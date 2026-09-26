@@ -88,6 +88,8 @@ Platform Admin (CoA Templates)
   - `owner_*_email` → Users by `email` (optional; ignored if not found during dry-run)
   - `analytics_category` → Analytics Categories by `name` (auto-created when missing during commit)
 - Import behavior: existing spend items are left untouched; the importer only inserts brand-new combinations. Use the UI for updates.
+- Yearly totals: spread flat over the twelve months. Each planning column written (`planned`, `committed`, `expected_landing`) gets a whole-year round input with `method: spread` and `last_calculation.source: item_csv`. A blank cell leaves the column and its round input untouched; `0` clears the year. Actuals never get a round input.
+- Monthly amounts and periods go through the budget rows file below.
 
 ### Spend Items Summary (Reporting feed)
 - Not a CSV import; derived in-app via `/spend-items/summary` and cached client-side.
@@ -132,6 +134,20 @@ Platform Admin (CoA Templates)
   - Y-1 Landing and Y Landing map to `expected_landing`
   - Y Follow-up maps to `actual`; Y Revision maps to `committed`
   - Creating budgets populates or creates versions for Y-1, Y, Y+1 with `input_grain=annual`
+  - Each planning column written gets a whole-year round input (`method: spread`, `last_calculation.source: item_csv`); a blank cell leaves it untouched; Actuals never get one
+
+### Budget rows (OPEX and CAPEX monthly amounts)
+- One tenant-wide file for both item types, reached from Budget Administration ("Budget rows file").
+- Endpoints: `GET /budget-rows/export?scope=template|data&year={yyyy?}` (read access to OPEX or CAPEX; only readable item types are exported) and `POST /budget-rows/import?dryRun=true|false` (admin on OPEX or CAPEX; `dryRun` defaults to true).
+- Headers, exact order: `item_type;item_number;year;measure;period_start;period_end;jan;feb;mar;apr;may;jun;jul;aug;sep;oct;nov;dec;method`. Every column except `method` is required on import; unknown columns are a header error.
+- File name: `budget_rows.csv`; `budget_rows_partial.csv` when the user reads only one item type; `budget_rows_<year>_partial.csv` when `year` is given.
+- Export: for every item of each readable type (all statuses) and every version with at least one stored month, five rows in the order `planned`, `committed`, `forecast`, `actual`, `expected_landing`, sorted by item type (OPEX first), item number, year. `period_start` / `period_end` come from the stored round input, else the whole year; blank on `actual`. Amounts use a dot decimal separator. `method` is `spread`, `copied` or `manual`, blank without a round input or on `actual`.
+- Import values: `item_type` case-insensitive; `item_number` as the integer or the ref (`OPX-7`, `CPX-7`) matching `item_type`; `measure` also accepts `budget`, `revision`, `follow_up`, `landing`; both period cells blank = whole year, one blank = row error, ignored on `actual`; all twelve months required (`0` for an empty month), comma decimals and spaces accepted; `method` ignored.
+- Validation before any write: duplicate `(item_type, item_number, year, measure)`, unknown item, or an item type the user does not administer are row errors. Any row error: `ok: false`, nothing written.
+- Rows identical to what is stored (twelve months to the cent and, for planning columns, the period) are `unchanged`: no write and no freeze check, so re-importing an export that covers frozen years succeeds. A changed row on a frozen column is a row error.
+- Writes: a missing version is created (`input_grain: monthly`); the twelve months are replaced; changed months mark the round input `manual` with the file's period (profile and last calculation kept); a period-only change updates the period and keeps the method; `actual` rows never create a round input.
+- Report: `{ ok, dryRun, total, inserted, updated, unchanged, errors[] }`; `inserted` counts rows that create the item's year, `updated` rows that change months or the period. The shared import dialog shows `inserted` and `updated`, plus an "N rows unchanged" line whenever the report carries `unchanged` (the other importers never send it, so their dialogs are unchanged).
+- Upload limit: 10 MB per file (the item CSVs keep the common limit). A year-limited export splits a larger budget into files that fit.
 
 ### Contracts
 - Headers: `name;company_name;supplier_name;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes`
@@ -194,4 +210,4 @@ Platform Admin (CoA Templates)
 - Relationship lookups are case-sensitive by exact name (normalized by service where applicable); ensure consistent spelling.
 - Department resolution requires company context to avoid ambiguity.
 - Status values outside `enabled|disabled` are rejected.
-- Most entities upsert rows based on their unique keys; the OPEX importer currently only creates new rows and never overwrites existing data.
+- Most entities upsert rows based on their unique keys; the OPEX importer currently only creates new rows and never overwrites existing data. The budget rows file is the way to update amounts of existing items in bulk.

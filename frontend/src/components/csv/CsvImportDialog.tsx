@@ -11,6 +11,8 @@ type ImportReport = {
   inserted: number;
   updated: number;
   processed?: number;
+  /** Rows identical to what is stored, left untouched (budget rows import only). */
+  unchanged?: number;
   errors: { row: number; message: string }[];
 };
 
@@ -165,6 +167,9 @@ export default function CsvImportDialog({
                   )
                 ) : (
                   <>{t('csv.uploadCompleted')}</>
+                )}
+                {typeof report.unchanged === 'number' && (
+                  <Box component="span" sx={{ display: 'block' }}>{t('csv.rowsUnchanged', { count: report.unchanged })}</Box>
                 )}
               </Alert>
             ) : (

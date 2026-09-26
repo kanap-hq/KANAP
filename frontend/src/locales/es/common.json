@@ -356,7 +356,9 @@
     "warnings": "Advertencias ({{count}})",
     "andMoreErrors2": "...y {{count}} error(es) más",
     "andMoreWarnings": "...y {{count}} advertencia(s) más",
-    "rowPrefix": "Fila {{row}}:"
+    "rowPrefix": "Fila {{row}}:",
+    "rowsUnchanged_one": "{{count}} fila sin cambios.",
+    "rowsUnchanged_other": "{{count}} filas sin cambios."
   },
   "selects": {
     "loading": "Cargando...",

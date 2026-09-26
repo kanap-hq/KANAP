@@ -153,8 +153,16 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
   - **Ist-Werte**: Erwartete tatsächliche Ausgaben (Ihre beste Schätzung im Jahresverlauf)
   - **Erwarteter Endwert**: Tatsächliche Ausgaben nach dem Jahresabschluss
 
+**Zeitraum einer Spalte**:
+  - Budget, Revision, Prognose und Erwarteter Endwert haben jeweils einen Zeitraum innerhalb des Jahres, zum Beispiel April bis Dezember
+  - Ein Monat zählt, wenn der Zeitraum seinen 15. Tag abdeckt. Ein Zeitraum, der am 10. April beginnt, schließt den April ein; einer, der am 20. April beginnt, startet im Mai
+  - Eine Spalte ohne Betrag und ohne Zeitraum erhält einen Vorschlag: **Beginn der Gültigkeit** und **Ende der Gültigkeit** der Position, begrenzt auf das Jahr. Eine Position, die am 1. April beginnt, ergibt den Vorschlag April bis Dezember
+  - Eine Spalte, die bereits Beträge enthält und keinen Zeitraum hat, gilt als ganzes Jahr, sodass sich vorhandene Daten wie bisher verhalten
+  - Ist-Werte decken immer das ganze Jahr ab
+
 **Jährlich oder Monatlich**:
-  - **Jährlich**: Geben Sie eine Summe pro Spalte ein; die Beträge werden für Zuordnungszwecke gleichmäßig auf 12 Monate verteilt. Nur die Summe, die Sie bearbeiten, wird gespeichert. Die anderen Spalten behalten ihre Monatsbeträge.
+  - **Jährlich**: Geben Sie eine Summe pro Spalte ein. Die Summe wird gleichmäßig auf die Monate des Zeitraums der Spalte verteilt, und die Monate außerhalb des Zeitraums werden auf null gesetzt. Der Zeitraum wird unter jeder Summe angezeigt, bevor Sie etwas eingeben, zum Beispiel „9 Monate, April bis Dezember“. Nur die Summe, die Sie bearbeiten, wird gespeichert. Die anderen Spalten behalten ihre Monatsbeträge.
+  - Klicken Sie unter einer Summe auf **Zeitraum ändern**, um das Verteilungsfeld für diese Spalte mit ihrer aktuellen Summe zu öffnen. Lassen die Daten der Position keinen Monat im Jahr übrig, ist die Summe deaktiviert und zeigt „Kein Monat von 2026 liegt innerhalb der Daten der Position.“ Klicken Sie auf **Zeitraum wählen**, um selbst einen festzulegen.
   - **Monatlich**: Geben Sie Beträge pro Monat (Jan-Dez) für jede Spalte ein, plus eine Spalte **Prognose** für zusätzliche Planung. Quartalszwischensummen und eine Jahressumme werden angezeigt. Nur die Monate, die Sie ändern, werden gespeichert.
   - Wechseln Sie mit den Tabs **Jährlich** und **Monatlich** zwischen den Modi. Der Wechsel ändert Ihre Beträge nicht.
 
@@ -163,9 +171,25 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
   - Sie können eingefrorene Daten weiterhin ansehen; Administratoren können sie über **Budgetverwaltung > Administration > Einfrieren/Freigeben** wieder freigeben
   - Jede Spalte kann unabhängig eingefroren werden (Budget, Revision, Prognose, Ist-Werte, Erwarteter Endwert)
 
+**Einen Betrag verteilen**:
+  - Das Verteilungsfeld ist im Tab **Monatlich** immer sichtbar. Im Tab **Jährlich** öffnet es sich über **Zeitraum ändern**
+  - Wählen Sie eine Spalte (Budget, Revision, Prognose, Erwarteter Endwert oder Ist-Werte), geben Sie einen Jahresbetrag ein, wählen Sie **Gleichmäßig** oder **4-4-5** und legen Sie die Daten **Von** und **Bis** fest. Die Daten gehen vom aktuellen Zeitraum der Spalte aus
+  - Vor dem Anwenden zeigt das Feld die Monate, die zählen („9 Monate, April bis Dezember“), und die Monate, die auf null gesetzt werden („Januar bis März werden auf null gesetzt.“)
+  - Mit **4-4-5** werden die Gewichte der zählenden Monate hochskaliert, sodass der gesamte Betrag auf sie entfällt
+  - Ein Hinweis erscheint, wenn der Zeitraum über die Daten der Position hinausgeht. Sie können trotzdem anwenden
+  - **Anwenden** bleibt deaktiviert, solange ein Datum fehlt oder kein Monat zählt. Nichts wird gespeichert, bevor Sie auf **Anwenden** klicken
+  - Im Tab **Monatlich** füllt Anwenden das Raster. Im Tab **Jährlich** bleiben Sie in der Jahresansicht
+  - Bei Ist-Werten bestimmen die Daten nur diese eine Verteilung. Ist-Werte behalten keinen Zeitraum
+
+**Wie jede Spalte entstanden ist**:
+  - Eine kurze Kennzeichnung zeigt, woher die Beträge einer Spalte stammen. Im Tab **Monatlich** steht sie unter der Spaltenüberschrift (fahren Sie mit der Maus darüber, um den Zeitraum zu sehen). Im Tab **Jährlich** steht sie neben dem Zeitraum
+  - **Gleichmäßig verteilt**, **Nach 4-4-5 verteilt** oder **Nach Quartal verteilt**: Die Beträge stammen aus einer Verteilung
+  - **Kopiert aus Budget 2025 +2 %**: Die Beträge stammen aus **Budgetspalten kopieren** in der Budgetadministration, mit dem Prozentsatz, falls einer angewendet wurde
+  - **Von Hand geändert**: Ein Monat wurde im Raster oder durch einen Import der Datei der Budgetzeilen geändert
+  - Eine Spalte ohne Kennzeichnung hat die Daten behalten, die sie vor der Einführung der Zeiträume hatte
+
 **Werkzeuge im Monatsmodus**:
-  - **Jahresbetrag verteilen**: Wählen Sie eine Spalte, geben Sie einen Jahresbetrag und ein Profil ein (**Gleichmäßig** oder **4-4-5**) und klicken Sie auf **Anwenden**, um die 12 Monate zu füllen
-  - **Spalte leeren**: Das Symbol neben einer Spaltenüberschrift setzt alle Monate dieser Spalte auf null, zum Beispiel bevor Sie den gesamten Betrag in einem einzigen Monat erfassen
+  - **Spalte leeren**: Das Symbol neben einer Spaltenüberschrift setzt alle Monate dieser Spalte auf null, zum Beispiel bevor Sie den gesamten Betrag in einem einzigen Monat erfassen. Das gilt als Änderung von Hand. Um Beträge und Zeitraum einer Spalte für alle Positionen zu entfernen, verwenden Sie **Budgetspalte zurücksetzen** in der Budgetadministration
 
 **Mehrjahrestrend**:
   - Ein Diagramm unter dem Raster zeigt die Budgetspalten der Position über mehrere Jahre und aktualisiert sich während der Eingabe
@@ -298,7 +322,8 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   - **Nur Neuanlage**: Der Importer erstellt nur neue Positionen; er aktualisiert keine bestehenden. Verwenden Sie die Benutzeroberfläche zum Bearbeiten bestehender Positionen
   - **Referenzen**: `supplier_name` muss einem Lieferanten namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `account_number` muss einem Konto entsprechen. `owner_it_email` und `owner_business_email` müssen aktivierten Benutzern per E-Mail entsprechen
   - **Analysekategorie**: Existiert die Kategorie nicht, wird sie beim Import automatisch erstellt
-  - **Budgets**: Budgetspalten füllen J-1, J und J+1 Versionen. Beträge werden gleichmäßig auf 12 Monate verteilt (Modus Jährlich)
+  - **Budgets**: Budgetspalten füllen J-1, J und J+1 Versionen. Beträge werden gleichmäßig auf 12 Monate verteilt (Modus Jährlich), und der Zeitraum der Spalte wird das ganze Jahr. Eine leere Zelle lässt die Spalte unverändert; `0` leert sie
+  - **Monatsbeträge**: Um Beträge Monat für Monat zu laden oder zu prüfen, mit dem Zeitraum jeder Spalte, verwenden Sie die **Datei der Budgetzeilen** in der Budgetadministration
 
 **Häufige Fehler**:
   - **„Lieferant nicht gefunden"**: Erstellen Sie den Lieferanten zuerst unter **Stammdaten > Lieferanten**, dann importieren Sie erneut

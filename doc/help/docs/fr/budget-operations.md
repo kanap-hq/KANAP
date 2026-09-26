@@ -7,7 +7,7 @@ L'administration budgétaire met à votre disposition un ensemble d'outils pour 
 - Chemin : **Gestion budgétaire > Administration**
 - Autorisations : La plupart des opérations nécessitent `budget_ops:admin`
 
-La page d'accueil affiche cinq cartes, chacune renvoyant à un outil dédié :
+La page d'accueil affiche six cartes, chacune renvoyant à un outil dédié :
 
 | Outil | Objectif |
 |-------|----------|
@@ -16,6 +16,7 @@ La page d'accueil affiche cinq cartes, chacune renvoyant à un outil dédié :
 | **Copier les ventilations** | Copier les méthodes de ventilation d'une année à l'autre |
 | **Réinitialiser une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
 | **Méthode de ventilation par défaut** | Définir la méthode que les postes OPEX et CAPEX suivent par défaut |
+| **Fichier des lignes budgétaires** | Exporter ou importer les montants mensuels de chaque poste OPEX et CAPEX |
 
 ---
 
@@ -57,6 +58,10 @@ Sans `budget_ops:admin`, vous pouvez toujours voir le statut de gel, mais les co
 
 Copiez les données budgétaires d'une année et colonne vers une autre, avec un ajustement en pourcentage optionnel. C'est l'outil principal pour alimenter le budget de l'année suivante à partir de l'année en cours.
 
+Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les postes sur lesquels la copie s'applique. OPEX est sélectionné par défaut si vous pouvez consulter les postes OPEX, sinon CAPEX.
+
+Nécessite les droits d'administration sur les OPEX, ou sur les CAPEX pour les postes CAPEX.
+
 ### Quand l'utiliser
 
 - Préparer le budget de l'année suivante à partir de l'année en cours
@@ -71,14 +76,14 @@ Copiez les données budgétaires d'une année et colonne vers une autre, avec un
 | **Colonne source** | Budget, Révision, Réalisé ou Atterrissage prévu |
 | **Année destination** | Année vers laquelle copier (même plage) |
 | **Colonne destination** | Budget, Révision, Réalisé ou Atterrissage prévu |
-| **Augmentation en pourcentage** | Ajustement appliqué aux valeurs copiées (ex. : `3` = +3 %). Par défaut 0. Accepte les décimales. |
+| **Augmentation en pourcentage** | Ajustement appliqué à chaque mois copié (ex. : `3` = +3 %). Par défaut 0. Accepte les décimales et les valeurs négatives. |
 | **Écraser les données existantes** | Bascule. Désactivé : les postes qui ont déjà une valeur dans la destination sont ignorés. Activé : toutes les valeurs destination sont remplacées. |
 
 ### Processus en deux étapes : Simulation, puis Copie
 
 1. Cliquez sur **Simulation** pour générer un aperçu sans modifier aucune donnée
 2. Examinez la grille d'aperçu, qui affiche :
-   - Nom du **Produit** (les postes marqués `[IGNORÉ]` ne seront pas modifiés)
+   - Nom du **Poste** (les postes marqués **Ignoré** conservent leur valeur actuelle)
    - **Valeur source** (de l'année/colonne source)
    - **Valeur destination actuelle**
    - **Valeur d'aperçu** (ce que la destination deviendra après la copie)
@@ -104,6 +109,17 @@ Sous la grille, une barre de statistiques affiche :
 | Désactivé | Non (zéro) | Copié |
 | Activé | Oui | Remplacé |
 | Activé | Non (zéro) | Copié |
+
+### Comment les montants sont copiés
+
+- La copie conserve la répartition mensuelle. Chacun des douze mois est copié vers le même mois de la destination : une colonne répartie d'avril à décembre reste répartie d'avril à décembre
+- Sans pourcentage, les montants sont copiés à l'identique, au centime près
+- Avec un pourcentage, chaque mois est arrondi à l'unité. Le total annuel est le total source auquel on applique le pourcentage, arrondi à l'unité. Le petit écart est reporté sur le dernier mois qui porte un montant. Par exemple, 12 000 répartis d'avril à décembre (1 333,33 par mois et 1 333,36 en décembre) copiés avec +2 % donnent 1 360 par mois et 12 240 pour l'année
+- La période de la colonne suit la copie : avril à décembre 2026 devient avril à décembre 2027. Une période qui se termine le 29 février se termine le 28 février dans une année non bissextile
+- Une source sans période, ou une source Réalisé, donne une période couvrant toute l'année
+- Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 +2 % »
+- La copie d'une colonne sur elle-même (même année et même colonne) est refusée
+- La copie se fait en tout ou rien : si un poste échoue, rien n'est enregistré
 
 ### Protection des colonnes gelées
 
@@ -153,7 +169,13 @@ Après une simulation, une bannière affiche le nombre de postes prêts à être
 
 ## Réinitialiser une colonne budgétaire
 
-Effacez toutes les données d'une colonne budgétaire spécifique pour une année donnée. C'est une opération destructive -- utilisez-la lorsque vous devez repartir de zéro.
+Effacez toutes les données d'une colonne budgétaire spécifique pour une année donnée. C'est une opération destructive : utilisez-la lorsque vous devez repartir de zéro.
+
+Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les postes à effacer. La réinitialisation met à zéro les douze mois de la colonne et retire sa période. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates du poste. La réinitialisation se fait en tout ou rien : si un poste échoue, rien n'est effacé.
+
+Nécessite les droits d'administration sur les OPEX, ou sur les CAPEX pour les postes CAPEX.
+
+Une colonne dont les postes ne portent aucun montant peut quand même être réinitialisée : la réinitialisation retire alors seulement les périodes de répartition, et la confirmation l'indique.
 
 ### Quand l'utiliser
 
@@ -170,10 +192,10 @@ Effacez toutes les données d'une colonne budgétaire spécifique pour une anné
 
 ### Aperçu
 
-La page charge une grille montrant chaque poste OPEX et sa valeur actuelle dans la colonne sélectionnée. Les postes avec des données sont surlignés en rouge. Sous la grille, trois statistiques apparaissent :
+La page charge une grille montrant chaque poste OPEX ou CAPEX et sa valeur actuelle dans la colonne sélectionnée. Les montants qui seront effacés apparaissent en graisse moyenne ; les valeurs vides sont atténuées. Sous la grille, trois statistiques apparaissent :
 
 - **Total des postes**
-- **Postes avec données** (seront effacés)
+- **Postes avec un total non nul**
 - **Valeur totale actuelle**
 
 ### Confirmation
@@ -189,7 +211,7 @@ Vous devez cliquer sur **Effacer la colonne** dans la boîte de dialogue pour co
 
 ### Dispositifs de sécurité
 
-- Le bouton **Effacer la colonne** est désactivé lorsqu'il n'y a pas de données à effacer
+- Le bouton **Effacer la colonne** reste disponible lorsqu'aucun poste ne porte de montant, afin de pouvoir retirer les périodes de répartition
 - Les colonnes gelées ne peuvent pas être réinitialisées -- dégélez d'abord
 - La boîte de dialogue de confirmation nécessite un acquittement explicite
 
@@ -247,6 +269,57 @@ La valeur par défaut est résolue à chaque affichage des ventilations : la mod
 ### Autorisations
 
 Sans `budget_ops:admin`, vous pouvez consulter le réglage actuel mais pas le modifier.
+
+---
+
+## Fichier des lignes budgétaires
+
+Exportez ou importez les montants mensuels de chaque poste OPEX et CAPEX dans un seul fichier, avec une ligne par poste, année et colonne.
+
+### Quand l'utiliser
+
+- Charger des budgets mensuels préparés dans un tableur
+- Importer le réalisé mensuel depuis votre système comptable
+- Relire ou archiver toutes les colonnes, y compris la Prévision
+
+### Export
+
+1. Choisissez une année, ou conservez **Toutes les années**
+2. Cliquez sur **Exporter**, puis sur **Exporter les données**
+
+Le fichier liste chaque poste OPEX et CAPEX que vous pouvez consulter, pour chaque année qui porte des montants. Chaque poste et chaque année reçoivent cinq lignes, dans cet ordre : Budget, Révision, Prévision, Réalisé, Atterrissage prévu. Les colonnes sans montant sont incluses aussi. Lorsque le fichier couvre une seule année, ou seulement les OPEX ou seulement les CAPEX en raison de vos autorisations, son nom se termine par `partial`.
+
+Un fichier peut être importé jusqu'à 10 Mo. Pour un budget plus volumineux, exportez et importez une année à la fois : un export limité à une année produit un fichier plus petit.
+
+### Colonnes
+
+Le fichier utilise le point-virgule `;` comme séparateur et l'encodage UTF-8.
+
+| Colonne | Contenu |
+|---------|---------|
+| `item_type` | `opex` ou `capex` |
+| `item_number` | Le numéro du poste, par exemple `7`. À l'import, la référence fonctionne aussi (`OPX-7`, `CPX-7`) |
+| `year` | Quatre chiffres |
+| `measure` | La colonne : `planned` (Budget), `committed` (Révision), `forecast` (Prévision), `actual` (Réalisé), `expected_landing` (Atterrissage prévu). À l'import, `budget`, `revision`, `follow_up` et `landing` fonctionnent aussi |
+| `period_start`, `period_end` | La période de la colonne au format `YYYY-MM-DD`, à l'intérieur de l'année de la ligne. Vides sur les lignes Réalisé. À l'import, deux valeurs vides signifient toute l'année |
+| `jan` à `dec` | Les douze montants mensuels, avec un point comme séparateur décimal. À l'import, la virgule et les espaces sont aussi acceptés |
+| `method` | La façon dont la colonne a été produite : `spread`, `copied` ou `manual`. À titre d'information uniquement, ignorée à l'import |
+
+### Règles d'import
+
+1. Cliquez sur **Importer**, choisissez le fichier et lancez la **Vérification préalable**
+2. Examinez le rapport, puis cliquez sur **Charger**
+
+- Tout le fichier est vérifié avant le moindre enregistrement. Si une ligne contient une erreur, rien n'est enregistré et le rapport liste les erreurs par numéro de ligne
+- Chaque ligne remplace les douze mois de son poste, de son année et de sa colonne. Les postes, années et colonnes absents du fichier ne sont pas modifiés
+- Les douze mois sont obligatoires. Saisissez `0` pour un mois sans montant
+- Une ligne identique à ce qui est enregistré n'est pas modifiée, y compris la façon dont la colonne a été produite. Réimporter un export ne change rien
+- Une ligne dont les montants changent marque la colonne comme **Modifié à la main**, avec la période du fichier
+- Une ligne qui ne change que la période met à jour la période et conserve le reste
+- Les lignes Réalisé sont autorisées, ce qui permet d'importer le réalisé mensuel. Le réalisé n'a pas de période
+- Une ligne modifiée sur une colonne gelée est refusée. Une ligne identique sur une colonne gelée est acceptée
+- Les lignes en double (même poste, même année et même colonne), les numéros de poste inconnus et les postes d'un type que vous ne pouvez pas administrer sont des erreurs
+- L'import nécessite les droits d'administration sur les OPEX ou sur les CAPEX. L'export nécessite l'accès en lecture à l'un des deux
 
 ---
 

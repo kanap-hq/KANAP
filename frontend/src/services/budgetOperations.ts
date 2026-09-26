@@ -2,6 +2,17 @@ import api from '../api';
 
 export type BudgetColumn = 'budget' | 'revision' | 'follow_up' | 'landing';
 
+/** Which items a column operation runs on. */
+export type BudgetScope = 'opex' | 'capex';
+
+const OPERATIONS_BASE: Record<BudgetScope, string> = {
+  opex: '/spend-items/budget-operations',
+  capex: '/capex-items/budget-operations',
+};
+
+/** Budget rows file: monthly amounts of every OPEX and CAPEX line (CSV dialogs append `/export` and `/import`). */
+export const budgetRowsEndpoint = '/budget-rows';
+
 export type BudgetColumnOperation = {
   sourceYear: number;
   sourceColumn: BudgetColumn;
@@ -18,6 +29,8 @@ export type BudgetOperationResult = {
   sourceValue: number;
   currentDestinationValue: number;
   newValue: number;
+  /** The server skips this item (source all zero, or destination not empty without overwrite), month by month. */
+  skipped: boolean;
 };
 
 export type BudgetOperationResponse = {
@@ -32,8 +45,8 @@ export type BudgetOperationResponse = {
   results: BudgetOperationResult[];
 };
 
-export const copyBudgetColumn = async (operation: BudgetColumnOperation): Promise<BudgetOperationResponse> => {
-  const response = await api.post<BudgetOperationResponse>('/spend-items/budget-operations/copy-column', operation);
+export const copyBudgetColumn = async (scope: BudgetScope, operation: BudgetColumnOperation): Promise<BudgetOperationResponse> => {
+  const response = await api.post<BudgetOperationResponse>(`${OPERATIONS_BASE[scope]}/copy-column`, operation);
   return response.data;
 };
 
@@ -91,7 +104,7 @@ export type ClearColumnResponse = {
   };
 };
 
-export const clearBudgetColumn = async (operation: ClearColumnOperation): Promise<ClearColumnResponse> => {
-  const response = await api.post<ClearColumnResponse>('/spend-items/budget-operations/clear-column', operation);
+export const clearBudgetColumn = async (scope: BudgetScope, operation: ClearColumnOperation): Promise<ClearColumnResponse> => {
+  const response = await api.post<ClearColumnResponse>(`${OPERATIONS_BASE[scope]}/clear-column`, operation);
   return response.data;
 };

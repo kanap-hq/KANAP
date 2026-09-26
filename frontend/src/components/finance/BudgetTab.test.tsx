@@ -7,11 +7,19 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { OPEX_FINANCE_CONFIG } from './config';
 
 // A stable `t`: the component's loader depends on it, like react-i18next's own.
-vi.mock('react-i18next', () => {
-  const translation = {
-    t: (key: string) => key,
-    i18n: { language: 'en', resolvedLanguage: 'en' },
-  };
+// Period, column and label texts come from the real English strings so the
+// captions can be read; every other key comes back as itself.
+vi.mock('react-i18next', async () => {
+  const i18next = (await import('i18next')).default;
+  const enOps = (await import('../../locales/en/ops.json')).default;
+  const real = i18next.createInstance();
+  await real.init({ lng: 'en', resources: { en: { ops: enOps } }, defaultNS: 'ops', interpolation: { escapeValue: false } });
+  const t = (key: string, options?: unknown) => (
+    key.startsWith('budgetTab.') || key.startsWith('operations.')
+      ? real.t(key, options as Record<string, unknown>)
+      : key
+  );
+  const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
 
@@ -29,6 +37,7 @@ vi.mock('./BudgetTrendChart', () => ({
 
 import api from '../../api';
 import BudgetTab, { BudgetTabHandle } from './BudgetTab';
+import type { RoundInput } from './roundPeriod';
 
 // jsdom here ships without localStorage.
 if (!window.localStorage) {
@@ -63,10 +72,17 @@ function period(month: number) {
 }
 
 /** Mocked API; `state.frozen` is read on every freeze-state fetch, so a test can freeze a column midway. */
-function setupApi({ grain, frozen = [] }: { grain: Grain; frozen?: FrozenColumn[] }) {
+function setupApi({ grain, frozen = [], empty = false, roundInputs }: {
+  grain: Grain;
+  frozen?: FrozenColumn[];
+  /** The version holds no amount at all. */
+  empty?: boolean;
+  /** Stored periods returned with the amounts (omitted: the field is absent). */
+  roundInputs?: RoundInput[];
+}) {
   const state = { frozen: [...frozen] };
   const version = { id: 'v1', input_grain: grain, budget_year: YEAR };
-  const items = Array.from({ length: 12 }, (_, i) => ({
+  const items = empty ? [] : Array.from({ length: 12 }, (_, i) => ({
     period: period(i + 1),
     planned: '1000',
     committed: '900',
@@ -74,18 +90,15 @@ function setupApi({ grain, frozen = [] }: { grain: Grain; frozen?: FrozenColumn[
     expected_landing: '700',
     forecast: '600',
   }));
+  const totals = empty
+    ? { planned: 0, committed: 0, actual: 0, expected_landing: 0, forecast: 0 }
+    : { planned: 12000, committed: 10800, actual: 9600, expected_landing: 8400, forecast: 7200 };
   const slot = (col: FrozenColumn) => ({ frozen: state.frozen.includes(col), frozenAt: null, frozenBy: null });
   const scope = () => ({ budget: slot('budget'), revision: slot('revision'), forecast: slot('forecast'), actual: slot('actual'), landing: slot('landing') });
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/spend-items/item-1/versions') return { data: [version] };
     if (url === '/spend-versions/v1/amounts') {
-      return {
-        data: {
-          items,
-          totals: { planned: 12000, committed: 10800, actual: 9600, expected_landing: 8400, forecast: 7200 },
-          year: YEAR,
-        },
-      };
+      return { data: { items, totals, year: YEAR, ...(roundInputs ? { round_inputs: roundInputs } : {}) } };
     }
     if (url === '/freeze-states') {
       return {
@@ -115,13 +128,16 @@ function setupApi({ grain, frozen = [] }: { grain: Grain; frozen?: FrozenColumn[
   return state;
 }
 
-function renderTab(year = YEAR) {
+function renderTab(year = YEAR, dates: { effectiveStart?: string; endOfValidity?: string } = {}) {
   const ref = React.createRef<BudgetTabHandle>();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui = (y: number) => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
-        <BudgetTab ref={ref} id="item-1" year={y} currency="EUR" onYearChange={() => undefined} config={OPEX_FINANCE_CONFIG} />
+        <BudgetTab
+          ref={ref} id="item-1" year={y} currency="EUR" onYearChange={() => undefined} config={OPEX_FINANCE_CONFIG}
+          effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity}
+        />
       </ThemeProvider>
     </QueryClientProvider>
   );
@@ -174,7 +190,10 @@ describe('BudgetTab write safety', () => {
     await flush(ref);
 
     expect(bulkCalls()).toHaveLength(1);
-    expect(bulkCalls()[0][1]).toEqual({ kind: 'annual', year: YEAR, totals: { planned: 15000 } });
+    // The column already holds amounts and has no stored period: the whole year.
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'annual', year: YEAR, totals: { planned: 15000 }, period_start: '2026-01-01', period_end: '2026-12-31',
+    });
   });
 
   it('monthly mode sends only the edited cell', async () => {
@@ -351,3 +370,241 @@ describe('BudgetTab write safety', () => {
     expect(bulkCalls()[0][1]).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(1), planned: 1500 }] });
   });
 });
+
+const record = (over: Partial<RoundInput>): RoundInput => ({
+  measure: 'planned',
+  period_start: '2026-04-01',
+  period_end: '2026-12-31',
+  method: 'spread',
+  spread_profile_name: 'flat',
+  last_calculation: null,
+  updated_at: '2026-09-26T10:00:00Z',
+  updated_by: null,
+  ...over,
+});
+
+const periodLine = (measure: string) => screen.getByTestId(`period-line-${measure}`);
+
+/** Wait until the amounts are loaded, without assuming the first field is editable. */
+async function waitForLoad() {
+  await waitFor(() => {
+    expect(amountLoads()).toBeGreaterThanOrEqual(1);
+    expect(screen.queryAllByRole('textbox').length).toBeGreaterThan(0);
+  });
+}
+
+describe('BudgetTab periods', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+  });
+
+  it('the yearly view suggests the item period for an empty column and sends it with the total', async () => {
+    setupApi({ grain: 'annual', empty: true });
+    const { ref } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(periodLine('planned')).toHaveTextContent('9 months, April to December');
+    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: '12000' } });
+    await flush(ref);
+
+    expect(bulkCalls()).toHaveLength(1);
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'annual', year: YEAR, totals: { planned: 12000 }, period_start: '2026-04-01', period_end: '2026-12-31',
+    });
+  });
+
+  it('a column that already holds amounts keeps the whole year', async () => {
+    setupApi({ grain: 'annual' });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(periodLine('planned')).toHaveTextContent('12 months, January to December');
+    expect(periodLine('committed')).toHaveTextContent('12 months, January to December');
+  });
+
+  it('a stored period wins, with its chip, and totals on different periods are sent apart', async () => {
+    setupApi({
+      grain: 'annual',
+      roundInputs: [
+        record({
+          method: 'copied',
+          last_calculation: { kind: 'copy', source_year: 2025, source_measure: 'planned', uplift_pct: '2', source_total: '12000.00', total: '12240.00', source_method: 'spread' },
+        }),
+        record({ measure: 'committed', method: 'manual', period_start: '2026-07-01', period_end: '2026-12-31' }),
+      ],
+    });
+    const { ref } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(periodLine('planned')).toHaveTextContent('Copied from Budget 2025 +2% · 9 months, April to December');
+    expect(periodLine('committed')).toHaveTextContent('Edited by hand · 6 months, July to December');
+    // No stored period on Landing: it holds amounts, so the whole year and no chip.
+    expect(periodLine('expected_landing')).toHaveTextContent(/^12 months, January to December$/);
+
+    const [budget, revision] = screen.getAllByRole('textbox');
+    fireEvent.change(budget, { target: { value: '6000' } });
+    fireEvent.change(revision, { target: { value: '3000' } });
+    await flush(ref);
+
+    expect(bulkCalls().map(([, body]) => body)).toEqual([
+      { kind: 'annual', year: YEAR, totals: { planned: 6000 }, period_start: '2026-04-01', period_end: '2026-12-31' },
+      { kind: 'annual', year: YEAR, totals: { committed: 3000 }, period_start: '2026-07-01', period_end: '2026-12-31' },
+    ]);
+  });
+
+  it('the total is disabled when the item dates leave no month of the year', async () => {
+    setupApi({ grain: 'annual', empty: true });
+    renderTab(YEAR, { effectiveStart: '2027-02-01' });
+    await waitForLoad();
+
+    await waitFor(() => expect(periodLine('planned')).toHaveTextContent("No month of 2026 is within the item's dates."));
+    expect(screen.getAllByRole('textbox')[0]).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Choose the period' })).toHaveLength(3);
+  });
+
+  it('the save response refreshes the chip', async () => {
+    setupApi({ grain: 'annual', empty: true });
+    mocked.post.mockResolvedValue({ data: { updated: 9, round_inputs: [record({})] } });
+    const { ref } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: '12000' } });
+    await flush(ref);
+
+    await waitFor(() => expect(periodLine('planned')).toHaveTextContent('Spread flat · 9 months, April to December'));
+  });
+
+  it('the monthly grid shows how each column was produced', async () => {
+    setupApi({
+      grain: 'monthly',
+      roundInputs: [
+        record({ spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '12000.00', profile: '4-4-5', active_months: [4, 5, 6, 7, 8, 9, 10, 11, 12], weights: [] } }),
+        record({ measure: 'forecast', method: 'manual', period_start: '2026-01-01' }),
+      ],
+    });
+    const { container } = renderTab();
+    await waitForAmounts();
+
+    const header = container.querySelector('thead') as HTMLElement;
+    expect(within(header).getByText('Spread 4-4-5')).toBeInTheDocument();
+    expect(within(header).getByText('Edited by hand')).toBeInTheDocument();
+  });
+
+  it('the spread panel shows the period, the zeroed months and the item-dates hint', async () => {
+    setupApi({ grain: 'monthly', empty: true });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(screen.getByText('9 months, April to December. January to March will be set to zero.')).toBeInTheDocument();
+    expect(screen.getByText('A month counts when the period covers its 15th.')).toBeInTheDocument();
+    expect(screen.queryByText("The period goes beyond the item's dates.")).not.toBeInTheDocument();
+
+    const [from] = screen.getAllByPlaceholderText('labels.datePlaceholder');
+    fireEvent.focus(from);
+    fireEvent.change(from, { target: { value: '01/02/2026' } });
+    fireEvent.blur(from);
+
+    expect(await screen.findByText('11 months, February to December. January will be set to zero.')).toBeInTheDocument();
+    expect(screen.getByText("The period goes beyond the item's dates.")).toBeInTheDocument();
+
+    // A period in which no month counts blocks Apply.
+    fireEvent.focus(from);
+    fireEvent.change(from, { target: { value: '20/12/2026' } });
+    fireEvent.blur(from);
+    fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '500' } });
+    expect(await screen.findByText('No month counts in this period.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'opex.budget.spreadApply' })).toBeDisabled();
+  });
+
+  it('Apply sends the period and the distribution', async () => {
+    setupApi({ grain: 'monthly', empty: true });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '12000' } });
+    const [, distribution] = screen.getAllByRole('combobox');
+    fireEvent.mouseDown(distribution);
+    fireEvent.click(await screen.findByRole('option', { name: 'opex.budget.profile445' }));
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'annual',
+      year: YEAR,
+      totals: { planned: 12000 },
+      spread_profile_name: '4-4-5',
+      period_start: '2026-04-01',
+      period_end: '2026-12-31',
+    });
+    await waitFor(() => expect(amountLoads()).toBe(2));
+  });
+
+  it('Change period in the yearly view opens the panel on that column and stays in the yearly view', async () => {
+    setupApi({ grain: 'annual' });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    fireEvent.click(within(periodLine('committed').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
+    const amount = await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
+    expect(amount).toHaveValue('10 800');
+    // The three period lines, plus the panel caption.
+    expect(screen.getAllByText('12 months, January to December')).toHaveLength(4);
+
+    const [from] = screen.getAllByPlaceholderText('labels.datePlaceholder');
+    fireEvent.focus(from);
+    fireEvent.change(from, { target: { value: '01/07/2026' } });
+    fireEvent.blur(from);
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'annual',
+      year: YEAR,
+      totals: { committed: 10800 },
+      spread_profile_name: 'flat',
+      period_start: '2026-07-01',
+      period_end: '2026-12-31',
+    });
+    await waitFor(() => expect(amountLoads()).toBe(2));
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(screen.getByRole('tab', { name: 'opex.budget.flat' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('Change period on a 4-4-5 column keeps 4-4-5', async () => {
+    setupApi({
+      grain: 'annual',
+      roundInputs: [record({ spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '12000.00', profile: '4-4-5', active_months: [4, 5, 6, 7, 8, 9, 10, 11, 12], weights: [] } })],
+    });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
+    const [from] = await screen.findAllByPlaceholderText('labels.datePlaceholder');
+    fireEvent.focus(from);
+    fireEvent.change(from, { target: { value: '01/05/2026' } });
+    fireEvent.blur(from);
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: 12000 }, spread_profile_name: '4-4-5', period_start: '2026-05-01', period_end: '2026-12-31' });
+  });
+
+  it('a year switch closes the yearly panel and hides the period lines until the new year is loaded', async () => {
+    setupApi({ grain: 'annual', roundInputs: [record({})] });
+    const { rerenderYear } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
+    expect(await screen.findByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('12 000');
+
+    rerenderYear(YEAR + 1);
+    // The 2026 period is never read against 2027 (it would give "No month of 2027 ...").
+    expect(screen.queryByText(/No month of 2027/)).not.toBeInTheDocument();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR + 1 } }));
+    await waitFor(() => expect(periodLine('planned')).toHaveTextContent('12 months, January to December'));
+    expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).not.toBeInTheDocument();
+  });
+});
+

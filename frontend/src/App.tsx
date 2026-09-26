@@ -44,6 +44,7 @@ const BudgetFreezePage = React.lazy(() => import('./pages/operations/BudgetFreez
 const CopyAllocationsPage = React.lazy(() => import('./pages/operations/CopyAllocationsPage'));
 const AllocationDefaultPage = React.lazy(() => import('./pages/operations/AllocationDefaultPage'));
 const CurrencySettingsPage = React.lazy(() => import('./pages/operations/CurrencySettingsPage'));
+const BudgetRowsPage = React.lazy(() => import('./pages/operations/BudgetRowsPage'));
 const TasksPage = React.lazy(() => import('./pages/TasksPage'));
 const TaskWorkspacePage = React.lazy(() => import('./pages/tasks/TaskWorkspacePage'));
 const ContactsPage = React.lazy(() => import('./pages/ContactsPage'));
@@ -275,6 +276,7 @@ function AppRoutes() {
           <Route path="/ops/operations/column-reset" element={<BudgetColumnResetPage />} />
           <Route path="/ops/operations/freeze" element={<BudgetFreezePage />} />
           <Route path="/ops/operations/allocation-default" element={<AllocationDefaultPage />} />
+          <Route path="/ops/operations/budget-rows" element={<BudgetRowsPage />} />
           {/* Currency Settings moved under Master Data */}
           <Route path="/master-data" element={<MasterDataHomePage />} />
           <Route path="/master-data/coa" element={<CoaPage />} />

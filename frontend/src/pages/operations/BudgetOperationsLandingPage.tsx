@@ -21,6 +21,7 @@ export default function BudgetOperationsLandingPage() {
     { title: t('operations.cards.copyAllocTitle'), description: t('operations.cards.copyAllocDesc'), to: '/ops/operations/copy-allocations' },
     { title: t('operations.cards.resetColumnTitle'), description: t('operations.cards.resetColumnDesc'), to: '/ops/operations/column-reset' },
     { title: t('operations.cards.allocationDefaultTitle'), description: t('operations.cards.allocationDefaultDesc'), to: '/ops/operations/allocation-default' },
+    { title: t('operations.cards.budgetRowsTitle'), description: t('operations.cards.budgetRowsDesc'), to: '/ops/operations/budget-rows' },
   ];
 
   return (

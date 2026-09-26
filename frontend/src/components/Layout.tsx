@@ -60,7 +60,15 @@ import { useBusinessContributorApplicationVisibility } from '../hooks/useBusines
 const drawerWidth = 220;
 
 type NavLevel = 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
-type NavItem = { to: string; label: string; icon: React.ReactNode; resource?: string; level?: NavLevel };
+type NavItem = {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  resource?: string;
+  /** Visible when the user has any one of these resources (instead of `resource`). */
+  anyResource?: string[];
+  level?: NavLevel;
+};
 type NavDivider = { divider: string };
 type NavEntry = NavItem | NavDivider;
 type WorkspaceKey = 'ops' | 'it' | 'master-data' | 'portfolio' | 'ai' | 'agents' | 'knowledge' | 'admin';
@@ -80,11 +88,15 @@ function isNavItem(entry: NavEntry): entry is NavItem {
   return 'to' in entry;
 }
 
+/** The resources that grant an item: any one suffices. Empty for an item open to everyone. */
+const itemResources = (item: NavItem): string[] => item.anyResource ?? (item.resource ? [item.resource] : []);
+
+// One requirement per granting resource; callers check `some`, so an item with
+// several alternatives grants its workspace through any of them.
 const getNavRequirements = (entries: NavEntry[]): Array<{ resource: string; level: NavLevel }> =>
   entries
     .filter(isNavItem)
-    .filter((item): item is NavItem & { resource: string } => !!item.resource)
-    .map((item) => ({ resource: item.resource, level: item.level ?? 'reader' }));
+    .flatMap((item) => itemResources(item).map((resource) => ({ resource, level: item.level ?? 'reader' })));
 
 export default function Layout() {
   const location = useLocation();
@@ -123,7 +135,7 @@ export default function Layout() {
     { to: '/ops/capex', label: t('nav:sidebar.ops.capex'), icon: <AccountBalanceIcon />, resource: 'capex' },
     { to: '/ops/contracts', label: t('nav:sidebar.ops.contracts'), icon: <DescriptionIcon />, resource: 'contracts' },
     { to: '/ops/reports', label: t('nav:sidebar.ops.reporting'), icon: <BarChartIcon />, resource: 'reporting' },
-    { to: '/ops/operations', label: t('nav:sidebar.ops.administration'), icon: <SettingsIcon />, resource: 'opex' },
+    { to: '/ops/operations', label: t('nav:sidebar.ops.administration'), icon: <SettingsIcon />, anyResource: ['opex', 'capex'] },
   ];
 
   const masterData: NavEntry[] = [
@@ -509,7 +521,8 @@ export default function Layout() {
               if (['/admin/ai', '/admin/ai-models', '/admin/ai-usage'].includes(entry.to)) {
                 return aiCapabilities.data?.surfaces.settings.available === true;
               }
-              return !entry.resource || hasLevel(entry.resource, entry.level ?? 'reader');
+              const resources = itemResources(entry);
+              return resources.length === 0 || resources.some((resource) => hasLevel(resource, entry.level ?? 'reader'));
             });
             // Drop group headers whose items were all filtered out.
             const visible = permitted.filter((entry, idx) => {

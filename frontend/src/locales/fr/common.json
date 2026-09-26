@@ -356,7 +356,9 @@
     "warnings": "Avertissements ({{count}})",
     "andMoreErrors2": "...et {{count}} erreur(s) supplémentaire(s)",
     "andMoreWarnings": "...et {{count}} avertissement(s) supplémentaire(s)",
-    "rowPrefix": "Ligne {{row}} :"
+    "rowPrefix": "Ligne {{row}} :",
+    "rowsUnchanged_one": "{{count}} ligne inchangée.",
+    "rowsUnchanged_other": "{{count}} lignes inchangées."
   },
   "selects": {
     "loading": "Chargement...",

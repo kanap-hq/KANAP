@@ -511,7 +511,9 @@
       "resetColumnTitle": "Réinitialiser une colonne budgétaire",
       "resetColumnDesc": "Effacer toutes les données d'une colonne budgétaire pour une année spécifique",
       "allocationDefaultTitle": "Méthode de ventilation par défaut",
-      "allocationDefaultDesc": "Choisir la méthode appliquée aux postes OPEX et CAPEX laissés en ventilation par défaut"
+      "allocationDefaultDesc": "Choisir la méthode appliquée aux postes OPEX et CAPEX laissés en ventilation par défaut",
+      "budgetRowsTitle": "Fichier des lignes budgétaires",
+      "budgetRowsDesc": "Exporter ou importer les montants mensuels de chaque poste OPEX et CAPEX, une ligne par poste, année et colonne."
     },
     "allocationDefault": {
       "title": "Méthode de ventilation par défaut",
@@ -567,27 +569,31 @@
     },
     "columnReset": {
       "title": "Réinitialiser une colonne budgétaire",
-      "subtitle": "Effacer toutes les données d'une colonne budgétaire pour une année spécifique",
+      "subtitle": "Effacer une colonne pour une année, en OPEX ou en CAPEX : ses douze mois et sa période de répartition.",
       "year": "Année",
       "budgetColumn": "Colonne budgétaire",
-      "processing": "Traitement en cours...",
+      "processing": "Traitement…",
       "clearColumn": "Effacer la colonne",
-      "product": "Produit",
-      "current": "Actuel",
+      "product": "Poste",
       "dataPreview": "Aperçu des données",
       "totalItems": "Total des postes",
-      "itemsWithData": "Postes avec données (seront effacés)",
+      "itemsWithData": "Postes avec un total non nul",
       "currentTotalValue": "Valeur totale actuelle",
       "columnFrozenError": "La colonne {{column}} de {{year}} est gelée. Dégelez-la avant d'effacer les données.",
-      "noDataInfo": "Aucune donnée trouvée dans la colonne {{column}} pour {{year}}. Rien à effacer.",
-      "clearWarning": "Attention : cette opération supprimera définitivement toutes les données de la colonne {{column}} pour l'année {{year}}. Cette action est irréversible. {{count}} postes seront affectés.",
+      "noDataInfo": "La colonne {{column}} de {{year}} ne contient aucun montant. L'effacement retire seulement ses périodes de répartition.",
       "confirmTitle": "Confirmer la réinitialisation de la colonne",
-      "confirmMessage": "Êtes-vous sûr de vouloir effacer toutes les données de la colonne <strong>{{column}}</strong> pour l'année <strong>{{year}}</strong> ?",
-      "confirmAffected": "Cette opération affectera <strong>{{count}} postes</strong> pour une valeur totale de <strong>{{value}}</strong>.",
       "confirmUndoWarning": "Cette action est irréversible.",
-      "clearSuccess": "Colonne effacée avec succès !\nEffacés : {{cleared}} postes\nIgnorés : {{skipped}} postes\nErreurs : {{errors}} postes",
-      "clearFailed": "L'opération d'effacement a échoué. Veuillez vérifier la console pour plus de détails.",
-      "loadingData": "Chargement des données…"
+      "clearFailed": "L'effacement a échoué. Rien n'a été modifié.",
+      "loadingData": "Chargement des données…",
+      "currentHeader": "{{column}} {{year}}, actuel",
+      "clearWarning_one": "L'effacement supprime les montants et la période {{column}} de {{year}} pour {{count}} poste. Cette action est irréversible.",
+      "clearWarning_other": "L'effacement supprime les montants et la période {{column}} de {{year}} pour {{count}} postes. Cette action est irréversible.",
+      "confirmMessage": "Effacer la colonne {{column}} pour {{year}} ?",
+      "confirmAffected_one": "{{count}} poste est concerné, pour un total de {{value}}.",
+      "confirmAffected_other": "{{count}} postes sont concernés, pour un total de {{value}}.",
+      "clearDone_one": "{{count}} poste effacé.",
+      "clearDone_other": "{{count}} postes effacés.",
+      "confirmPeriodsOnly": "La colonne {{column}} de {{year}} ne contient aucun montant. Seules ses périodes de répartition seront retirées."
     },
     "copyAllocations": {
       "title": "Copier les ventilations",
@@ -625,7 +631,7 @@
     },
     "copyBudgetColumns": {
       "title": "Copier les colonnes budgétaires",
-      "subtitle": "Copier les données budgétaires entre années et colonnes avec ajustements en pourcentage optionnels",
+      "subtitle": "Copier une colonne vers une autre année ou une autre colonne, en OPEX ou en CAPEX. Chaque mois garde son montant et le pourcentage s'applique à chaque mois.",
       "sourceYear": "Année source",
       "sourceColumn": "Colonne source",
       "destinationYear": "Année de destination",
@@ -634,8 +640,8 @@
       "overwriteExisting": "Écraser les données existantes",
       "dryRun": "Simulation",
       "copyData": "Copier les données",
-      "processing": "Traitement en cours...",
-      "product": "Produit",
+      "processing": "Traitement…",
+      "product": "Poste",
       "dataPreview": "Aperçu des données",
       "totalItems": "Total des postes",
       "itemsToProcess": "Postes à traiter",
@@ -643,13 +649,20 @@
       "currentDestTotal": "Total actuel de destination",
       "previewTotal": "Total prévisualisé",
       "frozenError": "La colonne {{column}} de {{year}} est gelée. Dégelez-la avant de copier les données.",
-      "existingDataWarning": "{{count}} postes ont déjà des données dans la colonne de destination et seront ignorés. Activez « Écraser les données existantes » pour les remplacer.",
-      "previewInfo": "L'aperçu affiche les {{total}} postes. {{toProcess}} postes seront traités, {{skipped}} seront ignorés. Les postes marqués [SKIP] ne seront pas modifiés lors de la copie.",
-      "copySuccess": "Copie terminée avec succès !\nTraités : {{processed}} postes\nIgnorés : {{skipped}} postes\nErreurs : {{errors}} postes",
-      "dryRunFailed": "La simulation a échoué. Veuillez vérifier la console pour plus de détails.",
-      "copyFailed": "L'opération de copie a échoué. Veuillez vérifier la console pour plus de détails.",
+      "dryRunFailed": "La simulation a échoué.",
+      "copyFailed": "La copie a échoué. Rien n'a été modifié.",
       "loadingData": "Chargement des données…",
-      "skip": "[SKIP]"
+      "roundingNote": "Avec un pourcentage, les montants sont arrondis à l'unité.",
+      "sourceHeader": "{{column}} {{year}}",
+      "currentHeader": "{{column}} {{year}}, actuel",
+      "previewHeader": "{{column}} {{year}}, aperçu",
+      "skipped": "Ignoré",
+      "previewInfo_one": "{{count}} poste dans l'aperçu : {{toProcess}} à copier, {{skipped}} à ignorer. Les postes ignorés gardent leur valeur actuelle.",
+      "previewInfo_other": "{{count}} postes dans l'aperçu : {{toProcess}} à copier, {{skipped}} à ignorer. Les postes ignorés gardent leur valeur actuelle.",
+      "existingDataWarning_one": "{{count}} poste a déjà un montant dans la colonne de destination et sera ignoré. Activez « Écraser les données existantes » pour le remplacer.",
+      "existingDataWarning_other": "{{count}} postes ont déjà un montant dans la colonne de destination et seront ignorés. Activez « Écraser les données existantes » pour les remplacer.",
+      "copyDone_one": "{{count}} poste copié.",
+      "copyDone_other": "{{count}} postes copiés."
     },
     "currency": {
       "title": "Paramètres de devise",
@@ -686,6 +699,28 @@
       "followUp": "Réalisé",
       "landing": "Atterrissage prévu",
       "forecast": "Prévision"
+    },
+    "scope": {
+      "label": "Type de poste",
+      "opex": "OPEX",
+      "capex": "CAPEX"
+    },
+    "budgetRows": {
+      "title": "Fichier des lignes budgétaires",
+      "intro": "Une ligne par poste, année et colonne, avec la période de la colonne et ses douze montants mensuels. L'export couvre les postes OPEX et CAPEX que vous pouvez consulter.",
+      "importRules": "Un import remplace les douze mois de chaque ligne du fichier. Les lignes identiques ne sont pas modifiées, et tout le fichier est vérifié avant le moindre enregistrement.",
+      "year": "Année",
+      "allYears": "Toutes les années",
+      "export": "Exporter",
+      "import": "Importer",
+      "exportTitle": "Exporter les lignes budgétaires",
+      "importTitle": "Importer les lignes budgétaires"
+    },
+    "results": {
+      "skipped_one": "{{count}} poste ignoré.",
+      "skipped_other": "{{count}} postes ignorés.",
+      "failed_one": "{{count}} poste en échec.",
+      "failed_other": "{{count}} postes en échec."
     }
   },
   "confirmations": {
@@ -974,6 +1009,40 @@
       "totalMetric": "Total {{metric}}",
       "unassigned": "Non affecté",
       "unnamed": "Dimension sans nom"
+    }
+  },
+  "budgetTab": {
+    "periodText_one": "{{count}} mois, {{months}}",
+    "periodText_other": "{{count}} mois, {{months}}",
+    "monthRange": "{{from}} à {{to}}",
+    "monthAnd": "{{first}} et {{second}}",
+    "zeroedMonths_one": "{{months}} sera mis à zéro.",
+    "zeroedMonths_other": "{{months}} seront mis à zéro.",
+    "changePeriod": "Modifier la période",
+    "choosePeriod": "Choisir la période",
+    "noMonthInItemDates": "Aucun mois de {{year}} n'est compris dans les dates du poste.",
+    "column": "Colonne",
+    "distribution": "Répartition",
+    "from": "Du",
+    "to": "Au",
+    "convention": "Un mois est pris en compte quand la période couvre le 15 du mois.",
+    "beyondItemDates": "La période dépasse les dates du poste.",
+    "problem": {
+      "missing": "Choisissez une date de début et une date de fin.",
+      "invalid": "Saisissez des dates valides.",
+      "outsideYear": "Choisissez des dates en {{year}}.",
+      "startAfterEnd": "La date de début est après la date de fin.",
+      "noMonth": "Aucun mois n'est pris en compte sur cette période."
+    },
+    "chip": {
+      "spreadFlat": "Répartition linéaire",
+      "spread445": "Répartition 4-4-5",
+      "spreadQuarterly": "Répartition par trimestre",
+      "spread": "Répartition",
+      "copied": "Copié depuis {{column}} {{year}}",
+      "copiedUplift": "Copié depuis {{column}} {{year}} {{uplift}}",
+      "copiedPlain": "Copié",
+      "manual": "Modifié à la main"
     }
   }
 }

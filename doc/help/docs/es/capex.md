@@ -197,9 +197,18 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 - **Realizado**: Gasto real esperado (su mejor estimación a medida que avanza el año)
 - **Aterrizaje previsto**: Gasto de capital real final después del cierre de fin de año
 
+**Periodo de una columna**:
+
+- Presupuesto, Revisión, Previsión y Aterrizaje previsto tienen cada una un periodo dentro del año, por ejemplo de abril a diciembre
+- Un mes cuenta cuando el periodo cubre su día 15. Un periodo que empieza el 10 de abril incluye abril; uno que empieza el 20 de abril comienza en mayo
+- Una columna sin importe y sin periodo recibe una sugerencia: el **Inicio de vigencia** y el **Fin de validez** de la partida, limitados al año. Una inversión que empieza el 1 de abril sugiere de abril a diciembre
+- Una columna que ya tiene importes y no tiene periodo se lee como todo el año, de modo que los datos existentes se comportan como antes
+- El Realizado siempre cubre todo el año
+
 **Anual o Mensual**:
 
-- **Anual**: Introduzca un total por columna; los importes se distribuyen uniformemente en 12 meses para fines de asignación. Solo se guarda el total que usted modifica. Las demás columnas conservan sus importes mensuales.
+- **Anual**: Introduzca un total por columna. El total se reparte uniformemente entre los meses del periodo de la columna, y los meses fuera de él se ponen a cero. El periodo aparece bajo cada total antes de escribir, por ejemplo «9 meses, de abril a diciembre». Solo se guarda el total que usted modifica. Las demás columnas conservan sus importes mensuales.
+- Haga clic en **Cambiar el periodo** bajo un total para abrir el panel de reparto en esa columna, con su total actual. Si las fechas de la partida no dejan ningún mes en el año, el total se deshabilita y muestra «Ningún mes de 2026 está dentro de las fechas de la partida.» Haga clic en **Elegir el periodo** para definirlo usted mismo.
 - **Mensual**: Introduzca importes por mes (enero a diciembre) para un seguimiento detallado del gasto del proyecto, más una columna **Previsión**. Se muestran subtotales trimestrales y un total anual. Solo se guardan los meses que usted modifica.
 - Cambie de modo con las pestañas **Anual** y **Mensual**
 - Cambiar de modo no modifica sus importes, solo la vista. Anual muestra el total anual de los meses guardados y Mensual muestra los meses guardados.
@@ -210,11 +219,30 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 - Cada columna puede congelarse independientemente (Presupuesto, Revisión, Previsión, Realizado, Aterrizaje previsto)
 - Puede ver los datos congelados; los administradores pueden descongelar vía **Gestión presupuestaria > Administración > Congelar/Descongelar**
 
+**Repartir un importe**:
+
+- El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde **Cambiar el periodo**
+- Elija una columna (Presupuesto, Revisión, Previsión, Aterrizaje previsto o Realizado), introduzca un importe anual, elija **Uniforme** o **4-4-5** y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna
+- Antes de aplicar, el panel muestra los meses que cuentan («9 meses, de abril a diciembre») y los meses que se pondrán a cero («De enero a marzo se pondrán a cero.»)
+- Con **4-4-5**, los pesos de los meses que cuentan se amplían para que todo el importe recaiga en ellos
+- Aparece un aviso no bloqueante cuando el periodo va más allá de las fechas de la partida. Aun así puede aplicar
+- **Aplicar** permanece deshabilitado mientras falte una fecha o ningún mes cuente. No se guarda nada hasta que haga clic en **Aplicar**
+- Desde la pestaña **Mensual**, Aplicar rellena la cuadrícula. Desde la pestaña **Anual**, permanece en la vista Anual
+- Para el Realizado, las fechas solo dan forma a ese reparto. El Realizado no conserva ningún periodo
+
+**Cómo se produjo cada columna**:
+
+- Una etiqueta breve indica de dónde vienen los importes de una columna. En la pestaña **Mensual** aparece bajo el encabezado de la columna (pase el cursor por encima para ver el periodo). En la pestaña **Anual** aparece junto al periodo
+- **Reparto uniforme**, **Reparto 4-4-5** o **Reparto por trimestre**: los importes proceden de un reparto
+- **Copiado de Presupuesto 2025 +2 %**: los importes proceden de **Copiar columnas presupuestarias** en la Administración presupuestaria, con el porcentaje visible cuando lo hay
+- **Editado a mano**: se modificó un mes en la cuadrícula o mediante una importación del archivo de filas presupuestarias
+- Una columna sin etiqueta conserva los datos que tenía antes de que existieran los periodos
+
 **Herramientas del modo mensual** (solo modo Mensual):
 
-- **Distribuir un importe anual**: elija una columna, introduzca un importe anual y un perfil (**Uniforme** o **4-4-5**) y haga clic en **Aplicar** para rellenar los 12 meses
 - **Borrar columna**: el icono junto al encabezado de una columna pone a cero todos los meses de esa columna
 - Útil para introducir a mano un plan de desembolsos, por ejemplo todo el importe en un solo mes
+- Borrar de esta forma cuenta como una edición a mano. Para quitar a la vez los importes y el periodo de una columna en todas las inversiones, use **Restablecer columna presupuestaria** en la Administración presupuestaria
 
 **Tendencia plurianual**:
 
@@ -375,7 +403,8 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 - **Tipo de activo fijo**: Debe ser `hardware` o `software` (sin distinguir mayúsculas).
 - **Tipo de inversión**: Debe ser uno de: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (sin distinguir mayúsculas).
 - **Prioridad**: Debe ser `mandatory`, `high`, `medium` o `low` (sin distinguir mayúsculas).
-- **Presupuestos**: Las columnas presupuestarias rellenan las versiones Y-1, Y e Y+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual).
+- **Presupuestos**: Las columnas presupuestarias rellenan las versiones Y-1, Y e Y+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual) y el periodo de la columna pasa a ser todo el año. Una celda vacía deja la columna como está; `0` la borra.
+- **Importes mensuales**: para cargar o revisar los importes mes a mes, con el periodo de cada columna, use el **Archivo de filas presupuestarias** en la Administración presupuestaria.
 
 **Errores comunes**:
 

@@ -1,44 +1,39 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
-  Stack,
-  TextField,
   MenuItem,
   Paper,
+  Stack,
+  TextField,
   Typography,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
   useTheme,
 } from '@mui/material';
 import { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';
-import ReportLayout from '../../components/reports/ReportLayout';
+import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
 import { useTranslation } from 'react-i18next';
 import AgGridBox from '../../components/AgGridBox';
-import { useOpexSummaryAll, SummaryRow, pickYearSlot } from '../reports/useOpexSummary';
+import { useOpexSummaryAll, pickYearSlot } from '../reports/useOpexSummary';
+import { useCapexSummaryAll } from '../reports/useCapexSummary';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearBudgetColumn, BudgetColumn } from '../../services/budgetOperations';
+import { clearBudgetColumn, BudgetColumn, BudgetScope } from '../../services/budgetOperations';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { FreezeColumn } from '../../services/freeze';
 import { useLocale } from '../../i18n/useLocale';
+import { useKanapDialogs } from '../../components/design';
+import { drawerMenuItemSx } from '../../theme/formSx';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import ItemScopeTabs, { useDefaultBudgetScope } from './ItemScopeTabs';
+import { formatOperationAmount } from './operationAmount';
+import { operationSummary } from './operationSummary';
 
 type ProcessedRow = {
   id: string;
   product_name: string;
   currentValue: number;
 };
-
-function formatNumber(v: any, locale: string) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '';
-  return Math.round(n).toLocaleString(locale);
-}
-
 
 
 const budgetToFreezeColumn: Record<BudgetColumn, FreezeColumn> = {
@@ -50,6 +45,7 @@ const budgetToFreezeColumn: Record<BudgetColumn, FreezeColumn> = {
 
 export default function BudgetColumnResetPage() {
   const { t } = useTranslation(['ops', 'common']);
+  const dialogs = useKanapDialogs();
 
   const BUDGET_COLUMNS: { value: BudgetColumn; label: string }[] = [
     { value: 'budget', label: t('operations.budgetColumns.budget') },
@@ -66,29 +62,31 @@ export default function BudgetColumnResetPage() {
   // Generate years from Y-1 to Y+5
   const years = Array.from({ length: 7 }, (_, i) => Y - 1 + i);
 
+  const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope());
   const [year, setYear] = useState<number>(Y);
   const [column, setColumn] = useState<BudgetColumn>('budget');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
-  const [clearResult, setClearResult] = useState<string | null>(null);
+  const [clearResult, setClearResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const { data: freezeData, isLoading: freezeLoading } = useFreezeState(year);
   const freezeKey = budgetToFreezeColumn[column];
-  const columnFrozen = freezeData?.summary?.scopes.opex[freezeKey]?.frozen ?? false;
+  const columnFrozen = freezeData?.summary?.scopes[scope][freezeKey]?.frozen ?? false;
 
   // Fetch data for the selected year
-  const { data: rows, isLoading } = useOpexSummaryAll([year]);
+  const opexSummary = useOpexSummaryAll([year], { enabled: scope === 'opex' });
+  const capexSummary = useCapexSummaryAll([year], { enabled: scope === 'capex' });
+  const { data: rows, isLoading } = scope === 'opex' ? opexSummary : capexSummary;
 
   const processedData = useMemo(() => {
     if (!rows) return [];
 
-    return rows.map((r: SummaryRow) => {
+    return rows.map((r: any) => {
       const slot = pickYearSlot(r, year);
       const currentValue = Number(slot?.totals?.[column] || 0);
 
       return {
         id: r.id,
-        product_name: r.product_name,
+        product_name: r.product_name ?? r.description,
         currentValue,
       };
     });
@@ -106,112 +104,124 @@ export default function BudgetColumnResetPage() {
     };
   }, [processedData]);
 
-  const columns = useMemo<ColDef[]>(() => {
-    const columnLabel = BUDGET_COLUMNS.find(c => c.value === column)?.label || column;
+  const columnLabel = BUDGET_COLUMNS.find((c) => c.value === column)?.label || column;
 
-    return [
-      {
-        field: 'product_name',
-        headerName: t('operations.columnReset.product'),
-        flex: 1,
-        minWidth: 220,
-      },
-      {
-        field: 'currentValue',
-        headerName: `${columnLabel} (${year}) - Current`,
-        width: 180,
-        type: 'rightAligned',
-        valueFormatter: (p) => formatNumber(p.value, locale),
-        cellStyle: (params) => {
-          const hasData = params.value !== 0;
-          return {
-            backgroundColor: hasData ? (theme.palette.error[50] || theme.palette.action.hover) : 'inherit',
-            fontWeight: hasData ? 'bold' : 'normal',
-            color: hasData ? theme.palette.error.dark : 'inherit',
-          };
-        },
-      },
-    ];
-  }, [year, column, locale, theme]);
+  const columns = useMemo<ColDef[]>(() => [
+    {
+      field: 'product_name',
+      headerName: t('operations.columnReset.product'),
+      flex: 1,
+      minWidth: 220,
+    },
+    {
+      field: 'currentValue',
+      headerName: t('operations.columnReset.currentHeader', { column: columnLabel, year }),
+      width: 200,
+      type: 'rightAligned',
+      valueFormatter: (p) => formatOperationAmount(p.value),
+      // Values that will be cleared stand out by weight; empty ones stay muted.
+      cellStyle: (params) => (params.value !== 0
+        ? { color: 'inherit', fontWeight: 500 }
+        : { color: theme.palette.kanap.text.tertiary, fontWeight: 400 }),
+    },
+  ], [columnLabel, year, locale, theme, t]);
 
   const gridApiRef = useRef<any>(null);
 
-  const handleClearClick = () => {
-    setConfirmDialogOpen(true);
-  };
+  const handleClearClick = async () => {
+    const confirmed = await dialogs.confirm({
+      title: t('operations.columnReset.confirmTitle'),
+      message: (
+        <Stack spacing={1}>
+          <span>{t('operations.columnReset.confirmMessage', { column: columnLabel, year })}</span>
+          {/* With no amount left, the reset still removes the spread periods (and how the column was produced). */}
+          <span>
+            {stats.itemsWithData > 0
+              ? t('operations.columnReset.confirmAffected', { count: stats.itemsWithData, value: formatOperationAmount(stats.totalValue) })
+              : t('operations.columnReset.confirmPeriodsOnly', { column: columnLabel, year })}
+          </span>
+          <span>{t('operations.columnReset.confirmUndoWarning')}</span>
+        </Stack>
+      ),
+      confirmLabel: t('operations.columnReset.clearColumn'),
+      cancelLabel: t('common:buttons.cancel'),
+      intent: 'danger',
+    });
+    if (!confirmed) return;
 
-  const handleConfirmClear = async () => {
-    setConfirmDialogOpen(false);
     setIsProcessing(true);
     setClearResult(null);
 
     try {
-      const result = await clearBudgetColumn({
+      const result = await clearBudgetColumn(scope, {
         year,
         column,
       });
 
-      setClearResult(`Column cleared successfully!
-Cleared: ${result.summary.cleared} items
-Skipped: ${result.summary.skipped} items
-Errors: ${result.summary.errors} items`);
+      setClearResult({
+        ok: true,
+        message: operationSummary(t, 'operations.columnReset.clearDone', result.summary.cleared, result.summary.skipped, result.summary.errors),
+      });
 
       // Invalidate and refetch the summary data to show updated values
-      await queryClient.invalidateQueries({ queryKey: ['spend-items-summary'] });
+      await queryClient.invalidateQueries({ queryKey: [scope === 'opex' ? 'spend-items-summary' : 'capex-items-summary'] });
     } catch (error) {
       console.error('Clear operation failed:', error);
-      setClearResult(t('operations.columnReset.clearFailed'));
+      setClearResult({ ok: false, message: getApiErrorMessage(error, t, t('operations.columnReset.clearFailed')) });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleCancelClear = () => {
-    setConfirmDialogOpen(false);
-  };
-
-  const columnLabel = BUDGET_COLUMNS.find(c => c.value === column)?.label || column;
+  const statSx = { display: 'flex', flexDirection: 'column', gap: '2px' } as const;
+  const statLabelSx = { fontSize: 12, color: 'kanap.text.tertiary' } as const;
+  const statValueSx = { fontSize: 13, fontWeight: 500, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums' } as const;
 
   return (
     <ReportLayout
+      rootTo="/ops/operations"
+      rootLabel={t('operations.title')}
       title={t('operations.columnReset.title')}
       subtitle={t('operations.columnReset.subtitle')}
       filters={
         <>
-          <TextField
-            select
-            size="small"
-            label={t("operations.columnReset.year")}
-            value={year}
-            onChange={(e) => setYear(parseInt(e.target.value, 10))}
-          >
-            {years.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label={t("operations.columnReset.budgetColumn")}
-            value={column}
-            onChange={(e) => setColumn(e.target.value as BudgetColumn)}
-          >
-            {BUDGET_COLUMNS.map((col) => (
-              <MenuItem key={col.value} value={col.value}>
-                {col.label}
-              </MenuItem>
-            ))}
-          </TextField>
+          <ItemScopeTabs value={scope} onChange={(next) => { setScope(next); setClearResult(null); }} />
+          <ReportFilter label={t('operations.columnReset.year')} width={120}>
+            <TextField
+              select
+              size="small"
+              value={year}
+              onChange={(e) => setYear(parseInt(e.target.value, 10))}
+              SelectProps={{ MenuProps: reportFilterMenuProps }}
+              sx={reportFilterSelectSx}
+            >
+              {years.map((y) => (
+                <MenuItem key={y} value={y} sx={drawerMenuItemSx}>{y}</MenuItem>
+              ))}
+            </TextField>
+          </ReportFilter>
+          <ReportFilter label={t('operations.columnReset.budgetColumn')} width={170}>
+            <TextField
+              select
+              size="small"
+              value={column}
+              onChange={(e) => setColumn(e.target.value as BudgetColumn)}
+              SelectProps={{ MenuProps: reportFilterMenuProps }}
+              sx={reportFilterSelectSx}
+            >
+              {BUDGET_COLUMNS.map((col) => (
+                <MenuItem key={col.value} value={col.value} sx={drawerMenuItemSx}>{col.label}</MenuItem>
+              ))}
+            </TextField>
+          </ReportFilter>
         </>
       }
       actions={
         <Button
-          variant="contained"
-          onClick={handleClearClick}
-          disabled={isProcessing || stats.itemsWithData === 0 || freezeLoading || columnFrozen}
-          color="error"
+          variant="action-danger"
+          onClick={() => void handleClearClick()}
+          // A column without amounts can still hold spread periods: the server clears them and skips the rest.
+          disabled={isProcessing || stats.totalItems === 0 || freezeLoading || columnFrozen}
         >
           {isProcessing ? t('operations.columnReset.processing') : t('operations.columnReset.clearColumn')}
         </Button>
@@ -221,30 +231,30 @@ Errors: ${result.summary.errors} items`);
       <Stack direction="column" spacing={2} alignItems="stretch">
         {columnFrozen && (
           <Alert severity="error">
-            {t("operations.columnReset.columnFrozenError", { year, column: columnLabel })}
+            {t('operations.columnReset.columnFrozenError', { year, column: columnLabel })}
           </Alert>
         )}
 
         {stats.itemsWithData === 0 && !isLoading && (
           <Alert severity="info">
-            {t("operations.columnReset.noDataInfo", { column: columnLabel, year })}
+            {t('operations.columnReset.noDataInfo', { column: columnLabel, year })}
           </Alert>
         )}
 
         {stats.itemsWithData > 0 && (
           <Alert severity="warning">
-            {t("operations.columnReset.clearWarning", { column: columnLabel, year, count: stats.itemsWithData })}
+            {t('operations.columnReset.clearWarning', { column: columnLabel, year, count: stats.itemsWithData })}
           </Alert>
         )}
 
         {clearResult && (
-          <Alert severity={clearResult.includes('failed') ? 'error' : 'success'}>
-            {clearResult}
+          <Alert severity={clearResult.ok ? 'success' : 'error'}>
+            {clearResult.message}
           </Alert>
         )}
 
         <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
+          <Typography sx={{ mb: 1, fontSize: 16, fontWeight: 500 }}>
             {t('operations.columnReset.dataPreview')}
           </Typography>
           <Box component={AgGridBox}>
@@ -263,53 +273,25 @@ Errors: ${result.summary.errors} items`);
           </Box>
 
           <Box sx={{ mt: 2, display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' } }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="body2" color="text.secondary">{t('operations.columnReset.totalItems')}</Typography>
-              <Typography variant="subtitle2">{stats.totalItems.toLocaleString(locale)}</Typography>
+            <Box sx={statSx}>
+              <Typography sx={statLabelSx}>{t('operations.columnReset.totalItems')}</Typography>
+              <Typography sx={statValueSx}>{stats.totalItems.toLocaleString(locale)}</Typography>
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="body2" color="text.secondary">{t('operations.columnReset.itemsWithData')}</Typography>
-              <Typography variant="subtitle2" sx={{ color: stats.itemsWithData > 0 ? 'error.main' : 'inherit' }}>
-                {stats.itemsWithData.toLocaleString(locale)}
-              </Typography>
+            <Box sx={statSx}>
+              <Typography sx={statLabelSx}>{t('operations.columnReset.itemsWithData')}</Typography>
+              <Typography sx={statValueSx}>{stats.itemsWithData.toLocaleString(locale)}</Typography>
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="body2" color="text.secondary">{t('operations.columnReset.currentTotalValue')}</Typography>
-              <Typography variant="subtitle2" sx={{ color: stats.itemsWithData > 0 ? 'error.main' : 'inherit' }}>
-                {formatNumber(stats.totalValue, locale)}
-              </Typography>
+            <Box sx={statSx}>
+              <Typography sx={statLabelSx}>{t('operations.columnReset.currentTotalValue')}</Typography>
+              <Typography sx={statValueSx}>{formatOperationAmount(stats.totalValue)}</Typography>
             </Box>
           </Box>
         </Paper>
       </Stack>
 
       {isLoading && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t("operations.columnReset.loadingData")}</Typography>
+        <Typography sx={{ mt: 1, fontSize: 13, color: 'kanap.text.secondary' }}>{t('operations.columnReset.loadingData')}</Typography>
       )}
-
-      <Dialog
-        open={confirmDialogOpen}
-        onClose={handleCancelClear}
-      >
-        <DialogTitle>{t('operations.columnReset.confirmTitle')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {t("operations.columnReset.confirmMessage", { column: columnLabel, year })}
-            <br /><br />
-            {t("operations.columnReset.confirmAffected", { count: stats.itemsWithData, value: formatNumber(stats.totalValue, locale) })}
-            <br /><br />
-            {t("operations.columnReset.confirmUndoWarning")}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelClear} color="primary">
-            {t('common:buttons.cancel')}
-          </Button>
-          <Button onClick={handleConfirmClear} color="error" variant="contained" autoFocus>
-            {t('operations.columnReset.clearColumn')}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </ReportLayout>
   );
 }
