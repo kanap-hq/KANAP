@@ -7,12 +7,15 @@ import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
 import { writeAmountsPayload } from '../spend/amounts-write.util';
+import { recordPayloadRoundInputs, versionRoundInputs } from '../spend/round-inputs.util';
 
 type AnnualPayload = {
   kind: 'annual';
   year: number;
   totals: Partial<Record<'planned' | 'forecast' | 'committed' | 'actual' | 'expected_landing', number>>;
-  spread_profile_name?: string;
+  spread_profile_name?: string; // default 'flat'; a named SpreadProfile applies its 12 weights
+  period_start?: string; // with period_end, 'YYYY-MM-DD' in the year; both omitted = the whole year
+  period_end?: string;
 };
 
 type QuarterlyPayload = {
@@ -20,7 +23,9 @@ type QuarterlyPayload = {
   year: number;
   measure: 'planned' | 'forecast' | 'committed' | 'actual' | 'expected_landing';
   Q1?: number; Q2?: number; Q3?: number; Q4?: number;
-  spread_profile_name?: string; // '4-4-5' or equal
+  spread_profile_name?: string; // '4-4-5' => 445 distribution; unset, 'equal' or 'flat' => equal thirds
+  period_start?: string;
+  period_end?: string;
 };
 
 type MonthlyPayload = {
@@ -45,23 +50,25 @@ export class CapexAmountsService {
     private readonly freeze: FreezeService,
   ) {}
 
-  async bulkUpsert(versionId: string, payload: AnnualPayload | QuarterlyPayload | MonthlyPayload, userId?: string, opts?: { manager?: EntityManager }) {
+  async bulkUpsert(versionId: string, payload: AnnualPayload | QuarterlyPayload | MonthlyPayload, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const version = await mg.getRepository(CapexVersion).findOne({ where: { id: versionId } });
     if (!version) throw new NotFoundException('Version not found');
 
-    // Yearly totals always spread in equal twelfths on CAPEX.
-    const { before, after } = await writeAmountsPayload({ manager: mg, freeze: this.freeze, scope: 'capex', version }, payload);
+    // Spread profiles resolve as on OPEX (flat, or a named SpreadProfile); an unknown one is a 400.
+    const result = await writeAmountsPayload({ manager: mg, freeze: this.freeze, scope: 'capex', version }, payload);
+    const { before, after } = result;
 
     await this.audit.log({ table: 'capex_amounts', recordId: null, action: 'update', before, after, userId }, { manager: mg });
-    return { updated: after.length };
+    await recordPayloadRoundInputs({ manager: mg, scope: 'capex', version, userId: userId ?? null, audit: this.audit }, result);
+    return { updated: after.length, round_inputs: await versionRoundInputs(mg, 'capex', version) };
   }
 
   async listByYear(versionId: string, year?: number, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
+    const version = await mg.getRepository(CapexVersion).findOne({ where: { id: versionId } });
     let targetYear = year;
     if (!targetYear) {
-      const version = await mg.getRepository(CapexVersion).findOne({ where: { id: versionId } });
       if (!version) throw new NotFoundException('Version not found');
       targetYear = (version as any).budget_year as number;
     }
@@ -91,6 +98,7 @@ export class CapexAmountsService {
       committed: Number(formatCents(totals.committed)),
       forecast: Number(formatCents(totals.forecast)),
     };
-    return { items, totals: roundedTotals, year: targetYear };
+    const round_inputs = version ? await versionRoundInputs(mg, 'capex', version) : [];
+    return { items, totals: roundedTotals, year: targetYear, round_inputs };
   }
 }

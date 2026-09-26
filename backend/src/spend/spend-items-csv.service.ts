@@ -17,7 +17,8 @@ import { FreezeService } from '../freeze/freeze.service';
 import { CurrencySettingsService } from '../currency/currency-settings.service';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { addCents, formatCents, toCents } from '../common/amount';
-import { AmountMeasure, replaceAmounts, spreadAnnualRows } from './amounts-write.util';
+import { AmountMeasure } from './amounts-write.util';
+import { writeItemCsvTotals } from './round-inputs.util';
 import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
 import { SpendItemUpsertDto } from './dto/spend-item.dto';
 import { ItemNumberService } from '../common/item-number.service';
@@ -484,7 +485,7 @@ export class SpendItemsCsvService {
           version = await mg.getRepository(SpendVersion).save(version);
           await this.audit.log({ table: 'spend_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
         }
-        await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze);
+        await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze, userId ?? null);
       }
       processed += 1;
     }
@@ -497,7 +498,9 @@ export class SpendItemsCsvService {
   /**
    * Spread a year's totals from the file flat over its twelve months. Only the
    * measures with a value in the file replace that year: a blank cell leaves
-   * the stored months as they are, an explicit 0 clears them.
+   * the stored months (and the column's period) as they are, an explicit 0
+   * clears them. Each planning column written gets a whole-year flat spread
+   * record.
    */
   async writeImportedTotals(
     mg: EntityManager,
@@ -505,17 +508,18 @@ export class SpendItemsCsvService {
     year: number,
     totals: Partial<Record<'planned' | 'actual' | 'expected_landing' | 'committed', number>>,
     checkedFreeze?: Set<string>,
+    userId: string | null = null,
   ) {
     const annualTotals: Partial<Record<AmountMeasure, bigint>> = {};
     for (const measure of ['planned', 'actual', 'expected_landing', 'committed'] as const) {
       const value = totals[measure];
       if (value != null && !isNaN(Number(value))) annualTotals[measure] = toCents(value);
     }
-    if (Object.keys(annualTotals).length === 0) return;
-    await replaceAmounts(
+    await writeItemCsvTotals(
       { manager: mg, freeze: this.freeze, scope: 'opex', version, checkedFreeze },
+      { userId, audit: this.audit },
       year,
-      spreadAnnualRows(year, annualTotals),
+      annualTotals,
     );
   }
 

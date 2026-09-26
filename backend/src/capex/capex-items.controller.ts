@@ -351,6 +351,37 @@ export class CapexItemsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('capex', 'admin')
+  @Post('budget-operations/copy-column')
+  copyBudgetColumn(
+    @Body() body: {
+      sourceYear: number;
+      sourceColumn: 'budget' | 'revision' | 'follow_up' | 'landing';
+      destinationYear: number;
+      destinationColumn: 'budget' | 'revision' | 'follow_up' | 'landing';
+      percentageIncrease: number | string;
+      overwrite: boolean;
+      dryRun: boolean;
+    },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.copyBudgetColumn(body, ctx.userId || null, { manager: ctx.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'admin')
+  @Post('budget-operations/clear-column')
+  clearBudgetColumn(
+    @Body() body: {
+      year: number;
+      column: 'budget' | 'revision' | 'follow_up' | 'landing';
+    },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.clearBudgetColumn(body, ctx.userId || null, { manager: ctx.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'admin')
   @Delete('bulk')
   bulkDelete(
     @Body() body: { ids: string[] },

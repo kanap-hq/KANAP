@@ -2,7 +2,16 @@ import { BadRequestException, InternalServerErrorException } from '@nestjs/commo
 import { EntityManager } from 'typeorm';
 import { FreezeColumn, FreezeService } from '../freeze/freeze.service';
 import { formatCents, toCents } from '../common/amount';
-import { FLAT_WEIGHTS, spreadAnnualToMonths, spreadQuarterlyToMonths } from './spread.util';
+import {
+  activeMonths,
+  FLAT_WEIGHTS,
+  NO_ACTIVE_MONTH_MESSAGE,
+  profileWeights,
+  SpreadInputError,
+  SpreadWindow,
+  spreadAnnualToMonths,
+  spreadQuarterlyToMonths,
+} from './spread.util';
 
 /**
  * The one way amounts are written, for OPEX (`spend_amounts`) and CAPEX
@@ -78,8 +87,8 @@ export type StoredAmountRow = {
   updated_at: Date;
 };
 
-/** Rows around the write, for the audit log. */
-export type AmountsWriteResult = { periods: string[]; before: StoredAmountRow[]; after: StoredAmountRow[] };
+/** Rows around the write, for the audit log, and the measures written. */
+export type AmountsWriteResult = { periods: string[]; measures: AmountMeasure[]; before: StoredAmountRow[]; after: StoredAmountRow[] };
 
 export function isAmountMeasure(value: unknown): value is AmountMeasure {
   return typeof value === 'string' && (AMOUNT_MEASURES as readonly string[]).includes(value);
@@ -185,7 +194,10 @@ async function assertMeasuresEditable(ctx: AmountsWriteContext, year: number, me
   }
 }
 
-async function readRows(ctx: AmountsWriteContext, periods: string[], lock = false): Promise<StoredAmountRow[]> {
+/** What reading or locking a version's months needs. */
+type MonthsContext = Pick<AmountsWriteContext, 'manager' | 'scope' | 'version'>;
+
+async function readRows(ctx: MonthsContext, periods: string[], lock = false): Promise<StoredAmountRow[]> {
   return ctx.manager.query(
     `SELECT id, tenant_id, version_id, to_char(period, 'YYYY-MM-DD') AS period,
             planned, forecast, committed, actual, expected_landing, created_at, updated_at
@@ -214,7 +226,7 @@ async function upsertColumns(ctx: AmountsWriteContext, measures: AmountMeasure[]
 }
 
 /** Create the months that do not exist yet, in period order; returns the periods created. */
-async function createMissingMonths(ctx: AmountsWriteContext, periods: string[]): Promise<Set<string>> {
+async function createMissingMonths(ctx: MonthsContext, periods: string[]): Promise<Set<string>> {
   const created: Array<{ period: string }> = await ctx.manager.query(
     `INSERT INTO ${AMOUNT_TABLE[ctx.scope]} (tenant_id, version_id, period)
      SELECT $1::uuid, $2::uuid, p FROM unnest($3::date[]) AS p ORDER BY p
@@ -259,7 +271,21 @@ async function write(ctx: AmountsWriteContext, year: number, rows: AmountRowInpu
   });
   for (const group of groups.values()) await upsertColumns(ctx, group.measures, group.rows);
   const after = await readRows(ctx, periods);
-  return { periods, before, after };
+  return { periods, measures, before, after };
+}
+
+/**
+ * Take the lock every amounts write takes, without writing amounts: create the
+ * missing months of `year`, then lock the twelve in period order. A caller
+ * that changes only round inputs takes it first, so a record is never locked
+ * before the months (no deadlock with a concurrent spread of the same line).
+ */
+export async function lockYearMonths(ctx: MonthsContext, year: number): Promise<void> {
+  assertVersionTenant(ctx.version);
+  assertYearMatchesVersion(year, ctx.version);
+  const periods = yearPeriods(year);
+  await createMissingMonths(ctx, periods);
+  await readRows(ctx, periods, true);
 }
 
 /**
@@ -293,9 +319,78 @@ export function spreadAnnualRows(
   year: number,
   totals: Partial<Record<AmountMeasure, bigint>>,
   weights: readonly bigint[] = FLAT_WEIGHTS,
+  window?: SpreadWindow,
 ): AmountRowInput[] {
-  return spreadAnnualToMonths(year, totals, weights);
+  return spreadAnnualToMonths(year, totals, weights, window);
 }
+
+/** A spread input error becomes a 400 with its readable message. */
+function asBadRequest<T>(fn: () => T): T {
+  try {
+    return fn();
+  } catch (err) {
+    if (err instanceof SpreadInputError) throw new BadRequestException(err.message);
+    throw err;
+  }
+}
+
+/** A spread profile as used: its name, integer weights and the stored weights as written. */
+export type ResolvedProfile = { name: string; weights: readonly bigint[]; labels: string[] };
+
+export const FLAT_PROFILE: ResolvedProfile = { name: 'flat', weights: FLAT_WEIGHTS, labels: FLAT_WEIGHTS.map(() => '1') };
+
+/**
+ * The profile a yearly spread uses, shared by OPEX and CAPEX: unset or
+ * 'flat' is equal twelfths; any other name must be a row of the global
+ * `spread_profiles` table with usable weights. Anything else is refused,
+ * never replaced by flat.
+ */
+export async function resolveSpreadProfile(manager: EntityManager, raw: unknown): Promise<ResolvedProfile> {
+  if (raw === undefined || raw === null || raw === '' || raw === 'flat') return FLAT_PROFILE;
+  // spread_profiles is global (no tenant_id): every tenant reads the same rows.
+  const rows: Array<{ name: string; weights_json: unknown }> = typeof raw === 'string'
+    ? await manager.query(`SELECT name, weights_json FROM spread_profiles WHERE name = $1`, [raw])
+    : [];
+  const weights = rows.length ? profileWeights(rows[0].weights_json) : null;
+  if (!weights) {
+    const names: Array<{ name: string }> = await manager.query(`SELECT name FROM spread_profiles ORDER BY name`);
+    const accepted = Array.from(new Set(['flat', ...names.map((n) => n.name)]));
+    throw new BadRequestException(`Unknown spread profile '${String(raw)}'. Use ${accepted.join(', ')}.`);
+  }
+  return { name: rows[0].name, weights, labels: (rows[0].weights_json as unknown[]).map((w) => String(w)) };
+}
+
+const QUARTERLY_DISTRIBUTIONS = new Map<unknown, 'equal' | '445'>([['equal', 'equal'], ['flat', 'equal'], ['4-4-5', '445']]);
+
+/** Period of a spread payload: both bounds or neither (the whole year), at least one active month. */
+export type PayloadPeriod = { period_start: string; period_end: string; active_months: number[] };
+
+export function parsePayloadPeriod(payload: Record<string, unknown>, year: number): PayloadPeriod {
+  const given = (value: unknown) => value !== undefined && value !== null && !(typeof value === 'string' && value.trim() === '');
+  const hasStart = given(payload.period_start);
+  const hasEnd = given(payload.period_end);
+  if (hasStart !== hasEnd) {
+    throw new BadRequestException('Send both period_start and period_end, or neither for the whole year.');
+  }
+  const period_start = hasStart ? String(payload.period_start).trim() : `${year}-01-01`;
+  const period_end = hasEnd ? String(payload.period_end).trim() : `${year}-12-31`;
+  const months = asBadRequest(() => activeMonths(year, period_start, period_end));
+  if (months.length === 0) throw new BadRequestException(NO_ACTIVE_MONTH_MESSAGE);
+  return { period_start, period_end, active_months: months };
+}
+
+/** What a spread payload did, so its round inputs can be recorded. */
+export type PayloadSpread =
+  | { kind: 'annual'; totals: Partial<Record<AmountMeasure, bigint>>; profile: ResolvedProfile; period: PayloadPeriod }
+  | {
+    kind: 'quarterly';
+    measure: AmountMeasure;
+    quarters: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', bigint>;
+    distribution: 'equal' | '445';
+    period: PayloadPeriod;
+  };
+
+export type AmountsPayloadResult = AmountsWriteResult & { spread: PayloadSpread | null };
 
 function asObject(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -307,20 +402,19 @@ function asObject(value: unknown, label: string): Record<string, unknown> {
 /**
  * Apply an amounts payload from the budget tab, the API or the AI:
  * - `annual`: `totals` names one or more measures; each is spread over the
- *   year (flat, or the weights `annualWeights` resolves) and replaces the
- *   twelve months of that measure only.
+ *   period (flat, or the named spread profile) and replaces the twelve
+ *   months of that measure only.
  * - `quarterly`: one `measure`; `Q1`..`Q4` are spread inside their quarter
- *   and replace that measure's year, an omitted quarter being zero.
+ *   over the active months of the period and replace that measure's year, an
+ *   omitted quarter being zero.
  * - `monthly`: `months` rows patch only the cells they carry.
+ * `period_start` / `period_end` (annual and quarterly) default to the whole
+ * year. Everything is validated before the first write.
  */
-export async function writeAmountsPayload(
-  ctx: AmountsWriteContext,
-  rawPayload: unknown,
-  annualWeights: (profileName: string | undefined) => Promise<readonly bigint[]> = async () => FLAT_WEIGHTS,
-): Promise<AmountsWriteResult> {
+export async function writeAmountsPayload(ctx: AmountsWriteContext, rawPayload: unknown): Promise<AmountsPayloadResult> {
   const payload = asObject(rawPayload, 'The amounts');
   const year = assertYearMatchesVersion(payload.year, ctx.version);
-  const profileName = typeof payload.spread_profile_name === 'string' ? payload.spread_profile_name : undefined;
+  const profileName = payload.spread_profile_name;
 
   if (payload.kind === 'annual') {
     const input = asObject(payload.totals ?? {}, 'totals');
@@ -332,19 +426,33 @@ export async function writeAmountsPayload(
     if (Object.keys(totals).length === 0) {
       throw new BadRequestException('The yearly totals must name at least one amount.');
     }
-    return replaceAmounts(ctx, year, spreadAnnualRows(year, totals, await annualWeights(profileName)));
+    const period = parsePayloadPeriod(payload, year);
+    const profile = await resolveSpreadProfile(ctx.manager, profileName);
+    const window = { start: period.period_start, end: period.period_end };
+    const rows = asBadRequest(() => spreadAnnualRows(year, totals, profile.weights, window));
+    const result = await replaceAmounts(ctx, year, rows);
+    return { ...result, spread: { kind: 'annual', totals, profile, period } };
   }
 
   if (payload.kind === 'quarterly') {
     const measure = payload.measure;
     if (!isAmountMeasure(measure)) throw unknownMeasure(String(measure ?? ''));
-    const quarters: Partial<Record<'Q1' | 'Q2' | 'Q3' | 'Q4', bigint>> = {};
+    const quarters: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', bigint> = { Q1: 0n, Q2: 0n, Q3: 0n, Q4: 0n };
     for (const quarter of ['Q1', 'Q2', 'Q3', 'Q4'] as const) {
       if (!Object.prototype.hasOwnProperty.call(payload, quarter)) continue;
       quarters[quarter] = validateAmountValue(payload[quarter], `${measureLabel(measure)} ${quarter}`);
     }
-    const rows = spreadQuarterlyToMonths(year, measure, quarters, profileName === '4-4-5' ? '445' : 'equal');
-    return replaceAmounts(ctx, year, rows);
+    const distribution = profileName === undefined || profileName === null || profileName === ''
+      ? 'equal'
+      : QUARTERLY_DISTRIBUTIONS.get(profileName);
+    if (!distribution) {
+      throw new BadRequestException(`Unknown spread profile '${String(profileName)}' for quarters. Use equal, flat or 4-4-5.`);
+    }
+    const period = parsePayloadPeriod(payload, year);
+    const window = { start: period.period_start, end: period.period_end };
+    const rows = asBadRequest(() => spreadQuarterlyToMonths(year, measure, quarters, distribution, window));
+    const result = await replaceAmounts(ctx, year, rows);
+    return { ...result, spread: { kind: 'quarterly', measure, quarters, distribution, period } };
   }
 
   if (payload.kind === 'monthly') {
@@ -362,8 +470,46 @@ export async function writeAmountsPayload(
       }
       return row;
     });
-    return patchAmounts(ctx, year, rows);
+    return { ...(await patchAmounts(ctx, year, rows)), spread: null };
   }
 
   throw new BadRequestException('Unsupported amounts payload: kind must be annual, quarterly or monthly.');
+}
+
+/** The twelve months (cents) of every measure of a version's own year; a missing month or NULL is zero. */
+export type VersionMonths = { stored: boolean; months: Record<AmountMeasure, bigint[]> };
+
+export function emptyMonths(): Record<AmountMeasure, bigint[]> {
+  return Object.fromEntries(AMOUNT_MEASURES.map((m) => [m, Array.from({ length: 12 }, () => 0n)])) as Record<AmountMeasure, bigint[]>;
+}
+
+/**
+ * Stored months of several versions in one query, keyed by version id.
+ * `stored` says whether the version has at least one month in its year.
+ */
+export async function readVersionMonths(
+  manager: EntityManager,
+  scope: AmountScope,
+  tenantId: string,
+  versions: ReadonlyArray<{ id: string; budget_year: number | string }>,
+): Promise<Map<string, VersionMonths>> {
+  const result = new Map<string, VersionMonths>();
+  for (const version of versions) result.set(version.id, { stored: false, months: emptyMonths() });
+  if (versions.length === 0) return result;
+  const yearOf = new Map(versions.map((v) => [v.id, Number(v.budget_year)]));
+  const rows: Array<Record<string, string | null>> = await manager.query(
+    `SELECT version_id, to_char(period, 'YYYY-MM-DD') AS period, planned, forecast, committed, actual, expected_landing
+     FROM ${AMOUNT_TABLE[scope]}
+     WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`,
+    [tenantId, versions.map((v) => v.id)],
+  );
+  for (const row of rows) {
+    const entry = result.get(String(row.version_id));
+    const period = String(row.period);
+    if (!entry || Number(period.slice(0, 4)) !== yearOf.get(String(row.version_id))) continue;
+    const index = Number(period.slice(5, 7)) - 1;
+    entry.stored = true;
+    for (const measure of AMOUNT_MEASURES) entry.months[measure][index] += toCents(row[measure]);
+  }
+  return result;
 }
