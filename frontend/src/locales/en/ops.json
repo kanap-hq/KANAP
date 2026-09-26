@@ -1043,6 +1043,14 @@
       "copiedUplift": "Copied from {{column}} {{year}} {{uplift}}",
       "copiedPlain": "Copied",
       "manual": "Edited by hand"
-    }
+    },
+    "listAnd": "{{first}} and {{last}}",
+    "amount": "Amount",
+    "reset": "Reset",
+    "applyToAll": "Apply to all columns",
+    "alsoSpread_one": "{{columns}} will also be spread over this period.",
+    "alsoSpread_other": "{{columns}} will also be spread over this period.",
+    "frozenUnchanged_one": "{{columns}} is frozen and stays unchanged.",
+    "frozenUnchanged_other": "{{columns}} are frozen and stay unchanged."
   }
 }

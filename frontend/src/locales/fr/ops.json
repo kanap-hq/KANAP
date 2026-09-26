@@ -1043,6 +1043,14 @@
       "copiedUplift": "Copié depuis {{column}} {{year}} {{uplift}}",
       "copiedPlain": "Copié",
       "manual": "Modifié à la main"
-    }
+    },
+    "listAnd": "{{first}} et {{last}}",
+    "amount": "Montant",
+    "reset": "Réinitialiser",
+    "applyToAll": "Appliquer à toutes les colonnes",
+    "alsoSpread_one": "Cette période s'applique aussi à {{columns}}.",
+    "alsoSpread_other": "{{columns}} seront aussi répartis sur cette période.",
+    "frozenUnchanged_one": "{{columns}} : colonne gelée, inchangée.",
+    "frozenUnchanged_other": "{{columns}} : colonnes gelées, inchangées."
   }
 }

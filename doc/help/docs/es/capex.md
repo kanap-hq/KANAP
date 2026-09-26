@@ -222,7 +222,12 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 **Repartir un importe**:
 
 - El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde **Cambiar el periodo**
-- Elija una columna (Presupuesto, Revisión, Previsión, Aterrizaje previsto o Realizado), introduzca un importe anual, elija **Uniforme** o **4-4-5** y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna
+- Elija una **Columna** (Presupuesto, Revisión, Previsión, Aterrizaje previsto o Realizado), compruebe el **Importe**, elija una **Distribución** (**Uniforme** o **4-4-5**) y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna, y la distribución de la que ya tiene la columna
+- El importe parte del total actual de la columna, en ambas pestañas, y se actualiza cuando elige otra columna. Queda vacío cuando la columna no tiene importe
+- **Aplicar a todas las columnas** está activado por defecto: Presupuesto, Revisión, Previsión y Aterrizaje previsto reciben el mismo periodo y la misma distribución, cada una con su propio total actual. Una línea encima de **Aplicar** las enumera con sus totales. Las columnas congeladas no se modifican. Desactive el interruptor para repartir solo la columna seleccionada
+- El Realizado nunca se reparte con las demás columnas. Cuando elige Realizado, el interruptor se oculta y solo se reparte el Realizado
+- **Restablecer** rellena el panel con el total actual de la columna, **Uniforme** y el año completo. No guarda nada: haga clic en **Aplicar** para usarlo. Con **Aplicar a todas las columnas** activado, **Restablecer** y luego **Aplicar** devuelven cada columna a un reparto uniforme en doce meses
+- Los totales introducidos en la pestaña **Anual** siguen aplicándose solo a su propia columna
 - Antes de aplicar, el panel muestra los meses que cuentan («9 meses, de abril a diciembre») y los meses que se pondrán a cero («De enero a marzo se pondrán a cero.»)
 - Con **4-4-5**, los pesos de los meses que cuentan se amplían para que todo el importe recaiga en ellos
 - Aparece un aviso no bloqueante cuando el periodo va más allá de las fechas de la partida. Aun así puede aplicar

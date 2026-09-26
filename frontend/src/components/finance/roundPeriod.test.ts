@@ -5,13 +5,16 @@ import frOps from '../../locales/fr/ops.json';
 import {
   RoundInput,
   activeMonths,
+  centsToDecimal,
   chipText,
   columnLabel,
   formatUplift,
+  joinList,
   periodForEdit,
   periodProblem,
   periodText,
   suggestedPeriod,
+  toCents,
   zeroedMonthsText,
 } from './roundPeriod';
 
@@ -152,3 +155,22 @@ describe('texts', () => {
     expect(formatUplift('en', '0.00')).toBe('');
   });
 });
+
+describe('amount helpers', () => {
+  it('sums in cents and writes two decimals', () => {
+    const months = [1333.33, 1333.33, 1333.34, 0.1, 0.2];
+    const cents = months.reduce((sum, v) => sum + toCents(v), 0);
+    expect(cents).toBe(400030);
+    expect(centsToDecimal(cents)).toBe('4000.30');
+    expect(centsToDecimal(600000)).toBe('6000.00');
+    expect(centsToDecimal(-5)).toBe('-0.05');
+    expect(toCents('')).toBe(0);
+  });
+
+  it('joins names in the viewer language', () => {
+    expect(joinList(en(), ['Revision'])).toBe('Revision');
+    expect(joinList(en(), ['Revision', 'Forecast', 'Expected landing'])).toBe('Revision, Forecast and Expected landing');
+    expect(joinList(fr(), ['Révision', 'Prévision'])).toBe('Révision et Prévision');
+  });
+});
+

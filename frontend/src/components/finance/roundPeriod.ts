@@ -190,3 +190,22 @@ export function chipText(t: TFunction, locale: string, record: RoundInput | null
   if (profile === 'flat' || profile == null) return t('budgetTab.chip.spreadFlat');
   return t('budgetTab.chip.spread');
 }
+
+/** "A", "A and B", "A, B and C" in the viewer's language. */
+export function joinList(t: TFunction, items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return t('budgetTab.listAnd', { first: items.slice(0, -1).join(', '), last: items[items.length - 1] });
+}
+
+/** Integer cents of an amount, so column sums never go through a float total. */
+export function toCents(value: number | string | null | undefined): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? Math.round(n * 100) : 0;
+}
+
+/** Cents written as a two-decimal string (`'6000.00'`), the exact form sent to the server. */
+export function centsToDecimal(cents: number): string {
+  const sign = cents < 0 ? '-' : '';
+  const abs = Math.abs(cents);
+  return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;
+}

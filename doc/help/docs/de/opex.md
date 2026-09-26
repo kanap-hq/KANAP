@@ -173,7 +173,12 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
 
 **Einen Betrag verteilen**:
   - Das Verteilungsfeld ist im Tab **Monatlich** immer sichtbar. Im Tab **Jährlich** öffnet es sich über **Zeitraum ändern**
-  - Wählen Sie eine Spalte (Budget, Revision, Prognose, Erwarteter Endwert oder Ist-Werte), geben Sie einen Jahresbetrag ein, wählen Sie **Gleichmäßig** oder **4-4-5** und legen Sie die Daten **Von** und **Bis** fest. Die Daten gehen vom aktuellen Zeitraum der Spalte aus
+  - Wählen Sie eine **Spalte** (Budget, Revision, Prognose, Erwarteter Endwert oder Ist-Werte), prüfen Sie den **Betrag**, wählen Sie eine **Verteilung** (**Gleichmäßig** oder **4-4-5**) und legen Sie die Daten **Von** und **Bis** fest. Die Daten gehen vom aktuellen Zeitraum der Spalte aus, die Verteilung von der bisherigen Verteilung der Spalte
+  - Der Betrag übernimmt die aktuelle Summe der Spalte, in beiden Tabs, und passt sich an, wenn Sie eine andere Spalte wählen. Er bleibt leer, wenn die Spalte keinen Betrag hat
+  - **Auf alle Spalten anwenden** ist standardmäßig aktiviert: Budget, Revision, Prognose und Erwarteter Endwert erhalten denselben Zeitraum und dieselbe Verteilung, jeweils mit ihrer eigenen aktuellen Summe. Eine Zeile über **Anwenden** listet sie mit ihren Summen auf. Eingefrorene Spalten bleiben unverändert. Schalten Sie den Schalter aus, um nur die gewählte Spalte zu verteilen
+  - Ist-Werte werden nie zusammen mit den anderen Spalten verteilt. Wenn Sie Ist-Werte wählen, ist der Schalter ausgeblendet und nur die Ist-Werte werden verteilt
+  - **Zurücksetzen** füllt das Feld mit der aktuellen Summe der Spalte, **Gleichmäßig** und dem ganzen Jahr. Dabei wird nichts gespeichert: Klicken Sie auf **Anwenden**, um es zu übernehmen. Ist **Auf alle Spalten anwenden** aktiviert, setzen **Zurücksetzen** und dann **Anwenden** jede Spalte auf eine gleichmäßige Verteilung über zwölf Monate zurück
+  - Summen, die Sie im Tab **Jährlich** eingeben, gelten weiterhin nur für ihre eigene Spalte
   - Vor dem Anwenden zeigt das Feld die Monate, die zählen („9 Monate, April bis Dezember“), und die Monate, die auf null gesetzt werden („Januar bis März werden auf null gesetzt.“)
   - Mit **4-4-5** werden die Gewichte der zählenden Monate hochskaliert, sodass der gesamte Betrag auf sie entfällt
   - Ein Hinweis erscheint, wenn der Zeitraum über die Daten der Position hinausgeht. Sie können trotzdem anwenden

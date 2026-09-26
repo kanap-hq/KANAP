@@ -72,13 +72,15 @@ function period(month: number) {
 }
 
 /** Mocked API; `state.frozen` is read on every freeze-state fetch, so a test can freeze a column midway. */
-function setupApi({ grain, frozen = [], empty = false, roundInputs }: {
+function setupApi({ grain, frozen = [], empty = false, roundInputs, monthValues = {} }: {
   grain: Grain;
   frozen?: FrozenColumn[];
   /** The version holds no amount at all. */
   empty?: boolean;
   /** Stored periods returned with the amounts (omitted: the field is absent). */
   roundInputs?: RoundInput[];
+  /** Replaces the stored value of every month for these columns. */
+  monthValues?: Partial<Record<'planned' | 'committed' | 'actual' | 'expected_landing' | 'forecast', string>>;
 }) {
   const state = { frozen: [...frozen] };
   const version = { id: 'v1', input_grain: grain, budget_year: YEAR };
@@ -89,6 +91,7 @@ function setupApi({ grain, frozen = [], empty = false, roundInputs }: {
     actual: '800',
     expected_landing: '700',
     forecast: '600',
+    ...monthValues,
   }));
   const totals = empty
     ? { planned: 0, committed: 0, actual: 0, expected_landing: 0, forecast: 0 }
@@ -530,10 +533,11 @@ describe('BudgetTab periods', () => {
     fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
 
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    // "Apply to all columns" is on by default: the empty columns get the same period.
     expect(bulkCalls()[0][1]).toEqual({
       kind: 'annual',
       year: YEAR,
-      totals: { planned: 12000 },
+      totals: { planned: '12000.00', committed: '0.00', forecast: '0.00', expected_landing: '0.00' },
       spread_profile_name: '4-4-5',
       period_start: '2026-04-01',
       period_end: '2026-12-31',
@@ -562,7 +566,7 @@ describe('BudgetTab periods', () => {
     expect(bulkCalls()[0][1]).toEqual({
       kind: 'annual',
       year: YEAR,
-      totals: { committed: 10800 },
+      totals: { committed: '10800.00', planned: '12000.00', forecast: '7200.00', expected_landing: '8400.00' },
       spread_profile_name: 'flat',
       period_start: '2026-07-01',
       period_end: '2026-12-31',
@@ -588,7 +592,7 @@ describe('BudgetTab periods', () => {
     fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
 
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: 12000 }, spread_profile_name: '4-4-5', period_start: '2026-05-01', period_end: '2026-12-31' });
+    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '12000.00' }, spread_profile_name: '4-4-5', period_start: '2026-05-01', period_end: '2026-12-31' });
   });
 
   it('a year switch closes the yearly panel and hides the period lines until the new year is loaded', async () => {
@@ -605,6 +609,87 @@ describe('BudgetTab periods', () => {
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/freeze-states', { params: { year: YEAR + 1 } }));
     await waitFor(() => expect(periodLine('planned')).toHaveTextContent('12 months, January to December'));
     expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).not.toBeInTheDocument();
+  });
+
+  it('Reset fills the whole year, flat, with the column total and writes nothing', async () => {
+    setupApi({
+      grain: 'annual',
+      roundInputs: [record({ spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '12000.00', profile: '4-4-5', active_months: [4, 5, 6, 7, 8, 9, 10, 11, 12], weights: [] } })],
+    });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
+    const amount = await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
+    fireEvent.change(amount, { target: { value: '500' } });
+    expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('opex.budget.profile445');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(amount).toHaveValue('12 000');
+    expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('opex.budget.profileFlat');
+    // The Revision and Landing lines, plus the panel caption (Budget's line keeps its stored April start).
+    expect(screen.getAllByText('12 months, January to December')).toHaveLength(3);
+    expect(bulkCalls()).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({
+      totals: { planned: '12000.00' }, spread_profile_name: 'flat', period_start: '2026-01-01', period_end: '2026-12-31',
+    });
+  });
+
+  it('Apply to all columns sends every planning total in exact cents, without a frozen column', async () => {
+    // 333.33 twelve times: a float sum gives 3999.9599999999996, cents give 3999.96.
+    setupApi({ grain: 'monthly', frozen: ['revision'], monthValues: { forecast: '333.33' } });
+    renderTab();
+    await waitForAmounts();
+
+    expect(screen.getByTestId('spread-others')).toHaveTextContent('Forecast (4 000) and Expected landing (8 400) will also be spread over this period.');
+    expect(screen.getByTestId('spread-frozen')).toHaveTextContent('Revision is frozen and stays unchanged.');
+
+    fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '24000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'annual',
+      year: YEAR,
+      totals: { planned: '24000.00', forecast: '3999.96', expected_landing: '8400.00' },
+      spread_profile_name: 'flat',
+      period_start: '2026-01-01',
+      period_end: '2026-12-31',
+    });
+  });
+
+  it('with Apply to all columns off, only the selected column is sent', async () => {
+    setupApi({ grain: 'monthly' });
+    renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(screen.getByLabelText('Apply to all columns'));
+    expect(screen.queryByTestId('spread-others')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '12000.00' } });
+    expect(Object.keys(bulkCalls()[0][1].totals)).toEqual(['planned']);
+  });
+
+  it('the monthly panel starts with the column total and follows the column select', async () => {
+    setupApi({ grain: 'monthly' });
+    renderTab();
+    await waitForAmounts();
+
+    const amount = screen.getByPlaceholderText('opex.budget.spreadPlaceholder');
+    expect(amount).toHaveValue('12 000');
+
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(await screen.findByRole('option', { name: 'Revision' }));
+    expect(amount).toHaveValue('10 800');
+
+    // Actuals are spread alone: no switch.
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(await screen.findByRole('option', { name: 'Actuals' }));
+    expect(amount).toHaveValue('9 600');
+    expect(screen.queryByLabelText('Apply to all columns')).not.toBeInTheDocument();
   });
 });
 

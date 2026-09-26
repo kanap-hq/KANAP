@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { Alert, Box, Button, IconButton, MenuItem, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, FormControlLabel, IconButton, MenuItem, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,22 +14,27 @@ import YearTabs from '../navigation/YearTabs';
 import FormattedNumberField from '../inputs/FormattedNumberField';
 import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx, tealLinkSx } from '../../theme/formSx';
 import DateEUField from '../fields/DateEUField';
+import { FieldLabel } from '../design';
 import BudgetTrendChart from './BudgetTrendChart';
 import { FinanceModuleConfig } from './config';
 import { patchYearlyTotalsCache } from './yearlyTotals';
 import {
   AmountMeasure,
+  PLANNING_MEASURES,
   Period,
   PlanningMeasure,
   RoundInput,
   activeMonths,
+  centsToDecimal,
   chipText,
   columnLabel,
   isPlanningMeasure,
+  joinList,
   periodForEdit,
   periodProblem,
   periodText,
   suggestedPeriod,
+  toCents,
   wholeYear,
   zeroedMonthsText,
 } from './roundPeriod';
@@ -81,6 +86,16 @@ const ALL_COLS: AmountCol[] = ['planned', 'committed', 'actual', 'expected_landi
 const SPREAD_COLS: AmountCol[] = ['planned', 'committed', 'forecast', 'expected_landing', 'actual'];
 const NO_STORED_AMOUNTS: Record<PlanningMeasure, boolean> = { planned: false, committed: false, forecast: false, expected_landing: false };
 
+/** A column's yearly total in cents, summed month by month. */
+function monthsCents(rows: AmountRow[], col: AmountCol): number {
+  return rows.reduce((sum, row) => sum + toCents(row[col]), 0);
+}
+
+/** The spread panel's amount field: the total, or empty when it is zero. */
+function amountOrEmpty(cents: number): number | '' {
+  return cents === 0 ? '' : cents / 100;
+}
+
 /** The distribution the spread panel starts with: the column's own, so a period change keeps its shape. */
 function profileOf(measure: AmountCol, inputs: RoundInput[]): 'flat' | '4-4-5' {
   return inputs.find((r) => r.measure === measure)?.spread_profile_name === '4-4-5' ? '4-4-5' : 'flat';
@@ -129,6 +144,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const spreadMeasureRef = React.useRef(spreadMeasure); spreadMeasureRef.current = spreadMeasure;
   const [spreadDates, setSpreadDates] = React.useState<Period | null>(null);
   const [spreadBusy, setSpreadBusy] = React.useState(false);
+  // On by default: the panel's period and distribution go to every planning column.
+  const [spreadAllColumns, setSpreadAllColumns] = React.useState(true);
   // The yearly view shows the panel only when asked for, on one column.
   const [panelOpen, setPanelOpen] = React.useState(false);
 
@@ -216,6 +233,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         setMonths(emptyMonths(year));
         setRoundInputs([]);
         setStoredAmounts(NO_STORED_AMOUNTS);
+        setSpreadAmount('');
         resetDirty();
         setLoadedYear(year);
         return;
@@ -250,6 +268,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       const loadedInputs = Array.isArray(amt.data?.round_inputs) ? amt.data.round_inputs : [];
       setRoundInputs(loadedInputs);
       setSpreadProfile(profileOf(spreadMeasureRef.current, loadedInputs));
+      setSpreadAmount(amountOrEmpty(monthsCents(loadedMonths, spreadMeasureRef.current)));
       resetDirty();
       setLoadedYear(year);
     } catch (e) {
@@ -400,11 +419,33 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   );
   const spreadFrozen = frozen[FREEZE_KEY[spreadMeasure]];
 
+  // A column's current total in cents: the typed yearly total in the yearly
+  // view (it may not be saved yet), else the sum of its months.
+  const currentCents = (col: AmountCol): number => (
+    mode === 'flat' && col !== 'forecast' ? toCents(flat[col as MeasureKey]) : monthsCents(months, col)
+  );
+
   const onSpreadMeasureChange = (measure: AmountCol) => {
     setSpreadMeasure(measure);
     setSpreadDates(null);
     setSpreadProfile(profileOf(measure, roundInputs));
+    setSpreadAmount(amountOrEmpty(currentCents(measure)));
   };
+  // Back to a flat spread of the column's current total over the whole year. Writes nothing.
+  const resetSpread = () => {
+    setSpreadAmount(amountOrEmpty(currentCents(spreadMeasure)));
+    setSpreadProfile('flat');
+    setSpreadDates(wholeYear(year));
+  };
+
+  // With "Apply to all columns", the other planning columns that are not frozen
+  // are spread with their own current total. Actuals never are.
+  const spreadToAll = spreadAllColumns && spreadMeasure !== 'actual';
+  const otherPlanning = PLANNING_MEASURES
+    .filter((col) => col !== spreadMeasure)
+    .sort((a, b) => SPREAD_COLS.indexOf(a) - SPREAD_COLS.indexOf(b));
+  const alsoSpread = spreadToAll ? otherPlanning.filter((col) => !frozen[FREEZE_KEY[col]]) : [];
+  const frozenLeft = spreadToAll ? otherPlanning.filter((col) => frozen[FREEZE_KEY[col]]) : [];
   const onSpreadDateChange = (bound: 'start' | 'end', value: string) => {
     setSpreadDates({ ...spreadPeriod, [bound]: value });
   };
@@ -413,7 +454,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     setSpreadMeasure(measure);
     setSpreadDates(null);
     setSpreadProfile(profileOf(measure, roundInputs));
-    setSpreadAmount(flat[measure] === '' ? '' : Number(flat[measure]) || '');
+    setSpreadAmount(amountOrEmpty(toCents(flat[measure])));
     setPanelOpen(true);
   };
   const closeSpreadPanel = () => {
@@ -427,6 +468,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const applySpread = async () => {
     const amount = Number(spreadAmount || 0);
     if (!amount || spreadProblem || spreadFrozen) return;
+    // Totals in cents, sent as two-decimal strings: no float sum reaches the server.
+    const totals: Record<string, string> = { [spreadMeasure]: centsToDecimal(toCents(amount)) };
+    alsoSpread.forEach((col) => { totals[col] = centsToDecimal(currentCents(col)); });
     const fromYearly = modeRef.current === 'flat';
     setError(null);
     setSpreadBusy(true);
@@ -437,7 +481,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, {
         kind: 'annual',
         year,
-        totals: { [spreadMeasure]: amount },
+        totals,
         spread_profile_name: spreadProfile,
         period_start: spreadPeriod.start,
         period_end: spreadPeriod.end,
@@ -504,40 +548,51 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const headCellSx = { textAlign: 'right', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1, py: 0.75, whiteSpace: 'nowrap', verticalAlign: 'top' } as const;
   const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
 
+  // Every control has its label above it, so the row sits on one baseline and wraps cleanly.
+  const panelField = (label: string, width: number, control: React.ReactNode) => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', width }}>
+      <FieldLabel sx={{ mb: '2px' }}>{label}</FieldLabel>
+      {control}
+    </Box>
+  );
+  const otherLabel = (col: AmountCol) => `${labelFor(col)} (${fmt(currentCents(col) / 100)})`;
+
   const spreadPanel = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, bgcolor: 'kanap.bg.drawer', border: '1px solid', borderColor: 'kanap.border.soft', borderRadius: '8px', p: 1.5 }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 1.5 }}>
-        <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center' }}>{t(`${config.i18nPrefix}.budget.spreadHelper`)}</Typography>
-        <TextField
-          select size="small" variant="standard" value={spreadMeasure}
-          onChange={(e) => onSpreadMeasureChange(e.target.value as AmountCol)}
-          inputProps={{ 'aria-label': t('budgetTab.column') }}
-          sx={[drawerSelectSx, { width: 'auto', minWidth: 120 }]}
-        >
-          {SPREAD_COLS.map((col) => <MenuItem key={col} value={col} sx={drawerMenuItemSx}>{labelFor(col)}</MenuItem>)}
-        </TextField>
-        <FormattedNumberField value={spreadAmount} onChange={(e) => setSpreadAmount(e.target.value as unknown as number | '')} variant="standard" size="small" placeholder={t(`${config.i18nPrefix}.budget.spreadPlaceholder`)} sx={{ width: 120 }} />
-        <TextField
-          select size="small" variant="standard" value={spreadProfile}
-          onChange={(e) => setSpreadProfile(e.target.value as 'flat' | '4-4-5')}
-          inputProps={{ 'aria-label': t('budgetTab.distribution') }}
-          sx={[drawerSelectSx, { width: 'auto', minWidth: 90 }]}
-        >
-          <MenuItem value="flat" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profileFlat`)}</MenuItem>
-          <MenuItem value="4-4-5" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profile445`)}</MenuItem>
-        </TextField>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, bgcolor: 'kanap.bg.drawer', border: '1px solid', borderColor: 'kanap.border.soft', borderRadius: '8px', p: 1.5 }}>
+      <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t(`${config.i18nPrefix}.budget.spreadHelper`)}</Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 1.5, rowGap: 1 }}>
+        {panelField(t('budgetTab.column'), 150, (
+          <TextField
+            select size="small" variant="standard" value={spreadMeasure}
+            onChange={(e) => onSpreadMeasureChange(e.target.value as AmountCol)}
+            inputProps={{ 'aria-label': t('budgetTab.column') }}
+            sx={drawerSelectSx}
+          >
+            {SPREAD_COLS.map((col) => <MenuItem key={col} value={col} sx={drawerMenuItemSx}>{labelFor(col)}</MenuItem>)}
+          </TextField>
+        ))}
+        {panelField(t('budgetTab.amount'), 130, (
+          <FormattedNumberField
+            value={spreadAmount}
+            onChange={(e) => setSpreadAmount(e.target.value as unknown as number | '')}
+            variant="standard" size="small" fullWidth
+            placeholder={t(`${config.i18nPrefix}.budget.spreadPlaceholder`)}
+            inputProps={{ 'aria-label': t('budgetTab.amount') }}
+          />
+        ))}
+        {panelField(t('budgetTab.distribution'), 120, (
+          <TextField
+            select size="small" variant="standard" value={spreadProfile}
+            onChange={(e) => setSpreadProfile(e.target.value as 'flat' | '4-4-5')}
+            inputProps={{ 'aria-label': t('budgetTab.distribution') }}
+            sx={drawerSelectSx}
+          >
+            <MenuItem value="flat" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profileFlat`)}</MenuItem>
+            <MenuItem value="4-4-5" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profile445`)}</MenuItem>
+          </TextField>
+        ))}
         <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} size="small" sx={{ width: 150 }} />
         <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} size="small" sx={{ width: 150 }} />
-        <Button
-          size="small" variant="contained"
-          onClick={() => void applySpread()}
-          disabled={!spreadAmount || !!spreadProblem || spreadFrozen || spreadBusy}
-        >
-          {t(`${config.i18nPrefix}.budget.spreadApply`)}
-        </Button>
-        {mode === 'flat' && (
-          <Button size="small" onClick={closeSpreadPanel} sx={{ textTransform: 'none' }}>{t('common:buttons.cancel')}</Button>
-        )}
       </Box>
       <Box>
         {spreadProblem ? (
@@ -555,6 +610,38 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         )}
         <Typography sx={captionSx}>{t('budgetTab.convention')}</Typography>
       </Box>
+      {spreadMeasure !== 'actual' && (
+        <Box>
+          <FormControlLabel
+            control={<Switch size="small" checked={spreadAllColumns} onChange={(e) => setSpreadAllColumns(e.target.checked)} />}
+            label={<Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyToAll')}</Typography>}
+            sx={{ ml: 0 }}
+          />
+          {alsoSpread.length > 0 && (
+            <Typography sx={{ ...captionSx, color: 'kanap.text.secondary' }} data-testid="spread-others">
+              {t('budgetTab.alsoSpread', { count: alsoSpread.length, columns: joinList(t, alsoSpread.map(otherLabel)) })}
+            </Typography>
+          )}
+          {frozenLeft.length > 0 && (
+            <Typography sx={captionSx} data-testid="spread-frozen">
+              {t('budgetTab.frozenUnchanged', { count: frozenLeft.length, columns: joinList(t, frozenLeft.map((col) => labelFor(col))) })}
+            </Typography>
+          )}
+        </Box>
+      )}
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Button
+          size="small" variant="contained"
+          onClick={() => void applySpread()}
+          disabled={!spreadAmount || !!spreadProblem || spreadFrozen || spreadBusy}
+        >
+          {t(`${config.i18nPrefix}.budget.spreadApply`)}
+        </Button>
+        <Button size="small" variant="action" onClick={resetSpread}>{t('budgetTab.reset')}</Button>
+        {mode === 'flat' && (
+          <Button size="small" onClick={closeSpreadPanel} sx={{ textTransform: 'none' }}>{t('common:buttons.cancel')}</Button>
+        )}
+      </Stack>
     </Box>
   );
 

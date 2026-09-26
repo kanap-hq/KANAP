@@ -173,7 +173,12 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
 
 **Répartir un montant** :
   - Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis **Modifier la période**
-  - Choisissez une colonne (Budget, Révision, Prévision, Atterrissage prévu ou Réalisé), saisissez un montant annuel, choisissez **Linéaire** ou **4-4-5**, puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne
+  - Choisissez une **Colonne** (Budget, Révision, Prévision, Atterrissage prévu ou Réalisé), vérifiez le **Montant**, choisissez une **Répartition** (**Linéaire** ou **4-4-5**), puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne, et la répartition de celle de la colonne
+  - Le montant reprend le total actuel de la colonne, dans les deux onglets, et suit lorsque vous choisissez une autre colonne. Il reste vide lorsque la colonne n'a aucun montant
+  - **Appliquer à toutes les colonnes** est activé par défaut : Budget, Révision, Prévision et Atterrissage prévu reçoivent la même période et la même répartition, chacune avec son propre total actuel. Une ligne au-dessus du bouton **Appliquer** les liste avec leurs totaux. Les colonnes gelées restent inchangées. Désactivez l'interrupteur pour ne répartir que la colonne choisie
+  - Le Réalisé n'est jamais réparti avec les autres colonnes. Lorsque vous choisissez Réalisé, l'interrupteur est masqué et seul le Réalisé est réparti
+  - **Réinitialiser** remplit le panneau avec le total actuel de la colonne, **Linéaire** et l'année entière. Rien n'est enregistré : cliquez sur **Appliquer** pour l'utiliser. Avec **Appliquer à toutes les colonnes** activé, **Réinitialiser** puis **Appliquer** remet chaque colonne en répartition linéaire sur douze mois
+  - Les totaux saisis dans l'onglet **Annuel** s'appliquent toujours à leur seule colonne
   - Avant d'appliquer, le panneau affiche les mois qui comptent (« 9 mois, avril à décembre ») et les mois qui seront mis à zéro (« Janvier à mars seront mis à zéro. »)
   - Avec **4-4-5**, les poids des mois qui comptent sont augmentés pour que tout le montant se répartisse sur eux
   - Un avertissement non bloquant apparaît lorsque la période dépasse les dates du poste. Vous pouvez tout de même appliquer

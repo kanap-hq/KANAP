@@ -173,7 +173,12 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 
 **Spreading an amount**:
   - The spread panel is always visible in the **Monthly** tab. In the **Flat** tab it opens from **Change period**
-  - Choose a column (Budget, Revision, Forecast, Expected landing or Actuals), type a yearly amount, pick **Flat** or **4-4-5**, and set the **From** and **To** dates. The dates start from the column's current period
+  - Choose a **Column** (Budget, Revision, Forecast, Expected landing or Actuals), check the **Amount**, pick a **Distribution** (**Flat** or **4-4-5**), and set the **From** and **To** dates. The dates start from the column's current period, and the distribution from the column's own
+  - The amount starts with the column's current total, in both tabs, and follows when you choose another column. It is empty when the column has no amount
+  - **Apply to all columns** is on by default: Budget, Revision, Forecast and Expected landing all get the same period and distribution, each with its own current total. A line above **Apply** lists them with their totals. Frozen columns are left as they are. Turn the switch off to spread only the selected column
+  - Actuals are never spread with the other columns. When you choose Actuals, the switch is hidden and only Actuals are spread
+  - **Reset** fills the panel with the column's current total, **Flat** and the whole year. It saves nothing: click **Apply** to use it. With **Apply to all columns** on, **Reset** then **Apply** brings every column back to a flat spread over twelve months
+  - Totals typed in the **Flat** tab still apply to their own column only
   - Before you apply, the panel shows the months that count ("9 months, April to December") and the months that will be set to zero ("January to March will be set to zero.")
   - With **4-4-5**, the weights of the months that count are scaled up so the whole amount lands on them
   - A soft warning appears when the period goes beyond the item's dates. You can still apply
