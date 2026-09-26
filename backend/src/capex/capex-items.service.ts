@@ -71,6 +71,16 @@ function parseSummaryYears(raw: unknown): number[] {
   return Array.from(new Set(years.filter((year) => year >= 1000)));
 }
 
+/**
+ * The version an item shows for `year`: none after the year of its end of
+ * validity, so a later year contributes nothing. The same rule as OPEX
+ * (`spend-summary.builder.ts`, `SpendItemsService.summaryTotals`).
+ */
+function versionWithinValidity<T>(perYear: Map<number, T> | undefined, year: number, disabledAt: unknown): T | undefined {
+  const endYear = disabledAt ? new Date(disabledAt as string | Date).getFullYear() : null;
+  return endYear != null && year > endYear ? undefined : perYear?.get(year);
+}
+
 function displayName(user?: User | null): string {
   if (!user) return '';
   const fn = (user as any).first_name ? String((user as any).first_name).trim() : '';
@@ -520,7 +530,7 @@ export class CapexItemsService {
   }
 
   // CAPEX summary endpoint: derived yearly totals and spread mode
-  async summary(query: any, opts?: { manager?: EntityManager; exportAll?: boolean }) {
+  async summary(query: any, opts?: { manager?: EntityManager; exportAll?: boolean; unmaskedYears?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
     const now = new Date();
     const Y = now.getFullYear();
@@ -707,10 +717,12 @@ export class CapexItemsService {
 
     const result = items.map((it) => {
       const perYear = versionsByItemYear.get(it.id) || new Map<number, CapexVersion>();
-      const vMinus1 = perYear.get(Y - 1);
-      const vCurr = perYear.get(Y);
-      const vPlus1 = perYear.get(Y + 1);
-      const vPlus2 = perYear.get(Y + 2);
+      // Years after the end of validity show nothing, unless the caller asks for what is stored.
+      const shown = (year: number) => (opts?.unmaskedYears ? perYear.get(year) : versionWithinValidity(perYear, year, (it as any).disabled_at));
+      const vMinus1 = shown(Y - 1);
+      const vCurr = shown(Y);
+      const vPlus1 = shown(Y + 1);
+      const vPlus2 = shown(Y + 2);
       const spread_mode_for_y = vCurr ? (vCurr.input_grain === 'annual' ? 'flat' : 'manual') : null;
       const allocationForY = vCurr ? allocationDataByYear.get(Y)?.get(vCurr.id) : undefined;
       const allocationForYPlus1 = vPlus1 ? allocationDataByYear.get(Y + 1)?.get(vPlus1.id) : undefined;
@@ -727,7 +739,7 @@ export class CapexItemsService {
           y: toTotals(vCurr),
           yPlus1: toTotals(vPlus1),
           yPlus2: toTotals(vPlus2),
-          ...Object.fromEntries(requestedYears.map((year) => [`y${year}`, toTotals(perYear.get(year))])),
+          ...Object.fromEntries(requestedYears.map((year) => [`y${year}`, toTotals(shown(year))])),
         },
         spread_mode_for_y,
         allocation_method_label: allocationMethodLabel,
@@ -1204,7 +1216,8 @@ export class CapexItemsService {
     // Data export
     const now = new Date();
     const Y = now.getFullYear();
-    const { items } = await this.summary({ page: 1, limit: 100000, sort: 'created_at:DESC' }, { ...opts, exportAll: true });
+    // What is stored, as the OPEX item export writes it: a masked 0 would clear that year on re-import.
+    const { items } = await this.summary({ page: 1, limit: 100000, sort: 'created_at:DESC' }, { ...opts, exportAll: true, unmaskedYears: true });
 
     // Get company names for items that have company_id
     const mgExport = opts?.manager ?? this.repo.manager;
@@ -1677,8 +1690,9 @@ export class CapexItemsService {
       acc.committed = addCents(acc.committed, (a as any).committed);
     }
 
+    const disabledAtById = new Map(data.map((row: any) => [row.id as string, row.disabled_at]));
     function sumFor(itemId: string, year: number, key: 'planned' | 'actual' | 'expected_landing' | 'committed') {
-      const v = versionsByItemYear.get(itemId)?.get(year);
+      const v = versionWithinValidity(versionsByItemYear.get(itemId), year, disabledAtById.get(itemId));
       if (!v) return 0;
       const sum = amountsByVersion[v.id] || { planned: 0n, actual: 0n, expected_landing: 0n, committed: 0n } as any;
       return Number(formatCents(sum[key]));
