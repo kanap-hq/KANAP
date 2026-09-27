@@ -116,7 +116,7 @@ Unterhalb des Grids zeigt eine Statistikleiste:
 - Ohne Prozentsatz werden die Beträge exakt kopiert, auf den Cent genau
 - Mit einem Prozentsatz wird jeder Monat auf einen ganzen Betrag gerundet. Die Jahressumme ist die Quellsumme mit angewendetem Prozentsatz, auf einen ganzen Betrag gerundet. Die kleine Differenz wird dem letzten Monat mit einem Betrag zugeschlagen. Beispiel: 12.000, verteilt von April bis Dezember (1.333,33 pro Monat und 1.333,36 im Dezember), ergeben mit +2 % kopiert 1.360 pro Monat und 12.240 für das Jahr
 - Der Zeitraum der Spalte wandert mit der Kopie: April bis Dezember 2026 wird zu April bis Dezember 2027. Ein Zeitraum, der am 29. Februar endet, endet in einem Jahr ohne diesen Tag am 28. Februar
-- Eine Quelle ohne Zeitraum oder eine Ist-Werte-Quelle ergibt einen Zeitraum über das ganze Jahr
+- Eine Quelle ohne Zeitraum ergibt einen Zeitraum über das ganze Jahr
 - Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026 +2 %“
 - Das Kopieren einer Spalte auf sich selbst (gleiches Jahr und gleiche Spalte) wird abgelehnt
 - Die Kopie gilt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts gespeichert
@@ -301,7 +301,7 @@ Die Datei verwendet das Semikolon `;` als Trennzeichen und die Kodierung UTF-8.
 | `item_number` | Die Positionsnummer, zum Beispiel `7`. Beim Import funktioniert auch die Referenz (`OPX-7`, `CPX-7`) |
 | `year` | Vier Ziffern |
 | `measure` | Die Spalte: `planned` (Budget), `committed` (Revision), `forecast` (Prognose), `actual` (Ist-Werte), `expected_landing` (Erwarteter Endwert). Beim Import funktionieren auch `budget`, `revision`, `follow_up` und `landing` |
-| `period_start`, `period_end` | Der Zeitraum der Spalte im Format `YYYY-MM-DD`, innerhalb des Jahres der Zeile. Leer bei Ist-Werte-Zeilen. Beim Import bedeuten zwei leere Werte das ganze Jahr |
+| `period_start`, `period_end` | Der Zeitraum der Spalte im Format `YYYY-MM-DD`, innerhalb des Jahres der Zeile. Beim Import bedeuten zwei leere Werte das ganze Jahr |
 | `jan` bis `dec` | Die zwölf Monatsbeträge, mit einem Punkt als Dezimaltrennzeichen. Beim Import werden auch ein Komma und Leerzeichen akzeptiert |
 | `method` | Wie die Spalte entstanden ist: `spread`, `copied` oder `manual`. Nur zur Information, beim Import ignoriert |
 
@@ -316,7 +316,7 @@ Die Datei verwendet das Semikolon `;` als Trennzeichen und die Kodierung UTF-8.
 - Eine Zeile, die dem gespeicherten Stand entspricht, bleibt unverändert, einschließlich der Angabe, wie die Spalte entstanden ist. Ein erneuter Import eines Exports ändert nichts
 - Eine Zeile mit geänderten Beträgen kennzeichnet die Spalte als **Von Hand geändert**, mit dem Zeitraum aus der Datei
 - Eine Zeile, die nur den Zeitraum ändert, aktualisiert den Zeitraum und behält den Rest bei
-- Ist-Werte-Zeilen sind erlaubt, sodass Sie monatliche Ist-Werte importieren können. Ist-Werte haben keinen Zeitraum
+- Ist-Werte-Zeilen folgen denselben Regeln, sodass Sie monatliche Ist-Werte importieren können
 - Eine geänderte Zeile in einer eingefrorenen Spalte wird abgelehnt. Eine unveränderte Zeile in einer eingefrorenen Spalte wird akzeptiert
 - Doppelte Zeilen (gleiche Position, gleiches Jahr und gleiche Spalte), unbekannte Positionsnummern und Positionen eines Typs, den Sie nicht administrieren dürfen, sind Fehler
 - Der Import erfordert Administrationsrechte für OPEX oder für CAPEX. Der Export erfordert Lesezugriff auf einen der beiden Bereiche

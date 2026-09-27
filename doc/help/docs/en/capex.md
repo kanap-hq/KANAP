@@ -199,11 +199,10 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 
 **Period of a column**:
 
-- Budget, Revision, Forecast and Expected landing each have a period inside the year, for example April to December
+- Every column (Budget, Revision, Forecast, Actuals and Expected landing) has a period inside the year, for example April to December
 - A month counts when the period covers its 15th. A period that starts on April 10 includes April; one that starts on April 20 begins in May
 - A column with no amount and no period yet gets a suggestion: the item's **Effective start** and **End of validity**, limited to the year. An investment that starts on April 1 suggests April to December
 - A column that already holds amounts and has no period reads as the whole year, so existing data behaves as before
-- Actuals always cover the whole year
 
 **Flat vs Monthly**:
 
@@ -224,8 +223,7 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 - The spread panel is always visible in the **Monthly** tab. In the **Flat** tab it opens from the pencil icon under a total
 - Choose a **Column** (Budget, Revision, Forecast, Expected landing or Actuals), check the **Amount**, pick a **Distribution** (**Flat** or **4-4-5**), and set the **From** and **To** dates. The dates start from the column's current period, and the distribution from the column's own
 - The amount starts with the column's current total, in both tabs, and follows when you choose another column. It is empty when the column has no amount
-- **Apply to all columns** is on by default: Budget, Revision, Forecast and Expected landing all get the same period and distribution, each with its own current total. Hover the switch to see which columns follow. Frozen columns and Actuals never change. Turn the switch off to spread only the selected column
-- Actuals are never spread with the other columns. When you choose Actuals, the switch is hidden and only Actuals are spread
+- **Apply to all columns** is on by default: the selected column, plus Budget, Revision, Forecast and Expected landing, all get the same period and distribution, each with its own current total. Hover the switch to see which columns follow. The other columns keep their own period, and frozen columns never change. Turn the switch off to spread only the selected column
 - **Reset** fills the panel with the column's current total, **Flat** and the whole year. It saves nothing: click **Apply** to use it. With **Apply to all columns** on, **Reset** then **Apply** brings every column back to a flat spread over twelve months
 - Totals typed in the **Flat** tab still apply to their own column only
 - The **From** and **To** dates show the period. When some months fall outside it, the panel says which ones will be set to zero ("January to March will be set to zero."). A whole-year period shows no line. Hover the info icon next to the panel title to see the 15th rule
@@ -233,7 +231,6 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 - A soft warning appears when the period goes beyond the item's dates. You can still apply
 - **Apply** stays disabled while a date is missing or no month counts. Nothing is saved before you click **Apply**
 - From the **Monthly** tab, Apply fills the grid. From the **Flat** tab, you stay in the Flat view
-- For Actuals, the dates only shape that one spread. Actuals keep no period
 
 **How each column was produced**:
 

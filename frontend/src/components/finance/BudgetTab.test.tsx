@@ -464,7 +464,9 @@ describe('BudgetTab periods', () => {
 
     await waitFor(() => expect(periodLine('planned')).toHaveTextContent("No month of 2026 is within the item's dates."));
     expect(screen.getAllByRole('textbox')[0]).toBeDisabled();
-    expect(screen.getAllByRole('button', { name: 'Choose the period' })).toHaveLength(3);
+    // Every yearly column, Actuals included.
+    expect(screen.getAllByRole('button', { name: 'Choose the period' })).toHaveLength(4);
+    expect(periodLine('actual')).toHaveTextContent("No month of 2026 is within the item's dates.");
   });
 
   it('the save response refreshes the chip', async () => {
@@ -485,6 +487,7 @@ describe('BudgetTab periods', () => {
       roundInputs: [
         record({ spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '12000.00', profile: '4-4-5', active_months: [4, 5, 6, 7, 8, 9, 10, 11, 12], weights: [] } }),
         record({ measure: 'forecast', method: 'manual', period_start: '2026-01-01' }),
+        record({ measure: 'actual', method: 'copied', period_start: '2026-01-01', last_calculation: { kind: 'copy', source_year: 2025, source_measure: 'actual', uplift_pct: '0', source_total: '9600.00', total: '9600.00', source_method: null } }),
       ],
     });
     const { container } = renderTab();
@@ -493,6 +496,8 @@ describe('BudgetTab periods', () => {
     const header = container.querySelector('thead') as HTMLElement;
     expect(within(header).getByText('Spread 4-4-5')).toBeInTheDocument();
     expect(within(header).getByText('Edited by hand')).toBeInTheDocument();
+    // Actuals carry their label like any column.
+    expect(within(header).getByText('Copied from Actuals 2025')).toBeInTheDocument();
   });
 
   it('the spread panel shows the zeroed months and the item-dates hint, and the 15th rule on hover', async () => {
@@ -558,9 +563,9 @@ describe('BudgetTab periods', () => {
     fireEvent.click(within(periodLine('committed').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
     const amount = await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
     expect(amount).toHaveValue('10 800');
-    // The three period lines; the panel adds no period text. The whole year starts before
-    // the item (April 1), so the only line is that hint.
-    expect(screen.getAllByText('12 months, January to December')).toHaveLength(3);
+    // The four period lines (Actuals included); the panel adds no period text. The whole
+    // year starts before the item (April 1), so the only line is that hint.
+    expect(screen.getAllByText('12 months, January to December')).toHaveLength(4);
     expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^The period goes beyond the item's dates\.$/);
 
     const [from] = screen.getAllByPlaceholderText('labels.datePlaceholder');
@@ -645,7 +650,7 @@ describe('BudgetTab periods', () => {
     });
   });
 
-  it('Apply to all columns sends every planning total in exact cents, without a frozen column', async () => {
+  it('Apply to all columns sends every total of the group in exact cents, without a frozen column', async () => {
     // 333.33 twelve times: a float sum gives 3999.9599999999996, cents give 3999.96.
     setupApi({ grain: 'monthly', frozen: ['revision'], monthValues: { forecast: '333.33' } });
     renderTab();
@@ -655,7 +660,7 @@ describe('BudgetTab periods', () => {
     expect(screen.queryByText(/will also be spread/)).not.toBeInTheDocument();
     fireEvent.mouseOver(screen.getByText('Apply to all columns'));
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      'Budget, Revision, Forecast and Expected landing follow the same period. Actuals and frozen columns never change.',
+      'Budget, Revision, Forecast and Expected landing follow the same period. Actuals keeps its own period. Frozen columns never change.',
     );
 
     fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '24000' } });
@@ -698,11 +703,36 @@ describe('BudgetTab periods', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'Revision' }));
     expect(amount).toHaveValue('10 800');
 
-    // Actuals are spread alone: no switch.
     fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
     fireEvent.click(await screen.findByRole('option', { name: 'Actuals' }));
     expect(amount).toHaveValue('9 600');
-    expect(screen.queryByLabelText('Apply to all columns')).not.toBeInTheDocument();
+  });
+
+  it('Actuals is a column like the others: its period, its label and the switch', async () => {
+    setupApi({
+      grain: 'annual',
+      roundInputs: [record({ measure: 'actual', method: 'manual', period_start: '2026-07-01' })],
+    });
+    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+
+    expect(periodLine('actual')).toHaveTextContent('Edited by hand · 6 months, July to December');
+
+    // From Actuals, the switch spreads Actuals plus the four columns of the group.
+    fireEvent.click(within(periodLine('actual').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
+    expect(await screen.findByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('9 600');
+    expect(screen.getByLabelText('Apply to all columns')).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'annual',
+      year: YEAR,
+      totals: { actual: '9600.00', planned: '12000.00', committed: '10800.00', forecast: '7200.00', expected_landing: '8400.00' },
+      spread_profile_name: 'flat',
+      period_start: '2026-07-01',
+      period_end: '2026-12-31',
+    });
   });
 });
 

@@ -154,11 +154,10 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
   - **Atterrissage prévu** : Dépense réelle finale après la clôture de fin d'année
 
 **Période d'une colonne** :
-  - Budget, Révision, Prévision et Atterrissage prévu ont chacun une période à l'intérieur de l'année, par exemple d'avril à décembre
+  - Chaque colonne (Budget, Révision, Prévision, Réalisé et Atterrissage prévu) a une période à l'intérieur de l'année, par exemple d'avril à décembre
   - Un mois compte lorsque la période couvre son 15. Une période qui commence le 10 avril inclut avril ; une période qui commence le 20 avril débute en mai
   - Une colonne sans montant ni période reçoit une suggestion : le **Début d'effet** et la **Fin de validité** du poste, limités à l'année. Un poste qui commence le 1er avril suggère d'avril à décembre
   - Une colonne qui porte déjà des montants sans période est lue comme couvrant toute l'année : les données existantes se comportent comme avant
-  - Le Réalisé couvre toujours toute l'année
 
 **Annuel ou Mensuel** :
   - **Annuel** : Saisissez un total par colonne. Le total est réparti uniformément sur les mois de la période de la colonne, et les mois hors de cette période sont mis à zéro. La période s'affiche sous chaque total avant la saisie, par exemple « 9 mois, avril à décembre ». Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
@@ -175,8 +174,7 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
   - Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis l'icône crayon sous un total
   - Choisissez une **Colonne** (Budget, Révision, Prévision, Atterrissage prévu ou Réalisé), vérifiez le **Montant**, choisissez une **Répartition** (**Linéaire** ou **4-4-5**), puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne, et la répartition de celle de la colonne
   - Le montant reprend le total actuel de la colonne, dans les deux onglets, et suit lorsque vous choisissez une autre colonne. Il reste vide lorsque la colonne n'a aucun montant
-  - **Appliquer à toutes les colonnes** est activé par défaut : Budget, Révision, Prévision et Atterrissage prévu reçoivent la même période et la même répartition, chacune avec son propre total actuel. Survolez l'interrupteur pour voir les colonnes concernées. Les colonnes gelées et le Réalisé ne changent jamais. Désactivez l'interrupteur pour ne répartir que la colonne choisie
-  - Le Réalisé n'est jamais réparti avec les autres colonnes. Lorsque vous choisissez Réalisé, l'interrupteur est masqué et seul le Réalisé est réparti
+  - **Appliquer à toutes les colonnes** est activé par défaut : la colonne choisie, ainsi que Budget, Révision, Prévision et Atterrissage prévu, reçoivent la même période et la même répartition, chacune avec son propre total actuel. Survolez l'interrupteur pour voir les colonnes concernées. Les autres colonnes gardent leur propre période, et les colonnes gelées ne changent jamais. Désactivez l'interrupteur pour ne répartir que la colonne choisie
   - **Réinitialiser** remplit le panneau avec le total actuel de la colonne, **Linéaire** et l'année entière. Rien n'est enregistré : cliquez sur **Appliquer** pour l'utiliser. Avec **Appliquer à toutes les colonnes** activé, **Réinitialiser** puis **Appliquer** remet chaque colonne en répartition linéaire sur douze mois
   - Les totaux saisis dans l'onglet **Annuel** s'appliquent toujours à leur seule colonne
   - Les dates **Du** et **Au** affichent la période. Quand des mois tombent en dehors, le panneau indique lesquels seront mis à zéro (« Janvier à mars seront mis à zéro. »). Une période sur l'année entière n'affiche aucune ligne. Survolez l'icône d'information à côté du titre du panneau pour voir la règle du 15
@@ -184,7 +182,6 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
   - Un avertissement non bloquant apparaît lorsque la période dépasse les dates du poste. Vous pouvez tout de même appliquer
   - **Appliquer** reste désactivé tant qu'une date manque ou qu'aucun mois ne compte. Rien n'est enregistré avant que vous cliquiez sur **Appliquer**
   - Depuis l'onglet **Mensuel**, Appliquer remplit la grille. Depuis l'onglet **Annuel**, vous restez dans la vue Annuel
-  - Pour le Réalisé, les dates servent uniquement à cette répartition. Le Réalisé ne conserve aucune période
 
 **Origine de chaque colonne** :
   - Un court libellé indique d'où viennent les montants d'une colonne. Dans l'onglet **Mensuel**, il se trouve sous l'en-tête de colonne (survolez-le pour voir la période). Dans l'onglet **Annuel**, il se trouve à côté de la période

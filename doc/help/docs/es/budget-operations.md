@@ -116,7 +116,7 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 - Sin porcentaje, los importes se copian exactamente, al céntimo
 - Con un porcentaje, cada mes se redondea a un importe entero. El total anual es el total de origen con el porcentaje aplicado, redondeado a un importe entero. La pequeña diferencia se asigna al último mes que tiene importe. Por ejemplo, 12.000 repartidos de abril a diciembre (1.333,33 al mes y 1.333,36 en diciembre) copiados con +2 % dan 1.360 al mes y 12.240 para el año
 - El periodo de la columna se desplaza con la copia: de abril a diciembre de 2026 pasa a ser de abril a diciembre de 2027. Un periodo que termina el 29 de febrero termina el 28 de febrero en un año que no lo tiene
-- Un origen sin periodo, o un origen Realizado, da un periodo de todo el año
+- Un origen sin periodo da un periodo de todo el año
 - En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026 +2 %»
 - Copiar una columna sobre sí misma (mismo año y misma columna) se rechaza
 - La copia es de todo o nada: si una partida falla, no se guarda nada
@@ -301,7 +301,7 @@ El archivo usa el punto y coma `;` como separador y la codificación UTF-8.
 | `item_number` | El número de la partida, por ejemplo `7`. Al importar, la referencia también funciona (`OPX-7`, `CPX-7`) |
 | `year` | Cuatro dígitos |
 | `measure` | La columna: `planned` (Presupuesto), `committed` (Revisión), `forecast` (Previsión), `actual` (Realizado), `expected_landing` (Aterrizaje previsto). Al importar, `budget`, `revision`, `follow_up` y `landing` también funcionan |
-| `period_start`, `period_end` | El periodo de la columna en formato `YYYY-MM-DD`, dentro del año de la fila. Vacíos en las filas de Realizado. Al importar, ambos vacíos significan todo el año |
+| `period_start`, `period_end` | El periodo de la columna en formato `YYYY-MM-DD`, dentro del año de la fila. Al importar, ambos vacíos significan todo el año |
 | `jan` a `dec` | Los doce importes mensuales, con un punto como separador decimal. Al importar, también se aceptan la coma y los espacios |
 | `method` | Cómo se produjo la columna: `spread`, `copied` o `manual`. Solo informativo, se ignora al importar |
 
@@ -316,7 +316,7 @@ El archivo usa el punto y coma `;` como separador y la codificación UTF-8.
 - Una fila idéntica a lo guardado no se modifica, incluida la forma en que se produjo la columna. Volver a importar una exportación no cambia nada
 - Una fila cuyos importes cambian marca la columna como **Editado a mano**, con el periodo del archivo
 - Una fila que solo cambia el periodo actualiza el periodo y conserva el resto
-- Las filas de Realizado están permitidas, lo que permite importar el realizado mensual. El realizado no tiene periodo
+- Las filas de Realizado siguen las mismas reglas, lo que permite importar el realizado mensual
 - Una fila modificada en una columna congelada se rechaza. Una fila idéntica en una columna congelada se acepta
 - Las filas repetidas (misma partida, año y columna), los números de partida desconocidos y las partidas de un tipo que no puede administrar son errores
 - Importar requiere permisos de administración sobre OPEX o sobre CAPEX. Exportar requiere acceso de lectura a uno de los dos

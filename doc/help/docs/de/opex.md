@@ -154,11 +154,10 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
   - **Erwarteter Endwert**: Tatsächliche Ausgaben nach dem Jahresabschluss
 
 **Zeitraum einer Spalte**:
-  - Budget, Revision, Prognose und Erwarteter Endwert haben jeweils einen Zeitraum innerhalb des Jahres, zum Beispiel April bis Dezember
+  - Jede Spalte (Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert) hat einen Zeitraum innerhalb des Jahres, zum Beispiel April bis Dezember
   - Ein Monat zählt, wenn der Zeitraum seinen 15. Tag abdeckt. Ein Zeitraum, der am 10. April beginnt, schließt den April ein; einer, der am 20. April beginnt, startet im Mai
   - Eine Spalte ohne Betrag und ohne Zeitraum erhält einen Vorschlag: **Beginn der Gültigkeit** und **Ende der Gültigkeit** der Position, begrenzt auf das Jahr. Eine Position, die am 1. April beginnt, ergibt den Vorschlag April bis Dezember
   - Eine Spalte, die bereits Beträge enthält und keinen Zeitraum hat, gilt als ganzes Jahr, sodass sich vorhandene Daten wie bisher verhalten
-  - Ist-Werte decken immer das ganze Jahr ab
 
 **Jährlich oder Monatlich**:
   - **Jährlich**: Geben Sie eine Summe pro Spalte ein. Die Summe wird gleichmäßig auf die Monate des Zeitraums der Spalte verteilt, und die Monate außerhalb des Zeitraums werden auf null gesetzt. Der Zeitraum wird unter jeder Summe angezeigt, bevor Sie etwas eingeben, zum Beispiel „9 Monate, April bis Dezember“. Nur die Summe, die Sie bearbeiten, wird gespeichert. Die anderen Spalten behalten ihre Monatsbeträge.
@@ -175,8 +174,7 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
   - Das Verteilungsfeld ist im Tab **Monatlich** immer sichtbar. Im Tab **Jährlich** öffnet es sich über das Stiftsymbol unter einer Summe
   - Wählen Sie eine **Spalte** (Budget, Revision, Prognose, Erwarteter Endwert oder Ist-Werte), prüfen Sie den **Betrag**, wählen Sie eine **Verteilung** (**Gleichmäßig** oder **4-4-5**) und legen Sie die Daten **Von** und **Bis** fest. Die Daten gehen vom aktuellen Zeitraum der Spalte aus, die Verteilung von der bisherigen Verteilung der Spalte
   - Der Betrag übernimmt die aktuelle Summe der Spalte, in beiden Tabs, und passt sich an, wenn Sie eine andere Spalte wählen. Er bleibt leer, wenn die Spalte keinen Betrag hat
-  - **Auf alle Spalten anwenden** ist standardmäßig aktiviert: Budget, Revision, Prognose und Erwarteter Endwert erhalten denselben Zeitraum und dieselbe Verteilung, jeweils mit ihrer eigenen aktuellen Summe. Fahren Sie mit der Maus über den Schalter, um zu sehen, welche Spalten folgen. Eingefrorene Spalten und Ist-Werte ändern sich nie. Schalten Sie den Schalter aus, um nur die gewählte Spalte zu verteilen
-  - Ist-Werte werden nie zusammen mit den anderen Spalten verteilt. Wenn Sie Ist-Werte wählen, ist der Schalter ausgeblendet und nur die Ist-Werte werden verteilt
+  - **Auf alle Spalten anwenden** ist standardmäßig aktiviert: Die gewählte Spalte sowie Budget, Revision, Prognose und Erwarteter Endwert erhalten denselben Zeitraum und dieselbe Verteilung, jeweils mit ihrer eigenen aktuellen Summe. Fahren Sie mit der Maus über den Schalter, um zu sehen, welche Spalten folgen. Die übrigen Spalten behalten ihren eigenen Zeitraum, und eingefrorene Spalten ändern sich nie. Schalten Sie den Schalter aus, um nur die gewählte Spalte zu verteilen
   - **Zurücksetzen** füllt das Feld mit der aktuellen Summe der Spalte, **Gleichmäßig** und dem ganzen Jahr. Dabei wird nichts gespeichert: Klicken Sie auf **Anwenden**, um es zu übernehmen. Ist **Auf alle Spalten anwenden** aktiviert, setzen **Zurücksetzen** und dann **Anwenden** jede Spalte auf eine gleichmäßige Verteilung über zwölf Monate zurück
   - Summen, die Sie im Tab **Jährlich** eingeben, gelten weiterhin nur für ihre eigene Spalte
   - Die Felder **Von** und **Bis** zeigen den Zeitraum. Fallen Monate heraus, nennt das Feld die Monate, die auf null gesetzt werden („Januar bis März werden auf null gesetzt.“). Ein Zeitraum über das ganze Jahr zeigt keine Zeile. Fahren Sie mit der Maus über das Info-Symbol neben dem Titel des Felds, um die Regel zum 15. zu sehen
@@ -184,7 +182,6 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
   - Ein Hinweis erscheint, wenn der Zeitraum über die Daten der Position hinausgeht. Sie können trotzdem anwenden
   - **Anwenden** bleibt deaktiviert, solange ein Datum fehlt oder kein Monat zählt. Nichts wird gespeichert, bevor Sie auf **Anwenden** klicken
   - Im Tab **Monatlich** füllt Anwenden das Raster. Im Tab **Jährlich** bleiben Sie in der Jahresansicht
-  - Bei Ist-Werten bestimmen die Daten nur diese eine Verteilung. Ist-Werte behalten keinen Zeitraum
 
 **Wie jede Spalte entstanden ist**:
   - Eine kurze Kennzeichnung zeigt, woher die Beträge einer Spalte stammen. Im Tab **Monatlich** steht sie unter der Spaltenüberschrift (fahren Sie mit der Maus darüber, um den Zeitraum zu sehen). Im Tab **Jährlich** steht sie neben dem Zeitraum

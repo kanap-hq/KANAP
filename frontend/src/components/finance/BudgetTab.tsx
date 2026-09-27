@@ -21,16 +21,15 @@ import BudgetTrendChart from './BudgetTrendChart';
 import { FinanceModuleConfig } from './config';
 import { patchYearlyTotalsCache } from './yearlyTotals';
 import {
+  AMOUNT_MEASURES,
+  APPLY_TO_ALL_COLUMNS,
   AmountMeasure,
-  PLANNING_MEASURES,
   Period,
-  PlanningMeasure,
   RoundInput,
   activeMonths,
   centsToDecimal,
   chipText,
   columnLabel,
-  isPlanningMeasure,
   joinList,
   periodForEdit,
   periodProblem,
@@ -85,8 +84,10 @@ const MEASURES: Array<{ key: MeasureKey; freezeKey: FreezeKey }> = [
 
 const ALL_COLS: AmountCol[] = ['planned', 'committed', 'actual', 'expected_landing', 'forecast'];
 /** Spread panel column order. */
-const SPREAD_COLS: AmountCol[] = ['planned', 'committed', 'forecast', 'expected_landing', 'actual'];
-const NO_STORED_AMOUNTS: Record<PlanningMeasure, boolean> = { planned: false, committed: false, forecast: false, expected_landing: false };
+const SPREAD_COLS: AmountCol[] = AMOUNT_MEASURES;
+const NO_STORED_AMOUNTS: Record<AmountCol, boolean> = { planned: false, committed: false, forecast: false, actual: false, expected_landing: false };
+/** The columns the yearly view shows a total for. */
+const isYearlyColumn = (col: AmountCol): col is MeasureKey => MEASURES.some((m) => m.key === col);
 
 /** A column's yearly total in cents, summed month by month. */
 function monthsCents(rows: AmountRow[], col: AmountCol): number {
@@ -136,7 +137,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   // How each column was produced and over which period, as stored.
   const [roundInputs, setRoundInputs] = React.useState<RoundInput[]>([]);
   // Columns that held a non-zero month when loaded: without a stored period they read as the whole year.
-  const [storedAmounts, setStoredAmounts] = React.useState<Record<PlanningMeasure, boolean>>(NO_STORED_AMOUNTS);
+  const [storedAmounts, setStoredAmounts] = React.useState<Record<AmountCol, boolean>>(NO_STORED_AMOUNTS);
 
   // Spread panel state. `spreadDates` is null until the user edits a date: the
   // column's own period is shown until then.
@@ -146,14 +147,13 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const spreadMeasureRef = React.useRef(spreadMeasure); spreadMeasureRef.current = spreadMeasure;
   const [spreadDates, setSpreadDates] = React.useState<Period | null>(null);
   const [spreadBusy, setSpreadBusy] = React.useState(false);
-  // On by default: the panel's period and distribution go to every planning column.
+  // On by default: the panel's period and distribution go to every column of the shared group.
   const [spreadAllColumns, setSpreadAllColumns] = React.useState(true);
   // The yearly view shows the panel only when asked for, on one column.
   const [panelOpen, setPanelOpen] = React.useState(false);
 
   const suggestion = React.useMemo(() => suggestedPeriod(year, effectiveStart, endOfValidity), [year, effectiveStart, endOfValidity]);
-  const periodFor = React.useCallback((measure: AmountCol, inputs: RoundInput[], stored: Record<PlanningMeasure, boolean>): Period | null => {
-    if (!isPlanningMeasure(measure)) return wholeYear(year);
+  const periodFor = React.useCallback((measure: AmountCol, inputs: RoundInput[], stored: Record<AmountCol, boolean>): Period | null => {
     return periodForEdit(year, inputs.find((r) => r.measure === measure), stored[measure], suggestion);
   }, [year, suggestion]);
 
@@ -260,13 +260,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
           : { period: p, planned: 0, committed: 0, actual: 0, expected_landing: 0, forecast: 0 };
       });
       setMonths(loadedMonths);
-      const hasAmounts = (m: PlanningMeasure) => loadedMonths.some((row) => row[m] !== 0);
-      setStoredAmounts({
-        planned: hasAmounts('planned'),
-        committed: hasAmounts('committed'),
-        forecast: hasAmounts('forecast'),
-        expected_landing: hasAmounts('expected_landing'),
-      });
+      const hasAmounts = (m: AmountCol) => loadedMonths.some((row) => row[m] !== 0);
+      setStoredAmounts(Object.fromEntries(AMOUNT_MEASURES.map((m) => [m, hasAmounts(m)])) as Record<AmountCol, boolean>);
       const loadedInputs = Array.isArray(amt.data?.round_inputs) ? amt.data.round_inputs : [];
       setRoundInputs(loadedInputs);
       setSpreadProfile(profileOf(spreadMeasureRef.current, loadedInputs));
@@ -424,7 +419,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   // A column's current total in cents: the typed yearly total in the yearly
   // view (it may not be saved yet), else the sum of its months.
   const currentCents = (col: AmountCol): number => (
-    mode === 'flat' && col !== 'forecast' ? toCents(flat[col as MeasureKey]) : monthsCents(months, col)
+    mode === 'flat' && isYearlyColumn(col) ? toCents(flat[col]) : monthsCents(months, col)
   );
 
   const onSpreadMeasureChange = (measure: AmountCol) => {
@@ -440,13 +435,12 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     setSpreadDates(wholeYear(year));
   };
 
-  // With "Apply to all columns", the other planning columns that are not frozen
-  // are spread with their own current total. Actuals never are.
-  const spreadToAll = spreadAllColumns && spreadMeasure !== 'actual';
-  const otherPlanning = PLANNING_MEASURES
-    .filter((col) => col !== spreadMeasure)
-    .sort((a, b) => SPREAD_COLS.indexOf(a) - SPREAD_COLS.indexOf(b));
-  const alsoSpread = spreadToAll ? otherPlanning.filter((col) => !frozen[FREEZE_KEY[col]]) : [];
+  // With "Apply to all columns", the columns of the shared group that are not
+  // frozen are spread too, each with its own current total. The selected column
+  // is spread whether it belongs to the group or not.
+  const alsoSpread = spreadAllColumns
+    ? APPLY_TO_ALL_COLUMNS.filter((col) => col !== spreadMeasure && !frozen[FREEZE_KEY[col]])
+    : [];
   const onSpreadDateChange = (bound: 'start' | 'end', value: string) => {
     setSpreadDates({ ...spreadPeriod, [bound]: value });
   };
@@ -556,10 +550,15 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       {control}
     </Box>
   );
-  const applyToAllHint = t('budgetTab.applyToAllHint', {
-    columns: joinList(t, PLANNING_MEASURES.map((col) => labelFor(col))),
-    actuals: labelFor('actual'),
-  });
+  // Built from the group and the column names: nothing here knows what a column means.
+  const outsideGroup = AMOUNT_MEASURES.filter((col) => !APPLY_TO_ALL_COLUMNS.includes(col));
+  const applyToAllHint = [
+    t('budgetTab.applyToAllFollow', { columns: joinList(t, APPLY_TO_ALL_COLUMNS.map((col) => labelFor(col))) }),
+    outsideGroup.length > 0
+      ? t('budgetTab.applyToAllOthers', { count: outsideGroup.length, columns: joinList(t, outsideGroup.map((col) => labelFor(col))) })
+      : '',
+    t('budgetTab.applyToAllFrozen'),
+  ].filter(Boolean).join(' ');
   const zeroedText = spreadProblem ? '' : zeroedMonthsText(t, locale, spreadActive);
 
   const spreadPanel = (
@@ -622,19 +621,17 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
           )}
         </Box>
       )}
-      {spreadMeasure !== 'actual' && (
-        <Box>
-          <FormControlLabel
-            control={<Switch size="small" checked={spreadAllColumns} onChange={(e) => setSpreadAllColumns(e.target.checked)} />}
-            label={(
-              <Tooltip title={applyToAllHint}>
-                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyToAll')}</Typography>
-              </Tooltip>
-            )}
-            sx={{ ml: 0 }}
-          />
-        </Box>
-      )}
+      <Box>
+        <FormControlLabel
+          control={<Switch size="small" checked={spreadAllColumns} onChange={(e) => setSpreadAllColumns(e.target.checked)} />}
+          label={(
+            <Tooltip title={applyToAllHint}>
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyToAll')}</Typography>
+            </Tooltip>
+          )}
+          sx={{ ml: 0 }}
+        />
+      </Box>
       <Stack direction="row" spacing={1} alignItems="center">
         <Button
           size="small" variant="contained"
@@ -675,12 +672,12 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 2.5 }}>
             {MEASURES.map((m) => {
               // Until this year's data is in, the previous year's periods would be read against this year.
-              const planning = isPlanningMeasure(m.key) && loadedYear === year;
-              const period = planning ? periodFor(m.key, roundInputs, storedAmounts) : null;
+              const loaded = loadedYear === year;
+              const period = loaded ? periodFor(m.key, roundInputs, storedAmounts) : null;
               const text = periodTextOf(period);
               // No stored period, no amounts and no month of the year within the item's dates.
-              const noMonth = planning && !text;
-              const chip = planning ? chipText(t, locale, recordFor(m.key)) : '';
+              const noMonth = loaded && !text;
+              const chip = loaded ? chipText(t, locale, recordFor(m.key)) : '';
               return (
                 <Box key={m.key} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -695,7 +692,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                     InputProps={{ readOnly: isFrozen(m) }}
                     sx={{ maxWidth: 220, '& .MuiInputBase-input': { fontSize: '15px !important', fontWeight: 500 } }}
                   />
-                  {planning && (
+                  {loaded && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
                       <Typography sx={captionSx} data-testid={`period-line-${m.key}`}>
                         {noMonth ? t('budgetTab.noMonthInItemDates', { year }) : [chip, text].filter(Boolean).join(' · ')}
@@ -730,7 +727,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
               <Box component="tr">
                 <Box component="th" sx={{ ...headCellSx, textAlign: 'left' }}>{t(`${config.i18nPrefix}.budget.month`)}</Box>
                 {gridColumns.map(({ col, fr }) => {
-                  const record = isPlanningMeasure(col) && loadedYear === year ? recordFor(col) : undefined;
+                  const record = loadedYear === year ? recordFor(col) : undefined;
                   const chip = chipText(t, locale, record);
                   return (
                     <Box component="th" key={col} sx={headCellSx}>

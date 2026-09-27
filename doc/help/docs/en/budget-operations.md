@@ -116,7 +116,7 @@ Below the grid, a stats bar shows:
 - Without a percentage, amounts are copied exactly, to the cent
 - With a percentage, each month is rounded to a whole amount. The yearly total is the source total with the percentage applied, rounded to a whole amount. The small difference lands on the last month that has an amount. For example, 12,000 spread from April to December (1,333.33 a month and 1,333.36 in December) copied with +2% gives 1,360 a month and 12,240 for the year
 - The column's period moves with the copy: April to December 2026 becomes April to December 2027. A period that ends on February 29 ends on February 28 in a year without one
-- A source without a period, or an Actuals source, gives a whole-year period
+- A source without a period gives a whole-year period
 - In the Budget tab, the destination column shows "Copied from Budget 2026 +2%"
 - Copying a column onto itself (same year and same column) is refused
 - The copy is all or nothing: if one item fails, nothing is saved
@@ -301,7 +301,7 @@ The file uses a semicolon `;` as separator and UTF-8 encoding.
 | `item_number` | The item number, for example `7`. On import, the reference also works (`OPX-7`, `CPX-7`) |
 | `year` | Four digits |
 | `measure` | The column: `planned` (Budget), `committed` (Revision), `forecast` (Forecast), `actual` (Actuals), `expected_landing` (Expected landing). On import, `budget`, `revision`, `follow_up` and `landing` also work |
-| `period_start`, `period_end` | The column's period as `YYYY-MM-DD`, inside the row's year. Empty on Actuals rows. On import, both empty means the whole year |
+| `period_start`, `period_end` | The column's period as `YYYY-MM-DD`, inside the row's year. On import, both empty means the whole year |
 | `jan` to `dec` | The twelve monthly amounts, with a dot as decimal separator. On import, a comma and spaces are accepted too |
 | `method` | How the column was produced: `spread`, `copied` or `manual`. For information only, ignored on import |
 
@@ -316,7 +316,7 @@ The file uses a semicolon `;` as separator and UTF-8 encoding.
 - A row identical to what is stored is left untouched, including how the column was produced. Re-importing an export changes nothing
 - A row whose amounts change marks the column as **Edited by hand**, with the period from the file
 - A row that only changes the period updates the period and keeps the rest
-- Actuals rows are allowed, which lets you import monthly actuals. Actuals have no period
+- Actuals rows follow the same rules, which lets you import monthly actuals
 - A changed row on a frozen column is refused. An identical row on a frozen column is accepted
 - Repeated rows (same item, year and column), unknown item numbers, and items of a type you cannot administer are errors
 - Importing needs administration rights on OPEX or on CAPEX. Exporting needs read access to either

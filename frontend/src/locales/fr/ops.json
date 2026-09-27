@@ -1048,6 +1048,9 @@
     "amount": "Montant",
     "reset": "Réinitialiser",
     "applyToAll": "Appliquer à toutes les colonnes",
-    "applyToAllHint": "{{columns}} suivent la même période. {{actuals}} et les colonnes gelées ne changent jamais."
+    "applyToAllFollow": "{{columns}} suivent la même période.",
+    "applyToAllOthers_one": "{{columns}} garde sa propre période.",
+    "applyToAllOthers_other": "{{columns}} gardent leur propre période.",
+    "applyToAllFrozen": "Les colonnes gelées ne changent jamais."
   }
 }

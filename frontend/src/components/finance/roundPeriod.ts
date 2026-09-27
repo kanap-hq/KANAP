@@ -5,8 +5,11 @@ import type { TFunction } from 'i18next';
  * it. Pure: the same 15th rule as `backend/src/spend/spread.util.ts`.
  */
 
-export type PlanningMeasure = 'planned' | 'committed' | 'forecast' | 'expected_landing';
-export type AmountMeasure = PlanningMeasure | 'actual';
+/**
+ * The five budget columns. Their technical names are storage keys only: every
+ * column has a period and a record, and no behaviour depends on which one it is.
+ */
+export type AmountMeasure = 'planned' | 'committed' | 'forecast' | 'actual' | 'expected_landing';
 
 export type LastCalculation =
   | { kind: 'annual'; total: string; profile: 'flat' | '4-4-5'; active_months: number[]; weights: string[]; source?: 'item_csv' }
@@ -14,7 +17,7 @@ export type LastCalculation =
   | {
     kind: 'copy';
     source_year: number;
-    source_measure: 'planned' | 'committed' | 'actual' | 'expected_landing';
+    source_measure: AmountMeasure;
     uplift_pct: string;
     source_total: string;
     total: string;
@@ -22,7 +25,7 @@ export type LastCalculation =
   };
 
 export type RoundInput = {
-  measure: PlanningMeasure;
+  measure: AmountMeasure;
   period_start: string;
   period_end: string;
   method: 'spread' | 'copied' | 'manual';
@@ -34,11 +37,15 @@ export type RoundInput = {
 
 export type Period = { start: string; end: string };
 
-export const PLANNING_MEASURES: PlanningMeasure[] = ['planned', 'committed', 'forecast', 'expected_landing'];
+/** Every column, in the order the spread panel lists them. */
+export const AMOUNT_MEASURES: AmountMeasure[] = ['planned', 'committed', 'forecast', 'expected_landing', 'actual'];
 
-export function isPlanningMeasure(measure: string): measure is PlanningMeasure {
-  return (PLANNING_MEASURES as string[]).includes(measure);
-}
+/**
+ * The columns "Apply to all columns" spreads together. This is the product
+ * default; step R makes it a tenant setting. Nothing else may test a column
+ * name to decide a behaviour.
+ */
+export const APPLY_TO_ALL_COLUMNS: AmountMeasure[] = ['planned', 'committed', 'forecast', 'expected_landing'];
 
 const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
 

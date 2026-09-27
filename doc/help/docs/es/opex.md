@@ -154,11 +154,10 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - **Aterrizaje previsto**: Gasto real final después del cierre de fin de año
 
 **Periodo de una columna**:
-  - Presupuesto, Revisión, Previsión y Aterrizaje previsto tienen cada una un periodo dentro del año, por ejemplo de abril a diciembre
+  - Cada columna (Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto) tiene un periodo dentro del año, por ejemplo de abril a diciembre
   - Un mes cuenta cuando el periodo cubre su día 15. Un periodo que empieza el 10 de abril incluye abril; uno que empieza el 20 de abril comienza en mayo
   - Una columna sin importe y sin periodo recibe una sugerencia: el **Inicio de vigencia** y el **Fin de validez** de la partida, limitados al año. Una partida que empieza el 1 de abril sugiere de abril a diciembre
   - Una columna que ya tiene importes y no tiene periodo se lee como todo el año, de modo que los datos existentes se comportan como antes
-  - El Realizado siempre cubre todo el año
 
 **Anual o Mensual**:
   - **Anual**: Introduzca un total por columna. El total se reparte uniformemente entre los meses del periodo de la columna, y los meses fuera de él se ponen a cero. El periodo aparece bajo cada total antes de escribir, por ejemplo «9 meses, de abril a diciembre». Solo se guarda el total que usted modifica. Las demás columnas conservan sus importes mensuales.
@@ -175,8 +174,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde el icono de lápiz bajo un total
   - Elija una **Columna** (Presupuesto, Revisión, Previsión, Aterrizaje previsto o Realizado), compruebe el **Importe**, elija una **Distribución** (**Uniforme** o **4-4-5**) y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna, y la distribución de la que ya tiene la columna
   - El importe parte del total actual de la columna, en ambas pestañas, y se actualiza cuando elige otra columna. Queda vacío cuando la columna no tiene importe
-  - **Aplicar a todas las columnas** está activado por defecto: Presupuesto, Revisión, Previsión y Aterrizaje previsto reciben el mismo periodo y la misma distribución, cada una con su propio total actual. Pase el cursor sobre el interruptor para ver qué columnas siguen. Las columnas congeladas y el Realizado nunca cambian. Desactive el interruptor para repartir solo la columna seleccionada
-  - El Realizado nunca se reparte con las demás columnas. Cuando elige Realizado, el interruptor se oculta y solo se reparte el Realizado
+  - **Aplicar a todas las columnas** está activado por defecto: la columna seleccionada, junto con Presupuesto, Revisión, Previsión y Aterrizaje previsto, reciben el mismo periodo y la misma distribución, cada una con su propio total actual. Pase el cursor sobre el interruptor para ver qué columnas siguen. Las demás columnas conservan su propio periodo, y las columnas congeladas nunca cambian. Desactive el interruptor para repartir solo la columna seleccionada
   - **Restablecer** rellena el panel con el total actual de la columna, **Uniforme** y el año completo. No guarda nada: haga clic en **Aplicar** para usarlo. Con **Aplicar a todas las columnas** activado, **Restablecer** y luego **Aplicar** devuelven cada columna a un reparto uniforme en doce meses
   - Los totales introducidos en la pestaña **Anual** siguen aplicándose solo a su propia columna
   - Las fechas **Desde** y **Hasta** muestran el periodo. Cuando algunos meses quedan fuera, el panel indica cuáles se pondrán a cero («De enero a marzo se pondrán a cero.»). Un periodo de todo el año no muestra ninguna línea. Pase el cursor sobre el icono de información junto al título del panel para ver la regla del día 15
@@ -184,7 +182,6 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - Aparece un aviso no bloqueante cuando el periodo va más allá de las fechas de la partida. Aun así puede aplicar
   - **Aplicar** permanece deshabilitado mientras falte una fecha o ningún mes cuente. No se guarda nada hasta que haga clic en **Aplicar**
   - Desde la pestaña **Mensual**, Aplicar rellena la cuadrícula. Desde la pestaña **Anual**, permanece en la vista Anual
-  - Para el Realizado, las fechas solo dan forma a ese reparto. El Realizado no conserva ningún periodo
 
 **Cómo se produjo cada columna**:
   - Una etiqueta breve indica de dónde vienen los importes de una columna. En la pestaña **Mensual** aparece bajo el encabezado de la columna (pase el cursor por encima para ver el periodo). En la pestaña **Anual** aparece junto al periodo

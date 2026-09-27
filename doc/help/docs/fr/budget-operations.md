@@ -116,7 +116,7 @@ Sous la grille, une barre de statistiques affiche :
 - Sans pourcentage, les montants sont copiés à l'identique, au centime près
 - Avec un pourcentage, chaque mois est arrondi à l'unité. Le total annuel est le total source auquel on applique le pourcentage, arrondi à l'unité. Le petit écart est reporté sur le dernier mois qui porte un montant. Par exemple, 12 000 répartis d'avril à décembre (1 333,33 par mois et 1 333,36 en décembre) copiés avec +2 % donnent 1 360 par mois et 12 240 pour l'année
 - La période de la colonne suit la copie : avril à décembre 2026 devient avril à décembre 2027. Une période qui se termine le 29 février se termine le 28 février dans une année non bissextile
-- Une source sans période, ou une source Réalisé, donne une période couvrant toute l'année
+- Une source sans période donne une période couvrant toute l'année
 - Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 +2 % »
 - La copie d'une colonne sur elle-même (même année et même colonne) est refusée
 - La copie se fait en tout ou rien : si un poste échoue, rien n'est enregistré
@@ -301,7 +301,7 @@ Le fichier utilise le point-virgule `;` comme séparateur et l'encodage UTF-8.
 | `item_number` | Le numéro du poste, par exemple `7`. À l'import, la référence fonctionne aussi (`OPX-7`, `CPX-7`) |
 | `year` | Quatre chiffres |
 | `measure` | La colonne : `planned` (Budget), `committed` (Révision), `forecast` (Prévision), `actual` (Réalisé), `expected_landing` (Atterrissage prévu). À l'import, `budget`, `revision`, `follow_up` et `landing` fonctionnent aussi |
-| `period_start`, `period_end` | La période de la colonne au format `YYYY-MM-DD`, à l'intérieur de l'année de la ligne. Vides sur les lignes Réalisé. À l'import, deux valeurs vides signifient toute l'année |
+| `period_start`, `period_end` | La période de la colonne au format `YYYY-MM-DD`, à l'intérieur de l'année de la ligne. À l'import, deux valeurs vides signifient toute l'année |
 | `jan` à `dec` | Les douze montants mensuels, avec un point comme séparateur décimal. À l'import, la virgule et les espaces sont aussi acceptés |
 | `method` | La façon dont la colonne a été produite : `spread`, `copied` ou `manual`. À titre d'information uniquement, ignorée à l'import |
 
@@ -316,7 +316,7 @@ Le fichier utilise le point-virgule `;` comme séparateur et l'encodage UTF-8.
 - Une ligne identique à ce qui est enregistré n'est pas modifiée, y compris la façon dont la colonne a été produite. Réimporter un export ne change rien
 - Une ligne dont les montants changent marque la colonne comme **Modifié à la main**, avec la période du fichier
 - Une ligne qui ne change que la période met à jour la période et conserve le reste
-- Les lignes Réalisé sont autorisées, ce qui permet d'importer le réalisé mensuel. Le réalisé n'a pas de période
+- Les lignes Réalisé suivent les mêmes règles, ce qui permet d'importer le réalisé mensuel
 - Une ligne modifiée sur une colonne gelée est refusée. Une ligne identique sur une colonne gelée est acceptée
 - Les lignes en double (même poste, même année et même colonne), les numéros de poste inconnus et les postes d'un type que vous ne pouvez pas administrer sont des erreurs
 - L'import nécessite les droits d'administration sur les OPEX ou sur les CAPEX. L'export nécessite l'accès en lecture à l'un des deux

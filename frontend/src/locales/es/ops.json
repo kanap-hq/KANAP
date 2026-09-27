@@ -1048,6 +1048,9 @@
     "amount": "Importe",
     "reset": "Restablecer",
     "applyToAll": "Aplicar a todas las columnas",
-    "applyToAllHint": "{{columns}} siguen el mismo periodo. {{actuals}} y las columnas congeladas nunca cambian."
+    "applyToAllFollow": "{{columns}} siguen el mismo periodo.",
+    "applyToAllOthers_one": "{{columns}} conserva su propio periodo.",
+    "applyToAllOthers_other": "{{columns}} conservan su propio periodo.",
+    "applyToAllFrozen": "Las columnas congeladas nunca cambian."
   }
 }
