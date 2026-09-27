@@ -63,7 +63,13 @@ export class CapexItemsDeleteService extends BaseDeleteService<CapexItem> {
       await versionRepo.delete({ capex_item_id: itemId });
     }
 
-    // 4. Finally delete the item itself
+    // 4. Delete tasks (depends on item) from unified table
+    await manager.query(
+      `DELETE FROM tasks WHERE tenant_id = $1 AND related_object_type = 'capex_item' AND related_object_id = $2`,
+      [item.tenant_id, itemId],
+    );
+
+    // 5. Finally delete the item itself
     await itemRepo.delete({ id: itemId } as any);
 
     // Audit log

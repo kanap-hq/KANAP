@@ -249,13 +249,30 @@ export class SpendItemsCsvService {
     };
     const userRepo = mg.getRepository(User);
     const userCache = new Map<string, User | null>();
-    const findUserByEmail = async (email: string | null): Promise<User | null> => {
-      if (!email) return null;
+    const findUserByEmail = async (email: string): Promise<User | null> => {
+      if (!tenantId) return null;
       const key = email.toLowerCase();
       if (userCache.has(key)) return userCache.get(key) ?? null;
-      const user = await userRepo.createQueryBuilder('u').where('LOWER(u.email) = LOWER(:email)', { email }).getOne();
+      const user = await userRepo.createQueryBuilder('u')
+        .where('u.tenant_id = :tenantId', { tenantId })
+        .andWhere('LOWER(u.email) = LOWER(:email)', { email })
+        .getOne();
       userCache.set(key, user ?? null);
       return user ?? null;
+    };
+    // An owner is an active (enabled) user of this tenant: checked with the rest of the row, before anything is written.
+    const resolveOwner = async (email: string, label: string, line: number): Promise<string | null> => {
+      if (!email) return null;
+      const user = await findUserByEmail(email);
+      if (!user) {
+        errors.push({ row: line, message: `${label} email '${email}' not found` });
+        return null;
+      }
+      if (user.status !== 'enabled') {
+        errors.push({ row: line, message: `${label} email '${email}' is not an active user` });
+        return null;
+      }
+      return user.id;
     };
 
     const allCompanies = await mg.getRepository(Company).find();
@@ -277,9 +294,9 @@ export class SpendItemsCsvService {
       notes: string | null;
       totals: { [year: number]: { planned?: number; actual?: number; expected_landing?: number; committed?: number } };
       analytics_category_name: string | null;
-      owner_it_email: string | null;
-      owner_business_email: string | null;
-      rowNumber: number;
+      owner_it_id: string | null;
+      owner_business_id: string | null;
+      line: number;
     }> = [];
     const parseAmount = (raw: string): number | undefined => {
       let s = (raw || '').trim();
@@ -352,8 +369,12 @@ export class SpendItemsCsvService {
         errors.push({ row: line, message: `currency '${currency}' is not allowed. allowedCurrencies=${Array.from(allowedSet).join(',')}` });
       }
       const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+      let owner_it_id: string | null = null;
       if (ownerItEmailRaw && !emailRegex.test(ownerItEmailRaw)) errors.push({ row: line, message: 'owner_it_email is invalid' });
+      else owner_it_id = await resolveOwner(ownerItEmailRaw.toLowerCase(), 'Owner IT', line);
+      let owner_business_id: string | null = null;
       if (ownerBizEmailRaw && !emailRegex.test(ownerBizEmailRaw)) errors.push({ row: line, message: 'owner_business_email is invalid' });
+      else owner_business_id = await resolveOwner(ownerBizEmailRaw.toLowerCase(), 'Owner business', line);
       // An amount that is not a number is a row error.
       const amount = (column: string) => {
         try {
@@ -389,11 +410,11 @@ export class SpendItemsCsvService {
         status,
         disabled_at,
         analytics_category_name: analyticsCategoryName,
-        owner_it_email: ownerItEmailRaw ? ownerItEmailRaw.toLowerCase() : null,
-        owner_business_email: ownerBizEmailRaw ? ownerBizEmailRaw.toLowerCase() : null,
+        owner_it_id,
+        owner_business_id,
         notes,
         totals,
-        rowNumber: line,
+        line,
       });
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
@@ -413,8 +434,14 @@ export class SpendItemsCsvService {
         supplierId = s ? s.id : null;
       }
       const exists = await mg.getRepository(SpendItem).findOne({ where: { product_name: item.product_name, supplier_id: supplierId as any } as any });
+      // A new line needs its currency; on an update a blank cell keeps the stored one.
+      if (!exists && !item.currency) {
+        errors.push({ row: item.line, message: 'currency is required' });
+        continue;
+      }
       if (exists) updated += 1; else inserted += 1;
     }
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
     if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
 
     if (!tenantId) {
@@ -437,29 +464,19 @@ export class SpendItemsCsvService {
         accountId = a ? a.id : null;
       }
       const analyticsCategory = await ensureCategory(item.analytics_category_name ?? null, true);
-      const ownerIt = item.owner_it_email ? await findUserByEmail(item.owner_it_email) : null;
-      if (item.owner_it_email && !ownerIt) {
-        errors.push({ row: item.rowNumber, message: `Owner IT email '${item.owner_it_email}' not found` });
-        continue;
-      }
-      const ownerBiz = item.owner_business_email ? await findUserByEmail(item.owner_business_email) : null;
-      if (item.owner_business_email && !ownerBiz) {
-        errors.push({ row: item.rowNumber, message: `Owner business email '${item.owner_business_email}' not found` });
-        continue;
-      }
       const body = {
         product_name: item.product_name,
         description: item.description ?? null,
         supplier_id: supplierId,
         paying_company_id: company ? company.id : null,
         account_id: accountId,
-        currency: item.currency,
+        ...(item.currency ? { currency: item.currency } : {}),
         effective_start: item.effective_start,
         status: item.status,
         disabled_at: item.disabled_at,
         analytics_category_id: analyticsCategory ? analyticsCategory.id : null,
-        owner_it_id: ownerIt ? ownerIt.id : null,
-        owner_business_id: ownerBiz ? ownerBiz.id : null,
+        owner_it_id: item.owner_it_id,
+        owner_business_id: item.owner_business_id,
         notes: item.notes ?? null,
       };
       const target = exists
@@ -488,9 +505,6 @@ export class SpendItemsCsvService {
         await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze, userId ?? null);
       }
       processed += 1;
-    }
-    if (errors.length > 0) {
-      return { ok: false, dryRun: false, total: rows.length, inserted, updated, errors, allowedCurrencies: Array.from(allowedSet) };
     }
     return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [], allowedCurrencies: Array.from(allowedSet) };
   }

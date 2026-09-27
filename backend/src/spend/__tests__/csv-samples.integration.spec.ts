@@ -28,6 +28,7 @@ function capexImporter(): any {
   const args: any[] = Array.from({ length: 12 }, () => undefined);
   args[5] = noAudit;
   args[6] = noFreeze;
+  args[7] = { resolveRates: async () => ({ map: new Map(), settings: { allowedCurrencies: null } }) };
   args[9] = { syncFromSupplier: async () => undefined };
   args[10] = new ItemNumberService();
   return new (CapexItemsService as any)(...args);

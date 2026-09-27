@@ -1193,7 +1193,7 @@ export class NotificationsService {
    * fixed reminder schedule); this sends to opted-in recipients, once per reminder.
    */
   async notifyExpirationWarning(params: {
-    itemType: 'contract' | 'opex';
+    itemType: 'contract' | 'opex' | 'capex';
     itemId: string;
     itemName: string;
     expirationDate: string;

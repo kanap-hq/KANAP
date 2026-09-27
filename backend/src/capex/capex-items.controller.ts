@@ -369,6 +369,21 @@ export class CapexItemsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('capex', 'admin')
+  @Post('budget-operations/copy-allocations')
+  copyAllocations(
+    @Body() body: {
+      sourceYear: number;
+      destinationYear: number;
+      overwrite?: boolean;
+      dryRun?: boolean;
+    },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.copyAllocations(body, ctx.userId || null, { manager: ctx.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'admin')
   @Post('budget-operations/clear-column')
   clearBudgetColumn(
     @Body() body: {
