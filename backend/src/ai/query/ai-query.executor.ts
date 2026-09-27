@@ -46,12 +46,14 @@ import {
   resolveAiParticipationAccessScope,
 } from './ai-query-scope.util';
 import {
+  AiEntityFilterRegistry,
   AiFilterValue,
   AiFilterValuesResult,
   AiQueryResult,
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
-import { getAiEntityRegistry } from './registries';
+import { analyticsAxisFields, resolveAiEntityRegistry } from './registries';
+import { analyticsAxisLabel, AnalyticsAxisInfo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import { FIXED_SLOTS, FixedSlot, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 
 function toIso(value: Date | string | null | undefined): string | null {
@@ -156,8 +158,32 @@ function budgetAmountMetadata(row: any, anchorYear: number): AiEntityMetadata {
   return metadata;
 }
 
-/** The descriptive fields both budget item types share. */
-function budgetItemMetadata(row: any): AiEntityMetadata {
+/**
+ * The value of each enabled non-default analytics dimension under its AI key
+ * (`analytics:<code>`): read from the engine's key, or from the AI key on a
+ * detail row already converted by `withAnalyticsAiKeys`.
+ */
+function analyticsAxisMetadata(row: any, registry: AiEntityFilterRegistry): AiEntityMetadata {
+  return Object.fromEntries(analyticsAxisFields(registry).map(({ key, grid }) => [key, scalar(row?.[grid] ?? row?.[key])]));
+}
+
+/**
+ * A summary row as the AI detail shows it: the dimension values under their AI
+ * keys (`analytics:<code>`), without the engine's per-id keys.
+ */
+function withAnalyticsAiKeys(row: Record<string, any> | undefined, registry: AiEntityFilterRegistry): Record<string, any> | undefined {
+  if (!row) return row;
+  const output: Record<string, any> = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (key === 'analytics_value_ids' || parseAnalyticsFieldKey(key)) continue;
+    output[key] = value;
+  }
+  for (const { key, grid } of analyticsAxisFields(registry)) output[key] = row[grid] ?? null;
+  return output;
+}
+
+/** The descriptive fields both budget item types share, for the registry resolved for the tenant. */
+function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry): AiEntityMetadata {
   return {
     supplier: scalar(row.supplier_name),
     paying_company: scalar(row.paying_company_name ?? row.company_name),
@@ -165,6 +191,7 @@ function budgetItemMetadata(row: any): AiEntityMetadata {
     owner_it: scalar(row.owner_it_name),
     owner_business: scalar(row.owner_business_name),
     analytics_category: scalar(row.analytics_category_name),
+    ...analyticsAxisMetadata(row, registry),
     cost_center: scalar(row.cost_center_label),
     budget_holder: scalar(row.budget_holder_name),
     run_build: scalar(row.run_build),
@@ -268,10 +295,9 @@ export class AiQueryExecutor {
   ) {}
 
   private resolveSort(
-    entityType: AiQueryEntityType,
+    registry: AiEntityFilterRegistry,
     sort?: { field: string; direction: 'asc' | 'desc' },
   ): string {
-    const registry = getAiEntityRegistry(entityType);
     if (!sort?.field) {
       return `${registry.defaultSort.field}:${registry.defaultSort.direction.toUpperCase()}`;
     }
@@ -341,6 +367,7 @@ export class AiQueryExecutor {
   private async buildBaseQuery(
     context: AiExecutionContextWithManager,
     entityType: AiQueryEntityType,
+    registry: AiEntityFilterRegistry,
     input: {
       filters?: Record<string, AiFilterValue>;
       q?: string;
@@ -350,16 +377,15 @@ export class AiQueryExecutor {
       limit?: number;
     },
   ): Promise<{ query: Record<string, any>; filtersApplied: string[]; filtersIgnored: string[] }> {
-    const registry = getAiEntityRegistry(entityType);
     const normalizedFilters = await this.normalizePersonFilters(context, entityType, input.filters);
     const adapted = adaptFilters(registry, normalizedFilters);
     const page = Math.min(Math.max(Number(input.page) || 1, 1), 100);
     const limit = Math.min(Math.max(Number(input.limit) || 200, 1), 200);
-    assertPlainTextQuickSearch(entityType, input.q);
+    assertPlainTextQuickSearch(entityType, input.q, registry);
     const query: Record<string, any> = {
       page,
       limit,
-      sort: this.resolveSort(entityType, input.sort),
+      sort: this.resolveSort(registry, input.sort),
     };
     if (input.q?.trim()) query.q = input.q.trim();
     if (Object.keys(adapted.filters).length > 0) query.filters = adapted.filters;
@@ -568,7 +594,7 @@ export class AiQueryExecutor {
     });
   }
 
-  private mapSpendItem(row: any): AiEntitySummaryDto {
+  private mapSpendItem(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
     const summary = row.description
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
@@ -579,14 +605,14 @@ export class AiQueryExecutor {
       summary,
       updated_at: row.updated_at ?? null,
       metadata: {
-        ...budgetItemMetadata(row),
+        ...budgetItemMetadata(row, registry),
         budget_anchor_year: anchorYear,
         ...budgetAmountMetadata(row, anchorYear),
       },
     });
   }
 
-  private mapCapexItem(row: any): AiEntitySummaryDto {
+  private mapCapexItem(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
     const summary = row.notes
       ?? ([row.company_name, row.ppe_type, row.investment_type].filter(Boolean).join(' | ') || null);
@@ -597,7 +623,7 @@ export class AiQueryExecutor {
       summary,
       updated_at: row.updated_at ?? null,
       metadata: {
-        ...budgetItemMetadata(row),
+        ...budgetItemMetadata(row, registry),
         ppe_type: scalar(row.ppe_type),
         investment_type: scalar(row.investment_type),
         priority: scalar(row.priority),
@@ -643,15 +669,25 @@ export class AiQueryExecutor {
     });
   }
 
-  private mapAnalyticsCategory(row: any): AiEntitySummaryDto {
+  /** A value with its dimension (the tenant's dimensions by id, read once per call). */
+  private mapAnalyticsCategory(row: any, axisById: Map<string, AnalyticsAxisInfo>): AiEntitySummaryDto {
+    const axis = row.axis_id ? axisById.get(row.axis_id) : undefined;
     return toEntitySummary('analytics_categories', {
       id: row.id,
       label: row.name || 'Untitled analytics category',
       status: row.status ?? null,
       summary: row.description ?? null,
       updated_at: row.updated_at ?? null,
-      metadata: {},
+      metadata: {
+        axis: axis ? analyticsAxisLabel(axis) : null,
+        axis_code: axis ? axis.code : null,
+      },
     });
+  }
+
+  private async analyticsAxesById(context: AiExecutionContextWithManager): Promise<Map<string, AnalyticsAxisInfo>> {
+    const axes = await loadAnalyticsAxes(context.manager, context.tenantId);
+    return new Map(axes.map((axis) => [axis.id, axis]));
   }
 
   private mapBusinessProcess(row: any): AiEntitySummaryDto {
@@ -959,11 +995,11 @@ export class AiQueryExecutor {
       scope?: AiQueryScope;
     },
   ): Promise<AiQueryResult> {
-    const { query, filtersApplied, filtersIgnored } = await this.buildBaseQuery(context, input.entity_type, input);
+    const registry = await resolveAiEntityRegistry(context, input.entity_type);
+    const { query, filtersApplied, filtersIgnored } = await this.buildBaseQuery(context, input.entity_type, registry, input);
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 200;
     if (filtersIgnored.length > 0) {
-      const registry = getAiEntityRegistry(input.entity_type);
       return {
         status: 'invalid_filter',
         items: [],
@@ -1113,7 +1149,7 @@ export class AiQueryExecutor {
       // A capped list was read from the newest lines only: never complete.
       const truncated = result.capped === true || (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapCapexItem(row)),
+        items: (result.items || []).map((row: any) => this.mapCapexItem(row, registry)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -1140,7 +1176,7 @@ export class AiQueryExecutor {
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       const truncated = result.capped === true || (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapSpendItem(row)),
+        items: (result.items || []).map((row: any) => this.mapSpendItem(row, registry)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -1257,12 +1293,13 @@ export class AiQueryExecutor {
 
     if (input.entity_type === 'analytics_categories') {
       const result = await this.analyticsCategories.list(scoped.query, { manager: context.manager });
+      const axisById = await this.analyticsAxesById(context);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapAnalyticsCategory(row)),
+        items: (result.items || []).map((row: any) => this.mapAnalyticsCategory(row, axisById)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -1720,9 +1757,10 @@ export class AiQueryExecutor {
   private async loadSpendItemDeepDetail(
     context: AiExecutionContextWithManager,
     spendItemId: string,
+    registry: AiEntityFilterRegistry,
   ): Promise<Record<string, unknown>> {
     const anchorYear = new Date().getFullYear();
-    const [summary] = await this.spendItems.summaryRowsByIds(
+    const [row] = await this.spendItems.summaryRowsByIds(
       [spendItemId],
       {
         years: budgetQueryYears(anchorYear),
@@ -1732,6 +1770,7 @@ export class AiQueryExecutor {
       },
       { manager: context.manager },
     );
+    const summary = withAnalyticsAiKeys(row, registry);
 
     const [
       financialVersions,
@@ -1777,9 +1816,10 @@ export class AiQueryExecutor {
   private async loadCapexItemDeepDetail(
     context: AiExecutionContextWithManager,
     capexItemId: string,
+    registry: AiEntityFilterRegistry,
   ): Promise<Record<string, unknown>> {
     const anchorYear = new Date().getFullYear();
-    const [[summary], financialVersions, contacts, linkedApplications, linkedProjects, linkedContracts] = await Promise.all([
+    const [[row], financialVersions, contacts, linkedApplications, linkedProjects, linkedContracts] = await Promise.all([
       this.capexItems.summaryRowsByIds(
         [capexItemId],
         {
@@ -1806,6 +1846,7 @@ export class AiQueryExecutor {
       this.capexItems.listProjects(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
       this.contracts.listContractsForCapexItem(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
     ]);
+    const summary = withAnalyticsAiKeys(row, registry);
 
     return {
       ...(summary ?? {}),
@@ -2003,8 +2044,9 @@ export class AiQueryExecutor {
     if (entityType === 'spend_items') {
       const row: any = await this.spendItems.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Spend item not found.');
-      Object.assign(row, await this.loadSpendItemDeepDetail(context, entityId));
-      return this.toDetailResult(this.mapSpendItem(row), row);
+      const registry = await resolveAiEntityRegistry(context, entityType);
+      Object.assign(row, await this.loadSpendItemDeepDetail(context, entityId, registry));
+      return this.toDetailResult(this.mapSpendItem(row, registry), row);
     }
 
     if (entityType === 'capex_items') {
@@ -2012,10 +2054,11 @@ export class AiQueryExecutor {
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('CAPEX item not found.');
       // The id, not the reference the caller may have given (`get` accepts both).
       const capexItemId = row.id as string;
-      Object.assign(row, await this.loadCapexItemDeepDetail(context, capexItemId));
+      const registry = await resolveAiEntityRegistry(context, entityType);
+      Object.assign(row, await this.loadCapexItemDeepDetail(context, capexItemId, registry));
       row.links = await this.capexItems.listLinks(capexItemId, { manager: context.manager }).catch(() => []);
       row.attachments = await this.capexItems.listAttachments(capexItemId, { manager: context.manager }).catch(() => []);
-      return this.toDetailResult(this.mapCapexItem(row), row);
+      return this.toDetailResult(this.mapCapexItem(row, registry), row);
     }
 
     if (entityType === 'contracts') {
@@ -2074,7 +2117,7 @@ export class AiQueryExecutor {
 
     if (entityType === 'analytics_categories') {
       const row = await this.analyticsCategories.get(entityId, { manager: context.manager });
-      return this.toDetailResult(this.mapAnalyticsCategory(row), row);
+      return this.toDetailResult(this.mapAnalyticsCategory(row, await this.analyticsAxesById(context)), row);
     }
 
     if (entityType === 'business_processes') {
@@ -2155,9 +2198,9 @@ export class AiQueryExecutor {
   private async loadRegistryFilterValues(
     context: AiExecutionContextWithManager,
     entityType: AiQueryEntityType,
+    registry: AiEntityFilterRegistry,
     aiFields: string[],
   ): Promise<Record<string, Array<string | boolean | null>>> {
-    const registry = getAiEntityRegistry(entityType);
     const values: Record<string, Array<string | boolean | null>> = {};
 
     // Resolved once for the whole call: the viewers and the readable library set
@@ -2230,7 +2273,7 @@ export class AiQueryExecutor {
       fields: string[];
     },
   ): Promise<AiFilterValuesResult> {
-    const registry = getAiEntityRegistry(input.entity_type);
+    const registry = await resolveAiEntityRegistry(context, input.entity_type);
     const requestedFields = Array.from(
       new Set(
         (input.fields || [])
@@ -2378,7 +2421,7 @@ export class AiQueryExecutor {
       return field?.dynamic === true && !raw?.[field.grid];
     });
     if (fallbackAiFields.length > 0) {
-      const fallback = await this.loadRegistryFilterValues(context, input.entity_type, fallbackAiFields);
+      const fallback = await this.loadRegistryFilterValues(context, input.entity_type, registry, fallbackAiFields);
       for (const [aiField, fieldValues] of Object.entries(fallback)) {
         const field = registry.fields[aiField];
         if (field) raw[field.grid] = fieldValues;

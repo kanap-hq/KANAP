@@ -1,4 +1,4 @@
-import { IsIn, IsISO8601, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { IsIn, IsISO8601, IsObject, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { StatusLifecycleDto } from '../../common/dto/status-lifecycle.dto';
 
 export class SpendItemUpsertDto extends StatusLifecycleDto {
@@ -44,6 +44,12 @@ export class SpendItemUpsertDto extends StatusLifecycleDto {
   @IsUUID()
   owner_business_id?: string | null;
 
+  /** Analytics values by dimension id: a value id, or null to clear; omitted dimensions are untouched. */
+  @IsOptional()
+  @IsObject()
+  analytics_values?: Record<string, string | null>;
+
+  /** Legacy: the default dimension's value (refused when analytics_values names another one for it). */
   @IsOptional()
   @IsUUID()
   analytics_category_id?: string | null;

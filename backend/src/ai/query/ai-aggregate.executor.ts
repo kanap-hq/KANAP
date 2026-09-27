@@ -46,10 +46,11 @@ import {
   AiAggregateMetricType,
   AiAggregateResult,
   AiDateFilterValue,
+  AiEntityFilterRegistry,
   AiFilterValue,
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
-import { getAiEntityRegistry } from './registries';
+import { resolveAiEntityRegistry } from './registries';
 import { getSpendSummaryFieldValue } from '../../spend/spend-summary.builder';
 import { formatCents, toCents } from '../../common/amount';
 import { divRoundHalfAway } from '../../common/decimal';
@@ -916,7 +917,7 @@ export class AiAggregateExecutor {
   }
 
   private resolveMetric(
-    entityType: SupportedAggregateEntityType,
+    registry: AiEntityFilterRegistry,
     metric: string | undefined,
     fn: AiAggregateFunction,
   ): { key: string; def: AiAggregateMetricDef } | null {
@@ -925,7 +926,6 @@ export class AiAggregateExecutor {
       throw new BadRequestException('metric is required for non-count aggregation.');
     }
 
-    const registry = getAiEntityRegistry(entityType);
     const explicit = registry.aggregate.metricFields?.[metric];
     if (explicit) {
       if ((fn === 'sum' || fn === 'avg') && explicit.type !== 'number') {
@@ -957,11 +957,11 @@ export class AiAggregateExecutor {
 
   private async buildDocumentAggregateQuery(
     context: AiExecutionContextWithManager,
+    registry: AiEntityFilterRegistry,
     groupBy: string,
     q: string | undefined,
     filters: Record<string, any>,
   ) {
-    const registry = getAiEntityRegistry('documents');
     const groupField = registry.aggregate.groupFields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1067,13 +1067,12 @@ export class AiAggregateExecutor {
 
   private async aggregateByIds(
     context: AiExecutionContextWithManager,
-    entityType: SupportedAggregateEntityType,
+    registry: AiEntityFilterRegistry,
     groupBy: string,
     ids: string[],
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
   ): Promise<Array<{ key: string | null; count: number } | { key: string | null; value: number | string | null }>> {
-    const registry = getAiEntityRegistry(entityType);
     const groupField = registry.aggregate.groupFields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1123,12 +1122,12 @@ export class AiAggregateExecutor {
   private async aggregateBudgetSummaryByIds(
     context: AiExecutionContextWithManager,
     entityType: 'spend_items' | 'capex_items',
+    registry: AiEntityFilterRegistry,
     groupBy: string,
     ids: string[],
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
   ): Promise<Array<{ key: string | null; count: number } | { key: string | null; value: number | string | null }>> {
-    const registry = getAiEntityRegistry(entityType);
     const groupField = registry.fields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1241,15 +1240,15 @@ export class AiAggregateExecutor {
       scope?: AiQueryScope;
     },
   ): Promise<AiAggregateResult> {
-    const registry = getAiEntityRegistry(input.entity_type);
+    const registry = await resolveAiEntityRegistry(context, input.entity_type);
     const field = registry.fields[input.group_by];
     if (!field || field.groupable !== true) {
       throw new BadRequestException('Unsupported group_by field.');
     }
-    assertPlainTextQuickSearch(input.entity_type, input.q);
+    assertPlainTextQuickSearch(input.entity_type, input.q, registry);
 
     const fn = normalizeAggregateFunction(input.function);
-    const metric = this.resolveMetric(input.entity_type, input.metric?.trim(), fn);
+    const metric = this.resolveMetric(registry, input.metric?.trim(), fn);
     const normalizedFilters = await this.normalizePersonFilters(context, input.entity_type, input.filters);
     const adapted = adaptFilters(registry, normalizedFilters);
     if (adapted.ignored.length > 0) {
@@ -1296,6 +1295,7 @@ export class AiAggregateExecutor {
 
       const { qb, groupExpression } = await this.buildDocumentAggregateQuery(
         context,
+        registry,
         input.group_by,
         input.q?.trim(),
         adapted.filters,
@@ -1388,8 +1388,8 @@ export class AiAggregateExecutor {
     }
 
     const groups = input.entity_type === 'spend_items' || input.entity_type === 'capex_items'
-      ? await this.aggregateBudgetSummaryByIds(context, input.entity_type, input.group_by, ids, fn, metric)
-      : await this.aggregateByIds(context, input.entity_type, input.group_by, ids, fn, metric);
+      ? await this.aggregateBudgetSummaryByIds(context, input.entity_type, registry, input.group_by, ids, fn, metric)
+      : await this.aggregateByIds(context, registry, input.group_by, ids, fn, metric);
     return {
       group_by: input.group_by,
       metric: metric?.key ?? null,

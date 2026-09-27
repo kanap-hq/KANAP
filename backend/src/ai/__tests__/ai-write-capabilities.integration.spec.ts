@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
+import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util';
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -888,15 +889,17 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
 
 async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
+    const axisId = await ensureDefaultAnalyticsAxis(runner.manager, seed.tenantId);
     const [category] = await runner.query(
-      `INSERT INTO analytics_categories (tenant_id, name) VALUES ($1, $2) RETURNING id`,
-      [seed.tenantId, `PLAID Capability Category ${seed.tag}`],
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, $3) RETURNING id`,
+      [seed.tenantId, axisId, `PLAID Capability Category ${seed.tag}`],
     );
     const [otherTenant] = await runner.query(`SELECT id FROM tenants WHERE slug = $1`, [`ai-cap-other-${seed.tag}`]);
     await setCurrentTenant(runner, otherTenant.id);
+    const otherAxisId = await ensureDefaultAnalyticsAxis(runner.manager, otherTenant.id);
     const [foreignCategory] = await runner.query(
-      `INSERT INTO analytics_categories (tenant_id, name) VALUES ($1, $2) RETURNING id`,
-      [otherTenant.id, `Other Tenant Category ${seed.tag}`],
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, $3) RETURNING id`,
+      [otherTenant.id, otherAxisId, `Other Tenant Category ${seed.tag}`],
     );
     const [foreignUser] = await runner.query(`SELECT id FROM users WHERE tenant_id = $1 LIMIT 1`, [otherTenant.id]);
     await setCurrentTenant(runner, seed.tenantId);
@@ -930,8 +933,11 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
     });
     await approvePreview(harness, ctx, preview);
     const [capexRow] = await runner.query(
-      `SELECT owner_it_id, owner_business_id, analytics_category_id FROM capex_items WHERE tenant_id = $1 AND id = $2`,
-      [seed.tenantId, seed.capexItemId],
+      `SELECT ci.owner_it_id, ci.owner_business_id, v.category_id AS analytics_category_id
+         FROM capex_items ci
+         LEFT JOIN capex_item_analytics_values v ON v.tenant_id = ci.tenant_id AND v.item_id = ci.id AND v.axis_id = $3
+        WHERE ci.tenant_id = $1 AND ci.id = $2`,
+      [seed.tenantId, seed.capexItemId, axisId],
     );
     assert.deepEqual(
       [capexRow.owner_it_id, capexRow.owner_business_id, capexRow.analytics_category_id],
@@ -955,6 +961,80 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
     const undoPreview = await harness.tools.execute(relationCtx, 'undo_preview', { preview_id: relationPreview.preview_id }) as any;
     await approvePreview(harness, relationCtx, undoPreview);
     assert.equal((await linkRows()).length, 0, 'undo removes the link');
+  });
+}
+
+/**
+ * The AI's analytics_category of a line is the default dimension's link: the
+ * preview shows the link's value (never the stale item column), the approval
+ * writes the link, a value of another dimension or of another tenant is not
+ * found and a disabled one is refused as new. Both line types.
+ */
+async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const axisId = await ensureDefaultAnalyticsAxis(runner.manager, seed.tenantId);
+    const [nature] = await runner.query(
+      `INSERT INTO analytics_axes (tenant_id, code, name, sort_order) VALUES ($1, 'nature', 'Nature', 1) RETURNING id`,
+      [seed.tenantId],
+    );
+    const value = async (axis: string, name: string, disabled = false): Promise<string> => {
+      const [row] = await runner.query(
+        `INSERT INTO analytics_categories (tenant_id, axis_id, name, status, disabled_at) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [seed.tenantId, axis, name, disabled ? 'disabled' : 'enabled', disabled ? new Date(Date.now() - 86_400_000) : null],
+      );
+      return row.id;
+    };
+    const current = await value(axisId, `Current ${seed.tag}`);
+    const stale = await value(axisId, `Stale ${seed.tag}`);
+    const target = await value(axisId, `Target ${seed.tag}`);
+    await value(axisId, `Retired ${seed.tag}`, true);
+    const natureOnly = await value(nature.id, `Nature only ${seed.tag}`);
+    const [otherTenant] = await runner.query(`SELECT id FROM tenants WHERE slug = $1`, [`ai-cap-other-${seed.tag}`]);
+    await setCurrentTenant(runner, otherTenant.id);
+    const [foreign] = await runner.query(
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, $3) RETURNING id`,
+      [otherTenant.id, await ensureDefaultAnalyticsAxis(runner.manager, otherTenant.id), `Foreign ${seed.tag}`],
+    );
+    await setCurrentTenant(runner, seed.tenantId);
+    const ctx = context(seed, runner, 'item-analytics');
+
+    for (const [entityType, itemId, itemTable, linkTable] of [
+      ['spend_items', seed.spendItemId, 'spend_items', 'spend_item_analytics_values'],
+      ['capex_items', seed.capexItemId, 'capex_items', 'capex_item_analytics_values'],
+    ] as const) {
+      await runner.query(
+        `INSERT INTO ${linkTable} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
+        [seed.tenantId, itemId, axisId, current],
+      );
+      await runner.query(`UPDATE ${itemTable} SET analytics_category_id = $2 WHERE id = $1`, [itemId, stale]);
+
+      const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
+        entity_type: entityType,
+        ref: itemId,
+        fields: { analytics_category: `Target ${seed.tag}` },
+      });
+      assert.equal(preview.changes.analytics_category_id.from, current, `${entityType}: the preview shows the link's current value`);
+      assert.equal(preview.changes.analytics_category_id.to, `Target ${seed.tag}`);
+      await approvePreview(harness, ctx, preview);
+      const rows = await runner.query(
+        `SELECT axis_id, category_id FROM ${linkTable} WHERE tenant_id = $1 AND item_id = $2`,
+        [seed.tenantId, itemId],
+      );
+      assert.deepEqual(rows.map((row: any) => [row.axis_id, row.category_id]), [[axisId, target]], `${entityType}: the AI writes the link`);
+      const [column] = await runner.query(`SELECT analytics_category_id FROM ${itemTable} WHERE id = $1`, [itemId]);
+      assert.equal(column.analytics_category_id, stale, `${entityType}: the item column is not written`);
+
+      for (const other of [natureOnly, foreign.id]) {
+        await expectRejects(
+          () => harness.tools.execute(ctx, 'update_business_record', { entity_type: entityType, ref: itemId, fields: { analytics_category_id: other } }),
+          /Analytics Category not found/,
+        );
+      }
+      await expectRejects(
+        () => harness.tools.execute(ctx, 'update_business_record', { entity_type: entityType, ref: itemId, fields: { analytics_category: `Retired ${seed.tag}` } }),
+        /This value is disabled/,
+      );
+    }
   });
 }
 
@@ -985,6 +1065,7 @@ async function run() {
     await testRelationWritesAndSupplierPropagationUndo(harness);
     await testBusinessTaskFinancialWritesAndRbac(harness);
     await testCapexOwnersAnalyticsAndApplications(harness);
+    await testItemAnalyticsCategoryThroughTheLinks(harness);
   } finally {
     await harness.app.close();
   }

@@ -551,19 +551,48 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
   - Guards: `JwtAuthGuard`, `PermissionGuard`, `@RequireLevel('settings', 'admin')`
   - Resets all settings to defaults
 
-## Analytics Categories (Admin)
-- GET `/analytics-categories?status=enabled|disabled&page=1&limit=50&sort=name:ASC`
-  - Used by the OPEX modal for category lookups.
-  - Items expose `{ id, name, description, status, created_at, updated_at }`.
-- POST `/analytics-categories`
-  - Body: `{ name: string, description?: string, status?: 'enabled'|'disabled' }`
-  - Requires `analytics:manager` level.
-- PATCH `/analytics-categories/:id`
-  - Body supports partial updates to `name`, `description`, and `status`.
-  - Requires `analytics:manager` level.
-- Notes:
-  - Names are unique per tenant (case-insensitive) and referenced by the OPEX CSV import/export via the `analytics_category` column.
-  - Disabled categories remain selectable for historical records but should not be assigned to new spend items.
+## Analytics Dimensions and Values (Master Data)
+
+A tenant classifies its budget lines along analytics dimensions (`analytics_axes`, "dimensions" in the UI); each dimension holds values (`analytics_categories`). A line holds at most one value per dimension (`spend_item_analytics_values`, `capex_item_analytics_values`). Resource key: `analytics` for every route below.
+
+- **Default dimension.** Every tenant has exactly one dimension with `is_default = true` (created by migration `1853660000000` for existing tenants, by the tenant bootstrap for new ones, and on the first write that needs it for a tenant inserted any other way). The legacy item field `analytics_category_id`, the item CSV header `analytics_category` and the AI key `analytics_category` address it through `is_default`, never through its position, code or name: renaming or reordering dimensions changes nothing for them. Its `name` may be `null` (screens then show the translated "Analytics dimension"). It cannot be disabled or deleted, and no API writes `is_default`.
+- **Values** belong to one dimension, set on create and never changed. Names are unique per dimension (case-insensitive), so two dimensions can each hold "Other".
+- **RLS**: all four tables are tenant-scoped (`tenant_id = app_current_tenant()`, forced). A value references its dimension by `(tenant_id, axis_id)` and a line's value references `(tenant_id, category_id, axis_id)`, so a line can only hold a value of its own tenant that belongs to the named dimension, raw SQL included.
+
+### Dimensions
+
+- GET `/analytics-axes` → `{ items }`: every dimension, disabled included, ordered by `sort_order`, then name, then code. Item: `{ id, tenant_id, code, name, description, sort_order, is_default, status, disabled_at, created_at, updated_at }` (`status` is the effective one: disabled once `disabled_at` has passed).
+  - Access: `reader` on any of `analytics`, `opex`, `capex`, `reporting` (item forms, lists and reports need the dimensions).
+- GET `/analytics-axes/:id` → the dimension plus `value_count`, `opex_count`, `capex_count` (lines holding one of its values). `analytics:reader`.
+- POST `/analytics-axes` `{ code, name, description?, sort_order?, status?, disabled_at? }` → as GET `/:id`. `analytics:member`.
+  - `code`: 1 to 40 characters, lowercase letters, digits, `_` and `-`, starting with a letter or a digit ("Use lowercase letters, digits, - or _ (40 at most)."); unique per tenant (`400` "A dimension with code {code} already exists."). The code names the CSV column (`analytics:<code>`) and the AI key; it can be changed (lines store ids).
+  - `name`: required, trimmed, 200 characters at most, unique per tenant (`400` "A dimension named {name} already exists."). The labels an unnamed default shows ("Analytics dimension", "Dimension analytique", "Analysedimension", "Dimensión analítica", any case) are refused for any other dimension (`400` "This name is reserved for the default dimension.").
+  - `sort_order`: optional whole number; when omitted the new dimension goes last.
+- PATCH `/analytics-axes/:id` (any subset of the create fields; `is_default` is ignored) → as GET `/:id`. `analytics:member`.
+  - On the default dimension, `name` may be cleared (`null` or blank, stored `null`); a lifecycle change is refused (`400` "This dimension cannot be disabled: older files and AI questions use it.").
+  - An unchanged body writes nothing (no audit row).
+- DELETE `/analytics-axes/:id`. `analytics:admin`. `409` for the default dimension ("This dimension cannot be deleted: older files and AI questions use it.") and while the dimension has values ("Nature still has 3 values. Delete them first.").
+
+### Values
+
+- GET `/analytics-categories?axis_id=&page=&limit=&sort=name:ASC&q=&filters=&status=&includeDisabled=` → `{ items, total, page, limit }`; items `{ id, tenant_id, axis_id, name, description, status, disabled_at, created_at, updated_at }`.
+  - `axis_id` restricts to one dimension. Default scope: enabled values; `status=enabled|disabled` or a `status` set filter picks one, `includeDisabled=1|true` lifts the default scope.
+  - Sort: `name`, `description`, `status`, `disabled_at`, `created_at`, `updated_at`. Filters (grid model, set or text): `name`, `description`, `axis_code`, `axis_name` (the dimension's name, "Analytics dimension" for an unnamed default). Quick search on name and description.
+  - Access: `reader` on any of `analytics`, `opex`, `capex`, `reporting`.
+- GET `/analytics-categories/ids` (same query) → `{ ids, total }` (at most 10,000 ids). Same access.
+- GET `/analytics-categories/:id` → the value plus `axis_name`, `axis_code`, `axis_is_default`, `opex_count`, `capex_count`. Same access.
+- POST `/analytics-categories` `{ axis_id?, name, description?, status?, disabled_at? }` → as GET `/:id`. `analytics:member`.
+  - Without `axis_id` the value goes into the default dimension. The dimension is resolved in the tenant (`400` "Dimension not found.") and must be enabled ("The Nature dimension is disabled. Enable it to add values.").
+  - Name unique within the dimension (`400` "A value named {name} already exists in {dimension}.", where an unnamed default reads "the analytics dimension").
+- PATCH `/analytics-categories/:id` (`name`, `description`, `status`, `disabled_at`) → as GET `/:id`. `analytics:member`. `axis_id` is accepted only when equal to the stored one (`400` "A value cannot move to another dimension."). An unchanged body writes nothing.
+- DELETE `/analytics-categories/:id`. `analytics:admin`. `409` while a line holds the value ("Licences is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.").
+- DELETE `/analytics-categories/bulk` `{ ids }` (at most 1,000) → `{ deleted, failed: [{ id, name, reason }] }`. `analytics:admin`. Each value is deleted under its own savepoint: a refused one leaves the others deleted.
+- GET `/analytics-categories/export?scope=data|template`. `analytics:admin`. Semicolon CSV with headers `axis_code;name;description;status;disabled_at`, every value of every dimension (disabled included), in dimension order then by name.
+- POST `/analytics-categories/import?dryRun=true|false` (multipart `file`). `analytics:admin` → `{ ok, dryRun, total, inserted, updated, unchanged, errors: [{ row, message }] }`.
+  - Only `name` is required; an absent column keeps what is stored. A blank `axis_code` is the default dimension; an unknown code is a row error. In a disabled dimension a row identical to the stored value passes as `unchanged`; a new value or an edit there is a row error ("The Nature dimension is disabled. Enable it or leave it out.").
+  - Rows match on (dimension, name), case-insensitively; the same pair twice in the file is a row error.
+  - The whole file is validated before any write; nothing is written when a row fails. A row identical to the stored value is counted `unchanged` and writes nothing. Exporting and re-importing the same file reports every row unchanged.
+- The AI master-data tools create and update values through the same service: a value created without a dimension lands in the default one, and a name used in two dimensions is the usual "several matches" error.
 
 ## Business Processes (Master Data)
 
@@ -710,12 +739,19 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
 ## Spend Items & Versions (OPEX)
 - POST `/spend-items` → create item
 - PATCH `/spend-items/:id` → update item (any subset of the writable fields)
-- GET `/spend-items/:id` → detail (every item column, `cost_center_id` and `run_build` included)
+- GET `/spend-items/:id` → detail (every item column, `cost_center_id` and `run_build` included) plus the analytics values:
+  - `analytics_values: [{ axis_id, axis_code, axis_name, is_default, category_id, category_name }]`: every dimension the line holds a value on (disabled dimensions included), in dimension order; `axis_name` is `null` on the default dimension while it has no name
+  - `analytics_category_id`, `analytics_category_name`: the default dimension's value, `null` when the line has none. They are read from the line's analytics values; the item column of the same name is no longer read or written (it stays in the database for one release)
+  - The create and update responses carry the same fields
+- GET `/spend-items` and GET `/capex-items` (the plain lists the pickers use) carry the item columns plus `analytics_category_id` and `analytics_category_name` of the default dimension, read the same way
 - Writable fields and write rules (OPEX and CAPEX alike, `spend/item-write.util.ts`; the UI, the API, the AI and both item CSVs all go through them):
-  - OPEX: `product_name, description, supplier_id, paying_company_id, account_id, currency, effective_start, owner_it_id, owner_business_id, analytics_category_id, project_id, contract_id, cost_center_id, run_build, notes`, plus the lifecycle inputs `status`, `disabled_at` and the deprecated `effective_end`
-  - CAPEX: `description, ppe_type, investment_type, priority, supplier_id, paying_company_id` (legacy alias `company_id`)`, account_id, currency, effective_start, owner_it_id, owner_business_id, analytics_category_id, project_id, cost_center_id, run_build, notes`, plus the same lifecycle inputs
+  - OPEX: `product_name, description, supplier_id, paying_company_id, account_id, currency, effective_start, owner_it_id, owner_business_id, analytics_values, analytics_category_id, project_id, contract_id, cost_center_id, run_build, notes`, plus the lifecycle inputs `status`, `disabled_at` and the deprecated `effective_end`
+  - CAPEX: `description, ppe_type, investment_type, priority, supplier_id, paying_company_id` (legacy alias `company_id`)`, account_id, currency, effective_start, owner_it_id, owner_business_id, analytics_values, analytics_category_id, project_id, cost_center_id, run_build, notes`, plus the same lifecycle inputs
   - Any other key (`id`, `tenant_id`, `item_number`, timestamps, unknown keys) is dropped, never refused
   - Every id is resolved in the current tenant; an unknown id, or an id of another tenant, is a `400` "<Field> not found." (`Paying company`, `Account`, `Supplier`, `Analytics category`, `IT owner`, `Business owner`, `Project`, `Contract`, `Cost center`)
+  - `analytics_values: { [axis_id]: category_id | null }` (`spend/item-analytics.util.ts`): each named dimension takes the value, `null` clears it, an omitted dimension is untouched. The dimension must be one of the tenant's ("Analytics dimension not found.") and enabled ("The Nature dimension is disabled. Enable it or leave it out."); on a disabled dimension the line's unchanged value, or `null` where the line has none, passes as a no-op, and only a real change is refused. The value must be one of the tenant's ("Analytics value not found.") and belong to that dimension ("Hardware is not a value of the Nature dimension."; "… of the analytics dimension." for the default dimension while it has no name); a disabled value is refused as a new assignment ("This value is disabled.") and kept as the line's current one. The value is read `FOR KEY SHARE`: a value deleted meanwhile makes the save wait, then answer "Analytics value not found."
+  - `analytics_category_id` (legacy) is the default dimension's value (`null` clears it); sent with a different value for the default dimension in `analytics_values`: `400` "Send the analytics category once: analytics_category_id and analytics_values disagree."
+  - The values are written after the line, in the same transaction; a change of analytics values alone is an edit (`updated_at`, audit). Audit snapshots carry `analytics_values` as `{ [axis_id]: category_id }` and `analytics_category_id`
   - `cost_center_id`: a new value must name an enabled cost center, not a group (`400` "Choose a cost center, not a group." / "This cost center is disabled."); the line's current value is always kept, disabled or not
   - `run_build`: `run`, `build` or `null` (case-insensitive); anything else is a `400`
   - A line with a cost center and no paying company takes the cost center's company (this satisfies "paying company required" on create); an explicit different company is kept. Without either: `400` "Paying company is required."
@@ -727,6 +763,9 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
   - A blank `company_name` keeps an existing line's company; a new line with a blank company takes its cost center's company, and without a cost center the row is refused ("Company is required unless the line has a cost center."). OPEX: the account number resolves in the resulting company's chart
   - CAPEX (no account column): a company change onto another chart while the line has an account is a row error in the dry run ("Account {number} is not in {company}'s chart of accounts. Change the line's account first.")
   - Before writing, the import locks every newly assigned cost center once, in id order
+  - Analytics columns (all optional, absent leaves the stored values, present and blank clears): `analytics_category` is the default dimension (older files import unchanged); `analytics:<code>` is any enabled dimension by its code (the default's code works too). Export and template carry `analytics_category`, then one `analytics:<code>` column per enabled non-default dimension in dimension order, right after it
+  - The file is refused (row 0) for an `analytics:<code>` column naming no dimension ("The column analytics:nope names no dimension. Check the dimension code or remove the column."), a disabled dimension ("The Nature dimension is disabled. Enable it or leave it out."), or two columns for one dimension ("The file has two columns for the analytics dimension: analytics_category and analytics:default. Keep one.")
+  - A name matches a value of its column's dimension case-insensitively; an unknown one is created in that dimension during the load (enabled, audited) and follows the value name rules, checked in the dry run as row errors ("Name must be 200 characters or fewer.", "Name cannot contain control or invisible characters."); a disabled value that is not the line's current one is a row error in the dry run ("Retired is disabled. Pick an enabled value.")
 - POST `/spend-items/:id/versions` with `{ version_name, as_of_date, input_grain, budget_year?, allocation_method?, allocation_driver? }`
   - `budget_year` defaults to `as_of_date` year; one version per (item, year)
   - `allocation_method` defaults to `default`; `allocation_driver` defaults to `headcount`
@@ -749,7 +788,7 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
 ## CAPEX Items & Versions
 - POST `/capex-items` → create CAPEX item
 - PATCH `/capex-items/:id` → update CAPEX item (writable fields and write rules as OPEX, see above)
-- GET `/capex-items/:id` → detail (every item column, `cost_center_id` and `run_build` included)
+- GET `/capex-items/:id` → detail (every item column, `cost_center_id` and `run_build` included) plus the analytics values, as OPEX (see above)
 - POST `/capex-items/:id/versions` with `{ version_name, as_of_date, input_grain, budget_year?, allocation_method?, allocation_driver? }`
   - `allocation_method` defaults to `default`; `allocation_driver` defaults to `headcount`
   - One version per (item, budget_year)
@@ -810,8 +849,13 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
     - The quick search reads the cost center code, name and path, and the budget holder name
   - Budget holder (both item types): `budget_holder_id` and `budget_holder_name`, the owner (`owner_user_id`) of the line's cost center and that user's display name. Derived when the rows are built, never stored on the line: a change of the cost center's owner shows on every line at once. `null` when the line has no cost center or its cost center has no owner
     - `budget_holder_name` filters (set and text) and sorts in memory
+  - Analytics dimensions (both item types), read from the line's analytics values (never the legacy item column):
+    - `analytics_category_id` and `analytics_category_name`: the value on the default dimension, `null` when the line has none
+    - `analytics_<axis_id>`: the value's name on each dimension of the tenant (disabled ones included), `null` when the line has none. The key uses `_`, not `:`, because sort strings are `field:DIR`
+    - `analytics_value_ids`: `{ [axis_id]: category_id }` for the dimensions the line has a value on
+    - Every analytics field filters (set, text, blank) and sorts in memory, `analytics_category_id` included; the quick search reads the value names of every dimension
 - GET `/spend-items/summary/filter-values?fields=fieldA,fieldB&q&filters&years=2024,2025,2026` **[Requires: opex:reader]**
-  - Fields include `cost_center_label`, `cost_center_code`, `cost_center_name`, `cost_center_path`, `budget_holder_name`, `run_build` (both item types)
+  - Fields include `cost_center_label`, `cost_center_code`, `cost_center_name`, `cost_center_path`, `budget_holder_name`, `run_build`, `analytics_category_name` and any `analytics_<axis_id>` (both item types)
   - Distinct filter values for closed-choice columns in the OPEX summary grid.
   - Response: `{ fieldA: Array<string | null>, fieldB: Array<string | null> }`
   - Caller should remove the column’s own filter so values stay discoverable.
@@ -820,7 +864,7 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
 - GET `/capex-items/summary?status=enabled&page=1&limit=50&sort=yBudget:DESC`
   - Each row includes `{ versions: { yMinus1, y, yPlus1 }, allocation_method_label, next_year_allocation_method_label, spread_mode_for_y, company_name }`
   - Also includes `latest_task?: { id, title?, description?, status, created_at } | null` for open/in_progress tasks (most recent)
-  - Cost center and run or build fields, filters, sort and quick search as OPEX (see above)
+  - Cost center and run or build fields, analytics dimension fields, filters, sort and quick search as OPEX (see above)
 - GET `/capex-items/summary/ids` → `{ ids, total }` ordered by requested sort (supports derived fields like `yBudget`)
 - GET `/capex-items/summary/totals` → `{ reportingCurrency, ...amounts }`: one key per `<slot><Suffix>` for the slots `yMinus2`, `yMinus1`, `y`, `yPlus1`, `yPlus2` and the suffixes `Budget`, `Revision`, `Forecast`, `FollowUp`, `Landing` (25 keys, for example `yBudget`, `yPlus2Forecast`), plus `y<YYYY><Suffix>` for each requested year. Same shape as the OPEX totals
 - GET `/capex-items/summary/filter-values?fields=fieldA,fieldB&q&filters` **[Requires: capex:reader]**

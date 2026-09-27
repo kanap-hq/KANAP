@@ -4069,7 +4069,8 @@ async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
       isPlatformHost: false,
       surface: 'chat',
       authMethod: 'jwt',
-      manager: {} as any,
+      // The registry is resolved for the tenant: a tenant without analytics dimensions.
+      manager: { query: async () => [] } as any,
     },
     {
       entity_type: 'spend_items',
@@ -4218,7 +4219,8 @@ async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProject
       isPlatformHost: false,
       surface: 'chat',
       authMethod: 'jwt',
-      manager: {} as any,
+      // The registry is resolved for the tenant: a tenant without analytics dimensions.
+      manager: { query: async () => [] } as any,
     },
     {
       entity_type: 'spend_items',

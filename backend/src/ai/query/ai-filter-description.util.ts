@@ -40,8 +40,11 @@ function inferExamples(fieldName: string, field: AiFilterFieldDef): string[] {
   return [];
 }
 
-export function describeAiEntityFilters(entityType: AiQueryEntityType): AiFilterDescriptionResult {
-  const registry = getAiEntityRegistry(entityType);
+/** The fields of `registry`: pass the one resolved for the tenant (OPEX and CAPEX carry its analytics dimensions). */
+export function describeAiEntityFilters(
+  entityType: AiQueryEntityType,
+  registry: AiEntityFilterRegistry = getAiEntityRegistry(entityType),
+): AiFilterDescriptionResult {
   const fields: AiFilterDescription[] = Object.entries(registry.fields).map(([fieldName, field]) => ({
     field: fieldName,
     type: field.type,

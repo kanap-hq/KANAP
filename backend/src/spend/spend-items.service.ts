@@ -35,6 +35,7 @@ import { ItemNumberService } from '../common/item-number.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import type { BudgetColumn } from './amounts-write.util';
 import { resolveItemWrite } from './item-write.util';
+import { itemAnalyticsAuditFields, itemAnalyticsFields, loadItemAnalyticsValues, writeItemAnalyticsValues } from './item-analytics.util';
 
 @Injectable()
 export class SpendItemsService {
@@ -101,7 +102,7 @@ export class SpendItemsService {
     // Only allow filtering/sorting by real columns on SpendItem
     const allowedFields = [
       'id', 'item_number', 'product_name', 'description', 'supplier_id', 'account_id', 'currency', 'effective_start', 'disabled_at',
-      'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id', 'contract_id', 'created_at', 'updated_at',
+      'status', 'owner_it_id', 'owner_business_id', 'project_id', 'contract_id', 'created_at', 'updated_at',
     ];
     const where: any = {};
     if (filtersToApply && Object.keys(filtersToApply).length > 0) {
@@ -116,25 +117,33 @@ export class SpendItemsService {
     if (q) where.product_name = ILike(`%${q}%`);
     const safeSortField = allowedFields.includes(sort.field) ? sort.field : 'created_at';
     const [itemsRaw, total] = await repo.findAndCount({ where, order: { [safeSortField]: sort.direction as any }, skip, take: limit });
-    const categoryRepo = opts?.manager ? opts.manager.getRepository(AnalyticsCategory) : this.analyticsCategories;
-    const categoryIds = Array.from(new Set(itemsRaw.map((i) => (i as any).analytics_category_id).filter(Boolean)));
-    const categories = categoryIds.length ? await categoryRepo.find({ where: { id: In(categoryIds) as any } as any }) : [];
-    const categoryById = new Map(categories.map((c) => [c.id, c]));
-    const items = itemsRaw.map((item) => ({
-      ...item,
-      analytics_category_name: ((item as any).analytics_category_id && categoryById.get((item as any).analytics_category_id))
-        ? categoryById.get((item as any).analytics_category_id)!.name
-        : null,
-    }));
+    // The default dimension's value, read from the analytics links.
+    const analyticsByItem = itemsRaw.length > 0
+      ? await loadItemAnalyticsValues(mg, 'opex', await this.resolveTenantId(mg), itemsRaw.map((item) => item.id))
+      : new Map();
+    const items = itemsRaw.map((item) => {
+      const { analytics_category_id, analytics_category_name } = itemAnalyticsFields(analyticsByItem.get(item.id) ?? []);
+      return { ...item, analytics_category_id, analytics_category_name };
+    });
     return { items, total, page, limit };
+  }
+
+  /** The stored line (under RLS), without its analytics values. */
+  private async findItem(id: string, mg: EntityManager): Promise<SpendItem> {
+    const found = await mg.getRepository(SpendItem).findOne({ where: { id } });
+    if (!found) throw new NotFoundException('Spend item not found');
+    return found;
+  }
+
+  /** The line with its analytics values (see `item-analytics.util.ts`). */
+  private async withAnalytics(mg: EntityManager, item: SpendItem) {
+    const values = (await loadItemAnalyticsValues(mg, 'opex', item.tenant_id, [item.id])).get(item.id) ?? [];
+    return { ...item, ...itemAnalyticsFields(values) };
   }
 
   async get(id: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(SpendItem);
-    const found = await repo.findOne({ where: { id } });
-    if (!found) throw new NotFoundException('Spend item not found');
-    return found;
+    return this.withAnalytics(mg, await this.findItem(id, mg));
   }
 
   /** Per-year totals of the five columns for one item (multi-year trend chart). */
@@ -220,14 +229,14 @@ export class SpendItemsService {
   /** Applications linked to the line; see `item-applications.ts`. */
   async listApplications(spendItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const spend = await this.get(spendItemId, { manager: mg });
+    const spend = await this.findItem(spendItemId, mg);
     return listItemApplications(mg, 'opex', spend);
   }
 
   /** Replace the line's applications (audited when the set changes); see `item-applications.ts`. */
   async bulkReplaceApplications(spendItemId: string, applicationIds: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const spend = await this.get(spendItemId, { manager: mg });
+    const spend = await this.findItem(spendItemId, mg);
     return replaceItemApplications({ manager: mg, audit: this.audit }, 'opex', spend, applicationIds, userId ?? null);
   }
 
@@ -235,7 +244,7 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendItem);
     // Writable columns only, every id resolved in this tenant; see `item-write.util.ts`.
-    const { values, lifecycle: input } = await resolveItemWrite(mg, 'opex', body, null);
+    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, 'opex', body, null);
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: disabled_at });
     const tenantId = await this.resolveTenantId(mg);
@@ -251,17 +260,23 @@ export class SpendItemsService {
       disabled_at: lifecycle.disabled_at,
     });
     const saved = await repo.save(entity);
-    await this.audit.log({ table: 'spend_items', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
-    return saved;
+    await writeItemAnalyticsValues(mg, 'opex', tenantId, saved.id, analytics);
+    const created = analytics.length > 0 ? await this.withAnalytics(mg, { ...saved, tenant_id: tenantId }) : { ...saved, ...itemAnalyticsFields([]) };
+    await this.audit.log({
+      table: 'spend_items', recordId: saved.id, action: 'create', before: null,
+      after: { ...saved, ...itemAnalyticsAuditFields(created.analytics_values) }, userId,
+    }, { manager: mg });
+    return created;
   }
 
   async update(id: string, body: SpendItemUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendItem);
-    const existing = await this.get(id, { manager: mg });
+    const existing = await this.findItem(id, mg);
     const before = { ...existing };
+    const analyticsBefore = (await loadItemAnalyticsValues(mg, 'opex', existing.tenant_id, [existing.id])).get(existing.id) ?? [];
     // Writable columns only, every id resolved in this tenant; see `item-write.util.ts`.
-    const { values, lifecycle: input } = await resolveItemWrite(mg, 'opex', body, existing);
+    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, 'opex', body, existing);
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     Object.assign(existing, values);
     const lifecycle = resolveLifecycleState({
@@ -279,7 +294,14 @@ export class SpendItemsService {
     const newSupplierId = existing.supplier_id;
 
     const saved = await repo.save(existing);
-    await this.audit.log({ table: 'spend_items', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
+    // A change of analytics values alone is an edit too (updated_at above, the audit below).
+    await writeItemAnalyticsValues(mg, 'opex', saved.tenant_id, saved.id, analytics);
+    const updated = analytics.length > 0 ? await this.withAnalytics(mg, saved) : { ...saved, ...itemAnalyticsFields(analyticsBefore) };
+    await this.audit.log({
+      table: 'spend_items', recordId: saved.id, action: 'update',
+      before: { ...before, ...itemAnalyticsAuditFields(analyticsBefore) },
+      after: { ...saved, ...itemAnalyticsAuditFields(updated.analytics_values) }, userId,
+    }, { manager: mg });
 
     // Sync contacts from supplier if supplier changed
     if (oldSupplierId !== newSupplierId) {
@@ -313,7 +335,7 @@ export class SpendItemsService {
       }
     }
 
-    return saved;
+    return updated;
   }
 
   /** Dependencies of the shared list engine (`budget-summary.ts`). */
@@ -511,7 +533,7 @@ export class SpendItemsService {
   // Projects
   async listProjects(spendItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    await this.get(spendItemId, { manager: mg }); // ensure item exists
+    await this.findItem(spendItemId, mg); // ensure item exists
     const rows = await mg.query(
       `SELECT l.project_id as id, p.name
        FROM portfolio_project_opex l
@@ -525,7 +547,7 @@ export class SpendItemsService {
 
   async bulkReplaceProjects(spendItemId: string, projectIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const spend = await this.get(spendItemId, { manager: mg });
+    const spend = await this.findItem(spendItemId, mg);
     const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
     if (cleanIds.length) {
       const projects = await mg.getRepository(PortfolioProject).find({ where: { id: In(cleanIds) } as any });

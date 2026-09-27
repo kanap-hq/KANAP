@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { AiQueryEntityType } from './ai-filter.types';
+import { AiEntityFilterRegistry, AiQueryEntityType } from './ai-filter.types';
 import { getAiEntityRegistry } from './registries';
 
 type SuspiciousQuickSearchClause = {
@@ -28,13 +28,13 @@ function normalizeClauseValue(value: string): string {
 export function findStructuredQuickSearchClauses(
   entityType: AiQueryEntityType,
   q?: string | null,
+  registry: AiEntityFilterRegistry = getAiEntityRegistry(entityType),
 ): SuspiciousQuickSearchClause[] {
   const quickSearch = String(q ?? '').trim();
   if (!quickSearch) {
     return [];
   }
 
-  const registry = getAiEntityRegistry(entityType);
   const keys = Array.from(new Set([
     ...Object.keys(registry.fields),
     ...RESERVED_QUERY_KEYS,
@@ -64,11 +64,13 @@ export function findStructuredQuickSearchClauses(
   return clauses;
 }
 
+/** `registry`: the one resolved for the tenant, so its analytics dimension keys count as field names too. */
 export function assertPlainTextQuickSearch(
   entityType: AiQueryEntityType,
   q?: string | null,
+  registry?: AiEntityFilterRegistry,
 ): void {
-  const clauses = findStructuredQuickSearchClauses(entityType, q);
+  const clauses = findStructuredQuickSearchClauses(entityType, q, registry);
   if (clauses.length === 0) {
     return;
   }

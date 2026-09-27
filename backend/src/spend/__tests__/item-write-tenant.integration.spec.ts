@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
+import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util';
 import { assert, inRolledBackTransaction, Kind, runSpecs, seedTenant, setTenant } from './round-inputs.fixtures';
 import {
   disableCostCenter,
@@ -46,7 +47,11 @@ async function seedRefs(runner: QueryRunner, tag: string): Promise<Refs> {
   const tenantId = await seedTenant(runner, tag);
   const { companyId, accountId } = await seedCompany(runner, tenantId, `${tag} company`);
   const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2) RETURNING id`, [tenantId, `${tag} supplier`]);
-  const [category] = await runner.query(`INSERT INTO analytics_categories (tenant_id, name) VALUES ($1, $2) RETURNING id`, [tenantId, `${tag} category`]);
+  const axisId = await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
+  const [category] = await runner.query(
+    `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, $3) RETURNING id`,
+    [tenantId, axisId, `${tag} category`],
+  );
   const userId = await seedUser(runner, tenantId, `${tag}-${tenantId.slice(0, 8)}@example.com`);
   const [project] = await runner.query(
     `INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES ($1, $2, 1) RETURNING id`,
@@ -138,8 +143,12 @@ async function testOwnIdsAccepted(kind: Kind) {
     if (kind === 'opex') body.contract_id = b.contractId;
     const saved = await svc.create(lineBody(kind, 'Every reference', body), undefined, opts);
     const row = await readLine(runner, kind, saved.id);
-    for (const [field, value] of Object.entries(body)) assert.equal(row[field], value, `${kind}: ${field} stored`);
+    for (const [field, value] of Object.entries(body)) {
+      // The analytics category is a link of the default dimension, not an item column.
+      if (field !== 'analytics_category_id') assert.equal(row[field], value, `${kind}: ${field} stored`);
+    }
     const got = await svc.get(saved.id, opts);
+    assert.equal(got.analytics_category_id, b.categoryId, `${kind}: the detail returns the analytics category`);
     assert.equal(got.cost_center_id, b.costCenterId, `${kind}: the detail returns cost_center_id`);
     assert.equal(got.run_build, 'build', `${kind}: the detail returns run_build`);
   });

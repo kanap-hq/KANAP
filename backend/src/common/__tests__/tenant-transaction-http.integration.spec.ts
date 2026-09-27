@@ -16,13 +16,15 @@ import { ReleaseTenantRunnerFilter } from '../filters/release-tenant-runner.filt
 // A handler that writes and then fails must leave nothing persisted.
 
 const PROBE_PREFIX = 'tx-probe';
+// A value belongs to a dimension: the probe writes into the tenant's default one.
+const DEFAULT_AXIS = `(SELECT id FROM analytics_axes WHERE tenant_id = app_current_tenant() AND is_default)`;
 
 @Controller('tx-probe')
 class TransactionProbeController {
   @Post('write-then-throw')
   async writeThenThrow(@Req() req: any) {
     await req.queryRunner.manager.query(
-      `INSERT INTO analytics_categories (tenant_id, name) VALUES (app_current_tenant(), $1)`,
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES (app_current_tenant(), ${DEFAULT_AXIS}, $1)`,
       [`${PROBE_PREFIX}-throw`],
     );
     throw new BadRequestException('Failure after a successful write');
@@ -31,7 +33,7 @@ class TransactionProbeController {
   @Post('write-then-crash')
   async writeThenCrash(@Req() req: any) {
     await req.queryRunner.manager.query(
-      `INSERT INTO analytics_categories (tenant_id, name) VALUES (app_current_tenant(), $1)`,
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES (app_current_tenant(), ${DEFAULT_AXIS}, $1)`,
       [`${PROBE_PREFIX}-crash`],
     );
     throw new Error('Unexpected failure after a successful write');
@@ -40,7 +42,7 @@ class TransactionProbeController {
   @Post('write-ok')
   async writeOk(@Req() req: any) {
     await req.queryRunner.manager.query(
-      `INSERT INTO analytics_categories (tenant_id, name) VALUES (app_current_tenant(), $1)`,
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES (app_current_tenant(), ${DEFAULT_AXIS}, $1)`,
       [`${PROBE_PREFIX}-ok`],
     );
     return { ok: true };
@@ -100,6 +102,10 @@ async function main() {
      VALUES ($1, $2, 'Transaction probe', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
     [tenantId, `tx-probe-${tenantId.slice(0, 8)}`],
   );
+  await dataSource.transaction(async (manager) => {
+    await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    await manager.query(`INSERT INTO analytics_axes (tenant_id, code, is_default) VALUES ($1, 'default', true)`, [tenantId]);
+  });
   const app = await createApp(tenantId);
   const failures: string[] = [];
   try {
@@ -118,6 +124,7 @@ async function main() {
     await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
       await manager.query(`DELETE FROM analytics_categories WHERE tenant_id = $1`, [tenantId]);
+      await manager.query(`DELETE FROM analytics_axes WHERE tenant_id = $1`, [tenantId]);
     });
     await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [tenantId]);
     await dataSource.destroy();

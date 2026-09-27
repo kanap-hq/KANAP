@@ -8,7 +8,6 @@ import { Company } from '../companies/company.entity';
 import { Department } from '../departments/department.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { Account } from '../accounts/account.entity';
-import { AnalyticsCategory } from '../analytics/analytics-category.entity';
 import { User } from '../users/user.entity';
 import { FxLookupKey, FxRateService, FxResolvedRate } from '../currency/fx-rate.service';
 import { ACTIVE_TASK_STATUSES } from '../tasks/task.entity';
@@ -17,6 +16,7 @@ import { normalizeAgFilterModel } from '../common/ag-grid-filtering';
 import { StatusState } from '../common/status';
 import { formatAllocationMethodLabel } from './allocation-utils';
 import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center-tree.util';
+import { analyticsFieldKey, parseAnalyticsFieldKey } from '../analytics/analytics-axes.util';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -65,6 +65,8 @@ export interface SummaryScopeConfig {
   versionItemFk: string;
   contractLink: { table: string; itemColumn: string };
   projectLink: { table: string; itemColumn: string };
+  /** One value per line and analytics dimension (`item_id`, `axis_id`, `category_id`). */
+  analyticsLink: { table: string };
   taskObjectType: string;
   refPrefix: string;
   nameField: string;
@@ -90,12 +92,13 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     versionItemFk: 'spend_item_id',
     contractLink: { table: 'contract_spend_items', itemColumn: 'spend_item_id' },
     projectLink: { table: 'portfolio_project_opex', itemColumn: 'opex_id' },
+    analyticsLink: { table: 'spend_item_analytics_values' },
     taskObjectType: 'spend_item',
     refPrefix: 'opx',
     nameField: 'product_name',
     columns: [
       'id', 'item_number', 'product_name', 'description', 'supplier_id', 'account_id', 'paying_company_id', 'currency',
-      'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id',
+      'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'project_id',
       'contract_id', 'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at',
     ],
     textColumns: ['product_name', 'description', 'currency', 'notes'],
@@ -112,12 +115,13 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     versionItemFk: 'capex_item_id',
     contractLink: { table: 'contract_capex_items', itemColumn: 'capex_item_id' },
     projectLink: { table: 'portfolio_project_capex', itemColumn: 'capex_id' },
+    analyticsLink: { table: 'capex_item_analytics_values' },
     taskObjectType: 'capex_item',
     refPrefix: 'cpx',
     nameField: 'description',
     columns: [
       'id', 'item_number', 'description', 'paying_company_id', 'supplier_id', 'account_id', 'ppe_type', 'investment_type', 'priority',
-      'currency', 'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id',
+      'currency', 'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'project_id',
       'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at',
     ],
     textColumns: ['description', 'currency', 'notes'],
@@ -176,8 +180,15 @@ export type BudgetSummaryRow = Record<string, any> & {
   account_warning: string | null;
   owner_it_name: string;
   owner_business_name: string;
+  /**
+   * The value on the default analytics dimension, read from the links (never
+   * the legacy item column). Every dimension of the tenant also has its own
+   * key `analytics_<axis id>` (the value's name, null when the line has none).
+   */
   analytics_category_id: string | null;
   analytics_category_name: string | null;
+  /** The line's values by dimension: `{ [axis id]: category id }`, dimensions without a value left out. */
+  analytics_value_ids: Record<string, string>;
   cost_center_id: string | null;
   cost_center_code: string | null;
   cost_center_name: string | null;
@@ -479,6 +490,47 @@ async function loadCostCentersForRows(
   }]));
 }
 
+type ItemAnalyticsValue = { category_id: string; name: string | null };
+
+/**
+ * The tenant's analytics dimensions and the values the items hold on them, in
+ * one query: every dimension comes back at least once (with no link when no
+ * item has a value on it), then once per link row of the given items. A tenant
+ * without dimensions reads as none (read paths never create the default).
+ */
+async function loadAnalyticsForRows(
+  config: SummaryScopeConfig,
+  manager: EntityManager,
+  tenantId: string,
+  itemIds: string[],
+): Promise<{ axisIds: string[]; defaultAxisId: string | null; byItem: Map<string, Map<string, ItemAnalyticsValue>> }> {
+  const rows: Array<{ axis_id: string; is_default: boolean; item_id: string | null; category_id: string | null; category_name: string | null }> =
+    await manager.query(
+      `SELECT ax.id AS axis_id, ax.is_default, v.item_id, v.category_id, c.name AS category_name
+       FROM analytics_axes ax
+       LEFT JOIN ${config.analyticsLink.table} v
+         ON v.tenant_id = $1 AND v.axis_id = ax.id AND v.item_id = ANY($2::uuid[])
+       LEFT JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = $1
+       WHERE ax.tenant_id = $1`,
+      [tenantId, itemIds],
+    );
+  const axisIds = new Set<string>();
+  let defaultAxisId: string | null = null;
+  const byItem = new Map<string, Map<string, ItemAnalyticsValue>>();
+  for (const row of rows) {
+    axisIds.add(row.axis_id);
+    if (row.is_default) defaultAxisId = row.axis_id;
+    if (!row.item_id || !row.category_id) continue;
+    let values = byItem.get(row.item_id);
+    if (!values) {
+      values = new Map();
+      byItem.set(row.item_id, values);
+    }
+    values.set(row.axis_id, { category_id: row.category_id, name: row.category_name ?? null });
+  }
+  return { axisIds: Array.from(axisIds), defaultAxisId, byItem };
+}
+
 /** One summary row per item (same order), for the years given; slots after the end of validity are empty. */
 export async function buildBudgetSummaryRows(
   config: SummaryScopeConfig,
@@ -506,14 +558,13 @@ export async function buildBudgetSummaryRows(
   const allocationForY = await allocate(Y);
   const allocationForNext = options.includeNextYearAllocation ? await allocate(Y + 1) : new Map<string, AllocationLike>();
 
-  const [categories, suppliers, accounts, owners, payingCompanies] = await Promise.all([
-    findByIds<AnalyticsCategory>(manager, AnalyticsCategory, tenantId, distinct(items.map((i) => i.analytics_category_id))),
+  const [suppliers, accounts, owners, payingCompanies] = await Promise.all([
     findByIds<Supplier>(manager, Supplier, tenantId, distinct(items.map((i) => i.supplier_id))),
     findByIds<Account>(manager, Account, tenantId, distinct(items.map((i) => i.account_id))),
     findByIds<User>(manager, User, tenantId, distinct(items.flatMap((i) => [i.owner_it_id, i.owner_business_id]))),
     findByIds<Company>(manager, Company, tenantId, distinct(items.map((i) => i.paying_company_id))),
   ]);
-  const categoryById = new Map(categories.map((c) => [c.id, c]));
+  const analytics = await loadAnalyticsForRows(config, manager, tenantId, itemIds);
   const costCenterById = await loadCostCentersForRows(manager, tenantId, items);
   const supplierById = new Map(suppliers.map((s) => [s.id, s]));
   const accountById = new Map(accounts.map((a) => [a.id, a]));
@@ -609,7 +660,15 @@ export async function buildBudgetSummaryRows(
 
     const supplier = item.supplier_id ? supplierById.get(item.supplier_id) : undefined;
     const account = item.account_id ? accountById.get(item.account_id) : undefined;
-    const category = item.analytics_category_id ? categoryById.get(item.analytics_category_id) : undefined;
+    const analyticsValues = analytics.byItem.get(item.id);
+    const defaultValue = analytics.defaultAxisId ? analyticsValues?.get(analytics.defaultAxisId) : undefined;
+    const analyticsFields: Record<string, string | null> = {};
+    const analyticsValueIds: Record<string, string> = {};
+    for (const axisId of analytics.axisIds) {
+      const value = analyticsValues?.get(axisId);
+      analyticsFields[analyticsFieldKey(axisId)] = value?.name ?? null;
+      if (value) analyticsValueIds[axisId] = value.category_id;
+    }
     const costCenter = item.cost_center_id ? costCenterById.get(item.cost_center_id) : undefined;
     const payingCompany = item.paying_company_id ? payingCompanyById.get(item.paying_company_id) : undefined;
     const contract = contractByItem.get(item.id);
@@ -638,8 +697,10 @@ export async function buildBudgetSummaryRows(
       account_warning: accountWarning,
       owner_it_name: displayName(ownerById.get(item.owner_it_id) || null),
       owner_business_name: displayName(ownerById.get(item.owner_business_id) || null),
-      analytics_category_id: item.analytics_category_id ?? null,
-      analytics_category_name: category ? category.name : null,
+      analytics_category_id: defaultValue?.category_id ?? null,
+      analytics_category_name: defaultValue?.name ?? null,
+      ...analyticsFields,
+      analytics_value_ids: analyticsValueIds,
       cost_center_id: item.cost_center_id ?? null,
       cost_center_code: costCenter?.code ?? null,
       cost_center_name: costCenter?.name ?? null,
@@ -733,7 +794,8 @@ export function getSummaryFieldValue(row: any, field: string): any {
     case 'latest_task_text':
       return blankToNull(row?.latest_task?.title);
     default:
-      return row?.[field];
+      // A dimension's value name (`analytics_<axis id>`) is derived text like the names above.
+      return parseAnalyticsFieldKey(field) ? blankToNull(row?.[field]) : row?.[field];
   }
 }
 
@@ -873,6 +935,8 @@ export function quickSearchSummaryRows<T extends Record<string, any>>(
     ]) {
       bag.push(take(value));
     }
+    // The value names of every dimension the line has a value on.
+    for (const axisId of Object.keys(row.analytics_value_ids ?? {})) bag.push(take(row[analyticsFieldKey(axisId)]));
     return bag.some((entry) => entry.includes(needle));
   });
 }

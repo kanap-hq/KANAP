@@ -61,8 +61,8 @@ export class CapexItem {
   @Column('uuid', { nullable: true })
   owner_business_id!: string | null;
 
-  @Column('uuid', { nullable: true })
-  analytics_category_id!: string | null;
+  // The legacy analytics category column stays in the database for one release, unread and
+  // unwritten: analytics values live in the item analytics links (`item-analytics.util.ts`).
 
   // A cost center of this tenant (never a group); the database enforces the tenant match.
   @Column('uuid', { nullable: true })

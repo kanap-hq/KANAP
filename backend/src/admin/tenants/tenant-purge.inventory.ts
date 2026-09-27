@@ -191,11 +191,16 @@ export const TENANT_PURGE_TABLES = [
   'spend_links',
   'spend_attachments',
   'spend_item_contacts',
+  // Line values reference a value by (tenant, value, dimension) ON DELETE RESTRICT: before the values
+  'spend_item_analytics_values',
+  'capex_item_analytics_values',
   'spend_items',
   'business_process_category_links',
   'business_processes',
   'business_process_categories',
   'analytics_categories',
+  // After the values (a value references its dimension ON DELETE RESTRICT)
+  'analytics_axes',
   'capex_amounts',
   'capex_allocations',
   'capex_round_inputs',

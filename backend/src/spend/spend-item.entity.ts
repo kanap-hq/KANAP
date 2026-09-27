@@ -52,8 +52,8 @@ export class SpendItem {
   @Column('uuid', { nullable: true })
   owner_business_id!: string | null;
 
-  @Column('uuid', { nullable: true })
-  analytics_category_id!: string | null;
+  // The legacy analytics category column stays in the database for one release, unread and
+  // unwritten: analytics values live in the item analytics links (`item-analytics.util.ts`).
 
   @Column('uuid', { nullable: true })
   project_id!: string | null;

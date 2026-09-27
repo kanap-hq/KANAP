@@ -249,11 +249,14 @@ if [[ -n "$DEFAULT_TENANT_ID" ]]; then
     spend_links
     spend_attachments
     spend_item_contacts
+    spend_item_analytics_values
+    capex_item_analytics_values
     spend_items
     business_process_category_links
     business_processes
     business_process_categories
     analytics_categories
+    analytics_axes
     capex_amounts
     capex_allocations
     capex_versions

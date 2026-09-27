@@ -1,4 +1,6 @@
-import { AiEntityFilterRegistry, AiQueryEntityType } from '../ai-filter.types';
+import { EntityManager } from 'typeorm';
+import { AnalyticsAxisInfo, ANALYTICS_CSV_PREFIX, analyticsFieldKey, isAxisActive, loadAnalyticsAxes } from '../../../analytics/analytics-axes.util';
+import { AiEntityFilterRegistry, AiFilterFieldDef, AiQueryEntityType } from '../ai-filter.types';
 import { accountsRegistry } from './accounts.registry';
 import { analyticsCategoriesRegistry } from './analytics-categories.registry';
 import { applicationsRegistry } from './applications.registry';
@@ -49,4 +51,71 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
 
 export function getAiEntityRegistry(entityType: AiQueryEntityType): AiEntityFilterRegistry {
   return aiEntityRegistries[entityType];
+}
+
+/** The field the default analytics dimension keeps on both item types; the other dimensions come right after it. */
+const DEFAULT_ANALYTICS_FIELD = 'analytics_category';
+
+/**
+ * A copy of an OPEX or CAPEX registry with one field per enabled non-default
+ * analytics dimension, `analytics:<code>`, reading the engine's
+ * `analytics_<axis id>` value (set, dynamic, sortable, groupable). The default
+ * dimension stays `analytics_category`, whatever its position, code or name.
+ */
+export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: AnalyticsAxisInfo[]): AiEntityFilterRegistry {
+  const defaultAxis = axes.find((axis) => axis.is_default);
+  const extra = axes
+    .filter((axis) => !axis.is_default && isAxisActive(axis))
+    .map((axis): [string, AiFilterFieldDef] => {
+      const key = `${ANALYTICS_CSV_PREFIX}${axis.code}`;
+      const name = axis.name?.trim() || axis.code;
+      return [key, {
+        ai: key,
+        grid: analyticsFieldKey(axis.id),
+        type: 'set',
+        description: `Analytics dimension "${name}": the line's value on it. null is a line without a value on this dimension.`,
+        dynamic: true,
+        discoverable: true,
+        sortable: true,
+        groupable: true,
+      }];
+    });
+  const renamedDefault = defaultAxis?.name?.trim();
+  if (!extra.length && !renamedDefault) return registry;
+
+  const fields: Record<string, AiFilterFieldDef> = {};
+  for (const [key, field] of Object.entries(registry.fields)) {
+    fields[key] = key === DEFAULT_ANALYTICS_FIELD && renamedDefault
+      ? { ...field, description: `${field.description} This tenant calls it "${renamedDefault}".` }
+      : field;
+    if (key === DEFAULT_ANALYTICS_FIELD) for (const [extraKey, extraField] of extra) fields[extraKey] = extraField;
+  }
+  const sortFields: Record<string, string> = {};
+  for (const [key, grid] of Object.entries(registry.sortFields)) {
+    sortFields[key] = grid;
+    if (key === DEFAULT_ANALYTICS_FIELD) for (const [extraKey, extraField] of extra) sortFields[extraKey] = extraField.grid;
+  }
+  return { ...registry, fields, sortFields };
+}
+
+/**
+ * The registry of one entity type for the tenant of the call: OPEX and CAPEX
+ * gain their analytics dimension fields (one tenant-predicated query), every
+ * other type is the static registry. Resolved once per tool call and passed
+ * down; `getAiEntityRegistry` stays for static callers.
+ */
+export async function resolveAiEntityRegistry(
+  context: { manager: EntityManager; tenantId: string },
+  entityType: AiQueryEntityType,
+): Promise<AiEntityFilterRegistry> {
+  const registry = getAiEntityRegistry(entityType);
+  if (entityType !== 'spend_items' && entityType !== 'capex_items') return registry;
+  return withAnalyticsAxisFields(registry, await loadAnalyticsAxes(context.manager, context.tenantId));
+}
+
+/** The `analytics:<code>` fields of a resolved registry with the row key each reads. */
+export function analyticsAxisFields(registry: AiEntityFilterRegistry): Array<{ key: string; grid: string }> {
+  return Object.entries(registry.fields)
+    .filter(([key]) => key.startsWith(ANALYTICS_CSV_PREFIX))
+    .map(([key, field]) => ({ key, grid: field.grid }));
 }

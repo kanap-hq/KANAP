@@ -17,6 +17,7 @@ import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { SpendItemsService } from '../../spend/spend-items.service';
+import { itemAnalyticsFields, ItemAnalyticsScope, loadItemAnalyticsValues } from '../../spend/item-analytics.util';
 import { isActiveAt, parseEndOfValidityInput } from '../../common/status';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
@@ -566,6 +567,10 @@ export class AiBusinessRecordMutationSupportService {
         if (relation.row.kind !== 'cost_center') throw new BadRequestException('Choose a cost center, not a group.');
         if (!isActiveAt(relation.row.disabled_at as any)) throw new BadRequestException('This cost center is disabled.');
       }
+      if (field.relationTarget === 'analytics_categories' && relation && relation.id !== (existing?.[fieldName] ?? null)) {
+        // A new value must be enabled; the line's current one is kept as it is (the write gate checks it again).
+        if (relation.row.status === 'disabled' || !isActiveAt(relation.row.disabled_at as any)) throw new BadRequestException('This value is disabled.');
+      }
       return { value: relation?.id ?? null, displayValue: relation?.label ?? null };
     }
 
@@ -897,15 +902,15 @@ export class AiBusinessRecordMutationSupportService {
           [tenantId, ref],
         );
       case 'spend_items':
-        return manager.query(
+        return this.withDefaultAnalyticsValue(context, 'opex', await manager.query(
           `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text)) ORDER BY product_name LIMIT 6`,
           [tenantId, ref],
-        );
+        ));
       case 'capex_items':
-        return manager.query(
+        return this.withDefaultAnalyticsValue(context, 'capex', await manager.query(
           `SELECT * FROM capex_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(description) = LOWER($2::text)) ORDER BY description LIMIT 6`,
           [tenantId, ref],
-        );
+        ));
       case 'companies':
         return manager.query(`SELECT * FROM companies WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'cost_centers': {
@@ -924,7 +929,13 @@ export class AiBusinessRecordMutationSupportService {
       case 'accounts':
         return manager.query(`SELECT * FROM accounts WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}account_number = $2::text OR LOWER(account_name) = LOWER($2::text) OR LOWER(CONCAT(account_number, ' - ', account_name)) = LOWER($2::text)) ORDER BY account_number LIMIT 6`, [tenantId, ref]);
       case 'analytics_categories':
-        return manager.query(`SELECT * FROM analytics_categories WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
+        // A line's analytics category is a value of the default dimension (the other dimensions are not written by the AI).
+        return manager.query(
+          `SELECT c.* FROM analytics_categories c
+             JOIN analytics_axes ax ON ax.tenant_id = c.tenant_id AND ax.id = c.axis_id AND ax.is_default
+            WHERE c.tenant_id = $1 AND (${uuid ? 'c.id = $2 OR ' : ''}LOWER(c.name) = LOWER($2::text)) ORDER BY c.name LIMIT 6`,
+          [tenantId, ref],
+        );
       case 'business_processes':
         return manager.query(`SELECT * FROM business_processes WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'portfolio_sources':
@@ -938,6 +949,20 @@ export class AiBusinessRecordMutationSupportService {
       default:
         throw new BadRequestException(`Unsupported relation target ${entityType}.`);
     }
+  }
+
+  /**
+   * Line rows with their default dimension's value read from the analytics links:
+   * the item column of that name is no longer written, so the preview's current
+   * values and the reference checks never read it.
+   */
+  private async withDefaultAnalyticsValue(
+    context: AiExecutionContextWithManager,
+    scope: ItemAnalyticsScope,
+    rows: Record<string, unknown>[],
+  ): Promise<Record<string, unknown>[]> {
+    const values = await loadItemAnalyticsValues(context.manager, scope, context.tenantId, rows.map((row) => String(row.id)));
+    return rows.map((row) => ({ ...row, analytics_category_id: itemAnalyticsFields(values.get(String(row.id)) ?? []).analytics_category_id }));
   }
 
   private referenceFromRow(entityType: RelationTarget, row: Record<string, unknown>): ResolvedReference {

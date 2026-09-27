@@ -21,9 +21,6 @@ export const ListSpendQuerySchema = ListQuerySchema.extend({
   /** Filter by account ID */
   account_id: z.string().uuid().optional(),
 
-  /** Filter by analytics category ID */
-  analytics_category_id: z.string().uuid().optional(),
-
   /** Filter by IT owner ID */
   owner_it_id: z.string().uuid().optional(),
 
@@ -67,7 +64,6 @@ export class ListSpendQueryDto implements ListSpendQuery {
   project_id?: string;
   contract_id?: string;
   account_id?: string;
-  analytics_category_id?: string;
   owner_it_id?: string;
   owner_business_id?: string;
   year?: number;

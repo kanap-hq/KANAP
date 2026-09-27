@@ -4,6 +4,7 @@ import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { applyDisabledAtWhere, LifecycleScope, StatusState } from '../common/status';
 import { compileAgFilterCondition, createParamNameGenerator, normalizeAgFilterModel } from '../common/ag-grid-filtering';
 import { formatCents } from '../common/amount';
+import { parseAnalyticsFieldKey } from '../analytics/analytics-axes.util';
 import {
   applyAgFiltersInMemory,
   buildBudgetSummaryRows,
@@ -38,7 +39,10 @@ import {
  */
 export const MEMORY_ROW_CAP = 10_000;
 
-/** Fields the column filters can list values for, on both item types (plus each type's own fields). */
+/**
+ * Fields the column filters can list values for, on both item types (plus each
+ * type's own fields and every `analytics_<axis id>` dimension key).
+ */
 const FILTER_VALUE_FIELDS = [
   'supplier_name', 'paying_company_name', 'company_name', 'account_display', 'allocation_label', 'allocation_method_label',
   'contract_name', 'currency', 'owner_it_name', 'owner_business_name', 'analytics_category_name', 'project_name',
@@ -299,7 +303,7 @@ export async function summaryFilterValues(
   const requested: string[] = typeof query?.fields === 'string'
     ? query.fields.split(',').map((field: string) => field.trim()).filter(Boolean)
     : [];
-  const fields = requested.filter((field) => allowed.has(field));
+  const fields = requested.filter((field) => allowed.has(field) || parseAnalyticsFieldKey(field) != null);
   if (fields.length === 0) return {};
 
   const ctx = await summaryContext(config, query, manager);

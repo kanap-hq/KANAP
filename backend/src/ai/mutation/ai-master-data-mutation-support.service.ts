@@ -866,8 +866,16 @@ export class AiMasterDataMutationSupportService {
           [tenantId, ref],
         );
       case 'analytics_categories':
+        // Names are unique per dimension: a name used in two dimensions is the "several matches" error.
         return manager.query(
-          `SELECT * FROM analytics_categories WHERE tenant_id = $1 AND LOWER(name) = LOWER($2::text) ORDER BY name LIMIT 6`,
+          `
+          SELECT c.*, a.name AS axis_name, a.is_default AS axis_is_default
+          FROM analytics_categories c
+          LEFT JOIN analytics_axes a ON a.id = c.axis_id AND a.tenant_id = c.tenant_id
+          WHERE c.tenant_id = $1 AND LOWER(c.name) = LOWER($2::text)
+          ORDER BY a.is_default DESC, c.name
+          LIMIT 6
+          `,
           [tenantId, ref],
         );
       case 'business_processes':
@@ -909,7 +917,7 @@ export class AiMasterDataMutationSupportService {
       case 'chart_of_accounts':
         return this.chartOfAccounts.get(id, { manager: context.manager }) as any;
       case 'analytics_categories':
-        return this.analyticsCategories.get(id, { manager: context.manager }) as any;
+        return this.analyticsCategories.get(id, { manager: context.manager, tenantId: context.tenantId }) as any;
       case 'business_processes':
         return this.businessProcesses.get(id, { manager: context.manager }) as any;
       case 'locations':
@@ -962,6 +970,11 @@ export class AiMasterDataMutationSupportService {
       }
       case 'locations':
         return [row.code, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled location';
+      case 'analytics_categories': {
+        const name = textOrNull(row.name) || 'Untitled analytics category';
+        const dimension = row.axis_is_default === false ? textOrNull(row.axis_name) : null;
+        return dimension ? `${name} (${dimension})` : name;
+      }
       default:
         return textOrNull(row.name) || `Untitled ${this.getConfig(entityType).labelSingular}`;
     }
@@ -1319,7 +1332,8 @@ export class AiMasterDataMutationSupportService {
       case 'chart_of_accounts':
         return this.chartOfAccounts.create(fields as any, context.userId, { manager: context.manager, audit });
       case 'analytics_categories':
-        return this.analyticsCategories.create(fields as any, context.userId, { manager: context.manager, audit });
+        // No dimension in the fields: a new value lands in the default dimension.
+        return this.analyticsCategories.create(fields as any, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
       case 'business_processes':
         return this.businessProcesses.create(fields as any, context.userId, { manager: context.manager, audit });
       case 'locations':
@@ -1401,7 +1415,7 @@ export class AiMasterDataMutationSupportService {
       case 'chart_of_accounts':
         return this.chartOfAccounts.update(id, fields as any, context.userId, { manager: context.manager, audit });
       case 'analytics_categories':
-        return this.analyticsCategories.update(id, fields as any, context.userId, { manager: context.manager, audit });
+        return this.analyticsCategories.update(id, fields as any, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
       case 'business_processes':
         return this.businessProcesses.update(id, fields as any, context.userId, { manager: context.manager, audit });
       case 'locations':

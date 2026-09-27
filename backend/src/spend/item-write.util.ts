@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { isActiveAt } from '../common/status';
+import { ItemAnalyticsChange, resolveItemAnalyticsChanges } from './item-analytics.util';
 
 /**
  * The one gate of every OPEX and CAPEX line write (API create and update, the
@@ -19,7 +20,10 @@ import { isActiveAt } from '../common/status';
  * - a line with a cost center and no paying company takes the cost center's;
  * - the resulting account must belong to the resulting company's chart,
  *   checked on create and when the company or the account changes (an older
- *   mismatched line still takes unrelated edits).
+ *   mismatched line still takes unrelated edits);
+ * - analytics values (`analytics_values`, and the legacy
+ *   `analytics_category_id` of the default dimension) are resolved into link
+ *   changes, which the caller writes after the line (`item-analytics.util.ts`).
  */
 
 export type ItemWriteScope = 'opex' | 'capex';
@@ -30,11 +34,11 @@ export type RunBuild = (typeof RUN_BUILD_VALUES)[number];
 const WRITABLE_COLUMNS: Record<ItemWriteScope, readonly string[]> = {
   opex: [
     'product_name', 'description', 'supplier_id', 'paying_company_id', 'account_id', 'currency', 'effective_start',
-    'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id', 'contract_id', 'cost_center_id', 'run_build', 'notes',
+    'owner_it_id', 'owner_business_id', 'project_id', 'contract_id', 'cost_center_id', 'run_build', 'notes',
   ],
   capex: [
     'description', 'ppe_type', 'investment_type', 'priority', 'supplier_id', 'paying_company_id', 'account_id', 'currency',
-    'effective_start', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id', 'cost_center_id', 'run_build', 'notes',
+    'effective_start', 'owner_it_id', 'owner_business_id', 'project_id', 'cost_center_id', 'run_build', 'notes',
   ],
 };
 
@@ -46,7 +50,6 @@ const REFERENCES: Record<string, { table: string; label: string }> = {
   paying_company_id: { table: 'companies', label: 'Paying company' },
   account_id: { table: 'accounts', label: 'Account' },
   supplier_id: { table: 'suppliers', label: 'Supplier' },
-  analytics_category_id: { table: 'analytics_categories', label: 'Analytics category' },
   owner_it_id: { table: 'users', label: 'IT owner' },
   owner_business_id: { table: 'users', label: 'Business owner' },
   project_id: { table: 'portfolio_projects', label: 'Project' },
@@ -59,6 +62,8 @@ export interface ItemWrite {
   /** The columns to set, only those the body supplied (plus a filled paying company). */
   values: Record<string, unknown>;
   lifecycle: { status?: unknown; disabled_at?: any; effective_end?: unknown };
+  /** Analytics values to set or clear per dimension, written after the line is saved (`writeItemAnalyticsValues`). */
+  analytics: ItemAnalyticsChange[];
 }
 
 type ExistingItem = { tenant_id?: string | null } & Record<string, any>;
@@ -195,13 +200,15 @@ export async function resolveItemWrite(
     }
   }
 
-  return { values, lifecycle };
+  const analytics = await resolveItemAnalyticsChanges(manager, scope, tenantId, input, (existing?.id as string | undefined) ?? null);
+
+  return { values, lifecycle, analytics };
 }
 
 /* ---- Item CSVs (both types) ---- */
 
 /** Accepted when absent (older files): an absent column leaves the stored value; present and blank clears it. */
-export const ITEM_CSV_OPTIONAL_HEADERS = ['cost_center_code', 'run_build'] as const;
+export const ITEM_CSV_OPTIONAL_HEADERS = ['analytics_category', 'cost_center_code', 'run_build'] as const;
 
 export type CsvCostCenter = { id: string; code: string; kind: string; company_id: string | null; disabled_at: Date | string | null };
 

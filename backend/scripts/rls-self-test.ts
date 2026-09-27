@@ -15,6 +15,7 @@ type TestResult = { name: string; ok: boolean; info?: string };
 
 const TABLES_TO_CHECK_RLS = Array.from(new Set([
   'users', 'companies', 'departments', 'cost_centers', 'suppliers', 'accounts',
+  'analytics_axes', 'analytics_categories', 'spend_item_analytics_values', 'capex_item_analytics_values',
   'spend_items', 'spend_versions', 'spend_amounts', 'spend_allocations', 'spend_tasks',
   'contracts', 'contract_tasks', 'contract_spend_items', 'contract_attachments', 'contract_links',
   'capex_items', 'capex_versions', 'capex_amounts',
@@ -96,6 +97,10 @@ const TABLES_TO_CHECK_POLICY = new Set([
   'portfolio_criteria',
   'portfolio_criterion_values',
   'cost_centers',
+  'analytics_axes',
+  'analytics_categories',
+  'spend_item_analytics_values',
+  'capex_item_analytics_values',
 ]);
 
 const TABLES_TO_CHECK_FORCE = new Set([

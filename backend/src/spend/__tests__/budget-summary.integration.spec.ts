@@ -401,7 +401,8 @@ async function testAiMarksACappedListTruncated() {
   const capex = {
     summary: async () => ({ items: [{ id: 'capex-1', description: 'Only line', versions: {} }], total: 1, page: 1, limit: 200, capped: true }),
   };
-  const context = { tenantId: 'tenant-ai', userId: null, isPlatformHost: false, surface: 'chat', authMethod: 'jwt', manager: {} } as any;
+  // The registry is resolved for the tenant: a tenant without analytics dimensions.
+  const context = { tenantId: 'tenant-ai', userId: null, isPlatformHost: false, surface: 'chat', authMethod: 'jwt', manager: { query: async () => [] } } as any;
   const result: any = await queryExecutor(capex).execute(context, { entity_type: 'capex_items' });
   assert.equal(result.truncated, true, 'AI: a capped list is truncated');
   assert.equal(result.complete, false);
@@ -638,6 +639,106 @@ async function testBudgetHolder(kind: Kind) {
   });
 }
 
+/**
+ * Two analytics dimensions: the default one (no name) and Nature. Alpha holds
+ * Licences and Subscriptions, Bravo Services and Maintenance, Charlie nothing
+ * on the links but a stale legacy column (Licences): the engine reads the
+ * links only.
+ */
+async function seedAnalytics(runner: QueryRunner, tenantId: string, kind: Kind, ids: Fixture['ids']) {
+  const axis = async (code: string, name: string | null, isDefault: boolean, order: number): Promise<string> => {
+    const [row] = await runner.query(
+      `INSERT INTO analytics_axes (tenant_id, code, name, is_default, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [tenantId, code, name, isDefault, order],
+    );
+    return row.id;
+  };
+  const value = async (axisId: string, name: string): Promise<string> => {
+    const [row] = await runner.query(
+      `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, $3) RETURNING id`,
+      [tenantId, axisId, name],
+    );
+    return row.id;
+  };
+  const defaultAxis = await axis('default', null, true, 0);
+  const nature = await axis('nature', 'Nature', false, 1);
+  const licences = await value(defaultAxis, 'Licences');
+  const services = await value(defaultAxis, 'Services');
+  const subscriptions = await value(nature, 'Subscriptions');
+  const maintenance = await value(nature, 'Maintenance');
+  const link = SUMMARY_SCOPES[kind].analyticsLink.table;
+  for (const [itemId, axisId, categoryId] of [
+    [ids.alpha, defaultAxis, licences], [ids.alpha, nature, subscriptions],
+    [ids.bravo, defaultAxis, services], [ids.bravo, nature, maintenance],
+  ]) {
+    await runner.query(`INSERT INTO ${link} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`, [tenantId, itemId, axisId, categoryId]);
+  }
+  await runner.query(`UPDATE ${TABLES[kind].items} SET analytics_category_id = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, ids.charlie, licences]);
+  return { defaultAxis, nature, licences, services, subscriptions, maintenance };
+}
+
+async function testAnalyticsDimensions(kind: Kind) {
+  await withFixture(kind, async (runner, { tenantId, ids }, svc) => {
+    const opts = { manager: runner.manager };
+    const config = SUMMARY_SCOPES[kind];
+    const a = await seedAnalytics(runner, tenantId, kind, ids);
+    const natureKey = `analytics_${a.nature}`;
+    const defaultKey = `analytics_${a.defaultAxis}`;
+
+    const { items } = await svc.summary({ ...ALL, limit: 100 }, opts);
+    const row = (id: string) => items.find((item: any) => item.id === id);
+    assert.deepEqual(
+      [row(ids.alpha).analytics_category_id, row(ids.alpha).analytics_category_name, row(ids.alpha)[defaultKey], row(ids.alpha)[natureKey]],
+      [a.licences, 'Licences', 'Licences', 'Subscriptions'],
+      `${kind}: both dimensions on the row, the default under its legacy keys too`,
+    );
+    assert.deepEqual(row(ids.alpha).analytics_value_ids, { [a.defaultAxis]: a.licences, [a.nature]: a.subscriptions }, `${kind}: value ids by dimension`);
+    assert.deepEqual(row(ids.bravo).analytics_value_ids, { [a.defaultAxis]: a.services, [a.nature]: a.maintenance });
+    const charlie = row(ids.charlie);
+    assert.deepEqual(
+      [charlie.analytics_category_id, charlie.analytics_category_name, charlie[defaultKey], charlie[natureKey], charlie.analytics_value_ids],
+      [null, null, null, null, {}],
+      `${kind}: the stale legacy column never leaks`,
+    );
+
+    const values = await svc.summaryFilterValues({ ...ALL, fields: `${natureKey},analytics_category_name,${defaultKey}` }, opts);
+    assert.deepEqual(values[natureKey], ['Maintenance', 'Subscriptions', null], `${kind}: filter values of a dimension`);
+    assert.deepEqual(values.analytics_category_name, ['Licences', 'Services', null], `${kind}: the default dimension from the links`);
+    assert.deepEqual(values[defaultKey], ['Licences', 'Services', null], `${kind}: the default dimension under its own key`);
+    const unknown = await svc.summaryFilterValues({ ...ALL, fields: 'analytics_nature,analytics_category_id' }, opts);
+    assert.deepEqual(unknown, {}, `${kind}: only a dimension id makes a filter-value key`);
+
+    const idsOf = (page: any) => page.items.map((item: any) => item.id).sort();
+    const bySet = await svc.summary({ ...ALL, filters: filters({ [natureKey]: { filterType: 'set', values: ['Maintenance', null] } }) }, opts);
+    assert.deepEqual(idsOf(bySet), [ids.bravo, ids.charlie, ids.delta, ids.echo].sort(), `${kind}: set filter on a dimension, blanks included`);
+    const byValue = await svc.summary({ ...ALL, filters: filters({ [natureKey]: { filterType: 'set', values: ['Subscriptions'] } }) }, opts);
+    assert.deepEqual(idsOf(byValue), [ids.alpha], `${kind}: set filter on one value`);
+    const idsForTotals = await svc.summaryIds({ ...ALL, filters: filters({ [natureKey]: { filterType: 'set', values: ['Subscriptions'] } }) }, opts);
+    assert.deepEqual(idsForTotals.ids, [ids.alpha], `${kind}: ids follow the same filter`);
+
+    const searched = await svc.summary({ ...ALL, q: 'maintenance' }, opts);
+    assert.deepEqual(idsOf(searched), [ids.bravo], `${kind}: quick search by a second-dimension value`);
+
+    const natureOf = (page: any) => page.items.map((item: any) => item[natureKey]);
+    const ascending = await svc.summary({ ...ALL, sort: `${natureKey}:ASC` }, opts);
+    assert.deepEqual(natureOf(ascending), ['Maintenance', 'Subscriptions', null, null, null], `${kind}: sort ascending on a dimension, blanks last`);
+    const descending = await svc.summary({ ...ALL, sort: `${natureKey}:DESC` }, opts);
+    assert.deepEqual(natureOf(descending), [null, null, null, 'Subscriptions', 'Maintenance'], `${kind}: sort descending on a dimension`);
+
+    // The legacy column left the SQL columns: a filter on the default dimension runs in memory on the links.
+    const byIdCapped = await budgetSummary.summary(config, engineDeps(1), { ...ALL, filters: filters({ analytics_category_id: { filterType: 'set', values: [a.licences] } }) }, runner.manager);
+    assert.equal(byIdCapped.capped, true, `${kind}: the default dimension filter runs in memory`);
+    const byId = await svc.summary({ ...ALL, filters: filters({ analytics_category_id: { filterType: 'set', values: [a.licences] } }) }, opts);
+    assert.deepEqual(idsOf(byId), [ids.alpha], `${kind}: filtered on the link, not on the stale column`);
+    const blank = await svc.summary({ ...ALL, filters: filters({ analytics_category_id: { filterType: 'text', type: 'blank' } }) }, opts);
+    assert.deepEqual(idsOf(blank), [ids.charlie, ids.delta, ids.echo].sort(), `${kind}: blank on the default dimension reads the links`);
+    const byName = await svc.summary({ ...ALL, filters: filters({ analytics_category_name: { filterType: 'set', values: ['Licences'] } }) }, opts);
+    assert.deepEqual(idsOf(byName), [ids.alpha], `${kind}: the default dimension by name`);
+    const sortedById = await svc.summary({ ...ALL, sort: 'analytics_category_name:ASC' }, opts);
+    assert.deepEqual(sortedById.items.map((item: any) => item.analytics_category_name), ['Licences', 'Services', null, null, null], `${kind}: sort on the default dimension`);
+  });
+}
+
 async function testRegistriesExposeEveryAmount() {
   const previous: Record<Kind, Record<string, string>> = {
     opex: {
@@ -699,6 +800,7 @@ void runSpecs('budget-summary.integration.spec', [
     [`AI aggregate sums in cents (${kind})`, () => testAiAggregateSumsInCents(kind)],
     [`cost center and run or build (${kind})`, () => testCostCenterFields(kind)],
     [`budget holder from the cost center (${kind})`, () => testBudgetHolder(kind)],
+    [`analytics dimensions (${kind})`, () => testAnalyticsDimensions(kind)],
   ]),
   ['AI: a capped list is truncated', testAiMarksACappedListTruncated],
   ['AI: CAPEX amount filter', testAiCapexAmountFilter],
