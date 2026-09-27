@@ -67,15 +67,19 @@ Die CAPEX-Liste (unter **Budgetverwaltung > CAPEX**) ist Ihre Hauptansicht zum D
 
 | Spalte | Was sie zeigt |
 |--------|---------------|
+| **Ref** | Positionsreferenz, zum Beispiel CPX-12 |
 | **Beschreibung** | Name der Investition |
-| **Unternehmen** | Zahlendes Unternehmen |
+| **Lieferant** | Der Name des Lieferanten |
+| **Zahlendes Unternehmen** | Welches Unternehmen diese Position bezahlt |
+| **Vertrag** | Der Name des zuletzt verknüpften Vertrags |
+| **Konto** | Nummer und Name des Sachkontos |
 | **Anlagentyp** | Hardware oder Software |
 | **Investitionsart** | Zweck der Investition |
 | **Priorität** | Geschäftliche Prioritätsstufe |
-| **J Zuordnung** | Zuordnungsmethoden-Bezeichnung des aktuellen Jahres |
-| **J Budget** | Geplantes Investitionsbudget des aktuellen Jahres (Berichtswährung) |
-| **J Erwarteter Endwert** | Tatsächliche Investitionsausgaben des aktuellen Jahres (Berichtswährung) |
-| **J+1 Budget** | Geplantes Investitionsbudget des nächsten Jahres (Berichtswährung) |
+| **Zuordnung** | Zuordnungsmethoden-Bezeichnung des aktuellen Jahres |
+| **Budget J** | Geplantes Investitionsbudget des aktuellen Jahres (Berichtswährung) |
+| **Erwarteter Endwert J** | Erwarteter Endwert des aktuellen Jahres (Berichtswährung) |
+| **Aufgabe** | Titel der neuesten mit dieser Position verknüpften Aufgabe |
 
 ### Zusätzliche Spalten
 
@@ -83,42 +87,48 @@ Diese Spalten sind standardmäßig ausgeblendet. Zeigen Sie sie über die Spalte
 
 | Spalte | Was sie zeigt |
 |--------|---------------|
-| **J+1 Zuordnung** | Zuordnungsmethoden-Bezeichnung des nächsten Jahres |
-| **J-1 Erwarteter Endwert** | Tatsächliche Investitionsausgaben des Vorjahres |
+| **Betragsspalten** | Jede Budgetspalte (Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert) für J-1, J, J+1 und J+2. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Die Beträge sind in der Berichtswährung |
 | **Währung** | Währungscode der Position |
-| **Start** | Gültig-ab-Datum |
+| **Gültig ab** | Startdatum |
 | **Ende der Gültigkeit** | Datum, an dem die Position endet (leer bedeutet kein Ende) |
+| **IT-Verantwortlicher** / **Fachbereichsverantwortlicher** | Zuständige Benutzer |
+| **Analytik** | Name der Analysekategorie |
+| **Projekt** | Namen der im Tab Verknüpfungen verknüpften Projekte |
 | **Notizen** | Freitext-Notizen |
-| **Aufgabe** | Titel der neuesten mit dieser Position verknüpften Aufgabe |
 | **Aktiviert** | Status (aktiviert oder deaktiviert) |
+| **Erstellt** / **Aktualisiert** | Zeitstempel |
 
 ### Schnellsuche
 
-Das Suchfeld oben durchsucht Beschreibung, Notizen, Anlagentyp, Investitionsart, Priorität, Währung und Status. Ergebnisse aktualisieren sich in Echtzeit während der Eingabe.
+Das Suchfeld oben durchsucht Referenz, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysekategorie, Anlagentyp, Investitionsart, Priorität, Notizen, Währung und Status. Ergebnisse aktualisieren sich in Echtzeit während der Eingabe.
 
 ### Spaltenfilter
 
-Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Unternehmen**, **Anlagentyp**, **Investitionsart**, **Priorität** und **Währung** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Mehrere Filter werden mit UND-Logik kombiniert.
+Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher** und **Analytik** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Mehrere Filter werden mit UND-Logik kombiniert.
+
+Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen.
+
+**Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer.
+
+Textspalten verwenden Textfilter. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `CPX-12`.
 
 ### Sortierung
 
-Klicken Sie auf eine Spaltenüberschrift, um aufsteigend oder absteigend zu sortieren. Die Liste merkt sich Ihre letzte Sortierung bei der Rückkehr.
+Klicken Sie auf eine Spaltenüberschrift, um aufsteigend oder absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betragsspalte. Standardmäßig wird nach **Budget J** sortiert, der höchste Betrag zuerst. Die Liste merkt sich Ihre letzte Sortierung bei der Rückkehr.
 
 ### Summenzeile
 
-Die angeheftete Zeile unten zeigt Summen für alle Budgetspalten. Summen berücksichtigen Ihre aktuellen Filter und Suche. Alle Beträge werden in Ihre Berichtswährung umgerechnet, die im Seitentitel angezeigt wird (z. B. „CAPEX (EUR)").
+Die angeheftete Zeile unten zeigt die Summe jeder Betragsspalte. Summen berücksichtigen Ihre aktuellen Filter und Suche. Alle Beträge werden in Ihre Berichtswährung umgerechnet, die im Seitentitel angezeigt wird.
 
 ### Deep Linking
 
 Klicken Sie auf eine beliebige Zelle in einer Zeile, um den Arbeitsbereich auf dem für diese Spalte relevantesten Tab zu öffnen:
 
-- **Beschreibung**, **Unternehmen**, **Anlagentyp**, **Investitionsart**, **Priorität**: Öffnet die **Übersicht**
-- **J Budget**, **J Erwarteter Endwert**: Öffnet den **Budget**-Tab für das aktuelle Jahr
-- **J-1 Erwarteter Endwert**: Öffnet den **Budget**-Tab für das Vorjahr
-- **J+1 Budget**: Öffnet den **Budget**-Tab für das nächste Jahr
-- **J Zuordnung**: Öffnet den **Zuordnungen**-Tab für das aktuelle Jahr
-- **J+1 Zuordnung**: Öffnet den **Zuordnungen**-Tab für das nächste Jahr
+- **Beschreibung**, **Lieferant**, **Zahlendes Unternehmen**, **Anlagentyp**, **Investitionsart**, **Priorität** und die anderen allgemeinen Spalten: Öffnet die **Übersicht**
+- **Betragsspalten** (Budget J, Erwarteter Endwert J, Revision J+1 usw.): Öffnet den **Budget**-Tab für das Jahr der Spalte
+- **Zuordnung**: Öffnet den **Zuordnungen**-Tab für das aktuelle Jahr
 - **Aufgabe**: Öffnet den Tab **Übersicht**, in dem sich der Aufgabenbereich befindet
+- **Vertrag**: Öffnet direkt den verknüpften Vertrag
 
 ### Statusfilter
 
@@ -328,12 +338,13 @@ Der Tab Verknüpfungen verbindet diese CAPEX-Position mit zugehörigen Objekten:
 
 - Verknüpfen Sie über die Autovervollständigung ein oder mehrere Projekte
 - Das hilft, Investitionsausgaben in Berichten nach Projekt zu gruppieren, und ermöglicht die Projektbuchhaltung
+- Die Projektnamen erscheinen in der Spalte **Projekt** der CAPEX-Liste, und die Schnellsuche findet sie
 - Entfernen Sie ein Projekt mit dem X auf seinem Chip
 
 **Verträge**:
 
 - Verknüpfen Sie über die Autovervollständigung einen oder mehrere Verträge
-- Verknüpfte Verträge erscheinen mit ihrem Namen zur schnellen Orientierung
+- Verknüpfte Verträge erscheinen mit ihrem Namen in der Spalte **Vertrag** der CAPEX-Liste zur schnellen Orientierung
 - Ein Vertrag kann auch mit mehreren CAPEX-Positionen verknüpft sein (n:m-Beziehung)
 - Entfernen Sie einen Vertrag mit dem X auf seinem Chip
 
@@ -375,7 +386,7 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 1. Klicken Sie in der CAPEX-Liste auf **CSV exportieren**
 2. Wählen Sie:
    - **Vorlage**: Nur Kopfzeilen (verwenden Sie dies, um eine leere CSV zum Ausfüllen zu erstellen)
-   - **Daten**: Alle aktuellen CAPEX-Positionen mit Budgets für J-1, J und J+1
+   - **Daten**: Alle CAPEX-Positionen, auch beendete, mit Budgets für J-1 bis J+2
 
 **CSV-Struktur**:
 
@@ -391,17 +402,19 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 2. Laden Sie Ihre CSV-Datei hoch (Drag-and-Drop oder Dateiauswahl)
 3. Klicken Sie auf **Vorprüfung** zur Validierung:
    - Kopfzeilen stimmen exakt überein
-   - Unternehmen existieren in Ihrem Arbeitsbereich
-   - Pflichtfelder (description, ppe_type, investment_type, priority, currency, effective_start, company_name) sind vorhanden
-   - Keine doppelten Beschreibungen
+   - Unternehmen und Benutzer existieren in Ihrem Arbeitsbereich
+   - Pflichtfelder (description, ppe_type, investment_type, priority) sind vorhanden. Eine neue Position braucht außerdem company_name und currency
+   - Währungen sind in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt
+   - Verantwortliche sind aktive Benutzer
+   - Eine `item_number` entspricht einer bestehenden CAPEX-Position
 4. Überprüfen Sie den Vorprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler)
 5. Wenn OK, klicken Sie auf **Laden** zum Importieren
 
 **Wichtige Hinweise**:
 
-- **Eindeutiger Schlüssel**: CAPEX-Positionen werden über `description` identifiziert. Existiert eine Beschreibung bereits, wird sie **übersprungen** (keine Aktualisierungen).
-- **Nur Neuanlage**: Der Importer erstellt nur neue Positionen; er aktualisiert keine bestehenden. Verwenden Sie die Benutzeroberfläche zum Bearbeiten bestehender Positionen.
-- **Referenzen**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert).
+- **Abgleich**: Eine Zeile mit einer `item_number` aktualisiert diese CAPEX-Position; die Vorprüfung meldet eine Nummer, die zu keiner Position passt. Eine Zeile ohne Nummer wird über `description` zugeordnet: Bei einem Treffer wird die Position aktualisiert, sonst legt die Zeile eine neue Position an. Passen mehrere Zeilen zur selben Position, zählt die erste.
+- **Neue Positionen**: `company_name` und `currency` sind für eine neue Position Pflicht. Die Währung muss in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt sein. Bei einer bestehenden Position behält eine leere Währungszelle deren Währung.
+- **Referenzen**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt.
 - **Anlagentyp**: Muss `hardware` oder `software` sein (Groß-/Kleinschreibung wird ignoriert).
 - **Investitionsart**: Muss eine von: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` sein (Groß-/Kleinschreibung wird ignoriert).
 - **Priorität**: Muss `mandatory`, `high`, `medium` oder `low` sein (Groß-/Kleinschreibung wird ignoriert).

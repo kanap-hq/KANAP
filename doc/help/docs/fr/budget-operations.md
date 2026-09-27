@@ -129,7 +129,11 @@ Si la colonne destination est gelée, **Simulation** et **Copier les données** 
 
 ## Copier les ventilations
 
-Copiez les méthodes et pourcentages de ventilation d'une année à l'autre pour tous les postes OPEX. Cela vous évite de ressaisir les configurations de refacturation lors de la mise en place d'une nouvelle année fiscale.
+Copiez les méthodes et pourcentages de ventilation d'une année à l'autre. Cela vous évite de ressaisir les configurations de refacturation lors de la mise en place d'une nouvelle année fiscale.
+
+La bascule **OPEX** / **CAPEX** en haut choisit les postes copiés. La copie se fait en bloc : si un poste échoue, rien n'est copié.
+
+Nécessite les droits d'administration sur OPEX, ou sur CAPEX pour les postes CAPEX.
 
 ### Quand l'utiliser
 
@@ -148,8 +152,8 @@ Copiez les méthodes et pourcentages de ventilation d'une année à l'autre pour
 ### Processus en deux étapes : Simulation, puis Copie
 
 1. Cliquez sur **Simulation** pour voir un aperçu
-2. La grille d'aperçu affiche chaque poste OPEX avec :
-   - Nom du **Produit**
+2. La grille d'aperçu affiche chaque poste OPEX ou CAPEX avec :
+   - Nom du **Poste**
    - **Action** -- ce qui va se passer (Sera copié, Ignoré -- pas d'année source, Ignoré -- pas de ventilations dans la source, Ignoré -- la destination a des données, Erreur)
    - Méthode et libellé **Source**
    - Méthode et libellé **Destination** actuels

@@ -67,15 +67,19 @@ La lista CAPEX (en **Gestión presupuestaria > CAPEX**) es su vista principal pa
 
 | Columna | Qué muestra |
 |---------|-------------|
+| **Ref** | Referencia de la partida, por ejemplo CPX-12 |
 | **Descripción** | Nombre de la inversión |
-| **Empresa** | Empresa pagadora |
+| **Proveedor** | El nombre del proveedor |
+| **Empresa pagadora** | Qué empresa paga esta partida |
+| **Contrato** | El nombre del último contrato vinculado |
+| **Cuenta** | El número y nombre de la cuenta contable |
 | **Tipo de activo fijo** | Hardware o Software |
 | **Tipo de inversión** | Propósito de la inversión |
 | **Prioridad** | Nivel de prioridad de negocio |
-| **Asignación A** | Etiqueta del método de asignación del año actual |
+| **Asignación** | Etiqueta del método de asignación del año actual |
 | **Presupuesto A** | Presupuesto de capital planificado del año actual (moneda de reporte) |
-| **Aterrizaje previsto A** | Gasto de capital real final del año actual (moneda de reporte) |
-| **Presupuesto A+1** | Presupuesto de capital planificado del año siguiente (moneda de reporte) |
+| **Aterrizaje previsto A** | Aterrizaje previsto del año actual (moneda de reporte) |
+| **Tarea** | Título de la tarea más reciente vinculada a esta partida |
 
 ### Columnas adicionales
 
@@ -83,42 +87,48 @@ Estas columnas están ocultas por defecto. Muéstrelas desde el selector de colu
 
 | Columna | Qué muestra |
 |---------|-------------|
-| **Asignación A+1** | Etiqueta del método de asignación del año siguiente |
-| **Aterrizaje previsto A-1** | Gasto de capital real final del año anterior |
+| **Columnas de importes** | Cada columna presupuestaria (Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto) para A-1, A, A+1 y A+2. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Los importes están en la moneda de reporte |
 | **Moneda** | Código de moneda de la partida |
-| **Inicio** | Fecha de inicio efectivo |
+| **Inicio efectivo** | Fecha de inicio |
 | **Fin de validez** | Fecha en que la partida termina (en blanco significa sin fin) |
+| **Responsable IT** / **Responsable de negocio** | Usuarios responsables |
+| **Analítica** | Nombre de la categoría analítica |
+| **Proyecto** | Nombres de los proyectos vinculados en la pestaña Relaciones |
 | **Notas** | Notas de texto libre |
-| **Tarea** | Título de la tarea más reciente vinculada a esta partida |
 | **Habilitado** | Estado (habilitado o deshabilitado) |
+| **Creado** / **Actualizado** | Marcas de tiempo |
 
 ### Búsqueda rápida
 
-El cuadro de búsqueda en la parte superior busca en descripción, notas, tipo de activo fijo, tipo de inversión, prioridad, moneda y estado. Los resultados se actualizan en tiempo real mientras escribe.
+El cuadro de búsqueda en la parte superior busca en la referencia, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, la categoría analítica, el tipo de activo fijo, el tipo de inversión, la prioridad, las notas, la moneda y el estado. Los resultados se actualizan en tiempo real mientras escribe.
 
 ### Filtros de columna
 
-Cada encabezado de columna filtrable tiene un icono de filtro. **Empresa**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad** y **Moneda** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. Múltiples filtros se combinan con lógica AND.
+Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio** y **Analítica** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. Múltiples filtros se combinan con lógica AND.
+
+Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes.
+
+**Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío.
+
+Las columnas de texto usan filtros de texto. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` o `CPX-12`.
 
 ### Ordenación
 
-Haga clic en un encabezado de columna para ordenar ascendente o descendente. La lista recuerda su última ordenación cuando regresa.
+Haga clic en un encabezado de columna para ordenar ascendente o descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe. La ordenación predeterminada es **Presupuesto A**, de mayor a menor. La lista recuerda su última ordenación cuando regresa.
 
 ### Fila de totales
 
-La fila fijada en la parte inferior muestra totales para todas las columnas presupuestarias. Los totales respetan sus filtros y búsqueda actuales. Todos los importes se convierten a su moneda de reporte, mostrada en el título de la página (p. ej., "CAPEX (EUR)").
+La fila fijada en la parte inferior muestra el total de cada columna de importe. Los totales respetan sus filtros y búsqueda actuales. Todos los importes se convierten a su moneda de reporte, mostrada en el título de la página.
 
 ### Enlace directo
 
 Haga clic en cualquier celda de una fila para abrir el espacio de trabajo en la pestaña más relevante para esa columna:
 
-- **Descripción**, **Empresa**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**: Abre **Vista general**
-- **Presupuesto A**, **Aterrizaje previsto A**: Abre la pestaña **Presupuesto** para el año actual
-- **Aterrizaje previsto A-1**: Abre la pestaña **Presupuesto** para el año anterior
-- **Presupuesto A+1**: Abre la pestaña **Presupuesto** para el año siguiente
-- **Asignación A**: Abre la pestaña **Asignaciones** para el año actual
-- **Asignación A+1**: Abre la pestaña **Asignaciones** para el año siguiente
+- **Descripción**, **Proveedor**, **Empresa pagadora**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad** y las demás columnas generales: Abre **Vista general**
+- **Columnas de importes** (Presupuesto A, Aterrizaje previsto A, Revisión A+1, etc.): Abre la pestaña **Presupuesto** en el año de la columna
+- **Asignación**: Abre la pestaña **Asignaciones** para el año actual
 - **Tarea**: Abre la pestaña **Vista general**, donde está el panel de tareas
+- **Contrato**: Abre directamente el contrato vinculado
 
 ### Filtro de estado
 
@@ -328,12 +338,13 @@ La pestaña Relaciones vincula esta partida CAPEX con objetos relacionados: Proy
 
 - Use el autocompletado para vincular uno o más proyectos
 - Esto ayuda a agrupar el gasto de capital por proyecto en los informes y permite la contabilidad de proyectos
+- Los nombres de los proyectos aparecen en la columna **Proyecto** de la lista CAPEX, y la búsqueda rápida los encuentra
 - Quite un proyecto haciendo clic en la X de su chip
 
 **Contratos**:
 
 - Use el autocompletado para vincular uno o más contratos
-- Una vez vinculado, el nombre del contrato aparece como referencia rápida
+- Una vez vinculado, el nombre del contrato aparece en la columna **Contrato** de la lista CAPEX como referencia rápida
 - Un contrato también puede vincularse a varias partidas CAPEX (relación de muchos a muchos)
 - Quite un contrato haciendo clic en la X de su chip
 
@@ -375,7 +386,7 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 1. Haga clic en **Exportar CSV** en la lista CAPEX
 2. Elija:
    - **Plantilla**: Solo encabezados (úselo para crear un CSV en blanco para rellenar)
-   - **Datos**: Todas las partidas CAPEX actuales con presupuestos para Y-1, Y e Y+1
+   - **Datos**: Todas las partidas CAPEX, incluidas las finalizadas, con presupuestos de Y-1 a Y+2
 
 **Estructura del CSV**:
 
@@ -391,17 +402,19 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 2. Suba su archivo CSV (arrastrar y soltar o selector de archivos)
 3. Haga clic en **Verificación previa** para validar:
    - Los encabezados coinciden exactamente
-   - Las empresas existen en su espacio de trabajo
-   - Los campos obligatorios (description, ppe_type, investment_type, priority, currency, effective_start, company_name) están presentes
-   - No hay descripciones duplicadas
+   - Las empresas y los usuarios existen en su espacio de trabajo
+   - Los campos obligatorios (description, ppe_type, investment_type, priority) están presentes. Una partida nueva también necesita company_name y currency
+   - Las monedas están permitidas en la configuración de monedas de su espacio de trabajo
+   - Los responsables son usuarios activos
+   - Un `item_number` corresponde a una partida CAPEX existente
 4. Revise el informe de verificación previa (muestra conteos y hasta 5 errores de ejemplo)
 5. Si es correcto, haga clic en **Cargar** para importar
 
 **Notas importantes**:
 
-- **Clave única**: Las partidas CAPEX se identifican por `description`. Si una descripción ya existe, se **omite** (sin actualizaciones).
-- **Solo inserción**: El importador solo crea nuevas partidas; no actualizará las existentes. Utilice la interfaz para editar partidas existentes.
-- **Referencias**: `company_name` debe coincidir con una empresa por nombre (sin distinguir mayúsculas).
+- **Correspondencia**: Una fila con un `item_number` actualiza esa partida CAPEX; la verificación previa señala un número que no corresponde a ninguna partida. Una fila sin número se asocia por `description`: si coincide, actualiza la partida; si no, crea una partida nueva. Si varias filas coinciden con la misma partida, cuenta la primera.
+- **Partidas nuevas**: `company_name` y `currency` son obligatorios para una partida nueva. La moneda debe estar permitida en la configuración de monedas de su espacio de trabajo. En una partida existente, una celda de moneda vacía conserva su moneda.
+- **Referencias**: `company_name` debe coincidir con una empresa por nombre (sin distinguir mayúsculas). `owner_it_email` y `owner_business_email` deben coincidir con usuarios activos por correo electrónico: un usuario invitado o un contacto sin cuenta se rechaza.
 - **Tipo de activo fijo**: Debe ser `hardware` o `software` (sin distinguir mayúsculas).
 - **Tipo de inversión**: Debe ser uno de: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (sin distinguir mayúsculas).
 - **Prioridad**: Debe ser `mandatory`, `high`, `medium` o `low` (sin distinguir mayúsculas).

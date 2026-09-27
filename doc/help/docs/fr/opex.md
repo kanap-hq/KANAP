@@ -46,10 +46,7 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
   - **Tâche** : Le titre de la dernière tâche (ouvre l'onglet Vue d'ensemble, où se trouve le panneau des tâches)
 
 **Colonnes supplémentaires** (masquées par défaut, activez via le sélecteur de colonnes) :
-  - **Budget A-1 / Atterrissage prévu A-1** : Chiffres de l'année précédente
-  - **Révision A / Réalisé A** : Montants de révision et de réalisé de l'année en cours
-  - **Budget A+1 / Révision A+1** : Chiffres de l'année suivante
-  - **Budget A+2** : Budget à deux ans
+  - **Colonnes de montants** : Chaque colonne budgétaire (Budget, Révision, Prévision, Réalisé et Atterrissage prévu) pour A-1, A, A+1 et A+2. L'en-tête indique la colonne, l'année par rapport à aujourd'hui et l'année civile, par exemple **Révision A+1 (2027)**. Les montants sont dans la devise de reporting
   - **Activé** : Statut du poste (activé ou désactivé)
   - **Description** : Description du poste
   - **Devise** : Code devise ISO
@@ -57,28 +54,31 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
   - **Fin de validité** : Date à laquelle le poste s'arrête (vide signifie sans fin)
   - **Responsable IT / Responsable métier** : Utilisateurs responsables
   - **Analytique** : Nom de la catégorie analytique
-  - **ID Projet** : Identifiant du projet lié
+  - **Projet** : Noms des projets liés dans l'onglet Relations
   - **Notes** : Notes internes
   - **Créé / Mis à jour** : Horodatages
 
 **Filtrage** :
-  - **Recherche rapide** : Recherche dans nom du produit, fournisseur, description et autres champs texte. Filtre la liste en temps réel
-  - **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier** et **Analytique** utilisent des filtres par jeu de cases à cocher (multi-sélection). Les autres colonnes utilisent des filtres texte ou numériques
+  - **Recherche rapide** : Recherche dans la référence, le nom du produit, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, la catégorie analytique, les notes, la devise et le statut. Filtre la liste en temps réel pendant la saisie
+  - **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Fournisseur**, **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier** et **Analytique** utilisent des filtres par jeu de cases à cocher (multi-sélection)
+  - **Filtres de montants** : Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants
+  - **Filtres de dates** : **Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide
+  - **Colonnes texte** : elles utilisent des filtres texte. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `OPX-12`
   - **Périmètre par statut** : Utilisez la bascule **Afficher : Activé / Désactivé / Tous** au-dessus de la grille (par défaut **Activé**)
 
 **Tri** :
-  - Cliquez sur un en-tête de colonne pour trier croissant/décroissant
+  - Cliquez sur un en-tête de colonne pour trier croissant/décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant
   - Le tri par défaut est par **Budget A** décroissant
   - La liste mémorise votre dernier tri, recherche et filtres quand vous revenez
 
 **Ligne de totaux** :
-  - La ligne épinglée en bas affiche les totaux pour toutes les colonnes budgétaires
+  - La ligne épinglée en bas affiche le total de chaque colonne de montant, dans la devise de reporting
   - Les totaux respectent vos filtres et recherche actuels
 
 **Liens profonds** :
   - Cliquer sur n'importe quelle cellule ouvre l'espace de travail sur l'onglet le plus pertinent :
     - **Nom du produit**, **Fournisseur**, **Société payeuse**, **Compte** et autres colonnes générales : Ouvre l'onglet **Vue d'ensemble**
-    - **Colonnes budgétaires** (Budget A, Atterrissage prévu A, Budget A-1, etc.) : Ouvre l'onglet **Budget** pré-positionné sur cette année
+    - **Colonnes de montants** (Budget A, Atterrissage prévu A, Révision A+1, etc.) : Ouvre l'onglet **Budget** pré-positionné sur l'année de la colonne
     - **Ventilation** : Ouvre l'onglet **Ventilations** pour l'année en cours
     - **Tâche** : Ouvre l'onglet **Vue d'ensemble**, où se trouve le panneau des tâches
     - **Contrat** : Ouvre directement l'espace de travail du Contrat lié (pas l'espace de travail OPEX)
@@ -259,6 +259,7 @@ L'onglet Relations lie ce poste OPEX aux objets associés : Projets, Application
 **Projets** :
   - Utilisez l'autocomplétion pour lier un ou plusieurs projets depuis votre Portefeuille
   - Cela aide à regrouper les dépenses par projet dans les rapports et permet la comptabilité projet
+  - Les noms des projets apparaissent dans la colonne **Projet** de la liste OPEX, et la recherche rapide les trouve
   - Retirez un projet en cliquant sur le X de sa puce
 
 **Applications** :
@@ -299,7 +300,7 @@ Vous pouvez charger en masse les postes OPEX via CSV pour accélérer la configu
   1. Cliquez sur **Export CSV** dans la liste OPEX
   2. Choisissez :
      - **Modèle** : En-têtes uniquement (utilisez-le pour créer un CSV vierge à remplir)
-     - **Données** : Tous les postes OPEX actuels avec les budgets pour A-1, A et A+1
+     - **Données** : Tous les postes OPEX avec les budgets pour A-1, A et A+1
 
 **Structure du CSV** :
   - Séparateur : point-virgule `;` (pas de virgule)
@@ -313,16 +314,17 @@ Vous pouvez charger en masse les postes OPEX via CSV pour accélérer la configu
   2. Téléversez votre fichier CSV (glisser-déposer ou sélecteur de fichiers)
   3. Cliquez sur **Vérification** pour valider :
      - Les en-têtes correspondent exactement
-     - Les fournisseurs, comptes et utilisateurs existent dans votre espace de travail
-     - Les champs obligatoires (product_name, currency, effective_start, paying_company) sont présents
-     - Aucune combinaison product_name + fournisseur en double
+     - Les fournisseurs, sociétés, comptes et utilisateurs existent dans votre espace de travail
+     - Les champs obligatoires (product_name, company_name, account_number) sont présents. Un nouveau poste nécessite aussi une devise
+     - Les devises sont autorisées dans les paramètres de devise de votre espace de travail
+     - Les responsables sont des utilisateurs actifs
   4. Examinez le rapport de vérification (il affiche les totaux et jusqu'à 5 exemples d'erreurs)
   5. Si tout est correct, cliquez sur **Charger** pour importer
 
 **Remarques importantes** :
-  - **Clé unique** : Les postes OPEX sont identifiés par `(product_name, supplier_name)`. Si une combinaison existe déjà, elle est **ignorée** (pas de mise à jour)
-  - **Insertion uniquement** : L'importateur ne crée que de nouveaux postes ; il ne met pas à jour les existants. Utilisez l'interface pour modifier les postes existants
-  - **Références** : `supplier_name` doit correspondre à un Fournisseur par nom (insensible à la casse). `account_number` doit correspondre à un Compte. `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail
+  - **Correspondance** : Une ligne est rattachée à un poste OPEX par `(product_name, supplier_name)`. Une ligne qui correspond à un poste existant le met à jour ; toute autre ligne crée un nouveau poste. Si plusieurs lignes partagent la même combinaison, seule la première compte
+  - **Devise** : Obligatoire pour un nouveau poste, et elle doit être autorisée dans les paramètres de devise de votre espace de travail. Sur un poste existant, une cellule vide conserve sa devise
+  - **Références** : `supplier_name` doit correspondre à un Fournisseur par nom (insensible à la casse). `company_name` doit correspondre à une Société et `account_number` à un Compte. `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail : un utilisateur invité ou un contact sans compte est refusé
   - **Catégorie analytique** : Si la catégorie n'existe pas, elle est créée automatiquement pendant l'import
   - **Budgets** : Les colonnes budgétaires alimentent les versions A-1, A et A+1. Les montants sont répartis uniformément sur 12 mois (mode Annuel) et la période de la colonne devient l'année entière. Une cellule vide laisse la colonne telle quelle ; `0` l'efface
   - **Montants mensuels** : pour charger ou relire les montants mois par mois, avec la période de chaque colonne, utilisez le **Fichier des lignes budgétaires** dans l'Administration budgétaire

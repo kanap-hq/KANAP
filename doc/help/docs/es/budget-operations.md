@@ -129,7 +129,11 @@ Si la columna de destino está congelada, tanto **Simulación** como **Copiar da
 
 ## Copiar asignaciones
 
-Copie métodos y porcentajes de asignación de un año a otro para todas las partidas OPEX. Esto le ahorra tener que volver a introducir las configuraciones de contracargo al configurar un nuevo ejercicio fiscal.
+Copie métodos y porcentajes de asignación de un año a otro. Esto le ahorra tener que volver a introducir las configuraciones de contracargo al configurar un nuevo ejercicio fiscal.
+
+El conmutador **OPEX** / **CAPEX** de la parte superior elige qué partidas se copian. La copia es de todo o nada: si una partida falla, no se copia nada.
+
+Requiere derechos de administración sobre OPEX, o sobre CAPEX para las partidas CAPEX.
 
 ### Cuándo usarla
 
@@ -148,8 +152,8 @@ Copie métodos y porcentajes de asignación de un año a otro para todas las par
 ### Proceso en dos pasos: Simulación, luego Copiar
 
 1. Haga clic en **Simulación** para ver una vista previa
-2. La cuadrícula de vista previa muestra cada partida OPEX con:
-   - Nombre del **Producto**
+2. La cuadrícula de vista previa muestra cada partida OPEX o CAPEX con:
+   - Nombre de la **Partida**
    - **Acción** -- qué sucederá (Se copiará, Omitir -- sin año de origen, Omitir -- sin asignaciones en origen, Omitir -- el destino tiene datos, Error)
    - Método y etiqueta del **Origen**
    - Método y etiqueta del **Destino** actual
