@@ -26,7 +26,10 @@
       "project": "Proyecto",
       "notes": "Notas",
       "created": "Creado",
-      "updated": "Actualizado"
+      "updated": "Actualizado",
+      "costCenter": "Centro de coste",
+      "budgetHolder": "Responsable del presupuesto",
+      "runBuild": "Run o build"
     },
     "workspace": {
       "newSpendItem": "Nueva partida OPEX",
@@ -165,7 +168,14 @@
       "notes": "Notas",
       "notesPlaceholder": "p. ej., renovación negociada en el T3",
       "endOfValidity": "Fin de validez",
-      "endOfValidityHint": "Dejar en blanco para permanecer activo indefinidamente."
+      "endOfValidityHint": "Dejar en blanco para permanecer activo indefinidamente.",
+      "costCenter": "Centro de coste",
+      "costCenterCompanyHint": "Este centro de coste pertenece a {{company}}.",
+      "runBuild": "Run o build"
+    },
+    "runBuild": {
+      "run": "Run",
+      "build": "Build"
     },
     "metadata": {
       "status": "Estado",
@@ -214,11 +224,18 @@
       "analytics": "Analítica",
       "project": "Proyecto",
       "created": "Creado",
-      "updated": "Actualizado"
+      "updated": "Actualizado",
+      "costCenter": "Centro de coste",
+      "budgetHolder": "Responsable del presupuesto",
+      "runBuild": "Run o build"
     },
     "ppeTypes": {
       "hardware": "Hardware",
       "software": "Software"
+    },
+    "runBuild": {
+      "run": "Run",
+      "build": "Build"
     },
     "investmentTypes": {
       "replacement": "Reemplazo",
@@ -374,7 +391,10 @@
       "description": "Descripción",
       "ppeType": "Tipo de activo fijo",
       "investmentType": "Tipo de inversión",
-      "priority": "Prioridad"
+      "priority": "Prioridad",
+      "costCenter": "Centro de coste",
+      "costCenterCompanyHint": "Este centro de coste pertenece a {{company}}.",
+      "runBuild": "Run o build"
     },
     "metadata": {
       "status": "Estado",
@@ -741,6 +761,8 @@
     "noSpendItemsFound": "No se encontraron partidas OPEX",
     "noCapexItemsFound": "No se encontraron partidas CAPEX",
     "blank": "(Vacío)",
+    "budgetHolder": "Responsable del presupuesto",
+    "budgetHolderSource": "Del centro de coste {{code}} · {{name}}.",
     "total": "Total",
     "yes": "sí",
     "no": "no",
@@ -856,7 +878,16 @@
       "accountSelected_other": "{{count}} cuentas seleccionadas",
       "categorySelected_one": "1 dimensión seleccionada",
       "categorySelected_other": "{{count}} dimensiones seleccionadas",
-      "yearGrouping": "Agrupación por año"
+      "yearGrouping": "Agrupación por año",
+      "costCenter": "Centro de coste",
+      "allCostCenters": "Todos los centros de coste",
+      "costCenterMissing": "Este centro de coste ya no existe o no se pudo cargar.",
+      "clearCostCenter": "Quitar el filtro",
+      "runBuild": "Run o build",
+      "runBuildAll": "Todos",
+      "runBuildRun": "Run",
+      "runBuildBuild": "Build",
+      "runBuildNone": "Sin definir"
     },
     "columns": {
       "company": "Empresa",

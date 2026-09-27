@@ -7,6 +7,8 @@
       "companiesDescription": "Manage company entities and their metrics",
       "departmentsTitle": "Departments",
       "departmentsDescription": "Manage departments across companies",
+      "costCentersTitle": "Cost centers",
+      "costCentersDescription": "Organize who owns each budget line, across legal entities",
       "suppliersTitle": "Suppliers",
       "suppliersDescription": "Manage supplier information",
       "coaTitle": "Charts of accounts",
@@ -130,7 +132,97 @@
       "headcountYear": "Headcount ({{year}})"
     },
     "export": "Export departments",
-    "import": "Import departments"
+    "import": "Import departments",
+    "previous": "Previous department",
+    "next": "Next department",
+    "fields": {
+      "name": "Name",
+      "company": "Company",
+      "description": "Description",
+      "headcount": "Headcount",
+      "year": "Year",
+      "lifecycle": "Lifecycle"
+    },
+    "placeholders": {
+      "name": "e.g., Finance",
+      "description": "e.g., Accounting and payroll"
+    },
+    "headcountHint": "Saved for the selected year when you leave the field.",
+    "messages": {
+      "saveFailed": "Failed to save the department.",
+      "createFailed": "Failed to create the department.",
+      "nameRequired": "Enter a name.",
+      "companyRequired": "Choose a company.",
+      "headcountInvalid": "Enter a whole number, 0 or more."
+    }
+  },
+  "costCenters": {
+    "title": "Cost centers",
+    "newCostCenter": "New cost center",
+    "fallback": "Cost center",
+    "emptyExplainer": "Cost centers say who owns each budget line. Create one, or import a file.",
+    "export": "Export cost centers",
+    "import": "Import cost centers",
+    "previous": "Previous cost center",
+    "next": "Next cost center",
+    "columns": {
+      "code": "Code",
+      "name": "Name",
+      "type": "Type",
+      "parent": "Parent",
+      "company": "Company",
+      "owner": "Budget holder",
+      "status": "Status"
+    },
+    "kinds": {
+      "group": "Group",
+      "cost_center": "Cost center"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Name",
+      "type": "Type",
+      "parent": "Parent group",
+      "company": "Company",
+      "owner": "Budget holder",
+      "description": "Description",
+      "lifecycle": "Lifecycle"
+    },
+    "hints": {
+      "code": "The code your finance team uses for this cost center, as in your accounting system or budget referential.",
+      "company": "The legal entity that pays the costs of this cost center.",
+      "owner": "The person accountable for this budget envelope at budget review."
+    },
+    "placeholders": {
+      "code": "e.g., CC-100",
+      "name": "e.g., Infrastructure",
+      "description": "e.g., Servers, network and workplace tools",
+      "topLevel": "Top level",
+      "ownerMissing": "Budget holder missing"
+    },
+    "usage": {
+      "opex_one": "{{count}} OPEX line",
+      "opex_other": "{{count}} OPEX lines",
+      "capex_one": "{{count}} CAPEX line",
+      "capex_other": "{{count}} CAPEX lines",
+      "one": "Used by {{lines}}.",
+      "both": "Used by {{opex}} and {{capex}}."
+    },
+    "deleteBlocked": {
+      "used": "{{usage}} Disable it instead.",
+      "children_one": "Contains {{count}} node.",
+      "children_other": "Contains {{count}} nodes."
+    },
+    "messages": {
+      "loadFailed": "Failed to load the cost center.",
+      "saveFailed": "Failed to save the cost center.",
+      "createFailed": "Failed to create the cost center.",
+      "deleteFailed": "Failed to delete the cost center.",
+      "codeRequired": "Enter a code.",
+      "nameRequired": "Enter a name.",
+      "companyRequired": "Choose a company.",
+      "chooseCompany": "Choose the company to make this group a cost center."
+    }
   },
   "suppliers": {
     "title": "Suppliers",
@@ -237,7 +329,7 @@
       "scopeCountry": "Country",
       "scopeGlobal": "Global",
       "setDefaultForCountry": "Set as default for this country",
-      "preflightOk": "Preflight OK — total {{total}}, inserts {{inserted}}, updates {{updated}}.",
+      "preflightOk": "Preflight OK: total {{total}}, inserts {{inserted}}, updates {{updated}}.",
       "codeAndNameRequired": "Code and name are required",
       "countryRequired": "Country is required",
       "selectTemplate": "Please select a template",

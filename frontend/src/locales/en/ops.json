@@ -26,7 +26,10 @@
       "project": "Project",
       "notes": "Notes",
       "created": "Created",
-      "updated": "Updated"
+      "updated": "Updated",
+      "costCenter": "Cost center",
+      "budgetHolder": "Budget holder",
+      "runBuild": "Run or build"
     },
     "workspace": {
       "newSpendItem": "New OPEX item",
@@ -64,7 +67,14 @@
       "notes": "Notes",
       "notesPlaceholder": "e.g., renewal negotiated in Q3",
       "endOfValidity": "End of validity",
-      "endOfValidityHint": "Leave blank to keep active indefinitely."
+      "endOfValidityHint": "Leave blank to keep active indefinitely.",
+      "costCenter": "Cost center",
+      "costCenterCompanyHint": "This cost center belongs to {{company}}.",
+      "runBuild": "Run or build"
+    },
+    "runBuild": {
+      "run": "Run",
+      "build": "Build"
     },
     "tabs": {
       "overview": "Overview",
@@ -214,11 +224,18 @@
       "analytics": "Analytics",
       "project": "Project",
       "created": "Created",
-      "updated": "Updated"
+      "updated": "Updated",
+      "costCenter": "Cost center",
+      "budgetHolder": "Budget holder",
+      "runBuild": "Run or build"
     },
     "ppeTypes": {
       "hardware": "Hardware",
       "software": "Software"
+    },
+    "runBuild": {
+      "run": "Run",
+      "build": "Build"
     },
     "investmentTypes": {
       "replacement": "Replacement",
@@ -374,7 +391,10 @@
       "description": "Description",
       "ppeType": "PP&E type",
       "investmentType": "Investment type",
-      "priority": "Priority"
+      "priority": "Priority",
+      "costCenter": "Cost center",
+      "costCenterCompanyHint": "This cost center belongs to {{company}}.",
+      "runBuild": "Run or build"
     },
     "metadata": {
       "status": "Status",
@@ -741,6 +761,8 @@
     "noSpendItemsFound": "No OPEX items found",
     "noCapexItemsFound": "No CAPEX items found",
     "blank": "(Blank)",
+    "budgetHolder": "Budget holder",
+    "budgetHolderSource": "From the cost center {{code}} · {{name}}.",
     "total": "Total",
     "yes": "yes",
     "no": "no",
@@ -856,7 +878,16 @@
       "accountSelected_other": "{{count}} accounts selected",
       "categorySelected_one": "1 dimension selected",
       "categorySelected_other": "{{count}} dimensions selected",
-      "yearGrouping": "Year grouping"
+      "yearGrouping": "Year grouping",
+      "costCenter": "Cost center",
+      "allCostCenters": "All cost centers",
+      "costCenterMissing": "This cost center no longer exists or could not be loaded.",
+      "clearCostCenter": "Clear filter",
+      "runBuild": "Run or build",
+      "runBuildAll": "All",
+      "runBuildRun": "Run",
+      "runBuildBuild": "Build",
+      "runBuildNone": "Not set"
     },
     "columns": {
       "company": "Company",

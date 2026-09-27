@@ -17,6 +17,12 @@ export type SummaryRow = {
   account?: { id?: string | null } | null;
   analytics_category_id?: string | null;
   analytics_category_name?: string | null;
+  cost_center_id?: string | null;
+  cost_center_code?: string | null;
+  cost_center_name?: string | null;
+  cost_center_label?: string | null;
+  cost_center_path?: string | null;
+  run_build?: 'run' | 'build' | null;
   versions?: {
     yMinus1?: SummaryYearSlot;
     y?: SummaryYearSlot;

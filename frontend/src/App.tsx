@@ -16,6 +16,8 @@ const CompaniesPage = React.lazy(() => import('./pages/CompaniesPage'));
 const CompanyWorkspacePage = React.lazy(() => import('./pages/companies/CompanyWorkspacePage'));
 const DepartmentsPage = React.lazy(() => import('./pages/DepartmentsPage'));
 const DepartmentWorkspacePage = React.lazy(() => import('./pages/departments/DepartmentWorkspacePage'));
+const CostCentersPage = React.lazy(() => import('./pages/CostCentersPage'));
+const CostCenterWorkspacePage = React.lazy(() => import('./pages/cost-centers/CostCenterWorkspacePage'));
 const SuppliersPage = React.lazy(() => import('./pages/SuppliersPage'));
 const SupplierWorkspacePage = React.lazy(() => import('./pages/suppliers/SupplierWorkspacePage'));
 const AccountWorkspacePage = React.lazy(() => import('./pages/accounts/AccountWorkspacePage'));
@@ -288,6 +290,9 @@ function AppRoutes() {
           <Route path="/master-data/departments" element={<DepartmentsPage />} />
           <Route path="/master-data/departments/:id" element={<DepartmentWorkspacePage />} />
           <Route path="/master-data/departments/:id/:tab" element={<DepartmentWorkspacePage />} />
+          <Route path="/master-data/cost-centers" element={<CostCentersPage />} />
+          <Route path="/master-data/cost-centers/:id" element={<CostCenterWorkspacePage />} />
+          <Route path="/master-data/cost-centers/:id/:tab" element={<CostCenterWorkspacePage />} />
           <Route path="/master-data/suppliers" element={<SuppliersPage />} />
           <Route path="/master-data/suppliers/:id" element={<SupplierWorkspacePage />} />
           <Route path="/master-data/suppliers/:id/:tab" element={<SupplierWorkspacePage />} />

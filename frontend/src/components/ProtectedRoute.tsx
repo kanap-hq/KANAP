@@ -182,6 +182,7 @@ export default function ProtectedRoute() {
     const masterDataAliases: Record<string, string> = {
       companies: 'companies',
       departments: 'departments',
+      'cost-centers': 'cost_centers',
       suppliers: 'suppliers',
       contacts: 'contacts',
       accounts: 'accounts',
@@ -208,6 +209,7 @@ export default function ProtectedRoute() {
       const hasMasterDataAccess = [
         'companies',
         'departments',
+        'cost_centers',
         'suppliers',
         'contacts',
         'accounts',

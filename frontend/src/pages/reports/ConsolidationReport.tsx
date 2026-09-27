@@ -8,6 +8,7 @@ import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import api from '../../api';
 import { BudgetSummaryRow, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
+import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
@@ -48,7 +49,9 @@ export default function ConsolidationReport() {
 
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
-  const { data: rows, isLoading } = useBudgetSummaryAll(scope);
+  const { data: allRows, isLoading } = useBudgetSummaryAll(scope);
+  const reportFilters = useBudgetReportFilters();
+  const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
   const { data: accounts } = useQuery<Account[]>({
     queryKey: ['accounts', 'enabled-for-consolidation'],
     queryFn: async () => {
@@ -261,6 +264,7 @@ export default function ConsolidationReport() {
       filters={(
         <>
           <ItemScopeTabs value={scope} onChange={setScope} />
+          <BudgetReportFilters filters={reportFilters} rows={allRows} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
             const v = parseInt(e.target.value, 10);
             setStartYear(v);

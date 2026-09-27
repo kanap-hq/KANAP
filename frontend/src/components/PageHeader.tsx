@@ -43,6 +43,7 @@ function useBreadcrumbs(): Crumb[] {
       'team-members': 'teamMembers',
       'companies': 'companies',
       'departments': 'departments',
+      'cost-centers': 'costCenters',
       'suppliers': 'suppliers',
       'accounts': 'accounts',
       'coa': 'coa',

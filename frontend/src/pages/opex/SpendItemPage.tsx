@@ -19,7 +19,8 @@ import {
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import SpendMetadataBar from './workspace/SpendMetadataBar';
-import SpendPropertiesDrawer from './workspace/SpendPropertiesDrawer';
+import SpendPropertiesDrawer, { RunBuild } from './workspace/SpendPropertiesDrawer';
+import { useCostCenterTree } from '../../hooks/useCostCenterTree';
 import BudgetTab, { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import AllocationsTab, { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { OPEX_FINANCE_CONFIG } from '../../components/finance/config';
@@ -49,6 +50,8 @@ type SpendForm = {
   owner_it_id: string;
   owner_business_id: string;
   analytics_category_id: string;
+  cost_center_id: string;
+  run_build: RunBuild | '';
   notes: string;
   created_at: string | null;
   updated_at: string | null;
@@ -57,7 +60,8 @@ type SpendForm = {
 const EMPTY_FORM: SpendForm = {
   product_name: '', description: '', supplier_id: '', currency: 'EUR', account_id: '',
   paying_company_id: '', effective_start: '', status: 'enabled', disabled_at: null,
-  owner_it_id: '', owner_business_id: '', analytics_category_id: '', notes: '', created_at: null, updated_at: null,
+  owner_it_id: '', owner_business_id: '', analytics_category_id: '', cost_center_id: '', run_build: '',
+  notes: '', created_at: null, updated_at: null,
 };
 
 function todayYmd() {
@@ -76,7 +80,7 @@ function toNull(value: string): string | null {
   return value === '' ? null : value;
 }
 
-// The form keeps '' for an empty picker; the API needs null for these uuid columns.
+// The form keeps '' for an empty picker or text; the API stores null for these columns, as on create.
 const NULLABLE_PATCH_FIELDS = new Set([
   'supplier_id',
   'account_id',
@@ -84,7 +88,11 @@ const NULLABLE_PATCH_FIELDS = new Set([
   'owner_it_id',
   'owner_business_id',
   'analytics_category_id',
+  'cost_center_id',
+  'run_build',
   'disabled_at',
+  'description',
+  'notes',
 ]);
 
 function normalizePatch(patch: Record<string, any>): Record<string, any> {
@@ -111,6 +119,8 @@ function toForm(data: any): SpendForm {
     owner_it_id: data?.owner_it_id || '',
     owner_business_id: data?.owner_business_id || '',
     analytics_category_id: data?.analytics_category_id || '',
+    cost_center_id: data?.cost_center_id || '',
+    run_build: data?.run_build === 'run' || data?.run_build === 'build' ? data.run_build : '',
     notes: data?.notes || '',
     created_at: data?.created_at || null,
     updated_at: data?.updated_at || null,
@@ -185,6 +195,7 @@ export default function SpendItemPage() {
   const [form, setForm] = React.useState<SpendForm>(EMPTY_FORM);
   const [createForm, setCreateForm] = React.useState<SpendForm>(() => createEmptySpendForm());
   const [createCurrencyTouched, setCreateCurrencyTouched] = React.useState(false);
+  const [createCompanyFromCostCenter, setCreateCompanyFromCostCenter] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   React.useEffect(() => {
@@ -194,6 +205,7 @@ export default function SpendItemPage() {
     if (!isCreate) return;
     setCreateForm(createEmptySpendForm(defaultSpendCurrency));
     setCreateCurrencyTouched(false);
+    setCreateCompanyFromCostCenter(false);
     setSaveError(null);
   }, [isCreate, idParam]);
   React.useEffect(() => {
@@ -207,6 +219,19 @@ export default function SpendItemPage() {
     setCreateForm((prev) => ({ ...prev, ...patch }));
     setSaveError(null);
   }, []);
+
+  // A cost center picked while the paying company is empty brings its company, so the
+  // account picker opens on that company's chart of accounts. The company keeps following
+  // the cost center until the user picks a company or an account.
+  const costCenterTree = useCostCenterTree();
+  const pickCreateCostCenter = React.useCallback((costCenterId: string) => {
+    const companyId = costCenterId ? costCenterTree.byId.get(costCenterId)?.company_id : null;
+    const follow = !!companyId && (
+      !createForm.paying_company_id || (createCompanyFromCostCenter && !createForm.account_id)
+    );
+    updateCreateForm({ cost_center_id: costCenterId, ...(follow && companyId ? { paying_company_id: companyId } : {}) });
+    if (follow) setCreateCompanyFromCostCenter(true);
+  }, [costCenterTree, createCompanyFromCostCenter, createForm.account_id, createForm.paying_company_id, updateCreateForm]);
 
   const [createAccountCoaId, setCreateAccountCoaId] = React.useState<string | null>(null);
   const [createCompanyCoaId, setCreateCompanyCoaId] = React.useState<string | null>(null);
@@ -300,7 +325,7 @@ export default function SpendItemPage() {
     if (!uuid) return;
     const keys = Object.keys(pendingPatchRef.current);
     if (keys.length === 0) return;
-    const patch = { ...pendingPatchRef.current };
+    const patch = normalizePatch({ ...pendingPatchRef.current });
     pendingPatchRef.current = {};
     await api.patch(`/spend-items/${uuid}`, patch);
     await queryClient.invalidateQueries({ queryKey: ['spend', idParam] });
@@ -321,6 +346,28 @@ export default function SpendItemPage() {
       await refetch();
     }
   }, [isCreate, uuid, stale, idParam, queryClient, refetch, t]);
+
+  // The server refuses a company on another chart of accounts than the line's account, and the
+  // account picker only lists the current company's chart: clear the account in the same write,
+  // so the Account row asks for one on the new chart.
+  const changePayingCompany = React.useCallback(async (companyId: string) => {
+    const accountId = form.account_id;
+    let clearAccount = false;
+    if (accountId && companyId && companyId !== form.paying_company_id) {
+      try {
+        const [company, account] = await Promise.all([
+          api.get(`/companies/${companyId}`),
+          api.get(`/accounts/${accountId}`),
+        ]);
+        const companyCoa = company.data?.coa_id || null;
+        const accountCoa = account.data?.coa_id || null;
+        clearAccount = !!companyCoa && !!accountCoa && companyCoa !== accountCoa;
+      } catch {
+        // Unknown charts: send the company alone and let the server decide.
+      }
+    }
+    await patchNow(clearAccount ? { paying_company_id: companyId, account_id: '' } : { paying_company_id: companyId });
+  }, [form.account_id, form.paying_company_id, patchNow]);
 
   // Debounced persist — long-form notes / description while typing.
   const patchDebounced = React.useCallback((patch: Partial<SpendForm>) => {
@@ -418,6 +465,8 @@ export default function SpendItemPage() {
         owner_it_id: toNull(createForm.owner_it_id),
         owner_business_id: toNull(createForm.owner_business_id),
         analytics_category_id: toNull(createForm.analytics_category_id),
+        cost_center_id: toNull(createForm.cost_center_id),
+        run_build: toNull(createForm.run_build),
         notes: toNull(createForm.notes),
       };
       const res = await api.post('/spend-items', payload);
@@ -509,6 +558,7 @@ export default function SpendItemPage() {
             status={form.status}
             ownerItId={form.owner_it_id || null}
             ownerBizId={form.owner_business_id || null}
+            costCenterId={form.cost_center_id || null}
             onStatusChange={handleStatusChange}
             onOwnerItChange={(v) => void patchNow({ owner_it_id: (v || '') as string })}
             onOwnerBizChange={(v) => void patchNow({ owner_business_id: (v || '') as string })}
@@ -547,19 +597,26 @@ export default function SpendItemPage() {
             accountId={createForm.account_id}
             currency={createForm.currency}
             analyticsCategoryId={createForm.analytics_category_id}
+            costCenterId={createForm.cost_center_id}
+            runBuild={createForm.run_build}
             effectiveStart={createForm.effective_start}
             disabledAt={createForm.disabled_at}
             ownerItId={createForm.owner_it_id}
             ownerBusinessId={createForm.owner_business_id}
             disabled={createSubmitting}
             onSupplierChange={(v) => updateCreateForm({ supplier_id: v })}
-            onPayingCompanyChange={(v) => updateCreateForm({ paying_company_id: v })}
+            onPayingCompanyChange={(v) => {
+              setCreateCompanyFromCostCenter(false);
+              updateCreateForm({ paying_company_id: v });
+            }}
             onAccountChange={(v) => updateCreateForm({ account_id: v })}
             onCurrencyChange={(v) => {
               setCreateCurrencyTouched(true);
               updateCreateForm({ currency: v.toUpperCase() });
             }}
             onAnalyticsCategoryChange={(v) => updateCreateForm({ analytics_category_id: v })}
+            onCostCenterChange={pickCreateCostCenter}
+            onRunBuildChange={(v) => updateCreateForm({ run_build: v })}
             onEffectiveStartChange={(v) => updateCreateForm({ effective_start: v })}
             onDisabledAtChange={(v) => updateCreateForm({ disabled_at: v, status: deriveStatusFromDisabledAt(v) })}
             onOwnerItChange={(v) => updateCreateForm({ owner_it_id: v })}
@@ -573,16 +630,20 @@ export default function SpendItemPage() {
             accountId={form.account_id}
             currency={form.currency}
             analyticsCategoryId={form.analytics_category_id}
+            costCenterId={form.cost_center_id}
+            runBuild={form.run_build}
             effectiveStart={form.effective_start}
             status={form.status}
             disabledAt={form.disabled_at}
             createdAt={form.created_at}
             updatedAt={form.updated_at}
             onSupplierChange={(v) => void patchNow({ supplier_id: v })}
-            onPayingCompanyChange={(v) => void patchNow({ paying_company_id: v })}
+            onPayingCompanyChange={(v) => void changePayingCompany(v)}
             onAccountChange={(v) => void patchNow({ account_id: v })}
             onCurrencyChange={(v) => void patchNow({ currency: v.toUpperCase() })}
             onAnalyticsCategoryChange={(v) => void patchNow({ analytics_category_id: v })}
+            onCostCenterChange={(v) => void patchNow({ cost_center_id: v })}
+            onRunBuildChange={(v) => void patchNow({ run_build: v })}
             onEffectiveStartChange={(v) => void patchNow({ effective_start: v })}
             onStatusChange={handleStatusChange}
             onDisabledAtChange={handleDisabledAtChange}

@@ -34,16 +34,34 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
 // The drawer stands in for the pickers: each button sets one field.
 vi.mock('./workspace/SpendPropertiesDrawer', () => ({
   default: (props: {
-    mode: string; onPayingCompanyChange: (v: string) => void; onAccountChange: (v: string) => void;
-    onSupplierChange: (v: string) => void;
+    mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
+    onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string) => void;
+    onRunBuildChange: (v: string) => void;
   }) => (
-    <div data-mode={props.mode}>
+    <div data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}>
       <button type="button" onClick={() => props.onPayingCompanyChange('company-1')}>pick company</button>
+      <button type="button" onClick={() => props.onPayingCompanyChange('company-2')}>pick other company</button>
       <button type="button" onClick={() => props.onAccountChange('account-1')}>pick account</button>
       <button type="button" onClick={() => props.onSupplierChange('')}>clear supplier</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-2')}>pick cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-3')}>pick third cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('')}>clear cost center</button>
+      <button type="button" onClick={() => props.onRunBuildChange('build')}>pick build</button>
+      <button type="button" onClick={() => props.onRunBuildChange('')}>clear run or build</button>
     </div>
   ),
 }));
+// Two cost centers, in the second and the third company.
+vi.mock('../../hooks/useCostCenterTree', () => {
+  const node = (id: string, company_id: string) => ({
+    id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id,
+    company_name: company_id, owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null,
+    sort_order: 0, depth: 0, path: id, path_ids: [id],
+  });
+  const nodes = [node('cc-2', 'company-2'), node('cc-3', 'company-3')];
+  const tree = { ready: true, nodes, byId: new Map(nodes.map((n) => [n.id, n])), hasAny: true, descendantIds: (id: string) => new Set([id]) };
+  return { useCostCenterTree: () => tree };
+});
 vi.mock('./workspace/SpendMetadataBar', () => ({ default: () => null }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/finance/BudgetTab', () => ({ default: () => null }));
@@ -102,6 +120,56 @@ describe('SpendItemPage create', () => {
     });
   });
 
+  it('fills an empty paying company from the picked cost center and sends both new fields', async () => {
+    renderAt('/ops/opex/new/overview');
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+    expect(document.querySelector('[data-mode="create"]')).toHaveAttribute('data-company', 'company-2');
+    fireEvent.click(screen.getByRole('button', { name: 'pick build' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    expect(mocked.post.mock.calls[0][1]).toMatchObject({
+      paying_company_id: 'company-2',
+      cost_center_id: 'cc-2',
+      run_build: 'build',
+    });
+  });
+
+  it('keeps a paying company picked first, and sends no cost center or run or build when none is picked', async () => {
+    renderAt('/ops/opex/new/overview');
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+    expect(document.querySelector('[data-mode="create"]')).toHaveAttribute('data-company', 'company-1');
+    fireEvent.click(screen.getByRole('button', { name: 'clear cost center' }));
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1', cost_center_id: null, run_build: null });
+  });
+
+  it('lets a company filled from the cost center follow the next cost center, until an account is picked', async () => {
+    renderAt('/ops/opex/new/overview');
+    const drawer = () => document.querySelector('[data-mode="create"]');
+    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+    expect(drawer()).toHaveAttribute('data-company', 'company-2');
+    fireEvent.click(screen.getByRole('button', { name: 'pick third cost center' }));
+    expect(drawer()).toHaveAttribute('data-company', 'company-3');
+    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+    expect(drawer()).toHaveAttribute('data-company', 'company-3');
+  });
+
+  it('stops following the cost center once the user picks a company', async () => {
+    renderAt('/ops/opex/new/overview');
+    const drawer = () => document.querySelector('[data-mode="create"]');
+    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick third cost center' }));
+    expect(drawer()).toHaveAttribute('data-company', 'company-1');
+  });
+
   it('refuses to create a line without an account', async () => {
     renderAt('/ops/opex/new/overview');
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
@@ -112,19 +180,64 @@ describe('SpendItemPage create', () => {
   });
 });
 
+// Charts of accounts: the account and the first company on one, the second company on another.
+const charts = vi.hoisted(() => ({ company2: 'coa-b' }));
+
 describe('SpendItemPage edit', () => {
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.patch.mockReset();
-    mocked.get.mockImplementation(async (url: string) => (url === `/spend-items/${ITEM_ID}`
-      ? {
-        data: {
-          id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1',
-          paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01',
-        },
+    charts.company2 = 'coa-b';
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/spend-items/${ITEM_ID}`) {
+        return {
+          data: {
+            id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1', notes: 'Renewal',
+            paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01',
+          },
+        };
       }
-      : { data: {} }));
+      if (url === '/companies/company-2') return { data: { id: 'company-2', coa_id: charts.company2 } };
+      if (url === '/accounts/account-1') return { data: { id: 'account-1', coa_id: 'coa-a' } };
+      return { data: {} };
+    });
     mocked.patch.mockResolvedValue({ data: {} });
+  });
+
+  /** Clicks once the line is on screen, then waits for the write (the charts load first). */
+  async function clickOnceLoaded(name: string) {
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
+    fireEvent.click(screen.getByRole('button', { name }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalled());
+  }
+
+  it('clears the account in the same write when the new company uses another chart', async () => {
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await clickOnceLoaded('pick other company');
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2', account_id: null });
+    // The Account row now asks for an account on the new chart.
+    expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', '');
+  });
+
+  it('keeps the account when the new company uses the same chart', async () => {
+    charts.company2 = 'coa-a';
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await clickOnceLoaded('pick other company');
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2' });
+  });
+
+  it('saves cleared notes as null after the typing pause', async () => {
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    const notes = await screen.findByDisplayValue('Renewal');
+    // The debounced write goes through flushPending, which normalises like the immediate one.
+    await waitFor(() => {
+      fireEvent.change(notes, { target: { value: '' } });
+      expect(notes).toHaveValue('');
+    });
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalled(), { timeout: 3000 });
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { notes: null });
   });
 
   it('clears the supplier as null, not as an empty string', async () => {
@@ -136,6 +249,25 @@ describe('SpendItemPage edit', () => {
       expect(mocked.patch).toHaveBeenCalled();
     });
     expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { supplier_id: null });
+  });
+
+  it('patches the cost center and run or build, as null when cleared', async () => {
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`));
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+      expect(mocked.patch).toHaveBeenCalled();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'clear cost center' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick build' }));
+    fireEvent.click(screen.getByRole('button', { name: 'clear run or build' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(4));
+    expect(mocked.patch.mock.calls.map((call) => call[1])).toEqual([
+      { cost_center_id: 'cc-2' },
+      { cost_center_id: null },
+      { run_build: 'build' },
+      { run_build: null },
+    ]);
   });
 });
 

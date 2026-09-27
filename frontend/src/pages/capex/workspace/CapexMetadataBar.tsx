@@ -3,6 +3,7 @@ import { Box, MenuItem, Popover, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { PortfolioMetadataItem } from '../../portfolio/workspace/PortfolioMetadataBar';
 import MetadataUserPicker from '../../../components/workspace/MetadataUserPicker';
+import BudgetHolderMetadataItem from '../../../components/workspace/BudgetHolderMetadataItem';
 import { drawerMenuItemSx } from '../../../theme/formSx';
 import { STATUS_ENABLED, STATUS_DISABLED, StatusValue } from '../../../constants/status';
 import { StatusDot } from '../../../components/design';
@@ -14,6 +15,8 @@ type Props = {
   priority: CapexPriority;
   ownerItId: string | null;
   ownerBizId: string | null;
+  /** The line's current cost center: its budget holder shows after the owners. */
+  costCenterId?: string | null;
   disabled?: boolean;
   onStatusChange: (next: StatusValue) => void;
   onPriorityChange: (next: CapexPriority) => void;
@@ -26,6 +29,7 @@ export default function CapexMetadataBar({
   priority,
   ownerItId,
   ownerBizId,
+  costCenterId = null,
   disabled = false,
   onStatusChange,
   onPriorityChange,
@@ -91,6 +95,8 @@ export default function CapexMetadataBar({
           onChange={onOwnerBizChange}
         />
       </PortfolioMetadataItem>
+
+      <BudgetHolderMetadataItem costCenterId={costCenterId} />
 
       <Popover
         open={Boolean(statusAnchor)}

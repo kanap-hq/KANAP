@@ -339,8 +339,8 @@
     "dragDropOrClick": "Glissez-déposez un CSV ici, ou cliquez pour sélectionner",
     "preflightCheck": "Vérification préalable",
     "load": "Charger",
-    "preflightOk": "Vérification OK — {{total}} lignes. Insertions : {{inserted}}, mises à jour : {{updated}}. Vous pouvez maintenant charger.",
-    "loadedSuccessfully": "Chargé avec succès — {{total}} lignes traitées.",
+    "preflightOk": "Vérification OK : {{total}} lignes. Insertions : {{inserted}}, mises à jour : {{updated}}. Vous pouvez maintenant charger.",
+    "loadedSuccessfully": "Chargé avec succès : {{total}} lignes traitées.",
     "uploadCompleted": "Téléversement terminé avec succès.",
     "fileNotFormatted": "Le fichier fourni n'est pas correctement formaté",
     "rowError": "Ligne {{row}} : {{message}}",
@@ -401,6 +401,11 @@
     "users": "Utilisateurs",
     "roles": "Rôles",
     "server": "Serveur",
+    "costCenter": "Centre de coûts",
+    "noCostCenterYet": "Aucun centre de coûts pour l'instant.",
+    "createCostCenter": "En créer un",
+    "noCostCentersFound": "Aucun centre de coûts trouvé",
+    "costCentersLoadFailed": "Les centres de coûts n'ont pas pu être chargés.",
     "notSet": "Non défini"
   },
   "documentEditor": {

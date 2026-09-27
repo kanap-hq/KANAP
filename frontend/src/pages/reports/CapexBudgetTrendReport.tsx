@@ -8,6 +8,7 @@ import { useCapexSummaryAll, pickYearSlot } from './useCapexSummary';
 import { useTranslation } from 'react-i18next';
 import { metricFileName, useReportMetrics } from './reportMetrics';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -21,7 +22,9 @@ export default function CapexBudgetTrendReport() {
   const now = new Date();
   const Y = now.getFullYear();
   const allowedYears = [Y - 2, Y - 1, Y, Y + 1, Y + 2];
-  const { data: rows, isLoading } = useCapexSummaryAll(allowedYears);
+  const { data: allRows, isLoading } = useCapexSummaryAll(allowedYears);
+  const reportFilters = useBudgetReportFilters();
+  const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
 
   const [startYear, setStartYear] = useState<number>(Y - 1);
   const [endYear, setEndYear] = useState<number>(Y + 1);
@@ -100,6 +103,7 @@ export default function CapexBudgetTrendReport() {
       subtitle={t("reports.budgetTrendCapex.subtitle")}
       filters={(
         <>
+          <BudgetReportFilters filters={reportFilters} rows={allRows} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
             const v = parseInt(e.target.value, 10);
             setStartYear(v);

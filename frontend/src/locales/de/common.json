@@ -339,8 +339,8 @@
     "dragDropOrClick": "CSV-Datei hierher ziehen oder klicken, um auszuwählen",
     "preflightCheck": "Vorabprüfung",
     "load": "Laden",
-    "preflightOk": "Vorabprüfung OK — {{total}} Zeilen. Einfügungen: {{inserted}}, Aktualisierungen: {{updated}}. Sie können jetzt laden.",
-    "loadedSuccessfully": "Erfolgreich geladen — {{total}} Zeilen verarbeitet.",
+    "preflightOk": "Vorabprüfung OK: {{total}} Zeilen. Einfügungen: {{inserted}}, Aktualisierungen: {{updated}}. Sie können jetzt laden.",
+    "loadedSuccessfully": "Erfolgreich geladen: {{total}} Zeilen verarbeitet.",
     "uploadCompleted": "Upload erfolgreich abgeschlossen.",
     "fileNotFormatted": "Die bereitgestellte Datei ist nicht korrekt formatiert",
     "rowError": "Zeile {{row}}: {{message}}",
@@ -401,6 +401,11 @@
     "users": "Benutzer",
     "roles": "Rollen",
     "server": "Server",
+    "costCenter": "Kostenstelle",
+    "noCostCenterYet": "Noch keine Kostenstelle.",
+    "createCostCenter": "Eine anlegen",
+    "noCostCentersFound": "Keine Kostenstellen gefunden",
+    "costCentersLoadFailed": "Die Kostenstellen konnten nicht geladen werden.",
     "notSet": "Nicht festgelegt"
   },
   "documentEditor": {

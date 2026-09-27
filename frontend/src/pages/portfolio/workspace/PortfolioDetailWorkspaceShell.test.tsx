@@ -1,0 +1,47 @@
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
+import { describe, expect, it, vi } from 'vitest';
+import { createAppTheme } from '../../../config/ThemeContext';
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+}));
+
+import PortfolioDetailWorkspaceShell from './PortfolioDetailWorkspaceShell';
+
+function renderShell(extra: Partial<React.ComponentProps<typeof PortfolioDetailWorkspaceShell>> = {}) {
+  return render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <PortfolioDetailWorkspaceShell
+        activeTab="overview"
+        tabs={[{ key: 'overview', label: 'Overview' }]}
+        onTabChange={() => undefined}
+        drawerStorageKey="kanap.test.drawerOpen"
+        backLabel="Back"
+        onBack={() => undefined}
+        title="Title"
+        titleFallback="Untitled"
+        {...extra}
+      >
+        <div>content</div>
+      </PortfolioDetailWorkspaceShell>
+    </ThemeProvider>,
+  );
+}
+
+describe('PortfolioDetailWorkspaceShell', () => {
+  it('draws the Properties tab and drawer when properties are given', () => {
+    renderShell({ properties: <div>drawer fields</div> });
+    expect(screen.getByRole('button', { name: 'workspace.closeProperties' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary')).toHaveTextContent('drawer fields');
+    expect(screen.getByText('content')).toBeInTheDocument();
+  });
+
+  it('draws neither the tab nor the drawer without properties', () => {
+    renderShell({ isCreate: true });
+    expect(screen.queryByRole('button', { name: /workspace\.(open|close)Properties/ })).toBeNull();
+    expect(screen.queryByRole('complementary')).toBeNull();
+    expect(screen.getByText('content')).toBeInTheDocument();
+  });
+});

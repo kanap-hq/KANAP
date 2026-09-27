@@ -10,6 +10,7 @@ import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
+import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -33,7 +34,10 @@ export default function TopOpexReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
 
-  const { data: rows, isLoading } = useBudgetSummaryAll(scope);
+  const { data: allRows, isLoading } = useBudgetSummaryAll(scope);
+  const reportFilters = useBudgetReportFilters();
+  // Totals and shares read the kept lines only; the exclusion pickers still offer every line.
+  const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
   // Lines and the accounts they use differ between OPEX and CAPEX: a type switch drops both exclusions.
   useEffect(() => {
     setExcludedIds([]);
@@ -83,9 +87,9 @@ export default function TopOpexReport() {
     return { processed, totalMetric, topSelectionTotal };
   }, [rows, scope, year, excludedIds, excludedAccounts, topCount, metric]);
 
-  const itemOptions = useMemo<ItemOption[]>(() => (rows ?? [])
+  const itemOptions = useMemo<ItemOption[]>(() => (allRows ?? [])
     .map((r: BudgetSummaryRow) => ({ id: r.id, name: itemName(scope, r) }))
-    .sort((a: ItemOption, b: ItemOption) => a.name.localeCompare(b.name)), [rows, scope]);
+    .sort((a: ItemOption, b: ItemOption) => a.name.localeCompare(b.name)), [allRows, scope]);
 
   const selectedItemOptions = useMemo<ItemOption[]>(() => {
     if (excludedIds.length === 0) return [];
@@ -98,7 +102,7 @@ export default function TopOpexReport() {
   const accountOptions = useMemo<AccountOption[]>(() => {
     const seen = new Set<string>();
     const options: AccountOption[] = [];
-    for (const row of rows ?? []) {
+    for (const row of allRows ?? []) {
       const name = row.account_display?.trim();
       if (!name || seen.has(name)) continue;
       seen.add(name);
@@ -106,7 +110,7 @@ export default function TopOpexReport() {
     }
     options.sort((a, b) => a.name.localeCompare(b.name));
     return options;
-  }, [rows]);
+  }, [allRows]);
 
   const selectedAccountOptions = useMemo<AccountOption[]>(() => {
     if (excludedAccounts.length === 0) return [];
@@ -233,6 +237,7 @@ export default function TopOpexReport() {
         }}
         >
           <ItemScopeTabs value={scope} onChange={setScope} />
+          <BudgetReportFilters filters={reportFilters} rows={allRows} />
           <TextField select size="small" label={t("reports.filters.year")} value={year} onChange={(e) => setYear(parseInt(e.target.value, 10))} sx={{ minWidth: 140 }}>
             <MenuItem value={Y - 1}>{Y - 1}</MenuItem>
             <MenuItem value={Y}>{Y}</MenuItem>

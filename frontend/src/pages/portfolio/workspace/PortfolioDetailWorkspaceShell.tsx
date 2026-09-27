@@ -54,7 +54,8 @@ type PortfolioDetailWorkspaceShellProps = {
   onSaveShortcut?: () => void;
   onTabChange: (nextTab: string) => void;
   onTitleSave?: (nextTitle: string) => void;
-  properties: React.ReactNode;
+  /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
+  properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
   title: string;
   titleFallback: string;
@@ -261,6 +262,7 @@ export default function PortfolioDetailWorkspaceShell({
   // always stack under the content, otherwise a stored "closed" state would
   // hide them with no visible way back.
   const effectiveDrawerOpen = forceDrawerOpen || drawerOpen || isMobile;
+  const hasProperties = properties != null;
 
   React.useEffect(() => {
     if (forceDrawerOpen) return;
@@ -532,11 +534,11 @@ export default function PortfolioDetailWorkspaceShell({
           minHeight: 380,
         }}
       >
-        <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', pt: '8px', pl: isCompact ? 2 : 3, pr: isCompact ? 2 : (isMobile ? 3 : '29px'), pb: 3 }}>
+        <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', pt: '8px', pl: isCompact ? 2 : 3, pr: isCompact ? 2 : (isMobile || !hasProperties ? 3 : '29px'), pb: 3 }}>
           {children}
         </Box>
 
-        {!isMobile && (
+        {hasProperties && !isMobile && (
           <Box sx={{ width: 0, position: 'relative', alignSelf: 'stretch' }}>
             <Box
               component="button"
@@ -596,7 +598,7 @@ export default function PortfolioDetailWorkspaceShell({
           </Box>
         )}
 
-        {effectiveDrawerOpen && (
+        {hasProperties && effectiveDrawerOpen && (
           <Box
             component="aside"
             sx={(theme) => ({

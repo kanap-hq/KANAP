@@ -333,6 +333,7 @@ interface ModuleItemNavResult {
 - `useProjectNav` - Portfolio projects (`/portfolio/projects/ids`)
 - `useAssetNav` - Assets (`/assets/ids`)
 - `useApplicationNav` - Applications (`/applications/ids`)
+- `useCostCenterNav` - Cost centers (`/cost-centers/ids`, default sort `path:ASC`)
 - Plus: suppliers, companies, departments, accounts, template accounts, analytics, business processes
 
 `useModuleItemNav.ts` itself only keeps the wrappers that have no file of their own: `useLocationItemNav`, `useConnectionItemNav`, `useInterfaceItemNav` and `useIncidentItemNav`.
@@ -464,6 +465,25 @@ type BudgetColumns = {
 - Hidden columns are not built as list columns; a saved or linked sort or filter on one falls back to the defaults (`sortOnShownColumn`, `filtersOnShownColumns`, `settleListSearch` in `amountColumns.ts`). The OPEX and CAPEX lists mount their grid once the URL is settled, so the first request already uses the tenant's default sort.
 - `resolveBudgetColumns(settings, t)` is the hook's pure core; tests mock `/budget-columns` or the hook.
 
+### useCostCenterTree
+The tenant's whole cost center tree, for item forms, lists and report filters.
+
+**Location:** `frontend/src/hooks/useCostCenterTree.ts` (service `services/costCenters.ts`, `GET /cost-centers/tree`, readable with `cost_centers`, `opex`, `capex` or `reporting` reader; query key `['cost-centers', 'tree']`, 5 min `staleTime`; the Cost centers page and workspace invalidate it after every write).
+
+```typescript
+type CostCenterTree = {
+  ready: boolean;                          // false until loaded, or while disabled (`useCostCenterTree({ enabled })`)
+  nodes: CostCenterNode[];                 // tree order: each node after its parent, siblings by sort order then code
+  byId: Map<string, CostCenterNode>;
+  hasAny: boolean;                         // false for a tenant without a node (screens then hide cost center filters)
+  isError: boolean;                        // the load failed: `nodes` is empty and proves nothing, so no empty state
+  descendantIds(id: string): Set<string>;  // the node and everything below it, disabled nodes included
+};
+```
+
+- A node carries `kind` (`group` | `cost_center`), `company_id`/`company_name` (cost centers only), `owner_user_id`/`owner_name`, `status`, `depth` (0 = root), `path` (names root to node, joined with ` › `) and `path_ids`.
+- `buildCostCenterTree(nodes)` is the hook's pure core; tests mock the hook with it.
+
 ## Shared Components
 - `FormModal` (`src/components/forms/FormModal.tsx`)
   - Replaces `FormDrawer` for create/edit forms, providing a centered modal overlay.
@@ -482,6 +502,11 @@ type BudgetColumns = {
   - MUI Autocomplete (typable) scoped by `companyId`.
   - Fetches departments that are active as of "now" (derived from `disabled_at`); client-side filtering.
   - Auto-clears invalid values when the selected department doesn't belong to the current company.
+- `CostCenterSelect` (`src/components/fields/CostCenterSelect.tsx`)
+  - MUI Autocomplete over `useCostCenterTree()`, in tree order, each option indented by depth and labeled `code · name`.
+  - Search matches code, name and path, and keeps the matches' ancestors, so typing a group name shows its descendants.
+  - `selectable`: `cost_centers` (default, a line's assignment: groups are shown and not pickable, a disabled cost center is marked and pickable only when it is the current value), `all` (report filters: every node, groups and disabled ones included), `groups` (a node's parent; `excludeIds` removes its own subtree).
+  - `onChange(id, node)`. When there is nothing to pick, one line "No cost center yet." links to `/master-data/cost-centers` for users with `cost_centers` member (the link reads `useAuth()`, only when that line renders).
 - `UserSelect` (`src/components/fields/UserSelect.tsx`)
   - MUI Autocomplete for selecting a single user; supports `size` prop for compact display.
   - Fetches enabled users, preloads missing selections by ID.

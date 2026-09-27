@@ -8,6 +8,7 @@ import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import api from '../../api';
 import { pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
+import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
@@ -46,7 +47,9 @@ export default function AnalyticsCategoryReport() {
 
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
-  const { data: rows, isLoading } = useBudgetSummaryAll(scope);
+  const { data: allRows, isLoading } = useBudgetSummaryAll(scope);
+  const reportFilters = useBudgetReportFilters();
+  const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
   const { data: categories } = useQuery<AnalyticsCategory[]>({
     queryKey: ['analytics-categories', 'reporting'],
     queryFn: async () => {
@@ -69,7 +72,7 @@ export default function AnalyticsCategoryReport() {
       const label = (cat.name ?? '').trim() || t('reports.analyticsCategory.unnamed');
       map.set(cat.id, { id: cat.id, label });
     }
-    for (const row of rows ?? []) {
+    for (const row of allRows ?? []) {
       const id = row.analytics_category_id ?? undefined;
       if (!id || map.has(id)) continue;
       const label = (row.analytics_category_name ?? '').trim() || t('reports.analyticsCategory.unnamed');
@@ -78,7 +81,7 @@ export default function AnalyticsCategoryReport() {
     const list = Array.from(map.values());
     list.sort((a, b) => a.label.localeCompare(b.label));
     return list;
-  }, [categories, rows, t]);
+  }, [categories, allRows, t]);
 
   const selectedOptions = useMemo<CategoryOption[]>(() => {
     if (excludedCategories.length === 0) return [];
@@ -256,6 +259,7 @@ export default function AnalyticsCategoryReport() {
       filters={(
         <>
           <ItemScopeTabs value={scope} onChange={setScope} />
+          <BudgetReportFilters filters={reportFilters} rows={allRows} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
             const v = parseInt(e.target.value, 10);
             setStartYear(v);

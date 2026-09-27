@@ -47,6 +47,14 @@ type SummaryRow = {
   owner_business_name?: string | null;
   analytics_category_id?: string | null;
   analytics_category_name?: string | null;
+  cost_center_id?: string | null;
+  cost_center_code?: string | null;
+  cost_center_name?: string | null;
+  cost_center_label?: string | null;
+  cost_center_path?: string | null;
+  budget_holder_id?: string | null;
+  budget_holder_name?: string | null;
+  run_build?: 'run' | 'build' | null;
   ppe_type: 'hardware' | 'software';
   investment_type: 'replacement' | 'capacity' | 'productivity' | 'security' | 'conformity' | 'business_growth' | 'other';
   priority: 'mandatory' | 'high' | 'medium' | 'low';
@@ -191,6 +199,11 @@ export default function CapexPage() {
     low: t('capex.priorityTypes.low'),
   }), [t]);
 
+  const RUN_BUILD_LABELS: Record<string, string> = useMemo(() => ({
+    run: t('capex.runBuild.run'),
+    build: t('capex.runBuild.build'),
+  }), [t]);
+
   const updateTotals = useCallback(async ({ q, filterModel, statusScope }: { q: string; filterModel: any; statusScope?: StatusScope }) => {
     try {
       const params: Record<string, any> = {};
@@ -264,6 +277,9 @@ export default function CapexPage() {
     if (colId === 'contract_name') {
       const contractId = item.latest_contract_id;
       return contractId ? `/ops/contracts/${contractId}/overview` : null;
+    }
+    if (colId === 'cost_center_label') {
+      return item.cost_center_id ? `/master-data/cost-centers/${item.cost_center_id}/overview` : null;
     }
     const sp = buildGridSearch();
     const next = new URLSearchParams(sp);
@@ -461,6 +477,38 @@ export default function CapexPage() {
         cellRenderer: linkCell('analytics_category_name'),
       },
       {
+        field: 'cost_center_label',
+        headerName: t('capex.columns.costCenter'),
+        width: 220,
+        defaultHidden: true,
+        tooltipValueGetter: (p: any) => p.data?.cost_center_path ?? '',
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: { getValues: getCapexFilterValues('cost_center_label'), searchable: true },
+        cellRenderer: linkCell('cost_center_label'),
+      },
+      {
+        field: 'budget_holder_name',
+        headerName: t('capex.columns.budgetHolder'),
+        width: 200,
+        defaultHidden: true,
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: { getValues: getCapexFilterValues('budget_holder_name'), searchable: false },
+        cellRenderer: linkCell('budget_holder_name'),
+      },
+      {
+        field: 'run_build',
+        headerName: t('capex.columns.runBuild'),
+        width: 140,
+        defaultHidden: true,
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: { getValues: getCapexFilterValues('run_build', { labelMap: RUN_BUILD_LABELS }), searchable: false },
+        valueFormatter: (p: any) => (p.value != null ? (RUN_BUILD_LABELS[String(p.value)] || String(p.value)) : ''),
+        cellRenderer: linkCell('run_build'),
+      },
+      {
         field: 'project_name',
         headerName: t('capex.columns.project'),
         width: 200,
@@ -516,7 +564,7 @@ export default function CapexPage() {
         cellRenderer: linkCell('updated_at'),
       },
     ];
-  }, [Y, budgetColumns, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, locale, navigate, t]);
+  }, [Y, budgetColumns, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, RUN_BUILD_LABELS, locale, navigate, t]);
 
   const canCreate = hasLevel('capex','manager');
   const canAdmin = hasLevel('capex','admin');

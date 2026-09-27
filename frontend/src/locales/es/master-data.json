@@ -7,6 +7,8 @@
       "companiesDescription": "Gestione las entidades empresariales y sus indicadores",
       "departmentsTitle": "Departamentos",
       "departmentsDescription": "Gestione los departamentos en las empresas",
+      "costCentersTitle": "Centros de coste",
+      "costCentersDescription": "Organice quién es responsable de cada línea de presupuesto, entre entidades jurídicas",
       "suppliersTitle": "Proveedores",
       "suppliersDescription": "Gestione la información de proveedores",
       "coaTitle": "Planes de cuentas",
@@ -130,7 +132,97 @@
       "headcountYear": "Plantilla ({{year}})"
     },
     "export": "Exportar departamentos",
-    "import": "Importar departamentos"
+    "import": "Importar departamentos",
+    "previous": "Departamento anterior",
+    "next": "Departamento siguiente",
+    "fields": {
+      "name": "Nombre",
+      "company": "Empresa",
+      "description": "Descripción",
+      "headcount": "Plantilla",
+      "year": "Año",
+      "lifecycle": "Ciclo de vida"
+    },
+    "placeholders": {
+      "name": "p. ej., Finanzas",
+      "description": "p. ej., Contabilidad y nóminas"
+    },
+    "headcountHint": "Se guarda para el año seleccionado al salir del campo.",
+    "messages": {
+      "saveFailed": "Error al guardar el departamento.",
+      "createFailed": "Error al crear el departamento.",
+      "nameRequired": "Introduzca un nombre.",
+      "companyRequired": "Elija una empresa.",
+      "headcountInvalid": "Introduzca un número entero, 0 o más."
+    }
+  },
+  "costCenters": {
+    "title": "Centros de coste",
+    "newCostCenter": "Nuevo centro de coste",
+    "fallback": "Centro de coste",
+    "emptyExplainer": "Los centros de coste indican quién es responsable de cada línea de presupuesto. Cree uno o importe un archivo.",
+    "export": "Exportar centros de coste",
+    "import": "Importar centros de coste",
+    "previous": "Centro de coste anterior",
+    "next": "Centro de coste siguiente",
+    "columns": {
+      "code": "Código",
+      "name": "Nombre",
+      "type": "Tipo",
+      "parent": "Superior",
+      "company": "Empresa",
+      "owner": "Responsable del presupuesto",
+      "status": "Estado"
+    },
+    "kinds": {
+      "group": "Grupo",
+      "cost_center": "Centro de coste"
+    },
+    "fields": {
+      "code": "Código",
+      "name": "Nombre",
+      "type": "Tipo",
+      "parent": "Grupo superior",
+      "company": "Empresa",
+      "owner": "Responsable del presupuesto",
+      "description": "Descripción",
+      "lifecycle": "Ciclo de vida"
+    },
+    "hints": {
+      "code": "El código que usa su equipo de finanzas para este centro de coste, tal como figura en su sistema contable o su referencial presupuestario.",
+      "company": "La entidad jurídica que paga los costes de este centro de coste.",
+      "owner": "La persona responsable de esta partida presupuestaria en la revisión del presupuesto."
+    },
+    "placeholders": {
+      "code": "p. ej., CC-100",
+      "name": "p. ej., Infraestructura",
+      "description": "p. ej., Servidores, red y herramientas de puesto de trabajo",
+      "topLevel": "Nivel superior",
+      "ownerMissing": "Falta el responsable del presupuesto"
+    },
+    "usage": {
+      "opex_one": "{{count}} línea OPEX",
+      "opex_other": "{{count}} líneas OPEX",
+      "capex_one": "{{count}} línea CAPEX",
+      "capex_other": "{{count}} líneas CAPEX",
+      "one": "Usado por {{lines}}.",
+      "both": "Usado por {{opex}} y {{capex}}."
+    },
+    "deleteBlocked": {
+      "used": "{{usage}} Desactívelo en su lugar.",
+      "children_one": "Contiene {{count}} elemento.",
+      "children_other": "Contiene {{count}} elementos."
+    },
+    "messages": {
+      "loadFailed": "Error al cargar el centro de coste.",
+      "saveFailed": "Error al guardar el centro de coste.",
+      "createFailed": "Error al crear el centro de coste.",
+      "deleteFailed": "Error al eliminar el centro de coste.",
+      "codeRequired": "Introduzca un código.",
+      "nameRequired": "Introduzca un nombre.",
+      "companyRequired": "Elija una empresa.",
+      "chooseCompany": "Elija la empresa para convertir este grupo en un centro de coste."
+    }
   },
   "suppliers": {
     "title": "Proveedores",
@@ -237,7 +329,7 @@
       "scopeCountry": "País",
       "scopeGlobal": "Global",
       "setDefaultForCountry": "Establecer como predeterminado para este país",
-      "preflightOk": "Verificación OK — total {{total}}, inserciones {{inserted}}, actualizaciones {{updated}}.",
+      "preflightOk": "Verificación OK: total {{total}}, inserciones {{inserted}}, actualizaciones {{updated}}.",
       "codeAndNameRequired": "El código y el nombre son obligatorios",
       "countryRequired": "El país es obligatorio",
       "selectTemplate": "Seleccione una plantilla",
