@@ -8,6 +8,8 @@ import CsvExportDialog from '../../components/csv/CsvExportDialog';
 import CsvImportDialog from '../../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import ForbiddenPage from '../ForbiddenPage';
+import CheckboxSetFilter from '../../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { STATUS_VALUES } from '../../constants/status';
 import { useAuth } from '../../auth/AuthContext';
 import { LinkCellRenderer } from '../../components/grid/renderers';
@@ -198,8 +200,12 @@ export default function CoaPage() {
       field: 'status',
       headerName: t('shared.columns.status'),
       width: 140,
-      filter: 'agSetColumnFilter',
-      filterParams: { values: STATUS_VALUES, suppressMiniFilter: true },
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
+        searchable: false,
+      },
       cellRenderer: (params: any) => (
         <LinkCellRenderer {...params} linkType="internal" getHref={getAccountHref} onNavigate={(href) => navigate(href)} />
       ),

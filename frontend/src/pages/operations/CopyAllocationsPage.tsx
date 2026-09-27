@@ -212,6 +212,8 @@ export default function CopyAllocationsPage() {
 
   return (
     <ReportLayout
+      rootTo="/ops/operations"
+      rootLabel={t('operations.title')}
       title={t('operations.copyAllocations.title')}
       subtitle={t('operations.copyAllocations.subtitle')}
       filters={

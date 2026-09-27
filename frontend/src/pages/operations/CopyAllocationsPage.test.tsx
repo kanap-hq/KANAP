@@ -25,8 +25,10 @@ vi.mock('../../auth/AuthContext', () => ({
 }));
 vi.mock('../../components/AgGridBox', () => ({ default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div> }));
 vi.mock('../../components/reports/ReportLayout', () => ({
-  default: ({ filters, actions, children }: { filters?: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode }) => (
-    <div>{filters}{actions}{children}</div>
+  default: ({ filters, actions, children, rootTo, rootLabel }: {
+    filters?: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode; rootTo?: string; rootLabel?: string;
+  }) => (
+    <div><a data-testid="breadcrumb-root" href={rootTo}>{rootLabel}</a>{filters}{actions}{children}</div>
   ),
 }));
 vi.mock('../../components/design', () => ({
@@ -72,6 +74,13 @@ describe('CopyAllocationsPage', () => {
     readable.add('capex');
     post.mockReset();
     post.mockResolvedValue(dryRunResponse);
+  });
+
+  it('roots its breadcrumb at the administration page', () => {
+    renderPage();
+    const root = screen.getByTestId('breadcrumb-root');
+    expect(root).toHaveAttribute('href', '/ops/operations');
+    expect(root).toHaveTextContent('operations.title');
   });
 
   it('copies OPEX allocations by default', async () => {

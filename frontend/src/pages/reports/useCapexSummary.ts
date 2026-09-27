@@ -1,33 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../../api';
+import type { SummaryRow as OpexSummaryRow } from './useOpexSummary';
 export { pickYearSlot } from './useOpexSummary';
 
-export type SummaryRow = {
-  id: string;
+/** A CAPEX summary row: the same fields as an OPEX row, named by its description. */
+export type SummaryRow = Omit<OpexSummaryRow, 'product_name'> & {
   description: string;
   company_name?: string;
-  versions?: {
-    yMinus1?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-    };
-    y?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-    };
-    yPlus1?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-    };
-    [key: string]: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-    } | undefined;
-  };
 };
 
 export function useCapexSummaryAll(years?: number[], options?: { enabled?: boolean }) {
@@ -55,5 +34,7 @@ export function useCapexSummaryAll(years?: number[], options?: { enabled?: boole
       return items;
     },
     enabled: options?.enabled !== false,
+    // Every line of the type, paged: reports and the dashboard share this entry for a few minutes.
+    staleTime: 5 * 60 * 1000,
   });
 }

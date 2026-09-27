@@ -91,13 +91,15 @@ export async function fetchSpendRelationsCount(spendItemId: string): Promise<num
 
 
 export async function fetchCapexRelationsCount(capexItemId: string): Promise<number> {
-  const [contracts, projects, links, attachments] = await Promise.allSettled([
+  const [contracts, applications, projects, links, attachments] = await Promise.allSettled([
     api.get(`/capex-items/${capexItemId}/contracts`),
+    api.get(`/capex-items/${capexItemId}/applications`),
     api.get(`/capex-items/${capexItemId}/projects`),
     api.get(`/capex-items/${capexItemId}/links`),
     api.get(`/capex-items/${capexItemId}/attachments`),
   ]);
   return settledItemCount(contracts)
+    + settledItemCount(applications)
     + settledItemCount(projects)
     + settledItemCount(links)
     + settledItemCount(attachments);

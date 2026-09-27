@@ -29,7 +29,8 @@
     "continue": "Fortfahren",
     "selectAll": "Alle auswählen",
     "browse": "Durchsuchen",
-    "loadMore": "Mehr laden"
+    "loadMore": "Mehr laden",
+    "done": "Fertig"
   },
   "status": {
     "loading": "Wird geladen...",
@@ -66,7 +67,12 @@
     "clearQuickFilter": "Schnellfilter löschen",
     "search": "Suchen...",
     "noOptions": "Keine Optionen",
-    "blank": "(Leer)"
+    "blank": "(Leer)",
+    "selectedCount": "{{count}} ausgewählt",
+    "selectedCount_one": "{{count}} ausgewählt",
+    "clearFilter": "Filter löschen",
+    "columnPlaceholder": "Filtern…",
+    "filterColumn": "{{column}} filtern"
   },
   "labels": {
     "show": "Anzeigen",
@@ -95,7 +101,8 @@
     "managedDoc": "Verwaltetes Dokument",
     "recommended": "Empfohlen",
     "openCalendar": "Kalender öffnen",
-    "datePlaceholder": "tt/mm/jjjj"
+    "datePlaceholder": "tt/mm/jjjj",
+    "requiredTag": "(erforderlich)"
   },
   "delete": {
     "confirmTitle": "Löschen bestätigen",
@@ -147,7 +154,7 @@
     "noTemplatesAvailable": "Keine veröffentlichten Vorlagen verfügbar.",
     "newOpex": "Neuer OPEX",
     "newCapex": "Neuer CAPEX",
-    "recentOpexUpdates": "Aktuelle OPEX-Änderungen",
+    "recentUpdates": "Aktuelle Änderungen",
     "noRecentUpdates": "Keine aktuellen Änderungen",
     "quickActions": "Schnellaktionen",
     "opexSnapshot": "OPEX-Überblick",
@@ -156,13 +163,16 @@
     "noTasksWithDueDate": "Keine Aufgaben mit Fälligkeitsdatum",
     "nextRenewals": "Nächste Verlängerungen",
     "noUpcomingRenewals": "Keine bevorstehenden Verlängerungen",
-    "dataHygieneOpex": "Datenqualität (OPEX)",
-    "noItOwner": "Ohne IT-Verantwortlichen: {{count}}",
-    "noBizOwner": "Ohne Fachbereichsverantwortlichen: {{count}}",
-    "noPayingCompany": "Ohne zahlendes Unternehmen: {{count}}",
-    "coaMismatches": "CoA-Abweichungen: {{count}}",
-    "topOpexY": "Top OPEX (J)",
+    "dataHygiene": "Datenqualität",
+    "hygiene": {
+      "noItOwner": "Ohne IT-Verantwortlichen",
+      "noBusinessOwner": "Ohne Fachbereichsverantwortlichen",
+      "noPayingCompany": "Ohne zahlendes Unternehmen",
+      "accountOutsideChart": "Konto nicht im Kontenplan des Unternehmens"
+    },
+    "topItemsY": "Top-Positionen (J)",
     "topIncreasesYvsYminus1": "Stärkste Zuwächse (J vs J-1)",
+    "noIncreases": "Keine Zuwächse",
     "settings": {
       "title": "Dashboard-Einstellungen",
       "description": "Kacheln ein- oder ausschalten, ihre Optionen anpassen und per Ziehen neu anordnen.",

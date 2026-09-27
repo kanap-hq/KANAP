@@ -728,7 +728,24 @@ export default function ApplicationsPage() {
       valueFormatter: (p: any) => formatYesNo(!!p.value),
       cellRenderer: ClickToTechnical,
     },
-    { headerName: t('pages.applications.columns.dataIntegrationEtl'), field: 'etl_enabled', width: 190, defaultHidden: true, sortable: false, filter: 'agSetColumnFilter', filterParams: { values: [true, false], suppressMiniFilter: true }, valueFormatter: (p: any) => formatYesNo(!!p.value), cellRenderer: ClickToTechnical },
+    {
+      headerName: t('pages.applications.columns.dataIntegrationEtl'),
+      field: 'etl_enabled',
+      width: 190,
+      defaultHidden: true,
+      sortable: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: [
+          { value: 'true', label: t('enums.yesNo.yes') },
+          { value: 'false', label: t('enums.yesNo.no') },
+        ],
+        searchable: false,
+      },
+      valueFormatter: (p: any) => formatYesNo(!!p.value),
+      cellRenderer: ClickToTechnical,
+    },
 
     { headerName: t('pages.applications.columns.opexItems'), field: 'spend_count', width: 180, defaultHidden: true, sortable: true, filter: 'agNumberColumnFilter', cellRenderer: RelationsSummaryCell },
     { headerName: t('pages.applications.columns.capexItems'), field: 'capex_count', width: 180, defaultHidden: true, sortable: true, filter: 'agNumberColumnFilter', cellRenderer: RelationsSummaryCell },

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Button, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { useTranslation } from 'react-i18next';
 import type { IFloatingFilter, IFloatingFilterParams } from 'ag-grid-community';
 
 type SetFilterModel = {
@@ -11,6 +12,7 @@ type SetFilterModel = {
 type FloatingFilterProps = IFloatingFilterParams<SetFilterModel>;
 
 const CheckboxSetFloatingFilter = React.forwardRef<IFloatingFilter, FloatingFilterProps>((props, ref) => {
+  const { t } = useTranslation('common');
   const [selectedCount, setSelectedCount] = useState(0);
   const [isNone, setIsNone] = useState(false);
   const [isActive, setIsActive] = useState(false);
@@ -37,10 +39,10 @@ const CheckboxSetFloatingFilter = React.forwardRef<IFloatingFilter, FloatingFilt
   }));
 
   const label = useMemo(() => {
-    if (isNone) return 'None';
-    if (!selectedCount) return 'All';
-    return `${selectedCount} selected`;
-  }, [selectedCount, isNone]);
+    if (isNone) return t('labels.none');
+    if (!selectedCount) return t('labels.all');
+    return t('filters.selectedCount', { count: selectedCount });
+  }, [selectedCount, isNone, t]);
 
   const handleClear = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -91,7 +93,7 @@ const CheckboxSetFloatingFilter = React.forwardRef<IFloatingFilter, FloatingFilt
         <IconButton
           size="small"
           onClick={handleClear}
-          aria-label="Clear filter"
+          aria-label={t('filters.clearFilter')}
           sx={{ p: 0.25, flex: '0 0 auto' }}
         >
           <CloseIcon fontSize="inherit" />

@@ -324,16 +324,18 @@ interface ModuleItemNavResult {
 }
 ```
 
-**Pre-configured hooks** (thin wrappers around `useModuleItemNav`):
+**Module hooks** (one file per module in `hooks/use*Nav.ts`, most of them thin wrappers around `useModuleItemNav`):
 - `useTaskNav` - Tasks (`/tasks/ids`)
-- `useSpendItemNav` - OPEX items (`/spend-items/summary/ids`)
-- `useCapexItemNav` - CAPEX items (`/capex-items/summary/ids`)
-- `useContractItemNav` - Contracts (`/contracts/ids`)
-- `useRequestItemNav` - Portfolio requests (`/portfolio/requests/ids`)
-- `useProjectItemNav` - Portfolio projects (`/portfolio/projects/ids`)
-- `useAssetItemNav` - Assets (`/assets/ids`)
-- `useApplicationItemNav` - Applications (`/applications/ids`)
-- Plus: suppliers, companies, departments, accounts, analytics, business processes
+- `useSpendNav` - OPEX items (`/spend-items/summary/ids`; its own query, prev/next returned as `OPX-N` references)
+- `useCapexNav` - CAPEX items (`/capex-items/summary/ids`; its own query, prev/next returned as `CPX-N` references)
+- `useContractNav` - Contracts (`/contracts/ids`)
+- `useRequestNav` - Portfolio requests (`/portfolio/requests/ids`)
+- `useProjectNav` - Portfolio projects (`/portfolio/projects/ids`)
+- `useAssetNav` - Assets (`/assets/ids`)
+- `useApplicationNav` - Applications (`/applications/ids`)
+- Plus: suppliers, companies, departments, accounts, template accounts, analytics, business processes
+
+`useModuleItemNav.ts` itself only keeps the wrappers that have no file of their own: `useLocationItemNav`, `useConnectionItemNav`, `useInterfaceItemNav` and `useIncidentItemNav`.
 
 **Usage with dynamic extraParams:**
 ```typescript

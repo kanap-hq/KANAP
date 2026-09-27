@@ -1047,7 +1047,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       >
         <Box sx={{ p: 2, minWidth: 250, maxWidth: 350 }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
-            Choose Columns
+            {t('common:buttons.chooseColumns')}
           </Typography>
           <Divider sx={{ mb: 1 }} />
           <Stack spacing={0.5} sx={{ maxHeight: 300, overflowY: 'auto' }}>
@@ -1067,7 +1067,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
                     {col.headerName}
                     {col.required && (
                       <Typography component="span" variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                        (required)
+                        {t('common:labels.requiredTag')}
                       </Typography>
                     )}
                   </Typography>
@@ -1086,10 +1086,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           <Divider sx={{ my: 1 }} />
           <Stack direction="row" spacing={1} justifyContent="flex-end">
             <Button size="small" onClick={handleResetColumns}>
-              Reset
+              {t('common:buttons.reset')}
             </Button>
             <Button size="small" variant="contained" onClick={handleCloseColumnChooser}>
-              Done
+              {t('common:buttons.done')}
             </Button>
           </Stack>
         </Box>

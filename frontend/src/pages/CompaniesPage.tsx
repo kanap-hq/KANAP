@@ -9,6 +9,8 @@ import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
+import CheckboxSetFilter from '../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { STATUS_VALUES } from '../constants/status';
 import api from '../api';
 import { useLocale } from '../i18n/useLocale';
@@ -301,8 +303,12 @@ export default function CompaniesPage() {
       field: 'status',
       headerName: t('shared.columns.status'),
       width: 140,
-      filter: 'agSetColumnFilter',
-      filterParams: { values: STATUS_VALUES, suppressMiniFilter: true },
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
+        searchable: false,
+      },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}

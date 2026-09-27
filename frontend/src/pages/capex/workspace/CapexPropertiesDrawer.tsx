@@ -146,12 +146,12 @@ export default function CapexPropertiesDrawer({
         </PropertyRow>
         <PropertyRow label={t('capex.fields.payingCompany')} required>
           <Box sx={hideInnerLabelSx}>
-            <CompanySelect value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required />
+            <CompanySelect value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required disableClearable={mode === 'edit'} />
           </Box>
         </PropertyRow>
-        <PropertyRow label={t('capex.fields.account')}>
+        <PropertyRow label={t('capex.fields.account')} required>
           <Box sx={hideInnerLabelSx}>
-            <AccountSelect value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} />
+            <AccountSelect value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('capex.fields.currency')} required>

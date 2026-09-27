@@ -5,6 +5,8 @@ import { ICellRendererParams } from 'ag-grid-community';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
+import CheckboxSetFilter from '../../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { StatusDot } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
@@ -74,7 +76,7 @@ export default function ConnectionsPage() {
   const { t } = useTranslation(['it', 'common']);
   const navigate = useNavigate();
   const { hasLevel } = useAuth();
-  const { labelFor } = useItOpsEnumOptions();
+  const { labelFor, byField } = useItOpsEnumOptions();
   const gridApiRef = useRef<any>(null);
   const [selectedRows, setSelectedRows] = useState<ConnectionRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -149,7 +151,12 @@ export default function ConnectionsPage() {
       width: 140,
       valueFormatter: (p) => topologyLabel(String(p.value || '')),
       cellRenderer: ClickToWorkspace,
-      filter: 'agSetColumnFilter',
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: ['server_to_server', 'multi_server'].map((value) => ({ value, label: topologyLabel(value) })),
+        searchable: false,
+      },
     },
     {
       headerName: 'Endpoints',
@@ -228,7 +235,8 @@ export default function ConnectionsPage() {
           </Box>
         );
       },
-      filter: 'agSetColumnFilter',
+      // No filter until the list filters the effective values: derived rows show effective_* but the filter tests stored ones.
+      filter: false,
     },
     {
       headerName: 'Data class',
@@ -240,7 +248,8 @@ export default function ConnectionsPage() {
         return classificationCatalog?.dataClasses.find((item) => item.code === value)?.label || (value || 'Not set');
       },
       cellRenderer: ClickToWorkspace,
-      filter: 'agSetColumnFilter',
+      // No filter until the list filters the effective values: derived rows show effective_* but the filter tests stored ones.
+      filter: false,
     },
     {
       headerName: 'PII',
@@ -252,7 +261,8 @@ export default function ConnectionsPage() {
         return value ? 'Yes' : 'No';
       },
       cellRenderer: ClickToWorkspace,
-      filter: 'agSetColumnFilter',
+      // No filter until the list filters the effective values: derived rows show effective_* but the filter tests stored ones.
+      filter: false,
     },
     {
       headerName: 'Lifecycle',
@@ -269,7 +279,12 @@ export default function ConnectionsPage() {
           </Box>
         );
       },
-      filter: 'agSetColumnFilter',
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: byField.lifecycleStatus.map((opt) => ({ value: opt.code, label: labelFor('lifecycleStatus', opt.code) })),
+        searchable: false,
+      },
     },
     {
       headerName: 'Linked interfaces',

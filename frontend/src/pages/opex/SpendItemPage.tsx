@@ -74,6 +74,24 @@ function toNull(value: string): string | null {
   return value === '' ? null : value;
 }
 
+// The form keeps '' for an empty picker; the API needs null for these uuid columns.
+const NULLABLE_PATCH_FIELDS = new Set([
+  'supplier_id',
+  'account_id',
+  'paying_company_id',
+  'owner_it_id',
+  'owner_business_id',
+  'analytics_category_id',
+  'disabled_at',
+]);
+
+function normalizePatch(patch: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(Object.entries(patch).map(([key, value]) => [
+    key,
+    NULLABLE_PATCH_FIELDS.has(key) && value === '' ? null : value,
+  ]));
+}
+
 function toForm(data: any): SpendForm {
   const normalizedDisabledAt = data?.disabled_at ? new Date(data.disabled_at).toISOString() : null;
   return {
@@ -288,7 +306,7 @@ export default function SpendItemPage() {
     setForm((prev) => ({ ...prev, ...patch }));
     setSaveError(null);
     try {
-      await api.patch(`/spend-items/${uuid}`, patch);
+      await api.patch(`/spend-items/${uuid}`, normalizePatch(patch));
       await queryClient.invalidateQueries({ queryKey: ['spend', idParam] });
       queryClient.invalidateQueries({ queryKey: ['spend-summary'] });
     } catch (e) {
@@ -359,10 +377,6 @@ export default function SpendItemPage() {
       setSaveError(t('opex.editor.productNameRequired'));
       return;
     }
-    if (!createForm.supplier_id) {
-      setSaveError(t('opex.editor.supplierRequired'));
-      return;
-    }
     if ((createForm.currency || '').trim().length !== 3) {
       setSaveError(t('opex.editor.currencyMust3'));
       return;
@@ -386,7 +400,7 @@ export default function SpendItemPage() {
       const payload = {
         product_name: productName,
         description: toNull(createForm.description),
-        supplier_id: createForm.supplier_id,
+        supplier_id: toNull(createForm.supplier_id),
         currency: createForm.currency.toUpperCase(),
         account_id: createForm.account_id,
         paying_company_id: createForm.paying_company_id,

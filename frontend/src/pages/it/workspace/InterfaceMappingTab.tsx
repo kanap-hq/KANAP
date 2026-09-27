@@ -1665,7 +1665,8 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
         field: 'lifecycle_label',
         headerName: 'Lifecycle',
         width: 130,
-        filter: 'agSetColumnFilter',
+        // Client-side grid: the checkbox set filter only drives server-side lists.
+        filter: 'agTextColumnFilter',
         hide: !isRuleColumnVisible('lifecycle_label'),
         cellRenderer: (params: ICellRendererParams<MappingRuleGridRow>) => {
           const row = params.data;

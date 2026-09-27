@@ -99,19 +99,19 @@ export default function SpendPropertiesDrawer({
   return (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('opex.fields.supplier')} required>
+        <PropertyRow label={t('opex.fields.supplier')}>
           <Box sx={hideInnerLabelSx}>
-            <SupplierSelect value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} required />
+            <SupplierSelect value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.payingCompany')} required>
           <Box sx={hideInnerLabelSx}>
-            <CompanySelect value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required />
+            <CompanySelect value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required disableClearable={mode === 'edit'} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.account')} required>
           <Box sx={hideInnerLabelSx}>
-            <AccountSelect value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required />
+            <AccountSelect value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.currency')} required>

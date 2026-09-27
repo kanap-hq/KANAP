@@ -29,7 +29,8 @@
     "continue": "Continuer",
     "selectAll": "Tout sélectionner",
     "browse": "Parcourir",
-    "loadMore": "Charger plus"
+    "loadMore": "Charger plus",
+    "done": "Terminé"
   },
   "status": {
     "loading": "Chargement...",
@@ -66,7 +67,12 @@
     "clearQuickFilter": "Effacer le filtre rapide",
     "search": "Rechercher...",
     "noOptions": "Aucune option",
-    "blank": "(Vide)"
+    "blank": "(Vide)",
+    "selectedCount": "{{count}} sélectionnés",
+    "selectedCount_one": "{{count}} sélectionné",
+    "clearFilter": "Effacer le filtre",
+    "columnPlaceholder": "Filtrer…",
+    "filterColumn": "Filtrer {{column}}"
   },
   "labels": {
     "show": "Afficher",
@@ -95,7 +101,8 @@
     "managedDoc": "Document géré",
     "recommended": "Recommandé",
     "openCalendar": "Ouvrir le calendrier",
-    "datePlaceholder": "jj/mm/aaaa"
+    "datePlaceholder": "jj/mm/aaaa",
+    "requiredTag": "(obligatoire)"
   },
   "delete": {
     "confirmTitle": "Confirmer la suppression",
@@ -147,7 +154,7 @@
     "noTemplatesAvailable": "Aucun modèle publié n'est disponible.",
     "newOpex": "Nouvel OPEX",
     "newCapex": "Nouveau CAPEX",
-    "recentOpexUpdates": "Mises à jour OPEX récentes",
+    "recentUpdates": "Mises à jour récentes",
     "noRecentUpdates": "Aucune mise à jour récente",
     "quickActions": "Actions rapides",
     "opexSnapshot": "Aperçu OPEX",
@@ -156,13 +163,16 @@
     "noTasksWithDueDate": "Aucune tâche avec date d'échéance",
     "nextRenewals": "Prochains renouvellements",
     "noUpcomingRenewals": "Aucun renouvellement à venir",
-    "dataHygieneOpex": "Hygiène des données (OPEX)",
-    "noItOwner": "Sans responsable IT : {{count}}",
-    "noBizOwner": "Sans responsable métier : {{count}}",
-    "noPayingCompany": "Sans société payeuse : {{count}}",
-    "coaMismatches": "Écarts CoA : {{count}}",
-    "topOpexY": "Top OPEX (A)",
+    "dataHygiene": "Hygiène des données",
+    "hygiene": {
+      "noItOwner": "Sans responsable IT",
+      "noBusinessOwner": "Sans responsable métier",
+      "noPayingCompany": "Sans société payeuse",
+      "accountOutsideChart": "Compte hors du plan de la société"
+    },
+    "topItemsY": "Top postes (A)",
     "topIncreasesYvsYminus1": "Plus fortes hausses (A vs A-1)",
+    "noIncreases": "Aucune hausse",
     "settings": {
       "title": "Paramètres du tableau de bord",
       "description": "Activez ou désactivez les tuiles, ajustez leurs options et glissez-les pour les réorganiser.",

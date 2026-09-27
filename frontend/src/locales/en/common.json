@@ -29,7 +29,8 @@
     "continue": "Continue",
     "selectAll": "Select all",
     "browse": "Browse",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "done": "Done"
   },
   "status": {
     "loading": "Loading...",
@@ -66,7 +67,12 @@
     "clearQuickFilter": "Clear quick filter",
     "search": "Search...",
     "noOptions": "No options",
-    "blank": "(Blank)"
+    "blank": "(Blank)",
+    "selectedCount": "{{count}} selected",
+    "selectedCount_one": "{{count}} selected",
+    "clearFilter": "Clear filter",
+    "columnPlaceholder": "Filter…",
+    "filterColumn": "Filter {{column}}"
   },
   "labels": {
     "show": "Show",
@@ -95,7 +101,8 @@
     "managedDoc": "Managed doc",
     "recommended": "Recommended",
     "openCalendar": "Open calendar",
-    "datePlaceholder": "dd/mm/yyyy"
+    "datePlaceholder": "dd/mm/yyyy",
+    "requiredTag": "(required)"
   },
   "delete": {
     "confirmTitle": "Confirm deletion",
@@ -147,7 +154,7 @@
     "noTemplatesAvailable": "No published templates are available.",
     "newOpex": "New OPEX",
     "newCapex": "New CAPEX",
-    "recentOpexUpdates": "Recent OPEX updates",
+    "recentUpdates": "Recent updates",
     "noRecentUpdates": "No recent updates",
     "quickActions": "Quick actions",
     "opexSnapshot": "OPEX snapshot",
@@ -156,13 +163,16 @@
     "noTasksWithDueDate": "No tasks with due date",
     "nextRenewals": "Next renewals",
     "noUpcomingRenewals": "No upcoming renewals",
-    "dataHygieneOpex": "Data hygiene (OPEX)",
-    "noItOwner": "No IT owner: {{count}}",
-    "noBizOwner": "No biz owner: {{count}}",
-    "noPayingCompany": "No paying company: {{count}}",
-    "coaMismatches": "CoA mismatches: {{count}}",
-    "topOpexY": "Top OPEX (Y)",
+    "dataHygiene": "Data hygiene",
+    "hygiene": {
+      "noItOwner": "No IT owner",
+      "noBusinessOwner": "No business owner",
+      "noPayingCompany": "No paying company",
+      "accountOutsideChart": "Account not in the company's chart"
+    },
+    "topItemsY": "Top items (Y)",
     "topIncreasesYvsYminus1": "Top increases (Y vs Y-1)",
+    "noIncreases": "No increases",
     "settings": {
       "title": "Dashboard settings",
       "description": "Enable or disable tiles, adjust their options and drag them to reorder.",

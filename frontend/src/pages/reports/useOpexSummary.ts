@@ -59,6 +59,8 @@ export function useOpexSummaryAll(years?: number[], options?: { enabled?: boolea
       return items;
     },
     enabled: options?.enabled !== false,
+    // Every line of the type, paged: reports and the dashboard share this entry for a few minutes.
+    staleTime: 5 * 60 * 1000,
   });
 }
 
