@@ -1048,9 +1048,6 @@
     "amount": "Importe",
     "reset": "Restablecer",
     "applyToAll": "Aplicar a todas las columnas",
-    "alsoSpread_one": "{{columns}} también se repartirá en este periodo.",
-    "alsoSpread_other": "{{columns}} también se repartirán en este periodo.",
-    "frozenUnchanged_one": "{{columns}}: columna congelada, sin cambios.",
-    "frozenUnchanged_other": "{{columns}}: columnas congeladas, sin cambios."
+    "applyToAllHint": "{{columns}} siguen el mismo periodo. {{actuals}} y las columnas congeladas nunca cambian."
   }
 }

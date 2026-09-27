@@ -2,6 +2,8 @@ import React, { forwardRef, useImperativeHandle } from 'react';
 import { Alert, Box, Button, FormControlLabel, IconButton, MenuItem, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -12,7 +14,7 @@ import { useFreezeState } from '../../hooks/useFreezeState';
 import useAutosave from '../../hooks/useAutosave';
 import YearTabs from '../navigation/YearTabs';
 import FormattedNumberField from '../inputs/FormattedNumberField';
-import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx, tealLinkSx } from '../../theme/formSx';
+import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx } from '../../theme/formSx';
 import DateEUField from '../fields/DateEUField';
 import { FieldLabel } from '../design';
 import BudgetTrendChart from './BudgetTrendChart';
@@ -445,7 +447,6 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     .filter((col) => col !== spreadMeasure)
     .sort((a, b) => SPREAD_COLS.indexOf(a) - SPREAD_COLS.indexOf(b));
   const alsoSpread = spreadToAll ? otherPlanning.filter((col) => !frozen[FREEZE_KEY[col]]) : [];
-  const frozenLeft = spreadToAll ? otherPlanning.filter((col) => frozen[FREEZE_KEY[col]]) : [];
   const onSpreadDateChange = (bound: 'start' | 'end', value: string) => {
     setSpreadDates({ ...spreadPeriod, [bound]: value });
   };
@@ -555,11 +556,21 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       {control}
     </Box>
   );
-  const otherLabel = (col: AmountCol) => `${labelFor(col)} (${fmt(currentCents(col) / 100)})`;
+  const applyToAllHint = t('budgetTab.applyToAllHint', {
+    columns: joinList(t, PLANNING_MEASURES.map((col) => labelFor(col))),
+    actuals: labelFor('actual'),
+  });
+  const zeroedText = spreadProblem ? '' : zeroedMonthsText(t, locale, spreadActive);
 
   const spreadPanel = (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, bgcolor: 'kanap.bg.drawer', border: '1px solid', borderColor: 'kanap.border.soft', borderRadius: '8px', p: 1.5 }}>
-      <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t(`${config.i18nPrefix}.budget.spreadHelper`)}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t(`${config.i18nPrefix}.budget.spreadHelper`)}</Typography>
+        {/* The 15th rule, one hover away instead of a permanent line. */}
+        <Tooltip title={t('budgetTab.convention')}>
+          <InfoOutlinedIcon tabIndex={0} aria-label={t('budgetTab.convention')} sx={{ fontSize: 13, color: 'kanap.text.tertiary' }} />
+        </Tooltip>
+      </Box>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 1.5, rowGap: 1 }}>
         {panelField(t('budgetTab.column'), 150, (
           <TextField
@@ -594,39 +605,34 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} size="small" sx={{ width: 150 }} />
         <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} size="small" sx={{ width: 150 }} />
       </Box>
-      <Box>
-        {spreadProblem ? (
-          <Typography sx={{ ...captionSx, color: 'error.main' }}>{t(`budgetTab.problem.${spreadProblem}`, { year })}</Typography>
-        ) : (
-          <Typography sx={{ ...captionSx, color: 'kanap.text.secondary' }}>
-            {[periodText(t, locale, spreadActive), zeroedMonthsText(t, locale, spreadActive)].filter(Boolean).join('. ')}
-          </Typography>
-        )}
-        {spreadBeyondItem && (
-          <Typography sx={{ ...captionSx, color: 'warning.main' }}>{t('budgetTab.beyondItemDates')}</Typography>
-        )}
-        {spreadFrozen && (
-          <Typography sx={captionSx}>{t(`${config.i18nPrefix}.budget.someColumnsFrozen`)}</Typography>
-        )}
-        <Typography sx={captionSx}>{t('budgetTab.convention')}</Typography>
-      </Box>
+      {/* Only the lines that apply: a whole-year period shows none. */}
+      {(spreadProblem || zeroedText || spreadBeyondItem || spreadFrozen) && (
+        <Box data-testid="spread-notes">
+          {spreadProblem && (
+            <Typography sx={{ ...captionSx, color: 'error.main' }}>{t(`budgetTab.problem.${spreadProblem}`, { year })}</Typography>
+          )}
+          {zeroedText && (
+            <Typography sx={{ ...captionSx, color: 'kanap.text.secondary' }}>{zeroedText}</Typography>
+          )}
+          {spreadBeyondItem && (
+            <Typography sx={{ ...captionSx, color: 'warning.main' }}>{t('budgetTab.beyondItemDates')}</Typography>
+          )}
+          {spreadFrozen && (
+            <Typography sx={captionSx}>{t(`${config.i18nPrefix}.budget.someColumnsFrozen`)}</Typography>
+          )}
+        </Box>
+      )}
       {spreadMeasure !== 'actual' && (
         <Box>
           <FormControlLabel
             control={<Switch size="small" checked={spreadAllColumns} onChange={(e) => setSpreadAllColumns(e.target.checked)} />}
-            label={<Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyToAll')}</Typography>}
+            label={(
+              <Tooltip title={applyToAllHint}>
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyToAll')}</Typography>
+              </Tooltip>
+            )}
             sx={{ ml: 0 }}
           />
-          {alsoSpread.length > 0 && (
-            <Typography sx={{ ...captionSx, color: 'kanap.text.secondary' }} data-testid="spread-others">
-              {t('budgetTab.alsoSpread', { count: alsoSpread.length, columns: joinList(t, alsoSpread.map(otherLabel)) })}
-            </Typography>
-          )}
-          {frozenLeft.length > 0 && (
-            <Typography sx={captionSx} data-testid="spread-frozen">
-              {t('budgetTab.frozenUnchanged', { count: frozenLeft.length, columns: joinList(t, frozenLeft.map((col) => labelFor(col))) })}
-            </Typography>
-          )}
         </Box>
       )}
       <Stack direction="row" spacing={1} alignItems="center">
@@ -690,14 +696,21 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                     sx={{ maxWidth: 220, '& .MuiInputBase-input': { fontSize: '15px !important', fontWeight: 500 } }}
                   />
                   {planning && (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
                       <Typography sx={captionSx} data-testid={`period-line-${m.key}`}>
                         {noMonth ? t('budgetTab.noMonthInItemDates', { year }) : [chip, text].filter(Boolean).join(' · ')}
                       </Typography>
                       {!isFrozen(m) && !loading && (
-                        <Box component="button" type="button" sx={tealLinkSx} onClick={() => openSpreadPanel(m.key)}>
-                          {noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}
-                        </Box>
+                        <Tooltip title={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}>
+                          <IconButton
+                            size="small"
+                            aria-label={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}
+                            onClick={() => openSpreadPanel(m.key)}
+                            sx={{ p: '2px', color: 'kanap.text.tertiary', '&:hover': { color: 'primary.main', bgcolor: 'transparent' } }}
+                          >
+                            <EditOutlinedIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
                       )}
                     </Box>
                   )}

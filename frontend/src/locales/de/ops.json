@@ -1048,9 +1048,6 @@
     "amount": "Betrag",
     "reset": "Zurücksetzen",
     "applyToAll": "Auf alle Spalten anwenden",
-    "alsoSpread_one": "{{columns}} wird ebenfalls auf diesen Zeitraum verteilt.",
-    "alsoSpread_other": "{{columns}} werden ebenfalls auf diesen Zeitraum verteilt.",
-    "frozenUnchanged_one": "{{columns}} ist eingefroren und bleibt unverändert.",
-    "frozenUnchanged_other": "{{columns}} sind eingefroren und bleiben unverändert."
+    "applyToAllHint": "{{columns}} folgen demselben Zeitraum. {{actuals}} und eingefrorene Spalten ändern sich nie."
   }
 }

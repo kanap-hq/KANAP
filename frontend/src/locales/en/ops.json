@@ -1048,9 +1048,6 @@
     "amount": "Amount",
     "reset": "Reset",
     "applyToAll": "Apply to all columns",
-    "alsoSpread_one": "{{columns}} will also be spread over this period.",
-    "alsoSpread_other": "{{columns}} will also be spread over this period.",
-    "frozenUnchanged_one": "{{columns}} is frozen and stays unchanged.",
-    "frozenUnchanged_other": "{{columns}} are frozen and stay unchanged."
+    "applyToAllHint": "{{columns}} follow the same period. {{actuals}} and frozen columns never change."
   }
 }

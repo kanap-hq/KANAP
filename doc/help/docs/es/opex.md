@@ -162,7 +162,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 
 **Anual o Mensual**:
   - **Anual**: Introduzca un total por columna. El total se reparte uniformemente entre los meses del periodo de la columna, y los meses fuera de él se ponen a cero. El periodo aparece bajo cada total antes de escribir, por ejemplo «9 meses, de abril a diciembre». Solo se guarda el total que usted modifica. Las demás columnas conservan sus importes mensuales.
-  - Haga clic en **Cambiar el periodo** bajo un total para abrir el panel de reparto en esa columna, con su total actual. Si las fechas de la partida no dejan ningún mes en el año, el total se deshabilita y muestra «Ningún mes de 2026 está dentro de las fechas de la partida.» Haga clic en **Elegir el periodo** para definirlo usted mismo.
+  - Haga clic en el icono de lápiz junto al periodo bajo un total (**Cambiar el periodo**) para abrir el panel de reparto en esa columna, con su total actual. Si las fechas de la partida no dejan ningún mes en el año, el total se deshabilita y muestra «Ningún mes de 2026 está dentro de las fechas de la partida.» Haga clic en el icono de lápiz junto a ese texto (**Elegir el periodo**) para definirlo usted mismo.
   - **Mensual**: Introduzca importes por mes (Ene-Dic) para cada columna, más una columna **Previsión** para planificación adicional. Se muestran subtotales trimestrales y un total anual. Solo se guardan los meses que usted modifica.
   - Cambie de modo con las pestañas **Anual** y **Mensual**. Cambiar de modo no modifica sus importes.
 
@@ -172,14 +172,14 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - Cada columna puede congelarse independientemente (Presupuesto, Revisión, Previsión, Realizado, Aterrizaje previsto)
 
 **Repartir un importe**:
-  - El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde **Cambiar el periodo**
+  - El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde el icono de lápiz bajo un total
   - Elija una **Columna** (Presupuesto, Revisión, Previsión, Aterrizaje previsto o Realizado), compruebe el **Importe**, elija una **Distribución** (**Uniforme** o **4-4-5**) y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna, y la distribución de la que ya tiene la columna
   - El importe parte del total actual de la columna, en ambas pestañas, y se actualiza cuando elige otra columna. Queda vacío cuando la columna no tiene importe
-  - **Aplicar a todas las columnas** está activado por defecto: Presupuesto, Revisión, Previsión y Aterrizaje previsto reciben el mismo periodo y la misma distribución, cada una con su propio total actual. Una línea encima de **Aplicar** las enumera con sus totales. Las columnas congeladas no se modifican. Desactive el interruptor para repartir solo la columna seleccionada
+  - **Aplicar a todas las columnas** está activado por defecto: Presupuesto, Revisión, Previsión y Aterrizaje previsto reciben el mismo periodo y la misma distribución, cada una con su propio total actual. Pase el cursor sobre el interruptor para ver qué columnas siguen. Las columnas congeladas y el Realizado nunca cambian. Desactive el interruptor para repartir solo la columna seleccionada
   - El Realizado nunca se reparte con las demás columnas. Cuando elige Realizado, el interruptor se oculta y solo se reparte el Realizado
   - **Restablecer** rellena el panel con el total actual de la columna, **Uniforme** y el año completo. No guarda nada: haga clic en **Aplicar** para usarlo. Con **Aplicar a todas las columnas** activado, **Restablecer** y luego **Aplicar** devuelven cada columna a un reparto uniforme en doce meses
   - Los totales introducidos en la pestaña **Anual** siguen aplicándose solo a su propia columna
-  - Antes de aplicar, el panel muestra los meses que cuentan («9 meses, de abril a diciembre») y los meses que se pondrán a cero («De enero a marzo se pondrán a cero.»)
+  - Las fechas **Desde** y **Hasta** muestran el periodo. Cuando algunos meses quedan fuera, el panel indica cuáles se pondrán a cero («De enero a marzo se pondrán a cero.»). Un periodo de todo el año no muestra ninguna línea. Pase el cursor sobre el icono de información junto al título del panel para ver la regla del día 15
   - Con **4-4-5**, los pesos de los meses que cuentan se amplían para que todo el importe recaiga en ellos
   - Aparece un aviso no bloqueante cuando el periodo va más allá de las fechas de la partida. Aun así puede aplicar
   - **Aplicar** permanece deshabilitado mientras falte una fecha o ningún mes cuente. No se guarda nada hasta que haga clic en **Aplicar**

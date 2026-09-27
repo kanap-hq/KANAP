@@ -162,7 +162,7 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
 
 **Annuel ou Mensuel** :
   - **Annuel** : Saisissez un total par colonne. Le total est réparti uniformément sur les mois de la période de la colonne, et les mois hors de cette période sont mis à zéro. La période s'affiche sous chaque total avant la saisie, par exemple « 9 mois, avril à décembre ». Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
-  - Cliquez sur **Modifier la période** sous un total pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates du poste ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates du poste. » Cliquez sur **Choisir la période** pour la définir vous-même.
+  - Cliquez sur l'icône crayon à côté de la période sous un total (**Modifier la période**) pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates du poste ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates du poste. » Cliquez sur l'icône crayon à côté (**Choisir la période**) pour la définir vous-même.
   - **Mensuel** : Saisissez les montants par mois (Jan-Déc) pour chaque colonne, plus une colonne **Prévision** pour la planification complémentaire. Des sous-totaux par trimestre et un total annuel sont affichés. Seuls les mois que vous modifiez sont enregistrés.
   - Passez d'un mode à l'autre avec les onglets **Annuel** et **Mensuel**. Changer de mode ne modifie pas vos montants.
 
@@ -172,14 +172,14 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
   - Chaque colonne peut être gelée indépendamment (Budget, Révision, Prévision, Réalisé, Atterrissage prévu)
 
 **Répartir un montant** :
-  - Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis **Modifier la période**
+  - Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis l'icône crayon sous un total
   - Choisissez une **Colonne** (Budget, Révision, Prévision, Atterrissage prévu ou Réalisé), vérifiez le **Montant**, choisissez une **Répartition** (**Linéaire** ou **4-4-5**), puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne, et la répartition de celle de la colonne
   - Le montant reprend le total actuel de la colonne, dans les deux onglets, et suit lorsque vous choisissez une autre colonne. Il reste vide lorsque la colonne n'a aucun montant
-  - **Appliquer à toutes les colonnes** est activé par défaut : Budget, Révision, Prévision et Atterrissage prévu reçoivent la même période et la même répartition, chacune avec son propre total actuel. Une ligne au-dessus du bouton **Appliquer** les liste avec leurs totaux. Les colonnes gelées restent inchangées. Désactivez l'interrupteur pour ne répartir que la colonne choisie
+  - **Appliquer à toutes les colonnes** est activé par défaut : Budget, Révision, Prévision et Atterrissage prévu reçoivent la même période et la même répartition, chacune avec son propre total actuel. Survolez l'interrupteur pour voir les colonnes concernées. Les colonnes gelées et le Réalisé ne changent jamais. Désactivez l'interrupteur pour ne répartir que la colonne choisie
   - Le Réalisé n'est jamais réparti avec les autres colonnes. Lorsque vous choisissez Réalisé, l'interrupteur est masqué et seul le Réalisé est réparti
   - **Réinitialiser** remplit le panneau avec le total actuel de la colonne, **Linéaire** et l'année entière. Rien n'est enregistré : cliquez sur **Appliquer** pour l'utiliser. Avec **Appliquer à toutes les colonnes** activé, **Réinitialiser** puis **Appliquer** remet chaque colonne en répartition linéaire sur douze mois
   - Les totaux saisis dans l'onglet **Annuel** s'appliquent toujours à leur seule colonne
-  - Avant d'appliquer, le panneau affiche les mois qui comptent (« 9 mois, avril à décembre ») et les mois qui seront mis à zéro (« Janvier à mars seront mis à zéro. »)
+  - Les dates **Du** et **Au** affichent la période. Quand des mois tombent en dehors, le panneau indique lesquels seront mis à zéro (« Janvier à mars seront mis à zéro. »). Une période sur l'année entière n'affiche aucune ligne. Survolez l'icône d'information à côté du titre du panneau pour voir la règle du 15
   - Avec **4-4-5**, les poids des mois qui comptent sont augmentés pour que tout le montant se répartisse sur eux
   - Un avertissement non bloquant apparaît lorsque la période dépasse les dates du poste. Vous pouvez tout de même appliquer
   - **Appliquer** reste désactivé tant qu'une date manque ou qu'aucun mois ne compte. Rien n'est enregistré avant que vous cliquiez sur **Appliquer**

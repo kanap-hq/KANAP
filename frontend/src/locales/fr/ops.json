@@ -1048,9 +1048,6 @@
     "amount": "Montant",
     "reset": "Réinitialiser",
     "applyToAll": "Appliquer à toutes les colonnes",
-    "alsoSpread_one": "Cette période s'applique aussi à {{columns}}.",
-    "alsoSpread_other": "{{columns}} seront aussi répartis sur cette période.",
-    "frozenUnchanged_one": "{{columns}} : colonne gelée, inchangée.",
-    "frozenUnchanged_other": "{{columns}} : colonnes gelées, inchangées."
+    "applyToAllHint": "{{columns}} suivent la même période. {{actuals}} et les colonnes gelées ne changent jamais."
   }
 }
