@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
-import { getMetricLabels, isMetricKey } from './reportMetrics';
+import { getMetricLabels, isMetricKey, metricKeys } from './reportMetrics';
 
 describe('report metric labels', () => {
   it('uses the budget tab wording in English', () => {
@@ -9,6 +9,7 @@ describe('report metric labels', () => {
       follow_up: 'Actuals',
       landing: 'Expected landing',
       revision: 'Revision',
+      forecast: 'Forecast',
     });
   });
 
@@ -18,6 +19,7 @@ describe('report metric labels', () => {
       follow_up: 'Réalisé',
       landing: 'Atterrissage prévu',
       revision: 'Révision',
+      forecast: 'Prévision',
     });
   });
 
@@ -25,8 +27,14 @@ describe('report metric labels', () => {
     expect(getMetricLabels(i18n.getFixedT('de', 'common')).landing).toBe('Erwarteter Endwert');
   });
 
-  it('recognises report metric keys only', () => {
+  it('recognises the budget columns that have a label, Forecast included', () => {
     expect(isMetricKey('follow_up')).toBe(true);
-    expect(isMetricKey('forecast')).toBe(false);
+    expect(isMetricKey('forecast')).toBe(true);
+    expect(isMetricKey('currency')).toBe(false);
+    expect(isMetricKey('toString')).toBe(false);
+  });
+
+  it('keeps Forecast out of the report pickers', () => {
+    expect(metricKeys).not.toContain('forecast');
   });
 });

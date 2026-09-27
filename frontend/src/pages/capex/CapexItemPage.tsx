@@ -395,6 +395,7 @@ export default function CapexItemPage() {
         account_id: toNull(createForm.account_id),
         owner_it_id: toNull(createForm.owner_it_id),
         owner_business_id: toNull(createForm.owner_business_id),
+        analytics_category_id: toNull(createForm.analytics_category_id),
       };
       const res = await api.post('/capex-items', payload);
       const newId = res.data?.id as string | undefined;

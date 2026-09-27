@@ -129,7 +129,11 @@ If the destination column is frozen, both **Dry Run** and **Copy Data** are disa
 
 ## Copy Allocations
 
-Copy allocation methods and percentages from one year to another for all OPEX items. This saves you from re-entering chargeback configurations when setting up a new fiscal year.
+Copy allocation methods and percentages from one year to another. This saves you from re-entering chargeback configurations when setting up a new fiscal year.
+
+The **OPEX** / **CAPEX** switch at the top chooses which items are copied. The copy is all or nothing: if one item fails, nothing is copied.
+
+Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
 
 ### When to use it
 
@@ -148,8 +152,8 @@ Copy allocation methods and percentages from one year to another for all OPEX it
 ### Two-step process: Dry Run, then Copy
 
 1. Click **Dry Run** to see a preview
-2. The preview grid shows each OPEX item with:
-   - **Product** name
+2. The preview grid shows each OPEX or CAPEX item with:
+   - **Item** name
    - **Action** -- what will happen (Will copy, Skip -- no source year, Skip -- no allocations in source, Skip -- destination has data, Error)
    - **Source** method and label
    - **Destination** current method and label

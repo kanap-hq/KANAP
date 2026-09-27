@@ -41,15 +41,12 @@ The OPEX list (at **Budget Management > OPEX**) is your main view for browsing, 
   - **Contract**: The latest linked contract name (links to the Contract workspace)
   - **Account**: The GL account number and name
   - **Allocation**: The allocation method label for the current year (links to the Allocations tab)
-  - **Y Budget**: Current-year budget amount (links to the Budget tab for this year)
-  - **Y expected landing**: Current-year expected landing amount (links to the Budget tab for this year)
+  - **Budget Y**: Current-year budget amount (links to the Budget tab for this year)
+  - **Expected landing Y**: Current-year expected landing amount (links to the Budget tab for this year)
   - **Task**: The latest task title (links to the Overview tab, where the Tasks panel sits)
 
 **Additional columns** (hidden by default, toggle via the column chooser):
-  - **Y-1 Budget / Y-1 expected landing**: Prior-year figures
-  - **Y Revision / Y actuals**: Current-year revision and actuals amounts
-  - **Y+1 Budget / Y+1 Revision**: Next-year figures
-  - **Y+2 Budget**: Two-years-out budget
+  - **Amount columns**: Every budget column (Budget, Revision, Forecast, Actuals and Expected landing) for Y-1, Y, Y+1 and Y+2. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Amounts are in the reporting currency
   - **Enabled**: Item status (enabled or disabled)
   - **Description**: Item description
   - **Currency**: ISO currency code
@@ -57,28 +54,31 @@ The OPEX list (at **Budget Management > OPEX**) is your main view for browsing, 
   - **End of validity**: Date the item stops (blank means no end)
   - **IT Owner / Business Owner**: Responsible users
   - **Analytics**: Analytics category name
-  - **Project ID**: Linked project identifier
+  - **Project**: Names of the projects linked on the Relations tab
   - **Notes**: Internal notes
   - **Created / Updated**: Timestamps
 
 **Filtering**:
-  - **Quick search**: Searches across product name, supplier, description, and other text fields. Filters the list in real-time as you type
-  - **Column filters**: Click the filter icon in any column header. **Paying Company**, **Account**, **Allocation**, **Currency**, **IT Owner**, **Business Owner**, and **Analytics** use checkbox set filters (multi-select). Other columns use text or number filters
+  - **Quick search**: Searches the reference, product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics category, notes, currency and status. Filters the list in real time as you type
+  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner** and **Analytics** use checkbox set filters (multi-select)
+  - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
+  - **Date filters**: **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank
+  - **Text columns** use text filters. On **Ref**, type the number or the full reference, for example `12` or `OPX-12`
   - **Status scope**: Use the **Show: Enabled / Disabled / All** toggle above the grid (defaults to **Enabled**)
 
 **Sorting**:
-  - Click a column header to sort ascending/descending
-  - Default sort is by **Y Budget** descending
+  - Click a column header to sort ascending/descending. Every column sorts, including every amount column
+  - Default sort is by **Budget Y** descending
   - The list remembers your last sort, search, and filters when you return
 
 **Totals row**:
-  - The pinned row at the bottom shows totals for all budget columns
+  - The pinned row at the bottom shows the total of every amount column, in the reporting currency
   - Totals respect your current filters and search
 
 **Deep linking**:
   - Clicking any cell opens the workspace on the most relevant tab:
     - **Product Name**, **Supplier**, **Paying Company**, **Account**, and other general columns: Opens the **Overview** tab
-    - **Budget columns** (Y Budget, Y expected landing, Y-1 Budget, etc.): Opens the **Budget** tab pre-set to that year
+    - **Amount columns** (Budget Y, Expected landing Y, Revision Y+1, etc.): Opens the **Budget** tab pre-set to the column's year
     - **Allocation**: Opens the **Allocations** tab for the current year
     - **Task**: Opens the **Overview** tab, where the Tasks panel sits
     - **Contract**: Opens the linked Contract workspace directly (not the OPEX workspace)
@@ -259,6 +259,7 @@ The Relations tab links this OPEX item to related objects: Projects, Application
 **Projects**:
   - Use the autocomplete to link one or more projects from your Portfolio
   - This helps group spend by project in reports and enables project accounting
+  - The project names appear in the OPEX list **Project** column, and the quick search finds them
   - Remove a project by clicking the X on its chip
 
 **Applications**:
@@ -299,7 +300,7 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   1. Click **Export CSV** in the OPEX list
   2. Choose:
      - **Template**: Headers only (use this to create a blank CSV to fill in)
-     - **Data**: All current OPEX items with budgets for Y-1, Y, and Y+1
+     - **Data**: Every OPEX item with budgets for Y-1, Y, and Y+1
 
 **CSV structure**:
   - Delimiter: semicolon `;` (not comma)
@@ -313,16 +314,17 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   2. Upload your CSV file (drag-and-drop or file picker)
   3. Click **Preflight** to validate:
      - Headers match exactly
-     - Suppliers, accounts, and users exist in your workspace
-     - Required fields (product_name, currency, effective_start, paying_company) are present
-     - No duplicate product_name + supplier combinations
+     - Suppliers, companies, accounts, and users exist in your workspace
+     - Required fields (product_name, company_name, account_number) are present. A new item also needs a currency
+     - Currencies are allowed in your workspace currency settings
+     - Owners are active users
   4. Review the preflight report (shows counts and up to 5 sample errors)
   5. If OK, click **Load** to import
 
 **Important notes**:
-  - **Unique key**: OPEX items are identified by `(product_name, supplier_name)`. If a combination already exists, it is **skipped** (no updates)
-  - **Insert-only**: The importer only creates new items; it will not update existing ones. Use the UI to edit existing items
-  - **References**: `supplier_name` must match a Supplier by name (case-insensitive). `account_number` must match an Account. `owner_it_email` and `owner_business_email` must match enabled users by email
+  - **Matching**: A row is matched to an OPEX item by `(product_name, supplier_name)`. A row that matches an existing item updates it; any other row creates a new item. When several rows share the same combination, the first one counts
+  - **Currency**: Required for a new item, and it must be allowed in your workspace currency settings. On an existing item, an empty cell keeps its currency
+  - **References**: `supplier_name` must match a Supplier by name (case-insensitive). `company_name` must match a Company and `account_number` an Account. `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused
   - **Analytics Category**: If the category does not exist, it is created automatically during import
   - **Budgets**: Budget columns populate Y-1, Y, and Y+1 versions. Amounts are spread evenly across 12 months (Flat mode) and the column's period becomes the whole year. An empty cell leaves the column as it is; `0` clears it
   - **Monthly amounts**: to load or review amounts month by month, with the period of each column, use the **Budget rows file** in Budget Administration

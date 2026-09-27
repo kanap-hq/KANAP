@@ -41,15 +41,12 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Vertrag**: Der neueste verknüpfte Vertragsname (verlinkt zum Vertrags-Arbeitsbereich)
   - **Konto**: Die Sachkonto-Nummer und -Bezeichnung
   - **Zuordnung**: Die Zuordnungsmethoden-Bezeichnung für das aktuelle Jahr (verlinkt zum Zuordnungen-Tab)
-  - **J Budget**: Budget des aktuellen Jahres (verlinkt zum Budget-Tab für dieses Jahr)
-  - **J Erwarteter Endwert**: Erwarteter Endwert des aktuellen Jahres (verlinkt zum Budget-Tab für dieses Jahr)
+  - **Budget J**: Budget des aktuellen Jahres (verlinkt zum Budget-Tab für dieses Jahr)
+  - **Erwarteter Endwert J**: Erwarteter Endwert des aktuellen Jahres (verlinkt zum Budget-Tab für dieses Jahr)
   - **Aufgabe**: Der neueste Aufgabentitel (verlinkt zum Tab Übersicht, in dem sich der Aufgabenbereich befindet)
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet, über Spaltenauswahl umschaltbar):
-  - **J-1 Budget / J-1 Erwarteter Endwert**: Vorjahreswerte
-  - **J Revision / J Ist-Werte**: Revision und Ist-Werte des aktuellen Jahres
-  - **J+1 Budget / J+1 Revision**: Werte des nächsten Jahres
-  - **J+2 Budget**: Budget in zwei Jahren
+  - **Betragsspalten**: Jede Budgetspalte (Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert) für J-1, J, J+1 und J+2. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Die Beträge sind in der Berichtswährung
   - **Aktiviert**: Positionsstatus (aktiviert oder deaktiviert)
   - **Beschreibung**: Positionsbeschreibung
   - **Währung**: ISO-Währungscode
@@ -57,28 +54,31 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Ende der Gültigkeit**: Datum, an dem die Position endet (leer bedeutet kein Ende)
   - **IT-Verantwortlicher / Fachbereichsverantwortlicher**: Zuständige Benutzer
   - **Analysedimension**: Name der Analysekategorie
-  - **Projekt-ID**: Verknüpfte Projektkennung
+  - **Projekt**: Namen der im Tab Verknüpfungen verknüpften Projekte
   - **Notizen**: Interne Notizen
   - **Erstellt / Aktualisiert**: Zeitstempel
 
 **Filtern**:
-  - **Schnellsuche**: Durchsucht Produktname, Lieferant, Beschreibung und andere Textfelder. Filtert die Liste in Echtzeit während der Eingabe
-  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher** und **Analysedimension** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Andere Spalten verwenden Text- oder Zahlenfilter
+  - **Schnellsuche**: Durchsucht Referenz, Produktname, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysekategorie, Notizen, Währung und Status. Filtert die Liste in Echtzeit während der Eingabe
+  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher** und **Analysedimension** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl)
+  - **Betragsfilter**: Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen
+  - **Datumsfilter**: **Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer
+  - **Textspalten** verwenden Textfilter. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `OPX-12`
   - **Statusbereich**: Verwenden Sie den Umschalter **Anzeigen: Aktiviert / Deaktiviert / Alle** über dem Grid (Standard ist **Aktiviert**)
 
 **Sortierung**:
-  - Klicken Sie auf eine Spaltenüberschrift, um aufsteigend/absteigend zu sortieren
-  - Standardsortierung ist nach **J Budget** absteigend
+  - Klicken Sie auf eine Spaltenüberschrift, um aufsteigend/absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betragsspalte
+  - Standardsortierung ist nach **Budget J** absteigend
   - Die Liste merkt sich Ihre letzte Sortierung, Suche und Filter bei der Rückkehr
 
 **Summenzeile**:
-  - Die angeheftete Zeile unten zeigt Summen für alle Budgetspalten
+  - Die angeheftete Zeile unten zeigt die Summe jeder Betragsspalte, in der Berichtswährung
   - Summen berücksichtigen Ihre aktuellen Filter und Suche
 
 **Deep Linking**:
   - Das Anklicken einer beliebigen Zelle öffnet den Arbeitsbereich auf dem relevantesten Tab:
     - **Produktname**, **Lieferant**, **Zahlendes Unternehmen**, **Konto** und andere allgemeine Spalten: Öffnet den **Übersichts**-Tab
-    - **Budgetspalten** (J Budget, J Erwarteter Endwert, J-1 Budget usw.): Öffnet den **Budget**-Tab voreingestellt auf dieses Jahr
+    - **Betragsspalten** (Budget J, Erwarteter Endwert J, Revision J+1 usw.): Öffnet den **Budget**-Tab voreingestellt auf das Jahr der Spalte
     - **Zuordnung**: Öffnet den **Zuordnungen**-Tab für das aktuelle Jahr
     - **Aufgabe**: Öffnet den Tab **Übersicht**, in dem sich der Aufgabenbereich befindet
     - **Vertrag**: Öffnet den verknüpften Vertrags-Arbeitsbereich direkt (nicht den OPEX-Arbeitsbereich)
@@ -259,6 +259,7 @@ Der Tab Verknüpfungen verbindet diese OPEX-Position mit zugehörigen Objekten: 
 **Projekte**:
   - Verknüpfen Sie über die Autovervollständigung ein oder mehrere Projekte aus Ihrem Portfolio
   - Das hilft, Ausgaben in Berichten nach Projekt zu gruppieren, und ermöglicht die Projektbuchhaltung
+  - Die Projektnamen erscheinen in der Spalte **Projekt** der OPEX-Liste, und die Schnellsuche findet sie
   - Entfernen Sie ein Projekt mit dem X auf seinem Chip
 
 **Anwendungen**:
@@ -299,7 +300,7 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   1. Klicken Sie in der OPEX-Liste auf **CSV exportieren**
   2. Wählen Sie:
      - **Vorlage**: Nur Kopfzeilen (verwenden Sie dies, um eine leere CSV zum Ausfüllen zu erstellen)
-     - **Daten**: Alle aktuellen OPEX-Positionen mit Budgets für J-1, J und J+1
+     - **Daten**: Alle OPEX-Positionen mit Budgets für J-1, J und J+1
 
 **CSV-Struktur**:
   - Trennzeichen: Semikolon `;` (kein Komma)
@@ -313,16 +314,17 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   2. Laden Sie Ihre CSV-Datei hoch (Drag-and-Drop oder Dateiauswahl)
   3. Klicken Sie auf **Vorprüfung** zur Validierung:
      - Kopfzeilen stimmen exakt überein
-     - Lieferanten, Konten und Benutzer existieren in Ihrem Arbeitsbereich
-     - Pflichtfelder (product_name, currency, effective_start, paying_company) sind vorhanden
-     - Keine doppelten product_name + supplier-Kombinationen
+     - Lieferanten, Unternehmen, Konten und Benutzer existieren in Ihrem Arbeitsbereich
+     - Pflichtfelder (product_name, company_name, account_number) sind vorhanden. Eine neue Position braucht außerdem eine Währung
+     - Währungen sind in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt
+     - Verantwortliche sind aktive Benutzer
   4. Überprüfen Sie den Vorprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler)
   5. Wenn OK, klicken Sie auf **Laden** zum Importieren
 
 **Wichtige Hinweise**:
-  - **Eindeutiger Schlüssel**: OPEX-Positionen werden über `(product_name, supplier_name)` identifiziert. Existiert eine Kombination bereits, wird sie **übersprungen** (keine Aktualisierungen)
-  - **Nur Neuanlage**: Der Importer erstellt nur neue Positionen; er aktualisiert keine bestehenden. Verwenden Sie die Benutzeroberfläche zum Bearbeiten bestehender Positionen
-  - **Referenzen**: `supplier_name` muss einem Lieferanten namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `account_number` muss einem Konto entsprechen. `owner_it_email` und `owner_business_email` müssen aktivierten Benutzern per E-Mail entsprechen
+  - **Abgleich**: Eine Zeile wird einer OPEX-Position über `(product_name, supplier_name)` zugeordnet. Eine Zeile, die zu einer bestehenden Position passt, aktualisiert sie; jede andere Zeile legt eine neue Position an. Teilen sich mehrere Zeilen dieselbe Kombination, zählt die erste
+  - **Währung**: Pflicht für eine neue Position, und sie muss in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt sein. Bei einer bestehenden Position behält eine leere Zelle deren Währung
+  - **Referenzen**: `supplier_name` muss einem Lieferanten namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `company_name` muss einem Unternehmen entsprechen und `account_number` einem Konto. `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt
   - **Analysekategorie**: Existiert die Kategorie nicht, wird sie beim Import automatisch erstellt
   - **Budgets**: Budgetspalten füllen J-1, J und J+1 Versionen. Beträge werden gleichmäßig auf 12 Monate verteilt (Modus Jährlich), und der Zeitraum der Spalte wird das ganze Jahr. Eine leere Zelle lässt die Spalte unverändert; `0` leert sie
   - **Monatsbeträge**: Um Beträge Monat für Monat zu laden oder zu prüfen, mit dem Zeitraum jeder Spalte, verwenden Sie die **Datei der Budgetzeilen** in der Budgetadministration

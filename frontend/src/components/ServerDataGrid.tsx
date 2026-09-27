@@ -109,6 +109,40 @@ function parseUrlSort(sortFromUrl: string | null | undefined, fallback: { field:
   return [{ colId: field, sort }] as SortModelItem[];
 }
 
+/**
+ * Saved layout merged with the current columns: saved columns keep their saved order and settings,
+ * columns the layout does not know yet go right after their nearest predecessor in the default
+ * order (at the start when none precedes them), and columns that no longer exist are dropped.
+ */
+export function mergeSavedColumnState(savedState: ColumnState[], defaultState: ColumnState[]): ColumnState[] {
+  const defaultById = new Map<string | null | undefined, ColumnState>();
+  for (const d of defaultState) defaultById.set(d.colId, d);
+
+  const merged: ColumnState[] = [];
+  for (const s of savedState) {
+    const d = defaultById.get(s.colId);
+    if (d) merged.push({ ...d, ...s, hide: s.hide ?? d.hide });
+  }
+
+  const known = new Set(merged.map((c) => c.colId));
+  let previous: string | null | undefined;
+  for (const d of defaultState) {
+    if (!known.has(d.colId)) {
+      const at = previous === undefined ? 0 : merged.findIndex((c) => c.colId === previous) + 1;
+      merged.splice(at, 0, d);
+      known.add(d.colId);
+    }
+    previous = d.colId;
+  }
+  return merged;
+}
+
+/** Date columns: date models from both the filter menu and the box under the header. */
+export const DATE_COLUMN_FILTER = {
+  filter: 'agDateColumnFilter',
+  floatingFilterComponent: 'agDateColumnFloatingFilter',
+} as const;
+
 // Column state management hook
 function useColumnState(
   key: string | undefined,
@@ -161,15 +195,6 @@ function useColumnState(
       const savedState = JSON.parse(saved) as ColumnState[];
       const defaultState = getDefaultColumnState();
 
-      // Build maps for quick lookup
-      const defaultById = new Map<string | null | undefined, ColumnState>();
-      for (const d of defaultState) defaultById.set(d.colId, d);
-
-      const savedById = new Map<string | null | undefined, ColumnState>();
-      for (const s of savedState) savedById.set(s.colId, s);
-
-      const merged: ColumnState[] = [];
-
       // Helper to compute hide respecting required columns
       const applyRequired = (col: ColumnState): ColumnState => {
         const field = col.colId || '';
@@ -180,22 +205,7 @@ function useColumnState(
         };
       };
 
-      // 1) Add saved columns first (preserve saved order)
-      for (const s of savedState) {
-        const d = defaultById.get(s.colId);
-        if (d) {
-          merged.push(applyRequired({ ...d, ...s, hide: s.hide ?? d.hide }));
-        }
-      }
-
-      // 2) Append any new columns not present in saved state (in default order)
-      for (const d of defaultState) {
-        if (!savedById.has(d.colId)) {
-          merged.push(applyRequired(d));
-        }
-      }
-
-      return merged;
+      return mergeSavedColumnState(savedState, defaultState).map(applyRequired);
     } catch (e) {
       console.warn('Failed to load column state from localStorage:', e);
       return getDefaultColumnState();

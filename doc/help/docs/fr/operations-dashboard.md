@@ -15,7 +15,7 @@ Le tableau de bord est composé de tuiles disposées en grille responsive : troi
 
 ### Aperçu OPEX
 
-Un tableau compact couvrant trois exercices fiscaux : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Jusqu'à quatre colonnes de valeurs apparaissent selon l'existence de données : **Budget**, **Révision**, **Réalisé** et **Atterrissage prévu**. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846k`).
+Un tableau compact couvrant trois exercices fiscaux : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Jusqu'à cinq colonnes de valeurs apparaissent : **Budget**, **Révision**, **Prévision**, **Réalisé** et **Atterrissage prévu**. Une colonne s'affiche dès qu'elle contient un montant pour au moins une des trois années. Les tuiles OPEX et CAPEX affichent les mêmes colonnes. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846k`).
 
 Cliquez sur **Voir** pour ouvrir la liste OPEX.
 

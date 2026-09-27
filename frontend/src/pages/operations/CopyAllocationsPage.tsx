@@ -24,9 +24,11 @@ import {
   AllocationCopyOperation,
   AllocationCopyResult,
   AllocationCopyResponse,
+  BudgetScope,
   copyAllocations,
 } from '../../services/budgetOperations';
 import { useKanapDialogs } from '../../components/design';
+import ItemScopeTabs, { useDefaultBudgetScope } from './ItemScopeTabs';
 
 
 
@@ -45,6 +47,7 @@ export default function CopyAllocationsPage() {
   const currentYear = now.getFullYear();
   const years = useMemo(() => Array.from({ length: 7 }, (_, i) => currentYear - 1 + i), [currentYear]);
 
+  const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope());
   const [sourceYear, setSourceYear] = useState<number>(currentYear);
   const [destinationYear, setDestinationYear] = useState<number>(currentYear + 1);
   const [overwrite, setOverwrite] = useState<boolean>(false);
@@ -147,13 +150,13 @@ export default function CopyAllocationsPage() {
     },
     {
       field: 'sourceMethodLabel',
-      headerName: `Source (${sourceYear})`,
+      headerName: t('operations.copyAllocations.sourceLabel', { year: sourceYear }),
       width: 180,
       valueGetter: (params) => params.data?.sourceMethodLabel || '—',
     },
     {
       field: 'destinationMethodLabel',
-      headerName: `Destination (${destinationYear})`,
+      headerName: t('operations.copyAllocations.destinationLabel', { year: destinationYear }),
       width: 200,
       valueGetter: (params) => params.data?.destinationMethodLabel || '—',
     },
@@ -163,7 +166,7 @@ export default function CopyAllocationsPage() {
       width: 200,
       valueGetter: (params) => params.data?.resultMethodLabel || '—',
     },
-  ], [destinationYear, sourceYear, theme]);
+  ], [destinationYear, sourceYear, t, theme]);
 
   const handleDryRun = async () => {
     const payload: AllocationCopyOperation = {
@@ -174,7 +177,7 @@ export default function CopyAllocationsPage() {
     };
     setIsProcessing(true);
     try {
-      const response = await copyAllocations(payload);
+      const response = await copyAllocations(scope, payload);
       setPreviewData(response.results);
       setSummary(response.summary);
     } catch (error) {
@@ -194,9 +197,9 @@ export default function CopyAllocationsPage() {
     };
     setIsProcessing(true);
     try {
-      const response = await copyAllocations(payload);
+      const response = await copyAllocations(scope, payload);
       await dialogs.alert(t('operations.copyAllocations.copyCompleted', { processed: response.summary.processed, skipped: response.summary.skipped, errors: response.summary.errors }));
-      await queryClient.invalidateQueries({ queryKey: ['spend-items-summary'] });
+      await queryClient.invalidateQueries({ queryKey: [scope === 'opex' ? 'spend-items-summary' : 'capex-items-summary'] });
       setPreviewData([]);
       setSummary(null);
     } catch (error) {
@@ -213,6 +216,14 @@ export default function CopyAllocationsPage() {
       subtitle={t('operations.copyAllocations.subtitle')}
       filters={
         <>
+          <ItemScopeTabs
+            value={scope}
+            onChange={(next) => {
+              setScope(next);
+              setPreviewData([]);
+              setSummary(null);
+            }}
+          />
           <TextField
             select
             size="small"
@@ -315,7 +326,7 @@ export default function CopyAllocationsPage() {
         {previewData.length > 0 ? (
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-              Preview
+              {t('operations.copyAllocations.preview')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               {t("operations.copyAllocations.showingItems", { total: stats.total.toLocaleString(locale), toCopy: stats.toCopy.toLocaleString(locale), skipped: stats.skipped.toLocaleString(locale), errors: stats.errors.toLocaleString(locale) })}

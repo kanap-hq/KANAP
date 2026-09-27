@@ -129,7 +129,11 @@ Wenn die Zielspalte eingefroren ist, sind sowohl **Testlauf** als auch **Daten k
 
 ## Zuordnungen kopieren
 
-Kopieren Sie Zuordnungsmethoden und Prozentsätze von einem Jahr in ein anderes für alle OPEX-Positionen. Dies erspart Ihnen die Neueingabe der Leistungsverrechnungs-Konfigurationen beim Einrichten eines neuen Geschäftsjahres.
+Kopieren Sie Zuordnungsmethoden und Prozentsätze von einem Jahr in ein anderes. Dies erspart Ihnen die Neueingabe der Leistungsverrechnungs-Konfigurationen beim Einrichten eines neuen Geschäftsjahres.
+
+Der Umschalter **OPEX** / **CAPEX** oben legt fest, welche Positionen kopiert werden. Die Kopie erfolgt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts kopiert.
+
+Erfordert Administrationsrechte für OPEX, bei CAPEX-Positionen für CAPEX.
 
 ### Wann verwenden
 
@@ -148,8 +152,8 @@ Kopieren Sie Zuordnungsmethoden und Prozentsätze von einem Jahr in ein anderes 
 ### Zwei-Schritt-Prozess: Testlauf, dann Kopieren
 
 1. Klicken Sie auf **Testlauf**, um eine Vorschau zu sehen
-2. Das Vorschau-Grid zeigt jede OPEX-Position mit:
-   - **Produkt**name
+2. Das Vorschau-Grid zeigt jede OPEX- oder CAPEX-Position mit:
+   - Name der **Position**
    - **Aktion** -- was geschehen wird (Wird kopiert, Übersprungen -- kein Quelljahr, Übersprungen -- keine Zuordnungen in der Quelle, Übersprungen -- Ziel hat Daten, Fehler)
    - **Quell**methode und -bezeichnung
    - **Ziel** aktuelle Methode und Bezeichnung

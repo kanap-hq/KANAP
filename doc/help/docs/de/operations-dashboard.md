@@ -15,7 +15,7 @@ Das Dashboard besteht aus Kacheln, die in einem responsiven Raster angeordnet si
 
 ### OPEX-Überblick
 
-Eine kompakte Tabelle, die drei Geschäftsjahre abdeckt: Vorjahr (J-1), aktuelles Jahr (J) und nächstes Jahr (J+1). Bis zu vier Wertspalten erscheinen, je nachdem ob Daten vorhanden sind: **Budget**, **Revision**, **Ist-Werte** und **Erwarteter Endwert**. Alle Beträge sind auf den nächsten Tausender gerundet und mit dem Suffix „k" angezeigt (z. B. `7 846k`).
+Eine kompakte Tabelle, die drei Geschäftsjahre abdeckt: Vorjahr (J-1), aktuelles Jahr (J) und nächstes Jahr (J+1). Bis zu fünf Wertspalten erscheinen: **Budget**, **Revision**, **Prognose**, **Ist-Werte** und **Erwarteter Endwert**. Eine Spalte erscheint, sobald sie für mindestens eines der drei Jahre einen Betrag enthält. Die Kacheln OPEX und CAPEX zeigen dieselben Spalten. Alle Beträge sind auf den nächsten Tausender gerundet und mit dem Suffix „k" angezeigt (z. B. `7 846k`).
 
 Klicken Sie auf **Anzeigen**, um die OPEX-Liste zu öffnen.
 

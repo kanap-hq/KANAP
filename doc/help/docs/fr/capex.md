@@ -67,15 +67,19 @@ La liste CAPEX (dans **Gestion budgétaire > CAPEX**) est votre vue principale p
 
 | Colonne | Ce qu'elle affiche |
 |---------|-------------------|
+| **Réf** | Référence du poste, par exemple CPX-12 |
 | **Description** | Nom de l'investissement |
-| **Société** | Société payeuse |
+| **Fournisseur** | Le nom du fournisseur |
+| **Société payeuse** | Quelle société paie ce poste |
+| **Contrat** | Le nom du dernier contrat lié |
+| **Compte** | Le numéro et nom du compte comptable |
 | **Type d'immobilisation** | Matériel ou Logiciel |
 | **Type d'investissement** | Objectif de l'investissement |
 | **Priorité** | Niveau de priorité métier |
-| **Ventilation A** | Libellé de la méthode de ventilation de l'année en cours |
+| **Ventilation** | Libellé de la méthode de ventilation de l'année en cours |
 | **Budget A** | Budget d'investissement planifié de l'année en cours (devise de reporting) |
-| **Atterrissage prévu A** | Dépense d'investissement réelle finale de l'année en cours (devise de reporting) |
-| **Budget A+1** | Budget d'investissement planifié de l'année suivante (devise de reporting) |
+| **Atterrissage prévu A** | Atterrissage prévu de l'année en cours (devise de reporting) |
+| **Tâche** | Titre de la tâche la plus récente liée à ce poste |
 
 ### Colonnes supplémentaires
 
@@ -83,42 +87,48 @@ Ces colonnes sont masquées par défaut. Affichez-les depuis le sélecteur de co
 
 | Colonne | Ce qu'elle affiche |
 |---|---|
-| **Ventilation A+1** | Libellé de la méthode de ventilation de l'année suivante |
-| **Atterrissage prévu A-1** | Dépense d'investissement réelle finale de l'année précédente |
+| **Colonnes de montants** | Chaque colonne budgétaire (Budget, Révision, Prévision, Réalisé et Atterrissage prévu) pour A-1, A, A+1 et A+2. L'en-tête indique la colonne, l'année par rapport à aujourd'hui et l'année civile, par exemple **Révision A+1 (2027)**. Les montants sont dans la devise de reporting |
 | **Devise** | Code de devise du poste |
-| **Début** | Date de début d'effet |
+| **Début effectif** | Date de début |
 | **Fin de validité** | Date à laquelle le poste s'arrête (vide signifie sans fin) |
+| **Responsable IT** / **Responsable métier** | Utilisateurs responsables |
+| **Analytique** | Nom de la catégorie analytique |
+| **Projet** | Noms des projets liés dans l'onglet Relations |
 | **Notes** | Notes libres |
-| **Tâche** | Titre de la tâche la plus récente liée à ce poste |
 | **Activé** | Statut (activé ou désactivé) |
+| **Créé** / **Mis à jour** | Horodatages |
 
 ### Recherche rapide
 
-Le champ de recherche en haut porte sur la description, les notes, le type d'immobilisation, le type d'investissement, la priorité, la devise et le statut. Les résultats se mettent à jour en temps réel pendant la saisie.
+Le champ de recherche en haut porte sur la référence, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, la catégorie analytique, le type d'immobilisation, le type d'investissement, la priorité, les notes, la devise et le statut. Les résultats se mettent à jour en temps réel pendant la saisie.
 
 ### Filtres de colonnes
 
-Chaque en-tête de colonne filtrable a une icône de filtre. **Société**, **Type d'immobilisation**, **Type d'investissement**, **Priorité** et **Devise** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Plusieurs filtres se combinent avec une logique ET.
+Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier** et **Analytique** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Plusieurs filtres se combinent avec une logique ET.
+
+Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants.
+
+**Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide.
+
+Les colonnes texte utilisent des filtres texte. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `CPX-12`.
 
 ### Tri
 
-Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. La liste mémorise votre dernier tri quand vous revenez.
+Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant. Le tri par défaut est **Budget A**, du plus élevé au plus faible. La liste mémorise votre dernier tri quand vous revenez.
 
 ### Ligne de totaux
 
-La ligne épinglée en bas affiche les totaux pour toutes les colonnes budgétaires. Les totaux respectent vos filtres et recherche actuels. Tous les montants sont convertis dans votre devise de reporting, affichée dans le titre de la page (ex. : « CAPEX (EUR) »).
+La ligne épinglée en bas affiche le total de chaque colonne de montant. Les totaux respectent vos filtres et recherche actuels. Tous les montants sont convertis dans votre devise de reporting, affichée dans le titre de la page.
 
 ### Liens profonds
 
 Cliquez sur n'importe quelle cellule d'une ligne pour ouvrir l'espace de travail sur l'onglet le plus pertinent pour cette colonne :
 
-- **Description**, **Société**, **Type d'immobilisation**, **Type d'investissement**, **Priorité** : Ouvre la **Vue d'ensemble**
-- **Budget A**, **Atterrissage prévu A** : Ouvre l'onglet **Budget** pour l'année en cours
-- **Atterrissage prévu A-1** : Ouvre l'onglet **Budget** pour l'année précédente
-- **Budget A+1** : Ouvre l'onglet **Budget** pour l'année suivante
-- **Ventilation A** : Ouvre l'onglet **Ventilations** pour l'année en cours
-- **Ventilation A+1** : Ouvre l'onglet **Ventilations** pour l'année suivante
+- **Description**, **Fournisseur**, **Société payeuse**, **Type d'immobilisation**, **Type d'investissement**, **Priorité** et les autres colonnes générales : Ouvre la **Vue d'ensemble**
+- **Colonnes de montants** (Budget A, Atterrissage prévu A, Révision A+1, etc.) : Ouvre l'onglet **Budget** sur l'année de la colonne
+- **Ventilation** : Ouvre l'onglet **Ventilations** pour l'année en cours
 - **Tâche** : Ouvre l'onglet **Vue d'ensemble**, où se trouve le panneau des tâches
+- **Contrat** : Ouvre directement le contrat lié
 
 ### Filtre de statut
 
@@ -328,12 +338,13 @@ L'onglet Relations lie ce poste CAPEX aux objets associés : Projets, Contrats, 
 
 - Utilisez l'autocomplétion pour lier un ou plusieurs projets
 - Cela aide à regrouper les dépenses d'investissement par projet dans les rapports et permet la comptabilité projet
+- Les noms des projets apparaissent dans la colonne **Projet** de la liste CAPEX, et la recherche rapide les trouve
 - Retirez un projet en cliquant sur le X de sa puce
 
 **Contrats** :
 
 - Utilisez l'autocomplétion pour lier un ou plusieurs contrats
-- Une fois lié, le nom du contrat apparaît pour référence rapide
+- Une fois lié, le nom du contrat apparaît dans la colonne **Contrat** de la liste CAPEX pour référence rapide
 - Un contrat peut aussi être lié à plusieurs postes CAPEX (relation plusieurs-à-plusieurs)
 - Retirez un contrat en cliquant sur le X de sa puce
 
@@ -375,7 +386,7 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 1. Cliquez sur **Export CSV** dans la liste CAPEX
 2. Choisissez :
    - **Modèle** : En-têtes uniquement (utilisez-le pour créer un CSV vierge à remplir)
-   - **Données** : Tous les postes CAPEX actuels avec les budgets pour A-1, A et A+1
+   - **Données** : Tous les postes CAPEX, y compris ceux arrivés à échéance, avec les budgets de A-1 à A+2
 
 **Structure du CSV** :
 
@@ -391,17 +402,19 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 2. Téléversez votre fichier CSV (glisser-déposer ou sélecteur de fichiers)
 3. Cliquez sur **Vérification** pour valider :
    - Les en-têtes correspondent exactement
-   - Les sociétés existent dans votre espace de travail
-   - Les champs obligatoires (description, ppe_type, investment_type, priority, currency, effective_start, company_name) sont présents
-   - Aucune description en double
+   - Les sociétés et utilisateurs existent dans votre espace de travail
+   - Les champs obligatoires (description, ppe_type, investment_type, priority) sont présents. Un nouveau poste nécessite aussi company_name et currency
+   - Les devises sont autorisées dans les paramètres de devise de votre espace de travail
+   - Les responsables sont des utilisateurs actifs
+   - Un `item_number` correspond à un poste CAPEX existant
 4. Examinez le rapport de vérification (il affiche les totaux et jusqu'à 5 exemples d'erreurs)
 5. Si tout est correct, cliquez sur **Charger** pour importer
 
 **Remarques importantes** :
 
-- **Clé unique** : Les postes CAPEX sont identifiés par `description`. Si une description existe déjà, elle est **ignorée** (pas de mise à jour).
-- **Insertion uniquement** : L'importateur ne crée que de nouveaux postes ; il ne met pas à jour les existants. Utilisez l'interface pour modifier les postes existants.
-- **Références** : `company_name` doit correspondre à une Société par nom (insensible à la casse).
+- **Correspondance** : Une ligne avec un `item_number` met à jour ce poste CAPEX ; la vérification signale un numéro qui ne correspond à aucun poste. Une ligne sans numéro est rattachée par `description` : si elle correspond, elle met à jour le poste, sinon elle crée un nouveau poste. Si plusieurs lignes correspondent au même poste, seule la première compte.
+- **Nouveaux postes** : `company_name` et `currency` sont obligatoires pour un nouveau poste. La devise doit être autorisée dans les paramètres de devise de votre espace de travail. Sur un poste existant, une cellule de devise vide conserve sa devise.
+- **Références** : `company_name` doit correspondre à une Société par nom (insensible à la casse). `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail : un utilisateur invité ou un contact sans compte est refusé.
 - **Type d'immobilisation** : Doit être `hardware` ou `software` (insensible à la casse).
 - **Type d'investissement** : Doit être l'un des suivants : `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (insensible à la casse).
 - **Priorité** : Doit être `mandatory`, `high`, `medium` ou `low` (insensible à la casse).

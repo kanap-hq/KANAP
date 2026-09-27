@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, StatusScope } from '../components/ServerDataGrid';
 import { Button, Stack } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
@@ -17,7 +17,7 @@ import { readStoredCapexListContext, writeStoredCapexListContext } from './capex
 import { statusScopeParams } from '../utils/statusScopeParams';
 import ForbiddenPage from './ForbiddenPage';
 import { STATUS_VALUES } from '../constants/status';
-import { formatAmount as formatNumber } from '../i18n/formatters';
+import { amountColumnYear, buildAmountColumnDefs, SummaryVersions, totalsToVersions } from '../components/finance/amountColumns';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../lib/dateFormat';
 // import StatusSwitch from '../components/fields/StatusSwitch';
@@ -48,32 +48,11 @@ type SummaryRow = {
   notes?: string | null;
   company_id?: string | null;
   company_name?: string | null;
-  versions?: {
-    yMinus1?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-      version_id?: string;
-    };
-    y?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-      version_id?: string;
-    };
-    yPlus1?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-      version_id?: string;
-    };
-    yPlus2?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-      version_id?: string;
-    };
-  };
+  versions?: SummaryVersions;
+  latest_task?: { id: string; title?: string } | null;
+  latest_contract_id?: string | null;
+  latest_contract_name?: string | null;
+  project_name?: string | null;
   spread_mode_for_y?: 'flat' | 'manual' | null;
   allocation_method_label?: string | null;
   next_year_allocation_method_label?: string | null;
@@ -209,64 +188,7 @@ export default function CapexPage() {
       const pinned = {
         id: '__capex_totals__',
         description: t('shared.total'),
-        versions: {
-          yMinus1: {
-            reporting: {
-              budget: Number(totals.yMinus1Budget || 0),
-              landing: Number(totals.yMinus1Landing || 0),
-              revision: 0,
-              follow_up: 0,
-            },
-            totals: {
-              budget: Number(totals.yMinus1Budget || 0),
-              landing: Number(totals.yMinus1Landing || 0),
-              revision: 0,
-              follow_up: 0,
-            },
-          },
-          y: {
-            reporting: {
-              budget: Number(totals.yBudget || 0),
-              revision: Number(totals.yRevision || 0),
-              follow_up: Number(totals.yFollowUp || 0),
-              landing: Number(totals.yLanding || 0),
-            },
-            totals: {
-              budget: Number(totals.yBudget || 0),
-              revision: Number(totals.yRevision || 0),
-              follow_up: Number(totals.yFollowUp || 0),
-              landing: Number(totals.yLanding || 0),
-            },
-          },
-          yPlus1: {
-            reporting: {
-              budget: Number(totals.yPlus1Budget || 0),
-              revision: Number(totals.yPlus1Revision || 0),
-              landing: 0,
-              follow_up: 0,
-            },
-            totals: {
-              budget: Number(totals.yPlus1Budget || 0),
-              revision: Number(totals.yPlus1Revision || 0),
-              landing: 0,
-              follow_up: 0,
-            },
-          },
-          yPlus2: {
-            reporting: {
-              budget: Number(totals.yPlus2Budget || 0),
-              revision: 0,
-              landing: 0,
-              follow_up: 0,
-            },
-            totals: {
-              budget: Number(totals.yPlus2Budget || 0),
-              revision: 0,
-              landing: 0,
-              follow_up: 0,
-            },
-          },
-        },
+        versions: totalsToVersions(totals),
       };
       setPinnedTotals([pinned]);
     } catch (err) {
@@ -320,24 +242,20 @@ export default function CapexPage() {
   const getCapexHref = useCallback((row: unknown, colId?: string) => {
     const item = row as SummaryRow | null | undefined;
     if (!item?.id) return null;
+    if (colId === 'contract_name') {
+      const contractId = item.latest_contract_id;
+      return contractId ? `/ops/contracts/${contractId}/overview` : null;
+    }
     const sp = buildGridSearch();
     const next = new URLSearchParams(sp);
     let tab = 'overview';
+    const amountYear = amountColumnYear(colId, Y);
     if (colId === 'allocation_label') {
       tab = 'allocations';
       next.set('year', String(Y));
-    } else if (colId === 'yMinus1Budget' || colId === 'yMinus1Landing') {
+    } else if (amountYear != null) {
       tab = 'budget';
-      next.set('year', String(Y - 1));
-    } else if (colId === 'yBudget' || colId === 'yRevision' || colId === 'yFollowUp' || colId === 'yLanding') {
-      tab = 'budget';
-      next.set('year', String(Y));
-    } else if (colId === 'yPlus1Budget' || colId === 'yPlus1Revision') {
-      tab = 'budget';
-      next.set('year', String(Y + 1));
-    } else if (colId === 'yPlus2Budget') {
-      tab = 'budget';
-      next.set('year', String(Y + 2));
+      next.set('year', String(amountYear));
     } else if (colId === 'latest_task_text') {
       tab = 'overview'; // tasks now live in the overview tab
     }
@@ -354,8 +272,6 @@ export default function CapexPage() {
         onNavigate={(href) => navigate(href)}
       />
     );
-    const moneyGetter = (slot: 'yMinus1' | 'y' | 'yPlus1' | 'yPlus2', metric: 'budget' | 'revision' | 'follow_up' | 'landing') =>
-      (p: any) => p.data?.versions?.[slot]?.reporting?.[metric] ?? p.data?.versions?.[slot]?.totals?.[metric] ?? 0;
     const accountGetter = (p: any) => {
       const d: any = p.data || {};
       const a = d?.account;
@@ -406,6 +322,13 @@ export default function CapexPage() {
         cellRenderer: linkCell('paying_company_name'),
       },
       {
+        colId: 'contract_name',
+        headerName: t('capex.columns.contract'),
+        valueGetter: (p: any) => p.data?.latest_contract_name || '',
+        width: 200,
+        cellRenderer: linkCell('contract_name'),
+      },
+      {
         colId: 'account_display',
         headerName: t('capex.columns.account'),
         valueGetter: accountGetter,
@@ -451,96 +374,12 @@ export default function CapexPage() {
         valueGetter: (p: any) => p.data?.allocation_method_label ?? '',
         tooltipValueGetter: (p: any) => p.data?.allocation_method_label ?? '',
         width: 180,
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: { getValues: getCapexFilterValues('allocation_label'), searchable: false },
         cellRenderer: linkCell('allocation_label'),
       },
-      {
-        colId: 'yMinus1Budget',
-        headerName: t('capex.columns.yMinus1Budget', { year: Y - 1 }),
-        valueGetter: moneyGetter('yMinus1', 'budget'),
-        valueFormatter: (p: any) => formatNumber(p.value),
-        type: 'rightAligned',
-        width: 170,
-        defaultHidden: true,
-        cellRenderer: linkCell('yMinus1Budget'),
-      },
-      {
-        colId: 'yMinus1Landing',
-        headerName: t('capex.columns.yMinus1Landing', { year: Y - 1 }),
-        valueGetter: moneyGetter('yMinus1', 'landing'),
-        valueFormatter: (p: any) => formatNumber(p.value),
-        type: 'rightAligned',
-        width: 170,
-        defaultHidden: true,
-        cellRenderer: linkCell('yMinus1Landing'),
-      },
-      {
-        colId: 'yBudget',
-        headerName: t('capex.columns.yBudget', { year: Y }),
-        valueGetter: moneyGetter('y', 'budget'),
-        valueFormatter: (p: any) => formatNumber(p.value),
-        type: 'rightAligned',
-        width: 160,
-        cellRenderer: linkCell('yBudget'),
-      },
-      {
-        colId: 'yRevision',
-        headerName: t('capex.columns.yRevision', { year: Y }),
-        valueGetter: moneyGetter('y', 'revision'),
-        valueFormatter: (p: any) => formatNumber(p.value),
-        type: 'rightAligned',
-        width: 160,
-        defaultHidden: true,
-        cellRenderer: linkCell('yRevision'),
-      },
-      {
-        colId: 'yFollowUp',
-        headerName: t('capex.columns.yFollowUp', { year: Y }),
-        valueGetter: moneyGetter('y', 'follow_up'),
-        valueFormatter: (p: any) => formatNumber(p.value),
-        type: 'rightAligned',
-        width: 170,
-        defaultHidden: true,
-        cellRenderer: linkCell('yFollowUp'),
-      },
-      {
-        colId: 'yLanding',
-        headerName: t('capex.columns.yLanding', { year: Y }),
-        valueGetter: moneyGetter('y', 'landing'),
-        valueFormatter: (p: any) => formatNumber(p.value),
-        type: 'rightAligned',
-        width: 160,
-        cellRenderer: linkCell('yLanding'),
-      },
-      {
-        colId: 'yPlus1Budget',
-        headerName: t('capex.columns.yPlus1Budget', { year: Y + 1 }),
-        valueGetter: moneyGetter('yPlus1', 'budget'),
-        valueFormatter: (p: any) => formatNumber(p.value),
-        type: 'rightAligned',
-        width: 180,
-        defaultHidden: true,
-        cellRenderer: linkCell('yPlus1Budget'),
-      },
-      {
-        colId: 'yPlus1Revision',
-        headerName: t('capex.columns.yPlus1Revision', { year: Y + 1 }),
-        valueGetter: moneyGetter('yPlus1', 'revision'),
-        valueFormatter: (p: any) => formatNumber(p.value),
-        type: 'rightAligned',
-        width: 190,
-        defaultHidden: true,
-        cellRenderer: linkCell('yPlus1Revision'),
-      },
-      {
-        colId: 'yPlus2Budget',
-        headerName: t('capex.columns.yPlus2Budget', { year: Y + 2 }),
-        valueGetter: moneyGetter('yPlus2', 'budget'),
-        valueFormatter: (p: any) => formatNumber(p.value),
-        type: 'rightAligned',
-        width: 180,
-        defaultHidden: true,
-        cellRenderer: linkCell('yPlus2Budget'),
-      },
+      ...buildAmountColumnDefs<SummaryRow>({ t, currentYear: Y, cellRenderer: linkCell }),
       {
         field: 'currency',
         headerName: t('capex.columns.currency'),
@@ -554,6 +393,7 @@ export default function CapexPage() {
       {
         field: 'effective_start',
         headerName: t('capex.columns.effectiveStart'),
+        ...DATE_COLUMN_FILTER,
         width: 150,
         defaultHidden: true,
         valueFormatter: (p: any) => formatShortDate(p.value as string | null, locale),
@@ -564,7 +404,7 @@ export default function CapexPage() {
         headerName: t('capex.columns.endOfValidity'),
         width: 150,
         defaultHidden: true,
-        filter: 'agDateColumnFilter',
+        ...DATE_COLUMN_FILTER,
         // A timestamp: shown as the calendar day in the viewer's time zone, like the drawer.
         valueFormatter: (p: any) => formatShortDate(p.value ? new Date(p.value as string) : null, locale),
         cellRenderer: linkCell('disabled_at'),
@@ -602,6 +442,14 @@ export default function CapexPage() {
         cellRenderer: linkCell('analytics_category_name'),
       },
       {
+        field: 'project_name',
+        headerName: t('capex.columns.project'),
+        width: 200,
+        defaultHidden: true,
+        tooltipValueGetter: (p: any) => p.data?.project_name ?? '',
+        cellRenderer: linkCell('project_name'),
+      },
+      {
         field: 'notes',
         headerName: t('capex.columns.notes'),
         width: 250,
@@ -615,7 +463,6 @@ export default function CapexPage() {
         tooltipValueGetter: (p: any) => (p.value ? String(p.value) : ''),
         flex: 1,
         minWidth: 220,
-        defaultHidden: true,
         cellRenderer: linkCell('latest_task_text'),
       },
       {
@@ -630,6 +477,7 @@ export default function CapexPage() {
       {
         field: 'created_at',
         headerName: t('capex.columns.created'),
+        ...DATE_COLUMN_FILTER,
         width: 200,
         valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale),
         defaultHidden: true,
@@ -638,6 +486,7 @@ export default function CapexPage() {
       {
         field: 'updated_at',
         headerName: t('capex.columns.updated'),
+        ...DATE_COLUMN_FILTER,
         width: 200,
         valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale),
         defaultHidden: true,

@@ -46,10 +46,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Tarea**: El título de la última tarea (enlaza a la pestaña Vista general, donde está el panel de tareas)
 
 **Columnas adicionales** (ocultas por defecto, habilítelas mediante el selector de columnas):
-  - **Presupuesto A-1 / Aterrizaje previsto A-1**: Cifras del año anterior
-  - **Revisión A / Realizado A**: Importes de revisión y realizado del año actual
-  - **Presupuesto A+1 / Revisión A+1**: Cifras del año siguiente
-  - **Presupuesto A+2**: Presupuesto a dos años
+  - **Columnas de importes**: Cada columna presupuestaria (Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto) para A-1, A, A+1 y A+2. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Los importes están en la moneda de reporte
   - **Habilitado**: Estado de la partida (habilitado o deshabilitado)
   - **Descripción**: Descripción de la partida
   - **Moneda**: Código de moneda ISO
@@ -57,28 +54,31 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Fin de validez**: Fecha en que la partida termina (en blanco significa sin fin)
   - **Responsable IT / Responsable de negocio**: Usuarios responsables
   - **Analítica**: Nombre de la categoría analítica
-  - **ID de proyecto**: Identificador del proyecto vinculado
+  - **Proyecto**: Nombres de los proyectos vinculados en la pestaña Relaciones
   - **Notas**: Notas internas
   - **Creado / Actualizado**: Marcas de tiempo
 
 **Filtrado**:
-  - **Búsqueda rápida**: Busca en nombre del producto, proveedor, descripción y otros campos de texto. Filtra la lista en tiempo real mientras escribe
-  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio** y **Analítica** usan filtros de conjunto de casillas (selección múltiple). Otras columnas usan filtros de texto o numéricos
+  - **Búsqueda rápida**: Busca en la referencia, el nombre del producto, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, la categoría analítica, las notas, la moneda y el estado. Filtra la lista en tiempo real mientras escribe
+  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio** y **Analítica** usan filtros de conjunto de casillas (selección múltiple)
+  - **Filtros de importe**: Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes
+  - **Filtros de fecha**: **Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío
+  - **Columnas de texto**: usan filtros de texto. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` u `OPX-12`
   - **Alcance de estado**: Utilice el conmutador **Mostrar: Habilitados / Deshabilitados / Todos** encima de la cuadrícula (predeterminado: **Habilitados**)
 
 **Ordenación**:
-  - Haga clic en un encabezado de columna para ordenar ascendente/descendente
+  - Haga clic en un encabezado de columna para ordenar ascendente/descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe
   - La ordenación predeterminada es por **Presupuesto A** descendente
   - La lista recuerda su última ordenación, búsqueda y filtros cuando regresa
 
 **Fila de totales**:
-  - La fila fijada en la parte inferior muestra totales para todas las columnas presupuestarias
+  - La fila fijada en la parte inferior muestra el total de cada columna de importe, en la moneda de reporte
   - Los totales respetan sus filtros y búsqueda actuales
 
 **Enlace directo**:
   - Hacer clic en cualquier celda abre el espacio de trabajo en la pestaña más relevante:
     - **Nombre del producto**, **Proveedor**, **Empresa pagadora**, **Cuenta** y otras columnas generales: Abre la pestaña **Vista general**
-    - **Columnas presupuestarias** (Presupuesto A, Aterrizaje previsto A, Presupuesto A-1, etc.): Abre la pestaña **Presupuesto** preconfigurada en ese año
+    - **Columnas de importes** (Presupuesto A, Aterrizaje previsto A, Revisión A+1, etc.): Abre la pestaña **Presupuesto** preconfigurada en el año de la columna
     - **Asignación**: Abre la pestaña **Asignaciones** para el año actual
     - **Tarea**: Abre la pestaña **Vista general**, donde está el panel de tareas
     - **Contrato**: Abre directamente el espacio de trabajo del Contrato vinculado (no el espacio de trabajo OPEX)
@@ -259,6 +259,7 @@ La pestaña Relaciones vincula esta partida OPEX con objetos relacionados: Proye
 **Proyectos**:
   - Use el autocompletado para vincular uno o más proyectos de su Portafolio
   - Esto ayuda a agrupar el gasto por proyecto en los informes y permite la contabilidad de proyectos
+  - Los nombres de los proyectos aparecen en la columna **Proyecto** de la lista OPEX, y la búsqueda rápida los encuentra
   - Quite un proyecto haciendo clic en la X de su chip
 
 **Aplicaciones**:
@@ -299,7 +300,7 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   1. Haga clic en **Exportar CSV** en la lista OPEX
   2. Elija:
      - **Plantilla**: Solo encabezados (úselo para crear un CSV en blanco para rellenar)
-     - **Datos**: Todas las partidas OPEX actuales con presupuestos para Y-1, Y e Y+1
+     - **Datos**: Todas las partidas OPEX con presupuestos para Y-1, Y e Y+1
 
 **Estructura del CSV**:
   - Delimitador: punto y coma `;` (no coma)
@@ -313,16 +314,17 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   2. Suba su archivo CSV (arrastrar y soltar o selector de archivos)
   3. Haga clic en **Verificación previa** para validar:
      - Los encabezados coinciden exactamente
-     - Los proveedores, cuentas y usuarios existen en su espacio de trabajo
-     - Los campos obligatorios (product_name, currency, effective_start, paying_company) están presentes
-     - No hay combinaciones duplicadas de product_name + supplier
+     - Los proveedores, empresas, cuentas y usuarios existen en su espacio de trabajo
+     - Los campos obligatorios (product_name, company_name, account_number) están presentes. Una partida nueva también necesita una moneda
+     - Las monedas están permitidas en la configuración de monedas de su espacio de trabajo
+     - Los responsables son usuarios activos
   4. Revise el informe de verificación previa (muestra conteos y hasta 5 errores de ejemplo)
   5. Si es correcto, haga clic en **Cargar** para importar
 
 **Notas importantes**:
-  - **Clave única**: Las partidas OPEX se identifican por `(product_name, supplier_name)`. Si una combinación ya existe, se **omite** (sin actualizaciones)
-  - **Solo inserción**: El importador solo crea nuevas partidas; no actualizará las existentes. Utilice la interfaz para editar partidas existentes
-  - **Referencias**: `supplier_name` debe coincidir con un Proveedor por nombre (sin distinguir mayúsculas). `account_number` debe coincidir con una Cuenta. `owner_it_email` y `owner_business_email` deben coincidir con usuarios habilitados por correo electrónico
+  - **Correspondencia**: Una fila se asocia a una partida OPEX por `(product_name, supplier_name)`. Una fila que coincide con una partida existente la actualiza; cualquier otra fila crea una partida nueva. Si varias filas comparten la misma combinación, cuenta la primera
+  - **Moneda**: Obligatoria para una partida nueva, y debe estar permitida en la configuración de monedas de su espacio de trabajo. En una partida existente, una celda vacía conserva su moneda
+  - **Referencias**: `supplier_name` debe coincidir con un Proveedor por nombre (sin distinguir mayúsculas). `company_name` debe coincidir con una Empresa y `account_number` con una Cuenta. `owner_it_email` y `owner_business_email` deben coincidir con usuarios activos por correo electrónico: un usuario invitado o un contacto sin cuenta se rechaza
   - **Categoría analítica**: Si la categoría no existe, se crea automáticamente durante la importación
   - **Presupuestos**: Las columnas presupuestarias rellenan las versiones Y-1, Y e Y+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual) y el periodo de la columna pasa a ser todo el año. Una celda vacía deja la columna como está; `0` la borra
   - **Importes mensuales**: para cargar o revisar los importes mes a mes, con el periodo de cada columna, use el **Archivo de filas presupuestarias** en la Administración presupuestaria
