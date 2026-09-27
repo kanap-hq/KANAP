@@ -259,7 +259,8 @@ export default function InterfacesPage() {
       field: 'business_process_id',
       width: 200,
       valueFormatter: (p) => p.data?.business_process_name || '',
-      filter: 'agSetColumnFilter',
+      // No filter until the interfaces list reads set models: it compares one raw value against the stored code.
+      filter: false,
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,
     },
@@ -267,7 +268,8 @@ export default function InterfacesPage() {
       headerName: t('pages.interfaces.columns.dataCategory'),
       field: 'data_category',
       width: 120,
-      filter: 'agSetColumnFilter',
+      // No filter until the interfaces list reads set models: it compares one raw value against the stored code.
+      filter: false,
       valueFormatter: (p) => labelFor('interfaceDataCategory', p.value) || p.value || '',
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,
@@ -276,7 +278,8 @@ export default function InterfacesPage() {
       headerName: t('pages.interfaces.columns.containsPii'),
       field: 'contains_pii',
       width: 130,
-      filter: 'agSetColumnFilter',
+      // No filter until the interfaces list reads set models: it compares one raw value against the stored code.
+      filter: false,
       valueFormatter: (p) => (p.value ? t('enums.yesNo.yes') : t('enums.yesNo.no')),
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,

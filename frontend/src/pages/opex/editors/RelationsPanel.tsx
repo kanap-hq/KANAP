@@ -22,6 +22,7 @@ export type RelationsPanelHandle = {
 
 type Props = { id: string; autoSave?: boolean; onDirtyChange?: (dirty: boolean) => void; onRelationsChange?: () => void };
 type Named = { id: string; name: string };
+type RelationSet = 'projects' | 'applications' | 'contracts';
 type LinkItem = { id?: string; description?: string; url: string };
 
 const relationTagSx = { borderRadius: '6px', height: 24, '& .MuiChip-label': { px: '8px', fontSize: 12 } } as const;
@@ -85,6 +86,9 @@ export default forwardRef<RelationsPanelHandle, Props>(function RelationsPanel({
   const [linkDraft, setLinkDraft] = React.useState<{ description: string; url: string }>({ description: '', url: '' });
   const [editingLinkIndex, setEditingLinkIndex] = React.useState<number | null>(null);
 
+  // Sets whose load failed stay read-only and are never posted: saving them would replace the stored links with nothing.
+  const [failedSets, setFailedSets] = React.useState<ReadonlySet<RelationSet>>(new Set());
+
   const dirty = React.useMemo(() => (
     !sameIds(projects, baselineProjects)
     || !sameIds(apps, baselineApps)
@@ -108,6 +112,12 @@ export default forwardRef<RelationsPanelHandle, Props>(function RelationsPanel({
       const p = named(pRes); setProjects(p); setBaselineProjects(p);
       const a = named(aRes); setApps(a); setBaselineApps(a);
       const c = named(cRes); setContracts(c); setBaselineContracts(c);
+      const failed = new Set<RelationSet>();
+      if (pRes.status === 'rejected') failed.add('projects');
+      if (aRes.status === 'rejected') failed.add('applications');
+      if (cRes.status === 'rejected') failed.add('contracts');
+      setFailedSets(failed);
+      if (failed.size > 0) setError(t('opex.relations.failedToLoad'));
       const l = lRes.status === 'fulfilled' ? (lRes.value.data || []).map((x: any) => ({ id: x.id, description: x.description, url: x.url })) : [];
       setLinks(l); setBaselineLinks(l);
       setAttachments(atRes.status === 'fulfilled' ? (atRes.value.data || []) : []);
@@ -125,9 +135,16 @@ export default forwardRef<RelationsPanelHandle, Props>(function RelationsPanel({
     setSaving(true);
     setError(null);
     try {
-      await api.post(`/spend-items/${id}/projects/bulk-replace`, { project_ids: projects.map((x) => x.id) });
-      await api.post(`/spend-items/${id}/applications/bulk-replace`, { application_ids: apps.map((x) => x.id) });
-      await api.post(`/spend-items/${id}/contracts/bulk-replace`, { contract_ids: contracts.map((x) => x.id) });
+      // Post a set only when it changed, so an untouched set is not deleted and re-inserted.
+      if (!failedSets.has('projects') && !sameIds(projects, baselineProjects)) {
+        await api.post(`/spend-items/${id}/projects/bulk-replace`, { project_ids: projects.map((x) => x.id) });
+      }
+      if (!failedSets.has('applications') && !sameIds(apps, baselineApps)) {
+        await api.post(`/spend-items/${id}/applications/bulk-replace`, { application_ids: apps.map((x) => x.id) });
+      }
+      if (!failedSets.has('contracts') && !sameIds(contracts, baselineContracts)) {
+        await api.post(`/spend-items/${id}/contracts/bulk-replace`, { contract_ids: contracts.map((x) => x.id) });
+      }
       const currentIds = new Set(links.filter((x) => x.id).map((x) => x.id as string));
       for (const ex of baselineLinks) { if (ex.id && !currentIds.has(ex.id)) await api.delete(`/spend-items/${id}/links/${ex.id}`); }
       for (const u of links) {
@@ -143,7 +160,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function RelationsPanel({
     } finally {
       setSaving(false);
     }
-  }, [readOnly, dirty, id, projects, apps, contracts, links, baselineLinks, load, onRelationsChange, t]);
+  }, [readOnly, dirty, id, failedSets, projects, baselineProjects, apps, baselineApps, contracts, baselineContracts, links, baselineLinks, load, onRelationsChange, t]);
 
   // Debounced autosave on change.
   React.useEffect(() => {
@@ -199,7 +216,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function RelationsPanel({
   const renderMulti = (
     section: string, value: Named[], options: Named[], loadingOpts: boolean,
     setValue: (v: Named[]) => void, ensureOptions: () => void, onSearch: (q: string) => void,
-    chipHref?: (o: Named) => string,
+    chipHref?: (o: Named) => string, loadFailed = false,
   ) => (
     <Autocomplete
       multiple
@@ -235,7 +252,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function RelationsPanel({
       ListboxProps={{ sx: drawerAutocompleteListboxSx }}
       isOptionEqualToValue={(o, v) => o.id === v.id}
       filterSelectedOptions
-      disabled={readOnly || loading}
+      disabled={readOnly || loading || loadFailed}
       sx={relationAutocompleteSx}
     />
   );
@@ -250,7 +267,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function RelationsPanel({
           {renderMulti(t('opex.relations.selectProjects'), projects, projectOptions, loadingProjects, setProjects,
             () => void loadOptions('/portfolio/projects', 'name', '', setProjectOptions, setLoadingProjects),
             (q) => void loadOptions('/portfolio/projects', 'name', q, setProjectOptions, setLoadingProjects),
-            (o) => `/portfolio/projects/${o.id}`)}
+            (o) => `/portfolio/projects/${o.id}`, failedSets.has('projects'))}
         </Stack>
 
         <Stack spacing={1.25}>
@@ -258,7 +275,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function RelationsPanel({
           {renderMulti(t('opex.relations.selectApplications'), apps, appOptions, loadingApps, setApps,
             () => void loadOptions('/applications', 'name', '', setAppOptions, setLoadingApps),
             (q) => void loadOptions('/applications', 'name', q, setAppOptions, setLoadingApps),
-            (o) => `/it/applications/${o.id}/overview`)}
+            (o) => `/it/applications/${o.id}/overview`, failedSets.has('applications'))}
         </Stack>
 
         <Stack spacing={1.25}>
@@ -266,7 +283,7 @@ export default forwardRef<RelationsPanelHandle, Props>(function RelationsPanel({
           {renderMulti(t('opex.relations.selectContracts'), contracts, contractOptions, loadingContracts, setContracts,
             () => void loadOptions('/contracts', 'name', '', setContractOptions, setLoadingContracts),
             (q) => void loadOptions('/contracts', 'name', q, setContractOptions, setLoadingContracts),
-            (o) => `/ops/contracts/${o.id}/overview`)}
+            (o) => `/ops/contracts/${o.id}/overview`, failedSets.has('contracts'))}
         </Stack>
 
         <ItemContactsSection itemType="spend-items" itemId={id} canManage={!readOnly} />

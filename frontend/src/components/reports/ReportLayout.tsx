@@ -144,7 +144,7 @@ export default function ReportLayout({
   filters,
   actions,
   rootTo = '/ops/reports',
-  rootLabel = 'Reporting',
+  rootLabel,
   onExportTableCsv,
   onExportChartPng,
   children,
@@ -183,7 +183,7 @@ export default function ReportLayout({
         <Box>
           <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 0.5, fontSize: 12 }} className="report-print-hide">
             <MLink component={RouterLink} to={rootTo} underline="hover" color="inherit" sx={{ fontSize: 12 }}>
-              {rootLabel}
+              {rootLabel ?? t('reports.landing.title')}
             </MLink>
             <Typography sx={{ fontSize: 12, color: 'kanap.text.secondary' }}>{title}</Typography>
           </Breadcrumbs>

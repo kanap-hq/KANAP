@@ -10,10 +10,18 @@ vi.mock('react-i18next', () => {
 });
 vi.mock('../../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../../hooks/useCurrencySettings', () => ({ default: () => ({ data: null }) }));
-// The pickers load their options from the API; they are not what this test is about.
-vi.mock('../../../components/fields/SupplierSelect', () => ({ default: () => null }));
-vi.mock('../../../components/fields/CompanySelect', () => ({ default: () => null }));
-vi.mock('../../../components/fields/AccountSelect', () => ({ default: () => null }));
+// The pickers load their options from the API; they only report the props this file checks.
+vi.mock('../../../components/fields/SupplierSelect', () => ({
+  default: (p: { required?: boolean }) => <div data-testid="supplier-select" data-required={String(!!p.required)} />,
+}));
+vi.mock('../../../components/fields/CompanySelect', () => ({
+  default: (p: { disableClearable?: boolean }) => <div data-testid="company-select" data-clearable={String(!p.disableClearable)} />,
+}));
+vi.mock('../../../components/fields/AccountSelect', () => ({
+  default: (p: { disableClearable?: boolean; required?: boolean }) => (
+    <div data-testid="account-select" data-clearable={String(!p.disableClearable)} data-required={String(!!p.required)} />
+  ),
+}));
 vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({ default: () => null }));
 vi.mock('../../../components/fields/UserSelect', () => ({ default: () => null }));
 
@@ -42,6 +50,21 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SpendProperties
     </ThemeProvider>,
   );
 }
+
+describe('SpendPropertiesDrawer required pickers', () => {
+  it('leaves the supplier optional and lets company and account be cleared only on create', () => {
+    const { unmount } = renderDrawer({ mode: 'create' });
+    expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-required', 'false');
+    expect(screen.getByTestId('account-select')).toHaveAttribute('data-required', 'true');
+    expect(screen.getByTestId('company-select')).toHaveAttribute('data-clearable', 'true');
+    expect(screen.getByTestId('account-select')).toHaveAttribute('data-clearable', 'true');
+    unmount();
+
+    renderDrawer({ mode: 'edit' });
+    expect(screen.getByTestId('company-select')).toHaveAttribute('data-clearable', 'false');
+    expect(screen.getByTestId('account-select')).toHaveAttribute('data-clearable', 'false');
+  });
+});
 
 describe('SpendPropertiesDrawer end of validity', () => {
   it('offers one optional end date on create, as the local end of that day', () => {

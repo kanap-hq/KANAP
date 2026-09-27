@@ -4,6 +4,8 @@ import { ICellRendererParams } from 'ag-grid-community';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
+import CheckboxSetFilter from '../../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { useAuth } from '../../auth/AuthContext';
 import ForbiddenPage from '../ForbiddenPage';
@@ -29,7 +31,7 @@ export default function LocationsPage() {
   const { t } = useTranslation(['it', 'common']);
   const navigate = useNavigate();
   const { hasLevel } = useAuth();
-  const { labelFor, settings } = useItOpsEnumOptions();
+  const { labelFor, settings, byField } = useItOpsEnumOptions();
 
   if (!hasLevel('locations', 'reader')) {
     return <ForbiddenPage />;
@@ -96,7 +98,12 @@ export default function LocationsPage() {
       headerName: t('pages.locations.columns.hostingType'),
       field: 'hosting_type',
       width: 160,
-      filter: 'agSetColumnFilter',
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: byField.hostingType.map((opt) => ({ value: opt.code, label: labelFor('hostingType', opt.code) })),
+        searchable: false,
+      },
       valueFormatter: (p) => labelFor('hostingType', p.value) || p.value || '',
       cellRenderer: ClickableCell,
     },

@@ -375,6 +375,10 @@ export default function CapexItemPage() {
       setSaveError(t('capex.editor.payingCompanyRequired'));
       return;
     }
+    if (!createForm.account_id) {
+      setSaveError(t('capex.editor.accountRequired'));
+      return;
+    }
 
     setCreateSubmitting(true);
     setSaveError(null);
@@ -392,7 +396,7 @@ export default function CapexItemPage() {
           : {}),
         notes: toNull(createForm.notes),
         paying_company_id: createForm.paying_company_id,
-        account_id: toNull(createForm.account_id),
+        account_id: createForm.account_id,
         owner_it_id: toNull(createForm.owner_it_id),
         owner_business_id: toNull(createForm.owner_business_id),
         analytics_category_id: toNull(createForm.analytics_category_id),

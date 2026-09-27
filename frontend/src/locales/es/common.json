@@ -29,7 +29,8 @@
     "continue": "Continuar",
     "selectAll": "Seleccionar todo",
     "browse": "Explorar",
-    "loadMore": "Cargar más"
+    "loadMore": "Cargar más",
+    "done": "Listo"
   },
   "status": {
     "loading": "Cargando...",
@@ -66,7 +67,12 @@
     "clearQuickFilter": "Borrar filtro rápido",
     "search": "Buscar...",
     "noOptions": "Sin opciones",
-    "blank": "(Vacío)"
+    "blank": "(Vacío)",
+    "selectedCount": "{{count}} seleccionados",
+    "selectedCount_one": "{{count}} seleccionado",
+    "clearFilter": "Borrar filtro",
+    "columnPlaceholder": "Filtrar…",
+    "filterColumn": "Filtrar {{column}}"
   },
   "labels": {
     "show": "Mostrar",
@@ -95,7 +101,8 @@
     "managedDoc": "Documento gestionado",
     "recommended": "Recomendado",
     "openCalendar": "Abrir calendario",
-    "datePlaceholder": "dd/mm/aaaa"
+    "datePlaceholder": "dd/mm/aaaa",
+    "requiredTag": "(obligatorio)"
   },
   "delete": {
     "confirmTitle": "Confirmar eliminación",
@@ -147,7 +154,7 @@
     "noTemplatesAvailable": "No hay plantillas publicadas disponibles.",
     "newOpex": "Nuevo OPEX",
     "newCapex": "Nuevo CAPEX",
-    "recentOpexUpdates": "Actualizaciones OPEX recientes",
+    "recentUpdates": "Actualizaciones recientes",
     "noRecentUpdates": "Sin actualizaciones recientes",
     "quickActions": "Acciones rápidas",
     "opexSnapshot": "Resumen OPEX",
@@ -156,13 +163,16 @@
     "noTasksWithDueDate": "Sin tareas con fecha de vencimiento",
     "nextRenewals": "Próximas renovaciones",
     "noUpcomingRenewals": "Sin renovaciones próximas",
-    "dataHygieneOpex": "Calidad de datos (OPEX)",
-    "noItOwner": "Sin responsable IT: {{count}}",
-    "noBizOwner": "Sin responsable de negocio: {{count}}",
-    "noPayingCompany": "Sin empresa pagadora: {{count}}",
-    "coaMismatches": "Discrepancias CoA: {{count}}",
-    "topOpexY": "Top OPEX (A)",
+    "dataHygiene": "Calidad de datos",
+    "hygiene": {
+      "noItOwner": "Sin responsable IT",
+      "noBusinessOwner": "Sin responsable de negocio",
+      "noPayingCompany": "Sin empresa pagadora",
+      "accountOutsideChart": "Cuenta fuera del plan de la empresa"
+    },
+    "topItemsY": "Top partidas (A)",
     "topIncreasesYvsYminus1": "Mayores incrementos (A vs A-1)",
+    "noIncreases": "Sin incrementos",
     "settings": {
       "title": "Configuración del panel",
       "description": "Active o desactive los mosaicos, ajuste sus opciones y arrástrelos para reordenarlos.",

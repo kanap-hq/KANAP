@@ -133,8 +133,6 @@ export default function ContractsPage() {
     { colId: 'latest_task_text', headerName: t('contracts.columns.task'), flex: 1, minWidth: 200, defaultHidden: true, valueGetter: (p) => {
       const t = p.data?.latest_task; if (!t) return ''; const s = t.status || ''; const d = (t.description || '').toString(); const short = d.length > 40 ? `${d.slice(0,40)}…` : d; return s ? `${s}: ${short}` : short;
     } },
-    // Keep status filter values list if needed later
-    // { field: 'status', headerName: 'Status', width: 120, defaultHidden: true, filter: 'agSetColumnFilter', filterParams: { values: STATUS_VALUES, suppressMiniFilter: true } },
   ], [navigate, searchParams]);
 
   const canCreate = hasLevel('contracts','manager');

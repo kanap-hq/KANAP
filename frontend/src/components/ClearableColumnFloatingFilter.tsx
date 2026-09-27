@@ -1,6 +1,7 @@
 import React, { useCallback, useImperativeHandle, useRef, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import { IconButton } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import type {
   IFloatingFilter,
   IFloatingFilterParams,
@@ -12,6 +13,7 @@ export type ClearableColumnFloatingFilterRef = IFloatingFilter;
 type FloatingFilterProps = IFloatingFilterParams<TextFilterModel>;
 
 const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFilterRef, FloatingFilterProps>((props, ref) => {
+  const { t } = useTranslation('common');
   const columnDef = props.column.getColDef();
   const filterParams = columnDef.filterParams as any;
 
@@ -105,8 +107,8 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
         <input
           value={value}
           onChange={handleInputChange}
-          aria-label={`Filter ${columnDef.headerName ?? columnDef.field ?? ''}`.trim()}
-          placeholder="Filter…"
+          aria-label={t('filters.filterColumn', { column: columnDef.headerName ?? columnDef.field ?? '' }).trim()}
+          placeholder={t('filters.columnPlaceholder')}
           className="ag-input-field-input ag-text-field-input"
           style={{
             flex: 1,
@@ -121,7 +123,7 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
       <IconButton
         size="small"
         onClick={handleClear}
-        aria-label="Clear filter"
+        aria-label={t('filters.clearFilter')}
         sx={{
           visibility: hasValue ? 'visible' : 'hidden',
           ml: 0.5,

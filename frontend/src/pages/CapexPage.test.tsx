@@ -25,6 +25,7 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => ({
 
 import api from '../api';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import CapexPage from './CapexPage';
 
 type Col = {
@@ -91,6 +92,20 @@ describe('CapexPage', () => {
     const allocation = column('allocation_label');
     expect(allocation?.filter).toBe(CheckboxSetFilter);
     expect(allocation?.filterParams?.getValues).toBeTypeOf('function');
+  });
+
+  it('filters the status column with a checkbox list of the two statuses', async () => {
+    await renderPage();
+    const status = column('status') as Col & { filterParams?: { values?: unknown; searchable?: boolean } };
+    expect(status.filter).toBe(CheckboxSetFilter);
+    expect(status.floatingFilterComponent).toBe(CheckboxSetFloatingFilter);
+    expect(status.filterParams).toMatchObject({
+      values: [
+        { value: 'enabled', label: 'common:statuses.enabled' },
+        { value: 'disabled', label: 'common:statuses.disabled' },
+      ],
+      searchable: false,
+    });
   });
 
   it('links the contract cell to the contract and an amount cell to the budget of its year', async () => {

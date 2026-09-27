@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../components/ServerDataGrid';
 import { Button } from '@mui/material';
+import CheckboxSetFilter from '../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { STATUS_VALUES } from '../constants/status';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -87,8 +89,12 @@ export default function AnalyticsCategoriesPage() {
             onNavigate={(href) => navigate(href)}
           />
         ),
-        filter: 'agSetColumnFilter',
-        filterParams: { values: STATUS_VALUES, suppressMiniFilter: true },
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: {
+          values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
+          searchable: false,
+        },
       },
       {
         field: 'updated_at',

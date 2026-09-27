@@ -1,12 +1,13 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Autocomplete, Box, Checkbox, ListItemText, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
-import { useOpexSummaryAll, SummaryRow, pickYearSlot } from './useOpexSummary';
+import { BudgetSummaryRow, itemName, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
 import { getMetricLabels, MetricKey } from './reportMetrics';
 import { useTranslation } from 'react-i18next';
+import ItemScopeTabs from '../operations/ItemScopeTabs';
 
 const METRIC_SELECTION_ORDER: MetricKey[] = ['budget', 'revision', 'follow_up', 'landing'];
 
@@ -29,19 +30,26 @@ export default function TopOpexReport() {
   const [excludedAccounts, setExcludedAccounts] = useState<string[]>([]);
   const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
   const metricLabel = metricLabels[metric];
+  const [scope, setScope] = useReportScope();
+  const scopeLabel = t(`operations.scope.${scope}`);
 
-  const { data: rows, isLoading } = useOpexSummaryAll();
+  const { data: rows, isLoading } = useBudgetSummaryAll(scope);
+  // Lines and the accounts they use differ between OPEX and CAPEX: a type switch drops both exclusions.
+  useEffect(() => {
+    setExcludedIds([]);
+    setExcludedAccounts([]);
+  }, [scope]);
 
   type ProcessedRow = {
     id: string;
-    product_name: string;
+    name: string;
     value: number;
     pct_of_total: number;
   };
 
   type RawRow = {
     id: string;
-    product_name: string;
+    name: string;
     value: number;
     account_display: string | null;
   };
@@ -50,11 +58,11 @@ export default function TopOpexReport() {
   type AccountOption = { id: string; name: string };
 
   const { processed, totalMetric, topSelectionTotal } = useMemo(() => {
-    const all: RawRow[] = (rows ?? []).map((r: SummaryRow) => {
-      const slot = pickYearSlot(r, year);
+    const all: RawRow[] = (rows ?? []).map((r: BudgetSummaryRow) => {
+      const slot = pickSlot(r, year);
       const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
       const value = Number(totals?.[metric] ?? 0);
-      return { id: r.id, product_name: r.product_name, value, account_display: r.account_display ?? null };
+      return { id: r.id, name: itemName(scope, r), value, account_display: r.account_display ?? null };
     });
     const filtered = all.filter((item: RawRow) => {
       if (excludedIds.includes(item.id)) return false;
@@ -68,16 +76,16 @@ export default function TopOpexReport() {
     const topSelectionTotal = topEntries.reduce((acc: number, it: RawRow) => acc + (Number(it.value) || 0), 0);
     const processed = topEntries.map<ProcessedRow>((r) => ({
       id: r.id,
-      product_name: r.product_name,
+      name: r.name,
       value: r.value,
       pct_of_total: totalMetric > 0 ? Math.round((r.value / totalMetric) * 100) : 0,
     }));
     return { processed, totalMetric, topSelectionTotal };
-  }, [rows, year, excludedIds, excludedAccounts, topCount, metric]);
+  }, [rows, scope, year, excludedIds, excludedAccounts, topCount, metric]);
 
   const itemOptions = useMemo<ItemOption[]>(() => (rows ?? [])
-    .map((r: SummaryRow) => ({ id: r.id, name: r.product_name }))
-    .sort((a: { id: string; name: string }, b: { id: string; name: string }) => a.name.localeCompare(b.name)), [rows]);
+    .map((r: BudgetSummaryRow) => ({ id: r.id, name: itemName(scope, r) }))
+    .sort((a: ItemOption, b: ItemOption) => a.name.localeCompare(b.name)), [rows, scope]);
 
   const selectedItemOptions = useMemo<ItemOption[]>(() => {
     if (excludedIds.length === 0) return [];
@@ -109,18 +117,18 @@ export default function TopOpexReport() {
   }, [excludedAccounts, accountOptions]);
 
   const columns = useMemo<ColDef[]>(() => [
-    { field: 'product_name', headerName: t('reports.columns.product'), flex: 1, minWidth: 220 },
+    { field: 'name', headerName: t('reports.columns.item'), flex: 1, minWidth: 220 },
     { field: 'value', headerName: `${metricLabel} (${year})`, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'pct_of_total', headerName: t('reports.columns.shareOfTotal'), width: 160, type: 'rightAligned', valueFormatter: (p) => (p.value != null ? `${p.value}%` : '') },
-  ], [year, metricLabel]);
+  ], [year, metricLabel, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
 
-  const chartData = useMemo(() => processed.map((r) => ({ product_name: r.product_name, value: r.value })), [processed]);
+  const chartData = useMemo(() => processed.map((r) => ({ name: r.name, value: r.value })), [processed]);
   const chartOptions = useMemo(() => {
     const base = {
-      title: { text: t('reports.topOpex.chartTitle', { count: chartData.length, metric: metricLabel, year }) },
+      title: { text: t('reports.topOpex.chartTitle', { count: chartData.length, type: scopeLabel, metric: metricLabel, year }) },
       subtitle: { text: t('reports.topOpex.shareSubtitle', { metric: metricLabel }) },
       footnote: { text: `${t('reports.topOpex.totalMetric', { metric: metricLabel })}: ${formatNumber(totalMetric)}` },
       data: chartData,
@@ -133,7 +141,7 @@ export default function TopOpexReport() {
         series: [
           {
             type: 'pie',
-            calloutLabelKey: 'product_name',
+            calloutLabelKey: 'name',
             sectorLabelKey: 'value',
             angleKey: 'value',
             calloutLabel: { offset: 20 },
@@ -154,7 +162,7 @@ export default function TopOpexReport() {
                 const value = Number(datum[angleKey] || 0);
                 const pct = totalMetric > 0 ? (value / totalMetric) * 100 : 0;
                 return {
-                  title: datum.product_name,
+                  title: datum.name,
                   data: [
                     { label: metricLabel, value: formatNumber(value) },
                     { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -182,7 +190,7 @@ export default function TopOpexReport() {
         {
           type: 'bar',
           direction: 'horizontal',
-          xKey: 'product_name',
+          xKey: 'name',
           yKey: 'value',
           strokeWidth: 0,
           label: {
@@ -194,7 +202,7 @@ export default function TopOpexReport() {
               const value = Number(datum.value || 0);
               const pct = totalMetric > 0 ? (value / totalMetric) * 100 : 0;
               return {
-                title: datum.product_name,
+                title: datum.name,
                 data: [
                   { label: metricLabel, value: formatNumber(value) },
                   { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -205,7 +213,7 @@ export default function TopOpexReport() {
         },
       ],
     };
-  }, [chartData, totalMetric, year, chartType, metricLabel, t]);
+  }, [chartData, totalMetric, year, chartType, metricLabel, scopeLabel, t]);
 
   const selectionSharePct = useMemo(() => (
     totalMetric > 0 ? Math.round((topSelectionTotal / totalMetric) * 100) : null
@@ -214,7 +222,7 @@ export default function TopOpexReport() {
   return (
     <ReportLayout
       title={t("reports.topOpex.title")}
-      subtitle={t('reports.topOpex.subtitle', { metric: metricLabel })}
+      subtitle={t('reports.topOpex.subtitle', { type: scopeLabel, metric: metricLabel })}
       filters={(
         <Box sx={{
           display: 'flex',
@@ -224,6 +232,7 @@ export default function TopOpexReport() {
           alignItems: 'flex-start',
         }}
         >
+          <ItemScopeTabs value={scope} onChange={setScope} />
           <TextField select size="small" label={t("reports.filters.year")} value={year} onChange={(e) => setYear(parseInt(e.target.value, 10))} sx={{ minWidth: 140 }}>
             <MenuItem value={Y - 1}>{Y - 1}</MenuItem>
             <MenuItem value={Y}>{Y}</MenuItem>
@@ -361,7 +370,7 @@ export default function TopOpexReport() {
         </Box>
       )}
       onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`top${processed.length}-opex-${year}-${metric}-${chartType}`)}
+      onExportChartPng={() => chartRef.current?.download(`top${processed.length}-${scope}-${year}-${metric}-${chartType}`)}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>

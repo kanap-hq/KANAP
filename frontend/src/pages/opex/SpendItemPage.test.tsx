@@ -11,36 +11,36 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
-vi.mock('../../hooks/useCapexNav', () => ({
-  useCapexNav: () => ({ index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
+vi.mock('../../hooks/useSpendNav', () => ({
+  useSpendNav: () => ({ index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
-vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultCapexCurrency: 'EUR' } }) }));
+vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultSpendCurrency: 'EUR' } }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
-vi.mock('../../utils/workspaceTabCounts', () => ({ fetchCapexRelationsCount: vi.fn(async () => 0) }));
+vi.mock('../../utils/workspaceTabCounts', () => ({ fetchSpendRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   default: ({ properties, actions, children, onTitleSave }: {
     properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
   }) => (
     <div>
-      <button type="button" onClick={() => onTitleSave('New servers')}>set title</button>
+      <button type="button" onClick={() => onTitleSave('Monitoring')}>set title</button>
       {actions}{properties}{children}
     </div>
   ),
 }));
-// The drawer stands in for the pickers: each button sets one create field.
-vi.mock('./workspace/CapexPropertiesDrawer', () => ({
+// The drawer stands in for the pickers: each button sets one field.
+vi.mock('./workspace/SpendPropertiesDrawer', () => ({
   default: (props: {
     mode: string; onPayingCompanyChange: (v: string) => void; onAccountChange: (v: string) => void;
-    onAnalyticsCategoryChange: (v: string) => void;
+    onSupplierChange: (v: string) => void;
   }) => (
     <div data-mode={props.mode}>
       <button type="button" onClick={() => props.onPayingCompanyChange('company-1')}>pick company</button>
       <button type="button" onClick={() => props.onAccountChange('account-1')}>pick account</button>
-      <button type="button" onClick={() => props.onAnalyticsCategoryChange('category-1')}>pick category</button>
+      <button type="button" onClick={() => props.onSupplierChange('')}>clear supplier</button>
     </div>
   ),
 }));
-vi.mock('./workspace/CapexMetadataBar', () => ({ default: () => null }));
+vi.mock('./workspace/SpendMetadataBar', () => ({ default: () => null }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/finance/BudgetTab', () => ({ default: () => null }));
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
@@ -48,18 +48,22 @@ vi.mock('./editors/RelationsPanel', () => ({ default: () => null }));
 vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 
 import api from '../../api';
-import CapexItemPage from './CapexItemPage';
+import SpendItemPage from './SpendItemPage';
 
-const mocked = api as unknown as { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn> };
+const mocked = api as unknown as {
+  get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>;
+};
 
-function renderCreate() {
+const ITEM_ID = '11111111-2222-3333-4444-555555555555';
+
+function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={['/ops/capex/new/overview']}>
+        <MemoryRouter initialEntries={[path]}>
           <Routes>
-            <Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} />
+            <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -67,53 +71,65 @@ function renderCreate() {
   );
 }
 
-describe('CapexItemPage create', () => {
+describe('SpendItemPage create', () => {
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.post.mockReset();
+    mocked.patch.mockReset();
     mocked.get.mockResolvedValue({ data: {} });
     mocked.post.mockResolvedValue({ data: { id: 'new-id' } });
   });
 
-  it('sends the analytics category picked in the drawer', async () => {
-    renderCreate();
+  it('creates a line without a supplier and sends none', async () => {
+    renderAt('/ops/opex/new/overview');
     expect(document.querySelector('[data-mode="create"]')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][0]).toBe('/capex-items');
+    expect(mocked.post.mock.calls[0][0]).toBe('/spend-items');
     expect(mocked.post.mock.calls[0][1]).toMatchObject({
-      description: 'New servers',
+      product_name: 'Monitoring',
+      supplier_id: null,
       paying_company_id: 'company-1',
       account_id: 'account-1',
-      analytics_category_id: 'category-1',
     });
-    // The page moves on to the new line's workspace.
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/capex-items/new-id'));
-  });
-
-  it('sends no analytics category when none is picked', async () => {
-    renderCreate();
-    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    // Supplier is optional: none picked, none sent.
-    expect(mocked.post.mock.calls[0][1]).toMatchObject({ analytics_category_id: null, supplier_id: null });
-    // The page moves on to the new line's workspace.
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/capex-items/new-id'));
   });
 
   it('refuses to create a line without an account', async () => {
-    renderCreate();
+    renderAt('/ops/opex/new/overview');
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('capex.editor.accountRequired')).toBeInTheDocument();
+    expect(await screen.findByText('opex.editor.accountRequired')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
+  });
+});
+
+describe('SpendItemPage edit', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.get.mockImplementation(async (url: string) => (url === `/spend-items/${ITEM_ID}`
+      ? {
+        data: {
+          id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1',
+          paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01',
+        },
+      }
+      : { data: {} }));
+    mocked.patch.mockResolvedValue({ data: {} });
+  });
+
+  it('clears the supplier as null, not as an empty string', async () => {
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`));
+    // Writes wait for the line to load; retry the click until one goes through.
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'clear supplier' }));
+      expect(mocked.patch).toHaveBeenCalled();
+    });
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { supplier_id: null });
   });
 });

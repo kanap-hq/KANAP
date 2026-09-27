@@ -25,6 +25,7 @@ type AccountSelectProps = {
   companyId?: string | null | undefined;
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
+  disableClearable?: boolean;
 };
 
 function assignRef<T>(target: React.Ref<T | null> | undefined, value: T | null) {
@@ -48,6 +49,7 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
     companyId,
     hideLabel = false,
     textFieldSx,
+    disableClearable = false,
   },
   ref,
 ) {
@@ -125,6 +127,7 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
       onChange={(_, newValue) => onChange(newValue?.id || null)}
       getOptionLabel={(option) => `[${option.account_number}] ${option.account_name}`}
       isOptionEqualToValue={(option, value) => option.id === value.id}
+      disableClearable={disableClearable}
       blurOnSelect
       renderOption={(props, option) => (
         <li {...props} key={option.id}>

@@ -8,6 +8,8 @@ import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import CheckboxSetFilter from '../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { STATUS_VALUES } from '../constants/status';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
@@ -82,8 +84,12 @@ export default function SuppliersPage() {
       field: 'status',
       headerName: t('shared.columns.status'),
       width: 140,
-      filter: 'agSetColumnFilter',
-      filterParams: { values: STATUS_VALUES, suppressMiniFilter: true },
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
+        searchable: false,
+      },
       defaultHidden: true,
       cellRenderer: (params: any) => (
         <LinkCellRenderer {...params} linkType="internal" getHref={getSupplierHref} onNavigate={(href) => navigate(href)} />

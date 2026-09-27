@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
 import { Box, Grid, Typography, Stack, Button, Skeleton, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { getDotColor } from '../utils/statusColors';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
@@ -11,6 +11,10 @@ import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/useLocale';
 import DashboardTile from './workspace/tiles/DashboardTile';
 import { AMOUNT_COLUMNS, AmountColumnKey, slotAmount, totalsToVersions, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
+import type { BudgetScope } from '../services/budgetOperations';
+import { buildItemPath, formatItemRef } from '../utils/item-ref';
+import ItemScopeTabs, { useDefaultBudgetScope } from './operations/ItemScopeTabs';
+import { BudgetSummaryRow, itemName, SUMMARY_ENDPOINT, useBudgetSummaryAll } from './reports/useBudgetSummaryAll';
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
 
@@ -44,9 +48,10 @@ function formatThousandsK(v: any) {
   return `${sign}${formatted}k`;
 }
 
-function useOpexTotals() {
+function useOpexTotals(enabled: boolean) {
   return useQuery({
     queryKey: ['dashboard', 'opex-totals'],
+    enabled,
     queryFn: async () => {
       const res = await api.get('/spend-items/summary/totals');
       return res.data as Record<string, number>;
@@ -55,9 +60,10 @@ function useOpexTotals() {
   });
 }
 
-function useCapexTotals() {
+function useCapexTotals(enabled: boolean) {
   return useQuery({
     queryKey: ['dashboard', 'capex-totals'],
+    enabled,
     queryFn: async () => {
       const res = await api.get('/capex-items/summary/totals');
       return res.data as Record<string, number>;
@@ -114,63 +120,48 @@ async function fetchCount(endpoint: string, filterModel: any): Promise<number> {
   return res.data?.total ?? 0;
 }
 
-function useHygieneCounts() {
-  const queries = {
-    noItOwner: useQuery({
-      queryKey: ['dashboard', 'hygiene', 'noItOwner'],
-      queryFn: () => fetchCount('/spend-items/summary', { owner_it_id: { filterType: 'text', type: 'blank' } }),
-      staleTime: 2 * 60 * 1000,
-    }),
-    noBizOwner: useQuery({
-      queryKey: ['dashboard', 'hygiene', 'noBizOwner'],
-      queryFn: () => fetchCount('/spend-items/summary', { owner_business_id: { filterType: 'text', type: 'blank' } }),
-      staleTime: 2 * 60 * 1000,
-    }),
-    noPayingCompany: useQuery({
-      queryKey: ['dashboard', 'hygiene', 'noPayingCompany'],
-      queryFn: () => fetchCount('/spend-items/summary', { paying_company_id: { filterType: 'text', type: 'blank' } }),
-      staleTime: 2 * 60 * 1000,
-    }),
-    accountWarning: useQuery({
-      queryKey: ['dashboard', 'hygiene', 'accountWarning'],
-      queryFn: () => fetchCount('/spend-items/summary', { account_warning: { filterType: 'text', type: 'notBlank' } }),
-      staleTime: 2 * 60 * 1000,
-    }),
-  } as const;
+const HYGIENE_CHECKS = [
+  { key: 'noItOwner', tone: 'warning', filter: { owner_it_id: { filterType: 'text', type: 'blank' } } },
+  { key: 'noBusinessOwner', tone: 'warning', filter: { owner_business_id: { filterType: 'text', type: 'blank' } } },
+  { key: 'noPayingCompany', tone: 'warning', filter: { paying_company_id: { filterType: 'text', type: 'blank' } } },
+  { key: 'accountOutsideChart', tone: 'error', filter: { account_warning: { filterType: 'text', type: 'notBlank' } } },
+] as const;
+type HygieneKey = (typeof HYGIENE_CHECKS)[number]['key'];
 
-  const loading =
-    queries.noItOwner.isLoading ||
-    queries.noBizOwner.isLoading ||
-    queries.noPayingCompany.isLoading ||
-    queries.accountWarning.isLoading;
-  const error =
-    queries.noItOwner.error ||
-    queries.noBizOwner.error ||
-    queries.noPayingCompany.error ||
-    queries.accountWarning.error;
-  const counts = {
-    noItOwner: queries.noItOwner.data ?? 0,
-    noBizOwner: queries.noBizOwner.data ?? 0,
-    noPayingCompany: queries.noPayingCompany.data ?? 0,
-    accountWarning: queries.accountWarning.data ?? 0,
-  };
-  return { loading, error, counts };
+function useHygieneCounts(scope: BudgetScope, enabled: boolean) {
+  return useQuery({
+    queryKey: ['dashboard', 'hygiene', scope],
+    enabled,
+    queryFn: async () => {
+      const counts = await Promise.all(HYGIENE_CHECKS.map((check) => fetchCount(SUMMARY_ENDPOINT[scope], check.filter)));
+      return Object.fromEntries(HYGIENE_CHECKS.map((check, i) => [check.key, counts[i]])) as Record<HygieneKey, number>;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
 }
 
-// Recent OPEX updates
-function useRecentOpexUpdates() {
+type RecentUpdate = { scope: BudgetScope; id: string; ref: string; name: string; at: string | null };
+
+function useRecentUpdates(scope: BudgetScope, enabled: boolean) {
   return useQuery({
-    queryKey: ['dashboard', 'recent-opex'],
-    queryFn: async () => {
+    queryKey: ['dashboard', 'recent-updates', scope],
+    enabled,
+    queryFn: async (): Promise<RecentUpdate[]> => {
       const params = { limit: 5, sort: 'updated_at:DESC' };
-      const res = await api.get<ServerListResponse<{ id: string; product_name: string; updated_at?: string; created_at?: string }>>('/spend-items/summary', { params });
-      return res.data;
+      const res = await api.get<ServerListResponse<BudgetSummaryRow>>(SUMMARY_ENDPOINT[scope], { params });
+      return (res.data.items || []).map((row) => ({
+        scope,
+        id: row.id,
+        ref: row.item_number != null ? formatItemRef(scope, row.item_number) : row.id,
+        name: itemName(scope, row),
+        at: row.updated_at || row.created_at || null,
+      }));
     },
     staleTime: 60 * 1000,
   });
 }
 
-// Mini-reports: Top OPEX and Top increases
+// Mini-reports: top items and top increases
 function getBudgetValueFromRow(row: any, year: 'y' | 'yMinus1' | 'yPlus1') {
   const slot = (row?.versions?.[year]) || {};
   const reporting = slot?.reporting || {};
@@ -179,17 +170,18 @@ function getBudgetValueFromRow(row: any, year: 'y' | 'yMinus1' | 'yPlus1') {
   return Number.isFinite(v) ? v : 0;
 }
 
-function useTopOpexCurrentYear(limit: number = 5) {
+function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, limit: number = 5) {
   const Y = new Date().getFullYear();
   return useQuery({
-    queryKey: ['dashboard', 'top-opex', Y, limit],
+    queryKey: ['dashboard', 'top-items', scope, Y, limit],
+    enabled,
     queryFn: async () => {
       const params = { limit, sort: 'yBudget:DESC', years: [Y - 1, Y].join(',') } as Record<string, any>;
-      const res = await api.get<ServerListResponse<any>>('/spend-items/summary', { params });
+      const res = await api.get<ServerListResponse<BudgetSummaryRow>>(SUMMARY_ENDPOINT[scope], { params });
       const items = res.data.items || [];
-      return items.map((row: any) => ({
+      return items.map((row) => ({
         id: row.id,
-        name: row.product_name || row.name || '\u2014',
+        name: itemName(scope, row) || '\u2014',
         y: getBudgetValueFromRow(row, 'y'),
         yMinus1: getBudgetValueFromRow(row, 'yMinus1'),
       }));
@@ -198,24 +190,45 @@ function useTopOpexCurrentYear(limit: number = 5) {
   });
 }
 
-function useTopOpexIncrease(limit: number = 5) {
-  const Y = new Date().getFullYear();
-  return useQuery({
-    queryKey: ['dashboard', 'top-opex-increase', Y, limit],
-    queryFn: async () => {
-      const params = { limit: 1000000, sort: 'created_at:DESC', years: [Y - 1, Y].join(',') } as Record<string, any>;
-      const res = await api.get<ServerListResponse<any>>('/spend-items/summary', { params });
-      const items = (res.data.items || []).map((row: any) => {
-        const y = getBudgetValueFromRow(row, 'y');
-        const yMinus1 = getBudgetValueFromRow(row, 'yMinus1');
-        const delta = y - yMinus1;
-        return { id: row.id, name: row.product_name || '\u2014', y, yMinus1, delta };
-      });
-      const sorted = items.sort((a, b) => b.delta - a.delta);
-      return sorted.slice(0, limit);
-    },
-    staleTime: 60 * 1000,
+/** Lines whose budget grew from Y-1 to Y, largest first, computed over every line of the type. */
+function useTopIncreases(scope: BudgetScope, enabled: boolean, limit: number = 5) {
+  // No years: the fixed Y-1 and Y slots are always there, and the reports use the same cache entry.
+  const query = useBudgetSummaryAll(scope, undefined, { enabled });
+  const items = useMemo(() => (query.data ?? [])
+    .map((row) => {
+      const y = getBudgetValueFromRow(row, 'y');
+      const yMinus1 = getBudgetValueFromRow(row, 'yMinus1');
+      return { id: row.id, name: itemName(scope, row) || '\u2014', y, yMinus1, delta: y - yMinus1 };
+    })
+    .filter((row) => row.delta > 0)
+    .sort((a, b) => b.delta - a.delta)
+    .slice(0, limit), [query.data, scope, limit]);
+  return { items, isLoading: enabled && query.isLoading };
+}
+
+/** OPEX / CAPEX choice of a dashboard tile, remembered per tile; a type the user cannot read falls back to the default. */
+function useTileScope(tile: string): [BudgetScope, (next: BudgetScope) => void] {
+  const { hasLevel } = useAuth();
+  const fallback = useDefaultBudgetScope();
+  const storageKey = `kanap.dashboard.${tile}.scope`;
+  const [stored, setStored] = useState<BudgetScope | null>(() => {
+    try {
+      const value = window.localStorage.getItem(storageKey);
+      return value === 'opex' || value === 'capex' ? value : null;
+    } catch {
+      return null;
+    }
   });
+  const scope = stored && hasLevel(stored, 'reader') ? stored : fallback;
+  const setScope = useCallback((next: BudgetScope) => {
+    setStored(next);
+    try {
+      window.localStorage.setItem(storageKey, next);
+    } catch {
+      // Remembering the choice is a convenience; the tile works without storage.
+    }
+  }, [storageKey]);
+  return [scope, setScope];
 }
 
 export default function DashboardPage() {
@@ -226,14 +239,32 @@ export default function DashboardPage() {
   const Y = new Date().getFullYear();
 
   const mode = useTheme().palette.mode;
-  const { data: opexTotals, isLoading: opexLoading } = useOpexTotals();
-  const { data: capexTotals, isLoading: capexLoading } = useCapexTotals();
+  const canOpex = hasLevel('opex', 'reader');
+  const canCapex = hasLevel('capex', 'reader');
+  const { data: opexTotals, isLoading: opexLoading } = useOpexTotals(canOpex);
+  const { data: capexTotals, isLoading: capexLoading } = useCapexTotals(canCapex);
   const { data: myTasks, isLoading: tasksLoading } = useMyTasksSummary(profile?.id);
   const { data: nextContract, isLoading: contractsLoading } = useNextContractRenewal();
-  const hygiene = useHygieneCounts();
-  const { data: recentOpex } = useRecentOpexUpdates();
-  const { data: topOpex } = useTopOpexCurrentYear(5);
-  const { data: topIncreases } = useTopOpexIncrease(5);
+  const readableScopes = (['opex', 'capex'] as const).filter((scope) => (scope === 'opex' ? canOpex : canCapex));
+  const scopeLabel = (scope: BudgetScope) => t(`ops:operations.scope.${scope}`);
+
+  const hygieneByScope = {
+    opex: useHygieneCounts('opex', canOpex),
+    capex: useHygieneCounts('capex', canCapex),
+  };
+  const hygieneLoading = readableScopes.some((scope) => hygieneByScope[scope].isLoading);
+  const hygieneError = readableScopes.some((scope) => hygieneByScope[scope].isError);
+
+  const recentOpex = useRecentUpdates('opex', canOpex);
+  const recentCapex = useRecentUpdates('capex', canCapex);
+  const recentUpdates = useMemo(() => [...(recentOpex.data ?? []), ...(recentCapex.data ?? [])]
+    .sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
+    .slice(0, 5), [recentOpex.data, recentCapex.data]);
+
+  const [topScope, setTopScope] = useTileScope('topItems');
+  const { data: topItems, isLoading: topLoading } = useTopItemsCurrentYear(topScope, readableScopes.length > 0, 5);
+  const [increaseScope, setIncreaseScope] = useTileScope('topIncreases');
+  const { items: topIncreases, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0, 5);
 
   const openTasks = myTasks?.total ?? 0;
   const taskItems = myTasks?.items || [];
@@ -299,35 +330,39 @@ export default function DashboardPage() {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <PageHeader title={t('dashboard.overview')} />
       <Grid container spacing={3}>
-        {/* OPEX Snapshot */}
-        <Grid item xs={12} md={6} lg={4}>
-          <DashboardTile icon="AccountBalanceWallet" title={t('dashboard.opexSnapshot')} action={<Button size="small" onClick={() => navigate('/ops/opex')}>{t('buttons.view')}</Button>}>
-            {opexLoading ? (
-              <Skeleton variant="rounded" width="100%" height={80} />
-            ) : (
-              opexSnapshot.columns.length === 0 || unionCols.length === 0 ? (
-                <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
+        {/* OPEX snapshot, for users who read OPEX */}
+        {canOpex && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile icon="AccountBalanceWallet" title={t('dashboard.opexSnapshot')} action={<Button size="small" onClick={() => navigate('/ops/opex')}>{t('buttons.view')}</Button>}>
+              {opexLoading ? (
+                <Skeleton variant="rounded" width="100%" height={80} />
               ) : (
-                <SnapshotTable rows={opexSnapshot.rows} columns={unionCols} />
-              )
-            )}
-          </DashboardTile>
-        </Grid>
+                opexSnapshot.columns.length === 0 || unionCols.length === 0 ? (
+                  <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
+                ) : (
+                  <SnapshotTable rows={opexSnapshot.rows} columns={unionCols} />
+                )
+              )}
+            </DashboardTile>
+          </Grid>
+        )}
 
-        {/* CAPEX Snapshot */}
-        <Grid item xs={12} md={6} lg={4}>
-          <DashboardTile icon="AccountBalance" title={t('dashboard.capexSnapshot')} action={<Button size="small" onClick={() => navigate('/ops/capex')}>{t('buttons.view')}</Button>}>
-            {capexLoading ? (
-              <Skeleton variant="rounded" width="100%" height={80} />
-            ) : (
-              capexSnapshot.columns.length === 0 || unionCols.length === 0 ? (
-                <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
+        {/* CAPEX snapshot, for users who read CAPEX */}
+        {canCapex && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile icon="AccountBalance" title={t('dashboard.capexSnapshot')} action={<Button size="small" onClick={() => navigate('/ops/capex')}>{t('buttons.view')}</Button>}>
+              {capexLoading ? (
+                <Skeleton variant="rounded" width="100%" height={80} />
               ) : (
-                <SnapshotTable rows={capexSnapshot.rows} columns={unionCols} />
-              )
-            )}
-          </DashboardTile>
-        </Grid>
+                capexSnapshot.columns.length === 0 || unionCols.length === 0 ? (
+                  <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
+                ) : (
+                  <SnapshotTable rows={capexSnapshot.rows} columns={unionCols} />
+                )
+              )}
+            </DashboardTile>
+          </Grid>
+        )}
 
         {/* My Tasks */}
         <Grid item xs={12} md={6} lg={4}>
@@ -369,17 +404,45 @@ export default function DashboardPage() {
           </DashboardTile>
         </Grid>
 
-        {/* Data Hygiene */}
-        <Grid item xs={12} md={6} lg={4}>
-          <DashboardTile icon="ReportProblemOutlined" title={t('dashboard.dataHygieneOpex')} isLoading={hygiene.loading} action={<Button size="small" onClick={() => navigate('/ops/opex')}>{t('buttons.view')}</Button>}>
-            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
-              <Typography variant="body2" sx={{ color: hygiene.counts.noItOwner ? getDotColor('warning', mode) : 'text.secondary', fontWeight: 500, cursor: 'pointer' }} onClick={() => navigate('/ops/opex')}>{t('dashboard.noItOwner', { count: hygiene.counts.noItOwner })}</Typography>
-              <Typography variant="body2" sx={{ color: hygiene.counts.noBizOwner ? getDotColor('warning', mode) : 'text.secondary', fontWeight: 500, cursor: 'pointer' }} onClick={() => navigate('/ops/opex')}>{t('dashboard.noBizOwner', { count: hygiene.counts.noBizOwner })}</Typography>
-              <Typography variant="body2" sx={{ color: hygiene.counts.noPayingCompany ? getDotColor('warning', mode) : 'text.secondary', fontWeight: 500, cursor: 'pointer' }} onClick={() => navigate('/ops/opex')}>{t('dashboard.noPayingCompany', { count: hygiene.counts.noPayingCompany })}</Typography>
-              <Typography variant="body2" sx={{ color: hygiene.counts.accountWarning ? getDotColor('error', mode) : 'text.secondary', fontWeight: 500, cursor: 'pointer' }} onClick={() => navigate('/ops/opex')}>{t('dashboard.coaMismatches', { count: hygiene.counts.accountWarning })}</Typography>
-            </Stack>
-          </DashboardTile>
-        </Grid>
+        {/* Data hygiene: the same four checks for each type the user reads */}
+        {readableScopes.length > 0 && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile
+              icon="ReportProblemOutlined"
+              title={t('dashboard.dataHygiene')}
+              isLoading={hygieneLoading}
+              isError={hygieneError}
+              onRetry={() => readableScopes.forEach((scope) => { void hygieneByScope[scope].refetch(); })}
+            >
+              <Box sx={{ display: 'grid', gridTemplateColumns: `1fr repeat(${readableScopes.length}, 56px)`, columnGap: 1, rowGap: 0.5, alignItems: 'baseline', mt: 1 }}>
+                <span />
+                {readableScopes.map((scope) => (
+                  <Typography key={scope} sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'right' }}>{scopeLabel(scope)}</Typography>
+                ))}
+                {HYGIENE_CHECKS.map((check) => (
+                  <Fragment key={check.key}>
+                    <Typography variant="body2">{t(`dashboard.hygiene.${check.key}`)}</Typography>
+                    {readableScopes.map((scope) => {
+                      const count = hygieneByScope[scope].data?.[check.key] ?? 0;
+                      return (
+                        <Typography
+                          key={scope}
+                          component={RouterLink}
+                          to={`/ops/${scope}`}
+                          variant="body2"
+                          aria-label={`${t(`dashboard.hygiene.${check.key}`)}, ${scopeLabel(scope)}: ${count}`}
+                          sx={{ textAlign: 'right', fontWeight: 500, textDecoration: 'none', color: count ? getDotColor(check.tone, mode) : 'text.secondary' }}
+                        >
+                          {count}
+                        </Typography>
+                      );
+                    })}
+                  </Fragment>
+                ))}
+              </Box>
+            </DashboardTile>
+          </Grid>
+        )}
 
         {/* Quick Actions */}
         <Grid item xs={12} md={6} lg={4}>
@@ -392,55 +455,91 @@ export default function DashboardPage() {
                   <Button variant="outlined" size="small" onClick={() => navigate('/ops/capex/new')}>{t('dashboard.newCapex')}</Button>
                 )}
               </Stack>
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="subtitle2">{t('dashboard.recentOpexUpdates')}</Typography>
+              {readableScopes.length > 0 && (
+                <>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2">{t('dashboard.recentUpdates')}</Typography>
+                  <Stack spacing={0.5} sx={{ mt: 1 }}>
+                    {recentUpdates.map((r) => (
+                      <Stack
+                        key={`${r.scope}-${r.id}`}
+                        component={RouterLink}
+                        to={buildItemPath(r.scope, r.ref)}
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        sx={{ color: 'inherit', textDecoration: 'none', borderRadius: '5px', mx: -0.5, px: 0.5, '&:hover': { bgcolor: 'kanap.bg.hover' } }}
+                      >
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.at ? new Date(r.at).toLocaleDateString(locale) : '\u2014'}</Typography>
+                        <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                        <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', whiteSpace: 'nowrap' }}>{scopeLabel(r.scope)}</Typography>
+                      </Stack>
+                    ))}
+                    {recentUpdates.length === 0 && (
+                      <Typography variant="body1" color="text.secondary">{t('dashboard.noRecentUpdates')}</Typography>
+                    )}
+                  </Stack>
+                </>
+              )}
+          </DashboardTile>
+        </Grid>
+
+        {/* Insights: top items and top increases, OPEX or CAPEX per tile */}
+        {readableScopes.length > 0 && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile
+              icon="Leaderboard"
+              title={t('dashboard.topItemsY')}
+              isLoading={topLoading}
+              action={(
+                <Stack direction="row" alignItems="center">
+                  <ItemScopeTabs value={topScope} onChange={setTopScope} />
+                  <Button size="small" onClick={() => navigate(`/ops/reports/top-opex?scope=${topScope}`)}>{t('buttons.open')}</Button>
+                </Stack>
+              )}
+            >
               <Stack spacing={0.5} sx={{ mt: 1 }}>
-                {(recentOpex?.items || []).map((r) => (
+                {(topItems || []).map((r) => (
                   <Stack key={r.id} direction="row" spacing={1} alignItems="center">
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{new Date((r.updated_at || r.created_at || '')).toLocaleDateString(locale)}</Typography>
-                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.product_name}</Typography>
+                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsK(r.y)}</Typography>
                   </Stack>
                 ))}
-                {(recentOpex?.items?.length || 0) === 0 && (
-                  <Typography variant="body1" color="text.secondary">{t('dashboard.noRecentUpdates')}</Typography>
+                {(topItems?.length || 0) === 0 && (
+                  <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
                 )}
-            </Stack>
-          </DashboardTile>
-        </Grid>
+              </Stack>
+            </DashboardTile>
+          </Grid>
+        )}
 
-        {/* Insights — Top OPEX */}
-        <Grid item xs={12} md={6} lg={4}>
-          <DashboardTile icon="Leaderboard" title={t('dashboard.topOpexY')} action={<Button size="small" onClick={() => navigate('/ops/reports/top-opex')}>{t('buttons.open')}</Button>}>
-            <Stack spacing={0.5} sx={{ mt: 1 }}>
-              {(topOpex || []).map((r) => (
-                <Stack key={r.id} direction="row" spacing={1} alignItems="center">
-                  <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                  <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsK(r.y)}</Typography>
+        {readableScopes.length > 0 && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile
+              icon="TrendingUp"
+              title={t('dashboard.topIncreasesYvsYminus1')}
+              isLoading={increasesLoading}
+              action={(
+                <Stack direction="row" alignItems="center">
+                  <ItemScopeTabs value={increaseScope} onChange={setIncreaseScope} />
+                  <Button size="small" onClick={() => navigate(`/ops/reports/opex-delta?scope=${increaseScope}`)}>{t('buttons.open')}</Button>
                 </Stack>
-              ))}
-              {(topOpex?.length || 0) === 0 && (
-                <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
               )}
-            </Stack>
-          </DashboardTile>
-        </Grid>
-
-        {/* Insights — Top increases */}
-        <Grid item xs={12} md={6} lg={4}>
-          <DashboardTile icon="TrendingUp" title={t('dashboard.topIncreasesYvsYminus1')} action={<Button size="small" onClick={() => navigate('/ops/reports/opex-delta')}>{t('buttons.open')}</Button>}>
-            <Stack spacing={0.5} sx={{ mt: 1 }}>
-              {(topIncreases || []).map((r) => (
-                <Stack key={r.id} direction="row" spacing={1} alignItems="center">
-                  <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                  <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatThousandsK(Math.abs(r.delta))}</Typography>
-                </Stack>
-              ))}
-              {(topIncreases?.length || 0) === 0 && (
-                <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
-              )}
-            </Stack>
-          </DashboardTile>
-        </Grid>
+            >
+              <Stack spacing={0.5} sx={{ mt: 1 }}>
+                {topIncreases.map((r) => (
+                  <Stack key={r.id} direction="row" spacing={1} alignItems="center">
+                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompact(r.delta)}</Typography>
+                  </Stack>
+                ))}
+                {topIncreases.length === 0 && (
+                  <Typography variant="body1" color="text.secondary">{t('dashboard.noIncreases')}</Typography>
+                )}
+              </Stack>
+            </DashboardTile>
+          </Grid>
+        )}
       </Grid>
     </Box>
   );

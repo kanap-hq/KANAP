@@ -482,8 +482,12 @@ export default function OpexListPage() {
       field: 'status',
       headerName: t('opex.columns.enabled'),
       width: 140,
-      filter: 'agSetColumnFilter',
-      filterParams: { values: STATUS_VALUES, suppressMiniFilter: true },
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
+        searchable: false,
+      },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}

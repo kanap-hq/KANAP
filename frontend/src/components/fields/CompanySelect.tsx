@@ -22,6 +22,7 @@ export default function CompanySelect({
   excludeCompanyIds,
   hideLabel = false,
   textFieldSx,
+  disableClearable = false,
 }: {
   label?: string;
   value: string | null | undefined;
@@ -35,6 +36,7 @@ export default function CompanySelect({
   excludeCompanyIds?: string[];
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
+  disableClearable?: boolean;
 }) {
   const { t } = useTranslation('common');
   const naked = hideLabel || label === '';
@@ -87,6 +89,7 @@ export default function CompanySelect({
         onChange={(_, v) => onChange(v?.id || null)}
         getOptionLabel={(o) => o.name}
         isOptionEqualToValue={(a, b) => a.id === b.id}
+        disableClearable={disableClearable}
         renderInput={(params) => (
           <TextField
             {...params}

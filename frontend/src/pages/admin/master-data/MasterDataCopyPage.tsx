@@ -264,6 +264,8 @@ export default function MasterDataCopyPage() {
 
   return (
     <ReportLayout
+      rootTo="/master-data/operations"
+      rootLabel={t('nav:sidebar.masterData.administration')}
       title={t('admin.copy.title')}
       subtitle={t('admin.copy.subtitle')}
       filters={

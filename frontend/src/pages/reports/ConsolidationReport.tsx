@@ -6,7 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import api from '../../api';
-import { useOpexSummaryAll, pickYearSlot, SummaryRow } from './useOpexSummary';
+import { BudgetSummaryRow, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
+import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { metricKeys, getMetricLabels, MetricKey } from './reportMetrics';
 import { useTranslation } from 'react-i18next';
 
@@ -43,7 +44,9 @@ export default function ConsolidationReport() {
   const singleYear = startYear === endYear;
   const years = useMemo(() => allowedYears.filter((yr) => yr >= startYear && yr <= endYear), [allowedYears, startYear, endYear]);
 
-  const { data: rows, isLoading } = useOpexSummaryAll();
+  const [scope, setScope] = useReportScope();
+  const scopeLabel = t(`operations.scope.${scope}`);
+  const { data: rows, isLoading } = useBudgetSummaryAll(scope);
   const { data: accounts } = useQuery<Account[]>({
     queryKey: ['accounts', 'enabled-for-consolidation'],
     queryFn: async () => {
@@ -85,7 +88,7 @@ export default function ConsolidationReport() {
 
   // Build groups by consolidation account
   const groups = useMemo<Group[]>(() => {
-    const source: SummaryRow[] = rows ?? [];
+    const source: BudgetSummaryRow[] = rows ?? [];
     const acc: Map<string, Group> = new Map();
     const makeKey = (a?: Account | null): { key: string; label: string } => {
       const num = a?.consolidation_account_number ?? null;
@@ -97,14 +100,14 @@ export default function ConsolidationReport() {
       return { key, label };
     };
     for (const r of source) {
-      const accId: string | undefined = (r as any)?.account?.id;
+      const accId = r.account?.id ?? undefined;
       if (accId && excludedAccounts.includes(accId)) continue;
       const a = accId ? accountById.get(accId) : undefined;
       const id = makeKey(a);
       let g = acc.get(id.key);
       if (!g) { g = { key: id.key, label: id.label, values: {} }; acc.set(id.key, g); }
       for (const yr of years) {
-        const slot = pickYearSlot(r as any, yr);
+        const slot = pickSlot(r, yr);
         const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
         const totalForMetric = Number(totals?.[metric] ?? 0);
         g.values[yr] = (g.values[yr] || 0) + totalForMetric;
@@ -158,7 +161,7 @@ export default function ConsolidationReport() {
       const chartData = groups.map((g) => ({ label: g.label, value: g.values[year] || 0 }));
       const total = chartData.reduce((acc, d) => acc + (Number(d.value) || 0), 0);
       const base = {
-        title: { text: t('reports.consolidation.chartTitleSingle', { year }) },
+        title: { text: t('reports.consolidation.chartTitleSingle', { type: scopeLabel, year }) },
         subtitle: { text: metricsCaption || t('reports.consolidation.shareSubtitle') },
         footnote: { text: t('reports.consolidation.totalLabel', { metric: metricsCaption, value: formatNumber(total) }) },
         data: chartData,
@@ -237,7 +240,7 @@ export default function ConsolidationReport() {
     });
     const series = groups.map((g) => ({ type: 'line', xKey: 'year', yKey: g.key, yName: g.label }));
     return {
-      title: { text: t('reports.consolidation.chartTitleRange', { start: years[0], end: years[years.length - 1] }) },
+      title: { text: t('reports.consolidation.chartTitleRange', { type: scopeLabel, start: years[0], end: years[years.length - 1] }) },
       subtitle: { text: metricsCaption || t('reports.consolidation.annualSubtitle') },
       data: chartData,
       series,
@@ -247,14 +250,15 @@ export default function ConsolidationReport() {
       ],
       legend: { enabled: true },
     };
-  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, t]);
+  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, t]);
 
   return (
     <ReportLayout
       title={t("reports.consolidation.title")}
-      subtitle={t("reports.consolidation.subtitle")}
+      subtitle={t('reports.consolidation.subtitle', { type: scopeLabel })}
       filters={(
         <>
+          <ItemScopeTabs value={scope} onChange={setScope} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
             const v = parseInt(e.target.value, 10);
             setStartYear(v);
@@ -344,7 +348,7 @@ export default function ConsolidationReport() {
         </>
       )}
       onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`consolidation-${years[0]}-${years[years.length - 1]}`)}
+      onExportChartPng={() => chartRef.current?.download(`consolidation-${scope}-${years[0]}-${years[years.length - 1]}`)}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>

@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Autocomplete, Box, Checkbox, ListItemText, MenuItem, Paper, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Autocomplete, Box, Checkbox, ListItemText, MenuItem, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material';
 import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
-import { useOpexSummaryAll, SummaryRow, pickYearSlot } from './useOpexSummary';
+import { BudgetSummaryRow, itemName, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
 import { useTranslation } from 'react-i18next';
-import { getMetricLabels, isMetricKey, type MetricKey } from './reportMetrics';
+import { getMetricLabels, isMetricKey, metricKeys, type MetricKey } from './reportMetrics';
+import ItemScopeTabs from '../operations/ItemScopeTabs';
+import { textTabSx, textTabsSx } from '../../theme/formSx';
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -16,13 +18,14 @@ function formatNumber(v: any) {
 }
 
 function labelForMetric(metric: string, metricLabels: Record<MetricKey, string>) {
-  if (!metric) return '';
-  if (isMetricKey(metric)) return metricLabels[metric];
-  return metric
-    .split('_')
-    .map((segment) => (segment ? segment[0].toUpperCase() + segment.slice(1) : segment))
-    .join(' ');
+  return isMetricKey(metric) ? metricLabels[metric] : '';
 }
+
+/** Budget columns both pickers offer, whatever the year (no currency or rate keys of the slots). */
+const DELTA_METRICS: readonly string[] = metricKeys;
+const NO_METRICS: readonly string[] = [];
+
+type Direction = 'increase' | 'decrease' | 'both';
 
 function inferYearFromVersionKey(key: string, currentYear: number): number | undefined {
   if (key === 'yMinus1') return currentYear - 1;
@@ -44,17 +47,29 @@ export default function OpexDeltaReport() {
   const [sourceMetric, setSourceMetric] = useState<string>('');
   const [destinationYear, setDestinationYear] = useState<number | null>(null);
   const [destinationMetric, setDestinationMetric] = useState<string>('');
-  const [modes, setModes] = useState<Array<'increase' | 'decrease'>>(['increase']);
+  const [direction, setDirection] = useState<Direction>('increase');
+  const modes = useMemo<Array<'increase' | 'decrease'>>(
+    () => (direction === 'both' ? ['increase', 'decrease'] : [direction]),
+    [direction],
+  );
   const [topCount, setTopCount] = useState<number>(10);
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const [excludedAccounts, setExcludedAccounts] = useState<string[]>([]);
   const [chartType, setChartType] = useState<'pie' | 'bar'>('bar');
 
-  const { data: rows, isLoading } = useOpexSummaryAll();
+  const [scope, setScope] = useReportScope();
+  const scopeLabel = t(`operations.scope.${scope}`);
+
+  const { data: rows, isLoading } = useBudgetSummaryAll(scope);
+  // Lines and the accounts they use differ between OPEX and CAPEX: a type switch drops both exclusions.
+  useEffect(() => {
+    setExcludedIds([]);
+    setExcludedAccounts([]);
+  }, [scope]);
 
   type ProcessedRow = {
     id: string;
-    product_name: string;
+    name: string;
     current: number;
     previous: number;
     delta: number;
@@ -64,7 +79,7 @@ export default function OpexDeltaReport() {
 
   type RawRow = {
     id: string;
-    product_name: string;
+    name: string;
     current: number;
     previous: number;
     delta: number;
@@ -74,67 +89,21 @@ export default function OpexDeltaReport() {
 
   type ItemOption = { id: string; name: string };
   type AccountOption = { id: string; name: string };
-  type ColumnOption = { year: number; metric: string };
-
-  const columnOptions = useMemo<ColumnOption[]>(() => {
-    const seen = new Set<string>();
-    const options: ColumnOption[] = [];
-    const fallbackYear = currentYear;
-    for (const row of rows ?? []) {
-      const versions = row.versions ?? {};
-      for (const [key, version] of Object.entries(versions)) {
-        const versionEntry = version as { year?: number; totals?: Record<string, number>; reporting?: Record<string, number> } | undefined;
-        if (!versionEntry) continue;
-        const year = typeof versionEntry.year === 'number' ? versionEntry.year : inferYearFromVersionKey(key, fallbackYear);
-        if (!year) continue;
-        const totals = versionEntry.reporting ?? versionEntry.totals;
-        if (!totals) continue;
-        for (const metric of Object.keys(totals)) {
-          const id = `${year}:${metric}`;
-          if (seen.has(id)) continue;
-          seen.add(id);
-          options.push({ year, metric });
-        }
-      }
-    }
-    options.sort((a, b) => {
-      if (a.year !== b.year) return a.year - b.year;
-      return a.metric.localeCompare(b.metric);
-    });
-    return options;
-  }, [rows, currentYear]);
 
   const yearOptions = useMemo<number[]>(() => {
-    const years = Array.from(new Set(columnOptions.map((option) => option.year)));
-    years.sort((a, b) => a - b);
-    return years;
-  }, [columnOptions]);
-
-  const metricsByYear = useMemo<Map<number, string[]>>(() => {
-    const map = new Map<number, string[]>();
-    for (const option of columnOptions) {
-      const metrics = map.get(option.year) ?? [];
-      if (!metrics.includes(option.metric)) {
-        metrics.push(option.metric);
+    const years = new Set<number>();
+    for (const row of rows ?? []) {
+      for (const [key, version] of Object.entries(row.versions ?? {})) {
+        if (!version || !(version.reporting ?? version.totals)) continue;
+        const year = typeof version.year === 'number' ? version.year : inferYearFromVersionKey(key, currentYear);
+        if (year) years.add(year);
       }
-      map.set(option.year, metrics);
     }
-    for (const [year, metrics] of map.entries()) {
-      metrics.sort((a, b) => a.localeCompare(b));
-      map.set(year, metrics);
-    }
-    return map;
-  }, [columnOptions]);
+    return Array.from(years).sort((a, b) => a - b);
+  }, [rows, currentYear]);
 
-  const destinationMetrics = useMemo<string[]>(() => {
-    if (destinationYear == null) return [];
-    return metricsByYear.get(destinationYear) ?? [];
-  }, [destinationYear, metricsByYear]);
-
-  const sourceMetrics = useMemo<string[]>(() => {
-    if (sourceYear == null) return [];
-    return metricsByYear.get(sourceYear) ?? [];
-  }, [sourceYear, metricsByYear]);
+  const sourceMetrics = sourceYear == null ? NO_METRICS : DELTA_METRICS;
+  const destinationMetrics = destinationYear == null ? NO_METRICS : DELTA_METRICS;
 
   useEffect(() => {
     if (yearOptions.length === 0) return;
@@ -170,11 +139,7 @@ export default function OpexDeltaReport() {
       setDestinationMetric('');
       return;
     }
-    setDestinationMetric((prev) => {
-      if (prev && metrics.includes(prev)) return prev;
-      if (metrics.includes('budget')) return 'budget';
-      return metrics[0];
-    });
+    setDestinationMetric((prev) => (prev && metrics.includes(prev) ? prev : metrics[0]));
   }, [destinationYear, destinationMetrics]);
 
   useEffect(() => {
@@ -187,11 +152,7 @@ export default function OpexDeltaReport() {
       setSourceMetric('');
       return;
     }
-    setSourceMetric((prev) => {
-      if (prev && metrics.includes(prev)) return prev;
-      if (metrics.includes('budget')) return 'budget';
-      return metrics[0];
-    });
+    setSourceMetric((prev) => (prev && metrics.includes(prev) ? prev : metrics[0]));
   }, [sourceYear, sourceMetrics]);
 
   useEffect(() => {
@@ -200,9 +161,9 @@ export default function OpexDeltaReport() {
     }
   }, [modes, chartType]);
 
-  const valueForColumn = (row: SummaryRow, year: number | null, metric: string) => {
+  const valueForColumn = (row: BudgetSummaryRow, year: number | null, metric: string) => {
     if (year == null || !metric) return 0;
-    const slot = pickYearSlot(row, year);
+    const slot = pickSlot(row, year);
     const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
     if (!totals) return 0;
     const raw = totals[metric];
@@ -219,14 +180,14 @@ export default function OpexDeltaReport() {
     ) {
       return [];
     }
-    const items: RawRow[] = (rows ?? []).map((r: SummaryRow) => {
+    const items: RawRow[] = (rows ?? []).map((r: BudgetSummaryRow) => {
       const curr = valueForColumn(r, destinationYear, destinationMetric);
       const prev = valueForColumn(r, sourceYear, sourceMetric);
       const delta = curr - prev;
       const pct = prev > 0 ? (delta / prev) * 100 : null;
       return {
         id: r.id,
-        product_name: r.product_name,
+        name: itemName(scope, r),
         current: curr,
         previous: prev,
         delta,
@@ -266,6 +227,7 @@ export default function OpexDeltaReport() {
     return [...increases, ...decreases];
   }, [
     rows,
+    scope,
     sourceYear,
     sourceMetric,
     destinationYear,
@@ -277,8 +239,8 @@ export default function OpexDeltaReport() {
   ]);
 
   const itemOptions = useMemo<ItemOption[]>(() => (rows ?? [])
-    .map((r: SummaryRow) => ({ id: r.id, name: r.product_name }))
-    .sort((a: { id: string; name: string }, b: { id: string; name: string }) => a.name.localeCompare(b.name)), [rows]);
+    .map((r: BudgetSummaryRow) => ({ id: r.id, name: itemName(scope, r) }))
+    .sort((a: ItemOption, b: ItemOption) => a.name.localeCompare(b.name)), [rows, scope]);
 
   const selectedItemOptions = useMemo<ItemOption[]>(() => {
     if (excludedIds.length === 0) return [];
@@ -317,12 +279,12 @@ export default function OpexDeltaReport() {
     : t('reports.opexDelta.destinationColumn');
 
   const columns = useMemo<ColDef[]>(() => [
-    { field: 'product_name', headerName: t('reports.columns.product'), flex: 1, minWidth: 240 },
+    { field: 'name', headerName: t('reports.columns.item'), flex: 1, minWidth: 240 },
     { field: 'previous', headerName: sourceLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'current', headerName: destinationLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'delta', headerName: t('reports.columns.delta'), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'pct_increase', headerName: t('reports.columns.pctIncrease'), width: 140, type: 'rightAligned', valueFormatter: (p) => (p.value == null ? '' : `${Number(p.value).toFixed(1)}%`) },
-  ], [sourceLabel, destinationLabel]);
+  ], [sourceLabel, destinationLabel, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -330,7 +292,7 @@ export default function OpexDeltaReport() {
   const chartData = useMemo(() => processed
     .filter((r) => r.delta !== 0)
     .map((r) => ({
-      product_name: r.product_name,
+      name: r.name,
       delta: r.delta,
       direction: r.direction,
       magnitude: Math.abs(r.delta),
@@ -419,7 +381,7 @@ export default function OpexDeltaReport() {
 
   const chartOptions = useMemo(() => {
     const base = {
-      title: { text: t(chartTitleKey, { n: countLabel, source: sourceLabel, destination: destinationLabel }) },
+      title: { text: t(chartTitleKey, { n: countLabel, type: scopeLabel, source: sourceLabel, destination: destinationLabel }) },
       subtitle: { text: t('reports.opexDelta.shareOfChangeMagnitude') },
       footnote: { text: selectionFootnote },
       data: chartData,
@@ -432,7 +394,7 @@ export default function OpexDeltaReport() {
         series: [
           {
             type: 'pie',
-            calloutLabelKey: 'product_name',
+            calloutLabelKey: 'name',
             sectorLabelKey: 'magnitude',
             angleKey: 'magnitude',
             calloutLabel: { offset: 20 },
@@ -453,7 +415,7 @@ export default function OpexDeltaReport() {
                 const pct = totalMagnitude > 0 ? (magnitude / totalMagnitude) * 100 : 0;
                 const changeLabel = datum.direction === 'increase' ? t('reports.opexDelta.increase') : t('reports.opexDelta.decrease');
                 return {
-                  title: datum.product_name,
+                  title: datum.name,
                   data: [
                     { label: changeLabel, value: formatNumber(magnitude) },
                     { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -481,7 +443,7 @@ export default function OpexDeltaReport() {
         {
           type: 'bar',
           direction: 'horizontal',
-          xKey: 'product_name',
+          xKey: 'name',
           yKey: 'delta',
           strokeWidth: 0,
           label: {
@@ -494,7 +456,7 @@ export default function OpexDeltaReport() {
               const pct = totalMagnitude > 0 ? (magnitude / totalMagnitude) * 100 : 0;
               const changeLabel = datum.direction === 'increase' ? t('reports.opexDelta.increase') : t('reports.opexDelta.decrease');
               return {
-                title: datum.product_name,
+                title: datum.name,
                 data: [
                   { label: changeLabel, value: formatNumber(datum.delta) },
                   { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -505,7 +467,7 @@ export default function OpexDeltaReport() {
         },
       ],
     };
-  }, [chartData, totalMagnitude, chartTitleKey, countLabel, sourceLabel, destinationLabel, chartType, selectionFootnote, modes.length, t]);
+  }, [chartData, totalMagnitude, chartTitleKey, countLabel, scopeLabel, sourceLabel, destinationLabel, chartType, selectionFootnote, modes.length, t]);
 
   useEffect(() => {
     const api = gridApiRef.current;
@@ -554,7 +516,7 @@ export default function OpexDeltaReport() {
   return (
     <ReportLayout
       title={t("reports.opexDelta.title")}
-      subtitle={t("reports.opexDelta.subtitle")}
+      subtitle={t('reports.opexDelta.subtitle', { type: scopeLabel })}
       filters={(
         <Box sx={{
           display: 'flex',
@@ -564,6 +526,7 @@ export default function OpexDeltaReport() {
           alignItems: 'flex-start',
         }}
         >
+          <ItemScopeTabs value={scope} onChange={setScope} />
           <TextField
             select
             size="small"
@@ -754,29 +717,23 @@ export default function OpexDeltaReport() {
             sx={{ minWidth: 260 }}
             noOptionsText={t("reports.filters.noMatchingAccounts")}
           />
-          <ToggleButtonGroup
-            size="small"
-            value={modes}
-            onChange={(_, next) => {
-              if (!next || next.length === 0) {
-                setModes(['increase']);
-              } else {
-                const unique = Array.from(new Set(next)) as Array<'increase' | 'decrease'>;
-                setModes(unique);
-              }
-            }}
+          <Tabs
+            value={direction}
+            onChange={(_, next: Direction) => setDirection(next)}
             aria-label={t('reports.opexDelta.directionToggle')}
+            sx={[textTabsSx, { alignSelf: 'center' }]}
           >
-            <ToggleButton value="increase">{t("reports.opexDelta.increase")}</ToggleButton>
-            <ToggleButton value="decrease">{t("reports.opexDelta.decrease")}</ToggleButton>
-          </ToggleButtonGroup>
+            <Tab value="increase" label={t('reports.opexDelta.increases')} sx={textTabSx(direction === 'increase')} />
+            <Tab value="decrease" label={t('reports.opexDelta.decreases')} sx={textTabSx(direction === 'decrease')} />
+            <Tab value="both" label={t('reports.opexDelta.both')} sx={textTabSx(direction === 'both')} />
+          </Tabs>
         </Box>
       )}
       onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
       onExportChartPng={() => {
         const increaseSlug = `inc${increaseCount}`;
         const decreaseSlug = `dec${decreaseCount}`;
-        chartRef.current?.download(`top${countSlug}-opex-delta-${sourceSlug}-to-${destinationSlug}-${modeSlug}-${increaseSlug}-${decreaseSlug}-${chartType}`);
+        chartRef.current?.download(`top${countSlug}-${scope}-delta-${sourceSlug}-to-${destinationSlug}-${modeSlug}-${increaseSlug}-${decreaseSlug}-${chartType}`);
       }}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">

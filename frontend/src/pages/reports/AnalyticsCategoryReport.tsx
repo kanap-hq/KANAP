@@ -6,7 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import api from '../../api';
-import { useOpexSummaryAll, pickYearSlot, SummaryRow } from './useOpexSummary';
+import { pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
+import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { metricKeys, getMetricLabels, MetricKey } from './reportMetrics';
 import { useTranslation } from 'react-i18next';
 
@@ -41,7 +42,9 @@ export default function AnalyticsCategoryReport() {
   const singleYear = startYear === endYear;
   const years = useMemo(() => allowedYears.filter((yr) => yr >= startYear && yr <= endYear), [allowedYears, startYear, endYear]);
 
-  const { data: rows, isLoading } = useOpexSummaryAll();
+  const [scope, setScope] = useReportScope();
+  const scopeLabel = t(`operations.scope.${scope}`);
+  const { data: rows, isLoading } = useBudgetSummaryAll(scope);
   const { data: categories } = useQuery<AnalyticsCategory[]>({
     queryKey: ['analytics-categories', 'reporting'],
     queryFn: async () => {
@@ -105,7 +108,7 @@ export default function AnalyticsCategoryReport() {
       let group = acc.get(keyInfo.key);
       if (!group) { group = { key: keyInfo.key, label: keyInfo.label, values: {} }; acc.set(keyInfo.key, group); }
       for (const yr of years) {
-        const slot = pickYearSlot(row, yr);
+        const slot = pickSlot(row, yr);
         const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
         const total = Number(totals?.[metric] ?? 0);
         group.values[yr] = (group.values[yr] || 0) + total;
@@ -154,7 +157,7 @@ export default function AnalyticsCategoryReport() {
       const chartData = groups.map((group) => ({ label: group.label, value: group.values[year] || 0 }));
       const total = chartData.reduce((acc, datum) => acc + (Number(datum.value) || 0), 0);
       const base = {
-        title: { text: t('reports.analyticsCategory.chartTitleSingle', { year }) },
+        title: { text: t('reports.analyticsCategory.chartTitleSingle', { type: scopeLabel, year }) },
         subtitle: { text: metricsCaption || t('reports.analyticsCategory.shareSubtitle') },
         footnote: { text: t('reports.analyticsCategory.totalLabel', { metric: metricsCaption, value: formatNumber(total) }) },
         data: chartData,
@@ -232,7 +235,7 @@ export default function AnalyticsCategoryReport() {
     });
     const series = groups.map((group) => ({ type: 'line', xKey: 'year', yKey: group.key, yName: group.label }));
     return {
-      title: { text: t('reports.analyticsCategory.chartTitleRange', { start: years[0], end: years[years.length - 1] }) },
+      title: { text: t('reports.analyticsCategory.chartTitleRange', { type: scopeLabel, start: years[0], end: years[years.length - 1] }) },
       subtitle: { text: metricsCaption || t('reports.analyticsCategory.annualSubtitle') },
       data: chartData,
       series,
@@ -242,14 +245,15 @@ export default function AnalyticsCategoryReport() {
       ],
       legend: { enabled: true },
     };
-  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, t]);
+  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, t]);
 
   return (
     <ReportLayout
       title={t("reports.analyticsCategory.title")}
-      subtitle={t("reports.analyticsCategory.subtitle")}
+      subtitle={t('reports.analyticsCategory.subtitle', { type: scopeLabel })}
       filters={(
         <>
+          <ItemScopeTabs value={scope} onChange={setScope} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
             const v = parseInt(e.target.value, 10);
             setStartYear(v);
@@ -339,7 +343,7 @@ export default function AnalyticsCategoryReport() {
         </>
       )}
       onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`analytics-${years[0]}-${years[years.length - 1]}`)}
+      onExportChartPng={() => chartRef.current?.download(`analytics-${scope}-${years[0]}-${years[years.length - 1]}`)}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>
