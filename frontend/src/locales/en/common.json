@@ -339,8 +339,8 @@
     "dragDropOrClick": "Drag & drop CSV here, or click to select",
     "preflightCheck": "Preflight check",
     "load": "Load",
-    "preflightOk": "Preflight OK — {{total}} rows. Inserts: {{inserted}}, updates: {{updated}}. You can now load.",
-    "loadedSuccessfully": "Loaded successfully — processed {{total}} rows.",
+    "preflightOk": "Preflight OK: {{total}} rows. Inserts: {{inserted}}, updates: {{updated}}. You can now load.",
+    "loadedSuccessfully": "Loaded successfully: processed {{total}} rows.",
     "uploadCompleted": "Upload completed successfully.",
     "fileNotFormatted": "The provided file isn't properly formatted",
     "rowError": "Row {{row}}: {{message}}",
@@ -401,6 +401,11 @@
     "users": "Users",
     "roles": "Roles",
     "server": "Server",
+    "costCenter": "Cost center",
+    "noCostCenterYet": "No cost center yet.",
+    "createCostCenter": "Create one",
+    "noCostCentersFound": "No cost centers found",
+    "costCentersLoadFailed": "Cost centers could not be loaded.",
     "notSet": "Not set"
   },
   "documentEditor": {

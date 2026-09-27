@@ -10,6 +10,7 @@ import { isMetricKey, metricFileName, resolveMetric, shownMetricKeys } from './r
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns, type BudgetColumns } from '../../hooks/useBudgetColumns';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
+import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { textTabSx, textTabsSx } from '../../theme/formSx';
 
 function formatNumber(v: any) {
@@ -60,7 +61,10 @@ export default function OpexDeltaReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
 
-  const { data: rows, isLoading } = useBudgetSummaryAll(scope);
+  const { data: allRows, isLoading } = useBudgetSummaryAll(scope);
+  const reportFilters = useBudgetReportFilters();
+  // Deltas and totals read the kept lines only; the year and exclusion pickers still offer every line.
+  const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
   // Lines and the accounts they use differ between OPEX and CAPEX: a type switch drops both exclusions.
   useEffect(() => {
     setExcludedIds([]);
@@ -92,7 +96,7 @@ export default function OpexDeltaReport() {
 
   const yearOptions = useMemo<number[]>(() => {
     const years = new Set<number>();
-    for (const row of rows ?? []) {
+    for (const row of allRows ?? []) {
       for (const [key, version] of Object.entries(row.versions ?? {})) {
         if (!version || !(version.reporting ?? version.totals)) continue;
         const year = typeof version.year === 'number' ? version.year : inferYearFromVersionKey(key, currentYear);
@@ -100,7 +104,7 @@ export default function OpexDeltaReport() {
       }
     }
     return Array.from(years).sort((a, b) => a - b);
-  }, [rows, currentYear]);
+  }, [allRows, currentYear]);
 
   // Both pickers offer the shown budget columns (no currency or rate keys of the slots) and
   // start on the default column: Y-1 against Y.
@@ -217,9 +221,9 @@ export default function OpexDeltaReport() {
     topCount,
   ]);
 
-  const itemOptions = useMemo<ItemOption[]>(() => (rows ?? [])
+  const itemOptions = useMemo<ItemOption[]>(() => (allRows ?? [])
     .map((r: BudgetSummaryRow) => ({ id: r.id, name: itemName(scope, r) }))
-    .sort((a: ItemOption, b: ItemOption) => a.name.localeCompare(b.name)), [rows, scope]);
+    .sort((a: ItemOption, b: ItemOption) => a.name.localeCompare(b.name)), [allRows, scope]);
 
   const selectedItemOptions = useMemo<ItemOption[]>(() => {
     if (excludedIds.length === 0) return [];
@@ -232,7 +236,7 @@ export default function OpexDeltaReport() {
   const accountOptions = useMemo<AccountOption[]>(() => {
     const seen = new Set<string>();
     const options: AccountOption[] = [];
-    for (const row of rows ?? []) {
+    for (const row of allRows ?? []) {
       const name = row.account_display?.trim();
       if (!name || seen.has(name)) continue;
       seen.add(name);
@@ -240,7 +244,7 @@ export default function OpexDeltaReport() {
     }
     options.sort((a, b) => a.name.localeCompare(b.name));
     return options;
-  }, [rows]);
+  }, [allRows]);
 
   const selectedAccountOptions = useMemo<AccountOption[]>(() => {
     if (excludedAccounts.length === 0) return [];
@@ -506,6 +510,7 @@ export default function OpexDeltaReport() {
         }}
         >
           <ItemScopeTabs value={scope} onChange={setScope} />
+          <BudgetReportFilters filters={reportFilters} rows={allRows} />
           <TextField
             select
             size="small"

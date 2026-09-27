@@ -9,7 +9,9 @@ import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import { useOpexSummaryAll, pickYearSlot as pickOpexYearSlot } from './useOpexSummary';
 import { useCapexSummaryAll, pickYearSlot as pickCapexYearSlot } from './useCapexSummary';
 import { MetricKey, metricKeys, resolveMetric } from './reportMetrics';
+import type { BudgetSummaryRow } from './useBudgetSummaryAll';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { useTranslation } from 'react-i18next';
 
 function formatNumber(v: any) {
@@ -58,7 +60,9 @@ export default function BudgetColumnsCompareReport() {
   const yearsNeeded = useMemo(() => Array.from(new Set(selections.map((s) => s.year))).sort((a, b) => a - b), [selections]);
   const { data: opexRows, isLoading: opexLoading } = useOpexSummaryAll(itemType === 'opex' ? yearsNeeded : undefined, { enabled: itemType === 'opex' });
   const { data: capexRows, isLoading: capexLoading } = useCapexSummaryAll(itemType === 'capex' ? yearsNeeded : undefined, { enabled: itemType === 'capex' });
-  const rows = itemType === 'opex' ? (opexRows || []) : (capexRows || []);
+  const allRows: BudgetSummaryRow[] | undefined = itemType === 'opex' ? opexRows : capexRows;
+  const reportFilters = useBudgetReportFilters();
+  const rows = useMemo(() => reportFilters.filterRows(allRows) ?? [], [allRows, reportFilters.filterRows]);
   const pickYearSlot = itemType === 'opex' ? pickOpexYearSlot : pickCapexYearSlot;
 
   // Sort selections chronologically for display (chart and table)
@@ -225,6 +229,7 @@ export default function BudgetColumnsCompareReport() {
             <MenuItem value="opex">{t('operations.scope.opex')}</MenuItem>
             <MenuItem value="capex">{t('operations.scope.capex')}</MenuItem>
           </TextField>
+          <BudgetReportFilters filters={reportFilters} rows={allRows} />
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 300 }}>
             {selections.map((sel, idx) => (

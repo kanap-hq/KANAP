@@ -10,6 +10,7 @@ import HubIcon from '@mui/icons-material/Hub';
 import DnsIcon from '@mui/icons-material/Dns';
 import BusinessIcon from '@mui/icons-material/Business';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import SchemaIcon from '@mui/icons-material/Schema';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PeopleIcon from '@mui/icons-material/People';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -143,6 +144,7 @@ export default function Layout() {
     { divider: t('nav:sidebar.masterData.sections.organization') },
     { to: '/master-data/companies', label: t('nav:sidebar.masterData.companies'), icon: <BusinessIcon />, resource: 'companies' },
     { to: '/master-data/departments', label: t('nav:sidebar.masterData.departments'), icon: <AccountTreeIcon />, resource: 'departments' },
+    { to: '/master-data/cost-centers', label: t('nav:sidebar.masterData.costCenters'), icon: <SchemaIcon />, resource: 'cost_centers' },
     { divider: t('nav:sidebar.masterData.sections.externalParties') },
     { to: '/master-data/suppliers', label: t('nav:sidebar.masterData.suppliers'), icon: <LocalShippingIcon />, resource: 'suppliers' },
     { to: '/master-data/contacts', label: t('nav:sidebar.masterData.contacts'), icon: <PeopleIcon />, resource: 'contacts' },

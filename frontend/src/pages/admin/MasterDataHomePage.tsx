@@ -7,6 +7,7 @@ import PageHeader from '../../components/PageHeader';
 const CARD_ROUTES = [
   { key: 'companies', to: '/master-data/companies' },
   { key: 'departments', to: '/master-data/departments' },
+  { key: 'costCenters', to: '/master-data/cost-centers' },
   { key: 'suppliers', to: '/master-data/suppliers' },
   { key: 'coa', to: '/master-data/coa' },
   { key: 'currency', to: '/master-data/currency' },

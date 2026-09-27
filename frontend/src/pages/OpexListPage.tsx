@@ -47,6 +47,14 @@ type SummaryRow = {
   owner_business_id?: string | null;
   analytics_category_id?: string | null;
   analytics_category_name?: string | null;
+  cost_center_id?: string | null;
+  cost_center_code?: string | null;
+  cost_center_name?: string | null;
+  cost_center_label?: string | null;
+  cost_center_path?: string | null;
+  budget_holder_id?: string | null;
+  budget_holder_name?: string | null;
+  run_build?: 'run' | 'build' | null;
   project_id?: string | null;
   project_name?: string | null;
   notes?: string | null;
@@ -107,8 +115,9 @@ export default function OpexListPage() {
     return m;
   }, [usersEnabled]);
 
-  const getOpexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string }) => {
+  const getOpexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string> }) => {
     const emptyLabel = opts?.emptyLabel ?? t('shared.blank');
+    const labelMap = opts?.labelMap;
     return async ({ context }: any) => {
       const queryState = context?.getQueryState?.() ?? {};
       const filters = { ...(queryState.filters || {}) };
@@ -124,7 +133,9 @@ export default function OpexListPage() {
       const values = (res.data?.[field] || []) as Array<string | null>;
       const options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };
-        return { value, label: String(value) };
+        const key = String(value);
+        const label = labelMap && Object.prototype.hasOwnProperty.call(labelMap, key) ? labelMap[key] : key;
+        return { value, label };
       });
       options.sort((a, b) => {
         if (a.value == null) return 1;
@@ -133,7 +144,12 @@ export default function OpexListPage() {
       });
       return options;
     };
-  }, []);
+  }, [t]);
+
+  const RUN_BUILD_LABELS: Record<string, string> = useMemo(() => ({
+    run: t('opex.runBuild.run'),
+    build: t('opex.runBuild.build'),
+  }), [t]);
 
   const gridApiRef = useRef<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -300,6 +316,9 @@ export default function OpexListPage() {
     if (colId === 'contract_name') {
       const contractId = item.latest_contract_id;
       return contractId ? `/ops/contracts/${contractId}/overview` : null;
+    }
+    if (colId === 'cost_center_label') {
+      return item.cost_center_id ? `/master-data/cost-centers/${item.cost_center_id}/overview` : null;
     }
     const sp = buildGridSearch();
     const next = new URLSearchParams(sp);
@@ -648,6 +667,68 @@ export default function OpexListPage() {
       ),
     },
     {
+      field: 'cost_center_label',
+      headerName: t('opex.columns.costCenter'),
+      width: 220,
+      defaultHidden: true,
+      tooltipValueGetter: (p) => p.data?.cost_center_path ?? '',
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        getValues: getOpexFilterValues('cost_center_label'),
+        searchable: true,
+      },
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getOpexHref(row, 'cost_center_label')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
+    {
+      field: 'budget_holder_name',
+      headerName: t('opex.columns.budgetHolder'),
+      width: 200,
+      defaultHidden: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        getValues: getOpexFilterValues('budget_holder_name'),
+        searchable: false,
+      },
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getOpexHref(row, 'budget_holder_name')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
+    {
+      field: 'run_build',
+      headerName: t('opex.columns.runBuild'),
+      width: 140,
+      defaultHidden: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        getValues: getOpexFilterValues('run_build', { labelMap: RUN_BUILD_LABELS }),
+        searchable: false,
+      },
+      valueFormatter: (p) => (p.value != null ? (RUN_BUILD_LABELS[String(p.value)] || String(p.value)) : ''),
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getOpexHref(row, 'run_build')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
+    {
       field: 'project_name',
       headerName: t('opex.columns.project'),
       width: 200,
@@ -708,7 +789,7 @@ export default function OpexListPage() {
         />
       ),
     },
-  ], [Y, budgetColumns, getOpexFilterValues, getOpexHref, locale, navigate, t, userNameById]);
+  ], [Y, budgetColumns, getOpexFilterValues, getOpexHref, RUN_BUILD_LABELS, locale, navigate, t, userNameById]);
 
   return (
     <>

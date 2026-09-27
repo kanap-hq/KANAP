@@ -7,6 +7,8 @@
       "companiesDescription": "Verwalten Sie Unternehmenseinheiten und deren Kennzahlen",
       "departmentsTitle": "Abteilungen",
       "departmentsDescription": "Verwalten Sie Abteilungen über Unternehmen hinweg",
+      "costCentersTitle": "Kostenstellen",
+      "costCentersDescription": "Legen Sie fest, wer für jede Budgetzeile verantwortlich ist, über juristische Personen hinweg",
       "suppliersTitle": "Lieferanten",
       "suppliersDescription": "Verwalten Sie Lieferanteninformationen",
       "coaTitle": "Kontenpläne",
@@ -130,7 +132,97 @@
       "headcountYear": "Mitarbeiterzahl ({{year}})"
     },
     "export": "Abteilungen exportieren",
-    "import": "Abteilungen importieren"
+    "import": "Abteilungen importieren",
+    "previous": "Vorherige Abteilung",
+    "next": "Nächste Abteilung",
+    "fields": {
+      "name": "Name",
+      "company": "Unternehmen",
+      "description": "Beschreibung",
+      "headcount": "Mitarbeiterzahl",
+      "year": "Jahr",
+      "lifecycle": "Lebenszyklus"
+    },
+    "placeholders": {
+      "name": "z. B. Finanzen",
+      "description": "z. B. Buchhaltung und Lohnabrechnung"
+    },
+    "headcountHint": "Wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen.",
+    "messages": {
+      "saveFailed": "Die Abteilung konnte nicht gespeichert werden.",
+      "createFailed": "Die Abteilung konnte nicht erstellt werden.",
+      "nameRequired": "Geben Sie einen Namen ein.",
+      "companyRequired": "Wählen Sie ein Unternehmen.",
+      "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr."
+    }
+  },
+  "costCenters": {
+    "title": "Kostenstellen",
+    "newCostCenter": "Neue Kostenstelle",
+    "fallback": "Kostenstelle",
+    "emptyExplainer": "Kostenstellen zeigen, wer für jede Budgetzeile verantwortlich ist. Legen Sie eine an oder importieren Sie eine Datei.",
+    "export": "Kostenstellen exportieren",
+    "import": "Kostenstellen importieren",
+    "previous": "Vorherige Kostenstelle",
+    "next": "Nächste Kostenstelle",
+    "columns": {
+      "code": "Code",
+      "name": "Name",
+      "type": "Typ",
+      "parent": "Übergeordnet",
+      "company": "Unternehmen",
+      "owner": "Budgetverantwortlicher",
+      "status": "Status"
+    },
+    "kinds": {
+      "group": "Gruppe",
+      "cost_center": "Kostenstelle"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Name",
+      "type": "Typ",
+      "parent": "Übergeordnete Gruppe",
+      "company": "Unternehmen",
+      "owner": "Budgetverantwortlicher",
+      "description": "Beschreibung",
+      "lifecycle": "Lebenszyklus"
+    },
+    "hints": {
+      "code": "Der Code, den Ihr Finanzteam für diese Kostenstelle verwendet, wie in Ihrem Buchhaltungssystem oder Ihrer Budgetstruktur.",
+      "company": "Die juristische Person, die die Kosten dieser Kostenstelle trägt.",
+      "owner": "Die Person, die bei der Budgetprüfung für diesen Budgetrahmen verantwortlich ist."
+    },
+    "placeholders": {
+      "code": "z. B. CC-100",
+      "name": "z. B. Infrastruktur",
+      "description": "z. B. Server, Netzwerk und Arbeitsplatz-Tools",
+      "topLevel": "Oberste Ebene",
+      "ownerMissing": "Budgetverantwortlicher fehlt"
+    },
+    "usage": {
+      "opex_one": "{{count}} OPEX-Zeile",
+      "opex_other": "{{count}} OPEX-Zeilen",
+      "capex_one": "{{count}} CAPEX-Zeile",
+      "capex_other": "{{count}} CAPEX-Zeilen",
+      "one": "Verwendet von {{lines}}.",
+      "both": "Verwendet von {{opex}} und {{capex}}."
+    },
+    "deleteBlocked": {
+      "used": "{{usage}} Deaktivieren Sie sie stattdessen.",
+      "children_one": "Enthält {{count}} Element.",
+      "children_other": "Enthält {{count}} Elemente."
+    },
+    "messages": {
+      "loadFailed": "Die Kostenstelle konnte nicht geladen werden.",
+      "saveFailed": "Die Kostenstelle konnte nicht gespeichert werden.",
+      "createFailed": "Die Kostenstelle konnte nicht erstellt werden.",
+      "deleteFailed": "Die Kostenstelle konnte nicht gelöscht werden.",
+      "codeRequired": "Geben Sie einen Code ein.",
+      "nameRequired": "Geben Sie einen Namen ein.",
+      "companyRequired": "Wählen Sie ein Unternehmen.",
+      "chooseCompany": "Wählen Sie das Unternehmen, um diese Gruppe in eine Kostenstelle umzuwandeln."
+    }
   },
   "suppliers": {
     "title": "Lieferanten",
@@ -237,7 +329,7 @@
       "scopeCountry": "Land",
       "scopeGlobal": "Global",
       "setDefaultForCountry": "Als Standard für dieses Land festlegen",
-      "preflightOk": "Vorabprüfung OK — gesamt {{total}}, Einfügungen {{inserted}}, Aktualisierungen {{updated}}.",
+      "preflightOk": "Vorabprüfung OK: gesamt {{total}}, Einfügungen {{inserted}}, Aktualisierungen {{updated}}.",
       "codeAndNameRequired": "Code und Name sind erforderlich",
       "countryRequired": "Land ist erforderlich",
       "selectTemplate": "Bitte wählen Sie eine Vorlage",

@@ -57,6 +57,7 @@ type Col = {
   filterParams?: { getValues?: unknown };
   headerName?: string;
   valueGetter?: (p: unknown) => unknown;
+  valueFormatter?: (p: unknown) => unknown;
   cellRenderer?: (p: unknown) => React.ReactElement;
 };
 type GridProps = {
@@ -201,5 +202,73 @@ describe('CapexPage', () => {
     expect(versions.yPlus2.totals?.forecast).toBe(4);
     expect(versions.yMinus1.totals?.revision).toBe(3);
     expect(versions.y.totals?.budget).toBe(10);
+  });
+
+  it('offers cost center and run or build columns, hidden by default, filtered on the values the server lists', async () => {
+    await renderPage();
+    const costCenter = column('cost_center_label');
+    const runBuild = column('run_build');
+    expect(costCenter).toMatchObject({ headerName: 'capex.columns.costCenter', defaultHidden: true, filter: CheckboxSetFilter });
+    expect(runBuild).toMatchObject({ headerName: 'capex.columns.runBuild', defaultHidden: true, filter: CheckboxSetFilter });
+    // Declared right after the analytics column (the budget holder between them), so saved layouts place them next to it.
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field);
+    expect(ids.indexOf('cost_center_label')).toBe(ids.indexOf('analytics_category_name') + 1);
+    expect(ids.indexOf('run_build')).toBe(ids.indexOf('analytics_category_name') + 3);
+    expect(runBuild?.valueFormatter?.({ value: 'build' })).toBe('capex.runBuild.build');
+
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
+      if (url !== '/capex-items/summary/filter-values') return { data: {} };
+      const field = config?.params?.fields ?? '';
+      return { data: { [field]: field === 'run_build' ? [null, 'run'] : ['IT-200 · Applications', null] } };
+    });
+    type GetValues = (p: unknown) => Promise<Array<{ value: string | null; label: string }>>;
+    const noState = { context: { getQueryState: () => ({}) } };
+    expect(await (costCenter!.filterParams!.getValues as GetValues)(noState)).toEqual([
+      { value: 'IT-200 · Applications', label: 'IT-200 · Applications' },
+      { value: null, label: 'shared.blank' },
+    ]);
+    expect(await (runBuild!.filterParams!.getValues as GetValues)(noState)).toEqual([
+      { value: 'run', label: 'capex.runBuild.run' },
+      { value: null, label: 'shared.blank' },
+    ]);
+    const calls = get.mock.calls.filter(([url]) => url === '/capex-items/summary/filter-values');
+    expect(calls.map(([, config]) => config.params.fields)).toEqual(['cost_center_label', 'run_build']);
+  });
+
+  it('links the cost center cell to the cost center, and nowhere when the line has none', async () => {
+    await renderPage();
+    const hrefOf = (data: Record<string, unknown>) => {
+      const el = column('cost_center_label')!.cellRenderer!({ data, value: '', colDef: {} });
+      return (el.props as { getHref: (row: unknown) => string | null }).getHref(data);
+    };
+    expect(hrefOf({ id: 'c-1', item_number: 7, cost_center_id: 'cc-1' })).toBe('/master-data/cost-centers/cc-1/overview');
+    expect(hrefOf({ id: 'c-1', item_number: 7 })).toBeNull();
+  });
+
+  it('offers a budget holder column after the cost center, hidden by default, filtered on the values the server lists', async () => {
+    await renderPage();
+    const holder = column('budget_holder_name');
+    expect(holder).toMatchObject({ headerName: 'capex.columns.budgetHolder', defaultHidden: true, filter: CheckboxSetFilter });
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field);
+    expect(ids.indexOf('budget_holder_name')).toBe(ids.indexOf('cost_center_label') + 1);
+
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
+      if (url !== '/capex-items/summary/filter-values') return { data: {} };
+      return { data: { [config?.params?.fields ?? '']: ['Ada Holder', null] } };
+    });
+    type GetValues = (p: unknown) => Promise<Array<{ value: string | null; label: string }>>;
+    const options = await (holder!.filterParams!.getValues as GetValues)({ context: { getQueryState: () => ({}) } });
+    expect(options).toEqual([
+      { value: 'Ada Holder', label: 'Ada Holder' },
+      { value: null, label: 'shared.blank' },
+    ]);
+    const calls = get.mock.calls.filter(([url]) => url === '/capex-items/summary/filter-values');
+    expect(calls.map(([, config]) => config.params.fields)).toEqual(['budget_holder_name']);
+
+    // The cell opens the line, like the owner columns: the budget holder is read from the cost center.
+    const data = { id: 'c-1', item_number: 7, cost_center_id: 'cc-1', budget_holder_name: 'Ada Holder' };
+    const el = holder!.cellRenderer!({ data, value: 'Ada Holder', colDef: {} });
+    const href = (el.props as { getHref: (row: unknown) => string | null }).getHref(data);
+    expect(href).toMatch(/^\/ops\/capex\/CPX-7\/overview/);
   });
 });

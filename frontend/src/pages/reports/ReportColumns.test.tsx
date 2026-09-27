@@ -20,7 +20,8 @@ vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
 const chart = vi.hoisted(() => ({ options: null as any }));
-vi.mock('../../components/reports/ReportLayout', () => ({
+vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
   default: ({ title, subtitle, filters, actions, children }: { title: string; subtitle?: React.ReactNode; filters?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode }) => (
     <div>
       <h1>{title}</h1>

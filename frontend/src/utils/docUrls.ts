@@ -67,6 +67,7 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/master-data\/companies/, 'companies'],
   [/^\/master-data\/departments\/\d+/, 'departments'],
   [/^\/master-data\/departments/, 'departments'],
+  [/^\/master-data\/cost-centers/, 'cost-centers'],
   [/^\/master-data\/suppliers\/\d+/, 'suppliers'],
   [/^\/master-data\/suppliers/, 'suppliers'],
   [/^\/master-data\/contacts\/\d+/, 'contacts'],

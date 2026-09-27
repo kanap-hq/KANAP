@@ -1,11 +1,12 @@
 import React from 'react';
-import { Autocomplete, Box, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, MenuItem, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { PropertyGroup, PropertyRow } from '../../../components/design/PropertyRow';
 import SupplierSelect from '../../../components/fields/SupplierSelect';
 import CompanySelect from '../../../components/fields/CompanySelect';
 import AccountSelect from '../../../components/fields/AccountSelect';
 import AnalyticsCategorySelect from '../../../components/fields/AnalyticsCategorySelect';
+import CostCenterSelect from '../../../components/fields/CostCenterSelect';
 import DateEUField from '../../../components/fields/DateEUField';
 import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
 import UserSelect from '../../../components/fields/UserSelect';
@@ -15,10 +16,13 @@ import { STATUS_ENABLED, StatusValue } from '../../../constants/status';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { isoToLocalDateInput, localDateInputToEndOfDayIso } from '../../../lib/datetime';
 import { useLocale } from '../../../i18n/useLocale';
+import { useCostCenterTree } from '../../../hooks/useCostCenterTree';
+import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import type { CapexPriority } from './CapexMetadataBar';
 
 export type CapexPpeType = 'hardware' | 'software';
 export type CapexInvestmentType = 'replacement' | 'capacity' | 'productivity' | 'security' | 'conformity' | 'business_growth' | 'other';
+export type RunBuild = 'run' | 'build';
 
 type Option<T extends string> = { value: T; label: string };
 
@@ -32,6 +36,8 @@ type Props = {
   investmentType: CapexInvestmentType;
   priority?: CapexPriority;
   analyticsCategoryId: string;
+  costCenterId: string;
+  runBuild: RunBuild | '';
   effectiveStart: string;
   status?: StatusValue;
   disabledAt?: string | null;
@@ -48,6 +54,8 @@ type Props = {
   onInvestmentTypeChange: (next: CapexInvestmentType) => void;
   onPriorityChange?: (next: CapexPriority) => void;
   onAnalyticsCategoryChange: (next: string) => void;
+  onCostCenterChange: (next: string) => void;
+  onRunBuildChange: (next: RunBuild | '') => void;
   onEffectiveStartChange: (next: string) => void;
   onStatusChange?: (next: StatusValue) => void;
   onDisabledAtChange?: (next: string | null) => void;
@@ -74,6 +82,8 @@ export default function CapexPropertiesDrawer({
   investmentType,
   priority = 'medium',
   analyticsCategoryId,
+  costCenterId,
+  runBuild,
   effectiveStart,
   status = STATUS_ENABLED,
   disabledAt = null,
@@ -90,6 +100,8 @@ export default function CapexPropertiesDrawer({
   onInvestmentTypeChange,
   onPriorityChange,
   onAnalyticsCategoryChange,
+  onCostCenterChange,
+  onRunBuildChange,
   onEffectiveStartChange,
   onStatusChange,
   onDisabledAtChange,
@@ -136,12 +148,30 @@ export default function CapexPropertiesDrawer({
       ?? (code ? ({ code, name: code } as CurrencyOption) : null);
   }, [currency, currencyOptions]);
 
+  // A paying company other than the cost center's is kept; the hint only says so.
+  const costCenterTree = useCostCenterTree();
+  const costCenter = costCenterId ? costCenterTree.byId.get(costCenterId) : undefined;
+  const costCenterHint = costCenter?.company_id && payingCompanyId && costCenter.company_id !== payingCompanyId
+    ? t('capex.fields.costCenterCompanyHint', { company: costCenter.company_name ?? '' })
+    : undefined;
+
   return (
     <>
       <PropertyGroup>
         <PropertyRow label={t('capex.fields.supplier')}>
           <Box sx={hideInnerLabelSx}>
             <SupplierSelect value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} />
+          </Box>
+        </PropertyRow>
+        <PropertyRow label={t('capex.fields.costCenter')} helperText={costCenterHint}>
+          <Box sx={hideInnerLabelSx}>
+            <CostCenterSelect
+              hideLabel
+              selectable="cost_centers"
+              value={costCenterId || null}
+              onChange={(v) => onCostCenterChange(v ?? '')}
+              disabled={disabled}
+            />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('capex.fields.payingCompany')} required>
@@ -216,6 +246,21 @@ export default function CapexPropertiesDrawer({
           <Box sx={hideInnerLabelSx}>
             <AnalyticsCategorySelect value={analyticsCategoryId || null} onChange={(v) => onAnalyticsCategoryChange(v ?? '')} disabled={disabled} />
           </Box>
+        </PropertyRow>
+        <PropertyRow label={t('capex.fields.runBuild')}>
+          <TextField
+            select
+            variant="standard"
+            value={runBuild}
+            onChange={(e) => onRunBuildChange(e.target.value as RunBuild | '')}
+            SelectProps={{ displayEmpty: true, inputProps: { 'aria-label': t('capex.fields.runBuild') } }}
+            sx={drawerSelectSx}
+            disabled={disabled}
+          >
+            <MenuItem value="" sx={drawerMenuItemSx}>{t('common:selects.notSet')}</MenuItem>
+            <MenuItem value="run" sx={drawerMenuItemSx}>{t('capex.runBuild.run')}</MenuItem>
+            <MenuItem value="build" sx={drawerMenuItemSx}>{t('capex.runBuild.build')}</MenuItem>
+          </TextField>
         </PropertyRow>
       </PropertyGroup>
 

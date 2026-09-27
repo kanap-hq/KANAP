@@ -19,7 +19,8 @@ import {
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import CapexMetadataBar, { CapexPriority } from './workspace/CapexMetadataBar';
-import CapexPropertiesDrawer, { CapexInvestmentType, CapexPpeType } from './workspace/CapexPropertiesDrawer';
+import CapexPropertiesDrawer, { CapexInvestmentType, CapexPpeType, RunBuild } from './workspace/CapexPropertiesDrawer';
+import { useCostCenterTree } from '../../hooks/useCostCenterTree';
 import BudgetTab, { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import AllocationsTab, { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { CAPEX_FINANCE_CONFIG } from '../../components/finance/config';
@@ -51,6 +52,8 @@ type CapexForm = {
   owner_it_id: string;
   owner_business_id: string;
   analytics_category_id: string;
+  cost_center_id: string;
+  run_build: RunBuild | '';
   notes: string;
   created_at: string | null;
   updated_at: string | null;
@@ -60,7 +63,7 @@ const EMPTY_FORM: CapexForm = {
   description: '', supplier_id: '', currency: 'EUR', account_id: '', paying_company_id: '',
   ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium',
   effective_start: '', status: 'enabled', disabled_at: null,
-  owner_it_id: '', owner_business_id: '', analytics_category_id: '', notes: '',
+  owner_it_id: '', owner_business_id: '', analytics_category_id: '', cost_center_id: '', run_build: '', notes: '',
   created_at: null, updated_at: null,
 };
 
@@ -87,7 +90,10 @@ const NULLABLE_PATCH_FIELDS = new Set([
   'owner_it_id',
   'owner_business_id',
   'analytics_category_id',
+  'cost_center_id',
+  'run_build',
   'disabled_at',
+  'notes',
 ]);
 
 function normalizePatch(patch: Record<string, any>): Record<string, any> {
@@ -116,6 +122,8 @@ function toForm(data: any): CapexForm {
     owner_it_id: data?.owner_it_id || '',
     owner_business_id: data?.owner_business_id || '',
     analytics_category_id: data?.analytics_category_id || '',
+    cost_center_id: data?.cost_center_id || '',
+    run_build: data?.run_build === 'run' || data?.run_build === 'build' ? data.run_build : '',
     notes: data?.notes || '',
     created_at: data?.created_at || null,
     updated_at: data?.updated_at || null,
@@ -181,6 +189,7 @@ export default function CapexItemPage() {
   const [form, setForm] = React.useState<CapexForm>(EMPTY_FORM);
   const [createForm, setCreateForm] = React.useState<CapexForm>(() => createEmptyCapexForm());
   const [createCurrencyTouched, setCreateCurrencyTouched] = React.useState(false);
+  const [createCompanyFromCostCenter, setCreateCompanyFromCostCenter] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   React.useEffect(() => {
@@ -190,6 +199,7 @@ export default function CapexItemPage() {
     if (!isCreate) return;
     setCreateForm(createEmptyCapexForm(defaultCapexCurrency));
     setCreateCurrencyTouched(false);
+    setCreateCompanyFromCostCenter(false);
     setSaveError(null);
   }, [isCreate, idParam]);
   React.useEffect(() => {
@@ -203,6 +213,19 @@ export default function CapexItemPage() {
     setCreateForm((prev) => ({ ...prev, ...patch }));
     setSaveError(null);
   }, []);
+
+  // A cost center picked while the paying company is empty brings its company, so the
+  // account picker opens on that company's chart of accounts. The company keeps following
+  // the cost center until the user picks a company or an account.
+  const costCenterTree = useCostCenterTree();
+  const pickCreateCostCenter = React.useCallback((costCenterId: string) => {
+    const companyId = costCenterId ? costCenterTree.byId.get(costCenterId)?.company_id : null;
+    const follow = !!companyId && (
+      !createForm.paying_company_id || (createCompanyFromCostCenter && !createForm.account_id)
+    );
+    updateCreateForm({ cost_center_id: costCenterId, ...(follow && companyId ? { paying_company_id: companyId } : {}) });
+    if (follow) setCreateCompanyFromCostCenter(true);
+  }, [costCenterTree, createCompanyFromCostCenter, createForm.account_id, createForm.paying_company_id, updateCreateForm]);
 
   const [createAccountCoaId, setCreateAccountCoaId] = React.useState<string | null>(null);
   const [createCompanyCoaId, setCreateCompanyCoaId] = React.useState<string | null>(null);
@@ -314,6 +337,28 @@ export default function CapexItemPage() {
     }
   }, [isCreate, uuid, stale, idParam, queryClient, refetch, t]);
 
+  // The server refuses a company on another chart of accounts than the line's account, and the
+  // account picker only lists the current company's chart: clear the account in the same write,
+  // so the Account row asks for one on the new chart.
+  const changePayingCompany = React.useCallback(async (companyId: string) => {
+    const accountId = form.account_id;
+    let clearAccount = false;
+    if (accountId && companyId && companyId !== form.paying_company_id) {
+      try {
+        const [company, account] = await Promise.all([
+          api.get(`/companies/${companyId}`),
+          api.get(`/accounts/${accountId}`),
+        ]);
+        const companyCoa = company.data?.coa_id || null;
+        const accountCoa = account.data?.coa_id || null;
+        clearAccount = !!companyCoa && !!accountCoa && companyCoa !== accountCoa;
+      } catch {
+        // Unknown charts: send the company alone and let the server decide.
+      }
+    }
+    await patchNow(clearAccount ? { paying_company_id: companyId, account_id: '' } : { paying_company_id: companyId });
+  }, [form.account_id, form.paying_company_id, patchNow]);
+
   const patchDebounced = React.useCallback((patch: Partial<CapexForm>) => {
     if (isCreate || !uuid || stale) return;
     setForm((prev) => ({ ...prev, ...patch }));
@@ -407,6 +452,8 @@ export default function CapexItemPage() {
         owner_it_id: toNull(createForm.owner_it_id),
         owner_business_id: toNull(createForm.owner_business_id),
         analytics_category_id: toNull(createForm.analytics_category_id),
+        cost_center_id: toNull(createForm.cost_center_id),
+        run_build: toNull(createForm.run_build),
       };
       const res = await api.post('/capex-items', payload);
       const newId = res.data?.id as string | undefined;
@@ -497,6 +544,7 @@ export default function CapexItemPage() {
             priority={form.priority}
             ownerItId={form.owner_it_id || null}
             ownerBizId={form.owner_business_id || null}
+            costCenterId={form.cost_center_id || null}
             onStatusChange={handleStatusChange}
             onPriorityChange={(v) => void patchNow({ priority: v })}
             onOwnerItChange={(v) => void patchNow({ owner_it_id: (v || '') as string })}
@@ -539,13 +587,18 @@ export default function CapexItemPage() {
             investmentType={createForm.investment_type}
             priority={createForm.priority}
             analyticsCategoryId={createForm.analytics_category_id}
+            costCenterId={createForm.cost_center_id}
+            runBuild={createForm.run_build}
             effectiveStart={createForm.effective_start}
             disabledAt={createForm.disabled_at}
             ownerItId={createForm.owner_it_id}
             ownerBusinessId={createForm.owner_business_id}
             disabled={createSubmitting}
             onSupplierChange={(v) => updateCreateForm({ supplier_id: v })}
-            onPayingCompanyChange={(v) => updateCreateForm({ paying_company_id: v })}
+            onPayingCompanyChange={(v) => {
+              setCreateCompanyFromCostCenter(false);
+              updateCreateForm({ paying_company_id: v });
+            }}
             onAccountChange={(v) => updateCreateForm({ account_id: v })}
             onCurrencyChange={(v) => {
               setCreateCurrencyTouched(true);
@@ -555,6 +608,8 @@ export default function CapexItemPage() {
             onInvestmentTypeChange={(v) => updateCreateForm({ investment_type: v })}
             onPriorityChange={(v) => updateCreateForm({ priority: v })}
             onAnalyticsCategoryChange={(v) => updateCreateForm({ analytics_category_id: v })}
+            onCostCenterChange={pickCreateCostCenter}
+            onRunBuildChange={(v) => updateCreateForm({ run_build: v })}
             onEffectiveStartChange={(v) => updateCreateForm({ effective_start: v })}
             onDisabledAtChange={(v) => updateCreateForm({ disabled_at: v, status: deriveStatusFromDisabledAt(v) })}
             onOwnerItChange={(v) => updateCreateForm({ owner_it_id: v })}
@@ -571,19 +626,23 @@ export default function CapexItemPage() {
             investmentType={form.investment_type}
             priority={form.priority}
             analyticsCategoryId={form.analytics_category_id}
+            costCenterId={form.cost_center_id}
+            runBuild={form.run_build}
             effectiveStart={form.effective_start}
             status={form.status}
             disabledAt={form.disabled_at}
             createdAt={form.created_at}
             updatedAt={form.updated_at}
             onSupplierChange={(v) => void patchNow({ supplier_id: v })}
-            onPayingCompanyChange={(v) => void patchNow({ paying_company_id: v })}
+            onPayingCompanyChange={(v) => void changePayingCompany(v)}
             onAccountChange={(v) => void patchNow({ account_id: v })}
             onCurrencyChange={(v) => void patchNow({ currency: v.toUpperCase() })}
             onPpeTypeChange={(v) => void patchNow({ ppe_type: v })}
             onInvestmentTypeChange={(v) => void patchNow({ investment_type: v })}
             // priority is edited via the metadata bar in edit mode; the drawer renders it in create mode only
             onAnalyticsCategoryChange={(v) => void patchNow({ analytics_category_id: v })}
+            onCostCenterChange={(v) => void patchNow({ cost_center_id: v })}
+            onRunBuildChange={(v) => void patchNow({ run_build: v })}
             onEffectiveStartChange={(v) => void patchNow({ effective_start: v })}
             onStatusChange={handleStatusChange}
             onDisabledAtChange={handleDisabledAtChange}

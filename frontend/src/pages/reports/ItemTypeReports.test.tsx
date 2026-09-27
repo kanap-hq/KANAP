@@ -21,7 +21,10 @@ vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   const state = await import('./budgetColumnsTestState');
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
-vi.mock('../../components/reports/ReportLayout', () => ({
+// The real ReportLayout module is loaded for its filter helpers; its locale hook would load i18n.
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
   default: ({ title, subtitle, filters, children }: { title: string; subtitle?: React.ReactNode; filters?: React.ReactNode; children?: React.ReactNode }) => (
     <div>
       <h1>{title}</h1>

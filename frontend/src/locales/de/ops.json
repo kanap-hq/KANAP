@@ -26,7 +26,10 @@
       "project": "Projekt",
       "notes": "Notizen",
       "created": "Erstellt",
-      "updated": "Aktualisiert"
+      "updated": "Aktualisiert",
+      "costCenter": "Kostenstelle",
+      "budgetHolder": "Budgetverantwortlicher",
+      "runBuild": "Run oder Build"
     },
     "workspace": {
       "newSpendItem": "Neue OPEX-Position",
@@ -165,7 +168,14 @@
       "notes": "Notizen",
       "notesPlaceholder": "z. B. Verlängerung im Q3 verhandelt",
       "endOfValidity": "Ende der Gültigkeit",
-      "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben."
+      "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben.",
+      "costCenter": "Kostenstelle",
+      "costCenterCompanyHint": "Diese Kostenstelle gehört zu {{company}}.",
+      "runBuild": "Run oder Build"
+    },
+    "runBuild": {
+      "run": "Run",
+      "build": "Build"
     },
     "metadata": {
       "status": "Status",
@@ -214,11 +224,18 @@
       "analytics": "Analytik",
       "project": "Projekt",
       "created": "Erstellt",
-      "updated": "Aktualisiert"
+      "updated": "Aktualisiert",
+      "costCenter": "Kostenstelle",
+      "budgetHolder": "Budgetverantwortlicher",
+      "runBuild": "Run oder Build"
     },
     "ppeTypes": {
       "hardware": "Hardware",
       "software": "Software"
+    },
+    "runBuild": {
+      "run": "Run",
+      "build": "Build"
     },
     "investmentTypes": {
       "replacement": "Ersatz",
@@ -374,7 +391,10 @@
       "description": "Beschreibung",
       "ppeType": "Anlagentyp",
       "investmentType": "Investitionsart",
-      "priority": "Priorität"
+      "priority": "Priorität",
+      "costCenter": "Kostenstelle",
+      "costCenterCompanyHint": "Diese Kostenstelle gehört zu {{company}}.",
+      "runBuild": "Run oder Build"
     },
     "metadata": {
       "status": "Status",
@@ -741,6 +761,8 @@
     "noSpendItemsFound": "Keine OPEX-Positionen gefunden",
     "noCapexItemsFound": "Keine CAPEX-Positionen gefunden",
     "blank": "(Leer)",
+    "budgetHolder": "Budgetverantwortlicher",
+    "budgetHolderSource": "Aus der Kostenstelle {{code}} · {{name}}.",
     "total": "Gesamt",
     "yes": "ja",
     "no": "nein",
@@ -856,7 +878,16 @@
       "accountSelected_other": "{{count}} Konten ausgewählt",
       "categorySelected_one": "1 Dimension ausgewählt",
       "categorySelected_other": "{{count}} Dimensionen ausgewählt",
-      "yearGrouping": "Jahresgruppierung"
+      "yearGrouping": "Jahresgruppierung",
+      "costCenter": "Kostenstelle",
+      "allCostCenters": "Alle Kostenstellen",
+      "costCenterMissing": "Diese Kostenstelle existiert nicht mehr oder konnte nicht geladen werden.",
+      "clearCostCenter": "Filter entfernen",
+      "runBuild": "Run oder Build",
+      "runBuildAll": "Alle",
+      "runBuildRun": "Run",
+      "runBuildBuild": "Build",
+      "runBuildNone": "Nicht festgelegt"
     },
     "columns": {
       "company": "Unternehmen",

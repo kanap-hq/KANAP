@@ -26,7 +26,10 @@
       "project": "Projet",
       "notes": "Notes",
       "created": "Créé",
-      "updated": "Mis à jour"
+      "updated": "Mis à jour",
+      "costCenter": "Centre de coûts",
+      "budgetHolder": "Responsable budgétaire",
+      "runBuild": "Run ou build"
     },
     "workspace": {
       "newSpendItem": "Nouveau poste OPEX",
@@ -165,7 +168,14 @@
       "notes": "Notes",
       "notesPlaceholder": "ex. renouvellement négocié au T3",
       "endOfValidity": "Fin de validité",
-      "endOfValidityHint": "Laisser vide pour rester actif indéfiniment."
+      "endOfValidityHint": "Laisser vide pour rester actif indéfiniment.",
+      "costCenter": "Centre de coûts",
+      "costCenterCompanyHint": "Ce centre de coûts appartient à {{company}}.",
+      "runBuild": "Run ou build"
+    },
+    "runBuild": {
+      "run": "Run",
+      "build": "Build"
     },
     "metadata": {
       "status": "Statut",
@@ -214,11 +224,18 @@
       "analytics": "Analytique",
       "project": "Projet",
       "created": "Créé",
-      "updated": "Mis à jour"
+      "updated": "Mis à jour",
+      "costCenter": "Centre de coûts",
+      "budgetHolder": "Responsable budgétaire",
+      "runBuild": "Run ou build"
     },
     "ppeTypes": {
       "hardware": "Matériel",
       "software": "Logiciel"
+    },
+    "runBuild": {
+      "run": "Run",
+      "build": "Build"
     },
     "investmentTypes": {
       "replacement": "Remplacement",
@@ -374,7 +391,10 @@
       "description": "Description",
       "ppeType": "Type d'immobilisation",
       "investmentType": "Type d'investissement",
-      "priority": "Priorité"
+      "priority": "Priorité",
+      "costCenter": "Centre de coûts",
+      "costCenterCompanyHint": "Ce centre de coûts appartient à {{company}}.",
+      "runBuild": "Run ou build"
     },
     "metadata": {
       "status": "Statut",
@@ -741,6 +761,8 @@
     "noSpendItemsFound": "Aucun poste OPEX trouvé",
     "noCapexItemsFound": "Aucun poste CAPEX trouvé",
     "blank": "(Vide)",
+    "budgetHolder": "Responsable budgétaire",
+    "budgetHolderSource": "Issu du centre de coûts {{code}} · {{name}}.",
     "total": "Total",
     "yes": "oui",
     "no": "non",
@@ -856,7 +878,16 @@
       "accountSelected_other": "{{count}} comptes sélectionnés",
       "categorySelected_one": "1 dimension sélectionnée",
       "categorySelected_other": "{{count}} dimensions sélectionnées",
-      "yearGrouping": "Regroupement par année"
+      "yearGrouping": "Regroupement par année",
+      "costCenter": "Centre de coûts",
+      "allCostCenters": "Tous les centres de coûts",
+      "costCenterMissing": "Ce centre de coûts n'existe plus ou n'a pas pu être chargé.",
+      "clearCostCenter": "Retirer le filtre",
+      "runBuild": "Run ou build",
+      "runBuildAll": "Tous",
+      "runBuildRun": "Run",
+      "runBuildBuild": "Build",
+      "runBuildNone": "Non défini"
     },
     "columns": {
       "company": "Société",
