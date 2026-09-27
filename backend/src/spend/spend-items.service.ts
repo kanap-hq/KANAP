@@ -2,8 +2,6 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, ILike, In, Repository } from 'typeorm';
 import { SpendItem } from './spend-item.entity';
-import { Account } from '../accounts/account.entity';
-import { Company } from '../companies/company.entity';
 import { AnalyticsCategory } from '../analytics/analytics-category.entity';
 import { User } from '../users/user.entity';
 import { parsePagination, buildWhereFromAgFilters } from '../common/pagination';
@@ -36,6 +34,7 @@ import { fixMulterFilename } from '../common/upload';
 import { ItemNumberService } from '../common/item-number.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import type { BudgetColumn } from './amounts-write.util';
+import { resolveItemWrite } from './item-write.util';
 
 @Injectable()
 export class SpendItemsService {
@@ -235,33 +234,18 @@ export class SpendItemsService {
   async create(body: SpendItemUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendItem);
-    const { status: statusInput, disabled_at: disabledAtInput, effective_end: effectiveEnd, ...rest } = body ?? {};
-    const disabled_at = this.endOfValidityInput(disabledAtInput, effectiveEnd);
-    // Require paying company (soft requirement -> throw clear error)
-    if (!rest.paying_company_id) {
-      throw new BadRequestException('paying_company_id is required');
-    }
-    // Validate account against paying company CoA when both provided
-    if (rest.account_id) {
-      const [account, company] = await Promise.all([
-        mg.getRepository(Account).findOne({ where: { id: rest.account_id } }),
-        mg.getRepository(Company).findOne({ where: { id: rest.paying_company_id as string } }),
-      ]);
-      if (!account) throw new BadRequestException('Account not found');
-      if (!company) throw new BadRequestException('Paying company not found');
-      if (account.coa_id && company.coa_id && account.coa_id !== company.coa_id) {
-        throw new BadRequestException('Selected account does not belong to the paying company\'s Chart of Accounts');
-      }
-    }
-    const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
+    // Writable columns only, every id resolved in this tenant; see `item-write.util.ts`.
+    const { values, lifecycle: input } = await resolveItemWrite(mg, 'opex', body, null);
+    const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
+    const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: disabled_at });
     const tenantId = await this.resolveTenantId(mg);
     const item_number = await this.itemNumbers.nextItemNumber('spend', tenantId, mg);
     const entity = repo.create({
-      ...rest,
+      ...(values as Partial<SpendItem>),
       // These columns are NOT NULL on the entity while the DTO allows null
-      product_name: rest.product_name ?? undefined,
-      currency: rest.currency ?? undefined,
-      effective_start: rest.effective_start ?? undefined,
+      product_name: (values.product_name as string | null | undefined) ?? undefined,
+      currency: (values.currency as string | null | undefined) ?? undefined,
+      effective_start: (values.effective_start as string | null | undefined) ?? undefined,
       item_number,
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
@@ -276,30 +260,13 @@ export class SpendItemsService {
     const repo = mg.getRepository(SpendItem);
     const existing = await this.get(id, { manager: mg });
     const before = { ...existing };
-    const { status: statusInput, disabled_at: disabledAtInput, effective_end: effectiveEnd, ...rest } = body ?? {};
-    const disabled_at = this.endOfValidityInput(disabledAtInput, effectiveEnd);
-    Object.assign(existing, rest);
-    // Require paying company on update if missing on record and not provided in body
-    const payingCompanyId = (rest.paying_company_id ?? (existing as any).paying_company_id) as string | null;
-    if (!payingCompanyId) {
-      throw new BadRequestException('paying_company_id is required');
-    }
-    // Validate account against paying company CoA when both present
-    const accountId = (rest.account_id ?? (existing as any).account_id) as string | null;
-    if (accountId) {
-      const [account, company] = await Promise.all([
-        mg.getRepository(Account).findOne({ where: { id: accountId } }),
-        mg.getRepository(Company).findOne({ where: { id: payingCompanyId } }),
-      ]);
-      if (!account) throw new BadRequestException('Account not found');
-      if (!company) throw new BadRequestException('Paying company not found');
-      if (account.coa_id && company.coa_id && account.coa_id !== company.coa_id) {
-        throw new BadRequestException('Selected account does not belong to the paying company\'s Chart of Accounts');
-      }
-    }
+    // Writable columns only, every id resolved in this tenant; see `item-write.util.ts`.
+    const { values, lifecycle: input } = await resolveItemWrite(mg, 'opex', body, existing);
+    const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
+    Object.assign(existing, values);
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: before.disabled_at,
-      nextStatus: statusInput,
+      nextStatus: input.status,
       nextDisabledAt: disabled_at,
     });
     existing.status = lifecycle.status;

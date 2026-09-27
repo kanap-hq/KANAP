@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, EntityManager, ILike, In, Repository } from 'typeorm';
 import { CapexItem } from './capex-item.entity';
@@ -44,6 +44,19 @@ import { ItemNumberService } from '../common/item-number.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { resolveToUuid } from '../common/resolve-item-id';
+import {
+  csvCostCenterDisabledError,
+  CSV_COMPANY_REQUIRED_ERROR,
+  CSV_RUN_BUILD_ERROR,
+  CsvCostCenter,
+  ITEM_CSV_OPTIONAL_HEADERS,
+  loadCostCenterCodes,
+  loadCostCentersByCode,
+  lockCsvCostCenters,
+  parseRunBuild,
+  resolveCsvCostCenter,
+  resolveItemWrite,
+} from '../spend/item-write.util';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
@@ -73,7 +86,6 @@ export class CapexItemsService {
     private readonly itemNumbers: ItemNumberService,
     private readonly notifications: NotificationsService,
   ) {}
-  private readonly logger = new Logger(CapexItemsService.name);
 
   private async resolveTenantId(mg: EntityManager): Promise<string> {
     const rows = await mg.query(`SELECT current_setting('app.current_tenant', true) AS tenant_id`);
@@ -297,62 +309,29 @@ export class CapexItemsService {
 
   async create(body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    // Map legacy field if present
-    const paying_company_id = body.paying_company_id ?? body.company_id ?? null;
-    this.logger.log(`[create] incoming company=${paying_company_id} account=${body.account_id ?? null}`);
-    if (body.company_id && !body.paying_company_id) {
-      console.warn('[capex] company_id is deprecated; use paying_company_id');
-    }
-    // Require paying company if provided (soft requirement -> enforce)
-    if (!paying_company_id) {
-      throw new BadRequestException('paying_company_id is required');
-    }
-    // Validate company if provided
-    if (paying_company_id) {
-      const company = await mg.getRepository(Company).findOne({ where: { id: paying_company_id } });
-      if (!company) throw new BadRequestException('Paying company not found');
-      if (body.account_id) {
-        const account = await mg.getRepository(Account).findOne({ where: { id: body.account_id } });
-        if (!account) throw new BadRequestException('Account not found');
-        if ((account as any).coa_id && company.coa_id && (account as any).coa_id !== company.coa_id) {
-          throw new BadRequestException('Selected account does not belong to the paying company\'s Chart of Accounts');
-        }
-      }
-    }
-    
     const repo = mg.getRepository(CapexItem);
-    const { status: statusInput, disabled_at: disabledAtInput, effective_end: effectiveEnd, ...rest } = body ?? {};
-    const disabled_at = this.endOfValidityInput(disabledAtInput, effectiveEnd);
-    const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
+    // Writable columns only (company_id is the legacy alias of the paying company),
+    // every id resolved in this tenant; see `spend/item-write.util.ts`.
+    const { values, lifecycle: input } = await resolveItemWrite(mg, 'capex', body, null);
+    const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
+    const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: disabled_at });
     const tenantId = await this.resolveTenantId(mg);
     const item_number = await this.itemNumbers.nextItemNumber('capex', tenantId, mg);
     const entity = repo.create({
-      ...rest,
+      ...(values as Partial<CapexItem>),
       // These columns are NOT NULL on the entity while the DTO allows null
-      description: rest.description ?? undefined,
-      ppe_type: rest.ppe_type ?? undefined,
-      investment_type: rest.investment_type ?? undefined,
-      priority: rest.priority ?? undefined,
-      currency: rest.currency ?? undefined,
-      effective_start: rest.effective_start ?? undefined,
+      description: (values.description as string | null | undefined) ?? undefined,
+      ppe_type: (values.ppe_type as CapexItem['ppe_type'] | null | undefined) ?? undefined,
+      investment_type: (values.investment_type as CapexItem['investment_type'] | null | undefined) ?? undefined,
+      priority: (values.priority as CapexItem['priority'] | null | undefined) ?? undefined,
+      currency: (values.currency as string | null | undefined) ?? undefined,
+      effective_start: (values.effective_start as string | null | undefined) ?? undefined,
       item_number,
-      account_id: body.account_id ?? null,
-      paying_company_id,
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     });
-    const saved = await repo.save(entity as any) as CapexAttachment as any;
-    // Defensive: ensure account_id persisted even if ORM payload missed it
-    if ('account_id' in body) {
-      try {
-        await mg.query(`UPDATE capex_items SET account_id = $1 WHERE id = $2`, [body.account_id ?? null, saved.id]);
-        (saved as any).account_id = body.account_id ?? null;
-      } catch (e) {
-        // no-op; rely on ORM value if direct SQL fails
-      }
-    }
+    const saved = await repo.save(entity);
     const persisted = await repo.findOne({ where: { id: saved.id } });
-    this.logger.log(`[create] persisted id=${saved.id} company=${(persisted as any)?.paying_company_id ?? null} account=${(persisted as any)?.account_id ?? null}`);
     await this.audit.log({ table: 'capex_items', recordId: saved.id, action: 'create', before: null, after: persisted ?? saved, userId }, { manager: mg });
     return persisted ?? saved;
   }
@@ -360,63 +339,26 @@ export class CapexItemsService {
   /** `statusEmail: false` skips the owners' status-change email (the CSV import sends none, like OPEX's). */
   async update(id: string, body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; statusEmail?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
-    // Map legacy field if present
+    const repo = mg.getRepository(CapexItem);
     const existing = await this.get(id, { manager: mg });
     const itemId = existing.id;
-    const nextPayingCompanyId = body.paying_company_id ?? body.company_id ?? ((existing as any).paying_company_id ?? null);
-    if (body.company_id && !body.paying_company_id) {
-      console.warn('[capex] company_id is deprecated; use paying_company_id');
-    }
-    if (!nextPayingCompanyId) {
-      throw new BadRequestException('paying_company_id is required');
-    }
-    // Validate company if provided
-    if (nextPayingCompanyId) {
-      const company = await mg.getRepository(Company).findOne({ where: { id: nextPayingCompanyId } });
-      if (!company) throw new BadRequestException('Paying company not found');
-      if (body.account_id) {
-        const account = await mg.getRepository(Account).findOne({ where: { id: body.account_id } });
-        if (!account) throw new BadRequestException('Account not found');
-        if ((account as any).coa_id && company.coa_id && (account as any).coa_id !== company.coa_id) {
-          throw new BadRequestException('Selected account does not belong to the paying company\'s Chart of Accounts');
-        }
-      }
-    }
-
-    const repo = mg.getRepository(CapexItem);
     const before = { ...existing };
-    const { status: statusInput, disabled_at: disabledAtInput, effective_end: effectiveEnd, ...rest } = body ?? {};
-    const disabled_at = this.endOfValidityInput(disabledAtInput, effectiveEnd);
-    Object.assign(existing, rest);
-    if (body.account_id !== undefined) {
-      (existing as any).account_id = body.account_id;
-    }
-    (existing as any).paying_company_id = nextPayingCompanyId;
+    // Writable columns only, every id resolved in this tenant, and the chart of
+    // accounts checked on the resulting company and account; see `spend/item-write.util.ts`.
+    const { values, lifecycle: input } = await resolveItemWrite(mg, 'capex', body, existing);
+    const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
+    Object.assign(existing, values);
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: before.disabled_at,
-      nextStatus: statusInput,
+      nextStatus: input.status,
       nextDisabledAt: disabled_at,
     });
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
     // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
     existing.updated_at = new Date();
-    this.logger.log(`[update] id=${itemId} incoming company=${nextPayingCompanyId} account=${body.account_id ?? null}`);
     const saved = await repo.save(existing);
-    if ('account_id' in body) {
-      try {
-        await mg.query(`UPDATE capex_items SET account_id = $1 WHERE id = $2`, [body.account_id ?? null, itemId]);
-        (saved as any).account_id = body.account_id ?? null;
-      } catch {}
-    }
-    if ('project_id' in body) {
-      try {
-        await mg.query(`UPDATE capex_items SET project_id = $1 WHERE id = $2`, [body.project_id ?? null, itemId]);
-        (saved as any).project_id = body.project_id ?? null;
-      } catch {}
-    }
     const persisted = await repo.findOne({ where: { id: itemId } });
-    this.logger.log(`[update] persisted id=${itemId} company=${(persisted as any)?.paying_company_id ?? null} account=${(persisted as any)?.account_id ?? null}`);
     await this.audit.log({ table: 'capex_items', recordId: saved.id, action: 'update', before, after: persisted ?? saved, userId }, { manager: mg });
 
     // Detect supplier change for contact sync
@@ -498,7 +440,7 @@ export class CapexItemsService {
   csvHeaders() {
     return [
       'item_number','description','ppe_type','investment_type','priority','currency','effective_start','status','disabled_at','notes','company_name',
-      'owner_it_email','owner_business_email','analytics_category',
+      'owner_it_email','owner_business_email','analytics_category','cost_center_code','run_build',
       'y_minus1_budget','y_minus1_landing','y_budget','y_follow_up','y_landing','y_revision','y_plus1_budget','y_plus1_revision','y_plus2_budget'
     ];
   }
@@ -540,6 +482,7 @@ export class CapexItemsService {
     const categoryIds = Array.from(new Set(items.map((it: any) => it.analytics_category_id).filter(Boolean))) as string[];
     const categories = categoryIds.length > 0 ? await mgExport.getRepository(AnalyticsCategory).find({ where: { tenant_id: tenantId, id: In(categoryIds) } as any }) : [];
     const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
+    const costCenterCodeById = await loadCostCenterCodes(mgExport, tenantId, items.map((it) => it.cost_center_id));
 
     const { format } = await import('@fast-csv/format');
     const toIsoDate = (value: unknown): string => {
@@ -579,6 +522,8 @@ export class CapexItemsService {
           owner_it_email: (it as any).owner_it_id ? (ownerEmailById.get((it as any).owner_it_id) ?? '') : '',
           owner_business_email: (it as any).owner_business_id ? (ownerEmailById.get((it as any).owner_business_id) ?? '') : '',
           analytics_category: (it as any).analytics_category_id ? (categoryNameById.get((it as any).analytics_category_id) ?? '') : '',
+          cost_center_code: it.cost_center_id ? (costCenterCodeById.get(it.cost_center_id) ?? '') : '',
+          run_build: it.run_build ?? '',
           y_minus1_budget: tMinus1.budget,
           y_minus1_landing: tMinus1.landing,
           y_budget: tY.budget,
@@ -599,11 +544,14 @@ export class CapexItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     if (!file) throw new Error('No file uploaded');
     const delimiter = ';';
+    const optionalHeaders: readonly string[] = ITEM_CSV_OPTIONAL_HEADERS;
     const expectedHeaders = this.csvHeaders();
+    const requiredHeaders = expectedHeaders.filter((h) => !optionalHeaders.includes(h));
     type Row = Record<string, string>;
     const rows: Row[] = [];
     const errors: { row: number; message: string }[] = [];
     let headerOk = false;
+    let fileHeaders: string[] = [];
 
     await new Promise<void>((resolve, reject) => {
       const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
@@ -613,7 +561,8 @@ export class CapexItemsService {
       catch { reject(new Error('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.')); return; }
       parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
         .on('headers', (headers: string[]) => {
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
+          fileHeaders = headers;
+          const missing = requiredHeaders.filter((h) => !headers.includes(h));
           const extras = headers.filter((h) => !expectedHeaders.includes(h) && !LEGACY_CSV_HEADERS.includes(h));
           headerOk = missing.length === 0 && extras.length === 0;
           if (!headerOk) errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
@@ -623,6 +572,9 @@ export class CapexItemsService {
         .on('end', () => resolve());
     });
     if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
+    // Absent optional columns leave the stored values as they are.
+    const hasCostCenter = fileHeaders.includes('cost_center_code');
+    const hasRunBuild = fileHeaders.includes('run_build');
 
     // The tenant's allowed currencies, as the OPEX import checks them (none configured: any code).
     const tenantId = await this.resolveTenantId(mg);
@@ -646,7 +598,8 @@ export class CapexItemsService {
     };
 
     // Get all companies for name resolution
-    const allCompanies = await mg.getRepository(Company).find();
+    const allCompanies = await mg.getRepository(Company).find({ where: { tenant_id: tenantId } as any });
+    const costCentersByCode = hasCostCenter ? await loadCostCentersByCode(mg, tenantId) : new Map<string, CsvCostCenter>();
     const companiesByName = new Map(allCompanies.map(c => [c.name.toLowerCase(), c.id]));
 
     /** A YYYY-MM-DD cell (see `spend/csv-date.ts`): null when blank; any other value is the row's error. */
@@ -689,6 +642,8 @@ export class CapexItemsService {
       owner_it_id: string | null;
       owner_business_id: string | null;
       analytics_category_name: string | null;
+      cost_center: CsvCostCenter | null;
+      run_build: 'run' | 'build' | null;
       totals: { [year: number]: { planned?: number; actual?: number; expected_landing?: number; committed?: number } };
     }> = [];
 
@@ -749,6 +704,15 @@ export class CapexItemsService {
       const owner_it_id = await resolveOwner(ownerItEmail, 'Owner IT', line);
       const owner_business_id = await resolveOwner(ownerBizEmail, 'Owner business', line);
       const analytics_category_name = ((r['analytics_category'] ?? '').toString().trim()) || null;
+      const costCenterCode = hasCostCenter ? (r['cost_center_code'] ?? '').toString().trim() : '';
+      let cost_center: CsvCostCenter | null = null;
+      if (costCenterCode) {
+        const resolved = resolveCsvCostCenter(costCentersByCode, costCenterCode);
+        if (resolved.error) errors.push({ row: line, message: resolved.error });
+        cost_center = resolved.node;
+      }
+      const run_build = hasRunBuild ? parseRunBuild(r['run_build']) : null;
+      if (run_build === undefined) errors.push({ row: line, message: CSV_RUN_BUILD_ERROR });
 
       // Resolve company name to ID
       let paying_company_id: string | null = null;
@@ -807,6 +771,8 @@ export class CapexItemsService {
         owner_it_id,
         owner_business_id,
         analytics_category_name,
+        cost_center,
+        run_build: run_build ?? null,
         totals,
       });
     }
@@ -818,30 +784,67 @@ export class CapexItemsService {
     // Existing items match by item_number when provided, else by description
     const findExisting = async (item: typeof normalized[number]): Promise<CapexItem | null> => {
       if (item.item_number != null) {
-        return mg.getRepository(CapexItem).findOne({ where: { item_number: item.item_number as any } });
+        return mg.getRepository(CapexItem).findOne({ where: { tenant_id: tenantId, item_number: item.item_number as any } });
       }
-      return mg.getRepository(CapexItem).findOne({ where: { description: item.description } });
+      return mg.getRepository(CapexItem).findOne({ where: { tenant_id: tenantId, description: item.description } });
     };
 
     let inserted = 0; let updated = 0;
+    const existingByItem = new Map<typeof normalized[number], CapexItem | null>();
     for (const item of unique) {
       const exists = await findExisting(item);
+      existingByItem.set(item, exists);
       if (item.item_number != null && !exists) {
         errors.push({ row: item.line, message: `item_number '${item.item_number}' does not match any CAPEX item` });
         continue;
       }
-      // A new line needs its paying company and its currency (an update keeps the stored ones).
-      if (!exists && !item.paying_company_id) {
-        errors.push({ row: item.line, message: 'company_name is required for a new line' });
+      const disabledCostCenter = item.cost_center ? csvCostCenterDisabledError(item.cost_center, exists?.cost_center_id) : null;
+      if (disabledCostCenter) errors.push({ row: item.line, message: disabledCostCenter });
+      // A new line needs its paying company (or a cost center, whose company it takes) and its
+      // currency (an update keeps the stored ones).
+      const hasCompany = !!item.paying_company_id || !!item.cost_center;
+      if (!exists && !hasCompany) {
+        errors.push({ row: item.line, message: CSV_COMPANY_REQUIRED_ERROR });
       }
       if (!exists && !item.currency) {
         errors.push({ row: item.line, message: 'currency is required' });
       }
-      if (!exists && (!item.paying_company_id || !item.currency)) continue;
+      if (disabledCostCenter || (!exists && (!hasCompany || !item.currency))) continue;
       if (exists) updated += 1; else inserted += 1;
+    }
+    // The file has no account column: a company change keeps the stored account, which must
+    // then be in the new company's chart (the write refuses it otherwise, after a clean dry run).
+    const movedLines = unique.flatMap((item) => {
+      const exists = existingByItem.get(item);
+      return exists?.account_id && item.paying_company_id && item.paying_company_id !== exists.paying_company_id
+        ? [{ item, accountId: exists.account_id }]
+        : [];
+    });
+    if (movedLines.length > 0) {
+      const accounts: Array<{ id: string; account_number: number; coa_id: string | null }> = await mg.query(
+        `SELECT id, account_number, coa_id FROM accounts WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenantId, Array.from(new Set(movedLines.map((moved) => moved.accountId)))],
+      );
+      const accountById = new Map(accounts.map((account) => [account.id, account]));
+      const companyById = new Map(allCompanies.map((company) => [company.id, company]));
+      for (const { item, accountId } of movedLines) {
+        const account = accountById.get(accountId);
+        const company = companyById.get(item.paying_company_id!);
+        if (account?.coa_id && company?.coa_id && account.coa_id !== company.coa_id) {
+          errors.push({
+            row: item.line,
+            message: `Account ${account.account_number} is not in ${company.name}'s chart of accounts. Change the line's account first.`,
+          });
+        }
+      }
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
     if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
+
+    await lockCsvCostCenters(mg, tenantId, unique.map((item) => {
+      const exists = existingByItem.get(item) ?? null;
+      return item.cost_center && item.cost_center.id !== exists?.cost_center_id ? item.cost_center.id : null;
+    }));
 
     const categoryCache = new Map<string, AnalyticsCategory | null>();
     const ensureCategory = async (name: string | null): Promise<AnalyticsCategory | null> => {
@@ -849,7 +852,10 @@ export class CapexItemsService {
       const key = name.toLowerCase();
       if (categoryCache.has(key)) return categoryCache.get(key) ?? null;
       const repo = mg.getRepository(AnalyticsCategory);
-      let category = await repo.createQueryBuilder('cat').where('LOWER(cat.name) = LOWER(:name)', { name }).getOne();
+      let category = await repo.createQueryBuilder('cat')
+        .where('cat.tenant_id = :tenantId', { tenantId })
+        .andWhere('LOWER(cat.name) = LOWER(:name)', { name })
+        .getOne();
       if (!category) {
         category = repo.create({ name, status: StatusState.ENABLED });
         category = await repo.save(category);
@@ -874,10 +880,13 @@ export class CapexItemsService {
         status: item.status,
         disabled_at: item.disabled_at,
         notes: item.notes ?? null,
-        paying_company_id: item.paying_company_id,
+        // A blank company keeps the stored one (a new line takes its cost center's).
+        ...(item.paying_company_id ? { paying_company_id: item.paying_company_id } : {}),
         owner_it_id: item.owner_it_id,
         owner_business_id: item.owner_business_id,
         analytics_category_id: analyticsCategory ? analyticsCategory.id : null,
+        ...(hasCostCenter ? { cost_center_id: item.cost_center?.id ?? null } : {}),
+        ...(hasRunBuild ? { run_build: item.run_build } : {}),
       };
       const target = exists
         ? await this.update(exists.id, payload as any, userId ?? undefined, { manager: mg, statusEmail: false })

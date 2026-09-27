@@ -73,22 +73,22 @@ export abstract class BaseDeleteService<T extends ObjectLiteral> {
     // 2. Call beforeDelete hook
     await this.beforeDelete(entity, manager);
 
-    // 3. Handle cascade relations
+    // 3. Handle cascade relations (collects the storage paths, touches no file)
     const storageItems = await this.handleCascadeRelations(id, manager);
 
-    // 4. Clean up storage (with proper error logging)
-    await this.cleanupStorage(storageItems);
-
-    // 5. Delete the entity
+    // 4. Delete the entity
     await repo.delete({ id } as any);
 
-    // 6. Log deletion to audit
+    // 5. Log deletion to audit
     if (!opts?.skipAudit) {
       await this.logDeletion(entity, opts?.userId ?? null, manager);
     }
 
-    // 7. Call afterDelete hook
+    // 6. Call afterDelete hook
     await this.afterDelete(entity, manager);
+
+    // 7. Clean up storage last: a delete that fails above keeps its files
+    await this.cleanupStorage(storageItems);
   }
 
   /**

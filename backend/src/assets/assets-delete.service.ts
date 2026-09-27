@@ -5,6 +5,7 @@ import { Asset } from './asset.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
 export class AssetsDeleteService extends BaseDeleteService<Asset> {
@@ -125,23 +126,25 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
 
     for (const id of ids || []) {
       try {
-        const asset = await this.ensureAsset(id, tenantId, manager);
-        const assignments = await this.findAssignments(id, tenantId, manager);
-        const connections = await this.findConnections(id, tenantId, manager);
-        if (assignments.count > 0 || connections.count > 0) {
-          throw new ConflictException(this.buildConflictMessage(asset.name, assignments, connections));
-        }
+        await withSavepoint(manager, async () => {
+          const asset = await this.ensureAsset(id, tenantId, manager);
+          const assignments = await this.findAssignments(id, tenantId, manager);
+          const connections = await this.findConnections(id, tenantId, manager);
+          if (assignments.count > 0 || connections.count > 0) {
+            throw new ConflictException(this.buildConflictMessage(asset.name, assignments, connections));
+          }
 
-        await repo.delete({ id } as any);
-        await this.audit.log(
-          { table: 'assets', recordId: id, action: 'delete', before: asset, after: null, userId },
-          { manager },
-        );
+          await repo.delete({ id } as any);
+          await this.audit.log(
+            { table: 'assets', recordId: id, action: 'delete', before: asset, after: null, userId },
+            { manager },
+          );
+        });
         result.deleted.push(id);
       } catch (error: any) {
         let name = 'Unknown';
         try {
-          const s = await repo.findOne({ where: { id } as any });
+          const s = await withSavepoint(manager, () => repo.findOne({ where: { id } as any }));
           if (s) name = s.name;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch asset name for error reporting: ${err?.message || 'Unknown error'}`);

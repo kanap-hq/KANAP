@@ -5,6 +5,7 @@ import { Department } from './department.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
 export class DepartmentsDeleteService extends BaseDeleteService<Department> {
@@ -72,12 +73,12 @@ export class DepartmentsDeleteService extends BaseDeleteService<Department> {
 
     for (const departmentId of departmentIds) {
       try {
-        await this.delete(departmentId, { manager, userId });
+        await withSavepoint(manager, () => this.delete(departmentId, { manager, userId }));
         result.deleted.push(departmentId);
       } catch (error: any) {
         let name = 'Unknown';
         try {
-          const department = await repo.findOne({ where: { id: departmentId } as any });
+          const department = await withSavepoint(manager, () => repo.findOne({ where: { id: departmentId } as any }));
           if (department) name = department.name;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch department name for error reporting: ${err?.message || 'Unknown error'}`);

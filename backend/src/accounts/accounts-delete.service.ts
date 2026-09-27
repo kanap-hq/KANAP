@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { ReferenceCheckService } from '../common/reference-check.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
 export class AccountsDeleteService extends BaseDeleteService<Account> {
@@ -93,12 +94,12 @@ export class AccountsDeleteService extends BaseDeleteService<Account> {
 
     for (const accountId of accountIds) {
       try {
-        await this.delete(accountId, { manager, userId });
+        await withSavepoint(manager, () => this.delete(accountId, { manager, userId }));
         result.deleted.push(accountId);
       } catch (error: any) {
         let name = 'Unknown';
         try {
-          const account = await repo.findOne({ where: { id: accountId } as any });
+          const account = await withSavepoint(manager, () => repo.findOne({ where: { id: accountId } as any }));
           if (account) name = this.getAccountDisplayName(account);
         } catch (err: any) {
           this.logger.warn(`Failed to fetch account name for error reporting: ${err?.message || 'Unknown error'}`);

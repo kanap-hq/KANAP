@@ -320,6 +320,24 @@ Validation/behavior:
 - POST `/departments` → create
 - PATCH `/departments/:id` → update (no metrics here)
 
+## Cost Centers
+- RBAC: resource `cost_centers` (`reader` to view, `member` to create and edit, `admin` to delete, import and export). `GET /cost-centers/tree` also answers `opex`, `capex` or `reporting` readers (item forms and budget reports).
+- A node is a `group` or a `cost_center`. A cost center has a company and no children and is what OPEX and CAPEX lines are attached to; a group has no company and may hold nodes of several companies. Codes are trimmed, 1 to 50 characters, unique per tenant case-insensitively.
+- Node fields (`CostCenterTreeNode`): `id, code, name, kind, parent_id, company_id, company_name, owner_user_id, owner_name, status, disabled_at, sort_order, depth, path, path_ids` (`status` is the effective lifecycle from `disabled_at`; `path` joins the names root → node with ` › `).
+- GET `/cost-centers/tree` → `{ items: CostCenterTreeNode[] }`: the whole tree in tree order (siblings by `sort_order`, then code), disabled nodes included.
+- GET `/cost-centers?page&limit&sort&q&filters&status|includeDisabled` → `{ items: (CostCenterTreeNode & { parent_code, parent_name })[], total, page, limit }`
+  - Default sort `path:ASC` (tree order); set filters on `kind`, `status`, `company_name`, `parent_name` (plus text filters on `code`, `name`, `owner_name`, `path`); `q` matches code, name and path. Enabled nodes only unless `status` or `includeDisabled=1` says otherwise.
+- GET `/cost-centers/ids` (same params) → `{ ids: string[], total }` for the workspace prev/next.
+- GET `/cost-centers/:id` → node + `{ parent_code, parent_name, description, opex_count, capex_count }`
+- POST `/cost-centers` `{ code, kind, name, description?, parent_id?, company_id?, owner_user_id?, status?, disabled_at?, sort_order? }` and PATCH `/cost-centers/:id` (any subset; `null` clears) → same shape as GET `/:id`.
+  - Refusals are `400 { message, field }`: company required on a cost center and refused on a group; only a group can be a parent, no self-parenting or loop; a cost center used by lines cannot become a group; a group holding nodes cannot become a cost center; company, owner and parent must belong to the tenant (a new company must be enabled, a new owner an enabled user; the stored value is always kept); duplicate code. Turning a node into a group without sending `company_id` drops its company.
+- DELETE `/cost-centers/:id` → 200, or 409 with a readable message when the node is used by lines (`IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.`) or still holds nodes.
+- DELETE `/cost-centers/bulk` `{ ids }` → `{ deleted: string[], failed: { id, name, reason }[] }` (each delete under its own savepoint; deeper nodes first, so a group and its content go together).
+- GET `/cost-centers/export?scope=data|template` and POST `/cost-centers/import?dryRun=true|false` (multipart `file`, `;`-separated UTF-8)
+  - Headers `code;kind;name;parent_code;company_name;owner_email;description;status;disabled_at` (`disabled_at` optional on import). `kind` is `group` or `cost_center`, `status` `enabled` or `disabled`.
+  - Upsert matched by code (case-insensitive); parents resolve against the file and the stored tree, so any row order imports; the whole resulting tree is checked before anything is written. → `{ ok, dryRun, total, inserted, updated, unchanged, errors: { row, message }[] }`; an export imported back is all `unchanged`.
+- Every write takes a per-tenant advisory lock (`cost-center:<tenant>`), so concurrent tree edits are serialized.
+
 ## Applications (IT Landscape)
 - RBAC: resource `applications` (`reader` to view, `manager` to mutate). Admin inherits all.
 
@@ -691,7 +709,24 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
 
 ## Spend Items & Versions (OPEX)
 - POST `/spend-items` → create item
-- GET `/spend-items/:id` → detail
+- PATCH `/spend-items/:id` → update item (any subset of the writable fields)
+- GET `/spend-items/:id` → detail (every item column, `cost_center_id` and `run_build` included)
+- Writable fields and write rules (OPEX and CAPEX alike, `spend/item-write.util.ts`; the UI, the API, the AI and both item CSVs all go through them):
+  - OPEX: `product_name, description, supplier_id, paying_company_id, account_id, currency, effective_start, owner_it_id, owner_business_id, analytics_category_id, project_id, contract_id, cost_center_id, run_build, notes`, plus the lifecycle inputs `status`, `disabled_at` and the deprecated `effective_end`
+  - CAPEX: `description, ppe_type, investment_type, priority, supplier_id, paying_company_id` (legacy alias `company_id`)`, account_id, currency, effective_start, owner_it_id, owner_business_id, analytics_category_id, project_id, cost_center_id, run_build, notes`, plus the same lifecycle inputs
+  - Any other key (`id`, `tenant_id`, `item_number`, timestamps, unknown keys) is dropped, never refused
+  - Every id is resolved in the current tenant; an unknown id, or an id of another tenant, is a `400` "<Field> not found." (`Paying company`, `Account`, `Supplier`, `Analytics category`, `IT owner`, `Business owner`, `Project`, `Contract`, `Cost center`)
+  - `cost_center_id`: a new value must name an enabled cost center, not a group (`400` "Choose a cost center, not a group." / "This cost center is disabled."); the line's current value is always kept, disabled or not
+  - `run_build`: `run`, `build` or `null` (case-insensitive); anything else is a `400`
+  - A line with a cost center and no paying company takes the cost center's company (this satisfies "paying company required" on create); an explicit different company is kept. Without either: `400` "Paying company is required."
+  - The chart of accounts check (the account must belong to the paying company's chart) runs on create, and on update when the resulting company or account differs from the stored one; a line already mismatched still takes unrelated edits
+- Item CSVs (`GET /spend-items/export`, `POST /spend-items/import`, same on `/capex-items`): export and template always carry the optional columns `cost_center_code` and `run_build`; an import accepts files without them
+  - Column absent: the stored value is untouched on update, `null` on create. Column present and blank: cleared
+  - `cost_center_code` matches a code case-insensitively; an unknown code, a group, or a disabled cost center that is not the line's current one is a row error (reported by the dry run)
+  - `run_build`: `run`, `build` or blank (case-insensitive), anything else a row error
+  - A blank `company_name` keeps an existing line's company; a new line with a blank company takes its cost center's company, and without a cost center the row is refused ("Company is required unless the line has a cost center."). OPEX: the account number resolves in the resulting company's chart
+  - CAPEX (no account column): a company change onto another chart while the line has an account is a row error in the dry run ("Account {number} is not in {company}'s chart of accounts. Change the line's account first.")
+  - Before writing, the import locks every newly assigned cost center once, in id order
 - POST `/spend-items/:id/versions` with `{ version_name, as_of_date, input_grain, budget_year?, allocation_method?, allocation_driver? }`
   - `budget_year` defaults to `as_of_date` year; one version per (item, year)
   - `allocation_method` defaults to `default`; `allocation_driver` defaults to `headcount`
@@ -713,7 +748,8 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
 
 ## CAPEX Items & Versions
 - POST `/capex-items` → create CAPEX item
-- GET `/capex-items/:id` → detail
+- PATCH `/capex-items/:id` → update CAPEX item (writable fields and write rules as OPEX, see above)
+- GET `/capex-items/:id` → detail (every item column, `cost_center_id` and `run_build` included)
 - POST `/capex-items/:id/versions` with `{ version_name, as_of_date, input_grain, budget_year?, allocation_method?, allocation_driver? }`
   - `allocation_method` defaults to `default`; `allocation_driver` defaults to `headcount`
   - One version per (item, budget_year)
@@ -769,7 +805,13 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
   - Optional `years` parameter: comma-separated list of years to fetch (e.g., `years=2024,2025,2026`)
     - If omitted, defaults to Y-1, Y, Y+1 (where Y = current year)
     - Response includes dynamic year keys: `versions.y2024`, `versions.y2025`, etc. in addition to legacy `yMinus1`, `y`, `yPlus1` for backward compatibility
+  - Cost center and run or build (both item types): `cost_center_id`, `cost_center_code`, `cost_center_name`, `cost_center_label` (`"{code} · {name}"`, the list column), `cost_center_path` (names from the root group to the cost center, joined with `" › "`), `run_build` (`run` | `build` | `null`); all `null` when not set
+    - Set and text filters on `run_build` run in SQL; `cost_center_label`, `cost_center_code`, `cost_center_name` and `cost_center_path` filter and sort in memory (a group through the path: `contains` its name); `sort=run_build:ASC` orders run, build, then blanks
+    - The quick search reads the cost center code, name and path, and the budget holder name
+  - Budget holder (both item types): `budget_holder_id` and `budget_holder_name`, the owner (`owner_user_id`) of the line's cost center and that user's display name. Derived when the rows are built, never stored on the line: a change of the cost center's owner shows on every line at once. `null` when the line has no cost center or its cost center has no owner
+    - `budget_holder_name` filters (set and text) and sorts in memory
 - GET `/spend-items/summary/filter-values?fields=fieldA,fieldB&q&filters&years=2024,2025,2026` **[Requires: opex:reader]**
+  - Fields include `cost_center_label`, `cost_center_code`, `cost_center_name`, `cost_center_path`, `budget_holder_name`, `run_build` (both item types)
   - Distinct filter values for closed-choice columns in the OPEX summary grid.
   - Response: `{ fieldA: Array<string | null>, fieldB: Array<string | null> }`
   - Caller should remove the column’s own filter so values stay discoverable.
@@ -778,6 +820,7 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
 - GET `/capex-items/summary?status=enabled&page=1&limit=50&sort=yBudget:DESC`
   - Each row includes `{ versions: { yMinus1, y, yPlus1 }, allocation_method_label, next_year_allocation_method_label, spread_mode_for_y, company_name }`
   - Also includes `latest_task?: { id, title?, description?, status, created_at } | null` for open/in_progress tasks (most recent)
+  - Cost center and run or build fields, filters, sort and quick search as OPEX (see above)
 - GET `/capex-items/summary/ids` → `{ ids, total }` ordered by requested sort (supports derived fields like `yBudget`)
 - GET `/capex-items/summary/totals` → `{ reportingCurrency, ...amounts }`: one key per `<slot><Suffix>` for the slots `yMinus2`, `yMinus1`, `y`, `yPlus1`, `yPlus2` and the suffixes `Budget`, `Revision`, `Forecast`, `FollowUp`, `Landing` (25 keys, for example `yBudget`, `yPlus2Forecast`), plus `y<YYYY><Suffix>` for each requested year. Same shape as the OPEX totals
 - GET `/capex-items/summary/filter-values?fields=fieldA,fieldB&q&filters` **[Requires: capex:reader]**

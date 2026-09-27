@@ -5,6 +5,7 @@ import { User } from './user.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
 export class UsersDeleteService extends BaseDeleteService<User> {
@@ -80,12 +81,12 @@ export class UsersDeleteService extends BaseDeleteService<User> {
 
     for (const id of ids) {
       try {
-        await this.deleteUser(id, actorId, { manager });
+        await withSavepoint(manager, () => this.deleteUser(id, actorId, { manager }));
         result.deleted.push(id);
       } catch (error: any) {
         let name = 'Unknown';
         try {
-          const u = await repo.findOne({ where: { id } as any });
+          const u = await withSavepoint(manager, () => repo.findOne({ where: { id } as any }));
           if (u) {
             name = this.getUserDisplayName(u);
           }

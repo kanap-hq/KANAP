@@ -30,6 +30,7 @@ export const RESOURCES = [
   'contacts',
   'companies',
   'departments',
+  'cost_centers',
   'accounts',
   'analytics',
   'business_processes',

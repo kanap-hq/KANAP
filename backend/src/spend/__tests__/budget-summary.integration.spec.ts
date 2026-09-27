@@ -19,6 +19,7 @@ import {
   seedVersion,
   TABLES,
 } from './round-inputs.fixtures';
+import { seedCompany as seedCostCenterCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
 
 // The shared list engine (budget-summary.ts) against the database, with the
 // same assertions for OPEX and CAPEX: five columns in every slot, sort and
@@ -488,6 +489,155 @@ async function testAiCapexAggregateIsComplete() {
   });
 }
 
+/**
+ * Cost centers: IT department (group) › Applications (group) › IT-200, and a
+ * root cost center LG-10. Alpha is on IT-200 (run), Bravo on LG-10 (build).
+ */
+async function seedCostCenters(runner: QueryRunner, tenantId: string, kind: Kind, ids: Fixture['ids']) {
+  const { companyId } = await seedCostCenterCompany(runner, tenantId, 'Cost center company');
+  const it = await seedCostCenter(runner, tenantId, { code: 'IT', name: 'IT department', kind: 'group' });
+  const apps = await seedCostCenter(runner, tenantId, { code: 'IT-APPS', name: 'Applications', kind: 'group', parentId: it });
+  const it200 = await seedCostCenter(runner, tenantId, { code: 'IT-200', name: 'Business apps', parentId: apps, companyId });
+  const lg10 = await seedCostCenter(runner, tenantId, { code: 'LG-10', name: 'Logistics IT', companyId });
+  const items = TABLES[kind].items;
+  await runner.query(`UPDATE ${items} SET cost_center_id = $2, run_build = 'run' WHERE id = $1`, [ids.alpha, it200]);
+  await runner.query(`UPDATE ${items} SET cost_center_id = $2, run_build = 'build' WHERE id = $1`, [ids.bravo, lg10]);
+  return { it200, lg10 };
+}
+
+async function testCostCenterFields(kind: Kind) {
+  await withFixture(kind, async (runner, { tenantId, ids }, svc) => {
+    const opts = { manager: runner.manager };
+    const config = SUMMARY_SCOPES[kind];
+    const { it200 } = await seedCostCenters(runner, tenantId, kind, ids);
+
+    const { items } = await svc.summary({ ...ALL, limit: 100 }, opts);
+    const alpha = items.find((row: any) => row.id === ids.alpha);
+    assert.equal(alpha.cost_center_id, it200);
+    assert.equal(alpha.cost_center_code, 'IT-200');
+    assert.equal(alpha.cost_center_name, 'Business apps');
+    assert.equal(alpha.cost_center_label, 'IT-200 · Business apps');
+    assert.equal(alpha.cost_center_path, 'IT department › Applications › Business apps', `${kind}: the path of a three-level node`);
+    assert.equal(alpha.run_build, 'run');
+    const charlie = items.find((row: any) => row.id === ids.charlie);
+    assert.deepEqual(
+      [charlie.cost_center_id, charlie.cost_center_code, charlie.cost_center_label, charlie.cost_center_path, charlie.run_build],
+      [null, null, null, null, null],
+      `${kind}: a line without cost center`,
+    );
+
+    const values = await svc.summaryFilterValues({ ...ALL, fields: 'cost_center_label,cost_center_code,cost_center_name,cost_center_path,run_build' }, opts);
+    assert.deepEqual(values.cost_center_label, ['IT-200 · Business apps', 'LG-10 · Logistics IT', null]);
+    assert.deepEqual(values.cost_center_code, ['IT-200', 'LG-10', null]);
+    assert.deepEqual(values.cost_center_path, ['IT department › Applications › Business apps', 'Logistics IT', null]);
+    assert.deepEqual(values.run_build, ['build', 'run', null]);
+
+    const byLabel = await svc.summary({ ...ALL, filters: filters({ cost_center_label: { filterType: 'set', values: ['LG-10 · Logistics IT', null] } }) }, opts);
+    assert.deepEqual(byLabel.items.map((row: any) => row.id).sort(), [ids.bravo, ids.charlie, ids.delta, ids.echo].sort(), `${kind}: set filter on the label, blanks included`);
+    const byGroup = await svc.summary({ ...ALL, filters: filters({ cost_center_path: { filterType: 'text', type: 'contains', filter: 'it department' } }) }, opts);
+    assert.deepEqual(byGroup.items.map((row: any) => row.id), [ids.alpha], `${kind}: a group through the path`);
+
+    // With a cap of 1, a filter or a sort evaluated in memory would report the cap: these run in SQL.
+    const build = await budgetSummary.summary(config, engineDeps(1), { ...ALL, filters: filters({ run_build: { filterType: 'set', values: ['build'] } }) }, runner.manager);
+    assert.equal(build.capped, undefined, `${kind}: the run or build filter runs in SQL`);
+    assert.deepEqual(build.items.map((row: any) => row.id), [ids.bravo]);
+    const blankRunBuild = await budgetSummary.summary(config, engineDeps(1), { ...ALL, filters: filters({ run_build: { filterType: 'set', values: [null] } }) }, runner.manager);
+    assert.equal(blankRunBuild.capped, undefined);
+    assert.equal(blankRunBuild.total, 3, `${kind}: blank run or build`);
+
+    const byCode = await svc.summary({ ...ALL, q: 'it-200' }, opts);
+    assert.deepEqual(byCode.items.map((row: any) => row.id), [ids.alpha], `${kind}: quick search by code`);
+    const byName = await svc.summary({ ...ALL, q: 'logistics it' }, opts);
+    assert.deepEqual(byName.items.map((row: any) => row.id), [ids.bravo], `${kind}: quick search by name`);
+    const byPath = await svc.summary({ ...ALL, q: 'applications' }, opts);
+    assert.deepEqual(byPath.items.map((row: any) => row.id), [ids.alpha], `${kind}: quick search by a group of the path`);
+
+    const labels = (page: any) => page.items.map((row: any) => row.cost_center_label);
+    const ascending = await svc.summary({ ...ALL, sort: 'cost_center_label:ASC' }, opts);
+    assert.deepEqual(labels(ascending), ['IT-200 · Business apps', 'LG-10 · Logistics IT', null, null, null], `${kind}: label ascending, blanks last`);
+    const descending = await svc.summary({ ...ALL, sort: 'cost_center_label:DESC' }, opts);
+    assert.deepEqual(labels(descending), [null, null, null, 'LG-10 · Logistics IT', 'IT-200 · Business apps'], `${kind}: label descending`);
+
+    const runBuilds = (page: any) => page.items.map((row: any) => row.run_build);
+    const inSql = await budgetSummary.summary(config, engineDeps(1), { ...ALL, sort: 'run_build:ASC' }, runner.manager);
+    assert.equal(inSql.capped, undefined, `${kind}: the run or build sort runs in SQL`);
+    assert.deepEqual(runBuilds(inSql), ['run', 'build', null, null, null]);
+    const inMemory = await svc.summary({ ...ALL, sort: 'run_build:ASC', q: 'e' }, opts);
+    assert.deepEqual(runBuilds(inMemory), ['run', 'build', null, null, null], `${kind}: the same order in memory`);
+    const down = await svc.summary({ ...ALL, sort: 'run_build:DESC', q: 'e' }, opts);
+    assert.deepEqual(runBuilds(down), [null, null, null, 'build', 'run'], `${kind}: run or build descending`);
+    const downSql = await budgetSummary.summary(config, engineDeps(1), { ...ALL, sort: 'run_build:DESC' }, runner.manager);
+    assert.deepEqual(runBuilds(downSql), [null, null, null, 'build', 'run'], `${kind}: run or build descending, in SQL`);
+  });
+}
+
+/** A user of the tenant with the given name. */
+async function seedNamedUser(runner: QueryRunner, tenantId: string, email: string, first: string, last: string): Promise<string> {
+  const id = await seedUser(runner, tenantId, email);
+  await runner.query(`UPDATE users SET first_name = $3, last_name = $4 WHERE tenant_id = $1 AND id = $2`, [tenantId, id, first, last]);
+  return id;
+}
+
+/**
+ * The budget holder is the owner of the line's cost center, read at build
+ * time: Alpha's IT-200 has one, Bravo's LG-10 has none, Charlie has no cost
+ * center. Changing the owner of a cost center changes every line on it.
+ */
+async function testBudgetHolder(kind: Kind) {
+  await withFixture(kind, async (runner, { tenantId, ids }, svc) => {
+    const opts = { manager: runner.manager };
+    const { it200, lg10 } = await seedCostCenters(runner, tenantId, kind, ids);
+    const ada = await seedNamedUser(runner, tenantId, `ada-${kind}@summary.test`, 'Ada', 'Holder');
+    const bea = await seedNamedUser(runner, tenantId, `bea-${kind}@summary.test`, 'Bea', 'Keeper');
+    await runner.query(`UPDATE cost_centers SET owner_user_id = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, it200, ada]);
+
+    const holders = async () => {
+      const { items } = await svc.summary({ ...ALL, limit: 100 }, opts);
+      return Object.fromEntries(items.map((row: any) => [row.id, [row.budget_holder_id, row.budget_holder_name]]));
+    };
+    const before = await holders();
+    assert.deepEqual(before[ids.alpha], [ada, 'Ada Holder'], `${kind}: the cost center's owner`);
+    assert.deepEqual(before[ids.bravo], [null, null], `${kind}: a cost center without owner`);
+    assert.deepEqual(before[ids.charlie], [null, null], `${kind}: a line without cost center`);
+
+    const values = await svc.summaryFilterValues({ ...ALL, fields: 'budget_holder_name' }, opts);
+    assert.deepEqual(values.budget_holder_name, ['Ada Holder', null], `${kind}: filter values`);
+    const byHolder = await svc.summary({ ...ALL, filters: filters({ budget_holder_name: { filterType: 'set', values: ['Ada Holder'] } }) }, opts);
+    assert.deepEqual(byHolder.items.map((row: any) => row.id), [ids.alpha], `${kind}: set filter`);
+    const blanks = await svc.summary({ ...ALL, filters: filters({ budget_holder_name: { filterType: 'set', values: [null] } }) }, opts);
+    assert.deepEqual(blanks.items.map((row: any) => row.id).sort(), [ids.bravo, ids.charlie, ids.delta, ids.echo].sort(), `${kind}: set filter on blanks`);
+    const searched = await svc.summary({ ...ALL, q: 'ada holder' }, opts);
+    assert.deepEqual(searched.items.map((row: any) => row.id), [ids.alpha], `${kind}: quick search by budget holder`);
+
+    // The lines carry nothing: a new owner on the cost centers shows on every line at once.
+    await runner.query(`UPDATE cost_centers SET owner_user_id = $2 WHERE tenant_id = $1 AND id = ANY($3::uuid[])`, [tenantId, bea, [it200, lg10]]);
+    const after = await holders();
+    assert.deepEqual(after[ids.alpha], [bea, 'Bea Keeper'], `${kind}: follows the cost center's owner`);
+    assert.deepEqual(after[ids.bravo], [bea, 'Bea Keeper']);
+    const afterValues = await svc.summaryFilterValues({ ...ALL, fields: 'budget_holder_name' }, opts);
+    assert.deepEqual(afterValues.budget_holder_name, ['Bea Keeper', null]);
+    const listed: any = await queryExecutor(svc, kind).execute(aiContext(runner, tenantId) as any, {
+      entity_type: kind === 'opex' ? 'spend_items' : 'capex_items',
+    });
+    const holderOf = (label: string) => listed.items.find((item: any) => item.label === label)?.metadata.budget_holder;
+    assert.deepEqual([holderOf('Alpha line'), holderOf('Charlie line')], ['Bea Keeper', null], `${kind}: AI item metadata`);
+
+    // The AI dynamic values read the registry's SQL group field: joined on the tenant.
+    const registry = getAiEntityRegistry(kind === 'opex' ? 'spend_items' : 'capex_items');
+    const group = registry.aggregate!.groupFields.budget_holder;
+    const alias = registry.aggregate!.alias;
+    const grouped: Array<{ key: string | null; count: number }> = await runner.query(
+      `SELECT ${group.expression} AS key, COUNT(*)::int AS count
+       FROM ${registry.aggregate!.baseTable} ${alias}
+       ${(group.joins ?? []).join('\n')}
+       WHERE ${alias}.tenant_id = $1
+       GROUP BY 1 ORDER BY 1 NULLS LAST`,
+      [tenantId],
+    );
+    assert.deepEqual(grouped, [{ key: 'Bea Keeper', count: 2 }, { key: null, count: 3 }], `${kind}: the SQL group field`);
+  });
+}
+
 async function testRegistriesExposeEveryAmount() {
   const previous: Record<Kind, Record<string, string>> = {
     opex: {
@@ -547,6 +697,8 @@ void runSpecs('budget-summary.integration.spec', [
     [`text filter on a date (${kind})`, () => testTextFilterOnADate(kind)],
     [`several linked projects (${kind})`, () => testSeveralLinkedProjects(kind)],
     [`AI aggregate sums in cents (${kind})`, () => testAiAggregateSumsInCents(kind)],
+    [`cost center and run or build (${kind})`, () => testCostCenterFields(kind)],
+    [`budget holder from the cost center (${kind})`, () => testBudgetHolder(kind)],
   ]),
   ['AI: a capped list is truncated', testAiMarksACappedListTruncated],
   ['AI: CAPEX amount filter', testAiCapexAmountFilter],

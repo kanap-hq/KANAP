@@ -16,6 +16,7 @@ import { formatCents, toCents } from '../common/amount';
 import { normalizeAgFilterModel } from '../common/ag-grid-filtering';
 import { StatusState } from '../common/status';
 import { formatAllocationMethodLabel } from './allocation-utils';
+import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center-tree.util';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -95,10 +96,10 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     columns: [
       'id', 'item_number', 'product_name', 'description', 'supplier_id', 'account_id', 'paying_company_id', 'currency',
       'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id',
-      'contract_id', 'notes', 'created_at', 'updated_at',
+      'contract_id', 'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at',
     ],
     textColumns: ['product_name', 'description', 'currency', 'notes'],
-    enumColumns: ['status'],
+    enumColumns: ['status', 'run_build'],
     extraFields: [],
   },
   capex: {
@@ -117,10 +118,10 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     columns: [
       'id', 'item_number', 'description', 'paying_company_id', 'supplier_id', 'account_id', 'ppe_type', 'investment_type', 'priority',
       'currency', 'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id',
-      'notes', 'created_at', 'updated_at',
+      'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at',
     ],
     textColumns: ['description', 'currency', 'notes'],
-    enumColumns: ['ppe_type', 'investment_type', 'priority', 'status'],
+    enumColumns: ['ppe_type', 'investment_type', 'priority', 'status', 'run_build'],
     extraFields: ['ppe_type', 'investment_type', 'priority'],
   },
 };
@@ -144,6 +145,7 @@ export interface SummaryDeps {
  */
 export const FIXED_SORT_ORDERS: Record<string, readonly string[]> = {
   status: [StatusState.ENABLED, StatusState.DISABLED],
+  run_build: ['run', 'build'],
 };
 
 export type SummarySlotTotals = Record<SlotMetric, number>;
@@ -176,6 +178,17 @@ export type BudgetSummaryRow = Record<string, any> & {
   owner_business_name: string;
   analytics_category_id: string | null;
   analytics_category_name: string | null;
+  cost_center_id: string | null;
+  cost_center_code: string | null;
+  cost_center_name: string | null;
+  /** `code · name`, the list column. */
+  cost_center_label: string | null;
+  /** Names from the root group to the cost center, joined with ' › '. */
+  cost_center_path: string | null;
+  /** The cost center's owner, derived at read time (never stored on the line). */
+  budget_holder_id: string | null;
+  budget_holder_name: string | null;
+  run_build: 'run' | 'build' | null;
   latest_contract_id: string | null;
   latest_contract_name: string;
   project_name: string | null;
@@ -444,6 +457,28 @@ async function findByIds<T>(manager: EntityManager, entity: any, tenantId: strin
 
 const distinct = (values: unknown[]) => Array.from(new Set(values.filter(Boolean))) as string[];
 
+/**
+ * Code, name, path and budget holder (the node's owner) of the cost centers
+ * the items name: the tenant's tree is read once (it is small, one query with
+ * the owner joined) and the paths computed in memory; no read without a cost
+ * center on the page.
+ */
+async function loadCostCentersForRows(
+  manager: EntityManager,
+  tenantId: string,
+  items: any[],
+): Promise<Map<string, { code: string; name: string; path: string; owner_user_id: string | null; owner_name: string | null }>> {
+  if (!items.some((item) => item.cost_center_id)) return new Map();
+  const nodes = await loadCostCenterTree(manager, tenantId);
+  return new Map(nodes.map((node) => [node.id, {
+    code: node.code,
+    name: node.name,
+    path: node.path,
+    owner_user_id: node.owner_user_id,
+    owner_name: node.owner_name,
+  }]));
+}
+
 /** One summary row per item (same order), for the years given; slots after the end of validity are empty. */
 export async function buildBudgetSummaryRows(
   config: SummaryScopeConfig,
@@ -479,6 +514,7 @@ export async function buildBudgetSummaryRows(
     findByIds<Company>(manager, Company, tenantId, distinct(items.map((i) => i.paying_company_id))),
   ]);
   const categoryById = new Map(categories.map((c) => [c.id, c]));
+  const costCenterById = await loadCostCentersForRows(manager, tenantId, items);
   const supplierById = new Map(suppliers.map((s) => [s.id, s]));
   const accountById = new Map(accounts.map((a) => [a.id, a]));
   const ownerById = new Map(owners.map((u) => [u.id, u]));
@@ -574,6 +610,7 @@ export async function buildBudgetSummaryRows(
     const supplier = item.supplier_id ? supplierById.get(item.supplier_id) : undefined;
     const account = item.account_id ? accountById.get(item.account_id) : undefined;
     const category = item.analytics_category_id ? categoryById.get(item.analytics_category_id) : undefined;
+    const costCenter = item.cost_center_id ? costCenterById.get(item.cost_center_id) : undefined;
     const payingCompany = item.paying_company_id ? payingCompanyById.get(item.paying_company_id) : undefined;
     const contract = contractByItem.get(item.id);
     const projects = projectsByItem.get(item.id) ?? [];
@@ -603,6 +640,14 @@ export async function buildBudgetSummaryRows(
       owner_business_name: displayName(ownerById.get(item.owner_business_id) || null),
       analytics_category_id: item.analytics_category_id ?? null,
       analytics_category_name: category ? category.name : null,
+      cost_center_id: item.cost_center_id ?? null,
+      cost_center_code: costCenter?.code ?? null,
+      cost_center_name: costCenter?.name ?? null,
+      cost_center_label: costCenter ? costCenterLabel(costCenter) : null,
+      cost_center_path: costCenter?.path ?? null,
+      budget_holder_id: costCenter?.owner_user_id ?? null,
+      budget_holder_name: costCenter?.owner_user_id ? costCenter.owner_name || null : null,
+      run_build: item.run_build ?? null,
       latest_contract_id: contract?.contract_id ?? null,
       latest_contract_name: contract?.contract_name ?? '',
       project_name: joinNames(projectLists.project_name),
@@ -670,6 +715,11 @@ export function getSummaryFieldValue(row: any, field: string): any {
     case 'owner_it_name':
     case 'owner_business_name':
     case 'analytics_category_name':
+    case 'cost_center_code':
+    case 'cost_center_name':
+    case 'cost_center_label':
+    case 'cost_center_path':
+    case 'budget_holder_name':
     case 'project_name':
     case 'project_stream_name':
     case 'project_category_name':
@@ -819,7 +869,7 @@ export function quickSearchSummaryRows<T extends Record<string, any>>(
       row[config.nameField], row.description, row.supplier_name ?? row.supplier?.name, row.paying_company_name ?? row.company_name,
       row.account_display, row.account_name, row.account_number, row.project_name, row.project_stream_name, row.project_category_name,
       row.latest_contract_name, row.allocation_method_label, row.owner_it_name, row.owner_business_name, row.analytics_category_name,
-      row.notes, row.currency, row.status, ...config.extraFields.map((field) => row[field]),
+      row.cost_center_code, row.cost_center_name, row.cost_center_path, row.budget_holder_name, row.notes, row.currency, row.status, ...config.extraFields.map((field) => row[field]),
     ]) {
       bag.push(take(value));
     }

@@ -22,6 +22,7 @@ import { markdownToSearchText } from '../common/markdown-search-text';
 import { bilingualDocumentTsQueryAnyTermSql, bilingualDocumentTsQuerySql, normalizeDocumentAnyTermQuery } from '../common/document-search-tsquery';
 import { DocumentExportService, ExportImageFetchOptions } from '../common/document-export.service';
 import { BulkDeleteResult } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
 import { fixMulterFilename } from '../common/upload';
 import { validateUploadedFile } from '../common/upload-validation';
@@ -4581,17 +4582,21 @@ export class KnowledgeService {
 
     for (const id of uniqueIds) {
       try {
-        const existing = await repo.findOne({ where: { id } as any });
-        if (!existing) {
+        const found = await withSavepoint(manager, async () => {
+          const existing = await repo.findOne({ where: { id } as any });
+          if (!existing) return false;
+          await this.remove(id, userId, { manager });
+          return true;
+        });
+        if (!found) {
           result.failed.push({ id, name: 'Unknown', reason: 'Not found' });
           continue;
         }
-        await this.remove(id, userId, { manager });
         result.deleted.push(id);
       } catch (e: any) {
         let name = 'Unknown';
         try {
-          const existing = await repo.findOne({ where: { id } as any });
+          const existing = await withSavepoint(manager, () => repo.findOne({ where: { id } as any }));
           if (existing) name = existing.title || existing.id;
         } catch (lookupError: any) {
           this.logger.warn(`Failed to load document title for bulk delete error reporting: ${lookupError?.message || 'Unknown error'}`);

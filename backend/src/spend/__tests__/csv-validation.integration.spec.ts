@@ -201,7 +201,7 @@ async function testCapexCurrencyCompanyAndItemNumber() {
     for (const dryRun of [true, false]) {
       const result = await svc.importCsv({ file, dryRun, userId: null }, { manager: runner.manager });
       assert.equal(result.ok, false, `CAPEX (dry run ${dryRun}): a new line without company is refused`);
-      assert.deepEqual(result.errors, [{ row: 3, message: 'company_name is required for a new line' }], `CAPEX (dry run ${dryRun}): row error`);
+      assert.deepEqual(result.errors, [{ row: 3, message: 'Company is required unless the line has a cost center.' }], `CAPEX (dry run ${dryRun}): row error`);
     }
     assert.equal(await count(runner, 'capex_items', tenantId), 1, 'CAPEX: nothing is written');
 

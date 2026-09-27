@@ -513,6 +513,40 @@ async function testNoStorageServiceHandlesGracefully() {
   assert.deepEqual(mockRepo.getDeletedIds(), ['entity-1']);
 }
 
+// Test: a row delete refused by the database keeps the stored files. Files go
+// only once the row delete, the audit and the after hook have gone through.
+async function testRefusedRowDeleteKeepsStoredFiles() {
+  const entity: TestEntity = { id: 'entity-1', name: 'Test Entity', tenant_id: 'tenant-1' };
+  const attachments: TestAttachment[] = [
+    { id: 'att-1', entity_id: 'entity-1', storage_path: 'path/to/kept.pdf' },
+  ];
+  const mockRepo = createMockRepository([entity]);
+  const mockAttachmentRepo = createMockRelatedRepository(attachments);
+  const mockStorage = createMockStorage();
+  mockRepo.manager.getRepository = (target: any) => (target === 'TestEntity' ? mockRepo : mockAttachmentRepo);
+  mockRepo.delete = async () => {
+    throw Object.assign(new Error('update or delete on table "test_entities" violates foreign key constraint'), { code: '23503' });
+  };
+  const config: DeleteConfig = {
+    entityName: 'TestEntity',
+    cascadeRelations: [
+      { repository: 'TestAttachment' as any, foreignKey: 'entity_id', deleteStrategy: 'cascade', storagePathColumn: 'storage_path' },
+    ],
+  };
+
+  const service = new TestDeleteService(mockRepo, mockStorage, createMockAudit(), config);
+  await assert.rejects(service.delete('entity-1'), (err: any) => err?.code === '23503');
+  assert.deepEqual(mockStorage.getDeletedPaths(), [], 'a refused row delete leaves its files in place');
+
+  // Same when the audit, which runs after the row delete, fails.
+  const auditRepo = createMockRepository([entity]);
+  auditRepo.manager.getRepository = (target: any) => (target === 'TestEntity' ? auditRepo : createMockRelatedRepository(attachments));
+  const failingAudit = { log: async () => { throw new Error('current transaction is aborted'); } };
+  const storage2 = createMockStorage();
+  await assert.rejects(new TestDeleteService(auditRepo, storage2, failingAudit, config).delete('entity-1'), /aborted/);
+  assert.deepEqual(storage2.getDeletedPaths(), [], 'a failed audit leaves the files in place');
+}
+
 // Run all tests
 (async () => {
   await testSuccessfulDeletionWithCascade();
@@ -524,6 +558,7 @@ async function testNoStorageServiceHandlesGracefully() {
   await testNullifyStrategySetsNull();
   await testSkipAuditOption();
   await testNoStorageServiceHandlesGracefully();
+  await testRefusedRowDeleteKeepsStoredFiles();
   console.log('All base-delete.service tests passed.');
 })().catch((err) => {
   console.error(err);

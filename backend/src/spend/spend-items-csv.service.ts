@@ -24,6 +24,19 @@ import { SpendItemUpsertDto } from './dto/spend-item.dto';
 import { ItemNumberService } from '../common/item-number.service';
 import { csvDateError, parseCsvDate } from './csv-date';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import {
+  csvCostCenterDisabledError,
+  CSV_COMPANY_REQUIRED_ERROR,
+  CSV_RUN_BUILD_ERROR,
+  CsvCostCenter,
+  ITEM_CSV_OPTIONAL_HEADERS,
+  loadCostCenterCodes,
+  loadCostCentersByCode,
+  lockCsvCostCenters,
+  parseRunBuild,
+  resolveCsvCostCenter,
+  resolveItemWrite,
+} from './item-write.util';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
@@ -58,6 +71,8 @@ export class SpendItemsCsvService {
       'owner_it_email',
       'owner_business_email',
       'analytics_category',
+      'cost_center_code',
+      'run_build',
       'notes',
       'y_minus1_budget',
       'y_minus1_landing',
@@ -119,6 +134,9 @@ export class SpendItemsCsvService {
     const companyById = new Map(companies.map((c) => [c.id, c]));
     const categoryById = new Map(categories.map((c) => [c.id, c]));
     const ownerById = new Map(owners.map((u) => [u.id, u]));
+    const costCenterCodeById = items.some((it) => it.cost_center_id)
+      ? await loadCostCenterCodes(mg, items[0].tenant_id, items.map((it) => it.cost_center_id))
+      : new Map<string, string>();
 
     function getTotals(v?: SpendVersion) {
       if (!v) return { budget: '0', follow_up: '0', landing: '0', revision: '0' };
@@ -162,6 +180,8 @@ export class SpendItemsCsvService {
           owner_it_email: ownerIt ? (ownerIt as any).email ?? '' : '',
           owner_business_email: ownerBiz ? (ownerBiz as any).email ?? '' : '',
           analytics_category: analyticsCategory ? analyticsCategory.name : '',
+          cost_center_code: it.cost_center_id ? (costCenterCodeById.get(it.cost_center_id) ?? '') : '',
+          run_build: it.run_build ?? '',
           notes: (it as any).notes ?? '',
           y_minus1_budget: tMinus1.budget,
           y_minus1_landing: tMinus1.landing,
@@ -190,11 +210,14 @@ export class SpendItemsCsvService {
     const allowedSet = new Set((settings.allowedCurrencies ?? []).map((c: string) => String(c || '').trim().toUpperCase()).filter((c: string) => c.length === 3));
     if (!file) throw new Error('No file uploaded');
     const delimiter = ';';
+    const optionalHeaders: readonly string[] = ITEM_CSV_OPTIONAL_HEADERS;
     const expectedHeaders = this.csvHeaders();
+    const requiredHeaders = expectedHeaders.filter((h) => !optionalHeaders.includes(h));
     type Row = Record<string, string>;
     const rows: Row[] = [];
     const errors: { row: number; message: string }[] = [];
     let headerOk = false;
+    let fileHeaders: string[] = [];
     await new Promise<void>((resolve, reject) => {
       const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
       if (!buf) { reject(new Error('Empty upload')); return; }
@@ -207,7 +230,8 @@ export class SpendItemsCsvService {
       }
       parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
         .on('headers', (headers: string[]) => {
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
+          fileHeaders = headers;
+          const missing = requiredHeaders.filter((h) => !headers.includes(h));
           const extras = headers.filter((h) => !expectedHeaders.includes(h) && !LEGACY_CSV_HEADERS.includes(h));
           headerOk = missing.length === 0 && extras.length === 0;
           if (!headerOk) errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
@@ -217,6 +241,9 @@ export class SpendItemsCsvService {
         .on('end', () => resolve());
     });
     if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors, allowedCurrencies: Array.from(allowedSet) };
+    // Absent optional columns leave the stored values as they are.
+    const hasCostCenter = fileHeaders.includes('cost_center_code');
+    const hasRunBuild = fileHeaders.includes('run_build');
 
     // A supplier name matches on the trimmed name; names are unique only case-sensitively,
     // so the exact name wins and a case-insensitive match is used only when there is none
@@ -277,7 +304,10 @@ export class SpendItemsCsvService {
       if (!name) return null;
       const key = name.toLowerCase();
       if (categoryCache.has(key)) return categoryCache.get(key) ?? null;
-      let category = await categoryRepo.createQueryBuilder('cat').where('LOWER(cat.name) = LOWER(:name)', { name }).getOne();
+      let category = await categoryRepo.createQueryBuilder('cat')
+        .where('cat.tenant_id = :tenantId', { tenantId })
+        .andWhere('LOWER(cat.name) = LOWER(:name)', { name })
+        .getOne();
       if (!category && allowCreate) {
         category = categoryRepo.create({ name, status: StatusState.ENABLED });
         category = await categoryRepo.save(category);
@@ -314,8 +344,10 @@ export class SpendItemsCsvService {
       return user.id;
     };
 
-    const allCompanies = await mg.getRepository(Company).find();
+    const allCompanies = await mg.getRepository(Company).find({ where: { tenant_id: tenantId ?? undefined } as any });
     const companiesByName = new Map(allCompanies.map(c => [c.name.toLowerCase(), c]));
+    const companiesById = new Map(allCompanies.map((c) => [c.id, c]));
+    const costCentersByCode = hasCostCenter && tenantId ? await loadCostCentersByCode(mg, tenantId) : new Map<string, CsvCostCenter>();
 
     const now = new Date();
     const Y = now.getFullYear();
@@ -335,6 +367,8 @@ export class SpendItemsCsvService {
       analytics_category_name: string | null;
       owner_it_id: string | null;
       owner_business_id: string | null;
+      cost_center: CsvCostCenter | null;
+      run_build: 'run' | 'build' | null;
       line: number;
     }> = [];
     const parseAmount = (raw: string): number | undefined => {
@@ -362,17 +396,35 @@ export class SpendItemsCsvService {
       const product_name = (r['product_name'] ?? '').toString().trim();
       const supplier_name = ((r['supplier_name'] ?? '').toString().trim()) || null;
       const company_name = ((r['company_name'] ?? '').toString().trim()) || null;
-      if (!company_name) errors.push({ row: line, message: 'company_name is required' });
-      const company = company_name ? companiesByName.get(company_name.toLowerCase()) ?? null : null;
-      if (company_name && !company) {
-        errors.push({ row: line, message: `Company '${company_name}' not found` });
+      const costCenterCode = hasCostCenter ? (r['cost_center_code'] ?? '').toString().trim() : '';
+      let cost_center: CsvCostCenter | null = null;
+      if (costCenterCode) {
+        const resolved = resolveCsvCostCenter(costCentersByCode, costCenterCode);
+        if (resolved.error) errors.push({ row: line, message: resolved.error });
+        cost_center = resolved.node;
       }
+      const run_build = hasRunBuild ? parseRunBuild(r['run_build']) : null;
+      if (run_build === undefined) errors.push({ row: line, message: CSV_RUN_BUILD_ERROR });
       let supplier_id: string | null = null;
       if (supplier_name) {
         const supplierIds = await findSupplierIds(supplier_name);
         if (supplierIds.length === 0) errors.push({ row: line, message: `Supplier '${supplier_name}' not found` });
         else if (supplierIds.length > 1) errors.push({ row: line, message: `Supplier '${supplier_name}' matches more than one supplier` });
         else supplier_id = supplierIds[0];
+      }
+      // A blank company keeps an existing line's company, and a new line takes its cost
+      // center's (as on CAPEX); the account then resolves in that company's chart.
+      let company: Company | null = null;
+      if (company_name) {
+        company = companiesByName.get(company_name.toLowerCase()) ?? null;
+        if (!company) errors.push({ row: line, message: `Company '${company_name}' not found` });
+      } else if (product_name && (!supplier_name || supplier_id)) {
+        const stored = await mg.getRepository(SpendItem).findOne({
+          where: { tenant_id: tenantId ?? undefined, product_name, supplier_id: supplier_id ?? IsNull() },
+        });
+        if (stored?.paying_company_id) company = companiesById.get(stored.paying_company_id) ?? null;
+        else if (cost_center?.company_id) company = companiesById.get(cost_center.company_id) ?? null;
+        else if (!costCenterCode) errors.push({ row: line, message: CSV_COMPANY_REQUIRED_ERROR });
       }
       // A line is its product name and supplier (the existing-line match): a second row for it is refused, never dropped.
       if (product_name && (!supplier_name || supplier_id)) {
@@ -471,6 +523,8 @@ export class SpendItemsCsvService {
         analytics_category_name: analyticsCategoryName,
         owner_it_id,
         owner_business_id,
+        cost_center,
+        run_build: run_build ?? null,
         notes,
         totals,
         line,
@@ -490,6 +544,11 @@ export class SpendItemsCsvService {
         where: { tenant_id: tenantId ?? undefined, product_name: item.product_name, supplier_id: item.supplier_id ?? IsNull() },
       });
       existingByItem.set(item, exists);
+      const disabledCostCenter = item.cost_center ? csvCostCenterDisabledError(item.cost_center, exists?.cost_center_id) : null;
+      if (disabledCostCenter) {
+        errors.push({ row: item.line, message: disabledCostCenter });
+        continue;
+      }
       // A new line needs its currency; on an update a blank cell keeps the stored one.
       if (!exists && !item.currency) {
         errors.push({ row: item.line, message: 'currency is required' });
@@ -503,6 +562,11 @@ export class SpendItemsCsvService {
     if (!tenantId) {
       return { ok: false, dryRun: false, total: rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'Tenant context is required for import' }], allowedCurrencies: Array.from(allowedSet) };
     }
+
+    await lockCsvCostCenters(mg, tenantId, unique.map((item) => {
+      const exists = existingByItem.get(item) ?? null;
+      return item.cost_center && item.cost_center.id !== exists?.cost_center_id ? item.cost_center.id : null;
+    }));
 
     let processed = 0;
     const checkedFreeze = new Set<string>();
@@ -522,6 +586,8 @@ export class SpendItemsCsvService {
         analytics_category_id: analyticsCategory ? analyticsCategory.id : null,
         owner_it_id: item.owner_it_id,
         owner_business_id: item.owner_business_id,
+        ...(hasCostCenter ? { cost_center_id: item.cost_center?.id ?? null } : {}),
+        ...(hasRunBuild ? { run_build: item.run_build } : {}),
         notes: item.notes ?? null,
       };
       const target = exists
@@ -582,21 +648,22 @@ export class SpendItemsCsvService {
     );
   }
 
+  /** The CSV's own writes go through the same gate as the API (`item-write.util.ts`). */
   private async createSpendItem({ manager, body, userId, tenantId }: { manager: EntityManager; body: SpendItemUpsertDto; userId?: string | null; tenantId: string }) {
     const repo = manager.getRepository(SpendItem);
-    const { status: statusInput, disabled_at, ...rest } = body;
-    const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
+    const { values, lifecycle: input } = await resolveItemWrite(manager, 'opex', body, null);
+    const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: input.disabled_at });
     // One OPX number per actual insert. Dry-run and skipped/invalid rows never reach here.
     const item_number = await this.itemNumbers.nextItemNumber('spend', tenantId, manager);
     const entity = repo.create({
-      ...rest,
+      ...(values as Partial<SpendItem>),
       // Set here, not left to the column default: save() does not read it
       // back, and the versions created for this line inherit it.
       tenant_id: tenantId,
       // These columns are NOT NULL on the entity while the DTO allows null
-      product_name: rest.product_name ?? undefined,
-      currency: rest.currency ?? undefined,
-      effective_start: rest.effective_start ?? undefined,
+      product_name: (values.product_name as string | null | undefined) ?? undefined,
+      currency: (values.currency as string | null | undefined) ?? undefined,
+      effective_start: (values.effective_start as string | null | undefined) ?? undefined,
       item_number,
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
@@ -609,13 +676,13 @@ export class SpendItemsCsvService {
   private async updateSpendItem({ manager, existing, body, userId }: { manager: EntityManager; existing: SpendItem; body: SpendItemUpsertDto; userId?: string | null }) {
     const repo = manager.getRepository(SpendItem);
     const before = { ...existing };
-    const { status: statusInput, disabled_at, ...rest } = body;
+    const { values, lifecycle: input } = await resolveItemWrite(manager, 'opex', body, existing);
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: existing.disabled_at,
-      nextStatus: statusInput,
-      nextDisabledAt: disabled_at,
+      nextStatus: input.status,
+      nextDisabledAt: input.disabled_at,
     });
-    Object.assign(existing, rest);
+    Object.assign(existing, values);
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
     existing.updated_at = new Date();

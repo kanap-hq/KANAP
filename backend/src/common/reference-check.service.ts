@@ -107,6 +107,27 @@ export class ReferenceCheckService {
   }
 
   /**
+   * A company that cost centers belong to cannot go (their key is ON DELETE
+   * RESTRICT): refused first, with the count, before the database would.
+   */
+  private async assertNoCostCenters(companyId: string, companyName: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager;
+    if (!mg) {
+      throw new Error('EntityManager required for reference checks');
+    }
+    const [row] = await mg.query(
+      `SELECT count(*)::int AS n FROM cost_centers WHERE tenant_id = app_current_tenant() AND company_id = $1`,
+      [companyId],
+    );
+    const count = Number(row?.n ?? 0);
+    if (count > 0) {
+      throw new ConflictException(
+        `${companyName} is used by ${count} ${count === 1 ? 'cost center' : 'cost centers'}. Change their company or disable it instead.`,
+      );
+    }
+  }
+
+  /**
    * Assert that an entity has no references, throw ConflictException if it does
    */
   async assertNoReferences(
@@ -119,6 +140,7 @@ export class ReferenceCheckService {
 
     switch (entityType) {
       case 'company':
+        await this.assertNoCostCenters(entityId, entityName, opts);
         result = await this.checkCompanyReferences(entityId, opts);
         break;
       case 'supplier':

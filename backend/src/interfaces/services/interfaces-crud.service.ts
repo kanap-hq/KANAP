@@ -15,6 +15,7 @@ import { InterfaceBinding } from '../../interface-bindings/interface-binding.ent
 import { InterfaceConnectionLink } from '../../interface-connection-links/interface-connection-link.entity';
 import { Application } from '../../applications/application.entity';
 import { AuditService } from '../../audit/audit.service';
+import { withSavepoint } from '../../common/savepoint.util';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { InterfaceMappingsService } from './interface-mappings.service';
@@ -433,12 +434,12 @@ export class InterfacesCrudService extends InterfacesBaseService {
 
     for (const id of ids || []) {
       try {
-        await this.delete(id, userId, { manager: mg, deleteRelatedBindings: opts?.deleteRelatedBindings });
+        await withSavepoint(mg, () => this.delete(id, userId, { manager: mg, deleteRelatedBindings: opts?.deleteRelatedBindings }));
         result.deleted.push(id);
       } catch (error: any) {
         let name = 'Unknown';
         try {
-          const row = await repo.findOne({ where: { id } });
+          const row = await withSavepoint(mg, () => repo.findOne({ where: { id } }));
           if (row) name = row.name;
         } catch {}
         result.failed.push({

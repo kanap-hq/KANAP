@@ -6,6 +6,7 @@ import { SupplierContactLink } from './supplier-contact.entity';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
 export class ContactsDeleteService extends BaseDeleteService<ExternalContact> {
@@ -45,12 +46,12 @@ export class ContactsDeleteService extends BaseDeleteService<ExternalContact> {
 
     for (const id of ids) {
       try {
-        await this.delete(id, { manager, skipAudit: true });
+        await withSavepoint(manager, () => this.delete(id, { manager, skipAudit: true }));
         result.deleted.push(id);
       } catch (e: any) {
         let name = 'Unknown';
         try {
-          const c = await repo.findOne({ where: { id } });
+          const c = await withSavepoint(manager, () => repo.findOne({ where: { id } }));
           if (c) name = c.email;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch contact name for error reporting: ${err?.message || 'Unknown error'}`);

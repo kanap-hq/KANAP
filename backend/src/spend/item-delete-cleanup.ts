@@ -1,6 +1,7 @@
 import { HttpException, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { withSavepoint } from '../common/savepoint.util';
 import { ATTACHMENT_TABLES } from '../common/storage-path-refs';
 import { StorageService } from '../common/storage/storage.service';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
@@ -164,21 +165,9 @@ export async function currentTenantId(manager: EntityManager): Promise<string> {
 /**
  * Runs one item of a bulk delete under its own savepoint, so a failing item is
  * undone alone and the request transaction stays usable for the others.
- * Without an open transaction every statement commits on its own anyway.
  */
-export async function underItemSavepoint<T>(manager: EntityManager, index: number, fn: () => Promise<T>): Promise<T> {
-  if (!manager.queryRunner?.isTransactionActive) return fn();
-  const name = `item_delete_${index}`;
-  await manager.query(`SAVEPOINT ${name}`);
-  try {
-    const result = await fn();
-    await manager.query(`RELEASE SAVEPOINT ${name}`);
-    return result;
-  } catch (err) {
-    await manager.query(`ROLLBACK TO SAVEPOINT ${name}`);
-    await manager.query(`RELEASE SAVEPOINT ${name}`);
-    throw err;
-  }
+export async function underItemSavepoint<T>(manager: EntityManager, _index: number, fn: () => Promise<T>): Promise<T> {
+  return withSavepoint(manager, fn);
 }
 
 /** The reason a bulk delete reports for a failed item: an HTTP error's own message, otherwise a plain one. */
