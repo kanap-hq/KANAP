@@ -547,7 +547,7 @@ describe('BudgetTab periods', () => {
     expect(bulkCalls()[0][1]).toEqual({
       kind: 'annual',
       year: YEAR,
-      totals: { planned: '12000.00', committed: '0.00', forecast: '0.00', expected_landing: '0.00' },
+      totals: { planned: '12000.00', committed: '0.00', forecast: '0.00', expected_landing: '0.00', actual: '0.00' },
       spread_profile_name: '4-4-5',
       period_start: '2026-04-01',
       period_end: '2026-12-31',
@@ -578,7 +578,7 @@ describe('BudgetTab periods', () => {
     expect(bulkCalls()[0][1]).toEqual({
       kind: 'annual',
       year: YEAR,
-      totals: { committed: '10800.00', planned: '12000.00', forecast: '7200.00', expected_landing: '8400.00' },
+      totals: { committed: '10800.00', planned: '12000.00', forecast: '7200.00', expected_landing: '8400.00', actual: '9600.00' },
       spread_profile_name: 'flat',
       period_start: '2026-07-01',
       period_end: '2026-12-31',
@@ -650,7 +650,7 @@ describe('BudgetTab periods', () => {
     });
   });
 
-  it('Apply to all columns sends every total of the group in exact cents, without a frozen column', async () => {
+  it('Apply to all columns sends every column total in exact cents, without a frozen column', async () => {
     // 333.33 twelve times: a float sum gives 3999.9599999999996, cents give 3999.96.
     setupApi({ grain: 'monthly', frozen: ['revision'], monthValues: { forecast: '333.33' } });
     renderTab();
@@ -660,7 +660,7 @@ describe('BudgetTab periods', () => {
     expect(screen.queryByText(/will also be spread/)).not.toBeInTheDocument();
     fireEvent.mouseOver(screen.getByText('Apply to all columns'));
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      'Budget, Revision, Forecast and Expected landing follow the same period. Actuals keeps its own period. Frozen columns never change.',
+      'Budget, Revision, Forecast, Expected landing and Actuals follow the same period. Frozen columns never change.',
     );
 
     fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '24000' } });
@@ -669,7 +669,7 @@ describe('BudgetTab periods', () => {
     expect(bulkCalls()[0][1]).toEqual({
       kind: 'annual',
       year: YEAR,
-      totals: { planned: '24000.00', forecast: '3999.96', expected_landing: '8400.00' },
+      totals: { planned: '24000.00', forecast: '3999.96', expected_landing: '8400.00', actual: '9600.00' },
       spread_profile_name: 'flat',
       period_start: '2026-01-01',
       period_end: '2026-12-31',
@@ -718,7 +718,7 @@ describe('BudgetTab periods', () => {
 
     expect(periodLine('actual')).toHaveTextContent('Edited by hand · 6 months, July to December');
 
-    // From Actuals, the switch spreads Actuals plus the four columns of the group.
+    // From Actuals, the switch spreads every column.
     fireEvent.click(within(periodLine('actual').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
     expect(await screen.findByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('9 600');
     expect(screen.getByLabelText('Apply to all columns')).toBeChecked();

@@ -42,10 +42,10 @@ export const AMOUNT_MEASURES: AmountMeasure[] = ['planned', 'committed', 'foreca
 
 /**
  * The columns "Apply to all columns" spreads together. This is the product
- * default; step R makes it a tenant setting. Nothing else may test a column
- * name to decide a behaviour.
+ * default, every column; step R makes it the per-tenant `group_spread`
+ * setting. Nothing else may test a column name to decide a behaviour.
  */
-export const APPLY_TO_ALL_COLUMNS: AmountMeasure[] = ['planned', 'committed', 'forecast', 'expected_landing'];
+export const APPLY_TO_ALL_COLUMNS: AmountMeasure[] = AMOUNT_MEASURES;
 
 const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
 
