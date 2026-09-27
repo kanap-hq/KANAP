@@ -15,7 +15,7 @@ El panel de control está construido a partir de mosaicos dispuestos en una cuad
 
 ### Resumen OPEX
 
-Una tabla compacta que cubre tres ejercicios fiscales: año anterior (A-1), año actual (A) y año siguiente (A+1). Aparecen hasta cinco columnas de valores: **Presupuesto**, **Revisión**, **Previsión**, **Realizado** y **Aterrizaje previsto**. Una columna se muestra cuando contiene un importe para al menos uno de los tres años. Los mosaicos OPEX y CAPEX muestran las mismas columnas. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7 846k`).
+Una tabla compacta que cubre tres ejercicios fiscales: año anterior (A-1), año actual (A) y año siguiente (A+1). Aparecen hasta cinco columnas de valores: las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Una columna se muestra cuando contiene un importe para al menos uno de los tres años. Las columnas ocultas nunca aparecen. Los mosaicos OPEX y CAPEX muestran las mismas columnas. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7 846k`).
 
 Haga clic en **Ver** para abrir la lista OPEX.
 
@@ -56,13 +56,13 @@ Debajo de los botones, una sección de **Actualizaciones recientes** lista las c
 
 ### Top partidas (A)
 
-Las cinco partidas más grandes para el año actual, clasificadas por importe presupuestario. Los importes se redondean a miles con sufijo "k".
+Las cinco partidas más grandes para el año actual, clasificadas por la columna por defecto. El título indica la columna, por ejemplo **Top partidas (Presupuesto, A)**. Los importes se redondean a miles con sufijo "k".
 
 Use las pestañas **OPEX** / **CAPEX** del encabezado del mosaico para elegir el tipo de partida. El mosaico recuerda su elección. Haga clic en **Abrir** para ver el informe completo Top partidas sobre el mismo tipo.
 
 ### Mayores incrementos (A vs A-1)
 
-Las cinco partidas con el mayor incremento presupuestario comparado con el año anterior, calculado sobre todas las partidas del tipo. Las partidas cuyo presupuesto se mantuvo o bajó no aparecen. Los importes se redondean a miles con sufijo "k".
+Las cinco partidas con el mayor incremento en la columna por defecto comparado con el año anterior, calculado sobre todas las partidas del tipo. El título indica la columna, por ejemplo **Mayores incrementos (Presupuesto, A vs A-1)**. Las partidas cuyo importe se mantuvo o bajó no aparecen. Los importes se redondean a miles con sufijo "k".
 
 Use las pestañas **OPEX** / **CAPEX** del encabezado del mosaico para elegir el tipo de partida. El mosaico recuerda su elección. Haga clic en **Abrir** para ver el informe completo Top aumento / disminución sobre el mismo tipo.
 
@@ -70,6 +70,7 @@ Un tipo que usted no puede consultar aparece desactivado en las pestañas y no t
 
 ## Consejos
 
+- **Qué columna usan los mosaicos**: Un administrador de presupuesto elige la columna por defecto y los nombres de las columnas en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Los mosaicos de top y los informes que abren siguen esa elección.
 - **Números redondeados**: Cada importe en el panel de control se redondea a miles para una vista compacta. Abra la lista OPEX o CAPEX, o los informes, cuando necesite cifras exactas.
 - **Botones ausentes**: Si no ve los botones **Nuevo OPEX** o **Nuevo CAPEX**, su rol actual no incluye el permiso de gestor requerido. Solicite a su administrador que verifique su acceso.
 - **Mosaicos vacíos**: Un mosaico que muestra "Sin datos" simplemente significa que no hay registros de ese tipo todavía. Una vez que usted o su equipo empiecen a introducir datos, el mosaico se llenará automáticamente.

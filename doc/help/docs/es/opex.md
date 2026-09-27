@@ -2,7 +2,7 @@
 
 Las partidas OPEX (gasto operativo) son sus costes IT recurrentes: licencias de software, suscripciones cloud, contratos de mantenimiento y servicios. Aquí es donde planifica presupuestos, hace seguimiento del realizado y asigna costes en toda su organización.
 
-El espacio de trabajo OPEX le ayuda a gestionar cada partida de gasto desde la presupuestación inicial hasta la ejecución y los informes -- todo en un solo lugar con columnas presupuestarias año a año, métodos flexibles de asignación y vínculos directos a proveedores, contratos, aplicaciones y proyectos.
+El espacio de trabajo OPEX le ayuda a gestionar cada partida de gasto desde la presupuestación inicial hasta la ejecución y los informes, todo en un solo lugar con columnas presupuestarias año a año, métodos flexibles de asignación y vínculos directos a proveedores, contratos, aplicaciones y proyectos.
 
 ## Primeros pasos
 
@@ -43,12 +43,11 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Contrato**: El nombre del último contrato vinculado (enlaza al espacio de trabajo del Contrato)
   - **Cuenta**: El número y nombre de cuenta contable
   - **Asignación**: La etiqueta del método de asignación del año actual (enlaza a la pestaña Asignaciones)
-  - **Presupuesto A**: Importe del presupuesto del año actual (enlaza a la pestaña Presupuesto de este año)
-  - **Aterrizaje previsto A**: Importe del aterrizaje previsto del año actual (enlaza a la pestaña Presupuesto de este año)
+  - **Presupuesto A** y **Aterrizaje previsto A**: Los importes del año actual de la columna por defecto y de la última columna visible (enlazan a la pestaña Presupuesto de este año). Con la configuración estándar son Presupuesto y Aterrizaje previsto. Cuando la columna por defecto es también la última visible, aparece una sola columna de importe. Consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)
   - **Tarea**: El título de la última tarea (enlaza a la pestaña Vista general, donde está el panel de tareas)
 
 **Columnas adicionales** (ocultas por defecto, habilítelas mediante el selector de columnas):
-  - **Columnas de importes**: Cada columna presupuestaria (Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto) para A-1, A, A+1 y A+2. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Los importes están en la moneda de reporte
+  - **Columnas de importes**: Cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Los importes están en la moneda de reporte. Las columnas ocultas no se ofrecen
   - **Habilitado**: Estado de la partida (habilitado o deshabilitado)
   - **Descripción**: Descripción de la partida
   - **Moneda**: Código de moneda ISO
@@ -70,7 +69,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
 
 **Ordenación**:
   - Haga clic en un encabezado de columna para ordenar ascendente/descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe
-  - La ordenación predeterminada es por **Presupuesto A** descendente
+  - La ordenación predeterminada es por la columna por defecto del año actual, de mayor a menor (**Presupuesto A** con la configuración estándar). Los botones **Anterior** y **Siguiente** del espacio de trabajo siguen el mismo orden
   - La lista recuerda su última ordenación, búsqueda y filtros cuando regresa
 
 **Fila de totales**:
@@ -150,13 +149,16 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - Al cambiar de año se guardan primero sus cambios pendientes
 
 **Columnas presupuestarias**:
+  - La pestaña muestra las columnas que muestra su organización, con sus nombres, siempre en el mismo orden. Las columnas estándar son:
   - **Presupuesto**: Presupuesto anual inicial aprobado a principios de año
   - **Revisión**: Actualización presupuestaria a mitad de año (p. ej., tras una reprevisión)
-  - **Realizado**: Gasto real esperado (su mejor estimación a medida que avanza el año)
-  - **Aterrizaje previsto**: Gasto real final después del cierre de fin de año
+  - **Previsión**: Una columna de planificación adicional, oculta por defecto
+  - **Realizado**: El gasto real, tal como se registra durante el año
+  - **Aterrizaje previsto**: Su mejor estimación de la cifra de fin de año
+  - Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y elegir la columna por defecto en **Gestión presupuestaria > Administración > Columnas presupuestarias** (consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)). Una columna oculta conserva sus importes
 
 **Periodo de una columna**:
-  - Cada columna (Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto) tiene un periodo dentro del año, por ejemplo de abril a diciembre
+  - Cada columna tiene un periodo dentro del año, por ejemplo de abril a diciembre
   - Un mes cuenta cuando el periodo cubre su día 15. Un periodo que empieza el 10 de abril incluye abril; uno que empieza el 20 de abril comienza en mayo
   - Una columna sin importe y sin periodo recibe una sugerencia: el **Inicio de vigencia** y el **Fin de validez** de la partida, limitados al año. Una partida que empieza el 1 de abril sugiere de abril a diciembre
   - Una columna que ya tiene importes y no tiene periodo se lee como todo el año, de modo que los datos existentes se comportan como antes
@@ -164,20 +166,22 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 **Anual o Mensual**:
   - **Anual**: Introduzca un total por columna. El total se reparte uniformemente entre los meses del periodo de la columna, y los meses fuera de él se ponen a cero. El periodo aparece bajo cada total antes de escribir, por ejemplo «9 meses, de abril a diciembre». Solo se guarda el total que usted modifica. Las demás columnas conservan sus importes mensuales.
   - Haga clic en el icono de lápiz junto al periodo bajo un total (**Cambiar el periodo**) para abrir el panel de reparto en esa columna, con su total actual. Si las fechas de la partida no dejan ningún mes en el año, el total se deshabilita y muestra «Ningún mes de 2026 está dentro de las fechas de la partida.» Haga clic en el icono de lápiz junto a ese texto (**Elegir el periodo**) para definirlo usted mismo.
-  - **Mensual**: Introduzca importes por mes (Ene-Dic) para cada columna, más una columna **Previsión** para planificación adicional. Se muestran subtotales trimestrales y un total anual. Solo se guardan los meses que usted modifica.
+  - **Mensual**: Introduzca importes por mes (Ene-Dic) para cada columna visible. Se muestran subtotales trimestrales y un total anual. Solo se guardan los meses que usted modifica.
+  - Ambas pestañas muestran las mismas columnas: Previsión también aparece en **Anual** cuando se muestra.
   - Cambie de modo con las pestañas **Anual** y **Mensual**. Cambiar de modo no modifica sus importes.
 
 **Comportamiento de congelación**:
   - Si las columnas presupuestarias de un año están congeladas (vía Administración presupuestaria), los campos correspondientes pasan a solo lectura y muestran un candado
   - Puede ver los datos congelados; los administradores pueden descongelar vía **Gestión presupuestaria > Administración > Congelar / Descongelar datos**
-  - Cada columna puede congelarse independientemente (Presupuesto, Revisión, Previsión, Realizado, Aterrizaje previsto)
+  - Cada columna puede congelarse independientemente
 
 **Repartir un importe**:
   - El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde el icono de lápiz bajo un total
-  - Elija una **Columna** (Presupuesto, Revisión, Previsión, Aterrizaje previsto o Realizado), compruebe el **Importe**, elija una **Distribución** (**Uniforme** o **4-4-5**) y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna, y la distribución de la que ya tiene la columna
-  - El importe parte del total actual de la columna, en ambas pestañas, y se actualiza cuando elige otra columna. Queda vacío cuando la columna no tiene importe
-  - **Aplicar a todas las columnas** está activado por defecto: cada columna (Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto) recibe el mismo periodo y la misma distribución, cada una con su propio total actual. Las columnas congeladas son la excepción: nunca cambian. Pase el cursor sobre el interruptor para ver qué columnas siguen. Desactive el interruptor para repartir solo la columna seleccionada
-  - **Restablecer** rellena el panel con el total actual de la columna, **Uniforme** y el año completo. No guarda nada: haga clic en **Aplicar** para usarlo. Con **Aplicar a todas las columnas** activado, **Restablecer** y luego **Aplicar** devuelven cada columna a un reparto uniforme en doce meses
+  - Elija una **Columna** entre las columnas visibles, compruebe el **Importe**, elija una **Distribución** (**Uniforme** o **4-4-5**) y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna, y la distribución de la que ya tiene la columna
+  - El panel se abre en la columna por defecto. El importe parte del total actual de la columna, en ambas pestañas, y se actualiza cuando elige otra columna. Queda vacío cuando la columna no tiene importe
+  - **Aplicar a todas las columnas** está activado por defecto: cada columna que lo sigue recibe el mismo periodo y la misma distribución, cada una con su propio total actual. Por defecto, todas las columnas lo siguen. Un administrador de presupuesto elige cuáles en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Las columnas congeladas nunca cambian. Pase el cursor sobre el interruptor para ver qué columnas siguen y cuáles conservan su propio periodo. Desactive el interruptor para repartir solo la columna seleccionada
+  - Una columna que no sigue «Aplicar a todas las columnas» se reparte sola: el interruptor no aparece cuando la reparte. El interruptor también se oculta cuando ninguna otra columna que lo sigue puede cambiar
+  - **Restablecer** rellena el panel con el total actual de la columna, **Uniforme** y el año completo. No guarda nada: haga clic en **Aplicar** para usarlo. Con **Aplicar a todas las columnas** activado, **Restablecer** y luego **Aplicar** devuelven cada columna que lo sigue a un reparto uniforme en doce meses
   - Los totales introducidos en la pestaña **Anual** siguen aplicándose solo a su propia columna
   - Las fechas **Desde** y **Hasta** muestran el periodo. Cuando algunos meses quedan fuera, el panel indica cuáles se pondrán a cero («De enero a marzo se pondrán a cero.»). Un periodo de todo el año no muestra ninguna línea. Pase el cursor sobre el icono de información junto al título del panel para ver la regla del día 15
   - Con **4-4-5**, los pesos de los meses que cuentan se amplían para que todo el importe recaiga en ellos
@@ -196,7 +200,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - **Borrar columna**: el icono junto al encabezado de una columna pone a cero todos los meses de esa columna, por ejemplo antes de introducir todo el importe en un solo mes. Cuenta como una edición a mano. Para quitar a la vez los importes y el periodo de una columna en todas las partidas, use **Restablecer columna presupuestaria** en la Administración presupuestaria
 
 **Tendencia plurianual**:
-  - Un gráfico bajo la cuadrícula muestra las columnas presupuestarias de la partida a lo largo de los años y se actualiza mientras escribe
+  - Un gráfico bajo la cuadrícula muestra cada columna visible a lo largo de los años, incluida Previsión cuando se muestra, y se actualiza mientras escribe
 
 **Cómo usarlo**:
   1. Seleccione el año que está planificando
@@ -215,13 +219,13 @@ La pestaña Asignaciones distribuye el gasto entre sus empresas y departamentos.
 **Selección de año**:
   - Funciona igual que Presupuesto: use las pestañas de año para alternar entre A-2, A-1, A, A+1, A+2
   - Cada año puede tener un método de asignación diferente
-  - El **Presupuesto del año** seleccionado aparece a la derecha, y la tabla muestra cada parte como porcentaje y como importe
+  - El total anual de la columna por defecto aparece a la derecha, por ejemplo **Presupuesto, total del año**, y la tabla muestra cada parte como porcentaje y como importe
 
 **Métodos de asignación**:
 
 | Método | Cómo funciona |
 |---|---|
-| **Plantilla (por defecto)** | Reparte el gasto proporcionalmente según la plantilla de cada empresa para el año seleccionado. No requiere selección manual -- los porcentajes se calculan automáticamente a partir de las métricas de las empresas. Es el método estándar. |
+| **Plantilla (por defecto)** | Reparte el gasto proporcionalmente según la plantilla de cada empresa para el año seleccionado. No requiere selección manual: los porcentajes se calculan automáticamente a partir de las métricas de las empresas. Es el método estándar. |
 | **Usuarios IT** | Reparte el gasto proporcionalmente según el número de usuarios IT de cada empresa para el año seleccionado. |
 | **Facturación** | Reparte el gasto proporcionalmente según la facturación de cada empresa para el año seleccionado. |
 | **Manual por empresa** | Usted selecciona qué empresas reciben este gasto y elige un inductor en **Asignar por** (Plantilla, Usuarios IT o Facturación) para calcular los porcentajes solo entre las empresas seleccionadas. |
@@ -229,7 +233,7 @@ La pestaña Asignaciones distribuye el gasto entre sus empresas y departamentos.
 | **Porcentajes manuales** | Usted elige las empresas y escribe cada porcentaje. El total debe sumar 100 %. |
 
 **Métodos por defecto y fijados**:
-  - La opción **por defecto** -- mostrada como *Plantilla (por defecto)* hasta que su organización configure otro método -- sigue la configuración de **Gestión presupuestaria > Administración > Método de asignación por defecto**. Cada partida que se deje en el valor por defecto se recalcula cuando un administrador cambia esa configuración
+  - La opción **por defecto**, mostrada como *Plantilla (por defecto)* hasta que su organización configure otro método, sigue la configuración de **Gestión presupuestaria > Administración > Método de asignación por defecto**. Cada partida que se deje en el valor por defecto se recalcula cuando un administrador cambia esa configuración
   - Esa configuración también puede restringir el valor por defecto a una **selección de empresas** (por ejemplo la entidad que lleva el presupuesto IT): el inductor se aplica entonces solo a esas empresas, y la opción muestra *Por defecto (n sociedades)*
   - **Plantilla**, **Usuarios IT** y **Facturación** fijan ese método en la partida: un método fijado sigue funcionando aunque el valor por defecto de la organización cambie más adelante
   - Las partidas con una asignación manual nunca se ven afectadas por la configuración por defecto
@@ -250,7 +254,7 @@ La pestaña Asignaciones distribuye el gasto entre sus empresas y departamentos.
   - **Métricas faltantes**: Una o más empresas tienen la plantilla, los usuarios IT o la facturación en cero o sin informar para el año seleccionado. Complete las métricas en **Datos maestros > Empresas** (pestaña Detalles)
   - **"Los porcentajes manuales deben sumar 100 %."**: Ajuste las filas o haga clic en **Repartir equitativamente**
 
-**Consejo**: Use Plantilla (por defecto) para la mayoría de partidas -- es lo más sencillo y se actualiza automáticamente. Reserve los métodos manuales para gastos que solo benefician a empresas o departamentos concretos.
+**Consejo**: Use Plantilla (por defecto) para la mayoría de partidas: es lo más sencillo y se actualiza automáticamente. Reserve los métodos manuales para gastos que solo benefician a empresas o departamentos concretos.
 
 ---
 
@@ -332,7 +336,7 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   - **Responsables**: `owner_it_email` y `owner_business_email` deben coincidir con usuarios activos por correo electrónico: un usuario invitado o un contacto sin cuenta se rechaza
   - **Fechas**: `effective_start` (y `effective_end` en archivos antiguos) debe ser un día real del calendario en formato `YYYY-MM-DD`, por ejemplo `2026-01-01`. Otros formatos, como `01/03/2026`, son errores. Un `effective_start` vacío conserva la fecha guardada de una partida existente; una partida nueva empieza el 1 de enero del año en curso
   - **Categoría analítica**: Si la categoría no existe, se crea automáticamente durante la importación
-  - **Presupuestos**: Las columnas presupuestarias rellenan las versiones A-1, A y A+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual) y el periodo de la columna pasa a ser todo el año. Una celda vacía deja la columna como está; `0` la borra
+  - **Presupuestos**: Las columnas presupuestarias rellenan las versiones A-1, A y A+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual) y el periodo de la columna pasa a ser todo el año. Una celda vacía deja la columna como está; `0` la borra. Los encabezados conservan sus nombres técnicos sea cual sea el nombre que su organización da a las columnas, y también cargan las columnas ocultas
   - **Importes mensuales**: para cargar o revisar los importes mes a mes, con el periodo de cada columna, use el **Archivo de filas presupuestarias** en la Administración presupuestaria
 
 **Errores comunes**:
@@ -414,9 +418,9 @@ Cada partida OPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de
 
 El acceso a OPEX se controla por tres niveles:
 
-- `opex:reader` -- Ver la lista OPEX, abrir partidas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
-- `opex:manager` -- Crear y editar partidas OPEX, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones y enlaces
-- `opex:admin` -- Todos los derechos de gestor más importación/exportación CSV, operaciones presupuestarias (congelar, copiar, restablecer) y eliminación masiva
+- `opex:reader`: Ver la lista OPEX, abrir partidas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
+- `opex:manager`: Crear y editar partidas OPEX, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones y enlaces
+- `opex:admin`: Todos los derechos de gestor más importación/exportación CSV, operaciones presupuestarias (congelar, copiar, restablecer) y eliminación masiva
 
 Adicionalmente:
 - Las tareas tienen permisos separados (`tasks:member` para crear/editar tareas en partidas OPEX)

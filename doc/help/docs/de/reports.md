@@ -38,6 +38,10 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 
 Die beiden Leistungsverrechnungsberichte decken nur OPEX ab.
 
+### Budgetspalten in Berichten
+
+Jede Spalten- oder Kennzahlauswahl bietet die Budgetspalten an, die Ihre Organisation anzeigt, unter ihren Namen und in der festen Spaltenreihenfolge. Prognose wird angeboten, wenn sie angezeigt wird. Ausgeblendete Spalten werden nicht angeboten. Jeder Bericht beginnt mit der Standardspalte, wie unten beschrieben. Budgetadministratoren legen die Namen, die angezeigten Spalten und die Standardspalte unter [Budgetspalten](budget-operations.md#budgetspalten) fest.
+
 ---
 
 ## Globale Leistungsverrechnung
@@ -47,7 +51,7 @@ Zeigen Sie Kostenzuordnungen über alle Unternehmen hinweg mit Zusammenfassungs-
 ### Steuerungen
 
 - **Jahr**: Vorheriges, aktuelles oder nächstes Geschäftsjahr
-- **Spalte**: Budget, Erwarteter Endwert, Ist-Werte oder Revision
+- **Spalte**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Unternehmens-Summen** (Kontrollkästchen): Unternehmens-Summentabelle und Balkendiagramm ein-/ausblenden
 - **Detaillierte Zuordnungen** (Kontrollkästchen): Aufschlüsselung nach Unternehmen/Abteilung ein-/ausblenden
 - **KPIs einbeziehen** (Kontrollkästchen): KPI-Tabelle ein-/ausblenden
@@ -111,7 +115,7 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 - **Unternehmen**: Welches Unternehmen analysiert werden soll
 - **Jahr**: Vorheriges, aktuelles oder nächstes Geschäftsjahr
-- **Spalte**: Budget, Erwarteter Endwert, Ist-Werte oder Revision
+- **Spalte**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Abteilungs-Summen** (Kontrollkästchen): Abteilungsaufschlüsselung ein-/ausblenden
 - **Verrechnungspositionen** (Kontrollkästchen): Einzelzuordnungen ein-/ausblenden
 - **Verrechnungs-KPIs** (Kontrollkästchen): KPI-Vergleichstabelle ein-/ausblenden
@@ -157,7 +161,7 @@ Identifizieren Sie Ihre größten OPEX- oder CAPEX-Positionen für ein bestimmte
 
 - **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
 - **Jahr**: Vorheriges, aktuelles oder nächstes Jahr
-- **Kennzahl**: Budget, Revision, Ist-Werte oder Erwarteter Endwert
+- **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Top-Anzahl**: Wie viele Positionen angezeigt werden (Standard: 10, Minimum: 1)
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm
 - **Positionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Positionen
@@ -175,8 +179,10 @@ Identifizieren Sie Ihre größten OPEX- oder CAPEX-Positionen für ein bestimmte
 
 **Zusammenfassungskarten unter der Tabelle**:
 
-- Top-N-Summe (mit Prozentsatz der gefilterten Kennzahl)
-- Gesamtwert für die ausgewählte Kennzahl über alle Positionen
+- **Top N gesamt**, mit ihrem Anteil an der gefilterten Summe, zum Beispiel „45 % der gefilterten Summe“
+- Die Summe der ausgewählten Spalte über alle Positionen, beschriftet mit dem Spaltennamen, zum Beispiel **Budget, gesamt**
+
+Die Fußnote des Diagramms nennt dieselbe Summe, zum Beispiel „Budget, gesamt: 1 234“.
 
 ### Anwendungsfall
 
@@ -199,7 +205,7 @@ Identifizieren Sie die größten OPEX- oder CAPEX-Veränderungen zwischen zwei B
 - **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
 - **Richtung**: Tabs **Anstiege**, **Rückgänge** oder **Beide**
 
-Die Jahresauswahlen listen die Jahre, die Daten enthalten. Die Kennzahlauswahlen bieten die vier Berichtsspalten: Budget, Ist-Werte, Erwarteter Endwert und Revision.
+Die Jahresauswahlen listen die Jahre, die Daten enthalten. Die Kennzahlauswahlen bieten die angezeigten Budgetspalten an. Der Bericht beginnt mit der Standardspalte des Vorjahres als Quelle und der Standardspalte des aktuellen Jahres als Ziel.
 
 Wenn **Beide** ausgewählt ist, wird die Kreisdiagramm-Option deaktiviert und der Bericht wechselt automatisch zum Balkendiagramm.
 
@@ -235,7 +241,7 @@ Vergleichen Sie OPEX-Kennzahlen über mehrere Jahre in einem einzelnen Liniendia
 
 - **Startjahr**: Beginn des Bereichs (aktuelles Jahr minus 2 bis plus 2)
 - **Endjahr**: Ende des Bereichs
-- **Kennzahlen**: Mehrfachauswahl aus Budget, Ist-Werte, Erwarteter Endwert, Revision (mindestens eine erforderlich)
+- **Kennzahlen**: Mehrfachauswahl aus den angezeigten Budgetspalten. Der Bericht beginnt mit der Standardspalte und der letzten angezeigten Spalte (Budget und Erwarteter Endwert mit den Standardeinstellungen). Wenn Sie alle Kennzahlen entfernen, wird die Standardspalte verwendet
 
 ### Was Sie sehen
 
@@ -273,7 +279,7 @@ Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen für entweder OPEX
 ### Steuerungen
 
 - **Positionstyp**: OPEX- oder CAPEX-Umschalter
-- **Auswahlen**: Jede Auswahl hat eine Jahrauswahl und eine Spaltenauswahl (Budget, Revision, Ist-Werte, Erwarteter Endwert). Auswahlen mit der **Hinzufügen**-Schaltfläche hinzufügen und mit dem Löschsymbol entfernen. Maximum von 10 Auswahlen; Minimum von 1.
+- **Auswahlen**: Jede Auswahl hat eine Jahrauswahl und eine Spaltenauswahl mit den angezeigten Budgetspalten. Der Bericht beginnt mit zwei Auswahlen: der Standardspalte des aktuellen Jahres und des nächsten Jahres. **Hinzufügen** fügt die Standardspalte des aktuellen Jahres hinzu, und das Löschsymbol entfernt eine Auswahl. Maximum von 10 Auswahlen; Minimum von 1.
 - **Jahresgruppierung** (Kontrollkästchen): Wenn aktiviert und mindestens zwei Jahre eine Kennzahl teilen, wechselt zu einem gruppierten Liniendiagramm mit einer Serie pro Kennzahl und Jahren auf der X-Achse. Wenn deaktiviert, zeigt ein flaches Liniendiagramm mit jeder Auswahl als Datenpunkt.
 
 ### Was Sie sehen
@@ -304,7 +310,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wob
 
 - **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
-- **Kennzahl**: Budget, Ist-Werte, Erwarteter Endwert oder Revision
+- **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur verfügbar bei Auswahl eines einzelnen Jahres)
 - **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
 
@@ -333,7 +339,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Analysedimension. Das Lay
 
 - **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
-- **Kennzahl**: Budget, Ist-Werte, Erwarteter Endwert oder Revision
+- **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur Einzeljahr)
 - **Analysedimensionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Dimensionen
 
@@ -362,16 +368,11 @@ Jeder Bericht bietet diese Funktionen über die gemeinsame Symbolleiste:
 - **Diagramm als PNG exportieren** (Bild-Symbol): Lädt das Diagramm als PNG-Bild herunter
 - **Drucken / Als PDF speichern** (Druck-Symbol): Öffnet den Browser-Druckdialog. Sie können auch `?print=1` an jede Bericht-URL anhängen, um den Druck beim Laden automatisch auszulösen.
 
+Exportierte Dateinamen enthalten den Spaltennamen, zum Beispiel `top10-opex-2026-budget-bar.png`.
+
 ### Verfügbare Kennzahlen
 
-Alle Berichte, die eine Kennzahlauswahl bieten, verwenden die gleichen vier Spalten:
-
-| Schlüssel | Bezeichnung |
-|-----------|-------------|
-| `budget` | Budget |
-| `revision` | Revision |
-| `follow_up` | Ist-Werte |
-| `landing` | Erwarteter Endwert |
+Jede Kennzahl- oder Spaltenauswahl bietet dieselben Budgetspalten an: die, die Ihre Organisation anzeigt, unter ihren Namen. Mit den Standardeinstellungen sind das Budget, Revision, Ist-Werte und Erwarteter Endwert. Prognose wird angeboten, wenn sie angezeigt wird. Siehe [Budgetspalten in Berichten](#budgetspalten-in-berichten).
 
 ### Navigation
 
@@ -384,6 +385,6 @@ Jeder Bericht zeigt eine Breadcrumb-Navigation zurück zum **Berichte**-Hub, sod
 - **Mit der Globalen Leistungsverrechnung beginnen**: Verschaffen Sie sich den Gesamtüberblick über Zuordnungen, bevor Sie in ein einzelnes Unternehmen eintauchen.
 - **Top-Positionen für schnelle Erfolge nutzen**: Die größten Kostenpositionen sind Ihre ersten Kandidaten für Optimierung.
 - **Budget vs. Erwarteter Endwert vergleichen**: Verwenden Sie den Bericht Budgetspaltenvergleich, um die Prognosegenauigkeit über Jahre zu messen.
-- **Abschnitte in Leistungsverrechnungsberichten umschalten**: Die Kontrollkästchen ermöglichen es, sich nur auf die benötigten Daten zu konzentrieren -- Abteilungen, Positionen, KPIs oder Flüsse -- ohne visuelle Unordnung.
+- **Abschnitte in Leistungsverrechnungsberichten umschalten**: Die Kontrollkästchen ermöglichen es, sich nur auf die benötigten Daten zu konzentrieren (Abteilungen, Positionen, KPIs oder Flüsse), ohne visuelle Unordnung.
 - **Jahresgruppierung im Budgetspaltenvergleich**: Wenn Sie die gleiche Kennzahl über mehrere Jahre vergleichen, aktivieren Sie die Jahresgruppierung für ein übersichtlicheres Liniendiagramm.
 - **Für Präsentationen exportieren**: Diagramme exportieren als PNG und Tabellen als CSV, beides bereit für Folien oder Tabellenkalkulationen.

@@ -38,6 +38,10 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 
 Los dos informes de contracargo cubren solo OPEX.
 
+### Columnas presupuestarias en los informes
+
+Cada selector de columna o de métrica ofrece las columnas presupuestarias que muestra su organización, con sus nombres, en el orden fijo de las columnas. Previsión se ofrece cuando se muestra. Las columnas ocultas no se ofrecen. Cada informe empieza en la columna por defecto, como se describe a continuación. Los administradores de presupuesto definen los nombres, las columnas visibles y la columna por defecto en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias).
+
 ---
 
 ## Contracargo global
@@ -47,7 +51,7 @@ Vea las asignaciones de costes entre todas las empresas con KPI resumen y flujos
 ### Controles
 
 - **Año**: Ejercicio fiscal anterior, actual o siguiente
-- **Columna**: Presupuesto, Aterrizaje previsto, Realizado o Revisión
+- **Columna**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Totales por empresa** (casilla): Mostrar u ocultar la tabla de totales por empresa y el gráfico de barras
 - **Asignaciones detalladas** (casilla): Mostrar u ocultar el desglose empresa-departamento
 - **Incluir KPI** (casilla): Mostrar u ocultar la tabla de KPI
@@ -111,7 +115,7 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 
 - **Empresa**: Seleccione qué empresa analizar
 - **Año**: Ejercicio fiscal anterior, actual o siguiente
-- **Columna**: Presupuesto, Aterrizaje previsto, Realizado o Revisión
+- **Columna**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Totales por departamento** (casilla): Mostrar u ocultar el desglose por departamento
 - **Partidas de contracargo** (casilla): Mostrar u ocultar asignaciones detalladas
 - **KPI de contracargo** (casilla): Mostrar u ocultar la tabla comparativa de KPI
@@ -157,7 +161,7 @@ Identifique sus mayores partidas OPEX o CAPEX para un año dado.
 
 - **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
 - **Año**: Año anterior, actual o siguiente
-- **Métrica**: Presupuesto, Revisión, Realizado o Aterrizaje previsto
+- **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Cantidad top**: Cuántas partidas mostrar (predeterminado: 10, mínimo: 1)
 - **Tipo de gráfico**: Gráfico circular o gráfico de barras horizontales
 - **Excluir partidas**: Autocompletado de selección múltiple para excluir partidas específicas
@@ -175,8 +179,10 @@ Identifique sus mayores partidas OPEX o CAPEX para un año dado.
 
 **Tarjetas de resumen debajo de la tabla**:
 
-- Total top N (con porcentaje de la métrica filtrada)
-- Valor total para la métrica seleccionada en todas las partidas
+- **Total top N**, con su parte del total filtrado, por ejemplo «45 % del total filtrado»
+- El total de la columna seleccionada en todas las partidas, con el nombre de la columna, por ejemplo **Presupuesto, total**
+
+La nota al pie del gráfico da el mismo total, por ejemplo «Presupuesto, total: 1 234».
 
 ### Caso de uso
 
@@ -199,7 +205,7 @@ Identifique los mayores cambios OPEX o CAPEX entre dos columnas presupuestarias 
 - **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
 - **Dirección**: pestañas **Aumentos**, **Disminuciones** o **Ambos**
 
-Los selectores de año muestran los años que contienen datos. Los selectores de métrica ofrecen las cuatro columnas del informe: Presupuesto, Realizado, Aterrizaje previsto y Revisión.
+Los selectores de año muestran los años que contienen datos. Los selectores de métrica ofrecen las columnas presupuestarias visibles. El informe empieza en la columna por defecto del año pasado como origen y en la columna por defecto del año actual como destino.
 
 Cuando se selecciona **Ambos**, la opción de gráfico circular se deshabilita y el informe cambia automáticamente a barras.
 
@@ -235,7 +241,7 @@ Compare métricas OPEX en múltiples años en un solo gráfico de líneas.
 
 - **Año de inicio**: Inicio del rango (año actual menos 2 hasta más 2)
 - **Año de fin**: Fin del rango
-- **Métricas**: Selección múltiple de Presupuesto, Realizado, Aterrizaje previsto, Revisión (al menos una requerida)
+- **Métricas**: Selección múltiple entre las columnas presupuestarias visibles. El informe empieza en la columna por defecto y en la última columna visible (Presupuesto y Aterrizaje previsto con la configuración estándar). Si quita todas las métricas, se usa la columna por defecto
 
 ### Qué verá
 
@@ -273,7 +279,7 @@ Compare de forma flexible hasta 10 combinaciones de año+columna para OPEX o CAP
 ### Controles
 
 - **Tipo de partida**: Conmutador OPEX o CAPEX
-- **Selecciones**: Cada selección tiene un selector de año y un selector de columna (Presupuesto, Revisión, Realizado, Aterrizaje previsto). Añada selecciones con el botón **Añadir** y elimine con el icono de borrar. Máximo de 10 selecciones; mínimo de 1.
+- **Selecciones**: Cada selección tiene un selector de año y un selector de columna con las columnas presupuestarias visibles. El informe empieza con dos selecciones: la columna por defecto del año actual y la del año siguiente. **Añadir** añade la columna por defecto del año actual, y el icono de borrar elimina una selección. Máximo de 10 selecciones; mínimo de 1.
 - **Agrupación por año** (casilla): Cuando está habilitada y al menos dos años comparten una métrica, cambia a un gráfico de líneas agrupado con una serie por métrica y años en el eje X. Cuando está deshabilitada, muestra un gráfico de líneas plano con cada selección como punto de datos.
 
 ### Qué verá
@@ -304,7 +310,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, c
 
 - **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
-- **Métrica**: Presupuesto, Realizado, Aterrizaje previsto o Revisión
+- **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo disponible cuando se selecciona un solo año)
 - **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
 
@@ -333,7 +339,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por dimensión analítica. El d
 
 - **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
-- **Métrica**: Presupuesto, Realizado, Aterrizaje previsto o Revisión
+- **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo un año)
 - **Excluir dimensiones analíticas**: Autocompletado de selección múltiple para excluir dimensiones específicas
 
@@ -362,16 +368,11 @@ Todos los informes comparten estas capacidades a través de la barra de herramie
 - **Exportar gráfico como PNG** (icono de imagen): Descarga el gráfico como imagen PNG
 - **Imprimir / Guardar como PDF** (icono de impresión): Abre el diálogo de impresión del navegador. También puede añadir `?print=1` a cualquier URL de informe para activar la impresión automáticamente al cargar.
 
+Los nombres de los archivos exportados llevan el nombre de la columna, por ejemplo `top10-opex-2026-presupuesto-bar.png`.
+
 ### Métricas disponibles
 
-Todos los informes que ofrecen un selector de métrica usan las mismas cuatro columnas:
-
-| Clave | Etiqueta |
-|-------|----------|
-| `budget` | Presupuesto |
-| `revision` | Revisión |
-| `follow_up` | Realizado |
-| `landing` | Aterrizaje previsto |
+Cada selector de métrica o de columna ofrece las mismas columnas presupuestarias: las que muestra su organización, con sus nombres. Con la configuración estándar son Presupuesto, Revisión, Realizado y Aterrizaje previsto. Previsión se ofrece cuando se muestra. Consulte [Columnas presupuestarias en los informes](#columnas-presupuestarias-en-los-informes).
 
 ### Navegación
 
@@ -384,6 +385,6 @@ Cada informe muestra una ruta de migas de pan de vuelta al centro de **Informes*
 - **Empiece con el Contracargo global**: Obtenga una imagen general de las asignaciones antes de profundizar en una empresa.
 - **Use Top partidas para victorias rápidas**: Las partidas de coste más grandes son sus primeros candidatos para optimización.
 - **Compare Presupuesto vs Aterrizaje previsto**: Utilice el informe de Comparación de columnas presupuestarias para medir la precisión de la previsión entre años.
-- **Alterne secciones en informes de contracargo**: Los controles de casilla le permiten centrarse solo en los datos que necesita -- departamentos, partidas, KPI o flujos -- sin ruido visual.
+- **Alterne secciones en informes de contracargo**: Los controles de casilla le permiten centrarse solo en los datos que necesita (departamentos, partidas, KPI o flujos) sin ruido visual.
 - **Agrupación por año en Comparación de columnas presupuestarias**: Al comparar la misma métrica en múltiples años, active la agrupación por año para un gráfico de líneas más limpio.
 - **Exporte para presentaciones**: Los gráficos se exportan como PNG y las tablas como CSV, ambos listos para diapositivas u hojas de cálculo.

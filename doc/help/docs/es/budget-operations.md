@@ -1,13 +1,13 @@
 # Administración presupuestaria
 
-La Administración presupuestaria le ofrece un conjunto de herramientas para gestionar y transformar datos presupuestarios entre años y columnas. Estas son las operaciones a las que recurre durante los ciclos de planificación presupuestaria -- preparar las cifras del próximo año, bloquear presupuestos aprobados y gestionar las transiciones entre años.
+La Administración presupuestaria le ofrece un conjunto de herramientas para gestionar y transformar datos presupuestarios entre años y columnas. Estas son las operaciones a las que recurre durante los ciclos de planificación presupuestaria: preparar las cifras del próximo año, bloquear presupuestos aprobados y gestionar las transiciones entre años.
 
 ## Dónde encontrarla
 
 - Ruta: **Gestión presupuestaria > Administración**
 - Permisos: La mayoría de operaciones requieren `budget_ops:admin`
 
-La página principal muestra seis tarjetas, cada una enlazando a una herramienta dedicada:
+La página principal muestra siete tarjetas, cada una enlazando a una herramienta dedicada:
 
 | Herramienta | Propósito |
 |-------------|-----------|
@@ -17,6 +17,9 @@ La página principal muestra seis tarjetas, cada una enlazando a una herramienta
 | **Restablecer columna presupuestaria** | Borrar todos los datos de una columna específica |
 | **Método de asignación por defecto** | Definir el método que las partidas de OPEX y CAPEX siguen por defecto |
 | **Archivo de filas presupuestarias** | Exportar o importar los importes mensuales de cada partida OPEX y CAPEX |
+| **Columnas presupuestarias** | Nombrar las cinco columnas presupuestarias, elegir cuáles se muestran y cuál es la columna por defecto |
+
+Las columnas presupuestarias son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto. Son los nombres estándar. Su organización puede renombrarlas, ocultar algunas y elegir una columna por defecto en [Columnas presupuestarias](#columnas-presupuestarias). Cada página a continuación muestra los nombres que eligió su organización.
 
 ---
 
@@ -34,23 +37,30 @@ Bloquee columnas presupuestarias para que no puedan editarse, importarse ni modi
 
 1. **Seleccione un año** del desplegable (rango: año actual menos uno hasta año actual más cuatro)
 2. **Seleccione alcances**: marque **OPEX**, **CAPEX** o ambos
-3. **Seleccione columnas** para cada alcance: Presupuesto, Revisión, Previsión, Realizado, Aterrizaje previsto (las cinco están seleccionadas por defecto)
-4. Haga clic en **Congelar datos** para bloquear, o **Descongelar datos** para desbloquear
+3. **Seleccione columnas** para cada alcance. La lista ofrece las cinco columnas. Las columnas ocultas llevan la marca **Oculta**. Todas las columnas están seleccionadas por defecto, así que congelar un año congela todas las columnas, también las ocultas. Desmarque una columna para dejarla fuera
+4. Haga clic en **Congelar datos** para bloquear, o **Descongelar datos** para desbloquear. Ambos botones siguen deshabilitados mientras un alcance seleccionado no tenga ninguna columna marcada
 
 ### Qué hace la congelación
 
 - Previene ediciones en columnas congeladas en los espacios de trabajo OPEX y CAPEX
 - Bloquea importaciones CSV a columnas congeladas
 - Bloquea operaciones de copia y restablecimiento dirigidas a columnas congeladas
-- **No** afecta el acceso de lectura -- los datos siguen siendo visibles
+- **No** afecta el acceso de lectura: los datos siguen siendo visibles
+- También se aplica a las columnas ocultas. Una columna congelada sigue congelada cuando se oculta, y las importaciones en ella se siguen rechazando
+
+### Congelar la columna por defecto fija los tipos de cambio
+
+Congelar la [columna por defecto](#columnas-presupuestarias) de un año también fija los tipos de cambio de ese año para el alcance que congela. KANAP actualiza los tipos del año y luego conserva el último conjunto para cada importe OPEX o CAPEX de ese año. Los informes convierten entonces esos importes con los mismos tipos, aunque lleguen tipos más recientes. Descongelar la columna por defecto los libera.
+
+Congelar otra columna no afecta a los tipos. Cambiar más tarde la columna por defecto no fija ni libera nada por sí solo: los tipos siguen la próxima congelación o descongelación de la nueva columna por defecto.
 
 ### Estado actual
 
-Debajo de los controles, dos tarjetas muestran el estado de congelación en tiempo real para cada columna en OPEX y CAPEX. Cada columna muestra **Congelado** (en rojo) o **Editable**.
+Debajo de los controles, dos tarjetas muestran el estado de congelación en tiempo real de las cinco columnas en OPEX y CAPEX. Cada columna muestra **Congelado** (en rojo) o **Editable**. Las columnas ocultas llevan la marca **Oculta**.
 
 ### Permisos
 
-Sin `budget_ops:admin` puede ver el estado de congelación, pero los controles están deshabilitados. Un banner informativo explica qué se necesita.
+Sin `budget_ops:admin` puede ver el estado de congelación, pero los controles están deshabilitados. Un banner indica «Solo los administradores de presupuesto pueden cambiar esta página.»
 
 ---
 
@@ -73,11 +83,13 @@ Requiere permisos de administración sobre OPEX, o sobre CAPEX para las partidas
 | Campo | Descripción |
 |-------|-------------|
 | **Año de origen** | Año del que copiar (rango: año actual menos uno hasta año actual más cinco) |
-| **Columna de origen** | Presupuesto, Revisión, Realizado o Aterrizaje previsto |
+| **Columna de origen** | Cualquier columna visible, incluida Previsión cuando se muestra. Empieza en la columna por defecto |
 | **Año de destino** | Año al que copiar (mismo rango) |
-| **Columna de destino** | Presupuesto, Revisión, Realizado o Aterrizaje previsto |
+| **Columna de destino** | Cualquier columna visible. Empieza en la columna por defecto |
 | **Incremento porcentual** | Ajuste aplicado a cada mes copiado (p. ej., `3` = +3%). Predeterminado: 0. Acepta decimales y valores negativos. |
 | **Sobrescribir datos existentes** | Conmutador. Cuando está desactivado, los elementos que ya tienen un valor en el destino se omiten. Cuando está activado, todos los valores de destino se reemplazan. |
+
+La página se abre con la columna por defecto del año actual como origen y la columna por defecto del año siguiente como destino. Las columnas ocultas no se ofrecen.
 
 ### Proceso en dos pasos: Simulación, luego Copiar
 
@@ -146,7 +158,7 @@ Requiere derechos de administración sobre OPEX, o sobre CAPEX para las partidas
 | Campo | Descripción |
 |-------|-------------|
 | **Año de origen** | Año del que copiar asignaciones (rango: año actual menos uno hasta año actual más cinco) |
-| **Año de destino** | Año al que copiar asignaciones (mismo rango). Debe ser diferente del Año de origen. |
+| **Año de destino** | Año al que copiar asignaciones (mismo rango). Debe ser diferente del año de origen. |
 | **Sobrescribir datos existentes** | Conmutador. Cuando está desactivado, los elementos que ya tienen asignaciones en el destino se omiten. |
 
 ### Proceso en dos pasos: Simulación, luego Copiar
@@ -154,10 +166,10 @@ Requiere derechos de administración sobre OPEX, o sobre CAPEX para las partidas
 1. Haga clic en **Simulación** para ver una vista previa
 2. La cuadrícula de vista previa muestra cada partida OPEX o CAPEX con:
    - Nombre de la **Partida**
-   - **Acción** -- qué sucederá (Se copiará, Omitir -- sin año de origen, Omitir -- sin asignaciones en origen, Omitir -- el destino tiene datos, Error)
+   - **Acción**: qué sucederá (Se copiará, Omitida – sin año de origen, Omitida – sin asignaciones en el origen, Omitida – el destino tiene datos, Error)
    - Método y etiqueta del **Origen**
    - Método y etiqueta del **Destino** actual
-   - **Resultado después de copiar** -- cómo quedará el destino
+   - **Resultado tras la copia**: cómo quedará el destino
 3. Haga clic en **Copiar datos** para aplicar
 
 ### Validación
@@ -192,11 +204,11 @@ Una columna cuyas partidas no tienen ningún importe también puede restablecers
 | Campo | Descripción |
 |-------|-------------|
 | **Año** | El ejercicio fiscal a borrar (rango: año actual menos uno hasta año actual más cinco) |
-| **Columna presupuestaria** | Presupuesto, Revisión, Realizado o Aterrizaje previsto |
+| **Columna presupuestaria** | Cualquier columna visible, incluida Previsión cuando se muestra. No hay ninguna columna preseleccionada: el campo indica **Elegir una columna** y **Borrar columna** sigue deshabilitado hasta que elija una |
 
 ### Vista previa
 
-La página carga una cuadrícula mostrando cada partida OPEX o CAPEX y su valor actual en la columna seleccionada. Los importes que se borrarán aparecen en peso medio; los valores vacíos aparecen atenuados. Debajo de la cuadrícula aparecen tres estadísticas:
+Antes de elegir una columna, una línea sustituye a la cuadrícula: «Elija una columna para ver los importes que contiene.» Una vez elegida la columna, una cuadrícula muestra cada partida OPEX o CAPEX y su valor actual en esa columna. Los importes que se borrarán aparecen en peso medio; los valores vacíos aparecen atenuados. Debajo de la cuadrícula aparecen tres estadísticas:
 
 - **Total de elementos**
 - **Partidas con un total distinto de cero**
@@ -216,7 +228,8 @@ Debe hacer clic en **Borrar columna** en el diálogo para proceder, o **Cancelar
 ### Medidas de seguridad
 
 - El botón **Borrar columna** sigue disponible cuando ninguna partida tiene importe, para poder quitar igualmente los periodos de reparto
-- Las columnas congeladas no pueden restablecerse -- descongele primero
+- No hay ninguna columna preseleccionada, así que siempre elige usted la columna que se borra
+- Las columnas congeladas no pueden restablecerse. Descongélelas primero
 - El diálogo de confirmación requiere reconocimiento explícito
 
 ---
@@ -243,7 +256,7 @@ Defina el método que siguen las partidas de OPEX y las inversiones de CAPEX cua
 ### Cómo funciona
 
 1. **Seleccione un año**
-2. **Elija el ámbito de sociedades** -- *Todas las sociedades activas*, o *Sociedades seleccionadas* y después las sociedades concretas
+2. **Elija el ámbito de sociedades**: *Todas las sociedades activas*, o *Sociedades seleccionadas* y después las sociedades concretas
 3. **Elija el generador** que pondera las sociedades (Plantilla, Usuarios IT o Facturación)
 4. Cada cambio se guarda inmediatamente, no hay botón Guardar
 5. Para volver al método estándar, haga clic en **Volver al método estándar** (solo se muestra mientras haya un valor por defecto personalizado configurado)
@@ -253,12 +266,12 @@ Defina el método que siguen las partidas de OPEX y las inversiones de CAPEX cua
 - El generador se aplica únicamente a las sociedades seleccionadas: sus porcentajes se calculan a partir de su propia plantilla, sus usuarios IT o su facturación del año
 - La página muestra el reparto resultante, para que pueda comprobar el efecto antes de confiar en él
 - Una sola sociedad seleccionada siempre asume el **100%**, sin necesidad de un valor del generador
-- A partir de dos sociedades, cada sociedad seleccionada necesita un valor para el generador elegido. Una sociedad sin valor se rechaza al guardar -- corrija primero las métricas de la sociedad en **Datos maestros > Empresas**
+- A partir de dos sociedades, cada sociedad seleccionada necesita un valor para el generador elegido. Una sociedad sin valor se rechaza al guardar. Corrija primero las métricas de la sociedad en **Datos maestros > Empresas**
 - Una sociedad desactivada para el año no se puede seleccionar: las sociedades desactivadas quedan excluidas de las asignaciones de ese año
 
 ### Qué afecta
 
-- Todas las partidas de OPEX y las inversiones de CAPEX cuyo método de asignación sea **por defecto** -- mostradas como *Plantilla (por defecto)* (o *Por defecto (n sociedades)*) en la pestaña Asignaciones hasta que se defina un valor por defecto para la organización
+- Todas las partidas de OPEX y las inversiones de CAPEX cuyo método de asignación sea **por defecto**, mostradas como *Plantilla (por defecto)* (o *Por defecto (n sociedades)*) en la pestaña Asignaciones hasta que se defina un valor por defecto para la organización
 - Las partidas con un método explícito (Plantilla, Usuarios IT o Facturación fijados en la partida) o una asignación manual conservan su propia configuración
 - Los importes asignados se recalculan la próxima vez que se muestren las asignaciones. Los importes presupuestarios en sí nunca se modifican
 
@@ -268,7 +281,7 @@ Mientras una organización no configure un valor por defecto, se aplica el méto
 
 ### Cambiar el valor por defecto a posteriori
 
-El valor por defecto se resuelve cada vez que se muestran las asignaciones, por lo que editarlo recalcula todas las partidas que siguen en el valor por defecto. Si una sociedad incluida en la selección pierde después su valor de generador o se desactiva, las partidas afectadas muestran un error en lugar de un reparto reequilibrado en silencio -- la página le advierte de los problemas con la selección actual.
+El valor por defecto se resuelve cada vez que se muestran las asignaciones, por lo que editarlo recalcula todas las partidas que siguen en el valor por defecto. Si una sociedad incluida en la selección pierde después su valor de generador o se desactiva, las partidas afectadas muestran un error en lugar de un reparto reequilibrado en silencio. La página le advierte de los problemas con la selección actual.
 
 ### Permisos
 
@@ -291,7 +304,9 @@ Exporte o importe los importes mensuales de cada partida OPEX y CAPEX en un solo
 1. Elija un año, o mantenga **Todos los años**
 2. Haga clic en **Exportar** y luego en **Exportar datos**
 
-El archivo incluye cada partida OPEX y CAPEX que puede consultar, para cada año que tiene importes. Cada partida y año recibe cinco filas, en este orden: Presupuesto, Revisión, Previsión, Realizado, Aterrizaje previsto. Las columnas sin importes también se incluyen. Cuando el archivo cubre un solo año, o solo OPEX o solo CAPEX debido a sus permisos, su nombre termina en `partial`.
+El archivo incluye cada partida OPEX y CAPEX que puede consultar, para cada año que tiene importes. Cada partida y año recibe cinco filas, una por columna presupuestaria en el orden fijo (Presupuesto, Revisión, Previsión, Realizado, Aterrizaje previsto con sus nombres estándar). Las columnas sin importes y las columnas ocultas también se incluyen.
+
+Bajo la introducción, la página indica qué nombre técnico del archivo corresponde a cada una de sus columnas, por ejemplo «`planned` para Presupuesto». Los mismos nombres técnicos aparecen como **En los archivos** en la página [Columnas presupuestarias](#columnas-presupuestarias). Cuando el archivo cubre un solo año, o solo OPEX o solo CAPEX debido a sus permisos, su nombre termina en `partial`.
 
 Se puede importar un archivo de hasta 10 MB. Para un presupuesto más grande, exporte e importe un año cada vez: una exportación limitada a un año genera un archivo más pequeño.
 
@@ -304,7 +319,7 @@ El archivo usa el punto y coma `;` como separador y la codificación UTF-8.
 | `item_type` | `opex` o `capex` |
 | `item_number` | El número de la partida, por ejemplo `7`. Al importar, la referencia también funciona (`OPX-7`, `CPX-7`) |
 | `year` | Cuatro dígitos |
-| `measure` | La columna: `planned` (Presupuesto), `committed` (Revisión), `forecast` (Previsión), `actual` (Realizado), `expected_landing` (Aterrizaje previsto). Al importar, `budget`, `revision`, `follow_up` y `landing` también funcionan |
+| `measure` | La columna, por su nombre técnico, sea cual sea el nombre que le da su organización: `planned` (columna 1, nombre estándar Presupuesto), `committed` (columna 2, Revisión), `forecast` (columna 3, Previsión), `actual` (columna 4, Realizado), `expected_landing` (columna 5, Aterrizaje previsto). Al importar, `budget`, `revision`, `follow_up` y `landing` también funcionan |
 | `period_start`, `period_end` | El periodo de la columna en formato `YYYY-MM-DD`, dentro del año de la fila. Al importar, ambos vacíos significan todo el año |
 | `jan` a `dec` | Los doce importes mensuales, con un punto como separador decimal. Al importar, también se aceptan la coma y los espacios |
 | `method` | Cómo se produjo la columna: `spread`, `copied` o `manual`. Solo informativo, se ignora al importar |
@@ -322,14 +337,58 @@ El archivo usa el punto y coma `;` como separador y la codificación UTF-8.
 - Una fila que solo cambia el periodo actualiza el periodo y conserva el resto
 - Las filas de Realizado siguen las mismas reglas, lo que permite importar el realizado mensual
 - Una fila modificada en una columna congelada se rechaza. Una fila idéntica en una columna congelada se acepta
+- Las filas de una columna oculta se importan como cualquier otra fila. Ocultar una columna nunca bloquea sus importaciones, y una columna oculta congelada sigue rechazando las filas modificadas
 - Las filas repetidas (misma partida, año y columna), los números de partida desconocidos y las partidas de un tipo que no puede administrar son errores
 - Importar requiere permisos de administración sobre OPEX o sobre CAPEX. Exportar requiere acceso de lectura a uno de los dos
 
 ---
 
+## Columnas presupuestarias
+
+Dé nombre a las cinco columnas presupuestarias, elija cuáles ve todo el mundo y de cuál parten los informes y las listas. La configuración se aplica a toda la organización, tanto para OPEX como para CAPEX.
+
+### Cuándo usarla
+
+- Sus rondas presupuestarias tienen nombres propios, por ejemplo A0, A1, A2 y Real
+- Su organización no usa todas las columnas y quiere una pantalla más ligera
+- Los informes y las listas deben partir de una columna distinta de Presupuesto
+
+### La tabla
+
+Una fila por columna, siempre en el mismo orden, de la columna 1 a la columna 5. Los nombres estándar son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto.
+
+| Campo | Descripción |
+|-------|-------------|
+| **Columna** | La posición, de 1 a 5. Las columnas no se pueden reordenar |
+| **Nombre** | El nombre que todos ven en las listas, la pestaña Presupuesto, los informes, el panel y la Administración presupuestaria. Déjelo vacío para usar el nombre estándar, que aparece como marcador. Como máximo 40 caracteres, sin caracteres de control ni invisibles. Cada nombre debe ser distinto de los nombres de las demás columnas, incluido el nombre estándar de una columna que no ha renombrado, sin importar las mayúsculas |
+| **En los archivos** | La línea bajo cada nombre. Indica el nombre técnico de la columna en el archivo de filas presupuestarias y sus importaciones, por ejemplo `planned` para la columna 1. Nunca cambia cuando renombra una columna |
+| **Visible** | Si la columna aparece en pantalla. Al menos una columna debe seguir visible |
+| **Sigue «Aplicar a todas las columnas»** | Si la columna toma el mismo periodo cuando un reparto de la pestaña Presupuesto se aplica a todas las columnas. Una columna que no lo sigue conserva su propio periodo y, cuando la reparte, se reparte sola |
+| **Por defecto** | La columna que preseleccionan los informes y que ordena las listas y el panel. Congelarla fija los tipos de cambio del año. La columna por defecto debe estar visible |
+
+Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visibles y Previsión está oculta, todas las columnas siguen «Aplicar a todas las columnas» y Presupuesto es la columna por defecto.
+
+### Qué cambia la configuración
+
+- **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de filas presupuestarias, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, así que congelar un año las congela junto con las demás
+- **La columna por defecto** está preseleccionada en todos los informes. Ordena las listas OPEX y CAPEX, su navegación anterior y siguiente, y los mosaicos **Top partidas** y **Mayores incrementos** del panel. Las listas la muestran para el año actual, junto a la última columna visible. También es el importe de referencia de la pestaña Asignaciones y la columna en la que se abre el panel de reparto. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
+- **Sigue «Aplicar a todas las columnas»** decide qué columnas se mueven juntas cuando un reparto se aplica a todas las columnas. Las columnas congeladas nunca cambian, diga lo que diga esta configuración
+
+### Guardar
+
+Haga clic en **Guardar** para aplicar sus cambios. El botón sigue deshabilitado hasta que algo cambie y todos los nombres sean válidos. **Restablecer** descarta los cambios que aún no ha guardado. Los errores se explican bajo el campo o bajo la tabla, por ejemplo «Al menos una columna debe seguir visible.» o «La columna por defecto debe estar visible: elija antes otra columna por defecto.» Para ocultar la columna por defecto actual, elija antes otra columna por defecto. Ambos cambios se pueden guardar a la vez.
+
+### Permisos
+
+Cambiar la configuración requiere derechos de administración de la Administración presupuestaria (`budget_ops:admin`). Los demás usuarios pueden abrir la página y ver la configuración en modo de solo lectura, bajo el banner «Solo los administradores de presupuesto pueden cambiar esta página.»
+
+Si la configuración no se puede cargar, la página muestra una sola línea, «No se pudo cargar la configuración de las columnas.», y ningún control.
+
+---
+
 ## Ejemplo de flujo de trabajo: Ciclo presupuestario anual
 
-A continuación se muestra una secuencia típica usando estas herramientas:
+A continuación se muestra una secuencia típica usando estas herramientas, con los nombres de columna estándar y Presupuesto como columna por defecto:
 
 ### 1. Fin del año N
 
@@ -344,7 +403,7 @@ A continuación se muestra una secuencia típica usando estas herramientas:
 
 ### 3. Aprobación del presupuesto
 
-1. Congelar el Presupuesto N+1 (bloquear el presupuesto aprobado)
+1. Congelar el Presupuesto N+1 (bloquear el presupuesto aprobado y fijar los tipos de cambio del año)
 2. Copiar Presupuesto N+1 a Revisión N+1 (punto de partida para el seguimiento intra-anual)
 
 ### 4. Revisión a mitad de año
@@ -359,6 +418,6 @@ A continuación se muestra una secuencia típica usando estas herramientas:
 - **Siempre haga una simulación primero**: Copiar columnas presupuestarias y Copiar asignaciones admiten simulación. Úsela cada vez para verificar el resultado antes de confirmar.
 - **Congele después de la aprobación**: Bloquear columnas después de la aprobación mantiene su registro de auditoría y previene ediciones accidentales.
 - **Use ajustes porcentuales**: Al copiar entre años, aplique un factor de inflación o crecimiento para no tener que ajustar cada línea manualmente.
-- **Verifique el estado de congelación antes de operaciones masivas**: Las columnas congeladas bloquean las operaciones de copia y restablecimiento. Si un botón está en gris, verifique la página de Congelación primero.
+- **Verifique el estado de congelación antes de operaciones masivas**: Las columnas congeladas bloquean las operaciones de copia y restablecimiento. Si un botón está en gris, verifique primero la página de congelación.
 - **Defina el valor por defecto del año antes de introducir presupuestos**: Si su base de asignación no es la plantilla, configúrela primero en Método de asignación por defecto, para que las partidas se creen sobre la base correcta en lugar de recalcularse después.
 - **Restablezca con precaución**: El restablecimiento de columna es irreversible. Compruebe el año y la columna antes de confirmar.

@@ -2,7 +2,7 @@
 
 Les postes CAPEX (dépenses d'investissement) sont vos investissements dans des actifs à long terme : achats de matériel, licences logicielles à valeur pluriannuelle, projets d'infrastructure et équipements. C'est ici que vous planifiez les budgets d'investissement, suivez les dépenses de projet et répartissez les coûts à travers votre organisation.
 
-L'espace de travail CAPEX vous aide à gérer chaque poste d'investissement de la budgétisation initiale jusqu'à l'exécution et le reporting -- le tout en un seul endroit avec des colonnes budgétaires annuelles, des méthodes de ventilation flexibles et des liens directs vers les projets, applications, contrats et contacts.
+L'espace de travail CAPEX vous aide à gérer chaque poste d'investissement de la budgétisation initiale jusqu'à l'exécution et le reporting, le tout en un seul endroit avec des colonnes budgétaires annuelles, des méthodes de ventilation flexibles et des liens directs vers les projets, applications, contrats et contacts.
 
 ## Premiers pas
 
@@ -16,7 +16,7 @@ L'espace de travail s'ouvre en mode création, avec le panneau **Propriétés** 
 - **Société payeuse** : Quelle société réalise l'investissement (obligatoire pour la comptabilité)
 - **Compte** : Le compte du grand livre pour cette dépense d'investissement. Seuls les comptes du plan comptable de la société payeuse apparaissent
 - **Devise** : Code ISO (ex. : USD, EUR). Par défaut la devise CAPEX de votre espace de travail ; modifiable par poste
-- **Type d'immobilisation** : Classification des immobilisations corporelles -- Matériel ou Logiciel
+- **Type d'immobilisation** : Classification des immobilisations corporelles : Matériel ou Logiciel
 - **Type d'investissement** : Objectif de l'investissement (voir les options ci-dessous)
 - **Priorité** : Niveau de priorité métier (voir les options ci-dessous)
 - **Début d'effet** : Quand cet investissement commence (JJ/MM/AAAA)
@@ -76,8 +76,7 @@ La liste CAPEX (dans **Gestion budgétaire > CAPEX**) est votre vue principale p
 | **Type d'investissement** | Objectif de l'investissement |
 | **Priorité** | Niveau de priorité métier |
 | **Ventilation** | Libellé de la méthode de ventilation de l'année en cours |
-| **Budget A** | Budget d'investissement planifié de l'année en cours (devise de reporting) |
-| **Atterrissage prévu A** | Atterrissage prévu de l'année en cours (devise de reporting) |
+| **Budget A** et **Atterrissage prévu A** | Les montants de l'année en cours de la colonne par défaut et de la dernière colonne affichée, dans la devise de reporting. Avec les réglages standard, ce sont Budget et Atterrissage prévu. Quand la colonne par défaut est aussi la dernière affichée, une seule colonne de montant apparaît. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires) |
 | **Tâche** | Titre de la tâche la plus récente liée à ce poste |
 
 ### Colonnes supplémentaires
@@ -86,7 +85,7 @@ Ces colonnes sont masquées par défaut. Affichez-les depuis le sélecteur de co
 
 | Colonne | Ce qu'elle affiche |
 |---|---|
-| **Colonnes de montants** | Chaque colonne budgétaire (Budget, Révision, Prévision, Réalisé et Atterrissage prévu) pour A-1, A, A+1 et A+2. L'en-tête indique la colonne, l'année par rapport à aujourd'hui et l'année civile, par exemple **Révision A+1 (2027)**. Les montants sont dans la devise de reporting |
+| **Colonnes de montants** | Chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation. L'en-tête indique la colonne, l'année par rapport à aujourd'hui et l'année civile, par exemple **Révision A+1 (2027)**. Les montants sont dans la devise de reporting. Les colonnes masquées ne sont pas proposées |
 | **Devise** | Code de devise du poste |
 | **Début effectif** | Date de début |
 | **Fin de validité** | Date à laquelle le poste s'arrête (vide signifie sans fin) |
@@ -113,7 +112,7 @@ Les colonnes texte utilisent des filtres texte. Sur **Réf**, saisissez le numé
 
 ### Tri
 
-Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant. Le tri par défaut est **Budget A**, du plus élevé au plus faible. La liste mémorise votre dernier tri quand vous revenez.
+Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant. Le tri par défaut suit la colonne par défaut de l'année en cours, du plus élevé au plus faible (**Budget A** avec les réglages standard). **Préc.** et **Suiv.** dans l'espace de travail suivent le même ordre. La liste mémorise votre dernier tri quand vous revenez.
 
 ### Ligne de totaux
 
@@ -201,14 +200,19 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
 
 **Colonnes budgétaires** (toutes les années) :
 
+L'onglet montre les colonnes affichées par votre organisation, sous leurs noms, toujours dans le même ordre. Les colonnes standard sont :
+
 - **Budget** : Budget d'investissement planifié initial
 - **Révision** : Mise à jour budgétaire en cours d'année (ex. : après des changements de périmètre ou des re-prévisions)
-- **Réalisé** : Dépense réelle attendue (votre meilleure estimation au fil de l'année)
-- **Atterrissage prévu** : Dépense d'investissement réelle finale après la clôture de fin d'année
+- **Prévision** : Une colonne de planification complémentaire, masquée par défaut
+- **Réalisé** : La dépense d'investissement réelle, telle qu'elle est enregistrée pendant l'année
+- **Atterrissage prévu** : Votre meilleure estimation de la dépense d'investissement de fin d'année
+
+Un administrateur budgétaire peut renommer les colonnes, en masquer certaines et choisir la colonne par défaut dans **Gestion budgétaire > Administration > Colonnes budgétaires** (voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)). Une colonne masquée garde ses montants.
 
 **Période d'une colonne** :
 
-- Chaque colonne (Budget, Révision, Prévision, Réalisé et Atterrissage prévu) a une période à l'intérieur de l'année, par exemple d'avril à décembre
+- Chaque colonne a une période à l'intérieur de l'année, par exemple d'avril à décembre
 - Un mois compte lorsque la période couvre son 15. Une période qui commence le 10 avril inclut avril ; une période qui commence le 20 avril débute en mai
 - Une colonne sans montant ni période reçoit une suggestion : le **Début d'effet** et la **Fin de validité** du poste, limités à l'année. Un investissement qui commence le 1er avril suggère d'avril à décembre
 - Une colonne qui porte déjà des montants sans période est lue comme couvrant toute l'année : les données existantes se comportent comme avant
@@ -217,23 +221,25 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
 
 - **Annuel** : Saisissez un total par colonne. Le total est réparti uniformément sur les mois de la période de la colonne, et les mois hors de cette période sont mis à zéro. La période s'affiche sous chaque total avant la saisie, par exemple « 9 mois, avril à décembre ». Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
 - Cliquez sur l'icône crayon à côté de la période sous un total (**Modifier la période**) pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates du poste ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates du poste. » Cliquez sur l'icône crayon à côté (**Choisir la période**) pour la définir vous-même.
-- **Mensuel** : Saisissez les montants par mois (Jan à Déc) pour un suivi fin des dépenses projet, plus une colonne **Prévision**. Des sous-totaux par trimestre et un total annuel sont affichés. Seuls les mois que vous modifiez sont enregistrés.
+- **Mensuel** : Saisissez les montants par mois (Jan à Déc) pour chaque colonne affichée, pour un suivi fin des dépenses projet. Des sous-totaux par trimestre et un total annuel sont affichés. Seuls les mois que vous modifiez sont enregistrés.
+- Les deux onglets montrent les mêmes colonnes : Prévision apparaît aussi dans **Annuel** quand elle est affichée.
 - Passez d'un mode à l'autre avec les onglets **Annuel** et **Mensuel**
 - Changer de mode ne modifie pas vos montants : seul l'affichage change. Annuel montre le total annuel des mois enregistrés, Mensuel montre les mois enregistrés.
 
 **Comportement du gel** :
 
 - Si le budget d'une année est gelé (via l'Administration budgétaire), les champs passent en lecture seule et affichent un cadenas
-- Chaque colonne peut être gelée indépendamment (Budget, Révision, Prévision, Réalisé, Atterrissage prévu)
+- Chaque colonne peut être gelée indépendamment
 - Vous pouvez toujours consulter les données gelées ; les administrateurs peuvent dégeler via **Gestion budgétaire > Administration > Geler / Dégeler les données**
 
 **Répartir un montant** :
 
 - Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis l'icône crayon sous un total
-- Choisissez une **Colonne** (Budget, Révision, Prévision, Atterrissage prévu ou Réalisé), vérifiez le **Montant**, choisissez une **Répartition** (**Linéaire** ou **4-4-5**), puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne, et la répartition de celle de la colonne
-- Le montant reprend le total actuel de la colonne, dans les deux onglets, et suit lorsque vous choisissez une autre colonne. Il reste vide lorsque la colonne n'a aucun montant
-- **Appliquer à toutes les colonnes** est activé par défaut : chaque colonne (Budget, Révision, Prévision, Réalisé et Atterrissage prévu) reçoit la même période et la même répartition, chacune avec son propre total actuel. Les colonnes gelées font exception : elles ne changent jamais. Survolez l'interrupteur pour voir les colonnes concernées. Désactivez l'interrupteur pour ne répartir que la colonne choisie
-- **Réinitialiser** remplit le panneau avec le total actuel de la colonne, **Linéaire** et l'année entière. Rien n'est enregistré : cliquez sur **Appliquer** pour l'utiliser. Avec **Appliquer à toutes les colonnes** activé, **Réinitialiser** puis **Appliquer** remet chaque colonne en répartition linéaire sur douze mois
+- Choisissez une **Colonne** parmi les colonnes affichées, vérifiez le **Montant**, choisissez une **Répartition** (**Linéaire** ou **4-4-5**), puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne, et la répartition de celle de la colonne
+- Le panneau s'ouvre sur la colonne par défaut. Le montant reprend le total actuel de la colonne, dans les deux onglets, et suit lorsque vous choisissez une autre colonne. Il reste vide lorsque la colonne n'a aucun montant
+- **Appliquer à toutes les colonnes** est activé par défaut : chaque colonne qui le suit reçoit la même période et la même répartition, chacune avec son propre total actuel. Par défaut, toutes les colonnes le suivent. Un administrateur budgétaire choisit lesquelles dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les colonnes gelées ne changent jamais. Survolez l'interrupteur pour voir les colonnes qui suivent et celles qui gardent leur propre période. Désactivez l'interrupteur pour ne répartir que la colonne choisie
+- Une colonne qui ne suit pas « Appliquer à toutes les colonnes » est répartie seule : l'interrupteur n'apparaît pas quand vous la répartissez. L'interrupteur est aussi masqué quand aucune autre colonne qui suit ne peut changer
+- **Réinitialiser** remplit le panneau avec le total actuel de la colonne, **Linéaire** et l'année entière. Rien n'est enregistré : cliquez sur **Appliquer** pour l'utiliser. Avec **Appliquer à toutes les colonnes** activé, **Réinitialiser** puis **Appliquer** remet chaque colonne qui suit en répartition linéaire sur douze mois
 - Les totaux saisis dans l'onglet **Annuel** s'appliquent toujours à leur seule colonne
 - Les dates **Du** et **Au** affichent la période. Quand des mois tombent en dehors, le panneau indique lesquels seront mis à zéro (« Janvier à mars seront mis à zéro. »). Une période sur l'année entière n'affiche aucune ligne. Survolez l'icône d'information à côté du titre du panneau pour voir la règle du 15
 - Avec **4-4-5**, les poids des mois qui comptent sont augmentés pour que tout le montant se répartisse sur eux
@@ -257,7 +263,7 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
 
 **Tendance pluriannuelle** :
 
-- Un graphique sous le tableau montre les colonnes budgétaires du poste sur plusieurs années et se met à jour pendant la saisie
+- Un graphique sous le tableau montre chaque colonne affichée sur plusieurs années, Prévision comprise quand elle est affichée, et se met à jour pendant la saisie
 
 **Comment l'utiliser** :
 
@@ -278,7 +284,7 @@ L'onglet Ventilations répartit la dépense d'investissement entre vos société
 
 - Fonctionne comme le Budget : utilisez les onglets d'année pour basculer entre A-2, A-1, A, A+1, A+2
 - Chaque année peut avoir une méthode de ventilation différente
-- Le **Budget de l'année** sélectionnée s'affiche à droite
+- Le total de l'année de la colonne par défaut s'affiche à droite, par exemple **Budget, total de l'année**
 
 **Méthodes de ventilation** :
 
@@ -296,7 +302,7 @@ L'onglet Ventilations répartit la dépense d'investissement entre vos société
 
 **Méthodes par défaut et méthodes épinglées** :
 
-- L'option **par défaut** -- affichée comme *Effectif (par défaut)* tant que votre organisation n'a pas configuré une autre méthode -- suit le réglage défini dans **Gestion budgétaire > Administration > Méthode de ventilation par défaut**. Chaque investissement laissé sur la valeur par défaut est recalculé lorsqu'un administrateur modifie ce réglage.
+- L'option **par défaut**, affichée comme *Effectif (par défaut)* tant que votre organisation n'a pas configuré une autre méthode, suit le réglage défini dans **Gestion budgétaire > Administration > Méthode de ventilation par défaut**. Chaque investissement laissé sur la valeur par défaut est recalculé lorsqu'un administrateur modifie ce réglage.
 - Ce réglage peut également restreindre la valeur par défaut à une **sélection de sociétés** (par exemple l'entité qui porte le budget IT) : l'inducteur ne s'applique alors qu'à ces sociétés, et l'option affiche *Par défaut (n sociétés)*.
 - **Effectif**, **Utilisateurs IT** et **Chiffre d'affaires** épinglent cette méthode sur l'investissement : une méthode épinglée continue de fonctionner même si la valeur par défaut de l'organisation change par la suite.
 - Les investissements dotés d'une ventilation manuelle ne sont jamais affectés par le réglage par défaut.
@@ -426,7 +432,7 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 - **Type d'immobilisation** : Doit être `hardware` ou `software` (insensible à la casse).
 - **Type d'investissement** : Doit être l'un des suivants : `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (insensible à la casse).
 - **Priorité** : Doit être `mandatory`, `high`, `medium` ou `low` (insensible à la casse).
-- **Budgets** : Les colonnes budgétaires alimentent les versions A-1, A et A+1. Les montants sont répartis uniformément sur 12 mois (mode Annuel) et la période de la colonne devient l'année entière. Une cellule vide laisse la colonne telle quelle ; `0` l'efface.
+- **Budgets** : Les colonnes budgétaires alimentent les versions A-1, A et A+1. Les montants sont répartis uniformément sur 12 mois (mode Annuel) et la période de la colonne devient l'année entière. Une cellule vide laisse la colonne telle quelle ; `0` l'efface. Les en-têtes gardent leurs noms techniques, quel que soit le nom choisi par votre organisation, et ils chargent aussi les colonnes masquées.
 - **Montants mensuels** : pour charger ou relire les montants mois par mois, avec la période de chaque colonne, utilisez le **Fichier des lignes budgétaires** dans l'Administration budgétaire.
 
 **Erreurs courantes** :
@@ -482,9 +488,9 @@ Chaque poste CAPEX a un **statut** (Activé ou Désactivé) et une **Fin de vali
 
 L'accès CAPEX est contrôlé par trois niveaux :
 
-- `capex:reader` -- Consulter la liste CAPEX, ouvrir les postes, voir les budgets et ventilations (lecture seule)
-- `capex:manager` -- Créer et modifier les postes CAPEX, mettre à jour les budgets et ventilations, téléverser les pièces jointes, gérer les liens et contacts
-- `capex:admin` -- Tous les droits manager plus import CSV, opérations budgétaires (gel, copie, réinitialisation) et suppression en masse
+- `capex:reader` : Consulter la liste CAPEX, ouvrir les postes, voir les budgets et ventilations (lecture seule)
+- `capex:manager` : Créer et modifier les postes CAPEX, mettre à jour les budgets et ventilations, téléverser les pièces jointes, gérer les liens et contacts
+- `capex:admin` : Tous les droits manager plus import CSV, opérations budgétaires (gel, copie, réinitialisation) et suppression en masse
 
 De plus :
 

@@ -38,6 +38,10 @@ The landing page shows a card for each available report with a short description
 
 The two chargeback reports cover OPEX only.
 
+### Budget columns in reports
+
+Every column or metric picker offers the budget columns your organisation shows, under their names, in the fixed column order. Forecast is offered when it is shown. Hidden columns are not offered. Each report starts on the default column, as described below. Budget administrators set the names, the shown columns and the default column in [Budget columns](budget-operations.md#budget-columns).
+
 ---
 
 ## Global chargeback
@@ -47,7 +51,7 @@ View cost allocations across all companies with summary KPIs and intercompany fl
 ### Controls
 
 - **Year**: Previous, current, or next fiscal year
-- **Column**: Budget, Expected landing, Actuals, or Revision
+- **Column**: Any shown budget column. Starts on the default column
 - **Company totals** (checkbox): Show or hide the company totals table and bar chart
 - **Detailed allocations** (checkbox): Show or hide the company-by-department breakdown
 - **Include KPIs** (checkbox): Show or hide the KPI table
@@ -111,7 +115,7 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 - **Company**: Select which company to analyze
 - **Year**: Previous, current, or next fiscal year
-- **Column**: Budget, Expected landing, Actuals, or Revision
+- **Column**: Any shown budget column. Starts on the default column
 - **Department totals** (checkbox): Show or hide department breakdown
 - **Chargeback items** (checkbox): Show or hide itemised allocations
 - **Chargeback KPIs** (checkbox): Show or hide the KPI comparison table
@@ -157,7 +161,7 @@ Identify your largest OPEX or CAPEX items for a given year.
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
 - **Year**: Previous, current, or next year
-- **Metric**: Budget, Revision, Actuals, or Expected landing
+- **Metric**: Any shown budget column. Starts on the default column
 - **Top count**: How many items to show (default: 10, minimum: 1)
 - **Chart type**: Pie chart or horizontal bar chart
 - **Exclude items**: Multi-select autocomplete to exclude specific items
@@ -175,8 +179,10 @@ Identify your largest OPEX or CAPEX items for a given year.
 
 **Summary cards below the table**:
 
-- Top N total (with percentage of filtered metric)
-- Total value for the selected metric across all items
+- **Top N total**, with its share of the filtered total, for example "45% of the filtered total"
+- The total of the selected column across all items, labelled with the column name, for example **Budget, total**
+
+The chart footnote gives the same total, for example "Budget, total: 1 234".
 
 ### Use case
 
@@ -199,7 +205,7 @@ Identify the biggest OPEX or CAPEX changes between two budget columns (any combi
 - **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
 - **Direction**: **Increases**, **Decreases**, or **Both** tabs
 
-The year pickers list the years that hold data. The metric pickers offer the four report columns: Budget, Actuals, Expected landing, and Revision.
+The year pickers list the years that hold data. The metric pickers offer the shown budget columns. The report starts on the default column of last year as the source and the default column of the current year as the destination.
 
 When **Both** is selected, the pie chart option is disabled and the report automatically switches to bar.
 
@@ -235,7 +241,7 @@ Compare OPEX metrics across multiple years on a single line chart.
 
 - **Start year**: Beginning of the range (current year minus 2 through plus 2)
 - **End year**: End of the range
-- **Metrics**: Multi-select from Budget, Actuals, Expected landing, Revision (at least one required)
+- **Metrics**: Multi-select from the shown budget columns. The report starts on the default column and the last shown column (Budget and Expected landing with the standard settings). If you clear every metric, the default column is used
 
 ### What you'll see
 
@@ -273,7 +279,7 @@ Flexibly compare up to 10 year+column combinations for either OPEX or CAPEX.
 ### Controls
 
 - **Item type**: OPEX or CAPEX toggle
-- **Selections**: Each selection has a year picker and a column picker (Budget, Revision, Actuals, Expected landing). Add selections with the **Add** button and remove with the delete icon. Maximum of 10 selections; minimum of 1.
+- **Selections**: Each selection has a year picker and a column picker with the shown budget columns. The report starts with two selections: the default column of the current year and of next year. **Add** adds the default column of the current year, and the delete icon removes a selection. Maximum of 10 selections; minimum of 1.
 - **Year grouping** (checkbox): When enabled and at least two years share a metric, switches to a grouped line chart with one series per metric and years on the X axis. When disabled, shows a flat line chart with each selection as a data point.
 
 ### What you'll see
@@ -304,7 +310,7 @@ View OPEX or CAPEX budget data grouped by consolidation account, with chart type
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
 - **Start year** and **End year**: Previous, current, or next year
-- **Metric**: Budget, Actuals, Expected landing, or Revision
+- **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (only available when a single year is selected)
 - **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
 
@@ -333,7 +339,7 @@ View OPEX or CAPEX budget data grouped by analytics dimension. The layout mirror
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
 - **Start year** and **End year**: Previous, current, or next year
-- **Metric**: Budget, Actuals, Expected landing, or Revision
+- **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (single-year only)
 - **Exclude analytics dimensions**: Multi-select autocomplete to exclude specific dimensions
 
@@ -362,16 +368,11 @@ Every report shares these capabilities through the shared toolbar:
 - **Export chart as PNG** (image icon): Downloads the chart as a PNG image
 - **Print / Save as PDF** (print icon): Opens the browser print dialog. You can also append `?print=1` to any report URL to trigger printing automatically on load.
 
+Exported file names carry the column name, for example `top10-opex-2026-budget-bar.png`.
+
 ### Available metrics
 
-All reports that offer a metric selector use the same four columns:
-
-| Key | Label |
-|-----|-------|
-| `budget` | Budget |
-| `revision` | Revision |
-| `follow_up` | Actuals |
-| `landing` | Expected landing |
+Every metric or column selector offers the same budget columns: the ones your organisation shows, under their names. With the standard settings these are Budget, Revision, Actuals and Expected landing. Forecast is offered when it is shown. See [Budget columns in reports](#budget-columns-in-reports).
 
 ### Navigation
 
@@ -384,6 +385,6 @@ Every report shows a breadcrumb trail back to the **Reporting** hub, so you can 
 - **Start with Global chargeback**: Get the big picture of allocations before drilling into a single company.
 - **Use Top items for quick wins**: The largest cost items are your first candidates for optimization.
 - **Compare Budget vs Expected landing**: Use the Budget column comparison report to measure forecast accuracy across years.
-- **Toggle sections on chargeback reports**: The checkbox controls let you focus on just the data you need -- departments, items, KPIs, or flows -- without visual clutter.
+- **Toggle sections on chargeback reports**: The checkbox controls let you focus on just the data you need (departments, items, KPIs, or flows) without visual clutter.
 - **Year grouping in Budget column comparison**: When comparing the same metric across multiple years, enable year grouping for a cleaner line chart.
 - **Export for presentations**: Charts export as PNG and tables as CSV, both ready for slides or spreadsheets.

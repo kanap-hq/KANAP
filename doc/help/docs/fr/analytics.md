@@ -1,6 +1,6 @@
 # Dimensions analytiques
 
-Les dimensions analytiques vous offrent un moyen flexible de classifier et d'analyser votre budget IT en dehors de votre structure comptable formelle. Au lieu de retravailler les sociétés, départements ou comptes, vous créez des catégories légères — « Infrastructure », « Migration Cloud », « Licences » — et étiquetez les postes de dépenses pour du reporting personnalisé.
+Les dimensions analytiques vous offrent un moyen flexible de classifier et d'analyser votre budget IT en dehors de votre structure comptable formelle. Au lieu de retravailler les sociétés, départements ou comptes, vous créez des catégories légères, par exemple « Infrastructure », « Migration Cloud » ou « Licences », et étiquetez les postes de dépenses pour du reporting personnalisé.
 
 ## Premiers pas
 
@@ -26,7 +26,7 @@ La liste des catégories vous offre un aperçu rapide de chaque dimension analyt
 
 | Colonne | Ce qu'elle affiche |
 |---|---|
-| **Nom** | Libellé de la catégorie (cliquable — ouvre l'espace de travail) |
+| **Nom** | Libellé de la catégorie (cliquable, ouvre l'espace de travail) |
 | **Description** | Courte explication de l'objectif de la catégorie |
 | **Statut** | Activé ou Désactivé |
 | **Mis à jour** | Horodatage de la dernière modification |
@@ -83,7 +83,7 @@ Le rapport **Dimensions analytiques** (sous **Rapports**) montre comment le budg
 **Fonctionnalités du rapport** :
 - **Type de poste** : OPEX ou CAPEX
 - **Plage d'années** : Année unique (graphique circulaire ou en barres) ou multi-année (graphique en ligne)
-- **Métrique** : Budget, Réalisé, Atterrissage prévu ou Révision
+- **Métrique** : Toute colonne budgétaire affichée par votre organisation, sous son nom. Démarre sur la colonne par défaut
 - **Type de graphique** (année unique) : Graphique circulaire ou graphique en barres horizontales
 - **Exclusion de catégories** : Filtrer des catégories spécifiques pour se concentrer sur un sous-ensemble
 
@@ -98,7 +98,7 @@ Le rapport **Dimensions analytiques** (sous **Rapports**) montre comment le budg
 - **Documentez avec des descriptions** : Une courte description aide grandement à un usage cohérent entre les équipes.
 - **Ne forcez pas** : « Non assigné » est un état valide. Évitez de créer des catégories fourre-tout vagues juste pour combler le vide.
 - **Désactivez plutôt que supprimer** : Retirer une catégorie préserve la précision historique dans les rapports.
-- **Utilisez les rapports pour affiner** : Exécutez le rapport Dimensions analytiques périodiquement — si une catégorie capture trop ou trop peu de dépenses, scindez ou fusionnez en conséquence.
+- **Utilisez les rapports pour affiner** : Exécutez le rapport Dimensions analytiques périodiquement. Si une catégorie capture trop ou trop peu de dépenses, scindez ou fusionnez en conséquence.
 
 ## Questions fréquentes
 
@@ -115,4 +115,4 @@ Commencez avec 5 à 10. Plus de 20 indique généralement une sur-ingénierie. V
 Les **départements** sont des unités organisationnelles formelles avec des clés de ventilation précises. Les **dimensions analytiques** sont des étiquettes informelles et optionnelles pour un reporting flexible sans surcharge de ventilation.
 
 **Pourquoi certains éléments affichent-ils « Non assigné » ?**
-Les éléments sans catégorie analytique apparaissent comme « Non assigné » dans les rapports. C'est attendu — les catégories sont entièrement optionnelles.
+Les éléments sans catégorie analytique apparaissent comme « Non assigné » dans les rapports. C'est attendu : les catégories sont entièrement optionnelles.

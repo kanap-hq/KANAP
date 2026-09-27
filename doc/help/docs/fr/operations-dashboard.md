@@ -15,7 +15,7 @@ Le tableau de bord est composé de tuiles disposées en grille responsive : troi
 
 ### Aperçu OPEX
 
-Un tableau compact couvrant trois exercices fiscaux : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Jusqu'à cinq colonnes de valeurs apparaissent : **Budget**, **Révision**, **Prévision**, **Réalisé** et **Atterrissage prévu**. Une colonne s'affiche dès qu'elle contient un montant pour au moins une des trois années. Les tuiles OPEX et CAPEX affichent les mêmes colonnes. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846k`).
+Un tableau compact couvrant trois exercices fiscaux : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Jusqu'à cinq colonnes de valeurs apparaissent : les colonnes budgétaires affichées par votre organisation, sous leurs noms (**Budget**, **Révision**, **Réalisé** et **Atterrissage prévu** avec les réglages standard, plus **Prévision** quand elle est affichée). Une colonne s'affiche dès qu'elle contient un montant pour au moins une des trois années. Les colonnes masquées n'apparaissent jamais. Les tuiles OPEX et CAPEX affichent les mêmes colonnes. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846k`).
 
 Cliquez sur **Voir** pour ouvrir la liste OPEX.
 
@@ -56,13 +56,13 @@ Sous les boutons, une section **Mises à jour récentes** liste les cinq postes 
 
 ### Top postes (A)
 
-Les cinq postes les plus importants de l'année en cours, classés par montant budgétaire. Les montants sont arrondis au millier avec un suffixe « k ».
+Les cinq postes les plus importants de l'année en cours, classés selon la colonne par défaut. Le titre nomme la colonne, par exemple **Top postes (Budget, A)**. Les montants sont arrondis au millier avec un suffixe « k ».
 
 Utilisez les onglets **OPEX** / **CAPEX** de l'en-tête de la tuile pour choisir le type de poste. La tuile mémorise votre choix. Cliquez sur **Ouvrir** pour voir le rapport Top postes complet sur le même type.
 
 ### Plus fortes hausses (A vs A-1)
 
-Les cinq postes avec la plus forte augmentation de budget par rapport à l'année précédente, calculée sur tous les postes du type. Les postes dont le budget est stable ou en baisse n'apparaissent pas. Les montants sont arrondis au millier avec un suffixe « k ».
+Les cinq postes avec la plus forte augmentation de la colonne par défaut par rapport à l'année précédente, calculée sur tous les postes du type. Le titre nomme la colonne, par exemple **Plus fortes hausses (Budget, A vs A-1)**. Les postes dont le montant est stable ou en baisse n'apparaissent pas. Les montants sont arrondis au millier avec un suffixe « k ».
 
 Utilisez les onglets **OPEX** / **CAPEX** de l'en-tête de la tuile pour choisir le type de poste. La tuile mémorise votre choix. Cliquez sur **Ouvrir** pour voir le rapport Top hausse / baisse complet sur le même type.
 
@@ -70,6 +70,7 @@ Un type que vous ne pouvez pas consulter est désactivé dans les onglets et n'a
 
 ## Conseils
 
+- **Colonne utilisée par les tuiles** : Un administrateur budgétaire choisit la colonne par défaut et les noms des colonnes dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les tuiles Top et les rapports qu'elles ouvrent suivent ce choix.
 - **Montants arrondis** : Tous les montants du tableau de bord sont arrondis au millier pour une vue compacte. Ouvrez la liste OPEX ou CAPEX, ou les rapports, lorsque vous avez besoin de chiffres exacts.
 - **Boutons manquants** : Si vous ne voyez pas les boutons **Nouveau OPEX** ou **Nouveau CAPEX**, votre rôle actuel n'inclut pas l'autorisation manager requise. Demandez à votre administrateur de vérifier votre accès.
 - **Tuiles vides** : Une tuile qui affiche « Pas de données » signifie simplement qu'il n'y a pas encore d'enregistrements de ce type. Dès que vous ou votre équipe commencez à saisir des données, la tuile se remplira automatiquement.
