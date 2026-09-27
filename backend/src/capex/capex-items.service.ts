@@ -232,7 +232,7 @@ export class CapexItemsService {
    * Spread a year's totals from the file flat over its twelve months. Only the
    * measures with a value in the file replace that year: a blank cell leaves
    * the stored months (and the column's period) as they are, an explicit 0
-   * clears them. Each planning column written gets a whole-year flat spread
+   * clears them. Each column written gets a whole-year flat spread
    * record.
    */
   async writeImportedTotals(

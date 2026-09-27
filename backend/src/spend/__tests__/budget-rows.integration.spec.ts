@@ -89,6 +89,7 @@ async function seedBook(runner: QueryRunner, tag: string) {
   );
   await record('opex', opex.versionId, 'planned', `${YEAR}-04-01`, `${YEAR}-12-31`, 'spread');
   await record('opex', opex.versionId, 'committed', `${YEAR}-01-01`, `${YEAR}-06-30`, 'copied');
+  await record('opex', opex.versionId, 'actual', `${YEAR}-02-01`, `${YEAR}-11-30`, 'manual');
   return { tenantId, opex, capex };
 }
 
@@ -117,21 +118,23 @@ async function testRoundTrip() {
       [planned.period_start, planned.period_end, planned.method, planned.apr, planned.may, planned.aug, planned.dec],
       [`${YEAR}-04-01`, `${YEAR}-12-31`, 'spread', '100.10', '0.01', '-10', '1.25'],
     );
-    assert.deepEqual([lines[3].period_start, lines[3].period_end, lines[3].method], ['', '', ''], 'Actuals carry no period nor method');
+    assert.deepEqual([lines[3].period_start, lines[3].period_end, lines[3].method], [`${YEAR}-02-01`, `${YEAR}-11-30`, 'manual'], 'Actuals carry their period and method');
+    assert.deepEqual([lines[8].period_start, lines[8].period_end, lines[8].method], [`${YEAR}-01-01`, `${YEAR}-12-31`, ''], 'CAPEX Actuals without a record: whole year');
     assert.deepEqual([lines[2].period_start, lines[2].period_end, lines[2].method], [`${YEAR}-01-01`, `${YEAR}-12-31`, ''], 'no record: whole year, no method');
 
     const result = await importLines(runner, tenantId, lines);
     assert.deepEqual(result, { ok: true, dryRun: false, total: 10, inserted: 0, updated: 0, unchanged: 10, errors: [] });
     const after = await readRecords(runner, 'opex', opex.versionId);
-    assert.deepEqual(Object.keys(after).sort(), ['committed', 'planned']);
+    assert.deepEqual(Object.keys(after).sort(), ['actual', 'committed', 'planned']);
     assert.equal(after.planned.updated_at.getTime(), before.planned.updated_at.getTime(), 'provenance kept');
+    assert.equal(after.actual.updated_at.getTime(), before.actual.updated_at.getTime(), 'the Actuals record is kept too');
     assert.equal(after.committed.method, 'copied');
     assert.deepEqual(await readMeasure(runner, 'opex', opex.versionId, 'planned', YEAR), stored(IRREGULAR));
     assert.deepEqual(Object.keys(await readRecords(runner, 'capex', capex.versionId)), [], 'CAPEX: no record created by an unchanged import');
   });
 }
 
-/** Changed rows: months → edited by hand with the file's period; period only → method kept; Actuals → months, no record; Forecast written. */
+/** Changed rows: months → edited by hand with the file's period; period only → method kept; Actuals and Forecast alike. */
 async function testChangedRows() {
   await inRolledBackTransaction(async (runner) => {
     const { tenantId, opex } = await seedBook(runner, 'change');
@@ -141,7 +144,7 @@ async function testChangedRows() {
       { ...planned, jan: '5', period_start: `${YEAR}-02-01` },
       { ...committed, period_end: `${YEAR}-09-30` },
       { ...forecast, dec: '77,50' },
-      { ...actual, feb: '1 000', period_start: 'garbage' },
+      { ...actual, feb: '1 000', period_start: `${YEAR}-03-01` },
     ];
     const dry = await importLines(runner, tenantId, changed, { dryRun: true });
     assert.deepEqual([dry.ok, dry.inserted, dry.updated, dry.unchanged], [true, 0, 4, 0], 'dry run counts');
@@ -161,7 +164,11 @@ async function testChangedRows() {
       'period only: method kept',
     );
     assert.deepEqual([records.forecast.method, records.forecast.period_start], ['manual', `${YEAR}-01-01`], 'Forecast gets a record');
-    assert.equal(records.actual, undefined, 'Actuals never get a record');
+    assert.deepEqual(
+      [records.actual.method, records.actual.period_start, records.actual.period_end],
+      ['manual', `${YEAR}-03-01`, `${YEAR}-11-30`],
+      'Actuals: edited by hand with the file\'s period',
+    );
     assert.equal((await readMeasure(runner, 'opex', opex.versionId, 'planned', YEAR))[0], '5.00');
     assert.equal((await readMeasure(runner, 'opex', opex.versionId, 'forecast', YEAR))[11], '77.50');
     assert.equal((await readMeasure(runner, 'opex', opex.versionId, 'actual', YEAR))[1], '1000.00');
@@ -187,6 +194,8 @@ async function testNewYearsAndAliases() {
     assert.deepEqual(await readMeasure(runner, 'opex', version!.id, 'actual', YEAR), repeat('1.00', 12));
     const { planned } = await readRecords(runner, 'opex', version!.id);
     assert.deepEqual([planned.method, planned.period_start, planned.spread_profile_name, planned.last_calculation], ['manual', `${YEAR}-04-01`, null, null]);
+    const { actual } = await readRecords(runner, 'opex', version!.id);
+    assert.deepEqual([actual.method, actual.period_start, actual.period_end], ['manual', `${YEAR}-01-01`, `${YEAR}-12-31`], 'a new Actuals row gets a whole-year record');
     assert.equal(await findVersion(runner, 'capex', capexItem, YEAR + 1), undefined, 'an all-zero row creates no year');
   });
 }

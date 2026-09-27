@@ -6,12 +6,12 @@ const TABLES = [
 ] as const;
 
 /**
- * Round inputs: one row per round (version × planning measure) holding the
+ * Round inputs: one row per round (version × budget column) holding the
  * period that drove its last spread and how the column was produced
  * (spread, copied, edited by hand). Same shape on OPEX and CAPEX.
  *
- * - Actuals never get a row: the `measure` check leaves `actual` out, so the
- *   database refuses one even if a caller forgot to.
+ * - The five columns are equal: `measure` is a storage key, never a role.
+ *   What a column means comes from the tenant's settings, not from here.
  * - The period stays inside one calendar year; that it is the version's year
  *   is checked by the services, which know the version.
  * - `updated_by` is a bare uuid like `freeze_states.frozen_by`: deleting a
@@ -43,7 +43,7 @@ export class RoundInputs1853630000000 implements MigrationInterface {
           updated_at timestamptz NOT NULL DEFAULT now(),
           updated_by uuid NULL,
           CONSTRAINT ${table}_measure_check
-            CHECK (measure IN ('planned', 'committed', 'forecast', 'expected_landing')),
+            CHECK (measure IN ('planned', 'committed', 'forecast', 'actual', 'expected_landing')),
           CONSTRAINT ${table}_method_check
             CHECK (method IN ('spread', 'copied', 'manual')),
           CONSTRAINT ${table}_period_check

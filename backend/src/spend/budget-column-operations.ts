@@ -20,7 +20,6 @@ import {
 import {
   centsToDecimal,
   deleteRoundInput,
-  isPlanningMeasure,
   listRoundInputs,
   RoundInput,
   RoundInputsContext,
@@ -200,8 +199,8 @@ export type CopyColumnOperation = {
  * Copy one column of a year to a column of a year for every enabled item:
  * the twelve months keep their shape (see `copiedMonths`), the destination
  * column's record takes the source period shifted to the destination year
- * (whole year when the source has none or is Actuals) and says where the
- * column was copied from. Actuals as destination get no record.
+ * (whole year when the source has none) and says where the column was
+ * copied from. Every column is treated alike.
  */
 export async function copyBudgetColumn(
   deps: BudgetOperationDeps,
@@ -290,26 +289,22 @@ export async function copyBudgetColumn(
       yearPeriods(destinationYear).map((period, i) => ({ period, [destinationMeasure]: target[i] })),
     );
 
-    if (isPlanningMeasure(destinationMeasure)) {
-      const sourceRecord = isPlanningMeasure(sourceMeasure)
-        ? records.get(sourceVersion.id)?.find((r) => r.measure === sourceMeasure)
-        : undefined;
-      const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
-      await upsertRoundInput(rctx, destinationMeasure, {
-        ...(sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear)),
-        method: 'copied',
-        spread_profile_name: sourceRecord?.spread_profile_name ?? null,
-        last_calculation: {
-          kind: 'copy',
-          source_year: sourceYear,
-          source_measure: sourceMeasure as 'planned' | 'committed' | 'actual' | 'expected_landing',
-          uplift_pct: pctText,
-          source_total: centsToDecimal(sourceTotal),
-          total: centsToDecimal(targetTotal),
-          source_method: sourceRecord?.method ?? null,
-        },
-      });
-    }
+    const sourceRecord = records.get(sourceVersion.id)?.find((r) => r.measure === sourceMeasure);
+    const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
+    await upsertRoundInput(rctx, destinationMeasure, {
+      ...(sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear)),
+      method: 'copied',
+      spread_profile_name: sourceRecord?.spread_profile_name ?? null,
+      last_calculation: {
+        kind: 'copy',
+        source_year: sourceYear,
+        source_measure: sourceMeasure,
+        uplift_pct: pctText,
+        source_total: centsToDecimal(sourceTotal),
+        total: centsToDecimal(targetTotal),
+        source_method: sourceRecord?.method ?? null,
+      },
+    });
 
     await deps.audit.log(
       {
@@ -369,9 +364,7 @@ export async function clearBudgetColumn(
   const versions = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [year]);
   const allVersions = Array.from(versions.values());
   const months = await readVersionMonths(mg, scope, tenantId, allVersions);
-  const records = isPlanningMeasure(measure)
-    ? await listRoundInputs(mg, scope, tenantId, allVersions.map((v) => v.id))
-    : new Map<string, RoundInput[]>();
+  const records = await listRoundInputs(mg, scope, tenantId, allVersions.map((v) => v.id));
 
   let cleared = 0;
   let skipped = 0;

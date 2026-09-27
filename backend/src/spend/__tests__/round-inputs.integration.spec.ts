@@ -22,7 +22,7 @@ import {
   TABLES,
 } from './round-inputs.fixtures';
 
-// Round inputs (period and provenance of each planning column) through the
+// Round inputs (period and provenance of each budget column) through the
 // amounts services, the legacy item CSV and the tenant isolation of the two
 // new tables, on OPEX and CAPEX, against the database behind `dataSource`.
 
@@ -180,21 +180,43 @@ async function testMonthlyEditsAndProvenance(kind: Kind) {
   });
 }
 
-/** Actuals never get a record, whatever the payload; the helper refuses them by name. */
-async function testActualsNeverGetARecord(kind: Kind) {
+/** Actuals behave like the other columns: spreads record a period, a real edit marks them manual, audited alike. */
+async function testActualsBehaveLikeTheOthers(kind: Kind) {
   await withLine(kind, async ({ runner, versionId, tenantId }) => {
-    const svc = amountsService(kind);
+    const audit = captureAudit();
+    const svc = amountsService(kind, audit);
     await svc.bulkUpsert(versionId, { kind: 'annual', year: YEAR, totals: { actual: 1200 }, period_start: `${YEAR}-04-01`, period_end: `${YEAR}-06-30` }, null, { manager: runner.manager });
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'actual', YEAR), [...repeat('0.00', 3), ...repeat('400.00', 3), ...repeat('0.00', 6)]);
+    let { actual } = await readRecords(runner, kind, versionId);
+    assert.deepEqual(
+      [actual.method, actual.period_start, actual.period_end, actual.spread_profile_name, actual.last_calculation.kind, actual.last_calculation.total],
+      ['spread', `${YEAR}-04-01`, `${YEAR}-06-30`, 'flat', 'annual', '1200.00'],
+      `${kind}: an annual spread records Actuals`,
+    );
+    const roundTable = kind === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
+    assert.deepEqual(audit.entries.filter((e) => e.table === roundTable).map((e) => [e.action, e.after?.measure]), [['create', 'actual']]);
+
+    // A no-op resubmit leaves the record; a real edit marks it manual and keeps its period.
+    const stored = await readMeasure(runner, kind, versionId, 'actual', YEAR);
+    await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: stored.map((value, i) => ({ period: period(i + 1, YEAR), actual: value })) }, null, { manager: runner.manager });
+    assert.equal((await readRecords(runner, kind, versionId)).actual.method, 'spread', `${kind}: no-op resubmit`);
+    await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(5, YEAR), actual: 7 }] }, null, { manager: runner.manager });
+    ({ actual } = await readRecords(runner, kind, versionId));
+    assert.deepEqual([actual.method, actual.period_start, actual.period_end], ['manual', `${YEAR}-04-01`, `${YEAR}-06-30`], `${kind}: a real edit`);
+
+    // Quarterly spreads record Actuals too.
     await svc.bulkUpsert(versionId, { kind: 'quarterly', year: YEAR, measure: 'actual', Q2: 300 }, null, { manager: runner.manager });
-    await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(1, YEAR), actual: 7 }] }, null, { manager: runner.manager });
-    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: no record for Actuals`);
+    ({ actual } = await readRecords(runner, kind, versionId));
+    assert.deepEqual([actual.method, actual.last_calculation.kind, actual.period_start], ['spread', 'quarterly', `${YEAR}-01-01`]);
+
+    // The helper still refuses a name that is not a column.
     await assert.rejects(
       () => upsertRoundInput(
         { manager: runner.manager, scope: kind, version: { id: versionId, tenant_id: tenantId, budget_year: YEAR }, userId: null, audit: captureAudit() },
-        'actual',
+        'budget',
         { period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`, method: 'spread', spread_profile_name: null, last_calculation: null },
       ),
-      (err: any) => err instanceof InternalServerErrorException && /Actuals/.test(err.message),
+      (err: any) => err instanceof InternalServerErrorException && /Unknown budget column 'budget'/.test(err.message),
     );
   });
 }
@@ -251,7 +273,11 @@ async function testItemCsvRecords(kind: Kind) {
     assert.deepEqual(records.planned.last_calculation, {
       kind: 'annual', total: '2400.00', profile: 'flat', active_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], weights: repeat('1', 12), source: 'item_csv',
     });
-    assert.equal(records.actual, undefined, `${kind}: no record for Actuals`);
+    assert.deepEqual(
+      [records.actual.method, records.actual.period_start, records.actual.period_end, records.actual.last_calculation.source],
+      ['spread', `${YEAR}-01-01`, `${YEAR}-12-31`, 'item_csv'],
+      `${kind}: Actuals get the same whole-year record`,
+    );
     assert.equal(records.committed.method, 'manual', `${kind}: a blank cell leaves the record`);
     assert.equal(records.committed.updated_at.getTime(), before.updated_at.getTime());
   });
@@ -323,7 +349,7 @@ void runSpecs(
     [`testAnnualSpreadRecordsItsPeriod(${kind})`, () => testAnnualSpreadRecordsItsPeriod(kind)],
     [`testQuarterlySpreadRecordsItsPeriod(${kind})`, () => testQuarterlySpreadRecordsItsPeriod(kind)],
     [`testMonthlyEditsAndProvenance(${kind})`, () => testMonthlyEditsAndProvenance(kind)],
-    [`testActualsNeverGetARecord(${kind})`, () => testActualsNeverGetARecord(kind)],
+    [`testActualsBehaveLikeTheOthers(${kind})`, () => testActualsBehaveLikeTheOthers(kind)],
     [`testRefusalsAndProfiles(${kind})`, () => testRefusalsAndProfiles(kind)],
     [`testItemCsvRecords(${kind})`, () => testItemCsvRecords(kind)],
     [`testCrossTenantIsolation(${kind})`, () => testCrossTenantIsolation(kind)],

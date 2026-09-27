@@ -23,12 +23,14 @@ import {
   yearPeriods,
 } from './amounts-write.util';
 import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, SpreadInputError } from './spread.util';
-import { isPlanningMeasure, listRoundInputs, PLANNING_MEASURES, RoundInput, saveRoundInput, wholeYear } from './round-inputs.util';
+import { listRoundInputs, ROUND_MEASURES, RoundInput, saveRoundInput, wholeYear } from './round-inputs.util';
 import { BudgetVersionRow, createBudgetVersion, loadVersions } from './budget-column-operations';
 
 /**
  * Budget rows file: the monthly amounts of every OPEX and CAPEX line, one row
- * per line, year and measure, with the period of each planning column.
+ * per line, year and measure, with the period of each column (the five
+ * columns are alike: export writes each column's period and method, import
+ * applies the same rules to every row).
  *
  * Import guarantees amounts and periods, not history: a row identical to what
  * is stored is left alone (no write, no freeze check, provenance kept); a row
@@ -56,12 +58,7 @@ const MEASURE_ALIASES: Record<string, AmountMeasure> = {
   follow_up: BUDGET_COLUMN_MEASURE.follow_up,
   landing: BUDGET_COLUMN_MEASURE.landing,
 };
-const EXPORT_MEASURE_ORDER: readonly AmountMeasure[] = ['planned', 'committed', 'forecast', 'actual', 'expected_landing'];
-
-const PLANNING_ORDER = (measure: AmountMeasure) => {
-  const index = (PLANNING_MEASURES as readonly string[]).indexOf(measure);
-  return index < 0 ? PLANNING_MEASURES.length : index;
-};
+const COLUMN_ORDER = (measure: AmountMeasure) => ROUND_MEASURES.indexOf(measure);
 
 const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
@@ -80,8 +77,7 @@ type ParsedRow = {
   itemNumber: number;
   year: number;
   measure: AmountMeasure;
-  /** Null on Actuals: their period is ignored. */
-  period: { period_start: string; period_end: string } | null;
+  period: { period_start: string; period_end: string };
   months: bigint[];
 };
 
@@ -142,19 +138,19 @@ export class BudgetRowsCsvService {
       const records = await listRoundInputs(ctx.manager, scope, ctx.tenantId, stored.map((v) => v.id));
       for (const version of stored) {
         const versionYear = Number(version.budget_year);
-        for (const measure of EXPORT_MEASURE_ORDER) {
+        for (const measure of ROUND_MEASURES) {
           const record = records.get(version.id)?.find((r) => r.measure === measure);
-          const period = measure === 'actual' ? null : record ?? wholeYear(versionYear);
+          const period = record ?? wholeYear(versionYear);
           const values = months.get(version.id)!.months[measure];
           lines.push({
             item_type: scope,
             item_number: String(numberOf.get(version.item_id)),
             year: String(versionYear),
             measure,
-            period_start: period?.period_start ?? '',
-            period_end: period?.period_end ?? '',
+            period_start: period.period_start,
+            period_end: period.period_end,
             ...Object.fromEntries(MONTH_COLUMNS.map((column, i) => [column, formatCents(values[i])])),
-            method: measure === 'actual' ? '' : record?.method ?? '',
+            method: record?.method ?? '',
           });
         }
       }
@@ -245,8 +241,7 @@ export class BudgetRowsCsvService {
         const monthsChanged = stored ? row.months.some((v, i) => v !== stored[i]) : row.months.some((v) => v !== 0n);
         const record = version ? records.get(version.id)?.find((r) => r.measure === row.measure) : undefined;
         const storedPeriod = record ?? wholeYear(row.year);
-        const periodChanged = row.period !== null
-          && (row.period.period_start !== storedPeriod.period_start || row.period.period_end !== storedPeriod.period_end);
+        const periodChanged = row.period.period_start !== storedPeriod.period_start || row.period.period_end !== storedPeriod.period_end;
         if (!monthsChanged && (!version || !periodChanged)) {
           unchanged++;
           continue;
@@ -316,9 +311,8 @@ export class BudgetRowsCsvService {
       }
       // Months before records, records in column order: the lock order of every amounts writer.
       if (changed.length === 0) await lockYearMonths({ manager, scope, version }, year);
-      const byColumn = [...group].sort((a, b) => PLANNING_ORDER(a.measure) - PLANNING_ORDER(b.measure));
+      const byColumn = [...group].sort((a, b) => COLUMN_ORDER(a.measure) - COLUMN_ORDER(b.measure));
       for (const row of byColumn) {
-        if (!isPlanningMeasure(row.measure) || !row.period) continue;
         const period = row.period;
         await saveRoundInput({ manager, scope, version, userId, audit: this.audit }, row.measure, (stored: RoundInput | null) => ({
           ...period,
@@ -367,8 +361,8 @@ export class BudgetRowsCsvService {
       error(`measure '${cell('measure')}' is unknown. Use ${AMOUNT_MEASURES.join(', ')} (or budget, revision, follow_up, landing).`);
     }
 
-    let period: ParsedRow['period'] = null;
-    if (measure && measure !== 'actual' && year !== null) {
+    let period: ParsedRow['period'] | null = null;
+    if (measure && year !== null) {
       const start = cell('period_start');
       const end = cell('period_end');
       if (!start && !end) {
@@ -401,7 +395,7 @@ export class BudgetRowsCsvService {
       }
     }
 
-    if (errors.length > before || !scope || itemNumber === null || year === null || !measure) return null;
+    if (errors.length > before || !scope || itemNumber === null || year === null || !measure || !period) return null;
     return { line, scope, itemNumber, year, measure, period, months };
   }
 

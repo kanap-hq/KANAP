@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { toCents } from '../common/amount';
 import {
+  AMOUNT_MEASURES,
   AmountMeasure,
   AmountScope,
   AmountsPayloadResult,
@@ -15,18 +16,18 @@ import {
 } from './amounts-write.util';
 
 /**
- * Round inputs: for each planning column of a version (Budget, Revision,
- * Forecast, Landing), the period its last spread used and how the column was
- * produced. Shared by OPEX (`spend_round_inputs`) and CAPEX
- * (`capex_round_inputs`); written in the caller's transaction, next to the
- * amounts, with one audit row per record change.
+ * Round inputs: for each budget column of a version, the period its last
+ * spread used and how the column was produced. Shared by OPEX
+ * (`spend_round_inputs`) and CAPEX (`capex_round_inputs`); written in the
+ * caller's transaction, next to the amounts, with one audit row per record
+ * change.
  *
- * Actuals never get a record: every function refuses `actual` before any SQL
- * (the table's check constraint refuses it too).
+ * The five columns are equal slots: a measure name is a storage key, never a
+ * behaviour. What a column means comes from the tenant's settings.
  */
 
-export type PlanningMeasure = 'planned' | 'committed' | 'forecast' | 'expected_landing';
-export const PLANNING_MEASURES: readonly PlanningMeasure[] = ['planned', 'committed', 'forecast', 'expected_landing'];
+/** The measures that get a record: all five columns, in this order (also the lock order). */
+export const ROUND_MEASURES: readonly AmountMeasure[] = AMOUNT_MEASURES;
 
 export type RoundMethod = 'spread' | 'copied' | 'manual';
 
@@ -36,7 +37,7 @@ export type LastCalculation =
   | {
     kind: 'copy';
     source_year: number;
-    source_measure: 'planned' | 'committed' | 'actual' | 'expected_landing';
+    source_measure: AmountMeasure;
     uplift_pct: string;
     source_total: string;
     total: string;
@@ -45,7 +46,7 @@ export type LastCalculation =
 
 /** A record as the API returns it. */
 export type RoundInput = {
-  measure: PlanningMeasure;
+  measure: AmountMeasure;
   period_start: string;
   period_end: string;
   method: RoundMethod;
@@ -85,15 +86,12 @@ export type RoundInputsContext = {
   audit: Pick<AuditService, 'log'>;
 };
 
-export function isPlanningMeasure(value: unknown): value is PlanningMeasure {
-  return typeof value === 'string' && (PLANNING_MEASURES as readonly string[]).includes(value);
+export function isRoundMeasure(value: unknown): value is AmountMeasure {
+  return typeof value === 'string' && (ROUND_MEASURES as readonly string[]).includes(value);
 }
 
-function assertPlanningMeasure(measure: string): PlanningMeasure {
-  if (measure === 'actual') {
-    throw new InternalServerErrorException('Actuals never get a spread period: no round input may be written for them.');
-  }
-  if (!isPlanningMeasure(measure)) throw new InternalServerErrorException(`Unknown budget column '${measure}'.`);
+function assertRoundMeasure(measure: string): AmountMeasure {
+  if (!isRoundMeasure(measure)) throw new InternalServerErrorException(`Unknown budget column '${measure}'.`);
   return measure;
 }
 
@@ -127,7 +125,7 @@ function toApi(row: StoredRoundInput): RoundInput {
   };
 }
 
-const MEASURE_ORDER = new Map(PLANNING_MEASURES.map((m, i) => [m as string, i]));
+const MEASURE_ORDER = new Map(ROUND_MEASURES.map((m, i) => [m as string, i]));
 
 /** The records of several versions in one query, keyed by version id, in column order. */
 export async function listRoundInputs(
@@ -153,7 +151,7 @@ export async function versionRoundInputs(manager: EntityManager, scope: AmountSc
   return (await listRoundInputs(manager, scope, version.tenant_id, [version.id])).get(version.id) ?? [];
 }
 
-async function readRecord(ctx: RoundInputsContext, measure: PlanningMeasure): Promise<StoredRoundInput | null> {
+async function readRecord(ctx: RoundInputsContext, measure: AmountMeasure): Promise<StoredRoundInput | null> {
   const rows: StoredRoundInput[] = await ctx.manager.query(
     `SELECT ${COLUMNS} FROM ${ROUND_TABLE[ctx.scope]}
      WHERE tenant_id = $1 AND version_id = $2 AND measure = $3
@@ -199,7 +197,7 @@ export async function saveRoundInput(
   rawMeasure: string,
   next: (stored: RoundInput | null) => RoundInputFields | null,
 ): Promise<RoundInput | null> {
-  const measure = assertPlanningMeasure(rawMeasure);
+  const measure = assertRoundMeasure(rawMeasure);
   assertTenant(ctx.version);
   const stored = await readRecord(ctx, measure);
   const fields = next(stored ? toApi(stored) : null);
@@ -269,7 +267,7 @@ export async function markRoundsManual(ctx: RoundInputsContext, measures: readon
 
 /** Delete the record of one column, if any. */
 export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: string) {
-  const measure = assertPlanningMeasure(rawMeasure);
+  const measure = assertRoundMeasure(rawMeasure);
   assertTenant(ctx.version);
   // Read (and lock) first: the audit needs the row, and a DELETE … RETURNING
   // comes back from TypeORM as [rows, count] rather than rows.
@@ -286,15 +284,14 @@ export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: stri
 }
 
 /**
- * The records a spread writes: one `spread` record per planning measure it
- * replaced, with the period, the profile and what was computed. Actuals are
- * skipped.
+ * The records a spread writes: one `spread` record per measure it replaced,
+ * with the period, the profile and what was computed.
  */
 export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSpread, source?: 'item_csv') {
   const { period_start, period_end, active_months } = spread.period;
   if (spread.kind === 'annual') {
     const activeWeights = active_months.map((m) => spread.profile.labels[m - 1]);
-    for (const measure of PLANNING_MEASURES) {
+    for (const measure of ROUND_MEASURES) {
       const total = spread.totals[measure];
       if (total === undefined) continue;
       await upsertRoundInput(ctx, measure, {
@@ -314,7 +311,6 @@ export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSprea
     }
     return;
   }
-  if (!isPlanningMeasure(spread.measure)) return;
   const q = spread.quarters;
   await upsertRoundInput(ctx, spread.measure, {
     period_start,
@@ -332,9 +328,9 @@ export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSprea
 
 /**
  * Round inputs after an amounts payload: a spread records its period and
- * profile; a monthly patch marks `manual` each planning measure whose stored
- * cents actually changed (a month the patch created was zero before), so a
- * no-op resubmit leaves the provenance alone.
+ * profile; a monthly patch marks `manual` each measure whose stored cents
+ * actually changed (a month the patch created was zero before), so a no-op
+ * resubmit leaves the provenance alone.
  */
 export async function recordPayloadRoundInputs(ctx: RoundInputsContext, result: AmountsPayloadResult) {
   if (result.spread) {
@@ -342,7 +338,7 @@ export async function recordPayloadRoundInputs(ctx: RoundInputsContext, result: 
     return;
   }
   const beforeByPeriod = new Map(result.before.map((row) => [row.period, row]));
-  const changed = result.measures.filter((measure: AmountMeasure) => isPlanningMeasure(measure) && result.after.some((row) => {
+  const changed = result.measures.filter((measure: AmountMeasure) => result.after.some((row) => {
     const before = beforeByPeriod.get(row.period);
     return toCents(before ? before[measure] : 0) !== toCents(row[measure]);
   }));
@@ -351,8 +347,8 @@ export async function recordPayloadRoundInputs(ctx: RoundInputsContext, result: 
 
 /**
  * Yearly totals of the legacy item CSV: each measure given is spread flat
- * over the whole year and replaces its twelve months; each planning measure
- * gets a whole-year `spread` record marked as coming from the item file.
+ * over the whole year and replaces its twelve months; each measure gets a
+ * whole-year `spread` record marked as coming from the item file.
  * A measure left out (blank cell) is not written and keeps its record.
  */
 export async function writeItemCsvTotals(

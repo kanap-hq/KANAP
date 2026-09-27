@@ -54,10 +54,12 @@ function copy(kind: Kind, runner: QueryRunner, op: CopyOp, audit = captureAudit(
   );
 }
 
-async function spreadRecord(runner: QueryRunner, kind: Kind, tenantId: string, versionId: string, year: number, start: string, end: string) {
+async function spreadRecord(
+  runner: QueryRunner, kind: Kind, tenantId: string, versionId: string, year: number, start: string, end: string, measure = 'planned',
+) {
   await upsertRoundInput(
     { manager: runner.manager, scope: kind, version: { id: versionId, tenant_id: tenantId, budget_year: year }, userId: null, audit: captureAudit() },
-    'planned',
+    measure,
     { period_start: start, period_end: end, method: 'spread', spread_profile_name: '4-4-5', last_calculation: null },
   );
 }
@@ -166,7 +168,7 @@ async function testCopyWithUplift(kind: Kind) {
   });
 }
 
-/** The period follows the copy: 29 February becomes 28; Actuals as source give the whole year, as destination no record. */
+/** The period follows the copy (29 February becomes 28); Actuals copy and are copied like any column. */
 async function testCopyPeriodsAndActuals(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, `${kind}-leap`);
@@ -178,19 +180,40 @@ async function testCopyPeriodsAndActuals(kind: Kind) {
     const leap = (await readRecords(runner, kind, next!.id)).planned;
     assert.deepEqual([leap.period_start, leap.period_end], ['2033-02-28', '2033-12-31'], `${kind}: 29 February becomes 28`);
 
-    // Actuals as the source: whole-year period, source_measure 'actual'.
+    // Actuals as the source, without a record: whole-year period, like any column without one.
     await copy(kind, runner, { sourceYear: 2032, sourceColumn: 'follow_up', destinationYear: 2033, destinationColumn: 'landing', percentageIncrease: 0 });
-    const landing = (await readRecords(runner, kind, next!.id)).expected_landing;
+    let landing = (await readRecords(runner, kind, next!.id)).expected_landing;
     assert.deepEqual(
       [landing.period_start, landing.period_end, landing.last_calculation.source_measure, landing.last_calculation.source_method],
       ['2033-01-01', '2033-12-31', 'actual', null],
     );
     assert.deepEqual(await readMeasure(runner, kind, next!.id, 'expected_landing', 2033), repeat('7.00', 12));
 
-    // Actuals as the destination: months copied, no record.
+    // Actuals as the source, with a record: its period is shifted like any other.
+    await spreadRecord(runner, kind, tenantId, versionId, 2032, '2032-03-01', '2032-09-30', 'actual');
+    await copy(kind, runner, { sourceYear: 2032, sourceColumn: 'follow_up', destinationYear: 2033, destinationColumn: 'landing', percentageIncrease: 0, overwrite: true });
+    landing = (await readRecords(runner, kind, next!.id)).expected_landing;
+    assert.deepEqual(
+      [landing.method, landing.period_start, landing.period_end, landing.last_calculation.source_method],
+      ['copied', '2033-03-01', '2033-09-30', 'spread'],
+      `${kind}: the Actuals period follows the copy`,
+    );
+
+    // Actuals as the destination: months copied and the copied record written.
     await copy(kind, runner, { sourceYear: 2032, sourceColumn: 'budget', destinationYear: 2033, destinationColumn: 'follow_up', percentageIncrease: 0, overwrite: true });
     assert.deepEqual(await readMeasure(runner, kind, next!.id, 'actual', 2033), repeat('10.00', 12));
-    assert.equal((await readRecords(runner, kind, next!.id)).actual, undefined, `${kind}: Actuals get no record`);
+    const actual = (await readRecords(runner, kind, next!.id)).actual;
+    assert.deepEqual(
+      [actual.method, actual.period_start, actual.period_end, actual.last_calculation.source_measure],
+      ['copied', '2033-02-28', '2033-12-31', 'planned'],
+      `${kind}: Actuals get the copied record`,
+    );
+
+    // Clearing Actuals deletes its record.
+    const cleared = await budgetOperations(kind).clearBudgetColumn({ year: 2033, column: 'follow_up' }, null, { manager: runner.manager });
+    assert.equal(cleared.summary.cleared, 1);
+    assert.deepEqual(await readMeasure(runner, kind, next!.id, 'actual', 2033), repeat('0.00', 12));
+    assert.equal((await readRecords(runner, kind, next!.id)).actual, undefined, `${kind}: clear deletes the Actuals record`);
   });
 }
 
