@@ -92,6 +92,23 @@ describe('BudgetColumnsSettingsPage', () => {
     expect(save()).toBeDisabled();
   });
 
+  it('explains Default and Follows in info tooltips on their headers, not in lines under the table', async () => {
+    renderPage();
+    await waitForSetting();
+
+    const defaultHelp = "The default column is preselected in reports and sorts the lists and the dashboard. Freezing it fixes the year's exchange rates.";
+    const followsHelp = 'Columns that follow "Apply to all columns" take the same period when a spread is applied to all columns.';
+    expect(screen.queryByText(defaultHelp)).not.toBeInTheDocument();
+    expect(screen.queryByText(followsHelp)).not.toBeInTheDocument();
+
+    const defaultInfo = screen.getByRole('img', { name: defaultHelp });
+    expect(screen.getByRole('img', { name: followsHelp })).toBeInTheDocument();
+    expect(defaultInfo.closest('th')).toHaveTextContent('Default');
+
+    fireEvent.mouseOver(defaultInfo);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(defaultHelp);
+  });
+
   it('saves only what changed', async () => {
     mocked.patch.mockImplementation(async (_url: string, body: unknown) => ({ data: { ...stored, ...(body as object) } }));
     renderPage();

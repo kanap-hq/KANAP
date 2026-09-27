@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Box, Button, Paper, Radio, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Paper, Radio, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -116,6 +117,20 @@ const headSx = { textAlign: 'left', fontSize: 12, fontWeight: 500, color: 'kanap
 const cellSx = { px: 1, py: 0.75, fontSize: 13, color: 'kanap.text.primary', verticalAlign: 'top' } as const;
 const controlCellSx = { ...cellSx, py: 0.25 } as const;
 const helpSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.5 } as const;
+const headInfoSx = { fontSize: 13, color: 'kanap.text.tertiary', verticalAlign: 'middle', ml: 0.5 } as const;
+
+/** A header with its explanation one hover away, the same info icon as the spread panel of the budget tab. */
+function HeadWithInfo({ label, info }: { label: string; info: string }) {
+  return (
+    <Box component="th" sx={headSx}>
+      {label}
+      <Tooltip title={info}>
+        {/* aria-hidden off: SvgIcon hides itself from assistive technology by default. */}
+        <InfoOutlinedIcon tabIndex={0} role="img" aria-hidden={false} aria-label={info} sx={headInfoSx} />
+      </Tooltip>
+    </Box>
+  );
+}
 
 export default function BudgetColumnsSettingsPage() {
   const { t } = useTranslation(['ops', 'common']);
@@ -183,8 +198,8 @@ export default function BudgetColumnsSettingsPage() {
                   <Box component="th" sx={headSx}>{t(`${P}.column`)}</Box>
                   <Box component="th" sx={headSx}>{t(`${P}.name`)}</Box>
                   <Box component="th" sx={headSx}>{t(`${P}.shown`)}</Box>
-                  <Box component="th" sx={headSx}>{t(`${P}.follows`)}</Box>
-                  <Box component="th" sx={headSx}>{t(`${P}.default`)}</Box>
+                  <HeadWithInfo label={t(`${P}.follows`)} info={t(`${P}.helpFollows`)} />
+                  <HeadWithInfo label={t(`${P}.default`)} info={t(`${P}.helpDefault`)} />
                 </Box>
               </Box>
               <Box component="tbody">
@@ -260,8 +275,6 @@ export default function BudgetColumnsSettingsPage() {
           <Stack spacing={0.5} sx={{ mt: 1.5, maxWidth: 720 }}>
             <Typography sx={helpSx}>{t(`${P}.nameHint`)}</Typography>
             <Typography sx={helpSx}>{t(`${P}.helpHidden`)}</Typography>
-            <Typography sx={helpSx}>{t(`${P}.helpDefault`)}</Typography>
-            <Typography sx={helpSx}>{t(`${P}.helpFollows`)}</Typography>
           </Stack>
 
           {canEdit && errors.form && (
