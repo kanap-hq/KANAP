@@ -331,7 +331,7 @@ async function testBudgetColumnOperations(kind: Kind) {
     assertUntouched(rows, ['planned', 'forecast', 'committed', 'actual'], 'clear Landing');
     rows.forEach((row) => assert.equal(row.expected_landing, '0.00', `clear Landing: ${row.period} is zero, not NULL`));
 
-    // Revision of the year (200 × 78 = 15 600) copied onto Budget: 1 300 a month.
+    // Revision of the year copied onto Budget keeps its monthly shape (200 × month).
     const copied = await ops.copyBudgetColumn(
       { sourceYear: YEAR, sourceColumn: 'revision', destinationYear: YEAR, destinationColumn: 'budget', percentageIncrease: 0, overwrite: true, dryRun: false },
       null,
@@ -340,8 +340,8 @@ async function testBudgetColumnOperations(kind: Kind) {
     assert.equal(copied.summary.processed, 1, 'copy: one item processed');
     rows = await readMonths(runner, kind, versionId);
     assertUntouched(rows, ['forecast', 'committed', 'actual'], 'copy Revision to Budget');
-    rows.forEach((row) => {
-      assert.equal(Number(row.planned), 1300, `copy Revision to Budget: planned of ${row.period}`);
+    rows.forEach((row, idx) => {
+      assert.equal(Number(row.planned), seededValue('committed', idx + 1), `copy Revision to Budget: planned of ${row.period}`);
       assert.equal(row.expected_landing, '0.00', `copy Revision to Budget: landing of ${row.period}`);
     });
   });

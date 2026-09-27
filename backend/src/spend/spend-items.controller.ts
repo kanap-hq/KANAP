@@ -366,7 +366,7 @@ export class SpendItemsController {
       sourceColumn: 'budget' | 'revision' | 'follow_up' | 'landing';
       destinationYear: number;
       destinationColumn: 'budget' | 'revision' | 'follow_up' | 'landing';
-      percentageIncrease: number;
+      percentageIncrease: number | string;
       overwrite: boolean;
       dryRun: boolean;
     },

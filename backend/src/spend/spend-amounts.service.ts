@@ -8,13 +8,15 @@ import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
 import { writeAmountsPayload } from './amounts-write.util';
-import { FLAT_WEIGHTS, profileWeights } from './spread.util';
+import { recordPayloadRoundInputs, versionRoundInputs } from './round-inputs.util';
 
 type AnnualPayload = {
   kind: 'annual';
   year: number;
   totals: Partial<Record<'planned' | 'forecast' | 'committed' | 'actual' | 'expected_landing', number>>;
   spread_profile_name?: string; // default 'flat' (equal twelfths); a named SpreadProfile applies its 12 weights
+  period_start?: string; // with period_end, 'YYYY-MM-DD' in the year; both omitted = the whole year
+  period_end?: string;
 };
 
 type QuarterlyPayload = {
@@ -22,7 +24,9 @@ type QuarterlyPayload = {
   year: number;
   measure: 'planned' | 'forecast' | 'committed' | 'actual' | 'expected_landing';
   Q1?: number; Q2?: number; Q3?: number; Q4?: number;
-  spread_profile_name?: string; // '4-4-5' => 445 distribution, else equal
+  spread_profile_name?: string; // '4-4-5' => 445 distribution; unset, 'equal' or 'flat' => equal thirds
+  period_start?: string;
+  period_end?: string;
 };
 
 type MonthlyPayload = {
@@ -48,38 +52,28 @@ export class SpendAmountsService {
     private readonly freeze: FreezeService,
   ) {}
 
-  async bulkUpsert(versionId: string, payload: AnnualPayload | QuarterlyPayload | MonthlyPayload, userId?: string, opts?: { manager?: EntityManager }) {
+  async bulkUpsert(versionId: string, payload: AnnualPayload | QuarterlyPayload | MonthlyPayload, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const version = await mg.getRepository(SpendVersion).findOne({ where: { id: versionId } });
     if (!version) throw new NotFoundException('Version not found');
 
-    // 'flat' (or unset) spreads equally across 12 months; a named SpreadProfile
-    // applies its stored 12 weights, which the spread normalises. Falls back to
-    // equal twelfths if the profile is missing or malformed.
-    const annualWeights = async (profileName: string | undefined): Promise<readonly bigint[]> => {
-      if (!profileName || profileName === 'flat') return FLAT_WEIGHTS;
-      const profile = await mg.getRepository(SpreadProfile).findOne({ where: { name: profileName } });
-      return profileWeights(profile?.weights_json) ?? FLAT_WEIGHTS;
-    };
-
-    const { before, after } = await writeAmountsPayload(
-      { manager: mg, freeze: this.freeze, scope: 'opex', version },
-      payload,
-      annualWeights,
-    );
+    // Spread profiles (flat, or a named SpreadProfile) are resolved by the writer; an unknown one is a 400.
+    const result = await writeAmountsPayload({ manager: mg, freeze: this.freeze, scope: 'opex', version }, payload);
+    const { before, after } = result;
 
     await this.audit.log({ table: 'spend_amounts', recordId: null, action: 'update', before, after, userId }, { manager: mg });
+    await recordPayloadRoundInputs({ manager: mg, scope: 'opex', version, userId: userId ?? null, audit: this.audit }, result);
 
-    return { updated: after.length };
+    return { updated: after.length, round_inputs: await versionRoundInputs(mg, 'opex', version) };
   }
 
   async listByYear(versionId: string, year?: number, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const versions = mg.getRepository(SpendVersion);
     const repo = mg.getRepository(SpendAmount);
+    const version = await versions.findOne({ where: { id: versionId } });
     let targetYear = year;
     if (!targetYear) {
-      const version = await versions.findOne({ where: { id: versionId } });
       if (!version) throw new NotFoundException('Version not found');
       targetYear = (version as any).budget_year as number;
     }
@@ -110,6 +104,7 @@ export class SpendAmountsService {
       forecast: Number(formatCents(totals.forecast)),
     };
 
-    return { items, totals: roundedTotals, year: targetYear };
+    const round_inputs = version ? await versionRoundInputs(mg, 'opex', version) : [];
+    return { items, totals: roundedTotals, year: targetYear, round_inputs };
   }
 }

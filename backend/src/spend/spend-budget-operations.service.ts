@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, EntityManager, In, Raw, Repository } from 'typeorm';
 import { SpendItem } from './spend-item.entity';
@@ -7,18 +7,10 @@ import { SpendAmount } from './spend-amount.entity';
 import { SpendAllocation } from './spend-allocation.entity';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { AuditService } from '../audit/audit.service';
-import { FreezeColumn, FreezeService } from '../freeze/freeze.service';
-import { toCents } from '../common/amount';
-import {
-  AmountMeasure,
-  BUDGET_COLUMN_MEASURE,
-  BudgetColumn,
-  MEASURE_FREEZE_COLUMN,
-  replaceAmounts,
-  spreadAnnualRows,
-  yearPeriods,
-} from './amounts-write.util';
+import { FreezeService } from '../freeze/freeze.service';
+import { BudgetColumn } from './amounts-write.util';
 import { formatAllocationMethodLabel } from './allocation-utils';
+import { clearBudgetColumn, copyBudgetColumn, CopyColumnOperation } from './budget-column-operations';
 
 @Injectable()
 export class SpendBudgetOperationsService {
@@ -32,203 +24,10 @@ export class SpendBudgetOperationsService {
     private readonly allocationCalculator: AllocationCalculatorService,
   ) {}
 
-  private mapFrontendColumnToFreeze(column: BudgetColumn): FreezeColumn {
-    const measure = BUDGET_COLUMN_MEASURE[column];
-    if (!measure) throw new Error(`Unsupported budget column '${column}'`);
-    return MEASURE_FREEZE_COLUMN[measure];
-  }
-
-  async copyBudgetColumn(
-    operation: {
-      sourceYear: number;
-      sourceColumn: BudgetColumn;
-      destinationYear: number;
-      destinationColumn: BudgetColumn;
-      percentageIncrease: number;
-      overwrite: boolean;
-      dryRun: boolean;
-    },
-    userId: string | null,
-    opts?: { manager?: EntityManager }
-  ) {
-    const mg = opts?.manager ?? this.spendItems.manager;
-    const { sourceYear, sourceColumn, destinationYear, destinationColumn, percentageIncrease, overwrite, dryRun } = operation;
-
-    await this.freeze.assertNotFrozen({
-      scope: 'opex',
-      column: this.mapFrontendColumnToFreeze(destinationColumn),
-      year: destinationYear,
-      action: 'Copy',
-    }, { manager: mg });
-
-    const columnMapping: Record<BudgetColumn, AmountMeasure> = BUDGET_COLUMN_MEASURE;
-    // Freeze is checked once for the whole operation, not once per item.
-    const checkedFreeze = new Set<string>();
-
-    const spendItems = await mg.getRepository(SpendItem).find({
-      where: {
-        disabled_at: Raw((alias) => `${alias} IS NULL OR ${alias} > NOW()`),
-      },
-      order: { created_at: 'DESC' }
-    });
-
-    console.log(`Found ${spendItems.length} spend items for budget operation`);
-    console.log(`Looking for source: ${sourceYear} ${sourceColumn}, destination: ${destinationYear} ${destinationColumn}`);
-
-    const results = [];
-    let processed = 0;
-    let skipped = 0;
-    let errors = 0;
-
-    for (const spendItem of spendItems) {
-      try {
-        const sourceVersion = await mg.getRepository(SpendVersion).findOne({
-          where: { spend_item_id: spendItem.id, budget_year: sourceYear }
-        });
-
-        if (!sourceVersion) {
-          skipped++;
-          console.log(`No source version found for item ${spendItem.product_name} year ${sourceYear}`);
-          continue;
-        }
-
-        console.log(`Found source version ${sourceVersion.id} for ${spendItem.product_name}`);
-
-        const sourceAmounts = await mg.getRepository(SpendAmount).find({
-          where: { version_id: sourceVersion.id }
-        });
-
-        const sourceDbColumn = columnMapping[sourceColumn];
-        const sourceValue = sourceAmounts.reduce((sum, amount) => sum + Number(amount[sourceDbColumn] || 0), 0);
-
-        console.log(`Source amounts for ${spendItem.product_name}: ${sourceAmounts.length} records, column: ${sourceDbColumn}, total: ${sourceValue}`);
-
-        let destinationVersion = await mg.getRepository(SpendVersion).findOne({
-          where: { spend_item_id: spendItem.id, budget_year: destinationYear }
-        });
-
-        let currentDestinationValue = 0;
-        if (destinationVersion) {
-          const destinationAmounts = await mg.getRepository(SpendAmount).find({
-            where: { version_id: destinationVersion.id }
-          });
-          const destDbColumn = columnMapping[destinationColumn];
-          currentDestinationValue = destinationAmounts.reduce((sum, amount) => sum + Number(amount[destDbColumn] || 0), 0);
-        }
-
-        if (dryRun) {
-          let newValue = sourceValue;
-          if (percentageIncrease !== 0 && sourceValue !== 0) {
-            newValue = newValue * (1 + percentageIncrease / 100);
-          }
-          newValue = Math.round(newValue);
-
-          const wouldBeSkipped = sourceValue === 0 || (!overwrite && currentDestinationValue !== 0);
-
-          results.push({
-            itemId: spendItem.id,
-            itemName: spendItem.product_name,
-            sourceValue,
-            currentDestinationValue,
-            newValue: wouldBeSkipped ? currentDestinationValue : newValue,
-          });
-
-          if (wouldBeSkipped) {
-            skipped++;
-          } else {
-            processed++;
-          }
-          continue;
-        }
-
-        if (sourceValue === 0) {
-          skipped++;
-          continue;
-        }
-
-        if (!overwrite && currentDestinationValue !== 0) {
-          skipped++;
-          continue;
-        }
-
-        let newValue = sourceValue;
-        if (percentageIncrease !== 0) {
-          newValue = newValue * (1 + percentageIncrease / 100);
-        }
-        newValue = Math.round(newValue);
-
-        console.log(`Processing item ${spendItem.product_name}: ${sourceValue} -> ${newValue}`);
-
-        results.push({
-          itemId: spendItem.id,
-          itemName: spendItem.product_name,
-          sourceValue,
-          currentDestinationValue,
-          newValue,
-        });
-
-        if (!destinationVersion) {
-          const versionPartial: DeepPartial<SpendVersion> = {
-            spend_item_id: spendItem.id,
-            budget_year: destinationYear,
-            version_name: `Budget ${destinationYear}`,
-            input_grain: 'annual',
-            is_approved: false,
-            as_of_date: `${destinationYear}-01-01`,
-            allocation_method: 'default',
-            tenant_id: spendItem.tenant_id,
-          };
-
-          destinationVersion = mg.getRepository(SpendVersion).create(versionPartial);
-          destinationVersion = await mg.getRepository(SpendVersion).save(destinationVersion);
-
-          console.log(`Created version ${destinationVersion.id} for year ${destinationYear}`);
-
-          await this.audit.log({
-            table: 'spend_versions',
-            recordId: destinationVersion.id,
-            action: 'create',
-            before: null,
-            after: destinationVersion,
-            userId
-          }, { manager: mg });
-        }
-
-        // Replace the destination measure only; the other measures keep their months.
-        const dbColumnName = columnMapping[destinationColumn];
-        await replaceAmounts(
-          { manager: mg, freeze: this.freeze, scope: 'opex', version: destinationVersion!, checkedFreeze },
-          destinationYear,
-          spreadAnnualRows(destinationYear, { [dbColumnName]: toCents(newValue) }),
-        );
-
-        await this.audit.log({
-          table: 'spend_items',
-          recordId: spendItem.id,
-          action: 'update',
-          before: { [destinationColumn]: currentDestinationValue },
-          after: { [destinationColumn]: newValue, operation: 'budget_column_copy', sourceYear, sourceColumn, destinationYear, destinationColumn, percentageIncrease },
-          userId
-        }, { manager: mg });
-
-        processed++;
-      } catch (error) {
-        console.error(`Error processing item ${spendItem.id}:`, error);
-        errors++;
-      }
-    }
-
-    return {
-      success: true,
-      dryRun,
-      summary: {
-        totalItems: spendItems.length,
-        processed,
-        skipped,
-        errors,
-      },
-      results: dryRun ? results : [],
-    };
+  /** Copy one budget column to another year or column (all or nothing); see `budget-column-operations.ts`. */
+  async copyBudgetColumn(operation: CopyColumnOperation, userId: string | null, opts?: { manager?: EntityManager }) {
+    const manager = opts?.manager ?? this.spendItems.manager;
+    return copyBudgetColumn({ manager, audit: this.audit, freeze: this.freeze }, 'opex', operation, userId);
   }
 
   async copyAllocations(
@@ -446,24 +245,25 @@ export class SpendBudgetOperationsService {
 
         processed++;
       } catch (error) {
+        // All or nothing: any error of a real copy, and any SQL error (it aborts
+        // the request transaction), fails the request. Only a dry run lists an
+        // item the allocation rules refuse (a BadRequestException, never SQL).
+        if (!dryRun || !(error instanceof BadRequestException)) throw error;
         errors++;
-        console.error(`Failed to copy allocations for spend item ${(spendItem as any).id}:`, error);
-        if (dryRun) {
-          results.push({
-            itemId: spendItem.id,
-            itemName: spendItem.product_name,
-            sourceMethod: null,
-            sourceMethodLabel: '',
-            destinationMethod: null,
-            destinationMethodLabel: '',
-            resultMethod: null,
-            resultMethodLabel: '',
-            sourceAllocationsCount: 0,
-            destinationAllocationsCount: 0,
-            action: 'error',
-            message: error instanceof Error ? error.message : 'Unknown error',
-          });
-        }
+        results.push({
+          itemId: spendItem.id,
+          itemName: spendItem.product_name,
+          sourceMethod: null,
+          sourceMethodLabel: '',
+          destinationMethod: null,
+          destinationMethodLabel: '',
+          resultMethod: null,
+          resultMethodLabel: '',
+          sourceAllocationsCount: 0,
+          destinationAllocationsCount: 0,
+          action: 'error',
+          message: error.message,
+        });
       }
     }
 
@@ -480,103 +280,9 @@ export class SpendBudgetOperationsService {
     };
   }
 
-  async clearBudgetColumn(
-    operation: {
-      year: number;
-      column: BudgetColumn;
-    },
-    userId: string | null,
-    opts?: { manager?: EntityManager }
-  ) {
-    const mg = opts?.manager ?? this.spendItems.manager;
-    const { year, column } = operation;
-
-    await this.freeze.assertNotFrozen({
-      scope: 'opex',
-      column: this.mapFrontendColumnToFreeze(column),
-      year,
-      action: 'Clear',
-    }, { manager: mg });
-
-    const dbColumnName = BUDGET_COLUMN_MEASURE[column];
-    // Freeze is checked once for the whole operation, not once per item.
-    const checkedFreeze = new Set<string>();
-
-    const spendItems = await mg.getRepository(SpendItem).find({
-      where: {
-        disabled_at: Raw((alias) => `${alias} IS NULL OR ${alias} > NOW()`),
-      },
-      order: { created_at: 'DESC' }
-    });
-
-    console.log(`Found ${spendItems.length} spend items for clear operation`);
-    console.log(`Clearing column ${column} (${dbColumnName}) for year ${year}`);
-
-    let cleared = 0;
-    let skipped = 0;
-    let errors = 0;
-
-    for (const spendItem of spendItems) {
-      try {
-        const version = await mg.getRepository(SpendVersion).findOne({
-          where: { spend_item_id: spendItem.id, budget_year: year }
-        });
-
-        if (!version) {
-          skipped++;
-          continue;
-        }
-
-        const existingAmounts = await mg.getRepository(SpendAmount).find({
-          where: { version_id: version.id }
-        });
-
-        if (existingAmounts.length === 0) {
-          skipped++;
-          continue;
-        }
-
-        const hasData = existingAmounts.some(amount => Number(amount[dbColumnName] || 0) !== 0);
-        if (!hasData) {
-          skipped++;
-          continue;
-        }
-
-        const currentValue = existingAmounts.reduce((sum, amount) => sum + Number(amount[dbColumnName] || 0), 0);
-
-        console.log(`Clearing ${spendItem.product_name}: ${dbColumnName} current value: ${currentValue}`);
-
-        // Zero, not NULL: the twelve months of this measure only.
-        await replaceAmounts(
-          { manager: mg, freeze: this.freeze, scope: 'opex', version, checkedFreeze },
-          year,
-          yearPeriods(year).map((period) => ({ period, [dbColumnName]: 0n })),
-        );
-
-        await this.audit.log({
-          table: 'spend_items',
-          recordId: spendItem.id,
-          action: 'update',
-          before: { [column]: currentValue },
-          after: { [column]: 0, operation: 'budget_column_clear', year, column },
-          userId
-        }, { manager: mg });
-
-        cleared++;
-      } catch (error) {
-        console.error(`Error clearing item ${spendItem.id}:`, error);
-        errors++;
-      }
-    }
-
-    return {
-      success: true,
-      summary: {
-        totalItems: spendItems.length,
-        cleared,
-        skipped,
-        errors,
-      },
-    };
+  /** Clear one budget column of a year (all or nothing); see `budget-column-operations.ts`. */
+  async clearBudgetColumn(operation: { year: number; column: BudgetColumn }, userId: string | null, opts?: { manager?: EntityManager }) {
+    const manager = opts?.manager ?? this.spendItems.manager;
+    return clearBudgetColumn({ manager, audit: this.audit, freeze: this.freeze }, 'opex', operation, userId);
   }
 }

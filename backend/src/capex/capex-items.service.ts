@@ -12,7 +12,9 @@ import { AnalyticsCategory } from '../analytics/analytics-category.entity';
 import { User } from '../users/user.entity';
 import { parseExportPagination, parsePagination, buildWhereFromAgFilters } from '../common/pagination';
 import { AuditService } from '../audit/audit.service';
-import { AmountMeasure, replaceAmounts, spreadAnnualRows } from '../spend/amounts-write.util';
+import { AmountMeasure, BudgetColumn } from '../spend/amounts-write.util';
+import { clearBudgetColumn, copyBudgetColumn, CopyColumnOperation } from '../spend/budget-column-operations';
+import { writeItemCsvTotals } from '../spend/round-inputs.util';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
@@ -57,6 +59,16 @@ function getCapexSummaryFieldValue(row: any, field: string): any {
   if (field === 'owner_business_name') return row.owner_business_name ?? null;
   if (field === 'analytics_category_name') return row.analytics_category_name ?? null;
   return (row as any)[field];
+}
+
+/**
+ * The `years` query parameter of the summary (`2028,2029`, or repeated): four-digit
+ * years from 1000 to 9999, without duplicates; anything else is ignored, as on OPEX.
+ */
+function parseSummaryYears(raw: unknown): number[] {
+  const text = Array.isArray(raw) ? raw.join(',') : typeof raw === 'string' ? raw : '';
+  const years = text.split(',').map((part) => part.trim()).filter((part) => /^\d{4}$/.test(part)).map(Number);
+  return Array.from(new Set(years.filter((year) => year >= 1000)));
 }
 
 function displayName(user?: User | null): string {
@@ -219,7 +231,9 @@ export class CapexItemsService {
   /**
    * Spread a year's totals from the file flat over its twelve months. Only the
    * measures with a value in the file replace that year: a blank cell leaves
-   * the stored months as they are, an explicit 0 clears them.
+   * the stored months (and the column's period) as they are, an explicit 0
+   * clears them. Each column written gets a whole-year flat spread
+   * record.
    */
   async writeImportedTotals(
     mg: EntityManager,
@@ -227,18 +241,31 @@ export class CapexItemsService {
     year: number,
     totals: Partial<Record<'planned' | 'actual' | 'expected_landing' | 'committed', number>>,
     checkedFreeze?: Set<string>,
+    userId: string | null = null,
   ) {
     const annualTotals: Partial<Record<AmountMeasure, bigint>> = {};
     for (const measure of ['planned', 'actual', 'expected_landing', 'committed'] as const) {
       const value = totals[measure];
       if (value != null && !isNaN(Number(value))) annualTotals[measure] = toCents(value);
     }
-    if (Object.keys(annualTotals).length === 0) return;
-    await replaceAmounts(
+    await writeItemCsvTotals(
       { manager: mg, freeze: this.freeze, scope: 'capex', version, checkedFreeze },
+      { userId, audit: this.audit },
       year,
-      spreadAnnualRows(year, annualTotals),
+      annualTotals,
     );
+  }
+
+  /** Copy one CAPEX budget column to another year or column (all or nothing); see `budget-column-operations.ts`. */
+  async copyBudgetColumn(operation: CopyColumnOperation, userId: string | null, opts?: { manager?: EntityManager }) {
+    const manager = opts?.manager ?? this.repo.manager;
+    return copyBudgetColumn({ manager, audit: this.audit, freeze: this.freeze }, 'capex', operation, userId);
+  }
+
+  /** Clear one CAPEX budget column of a year (all or nothing); see `budget-column-operations.ts`. */
+  async clearBudgetColumn(operation: { year: number; column: BudgetColumn }, userId: string | null, opts?: { manager?: EntityManager }) {
+    const manager = opts?.manager ?? this.repo.manager;
+    return clearBudgetColumn({ manager, audit: this.audit, freeze: this.freeze }, 'capex', operation, userId);
   }
 
   async list(query: any, opts?: { manager?: EntityManager }) {
@@ -497,7 +524,10 @@ export class CapexItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const now = new Date();
     const Y = now.getFullYear();
-    const years = [Y - 1, Y, Y + 1, Y + 2];
+    // Years the caller names (`years=2028,2029`, as on OPEX) get a `y<year>` slot
+    // next to the fixed ones; the fixed slots stay as they are.
+    const requestedYears = parseSummaryYears(query?.years);
+    const years = Array.from(new Set([Y - 1, Y, Y + 1, Y + 2, ...requestedYears]));
 
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query)
@@ -697,6 +727,7 @@ export class CapexItemsService {
           y: toTotals(vCurr),
           yPlus1: toTotals(vPlus1),
           yPlus2: toTotals(vPlus2),
+          ...Object.fromEntries(requestedYears.map((year) => [`y${year}`, toTotals(perYear.get(year))])),
         },
         spread_mode_for_y,
         allocation_method_label: allocationMethodLabel,
@@ -1531,7 +1562,7 @@ export class CapexItemsService {
           version = await mg.getRepository(CapexVersion).save(version);
           await this.audit.log({ table: 'capex_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
         }
-        await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze);
+        await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze, userId ?? null);
       }
       processed += 1;
     }

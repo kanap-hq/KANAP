@@ -52,10 +52,13 @@ import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { CommonModule } from '../common/common.module';
+import { CapexVersion } from '../capex/capex-version.entity';
+import { BudgetRowsCsvService } from './budget-rows-csv.service';
+import { BudgetRowsController } from './budget-rows.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SpendItem, SpendVersion, SpendAmount, SpendAllocation, SpreadProfile, Company, Department, DepartmentMetric, Supplier, Account, AllocationRule, CompanyMetric, AnalyticsCategory, SpendLink, SpendAttachment, Application, ApplicationSpendItemLink, SpendItemContactLink, ExternalContact, SupplierContactLink, PortfolioProjectOpex, PortfolioProject]),
+    TypeOrmModule.forFeature([SpendItem, SpendVersion, SpendAmount, SpendAllocation, SpreadProfile, Company, Department, DepartmentMetric, Supplier, Account, AllocationRule, CompanyMetric, AnalyticsCategory, SpendLink, SpendAttachment, Application, ApplicationSpendItemLink, SpendItemContactLink, ExternalContact, SupplierContactLink, PortfolioProjectOpex, PortfolioProject, CapexVersion]),
     CommonModule,
     AuditModule,
     PermissionsModule,
@@ -67,7 +70,7 @@ import { CommonModule } from '../common/common.module';
     NotificationsModule,
     KnowledgeModule,
   ],
-  controllers: [SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController],
+  controllers: [SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController, BudgetRowsController],
   providers: [
     SpendItemsService,
     SpendItemsCsvService,
@@ -82,6 +85,7 @@ import { CommonModule } from '../common/common.module';
     AllocationRulesService,
     ChargebackReportService,
     SpendItemContactsService,
+    BudgetRowsCsvService,
   ],
   exports: [
     SpendItemsService,
