@@ -5,6 +5,7 @@ import { Task } from './task.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 
 @Injectable()
@@ -79,17 +80,21 @@ export class TasksDeleteService extends BaseDeleteService<Task> {
 
     for (const id of taskIds) {
       try {
-        const before = await repo.findOne({ where: { id } as any });
-        if (!before) {
+        const found = await withSavepoint(manager, async () => {
+          const before = await repo.findOne({ where: { id } as any });
+          if (!before) return false;
+          await this.delete(id, { manager, userId });
+          return true;
+        });
+        if (!found) {
           result.failed.push({ id, name: 'Unknown', reason: 'Not found' });
           continue;
         }
-        await this.delete(id, { manager, userId });
         result.deleted.push(id);
       } catch (e: any) {
         let name = 'Unknown';
         try {
-          const t = await repo.findOne({ where: { id } as any });
+          const t = await withSavepoint(manager, () => repo.findOne({ where: { id } as any }));
           if (t) name = t.title || t.id;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch task name for error reporting: ${err?.message || 'Unknown error'}`);

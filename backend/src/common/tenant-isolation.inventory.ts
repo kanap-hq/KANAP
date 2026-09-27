@@ -92,6 +92,7 @@ export const TENANT_SCOPED_TABLES = [
   'contract_spend_items',
   'contract_tasks',
   'contracts',
+  'cost_centers',
   'currency_rate_sets',
   'department_metrics',
   'departments',

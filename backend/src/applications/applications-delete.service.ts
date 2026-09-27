@@ -7,6 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../common/storage/storage.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
 export class ApplicationsDeleteService extends BaseDeleteService<Application> {
@@ -44,20 +45,9 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
       throw new NotFoundException('Application not found');
     }
 
-    // Best-effort: cleanup stored attachment blobs before DB cascade
-    try {
-      const attRepo = manager.getRepository(ApplicationAttachment);
-      const attachments = await attRepo.find({ where: { application_id: applicationId } as any });
-      for (const a of attachments) {
-        try {
-          await this.storage?.deleteObject((a as any).storage_path);
-        } catch (err: any) {
-          this.logger.warn(`Failed to delete attachment storage object: ${err?.message || 'Unknown error'}`);
-        }
-      }
-    } catch (err: any) {
-      this.logger.warn(`Failed to cleanup attachments for application ${applicationId}: ${err?.message || 'Unknown error'}`);
-    }
+    // Attachment paths are read before the DB cascade removes their rows; the
+    // files go only once the delete has gone through, so a failed delete keeps them.
+    const attachments = await manager.getRepository(ApplicationAttachment).find({ where: { application_id: applicationId } as any });
 
     // Delete the base application row (child rows cascade via FKs)
     await appRepo.delete({ id: applicationId } as any);
@@ -76,6 +66,15 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
         { manager }
       );
     }
+
+    // Best effort, once the rows are gone
+    for (const a of attachments) {
+      try {
+        await this.storage?.deleteObject((a as any).storage_path);
+      } catch (err: any) {
+        this.logger.warn(`Failed to delete attachment storage object: ${err?.message || 'Unknown error'}`);
+      }
+    }
   }
 
   /**
@@ -88,12 +87,12 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
 
     for (const id of ids || []) {
       try {
-        await this.delete(id, { manager, userId });
+        await withSavepoint(manager, () => this.delete(id, { manager, userId }));
         result.deleted.push(id);
       } catch (e: any) {
         let name = 'Unknown';
         try {
-          const a = await appRepo.findOne({ where: { id } as any });
+          const a = await withSavepoint(manager, () => appRepo.findOne({ where: { id } as any }));
           if (a) name = a.name;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch application name for error reporting: ${err?.message || 'Unknown error'}`);

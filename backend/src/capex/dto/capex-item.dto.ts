@@ -72,4 +72,13 @@ export class CapexItemUpsertDto extends StatusLifecycleDto {
   @IsOptional()
   @IsUUID()
   analytics_category_id?: string | null;
+
+  /** A cost center of the tenant (not a group); an empty paying company takes its company. */
+  @IsOptional()
+  @IsUUID()
+  cost_center_id?: string | null;
+
+  @IsOptional()
+  @IsIn(['run', 'build'])
+  run_build?: 'run' | 'build' | null;
 }

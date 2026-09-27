@@ -6,6 +6,14 @@ import { AuditService } from '../audit/audit.service';
 import { ReferenceCheckService } from '../common/reference-check.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
+
+/** Tables whose foreign key can block a company delete, in plain words. */
+const COMPANY_REFERENCING_TABLES: Record<string, string> = {
+  spend_allocations: 'OPEX allocations',
+  capex_allocations: 'CAPEX allocations',
+  cost_centers: 'cost centers',
+};
 
 @Injectable()
 export class CompaniesDeleteService extends BaseDeleteService<Company> {
@@ -50,11 +58,10 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
       // Delete the company
       await repo.delete({ id: companyId } as any);
     } catch (error: any) {
-      // Catch database-level foreign key errors (e.g., from allocations)
+      // A foreign key the reference check did not cover (or a row added since): say which records, when known.
       if (error.code === '23503' || error.message?.includes('foreign key constraint')) {
-        throw new ConflictException(
-          `Cannot delete company "${company.name}": it is being used in allocations for OPEX or CAPEX items. You can disable it if it shouldn't be used actively anymore.`
-        );
+        const users = COMPANY_REFERENCING_TABLES[String(error.table ?? '')] ?? 'other records';
+        throw new ConflictException(`Cannot delete company "${company.name}": ${users} still use it. You can disable it instead.`);
       }
       throw error;
     }
@@ -86,13 +93,13 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
 
     for (const companyId of companyIds) {
       try {
-        await this.delete(companyId, { manager, userId });
+        await withSavepoint(manager, () => this.delete(companyId, { manager, userId }));
         result.deleted.push(companyId);
       } catch (error: any) {
         // Get company name for error reporting
         let name = 'Unknown';
         try {
-          const company = await repo.findOne({ where: { id: companyId } as any });
+          const company = await withSavepoint(manager, () => repo.findOne({ where: { id: companyId } as any }));
           if (company) name = company.name;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch company name for error reporting: ${err?.message || 'Unknown error'}`);

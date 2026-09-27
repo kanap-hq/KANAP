@@ -17,7 +17,7 @@ import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { SpendItemsService } from '../../spend/spend-items.service';
-import { parseEndOfValidityInput } from '../../common/status';
+import { isActiveAt, parseEndOfValidityInput } from '../../common/status';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
@@ -56,6 +56,7 @@ type RelationTarget =
   | 'analytics_categories'
   | 'business_processes'
   | 'companies'
+  | 'cost_centers'
   | 'departments'
   | 'locations'
   | 'location_sub_items'
@@ -129,6 +130,7 @@ const BILLING_FREQUENCIES = ['monthly', 'quarterly', 'annual', 'other'] as const
 const PPE_TYPES = ['hardware', 'software'] as const;
 const INVESTMENT_TYPES = ['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other'] as const;
 const PRIORITIES = ['mandatory', 'high', 'medium', 'low'] as const;
+const RUN_BUILD = ['run', 'build'] as const;
 const INTERFACE_ROUTES = ['direct', 'via_middleware'] as const;
 const CONNECTION_TOPOLOGIES = ['server_to_server', 'multi_server'] as const;
 const RISK_MODES = ['manual', 'derived'] as const;
@@ -360,6 +362,8 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       owner_business_id: { label: 'Business Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['business_owner'] },
       analytics_category_id: { label: 'Analytics Category', kind: 'relation', nullable: true, relationTarget: 'analytics_categories', aliases: ['analytics_category'] },
       project_id: { label: 'Project', kind: 'relation', nullable: true, relationTarget: 'projects', aliases: ['project'] },
+      cost_center_id: { label: 'Cost center', kind: 'relation', nullable: true, relationTarget: 'cost_centers', aliases: ['cost_center'] },
+      run_build: { label: 'Run or build', kind: 'enum', enumValues: RUN_BUILD, nullable: true },
       contract_id: { label: 'Contract', kind: 'relation', nullable: true, relationTarget: 'contracts', aliases: ['contract'] },
       status: { label: 'Status', kind: 'enum', enumValues: STATUS_STATES },
       disabled_at: { label: 'End of validity', kind: 'date', nullable: true, aliases: ['end_of_validity'] },
@@ -387,6 +391,8 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       owner_business_id: { label: 'Business Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['business_owner'] },
       analytics_category_id: { label: 'Analytics Category', kind: 'relation', nullable: true, relationTarget: 'analytics_categories', aliases: ['analytics_category'] },
       project_id: { label: 'Project', kind: 'relation', nullable: true, relationTarget: 'projects', aliases: ['project'] },
+      cost_center_id: { label: 'Cost center', kind: 'relation', nullable: true, relationTarget: 'cost_centers', aliases: ['cost_center'] },
+      run_build: { label: 'Run or build', kind: 'enum', enumValues: RUN_BUILD, nullable: true },
       status: { label: 'Status', kind: 'enum', enumValues: STATUS_STATES },
       disabled_at: { label: 'End of validity', kind: 'date', nullable: true, aliases: ['end_of_validity'] },
       notes: { label: 'Notes', kind: 'text', nullable: true },
@@ -555,6 +561,11 @@ export class AiBusinessRecordMutationSupportService {
       }
       const relation = await this.resolveRelation(context, field.relationTarget!, rawValue, field.label, fieldsSoFar);
       if (!relation && !field.nullable) throw new BadRequestException(`${field.label} cannot be empty.`);
+      if (field.relationTarget === 'cost_centers' && relation && relation.id !== (existing?.[fieldName] ?? null)) {
+        // A new assignment names an enabled cost center; the stored one is kept as it is.
+        if (relation.row.kind !== 'cost_center') throw new BadRequestException('Choose a cost center, not a group.');
+        if (!isActiveAt(relation.row.disabled_at as any)) throw new BadRequestException('This cost center is disabled.');
+      }
       return { value: relation?.id ?? null, displayValue: relation?.label ?? null };
     }
 
@@ -897,6 +908,15 @@ export class AiBusinessRecordMutationSupportService {
         );
       case 'companies':
         return manager.query(`SELECT * FROM companies WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
+      case 'cost_centers': {
+        // By id, code or name; a code (unique in the tenant) wins over names that match too.
+        const rows: Record<string, unknown>[] = await manager.query(
+          `SELECT * FROM cost_centers WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(code) = LOWER($2::text) OR LOWER(name) = LOWER($2::text)) ORDER BY code LIMIT 6`,
+          [tenantId, ref],
+        );
+        const exact = rows.filter((row) => String(row.id) === ref.toLowerCase() || String(row.code).toLowerCase() === ref.toLowerCase());
+        return exact.length > 0 ? exact : rows;
+      }
       case 'departments':
         return manager.query(`SELECT * FROM departments WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'suppliers':
@@ -951,6 +971,7 @@ export class AiBusinessRecordMutationSupportService {
       case 'spend_items': return textOrNull(row.product_name);
       case 'capex_items': return textOrNull(row.description);
       case 'accounts': return textOrNull(row.account_number);
+      case 'cost_centers': return textOrNull(row.code);
       default: return null;
     }
   }
@@ -975,6 +996,8 @@ export class AiBusinessRecordMutationSupportService {
         return textOrNull(row.description) || 'Untitled CAPEX item';
       case 'accounts':
         return [row.account_number, row.account_name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled account';
+      case 'cost_centers':
+        return [row.code, row.name].map(textOrNull).filter(Boolean).join(' · ') || 'Untitled cost center';
       default:
         return textOrNull(row.name) || String(row.id || `Untitled ${this.referenceLabelSingular(entityType)}`);
     }

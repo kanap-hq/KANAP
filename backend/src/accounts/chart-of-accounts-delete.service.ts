@@ -7,6 +7,7 @@ import { Company } from '../companies/company.entity';
 import { Account } from './account.entity';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
 export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccounts> {
@@ -109,12 +110,12 @@ export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccou
 
     for (const id of ids) {
       try {
-        await this.delete(id, { manager, userId });
+        await withSavepoint(manager, () => this.delete(id, { manager, userId }));
         result.deleted.push(id);
       } catch (err: any) {
         let name = 'Unknown';
         try {
-          const found = await repo.findOne({ where: { id } as any });
+          const found = await withSavepoint(manager, () => repo.findOne({ where: { id } as any }));
           if (found) name = this.getCoaDisplayName(found);
         } catch (e: any) {
           this.logger.warn(`Failed to fetch chart of accounts name for error reporting: ${e?.message || 'Unknown error'}`);

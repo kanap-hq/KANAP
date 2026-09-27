@@ -44,6 +44,12 @@ export const UpdateSpendItemSchema = z.object({
   /** Contract ID */
   contract_id: z.string().uuid().nullable().optional(),
 
+  /** Cost center ID (a cost center, not a group); an empty paying company takes its company */
+  cost_center_id: z.string().uuid().nullable().optional(),
+
+  /** Run or build */
+  run_build: z.enum(['run', 'build']).nullable().optional(),
+
   /** Notes */
   notes: z.string().nullable().optional(),
 

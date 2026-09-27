@@ -262,6 +262,7 @@ if [[ -n "$DEFAULT_TENANT_ID" ]]; then
     capex_item_contacts
     currency_rate_sets
     capex_items
+    cost_centers
     freeze_states
     department_metrics
     company_metrics

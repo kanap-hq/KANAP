@@ -1,4 +1,4 @@
-import { IsISO8601, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { IsIn, IsISO8601, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { StatusLifecycleDto } from '../../common/dto/status-lifecycle.dto';
 
 export class SpendItemUpsertDto extends StatusLifecycleDto {
@@ -47,6 +47,15 @@ export class SpendItemUpsertDto extends StatusLifecycleDto {
   @IsOptional()
   @IsUUID()
   analytics_category_id?: string | null;
+
+  /** A cost center of the tenant (not a group); an empty paying company takes its company. */
+  @IsOptional()
+  @IsUUID()
+  cost_center_id?: string | null;
+
+  @IsOptional()
+  @IsIn(['run', 'build'])
+  run_build?: 'run' | 'build' | null;
 
   @IsOptional()
   @IsUUID()

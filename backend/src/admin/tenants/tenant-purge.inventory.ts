@@ -206,6 +206,8 @@ export const TENANT_PURGE_TABLES = [
   // currency rate snapshots per-tenant
   'currency_rate_sets',
   'capex_items',
+  // After both item tables (lines reference a node), before companies and users (a node references them)
+  'cost_centers',
   'freeze_states',
   'department_metrics',
   'company_metrics',

@@ -42,7 +42,8 @@ export const MEMORY_ROW_CAP = 10_000;
 const FILTER_VALUE_FIELDS = [
   'supplier_name', 'paying_company_name', 'company_name', 'account_display', 'allocation_label', 'allocation_method_label',
   'contract_name', 'currency', 'owner_it_name', 'owner_business_name', 'analytics_category_name', 'project_name',
-  'project_stream_name', 'project_category_name',
+  'project_stream_name', 'project_category_name', 'cost_center_label', 'cost_center_code', 'cost_center_name', 'cost_center_path',
+  'budget_holder_name', 'run_build',
 ];
 
 const TEXT_FILTER_TYPES = new Set(['contains', 'notContains', 'equals', 'notEqual', 'startsWith', 'endsWith']);

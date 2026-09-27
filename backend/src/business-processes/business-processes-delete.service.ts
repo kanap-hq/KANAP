@@ -5,6 +5,7 @@ import { BusinessProcess } from './business-process.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
 export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessProcess> {
@@ -69,12 +70,12 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
 
     for (const id of ids) {
       try {
-        await this.delete(id, { manager, userId });
+        await withSavepoint(manager, () => this.delete(id, { manager, userId }));
         result.deleted.push(id);
       } catch (error: any) {
         let name = 'Unknown';
         try {
-          const p = await repo.findOne({ where: { id } as any });
+          const p = await withSavepoint(manager, () => repo.findOne({ where: { id } as any }));
           if (p) name = p.name;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch business process name for error reporting: ${err?.message || 'Unknown error'}`);

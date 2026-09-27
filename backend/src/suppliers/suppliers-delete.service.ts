@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { ReferenceCheckService } from '../common/reference-check.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { withSavepoint } from '../common/savepoint.util';
 
 @Injectable()
 export class SuppliersDeleteService extends BaseDeleteService<Supplier> {
@@ -84,12 +85,12 @@ export class SuppliersDeleteService extends BaseDeleteService<Supplier> {
 
     for (const supplierId of supplierIds) {
       try {
-        await this.delete(supplierId, { manager, userId });
+        await withSavepoint(manager, () => this.delete(supplierId, { manager, userId }));
         result.deleted.push(supplierId);
       } catch (error: any) {
         let name = 'Unknown';
         try {
-          const supplier = await repo.findOne({ where: { id: supplierId } as any });
+          const supplier = await withSavepoint(manager, () => repo.findOne({ where: { id: supplierId } as any }));
           if (supplier) name = supplier.name;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch supplier name for error reporting: ${err?.message || 'Unknown error'}`);

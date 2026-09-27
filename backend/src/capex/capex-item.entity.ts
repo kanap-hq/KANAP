@@ -64,6 +64,13 @@ export class CapexItem {
   @Column('uuid', { nullable: true })
   analytics_category_id!: string | null;
 
+  // A cost center of this tenant (never a group); the database enforces the tenant match.
+  @Column('uuid', { nullable: true })
+  cost_center_id!: string | null;
+
+  @Column({ type: 'enum', enum: ['run', 'build'], enumName: 'run_build', nullable: true })
+  run_build!: 'run' | 'build' | null;
+
   @Column('text', { nullable: true })
   notes!: string | null;
 

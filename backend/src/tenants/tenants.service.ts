@@ -24,7 +24,7 @@ const BUILT_IN_ROLES: Array<{
     permissions: {
       opex: 'admin', capex: 'admin', budget_ops: 'admin', contracts: 'admin',
       analytics: 'admin', reporting: 'admin', tasks: 'member', users: 'reader',
-      companies: 'member', departments: 'member', suppliers: 'member',
+      companies: 'member', departments: 'member', cost_centers: 'admin', suppliers: 'member',
       contacts: 'member', accounts: 'member'
     }
   },
@@ -34,7 +34,7 @@ const BUILT_IN_ROLES: Array<{
     permissions: {
       opex: 'member', capex: 'member', budget_ops: 'reader', contracts: 'member',
       analytics: 'member', reporting: 'member', tasks: 'member',
-      companies: 'reader', departments: 'member', suppliers: 'member',
+      companies: 'reader', departments: 'member', cost_centers: 'member', suppliers: 'member',
       contacts: 'member', accounts: 'reader'
     }
   },
@@ -44,7 +44,7 @@ const BUILT_IN_ROLES: Array<{
     permissions: {
       opex: 'reader', capex: 'reader', budget_ops: 'reader', contracts: 'reader',
       analytics: 'reader', reporting: 'reader', tasks: 'reader',
-      companies: 'reader', departments: 'reader', suppliers: 'reader',
+      companies: 'reader', departments: 'reader', cost_centers: 'reader', suppliers: 'reader',
       contacts: 'reader', accounts: 'reader'
     }
   },
@@ -55,7 +55,7 @@ const BUILT_IN_ROLES: Array<{
     permissions: {
       portfolio_requests: 'admin', portfolio_projects: 'admin', portfolio_planning: 'admin',
       portfolio_reports: 'admin', portfolio_settings: 'admin', tasks: 'member', users: 'reader',
-      companies: 'reader', departments: 'reader', suppliers: 'member',
+      companies: 'reader', departments: 'reader', cost_centers: 'reader', suppliers: 'member',
       contacts: 'member', accounts: 'member',
       applications: 'reader', infrastructure: 'reader', locations: 'reader', settings: 'reader',
       opex: 'reader', capex: 'reader', contracts: 'reader'
@@ -67,7 +67,7 @@ const BUILT_IN_ROLES: Array<{
     permissions: {
       portfolio_requests: 'member', portfolio_projects: 'member', portfolio_planning: 'member',
       portfolio_reports: 'reader', portfolio_settings: 'reader', tasks: 'member',
-      companies: 'reader', departments: 'reader', suppliers: 'reader',
+      companies: 'reader', departments: 'reader', cost_centers: 'reader', suppliers: 'reader',
       contacts: 'reader', accounts: 'reader',
       applications: 'reader', infrastructure: 'reader', locations: 'reader'
     }
@@ -78,7 +78,7 @@ const BUILT_IN_ROLES: Array<{
     permissions: {
       portfolio_requests: 'reader', portfolio_projects: 'reader', portfolio_planning: 'reader',
       portfolio_reports: 'reader', portfolio_settings: 'reader', tasks: 'reader',
-      companies: 'reader', departments: 'reader', suppliers: 'reader', contacts: 'reader'
+      companies: 'reader', departments: 'reader', cost_centers: 'reader', suppliers: 'reader', contacts: 'reader'
     }
   },
   {
@@ -96,7 +96,7 @@ const BUILT_IN_ROLES: Array<{
     permissions: {
       applications: 'admin', infrastructure: 'admin', locations: 'admin', incidents: 'admin', settings: 'admin',
       tasks: 'member', users: 'reader',
-      companies: 'reader', departments: 'reader', suppliers: 'member', contacts: 'member',
+      companies: 'reader', departments: 'reader', cost_centers: 'reader', suppliers: 'member', contacts: 'member',
       opex: 'reader', capex: 'reader', contracts: 'reader',
       portfolio_requests: 'reader', portfolio_projects: 'reader',
       portfolio_planning: 'reader', portfolio_reports: 'reader', portfolio_settings: 'reader'
@@ -108,7 +108,7 @@ const BUILT_IN_ROLES: Array<{
     permissions: {
       applications: 'member', infrastructure: 'member', locations: 'member', incidents: 'member', settings: 'member',
       tasks: 'member', users: 'reader',
-      companies: 'reader', departments: 'reader', suppliers: 'reader', contacts: 'member',
+      companies: 'reader', departments: 'reader', cost_centers: 'reader', suppliers: 'reader', contacts: 'member',
       opex: 'reader', capex: 'reader', contracts: 'reader',
       portfolio_requests: 'reader', portfolio_projects: 'reader', portfolio_planning: 'reader'
     }
@@ -119,7 +119,7 @@ const BUILT_IN_ROLES: Array<{
     permissions: {
       applications: 'reader', infrastructure: 'reader', locations: 'reader', incidents: 'reader', settings: 'reader',
       tasks: 'reader', users: 'reader',
-      companies: 'reader', departments: 'reader', suppliers: 'reader', contacts: 'reader'
+      companies: 'reader', departments: 'reader', cost_centers: 'reader', suppliers: 'reader', contacts: 'reader'
     }
   },
   // Master Data Roles
@@ -127,7 +127,7 @@ const BUILT_IN_ROLES: Array<{
     name: 'Master Data Administrator',
     description: 'Full control over master data including companies, departments, suppliers, and locations',
     permissions: {
-      companies: 'admin', departments: 'admin', suppliers: 'admin',
+      companies: 'admin', departments: 'admin', cost_centers: 'admin', suppliers: 'admin',
       contacts: 'admin', accounts: 'admin', business_processes: 'admin'
     }
   },
@@ -135,7 +135,7 @@ const BUILT_IN_ROLES: Array<{
     name: 'Master Data Member',
     description: 'Can manage master data entries',
     permissions: {
-      companies: 'member', departments: 'member', suppliers: 'member',
+      companies: 'member', departments: 'member', cost_centers: 'member', suppliers: 'member',
       contacts: 'member', accounts: 'member', business_processes: 'member'
     }
   },
@@ -143,7 +143,7 @@ const BUILT_IN_ROLES: Array<{
     name: 'Master Data Reader',
     description: 'Read-only access to master data',
     permissions: {
-      companies: 'reader', departments: 'reader', suppliers: 'reader',
+      companies: 'reader', departments: 'reader', cost_centers: 'reader', suppliers: 'reader',
       contacts: 'reader', accounts: 'reader', business_processes: 'reader'
     }
   },
