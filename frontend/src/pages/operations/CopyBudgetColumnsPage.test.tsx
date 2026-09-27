@@ -60,8 +60,26 @@ vi.mock('../reports/useCapexSummary', async (importOriginal) => ({
   useCapexSummaryAll: (years: number[], options?: { enabled?: boolean }) => capexHook(years, options),
 }));
 
+// The tenant's column settings, set per test.
+const columnsSetting = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
+  let cache: { settings: unknown; value: ReturnType<typeof mod.resolveBudgetColumns> } | null = null;
+  const t = ((key: string) => key) as unknown as Parameters<typeof mod.resolveBudgetColumns>[1];
+  return {
+    ...mod,
+    useBudgetColumns: () => {
+      if (!cache || cache.settings !== columnsSetting.current) {
+        cache = { settings: columnsSetting.current, value: mod.resolveBudgetColumns(columnsSetting.current as never, t) };
+      }
+      return cache.value;
+    },
+  };
+});
+
 import api from '../../api';
 import CopyBudgetColumnsPage from './CopyBudgetColumnsPage';
+import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
@@ -78,6 +96,7 @@ function renderPage() {
 
 describe('CopyBudgetColumnsPage', () => {
   beforeEach(() => {
+    columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
     readable.clear();
     readable.add('opex');
     readable.add('capex');
@@ -176,5 +195,42 @@ describe('CopyBudgetColumnsPage', () => {
     expect(hosting).toHaveAttribute('data-preview', '700');
     expect(screen.getByText('Licences')).toHaveAttribute('data-preview', '12000');
   });
-});
 
+  it('copies from the default column of Y to the default column of Y+1', async () => {
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, default_column: 'committed' };
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    const Y = new Date().getFullYear();
+    expect(post.mock.calls[0][1]).toMatchObject({ sourceYear: Y, sourceColumn: 'revision', destinationYear: Y + 1, destinationColumn: 'revision' });
+  });
+
+  it('offers the shown columns, Forecast included when it is shown, and copies into it', async () => {
+    const options = async (index: number) => {
+      fireEvent.mouseDown(screen.getAllByRole('combobox')[index]);
+      const items = (await screen.findAllByRole('option')).map((o) => o.textContent);
+      fireEvent.keyDown(screen.getAllByRole('listbox')[0], { key: 'Escape' });
+      return items;
+    };
+    const { unmount } = renderPage();
+    // Source year, source column, destination year, destination column.
+    expect(await options(1)).toEqual([
+      'ops:operations.budgetColumns.budget', 'ops:operations.budgetColumns.revision',
+      'ops:operations.budgetColumns.followUp', 'ops:operations.budgetColumns.landing',
+    ]);
+    unmount();
+
+    columnsSetting.current = {
+      ...DEFAULT_BUDGET_COLUMNS,
+      enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, forecast: true },
+      labels: { ...DEFAULT_BUDGET_COLUMNS.labels, forecast: 'A2' },
+    };
+    renderPage();
+    expect(await options(3)).toContain('A2');
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[3]);
+    fireEvent.click(await screen.findByRole('option', { name: 'A2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post.mock.calls[0][1]).toMatchObject({ sourceColumn: 'budget', destinationColumn: 'forecast' });
+  });
+});

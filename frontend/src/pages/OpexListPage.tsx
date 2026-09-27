@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ColDef } from 'ag-grid-community';
 import ServerDataGrid, { DATE_COLUMN_FILTER, StatusScope } from '../components/ServerDataGrid';
 import PageHeader from '../components/PageHeader';
-import { Button, Stack } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import api from '../api';
@@ -15,7 +15,16 @@ import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { formatItemRef } from '../utils/item-ref';
-import { amountColumnYear, buildAmountColumnDefs, SummaryVersions, totalsToVersions } from '../components/finance/amountColumns';
+import {
+  amountColumnYear,
+  buildAmountColumnDefs,
+  filtersOnShownColumns,
+  settleListSearch,
+  explicitSort,
+  SummaryVersions,
+  totalsToVersions,
+} from '../components/finance/amountColumns';
+import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import { readStoredOpexListContext, writeStoredOpexListContext } from './opex/listContextStorage';
 import { statusScopeParams } from '../utils/statusScopeParams';
 import { STATUS_VALUES } from '../constants/status';
@@ -70,6 +79,7 @@ export default function OpexListPage() {
   const { hasLevel } = useAuth();
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
+  const budgetColumns = useBudgetColumns();
 
   if (!hasLevel('opex', 'reader')) {
     return <ForbiddenPage />;
@@ -132,9 +142,40 @@ export default function OpexListPage() {
   const [selectedRows, setSelectedRows] = useState<SummaryRow[]>([]);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; filtersString: string; statusScope?: StatusScope } | null>(null);
   const storedContextRef = useRef(readStoredOpexListContext());
+  // The default sort and the shown columns come from the budget columns setting; callbacks
+  // created once read them here.
+  const budgetColumnsRef = useRef(budgetColumns);
+  budgetColumnsRef.current = budgetColumns;
+  // The sort to keep in the URL and the list context: '' for the default, which then follows a default change.
+  const listSort = useCallback(
+    (sort?: string | null) => explicitSort(sort, budgetColumnsRef.current.shown, budgetColumnsRef.current.defaultSort),
+    [],
+  );
+  const gridDefaultSort = useMemo(
+    () => ({ field: budgetColumns.defaultSort.split(':')[0], direction: 'DESC' as const }),
+    [budgetColumns.defaultSort],
+  );
+
+  // The URL once the stored list context has filled it and a sort or filter on a hidden column
+  // has fallen back; null until the setting is loaded. The grid mounts on that URL only, so the
+  // first request already uses the tenant's default sort.
+  const settledSearch = useMemo(() => {
+    if (!budgetColumns.ready) return null;
+    const stored = storedContextRef.current || readStoredOpexListContext();
+    if (stored && !storedContextRef.current) storedContextRef.current = stored;
+    return settleListSearch(location.search, stored, budgetColumns.shown, budgetColumns.defaultSort);
+  }, [budgetColumns.ready, budgetColumns.shown, budgetColumns.defaultSort, location.search]);
+  const currentSearch = new URLSearchParams(location.search).toString();
+  useEffect(() => {
+    if (settledSearch != null && settledSearch !== currentSearch) navigate({ search: settledSearch }, { replace: true });
+  }, [settledSearch, currentSearch, navigate]);
+  const [gridMounted, setGridMounted] = useState(false);
+  const gridCanMount = gridMounted || (settledSearch != null && settledSearch === currentSearch);
+  useEffect(() => { if (gridCanMount && !gridMounted) setGridMounted(true); }, [gridCanMount, gridMounted]);
 
   const initialGridState = useMemo(() => {
-    const raw = new URLSearchParams(window.location.search).get('filters') || storedContextRef.current?.filters || '';
+    if (!gridCanMount) return undefined;
+    const raw = new URLSearchParams(location.search).get('filters') || '';
     if (!raw) return undefined;
     try {
       const parsed = JSON.parse(raw);
@@ -143,35 +184,10 @@ export default function OpexListPage() {
       }
     } catch {}
     return undefined;
-  }, []);
+    // Read once, when the grid mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gridCanMount]);
   const [pinnedTotals, setPinnedTotals] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = storedContextRef.current || readStoredOpexListContext();
-    if (stored && !storedContextRef.current) {
-      storedContextRef.current = stored;
-    }
-    if (!stored) return;
-
-    const currentParams = new URLSearchParams(location.search);
-    const currentSort = currentParams.get('sort') || '';
-    const currentQ = currentParams.get('q') || '';
-    const currentFilters = currentParams.get('filters') || '';
-
-    const shouldApplySort = !!stored.sort && !currentSort;
-    const shouldApplyQ = !!stored.q && !currentQ;
-    const shouldApplyFilters = !!stored.filters && !currentFilters;
-
-    if (!shouldApplySort && !shouldApplyQ && !shouldApplyFilters) return;
-
-    const newParams = new URLSearchParams(location.search);
-    if (shouldApplySort) newParams.set('sort', stored.sort);
-    if (shouldApplyQ) newParams.set('q', stored.q);
-    if (shouldApplyFilters) newParams.set('filters', stored.filters);
-
-    navigate({ search: newParams.toString() }, { replace: true });
-  }, [location.search, navigate]);
 
   const updateTotals = useCallback(async ({ q, filterModel, statusScope }: { q: string; filterModel: any; statusScope?: StatusScope }) => {
     try {
@@ -192,6 +208,7 @@ export default function OpexListPage() {
   }, []);
 
   useEffect(() => {
+    if (!budgetColumns.ready) return;
     let urlParams: URLSearchParams | null = null;
     if (typeof window !== 'undefined') {
       urlParams = new URLSearchParams(window.location.search);
@@ -207,8 +224,10 @@ export default function OpexListPage() {
       } catch {}
     }
     const statusScope = lastQueryRef.current?.statusScope ?? 'enabled';
-    updateTotals({ q, filterModel: fm, statusScope });
-  }, [refreshKey, updateTotals]);
+    updateTotals({ q, filterModel: filtersOnShownColumns(fm, budgetColumns.shown), statusScope });
+    // The shown columns only matter once, when the setting arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, updateTotals, budgetColumns.ready]);
 
   const canCreate = hasLevel('opex', 'manager');
   const canAdmin = hasLevel('opex', 'admin');
@@ -221,7 +240,7 @@ export default function OpexListPage() {
             const urlParams = new URLSearchParams(window.location.search);
             const stored = storedContextRef.current || readStoredOpexListContext();
             if (stored && !storedContextRef.current) storedContextRef.current = stored;
-            const sort = urlParams.get('sort') || stored?.sort || 'yBudget:DESC';
+            const sort = listSort(urlParams.get('sort') || stored?.sort);
             const q = urlParams.get('q') || stored?.q || '';
             const filters = urlParams.get('filters') || stored?.filters || '';
             const sp = new URLSearchParams();
@@ -255,13 +274,13 @@ export default function OpexListPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const stored = storedContextRef.current || readStoredOpexListContext();
     if (stored && !storedContextRef.current) storedContextRef.current = stored;
-    const fallbackSort = lastQueryRef.current?.sort || urlParams.get('sort') || stored?.sort || 'yBudget:DESC';
+    const fallbackSort = listSort(lastQueryRef.current?.sort || urlParams.get('sort') || stored?.sort);
     const sortModel = gridApiRef.current?.getSortModel?.() as Array<{ colId?: string; sort?: 'asc' | 'desc' | undefined }> | undefined;
     const primarySort = Array.isArray(sortModel) && sortModel.length > 0 ? sortModel[0] : undefined;
     let sort = fallbackSort;
     if (primarySort?.colId) {
       const direction = primarySort.sort === 'asc' ? 'ASC' : 'DESC';
-      sort = `${primarySort.colId}:${direction}`;
+      sort = listSort(`${primarySort.colId}:${direction}`);
     }
     const q = lastQueryRef.current?.q ?? urlParams.get('q') ?? stored?.q ?? '';
     const gridFilterModel = gridApiRef.current?.getFilterModel?.() || lastQueryRef.current?.filters || {};
@@ -453,6 +472,7 @@ export default function OpexListPage() {
     ...buildAmountColumnDefs<SummaryRow>({
       t,
       currentYear: Y,
+      columns: budgetColumns,
       cellRenderer: (colId) => (params: any) => (
         <LinkCellRenderer
           {...params}
@@ -688,19 +708,23 @@ export default function OpexListPage() {
         />
       ),
     },
-  ], [Y, getOpexFilterValues, getOpexHref, locale, navigate, t, userNameById]);
+  ], [Y, budgetColumns, getOpexFilterValues, getOpexHref, locale, navigate, t, userNameById]);
 
   return (
     <>
       <PageHeader title={t("opex.title")} actions={actions} />
-      <ServerDataGrid<SummaryRow>
+      {!gridCanMount && (
+        // One line while the budget columns setting loads: the grid waits for the default sort.
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', py: 1 }}>{t('common:status.loading')}</Typography>
+      )}
+      {gridCanMount && <ServerDataGrid<SummaryRow>
         columns={columns}
         endpoint="/spend-items/summary"
         queryKey="spend-items-summary"
         getRowId={(r) => r.id || '__opex_totals__'}
         enableSearch
         pinnedBottomRowData={pinnedTotals}
-        defaultSort={{ field: 'yBudget', direction: 'DESC' }}
+        defaultSort={gridDefaultSort}
         extraParams={{ years: [Y - 1, Y, Y + 1, Y + 2].join(',') }}
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="opex-summary"
@@ -708,7 +732,7 @@ export default function OpexListPage() {
         refreshKey={refreshKey}
         onGridApiReady={(gridApi) => { gridApiRef.current = gridApi; }}
         onQueryStateChange={(state) => {
-          const normalizedSort = state.sort || 'yBudget:DESC';
+          const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};
           const filtersString = filtersObject && Object.keys(filtersObject).length > 0 ? JSON.stringify(filtersObject) : '';
           const scope = state.statusScope ?? 'enabled';
@@ -720,7 +744,7 @@ export default function OpexListPage() {
         }}
         enableRowSelection={canAdmin}
         onSelectionChanged={setSelectedRows}
-      />
+      />}
       <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/spend-items" title={t("opex.exportTitle")} />
       <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/spend-items" title={t("opex.importTitle")} onImported={() => setRefreshKey((k) => k + 1)} />
     </>

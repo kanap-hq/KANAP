@@ -14,6 +14,8 @@ import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx } from '../../theme/
 import { FinanceModuleConfig } from './config';
 import { PropertyRow } from '../design';
 import { fetchAllocationRule } from '../../services/allocationRules';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import type { AmountMeasure } from './roundPeriod';
 
 type PickerOption = { id: string; label: string };
 
@@ -109,6 +111,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config }, ref) {
   const { t } = useTranslation(['ops', 'common']);
+  const { defaultColumn } = useBudgetColumns();
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -117,7 +120,9 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   const [driver, setDriver] = React.useState<Driver>('headcount');
   const [rows, setRows] = React.useState<Row[]>([]);
   const [computedPct, setComputedPct] = React.useState<Map<string, number>>(new Map());
-  const [budgetTotal, setBudgetTotal] = React.useState(0);
+  // The version's yearly totals; the reference amount is the default column's.
+  const [yearTotals, setYearTotals] = React.useState<Partial<Record<AmountMeasure, number | string>>>({});
+  const budgetTotal = num(yearTotals[defaultColumn.measure]);
   const [companies, setCompanies] = React.useState<Company[]>([]);
   const [departments, setDepartments] = React.useState<Department[]>([]);
   const [autoOpenIdx, setAutoOpenIdx] = React.useState<number | null>(null);
@@ -192,7 +197,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
       const v = (versRes.data || []).find((vv) => Number(vv.budget_year) === year) || null;
       setVersion(v);
       if (!v) {
-        setMethod('default'); setDriver('headcount'); setRows([]); setComputedPct(new Map()); setBudgetTotal(0);
+        setMethod('default'); setDriver('headcount'); setRows([]); setComputedPct(new Map()); setYearTotals({});
         return;
       }
       const rawMethod = String(v.allocation_method ?? 'default');
@@ -201,8 +206,8 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
       setDriver((v.allocation_driver ?? 'headcount') as Driver);
       const [items] = await Promise.all([
         loadComputed(v.id),
-        api.get<{ totals: { planned: number } }>(`${config.versionsApi}/${v.id}/amounts`, { params: { year } })
-          .then((r) => setBudgetTotal(num(r.data?.totals?.planned))).catch(() => setBudgetTotal(0)),
+        api.get<{ totals?: Partial<Record<AmountMeasure, number | string>> }>(`${config.versionsApi}/${v.id}/amounts`, { params: { year } })
+          .then((r) => setYearTotals(r.data?.totals ?? {})).catch(() => setYearTotals({})),
       ]);
       // Seed editable rows from stored distribution for manual methods.
       if (m === 'manual_pct' || m === 'manual_company' || m === 'manual_department') {
@@ -389,7 +394,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
           </PropertyRow>
         )}
         <Box sx={{ ml: 'auto', textAlign: 'right' }}>
-          <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{t(`${config.i18nPrefix}.allocations.yearBudget`)}{currency ? ` · ${currency.toUpperCase()}` : ''}</Typography>
+          <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{t(`${config.i18nPrefix}.allocations.yearTotal`, { column: defaultColumn.label })}{currency ? ` · ${currency.toUpperCase()}` : ''}</Typography>
           <Typography sx={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{formatAmount(budgetTotal)}</Typography>
         </Box>
       </Box>

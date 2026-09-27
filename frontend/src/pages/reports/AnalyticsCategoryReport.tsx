@@ -8,7 +8,9 @@ import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import api from '../../api';
 import { pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
-import { metricKeys, getMetricLabels, MetricKey } from './reportMetrics';
+import { MetricKey, useReportMetric } from './reportMetrics';
+import { escapeTooltipText } from './tooltipText';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
 
 type AnalyticsCategory = {
@@ -28,14 +30,14 @@ function formatNumber(v: any) {
 
 export default function AnalyticsCategoryReport() {
   const { t } = useTranslation(["ops"]);
-  const metricLabels = useMemo(() => getMetricLabels(t), [t]);
+  const budgetColumns = useBudgetColumns();
   const now = new Date();
   const Y = now.getFullYear();
   const allowedYears = [Y - 1, Y, Y + 1];
 
   const [startYear, setStartYear] = useState<number>(Y);
   const [endYear, setEndYear] = useState<number>(Y);
-  const [metric, setMetric] = useState<MetricKey>('budget');
+  const [metric, setMetric] = useReportMetric(budgetColumns);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
 
@@ -136,7 +138,7 @@ export default function AnalyticsCategoryReport() {
     return cols;
   }, [years]);
 
-  const metricLabel = metricLabels[metric];
+  const metricLabel = budgetColumns.label(metric);
 
   const totalsRow = useMemo(() => {
     const row: any = { group: t('reports.analyticsCategory.totalMetric', { metric: metricLabel }) };
@@ -193,7 +195,7 @@ export default function AnalyticsCategoryReport() {
                   const value = Number(datum.value || 0);
                   const pct = total > 0 ? (value / total) * 100 : 0;
                   return {
-                    title: datum.label,
+                    title: escapeTooltipText(datum.label),
                     data: [
                       { label: metricLabel, value: formatNumber(value) },
                       { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -277,8 +279,8 @@ export default function AnalyticsCategoryReport() {
             sx={{ minWidth: 200 }}
             InputLabelProps={{ shrink: true }}
           >
-            {metricKeys.map((key) => (
-              <MenuItem key={key} value={key}>{metricLabels[key]}</MenuItem>
+            {budgetColumns.shown.map((column) => (
+              <MenuItem key={column.key} value={column.key}>{column.label}</MenuItem>
             ))}
           </TextField>
           <TextField

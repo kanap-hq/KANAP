@@ -22,7 +22,7 @@ import { useCapexSummaryAll } from '../reports/useCapexSummary';
 import { useQueryClient } from '@tanstack/react-query';
 import { copyBudgetColumn, BudgetColumn, BudgetOperationResult, BudgetScope } from '../../services/budgetOperations';
 import { useFreezeState } from '../../hooks/useFreezeState';
-import { FreezeColumn } from '../../services/freeze';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
 import { useKanapDialogs } from '../../components/design';
 import { drawerMenuItemSx } from '../../theme/formSx';
@@ -44,26 +44,17 @@ type ProcessedRow = {
 
 
 
-
-
-const budgetToFreezeColumn: Record<BudgetColumn, FreezeColumn> = {
-  budget: 'budget',
-  revision: 'revision',
-  follow_up: 'actual',
-  landing: 'landing',
-};
-
 export default function CopyBudgetColumnsPage() {
   const { t } = useTranslation(['ops']);
   const dialogs = useKanapDialogs();
 
-  const BUDGET_COLUMNS: { value: BudgetColumn; label: string }[] = [
-    { value: 'budget', label: t('operations.budgetColumns.budget') },
-    { value: 'revision', label: t('operations.budgetColumns.revision') },
-    { value: 'follow_up', label: t('operations.budgetColumns.followUp') },
-    { value: 'landing', label: t('operations.budgetColumns.landing') },
-  ];
-  const columnName = (value: BudgetColumn) => BUDGET_COLUMNS.find((c) => c.value === value)?.label ?? value;
+  // Shown columns only; both sides default to the default column.
+  const budgetColumns = useBudgetColumns();
+  const BUDGET_COLUMNS: { value: BudgetColumn; label: string }[] = budgetColumns.shown.map((c) => ({ value: c.key, label: c.label }));
+  const columnName = (value: BudgetColumn) => budgetColumns.label(value);
+  const usableColumn = (picked: BudgetColumn | null): BudgetColumn => (
+    picked && budgetColumns.shown.some((c) => c.key === picked) ? picked : budgetColumns.defaultColumn.key
+  );
   const locale = useLocale();
   const theme = useTheme();
   const queryClient = useQueryClient();
@@ -75,9 +66,11 @@ export default function CopyBudgetColumnsPage() {
 
   const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope());
   const [sourceYear, setSourceYear] = useState<number>(Y);
-  const [sourceColumn, setSourceColumn] = useState<BudgetColumn>('budget');
+  const [pickedSource, setSourceColumn] = useState<BudgetColumn | null>(null);
+  const sourceColumn = usableColumn(pickedSource);
   const [destinationYear, setDestinationYear] = useState<number>(Y + 1);
-  const [destinationColumn, setDestinationColumn] = useState<BudgetColumn>('budget');
+  const [pickedDestination, setDestinationColumn] = useState<BudgetColumn | null>(null);
+  const destinationColumn = usableColumn(pickedDestination);
   const [percentageIncrease, setPercentageIncrease] = useState<number>(0);
   const [overwrite, setOverwrite] = useState<boolean>(false);
   const [previewData, setPreviewData] = useState<ProcessedRow[]>([]);
@@ -96,7 +89,7 @@ export default function CopyBudgetColumnsPage() {
   const capexSummary = useCapexSummaryAll(requiredYears, { enabled: scope === 'capex' });
   const { data: rows, isLoading } = scope === 'opex' ? opexSummary : capexSummary;
 
-  const freezeKey = budgetToFreezeColumn[destinationColumn];
+  const freezeKey = budgetColumns.get(destinationColumn).freezeKey;
   const destinationFrozen = freezeData?.summary?.scopes[scope][freezeKey]?.frozen ?? false;
 
   const processedData = useMemo(() => {
@@ -246,7 +239,7 @@ export default function CopyBudgetColumnsPage() {
     }
 
     return baseColumns;
-  }, [destinationColumn, destinationYear, locale, showPreview, sourceColumn, sourceYear, theme]);
+  }, [budgetColumns, destinationColumn, destinationYear, locale, showPreview, sourceColumn, sourceYear, t, theme]);
 
   const gridApiRef = useRef<any>(null);
 
@@ -374,7 +367,7 @@ export default function CopyBudgetColumnsPage() {
           <Button
             variant="outlined"
             onClick={handleDryRun}
-            disabled={isProcessing || processedData.length === 0 || freezeLoading || destinationFrozen}
+            disabled={isProcessing || processedData.length === 0 || freezeLoading || destinationFrozen || !budgetColumns.ready}
           >
             {isProcessing ? t('operations.copyBudgetColumns.processing') : t('operations.copyBudgetColumns.dryRun')}
           </Button>

@@ -11,8 +11,12 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+const nav = vi.hoisted(() => ({ calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
 vi.mock('../../hooks/useSpendNav', () => ({
-  useSpendNav: () => ({ index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
+  useSpendNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }) => {
+    nav.calls.push(params);
+    return { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null };
+  },
 }));
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultSpendCurrency: 'EUR' } }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
@@ -49,6 +53,7 @@ vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 
 import api from '../../api';
 import SpendItemPage from './SpendItemPage';
+import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>;
@@ -131,5 +136,48 @@ describe('SpendItemPage edit', () => {
       expect(mocked.patch).toHaveBeenCalled();
     });
     expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { supplier_id: null });
+  });
+});
+
+describe('SpendItemPage list context', () => {
+  beforeEach(() => {
+    nav.calls = [];
+    window.sessionStorage.clear();
+    mocked.get.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
+      if (url === `/spend-items/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR' } };
+      return { data: {} };
+    });
+  });
+
+  it('sends prev/next no sort for the default one, and keeps a sort the user picked', async () => {
+    window.sessionStorage.setItem('opex-list-context', JSON.stringify({ sort: 'yBudget:DESC', q: '', filters: '', statusScope: 'enabled' }));
+    const first = renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    expect(nav.calls.filter((c) => c.enabled).every((c) => (c.sort ?? null) === null)).toBe(true);
+    first.unmount();
+
+    nav.calls = [];
+    window.sessionStorage.setItem('opex-list-context', JSON.stringify({ sort: 'yRevision:ASC', q: '', filters: '', statusScope: 'enabled' }));
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === 'yRevision:ASC')).toBe(true);
+  });
+
+  it('walks prev/next like the list: a sort or filter on a hidden column falls back', async () => {
+    const filters = JSON.stringify({ yForecast: { filterType: 'number', type: 'greaterThan', filter: 1 }, yBudget: { filterType: 'number', type: 'greaterThan', filter: 2 } });
+    renderAt(`/ops/opex/${ITEM_ID}/overview?sort=yForecast:ASC&filters=${encodeURIComponent(filters)}`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    const ready = nav.calls.filter((c) => c.enabled);
+    for (const call of ready) {
+      // No sort: prev/next uses the current default sort.
+      expect(call.sort ?? null).toBeNull();
+      expect(JSON.parse(call.filters ?? '{}')).toEqual({ yBudget: { filterType: 'number', type: 'greaterThan', filter: 2 } });
+    }
+    // The stored list context gets the same, once the setting is known.
+    const stored = JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}');
+    expect(stored.sort).toBe('');
+    expect(stored.filters).not.toContain('yForecast');
   });
 });

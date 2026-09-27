@@ -1,33 +1,65 @@
-import type { TFunction } from 'i18next';
+import { useMemo, useState } from 'react';
+import { AMOUNT_COLUMNS, type AmountColumnKey } from '../../components/finance/amountColumns';
+import type { BudgetColumns } from '../../hooks/useBudgetColumns';
 
-/** Budget columns the report pickers offer (which columns reports offer is step R's setting). */
-export const metricKeys = ['budget', 'follow_up', 'landing', 'revision'] as const;
-/** A budget column with a translated label: the picker columns plus Forecast, which summary slots carry. */
-export type MetricKey = (typeof metricKeys)[number] | 'forecast';
+/** A budget column as the summary API and the reports name it. */
+export type MetricKey = AmountColumnKey;
 
-/** Same wording as the budget tab of OPEX and CAPEX items (ops namespace). */
-export const metricLabelKeys: Record<MetricKey, string> = {
-  budget: 'ops:operations.budgetColumns.budget',
-  follow_up: 'ops:operations.budgetColumns.followUp',
-  landing: 'ops:operations.budgetColumns.landing',
-  revision: 'ops:operations.budgetColumns.revision',
-  forecast: 'ops:operations.budgetColumns.forecast',
-};
+/**
+ * The five budget columns in their fixed order (column 1 to 5). Which ones a picker offers,
+ * their names and the preselected one come from the tenant setting (`useBudgetColumns()`).
+ */
+export const metricKeys: readonly MetricKey[] = AMOUNT_COLUMNS.map((column) => column.key);
 
-/** True for a budget column that has a translated label. */
+/** True for the summary key of a budget column. */
 export function isMetricKey(value: unknown): value is MetricKey {
-  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(metricLabelKeys, value);
+  return typeof value === 'string' && (metricKeys as readonly string[]).includes(value);
 }
 
-/** Translated label of a budget column, keyed by report metric. */
-export function getMetricLabels(t: TFunction): Record<MetricKey, string> {
-  return {
-    budget: t(metricLabelKeys.budget),
-    follow_up: t(metricLabelKeys.follow_up),
-    landing: t(metricLabelKeys.landing),
-    revision: t(metricLabelKeys.revision),
-    forecast: t(metricLabelKeys.forecast),
-  };
+/** Columns a report picker offers: the shown columns, fixed order. */
+export function shownMetricKeys(columns: BudgetColumns): MetricKey[] {
+  return columns.shown.map((column) => column.key);
+}
+
+/** A picked column while it is shown; otherwise (nothing picked, or hidden since) the default column. */
+export function resolveMetric(columns: BudgetColumns, picked: string | null | undefined): MetricKey {
+  const column = picked ? columns.shown.find((c) => c.key === picked) : undefined;
+  return (column ?? columns.defaultColumn).key;
+}
+
+/**
+ * Picked columns that are still shown, fixed order. Nothing picked yet: the list display defaults
+ * (default column, then the last shown one). An emptied selection keeps the default column.
+ */
+export function resolveMetrics(columns: BudgetColumns, picked: readonly string[] | null): MetricKey[] {
+  if (picked == null) return columns.displayDefaults.map((column) => column.key);
+  const kept = columns.shown.filter((column) => picked.includes(column.key)).map((column) => column.key);
+  return kept.length > 0 ? kept : [columns.defaultColumn.key];
+}
+
+/** Column name in a downloaded file name: lower-case letters and digits, `column-N` when none is left. */
+export function metricFileName(columns: BudgetColumns, key: string): string {
+  const column = columns.get(key);
+  const slug = column.label
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || `column-${column.position}`;
+}
+
+/** One picker column: follows the default column until the user picks one. */
+export function useReportMetric(columns: BudgetColumns): [MetricKey, (key: MetricKey) => void] {
+  const [picked, setPicked] = useState<MetricKey | null>(null);
+  return [resolveMetric(columns, picked), setPicked];
+}
+
+/** Several picker columns: the list display defaults until the user picks others. */
+export function useReportMetrics(columns: BudgetColumns): [MetricKey[], (keys: string[]) => void] {
+  const [picked, setPicked] = useState<string[] | null>(null);
+  const metrics = useMemo(() => resolveMetrics(columns, picked), [columns, picked]);
+  return [metrics, setPicked];
 }
 
 /**

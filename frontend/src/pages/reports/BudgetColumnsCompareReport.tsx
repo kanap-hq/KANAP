@@ -8,7 +8,8 @@ import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import { useOpexSummaryAll, pickYearSlot as pickOpexYearSlot } from './useOpexSummary';
 import { useCapexSummaryAll, pickYearSlot as pickCapexYearSlot } from './useCapexSummary';
-import { MetricKey, getMetricLabels } from './reportMetrics';
+import { MetricKey, metricKeys, resolveMetric } from './reportMetrics';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
 
 function formatNumber(v: any) {
@@ -25,17 +26,32 @@ type Selection = {
   metric: MetricKey;
 };
 
+/** A selection as picked: no column yet means the default column. */
+type PickedSelection = {
+  year: number;
+  metric: MetricKey | null;
+};
+
 export default function BudgetColumnsCompareReport() {
   const { t } = useTranslation(["ops"]);
-  const metricLabels = useMemo(() => getMetricLabels(t), [t]);
+  const budgetColumns = useBudgetColumns();
+  const metricLabels = useMemo(
+    () => Object.fromEntries(budgetColumns.all.map((column) => [column.key, column.label])) as Record<MetricKey, string>,
+    [budgetColumns],
+  );
   const now = new Date();
   const Y = now.getFullYear();
   const allowedYears = [Y - 2, Y - 1, Y, Y + 1, Y + 2];
   const [itemType, setItemType] = useState<ItemType>('opex');
-  const [selections, setSelections] = useState<Selection[]>([
-    { year: Y, metric: 'budget' },
-    { year: Y + 1, metric: 'budget' },
+  const [picked, setSelections] = useState<PickedSelection[]>([
+    { year: Y, metric: null },
+    { year: Y + 1, metric: null },
   ]);
+  // A column not picked yet, or hidden since, is the default column.
+  const selections = useMemo<Selection[]>(
+    () => picked.map((sel) => ({ year: sel.year, metric: resolveMetric(budgetColumns, sel.metric) })),
+    [picked, budgetColumns],
+  );
   const [yearGrouping, setYearGrouping] = useState<boolean>(false);
 
   // Fetch only needed years
@@ -46,11 +62,10 @@ export default function BudgetColumnsCompareReport() {
   const pickYearSlot = itemType === 'opex' ? pickOpexYearSlot : pickCapexYearSlot;
 
   // Sort selections chronologically for display (chart and table)
-  const METRIC_ORDER: MetricKey[] = ['budget', 'revision', 'follow_up', 'landing'];
   const sortedSelections = useMemo(() => {
     return [...selections].sort((a, b) => {
       if (a.year !== b.year) return a.year - b.year;
-      return METRIC_ORDER.indexOf(a.metric) - METRIC_ORDER.indexOf(b.metric);
+      return metricKeys.indexOf(a.metric) - metricKeys.indexOf(b.metric);
     });
   }, [selections]);
 
@@ -128,7 +143,7 @@ export default function BudgetColumnsCompareReport() {
   const groupedChartData = useMemo(() => {
     return groupedYears.map((year) => {
       const row: any = { year };
-      for (const m of METRIC_ORDER) {
+      for (const m of metricKeys) {
         if (!metricsInUse.includes(m)) continue;
         const key = `${year}:${m}`;
         row[m] = totalsByMetricYear.has(key) ? totalsByMetricYear.get(key) : null;
@@ -141,7 +156,7 @@ export default function BudgetColumnsCompareReport() {
     if (groupingEligible) {
       return {
         title: { text: t('reports.budgetColumnsCompare.title') },
-        subtitle: { text: t('reports.budgetColumnsCompare.yearGroupingSubtitle', { type: itemType.toUpperCase() }) },
+        subtitle: { text: t('reports.budgetColumnsCompare.yearGroupingSubtitle', { type: t(`operations.scope.${itemType}`) }) },
         data: groupedChartData,
         axes: [
           { type: 'number', position: 'bottom' },
@@ -153,7 +168,7 @@ export default function BudgetColumnsCompareReport() {
     }
     return {
       title: { text: t('reports.budgetColumnsCompare.title') },
-      subtitle: { text: t('reports.budgetColumnsCompare.selectionsSubtitle', { type: itemType.toUpperCase(), count: selections.length }) },
+      subtitle: { text: t('reports.budgetColumnsCompare.selectionsSubtitle', { type: t(`operations.scope.${itemType}`), count: selections.length }) },
       data: chartData,
       axes: [
         { type: 'category', position: 'bottom' },
@@ -207,8 +222,8 @@ export default function BudgetColumnsCompareReport() {
             onChange={(e) => setItemType((e.target.value as ItemType) || 'opex')}
             sx={{ minWidth: 160 }}
           >
-            <MenuItem value="opex">OPEX</MenuItem>
-            <MenuItem value="capex">CAPEX</MenuItem>
+            <MenuItem value="opex">{t('operations.scope.opex')}</MenuItem>
+            <MenuItem value="capex">{t('operations.scope.capex')}</MenuItem>
           </TextField>
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 300 }}>
@@ -217,7 +232,7 @@ export default function BudgetColumnsCompareReport() {
                 <TextField
                   select
                   size="small"
-                  label={`Y`}
+                  label={t('reports.filters.year')}
                   value={sel.year}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);
@@ -230,7 +245,7 @@ export default function BudgetColumnsCompareReport() {
                 <TextField
                   select
                   size="small"
-                  label="Col"
+                  label={t('reports.filters.column')}
                   value={sel.metric}
                   onChange={(e) => {
                     const v = e.target.value as MetricKey;
@@ -238,8 +253,8 @@ export default function BudgetColumnsCompareReport() {
                   }}
                   sx={{ minWidth: 140 }}
                 >
-                  {(['budget', 'revision', 'follow_up', 'landing'] as const).map((m) => (
-                    <MenuItem key={m} value={m}>{metricLabels[m]}</MenuItem>
+                  {budgetColumns.shown.map((column) => (
+                    <MenuItem key={column.key} value={column.key}>{column.label}</MenuItem>
                   ))}
                 </TextField>
                 <IconButton size="small" aria-label={t("common:buttons.remove")} disabled={selections.length <= 1} onClick={() => {
@@ -249,8 +264,8 @@ export default function BudgetColumnsCompareReport() {
                 </IconButton>
               </Box>
             ))}
-            <Button size="small" startIcon={<AddIcon />} disabled={!canAdd} onClick={() => setSelections((prev) => prev.concat({ year: Y, metric: 'budget' }))}>
-              Add
+            <Button size="small" startIcon={<AddIcon />} disabled={!canAdd} onClick={() => setSelections((prev) => prev.concat({ year: Y, metric: null }))}>
+              {t('reports.budgetColumnsCompare.addSelection')}
             </Button>
           </Box>
         </>

@@ -81,7 +81,7 @@ export interface ModuleItemNavResult {
  *   return useModuleItemNav(params, {
  *     endpoint: '/spend-items/summary/ids',
  *     queryKey: 'spend-items-summary-ids',
- *     defaultSort: 'yBudget:DESC',
+ *     defaultSort: 'created_at:DESC',
  *   });
  * }
  *

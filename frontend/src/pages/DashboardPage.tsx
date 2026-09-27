@@ -10,7 +10,8 @@ import api from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/useLocale';
 import DashboardTile from './workspace/tiles/DashboardTile';
-import { AMOUNT_COLUMNS, AmountColumnKey, slotAmount, totalsToVersions, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
+import { AmountColumnKey, slotAmount, totalsToVersions, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
+import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import type { BudgetScope } from '../services/budgetOperations';
 import { buildItemPath, formatItemRef } from '../utils/item-ref';
 import ItemScopeTabs, { useDefaultBudgetScope } from './operations/ItemScopeTabs';
@@ -161,49 +162,49 @@ function useRecentUpdates(scope: BudgetScope, enabled: boolean) {
   });
 }
 
-// Mini-reports: top items and top increases
-function getBudgetValueFromRow(row: any, year: 'y' | 'yMinus1' | 'yPlus1') {
+// Mini-reports: top items and top increases, both on the tenant's default column.
+function getColumnValueFromRow(row: any, year: 'y' | 'yMinus1' | 'yPlus1', column: AmountColumnKey) {
   const slot = (row?.versions?.[year]) || {};
   const reporting = slot?.reporting || {};
   const totals = slot?.totals || {};
-  const v = Number(reporting.budget ?? totals.budget ?? 0);
+  const v = Number(reporting[column] ?? totals[column] ?? 0);
   return Number.isFinite(v) ? v : 0;
 }
 
-function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, limit: number = 5) {
+function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: AmountColumnKey, sort: string, limit: number = 5) {
   const Y = new Date().getFullYear();
   return useQuery({
-    queryKey: ['dashboard', 'top-items', scope, Y, limit],
+    queryKey: ['dashboard', 'top-items', scope, Y, column, limit],
     enabled,
     queryFn: async () => {
-      const params = { limit, sort: 'yBudget:DESC', years: [Y - 1, Y].join(',') } as Record<string, any>;
+      const params = { limit, sort, years: [Y - 1, Y].join(',') } as Record<string, any>;
       const res = await api.get<ServerListResponse<BudgetSummaryRow>>(SUMMARY_ENDPOINT[scope], { params });
       const items = res.data.items || [];
       return items.map((row) => ({
         id: row.id,
         name: itemName(scope, row) || '\u2014',
-        y: getBudgetValueFromRow(row, 'y'),
-        yMinus1: getBudgetValueFromRow(row, 'yMinus1'),
+        y: getColumnValueFromRow(row, 'y', column),
+        yMinus1: getColumnValueFromRow(row, 'yMinus1', column),
       }));
     },
     staleTime: 60 * 1000,
   });
 }
 
-/** Lines whose budget grew from Y-1 to Y, largest first, computed over every line of the type. */
-function useTopIncreases(scope: BudgetScope, enabled: boolean, limit: number = 5) {
+/** Lines whose default column grew from Y-1 to Y, largest first, computed over every line of the type. */
+function useTopIncreases(scope: BudgetScope, enabled: boolean, column: AmountColumnKey, columnReady: boolean, limit: number = 5) {
   // No years: the fixed Y-1 and Y slots are always there, and the reports use the same cache entry.
   const query = useBudgetSummaryAll(scope, undefined, { enabled });
-  const items = useMemo(() => (query.data ?? [])
+  const items = useMemo(() => (columnReady ? query.data ?? [] : [])
     .map((row) => {
-      const y = getBudgetValueFromRow(row, 'y');
-      const yMinus1 = getBudgetValueFromRow(row, 'yMinus1');
+      const y = getColumnValueFromRow(row, 'y', column);
+      const yMinus1 = getColumnValueFromRow(row, 'yMinus1', column);
       return { id: row.id, name: itemName(scope, row) || '\u2014', y, yMinus1, delta: y - yMinus1 };
     })
     .filter((row) => row.delta > 0)
     .sort((a, b) => b.delta - a.delta)
-    .slice(0, limit), [query.data, scope, limit]);
-  return { items, isLoading: enabled && query.isLoading };
+    .slice(0, limit), [query.data, scope, column, columnReady, limit]);
+  return { items, isLoading: enabled && (query.isLoading || !columnReady) };
 }
 
 /** OPEX / CAPEX choice of a dashboard tile, remembered per tile; a type the user cannot read falls back to the default. */
@@ -247,6 +248,8 @@ export default function DashboardPage() {
   const { data: nextContract, isLoading: contractsLoading } = useNextContractRenewal();
   const readableScopes = (['opex', 'capex'] as const).filter((scope) => (scope === 'opex' ? canOpex : canCapex));
   const scopeLabel = (scope: BudgetScope) => t(`ops:operations.scope.${scope}`);
+  const budgetColumns = useBudgetColumns();
+  const defaultColumn = budgetColumns.defaultColumn;
 
   const hygieneByScope = {
     opex: useHygieneCounts('opex', canOpex),
@@ -262,9 +265,17 @@ export default function DashboardPage() {
     .slice(0, 5), [recentOpex.data, recentCapex.data]);
 
   const [topScope, setTopScope] = useTileScope('topItems');
-  const { data: topItems, isLoading: topLoading } = useTopItemsCurrentYear(topScope, readableScopes.length > 0, 5);
+  // Both tiles wait for the default column so the list is not fetched twice.
+  const { data: topItems, isLoading: topQueryLoading } = useTopItemsCurrentYear(
+    topScope,
+    readableScopes.length > 0 && budgetColumns.ready,
+    defaultColumn.key,
+    budgetColumns.defaultSort,
+    5,
+  );
+  const topLoading = topQueryLoading || (readableScopes.length > 0 && !budgetColumns.ready);
   const [increaseScope, setIncreaseScope] = useTileScope('topIncreases');
-  const { items: topIncreases, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0, 5);
+  const { items: topIncreases, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0, defaultColumn.key, budgetColumns.ready, 5);
 
   const openTasks = myTasks?.total ?? 0;
   const taskItems = myTasks?.items || [];
@@ -280,24 +291,24 @@ export default function DashboardPage() {
     return items;
   }, [nextContract]);
 
-  // Budget snapshot: one row per year, every column read from the totals key of the same name.
+  // Budget snapshot: one row per year, every shown column read from the totals key of the same name.
   const snapshotSlots: readonly YearSlot[] = ['yMinus1', 'y', 'yPlus1'];
   const buildSnapshot = (totals: Record<string, unknown> | undefined) => {
     const versions = totalsToVersions(totals, snapshotSlots);
     const rows = snapshotSlots.map((slot) => ({
       slot,
       label: yearSlotLabel(t, slot, Y),
-      values: Object.fromEntries(AMOUNT_COLUMNS.map((c) => [c.key, slotAmount(versions[slot], c.key)])) as Record<AmountColumnKey, number>,
+      values: Object.fromEntries(budgetColumns.shown.map((c) => [c.key, slotAmount(versions[slot], c.key)])) as Record<AmountColumnKey, number>,
     }));
-    const columns = AMOUNT_COLUMNS.filter((c) => rows.some((r) => r.values[c.key] !== 0)).map((c) => c.key);
+    const columns = budgetColumns.shown.filter((c) => rows.some((r) => r.values[c.key] !== 0)).map((c) => c.key);
     return { rows, columns };
   };
 
   const opexSnapshot = buildSnapshot(opexTotals);
   const capexSnapshot = buildSnapshot(capexTotals);
-  // Same labels as the budget tab of OPEX and CAPEX items.
-  const snapshotColumnLabelKeys = Object.fromEntries(AMOUNT_COLUMNS.map((c) => [c.key, c.labelKey])) as Record<AmountColumnKey, string>;
-  const unionCols = AMOUNT_COLUMNS.map((c) => c.key).filter((c) => opexSnapshot.columns.includes(c) || capexSnapshot.columns.includes(c));
+  // Tenant names, the same as the lists and the budget tab.
+  const snapshotColumnLabels = Object.fromEntries(budgetColumns.shown.map((c) => [c.key, c.label])) as Record<AmountColumnKey, string>;
+  const unionCols = budgetColumns.shown.map((c) => c.key).filter((c) => opexSnapshot.columns.includes(c) || capexSnapshot.columns.includes(c));
 
   const SnapshotTable = ({ rows, columns }: { rows: Array<{ slot: YearSlot; label: string; values: Record<AmountColumnKey, number> }>; columns: ReadonlyArray<AmountColumnKey> }) => (
       <TableContainer>
@@ -307,7 +318,7 @@ export default function DashboardPage() {
               <TableCell sx={{ width: 120, fontWeight: 600 }} align="left">{t('labels.year')}</TableCell>
               {columns.map((c) => (
                 <TableCell key={`h-${c}`} align="center" sx={{ fontWeight: 600, minWidth: 76 }}>
-                  {t(snapshotColumnLabelKeys[c])}
+                  {snapshotColumnLabels[c]}
                 </TableCell>
               ))}
             </TableRow>
@@ -489,7 +500,7 @@ export default function DashboardPage() {
           <Grid item xs={12} md={6} lg={4}>
             <DashboardTile
               icon="Leaderboard"
-              title={t('dashboard.topItemsY')}
+              title={t('dashboard.topItemsY', { column: defaultColumn.label })}
               isLoading={topLoading}
               action={(
                 <Stack direction="row" alignItems="center">
@@ -517,7 +528,7 @@ export default function DashboardPage() {
           <Grid item xs={12} md={6} lg={4}>
             <DashboardTile
               icon="TrendingUp"
-              title={t('dashboard.topIncreasesYvsYminus1')}
+              title={t('dashboard.topIncreasesYvsYminus1', { column: defaultColumn.label })}
               isLoading={increasesLoading}
               action={(
                 <Stack direction="row" alignItems="center">

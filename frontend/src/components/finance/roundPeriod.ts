@@ -37,16 +37,6 @@ export type RoundInput = {
 
 export type Period = { start: string; end: string };
 
-/** Every column, in the order the spread panel lists them. */
-export const AMOUNT_MEASURES: AmountMeasure[] = ['planned', 'committed', 'forecast', 'expected_landing', 'actual'];
-
-/**
- * The columns "Apply to all columns" spreads together. This is the product
- * default, every column; step R makes it the per-tenant `group_spread`
- * setting. Nothing else may test a column name to decide a behaviour.
- */
-export const APPLY_TO_ALL_COLUMNS: AmountMeasure[] = AMOUNT_MEASURES;
-
 const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** True for a real calendar date written `YYYY-MM-DD`. */
@@ -166,7 +156,7 @@ const COLUMN_LABEL_KEYS: Record<AmountMeasure, string> = {
   actual: 'operations.budgetColumns.followUp',
 };
 
-/** The one place a column gets its name, so configured names can replace it later. */
+/** The product name of a column; screens show the tenant's names from `useBudgetColumns`. */
 export function columnLabel(t: TFunction, measure: AmountMeasure): string {
   return t(COLUMN_LABEL_KEYS[measure]);
 }
@@ -178,14 +168,22 @@ export function formatUplift(locale: string, pct: string | number | null | undef
   return new Intl.NumberFormat(locale, { style: 'percent', signDisplay: 'exceptZero', maximumFractionDigits: 2 }).format(n / 100);
 }
 
-/** How the column was produced: "Spread flat", "Copied from Budget 2025 +2 %", "Edited by hand". */
-export function chipText(t: TFunction, locale: string, record: RoundInput | null | undefined): string {
+/**
+ * How the column was produced: "Spread flat", "Copied from Budget 2025 +2 %", "Edited by hand".
+ * `nameOf` names the source column of a copy (the tenant's names; the product names by default).
+ */
+export function chipText(
+  t: TFunction,
+  locale: string,
+  record: RoundInput | null | undefined,
+  nameOf: (measure: AmountMeasure) => string = (measure) => columnLabel(t, measure),
+): string {
   if (!record) return '';
   const calc = record.last_calculation;
   if (record.method === 'manual') return t('budgetTab.chip.manual');
   if (record.method === 'copied') {
     if (calc?.kind !== 'copy') return t('budgetTab.chip.copiedPlain');
-    const column = columnLabel(t, calc.source_measure);
+    const column = nameOf(calc.source_measure);
     const uplift = formatUplift(locale, calc.uplift_pct);
     return uplift
       ? t('budgetTab.chip.copiedUplift', { column, year: calc.source_year, uplift })

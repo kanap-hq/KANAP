@@ -16,6 +16,11 @@ const readable: Record<string, boolean> = { opex: true, capex: true };
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string) => readable[resource] ?? true }),
 }));
+vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
+  const state = await import('./budgetColumnsTestState');
+  return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
+});
 vi.mock('../../components/reports/ReportLayout', () => ({
   default: ({ title, subtitle, filters, children }: { title: string; subtitle?: React.ReactNode; filters?: React.ReactNode; children?: React.ReactNode }) => (
     <div>
@@ -38,6 +43,7 @@ vi.mock('../../components/reports/ReportGrid', () => ({
 }));
 
 import api from '../../api';
+import { setBudgetColumns } from './budgetColumnsTestState';
 import TopOpexReport from './TopOpexReport';
 import OpexDeltaReport from './OpexDeltaReport';
 import ConsolidationReport from './ConsolidationReport';
@@ -48,7 +54,7 @@ const Y = new Date().getFullYear();
 
 /** A year slot whose reporting block also carries the currency and rate keys the summary sends. */
 function slot(year: number, budget: number) {
-  const columns = { budget, revision: 0, follow_up: 0, landing: 0 };
+  const columns = { budget, revision: 0, forecast: 0, follow_up: 0, landing: 0 };
   return {
     year,
     totals: columns,
@@ -78,6 +84,7 @@ function renderReport(element: React.ReactElement, path = '/report') {
 const calledUrls = () => get.mock.calls.map(([url]) => url as string);
 
 beforeEach(() => {
+  setBudgetColumns();
   readable.opex = true;
   readable.capex = true;
   get.mockReset();
@@ -112,7 +119,7 @@ describe('Top items report', () => {
 });
 
 describe('Top increase / decrease report', () => {
-  it('offers only budget columns in the metric pickers, no currency or rate keys', async () => {
+  it('offers only the shown budget columns in the metric pickers, fixed order, no currency or rate keys', async () => {
     renderReport(<OpexDeltaReport />);
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Opex line'));
 
@@ -120,9 +127,9 @@ describe('Top increase / decrease report', () => {
     const options = within(await screen.findByRole('listbox')).getAllByRole('option').map((o) => o.textContent);
     expect(options).toEqual([
       'ops:operations.budgetColumns.budget',
+      'ops:operations.budgetColumns.revision',
       'ops:operations.budgetColumns.followUp',
       'ops:operations.budgetColumns.landing',
-      'ops:operations.budgetColumns.revision',
     ]);
   });
 

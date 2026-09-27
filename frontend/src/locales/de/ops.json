@@ -71,12 +71,6 @@
       "annualTotals": "Jahrestotale ({{year}})",
       "monthlyEntry": "Monatliche Eingabe ({{year}})",
       "month": "Monat",
-      "budgetPlanned": "Budget (geplant)",
-      "revisionCommitted": "Revision (festgelegt)",
-      "followUpActual": "Ist-Werte",
-      "landingExpected": "Erwarteter Endwert",
-      "frozen": "eingefroren",
-      "forecast": "Prognose",
       "checkingFreeze": "Einfrierstatus wird überprüft…",
       "someColumnsFrozen": "Einige Spalten sind eingefroren und schreibgeschützt.",
       "allColumnsEditable": "Alle Spalten sind bearbeitbar.",
@@ -98,7 +92,7 @@
       "allocateBy": "Zuordnen nach",
       "headcount": "Mitarbeiterzahl",
       "allocationPct": "Zuordnung %",
-      "yearBudget": "Jahresbudget",
+      "yearTotal": "{{column}}, Jahressumme",
       "splitEqually": "Gleichmäßig aufteilen",
       "clearPins": "Manuelle Fixierungen löschen",
       "company": "Unternehmen",
@@ -277,12 +271,6 @@
       "annualTotals": "Jahrestotale ({{year}})",
       "monthlyEntry": "Monatliche Eingabe ({{year}})",
       "month": "Monat",
-      "budgetPlanned": "Budget (geplant)",
-      "revisionCommitted": "Revision (festgelegt)",
-      "followUpActual": "Ist-Werte",
-      "landingExpected": "Erwarteter Endwert",
-      "frozen": "eingefroren",
-      "forecast": "Prognose",
       "checkingFreeze": "Einfrierstatus wird überprüft…",
       "someColumnsFrozen": "Einige Spalten sind eingefroren und schreibgeschützt.",
       "allColumnsEditable": "Alle Spalten sind bearbeitbar.",
@@ -304,7 +292,7 @@
       "allocateBy": "Zuordnen nach",
       "headcount": "Mitarbeiterzahl",
       "allocationPct": "Zuordnung %",
-      "yearBudget": "Jahresbudget",
+      "yearTotal": "{{column}}, Jahressumme",
       "splitEqually": "Gleichmäßig aufteilen",
       "clearPins": "Manuelle Fixierungen löschen",
       "company": "Unternehmen",
@@ -499,7 +487,9 @@
       "allocationDefaultTitle": "Standard-Zuordnungsmethode",
       "allocationDefaultDesc": "Methode wählen, die für OPEX- und CAPEX-Positionen mit Standard-Zuordnung gilt",
       "budgetRowsTitle": "Datei der Budgetzeilen",
-      "budgetRowsDesc": "Die Monatsbeträge aller OPEX- und CAPEX-Positionen exportieren oder importieren, eine Zeile pro Position, Jahr und Spalte."
+      "budgetRowsDesc": "Die Monatsbeträge aller OPEX- und CAPEX-Positionen exportieren oder importieren, eine Zeile pro Position, Jahr und Spalte.",
+      "budgetColumnsTitle": "Budgetspalten",
+      "budgetColumnsDesc": "Die fünf Budgetspalten benennen, die angezeigten Spalten und die Standardspalte wählen"
     },
     "allocationDefault": {
       "title": "Standard-Zuordnungsmethode",
@@ -536,7 +526,6 @@
     },
     "freeze": {
       "title": "Daten einfrieren / auftauen",
-      "noPermission": "Sie benötigen Budget-Admin-Berechtigungen, um Daten einzufrieren oder aufzutauen. Sie können den aktuellen Einfrierstatus unten einsehen.",
       "frozenSuccess": "Spalten erfolgreich eingefroren.",
       "unfrozenSuccess": "Spalten erfolgreich aufgetaut.",
       "freezeError": "Spalten konnten nicht eingefroren werden.",
@@ -551,7 +540,8 @@
       "unfreezing": "Auftauen…",
       "updating": "Einfrierstatus wird aktualisiert…",
       "frozen": "Eingefroren",
-      "editable": "Bearbeitbar"
+      "editable": "Bearbeitbar",
+      "hidden": "Ausgeblendet"
     },
     "columnReset": {
       "title": "Budgetspalte zurücksetzen",
@@ -579,7 +569,9 @@
       "confirmAffected_other": "{{count}} Positionen sind betroffen, mit insgesamt {{value}}.",
       "clearDone_one": "{{count}} Position geleert.",
       "clearDone_other": "{{count}} Positionen geleert.",
-      "confirmPeriodsOnly": "Die Spalte {{column}} für {{year}} enthält keinen Betrag. Nur ihre Verteilungszeiträume werden entfernt."
+      "confirmPeriodsOnly": "Die Spalte {{column}} für {{year}} enthält keinen Betrag. Nur ihre Verteilungszeiträume werden entfernt.",
+      "chooseColumn": "Spalte wählen",
+      "chooseColumnFirst": "Wählen Sie eine Spalte, um ihre Beträge zu sehen."
     },
     "copyAllocations": {
       "title": "Zuordnungen kopieren",
@@ -700,7 +692,37 @@
       "export": "Exportieren",
       "import": "Importieren",
       "exportTitle": "Budgetzeilen exportieren",
-      "importTitle": "Budgetzeilen importieren"
+      "importTitle": "Budgetzeilen importieren",
+      "fileNames": "In der Datei bezeichnet die Spalte measure jede Budgetspalte: {{names}}.",
+      "fileName": "{{key}} für {{column}}"
+    },
+    "budgetAdminOnly": "Nur Budgetadministratoren können diese Seite ändern.",
+    "budgetColumnsSettings": {
+      "title": "Budgetspalten",
+      "subtitle": "Benennen Sie die Spalten Ihres Budgets, wählen Sie, welche alle sehen und von welcher Berichte und Listen ausgehen.",
+      "loadError": "Die Spalteneinstellungen konnten nicht geladen werden.",
+      "column": "Spalte",
+      "name": "Name",
+      "shown": "Angezeigt",
+      "follows": "Folgt „Auf alle Spalten anwenden“",
+      "default": "Standard",
+      "nameOf": "Name der Spalte {{position}}",
+      "shownOf": "{{column}} anzeigen",
+      "followsOf": "{{column}} folgt „Auf alle Spalten anwenden“",
+      "defaultOf": "{{column}} zur Standardspalte machen",
+      "inFiles": "In Dateien: {{name}}",
+      "nameHint": "Lassen Sie einen Namen leer, um den Standardnamen zu verwenden.",
+      "helpHidden": "Ausgeblendete Spalten behalten ihre Beträge und nehmen weiterhin Importe und Einfrierungen an.",
+      "helpDefault": "Die Standardspalte ist in Berichten vorausgewählt und sortiert die Listen und das Dashboard. Wird sie eingefroren, werden die Wechselkurse des Jahres festgeschrieben.",
+      "helpFollows": "Spalten, die „Auf alle Spalten anwenden“ folgen, übernehmen denselben Zeitraum, wenn eine Verteilung auf alle Spalten angewendet wird.",
+      "errors": {
+        "allHidden": "Mindestens eine Spalte muss angezeigt bleiben.",
+        "defaultHidden": "Die Standardspalte muss angezeigt werden: Wählen Sie zuerst eine andere Standardspalte.",
+        "duplicate": "Zwei Spalten können nicht beide „{{name}}“ heißen.",
+        "tooLong": "Ein Spaltenname darf höchstens {{max}} Zeichen haben.",
+        "saveFailed": "Die Budgetspalten konnten nicht gespeichert werden.",
+        "controlCharacters": "Ein Spaltenname darf keine Steuerzeichen oder unsichtbaren Zeichen enthalten."
+      }
     },
     "results": {
       "skipped_one": "{{count}} Position übersprungen.",
@@ -924,8 +946,8 @@
       "title": "Top-Positionen",
       "subtitle": "Größte {{type}}-Positionen nach ausgewähltem Jahr ({{metric}})",
       "topTotal": "Top {{count}} gesamt",
-      "totalMetric": "Gesamt {{metric}}",
-      "ofFilteredMetric": "{{pct}} % des gefilterten {{metric}}",
+      "totalMetric": "{{metric}}, gesamt",
+      "ofFilteredMetric": "{{pct}} % der gefilterten Summe",
       "shareSubtitle": "Anteil an der Jahressumme ({{metric}})",
       "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}"
     },
@@ -978,8 +1000,8 @@
     "budgetColumnsCompare": {
       "title": "Budgetspaltenvergleich",
       "subtitle": "Bis zu zehn Budgetspalten für OPEX oder CAPEX vergleichen",
-      "yearGroupingSubtitle": "{{type}} — Jahresgruppierung",
-      "selectionsSubtitle": "{{type}} — {{count}} Auswahl(en)",
+      "yearGroupingSubtitle": "{{type}}: Jahresgruppierung",
+      "selectionsSubtitle": "{{type}}: {{count}} Auswahl(en)",
       "addSelection": "Hinzufügen"
     },
     "consolidation": {

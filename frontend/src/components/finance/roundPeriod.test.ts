@@ -147,9 +147,11 @@ describe('texts', () => {
     // The space before % depends on the runtime's ICU data.
     expect(chipText(fr(), 'fr', copy('2'))).toMatch(/^Copié depuis Budget 2025 \+2\s%$/);
     expect(chipText(en(), 'en', record({ method: 'copied' }))).toBe('Copied');
+    // The source column carries the tenant's name when the screen passes it.
+    expect(chipText(en(), 'en', copy('2'), (measure) => (measure === 'planned' ? 'A0' : measure))).toBe('Copied from A0 2025 +2%');
   });
 
-  it('builds every column name in one place', () => {
+  it('gives the product name of a column', () => {
     expect(columnLabel(en(), 'actual')).toBe('Actuals');
     expect(columnLabel(en(), 'forecast')).toBe('Forecast');
     expect(formatUplift('en', '0.00')).toBe('');

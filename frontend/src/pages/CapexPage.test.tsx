@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => {
@@ -15,18 +15,38 @@ vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
 const grid = vi.fn();
+// The list URL at the time the grid renders, recorded by a probe rendered just before the page.
+const seen = vi.hoisted(() => ({ search: '', searches: [] as string[] }));
 vi.mock('../components/ServerDataGrid', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../components/ServerDataGrid')>()),
   default: (props: unknown) => {
     grid(props);
+    seen.searches.push(seen.search);
     return null;
   },
 }));
+// The tenant's column settings, set per test.
+const columnsSetting = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../hooks/useBudgetColumns')>();
+  let cache: { settings: unknown; value: ReturnType<typeof mod.resolveBudgetColumns> } | null = null;
+  const t = ((key: string) => key) as unknown as Parameters<typeof mod.resolveBudgetColumns>[1];
+  return {
+    ...mod,
+    useBudgetColumns: () => {
+      if (!cache || cache.settings !== columnsSetting.current) {
+        cache = { settings: columnsSetting.current, value: mod.resolveBudgetColumns(columnsSetting.current as never, t) };
+      }
+      return cache.value;
+    },
+  };
+});
 
 import api from '../api';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import CapexPage from './CapexPage';
+import { DEFAULT_BUDGET_COLUMNS } from '../services/budgetColumns';
 
 type Col = {
   colId?: string;
@@ -39,16 +59,26 @@ type Col = {
   valueGetter?: (p: unknown) => unknown;
   cellRenderer?: (p: unknown) => React.ReactElement;
 };
-type GridProps = { columns: Col[]; pinnedBottomRowData: Array<{ versions?: Record<string, { totals?: Record<string, number> }> }> };
+type GridProps = {
+  columns: Col[];
+  pinnedBottomRowData: Array<{ versions?: Record<string, { totals?: Record<string, number> }> }>;
+  defaultSort: { field: string; direction: string };
+};
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const lastProps = () => grid.mock.calls[grid.mock.calls.length - 1][0] as GridProps;
 const column = (id: string) => lastProps().columns.find((c) => (c.colId ?? c.field) === id);
 
+function LocationProbe() {
+  seen.search = useLocation().search;
+  return null;
+}
+
 /** Renders the page and waits for the totals footer, the last state update of the first load. */
-async function renderPage() {
+async function renderPage(url = '/ops/capex') {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
+      <LocationProbe />
       <CapexPage />
     </MemoryRouter>,
   );
@@ -58,17 +88,62 @@ async function renderPage() {
 describe('CapexPage', () => {
   beforeEach(() => {
     grid.mockReset();
+    seen.searches = [];
+    columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
+    window.sessionStorage.clear();
     get.mockReset();
     get.mockResolvedValue({ data: { yBudget: 10, yPlus2Forecast: 4, yMinus1Revision: 3, reportingCurrency: 'X' } });
   });
 
-  it('offers every column of every list year, filtered with number models', async () => {
+  it('offers every shown column of every list year, filtered with number models', async () => {
     await renderPage();
     const amounts = lastProps().columns.filter((c) => c.filter === 'agNumberColumnFilter');
-    expect(amounts).toHaveLength(20);
+    // Forecast is hidden by default: not in the chooser, sort or filters.
+    expect(amounts).toHaveLength(16);
     expect(amounts.filter((c) => !c.defaultHidden).map((c) => c.colId)).toEqual(['yBudget', 'yLanding']);
-    expect(column('yPlus2Forecast')).toBeDefined();
+    expect(column('yPlus2Forecast')).toBeUndefined();
     expect(column('yMinus1Revision')).toBeDefined();
+  });
+
+  it('shows a column once the tenant shows it, named with its name', async () => {
+    columnsSetting.current = {
+      ...DEFAULT_BUDGET_COLUMNS,
+      enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, forecast: true },
+      labels: { ...DEFAULT_BUDGET_COLUMNS.labels, forecast: 'A2' },
+    };
+    await renderPage();
+    expect(lastProps().columns.filter((c) => c.filter === 'agNumberColumnFilter')).toHaveLength(20);
+    expect(column('yPlus2Forecast')?.headerName).toBe('ops:shared.amountColumnHeader');
+  });
+
+  it('sorts by the default column of Y by default', async () => {
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, default_column: 'committed' };
+    await renderPage();
+    expect(lastProps().defaultSort).toEqual({ field: 'yRevision', direction: 'DESC' });
+    // Visible by default: the default column and the last shown column of Y.
+    expect(lastProps().columns.filter((c) => c.filter === 'agNumberColumnFilter' && !c.defaultHidden).map((c) => c.colId))
+      .toEqual(['yRevision', 'yLanding']);
+  });
+
+  it('a stored sort on a hidden column falls back before the grid loads', async () => {
+    window.sessionStorage.setItem('capex-list-context', JSON.stringify({ sort: 'yPlus1Forecast:ASC', q: '', filters: '', statusScope: 'enabled' }));
+    await renderPage();
+    expect(seen.searches.length).toBeGreaterThan(0);
+    for (const search of seen.searches) expect(new URLSearchParams(search).get('sort')).toBeNull();
+    expect(lastProps().defaultSort).toEqual({ field: 'yBudget', direction: 'DESC' });
+  });
+
+  it('a linked sort or filter on a hidden column falls back before the grid loads', async () => {
+    const filters = JSON.stringify({ yForecast: { filterType: 'number', type: 'greaterThan', filter: 1 } });
+    await renderPage(`/ops/capex?sort=yForecast:DESC&filters=${encodeURIComponent(filters)}`);
+    expect(seen.searches.length).toBeGreaterThan(0);
+    for (const search of seen.searches) {
+      const params = new URLSearchParams(search);
+      // No sort in the URL: the grid applies the default sort.
+      expect(params.get('sort')).toBeNull();
+      expect(params.get('filters')).toBeNull();
+    }
+    expect(lastProps().defaultSort).toEqual({ field: 'yBudget', direction: 'DESC' });
   });
 
   it('has a contract column, a project column hidden by default, and a visible task column', async () => {
@@ -117,7 +192,7 @@ describe('CapexPage', () => {
     const row = { id: 'c-1', item_number: 7, latest_contract_id: 'k-1' };
     expect(hrefOf('contract_name', row)).toBe('/ops/contracts/k-1/overview');
     const Y = new Date().getFullYear();
-    expect(hrefOf('yPlus1Forecast', row)).toMatch(new RegExp(`^/ops/capex/CPX-7/budget\\?.*year=${Y + 1}`));
+    expect(hrefOf('yPlus1Revision', row)).toMatch(new RegExp(`^/ops/capex/CPX-7/budget\\?.*year=${Y + 1}`));
   });
 
   it('fills the footer from the totals keys of the same name', async () => {

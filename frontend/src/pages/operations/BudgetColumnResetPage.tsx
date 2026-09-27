@@ -20,7 +20,8 @@ import { useCapexSummaryAll } from '../reports/useCapexSummary';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearBudgetColumn, BudgetColumn, BudgetScope } from '../../services/budgetOperations';
 import { useFreezeState } from '../../hooks/useFreezeState';
-import { FreezeColumn } from '../../services/freeze';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { selectPlaceholderSx } from '../../theme/formSx';
 import { useLocale } from '../../i18n/useLocale';
 import { useKanapDialogs } from '../../components/design';
 import { drawerMenuItemSx } from '../../theme/formSx';
@@ -36,23 +37,13 @@ type ProcessedRow = {
 };
 
 
-const budgetToFreezeColumn: Record<BudgetColumn, FreezeColumn> = {
-  budget: 'budget',
-  revision: 'revision',
-  follow_up: 'actual',
-  landing: 'landing',
-};
-
 export default function BudgetColumnResetPage() {
   const { t } = useTranslation(['ops', 'common']);
   const dialogs = useKanapDialogs();
 
-  const BUDGET_COLUMNS: { value: BudgetColumn; label: string }[] = [
-    { value: 'budget', label: t('operations.budgetColumns.budget') },
-    { value: 'revision', label: t('operations.budgetColumns.revision') },
-    { value: 'follow_up', label: t('operations.budgetColumns.followUp') },
-    { value: 'landing', label: t('operations.budgetColumns.landing') },
-  ];
+  // Shown columns only, none preselected: clearing is destructive, the user names the column.
+  const budgetColumns = useBudgetColumns();
+  const BUDGET_COLUMNS: { value: BudgetColumn; label: string }[] = budgetColumns.shown.map((c) => ({ value: c.key, label: c.label }));
   const locale = useLocale();
   const theme = useTheme();
   const queryClient = useQueryClient();
@@ -64,13 +55,14 @@ export default function BudgetColumnResetPage() {
 
   const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope());
   const [year, setYear] = useState<number>(Y);
-  const [column, setColumn] = useState<BudgetColumn>('budget');
+  const [pickedColumn, setColumn] = useState<BudgetColumn | null>(null);
+  // A column hidden since it was picked is no longer offered.
+  const column = pickedColumn && budgetColumns.shown.some((c) => c.key === pickedColumn) ? pickedColumn : null;
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [clearResult, setClearResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const { data: freezeData, isLoading: freezeLoading } = useFreezeState(year);
-  const freezeKey = budgetToFreezeColumn[column];
-  const columnFrozen = freezeData?.summary?.scopes[scope][freezeKey]?.frozen ?? false;
+  const columnFrozen = column ? freezeData?.summary?.scopes[scope][budgetColumns.get(column).freezeKey]?.frozen ?? false : false;
 
   // Fetch data for the selected year
   const opexSummary = useOpexSummaryAll([year], { enabled: scope === 'opex' });
@@ -82,7 +74,7 @@ export default function BudgetColumnResetPage() {
 
     return rows.map((r: any) => {
       const slot = pickYearSlot(r, year);
-      const currentValue = Number(slot?.totals?.[column] || 0);
+      const currentValue = column ? Number(slot?.totals?.[column] || 0) : 0;
 
       return {
         id: r.id,
@@ -104,7 +96,7 @@ export default function BudgetColumnResetPage() {
     };
   }, [processedData]);
 
-  const columnLabel = BUDGET_COLUMNS.find((c) => c.value === column)?.label || column;
+  const columnLabel = column ? budgetColumns.label(column) : '';
 
   const columns = useMemo<ColDef[]>(() => [
     {
@@ -115,7 +107,7 @@ export default function BudgetColumnResetPage() {
     },
     {
       field: 'currentValue',
-      headerName: t('operations.columnReset.currentHeader', { column: columnLabel, year }),
+      headerName: column ? t('operations.columnReset.currentHeader', { column: columnLabel, year }) : String(year),
       width: 200,
       type: 'rightAligned',
       valueFormatter: (p) => formatOperationAmount(p.value),
@@ -124,11 +116,12 @@ export default function BudgetColumnResetPage() {
         ? { color: 'inherit', fontWeight: 500 }
         : { color: theme.palette.kanap.text.tertiary, fontWeight: 400 }),
     },
-  ], [columnLabel, year, locale, theme, t]);
+  ], [column, columnLabel, year, locale, theme, t]);
 
   const gridApiRef = useRef<any>(null);
 
   const handleClearClick = async () => {
+    if (!column) return;
     const confirmed = await dialogs.confirm({
       title: t('operations.columnReset.confirmTitle'),
       message: (
@@ -204,9 +197,16 @@ export default function BudgetColumnResetPage() {
             <TextField
               select
               size="small"
-              value={column}
-              onChange={(e) => setColumn(e.target.value as BudgetColumn)}
-              SelectProps={{ MenuProps: reportFilterMenuProps }}
+              value={column ?? ''}
+              onChange={(e) => { setColumn(e.target.value as BudgetColumn); setClearResult(null); }}
+              SelectProps={{
+                MenuProps: reportFilterMenuProps,
+                displayEmpty: true,
+                renderValue: (value) => (value
+                  ? budgetColumns.label(String(value))
+                  : <Box component="span" sx={selectPlaceholderSx}>{t('operations.columnReset.chooseColumn')}</Box>),
+              }}
+              inputProps={{ 'aria-label': t('operations.columnReset.budgetColumn') }}
               sx={reportFilterSelectSx}
             >
               {BUDGET_COLUMNS.map((col) => (
@@ -221,7 +221,7 @@ export default function BudgetColumnResetPage() {
           variant="action-danger"
           onClick={() => void handleClearClick()}
           // A column without amounts can still hold spread periods: the server clears them and skips the rest.
-          disabled={isProcessing || stats.totalItems === 0 || freezeLoading || columnFrozen}
+          disabled={!column || isProcessing || stats.totalItems === 0 || freezeLoading || columnFrozen}
         >
           {isProcessing ? t('operations.columnReset.processing') : t('operations.columnReset.clearColumn')}
         </Button>
@@ -235,13 +235,13 @@ export default function BudgetColumnResetPage() {
           </Alert>
         )}
 
-        {stats.itemsWithData === 0 && !isLoading && (
+        {column && stats.itemsWithData === 0 && !isLoading && (
           <Alert severity="info">
             {t('operations.columnReset.noDataInfo', { column: columnLabel, year })}
           </Alert>
         )}
 
-        {stats.itemsWithData > 0 && (
+        {column && stats.itemsWithData > 0 && (
           <Alert severity="warning">
             {t('operations.columnReset.clearWarning', { column: columnLabel, year, count: stats.itemsWithData })}
           </Alert>
@@ -253,40 +253,45 @@ export default function BudgetColumnResetPage() {
           </Alert>
         )}
 
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography sx={{ mb: 1, fontSize: 16, fontWeight: 500 }}>
-            {t('operations.columnReset.dataPreview')}
-          </Typography>
-          <Box component={AgGridBox}>
-            <AgGridReact
-              rowData={processedData}
-              columnDefs={columns}
-              defaultColDef={{ sortable: true, resizable: true }}
-              initialState={{
-                sort: {
-                  sortModel: [{ colId: 'currentValue', sort: 'desc' }],
-                },
-              }}
-              onGridReady={(e) => { gridApiRef.current = e.api; }}
-              domLayout="autoHeight"
-            />
-          </Box>
-
-          <Box sx={{ mt: 2, display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' } }}>
-            <Box sx={statSx}>
-              <Typography sx={statLabelSx}>{t('operations.columnReset.totalItems')}</Typography>
-              <Typography sx={statValueSx}>{stats.totalItems.toLocaleString(locale)}</Typography>
+        {!column ? (
+          // No column yet: one line instead of a grid of zeros.
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('operations.columnReset.chooseColumnFirst')}</Typography>
+        ) : (
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography sx={{ mb: 1, fontSize: 16, fontWeight: 500 }}>
+              {t('operations.columnReset.dataPreview')}
+            </Typography>
+            <Box component={AgGridBox}>
+              <AgGridReact
+                rowData={processedData}
+                columnDefs={columns}
+                defaultColDef={{ sortable: true, resizable: true }}
+                initialState={{
+                  sort: {
+                    sortModel: [{ colId: 'currentValue', sort: 'desc' }],
+                  },
+                }}
+                onGridReady={(e) => { gridApiRef.current = e.api; }}
+                domLayout="autoHeight"
+              />
             </Box>
-            <Box sx={statSx}>
-              <Typography sx={statLabelSx}>{t('operations.columnReset.itemsWithData')}</Typography>
-              <Typography sx={statValueSx}>{stats.itemsWithData.toLocaleString(locale)}</Typography>
+  
+            <Box sx={{ mt: 2, display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' } }}>
+              <Box sx={statSx}>
+                <Typography sx={statLabelSx}>{t('operations.columnReset.totalItems')}</Typography>
+                <Typography sx={statValueSx}>{stats.totalItems.toLocaleString(locale)}</Typography>
+              </Box>
+              <Box sx={statSx}>
+                <Typography sx={statLabelSx}>{t('operations.columnReset.itemsWithData')}</Typography>
+                <Typography sx={statValueSx}>{stats.itemsWithData.toLocaleString(locale)}</Typography>
+              </Box>
+              <Box sx={statSx}>
+                <Typography sx={statLabelSx}>{t('operations.columnReset.currentTotalValue')}</Typography>
+                <Typography sx={statValueSx}>{formatOperationAmount(stats.totalValue)}</Typography>
+              </Box>
             </Box>
-            <Box sx={statSx}>
-              <Typography sx={statLabelSx}>{t('operations.columnReset.currentTotalValue')}</Typography>
-              <Typography sx={statValueSx}>{formatOperationAmount(stats.totalValue)}</Typography>
-            </Box>
-          </Box>
-        </Paper>
+          </Paper>
+        )}
       </Stack>
 
       {isLoading && (

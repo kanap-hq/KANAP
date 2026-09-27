@@ -14,11 +14,12 @@ vi.mock('react-i18next', async () => {
   const enOps = (await import('../../locales/en/ops.json')).default;
   const real = i18next.createInstance();
   await real.init({ lng: 'en', resources: { en: { ops: enOps } }, defaultNS: 'ops', interpolation: { escapeValue: false } });
-  const t = (key: string, options?: unknown) => (
-    key.startsWith('budgetTab.') || key.startsWith('operations.')
+  const t = (rawKey: string, options?: unknown) => {
+    const key = rawKey.replace(/^ops:/, '');
+    return key.startsWith('budgetTab.') || key.startsWith('operations.')
       ? real.t(key, options as Record<string, unknown>)
-      : key
-  );
+      : rawKey;
+  };
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
@@ -35,9 +36,34 @@ vi.mock('./BudgetTrendChart', () => ({
   default: () => null,
 }));
 
+// The tenant's column settings, set per test (every column shown unless a test says otherwise).
+const columnsSetting = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
+  const { useTranslation } = await import('react-i18next');
+  let cache: { settings: unknown; value: ReturnType<typeof mod.resolveBudgetColumns> } | null = null;
+  return {
+    ...mod,
+    useBudgetColumns: () => {
+      const { t } = useTranslation();
+      if (!cache || cache.settings !== columnsSetting.current) {
+        cache = { settings: columnsSetting.current, value: mod.resolveBudgetColumns(columnsSetting.current as never, t) };
+      }
+      return cache.value;
+    },
+  };
+});
+
 import api from '../../api';
 import BudgetTab, { BudgetTabHandle } from './BudgetTab';
 import type { RoundInput } from './roundPeriod';
+import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
+
+const ALL_SHOWN: BudgetColumnsSettings = {
+  ...DEFAULT_BUDGET_COLUMNS,
+  enabled: { planned: true, committed: true, forecast: true, actual: true, expected_landing: true },
+};
+beforeEach(() => { columnsSetting.current = ALL_SHOWN; });
 
 // jsdom here ships without localStorage.
 if (!window.localStorage) {
@@ -162,13 +188,13 @@ async function waitForAmounts(loads = 1) {
   });
 }
 
-/** The inputs of the monthly grid, row by row: Budget, Revision, Actuals, Landing, Forecast. */
+/** The inputs of the monthly grid, row by row, in the fixed order: Budget, Revision, Forecast, Actuals, Expected landing. */
 function monthCells(container: HTMLElement) {
   const table = container.querySelector('table');
   if (!table) throw new Error('monthly table not rendered');
   return within(table as HTMLElement).getAllByRole('textbox') as HTMLInputElement[];
 }
-const cell = (cells: HTMLInputElement[], month: number, column: number) => cells[(month - 1) * 5 + column];
+const cell = (cells: HTMLInputElement[], month: number, column: number, columns = 5) => cells[(month - 1) * columns + column];
 
 async function flush(ref: React.RefObject<BudgetTabHandle>) {
   let ok = true;
@@ -359,13 +385,13 @@ describe('BudgetTab write safety', () => {
     await waitFor(() => {
       const cells = monthCells(container);
       for (let month = 1; month <= 12; month++) {
-        expect(cell(cells, month, 4)).toHaveAttribute('readonly');
+        expect(cell(cells, month, 2)).toHaveAttribute('readonly');
       }
     });
     expect(screen.getAllByRole('button', { name: 'opex.budget.clearColumn' })).toHaveLength(4);
 
     const cells = monthCells(container);
-    fireEvent.change(cell(cells, 1, 4), { target: { value: '5' } });
+    fireEvent.change(cell(cells, 1, 2), { target: { value: '5' } });
     fireEvent.change(cell(cells, 1, 0), { target: { value: '1500' } });
     await flush(ref);
 
@@ -464,8 +490,8 @@ describe('BudgetTab periods', () => {
 
     await waitFor(() => expect(periodLine('planned')).toHaveTextContent("No month of 2026 is within the item's dates."));
     expect(screen.getAllByRole('textbox')[0]).toBeDisabled();
-    // Every yearly column, Actuals included.
-    expect(screen.getAllByRole('button', { name: 'Choose the period' })).toHaveLength(4);
+    // Every shown column, Forecast and Actuals included.
+    expect(screen.getAllByRole('button', { name: 'Choose the period' })).toHaveLength(5);
     expect(periodLine('actual')).toHaveTextContent("No month of 2026 is within the item's dates.");
   });
 
@@ -563,9 +589,9 @@ describe('BudgetTab periods', () => {
     fireEvent.click(within(periodLine('committed').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
     const amount = await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
     expect(amount).toHaveValue('10 800');
-    // The four period lines (Actuals included); the panel adds no period text. The whole
-    // year starts before the item (April 1), so the only line is that hint.
-    expect(screen.getAllByText('12 months, January to December')).toHaveLength(4);
+    // The five period lines (Forecast and Actuals included); the panel adds no period text.
+    // The whole year starts before the item (April 1), so the only line is that hint.
+    expect(screen.getAllByText('12 months, January to December')).toHaveLength(5);
     expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^The period goes beyond the item's dates\.$/);
 
     const [from] = screen.getAllByPlaceholderText('labels.datePlaceholder');
@@ -660,7 +686,7 @@ describe('BudgetTab periods', () => {
     expect(screen.queryByText(/will also be spread/)).not.toBeInTheDocument();
     fireEvent.mouseOver(screen.getByText('Apply to all columns'));
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      'Budget, Revision, Forecast, Expected landing and Actuals follow the same period. Frozen columns never change.',
+      'Budget, Revision, Forecast, Actuals and Expected landing follow the same period. Frozen columns never change.',
     );
 
     fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '24000' } });
@@ -736,3 +762,118 @@ describe('BudgetTab periods', () => {
   });
 });
 
+describe('BudgetTab columns from the setting', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+  });
+
+  const headerLabels = (container: HTMLElement) =>
+    Array.from((container.querySelector('thead') as HTMLElement).querySelectorAll('th')).slice(1).map((th) => th.firstElementChild?.textContent);
+
+  it('shows the shown columns only, in the fixed order, in the grid and the yearly view', async () => {
+    columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
+    setupApi({ grain: 'monthly' });
+    const { container, unmount } = renderTab();
+    await waitForAmounts();
+
+    expect(headerLabels(container)).toEqual(['Budget', 'Revision', 'Actuals', 'Expected landing']);
+    expect(monthCells(container)).toHaveLength(12 * 4);
+    // The quarter and year totals follow the same columns.
+    expect(container.querySelectorAll('tfoot td')).toHaveLength(1 + 4);
+    unmount();
+
+    setupApi({ grain: 'annual' });
+    renderTab();
+    await waitForAmounts(2);
+    expect(screen.getByTestId('period-line-planned')).toBeInTheDocument();
+    expect(screen.queryByTestId('period-line-forecast')).not.toBeInTheDocument();
+  });
+
+  it('shows Forecast in the yearly view when it is shown, and saves its total', async () => {
+    setupApi({ grain: 'annual' });
+    const { ref, container } = renderTab();
+    await waitForAmounts();
+
+    expect(periodLine('forecast')).toHaveTextContent('12 months, January to December');
+    const fields = within(container).getAllByRole('textbox');
+    // Budget, Revision, Forecast: the third field.
+    expect(fields[2]).toHaveValue('7 200');
+    fireEvent.change(fields[2], { target: { value: '5000' } });
+    await flush(ref);
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'annual', year: YEAR, totals: { forecast: 5000 }, period_start: '2026-01-01', period_end: '2026-12-31',
+    });
+  });
+
+  it('names the columns with the tenant names', async () => {
+    columnsSetting.current = { ...ALL_SHOWN, labels: { planned: 'A0', committed: 'A1', forecast: 'A2', actual: 'A3', expected_landing: 'Real' } };
+    setupApi({ grain: 'monthly' });
+    const { container } = renderTab();
+    await waitForAmounts();
+
+    expect(headerLabels(container)).toEqual(['A0', 'A1', 'A2', 'A3', 'Real']);
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['A0', 'A1', 'A2', 'A3', 'Real']);
+  });
+
+  it('opens the spread panel on the default column', async () => {
+    columnsSetting.current = { ...ALL_SHOWN, default_column: 'committed' };
+    setupApi({ grain: 'monthly' });
+    renderTab();
+    await waitForAmounts();
+
+    expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Revision');
+    expect(screen.getByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('10 800');
+    fireEvent.click(screen.getByLabelText('Apply to all columns'));
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].totals).toEqual({ committed: '10800.00' });
+  });
+
+  it('by default every shown column follows, and a hidden column is never spread', async () => {
+    columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
+    setupApi({ grain: 'monthly' });
+    renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].totals).toEqual({
+      planned: '12000.00', committed: '10800.00', actual: '9600.00', expected_landing: '8400.00',
+    });
+  });
+
+  it('a column taken out of the group keeps its own period, the tooltip says so, and it spreads alone', async () => {
+    columnsSetting.current = { ...ALL_SHOWN, group_spread: { ...ALL_SHOWN.group_spread, expected_landing: false } };
+    setupApi({ grain: 'monthly' });
+    renderTab();
+    await waitForAmounts();
+
+    fireEvent.mouseOver(screen.getByText('Apply to all columns'));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Budget, Revision, Forecast and Actuals follow the same period. Expected landing keeps its own period. Frozen columns never change.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(Object.keys(bulkCalls()[0][1].totals)).toEqual(['planned', 'committed', 'forecast', 'actual']);
+
+    // Spreading the column outside the group: no switch, that column only.
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(await screen.findByRole('option', { name: 'Expected landing' }));
+    await waitFor(() => expect(screen.queryByText('Apply to all columns')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1].totals).toEqual({ expected_landing: '8400.00' });
+  });
+
+  it('offers no switch when every other column of the group is frozen', async () => {
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, actual: false, expected_landing: false } };
+    setupApi({ grain: 'monthly', frozen: ['revision'] });
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
+    await waitFor(() => expect(screen.queryByText('Apply to all columns')).not.toBeInTheDocument());
+  });
+});

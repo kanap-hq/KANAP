@@ -6,6 +6,11 @@ vi.mock('react-i18next', () => {
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
+vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
+  const state = await import('./budgetColumnsTestState');
+  return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
+});
 vi.mock('../../components/reports/ReportLayout', () => ({
   default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }));

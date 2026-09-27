@@ -47,10 +47,34 @@ vi.mock('../reports/useCapexSummary', async (importOriginal) => ({
   useCapexSummaryAll: () => ({ data: capexRows.current, isLoading: false }),
 }));
 
+// The tenant's column settings, set per test.
+const columnsSetting = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
+  let cache: { settings: unknown; value: ReturnType<typeof mod.resolveBudgetColumns> } | null = null;
+  const t = ((key: string) => key) as unknown as Parameters<typeof mod.resolveBudgetColumns>[1];
+  return {
+    ...mod,
+    useBudgetColumns: () => {
+      if (!cache || cache.settings !== columnsSetting.current) {
+        cache = { settings: columnsSetting.current, value: mod.resolveBudgetColumns(columnsSetting.current as never, t) };
+      }
+      return cache.value;
+    },
+  };
+});
+
 import api from '../../api';
 import BudgetColumnResetPage from './BudgetColumnResetPage';
+import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+
+/** Picks a column in the column select (the second select, after the year). */
+async function chooseColumn(name: string) {
+  fireEvent.mouseDown(screen.getAllByRole('combobox')[1]);
+  fireEvent.click(await screen.findByRole('option', { name }));
+}
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -65,6 +89,7 @@ function renderPage() {
 
 describe('BudgetColumnResetPage', () => {
   beforeEach(() => {
+    columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
     post.mockReset();
     confirm.mockClear();
     capexRows.current = [serversRow];
@@ -74,10 +99,12 @@ describe('BudgetColumnResetPage', () => {
     post.mockResolvedValue({ data: { success: true, summary: { totalItems: 3, cleared: 1, skipped: 2, errors: 0 } } });
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.budget');
     fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.clearColumn' }));
 
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ intent: 'danger' }));
+    expect(post.mock.calls[0][1]).toMatchObject({ column: 'budget' });
     expect(post.mock.calls[0][0]).toBe('/capex-items/budget-operations/clear-column');
     expect(await screen.findByText('operations.columnReset.clearDone:1 operations.results.skipped:2')).toBeInTheDocument();
   });
@@ -86,6 +113,7 @@ describe('BudgetColumnResetPage', () => {
     confirm.mockResolvedValueOnce(false);
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.budget');
     fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.clearColumn' }));
     await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
     expect(post).not.toHaveBeenCalled();
@@ -96,6 +124,7 @@ describe('BudgetColumnResetPage', () => {
     post.mockResolvedValue({ data: { success: true, summary: { totalItems: 1, cleared: 1, skipped: 0, errors: 0 } } });
     const { container } = renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.revision');
     const clear = await screen.findByRole('button', { name: 'operations.columnReset.clearColumn' });
     expect(clear).toBeEnabled();
     fireEvent.click(clear);
@@ -104,5 +133,42 @@ describe('BudgetColumnResetPage', () => {
     const { message } = confirm.mock.calls[0][0];
     const { getByText } = render(<>{message}</>, { container: container.appendChild(document.createElement('div')) });
     expect(getByText('operations.columnReset.confirmPeriodsOnly')).toBeInTheDocument();
+  });
+
+  it('preselects no column: Clear stays off until a column is chosen', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    expect(screen.getByText('operations.columnReset.chooseColumn')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'operations.columnReset.clearColumn' })).toBeDisabled();
+    // One line instead of a grid of zeros.
+    expect(screen.getByText('operations.columnReset.chooseColumnFirst')).toBeInTheDocument();
+    expect(screen.queryByText('operations.columnReset.dataPreview')).not.toBeInTheDocument();
+    await chooseColumn('ops:operations.budgetColumns.landing');
+    expect(screen.getByRole('button', { name: 'operations.columnReset.clearColumn' })).toBeEnabled();
+    expect(screen.queryByText('operations.columnReset.chooseColumnFirst')).not.toBeInTheDocument();
+    expect(screen.getByText('operations.columnReset.dataPreview')).toBeInTheDocument();
+  });
+
+  it('offers the shown columns only, Forecast when it is shown, and clears it', async () => {
+    const listed = async () => {
+      fireEvent.mouseDown(screen.getAllByRole('combobox')[1]);
+      return (await screen.findAllByRole('option')).map((o) => o.textContent);
+    };
+    const { unmount } = renderPage();
+    expect(await listed()).not.toContain('ops:operations.budgetColumns.forecast');
+    unmount();
+
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, forecast: true, committed: false } };
+    post.mockResolvedValue({ data: { success: true, summary: { totalItems: 1, cleared: 1, skipped: 0, errors: 0 } } });
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    expect(await listed()).toEqual([
+      'ops:operations.budgetColumns.budget', 'ops:operations.budgetColumns.forecast',
+      'ops:operations.budgetColumns.followUp', 'ops:operations.budgetColumns.landing',
+    ]);
+    fireEvent.click(await screen.findByRole('option', { name: 'ops:operations.budgetColumns.forecast' }));
+    fireEvent.click(screen.getByRole('button', { name: 'operations.columnReset.clearColumn' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post.mock.calls[0][1]).toMatchObject({ column: 'forecast' });
   });
 });

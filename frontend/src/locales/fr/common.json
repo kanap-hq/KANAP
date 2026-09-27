@@ -170,8 +170,8 @@
       "noPayingCompany": "Sans société payeuse",
       "accountOutsideChart": "Compte hors du plan de la société"
     },
-    "topItemsY": "Top postes (A)",
-    "topIncreasesYvsYminus1": "Plus fortes hausses (A vs A-1)",
+    "topItemsY": "Top postes ({{column}}, A)",
+    "topIncreasesYvsYminus1": "Plus fortes hausses ({{column}}, A vs A-1)",
     "noIncreases": "Aucune hausse",
     "settings": {
       "title": "Paramètres du tableau de bord",

@@ -24,7 +24,9 @@ import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import CompanySelect from '../../components/fields/CompanySelect';
 import api from '../../api';
-import { getMetricLabels, MetricKey, horizontalBarChartHeight } from './reportMetrics';
+import { MetricKey, horizontalBarChartHeight, metricFileName, useReportMetric } from './reportMetrics';
+import { escapeTooltipText } from './tooltipText';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
@@ -141,7 +143,7 @@ type CompanyChargebackKpiRow = CompanyChargebackReportResponse['kpis'][number];
 
 export default function CompanyChargebackReport() {
   const { t } = useTranslation(["ops"]);
-  const metricLabels = useMemo(() => getMetricLabels(t), [t]);
+  const budgetColumns = useBudgetColumns();
   const locale = useLocale();
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -149,7 +151,7 @@ export default function CompanyChargebackReport() {
 
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [year, setYear] = useState<number>(currentYear);
-  const [metric, setMetric] = useState<MetricKey>('budget');
+  const [metric, setMetric] = useReportMetric(budgetColumns);
   const [showDepartments, setShowDepartments] = useState(true);
   const [showItems, setShowItems] = useState(true);
   const [showKpis, setShowKpis] = useState(true);
@@ -162,7 +164,8 @@ export default function CompanyChargebackReport() {
   const queryKey = ['company-chargeback-report', companyId, year, metric];
   const { data, isLoading, isFetching, refetch } = useQuery<CompanyChargebackReportResponse>({
     queryKey,
-    enabled: Boolean(companyId),
+    // The preselected column is the tenant's default: wait for it rather than fetch twice.
+    enabled: Boolean(companyId) && budgetColumns.ready,
     queryFn: async () => {
       const response = await api.get<CompanyChargebackReportResponse>('/reports/chargeback/company', {
         params: { companyId, year, metric },
@@ -172,7 +175,8 @@ export default function CompanyChargebackReport() {
     placeholderData: keepPreviousData,
   });
 
-  const metricLabel = metricLabels[metric];
+  const metricLabel = budgetColumns.label(metric);
+  const metricFile = metricFileName(budgetColumns, metric);
   const reportingCurrency = (data?.reportingCurrency || 'EUR').toUpperCase();
   const departments = data?.departments ?? [];
   const items = data?.items ?? [];
@@ -231,12 +235,12 @@ export default function CompanyChargebackReport() {
     const tRec = intercompanyRows.reduce((s, r) => s + (r.receivables || 0), 0);
     const tPay = intercompanyRows.reduce((s, r) => s + (r.payables || 0), 0);
     const tNet = tRec - tPay;
-    return [{ partnerName: 'Total', receivables: tRec, payables: tPay, net: tNet } as Partial<any>];
-  }, [intercompanyRows]);
+    return [{ partnerName: t('reports.columns.total'), receivables: tRec, payables: tPay, net: tNet } as Partial<any>];
+  }, [intercompanyRows, t]);
 
   const exportIntercompanyCsv = () => {
     if (!companyId) return;
-    intercompanyGridRef.current?.exportDataAsCsv?.({ fileName: `company-chargeback-flows-${companyId}-${year}-${metric}.csv` });
+    intercompanyGridRef.current?.exportDataAsCsv?.({ fileName: `company-chargeback-flows-${companyId}-${year}-${metricFile}.csv` });
   };
 
   const departmentColumns = useMemo<ColDef[]>(() => [
@@ -299,14 +303,14 @@ export default function CompanyChargebackReport() {
     const total = data.total ?? 0;
     const share = total > 0 ? (data.itemsTotal / total) * 100 : null;
     return [{
-      itemName: 'Total',
+      itemName: t('reports.columns.total'),
       allocationMethod: '',
       allocationMethodLabel: '',
       amount: data.itemsTotal,
       amountRaw: data.itemsTotalRaw,
       sharePct: share != null ? Math.round(share * 100) / 100 : null,
     } as Partial<CompanyChargebackItemRow>];
-  }, [data]);
+  }, [data, t]);
 
   const chartOptions = useMemo(() => {
     if (!data?.company) {
@@ -344,7 +348,7 @@ export default function CompanyChargebackReport() {
               const total = data?.total ?? 0;
               const pct = total > 0 ? (value / total) * 100 : 0;
               return {
-                title: datum.label,
+                title: escapeTooltipText(datum.label),
                 data: [
                   { label: metricLabel, value: formatNumber(value) },
                   { label: t('reports.shared.share'), value: `${pct.toFixed(2)}%` },
@@ -362,13 +366,13 @@ export default function CompanyChargebackReport() {
   const exportDepartmentsCsv = () => {
     if (!companyId) return;
     departmentGridRef.current?.exportDataAsCsv?.({
-      fileName: `company-chargeback-departments-${companyId}-${year}-${metric}.csv`,
+      fileName: `company-chargeback-departments-${companyId}-${year}-${metricFile}.csv`,
     });
   };
 
   const exportChart = () => {
     if (!companyId) return;
-    chartRef.current?.download(`company-chargeback-departments-${companyId}-${year}-${metric}`);
+    chartRef.current?.download(`company-chargeback-departments-${companyId}-${year}-${metricFile}`);
   };
 
   const companySummary = data?.company;
@@ -409,10 +413,9 @@ export default function CompanyChargebackReport() {
             onChange={(event) => setMetric(event.target.value as MetricKey)}
             sx={{ minWidth: 160 }}
           >
-            <MenuItem value="budget">{metricLabels.budget}</MenuItem>
-            <MenuItem value="landing">{metricLabels.landing}</MenuItem>
-            <MenuItem value="follow_up">{metricLabels.follow_up}</MenuItem>
-            <MenuItem value="revision">{metricLabels.revision}</MenuItem>
+            {budgetColumns.shown.map((column) => (
+              <MenuItem key={column.key} value={column.key}>{column.label}</MenuItem>
+            ))}
           </TextField>
           <FormControlLabel
             control={<Checkbox checked={showDepartments} onChange={(_, checked) => setShowDepartments(checked)} />}
@@ -437,7 +440,7 @@ export default function CompanyChargebackReport() {
           variant="contained"
           size="small"
           onClick={() => refetch()}
-          disabled={!companyId || isFetching}
+          disabled={!companyId || isFetching || !budgetColumns.ready}
         >
           {!companyId ? t('reports.companyChargeback.selectCompany') : isFetching ? t('reports.shared.refreshing') : t('reports.shared.run')}
         </Button>
@@ -450,8 +453,7 @@ export default function CompanyChargebackReport() {
           <Paper variant="outlined" sx={{ p: 3 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.companyChargeback.selectCompanyTitle")}</Typography>
             <Typography variant="body2" color="text.secondary">
-              Choose a company, year, and budget column to generate the detailed chargeback view. Department totals,
-              itemised allocations, and KPIs will appear once the report runs.
+              {t('reports.companyChargeback.selectCompanyDescription')}
             </Typography>
           </Paper>
         )}
@@ -466,7 +468,7 @@ export default function CompanyChargebackReport() {
               </Box>
               <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' } }}>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">Headcount</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('reports.columns.headcount')}</Typography>
                   <Typography variant="subtitle2">{formatCount(companySummary.headcount)}</Typography>
                 </Box>
                 <Box>
@@ -577,7 +579,7 @@ export default function CompanyChargebackReport() {
                 domLayout="autoHeight"
               />
             ) : (
-              <Typography variant="body2" color="text.secondary">No intercompany flows for the selected configuration.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('reports.companyChargeback.noFlows')}</Typography>
             )}
             <Box className="report-print-hide">
               <Divider sx={{ my: 2 }} />
@@ -622,7 +624,7 @@ export default function CompanyChargebackReport() {
                   {kpiRows.length === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={8} sx={{ color: 'text.secondary' }}>
-                        No KPI data available for the selected year.
+                        {t('reports.shared.noDataForYear')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -644,7 +646,7 @@ export default function CompanyChargebackReport() {
           </Paper>
         )}
 
-        {isReady && isLoading && (
+        {isReady && (isLoading || !budgetColumns.ready) && (
           <Typography variant="body2" color="text.secondary">{t("reports.shared.loadingReport")}</Typography>
         )}
       </Stack>

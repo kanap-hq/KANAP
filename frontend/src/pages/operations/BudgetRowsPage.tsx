@@ -9,6 +9,7 @@ import CsvImportDialog from '../../components/csv/CsvImportDialog';
 import { compactSelectMenuProps, drawerMenuItemSx, pageSelectSx } from '../../theme/formSx';
 import { useAuth } from '../../auth/AuthContext';
 import { budgetRowsEndpoint } from '../../services/budgetOperations';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 
 const ALL_YEARS = 'all';
 
@@ -17,6 +18,11 @@ export default function BudgetRowsPage() {
   const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
   const canImport = hasLevel('opex', 'admin') || hasLevel('capex', 'admin');
+  const budgetColumns = useBudgetColumns();
+  // Where to find each column in the file: its technical name in the measure column.
+  const fileNames = budgetColumns.all
+    .map((c) => t('operations.budgetRows.fileName', { key: c.measure, column: c.label }))
+    .join(', ');
 
   const Y = new Date().getFullYear();
   const years = Array.from({ length: 7 }, (_, i) => Y - 3 + i);
@@ -35,6 +41,7 @@ export default function BudgetRowsPage() {
       <Stack spacing={0.5} sx={{ maxWidth: 720 }}>
         <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>{t('operations.budgetRows.intro')}</Typography>
         <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>{t('operations.budgetRows.importRules')}</Typography>
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('operations.budgetRows.fileNames', { names: fileNames })}</Typography>
       </Stack>
 
       <Paper variant="outlined" sx={{ p: 2, maxWidth: 640 }}>

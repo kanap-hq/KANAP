@@ -24,44 +24,42 @@ import { useAuth } from '../../auth/AuthContext';
 import { FreezeColumn, FreezeScope, freezeTargets, FreezeTarget, unfreezeTargets, FreezeStateResponse } from '../../services/freeze';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 
 const YEAR_RANGE = 6;
-const OPEX_COLUMNS: FreezeColumn[] = ['budget', 'revision', 'forecast', 'actual', 'landing'];
-const CAPEX_COLUMNS: FreezeColumn[] = ['budget', 'revision', 'forecast', 'actual', 'landing'];
-const COLUMN_LABEL_KEYS: Record<FreezeColumn, string> = {
-  budget: 'operations.budgetColumns.budget',
-  revision: 'operations.budgetColumns.revision',
-  forecast: 'operations.budgetColumns.forecast',
-  actual: 'operations.budgetColumns.followUp',
-  landing: 'operations.budgetColumns.landing',
-};
 
 function useYearOptions() {
   const currentYear = new Date().getFullYear();
   return React.useMemo(() => Array.from({ length: YEAR_RANGE }, (_, i) => currentYear - 1 + i), [currentYear]);
 }
 
+/** The user's column choice per scope; null means every listed column (the default). */
 type ScopedColumns = {
-  opex: FreezeColumn[];
-  capex: FreezeColumn[];
-};
-
-const defaultColumns: ScopedColumns = {
-  opex: [...OPEX_COLUMNS],
-  capex: [...CAPEX_COLUMNS],
+  opex: FreezeColumn[] | null;
+  capex: FreezeColumn[] | null;
 };
 
 export default function BudgetFreezePage() {
   const { t } = useTranslation(['ops']);
+  const budgetColumns = useBudgetColumns();
   const years = useYearOptions();
   const { hasLevel } = useAuth();
   const canModify = hasLevel('budget_ops', 'admin');
   const [year, setYear] = React.useState<number>(years[1] ?? years[0] ?? new Date().getFullYear());
   const [selectedScopes, setSelectedScopes] = React.useState<FreezeScope[]>([]);
-  const [columnsByScope, setColumnsByScope] = React.useState<ScopedColumns>({ ...defaultColumns });
+  const [pickedColumns, setColumnsByScope] = React.useState<ScopedColumns>({ opex: null, capex: null });
   const queryClient = useQueryClient();
 
   const { data, isLoading, isFetching, error } = useFreezeState(year);
+
+  // Every column of each scope, hidden ones marked, all preselected: freezing a year freezes
+  // hidden columns too, since they still accept imports and API writes.
+  const allColumns = React.useMemo(() => budgetColumns.all.map((c) => c.freezeKey), [budgetColumns.all]);
+  const columnsByScope = React.useMemo(() => ({
+    opex: pickedColumns.opex ?? allColumns,
+    capex: pickedColumns.capex ?? allColumns,
+  }), [allColumns, pickedColumns]);
+  const noColumnChosen = selectedScopes.some((scope) => (scope === 'opex' || scope === 'capex') && columnsByScope[scope].length === 0);
 
   const freezeMutation = useMutation({
     mutationFn: async (targets: FreezeTarget[]) => freezeTargets(year, targets),
@@ -100,7 +98,7 @@ export default function BudgetFreezePage() {
   const handleColumnsChange = (scope: 'opex' | 'capex') => (event: SelectChangeEvent<FreezeColumn[]>) => {
     const value = event.target.value as FreezeColumn[];
     setFeedback(null);
-    setColumnsByScope((prev) => ({ ...prev, [scope]: value.length > 0 ? value : [] }));
+    setColumnsByScope((prev) => ({ ...prev, [scope]: value }));
   };
 
   const buildTargets = (): FreezeTarget[] => {
@@ -125,7 +123,8 @@ export default function BudgetFreezePage() {
     await unfreezeMutation.mutateAsync(targets);
   };
 
-  const columnLabel = (col: FreezeColumn) => t(COLUMN_LABEL_KEYS[col]);
+  const columnLabel = (col: FreezeColumn) => budgetColumns.label(col);
+  const isHidden = (col: FreezeColumn) => !budgetColumns.get(col).enabled;
 
   const summary = data?.summary;
   const scopeSummary = summary?.scopes;
@@ -135,7 +134,12 @@ export default function BudgetFreezePage() {
     if (!scopeSummary) return null;
     const columnStatus = (col: FreezeColumn, info: { frozen: boolean; frozenAt: string | null; frozenBy: string | null } | undefined) => (
       <Box key={col} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
-        <Typography variant="body2">{columnLabel(col)}</Typography>
+        <Typography variant="body2">
+          {columnLabel(col)}
+          {isHidden(col) && (
+            <Typography component="span" sx={{ ml: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.freeze.hidden')}</Typography>
+          )}
+        </Typography>
         <Typography variant="body2" color={info?.frozen ? 'error.main' : 'text.secondary'}>
           {info?.frozen ? t('operations.freeze.frozen') : t('operations.freeze.editable')}
         </Typography>
@@ -147,13 +151,13 @@ export default function BudgetFreezePage() {
         <Card variant="outlined">
           <CardContent>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('operations.freeze.opexColumns')}</Typography>
-            {OPEX_COLUMNS.map((col) => columnStatus(col, scopeSummary.opex[col]))}
+            {budgetColumns.all.map((c) => columnStatus(c.freezeKey, scopeSummary.opex[c.freezeKey]))}
           </CardContent>
         </Card>
         <Card variant="outlined">
           <CardContent>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('operations.freeze.capexColumns')}</Typography>
-            {CAPEX_COLUMNS.map((col) => columnStatus(col, scopeSummary.capex[col]))}
+            {budgetColumns.all.map((c) => columnStatus(c.freezeKey, scopeSummary.capex[c.freezeKey]))}
           </CardContent>
         </Card>
       </Stack>
@@ -162,10 +166,10 @@ export default function BudgetFreezePage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader title={t("operations.freeze.title")} />
+      <PageHeader title={t('operations.freeze.title')} breadcrumbTitle={t('operations.freeze.title')} />
       {!canModify && (
         <Alert severity="info" sx={{ maxWidth: 600 }}>
-          {t('operations.freeze.noPermission')}
+          {t('operations.budgetAdminOnly')}
         </Alert>
       )}
       {feedback && (
@@ -215,10 +219,11 @@ export default function BudgetFreezePage() {
                       onChange={handleColumnsChange('opex')}
                       renderValue={(selected) => selected.map(columnLabel).join(', ')}
                     >
-                      {OPEX_COLUMNS.map((col) => (
+                      {budgetColumns.all.map(({ freezeKey: col }) => (
                         <MenuItem key={col} value={col}>
                           <Checkbox checked={columnsByScope.opex.includes(col)} />
                           <Typography sx={{ ml: 1 }}>{columnLabel(col)}</Typography>
+                          {isHidden(col) && <Typography sx={{ ml: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.freeze.hidden')}</Typography>}
                         </MenuItem>
                       ))}
                     </Select>
@@ -235,10 +240,11 @@ export default function BudgetFreezePage() {
                       onChange={handleColumnsChange('capex')}
                       renderValue={(selected) => selected.map(columnLabel).join(', ')}
                     >
-                      {CAPEX_COLUMNS.map((col) => (
+                      {budgetColumns.all.map(({ freezeKey: col }) => (
                         <MenuItem key={col} value={col}>
                           <Checkbox checked={columnsByScope.capex.includes(col)} />
                           <Typography sx={{ ml: 1 }}>{columnLabel(col)}</Typography>
+                          {isHidden(col) && <Typography sx={{ ml: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.freeze.hidden')}</Typography>}
                         </MenuItem>
                       ))}
                     </Select>
@@ -251,7 +257,7 @@ export default function BudgetFreezePage() {
               <Button
                 variant="contained"
                 onClick={handleFreeze}
-                disabled={!canModify || selectedScopes.length === 0 || loading}
+                disabled={!canModify || selectedScopes.length === 0 || noColumnChosen || loading}
                 startIcon={freezeMutation.isPending ? <CircularProgress size={16} /> : undefined}
               >
                 {freezeMutation.isPending ? t('operations.freeze.freezing') : t('operations.freeze.freezeData')}
@@ -259,7 +265,7 @@ export default function BudgetFreezePage() {
               <Button
                 variant="outlined"
                 onClick={handleUnfreeze}
-                disabled={!canModify || selectedScopes.length === 0 || loading}
+                disabled={!canModify || selectedScopes.length === 0 || noColumnChosen || loading}
                 startIcon={unfreezeMutation.isPending ? <CircularProgress size={16} /> : undefined}
               >
                 {unfreezeMutation.isPending ? t('operations.freeze.unfreezing') : t('operations.freeze.unfreezeData')}

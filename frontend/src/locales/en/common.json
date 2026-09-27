@@ -170,8 +170,8 @@
       "noPayingCompany": "No paying company",
       "accountOutsideChart": "Account not in the company's chart"
     },
-    "topItemsY": "Top items (Y)",
-    "topIncreasesYvsYminus1": "Top increases (Y vs Y-1)",
+    "topItemsY": "Top items ({{column}}, Y)",
+    "topIncreasesYvsYminus1": "Top increases ({{column}}, Y vs Y-1)",
     "noIncreases": "No increases",
     "settings": {
       "title": "Dashboard settings",

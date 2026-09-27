@@ -7,8 +7,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
-  const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
+  // The tile titles name the default column: show it next to the key.
+  const t = (key: string, options?: Record<string, unknown>) => (options && 'column' in options ? `${key} (${options.column})` : key);
+  const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
+});
+vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../hooks/useBudgetColumns')>();
+  const state = await import('./reports/budgetColumnsTestState');
+  return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
@@ -25,6 +32,7 @@ vi.mock('./workspace/tiles/DashboardTile', () => ({
 
 import api from '../api';
 import DashboardPage from './DashboardPage';
+import { setBudgetColumns } from './reports/budgetColumnsTestState';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 
@@ -41,8 +49,12 @@ function renderPage() {
   );
 }
 
+const ALL_SHOWN = { planned: true, committed: true, forecast: true, actual: true, expected_landing: true };
+const TENANT_NAMES = { planned: 'A0', committed: 'A1', forecast: 'A2', actual: 'A3', expected_landing: 'Réel' };
+
 describe('DashboardPage budget snapshot', () => {
   beforeEach(() => {
+    setBudgetColumns();
     get.mockReset();
     get.mockImplementation(async (url: string) => {
       if (url === '/spend-items/summary/totals') {
@@ -53,32 +65,41 @@ describe('DashboardPage budget snapshot', () => {
     });
   });
 
-  it('reads every column from the totals key of the same name and hides empty columns', async () => {
+  it('reads every shown column from the totals key of the same name, with the tenant names, and hides empty columns', async () => {
+    setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN });
     renderPage();
     const tile = await screen.findByRole('region', { name: 'dashboard.opexSnapshot' });
-    await within(tile).findByText('ops:operations.budgetColumns.forecast');
+    await within(tile).findByText('A2');
     const headers = within(tile).getAllByRole('columnheader').map((h) => h.textContent);
-    expect(headers).toEqual([
-      'labels.year',
-      'ops:operations.budgetColumns.budget',
-      'ops:operations.budgetColumns.revision',
-      'ops:operations.budgetColumns.forecast',
-      'ops:operations.budgetColumns.followUp',
-    ]);
+    expect(headers).toEqual(['labels.year', 'A0', 'A1', 'A2', 'A3']);
     const cells = within(tile).getAllByRole('row').slice(1).map((r) => within(r).getAllByRole('cell').slice(1).map((c) => c.textContent));
-    // Rows Y-1, Y, Y+1; columns Budget, Revision, Forecast, Actuals.
+    // Rows Y-1, Y, Y+1; columns 1 to 4 (column 5 is empty).
     expect(cells).toEqual([
       ['0k', '3k', '0k', '0k'],
       ['12k', '0k', '7k', '0k'],
       ['0k', '0k', '0k', '9k'],
     ]);
   });
+
+  it('leaves hidden columns out, whatever they hold (Forecast is hidden by default)', async () => {
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.opexSnapshot' });
+    await within(tile).findByText('ops:operations.budgetColumns.budget');
+    const headers = within(tile).getAllByRole('columnheader').map((h) => h.textContent);
+    expect(headers).toEqual([
+      'labels.year',
+      'ops:operations.budgetColumns.budget',
+      'ops:operations.budgetColumns.revision',
+      'ops:operations.budgetColumns.followUp',
+    ]);
+  });
 });
 
 const compact = (n: number) => new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+/** Y-1 and Y slots; column 3 holds the same amounts the other way round, so a tile reading the wrong column shows. */
 const budgetSlots = (previous: number, current: number) => ({
-  yMinus1: { totals: { budget: previous } },
-  y: { totals: { budget: current } },
+  yMinus1: { totals: { budget: previous, forecast: current } },
+  y: { totals: { budget: current, forecast: previous } },
 });
 
 /** Answers the summary endpoints by the kind of request the dashboard makes. */
@@ -101,7 +122,7 @@ function mockBudgetEndpoints() {
         : [{ id: 'c2', item_number: 2, description: 'Capex edited', updated_at: '2026-09-25T10:00:00Z' }];
       return { data: { items, total: items.length } };
     }
-    if (params.sort === 'yBudget:DESC') {
+    if (params.sort === 'yBudget:DESC' || params.sort === 'yForecast:DESC') {
       const items = scope === 'opex'
         ? [{ id: 'o1', product_name: 'Opex top', versions: budgetSlots(0, 5000) }]
         : [{ id: 'c1', description: 'Capex top', versions: budgetSlots(0, 9000) }];
@@ -121,8 +142,12 @@ function mockBudgetEndpoints() {
 
 const summaryCalls = (url: string) => get.mock.calls.filter(([called]) => called === url).map(([, config]) => config?.params ?? {});
 
+const TOP_ITEMS = 'dashboard.topItemsY (ops:operations.budgetColumns.budget)';
+const TOP_INCREASES = 'dashboard.topIncreasesYvsYminus1 (ops:operations.budgetColumns.budget)';
+
 describe('DashboardPage budget tiles', () => {
   beforeEach(() => {
+    setBudgetColumns();
     get.mockReset();
     readable.opex = true;
     readable.capex = true;
@@ -132,7 +157,7 @@ describe('DashboardPage budget tiles', () => {
 
   it('switches the top items tile to CAPEX and opens the report on that type', async () => {
     renderPage();
-    const tile = await screen.findByRole('region', { name: 'dashboard.topItemsY' });
+    const tile = await screen.findByRole('region', { name: TOP_ITEMS });
     expect(await within(tile).findByText('Opex top')).toBeInTheDocument();
 
     fireEvent.click(within(tile).getByRole('tab', { name: 'operations.scope.capex' }));
@@ -143,7 +168,7 @@ describe('DashboardPage budget tiles', () => {
 
   it('lists only increases, computed over every line of the type from the reports cache entry', async () => {
     renderPage();
-    const tile = await screen.findByRole('region', { name: 'dashboard.topIncreasesYvsYminus1' });
+    const tile = await screen.findByRole('region', { name: TOP_INCREASES });
     expect(await within(tile).findByText('Opex grows')).toBeInTheDocument();
     expect(within(tile).getByText(`+${compact(2000)}`)).toBeInTheDocument();
     expect(within(tile).queryByText('Opex shrinks')).not.toBeInTheDocument();
@@ -183,7 +208,7 @@ describe('DashboardPage budget tiles', () => {
     renderPage();
     const hygiene = await screen.findByRole('region', { name: 'dashboard.dataHygiene' });
     expect(within(hygiene).queryByText('ops:operations.scope.capex')).not.toBeInTheDocument();
-    const top = screen.getByRole('region', { name: 'dashboard.topItemsY' });
+    const top = screen.getByRole('region', { name: TOP_ITEMS });
     expect(within(top).getByRole('tab', { name: 'operations.scope.capex' })).toBeDisabled();
     await waitFor(() => expect(within(top).getByText('Opex top')).toBeInTheDocument());
     expect(screen.queryByRole('region', { name: 'dashboard.capexSnapshot' })).not.toBeInTheDocument();
@@ -194,10 +219,37 @@ describe('DashboardPage budget tiles', () => {
   it('hides the OPEX snapshot and sends no OPEX request to a user who cannot read OPEX', async () => {
     readable.opex = false;
     renderPage();
-    const top = await screen.findByRole('region', { name: 'dashboard.topItemsY' });
+    const top = await screen.findByRole('region', { name: TOP_ITEMS });
     await waitFor(() => expect(within(top).getByText('Capex top')).toBeInTheDocument());
     expect(screen.queryByRole('region', { name: 'dashboard.opexSnapshot' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'dashboard.capexSnapshot' })).toBeInTheDocument();
     expect(get.mock.calls.some(([url]) => (url as string).startsWith('/spend-items/'))).toBe(false);
+  });
+  it('ranks the top items by the default column and names it in the title', async () => {
+    setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' });
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.topItemsY (A2)' });
+    expect(await within(tile).findByText('Opex top')).toBeInTheDocument();
+    // Column 3 of Y holds the Y-1 amount of column 1 (0): 0k, not the 5k of column 1.
+    expect(within(tile).getByText('0k')).toBeInTheDocument();
+    const topRequests = summaryCalls('/spend-items/summary').filter((p) => p.limit === 5 && p.sort !== 'updated_at:DESC' && !p.filters);
+    expect(topRequests.map((p) => p.sort)).toEqual(['yForecast:DESC']);
+  });
+
+  it('computes the top increases on the default column and names it in the title', async () => {
+    setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' });
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.topIncreasesYvsYminus1 (A2)' });
+    // Column 3 runs the other way: only the line that shrinks on column 1 grows on it.
+    expect(await within(tile).findByText('Opex shrinks')).toBeInTheDocument();
+    expect(within(tile).queryByText('Opex grows')).not.toBeInTheDocument();
+  });
+
+  it('asks for no top items before the setting is loaded', async () => {
+    setBudgetColumns({}, false);
+    renderPage();
+    await screen.findByRole('region', { name: 'dashboard.dataHygiene' });
+    await waitFor(() => expect(summaryCalls('/spend-items/summary').some((p) => p.sort === 'updated_at:DESC')).toBe(true));
+    expect(summaryCalls('/spend-items/summary').some((p) => /^y[A-Z]/.test(String(p.sort)))).toBe(false);
   });
 });

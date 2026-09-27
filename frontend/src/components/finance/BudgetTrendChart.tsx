@@ -6,7 +6,10 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { formatAmount } from '../../i18n/formatters';
 import { useLocalStorageState } from '../../hooks/useLocalStorageState';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import type { FreezeColumn } from '../../services/freeze';
 import { FinanceModuleConfig } from './config';
+import { AMOUNT_COLUMNS } from './amountColumns';
 import {
   overlayYear,
   YEARLY_TOTALS_FROM,
@@ -16,10 +19,19 @@ import {
   type YearTotals,
 } from './yearlyTotals';
 
-const SERIES_KEYS = ['budget', 'revision', 'actual', 'landing'] as const;
-type SeriesKey = (typeof SERIES_KEYS)[number];
-
+/** Series keys are the yearly totals keys, one per column. */
+type SeriesKey = FreezeColumn;
+const SERIES_KEYS: SeriesKey[] = AMOUNT_COLUMNS.map((column) => column.freezeKey);
 const isSeriesKey = (v: unknown): v is SeriesKey => SERIES_KEYS.includes(v as SeriesKey);
+
+/** Series colours by column position (1 to 5), light and dark; each column keeps its colour when others are hidden. */
+const SERIES_COLORS: Array<{ light: string; dark: string } | 'orange'> = [
+  { light: '#3B82F6', dark: '#60A5FA' },
+  { light: '#6B7280', dark: '#9CA3AF' },
+  { light: '#8B5CF6', dark: '#A78BFA' },
+  { light: '#10B981', dark: '#34D399' },
+  'orange',
+];
 
 export default function BudgetTrendChart({
   id,
@@ -37,6 +49,7 @@ export default function BudgetTrendChart({
   const { t } = useTranslation(['ops', 'common']);
   const theme = useTheme();
   const dark = theme.palette.mode === 'dark';
+  const { shown } = useBudgetColumns();
 
   // Legend toggles live inside AG Charts and reset whenever the chart remounts
   // (navigating between items). Mirror them here so the choice survives, per module.
@@ -72,11 +85,9 @@ export default function BudgetTrendChart({
   );
 
   const series = React.useMemo(() => {
-    const colors = {
-      budget: dark ? '#60A5FA' : '#3B82F6',
-      revision: dark ? '#9CA3AF' : '#6B7280',
-      actual: dark ? '#34D399' : '#10B981',
-      landing: theme.palette.kanap.orange,
+    const colorOf = (position: number) => {
+      const color = SERIES_COLORS[position - 1];
+      return color === 'orange' ? theme.palette.kanap.orange : dark ? color.dark : color.light;
     };
     const line = (yKey: SeriesKey, yName: string, color: string) => ({
       type: 'line' as const,
@@ -88,13 +99,11 @@ export default function BudgetTrendChart({
       strokeWidth: 2,
       marker: { enabled: true, size: 6, fill: color, stroke: color },
     });
-    return [
-      line('budget', t('operations.budgetColumns.budget'), colors.budget),
-      line('revision', t('operations.budgetColumns.revision'), colors.revision),
-      line('actual', t('operations.budgetColumns.followUp'), colors.actual),
-      line('landing', t('operations.budgetColumns.landing'), colors.landing),
-    ];
-  }, [dark, theme, t, hidden]);
+    return shown.map((column) => line(column.freezeKey, column.label, colorOf(column.position)));
+  }, [dark, theme, hidden, shown]);
+
+  const shownKeysRef = React.useRef<SeriesKey[]>([]);
+  shownKeysRef.current = shown.map((column) => column.freezeKey);
 
   // Mirror AG Charts' own legend behaviour: click toggles one series, double-click
   // isolates it (or shows everything again when it is already the only one visible).
@@ -106,7 +115,7 @@ export default function BudgetTrendChart({
     legendItemDoubleClick: ({ itemId }: { itemId: string }) => {
       if (!isSeriesKey(itemId)) return;
       setHidden((prev) => {
-        const others = SERIES_KEYS.filter((k) => k !== itemId);
+        const others = shownKeysRef.current.filter((k) => k !== itemId);
         const alreadyAlone = others.every((k) => prev.includes(k)) && !prev.includes(itemId);
         return alreadyAlone ? [] : others;
       });

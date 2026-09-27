@@ -170,8 +170,8 @@
       "noPayingCompany": "Sin empresa pagadora",
       "accountOutsideChart": "Cuenta fuera del plan de la empresa"
     },
-    "topItemsY": "Top partidas (A)",
-    "topIncreasesYvsYminus1": "Mayores incrementos (A vs A-1)",
+    "topItemsY": "Top partidas ({{column}}, A)",
+    "topIncreasesYvsYminus1": "Mayores incrementos ({{column}}, A vs A-1)",
     "noIncreases": "Sin incrementos",
     "settings": {
       "title": "Configuración del panel",

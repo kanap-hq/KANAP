@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pickYearSlot, SummaryRow } from './useOpexSummary';
 
-const slot = (budget: number) => ({ totals: { budget, follow_up: 0, landing: 0, revision: 0 } });
+const slot = (budget: number) => ({ totals: { budget, revision: 0, forecast: 0, follow_up: 0, landing: 0 } });
 
 describe('pickYearSlot', () => {
   it('prefers the dynamic key, then falls back to the fixed keys from Y-2 to Y+2', () => {

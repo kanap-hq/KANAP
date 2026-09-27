@@ -6,7 +6,9 @@ import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import { BudgetSummaryRow, itemName, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
 import { useTranslation } from 'react-i18next';
-import { getMetricLabels, isMetricKey, metricKeys, type MetricKey } from './reportMetrics';
+import { isMetricKey, metricFileName, resolveMetric, shownMetricKeys } from './reportMetrics';
+import { escapeTooltipText } from './tooltipText';
+import { useBudgetColumns, type BudgetColumns } from '../../hooks/useBudgetColumns';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { textTabSx, textTabsSx } from '../../theme/formSx';
 
@@ -17,12 +19,10 @@ function formatNumber(v: any) {
   return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
-function labelForMetric(metric: string, metricLabels: Record<MetricKey, string>) {
-  return isMetricKey(metric) ? metricLabels[metric] : '';
+function labelForMetric(metric: string, budgetColumns: BudgetColumns) {
+  return isMetricKey(metric) ? budgetColumns.label(metric) : '';
 }
 
-/** Budget columns both pickers offer, whatever the year (no currency or rate keys of the slots). */
-const DELTA_METRICS: readonly string[] = metricKeys;
 const NO_METRICS: readonly string[] = [];
 
 type Direction = 'increase' | 'decrease' | 'both';
@@ -38,15 +38,15 @@ function inferYearFromVersionKey(key: string, currentYear: number): number | und
 
 export default function OpexDeltaReport() {
   const { t } = useTranslation(["ops"]);
-  const metricLabels = useMemo(() => getMetricLabels(t), [t]);
+  const budgetColumns = useBudgetColumns();
   const now = new Date();
   const currentYear = now.getFullYear();
   const previousYear = currentYear - 1;
 
   const [sourceYear, setSourceYear] = useState<number | null>(null);
-  const [sourceMetric, setSourceMetric] = useState<string>('');
+  const [pickedSourceMetric, setSourceMetric] = useState<string | null>(null);
   const [destinationYear, setDestinationYear] = useState<number | null>(null);
-  const [destinationMetric, setDestinationMetric] = useState<string>('');
+  const [pickedDestinationMetric, setDestinationMetric] = useState<string | null>(null);
   const [direction, setDirection] = useState<Direction>('increase');
   const modes = useMemo<Array<'increase' | 'decrease'>>(
     () => (direction === 'both' ? ['increase', 'decrease'] : [direction]),
@@ -102,8 +102,13 @@ export default function OpexDeltaReport() {
     return Array.from(years).sort((a, b) => a - b);
   }, [rows, currentYear]);
 
-  const sourceMetrics = sourceYear == null ? NO_METRICS : DELTA_METRICS;
-  const destinationMetrics = destinationYear == null ? NO_METRICS : DELTA_METRICS;
+  // Both pickers offer the shown budget columns (no currency or rate keys of the slots) and
+  // start on the default column: Y-1 against Y.
+  const shownMetrics = useMemo(() => shownMetricKeys(budgetColumns), [budgetColumns]);
+  const sourceMetrics = sourceYear == null ? NO_METRICS : shownMetrics;
+  const destinationMetrics = destinationYear == null ? NO_METRICS : shownMetrics;
+  const sourceMetric = sourceYear == null ? '' : resolveMetric(budgetColumns, pickedSourceMetric);
+  const destinationMetric = destinationYear == null ? '' : resolveMetric(budgetColumns, pickedDestinationMetric);
 
   useEffect(() => {
     if (yearOptions.length === 0) return;
@@ -128,32 +133,6 @@ export default function OpexDeltaReport() {
       return preferred ?? null;
     });
   }, [yearOptions, previousYear, currentYear]);
-
-  useEffect(() => {
-    if (destinationYear == null) {
-      setDestinationMetric('');
-      return;
-    }
-    const metrics = destinationMetrics;
-    if (metrics.length === 0) {
-      setDestinationMetric('');
-      return;
-    }
-    setDestinationMetric((prev) => (prev && metrics.includes(prev) ? prev : metrics[0]));
-  }, [destinationYear, destinationMetrics]);
-
-  useEffect(() => {
-    if (sourceYear == null) {
-      setSourceMetric('');
-      return;
-    }
-    const metrics = sourceMetrics;
-    if (metrics.length === 0) {
-      setSourceMetric('');
-      return;
-    }
-    setSourceMetric((prev) => (prev && metrics.includes(prev) ? prev : metrics[0]));
-  }, [sourceYear, sourceMetrics]);
 
   useEffect(() => {
     if (modes.length === 2 && chartType !== 'bar') {
@@ -272,10 +251,10 @@ export default function OpexDeltaReport() {
   }, [excludedAccounts, accountOptions]);
 
   const sourceLabel = sourceYear != null && sourceMetric
-    ? `${labelForMetric(sourceMetric, metricLabels)} (${sourceYear})`
+    ? `${labelForMetric(sourceMetric, budgetColumns)} (${sourceYear})`
     : t('reports.opexDelta.sourceColumn');
   const destinationLabel = destinationYear != null && destinationMetric
-    ? `${labelForMetric(destinationMetric, metricLabels)} (${destinationYear})`
+    ? `${labelForMetric(destinationMetric, budgetColumns)} (${destinationYear})`
     : t('reports.opexDelta.destinationColumn');
 
   const columns = useMemo<ColDef[]>(() => [
@@ -415,7 +394,7 @@ export default function OpexDeltaReport() {
                 const pct = totalMagnitude > 0 ? (magnitude / totalMagnitude) * 100 : 0;
                 const changeLabel = datum.direction === 'increase' ? t('reports.opexDelta.increase') : t('reports.opexDelta.decrease');
                 return {
-                  title: datum.name,
+                  title: escapeTooltipText(datum.name),
                   data: [
                     { label: changeLabel, value: formatNumber(magnitude) },
                     { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -456,7 +435,7 @@ export default function OpexDeltaReport() {
               const pct = totalMagnitude > 0 ? (magnitude / totalMagnitude) * 100 : 0;
               const changeLabel = datum.direction === 'increase' ? t('reports.opexDelta.increase') : t('reports.opexDelta.decrease');
               return {
-                title: datum.name,
+                title: escapeTooltipText(datum.name),
                 data: [
                   { label: changeLabel, value: formatNumber(datum.delta) },
                   { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -510,8 +489,8 @@ export default function OpexDeltaReport() {
   })();
 
   const modeSlug = modes.length === 0 ? 'mode' : modes.slice().sort().join('-');
-  const sourceSlug = sourceYear != null && sourceMetric ? `${sourceYear}-${sourceMetric}` : 'source';
-  const destinationSlug = destinationYear != null && destinationMetric ? `${destinationYear}-${destinationMetric}` : 'destination';
+  const sourceSlug = sourceYear != null && sourceMetric ? `${sourceYear}-${metricFileName(budgetColumns, sourceMetric)}` : 'source';
+  const destinationSlug = destinationYear != null && destinationMetric ? `${destinationYear}-${metricFileName(budgetColumns, destinationMetric)}` : 'destination';
 
   return (
     <ReportLayout
@@ -560,7 +539,7 @@ export default function OpexDeltaReport() {
               <MenuItem value="" disabled>{t("reports.filters.noMetricsAvailable")}</MenuItem>
             ) : (
               sourceMetrics.map((metric) => (
-                <MenuItem key={`source-metric-${metric}`} value={metric}>{labelForMetric(metric, metricLabels)}</MenuItem>
+                <MenuItem key={`source-metric-${metric}`} value={metric}>{labelForMetric(metric, budgetColumns)}</MenuItem>
               ))
             )}
           </TextField>
@@ -597,7 +576,7 @@ export default function OpexDeltaReport() {
               <MenuItem value="" disabled>{t("reports.filters.noMetricsAvailable")}</MenuItem>
             ) : (
               destinationMetrics.map((metric) => (
-                <MenuItem key={`dest-metric-${metric}`} value={metric}>{labelForMetric(metric, metricLabels)}</MenuItem>
+                <MenuItem key={`dest-metric-${metric}`} value={metric}>{labelForMetric(metric, budgetColumns)}</MenuItem>
               ))
             )}
           </TextField>

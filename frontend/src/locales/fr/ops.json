@@ -71,12 +71,6 @@
       "annualTotals": "Totaux annuels ({{year}})",
       "monthlyEntry": "Saisie mensuelle ({{year}})",
       "month": "Mois",
-      "budgetPlanned": "Budget (prévu)",
-      "revisionCommitted": "Révision (engagé)",
-      "followUpActual": "Réalisé",
-      "landingExpected": "Atterrissage prévu",
-      "frozen": "gelé",
-      "forecast": "Prévision",
       "checkingFreeze": "Vérification de l'état de gel…",
       "someColumnsFrozen": "Certaines colonnes sont gelées et en lecture seule.",
       "allColumnsEditable": "Toutes les colonnes sont modifiables.",
@@ -98,7 +92,7 @@
       "allocateBy": "Ventiler par",
       "headcount": "Effectif",
       "allocationPct": "Ventilation %",
-      "yearBudget": "Budget de l'année",
+      "yearTotal": "{{column}}, total de l'année",
       "splitEqually": "Répartir équitablement",
       "clearPins": "Réinitialiser les valeurs fixées",
       "company": "Société",
@@ -277,12 +271,6 @@
       "annualTotals": "Totaux annuels ({{year}})",
       "monthlyEntry": "Saisie mensuelle ({{year}})",
       "month": "Mois",
-      "budgetPlanned": "Budget (prévu)",
-      "revisionCommitted": "Révision (engagé)",
-      "followUpActual": "Réalisé",
-      "landingExpected": "Atterrissage prévu",
-      "frozen": "gelé",
-      "forecast": "Prévision",
       "checkingFreeze": "Vérification de l'état de gel…",
       "someColumnsFrozen": "Certaines colonnes sont gelées et en lecture seule.",
       "allColumnsEditable": "Toutes les colonnes sont modifiables.",
@@ -304,7 +292,7 @@
       "allocateBy": "Ventiler par",
       "headcount": "Effectif",
       "allocationPct": "Ventilation %",
-      "yearBudget": "Budget de l'année",
+      "yearTotal": "{{column}}, total de l'année",
       "splitEqually": "Répartir équitablement",
       "clearPins": "Réinitialiser les valeurs fixées",
       "company": "Société",
@@ -499,7 +487,9 @@
       "allocationDefaultTitle": "Méthode de ventilation par défaut",
       "allocationDefaultDesc": "Choisir la méthode appliquée aux postes OPEX et CAPEX laissés en ventilation par défaut",
       "budgetRowsTitle": "Fichier des lignes budgétaires",
-      "budgetRowsDesc": "Exporter ou importer les montants mensuels de chaque poste OPEX et CAPEX, une ligne par poste, année et colonne."
+      "budgetRowsDesc": "Exporter ou importer les montants mensuels de chaque poste OPEX et CAPEX, une ligne par poste, année et colonne.",
+      "budgetColumnsTitle": "Colonnes budgétaires",
+      "budgetColumnsDesc": "Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut"
     },
     "allocationDefault": {
       "title": "Méthode de ventilation par défaut",
@@ -536,7 +526,6 @@
     },
     "freeze": {
       "title": "Geler / Dégeler les données",
-      "noPermission": "Vous devez disposer des autorisations d'administration budgétaire pour geler ou dégeler les données. Vous pouvez néanmoins consulter l'état de gel actuel ci-dessous.",
       "frozenSuccess": "Colonnes gelées avec succès.",
       "unfrozenSuccess": "Colonnes dégelées avec succès.",
       "freezeError": "Impossible de geler les colonnes.",
@@ -551,7 +540,8 @@
       "unfreezing": "Dégel en cours…",
       "updating": "Mise à jour de l'état de gel…",
       "frozen": "Gelé",
-      "editable": "Modifiable"
+      "editable": "Modifiable",
+      "hidden": "Masquée"
     },
     "columnReset": {
       "title": "Réinitialiser une colonne budgétaire",
@@ -579,7 +569,9 @@
       "confirmAffected_other": "{{count}} postes sont concernés, pour un total de {{value}}.",
       "clearDone_one": "{{count}} poste effacé.",
       "clearDone_other": "{{count}} postes effacés.",
-      "confirmPeriodsOnly": "La colonne {{column}} de {{year}} ne contient aucun montant. Seules ses périodes de répartition seront retirées."
+      "confirmPeriodsOnly": "La colonne {{column}} de {{year}} ne contient aucun montant. Seules ses périodes de répartition seront retirées.",
+      "chooseColumn": "Choisir une colonne",
+      "chooseColumnFirst": "Choisissez une colonne pour voir les montants qu'elle contient."
     },
     "copyAllocations": {
       "title": "Copier les ventilations",
@@ -700,7 +692,37 @@
       "export": "Exporter",
       "import": "Importer",
       "exportTitle": "Exporter les lignes budgétaires",
-      "importTitle": "Importer les lignes budgétaires"
+      "importTitle": "Importer les lignes budgétaires",
+      "fileNames": "Dans le fichier, la colonne measure désigne chaque colonne budgétaire : {{names}}.",
+      "fileName": "{{key}} pour {{column}}"
+    },
+    "budgetAdminOnly": "Seuls les administrateurs budgétaires peuvent modifier cette page.",
+    "budgetColumnsSettings": {
+      "title": "Colonnes budgétaires",
+      "subtitle": "Nommez les colonnes de votre budget, choisissez celles que tout le monde voit et celle dont partent les rapports et les listes.",
+      "loadError": "Les réglages des colonnes n'ont pas pu être chargés.",
+      "column": "Colonne",
+      "name": "Nom",
+      "shown": "Affichée",
+      "follows": "Suit « Appliquer à toutes les colonnes »",
+      "default": "Par défaut",
+      "nameOf": "Nom de la colonne {{position}}",
+      "shownOf": "Afficher {{column}}",
+      "followsOf": "{{column}} suit « Appliquer à toutes les colonnes »",
+      "defaultOf": "Faire de {{column}} la colonne par défaut",
+      "inFiles": "Dans les fichiers : {{name}}",
+      "nameHint": "Laissez un nom vide pour utiliser le nom standard.",
+      "helpHidden": "Les colonnes masquées gardent leurs montants et acceptent toujours les imports et les gels.",
+      "helpDefault": "La colonne par défaut est présélectionnée dans les rapports et trie les listes et le tableau de bord. La geler fige les taux de change de l'année.",
+      "helpFollows": "Les colonnes qui suivent « Appliquer à toutes les colonnes » prennent la même période quand une répartition est appliquée à toutes les colonnes.",
+      "errors": {
+        "allHidden": "Au moins une colonne doit rester affichée.",
+        "defaultHidden": "La colonne par défaut doit être affichée : choisissez d'abord une autre colonne par défaut.",
+        "duplicate": "Deux colonnes ne peuvent pas porter le même nom « {{name}} ».",
+        "tooLong": "Un nom de colonne compte au plus {{max}} caractères.",
+        "saveFailed": "Les colonnes budgétaires n'ont pas pu être enregistrées.",
+        "controlCharacters": "Un nom de colonne ne peut pas contenir de caractères de contrôle ou invisibles."
+      }
     },
     "results": {
       "skipped_one": "{{count}} poste ignoré.",
@@ -924,8 +946,8 @@
       "title": "Top postes",
       "subtitle": "Plus gros postes {{type}} par année sélectionnée ({{metric}})",
       "topTotal": "Total top {{count}}",
-      "totalMetric": "Total {{metric}}",
-      "ofFilteredMetric": "{{pct}} % du {{metric}} filtré",
+      "totalMetric": "{{metric}}, total",
+      "ofFilteredMetric": "{{pct}} % du total filtré",
       "shareSubtitle": "Part du total annuel ({{metric}})",
       "chartTitle": "Top {{count}} des {{type}} · {{metric}} {{year}}"
     },
@@ -978,8 +1000,8 @@
     "budgetColumnsCompare": {
       "title": "Comparaison de colonnes budgétaires",
       "subtitle": "Comparer jusqu'à dix colonnes budgétaires pour OPEX ou CAPEX",
-      "yearGroupingSubtitle": "{{type}} — Regroupement par année",
-      "selectionsSubtitle": "{{type}} — {{count}} sélection(s)",
+      "yearGroupingSubtitle": "{{type}} : regroupement par année",
+      "selectionsSubtitle": "{{type}} : {{count}} sélection(s)",
       "addSelection": "Ajouter"
     },
     "consolidation": {
