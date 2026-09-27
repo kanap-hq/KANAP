@@ -6,17 +6,15 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
-
-type AnalyticsCategory = {
-  id: string;
-  name: string;
-  description?: string | null;
-  status: string;
-};
+import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import { ANALYTICS_VALUES_ENDPOINT, type AnalyticsValue } from '../../services/analytics';
 
 type Props = {
+  /** The dimension whose values the select offers. */
+  axisId: string;
   value: string | null | undefined;
   onChange: (value: string | null) => void;
+  /** Defaults to the dimension's display name. */
   label?: string;
   helperText?: React.ReactNode;
   error?: boolean;
@@ -25,31 +23,47 @@ type Props = {
   textFieldSx?: SxProps<Theme>;
 };
 
-export default function AnalyticsCategorySelect({ value, onChange, label, helperText, error, disabled, hideLabel = false, textFieldSx }: Props) {
+/** One dimension's values. The list holds enabled values; the current value stays shown when it is disabled. */
+export default function AnalyticsCategorySelect({
+  axisId,
+  value,
+  onChange,
+  label,
+  helperText,
+  error,
+  disabled,
+  hideLabel = false,
+  textFieldSx,
+}: Props) {
   const { t } = useTranslation(['master-data', 'common']);
+  const needsAxisLabel = label === undefined && !hideLabel;
+  const axes = useAnalyticsAxes({ enabled: needsAxisLabel });
+
   const { data, isLoading } = useQuery({
-    queryKey: ['analytics-categories', 'all'],
+    queryKey: ['analytics-categories', 'axis', axisId],
+    enabled: !!axisId,
     queryFn: async () => {
-      const res = await api.get<{ items: AnalyticsCategory[] }>('/analytics-categories', {
-        params: { limit: 1000, sort: 'name:ASC' },
+      const res = await api.get<{ items: AnalyticsValue[] }>(ANALYTICS_VALUES_ENDPOINT, {
+        params: { axis_id: axisId, limit: 1000, sort: 'name:ASC' },
       });
       return res.data.items;
     },
   });
 
   const options = React.useMemo(() => {
-    const list = data ? [...data] : [];
+    // The server filters by dimension; the guard keeps another dimension's value out if it did not.
+    const list = (data ?? []).filter((item) => !item.axis_id || item.axis_id === axisId);
     return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [data]);
+  }, [axisId, data]);
 
-  // Ensure selected category appears even if not in the preloaded list (disabled or off-page)
-  const needSelectedFetch = !!value && !options.some((c) => c.id === value);
+  // The current value may be missing from the list (disabled, or beyond the first page).
+  const needSelectedFetch = !!value && !isLoading && !options.some((c) => c.id === value);
   const { data: selectedById, isLoading: isLoadingSelected } = useQuery({
     queryKey: ['analytics-categories', 'by-id', value],
     enabled: needSelectedFetch,
     queryFn: async () => {
-      const res = await api.get<AnalyticsCategory>(`/analytics-categories/${value}`);
-      return res.data as unknown as AnalyticsCategory;
+      const res = await api.get<AnalyticsValue>(`${ANALYTICS_VALUES_ENDPOINT}/${value}`);
+      return res.data;
     },
   });
 
@@ -59,9 +73,12 @@ export default function AnalyticsCategorySelect({ value, onChange, label, helper
     return base;
   }, [options, selectedById]);
 
-  const selected = React.useMemo(() => mergedOptions.find((cat) => cat.id === value) ?? null, [mergedOptions, value]);
-  const resolvedLabel = label ?? t('analytics.analyticsCategoryFallback');
+  const selected = React.useMemo(() => mergedOptions.find((item) => item.id === value) ?? null, [mergedOptions, value]);
+  const resolvedLabel = label ?? axes.label(axes.byId.get(axisId) ?? { name: null });
   const naked = hideLabel || resolvedLabel === '';
+  // A hidden label still names the field for assistive technology, when the caller gave one.
+  const ariaLabel = hideLabel ? label : resolvedLabel;
+  const loading = isLoading || (needSelectedFetch && isLoadingSelected);
 
   const control = (
     <Autocomplete
@@ -80,7 +97,7 @@ export default function AnalyticsCategorySelect({ value, onChange, label, helper
             )}
             {option.status === 'disabled' && (
               <Box sx={{ fontSize: '0.75rem', color: 'warning.main' }}>
-                Disabled
+                {t('common:statuses.disabled')}
               </Box>
             )}
           </Box>
@@ -95,11 +112,12 @@ export default function AnalyticsCategorySelect({ value, onChange, label, helper
           placeholder={naked ? t('common:selects.notSet') : undefined}
           error={error}
           helperText={helperText}
+          inputProps={ariaLabel ? { ...params.inputProps, 'aria-label': ariaLabel } : params.inputProps}
           InputProps={{
             ...params.InputProps,
             endAdornment: (
               <>
-                {(isLoading || isLoadingSelected) ? <CircularProgress color="inherit" size={20} /> : null}
+                {loading ? <CircularProgress color="inherit" size={20} /> : null}
                 {params.InputProps.endAdornment}
               </>
             ),
@@ -107,7 +125,7 @@ export default function AnalyticsCategorySelect({ value, onChange, label, helper
         />
       )}
       disabled={disabled || isLoading}
-      loading={isLoading || isLoadingSelected}
+      loading={loading}
       clearOnBlur
       clearOnEscape
       isOptionEqualToValue={(opt, val) => opt.id === val.id}

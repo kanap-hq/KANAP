@@ -334,7 +334,8 @@ interface ModuleItemNavResult {
 - `useAssetNav` - Assets (`/assets/ids`)
 - `useApplicationNav` - Applications (`/applications/ids`)
 - `useCostCenterNav` - Cost centers (`/cost-centers/ids`, default sort `path:ASC`)
-- Plus: suppliers, companies, departments, accounts, template accounts, analytics, business processes
+- `useAnalyticsNav` - Analytics values (`/analytics-categories/ids`; pass the dimension as `extraParams: { axis_id }` so the walk stays in it). `useAnalyticsDimensionNav(id)` in the same file walks the dimensions in their order from `useAnalyticsAxes()`, with no request of its own.
+- Plus: suppliers, companies, departments, accounts, template accounts, business processes
 
 `useModuleItemNav.ts` itself only keeps the wrappers that have no file of their own: `useLocationItemNav`, `useConnectionItemNav`, `useInterfaceItemNav` and `useIncidentItemNav`.
 
@@ -484,6 +485,28 @@ type CostCenterTree = {
 - A node carries `kind` (`group` | `cost_center`), `company_id`/`company_name` (cost centers only), `owner_user_id`/`owner_name`, `status`, `depth` (0 = root), `path` (names root to node, joined with ` › `) and `path_ids`.
 - `buildCostCenterTree(nodes)` is the hook's pure core; tests mock the hook with it.
 
+### useAnalyticsAxes
+The tenant's analytics dimensions (storage word: axes), for item forms, lists, report filters and the Analytics dimensions page. A budget line holds at most one value per dimension.
+
+**Location:** `frontend/src/hooks/useAnalyticsAxes.ts` (service `services/analytics.ts`, `GET /analytics-axes`, readable with `analytics`, `opex`, `capex` or `reporting` reader; query key `['analytics-axes']`, 5 min `staleTime`; the Analytics dimensions page and both workspaces invalidate it after every write).
+
+```typescript
+type AnalyticsAxes = {
+  ready: boolean;                   // false until loaded, or while disabled (`useAnalyticsAxes({ enabled })`)
+  isError: boolean;                 // the load failed: `axes` is empty and proves nothing
+  axes: AnalyticsAxis[];            // every dimension, disabled ones included: sort order, then name, then code
+  enabled: AnalyticsAxis[];         // enabled now (a future disable date still counts), in order: forms, lists, filters, reports
+  byId: Map<string, AnalyticsAxis>;
+  defaultAxis: AnalyticsAxis | null;
+  label(axis): string;              // the name, or the translated "Analytics dimension" when it has none
+};
+```
+
+- The default dimension (`is_default`) is an identity, never a position: the legacy `analytics_category_id` / `analytics_category_name` fields, the `analytics_category` CSV header and the AI `analytics_category` key address it, whatever its order or name. Its name may be null; every screen shows `label(axis)`, never `axis.name`.
+- List and summary fields of the other dimensions are `analyticsFieldKey(axisId)` = `analytics_<axis id>` (no colon: sort strings are `field:DIR`). CSV headers and AI keys use `analytics:<code>`.
+- Items read `analytics_values: ItemAnalyticsValue[]` and write `analytics_values: { [axisId]: valueId | null }` (omitted dimensions untouched, `null` clears); the frontend never sends the legacy field.
+- `buildAnalyticsAxes(list, t)` is the hook's pure core; tests mock the hook with it. `analyticsAxisLabel(axis, t)` labels an axis-like object (`{ name }`) outside the hook.
+
 ## Shared Components
 - `FormModal` (`src/components/forms/FormModal.tsx`)
   - Replaces `FormDrawer` for create/edit forms, providing a centered modal overlay.
@@ -507,6 +530,10 @@ type CostCenterTree = {
   - Search matches code, name and path, and keeps the matches' ancestors, so typing a group name shows its descendants.
   - `selectable`: `cost_centers` (default, a line's assignment: groups are shown and not pickable, a disabled cost center is marked and pickable only when it is the current value), `all` (report filters: every node, groups and disabled ones included), `groups` (a node's parent; `excludeIds` removes its own subtree).
   - `onChange(id, node)`. When there is nothing to pick, one line "No cost center yet." links to `/master-data/cost-centers` for users with `cost_centers` member (the link reads `useAuth()`, only when that line renders).
+- `AnalyticsCategorySelect` (`src/components/fields/AnalyticsCategorySelect.tsx`)
+  - MUI Autocomplete over one dimension's values: `axisId` (required) loads `GET /analytics-categories?axis_id=…&limit=1000&sort=name:ASC` (enabled values, query key `['analytics-categories', 'axis', axisId]`).
+  - A disabled current value is fetched by id and kept shown, marked Disabled; it cannot be picked anew because the list holds enabled values only.
+  - Label: `label` when given, else the dimension's display name from `useAnalyticsAxes()` (loaded only in that case). With `hideLabel`, `label` still names the input for assistive technology.
 - `UserSelect` (`src/components/fields/UserSelect.tsx`)
   - MUI Autocomplete for selecting a single user; supports `size` prop for compact display.
   - Fetches enabled users, preloads missing selections by ID.

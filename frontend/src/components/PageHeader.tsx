@@ -48,6 +48,7 @@ function useBreadcrumbs(): Crumb[] {
       'accounts': 'accounts',
       'coa': 'coa',
       'analytics': 'analytics',
+      'dimensions': 'dimensions',
       'users': 'users',
       'roles': 'roles',
       'agent-control': 'agentControl',

@@ -374,16 +374,79 @@
   },
   "analytics": {
     "title": "Dimensiones analíticas",
-    "entity": "dimensión analítica",
-    "newCategory": "Nueva dimensión",
-    "newAnalyticsCategory": "Nueva dimensión analítica",
     "analyticsCategoryFallback": "Dimensión analítica",
-    "loadError": "Error al cargar la dimensión analítica.",
-    "noOptions": "No se encontraron dimensiones analíticas",
+    "noOptions": "No se encontraron valores",
+    "newValue": "Nuevo valor",
+    "newDimension": "Nueva dimensión",
+    "valueFallback": "Valor",
+    "dimensionFallback": "Dimensión",
+    "dimensionsLabel": "Dimensiones",
+    "editDimension": "Editar {{name}}",
+    "openDimension": "Abrir {{name}}",
+    "disabledDimension": "{{name}}, desactivada",
+    "enableToAddValues": "Active esta dimensión para añadir valores.",
+    "export": "Exportar valores",
+    "import": "Importar valores",
+    "previousValue": "Valor anterior",
+    "nextValue": "Valor siguiente",
+    "previousDimension": "Dimensión anterior",
+    "nextDimension": "Dimensión siguiente",
     "fields": {
-      "nameHelper": "Introduzca un nombre único de dimensión analítica",
-      "descriptionPlaceholder": "Descripción opcional",
-      "statusHelper": "Desactive para deshabilitar esta dimensión"
+      "name": "Nombre",
+      "code": "Código",
+      "order": "Orden",
+      "description": "Descripción",
+      "dimension": "Dimensión",
+      "lifecycle": "Ciclo de vida"
+    },
+    "hints": {
+      "nameDefault": "Déjelo vacío para mostrar «{{label}}» en el idioma de cada persona.",
+      "code": "Se usa como nombre de columna en los archivos CSV: analytics:{{code}}. Cambiarlo cambia el nombre de la columna.",
+      "codeDefault": "Los archivos antiguos usan la columna analytics_category para esta dimensión; analytics:{{code}} también funciona.",
+      "codeCreate": "Se usa como nombre de columna en los archivos CSV. Letras minúsculas, dígitos, - o _.",
+      "order": "Las dimensiones se ordenan según este número, de menor a mayor.",
+      "defaultLocked": "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan."
+    },
+    "placeholders": {
+      "dimensionName": "p. ej., Naturaleza",
+      "dimensionCode": "p. ej., naturaleza",
+      "dimensionDescription": "p. ej., El tipo de gasto",
+      "valueName": "p. ej., Licencias",
+      "valueDescription": "p. ej., Suscripciones de software y soporte"
+    },
+    "usage": {
+      "values_one": "{{count}} valor",
+      "values_other": "{{count}} valores",
+      "opex_one": "{{count}} línea OPEX",
+      "opex_other": "{{count}} líneas OPEX",
+      "capex_one": "{{count}} línea CAPEX",
+      "capex_other": "{{count}} líneas CAPEX",
+      "noValues": "Todavía no hay valores.",
+      "dimensionUnused": "{{values}}. Uso: ninguna línea por ahora.",
+      "dimensionOne": "{{values}}. Uso: {{lines}}.",
+      "dimensionBoth": "{{values}}. Uso: {{opex}} y {{capex}}.",
+      "valueOne": "Usado por {{lines}}.",
+      "valueBoth": "Usado por {{opex}} y {{capex}}."
+    },
+    "deleteBlocked": {
+      "dimensionHasValues": "Para eliminar esta dimensión, elimine primero sus valores.",
+      "valueUsed": "{{usage}} Desactívelo en su lugar."
+    },
+    "messages": {
+      "loadFailed": "Error al cargar el valor.",
+      "saveFailed": "Error al guardar el valor.",
+      "createFailed": "Error al crear el valor.",
+      "deleteFailed": "Error al eliminar el valor.",
+      "dimensionsLoadFailed": "Error al cargar las dimensiones.",
+      "dimensionLoadFailed": "Error al cargar la dimensión.",
+      "dimensionSaveFailed": "Error al guardar la dimensión.",
+      "dimensionCreateFailed": "Error al crear la dimensión.",
+      "dimensionDeleteFailed": "Error al eliminar la dimensión.",
+      "nameRequired": "Introduzca un nombre.",
+      "codeRequired": "Introduzca un código.",
+      "codeInvalid": "Use letras minúsculas, dígitos, - o _ (40 como máximo).",
+      "orderInvalid": "Introduzca un número entero.",
+      "dimensionRequired": "Elija una dimensión."
     }
   },
   "businessProcesses": {

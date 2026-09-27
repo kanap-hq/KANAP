@@ -92,34 +92,79 @@ function isHiddenAmountField(colId: string | null | undefined, shown: ListAmount
   return !!field && !shown.some((c) => c.measure === field.column.measure);
 }
 
+/**
+ * Says whether the list builds a column for a field id other than an amount column. Lists pass one
+ * for columns that come and go with tenant data (the dimension columns); without one, every such
+ * field is kept.
+ */
+export type ListFieldPredicate = (colId: string) => boolean;
+
+function isDroppedField(colId: string | null | undefined, shown: ListAmountColumns['shown'], isListField?: ListFieldPredicate): boolean {
+  if (isHiddenAmountField(colId, shown)) return true;
+  return !!colId && !!isListField && !isListField(colId);
+}
+
+const DIMENSION_FIELD = /^analytics_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+/**
+ * The dimension fields a list builds: `analytics_<id>` for the given dimensions only (the enabled
+ * ones besides the default, whose column is `analytics_category_name`). A saved or linked sort or
+ * filter on another dimension (disabled or deleted since) then falls back like a hidden amount column.
+ */
+export function dimensionFieldPredicate(columnDimensionIds: Iterable<string>): ListFieldPredicate {
+  const ids = new Set(Array.from(columnDimensionIds, (id) => id.toLowerCase()));
+  return (colId) => {
+    const match = DIMENSION_FIELD.exec(colId);
+    return !match || ids.has(match[1].toLowerCase());
+  };
+}
+
 /** A saved or linked sort on a column that is not shown falls back to the default sort. */
-export function sortOnShownColumn(sort: string | null | undefined, shown: ListAmountColumns['shown'], fallback: string): string {
+export function sortOnShownColumn(
+  sort: string | null | undefined,
+  shown: ListAmountColumns['shown'],
+  fallback: string,
+  isListField?: ListFieldPredicate,
+): string {
   if (!sort) return fallback;
-  return isHiddenAmountField(sort.split(':')[0], shown) ? fallback : sort;
+  return isDroppedField(sort.split(':')[0], shown, isListField) ? fallback : sort;
 }
 
 /**
  * The sort to keep in the URL and the list context: '' when it is the default sort, so that an
  * absent sort always means "the current default" and follows a change of the default column.
  */
-export function explicitSort(sort: string | null | undefined, shown: ListAmountColumns['shown'], defaultSort: string): string {
-  const usable = sortOnShownColumn(sort, shown, defaultSort);
+export function explicitSort(
+  sort: string | null | undefined,
+  shown: ListAmountColumns['shown'],
+  defaultSort: string,
+  isListField?: ListFieldPredicate,
+): string {
+  const usable = sortOnShownColumn(sort, shown, defaultSort, isListField);
   return usable === defaultSort ? '' : usable;
 }
 
 /** A saved or linked filter model without the filters on columns that are not shown. */
-export function filtersOnShownColumns<M extends Record<string, unknown>>(model: M, shown: ListAmountColumns['shown']): M {
-  const kept = Object.entries(model).filter(([colId]) => !isHiddenAmountField(colId, shown));
+export function filtersOnShownColumns<M extends Record<string, unknown>>(
+  model: M,
+  shown: ListAmountColumns['shown'],
+  isListField?: ListFieldPredicate,
+): M {
+  const kept = Object.entries(model).filter(([colId]) => !isDroppedField(colId, shown, isListField));
   return (kept.length === Object.keys(model).length ? model : Object.fromEntries(kept)) as M;
 }
 
 /** Same as `filtersOnShownColumns` for a serialised model (URL or stored list context); '' when nothing is left. */
-export function filtersStringOnShownColumns(raw: string | null | undefined, shown: ListAmountColumns['shown']): string {
+export function filtersStringOnShownColumns(
+  raw: string | null | undefined,
+  shown: ListAmountColumns['shown'],
+  isListField?: ListFieldPredicate,
+): string {
   if (!raw) return '';
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return raw;
-    const kept = filtersOnShownColumns(parsed as Record<string, unknown>, shown);
+    const kept = filtersOnShownColumns(parsed as Record<string, unknown>, shown, isListField);
     if (kept === parsed) return raw;
     return Object.keys(kept).length > 0 ? JSON.stringify(kept) : '';
   } catch {
@@ -137,12 +182,13 @@ export function settleListSearch(
   stored: { sort?: string; q?: string; filters?: string } | null | undefined,
   shown: ListAmountColumns['shown'],
   defaultSort: string,
+  isListField?: ListFieldPredicate,
 ): string {
   const params = new URLSearchParams(search);
-  const sort = explicitSort(params.get('sort') || stored?.sort, shown, defaultSort);
+  const sort = explicitSort(params.get('sort') || stored?.sort, shown, defaultSort, isListField);
   if (sort) params.set('sort', sort); else params.delete('sort');
   if (!params.get('q') && stored?.q) params.set('q', stored.q);
-  const filters = filtersStringOnShownColumns(params.get('filters') || stored?.filters || '', shown);
+  const filters = filtersStringOnShownColumns(params.get('filters') || stored?.filters || '', shown, isListField);
   if (filters) params.set('filters', filters); else params.delete('filters');
   return params.toString();
 }

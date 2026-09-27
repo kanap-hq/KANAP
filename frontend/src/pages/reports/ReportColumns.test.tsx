@@ -19,6 +19,11 @@ vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   const state = await import('./budgetColumnsTestState');
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
+// The report filter bar reads the dimensions; none here, so the analytics report groups on the default.
+vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
+  return { ...actual, useAnalyticsAxes: () => actual.buildAnalyticsAxes([], ((key: string) => key) as never) };
+});
 const chart = vi.hoisted(() => ({ options: null as any }));
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),

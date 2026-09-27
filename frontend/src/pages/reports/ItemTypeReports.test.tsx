@@ -21,6 +21,11 @@ vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   const state = await import('./budgetColumnsTestState');
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
+// The report filter bar reads the dimensions; none here, so the analytics report groups on the default.
+vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
+  return { ...actual, useAnalyticsAxes: () => actual.buildAnalyticsAxes([], ((key: string) => key) as never) };
+});
 // The real ReportLayout module is loaded for its filter helpers; its locale hook would load i18n.
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({

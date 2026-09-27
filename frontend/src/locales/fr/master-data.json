@@ -374,16 +374,79 @@
   },
   "analytics": {
     "title": "Dimensions analytiques",
-    "entity": "dimension analytique",
-    "newCategory": "Nouvelle dimension",
-    "newAnalyticsCategory": "Nouvelle dimension analytique",
     "analyticsCategoryFallback": "Dimension analytique",
-    "loadError": "Échec du chargement de la dimension analytique.",
-    "noOptions": "Aucune dimension analytique trouvée",
+    "noOptions": "Aucune valeur trouvée",
+    "newValue": "Nouvelle valeur",
+    "newDimension": "Nouvelle dimension",
+    "valueFallback": "Valeur",
+    "dimensionFallback": "Dimension",
+    "dimensionsLabel": "Dimensions",
+    "editDimension": "Modifier {{name}}",
+    "openDimension": "Ouvrir {{name}}",
+    "disabledDimension": "{{name}}, désactivée",
+    "enableToAddValues": "Activez cette dimension pour ajouter des valeurs.",
+    "export": "Exporter les valeurs",
+    "import": "Importer les valeurs",
+    "previousValue": "Valeur précédente",
+    "nextValue": "Valeur suivante",
+    "previousDimension": "Dimension précédente",
+    "nextDimension": "Dimension suivante",
     "fields": {
-      "nameHelper": "Saisissez un nom unique de dimension analytique",
-      "descriptionPlaceholder": "Description facultative",
-      "statusHelper": "Désactivez pour rendre cette dimension inactive"
+      "name": "Nom",
+      "code": "Code",
+      "order": "Ordre",
+      "description": "Description",
+      "dimension": "Dimension",
+      "lifecycle": "Cycle de vie"
+    },
+    "hints": {
+      "nameDefault": "Laissez vide pour afficher « {{label}} » dans la langue de chaque personne.",
+      "code": "Sert de nom de colonne dans les fichiers CSV : analytics:{{code}}. Le modifier change le nom de la colonne.",
+      "codeDefault": "Les anciens fichiers utilisent la colonne analytics_category pour cette dimension ; analytics:{{code}} fonctionne aussi.",
+      "codeCreate": "Sert de nom de colonne dans les fichiers CSV. Lettres minuscules, chiffres, - ou _.",
+      "order": "Les dimensions sont classées selon ce nombre, du plus petit au plus grand.",
+      "defaultLocked": "Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent."
+    },
+    "placeholders": {
+      "dimensionName": "ex. Nature",
+      "dimensionCode": "ex. nature",
+      "dimensionDescription": "ex. Le type de dépense",
+      "valueName": "ex. Licences",
+      "valueDescription": "ex. Abonnements logiciels et support"
+    },
+    "usage": {
+      "values_one": "{{count}} valeur",
+      "values_other": "{{count}} valeurs",
+      "opex_one": "{{count}} ligne OPEX",
+      "opex_other": "{{count}} lignes OPEX",
+      "capex_one": "{{count}} ligne CAPEX",
+      "capex_other": "{{count}} lignes CAPEX",
+      "noValues": "Aucune valeur pour le moment.",
+      "dimensionUnused": "{{values}}. Utilisation : aucune ligne pour le moment.",
+      "dimensionOne": "{{values}}. Utilisation : {{lines}}.",
+      "dimensionBoth": "{{values}}. Utilisation : {{opex}} et {{capex}}.",
+      "valueOne": "Utilisée par {{lines}}.",
+      "valueBoth": "Utilisée par {{opex}} et {{capex}}."
+    },
+    "deleteBlocked": {
+      "dimensionHasValues": "Pour supprimer cette dimension, supprimez d'abord ses valeurs.",
+      "valueUsed": "{{usage}} Désactivez-la plutôt."
+    },
+    "messages": {
+      "loadFailed": "Échec du chargement de la valeur.",
+      "saveFailed": "Échec de l'enregistrement de la valeur.",
+      "createFailed": "Échec de la création de la valeur.",
+      "deleteFailed": "Échec de la suppression de la valeur.",
+      "dimensionsLoadFailed": "Échec du chargement des dimensions.",
+      "dimensionLoadFailed": "Échec du chargement de la dimension.",
+      "dimensionSaveFailed": "Échec de l'enregistrement de la dimension.",
+      "dimensionCreateFailed": "Échec de la création de la dimension.",
+      "dimensionDeleteFailed": "Échec de la suppression de la dimension.",
+      "nameRequired": "Saisissez un nom.",
+      "codeRequired": "Saisissez un code.",
+      "codeInvalid": "Utilisez des lettres minuscules, des chiffres, - ou _ (40 au maximum).",
+      "orderInvalid": "Saisissez un nombre entier.",
+      "dimensionRequired": "Choisissez une dimension."
     }
   },
   "businessProcesses": {

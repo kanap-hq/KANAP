@@ -17,6 +17,7 @@ import { formatShortDate } from '../../../lib/dateFormat';
 import { isoToLocalDateInput, localDateInputToEndOfDayIso } from '../../../lib/datetime';
 import { useLocale } from '../../../i18n/useLocale';
 import { useCostCenterTree } from '../../../hooks/useCostCenterTree';
+import { useAnalyticsAxes } from '../../../hooks/useAnalyticsAxes';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 
 export type RunBuild = 'run' | 'build';
@@ -27,7 +28,8 @@ type Props = {
   payingCompanyId: string;
   accountId: string;
   currency: string;
-  analyticsCategoryId: string;
+  /** The line's value per dimension id; a dimension without a value is absent or null. */
+  analyticsValues: Record<string, string | null>;
   costCenterId: string;
   runBuild: RunBuild | '';
   effectiveStart: string;
@@ -42,7 +44,7 @@ type Props = {
   onPayingCompanyChange: (next: string) => void;
   onAccountChange: (next: string) => void;
   onCurrencyChange: (next: string) => void;
-  onAnalyticsCategoryChange: (next: string) => void;
+  onAnalyticsValueChange: (axisId: string, next: string | null) => void;
   onCostCenterChange: (next: string) => void;
   onRunBuildChange: (next: RunBuild | '') => void;
   onEffectiveStartChange: (next: string) => void;
@@ -65,7 +67,7 @@ export default function SpendPropertiesDrawer({
   payingCompanyId,
   accountId,
   currency,
-  analyticsCategoryId,
+  analyticsValues,
   costCenterId,
   runBuild,
   effectiveStart,
@@ -80,7 +82,7 @@ export default function SpendPropertiesDrawer({
   onPayingCompanyChange,
   onAccountChange,
   onCurrencyChange,
-  onAnalyticsCategoryChange,
+  onAnalyticsValueChange,
   onCostCenterChange,
   onRunBuildChange,
   onEffectiveStartChange,
@@ -115,6 +117,10 @@ export default function SpendPropertiesDrawer({
   const costCenterHint = costCenter?.company_id && payingCompanyId && costCenter.company_id !== payingCompanyId
     ? t('opex.fields.costCenterCompanyHint', { company: costCenter.company_name ?? '' })
     : undefined;
+
+  // One select per enabled dimension, in dimension order. A disabled dimension shows no select;
+  // its value stays on the line. When the dimensions cannot be loaded, one line says so.
+  const analyticsAxes = useAnalyticsAxes();
 
   return (
     <>
@@ -151,7 +157,7 @@ export default function SpendPropertiesDrawer({
             disableClearable
             value={currencyValue ?? undefined}
             onChange={(_e, option) => onCurrencyChange(option?.code ?? currency)}
-            getOptionLabel={(option) => `${option.code} — ${option.name}`}
+            getOptionLabel={(option) => `${option.code} · ${option.name}`}
             isOptionEqualToValue={(option, value) => option.code === value.code}
             disabled={disabled}
             renderInput={(params) => (
@@ -159,11 +165,24 @@ export default function SpendPropertiesDrawer({
             )}
           />
         </PropertyRow>
-        <PropertyRow label={t('opex.fields.analyticsCategory')}>
-          <Box sx={hideInnerLabelSx}>
-            <AnalyticsCategorySelect value={analyticsCategoryId || null} onChange={(v) => onAnalyticsCategoryChange(v ?? '')} disabled={disabled} />
-          </Box>
-        </PropertyRow>
+        {analyticsAxes.isError && analyticsAxes.axes.length === 0 ? (
+          <Typography sx={{ fontSize: 12, lineHeight: 1.35, color: 'kanap.text.tertiary', py: '5px' }}>
+            {t('shared.dimensionsLoadFailed')}
+          </Typography>
+        ) : analyticsAxes.enabled.map((axis) => (
+          <PropertyRow key={axis.id} label={analyticsAxes.label(axis)}>
+            <Box sx={hideInnerLabelSx}>
+              <AnalyticsCategorySelect
+                axisId={axis.id}
+                label={analyticsAxes.label(axis)}
+                hideLabel
+                value={analyticsValues[axis.id] ?? null}
+                onChange={(v) => onAnalyticsValueChange(axis.id, v)}
+                disabled={disabled}
+              />
+            </Box>
+          </PropertyRow>
+        ))}
         <PropertyRow label={t('opex.fields.runBuild')}>
           <TextField
             select

@@ -24,6 +24,10 @@ vi.mock('../../hooks/useCostCenterTree', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useCostCenterTree')>();
   return { ...actual, useCostCenterTree: () => actual.buildCostCenterTree([]) };
 });
+vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
+  return { ...actual, useAnalyticsAxes: () => actual.buildAnalyticsAxes([], ((key: string) => key) as never) };
+});
 vi.mock('../../components/reports/ChartCard', () => ({ default: React.forwardRef(() => null) }));
 vi.mock('../../components/reports/ReportGrid', () => ({ default: () => null }));
 const summaryHook = vi.fn();

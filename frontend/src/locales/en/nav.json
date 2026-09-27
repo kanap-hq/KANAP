@@ -131,6 +131,7 @@
     "accounts": "Accounts",
     "coa": "Charts of accounts",
     "analytics": "Analytics dimensions",
+    "dimensions": "Dimensions",
     "users": "Users",
     "roles": "Roles",
     "scheduledTasks": "Scheduled tasks",

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -42,6 +42,38 @@ vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
   };
 });
 
+// The tenant's dimensions, set per test; the hook's own core orders them and names the default.
+// A small store, so a test can let the dimensions arrive after the first render.
+const dimensions = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  const store = {
+    list: [] as unknown[],
+    ready: true,
+    set(next: { list?: unknown[]; ready?: boolean }) {
+      Object.assign(store, next);
+      listeners.forEach((listener) => listener());
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
+    },
+  };
+  return store;
+});
+vi.mock('../hooks/useAnalyticsAxes', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../hooks/useAnalyticsAxes')>();
+  const { useSyncExternalStore } = await import('react');
+  const t = ((key: string) => key) as unknown as Parameters<typeof mod.buildAnalyticsAxes>[1];
+  let cache: { list: unknown[]; ready: boolean; value: ReturnType<typeof mod.buildAnalyticsAxes> } | null = null;
+  const snapshot = () => {
+    if (!cache || cache.list !== dimensions.list || cache.ready !== dimensions.ready) {
+      cache = { list: dimensions.list, ready: dimensions.ready, value: mod.buildAnalyticsAxes(dimensions.list as never, t, dimensions.ready) };
+    }
+    return cache.value;
+  };
+  return { ...mod, useAnalyticsAxes: () => useSyncExternalStore(dimensions.subscribe, snapshot) };
+});
+
 import api from '../api';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
@@ -75,6 +107,11 @@ function LocationProbe() {
   return null;
 }
 
+const dimension = (id: string, name: string | null, sort_order: number, extra: Record<string, unknown> = {}) => ({
+  id, code: id, name, description: null, sort_order, is_default: false, status: 'enabled', disabled_at: null, ...extra,
+});
+const DEFAULT_DIMENSION = dimension('default', null, 0, { is_default: true });
+
 /** Renders the page and waits for the totals footer, the last state update of the first load. */
 async function renderPage(url = '/ops/capex') {
   render(
@@ -91,6 +128,8 @@ describe('CapexPage', () => {
     grid.mockReset();
     seen.searches = [];
     columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
+    dimensions.list = [DEFAULT_DIMENSION];
+    dimensions.ready = true;
     window.sessionStorage.clear();
     get.mockReset();
     get.mockResolvedValue({ data: { yBudget: 10, yPlus2Forecast: 4, yMinus1Revision: 3, reportingCurrency: 'X' } });
@@ -270,5 +309,113 @@ describe('CapexPage', () => {
     const el = holder!.cellRenderer!({ data, value: 'Ada Holder', colDef: {} });
     const href = (el.props as { getHref: (row: unknown) => string | null }).getHref(data);
     expect(href).toMatch(/^\/ops\/capex\/CPX-7\/overview/);
+  });
+
+  it('names the default dimension column after the dimension, hidden by default as before', async () => {
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field);
+    expect(ids.filter((id) => id?.startsWith('analytics_'))).toEqual(['analytics_category_name']);
+    // No name yet: the translated default label.
+    expect(column('analytics_category_name')).toMatchObject({
+      headerName: 'master-data:analytics.analyticsCategoryFallback', defaultHidden: true, filter: CheckboxSetFilter,
+    });
+  });
+
+  it('adds one column per other enabled dimension, hidden, right after the default one, in dimension order', async () => {
+    dimensions.list = [
+      dimension('activity', 'Activity', 3),
+      dimension('old', 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
+      dimension('nature', 'Nature', 1),
+      dimension('default', 'Cost type', 0, { is_default: true }),
+    ];
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field);
+    const at = ids.indexOf('analytics_category_name');
+    expect(ids.slice(at, at + 4)).toEqual(['analytics_category_name', 'analytics_nature', 'analytics_activity', 'cost_center_label']);
+    expect(ids).not.toContain('analytics_old');
+    expect(column('analytics_category_name')?.headerName).toBe('Cost type');
+    expect(column('analytics_nature')).toMatchObject({
+      headerName: 'Nature', defaultHidden: true, filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter,
+    });
+    expect(column('analytics_activity')).toMatchObject({ headerName: 'Activity', defaultHidden: true });
+
+    // The cell opens the line.
+    const data = { id: 'c-1', item_number: 7, analytics_nature: 'Licences' };
+    const el = column('analytics_nature')!.cellRenderer!({ data, value: 'Licences', colDef: {} });
+    expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(/^\/ops\/capex\/CPX-7\/overview/);
+
+    // A set filter on the values the server lists for that dimension.
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
+      if (url !== '/capex-items/summary/filter-values') return { data: {} };
+      return { data: { [config?.params?.fields ?? '']: ['Licences', null] } };
+    });
+    type GetValues = (p: unknown) => Promise<Array<{ value: string | null; label: string }>>;
+    const options = await (column('analytics_nature')!.filterParams!.getValues as GetValues)({ context: { getQueryState: () => ({}) } });
+    expect(options).toEqual([
+      { value: 'Licences', label: 'Licences' },
+      { value: null, label: 'shared.blank' },
+    ]);
+    const calls = get.mock.calls.filter(([url]) => url === '/capex-items/summary/filter-values');
+    expect(calls.map(([, config]) => config.params.fields)).toEqual(['analytics_nature']);
+  });
+
+  it('mounts the grid only once the dimensions are known, so a saved layout finds their columns', async () => {
+    dimensions.ready = false;
+    dimensions.list = [];
+    render(
+      <MemoryRouter initialEntries={['/ops/capex']}>
+        <LocationProbe />
+        <CapexPage />
+      </MemoryRouter>,
+    );
+    // The budget columns setting is known from the start (mocked); the grid and the footer totals still wait.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(grid).not.toHaveBeenCalled();
+    expect(get.mock.calls.some(([url]) => url === '/capex-items/summary/totals')).toBe(false);
+
+    act(() => dimensions.set({ ready: true, list: [DEFAULT_DIMENSION, dimension('nature', 'Nature', 1)] }));
+    await waitFor(() => expect(grid).toHaveBeenCalled());
+    // Never mounted without the dimension columns.
+    for (const [props] of grid.mock.calls) {
+      expect((props as GridProps).columns.map((c) => c.colId ?? c.field)).toContain('analytics_nature');
+    }
+  });
+
+  it('drops a stored sort or filter on a dimension the list has no column for, and keeps an enabled one', async () => {
+    const NATURE = '11111111-1111-4111-8111-111111111111';
+    const OLD = '22222222-2222-4222-8222-222222222222';
+    const GONE = '33333333-3333-4333-8333-333333333333';
+    dimensions.list = [
+      DEFAULT_DIMENSION,
+      dimension(NATURE, 'Nature', 1),
+      dimension(OLD, 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
+    ];
+    const kept = { [`analytics_${NATURE}`]: { filterType: 'set', values: ['Licences'] } };
+    const filters = {
+      ...kept,
+      [`analytics_${OLD}`]: { filterType: 'set', values: ['Hardware'] },
+      [`analytics_${GONE}`]: { filterType: 'set', values: [null] },
+    };
+    window.sessionStorage.setItem('capex-list-context', JSON.stringify({
+      sort: `analytics_${OLD}:ASC`, q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
+    }));
+    await renderPage();
+    // The grid only ever renders on the settled URL.
+    expect(seen.searches.length).toBeGreaterThan(0);
+    for (const search of seen.searches) {
+      const params = new URLSearchParams(search);
+      expect(params.get('sort')).toBeNull();
+      expect(JSON.parse(params.get('filters') ?? '{}')).toEqual(kept);
+    }
+    const totals = get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals');
+    expect(totals.length).toBeGreaterThan(0);
+    for (const [, config] of totals) expect(JSON.parse(config.params.filters)).toEqual(kept);
+  });
+
+  it('keeps a linked sort on an enabled dimension', async () => {
+    const NATURE = '11111111-1111-4111-8111-111111111111';
+    dimensions.list = [DEFAULT_DIMENSION, dimension(NATURE, 'Nature', 1)];
+    await renderPage(`/ops/capex?sort=analytics_${NATURE}:ASC`);
+    for (const search of seen.searches) expect(new URLSearchParams(search).get('sort')).toBe(`analytics_${NATURE}:ASC`);
   });
 });
