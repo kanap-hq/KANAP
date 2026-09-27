@@ -129,7 +129,7 @@ async function loadItems(manager: EntityManager, scope: AmountScope, tenantId: s
   );
 }
 
-/** Versions of the items for the years given, one per item and year (the newest when several exist, as the budget tab shows). */
+/** Versions of the items for the years given, one per item and year (both version tables are unique per item and year). */
 export async function loadVersions(
   manager: EntityManager,
   scope: AmountScope,
@@ -147,7 +147,7 @@ export async function loadVersions(
      ORDER BY created_at DESC, id DESC`,
     years ? [tenantId, itemIds, years] : [tenantId, itemIds],
   );
-  // capex_versions has no unique (item, year) index (spend_versions has one): keep the first, the newest.
+  // Both tables have a unique (item, year) index (capex_versions since 1853640000000); keeping the first, the newest, is only a guard.
   for (const row of rows) {
     const key = `${row.item_id}:${Number(row.budget_year)}`;
     if (!byItemYear.has(key)) byItemYear.set(key, { ...row, budget_year: Number(row.budget_year) });

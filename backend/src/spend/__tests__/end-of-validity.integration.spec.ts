@@ -70,6 +70,7 @@ function itemService(kind: Kind): any {
   args[7] = identityFx;
   args[9] = { syncFromSupplier: async () => undefined };
   args[10] = new ItemNumberService();
+  args[11] = { notifyStatusChange: () => undefined };
   return new (CapexItemsService as any)(...args);
 }
 
@@ -369,18 +370,17 @@ async function testListDateFilterKeepsLifecycle(kind: Kind) {
 }
 
 /**
- * The summaries sort on the end of validity in memory (CAPEX always, OPEX with
- * a quick search): chronological order, blanks last ascending, first descending.
+ * The summaries sort on the end of validity in memory when a quick search is
+ * given (in SQL otherwise): chronological order, blanks last ascending, first descending.
  */
 async function testSummarySortsByDate(kind: Kind) {
   await withTenant(`${kind}-sort`, async (runner, tenantId) => {
     await seedListItems(runner, kind, tenantId);
     const svc = itemService(kind);
     const nameOf = (row: any) => (kind === 'opex' ? row.product_name : row.description);
-    if (kind === 'capex') svc.enrichSummaryItems = async (rows: any[]) => rows;
     const opts = { manager: runner.manager };
     // "end" matches every seeded name, so the quick search keeps them all and forces the in-memory sort.
-    const search = kind === 'opex' ? { q: 'end' } : {};
+    const search = { q: 'end' };
     const rows = await runner.query(`SELECT id, ${kind === 'opex' ? 'product_name' : 'description'} AS name FROM ${table(kind)} WHERE tenant_id = $1`, [tenantId]);
     const nameById = new Map(rows.map((r: any) => [r.id, r.name]));
 
@@ -391,6 +391,8 @@ async function testSummarySortsByDate(kind: Kind) {
 
     const ids = await svc.summaryIds({ ...search, sort: 'disabled_at:ASC' }, opts);
     assert.deepEqual(ids.ids.map((id: string) => nameById.get(id)), ['Ends 2031', 'Ends 2032', 'No end'], `${kind} summary ids: ascending end of validity`);
+    const inSql = await svc.summary({ sort: 'disabled_at:ASC' }, opts);
+    assert.deepEqual(inSql.items.map(nameOf), ['Ends 2031', 'Ends 2032', 'No end'], `${kind} summary: the same order sorted in SQL`);
   });
 }
 
@@ -400,7 +402,6 @@ async function testSummaryDateFilterWithActiveSince(kind: Kind) {
     await seedListItems(runner, kind, tenantId);
     const svc = itemService(kind);
     const nameOf = (row: any) => (kind === 'opex' ? row.product_name : row.description);
-    if (kind === 'capex') svc.enrichSummaryItems = async (rows: any[]) => rows;
     const opts = { manager: runner.manager };
     const before2032 = JSON.stringify({ disabled_at: { filterType: 'date', type: 'lessThan', dateFrom: '2032-01-01 00:00:00' } });
 

@@ -59,9 +59,10 @@ async function testYearsAfterTheEndContributeNothing() {
     const open: any = byId.get(lines.open);
     assert.ok(ending && open, 'both lines are listed');
     assert.equal(ending.versions.y.totals.budget, 120, 'the year of the end keeps its amounts');
-    assert.deepEqual(ending.versions.yPlus1.totals, { budget: 0, follow_up: 0, landing: 0, revision: 0 }, 'fixed slot after the end: nothing');
+    const nothing = { budget: 0, revision: 0, forecast: 0, follow_up: 0, landing: 0 };
+    assert.deepEqual(ending.versions.yPlus1.totals, nothing, 'fixed slot after the end: nothing');
     assert.equal(ending.versions.yPlus1.version_id, undefined);
-    assert.deepEqual(ending.versions[`y${Y + 1}`].totals, { budget: 0, follow_up: 0, landing: 0, revision: 0 }, 'requested slot after the end: nothing');
+    assert.deepEqual(ending.versions[`y${Y + 1}`].totals, nothing, 'requested slot after the end: nothing');
     assert.equal(open.versions.y.totals.budget, 120);
     assert.equal(open.versions.yPlus1.totals.budget, 240, 'without an end of validity both years count');
     assert.equal(open.versions[`y${Y + 1}`].totals.budget, 240);

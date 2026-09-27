@@ -6,7 +6,7 @@ import {
 } from '../notifications.constants';
 
 /**
- * Expiry warnings (contract cancellation deadline / end date, OPEX end of validity) go only
+ * Expiry warnings (contract cancellation deadline / end date, OPEX and CAPEX end of validity) go only
  * to users who opted in: emails on, budget notifications on, expiration warnings on. The
  * same-day guard must only record a recipient who is actually emailed, so a user who opts in
  * after a skipped run still gets the reminder. The guard stops a same-day re-run of the task
@@ -55,7 +55,7 @@ function createService() {
 // A reminder 14 days before a deadline on 2026-10-20, sent by the 08:00 UTC run of 2026-10-06.
 async function warn(
   svc: NotificationsService,
-  itemType: 'contract' | 'opex',
+  itemType: 'contract' | 'opex' | 'capex',
   recipients: typeof ALICE[],
   daysRemaining = 14,
 ) {
@@ -73,7 +73,7 @@ async function warn(
   await new Promise((resolve) => setImmediate(resolve));
 }
 
-async function casesFor(itemType: 'contract' | 'opex') {
+async function casesFor(itemType: 'contract' | 'opex' | 'capex') {
   const label = (s: string) => `[${itemType}] ${s}`;
 
   {
@@ -155,6 +155,7 @@ async function casesFor(itemType: 'contract' | 'opex') {
 async function run() {
   await casesFor('contract');
   await casesFor('opex');
+  await casesFor('capex');
   console.log('expiry-warning-opt-in: all cases passed');
 }
 

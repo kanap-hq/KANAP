@@ -62,7 +62,9 @@ function testClientCannotRaiseTheCeilingOnAListPath() {
 
 /**
  * Source-level guard: every writer that asks for the whole set must pass the flag, and every
- * delegate that receives it must actually branch on it.
+ * delegate that receives it must actually branch on it. The CAPEX item export is not one of
+ * them any more: it reads every item without the list pagination, so it has no cap at all
+ * (`spend/__tests__/budget-summary.integration.spec.ts` checks an ended line is in the file).
  */
 function testWholeSetPathsPassTheExportFlag() {
   const srcRoot = path.join(__dirname, '..', '..');
@@ -73,7 +75,6 @@ function testWholeSetPathsPassTheExportFlag() {
     'departments/departments.service.ts',
     'suppliers/suppliers.service.ts',
     'business-processes/business-processes.service.ts',
-    'capex/capex-items.service.ts',
     'admin/coa-templates/admin-coa-templates.service.ts',
   ];
   const missing = CALL_SITES.filter((relative) => {
@@ -88,7 +89,6 @@ function testWholeSetPathsPassTheExportFlag() {
     'departments/departments.service.ts',
     'suppliers/suppliers.service.ts',
     'business-processes/business-processes.service.ts',
-    'capex/capex-items.service.ts',
     'admin/coa-templates/admin-coa-templates.service.ts',
   ];
   const notBranching = DELEGATES.filter((relative) => {

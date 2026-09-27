@@ -11,8 +11,9 @@ import {
   seedVersion,
 } from '../../spend/__tests__/round-inputs.fixtures';
 
-// The CAPEX summary accepts `years` like OPEX: each requested year gets a
-// `y<year>` slot (same shape as the fixed ones), the fixed slots are unchanged.
+// The CAPEX summary accepts `years` like OPEX: the requested years add to the
+// fixed window (Y-2..Y+2), every year read gets a `y<year>` slot (same shape
+// as the fixed ones, five totals each), the fixed slots are unchanged.
 
 const identityFx = {
   resolveRates: async () => ({ map: new Map(), settings: { reportingCurrency: 'EUR' } }),
@@ -44,25 +45,28 @@ async function testRequestedYearsGetSlots() {
     const plain = (await svc.summary({}, { manager: runner.manager })).items[0];
     const withYears = (await svc.summary({ years: `${later},${afterThat},abc,0999` }, { manager: runner.manager })).items[0];
 
-    for (const key of ['yMinus1', 'y', 'yPlus1', 'yPlus2']) {
-      assert.deepEqual(withYears.versions[key], plain.versions[key], `fixed slot ${key} unchanged`);
+    const fixedKeys = ['yMinus2', 'yMinus1', 'y', 'yPlus1', 'yPlus2'];
+    const windowKeys = [Y - 2, Y - 1, Y, Y + 1, Y + 2].map((year) => `y${year}`);
+    for (const key of [...fixedKeys, ...windowKeys]) {
+      assert.deepEqual(withYears.versions[key], plain.versions[key], `slot ${key} unchanged`);
     }
     assert.equal(withYears.versions.y.totals.budget, 120, 'the current year is still read');
+    assert.deepEqual(withYears.versions[`y${Y}`], withYears.versions.y, 'the current year reads the same under both keys');
     assert.deepEqual(
       Object.keys(withYears.versions),
-      ['yMinus1', 'y', 'yPlus1', 'yPlus2', `y${later}`, `y${afterThat}`],
+      [...fixedKeys, ...windowKeys, `y${later}`, `y${afterThat}`],
       'one slot per valid requested year, nothing for invalid entries',
     );
-    assert.deepEqual(withYears.versions[`y${later}`].totals, { budget: 1200, follow_up: 0, landing: 0, revision: 1.2 });
+    assert.deepEqual(withYears.versions[`y${later}`].totals, { budget: 1200, revision: 1.2, forecast: 0, follow_up: 0, landing: 0 });
     assert.equal(withYears.versions[`y${later}`].year, later);
     assert.equal(withYears.versions[`y${later}`].version_id, first);
     assert.equal(withYears.versions[`y${later}`].reporting.budget, 1200, 'the slot carries reporting totals like the fixed ones');
-    assert.deepEqual(withYears.versions[`y${afterThat}`].totals, { budget: 0, follow_up: 0, landing: 0, revision: 600 });
-    assert.deepEqual(Object.keys(plain.versions), ['yMinus1', 'y', 'yPlus1', 'yPlus2'], 'without years, the fixed keys only');
+    assert.deepEqual(withYears.versions[`y${afterThat}`].totals, { budget: 0, revision: 600, forecast: 0, follow_up: 0, landing: 0 });
+    assert.deepEqual(Object.keys(plain.versions), [...fixedKeys, ...windowKeys], 'without years, the fixed window only');
 
     // A requested year without a version reads as the fixed slots do.
     const empty = (await svc.summary({ years: String(Y + 6) }, { manager: runner.manager })).items[0];
-    assert.deepEqual(empty.versions[`y${Y + 6}`].totals, { budget: 0, follow_up: 0, landing: 0, revision: 0 });
+    assert.deepEqual(empty.versions[`y${Y + 6}`].totals, { budget: 0, revision: 0, forecast: 0, follow_up: 0, landing: 0 });
   });
 }
 

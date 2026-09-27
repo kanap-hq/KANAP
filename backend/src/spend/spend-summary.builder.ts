@@ -1,105 +1,296 @@
+import { BadRequestException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { SpendItem } from './spend-item.entity';
 import { SpendVersion } from './spend-version.entity';
-import { SpendAmount } from './spend-amount.entity';
+import { CapexItem } from '../capex/capex-item.entity';
+import { CapexVersion } from '../capex/capex-version.entity';
 import { Company } from '../companies/company.entity';
 import { Department } from '../departments/department.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { Account } from '../accounts/account.entity';
 import { AnalyticsCategory } from '../analytics/analytics-category.entity';
 import { User } from '../users/user.entity';
-import { AllocationCalculatorService, AllocationComputation } from './allocation-calculator.service';
-import { FxRateService, FxLookupKey, FxResolvedRate } from '../currency/fx-rate.service';
+import { FxLookupKey, FxRateService, FxResolvedRate } from '../currency/fx-rate.service';
 import { ACTIVE_TASK_STATUSES } from '../tasks/task.entity';
+import { formatCents, toCents } from '../common/amount';
+import { normalizeAgFilterModel } from '../common/ag-grid-filtering';
+import { StatusState } from '../common/status';
+import { formatAllocationMethodLabel } from './allocation-utils';
 
-export type SpendSummaryRow = SpendItem & {
-  analytics_category_id: string | null;
-  analytics_category_name: string | null;
-  project_name?: string | null;
-  project_stream_name?: string | null;
-  project_category_name?: string | null;
-  latest_contract_id: string | null;
-  latest_contract_name: string | '';
+/**
+ * The summary rows of the OPEX and CAPEX lists, built once for both item types.
+ * Everything that differs between the two lives in a scope config; the query
+ * functions (paging, filters, totals) are in `budget-summary.ts`.
+ */
+
+/**
+ * The five budget columns are equal slots: every year of the summary carries
+ * all five, and every behaviour iterates this table (no column is special).
+ * `measure` is the amount column, `key` the slot total, `suffix` the field
+ * suffix (`yPlus1Forecast`), `ai` the AI key part (`y_plus1_forecast`), `label`
+ * the product default name. The keys are technical aliases kept for the API.
+ */
+export const SUMMARY_COLUMNS = [
+  { measure: 'planned', key: 'budget', suffix: 'Budget', ai: 'budget', label: 'Budget' },
+  { measure: 'committed', key: 'revision', suffix: 'Revision', ai: 'review', label: 'Revision' },
+  { measure: 'forecast', key: 'forecast', suffix: 'Forecast', ai: 'forecast', label: 'Forecast' },
+  { measure: 'actual', key: 'follow_up', suffix: 'FollowUp', ai: 'actual', label: 'Actuals' },
+  { measure: 'expected_landing', key: 'landing', suffix: 'Landing', ai: 'landing', label: 'Expected landing' },
+] as const;
+
+export type SummaryColumn = (typeof SUMMARY_COLUMNS)[number];
+export type SlotMetric = SummaryColumn['key'];
+
+/** The slots every row carries, relative to the current year. */
+export const FIXED_SLOTS = [
+  { key: 'yMinus2', offset: -2, ai: 'y_minus2', label: 'Y-2' },
+  { key: 'yMinus1', offset: -1, ai: 'y_minus1', label: 'Y-1' },
+  { key: 'y', offset: 0, ai: 'y', label: 'Y' },
+  { key: 'yPlus1', offset: 1, ai: 'y_plus1', label: 'Y+1' },
+  { key: 'yPlus2', offset: 2, ai: 'y_plus2', label: 'Y+2' },
+] as const;
+
+export type FixedSlot = (typeof FIXED_SLOTS)[number];
+
+export type SummaryScope = 'opex' | 'capex';
+
+export interface SummaryScopeConfig {
+  scope: SummaryScope;
+  itemEntity: typeof SpendItem | typeof CapexItem;
+  versionEntity: typeof SpendVersion | typeof CapexVersion;
+  itemTable: string;
+  versionTable: string;
+  amountTable: string;
+  versionItemFk: string;
+  contractLink: { table: string; itemColumn: string };
+  projectLink: { table: string; itemColumn: string };
+  taskObjectType: string;
+  refPrefix: string;
+  nameField: string;
+  /** Columns of the item table: the only fields a list may filter or sort in SQL. */
+  columns: readonly string[];
+  /** Text columns: a set, text or blank filter on them runs in SQL. */
+  textColumns: readonly string[];
+  /** Enum columns: filtered in SQL as text, sorted in memory (their SQL order is the declaration order). */
+  enumColumns: readonly string[];
+  /** Item fields of this type only, searched by the quick search and offered by the filter values. */
+  extraFields: readonly string[];
+}
+
+// Table and column names come only from here: never from the caller.
+export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
+  opex: {
+    scope: 'opex',
+    itemEntity: SpendItem,
+    versionEntity: SpendVersion,
+    itemTable: 'spend_items',
+    versionTable: 'spend_versions',
+    amountTable: 'spend_amounts',
+    versionItemFk: 'spend_item_id',
+    contractLink: { table: 'contract_spend_items', itemColumn: 'spend_item_id' },
+    projectLink: { table: 'portfolio_project_opex', itemColumn: 'opex_id' },
+    taskObjectType: 'spend_item',
+    refPrefix: 'opx',
+    nameField: 'product_name',
+    columns: [
+      'id', 'item_number', 'product_name', 'description', 'supplier_id', 'account_id', 'paying_company_id', 'currency',
+      'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id',
+      'contract_id', 'notes', 'created_at', 'updated_at',
+    ],
+    textColumns: ['product_name', 'description', 'currency', 'notes'],
+    enumColumns: ['status'],
+    extraFields: [],
+  },
+  capex: {
+    scope: 'capex',
+    itemEntity: CapexItem,
+    versionEntity: CapexVersion,
+    itemTable: 'capex_items',
+    versionTable: 'capex_versions',
+    amountTable: 'capex_amounts',
+    versionItemFk: 'capex_item_id',
+    contractLink: { table: 'contract_capex_items', itemColumn: 'capex_item_id' },
+    projectLink: { table: 'portfolio_project_capex', itemColumn: 'capex_id' },
+    taskObjectType: 'capex_item',
+    refPrefix: 'cpx',
+    nameField: 'description',
+    columns: [
+      'id', 'item_number', 'description', 'paying_company_id', 'supplier_id', 'account_id', 'ppe_type', 'investment_type', 'priority',
+      'currency', 'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id',
+      'notes', 'created_at', 'updated_at',
+    ],
+    textColumns: ['description', 'currency', 'notes'],
+    enumColumns: ['ppe_type', 'investment_type', 'priority', 'status'],
+    extraFields: ['ppe_type', 'investment_type', 'priority'],
+  },
+};
+
+type AllocationShareLike = { company_id: string | null; department_id: string | null; allocation_pct: number };
+type AllocationLike = { resolvedMethod?: string | null; shares?: AllocationShareLike[]; error?: string | null };
+
+export interface SummaryDeps {
+  allocationCalculator: {
+    computeForVersions(versions: any[], opts?: { manager?: EntityManager; suppressErrors?: boolean }): Promise<Map<string, AllocationLike>>;
+  };
+  fxRates: Pick<FxRateService, 'resolveRates' | 'convertValue'>;
+  /** Rows the list page and the filter values build at most (default in `budget-summary.ts`). */
+  memoryRowCap?: number;
+}
+
+/**
+ * Columns whose order is not alphabetical: the in-memory sort ranks their
+ * values like SQL does (`status_state` enum order), so a quick search never
+ * changes the order of the list.
+ */
+export const FIXED_SORT_ORDERS: Record<string, readonly string[]> = {
+  status: [StatusState.ENABLED, StatusState.DISABLED],
+};
+
+export type SummarySlotTotals = Record<SlotMetric, number>;
+
+export type SummarySlot = {
+  year?: number;
+  version_id?: string;
+  totals: SummarySlotTotals;
+  reporting?: SummarySlotTotals & {
+    currency: string;
+    reporting_currency: string;
+    fx_rate: number;
+    fx_source: FxResolvedRate['source'];
+    fx_rate_set_id: string | null;
+  };
+};
+
+export type BudgetSummaryRow = Record<string, any> & {
+  id: string;
+  company_name: string | null;
+  paying_company_name: string | null;
   supplier?: { id: string; name: string };
   supplier_name?: string;
   account?: { id: string; account_number: string; account_name: string };
   account_number?: string;
   account_name?: string;
   account_display?: string;
-  owner_it_name?: string;
-  owner_business_name?: string;
-  main_recipient?: {
-    company_id: string | null;
-    department_id: string | null;
-    pct?: number;
-    label: string;
-  } | null;
-  versions: Record<string, {
-    year?: number;
-    totals: {
-      budget: number;
-      follow_up: number;
-      landing: number;
-      revision: number;
-    };
-    version_id?: string;
-    reporting?: {
-      budget: number;
-      follow_up: number;
-      landing: number;
-      revision: number;
-      currency: string;
-      reporting_currency: string;
-      fx_rate: number;
-      fx_source: FxResolvedRate['source'];
-      fx_rate_set_id: string | null;
-    };
-  }>;
-  latest_task?: { id: string; title?: string | null; description?: string | null; status?: string; created_at?: Date } | null;
-  spread_mode_for_y?: string | null;
-  allocation_method_label?: string;
-  allocation_warning?: string | null;
-  account_warning?: string | null;
+  account_warning: string | null;
+  owner_it_name: string;
+  owner_business_name: string;
+  analytics_category_id: string | null;
+  analytics_category_name: string | null;
+  latest_contract_id: string | null;
+  latest_contract_name: string;
+  project_name: string | null;
+  project_stream_name: string | null;
+  project_category_name: string | null;
+  latest_task?: { id: string; title: string | null; description: string | null; status: string; created_at: Date } | null;
+  spread_mode_for_y: 'flat' | 'manual' | null;
+  allocation_method_label: string;
+  allocation_warning: string | null;
+  main_recipient?: { company_id: string | null; department_id: string | null; pct?: number; label: string } | null;
+  next_year_allocation_method_label?: string;
+  versions: Record<string, SummarySlot>;
 };
 
-export interface SpendSummaryBuildParams {
-  manager: EntityManager;
-  items: SpendItem[];
+/** The OPEX name of the row type, kept for existing imports. */
+export type SpendSummaryRow = BudgetSummaryRow;
+
+export interface BuildRowsOptions {
+  /** Every year to read; each gets a `y<year>` slot next to the fixed ones. */
   years: number[];
   currentYear: number;
-  allocationCalculator: AllocationCalculatorService;
-  formatAllocationMethodLabel: (method?: string | null) => string;
-  includeRecipientDetails?: boolean;
   includeLatestTask?: boolean;
-  fxRates: FxRateService;
-  tenantId?: string | null;
+  includeRecipientDetails?: boolean;
+  includeNextYearAllocation?: boolean;
 }
 
-export interface SpendSummaryBuildResult {
-  rows: SpendSummaryRow[];
-  versionsByItemYear: Map<string, Map<number, SpendVersion>>;
-  versionTotalsById: Map<string, VersionAnnualTotals>;
-  versionReportingTotalsById: Map<string, VersionReportingTotals>;
-}
+type Cents = Record<SlotMetric, bigint>;
 
-export interface VersionAnnualTotals {
-  planned: number;
-  actual: number;
-  expected_landing: number;
-  committed: number;
-}
-
-export interface VersionReportingTotals extends VersionAnnualTotals {
+type VersionReporting = {
+  cents: Cents;
   currency: string;
   reporting_currency: string;
   fx_rate: number;
   fx_source: FxResolvedRate['source'];
   fx_rate_set_id: string | null;
-  captured_at: Date | null;
+};
+
+export interface VersionTotals {
+  /** One version per item and year: the newest when several exist, as the budget tab shows. */
+  versionsByItemYear: Map<string, Map<number, any>>;
+  /** Per version, in the item's currency. */
+  cents: Map<string, Cents>;
+  /** Per version with amounts, converted to the reporting currency. */
+  reporting: Map<string, VersionReporting>;
+  reportingCurrency: string;
 }
 
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+const zeroCents = (): Cents => Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, 0n])) as Cents;
+
+export function centsToNumbers(cents: Cents): SummarySlotTotals {
+  return Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, Number(formatCents(cents[c.key]))])) as SummarySlotTotals;
+}
+
+/** The tenant of the request transaction; every engine query names it explicitly besides RLS. */
+export async function summaryTenantId(manager: EntityManager): Promise<string> {
+  const [row] = await manager.query(`SELECT app_current_tenant() AS tenant_id`);
+  const tenantId = row?.tenant_id as string | null;
+  if (!tenantId) throw new BadRequestException('Tenant context is required');
+  return tenantId;
+}
+
+/** Four-digit years from 1000 to 9999, without duplicates (`2028,2029`, an array, or numbers); anything else is ignored. */
+export function parseSummaryYears(raw: unknown): number[] {
+  const parts = Array.isArray(raw) ? raw.flatMap((part) => String(part).split(',')) : typeof raw === 'string' ? raw.split(',') : [];
+  const years = parts.map((part) => String(part).trim()).filter((part) => /^\d{4}$/.test(part)).map(Number);
+  return Array.from(new Set(years.filter((year) => year >= 1000)));
+}
+
+/** The UTC year of the end of validity: later years show nothing. */
+function endOfValidityYear(disabledAt: unknown): number | null {
+  if (!disabledAt) return null;
+  const date = disabledAt instanceof Date ? disabledAt : new Date(disabledAt as string);
+  return Number.isNaN(date.getTime()) ? null : date.getUTCFullYear();
+}
+
+/** The version an item shows for `year`: none after the year of its end of validity. */
+export function versionWithinValidity<T>(perYear: Map<number, T> | undefined, year: number, disabledAt: unknown): T | undefined {
+  const endYear = endOfValidityYear(disabledAt);
+  return endYear != null && year > endYear ? undefined : perYear?.get(year);
+}
+
+const SLOT_FIELD = new RegExp(
+  `^(${[...FIXED_SLOTS.filter((s) => s.key !== 'y').map((s) => s.key), 'y\\d{4}', 'y'].join('|')})(${SUMMARY_COLUMNS.map((c) => c.suffix).join('|')})$`,
+);
+
+/** `<slot><Suffix>` (`yPlus1Forecast`, `y2028Revision`) to its slot and column; null for any other field. */
+export function resolveAmountField(field: string): { slot: string; year: number | null; column: SummaryColumn } | null {
+  const match = SLOT_FIELD.exec(String(field ?? ''));
+  if (!match) return null;
+  const [, slot, suffix] = match;
+  const column = SUMMARY_COLUMNS.find((c) => c.suffix === suffix)!;
+  const dynamic = /^y(\d{4})$/.exec(slot);
+  if (dynamic) {
+    const year = Number(dynamic[1]);
+    return year >= 1000 ? { slot, year, column } : null;
+  }
+  return { slot, year: null, column };
+}
+
+/** Years named by `y<YYYY><Suffix>` fields (a sort or a filter key), so their slot is loaded. */
+export function yearsNamedByFields(fields: string[]): number[] {
+  const years = new Set<number>();
+  for (const field of fields) {
+    const resolved = resolveAmountField(field);
+    if (resolved?.year != null) years.add(resolved.year);
+  }
+  return Array.from(years);
+}
+
+function slotValue(row: any, slotKey: string, metric: SlotMetric): number {
+  const slot = row?.versions?.[slotKey];
+  if (!slot) return 0;
+  if (slot.reporting && typeof slot.reporting[metric] === 'number') return slot.reporting[metric];
+  if (slot.totals && typeof slot.totals[metric] === 'number') return slot.totals[metric];
+  return 0;
 }
 
 function displayName(user?: User | null): string {
@@ -110,36 +301,132 @@ function displayName(user?: User | null): string {
   return name || (user as any).email || '';
 }
 
-function toTotals(
-  version: SpendVersion | undefined,
-  versionTotalsById: Map<string, VersionAnnualTotals>,
-  versionReportingTotalsById: Map<string, VersionReportingTotals>
-) {
-  if (!version) {
-    return {
-      year: undefined,
-      totals: { budget: 0, follow_up: 0, landing: 0, revision: 0 },
-      version_id: undefined,
-      reporting: undefined,
-    };
+const byName = (a: string, b: string) => a.localeCompare(b);
+const joinNames = (names: string[]) => (names.length ? names.join(', ') : null);
+
+/**
+ * The project fields join the names of every linked project with ", ". The
+ * names themselves are kept per built row, so a filter or a filter-value list
+ * can work with one name (a name may itself contain ", ").
+ */
+export const PROJECT_LIST_FIELDS: readonly string[] = ['project_name', 'project_stream_name', 'project_category_name'];
+const projectNamesByRow = new WeakMap<object, Record<string, string[]>>();
+
+function projectNames(row: any, field: string): string[] {
+  const lists = row && typeof row === 'object' ? projectNamesByRow.get(row) : undefined;
+  if (lists) return lists[field] ?? [];
+  // A row not built here (a copy, a test double) carries the joined value only.
+  const joined = row?.[field];
+  return joined == null || joined === '' ? [] : String(joined).split(', ').filter(Boolean);
+}
+
+/** Every value a row holds for `field`: each linked name for the project fields, else the one field value. */
+export function summaryFieldValues(row: any, field: string): unknown[] {
+  return PROJECT_LIST_FIELDS.includes(field) ? projectNames(row, field) : [getSummaryFieldValue(row, field)];
+}
+
+/**
+ * Versions of the items for the given years (the newest per item and year) and
+ * their totals: one SQL aggregate per version (months of its own year only),
+ * kept in cents, and each version converted to the reporting currency once.
+ */
+export async function loadVersionTotals(
+  config: SummaryScopeConfig,
+  deps: Pick<SummaryDeps, 'fxRates'>,
+  manager: EntityManager,
+  tenantId: string,
+  items: any[],
+  years: number[],
+  opts: { reporting: boolean },
+): Promise<VersionTotals> {
+  const result: VersionTotals = { versionsByItemYear: new Map(), cents: new Map(), reporting: new Map(), reportingCurrency: 'EUR' };
+  const itemIds = items.map((item) => item.id);
+  const uniqueYears = Array.from(new Set(years));
+  const versions: any[] = itemIds.length && uniqueYears.length
+    ? await manager.getRepository<any>(config.versionEntity as any)
+      .createQueryBuilder('v')
+      .where('v.tenant_id = :tenantId', { tenantId })
+      .andWhere(`v.${config.versionItemFk} = ANY(:itemIds)`, { itemIds })
+      .andWhere('v.budget_year = ANY(:years)', { years: uniqueYears })
+      .orderBy('v.created_at', 'DESC')
+      .addOrderBy('v.id', 'DESC')
+      .getMany()
+    : [];
+  const kept: any[] = [];
+  for (const version of versions) {
+    const itemId = version[config.versionItemFk] as string;
+    const year = Number(version.budget_year);
+    let perYear = result.versionsByItemYear.get(itemId);
+    if (!perYear) {
+      perYear = new Map();
+      result.versionsByItemYear.set(itemId, perYear);
+    }
+    if (perYear.has(year)) continue;
+    perYear.set(year, version);
+    kept.push(version);
   }
-  const sums = versionTotalsById.get(version.id) || { planned: 0, actual: 0, expected_landing: 0, committed: 0 };
-  const reporting = versionReportingTotalsById.get(version.id) || null;
+
+  if (kept.length) {
+    const sums: Array<Record<string, string>> = await manager.query(
+      `SELECT a.version_id, ${SUMMARY_COLUMNS.map((c) => `COALESCE(SUM(a.${c.measure}), 0)::text AS ${c.measure}`).join(', ')}
+       FROM ${config.amountTable} a
+       JOIN ${config.versionTable} v ON v.id = a.version_id AND v.tenant_id = a.tenant_id
+       WHERE a.tenant_id = $1
+         AND a.version_id = ANY($2::uuid[])
+         AND EXTRACT(YEAR FROM a.period) = v.budget_year
+       GROUP BY a.version_id`,
+      [tenantId, kept.map((v) => v.id)],
+    );
+    for (const row of sums) {
+      result.cents.set(row.version_id, Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, toCents(row[c.measure])])) as Cents);
+    }
+  }
+
+  if (!opts.reporting) return result;
+
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const currencyOf = (version: any) => String(itemById.get(version[config.versionItemFk])?.currency || 'EUR').trim().toUpperCase();
+  const lookups: FxLookupKey[] = kept.map((version) => ({
+    key: '',
+    rateSetId: version.fx_rate_set_id ?? null,
+    fiscalYear: Number(version.budget_year),
+    sourceCurrency: currencyOf(version),
+  }));
+  const fx = await deps.fxRates.resolveRates(tenantId, lookups, { manager });
+  result.reportingCurrency = fx.settings?.reportingCurrency ?? 'EUR';
+  for (const version of kept) {
+    const cents = result.cents.get(version.id);
+    if (!cents) continue;
+    const currency = currencyOf(version);
+    const rate = fx.map.get(`${version.fx_rate_set_id || 'live'}:${Number(version.budget_year)}:${currency}`);
+    const fxRate = rate?.rate ?? 1;
+    result.reporting.set(version.id, {
+      cents: Object.fromEntries(SUMMARY_COLUMNS.map((c) => [
+        c.key,
+        toCents(deps.fxRates.convertValue(Number(formatCents(cents[c.key])), fxRate)),
+      ])) as Cents,
+      currency,
+      reporting_currency: rate?.reportingCurrency ?? result.reportingCurrency,
+      fx_rate: fxRate,
+      fx_source: rate?.source ?? 'identity',
+      fx_rate_set_id: version.fx_rate_set_id ?? null,
+    });
+  }
+  return result;
+}
+
+function toSlot(version: any | undefined, totals: VersionTotals): SummarySlot {
+  if (!version) {
+    return { year: undefined, totals: centsToNumbers(zeroCents()), version_id: undefined, reporting: undefined };
+  }
+  const reporting = totals.reporting.get(version.id);
   return {
-    year: (version as any).budget_year as number,
-    totals: {
-      budget: round2(Number(sums.planned || 0)),
-      follow_up: round2(Number(sums.actual || 0)),
-      landing: round2(Number(sums.expected_landing || 0)),
-      revision: round2(Number(sums.committed || 0)),
-    },
+    year: Number(version.budget_year),
+    totals: centsToNumbers(totals.cents.get(version.id) ?? zeroCents()),
     version_id: version.id,
     reporting: reporting
       ? {
-          budget: round2(Number(reporting.planned || 0)),
-          follow_up: round2(Number(reporting.actual || 0)),
-          landing: round2(Number(reporting.expected_landing || 0)),
-          revision: round2(Number(reporting.committed || 0)),
+          ...centsToNumbers(reporting.cents),
           currency: reporting.currency,
           reporting_currency: reporting.reporting_currency,
           fx_rate: reporting.fx_rate,
@@ -150,708 +437,427 @@ function toTotals(
   };
 }
 
-export async function buildSpendSummaryRows(params: SpendSummaryBuildParams): Promise<SpendSummaryBuildResult> {
-  const {
-    manager,
-    items,
-    years,
-    currentYear,
-    allocationCalculator,
-    formatAllocationMethodLabel,
-    includeRecipientDetails = false,
-    includeLatestTask = false,
-  } = params;
+async function findByIds<T>(manager: EntityManager, entity: any, tenantId: string, ids: string[]): Promise<T[]> {
+  if (!ids.length) return [];
+  return manager.getRepository<any>(entity).find({ where: { tenant_id: tenantId, id: In(ids) } as any }) as Promise<T[]>;
+}
 
-  if (!items.length) {
-    return {
-      rows: [],
-      versionsByItemYear: new Map(),
-      versionTotalsById: new Map(),
-      versionReportingTotalsById: new Map(),
-    };
-  }
+const distinct = (values: unknown[]) => Array.from(new Set(values.filter(Boolean))) as string[];
 
-  const itemIds = items.map((i) => i.id);
+/** One summary row per item (same order), for the years given; slots after the end of validity are empty. */
+export async function buildBudgetSummaryRows(
+  config: SummaryScopeConfig,
+  deps: SummaryDeps,
+  manager: EntityManager,
+  tenantId: string,
+  items: any[],
+  options: BuildRowsOptions,
+): Promise<BudgetSummaryRow[]> {
+  if (!items.length) return [];
+  const Y = options.currentYear;
+  const years = Array.from(new Set(options.years)).sort((a, b) => a - b);
+  const itemIds = items.map((item) => item.id);
+  const totals = await loadVersionTotals(config, deps, manager, tenantId, items, years, { reporting: true });
 
-  const categoryIds = Array.from(new Set(items.map((i: any) => i.analytics_category_id).filter(Boolean)));
-  const categories = categoryIds.length
-    ? await manager.getRepository(AnalyticsCategory).find({ where: { id: In(categoryIds) as any } as any })
-    : [];
-  const categoryById = new Map(categories.map((c) => [c.id, c]));
-
-  const latestContracts: Array<{ spend_item_id: string; contract_id: string; contract_name: string; link_created_at: string }> = itemIds.length
-    ? await manager.query(
-        `SELECT DISTINCT ON (csi.spend_item_id)
-           csi.spend_item_id,
-           csi.created_at as link_created_at,
-           c.id as contract_id,
-           c.name as contract_name
-         FROM contract_spend_items csi
-         JOIN contracts c ON csi.contract_id = c.id
-         WHERE csi.spend_item_id = ANY($1)
-         ORDER BY csi.spend_item_id, csi.created_at DESC`,
-        [itemIds],
-      )
-    : [];
-  const latestContractByItem = new Map<string, { id: string; name: string }>();
-  for (const row of latestContracts) {
-    latestContractByItem.set(row.spend_item_id, { id: row.contract_id, name: row.contract_name });
-  }
-
-  const uniqueYears = Array.from(new Set(years));
-  const versions = await manager.getRepository(SpendVersion).find({
-    where: { spend_item_id: In(itemIds) as any, budget_year: In(uniqueYears) as any } as any,
-  });
-  const versionsByItemYear = new Map<string, Map<number, SpendVersion>>();
-  const versionsById = new Map<string, SpendVersion>();
-  for (const version of versions) {
-    versionsById.set(version.id, version);
-    const budgetYear = (version as any).budget_year as number;
-    let perItem = versionsByItemYear.get(version.spend_item_id);
-    if (!perItem) {
-      perItem = new Map<number, SpendVersion>();
-      versionsByItemYear.set(version.spend_item_id, perItem);
-    }
-    perItem.set(budgetYear, version);
-  }
-
-  const versionIds = versions.map((v) => v.id);
-  const versionTotalsById = new Map<string, VersionAnnualTotals>();
-  if (versionIds.length) {
-    const allAmounts = await manager.getRepository(SpendAmount).find({ where: { version_id: In(versionIds) as any } as any });
-    for (const amount of allAmounts) {
-      const versionId = (amount as any).version_id as string;
-      const version = versionsById.get(versionId);
-      if (!version) continue;
-      const periodYear = new Date((amount as any).period as string).getFullYear();
-      const versionYear = (version as any).budget_year as number;
-      if (periodYear !== versionYear) continue;
-      const acc = versionTotalsById.get(versionId) || { planned: 0, actual: 0, expected_landing: 0, committed: 0 };
-      acc.planned += Number((amount as any).planned || 0);
-      acc.actual += Number((amount as any).actual || 0);
-      acc.expected_landing += Number((amount as any).expected_landing || 0);
-      acc.committed += Number((amount as any).committed || 0);
-      versionTotalsById.set(versionId, acc);
-    }
-  }
-
-  const lookupKeys: FxLookupKey[] = [];
-  const itemById = new Map(items.map((it) => [it.id, it]));
-  for (const version of versions) {
-    const item = itemById.get(version.spend_item_id);
-    if (!item) continue;
-    const sourceCurrency = (item as any).currency || 'EUR';
-    lookupKeys.push({
-      key: '',
-      rateSetId: (version as any).fx_rate_set_id ?? null,
-      fiscalYear: (version as any).budget_year as number,
-      sourceCurrency,
-    });
-  }
-
-  const tenantId = params.tenantId || (items[0] ? (items[0] as any).tenant_id : null);
-  const fxResult = tenantId ? await params.fxRates.resolveRates(tenantId, lookupKeys, { manager }) : { map: new Map<string, FxResolvedRate>(), settings: { reportingCurrency: 'EUR', defaultCapexCurrency: 'EUR', defaultSpendCurrency: 'EUR', allowedCurrencies: null } };
-  const fxMap = fxResult.map;
-  const versionReportingTotalsById = new Map<string, VersionReportingTotals>();
-
-  const getFx = (version: SpendVersion, currency: string): FxResolvedRate => {
-    const key = `${(version as any).fx_rate_set_id || 'live'}:${(version as any).budget_year}:${currency.toUpperCase()}`;
-    return fxMap.get(key) || {
-      rate: currency.toUpperCase() === fxResult.settings.reportingCurrency ? 1 : 1,
-      rateSetId: null,
-      fiscalYear: (version as any).budget_year as number,
-      reportingCurrency: fxResult.settings.reportingCurrency,
-      source: 'identity',
-      capturedAt: null,
-    };
+  const versionsOfYear = (year: number) => Array.from(totals.versionsByItemYear.values())
+    .map((perYear) => perYear.get(year))
+    .filter((version): version is any => !!version);
+  const allocate = async (year: number) => {
+    const versions = versionsOfYear(year);
+    return versions.length
+      ? deps.allocationCalculator.computeForVersions(versions, { manager, suppressErrors: true })
+      : new Map<string, AllocationLike>();
   };
+  const allocationForY = await allocate(Y);
+  const allocationForNext = options.includeNextYearAllocation ? await allocate(Y + 1) : new Map<string, AllocationLike>();
 
-  for (const version of versions) {
-    const totals = versionTotalsById.get(version.id);
-    if (!totals) continue;
-    const item = itemById.get(version.spend_item_id);
-    const currency = ((item as any)?.currency || 'EUR').toString().toUpperCase();
-    const fx = getFx(version, currency);
-    versionReportingTotalsById.set(version.id, {
-      planned: params.fxRates.convertValue(totals.planned, fx.rate),
-      actual: params.fxRates.convertValue(totals.actual, fx.rate),
-      expected_landing: params.fxRates.convertValue(totals.expected_landing, fx.rate),
-      committed: params.fxRates.convertValue(totals.committed, fx.rate),
-      currency,
-      reporting_currency: fx.reportingCurrency,
-      fx_rate: fx.rate,
-      fx_source: fx.source,
-      fx_rate_set_id: (version as any).fx_rate_set_id ?? null,
-      captured_at: fx.capturedAt,
-    });
+  const [categories, suppliers, accounts, owners, payingCompanies] = await Promise.all([
+    findByIds<AnalyticsCategory>(manager, AnalyticsCategory, tenantId, distinct(items.map((i) => i.analytics_category_id))),
+    findByIds<Supplier>(manager, Supplier, tenantId, distinct(items.map((i) => i.supplier_id))),
+    findByIds<Account>(manager, Account, tenantId, distinct(items.map((i) => i.account_id))),
+    findByIds<User>(manager, User, tenantId, distinct(items.flatMap((i) => [i.owner_it_id, i.owner_business_id]))),
+    findByIds<Company>(manager, Company, tenantId, distinct(items.map((i) => i.paying_company_id))),
+  ]);
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+  const supplierById = new Map(suppliers.map((s) => [s.id, s]));
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
+  const ownerById = new Map(owners.map((u) => [u.id, u]));
+  const payingCompanyById = new Map(payingCompanies.map((c) => [c.id, c]));
+
+  const contracts: Array<{ item_id: string; contract_id: string; contract_name: string }> = await manager.query(
+    `SELECT DISTINCT ON (l.${config.contractLink.itemColumn})
+            l.${config.contractLink.itemColumn} AS item_id, c.id AS contract_id, c.name AS contract_name
+     FROM ${config.contractLink.table} l
+     JOIN contracts c ON c.id = l.contract_id AND c.tenant_id = l.tenant_id
+     WHERE l.tenant_id = $1 AND l.${config.contractLink.itemColumn} = ANY($2::uuid[])
+     ORDER BY l.${config.contractLink.itemColumn}, l.created_at DESC`,
+    [tenantId, itemIds],
+  );
+  const contractByItem = new Map(contracts.map((row) => [row.item_id, row]));
+
+  // Projects linked in the Relations panel, plus the legacy item field when set and not already linked.
+  const projectRows: Array<{ item_id: string; name: string; stream_name: string | null; category_name: string | null }> = await manager.query(
+    `SELECT l.item_id, p.name, pst.name AS stream_name, pc.name AS category_name
+     FROM (
+       SELECT pl.${config.projectLink.itemColumn} AS item_id, pl.project_id
+       FROM ${config.projectLink.table} pl
+       WHERE pl.tenant_id = $1 AND pl.${config.projectLink.itemColumn} = ANY($2::uuid[])
+       UNION
+       SELECT i.id AS item_id, i.project_id
+       FROM ${config.itemTable} i
+       WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[]) AND i.project_id IS NOT NULL
+     ) l
+     JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = $1
+     LEFT JOIN portfolio_streams pst ON pst.id = p.stream_id AND pst.tenant_id = p.tenant_id
+     LEFT JOIN portfolio_categories pc ON pc.id = p.category_id AND pc.tenant_id = p.tenant_id`,
+    [tenantId, itemIds],
+  );
+  const projectsByItem = new Map<string, typeof projectRows>();
+  for (const row of projectRows) {
+    const list = projectsByItem.get(row.item_id) ?? [];
+    list.push(row);
+    projectsByItem.set(row.item_id, list);
   }
 
-  const versionsForCurrentYear = versions.filter((v) => (v as any).budget_year === currentYear);
-  const allocationDataForYear: Map<string, AllocationComputation> = versionsForCurrentYear.length
-    ? await allocationCalculator.computeForVersions(versionsForCurrentYear, { manager, suppressErrors: true })
-    : new Map<string, AllocationComputation>();
+  const latestTaskByItem = new Map<string, NonNullable<BudgetSummaryRow['latest_task']>>();
+  if (options.includeLatestTask) {
+    const tasks: Array<{ id: string; related_object_id: string; title: string | null; description: string | null; status: string; created_at: Date }> = await manager.query(
+      `SELECT DISTINCT ON (related_object_id) id, related_object_id, title, description, status, created_at
+       FROM tasks
+       WHERE tenant_id = $1
+         AND related_object_type = $2
+         AND related_object_id = ANY($3::uuid[])
+         AND status = ANY($4)
+       ORDER BY related_object_id, created_at DESC`,
+      [tenantId, config.taskObjectType, itemIds, ACTIVE_TASK_STATUSES],
+    );
+    for (const { related_object_id: itemId, ...task } of tasks) latestTaskByItem.set(itemId, task);
+  }
 
-  let companyById: Map<string, Company> | undefined;
-  let departmentById: Map<string, Department> | undefined;
-
-  if (includeRecipientDetails && allocationDataForYear.size) {
-    const companyIds = new Set<string>();
-    const departmentIds = new Set<string>();
-    allocationDataForYear.forEach((entry) => {
-      for (const share of entry.shares) {
-        if (share.company_id) companyIds.add(share.company_id);
-        if (share.department_id) departmentIds.add(share.department_id);
-      }
-    });
-
-    const companies = companyIds.size
-      ? await manager.getRepository(Company).find({ where: { id: In(Array.from(companyIds)) as any } as any })
-      : [];
-    const departments = departmentIds.size
-      ? await manager.getRepository(Department).find({ where: { id: In(Array.from(departmentIds)) as any } as any })
-      : [];
+  let companyById = new Map<string, Company>();
+  let departmentById = new Map<string, Department>();
+  if (options.includeRecipientDetails && allocationForY.size) {
+    const shares = Array.from(allocationForY.values()).flatMap((entry) => entry.shares ?? []);
+    const [companies, departments] = await Promise.all([
+      findByIds<Company>(manager, Company, tenantId, distinct(shares.map((s) => s.company_id))),
+      findByIds<Department>(manager, Department, tenantId, distinct(shares.map((s) => s.department_id))),
+    ]);
     companyById = new Map(companies.map((c) => [c.id, c]));
     departmentById = new Map(departments.map((d) => [d.id, d]));
   }
 
-  let latestTaskByItem: Map<string, { id: string; title: string | null; description: string | null; status: string; created_at: Date }> | undefined;
-  if (includeLatestTask) {
-    const tasks: Array<{ id: string; related_object_id: string; title: string | null; description: string | null; status: string; created_at: Date }> = itemIds.length
-      ? await manager.query(
-          `SELECT DISTINCT ON (related_object_id) id, related_object_id, title, description, status, created_at
-           FROM tasks
-           WHERE related_object_type = 'spend_item'
-             AND related_object_id = ANY($1)
-             AND status = ANY($2)
-           ORDER BY related_object_id, created_at DESC`, [itemIds, ACTIVE_TASK_STATUSES])
-      : [];
-    latestTaskByItem = new Map<string, { id: string; title: string | null; description: string | null; status: string; created_at: Date }>();
-    for (const task of tasks) {
-      const itemId = task.related_object_id;
-      if (!latestTaskByItem.has(itemId)) latestTaskByItem.set(itemId, task);
-    }
-  }
+  const mainRecipient = (allocation: AllocationLike | undefined): BudgetSummaryRow['main_recipient'] => {
+    const shares = allocation?.shares ?? [];
+    if (!shares.length) return null;
+    const top = shares.reduce((acc, share) => (share.allocation_pct > acc.allocation_pct ? share : acc), shares[0]);
+    const company = top.company_id ? companyById.get(top.company_id) : undefined;
+    if (!company) return null;
+    const department = top.department_id ? departmentById.get(top.department_id) : undefined;
+    const pct = Number(top.allocation_pct || 0);
+    return department
+      ? { company_id: top.company_id, department_id: top.department_id, pct, label: `${company.name} - ${department.name} (${pct.toFixed(2)}%)` }
+      : { company_id: top.company_id, department_id: null, pct, label: `${company.name} (${pct.toFixed(2)}%)` };
+  };
 
-  const supplierIds = Array.from(new Set(items.map((i: any) => i.supplier_id).filter(Boolean)));
-  const accountIds = Array.from(new Set(items.map((i: any) => i.account_id).filter(Boolean)));
-  const ownerIds = Array.from(new Set(items.flatMap((i: any) => [i.owner_it_id, i.owner_business_id]).filter(Boolean)));
-  const projectIds = Array.from(new Set(items.map((i: any) => i.project_id).filter(Boolean)));
+  return items.map((item) => {
+    const perYear = totals.versionsByItemYear.get(item.id);
+    const shown = (year: number) => versionWithinValidity(perYear, year, item.disabled_at);
+    const versions: Record<string, SummarySlot> = {};
+    for (const slot of FIXED_SLOTS) versions[slot.key] = toSlot(shown(Y + slot.offset), totals);
+    for (const year of years) versions[`y${year}`] = toSlot(shown(year), totals);
 
-  const suppliers = supplierIds.length
-    ? await manager.getRepository(Supplier).find({ where: { id: In(supplierIds) as any } as any })
-    : [];
-  const accounts = accountIds.length
-    ? await manager.getRepository(Account).find({ where: { id: In(accountIds) as any } as any })
-    : [];
-  const owners = ownerIds.length
-    ? await manager.getRepository(User).find({ where: { id: In(ownerIds) as any } as any })
-    : [];
+    const current = shown(Y);
+    const allocation = current ? allocationForY.get(current.id) : undefined;
+    const next = shown(Y + 1);
+    const nextAllocation = next ? allocationForNext.get(next.id) : undefined;
 
-  const supplierById = new Map(suppliers.map((s) => [s.id, s]));
-  const accountById = new Map(accounts.map((a) => [a.id, a]));
-  const ownerById = new Map(owners.map((u) => [u.id, u]));
-  const projectRows: Array<{ id: string; name: string; stream_name: string | null; category_name: string | null }> = projectIds.length
-    ? await manager.query(
-        `SELECT p.id,
-                p.name,
-                pst.name AS stream_name,
-                pc.name AS category_name
-         FROM portfolio_projects p
-         LEFT JOIN portfolio_streams pst ON pst.id = p.stream_id AND pst.tenant_id = p.tenant_id
-         LEFT JOIN portfolio_categories pc ON pc.id = p.category_id AND pc.tenant_id = p.tenant_id
-         WHERE p.id = ANY($1)`,
-        [projectIds],
-      )
-    : [];
-  const projectById = new Map(projectRows.map((project) => [project.id, project]));
+    const supplier = item.supplier_id ? supplierById.get(item.supplier_id) : undefined;
+    const account = item.account_id ? accountById.get(item.account_id) : undefined;
+    const category = item.analytics_category_id ? categoryById.get(item.analytics_category_id) : undefined;
+    const payingCompany = item.paying_company_id ? payingCompanyById.get(item.paying_company_id) : undefined;
+    const contract = contractByItem.get(item.id);
+    const projects = projectsByItem.get(item.id) ?? [];
+    const projectLists: Record<string, string[]> = {
+      project_name: projects.map((p) => p.name).sort(byName),
+      project_stream_name: distinct(projects.map((p) => p.stream_name)).sort(byName),
+      project_category_name: distinct(projects.map((p) => p.category_name)).sort(byName),
+    };
 
-  // Paying company lookup
-  const payingCompanyIds = Array.from(new Set(items.map((i: any) => i.paying_company_id).filter(Boolean)));
-  const payingCompanies = payingCompanyIds.length
-    ? await manager.getRepository(Company).find({ where: { id: In(payingCompanyIds) as any } as any })
-    : [];
-  const payingCompanyById = new Map(payingCompanies.map((c) => [c.id, c]));
+    // An account from another chart of accounts than the paying company's is obsolete.
+    const accountCoa = (account as any)?.coa_id || null;
+    const companyCoa = (payingCompany as any)?.coa_id || null;
+    const accountWarning = accountCoa && companyCoa && accountCoa !== companyCoa ? 'coa_mismatch' : null;
 
-  const rows: SpendSummaryRow[] = items.map((item) => {
-    const perYear = versionsByItemYear.get(item.id) || new Map<number, SpendVersion>();
-    // Mask versions after the item's disabled year: include values through the fiscal
-    // year of disabled_at; contribute zero for later years.
-    const disabledYear = (item as any)?.disabled_at ? new Date((item as any).disabled_at).getFullYear() : null;
-    const versionMinus2Raw = perYear.get(currentYear - 2);
-    const versionMinus1Raw = perYear.get(currentYear - 1);
-    const versionCurrRaw = perYear.get(currentYear);
-    const versionPlus1Raw = perYear.get(currentYear + 1);
-    const versionPlus2Raw = perYear.get(currentYear + 2);
-    const versionMinus2 = disabledYear != null && (currentYear - 2) > disabledYear ? undefined : versionMinus2Raw;
-    const versionMinus1 = disabledYear != null && (currentYear - 1) > disabledYear ? undefined : versionMinus1Raw;
-    const versionCurr = disabledYear != null && currentYear > disabledYear ? undefined : versionCurrRaw;
-    const versionPlus1 = disabledYear != null && (currentYear + 1) > disabledYear ? undefined : versionPlus1Raw;
-    const versionPlus2 = disabledYear != null && (currentYear + 2) > disabledYear ? undefined : versionPlus2Raw;
-
-    const dynamicVersions: Record<string, any> = {};
-    for (const year of uniqueYears) {
-      const vRaw = perYear.get(year);
-      const v = disabledYear != null && year > disabledYear ? undefined : vRaw;
-      dynamicVersions[`y${year}`] = toTotals(v, versionTotalsById, versionReportingTotalsById);
-    }
-
-    const allocationInfo = versionCurr ? allocationDataForYear.get(versionCurr.id) : undefined;
-    const resolvedMethod = allocationInfo?.resolvedMethod ?? ((versionCurr as any)?.allocation_method as string | undefined);
-    const methodLabel = formatAllocationMethodLabel(resolvedMethod);
-    const allocationWarning = allocationInfo?.error ?? null;
-
-    let mainRecipient: SpendSummaryRow['main_recipient'] = null;
-    if (includeRecipientDetails && allocationInfo?.shares?.length && companyById) {
-      const shares = allocationInfo.shares;
-      const topShare = shares.reduce((acc, share) => {
-        if (!acc) return share;
-        return share.allocation_pct > acc.allocation_pct ? share : acc;
-      }, shares[0]);
-      if (topShare) {
-        const company = topShare.company_id ? companyById.get(topShare.company_id) : undefined;
-        const department = topShare.department_id && departmentById ? departmentById.get(topShare.department_id) : undefined;
-        const pct = Number(topShare.allocation_pct || 0);
-        if (company) {
-          mainRecipient = department
-            ? {
-                company_id: topShare.company_id,
-                department_id: topShare.department_id,
-                pct,
-                label: `${(company as any).name} - ${(department as any).name} (${pct.toFixed(2)}%)`,
-              }
-            : {
-                company_id: topShare.company_id,
-                department_id: null,
-                pct,
-                label: `${(company as any).name} (${pct.toFixed(2)}%)`,
-              };
-        }
-      }
-    }
-
-    const spreadModeForYear = versionCurr ? ((versionCurr as any).input_grain === 'annual' ? 'flat' : 'manual') : null;
-
-    const supplier = (item as any).supplier_id ? supplierById.get((item as any).supplier_id) : undefined;
-    const account = (item as any).account_id ? accountById.get((item as any).account_id) : undefined;
-    const analyticsCategoryId = (item as any).analytics_category_id as string | null;
-    const analyticsCategory = analyticsCategoryId ? categoryById.get(analyticsCategoryId) : undefined;
-    const projectId = (item as any).project_id ?? null;
-    const project = projectId ? projectById.get(projectId) : undefined;
-
-    const payingCompanyId = (item as any).paying_company_id ?? null;
-    const payingCompany = payingCompanyId ? payingCompanyById.get(payingCompanyId) : undefined;
-
-    // Detect obsolete account — account's CoA differs from paying company's CoA
-    let accountWarning: string | null = null;
-    if (account && payingCompany) {
-      const accCoa = (account as any).coa_id || null;
-      const companyCoa = (payingCompany as any).coa_id || null;
-      if (accCoa && companyCoa && accCoa !== companyCoa) {
-        accountWarning = 'coa_mismatch';
-      }
-    }
-
-    const row: SpendSummaryRow = Object.assign({}, item, {
-      analytics_category_id: analyticsCategoryId ?? null,
-      analytics_category_name: analyticsCategory ? (analyticsCategory as any).name : null,
-      project_name: project?.name ?? null,
-      project_stream_name: project?.stream_name ?? null,
-      project_category_name: project?.category_name ?? null,
-      latest_contract_id: latestContractByItem.get(item.id)?.id || null,
-      latest_contract_name: latestContractByItem.get(item.id)?.name || '',
-      supplier: supplier ? { id: supplier.id, name: (supplier as any).name } : undefined,
-      supplier_name: supplier ? (supplier as any).name : undefined,
+    const row: BudgetSummaryRow = {
+      ...item,
+      company_name: payingCompany?.name ?? null,
+      paying_company_name: payingCompany?.name ?? null,
+      supplier: supplier ? { id: supplier.id, name: supplier.name } : undefined,
+      supplier_name: supplier ? supplier.name : undefined,
       account: account ? { id: account.id, account_number: (account as any).account_number, account_name: (account as any).account_name } : undefined,
       account_number: account ? (account as any).account_number : undefined,
       account_name: account ? (account as any).account_name : undefined,
       account_display: account ? `${(account as any).account_number} - ${(account as any).account_name}` : undefined,
-      owner_it_name: displayName(ownerById.get((item as any).owner_it_id) || null),
-      owner_business_name: displayName(ownerById.get((item as any).owner_business_id) || null),
-      paying_company_id: payingCompanyId,
-      paying_company_name: payingCompany ? ((payingCompany as any).name ?? null) : null,
-      main_recipient: mainRecipient,
-      versions: {
-        yMinus2: toTotals(versionMinus2, versionTotalsById, versionReportingTotalsById),
-        yMinus1: toTotals(versionMinus1, versionTotalsById, versionReportingTotalsById),
-        y: toTotals(versionCurr, versionTotalsById, versionReportingTotalsById),
-        yPlus1: toTotals(versionPlus1, versionTotalsById, versionReportingTotalsById),
-        yPlus2: toTotals(versionPlus2, versionTotalsById, versionReportingTotalsById),
-        ...dynamicVersions,
-      },
-      latest_task: includeLatestTask ? latestTaskByItem?.get(item.id) || null : undefined,
-      spread_mode_for_y: spreadModeForYear,
-      allocation_method_label: methodLabel,
-      allocation_warning: allocationWarning,
       account_warning: accountWarning,
-    });
+      owner_it_name: displayName(ownerById.get(item.owner_it_id) || null),
+      owner_business_name: displayName(ownerById.get(item.owner_business_id) || null),
+      analytics_category_id: item.analytics_category_id ?? null,
+      analytics_category_name: category ? category.name : null,
+      latest_contract_id: contract?.contract_id ?? null,
+      latest_contract_name: contract?.contract_name ?? '',
+      project_name: joinNames(projectLists.project_name),
+      project_stream_name: joinNames(projectLists.project_stream_name),
+      project_category_name: joinNames(projectLists.project_category_name),
+      latest_task: options.includeLatestTask ? latestTaskByItem.get(item.id) ?? null : undefined,
+      spread_mode_for_y: current ? (current.input_grain === 'annual' ? 'flat' : 'manual') : null,
+      allocation_method_label: formatAllocationMethodLabel(allocation?.resolvedMethod ?? current?.allocation_method ?? null),
+      allocation_warning: allocation?.error ?? null,
+      versions,
+    };
+    if (options.includeRecipientDetails) row.main_recipient = mainRecipient(allocation);
+    if (options.includeNextYearAllocation) {
+      row.next_year_allocation_method_label = formatAllocationMethodLabel(nextAllocation?.resolvedMethod ?? next?.allocation_method ?? null);
+    }
+    projectNamesByRow.set(row, projectLists);
     return row;
   });
-
-  return {
-    rows,
-    versionsByItemYear,
-    versionTotalsById,
-    versionReportingTotalsById,
-  };
 }
 
-type VersionMetricKey = 'budget' | 'follow_up' | 'landing' | 'revision';
-
-function resolveVersionField(field: string): { slotKey: string; metric: VersionMetricKey } | null {
-  const staticMap: Record<string, { slotKey: string; metric: VersionMetricKey }> = {
-    yMinus2Budget: { slotKey: 'yMinus2', metric: 'budget' },
-    yMinus2Landing: { slotKey: 'yMinus2', metric: 'landing' },
-    yMinus1Budget: { slotKey: 'yMinus1', metric: 'budget' },
-    yMinus1Landing: { slotKey: 'yMinus1', metric: 'landing' },
-    yBudget: { slotKey: 'y', metric: 'budget' },
-    yRevision: { slotKey: 'y', metric: 'revision' },
-    yFollowUp: { slotKey: 'y', metric: 'follow_up' },
-    yLanding: { slotKey: 'y', metric: 'landing' },
-    yPlus1Budget: { slotKey: 'yPlus1', metric: 'budget' },
-    yPlus1Revision: { slotKey: 'yPlus1', metric: 'revision' },
-    yPlus1Landing: { slotKey: 'yPlus1', metric: 'landing' },
-    yPlus2Budget: { slotKey: 'yPlus2', metric: 'budget' },
-    yPlus2Landing: { slotKey: 'yPlus2', metric: 'landing' },
-  };
-  if (staticMap[field]) {
-    return staticMap[field];
-  }
-  const dynamicMatch = field.match(/^y(\d{4})(Budget|Revision|FollowUp|Landing)$/);
-  if (dynamicMatch) {
-    const [, year, metricPart] = dynamicMatch;
-    const metricMap: Record<string, VersionMetricKey> = {
-      Budget: 'budget',
-      Revision: 'revision',
-      FollowUp: 'follow_up',
-      Landing: 'landing',
-    };
-    const metric = metricMap[metricPart];
-    if (metric) {
-      return { slotKey: `y${year}`, metric };
-    }
-  }
-  return null;
+/** The OPEX builder under its former name. */
+export async function buildSpendSummaryRows(params: {
+  manager: EntityManager;
+  items: SpendItem[];
+  years: number[];
+  currentYear: number;
+  allocationCalculator: SummaryDeps['allocationCalculator'];
+  fxRates: SummaryDeps['fxRates'];
+  includeRecipientDetails?: boolean;
+  includeLatestTask?: boolean;
+  tenantId?: string | null;
+}): Promise<{ rows: BudgetSummaryRow[] }> {
+  const tenantId = params.tenantId || (await summaryTenantId(params.manager));
+  const rows = await buildBudgetSummaryRows(
+    SUMMARY_SCOPES.opex,
+    { allocationCalculator: params.allocationCalculator, fxRates: params.fxRates },
+    params.manager,
+    tenantId,
+    params.items,
+    params,
+  );
+  return { rows };
 }
 
-function getVersionMetricValue(row: SpendSummaryRow, slotKey: string, metric: VersionMetricKey): number {
-  const versions = (row as any)?.versions as Record<string, any> | undefined;
-  if (!versions) return 0;
-  const slot = versions[slotKey];
-  if (!slot) return 0;
-  const reporting = slot.reporting;
-  if (reporting && typeof reporting[metric] === 'number') {
-    return reporting[metric] ?? 0;
-  }
-  const totals = slot.totals;
-  if (totals && typeof totals[metric] === 'number') {
-    return totals[metric] ?? 0;
-  }
-  return 0;
-}
-
-export function getSpendSummaryFieldValue(row: SpendSummaryRow, field: string): any {
-  const resolved = resolveVersionField(field);
-  if (resolved) {
-    return getVersionMetricValue(row, resolved.slotKey, resolved.metric);
-  }
+/**
+ * The value a sort, a filter or a filter-value list reads for `field`: an
+ * amount field is the slot's reporting total (item currency when there is no
+ * reporting), a derived field its row value, anything else the item column.
+ * Blank derived text reads as null so blanks sort last ascending.
+ */
+export function getSummaryFieldValue(row: any, field: string): any {
+  const amount = resolveAmountField(field);
+  if (amount) return slotValue(row, amount.slot, amount.column.key);
+  const blankToNull = (value: unknown) => (value == null || value === '' ? null : value);
   switch (field) {
     case 'supplier_name':
-      return row?.supplier_name ?? row?.supplier?.name ?? '';
+      return blankToNull(row?.supplier_name ?? row?.supplier?.name);
     case 'paying_company_name':
-      return (row as any)?.paying_company_name ?? '';
+      return blankToNull(row?.paying_company_name ?? row?.company_name);
+    case 'company_name':
+      return blankToNull(row?.company_name ?? row?.paying_company_name);
     case 'account_display':
-      return row?.account_display ?? '';
-    case 'project_name':
-      return row?.project_name ?? '';
-    case 'project_stream_name':
-      return row?.project_stream_name ?? '';
-    case 'project_category_name':
-      return row?.project_category_name ?? '';
     case 'account_name':
-      return row?.account_name ?? '';
     case 'account_number':
-      return row?.account_number ?? null;
     case 'owner_it_name':
-      return row?.owner_it_name ?? '';
     case 'owner_business_name':
-      return row?.owner_business_name ?? '';
+    case 'analytics_category_name':
+    case 'project_name':
+    case 'project_stream_name':
+    case 'project_category_name':
+    case 'account_warning':
+      return blankToNull(row?.[field]);
     case 'contract_name':
-      return row?.latest_contract_name ?? '';
+      return blankToNull(row?.latest_contract_name);
     case 'allocation_label':
     case 'allocation_method_label':
-      return row?.allocation_method_label ?? '';
+      return blankToNull(row?.allocation_method_label);
     case 'latest_task_text':
-      return row?.latest_task?.title ?? '';
-    case 'account_warning':
-      return row?.account_warning ?? '';
-    case 'yMinus1Landing':
-      return getVersionMetricValue(row, 'yMinus1', 'landing');
-    case 'yBudget':
-      return getVersionMetricValue(row, 'y', 'budget');
-    case 'yLanding':
-      return getVersionMetricValue(row, 'y', 'landing');
-    case 'yPlus1Budget':
-      return getVersionMetricValue(row, 'yPlus1', 'budget');
+      return blankToNull(row?.latest_task?.title);
     default:
-      return (row as any)?.[field];
+      return row?.[field];
   }
 }
+
+/** The OPEX name of the resolver, kept for existing imports. */
+export const getSpendSummaryFieldValue = getSummaryFieldValue;
 
 function valueToString(val: any): string {
   if (val == null) return '';
+  // A timestamp column comes as a Date: a text filter compares its ISO form (2026-09-27T…).
+  if (val instanceof Date) return Number.isNaN(val.getTime()) ? '' : val.toISOString().toLowerCase();
   return String(val).toLowerCase();
 }
 
-export function applyAgFiltersInMemory(rows: SpendSummaryRow[], filterModel: any): SpendSummaryRow[] {
+const COMPARISON_TYPES = new Set(['equals', 'notEqual', 'lessThan', 'lessThanOrEqual', 'greaterThan', 'greaterThanOrEqual', 'inRange']);
+const NEGATIVE_TEXT_TYPES = new Set(['notEqual', 'notContains']);
+
+/** A calendar day as a UTC timestamp: the date part of a string as written, the UTC day of a Date. */
+function parseDay(value: any): number | null {
+  if (value == null || value === '') return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
+  }
+  const text = String(value);
+  const day = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+  if (day) return Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]));
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function compare(type: string, value: number, from: number, to?: number): boolean {
+  switch (type) {
+    case 'equals': return value === from;
+    case 'notEqual': return value !== from;
+    case 'lessThan': return value < from;
+    case 'lessThanOrEqual': return value <= from;
+    case 'greaterThan': return value > from;
+    case 'greaterThanOrEqual': return value >= from;
+    case 'inRange': return to != null && Number.isFinite(to) && value >= from && value <= to;
+    default: return true;
+  }
+}
+
+function textMatches(type: string, value: string, needle: string): boolean {
+  switch (type) {
+    case 'equals': return value === needle;
+    case 'notEqual': return value !== needle;
+    case 'startsWith': return value.startsWith(needle);
+    case 'endsWith': return value.endsWith(needle);
+    case 'notContains': return !value.includes(needle);
+    case 'contains':
+    default:
+      return value.includes(needle);
+  }
+}
+
+/** Whether a row passes one grid filter model (first condition of a combined model). */
+function rowPassesFilter(row: any, field: string, rawModel: any, config: SummaryScopeConfig): boolean {
+  const model = normalizeAgFilterModel(rawModel);
+  if (!model || typeof model !== 'object') return true;
+  const type = String(model.type ?? model.filterType ?? 'contains');
+  const rowVal = getSummaryFieldValue(row, field);
+  const blank = rowVal == null || String(rowVal) === '';
+
+  if (type === 'set' && Array.isArray(model.values)) {
+    const rawValues: any[] = model.values;
+    if (rawValues.length === 0) return false;
+    const values = rawValues.filter((v) => v !== null && v !== undefined && v !== '').map((v) => String(v));
+    const hasNull = values.length < rawValues.length;
+    if (hasNull && blank) return true;
+    // A line linked to several projects is kept when any one of its names is selected.
+    const candidates = PROJECT_LIST_FIELDS.includes(field) ? [...projectNames(row, field), String(rowVal ?? '')] : [String(rowVal ?? '')];
+    return candidates.some((candidate) => values.includes(candidate));
+  }
+  if (type === 'blank') return blank;
+  if (type === 'notBlank') return !blank;
+
+  if ((model.filterType === 'date' || model.dateFrom || model.dateTo) && COMPARISON_TYPES.has(type)) {
+    const day = parseDay(rowVal);
+    const from = parseDay(model.dateFrom ?? model.filter ?? model.value);
+    const to = parseDay(model.dateTo ?? model.filterTo ?? model.valueTo);
+    if (day == null || from == null) return false;
+    return compare(type, day, from, to ?? undefined);
+  }
+
+  const valRaw = model.filter ?? model.value ?? (Array.isArray(model.values) ? model.values[0] : undefined);
+  if (valRaw == null || valRaw === '') return true;
+  const needle = String(valRaw);
+
+  const numericModel = model.filterType === 'number' || (typeof rowVal === 'number' && !Number.isNaN(Number(needle)));
+  if (numericModel && COMPARISON_TYPES.has(type)) {
+    if (blank || !Number.isFinite(Number(rowVal)) || !Number.isFinite(Number(needle))) return false;
+    return compare(type, Number(rowVal), Number(needle), Number(model.filterTo ?? model.valueTo));
+  }
+
+  const lowerNeedle = needle.toLowerCase();
+  if (field === 'item_number' && !blank) {
+    // The Ref column matches the bare number and the reference, like the quick search.
+    const candidates = [valueToString(rowVal), `${config.refPrefix}-${valueToString(rowVal)}`];
+    return NEGATIVE_TEXT_TYPES.has(type)
+      ? candidates.every((candidate) => textMatches(type, candidate, lowerNeedle))
+      : candidates.some((candidate) => textMatches(type, candidate, lowerNeedle));
+  }
+  return textMatches(type, valueToString(rowVal), lowerNeedle);
+}
+
+/** Grid filter models evaluated on built rows: set, blank, text, number (7 operators) and date (7 operators). */
+export function applyAgFiltersInMemory<T extends Record<string, any>>(
+  rows: T[],
+  filterModel: any,
+  config: SummaryScopeConfig = SUMMARY_SCOPES.opex,
+): T[] {
   if (!filterModel || typeof filterModel !== 'object') return rows;
   const entries = Object.entries(filterModel);
   if (!entries.length) return rows;
-
-  const parseDate = (value: any): number | null => {
-    if (!value) return null;
-    if (value instanceof Date) {
-      return Number.isNaN(value.getTime()) ? null : Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
-    }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return null;
-    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  };
-
-  return rows.filter((row) => {
-    for (const [field, rawModel] of entries) {
-      let model: any = rawModel;
-      if (model && model.operator && Array.isArray(model.conditions) && model.conditions.length > 0) {
-        model = model.conditions[0];
-      }
-      const type = (model?.type ?? model?.filterType ?? 'contains') as string;
-      const rowVal = getSpendSummaryFieldValue(row, field);
-
-      if (type === 'set' && Array.isArray(model?.values)) {
-        const rawValues = model.values;
-        if (rawValues.length === 0) return false;
-        const nonNullValues = rawValues.filter((v: any) => v !== null && v !== undefined && v !== '');
-        const hasNull = rawValues.some((v: any) => v === null || v === undefined || v === '');
-        const rowIsBlank = rowVal == null || rowVal === '';
-        if (hasNull && rowIsBlank) continue;
-        if (nonNullValues.length === 0) return false;
-        const rowStr = String(rowVal ?? '');
-        if (!nonNullValues.map((v: any) => String(v)).includes(rowStr)) return false;
-        continue;
-      }
-
-      if (type === 'blank') {
-        if (!(rowVal == null || String(rowVal) === '')) return false;
-        continue;
-      }
-
-      if (type === 'notBlank') {
-        if (rowVal == null || String(rowVal) === '') return false;
-        continue;
-      }
-
-      if ((model?.filterType === 'date' || model?.dateFrom || model?.dateTo) && [
-        'equals',
-        'notEqual',
-        'lessThan',
-        'lessThanOrEqual',
-        'greaterThan',
-        'greaterThanOrEqual',
-        'inRange',
-      ].includes(type)) {
-        const rowDate = parseDate(rowVal);
-        if (rowDate == null) return false;
-        const fromDate = parseDate(model?.dateFrom ?? model?.filter ?? model?.value);
-        const toDate = parseDate(model?.dateTo ?? model?.filterTo ?? model?.valueTo);
-        if (type === 'inRange') {
-          if (fromDate == null || toDate == null) return false;
-          if (rowDate < fromDate || rowDate > toDate) return false;
-          continue;
-        }
-        if (fromDate == null) return false;
-        switch (type) {
-          case 'equals':
-            if (rowDate !== fromDate) return false;
-            break;
-          case 'notEqual':
-            if (rowDate === fromDate) return false;
-            break;
-          case 'lessThan':
-            if (!(rowDate < fromDate)) return false;
-            break;
-          case 'lessThanOrEqual':
-            if (!(rowDate <= fromDate)) return false;
-            break;
-          case 'greaterThan':
-            if (!(rowDate > fromDate)) return false;
-            break;
-          case 'greaterThanOrEqual':
-            if (!(rowDate >= fromDate)) return false;
-            break;
-          default:
-            break;
-        }
-        continue;
-      }
-
-      const valRaw = model?.filter ?? model?.value ?? (Array.isArray(model?.values) ? model.values[0] : undefined);
-      if (valRaw == null || valRaw === '') continue;
-      const needle = String(valRaw);
-
-      const bothNumeric = typeof rowVal === 'number' && !isNaN(Number(needle));
-
-      if (bothNumeric && [
-        'equals',
-        'notEqual',
-        'lessThan',
-        'lessThanOrEqual',
-        'greaterThan',
-        'greaterThanOrEqual',
-        'inRange',
-      ].includes(type)) {
-        const rowNumber = Number(rowVal);
-        const target = Number(needle);
-        if (type === 'inRange') {
-          const upper = Number(model?.filterTo ?? model?.valueTo);
-          if (!Number.isFinite(upper)) return false;
-          if (rowNumber < target || rowNumber > upper) return false;
-          continue;
-        }
-        switch (type) {
-          case 'equals':
-            if (rowNumber !== target) return false;
-            break;
-          case 'notEqual':
-            if (rowNumber === target) return false;
-            break;
-          case 'lessThan':
-            if (!(rowNumber < target)) return false;
-            break;
-          case 'lessThanOrEqual':
-            if (!(rowNumber <= target)) return false;
-            break;
-          case 'greaterThan':
-            if (!(rowNumber > target)) return false;
-            break;
-          case 'greaterThanOrEqual':
-            if (!(rowNumber >= target)) return false;
-            break;
-          default:
-            break;
-        }
-        continue;
-      }
-
-      switch (type) {
-        case 'equals':
-          if (bothNumeric) {
-            if (Number(rowVal) !== Number(needle)) return false;
-          } else if (valueToString(rowVal) !== needle.toLowerCase()) return false;
-          break;
-        case 'notEqual':
-          if (bothNumeric) {
-            if (Number(rowVal) === Number(needle)) return false;
-          } else if (valueToString(rowVal) === needle.toLowerCase()) return false;
-          break;
-        case 'startsWith':
-          if (!valueToString(rowVal).startsWith(needle.toLowerCase())) return false;
-          break;
-        case 'endsWith':
-          if (!valueToString(rowVal).endsWith(needle.toLowerCase())) return false;
-          break;
-        case 'notContains':
-          if (valueToString(rowVal).includes(needle.toLowerCase())) return false;
-          break;
-        case 'contains':
-        default:
-          if (!valueToString(rowVal).includes(needle.toLowerCase())) return false;
-          break;
-      }
-    }
-    return true;
-  });
+  return rows.filter((row) => entries.every(([field, model]) => rowPassesFilter(row, field, model, config)));
 }
 
-export function quickSearchSummaryRows(rows: SpendSummaryRow[], q: string): SpendSummaryRow[] {
+/** The list's quick search: number and reference, names, labels, notes, currency and status. */
+export function quickSearchSummaryRows<T extends Record<string, any>>(
+  rows: T[],
+  q: string,
+  config: SummaryScopeConfig = SUMMARY_SCOPES.opex,
+): T[] {
   if (!q) return rows;
   const needle = String(q).toLowerCase();
   const take = (value: any) => (value == null ? '' : String(value)).toLowerCase();
-  return rows.filter((row) => {
+  return rows.filter((row: any) => {
     const bag: string[] = [];
-    const itemNumber = (row as any).item_number;
-    if (itemNumber != null) {
-      bag.push(take(itemNumber));
-      bag.push(`opx-${take(itemNumber)}`);
+    if (row.item_number != null) {
+      bag.push(take(row.item_number), `${config.refPrefix}-${take(row.item_number)}`);
     }
-    bag.push(take((row as any).product_name));
-    bag.push(take((row as any).description));
-    bag.push(take(row.supplier_name));
-    bag.push(take((row as any).paying_company_name));
-    bag.push(take(row.account_display));
-    bag.push(take(row.account_name));
-    bag.push(take(row.account_number));
-    bag.push(take(row.project_name));
-    bag.push(take(row.project_stream_name));
-    bag.push(take(row.project_category_name));
-    bag.push(take(row.latest_contract_name));
-    bag.push(take(row.allocation_method_label));
-    bag.push(take((row as any).currency));
-    bag.push(take((row as any).status));
-    bag.push(take((row as any).notes));
+    for (const value of [
+      row[config.nameField], row.description, row.supplier_name ?? row.supplier?.name, row.paying_company_name ?? row.company_name,
+      row.account_display, row.account_name, row.account_number, row.project_name, row.project_stream_name, row.project_category_name,
+      row.latest_contract_name, row.allocation_method_label, row.owner_it_name, row.owner_business_name, row.analytics_category_name,
+      row.notes, row.currency, row.status, ...config.extraFields.map((field) => row[field]),
+    ]) {
+      bag.push(take(value));
+    }
     return bag.some((entry) => entry.includes(needle));
   });
 }
 
-export function sortSummaryRows(
-  rows: SpendSummaryRow[],
-  field: string,
-  direction: 'ASC' | 'DESC'
-): SpendSummaryRow[] {
+/**
+ * Sort in place on any field: numbers, dates chronologically, text
+ * case-insensitively, a field of `FIXED_SORT_ORDERS` in its own order; blanks last ascending.
+ */
+export function sortSummaryRows<T extends Record<string, any>>(rows: T[], field: string, direction: 'ASC' | 'DESC'): T[] {
   const dir = direction === 'ASC' ? 1 : -1;
-  const getValue = (row: SpendSummaryRow) => {
-    const resolved = resolveVersionField(field);
-    if (resolved) {
-      return getVersionMetricValue(row, resolved.slotKey, resolved.metric);
-    }
-    switch (field) {
-      case 'supplier_name':
-      case 'allocation_label':
-      case 'allocation_method_label':
-      case 'account_display':
-      case 'account_name':
-      case 'owner_it_name':
-      case 'owner_business_name':
-      case 'contract_name':
-      case 'latest_task_text':
-        return getSpendSummaryFieldValue(row, field);
-      case 'account_number':
-        return getSpendSummaryFieldValue(row, field);
-      default:
-        return (row as any)?.[field];
-    }
+  const order = FIXED_SORT_ORDERS[field];
+  const valueOf = (row: T) => {
+    const value = getSummaryFieldValue(row, field);
+    if (!order) return value;
+    const rank = order.indexOf(String(value));
+    return rank < 0 ? null : rank;
   };
-
+  const values = new Map(rows.map((row) => [row, valueOf(row)]));
   rows.sort((a, b) => {
-    const av = getValue(a);
-    const bv = getValue(b);
-    const aUndefined = av == null;
-    const bUndefined = bv == null;
-    if (aUndefined && bUndefined) return 0;
-    if (aUndefined) return 1 * dir;
-    if (bUndefined) return -1 * dir;
-
-    if (typeof av === 'number' && typeof bv === 'number') {
-      return av === bv ? 0 : (av < bv ? -1 : 1) * dir;
-    }
+    const av = values.get(a);
+    const bv = values.get(b);
+    const aBlank = av == null || av === '';
+    const bBlank = bv == null || bv === '';
+    if (aBlank && bBlank) return 0;
+    if (aBlank) return dir;
+    if (bBlank) return -dir;
+    if (typeof av === 'number' && typeof bv === 'number') return av === bv ? 0 : (av < bv ? -1 : 1) * dir;
     // disabled_at comes as a Date: its string form starts with the weekday.
     if (av instanceof Date && bv instanceof Date) {
       const diff = av.getTime() - bv.getTime();
       return diff === 0 ? 0 : (diff < 0 ? -1 : 1) * dir;
     }
-
     const as = String(av).toLowerCase();
     const bs = String(bv).toLowerCase();
     return as === bs ? 0 : (as < bs ? -1 : 1) * dir;
   });
-
   return rows;
 }

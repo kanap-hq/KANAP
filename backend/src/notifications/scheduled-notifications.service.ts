@@ -21,6 +21,12 @@ import { calendarDaysUntil, isExpiryReminderDay, utcDateYmd } from './expiry-rem
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// Budget items warned on their end of validity. Table and column names come only from here.
+const BUDGET_ITEM_TABLES = {
+  opex: { table: 'spend_items', name: 'product_name' },
+  capex: { table: 'capex_items', name: 'description' },
+} as const;
+
 @Injectable()
 export class ScheduledNotificationsService implements OnModuleInit {
   private readonly logger = new Logger(ScheduledNotificationsService.name);
@@ -40,7 +46,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
 
     this.scheduledTasks.register({
       name: 'check-expirations',
-      description: 'Sends expiration warnings for contracts and OPEX items nearing their end date',
+      description: 'Sends expiration warnings for contracts, OPEX and CAPEX items nearing their end date',
       defaultCron: '0 8 * * *',
       handler: () => this.checkExpirations(),
     });
@@ -107,7 +113,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
   async checkExpirations(now: Date = new Date()): Promise<Record<string, any>> {
     this.logger.log('[Expirations] Running expiration warnings check...');
 
-    const summary = { tenantsProcessed: 0, contractWarnings: 0, opexWarnings: 0, errors: [] as string[] };
+    const summary = { tenantsProcessed: 0, contractWarnings: 0, opexWarnings: 0, capexWarnings: 0, errors: [] as string[] };
 
     const tenants = await this.dataSource.query(`
       SELECT id, slug FROM tenants WHERE status = 'active'
@@ -125,9 +131,11 @@ export class ScheduledNotificationsService implements OnModuleInit {
 
         const contractCount = await this.checkContractExpirationsForTenant(runner.manager, tenant.id, now);
         const opexCount = await this.checkOpexExpirationsForTenant(runner.manager, tenant.id, now);
+        const capexCount = await this.checkCapexExpirationsForTenant(runner.manager, tenant.id, now);
 
         summary.contractWarnings += contractCount;
         summary.opexWarnings += opexCount;
+        summary.capexWarnings += capexCount;
         summary.tenantsProcessed++;
 
         await runner.commitTransaction();
@@ -145,7 +153,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
     }
 
     this.logger.log(
-      `[Expirations] Complete: ${summary.contractWarnings} contracts, ${summary.opexWarnings} OPEX items processed`,
+      `[Expirations] Complete: ${summary.contractWarnings} contracts, ${summary.opexWarnings} OPEX items, ${summary.capexWarnings} CAPEX items processed`,
     );
 
     return summary;
@@ -215,14 +223,28 @@ export class ScheduledNotificationsService implements OnModuleInit {
     return contracts.length;
   }
 
-  private async checkOpexExpirationsForTenant(mg: any, tenantId: string, now: Date = new Date()): Promise<number> {
-    // Candidates: OPEX items whose end of validity falls within 30 calendar days (UTC dates,
+  private checkOpexExpirationsForTenant(mg: any, tenantId: string, now: Date = new Date()): Promise<number> {
+    return this.checkBudgetItemExpirationsForTenant(mg, tenantId, 'opex', now);
+  }
+
+  private checkCapexExpirationsForTenant(mg: any, tenantId: string, now: Date = new Date()): Promise<number> {
+    return this.checkBudgetItemExpirationsForTenant(mg, tenantId, 'capex', now);
+  }
+
+  private async checkBudgetItemExpirationsForTenant(
+    mg: any,
+    tenantId: string,
+    itemType: 'opex' | 'capex',
+    now: Date,
+  ): Promise<number> {
+    const t = BUDGET_ITEM_TABLES[itemType];
+    // Candidates: items whose end of validity falls within 30 calendar days (UTC dates,
     // so that an end 30 days away at any time of day is included). A future disabled_at
     // means the item is still enabled, so no status predicate.
-    const opexItems = await mg.query(`
+    const items = await mg.query(`
       SELECT
         s.id,
-        s.product_name,
+        s.${t.name} AS item_name,
         s.tenant_id,
         s.disabled_at,
         s.owner_it_id,
@@ -233,7 +255,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
         biz_user.id as biz_owner_id,
         biz_user.email as biz_owner_email,
         biz_user.locale as biz_owner_locale
-      FROM spend_items s
+      FROM ${t.table} s
       LEFT JOIN users it_user ON it_user.id = s.owner_it_id AND it_user.tenant_id = s.tenant_id AND it_user.status = 'enabled'
       LEFT JOIN users biz_user ON biz_user.id = s.owner_business_id AND biz_user.tenant_id = s.tenant_id AND biz_user.status = 'enabled'
       WHERE s.tenant_id = $1
@@ -242,7 +264,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
         AND (s.owner_it_id IS NOT NULL OR s.owner_business_id IS NOT NULL)
     `, [tenantId, utcDateYmd(now)]);
 
-    for (const item of opexItems) {
+    for (const item of items) {
       // The last service day is the UTC calendar day of the end of validity.
       const expirationDate = dayjs.utc(item.disabled_at).format('YYYY-MM-DD');
       const daysRemaining = calendarDaysUntil(expirationDate, now);
@@ -258,9 +280,9 @@ export class ScheduledNotificationsService implements OnModuleInit {
 
       if (recipients.length > 0) {
         await this.notificationsService.notifyExpirationWarning({
-          itemType: 'opex',
+          itemType,
           itemId: item.id,
-          itemName: item.product_name,
+          itemName: item.item_name,
           expirationDate,
           daysRemaining,
           warningType: 'expiration',
@@ -271,7 +293,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
       }
     }
 
-    return opexItems.length;
+    return items.length;
   }
 
   private getCurrentWeekScheduledSlot(

@@ -959,7 +959,7 @@ export function buildKnowledgeWorkflowCancelledEmail(params: {
 
 // Template: Expiration Warning
 export function buildExpirationWarningEmail(params: {
-  itemType: 'contract' | 'opex';
+  itemType: 'contract' | 'opex' | 'capex';
   itemName: string;
   itemUrl: string;
   expirationDate: string;

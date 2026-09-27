@@ -383,6 +383,9 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       effective_start: { label: 'Effective Start', kind: 'date', requiredOnCreate: true },
       // Deprecated alias of disabled_at for one release: fills an empty end of validity, never clears it.
       effective_end: { label: 'End of validity', kind: 'date', nullable: true },
+      owner_it_id: { label: 'IT Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['it_owner'] },
+      owner_business_id: { label: 'Business Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['business_owner'] },
+      analytics_category_id: { label: 'Analytics Category', kind: 'relation', nullable: true, relationTarget: 'analytics_categories', aliases: ['analytics_category'] },
       project_id: { label: 'Project', kind: 'relation', nullable: true, relationTarget: 'projects', aliases: ['project'] },
       status: { label: 'Status', kind: 'enum', enumValues: STATUS_STATES },
       disabled_at: { label: 'End of validity', kind: 'date', nullable: true, aliases: ['end_of_validity'] },

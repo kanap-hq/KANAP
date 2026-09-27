@@ -4,16 +4,17 @@ import { DeepPartial, EntityManager, ILike, In, Repository } from 'typeorm';
 import { CapexItem } from './capex-item.entity';
 import { CapexVersion } from './capex-version.entity';
 import { CapexAmount } from './capex-amount.entity';
-import { CapexAllocationCalculatorService, CapexAllocationComputation } from './capex-allocation-calculator.service';
+import { CapexAllocationCalculatorService } from './capex-allocation-calculator.service';
 import { Company } from '../companies/company.entity';
 import { Account } from '../accounts/account.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { AnalyticsCategory } from '../analytics/analytics-category.entity';
 import { User } from '../users/user.entity';
-import { parseExportPagination, parsePagination, buildWhereFromAgFilters } from '../common/pagination';
+import { parsePagination, buildWhereFromAgFilters } from '../common/pagination';
 import { AuditService } from '../audit/audit.service';
 import { AmountMeasure, BudgetColumn } from '../spend/amounts-write.util';
 import { clearBudgetColumn, copyBudgetColumn, CopyColumnOperation } from '../spend/budget-column-operations';
+import { copyAllocations, CopyAllocationsOperation } from '../spend/budget-allocation-operations';
 import { writeItemCsvTotals } from '../spend/round-inputs.util';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
@@ -22,13 +23,13 @@ import * as path from 'path';
 import { CapexLink } from './capex-link.entity';
 import { CapexAttachment } from './capex-attachment.entity';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
-import { addCents, formatCents, toCents } from '../common/amount';
+import { formatCents, toCents } from '../common/amount';
 import { FreezeService } from '../freeze/freeze.service';
-import { formatAllocationMethodLabel } from '../spend/allocation-utils';
-import { FxRateService, FxLookupKey, FxResolvedRate } from '../currency/fx-rate.service';
-import { applyDisabledAtWhere, LifecycleScope, summaryScope, parseEndOfValidityInput, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
+import { FxRateService } from '../currency/fx-rate.service';
+import { applyDisabledAtWhere, LifecycleScope, parseEndOfValidityInput, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
-import { normalizeAgFilterModel } from '../common/ag-grid-filtering';
+import { loadVersionTotals, SUMMARY_COLUMNS, SUMMARY_SCOPES, SummaryDeps, summaryTenantId } from '../spend/spend-summary.builder';
+import * as budgetSummary from '../spend/budget-summary';
 import { CapexItemUpsertDto } from './dto/capex-item.dto';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
@@ -37,7 +38,6 @@ import { PortfolioProjectCapex } from '../portfolio/portfolio-project-capex.enti
 import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
-import { ACTIVE_TASK_STATUSES } from '../tasks/task.entity';
 import { ItemNumberService } from '../common/item-number.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
@@ -47,122 +47,12 @@ import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.se
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
 
-function getCapexSummaryFieldValue(row: any, field: string): any {
-  if (!row) return null;
-  if (field === 'company_name') return row.company_name ?? row.paying_company_name ?? null;
-  if (field === 'paying_company_name') return row.paying_company_name ?? row.company_name ?? null;
-  if (field === 'supplier_name') return row.supplier_name ?? row.supplier?.name ?? null;
-  if (field === 'account_display') return row.account_display ?? null;
-  if (field === 'account_name') return row.account_name ?? null;
-  if (field === 'account_number') return row.account_number ?? null;
-  if (field === 'owner_it_name') return row.owner_it_name ?? null;
-  if (field === 'owner_business_name') return row.owner_business_name ?? null;
-  if (field === 'analytics_category_name') return row.analytics_category_name ?? null;
-  return (row as any)[field];
-}
-
-/**
- * The `years` query parameter of the summary (`2028,2029`, or repeated): four-digit
- * years from 1000 to 9999, without duplicates; anything else is ignored, as on OPEX.
- */
-function parseSummaryYears(raw: unknown): number[] {
-  const text = Array.isArray(raw) ? raw.join(',') : typeof raw === 'string' ? raw : '';
-  const years = text.split(',').map((part) => part.trim()).filter((part) => /^\d{4}$/.test(part)).map(Number);
-  return Array.from(new Set(years.filter((year) => year >= 1000)));
-}
-
-/**
- * The version an item shows for `year`: none after the year of its end of
- * validity, so a later year contributes nothing. The same rule as OPEX
- * (`spend-summary.builder.ts`, `SpendItemsService.summaryTotals`).
- */
-function versionWithinValidity<T>(perYear: Map<number, T> | undefined, year: number, disabledAt: unknown): T | undefined {
-  const endYear = disabledAt ? new Date(disabledAt as string | Date).getFullYear() : null;
-  return endYear != null && year > endYear ? undefined : perYear?.get(year);
-}
-
 function displayName(user?: User | null): string {
   if (!user) return '';
   const fn = (user as any).first_name ? String((user as any).first_name).trim() : '';
   const ln = (user as any).last_name ? String((user as any).last_name).trim() : '';
   const name = [fn, ln].filter(Boolean).join(' ');
   return name || (user as any).email || '';
-}
-
-function valueToString(val: any): string {
-  if (val == null) return '';
-  return String(val).toLowerCase();
-}
-
-function applyCapexFiltersInMemory(rows: any[], filterModel: any): any[] {
-  if (!filterModel || typeof filterModel !== 'object') return rows;
-  const entries = Object.entries(filterModel);
-  if (!entries.length) return rows;
-
-  return rows.filter((row) => {
-    for (const [field, rawModel] of entries) {
-      const model = normalizeAgFilterModel(rawModel);
-      if (!model || typeof model !== 'object') continue;
-      const type = String(model.type ?? model.filterType ?? 'contains');
-      const rowVal = getCapexSummaryFieldValue(row, field);
-
-      if (type === 'set' && Array.isArray(model.values)) {
-        const rawValues = model.values;
-        if (rawValues.length === 0) return false;
-        const nonNullValues = rawValues.filter((v: any) => v !== null && v !== undefined && v !== '');
-        const hasNull = rawValues.some((v: any) => v === null || v === undefined || v === '');
-        const rowIsBlank = rowVal == null || rowVal === '';
-        if (hasNull && rowIsBlank) continue;
-        if (nonNullValues.length === 0) return false;
-        const rowStr = String(rowVal ?? '');
-        if (!nonNullValues.map((v: any) => String(v)).includes(rowStr)) return false;
-        continue;
-      }
-
-      if (type === 'blank') {
-        if (!(rowVal == null || String(rowVal) === '')) return false;
-        continue;
-      }
-
-      if (type === 'notBlank') {
-        if (rowVal == null || String(rowVal) === '') return false;
-        continue;
-      }
-
-      const valRaw = model.filter ?? model.value ?? (Array.isArray(model.values) ? model.values[0] : undefined);
-      if (valRaw == null || valRaw === '') continue;
-      const needle = String(valRaw);
-
-      const bothNumeric = typeof rowVal === 'number' && !isNaN(Number(needle));
-
-      switch (type) {
-        case 'equals':
-          if (bothNumeric) {
-            if (Number(rowVal) !== Number(needle)) return false;
-          } else if (valueToString(rowVal) !== needle.toLowerCase()) return false;
-          break;
-        case 'notEqual':
-          if (bothNumeric) {
-            if (Number(rowVal) === Number(needle)) return false;
-          } else if (valueToString(rowVal) === needle.toLowerCase()) return false;
-          break;
-        case 'startsWith':
-          if (!valueToString(rowVal).startsWith(needle.toLowerCase())) return false;
-          break;
-        case 'endsWith':
-          if (!valueToString(rowVal).endsWith(needle.toLowerCase())) return false;
-          break;
-        case 'notContains':
-          if (valueToString(rowVal).includes(needle.toLowerCase())) return false;
-          break;
-        case 'contains':
-        default:
-          if (!valueToString(rowVal).includes(needle.toLowerCase())) return false;
-          break;
-      }
-    }
-    return true;
-  });
 }
 
 @Injectable()
@@ -272,6 +162,12 @@ export class CapexItemsService {
     return copyBudgetColumn({ manager, audit: this.audit, freeze: this.freeze }, 'capex', operation, userId);
   }
 
+  /** Copy CAPEX allocations to another year (all or nothing); see `budget-allocation-operations.ts`. */
+  async copyAllocations(operation: CopyAllocationsOperation, userId: string | null, opts?: { manager?: EntityManager }) {
+    const manager = opts?.manager ?? this.repo.manager;
+    return copyAllocations({ manager, audit: this.audit, calculator: this.allocationCalculator }, 'capex', operation, userId);
+  }
+
   /** Clear one CAPEX budget column of a year (all or nothing); see `budget-column-operations.ts`. */
   async clearBudgetColumn(operation: { year: number; column: BudgetColumn }, userId: string | null, opts?: { manager?: EntityManager }) {
     const manager = opts?.manager ?? this.repo.manager;
@@ -284,10 +180,7 @@ export class CapexItemsService {
     const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
     const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
-    const allowedFields = [
-      'id', 'item_number', 'description', 'paying_company_id', 'supplier_id', 'account_id', 'ppe_type', 'investment_type', 'priority', 'currency', 'effective_start', 'disabled_at',
-      'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id', 'notes', 'created_at', 'updated_at',
-    ];
+    const allowedFields = [...SUMMARY_SCOPES.capex.columns];
     const where: any = {};
     if (filtersToApply && Object.keys(filtersToApply).length > 0) {
       Object.assign(where, buildWhereFromAgFilters(filtersToApply, allowedFields));
@@ -460,7 +353,8 @@ export class CapexItemsService {
     return persisted ?? saved;
   }
 
-  async update(id: string, body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
+  /** `statusEmail: false` skips the owners' status-change email (the CSV import sends none, like OPEX's). */
+  async update(id: string, body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; statusEmail?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
     // Map legacy field if present
     const existing = await this.get(id, { manager: mg });
@@ -526,674 +420,73 @@ export class CapexItemsService {
       await this.itemContacts.syncFromSupplier(itemId, newSupplierId, userId ?? null, { manager: mg });
     }
 
-    return persisted ?? saved;
+    const after = persisted ?? saved;
+    if (before.status !== after.status && opts?.statusEmail !== false) {
+      await this.notifyOwnersOfStatusChange(mg, after, before.status, userId);
+    }
+
+    return after;
   }
 
-  // CAPEX summary endpoint: derived yearly totals and spread mode
-  async summary(query: any, opts?: { manager?: EntityManager; exportAll?: boolean; unmaskedYears?: boolean }) {
-    const mg = opts?.manager ?? this.repo.manager;
-    const now = new Date();
-    const Y = now.getFullYear();
-    // Years the caller names (`years=2028,2029`, as on OPEX) get a `y<year>` slot
-    // next to the fixed ones; the fixed slots stay as they are.
-    const requestedYears = parseSummaryYears(query?.years);
-    const years = Array.from(new Set([Y - 1, Y, Y + 1, Y + 2, ...requestedYears]));
-
-    const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
-      ? parseExportPagination(query)
-      : parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
-    const filtersToApply = sanitizedFilters ?? filters;
-    const allowedDbFields = [
-      'id', 'item_number', 'description', 'paying_company_id', 'supplier_id', 'account_id', 'ppe_type', 'investment_type', 'priority', 'currency', 'effective_start', 'disabled_at',
-      'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id', 'notes', 'created_at', 'updated_at',
-    ];
-    const where: any = {};
-    if (filtersToApply && Object.keys(filtersToApply).length > 0) {
-      Object.assign(where, buildWhereFromAgFilters(filtersToApply, allowedDbFields));
-    }
-    // Period-aware gating: if lifecycle status is neutral, include items enabled
-    // since the earliest year in scope, mirroring OPEX summary behavior.
-    const lifecycleStatus = status ?? statusFromAg ?? null;
-    const minYear = Math.min(...years);
-    const periodStart = new Date(`${String(minYear).padStart(4, '0')}-01-01T00:00:00.000Z`);
-    const includeDisabled =
-      String(query.includeDisabled ?? '').toLowerCase() === '1' ||
-      String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    applyDisabledAtWhere(where, summaryScope(includeDisabled, lifecycleStatus, periodStart), filtersToApply);
-
-    // Fetch base items (limit to 10k to avoid runaway)
-    const baseItems = await mg.getRepository(CapexItem).find({
-      where,
-      order: { created_at: 'DESC' as any },
-      take: 10000,
-    });
-    const items = await this.enrichSummaryItems(baseItems as CapexItem[], mg);
-    const total = items.length;
-    const derivedFilters = Object.fromEntries(
-      Object.entries(filtersToApply || {}).filter(([key]) => !allowedDbFields.includes(key)),
+  private async notifyOwnersOfStatusChange(mg: EntityManager, item: CapexItem, oldStatus: string, userId?: string) {
+    const ownerIds = Array.from(new Set([item.owner_it_id, item.owner_business_id].filter((v): v is string => !!v)));
+    if (ownerIds.length === 0) return;
+    const tenantId = item.tenant_id;
+    const users: Array<{ id: string; email: string; locale: string | null }> = await mg.query(
+      `SELECT id, email, locale FROM users WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND status = 'enabled'`,
+      [tenantId, ownerIds],
     );
-    const hasDerivedFilters = Object.keys(derivedFilters).length > 0;
-
-    const itemIds = items.map((i) => i.id);
-    // Latest open/in_progress task per CAPEX item (match OPEX behavior)
-    const latestTasks: Array<{ id: string; related_object_id: string; title: string | null; description: string | null; status: string; created_at: Date }> = itemIds.length
-      ? await mg.query(
-          `SELECT DISTINCT ON (related_object_id) id, related_object_id, title, description, status, created_at
-           FROM tasks
-           WHERE related_object_type = 'capex_item'
-             AND related_object_id = ANY($1)
-             AND status = ANY($2)
-           ORDER BY related_object_id, created_at DESC`,
-          [itemIds, ACTIVE_TASK_STATUSES],
-        )
-      : [];
-    const latestTaskByItem = new Map<string, { id: string; title: string | null; description: string | null; status: string; created_at: Date }>();
-    for (const t of latestTasks) {
-      if (!latestTaskByItem.has(t.related_object_id)) latestTaskByItem.set(t.related_object_id, t);
-    }
-    const versions = itemIds.length > 0
-      ? await (opts?.manager ?? this.repo.manager).getRepository(CapexVersion).find({ where: { capex_item_id: In(itemIds) as any } as any })
-      : [];
-
-    const versionsById = new Map(versions.map((v) => [v.id, v]));
-    const versionsByItemYear = new Map<string, Map<number, CapexVersion>>();
-    for (const v of versions) {
-      const y = (v as any).budget_year as number;
-      if (!years.includes(y)) continue;
-      let m = versionsByItemYear.get(v.capex_item_id);
-      if (!m) { m = new Map<number, CapexVersion>(); versionsByItemYear.set(v.capex_item_id, m); }
-      m.set(y, v);
-    }
-
-    const versionIds = versions.map((v) => v.id);
-    let allAmounts: CapexAmount[] = [];
-    if (versionIds.length > 0) {
-      allAmounts = await (opts?.manager ?? this.repo.manager).getRepository(CapexAmount).find({ where: { version_id: In(versionIds) as any } as any });
-    }
-    const amountsByVersion: Record<string, { planned: bigint; actual: bigint; expected_landing: bigint; committed: bigint }> = {};
-    for (const a of allAmounts) {
-      const v = versionsById.get((a as any).version_id as string);
-      if (!v) continue;
-      const periodYear = new Date((a as any).period as string).getFullYear();
-      const vYear = (v as any).budget_year as number;
-      if (periodYear !== vYear) continue;
-      const key = (a as any).version_id as string;
-      const acc = (amountsByVersion[key] ||= { planned: 0n, actual: 0n, expected_landing: 0n, committed: 0n });
-      acc.planned = addCents(acc.planned, (a as any).planned);
-      acc.actual = addCents(acc.actual, (a as any).actual);
-      acc.expected_landing = addCents(acc.expected_landing, (a as any).expected_landing);
-      acc.committed = addCents(acc.committed, (a as any).committed);
-    }
-
-    const reportingTotalsByVersion = new Map<string, {
-      budget: number;
-      follow_up: number;
-      landing: number;
-      revision: number;
-      currency: string;
-      reporting_currency: string;
-      fx_rate: number;
-      fx_source: FxResolvedRate['source'];
-      fx_rate_set_id: string | null;
-    }>();
-
-    const itemById = new Map(items.map((it) => [it.id, it]));
-    const lookupKeys: FxLookupKey[] = [];
-    for (const version of versions) {
-      const item = itemById.get(version.capex_item_id);
-      if (!item) continue;
-      const sourceCurrency = (item as any).currency || 'EUR';
-      lookupKeys.push({ key: '', rateSetId: (version as any).fx_rate_set_id ?? null, fiscalYear: (version as any).budget_year as number, sourceCurrency });
-    }
-
-    const tenantId = items[0] ? (items[0] as any).tenant_id ?? null : null;
-    const fxResult = tenantId
-      ? await this.fxRates.resolveRates(tenantId, lookupKeys, { manager: mg })
-      : { map: new Map<string, FxResolvedRate>(), settings: { reportingCurrency: 'EUR' } as any };
-    const fxMap = fxResult.map;
-
-    const getFx = (version: CapexVersion, currency: string): FxResolvedRate => {
-      const key = `${(version as any).fx_rate_set_id || 'live'}:${(version as any).budget_year}:${currency.toUpperCase()}`;
-      return fxMap.get(key) || {
-        rate: currency.toUpperCase() === fxResult.settings.reportingCurrency ? 1 : 1,
-        rateSetId: null,
-        fiscalYear: (version as any).budget_year as number,
-        reportingCurrency: fxResult.settings.reportingCurrency,
-        source: 'identity',
-        capturedAt: null,
-      };
-    };
-
-    for (const version of versions) {
-      const sums = amountsByVersion[version.id];
-      if (!sums) continue;
-      const item = itemById.get(version.capex_item_id);
-      const currency = ((item as any)?.currency || 'EUR').toString().toUpperCase();
-      const fx = getFx(version, currency);
-      const budget = Number(formatCents(sums.planned));
-      const followUp = Number(formatCents(sums.actual));
-      const landing = Number(formatCents(sums.expected_landing));
-      const revision = Number(formatCents(sums.committed));
-      reportingTotalsByVersion.set(version.id, {
-        budget: this.fxRates.convertValue(budget, fx.rate),
-        follow_up: this.fxRates.convertValue(followUp, fx.rate),
-        landing: this.fxRates.convertValue(landing, fx.rate),
-        revision: this.fxRates.convertValue(revision, fx.rate),
-        currency,
-        reporting_currency: fx.reportingCurrency,
-        fx_rate: fx.rate,
-        fx_source: fx.source,
-        fx_rate_set_id: (version as any).fx_rate_set_id ?? null,
-      });
-    }
-
-    function toTotals(version?: CapexVersion) {
-      if (!version) {
-        return { year: undefined, totals: { budget: 0, follow_up: 0, landing: 0, revision: 0 }, version_id: undefined, reporting: undefined };
-      }
-      const sum = amountsByVersion[version.id] || { planned: 0n, actual: 0n, expected_landing: 0n, committed: 0n };
-      const reporting = reportingTotalsByVersion.get(version.id) || null;
-      return {
-        year: (version as any).budget_year as number,
-        totals: {
-          budget: Number(formatCents(sum.planned)),
-          follow_up: Number(formatCents(sum.actual)),
-          landing: Number(formatCents(sum.expected_landing)),
-          revision: Number(formatCents(sum.committed)),
-        },
-        version_id: (version as any).id,
-        reporting: reporting ? { ...reporting } : undefined,
-      };
-    }
-
-    const allocationDataByYear = new Map<number, Map<string, CapexAllocationComputation>>();
-    for (const targetYear of [Y, Y + 1]) {
-      const versionsForYear = versions.filter((v) => (v as any).budget_year === targetYear);
-      if (!versionsForYear.length) continue;
-      const computations = await this.allocationCalculator.computeForVersions(versionsForYear, { manager: mg, suppressErrors: true });
-      allocationDataByYear.set(targetYear, computations);
-    }
-
-    const result = items.map((it) => {
-      const perYear = versionsByItemYear.get(it.id) || new Map<number, CapexVersion>();
-      // Years after the end of validity show nothing, unless the caller asks for what is stored.
-      const shown = (year: number) => (opts?.unmaskedYears ? perYear.get(year) : versionWithinValidity(perYear, year, (it as any).disabled_at));
-      const vMinus1 = shown(Y - 1);
-      const vCurr = shown(Y);
-      const vPlus1 = shown(Y + 1);
-      const vPlus2 = shown(Y + 2);
-      const spread_mode_for_y = vCurr ? (vCurr.input_grain === 'annual' ? 'flat' : 'manual') : null;
-      const allocationForY = vCurr ? allocationDataByYear.get(Y)?.get(vCurr.id) : undefined;
-      const allocationForYPlus1 = vPlus1 ? allocationDataByYear.get(Y + 1)?.get(vPlus1.id) : undefined;
-      const methodSource = allocationForY?.resolvedMethod ?? ((vCurr as any)?.allocation_method ?? null);
-      const allocationMethodLabel = formatAllocationMethodLabel(methodSource);
-      const allocationWarning = allocationForY?.error ?? null;
-      const nextMethodSource = allocationForYPlus1?.resolvedMethod ?? ((vPlus1 as any)?.allocation_method ?? null);
-      const nextAllocationMethodLabel = formatAllocationMethodLabel(nextMethodSource);
-      return {
-        ...it,
-        latest_task: latestTaskByItem.get(it.id) || null,
-        versions: {
-          yMinus1: toTotals(vMinus1),
-          y: toTotals(vCurr),
-          yPlus1: toTotals(vPlus1),
-          yPlus2: toTotals(vPlus2),
-          ...Object.fromEntries(requestedYears.map((year) => [`y${year}`, toTotals(shown(year))])),
-        },
-        spread_mode_for_y,
-        allocation_method_label: allocationMethodLabel,
-        allocation_warning: allocationWarning,
-        next_year_allocation_method_label: nextAllocationMethodLabel,
-      } as any;
+    const byId = new Map(users.map((u) => [u.id, u]));
+    const recipients = ownerIds.flatMap((ownerId) => {
+      const user = byId.get(ownerId);
+      return user ? [{ userId: user.id, email: user.email, locale: user.locale }] : [];
     });
-
-    let data: any[] = result;
-    if (hasDerivedFilters) {
-      data = applyCapexFiltersInMemory(data, derivedFilters);
-    }
-
-    // Optional in-memory quick search
-    if (q) {
-      const needle = String(q).toLowerCase();
-      const take = (v: any) => (v == null ? '' : String(v)).toLowerCase();
-      const matches = (row: any): boolean => {
-        const bag: string[] = [];
-        const itemNumber = row.item_number;
-        if (itemNumber != null) {
-          bag.push(take(itemNumber));
-          bag.push(`cpx-${take(itemNumber)}`);
-        }
-        bag.push(take(row.description));
-        bag.push(take(row.supplier_name));
-        bag.push(take(row.paying_company_name));
-        bag.push(take(row.account_display));
-        bag.push(take(row.account_name));
-        bag.push(take(row.account_number));
-        bag.push(take(row.owner_it_name));
-        bag.push(take(row.owner_business_name));
-        bag.push(take(row.analytics_category_name));
-        bag.push(take(row.notes));
-        bag.push(take(row.ppe_type));
-        bag.push(take(row.investment_type));
-        bag.push(take(row.priority));
-        bag.push(take(row.currency));
-        bag.push(take(row.status));
-        return bag.some((s) => s.includes(needle));
-      };
-      data = data.filter(matches);
-    }
-
-    const sortField = sort.field;
-    const dir = sort.direction === 'ASC' ? 1 : -1;
-    const versionMetric = (row: any, slotKey: string, metric: 'budget' | 'revision' | 'follow_up' | 'landing'): number => {
-      const slot = row?.versions?.[slotKey];
-      if (!slot) return 0;
-      const reporting = slot?.reporting;
-      if (reporting && typeof reporting[metric] === 'number') {
-        return reporting[metric] ?? 0;
-      }
-      const totals = slot?.totals;
-      if (totals && typeof totals[metric] === 'number') {
-        return totals[metric] ?? 0;
-      }
-      return 0;
-    };
-    const get = (row: any): any => {
-      switch (sortField) {
-        case 'yMinus1Landing': return versionMetric(row, 'yMinus1', 'landing');
-        case 'yMinus1Budget': return versionMetric(row, 'yMinus1', 'budget');
-        case 'yBudget': return versionMetric(row, 'y', 'budget');
-        case 'yRevision': return versionMetric(row, 'y', 'revision');
-        case 'yFollowUp': return versionMetric(row, 'y', 'follow_up');
-        case 'yLanding': return versionMetric(row, 'y', 'landing');
-        case 'yPlus1Budget': return versionMetric(row, 'yPlus1', 'budget');
-        case 'yPlus1Revision': return versionMetric(row, 'yPlus1', 'revision');
-        case 'yPlus1Landing': return versionMetric(row, 'yPlus1', 'landing');
-        case 'yPlus2Budget': return versionMetric(row, 'yPlus2', 'budget');
-        default: return row?.[sortField];
-      }
-    };
-    data.sort((a: any, b: any) => {
-      const av = get(a); const bv = get(b);
-      const aU = av == null; const bU = bv == null;
-      if (aU && bU) return 0; if (aU) return 1 * dir; if (bU) return -1 * dir;
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
-      // disabled_at comes as a Date: its string form starts with the weekday.
-      if (av instanceof Date && bv instanceof Date) return (av.getTime() - bv.getTime()) * dir;
-      return String(av).localeCompare(String(bv)) * dir;
+    if (recipients.length === 0) return;
+    this.notifications.notifyStatusChange({
+      itemType: 'capex',
+      itemId: item.id,
+      itemName: item.description,
+      oldStatus,
+      newStatus: item.status,
+      recipients,
+      tenantId,
+      excludeUserId: userId,
+      manager: mg,
     });
-    const start = skip;
-    const end = Math.min(skip + limit, data.length);
-    const effectiveTotal = (q || hasDerivedFilters) ? data.length : total;
-    return { items: data.slice(start, end), total: effectiveTotal, page, limit };
+  }
+
+  /** Dependencies of the shared list engine (`spend/budget-summary.ts`). */
+  private summaryDeps(): SummaryDeps {
+    return { allocationCalculator: this.allocationCalculator, fxRates: this.fxRates };
+  }
+
+  /** One page of the CAPEX list; see `spend/budget-summary.ts`. */
+  async summary(query: any, opts?: { manager?: EntityManager }) {
+    return budgetSummary.summary(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager, {
+      includeRecipientDetails: true,
+      includeNextYearAllocation: true,
+    });
   }
 
   async summaryFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
-    const mg = opts?.manager ?? this.repo.manager;
-    const rawFields: string[] = typeof query.fields === 'string'
-      ? query.fields.split(',').map((f: string) => f.trim()).filter(Boolean)
-      : [];
-    const allowedFields = new Set([
-      'company_name',
-      'paying_company_name',
-      'supplier_name',
-      'account_display',
-      'owner_it_name',
-      'owner_business_name',
-      'analytics_category_name',
-      'ppe_type',
-      'investment_type',
-      'priority',
-      'currency',
-    ]);
-    const fields = rawFields.filter((field) => allowedFields.has(field));
-    if (fields.length === 0) return {};
-
-    const now = new Date();
-    const Y = now.getFullYear();
-    const years = [Y - 1, Y, Y + 1, Y + 2];
-    const { status, q, filters } = parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
-    const filtersToApply = sanitizedFilters ?? filters ?? {};
-    const allowedDbFields = [
-      'id', 'item_number', 'description', 'paying_company_id', 'supplier_id', 'account_id', 'ppe_type', 'investment_type', 'priority', 'currency', 'effective_start', 'disabled_at',
-      'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id', 'notes', 'created_at', 'updated_at',
-    ];
-
-    const includeDisabled =
-      String(query.includeDisabled ?? '').toLowerCase() === '1' ||
-      String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const lifecycleStatus = status ?? statusFromAg ?? null;
-    const minYear = Math.min(...years);
-    const periodStart = new Date(`${String(minYear).padStart(4, '0')}-01-01T00:00:00.000Z`);
-
-    const loadRows = async (fieldFilters: any) => {
-      const where: Record<string, any> = {};
-      if (fieldFilters && Object.keys(fieldFilters).length > 0) {
-        Object.assign(where, buildWhereFromAgFilters(fieldFilters, allowedDbFields));
-      }
-      applyDisabledAtWhere(where, summaryScope(includeDisabled, lifecycleStatus, periodStart), fieldFilters);
-      const baseItems = await mg.getRepository(CapexItem).find({
-        where,
-        order: { created_at: 'DESC' as any },
-        take: 10000,
-      });
-      if (!baseItems.length) return [];
-      let data: any[] = await this.enrichSummaryItems(baseItems as CapexItem[], mg);
-
-      const derivedFilters = Object.fromEntries(
-        Object.entries(fieldFilters || {}).filter(([key]) => !allowedDbFields.includes(key)),
-      );
-      if (Object.keys(derivedFilters).length > 0) {
-        data = applyCapexFiltersInMemory(data, derivedFilters);
-      }
-
-      if (q) {
-        const needle = String(q).toLowerCase();
-        const take = (v: any) => (v == null ? '' : String(v)).toLowerCase();
-        const matches = (row: any): boolean => {
-          const bag: string[] = [];
-          const itemNumber = row.item_number;
-          if (itemNumber != null) {
-            bag.push(take(itemNumber));
-            bag.push(`cpx-${take(itemNumber)}`);
-          }
-          bag.push(take(row.description));
-          bag.push(take(row.supplier_name));
-          bag.push(take(row.paying_company_name));
-          bag.push(take(row.account_display));
-          bag.push(take(row.account_name));
-          bag.push(take(row.account_number));
-          bag.push(take(row.owner_it_name));
-          bag.push(take(row.owner_business_name));
-          bag.push(take(row.analytics_category_name));
-          bag.push(take(row.notes));
-          bag.push(take(row.ppe_type));
-          bag.push(take(row.investment_type));
-          bag.push(take(row.priority));
-          bag.push(take(row.currency));
-          bag.push(take(row.status));
-          return bag.some((s) => s.includes(needle));
-        };
-        data = data.filter(matches);
-      }
-      return data;
-    };
-
-    const results: Record<string, Array<string | null>> = {};
-    for (const field of fields) {
-      const fieldFilters = { ...(filtersToApply || {}) };
-      delete fieldFilters[field];
-      const rows = await loadRows(fieldFilters);
-      const values = new Set<string | null>();
-      rows.forEach((row) => {
-        let value: any = getCapexSummaryFieldValue(row, field);
-        if (value == null || value === '') {
-          value = null;
-        } else if (typeof value !== 'string') {
-          value = String(value);
-        }
-        values.add(value);
-      });
-      const ordered = Array.from(values);
-      ordered.sort((a, b) => {
-        if (a == null) return 1;
-        if (b == null) return -1;
-        return String(a).localeCompare(String(b));
-      });
-      results[field] = ordered;
-    }
-
-    return results;
+    return budgetSummary.summaryFilterValues(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
   }
 
-  /**
-   * Optimized aggregation of capex amounts by version using SQL GROUP BY.
-   * This is 90%+ faster than loading all individual amounts and aggregating in JavaScript.
-   */
-  private async aggregateCapexAmountsByVersionIds(
-    versionIds: string[],
-    mg: EntityManager,
-  ): Promise<Map<string, { planned: bigint; actual: bigint; expected_landing: bigint; committed: bigint }>> {
-    if (!versionIds || versionIds.length === 0) {
-      return new Map();
-    }
+  // Return ordered list of matching CAPEX item IDs for navigation (reflects sort/filter/q)
+  async summaryIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; item_numbers: number[]; total: number }> {
+    return budgetSummary.summaryIds(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+  }
 
-    // Aggregate amounts by version_id in a single SQL query
-    // Filter by year to only sum amounts within the version's budget year
-    const results: Array<{
-      version_id: string;
-      planned: string;
-      actual: string;
-      expected_landing: string;
-      committed: string;
-    }> = await mg.query(
-      `
-      SELECT
-        ca.version_id,
-        COALESCE(SUM(ca.planned), 0) as planned,
-        COALESCE(SUM(ca.actual), 0) as actual,
-        COALESCE(SUM(ca.expected_landing), 0) as expected_landing,
-        COALESCE(SUM(ca.committed), 0) as committed
-      FROM capex_amounts ca
-      JOIN capex_versions cv ON ca.version_id = cv.id
-      WHERE ca.version_id = ANY($1::uuid[])
-        AND EXTRACT(YEAR FROM ca.period) = cv.budget_year
-      GROUP BY ca.version_id
-      `,
-      [versionIds],
-    );
-
-    // Convert to Map for O(1) lookup, using bigint for precision
-    // Use toCents() to convert decimal strings (e.g., "0.00", "1234.56") to bigint cents
-    const totalsMap = new Map<string, { planned: bigint; actual: bigint; expected_landing: bigint; committed: bigint }>();
-    for (const row of results) {
-      totalsMap.set(row.version_id, {
-        planned: toCents(row.planned),
-        actual: toCents(row.actual),
-        expected_landing: toCents(row.expected_landing),
-        committed: toCents(row.committed),
-      });
-    }
-
-    return totalsMap;
+  async summaryRowsByIds(
+    itemIds: string[],
+    query?: { years?: number[]; includeRecipientDetails?: boolean; includeLatestTask?: boolean; includeNextYearAllocation?: boolean },
+    opts?: { manager?: EntityManager },
+  ) {
+    return budgetSummary.summaryRowsByIds(SUMMARY_SCOPES.capex, this.summaryDeps(), { ...query, ids: itemIds }, opts?.manager ?? this.repo.manager);
   }
 
   async summaryTotals(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, number | string>> {
-    const mg = opts?.manager ?? this.repo.manager;
-    const now = new Date();
-    const Y = now.getFullYear();
-    const years = [Y - 1, Y, Y + 1, Y + 2];
-
-    const { ids: itemIds } = await this.summaryIds(query, { manager: mg });
-    const defaultSummary = {
-      yMinus1Budget: 0,
-      yMinus1Landing: 0,
-      yBudget: 0,
-      yRevision: 0,
-      yFollowUp: 0,
-      yLanding: 0,
-      yPlus1Budget: 0,
-      yPlus1Revision: 0,
-      yPlus2Budget: 0,
-      reportingCurrency: 'EUR',
-    };
-
-    if (!itemIds || itemIds.length === 0) {
-      return { ...defaultSummary };
-    }
-
-    // Load items (needed for currency info and disabled_at logic)
-    const items = await mg.getRepository(CapexItem).find({ where: { id: In(itemIds) as any } as any });
-    if (!items.length) {
-      return { ...defaultSummary };
-    }
-
-    const tenantId = (items[0] as any).tenant_id ?? null;
-    const { settings } = tenantId
-      ? await this.fxRates.resolveRates(tenantId, [], { manager: mg })
-      : { settings: { reportingCurrency: 'EUR' } as any };
-
-    // Load versions for the filtered items
-    const versions = await mg.getRepository(CapexVersion).find({
-      where: { capex_item_id: In(itemIds) as any, budget_year: In(years) as any } as any,
-    });
-
-    if (!versions.length) {
-      return { ...defaultSummary, reportingCurrency: settings.reportingCurrency ?? 'EUR' };
-    }
-
-    // OPTIMIZATION: Aggregate amounts by version_id using SQL (90%+ faster)
-    const versionIds = versions.map((v) => v.id);
-    const versionTotalsById = await this.aggregateCapexAmountsByVersionIds(versionIds, mg);
-
-    // Build lookup maps
-    const itemById = new Map(items.map((it) => [it.id, it]));
-    const versionsById = new Map(versions.map((v) => [v.id, v]));
-
-    // Prepare FX lookup keys for each version
-    const lookupKeys: FxLookupKey[] = [];
-    for (const version of versions) {
-      const item = itemById.get((version as any).capex_item_id);
-      if (!item) continue;
-      const sourceCurrency = (item as any).currency || 'EUR';
-      lookupKeys.push({
-        key: '',
-        rateSetId: (version as any).fx_rate_set_id ?? null,
-        fiscalYear: (version as any).budget_year as number,
-        sourceCurrency,
-      });
-    }
-
-    // Resolve FX rates for all versions
-    const fxResult = tenantId
-      ? await this.fxRates.resolveRates(tenantId, lookupKeys, { manager: mg })
-      : { map: new Map<string, FxResolvedRate>(), settings: { reportingCurrency: 'EUR' } as any };
-    const fxMap = fxResult.map;
-
-    // Convert each version's totals to reporting currency
-    const versionReportingTotalsById = new Map<
-      string,
-      { budget: number; revision: number; follow_up: number; landing: number }
-    >();
-
-    for (const version of versions) {
-      const totals = versionTotalsById.get(version.id);
-      if (!totals) {
-        // Version has no amounts - set to zero
-        versionReportingTotalsById.set(version.id, { budget: 0, revision: 0, follow_up: 0, landing: 0 });
-        continue;
-      }
-
-      const item = itemById.get((version as any).capex_item_id);
-      const currency = ((item as any)?.currency || 'EUR').toString().toUpperCase();
-      const fxRateSetId = (version as any).fx_rate_set_id ?? null;
-      const budgetYear = (version as any).budget_year as number;
-      const key = `${fxRateSetId || 'live'}:${budgetYear}:${currency}`;
-      const fx = fxMap.get(key) || {
-        rate: currency === settings.reportingCurrency ? 1 : 1,
-        reportingCurrency: settings.reportingCurrency,
-        source: 'identity',
-        capturedAt: null,
-      };
-
-      // Convert bigint amounts to numbers and apply FX conversion
-      const budget = Number(formatCents(totals.planned));
-      const revision = Number(formatCents(totals.committed));
-      const followUp = Number(formatCents(totals.actual));
-      const landing = Number(formatCents(totals.expected_landing));
-
-      versionReportingTotalsById.set(version.id, {
-        budget: this.fxRates.convertValue(budget, fx.rate),
-        revision: this.fxRates.convertValue(revision, fx.rate),
-        follow_up: this.fxRates.convertValue(followUp, fx.rate),
-        landing: this.fxRates.convertValue(landing, fx.rate),
-      });
-    }
-
-    // Build versionsByItemYear map for efficient lookup
-    const versionsByItemYear = new Map<string, Map<number, CapexVersion>>();
-    for (const version of versions) {
-      const itemId = (version as any).capex_item_id as string;
-      const budgetYear = (version as any).budget_year as number;
-      let perItem = versionsByItemYear.get(itemId);
-      if (!perItem) {
-        perItem = new Map<number, CapexVersion>();
-        versionsByItemYear.set(itemId, perItem);
-      }
-      perItem.set(budgetYear, version);
-    }
-
-    // Sum up totals across all items, respecting disabled_at logic
-    const zeroTotals = { budget: 0, revision: 0, follow_up: 0, landing: 0 };
-    const totals = {
-      yMinus1Budget: 0,
-      yMinus1Landing: 0,
-      yBudget: 0,
-      yRevision: 0,
-      yFollowUp: 0,
-      yLanding: 0,
-      yPlus1Budget: 0,
-      yPlus1Revision: 0,
-      yPlus2Budget: 0,
-    };
-
-    const getTotals = (versionId?: string | null) => {
-      if (!versionId) return zeroTotals;
-      const totals = versionReportingTotalsById.get(versionId);
-      if (!totals) return zeroTotals;
-      return {
-        budget: totals.budget,
-        revision: totals.revision,
-        follow_up: totals.follow_up,
-        landing: totals.landing,
-      };
-    };
-
-    for (const itemId of itemIds) {
-      const perYear = versionsByItemYear.get(itemId) || new Map<number, CapexVersion>();
-      const item = items.find((it) => it.id === itemId);
-      const disabledYear = item && (item as any).disabled_at ? new Date((item as any).disabled_at).getFullYear() : null;
-      const vMinus1Raw = perYear.get(Y - 1);
-      const vCurrRaw = perYear.get(Y);
-      const vPlus1Raw = perYear.get(Y + 1);
-      const vPlus2Raw = perYear.get(Y + 2);
-      const vMinus1 = disabledYear != null && (Y - 1) > disabledYear ? undefined : vMinus1Raw;
-      const vCurr = disabledYear != null && Y > disabledYear ? undefined : vCurrRaw;
-      const vPlus1 = disabledYear != null && (Y + 1) > disabledYear ? undefined : vPlus1Raw;
-      const vPlus2 = disabledYear != null && (Y + 2) > disabledYear ? undefined : vPlus2Raw;
-
-      const minus1 = getTotals(vMinus1?.id);
-      const current = getTotals(vCurr?.id);
-      const plus1 = getTotals(vPlus1?.id);
-      const plus2 = getTotals(vPlus2?.id);
-
-      totals.yMinus1Budget += minus1.budget;
-      totals.yMinus1Landing += minus1.landing;
-      totals.yBudget += current.budget;
-      totals.yRevision += current.revision;
-      totals.yFollowUp += current.follow_up;
-      totals.yLanding += current.landing;
-      totals.yPlus1Budget += plus1.budget;
-      totals.yPlus1Revision += plus1.revision;
-      totals.yPlus2Budget += plus2.budget;
-    }
-
-    const round2 = (n: number) => Math.round(n * 100) / 100;
-
-    return {
-      yMinus1Budget: round2(totals.yMinus1Budget),
-      yMinus1Landing: round2(totals.yMinus1Landing),
-      yBudget: round2(totals.yBudget),
-      yRevision: round2(totals.yRevision),
-      yFollowUp: round2(totals.yFollowUp),
-      yLanding: round2(totals.yLanding),
-      yPlus1Budget: round2(totals.yPlus1Budget),
-      yPlus1Revision: round2(totals.yPlus1Revision),
-      yPlus2Budget: round2(totals.yPlus2Budget),
-      reportingCurrency: settings.reportingCurrency ?? 'EUR',
-    };
+    return budgetSummary.summaryTotals(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
   }
 
   csvHeaders() {
@@ -1213,24 +506,33 @@ export class CapexItemsService {
       return { filename: 'capex_template.csv', content: '\ufeff' + headerRow + '\n' };
     }
 
-    // Data export
-    const now = new Date();
-    const Y = now.getFullYear();
-    // What is stored, as the OPEX item export writes it: a masked 0 would clear that year on re-import.
-    const { items } = await this.summary({ page: 1, limit: 100000, sort: 'created_at:DESC' }, { ...opts, exportAll: true, unmaskedYears: true });
+    // Data export: every item whatever its end of validity, read without the list paging,
+    // with what is stored, as the OPEX item export writes it (a masked 0 would clear that year on re-import).
+    const mgExport = opts?.manager ?? this.repo.manager;
+    const tenantId = await summaryTenantId(mgExport);
+    const Y = new Date().getFullYear();
+    const items = await mgExport.getRepository(CapexItem).find({
+      where: { tenant_id: tenantId } as any,
+      order: { created_at: 'DESC', id: 'DESC' } as any,
+    });
+    const stored = await loadVersionTotals(SUMMARY_SCOPES.capex, this.summaryDeps(), mgExport, tenantId, items, [Y - 1, Y, Y + 1, Y + 2], { reporting: false });
+    const storedTotals = (itemId: string, year: number): Record<string, number> => {
+      const version = stored.versionsByItemYear.get(itemId)?.get(year);
+      const cents = version ? stored.cents.get(version.id) : undefined;
+      return Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, cents ? Number(formatCents(cents[c.key])) : 0]));
+    };
 
     // Get company names for items that have company_id
-    const mgExport = opts?.manager ?? this.repo.manager;
-    const companyIds = items.map((it: any) => it.paying_company_id).filter(Boolean);
+    const companyIds = Array.from(new Set(items.map((it: any) => it.paying_company_id).filter(Boolean))) as string[];
     const companies = companyIds.length > 0
-      ? await mgExport.getRepository(Company).find({ where: { id: In(companyIds) } })
+      ? await mgExport.getRepository(Company).find({ where: { tenant_id: tenantId, id: In(companyIds) } as any })
       : [];
     const companiesById = new Map(companies.map(c => [c.id, c.name]));
     const ownerIds = Array.from(new Set(items.flatMap((it: any) => [it.owner_it_id, it.owner_business_id]).filter(Boolean))) as string[];
-    const owners = ownerIds.length > 0 ? await mgExport.getRepository(User).find({ where: { id: In(ownerIds) } }) : [];
+    const owners = ownerIds.length > 0 ? await mgExport.getRepository(User).find({ where: { tenant_id: tenantId, id: In(ownerIds) } as any }) : [];
     const ownerEmailById = new Map(owners.map((u) => [u.id, u.email]));
     const categoryIds = Array.from(new Set(items.map((it: any) => it.analytics_category_id).filter(Boolean))) as string[];
-    const categories = categoryIds.length > 0 ? await mgExport.getRepository(AnalyticsCategory).find({ where: { id: In(categoryIds) } }) : [];
+    const categories = categoryIds.length > 0 ? await mgExport.getRepository(AnalyticsCategory).find({ where: { tenant_id: tenantId, id: In(categoryIds) } as any }) : [];
     const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
 
     const { format } = await import('@fast-csv/format');
@@ -1251,15 +553,11 @@ export class CapexItemsService {
       stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
       stream.on('end', () => resolve());
       stream.on('error', (err) => reject(err));
-      function getTotals(row: any, key: 'yMinus1' | 'y' | 'yPlus1' | 'yPlus2') {
-        const v = row?.versions?.[key]?.totals || { budget: 0, follow_up: 0, landing: 0, revision: 0 };
-        return v;
-      }
       for (const it of items as any[]) {
-        const tMinus1 = getTotals(it, 'yMinus1');
-        const tY = getTotals(it, 'y');
-        const tPlus1 = getTotals(it, 'yPlus1');
-        const tPlus2 = getTotals(it, 'yPlus2');
+        const tMinus1 = storedTotals(it.id, Y - 1);
+        const tY = storedTotals(it.id, Y);
+        const tPlus1 = storedTotals(it.id, Y + 1);
+        const tPlus2 = storedTotals(it.id, Y + 2);
         stream.write({
           item_number: (it as any).item_number ?? '',
           description: (it as any).description ?? '',
@@ -1320,6 +618,13 @@ export class CapexItemsService {
     });
     if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
 
+    // The tenant's allowed currencies, as the OPEX import checks them (none configured: any code).
+    const tenantId = await this.resolveTenantId(mg);
+    const { settings: currencySettings } = await this.fxRates.resolveRates(tenantId, [], { manager: mg });
+    const allowedCurrencies = new Set(
+      (currencySettings.allowedCurrencies ?? []).map((c) => String(c || '').trim().toUpperCase()).filter((c) => c.length === 3),
+    );
+
     const now = new Date();
     const Y = now.getFullYear();
     // number parsing tolerant to thousand separators and comma decimals
@@ -1354,12 +659,30 @@ export class CapexItemsService {
     const findUserByEmail = async (email: string): Promise<User | null> => {
       const key = email.toLowerCase();
       if (userCache.has(key)) return userCache.get(key) ?? null;
-      const user = await mg.getRepository(User).createQueryBuilder('u').where('LOWER(u.email) = LOWER(:email)', { email }).getOne();
+      const user = await mg.getRepository(User).createQueryBuilder('u')
+        .where('u.tenant_id = :tenantId', { tenantId })
+        .andWhere('LOWER(u.email) = LOWER(:email)', { email })
+        .getOne();
       userCache.set(key, user ?? null);
       return user ?? null;
     };
+    // An owner is an active (enabled) user of this tenant, as on the OPEX import.
+    const resolveOwner = async (email: string, label: string, line: number): Promise<string | null> => {
+      if (!email) return null;
+      const user = await findUserByEmail(email);
+      if (!user) {
+        errors.push({ row: line, message: `${label} email '${email}' not found` });
+        return null;
+      }
+      if (user.status !== 'enabled') {
+        errors.push({ row: line, message: `${label} email '${email}' is not an active user` });
+        return null;
+      }
+      return user.id;
+    };
 
     const normalized: Array<{
+      line: number;
       item_number: number | null;
       description: string; ppe_type: string; investment_type: string; priority: string; currency: string; effective_start: string; status: StatusState; disabled_at: Date | null; notes: string | null;
       paying_company_id: string | null;
@@ -1414,18 +737,8 @@ export class CapexItemsService {
       }
       const ownerItEmail = (r['owner_it_email'] ?? '').toString().trim();
       const ownerBizEmail = (r['owner_business_email'] ?? '').toString().trim();
-      let owner_it_id: string | null = null;
-      if (ownerItEmail) {
-        const user = await findUserByEmail(ownerItEmail);
-        if (user) owner_it_id = user.id;
-        else errors.push({ row: line, message: `Owner IT email '${ownerItEmail}' not found` });
-      }
-      let owner_business_id: string | null = null;
-      if (ownerBizEmail) {
-        const user = await findUserByEmail(ownerBizEmail);
-        if (user) owner_business_id = user.id;
-        else errors.push({ row: line, message: `Owner business email '${ownerBizEmail}' not found` });
-      }
+      const owner_it_id = await resolveOwner(ownerItEmail, 'Owner IT', line);
+      const owner_business_id = await resolveOwner(ownerBizEmail, 'Owner business', line);
       const analytics_category_name = ((r['analytics_category'] ?? '').toString().trim()) || null;
 
       // Resolve company name to ID
@@ -1439,6 +752,9 @@ export class CapexItemsService {
 
       if (!description) errors.push({ row: line, message: 'description is required' });
       if (currency && currency.length !== 3) errors.push({ row: line, message: 'currency must be 3 letters' });
+      if (allowedCurrencies.size > 0 && currency.length === 3 && !allowedCurrencies.has(currency)) {
+        errors.push({ row: line, message: `currency '${currency}' is not allowed. allowedCurrencies=${Array.from(allowedCurrencies).join(',')}` });
+      }
       if (!['hardware','software'].includes(ppe_type)) errors.push({ row: line, message: 'ppe_type must be hardware|software' });
       const invOk = ['replacement','capacity','productivity','security','conformity','business_growth','other'].includes(investment_type);
       if (!invOk) errors.push({ row: line, message: 'investment_type invalid' });
@@ -1467,6 +783,7 @@ export class CapexItemsService {
       const tPlus2 = { planned: amount('y_plus2_budget') };
       const totals: any = {}; totals[Y - 1] = tMinus1; totals[Y] = tY; totals[Y + 1] = tPlus1; totals[Y + 2] = tPlus2;
       normalized.push({
+        line,
         item_number,
         description,
         ppe_type,
@@ -1506,9 +823,17 @@ export class CapexItemsService {
     for (const item of unique) {
       const exists = await findExisting(item);
       if (item.item_number != null && !exists) {
-        errors.push({ row: 0, message: `item_number '${item.item_number}' does not match any CAPEX item` });
+        errors.push({ row: item.line, message: `item_number '${item.item_number}' does not match any CAPEX item` });
         continue;
       }
+      // A new line needs its paying company and its currency (an update keeps the stored ones).
+      if (!exists && !item.paying_company_id) {
+        errors.push({ row: item.line, message: 'company_name is required for a new line' });
+      }
+      if (!exists && !item.currency) {
+        errors.push({ row: item.line, message: 'currency is required' });
+      }
+      if (!exists && (!item.paying_company_id || !item.currency)) continue;
       if (exists) updated += 1; else inserted += 1;
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
@@ -1540,7 +865,7 @@ export class CapexItemsService {
         ppe_type: item.ppe_type as any,
         investment_type: item.investment_type as any,
         priority: item.priority as any,
-        currency: item.currency,
+        ...(item.currency ? { currency: item.currency } : {}),
         effective_start: item.effective_start,
         status: item.status,
         disabled_at: item.disabled_at,
@@ -1551,7 +876,7 @@ export class CapexItemsService {
         analytics_category_id: analyticsCategory ? analyticsCategory.id : null,
       };
       const target = exists
-        ? await this.update(exists.id, payload as any, userId ?? undefined, { manager: mg })
+        ? await this.update(exists.id, payload as any, userId ?? undefined, { manager: mg, statusEmail: false })
         : await this.create(payload as any, userId ?? undefined, { manager: mg });
 
       const years = [Y - 1, Y, Y + 1, Y + 2];
@@ -1580,154 +905,6 @@ export class CapexItemsService {
       processed += 1;
     }
     return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [] };
-  }
-
-  // Return ordered list of matching CAPEX item IDs for navigation (reflects sort/filter/q)
-  async summaryIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; item_numbers: number[]; total: number }> {
-    const mg = opts?.manager ?? this.repo.manager;
-    const now = new Date();
-    const Y = now.getFullYear();
-    const years = [Y - 1, Y, Y + 1, Y + 2];
-
-    const { sort, status, q, filters } = parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
-    const filtersToApply = sanitizedFilters ?? filters;
-    const allowedDbFields = [
-      'id', 'item_number', 'description', 'paying_company_id', 'supplier_id', 'account_id', 'ppe_type', 'investment_type', 'priority', 'currency', 'effective_start', 'disabled_at',
-      'status', 'owner_it_id', 'owner_business_id', 'analytics_category_id', 'project_id', 'notes', 'created_at', 'updated_at',
-    ];
-
-    const where: Record<string, any> = {};
-    if (filtersToApply && Object.keys(filtersToApply).length > 0) {
-      Object.assign(where, buildWhereFromAgFilters(filtersToApply, allowedDbFields));
-    }
-    const lifecycleStatus = status ?? statusFromAg ?? StatusState.ENABLED;
-    const includeDisabled =
-      String(query.includeDisabled ?? '').toLowerCase() === '1' ||
-      String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const scope: LifecycleScope = includeDisabled ? null : lifecycleStatus === StatusState.DISABLED ? 'inactive' : 'active';
-    applyDisabledAtWhere(where, scope, filtersToApply);
-
-    const baseItems = await mg.getRepository(CapexItem).find({
-      where,
-      order: { created_at: 'DESC' as any },
-      take: 10000,
-    });
-    if (!baseItems.length) return { ids: [], item_numbers: [], total: 0 };
-
-    let data: any[] = await this.enrichSummaryItems(baseItems as CapexItem[], mg);
-
-    const derivedFilters = Object.fromEntries(
-      Object.entries(filtersToApply || {}).filter(([key]) => !allowedDbFields.includes(key)),
-    );
-    const hasDerivedFilters = Object.keys(derivedFilters).length > 0;
-    if (hasDerivedFilters) {
-      data = applyCapexFiltersInMemory(data, derivedFilters);
-    }
-
-    // Optional quick search across a few textual fields
-    if (q) {
-      const needle = String(q).toLowerCase();
-      const take = (v: any) => (v == null ? '' : String(v)).toLowerCase();
-      const matches = (row: any): boolean => {
-        const bag: string[] = [];
-        const itemNumber = row.item_number;
-        if (itemNumber != null) {
-          bag.push(take(itemNumber));
-          bag.push(`cpx-${take(itemNumber)}`);
-        }
-        bag.push(take(row.description));
-        bag.push(take(row.supplier_name));
-        bag.push(take(row.paying_company_name));
-        bag.push(take(row.account_display));
-        bag.push(take(row.account_name));
-        bag.push(take(row.account_number));
-        bag.push(take(row.owner_it_name));
-        bag.push(take(row.owner_business_name));
-        bag.push(take(row.analytics_category_name));
-        bag.push(take(row.notes));
-        bag.push(take(row.ppe_type));
-        bag.push(take(row.investment_type));
-        bag.push(take(row.priority));
-        bag.push(take(row.currency));
-        bag.push(take(row.status));
-        return bag.some((s) => s.includes(needle));
-      };
-      data = data.filter(matches);
-    }
-
-    if (!data.length) return { ids: [], item_numbers: [], total: 0 };
-
-    // Load versions for required years and compute rollups used for sorting by derived fields
-    const itemIds = data.map((i) => i.id);
-    const versions = await mg.getRepository(CapexVersion).find({ where: { capex_item_id: In(itemIds) as any, budget_year: In(years) as any } as any });
-    const versionsById = new Map<string, CapexVersion>();
-    const versionsByItemYear = new Map<string, Map<number, CapexVersion>>();
-    for (const v of versions) {
-      versionsById.set(v.id, v);
-      let perItem = versionsByItemYear.get(v.capex_item_id);
-      if (!perItem) { perItem = new Map<number, CapexVersion>(); versionsByItemYear.set(v.capex_item_id, perItem); }
-      perItem.set((v as any).budget_year as number, v);
-    }
-
-    const versionIds = versions.map((v) => v.id);
-    let allAmounts: CapexAmount[] = [];
-    if (versionIds.length > 0) {
-      allAmounts = await mg.getRepository(CapexAmount).find({ where: { version_id: In(versionIds) as any } as any });
-    }
-    const amountsByVersion: Record<string, { planned: bigint; actual: bigint; expected_landing: bigint; committed: bigint }> = {};
-    for (const a of allAmounts) {
-      const v = versionsById.get((a as any).version_id as string);
-      if (!v) continue;
-      const periodYear = new Date((a as any).period as string).getFullYear();
-      const vYear = (v as any).budget_year as number;
-      if (periodYear !== vYear) continue;
-      const key = (a as any).version_id as string;
-      const acc = (amountsByVersion[key] ||= { planned: 0n, actual: 0n, expected_landing: 0n, committed: 0n });
-      acc.planned = addCents(acc.planned, (a as any).planned);
-      acc.actual = addCents(acc.actual, (a as any).actual);
-      acc.expected_landing = addCents(acc.expected_landing, (a as any).expected_landing);
-      acc.committed = addCents(acc.committed, (a as any).committed);
-    }
-
-    const disabledAtById = new Map(data.map((row: any) => [row.id as string, row.disabled_at]));
-    function sumFor(itemId: string, year: number, key: 'planned' | 'actual' | 'expected_landing' | 'committed') {
-      const v = versionWithinValidity(versionsByItemYear.get(itemId), year, disabledAtById.get(itemId));
-      if (!v) return 0;
-      const sum = amountsByVersion[v.id] || { planned: 0n, actual: 0n, expected_landing: 0n, committed: 0n } as any;
-      return Number(formatCents(sum[key]));
-    }
-
-    // Sort by requested field
-    const dir = sort.direction === 'ASC' ? 1 : -1;
-    const getValue = (row: any): any => {
-      switch (sort.field) {
-        case 'yMinus1Budget': return sumFor(row.id, Y - 1, 'planned');
-        case 'yMinus1Landing': return sumFor(row.id, Y - 1, 'expected_landing');
-        case 'yBudget': return sumFor(row.id, Y, 'planned');
-        case 'yRevision': return sumFor(row.id, Y, 'committed');
-        case 'yFollowUp': return sumFor(row.id, Y, 'actual');
-        case 'yLanding': return sumFor(row.id, Y, 'expected_landing');
-        case 'yPlus1Budget': return sumFor(row.id, Y + 1, 'planned');
-        case 'yPlus1Revision': return sumFor(row.id, Y + 1, 'committed');
-        case 'yPlus2Budget': return sumFor(row.id, Y + 2, 'planned');
-        default: return row?.[sort.field];
-      }
-    };
-
-    data.sort((a: any, b: any) => {
-      const av = getValue(a); const bv = getValue(b);
-      const aU = av == null; const bU = bv == null;
-      if (aU && bU) return 0; if (aU) return 1 * dir; if (bU) return -1 * dir;
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
-      // disabled_at comes as a Date: its string form starts with the weekday.
-      if (av instanceof Date && bv instanceof Date) return (av.getTime() - bv.getTime()) * dir;
-      return String(av).localeCompare(String(bv)) * dir;
-    });
-
-    const ids = data.map((r: any) => r.id);
-    const item_numbers = data.map((r: any) => r.item_number);
-    return { ids, item_numbers, total: ids.length };
   }
 
   // Links

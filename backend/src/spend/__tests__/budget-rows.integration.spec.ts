@@ -322,38 +322,6 @@ async function testRightsOnlyForRowsThatWrite() {
   });
 }
 
-/** CAPEX has no unique (item, year) version: export and import use the newest, as the budget tab does. */
-async function testNewestCapexVersion() {
-  await inRolledBackTransaction(async (runner) => {
-    const tenantId = await seedTenant(runner, 'newest');
-    const itemId = await seedItem(runner, 'capex', tenantId, 3);
-    for (const [name, age, value] of [['Older', '2 days', '1'], ['Newer', '1 day', '2']]) {
-      const [{ id }] = await runner.query(
-        `INSERT INTO capex_versions (tenant_id, capex_item_id, version_name, input_grain, as_of_date, budget_year, allocation_method, created_at)
-         VALUES ($1, $2, $3, 'monthly', '${YEAR}-01-01', ${YEAR}, 'default', now() - interval '${age}') RETURNING id`,
-        [tenantId, itemId, name],
-      );
-      await runner.query(
-        `INSERT INTO capex_amounts (tenant_id, version_id, period, planned)
-         SELECT $1, $2, make_date(${YEAR}, m, 1), $3 FROM generate_series(1, 12) AS m`,
-        [tenantId, id, value],
-      );
-    }
-    const { lines } = await exportLines(runner, tenantId);
-    assert.equal(lines.length, 5, 'one version per item and year');
-    assert.equal(lines[0].jan, '2', 'the newest version is exported');
-    const result = await importLines(runner, tenantId, [{ ...lines[0], jan: '7' }]);
-    assert.deepEqual([result.ok, result.updated], [true, 1]);
-    const [{ newer, older }] = await runner.query(
-      `SELECT max(a.planned) FILTER (WHERE v.version_name = 'Newer' AND a.period = '${YEAR}-01-01')::text AS newer,
-              max(a.planned) FILTER (WHERE v.version_name = 'Older' AND a.period = '${YEAR}-01-01')::text AS older
-       FROM capex_amounts a JOIN capex_versions v ON v.id = a.version_id WHERE v.capex_item_id = $1`,
-      [itemId],
-    );
-    assert.deepEqual([newer, older], ['7.00', '1.00'], 'the import writes the newest version');
-  });
-}
-
 /** A group changing only periods locks the months first and writes its records in column order. */
 async function testPeriodOnlyGroup() {
   await inRolledBackTransaction(async (runner) => {
@@ -456,7 +424,6 @@ void runSpecs('budget-rows.integration.spec', [
   ['testFreeze', testFreeze],
   ['testPermissionsAndPartialExports', testPermissionsAndPartialExports],
   ['testRightsOnlyForRowsThatWrite', testRightsOnlyForRowsThatWrite],
-  ['testNewestCapexVersion', testNewestCapexVersion],
   ['testPeriodOnlyGroup', testPeriodOnlyGroup],
   ['testPeriodOnlyWaitsForTheMonths', testPeriodOnlyWaitsForTheMonths],
 ]);

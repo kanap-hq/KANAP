@@ -121,6 +121,7 @@ const SIMPLE_RELATIONS: SimpleRelationConfig[] = [
   { sourceEntity: 'spend_items', relation: 'projects', label: 'Projects', table: 'portfolio_project_opex', sourceColumn: 'opex_id', targetColumn: 'project_id', target: 'projects', businessResource: 'opex', kind: 'simple' },
   { sourceEntity: 'spend_items', relation: 'contracts', label: 'Contracts', table: 'contract_spend_items', sourceColumn: 'spend_item_id', targetColumn: 'contract_id', target: 'contracts', businessResource: 'opex', kind: 'simple' },
 
+  { sourceEntity: 'capex_items', relation: 'applications', label: 'Applications', table: 'application_capex_items', sourceColumn: 'capex_item_id', targetColumn: 'application_id', target: 'applications', businessResource: 'capex', kind: 'simple' },
   { sourceEntity: 'capex_items', relation: 'projects', label: 'Projects', table: 'portfolio_project_capex', sourceColumn: 'capex_id', targetColumn: 'project_id', target: 'projects', businessResource: 'capex', kind: 'simple' },
   { sourceEntity: 'capex_items', relation: 'contracts', label: 'Contracts', table: 'contract_capex_items', sourceColumn: 'capex_item_id', targetColumn: 'contract_id', target: 'contracts', businessResource: 'capex', kind: 'simple' },
 

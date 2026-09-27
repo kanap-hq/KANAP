@@ -758,7 +758,7 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
   - Each row includes `{ versions: { yMinus1, y, yPlus1 }, allocation_method_label, next_year_allocation_method_label, spread_mode_for_y, company_name }`
   - Also includes `latest_task?: { id, title?, description?, status, created_at } | null` for open/in_progress tasks (most recent)
 - GET `/capex-items/summary/ids` → `{ ids, total }` ordered by requested sort (supports derived fields like `yBudget`)
-- GET `/capex-items/summary/totals` → `{ reportingCurrency, yMinus1Landing, yBudget, yLanding, yPlus1Budget }`
+- GET `/capex-items/summary/totals` → `{ reportingCurrency, ...amounts }`: one key per `<slot><Suffix>` for the slots `yMinus2`, `yMinus1`, `y`, `yPlus1`, `yPlus2` and the suffixes `Budget`, `Revision`, `Forecast`, `FollowUp`, `Landing` (25 keys, for example `yBudget`, `yPlus2Forecast`), plus `y<YYYY><Suffix>` for each requested year. Same shape as the OPEX totals
 - GET `/capex-items/summary/filter-values?fields=fieldA,fieldB&q&filters` **[Requires: capex:reader]**
   - Distinct filter values for closed-choice columns in the CAPEX summary grid.
   - Response: `{ fieldA: Array<string | null>, fieldB: Array<string | null> }`
@@ -1234,6 +1234,18 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
     - Preserves all other columns when updating destination column
     - Creates versions/amounts for destination year if they don't exist
     - Full audit logging for compliance
+
+### Copy Allocations
+- POST `/spend-items/budget-operations/copy-allocations` (OPEX lines, requires `opex:admin`)
+- POST `/capex-items/budget-operations/copy-allocations` (CAPEX lines, requires `capex:admin`)
+  - Body (both routes): `{ sourceYear: number, destinationYear: number, overwrite?: boolean, dryRun?: boolean }`
+  - Returns: `{ success: boolean, dryRun: boolean, summary: { totalItems, processed, skipped, errors }, results: AllocationCopyResult[] }`
+  - `AllocationCopyResult`: `{ itemId, itemName, sourceMethod, sourceMethodLabel, destinationMethod, destinationMethodLabel, resultMethod, resultMethodLabel, sourceAllocationsCount, destinationAllocationsCount, action, message? }`, with `action` one of `copy`, `skip_missing_source_version`, `skip_no_source_allocations`, `skip_destination_has_data`, `error`
+  - Notes:
+    - Reads the newest budget version of each line for the source year; creates the destination year's version when missing
+    - Manual methods copy their percentages; automatic methods are recomputed for the destination year
+    - `overwrite: false` skips lines whose destination year already has allocations
+    - All or nothing: if one line fails, nothing is written
 
 ### Clear Budget Column
 - POST `/spend-items/budget-operations/clear-column`

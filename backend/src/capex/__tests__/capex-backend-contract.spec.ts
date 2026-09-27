@@ -2,7 +2,6 @@ import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { CapexAllocation } from '../capex-allocation.entity';
 import { CapexAllocationsService } from '../capex-allocations.service';
-import { CapexAmount } from '../capex-amount.entity';
 import { CapexItem } from '../capex-item.entity';
 import { CapexItemsService } from '../capex-items.service';
 import { CapexVersion } from '../capex-version.entity';
@@ -56,16 +55,18 @@ async function testSummaryIdsReturnsAlignedItemNumbers() {
     { id: 'capex-a', item_number: 1, tenant_id: 'tenant-1', description: 'A', disabled_at: null },
   ] as any[];
 
+  const finds: any[] = [];
   const manager = {
+    query: async (sql: string) => (/app_current_tenant/.test(sql) ? [{ tenant_id: 'tenant-1' }] : []),
     getRepository: (entity: unknown) => {
       if (entity === CapexItem) {
         return {
-          find: async () => items,
-        };
-      }
-      if (entity === CapexVersion || entity === CapexAmount) {
-        return {
-          find: async () => [],
+          // A sort on an item column runs in SQL: the read carries the order and the tenant.
+          find: async (options: any) => {
+            finds.push(options);
+            const [field, direction] = Object.entries(options.order)[0] as [string, string];
+            return [...items].sort((a, b) => (a[field] - b[field]) * (direction === 'ASC' ? 1 : -1));
+          },
         };
       }
       return {
@@ -80,6 +81,9 @@ async function testSummaryIdsReturnsAlignedItemNumbers() {
   assert.deepEqual(result.ids, ['capex-a', 'capex-b']);
   assert.deepEqual(result.item_numbers, [1, 2]);
   assert.equal(result.total, 2);
+  assert.equal(finds.length, 1, 'one item read, no rows built for a column sort');
+  assert.equal(finds[0].where.tenant_id, 'tenant-1', 'the item read names the tenant');
+  assert.deepEqual(finds[0].order, { item_number: 'ASC', id: 'ASC' });
 }
 
 async function testManualPctBulkUpsert() {

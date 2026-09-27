@@ -52,6 +52,7 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { getAiEntityRegistry } from './registries';
+import { FIXED_SLOTS, FixedSlot, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -124,55 +125,61 @@ function extractContributorNames(row: any): string | null {
   ]);
 }
 
-function getSpendVersionSlot(row: any, offset: number, anchorYear: number): any {
+function budgetSlot(row: any, slot: FixedSlot, anchorYear: number): any {
   const versions = row?.versions;
   if (!versions || typeof versions !== 'object') return null;
-  const targetYear = anchorYear + offset;
-  if (offset === -1) return versions.yMinus1 ?? versions[`y${targetYear}`] ?? null;
-  if (offset === 0) return versions.y ?? versions[`y${targetYear}`] ?? null;
-  if (offset === 1) return versions.yPlus1 ?? versions[`y${targetYear}`] ?? null;
-  return versions[`y${targetYear}`] ?? null;
+  return versions[slot.key] ?? versions[`y${anchorYear + slot.offset}`] ?? null;
 }
 
-function getSpendVersionMetric(
-  row: any,
-  offset: number,
-  anchorYear: number,
-  metric: 'budget' | 'revision' | 'follow_up' | 'landing',
-): number | null {
-  const slot = getSpendVersionSlot(row, offset, anchorYear);
+function budgetSlotValue(slot: any, metric: SlotMetric): number | null {
   if (!slot || typeof slot !== 'object') return null;
   const reportingValue = numericScalar(slot.reporting?.[metric]);
   if (reportingValue != null) return reportingValue;
   return numericScalar(slot.totals?.[metric]);
 }
 
-function formatRelativeYearLabel(offset: number): string {
-  if (offset === 0) return 'Y';
-  return offset > 0 ? `Y+${offset}` : `Y${offset}`;
+/** Every column of every fixed year under its registry key (`y_plus1_forecast`), and the same per year. */
+function budgetAmountMetadata(row: any, anchorYear: number): AiEntityMetadata {
+  const metadata: AiEntityMetadata = {};
+  const yearlyTotals: Array<Record<string, string | number | null>> = [];
+  for (const slot of FIXED_SLOTS) {
+    const data = budgetSlot(row, slot, anchorYear);
+    const year: Record<string, string | number | null> = { label: slot.label, year: anchorYear + slot.offset };
+    for (const column of SUMMARY_COLUMNS) {
+      const value = budgetSlotValue(data, column.key);
+      metadata[`${slot.ai}_${column.ai}`] = value;
+      year[column.ai] = value;
+    }
+    yearlyTotals.push(year);
+  }
+  metadata.yearly_totals = yearlyTotals;
+  return metadata;
 }
 
-function buildSpendYearlyTotals(row: any, anchorYear: number): Array<Record<string, string | number | null>> {
-  return [-2, -1, 0, 1, 2].map((offset) => ({
-    label: formatRelativeYearLabel(offset),
-    year: anchorYear + offset,
-    budget: getSpendVersionMetric(row, offset, anchorYear, 'budget'),
-    review: getSpendVersionMetric(row, offset, anchorYear, 'revision'),
-    actual: getSpendVersionMetric(row, offset, anchorYear, 'follow_up'),
-    landing: getSpendVersionMetric(row, offset, anchorYear, 'landing'),
-  }));
+/** The descriptive fields both budget item types share. */
+function budgetItemMetadata(row: any): AiEntityMetadata {
+  return {
+    supplier: scalar(row.supplier_name),
+    paying_company: scalar(row.paying_company_name ?? row.company_name),
+    account: scalar(row.account_display),
+    owner_it: scalar(row.owner_it_name),
+    owner_business: scalar(row.owner_business_name),
+    analytics_category: scalar(row.analytics_category_name),
+    allocation_method: scalar(row.allocation_method_label),
+    next_year_allocation_method: scalar(row.next_year_allocation_method_label),
+    contract: scalar(row.latest_contract_name),
+    currency: scalar(row.currency),
+    effective_start: scalar(row.effective_start),
+    end_of_validity: scalar(row.disabled_at),
+    project_name: scalar(row.project_name),
+    project_stream: scalar(row.project_stream_name),
+    project_category: scalar(row.project_category_name),
+  };
 }
 
-function getCapexVersionMetric(
-  row: any,
-  slotKey: 'yMinus1' | 'y' | 'yPlus1',
-  metric: 'budget' | 'revision' | 'follow_up' | 'landing',
-): number | null {
-  const slot = row?.versions?.[slotKey];
-  if (!slot || typeof slot !== 'object') return null;
-  const reportingValue = numericScalar(slot.reporting?.[metric]);
-  if (reportingValue != null) return reportingValue;
-  return numericScalar(slot.totals?.[metric]);
+/** The years the AI reads on both budget item types: the five fixed ones. */
+function budgetQueryYears(anchorYear: number): number[] {
+  return FIXED_SLOTS.map((slot) => anchorYear + slot.offset);
 }
 
 const DETAIL_OMITTED_KEYS = new Set([
@@ -569,47 +576,15 @@ export class AiQueryExecutor {
       summary,
       updated_at: row.updated_at ?? null,
       metadata: {
-        supplier: scalar(row.supplier_name),
-        paying_company: scalar(row.paying_company_name),
-        account: scalar(row.account_display),
-        owner_it: scalar(row.owner_it_name),
-        owner_business: scalar(row.owner_business_name),
-        analytics_category: scalar(row.analytics_category_name),
-        allocation_method: scalar(row.allocation_method_label),
-        contract: scalar(row.latest_contract_name),
-        currency: scalar(row.currency),
-        effective_start: scalar(row.effective_start),
-        end_of_validity: scalar(row.disabled_at),
-        project_name: scalar(row.project_name),
-        project_stream: scalar(row.project_stream_name),
-        project_category: scalar(row.project_category_name),
+        ...budgetItemMetadata(row),
         budget_anchor_year: anchorYear,
-        y_minus2_budget: getSpendVersionMetric(row, -2, anchorYear, 'budget'),
-        y_minus2_review: getSpendVersionMetric(row, -2, anchorYear, 'revision'),
-        y_minus2_actual: getSpendVersionMetric(row, -2, anchorYear, 'follow_up'),
-        y_minus2_landing: getSpendVersionMetric(row, -2, anchorYear, 'landing'),
-        y_minus1_budget: getSpendVersionMetric(row, -1, anchorYear, 'budget'),
-        y_minus1_review: getSpendVersionMetric(row, -1, anchorYear, 'revision'),
-        y_minus1_actual: getSpendVersionMetric(row, -1, anchorYear, 'follow_up'),
-        y_minus1_landing: getSpendVersionMetric(row, -1, anchorYear, 'landing'),
-        y_budget: getSpendVersionMetric(row, 0, anchorYear, 'budget'),
-        y_review: getSpendVersionMetric(row, 0, anchorYear, 'revision'),
-        y_actual: getSpendVersionMetric(row, 0, anchorYear, 'follow_up'),
-        y_landing: getSpendVersionMetric(row, 0, anchorYear, 'landing'),
-        y_plus1_budget: getSpendVersionMetric(row, 1, anchorYear, 'budget'),
-        y_plus1_review: getSpendVersionMetric(row, 1, anchorYear, 'revision'),
-        y_plus1_actual: getSpendVersionMetric(row, 1, anchorYear, 'follow_up'),
-        y_plus1_landing: getSpendVersionMetric(row, 1, anchorYear, 'landing'),
-        y_plus2_budget: getSpendVersionMetric(row, 2, anchorYear, 'budget'),
-        y_plus2_review: getSpendVersionMetric(row, 2, anchorYear, 'revision'),
-        y_plus2_actual: getSpendVersionMetric(row, 2, anchorYear, 'follow_up'),
-        y_plus2_landing: getSpendVersionMetric(row, 2, anchorYear, 'landing'),
-        yearly_totals: buildSpendYearlyTotals(row, anchorYear),
+        ...budgetAmountMetadata(row, anchorYear),
       },
     });
   }
 
   private mapCapexItem(row: any): AiEntitySummaryDto {
+    const anchorYear = new Date().getFullYear();
     const summary = row.notes
       ?? ([row.company_name, row.ppe_type, row.investment_type].filter(Boolean).join(' | ') || null);
     return toEntitySummary('capex_items', {
@@ -619,23 +594,12 @@ export class AiQueryExecutor {
       summary,
       updated_at: row.updated_at ?? null,
       metadata: {
-        paying_company: scalar(row.company_name),
+        ...budgetItemMetadata(row),
         ppe_type: scalar(row.ppe_type),
         investment_type: scalar(row.investment_type),
         priority: scalar(row.priority),
-        currency: scalar(row.currency),
-        effective_start: scalar(row.effective_start),
-        end_of_validity: scalar(row.disabled_at),
-        allocation_method: scalar(row.allocation_method_label),
-        next_year_allocation_method: scalar(row.next_year_allocation_method_label),
-        budget_anchor_year: new Date().getFullYear(),
-        y_minus1_landing: getCapexVersionMetric(row, 'yMinus1', 'landing'),
-        y_budget: getCapexVersionMetric(row, 'y', 'budget'),
-        y_review: getCapexVersionMetric(row, 'y', 'revision'),
-        y_actual: getCapexVersionMetric(row, 'y', 'follow_up'),
-        y_landing: getCapexVersionMetric(row, 'y', 'landing'),
-        y_plus1_budget: getCapexVersionMetric(row, 'yPlus1', 'budget'),
-        y_plus1_landing: getCapexVersionMetric(row, 'yPlus1', 'landing'),
+        budget_anchor_year: anchorYear,
+        ...budgetAmountMetadata(row, anchorYear),
       },
     });
   }
@@ -1136,14 +1100,15 @@ export class AiQueryExecutor {
       const result = await this.capexItems.summary(
         {
           ...scoped.query,
-          years: [anchorYear - 1, anchorYear, anchorYear + 1].join(','),
+          years: budgetQueryYears(anchorYear).join(','),
         },
         { manager: context.manager },
       );
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
-      const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
+      // A capped list was read from the newest lines only: never complete.
+      const truncated = result.capped === true || (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
         items: (result.items || []).map((row: any) => this.mapCapexItem(row)),
         total: result.total ?? 0,
@@ -1163,14 +1128,14 @@ export class AiQueryExecutor {
       const result = await this.spendItems.summary(
         {
           ...scoped.query,
-          years: [anchorYear - 2, anchorYear - 1, anchorYear, anchorYear + 1, anchorYear + 2].join(','),
+          years: budgetQueryYears(anchorYear).join(','),
         },
-        { manager: context.manager },
+        { manager: context.manager, includeNextYearAllocation: true },
       );
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
-      const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
+      const truncated = result.capped === true || (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
         items: (result.items || []).map((row: any) => this.mapSpendItem(row)),
         total: result.total ?? 0,
@@ -1757,9 +1722,10 @@ export class AiQueryExecutor {
     const [summary] = await this.spendItems.summaryRowsByIds(
       [spendItemId],
       {
-        years: [anchorYear - 2, anchorYear - 1, anchorYear, anchorYear + 1, anchorYear + 2],
+        years: budgetQueryYears(anchorYear),
         includeRecipientDetails: true,
         includeLatestTask: true,
+        includeNextYearAllocation: true,
       },
       { manager: context.manager },
     );
@@ -1809,18 +1775,18 @@ export class AiQueryExecutor {
     context: AiExecutionContextWithManager,
     capexItemId: string,
   ): Promise<Record<string, unknown>> {
-    const [summaryResult, financialVersions, contacts, linkedProjects, linkedContracts] = await Promise.all([
-      this.capexItems.summary(
+    const anchorYear = new Date().getFullYear();
+    const [[summary], financialVersions, contacts, linkedApplications, linkedProjects, linkedContracts] = await Promise.all([
+      this.capexItems.summaryRowsByIds(
+        [capexItemId],
         {
-          page: 1,
-          limit: 1,
-          includeDisabled: true,
-          filters: {
-            id: { filterType: 'set', values: [capexItemId] },
-          },
+          years: budgetQueryYears(anchorYear),
+          includeRecipientDetails: true,
+          includeLatestTask: true,
+          includeNextYearAllocation: true,
         },
         { manager: context.manager },
-      ).catch(() => ({ items: [] })),
+      ),
       this.loadFinancialVersions(context, {
         versionTable: 'capex_versions',
         amountTable: 'capex_amounts',
@@ -1833,19 +1799,36 @@ export class AiQueryExecutor {
         foreignKey: 'capex_item_id',
         id: capexItemId,
       }).catch(() => []),
+      this.loadCapexLinkedApplications(context, capexItemId).catch(() => ({ items: [] })),
       this.capexItems.listProjects(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
       this.contracts.listContractsForCapexItem(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
     ]);
-    const summary = Array.isArray((summaryResult as any).items) ? (summaryResult as any).items[0] ?? null : null;
 
     return {
       ...(summary ?? {}),
-      financial_summary: summary,
+      financial_summary: summary ?? null,
       financial_versions: financialVersions,
       contacts,
+      linked_applications: linkedApplications,
       projects: linkedProjects,
       linked_contracts: linkedContracts,
     };
+  }
+
+  /** Applications linked to a CAPEX item, in the shape of the OPEX detail's `linked_applications`. */
+  private async loadCapexLinkedApplications(
+    context: AiExecutionContextWithManager,
+    capexItemId: string,
+  ): Promise<{ items: Array<{ id: string; name: string }> }> {
+    const items = await context.manager.query(
+      `SELECT a.id, a.name
+       FROM application_capex_items l
+       JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
+       WHERE l.tenant_id = $1 AND l.capex_item_id = $2
+       ORDER BY a.name ASC`,
+      [context.tenantId, capexItemId],
+    );
+    return { items };
   }
 
   private async loadContractDeepDetail(
@@ -2024,9 +2007,11 @@ export class AiQueryExecutor {
     if (entityType === 'capex_items') {
       const row: any = await this.capexItems.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('CAPEX item not found.');
-      Object.assign(row, await this.loadCapexItemDeepDetail(context, entityId));
-      row.links = await this.capexItems.listLinks(entityId, { manager: context.manager }).catch(() => []);
-      row.attachments = await this.capexItems.listAttachments(entityId, { manager: context.manager }).catch(() => []);
+      // The id, not the reference the caller may have given (`get` accepts both).
+      const capexItemId = row.id as string;
+      Object.assign(row, await this.loadCapexItemDeepDetail(context, capexItemId));
+      row.links = await this.capexItems.listLinks(capexItemId, { manager: context.manager }).catch(() => []);
+      row.attachments = await this.capexItems.listAttachments(capexItemId, { manager: context.manager }).catch(() => []);
       return this.toDetailResult(this.mapCapexItem(row), row);
     }
 
