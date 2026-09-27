@@ -366,6 +366,8 @@ Une ligne par colonne, toujours dans le même ordre, de la colonne 1 à la colon
 | **Suit « Appliquer à toutes les colonnes »** | Indique si la colonne prend la même période quand une répartition de l'onglet Budget est appliquée à toutes les colonnes. Une colonne qui ne suit pas garde sa propre période, et quand vous la répartissez, elle est répartie seule |
 | **Par défaut** | La colonne que les rapports présélectionnent et qui trie les listes et la vue d'ensemble. La geler fige les taux de change de l'année. La colonne par défaut doit être affichée |
 
+Les en-têtes **Suit « Appliquer à toutes les colonnes »** et **Par défaut** portent une icône d'information. Survolez-la, ou placez-y le focus du clavier, pour lire la même explication sur la page.
+
 Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées et Prévision est masquée, toutes les colonnes suivent « Appliquer à toutes les colonnes », et Budget est la colonne par défaut.
 
 ### Ce que changent les réglages

@@ -366,6 +366,8 @@ Una fila por columna, siempre en el mismo orden, de la columna 1 a la columna 5.
 | **Sigue «Aplicar a todas las columnas»** | Si la columna toma el mismo periodo cuando un reparto de la pestaña Presupuesto se aplica a todas las columnas. Una columna que no lo sigue conserva su propio periodo y, cuando la reparte, se reparte sola |
 | **Por defecto** | La columna que preseleccionan los informes y que ordena las listas y el panel. Congelarla fija los tipos de cambio del año. La columna por defecto debe estar visible |
 
+Los encabezados **Sigue «Aplicar a todas las columnas»** y **Por defecto** llevan un icono de información. Pase el ratón por encima, o lleve el foco del teclado hasta él, para leer la misma explicación en la página.
+
 Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visibles y Previsión está oculta, todas las columnas siguen «Aplicar a todas las columnas» y Presupuesto es la columna por defecto.
 
 ### Qué cambia la configuración

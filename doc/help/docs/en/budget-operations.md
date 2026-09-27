@@ -366,6 +366,8 @@ One row per column, always in the same order, from column 1 to column 5. The sta
 | **Follows "Apply to all columns"** | Whether the column takes the same period when a spread in the Budget tab is applied to all columns. A column that does not follow keeps its own period, and when you spread it, it spreads alone |
 | **Default** | The column that reports preselect and that sorts the lists and the overview. Freezing it fixes the year's exchange rates. The default column must be shown |
 
+The **Follows "Apply to all columns"** and **Default** headers carry an info icon. Hover over it, or move the keyboard focus to it, to read the same explanation on the page.
+
 By default, Budget, Revision, Actuals and Expected landing are shown and Forecast is hidden, every column follows "Apply to all columns", and Budget is the default column.
 
 ### What the settings change

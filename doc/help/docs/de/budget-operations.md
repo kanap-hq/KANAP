@@ -366,6 +366,8 @@ Eine Zeile pro Spalte, immer in derselben Reihenfolge, von Spalte 1 bis Spalte 5
 | **Folgt „Auf alle Spalten anwenden“** | Ob die Spalte denselben Zeitraum übernimmt, wenn eine Verteilung im Budget-Tab auf alle Spalten angewendet wird. Eine Spalte, die nicht folgt, behält ihren eigenen Zeitraum. Wenn Sie sie verteilen, wird sie allein verteilt |
 | **Standard** | Die Spalte, die Berichte vorauswählen und nach der die Listen und die Übersicht sortiert werden. Ihr Einfrieren schreibt die Wechselkurse des Jahres fest. Die Standardspalte muss angezeigt werden |
 
+Die Überschriften **Folgt „Auf alle Spalten anwenden“** und **Standard** tragen ein Infosymbol. Fahren Sie mit der Maus darüber oder setzen Sie den Tastaturfokus darauf, um dieselbe Erklärung auf der Seite zu lesen.
+
 Standardmäßig sind Budget, Revision, Ist-Werte und Erwarteter Endwert angezeigt und Prognose ist ausgeblendet. Jede Spalte folgt „Auf alle Spalten anwenden“, und Budget ist die Standardspalte.
 
 ### Was die Einstellungen ändern
