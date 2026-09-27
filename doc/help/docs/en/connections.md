@@ -43,7 +43,7 @@ The list gives you a filterable overview of every connection in your registry.
 
 **Filtering**:
   - Quick search: Searches across connection fields
-  - Column filters: Topology, Criticality, Data class, PII, Risk, Lifecycle
+  - Column filters: Topology and Lifecycle (checkbox lists). Criticality, Data class and PII have no column filter
 
 **Actions**:
   - **Add connection**: Create a new connection (requires `infrastructure:member`)

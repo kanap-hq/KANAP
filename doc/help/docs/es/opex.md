@@ -12,17 +12,19 @@ El espacio de trabajo se abre en modo de creación, con el panel **Propiedades**
 
 **Campos obligatorios**:
   - **Nombre del producto** (el título): En qué gasta (p. ej., "Licencias Salesforce", "AWS Compute")
-  - **Proveedor**: A quién paga. Vinculado a sus datos maestros de Proveedores
-  - **Empresa pagadora**: Qué empresa paga al proveedor (obligatorio para contabilidad)
+  - **Empresa pagadora**: Qué empresa paga este gasto (obligatorio para contabilidad)
   - **Cuenta**: La cuenta contable de este gasto. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora
   - **Moneda**: Código ISO (p. ej., USD, EUR). Por defecto la moneda de su espacio de trabajo; puede cambiarla por partida
   - **Inicio de vigencia**: Cuándo comienza este gasto (DD/MM/AAAA)
 
 **Opcional pero útil**:
+  - **Proveedor**: A quién paga. Vinculado a sus proveedores en datos maestros
   - **Categoría analítica**: Agrupación personalizada para informes (p. ej., "Infraestructura", "Apps de negocio"). Se pueden crear categorías nuevas sobre la marcha
   - **Fin de validez**: La fecha en que termina este gasto. Déjela en blanco si no hay fin. Después de esa fecha, la partida queda desactivada y los años posteriores dejan de contar en las vistas presupuestarias
   - **Responsable de TI** / **Responsable de negocio**: Quién es responsable
   - **Descripción** y **Notas**: Texto libre en la pestaña Vista general
+
+Una vez definidas, **Empresa pagadora** y **Cuenta** se pueden cambiar, pero no vaciar. **Proveedor** se puede borrar en cualquier momento.
 
 Una vez creada la partida, el espacio de trabajo desbloquea las cuatro pestañas: **Vista general**, **Presupuesto**, **Asignaciones** y **Relaciones**.
 
@@ -52,7 +54,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Moneda**: Código de moneda ISO
   - **Inicio efectivo**: Fecha de inicio
   - **Fin de validez**: Fecha en que la partida termina (en blanco significa sin fin)
-  - **Responsable IT / Responsable de negocio**: Usuarios responsables
+  - **Responsable IT** / **Responsable de negocio**: Usuarios responsables
   - **Analítica**: Nombre de la categoría analítica
   - **Proyecto**: Nombres de los proyectos vinculados en la pestaña Relaciones
   - **Notas**: Notas internas
@@ -60,7 +62,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
 
 **Filtrado**:
   - **Búsqueda rápida**: Busca en la referencia, el nombre del producto, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, la categoría analítica, las notas, la moneda y el estado. Filtra la lista en tiempo real mientras escribe
-  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio** y **Analítica** usan filtros de conjunto de casillas (selección múltiple)
+  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, **Analítica** y **Habilitado** usan filtros de conjunto de casillas (selección múltiple). El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**
   - **Filtros de importe**: Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes
   - **Filtros de fecha**: **Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío
   - **Columnas de texto**: usan filtros de texto. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` u `OPX-12`
@@ -167,7 +169,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 
 **Comportamiento de congelación**:
   - Si las columnas presupuestarias de un año están congeladas (vía Administración presupuestaria), los campos correspondientes pasan a solo lectura y muestran un candado
-  - Puede ver los datos congelados; los administradores pueden descongelar vía **Gestión presupuestaria > Administración > Congelar/Descongelar**
+  - Puede ver los datos congelados; los administradores pueden descongelar vía **Gestión presupuestaria > Administración > Congelar / Descongelar datos**
   - Cada columna puede congelarse independientemente (Presupuesto, Revisión, Previsión, Realizado, Aterrizaje previsto)
 
 **Repartir un importe**:
@@ -300,7 +302,7 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   1. Haga clic en **Exportar CSV** en la lista OPEX
   2. Elija:
      - **Plantilla**: Solo encabezados (úselo para crear un CSV en blanco para rellenar)
-     - **Datos**: Todas las partidas OPEX con presupuestos para Y-1, Y e Y+1
+     - **Datos**: Todas las partidas OPEX con presupuestos para A-1, A y A+1
 
 **Estructura del CSV**:
   - Delimitador: punto y coma `;` (no coma)
@@ -314,24 +316,31 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   2. Suba su archivo CSV (arrastrar y soltar o selector de archivos)
   3. Haga clic en **Verificación previa** para validar:
      - Los encabezados coinciden exactamente
-     - Los proveedores, empresas, cuentas y usuarios existen en su espacio de trabajo
      - Los campos obligatorios (product_name, company_name, account_number) están presentes. Una partida nueva también necesita una moneda
+     - Cada empresa, proveedor, cuenta y responsable del archivo existe en su espacio de trabajo
+     - Las fechas son válidas y no hay dos filas que describan la misma partida
      - Las monedas están permitidas en la configuración de monedas de su espacio de trabajo
      - Los responsables son usuarios activos
-  4. Revise el informe de verificación previa (muestra conteos y hasta 5 errores de ejemplo)
+  4. Revise el informe de verificación previa (muestra conteos y hasta 5 errores de ejemplo). Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa
   5. Si es correcto, haga clic en **Cargar** para importar
 
 **Notas importantes**:
-  - **Correspondencia**: Una fila se asocia a una partida OPEX por `(product_name, supplier_name)`. Una fila que coincide con una partida existente la actualiza; cualquier otra fila crea una partida nueva. Si varias filas comparten la misma combinación, cuenta la primera
+  - **Correspondencia**: Una fila se asocia a una partida OPEX por nombre del producto y proveedor. Una fila que coincide con una partida existente la actualiza; cualquier otra fila crea una partida nueva. Una fila con `supplier_name` vacío solo coincide con una partida sin proveedor. Dos filas con el mismo nombre del producto y el mismo proveedor son un error ("Same line as row N"): conserve una sola fila por partida
   - **Moneda**: Obligatoria para una partida nueva, y debe estar permitida en la configuración de monedas de su espacio de trabajo. En una partida existente, una celda vacía conserva su moneda
-  - **Referencias**: `supplier_name` debe coincidir con un Proveedor por nombre (sin distinguir mayúsculas). `company_name` debe coincidir con una Empresa y `account_number` con una Cuenta. `owner_it_email` y `owner_business_email` deben coincidir con usuarios activos por correo electrónico: un usuario invitado o un contacto sin cuenta se rechaza
+  - **Proveedor**: `supplier_name` es opcional. Si está relleno, se usa el proveedor con exactamente ese nombre. Si no existe, el nombre se compara sin distinguir mayúsculas. Un nombre que no coincide con ningún proveedor es un error, y también lo es un nombre que coincide con varios proveedores que solo difieren en mayúsculas (por ejemplo "Acme" y "ACME" cuando el archivo dice "acme")
+  - **Empresa y cuenta**: `company_name` debe coincidir con una empresa por nombre (sin distinguir mayúsculas). `account_number` se busca en el plan de cuentas de esa empresa, o en el plan de cuentas por defecto cuando la empresa no tiene ninguno. Un número de cuenta que solo existe en otro plan es un error
+  - **Responsables**: `owner_it_email` y `owner_business_email` deben coincidir con usuarios activos por correo electrónico: un usuario invitado o un contacto sin cuenta se rechaza
+  - **Fechas**: `effective_start` (y `effective_end` en archivos antiguos) debe ser un día real del calendario en formato `YYYY-MM-DD`, por ejemplo `2026-01-01`. Otros formatos, como `01/03/2026`, son errores. Un `effective_start` vacío conserva la fecha guardada de una partida existente; una partida nueva empieza el 1 de enero del año en curso
   - **Categoría analítica**: Si la categoría no existe, se crea automáticamente durante la importación
-  - **Presupuestos**: Las columnas presupuestarias rellenan las versiones Y-1, Y e Y+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual) y el periodo de la columna pasa a ser todo el año. Una celda vacía deja la columna como está; `0` la borra
+  - **Presupuestos**: Las columnas presupuestarias rellenan las versiones A-1, A y A+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual) y el periodo de la columna pasa a ser todo el año. Una celda vacía deja la columna como está; `0` la borra
   - **Importes mensuales**: para cargar o revisar los importes mes a mes, con el periodo de cada columna, use el **Archivo de filas presupuestarias** en la Administración presupuestaria
 
 **Errores comunes**:
-  - **"Proveedor no encontrado"**: Cree el proveedor en **Datos maestros > Proveedores** primero, luego reimporte
-  - **"Cuenta no encontrada"**: Añada la cuenta en **Datos maestros > Planes de cuentas**, luego reimporte
+  - **"Supplier '...' not found"**: Compruebe la ortografía, o cree el proveedor en **Datos maestros > Proveedores** primero, luego reimporte
+  - **"Supplier '...' matches more than one supplier"**: Varios proveedores solo difieren de este nombre en mayúsculas. Escriba el nombre exactamente como uno de ellos, o cambie el nombre de uno en **Datos maestros > Proveedores**, luego reimporte
+  - **"Same line as row N"**: Dos filas describen la misma partida. Combínelas en una sola fila, luego reimporte
+  - **"Account ... not found in ...'s chart of accounts"**: Use una cuenta del plan de la empresa pagadora, o añada la cuenta en **Datos maestros > Planes de cuentas**, luego reimporte
+  - **"effective_start must be a valid date"**: Use el formato `YYYY-MM-DD`
   - **"Moneda inválida"**: Utilice códigos ISO de 3 letras (USD, EUR, GBP) que estén permitidos en la configuración de monedas de su espacio de trabajo
   - **"Desajuste de encabezados"**: Descargue una plantilla nueva; los encabezados deben coincidir exactamente (incluido el orden)
 
@@ -362,8 +371,8 @@ Cada partida OPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de
 
 **Cuándo desactivar vs eliminar**:
   - **Prefiera desactivar**: Mantiene el historial intacto, asegura que los informes permanezcan consistentes y soporta registros de auditoría
-  - **Elimine solo si**: La partida se creó por error y no tiene presupuestos, asignaciones ni tareas
-  - La eliminación está protegida: no puede eliminar una partida que está referenciada por contratos, tareas o tiene datos presupuestarios
+  - **Elimine solo si**: La partida se creó por error
+  - Eliminar una partida también elimina sus presupuestos, asignaciones, tareas, sitios web relevantes, adjuntos (con sus archivos) y sus vínculos con contratos. Si una de sus tareas se convirtió en una solicitud, la solicitud se conserva: tiene su propia copia del título, la descripción y los adjuntos, y solo se pierde su vínculo con la tarea
 
 **Consejo**: Utilice el Fin de validez para retirar partidas OPEX cuando los contratos terminen o los servicios se discontinúen. No elimine a menos que sea un verdadero error.
 
@@ -371,9 +380,9 @@ Cada partida OPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de
 
 ## Consejos y mejores prácticas
 
-1. **Empiece simple**: Cree partidas con solo lo esencial (nombre del producto, proveedor, empresa pagadora, cuenta), luego añada presupuestos y asignaciones a medida que planifica.
+1. **Empiece simple**: Cree partidas con solo lo esencial (nombre del producto, empresa pagadora, cuenta), luego añada presupuestos y asignaciones a medida que planifica.
 
-2. **Use el método de asignación predeterminado**: Para la mayoría de partidas, Plantilla (Predeterminado) es suficiente. Reserve métodos manuales para gasto que beneficia solo a empresas o departamentos específicos.
+2. **Use el método de asignación predeterminado**: Para la mayoría de partidas, Plantilla (por defecto) es suficiente. Reserve métodos manuales para gasto que beneficia solo a empresas o departamentos específicos.
 
 3. **Vincule contratos**: Si gestiona gasto mediante contratos, vincúlelos en la pestaña Relaciones. Facilita el seguimiento de renovaciones.
 

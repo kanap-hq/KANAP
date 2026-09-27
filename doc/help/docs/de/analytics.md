@@ -78,12 +78,13 @@ Sie können die Kategorie jederzeit ändern oder entfernen. Die Kategorie gilt f
 
 ## Der Analysebericht
 
-Der **Analysebericht** (zu finden unter **Berichte > Analysedimensionen**) visualisiert die Budgetverteilung über Ihre Kategorien.
+Der Bericht **Analysedimensionen** (unter **Berichte**) zeigt, wie sich das Budget Ihrer OPEX- oder CAPEX-Positionen auf Ihre Kategorien verteilt. Die vollständige Beschreibung finden Sie unter [Berichte](reports.md).
 
 **Berichtsfunktionen**:
+- **Positionstyp**: OPEX oder CAPEX
 - **Jahresbereich**: Einzeljahr (Kreis- oder Balkendiagramm) oder Mehrjahr (Liniendiagramm)
-- **Kennzahlauswahl**: Budget, OPEX, CAPEX, zugeordnete Kosten oder verschiedene KPIs
-- **Diagrammtyp** (Einzeljahr): Umschalten zwischen Kreis- und horizontalem Balkendiagramm
+- **Kennzahl**: Budget, Ist-Werte, Erwarteter Endwert oder Revision
+- **Diagrammtyp** (Einzeljahr): Kreisdiagramm oder horizontales Balkendiagramm
 - **Kategorieausschluss**: Bestimmte Kategorien herausfiltern, um sich auf eine Teilmenge zu konzentrieren
 
 **Berichtsausgaben**:

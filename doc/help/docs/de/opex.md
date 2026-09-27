@@ -12,17 +12,19 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus, mit geöffnetem Bereich **E
 
 **Pflichtfelder**:
   - **Produktname** (der Titel): Was Sie ausgeben (z. B. „Salesforce Lizenzen", „AWS Compute")
-  - **Lieferant**: Wen Sie bezahlen. Verknüpft mit Ihren Stammdaten-Lieferanten
-  - **Zahlendes Unternehmen**: Welches Unternehmen den Lieferanten bezahlt (erforderlich für die Buchhaltung)
+  - **Zahlendes Unternehmen**: Welches Unternehmen diese Ausgabe bezahlt (erforderlich für die Buchhaltung)
   - **Konto**: Das Sachkonto für diese Ausgabe. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens
   - **Währung**: ISO-Code (z. B. USD, EUR). Standardmäßig Ihre Arbeitsbereich-Währung; kann pro Position überschrieben werden
   - **Beginn der Gültigkeit**: Wann diese Ausgabe beginnt (TT/MM/JJJJ)
 
 **Optional aber nützlich**:
+  - **Lieferant**: Wen Sie bezahlen. Verknüpft mit Ihren Lieferanten in den Stammdaten
   - **Analysekategorie**: Benutzerdefinierte Gruppierung für Berichte (z. B. „Infrastruktur", „Business Apps"). Neue Kategorien können spontan erstellt werden
   - **Ende der Gültigkeit**: Das Datum, an dem diese Ausgabe endet. Lassen Sie es leer, wenn es kein Ende gibt. Danach ist die Position deaktiviert und spätere Jahre zählen in den Budgetansichten nicht mehr
   - **IT-Verantwortlicher** / **Fachverantwortlicher**: Wer verantwortlich ist
   - **Beschreibung** und **Notizen**: Freitext im Tab Übersicht
+
+Einmal gesetzt, können **Zahlendes Unternehmen** und **Konto** geändert, aber nicht geleert werden. **Lieferant** können Sie jederzeit leeren.
 
 Sobald die Position erstellt ist, schaltet der Arbeitsbereich alle vier Tabs frei: **Übersicht**, **Budget**, **Zuordnungen** und **Verknüpfungen**.
 
@@ -52,15 +54,15 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Währung**: ISO-Währungscode
   - **Gültig ab**: Startdatum
   - **Ende der Gültigkeit**: Datum, an dem die Position endet (leer bedeutet kein Ende)
-  - **IT-Verantwortlicher / Fachbereichsverantwortlicher**: Zuständige Benutzer
-  - **Analysedimension**: Name der Analysekategorie
+  - **IT-Verantwortlicher** / **Fachbereichsverantwortlicher**: Zuständige Benutzer
+  - **Analytik**: Name der Analysekategorie
   - **Projekt**: Namen der im Tab Verknüpfungen verknüpften Projekte
   - **Notizen**: Interne Notizen
   - **Erstellt / Aktualisiert**: Zeitstempel
 
 **Filtern**:
   - **Schnellsuche**: Durchsucht Referenz, Produktname, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysekategorie, Notizen, Währung und Status. Filtert die Liste in Echtzeit während der Eingabe
-  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher** und **Analysedimension** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl)
+  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, **Analytik** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht
   - **Betragsfilter**: Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen
   - **Datumsfilter**: **Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer
   - **Textspalten** verwenden Textfilter. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `OPX-12`
@@ -87,7 +89,7 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Neu**: Neue OPEX-Position erstellen (erfordert `opex:manager`)
   - **CSV importieren**: Massenladen von Positionen aus CSV (erfordert `opex:admin`)
   - **CSV exportieren**: Positionen als CSV exportieren (erfordert `opex:admin`)
-  - **Ausgewählte löschen**: Massenlöschung ausgewählter Positionen (erfordert `opex:admin`; Zeilen über Kontrollkästchen auswählen)
+  - **Auswahl löschen**: Massenlöschung ausgewählter Positionen (erfordert `opex:admin`; Zeilen über Kontrollkästchen auswählen)
 
 **Zurück/Weiter-Navigation**:
   - Wenn Sie eine Position öffnen, zeigt der Arbeitsbereich **Zurück** und **Weiter**-Schaltflächen
@@ -167,7 +169,7 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
 
 **Einfrierverhalten**:
   - Wenn die Budgetspalten eines Jahres eingefroren sind (über die Budgetadministration), werden die entsprechenden Felder schreibgeschützt und zeigen ein Schloss-Symbol
-  - Sie können eingefrorene Daten weiterhin ansehen; Administratoren können sie über **Budgetverwaltung > Administration > Einfrieren/Freigeben** wieder freigeben
+  - Sie können eingefrorene Daten weiterhin ansehen; Administratoren können sie über **Budgetverwaltung > Administration > Daten einfrieren / auftauen** wieder freigeben
   - Jede Spalte kann unabhängig eingefroren werden (Budget, Revision, Prognose, Ist-Werte, Erwarteter Endwert)
 
 **Einen Betrag verteilen**:
@@ -314,24 +316,31 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   2. Laden Sie Ihre CSV-Datei hoch (Drag-and-Drop oder Dateiauswahl)
   3. Klicken Sie auf **Vorprüfung** zur Validierung:
      - Kopfzeilen stimmen exakt überein
-     - Lieferanten, Unternehmen, Konten und Benutzer existieren in Ihrem Arbeitsbereich
      - Pflichtfelder (product_name, company_name, account_number) sind vorhanden. Eine neue Position braucht außerdem eine Währung
+     - Jedes Unternehmen, jeder Lieferant, jedes Konto und jeder Verantwortliche aus der Datei existiert in Ihrem Arbeitsbereich
+     - Datumsangaben sind gültig, und keine zwei Zeilen beschreiben dieselbe Position
      - Währungen sind in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt
      - Verantwortliche sind aktive Benutzer
-  4. Überprüfen Sie den Vorprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler)
+  4. Überprüfen Sie den Vorprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorprüfung erneut aus
   5. Wenn OK, klicken Sie auf **Laden** zum Importieren
 
 **Wichtige Hinweise**:
-  - **Abgleich**: Eine Zeile wird einer OPEX-Position über `(product_name, supplier_name)` zugeordnet. Eine Zeile, die zu einer bestehenden Position passt, aktualisiert sie; jede andere Zeile legt eine neue Position an. Teilen sich mehrere Zeilen dieselbe Kombination, zählt die erste
+  - **Abgleich**: Eine Zeile wird einer OPEX-Position über Produktname und Lieferant zugeordnet. Eine Zeile, die zu einer bestehenden Position passt, aktualisiert sie; jede andere Zeile legt eine neue Position an. Eine Zeile mit leerem `supplier_name` passt nur zu einer Position ohne Lieferant. Zwei Zeilen mit demselben Produktnamen und Lieferanten sind ein Fehler („Same line as row N"): Behalten Sie eine Zeile pro Position
   - **Währung**: Pflicht für eine neue Position, und sie muss in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt sein. Bei einer bestehenden Position behält eine leere Zelle deren Währung
-  - **Referenzen**: `supplier_name` muss einem Lieferanten namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `company_name` muss einem Unternehmen entsprechen und `account_number` einem Konto. `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt
+  - **Lieferant**: `supplier_name` ist optional. Ist das Feld gefüllt, wird ein Lieferant mit genau diesem Namen verwendet. Andernfalls wird der Name ohne Rücksicht auf Groß-/Kleinschreibung abgeglichen. Ein Name, der zu keinem Lieferanten passt, ist ein Fehler. Ebenso ein Name, der zu mehreren Lieferanten nur über die Groß-/Kleinschreibung passt (zum Beispiel „Acme" und „ACME", wenn die Datei „acme" enthält)
+  - **Unternehmen und Konto**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `account_number` wird im Kontenplan dieses Unternehmens gesucht, oder im Standard-Kontenplan, wenn das Unternehmen keinen hat. Eine Kontonummer, die nur in einem anderen Kontenplan existiert, ist ein Fehler
+  - **Verantwortliche**: `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt
+  - **Datumsangaben**: `effective_start` (und `effective_end` in älteren Dateien) muss ein echter Kalendertag im Format `YYYY-MM-DD` sein, zum Beispiel `2026-01-01`. Andere Formate wie `01/03/2026` sind Fehler. Ein leeres `effective_start` behält das gespeicherte Datum einer bestehenden Position; eine neue Position beginnt am 1. Januar des laufenden Jahres
   - **Analysekategorie**: Existiert die Kategorie nicht, wird sie beim Import automatisch erstellt
   - **Budgets**: Budgetspalten füllen J-1, J und J+1 Versionen. Beträge werden gleichmäßig auf 12 Monate verteilt (Modus Jährlich), und der Zeitraum der Spalte wird das ganze Jahr. Eine leere Zelle lässt die Spalte unverändert; `0` leert sie
   - **Monatsbeträge**: Um Beträge Monat für Monat zu laden oder zu prüfen, mit dem Zeitraum jeder Spalte, verwenden Sie die **Datei der Budgetzeilen** in der Budgetadministration
 
 **Häufige Fehler**:
-  - **„Lieferant nicht gefunden"**: Erstellen Sie den Lieferanten zuerst unter **Stammdaten > Lieferanten**, dann importieren Sie erneut
-  - **„Konto nicht gefunden"**: Fügen Sie das Konto unter **Stammdaten > Kontenpläne** hinzu, dann importieren Sie erneut
+  - **„Supplier '...' not found"**: Prüfen Sie die Schreibweise, oder erstellen Sie den Lieferanten zuerst unter **Stammdaten > Lieferanten**, dann importieren Sie erneut
+  - **„Supplier '...' matches more than one supplier"**: Mehrere Lieferanten unterscheiden sich von diesem Namen nur durch die Groß-/Kleinschreibung. Schreiben Sie den Namen genau wie bei einem von ihnen, oder benennen Sie einen unter **Stammdaten > Lieferanten** um, dann importieren Sie erneut
+  - **„Same line as row N"**: Zwei Zeilen beschreiben dieselbe Position. Führen Sie sie zu einer Zeile zusammen und importieren Sie dann erneut
+  - **„Account ... not found in ...'s chart of accounts"**: Verwenden Sie ein Konto aus dem Kontenplan des zahlenden Unternehmens, oder fügen Sie das Konto unter **Stammdaten > Kontenpläne** hinzu, dann importieren Sie erneut
+  - **„effective_start must be a valid date"**: Verwenden Sie das Format `YYYY-MM-DD`
   - **„Ungültige Währung"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind
   - **„Kopfzeilen stimmen nicht überein"**: Laden Sie eine frische Vorlage herunter; Kopfzeilen müssen exakt übereinstimmen (einschließlich Reihenfolge)
 
@@ -362,8 +371,8 @@ Jede OPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein opt
 
 **Wann deaktivieren vs. löschen**:
   - **Bevorzugen Sie das Deaktivieren**: Bewahrt die Historie, stellt konsistente Berichte sicher und unterstützt Audit-Trails
-  - **Nur löschen, wenn**: Die Position versehentlich erstellt wurde und keine Budgets, Zuordnungen oder Aufgaben hat
-  - Das Löschen ist geschützt: Sie können keine Position löschen, die von Verträgen, Aufgaben referenziert wird oder Budgetdaten hat
+  - **Nur löschen, wenn**: Die Position versehentlich erstellt wurde
+  - Beim Löschen einer Position werden auch ihre Budgets, Zuordnungen, Aufgaben, relevanten Websites, Anhänge (mit ihren Dateien) und ihre Verknüpfungen zu Verträgen entfernt. Wurde eine ihrer Aufgaben in eine Anfrage umgewandelt, bleibt die Anfrage erhalten: Sie hat eine eigene Kopie von Titel, Beschreibung und Anhängen, und nur ihre Verknüpfung zur Aufgabe entfällt
 
 **Tipp**: Verwenden Sie das Ende der Gültigkeit, um OPEX-Positionen auslaufen zu lassen, wenn Verträge enden oder Dienste eingestellt werden. Löschen Sie nur bei echten Fehlern.
 
@@ -371,7 +380,7 @@ Jede OPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein opt
 
 ## Tipps und Best Practices
 
-1. **Einfach anfangen**: Erstellen Sie Positionen nur mit dem Wesentlichen (Produktname, Lieferant, zahlendes Unternehmen, Konto), dann ergänzen Sie Budgets und Zuordnungen bei der Planung.
+1. **Einfach anfangen**: Erstellen Sie Positionen nur mit dem Wesentlichen (Produktname, zahlendes Unternehmen, Konto), dann ergänzen Sie Budgets und Zuordnungen bei der Planung.
 
 2. **Die Standard-Zuordnungsmethode verwenden**: Für die meisten Positionen reicht Mitarbeiterzahl (Standard) aus. Reservieren Sie manuelle Zuordnungen für Ausgaben, die nur bestimmten Unternehmen oder Abteilungen zugutekommen.
 

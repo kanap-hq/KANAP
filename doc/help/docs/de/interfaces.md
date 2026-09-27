@@ -45,7 +45,7 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 **Filterung**:
 
 - Schnellsuche über alle Textspalten
-- Spaltenfilter für Lebenszyklus, Kritikalität, Datenkategorie, Geschäftsprozess, Enthält PII, Integrationsroute und Datenklassifizierung
+- Spaltenfilter auf den Textspalten, darunter Lebenszyklus und Kritikalität. Geschäftsprozess, Datenkategorie und Enthält PII haben keinen Spaltenfilter
 
 **Aktionen**:
 

@@ -17,15 +17,26 @@ Die Startseite zeigt eine Karte für jeden verfügbaren Bericht mit einer kurzen
 
 | Bericht | Was er abdeckt |
 |---------|----------------|
-| **Globale Leistungsverrechnung** | Unternehmensebene: Zuordnungssummen, KPIs und konzerninterne Flüsse |
-| **Unternehmens-Leistungsverrechnung** | Einzelunternehmen-Detailansicht mit Abteilungen, Positionen und KPIs |
-| **Top OPEX** | Größte OPEX-Positionen für ein ausgewähltes Jahr (anpassbare Top-N-Anzahl) |
-| **Top OPEX Steigerung/Rückgang** | Größte Jahresveränderungen bei OPEX (anpassbare Top-N-Anzahl) |
+| **Globale Leistungsverrechnung** | Unternehmensebene: Zuordnungssummen, KPIs und konzerninterne Flüsse (OPEX) |
+| **Leistungsverrechnung pro Unternehmen** | Einzelunternehmen-Detailansicht mit Abteilungen, Positionen und KPIs (OPEX) |
+| **Top-Positionen** | Größte OPEX- oder CAPEX-Positionen für ein ausgewähltes Jahr (anpassbare Top-N-Anzahl) |
+| **Top Anstieg / Rückgang** | Größte OPEX- oder CAPEX-Veränderungen zwischen zwei Budgetspalten (anpassbare Top-N-Anzahl) |
 | **Budgettrend (OPEX)** | OPEX-Kennzahlen über einen Jahresbereich vergleichen |
 | **Budgettrend (CAPEX)** | CAPEX-Kennzahlen über einen Jahresbereich vergleichen |
-| **Budgetspalten-Vergleich** | Bis zu 10 Jahr+Spalten-Kombinationen für OPEX oder CAPEX auswählen |
-| **Konsolidierungskonten** | Budget gruppiert nach Konsolidierungskonto |
-| **Analysekategorien** | Budget gruppiert nach Analysekategorie |
+| **Budgetspaltenvergleich** | Bis zu 10 Jahr+Spalten-Kombinationen für OPEX oder CAPEX auswählen |
+| **Konsolidierungskonten** | OPEX- oder CAPEX-Budget gruppiert nach Konsolidierungskonto |
+| **Analysedimensionen** | OPEX- oder CAPEX-Budget gruppiert nach Analysedimension |
+
+### OPEX oder CAPEX wählen
+
+**Top-Positionen**, **Top Anstieg / Rückgang**, **Konsolidierungskonten** und **Analysedimensionen** beginnen jeweils mit einem Umschalter **OPEX** / **CAPEX**, dem ersten Steuerelement der Filterleiste.
+
+- Der Bericht öffnet sich auf einem Typ, den Sie lesen dürfen, zuerst OPEX. Ein Typ, den Sie nicht lesen dürfen, ist deaktiviert.
+- Die Seitenadresse behält den gewählten Typ (`?scope=opex` oder `?scope=capex`). Ein gespeicherter oder geteilter Link öffnet sich daher auf demselben Typ.
+- Untertitel und Diagrammtitel nennen den Typ. So zeigt ein Ausdruck oder ein exportiertes PNG, welchen Typ es abdeckt.
+- Ein Wechsel des Typs leert die ausgeschlossenen Positionen, da jeder Typ seine eigenen Positionen hat.
+
+Die beiden Leistungsverrechnungsberichte decken nur OPEX ab.
 
 ---
 
@@ -92,7 +103,7 @@ Eine Summenzeile ist unten angeheftet.
 
 ---
 
-## Unternehmens-Leistungsverrechnung
+## Leistungsverrechnung pro Unternehmen
 
 Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens über Abteilungen, Budgetpositionen, konzerninterne Flüsse und KPIs.
 
@@ -138,26 +149,27 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 ---
 
-## Top OPEX
+## Top-Positionen
 
-Identifizieren Sie Ihre größten wiederkehrenden OPEX-Kosten für ein bestimmtes Jahr.
+Identifizieren Sie Ihre größten OPEX- oder CAPEX-Positionen für ein bestimmtes Jahr.
 
 ### Steuerungen
 
+- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
 - **Jahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Kennzahl**: Budget, Revision, Ist-Werte oder Erwarteter Endwert
 - **Top-Anzahl**: Wie viele Positionen angezeigt werden (Standard: 10, Minimum: 1)
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm
-- **Positionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Produkte
-- **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen nach Kontokategorie
+- **Positionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Positionen
+- **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
 
 ### Was Sie sehen
 
-**Diagramm**: Kreis- oder horizontales Balkendiagramm der Top-Positionen.
+**Diagramm**: Kreis- oder horizontales Balkendiagramm der Top-Positionen. Sein Titel nennt den Typ, zum Beispiel „Top 10 CAPEX · Budget 2026".
 
 **Tabellenspalten**:
 
-- Produktname
+- Position
 - Wert für die ausgewählte Kennzahl und das Jahr
 - Anteil an Gesamtsumme (Prozentsatz)
 
@@ -172,29 +184,32 @@ Verwenden Sie diesen Bericht, um schnell zu erkennen, wohin der Großteil Ihres 
 
 ---
 
-## Top OPEX Steigerung / Rückgang
+## Top Anstieg / Rückgang
 
-Identifizieren Sie die größten Veränderungen zwischen zwei Budgetspalten (jede Kombination aus Jahr und Kennzahl).
+Identifizieren Sie die größten OPEX- oder CAPEX-Veränderungen zwischen zwei Budgetspalten (jede Kombination aus Jahr und Kennzahl).
 
 ### Steuerungen
 
+- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
 - **Quelljahr** und **Quellkennzahl**: Die Basisspalte zum Vergleich
 - **Zieljahr** und **Zielkennzahl**: Die Zielspalte zum Vergleich
 - **Top-Anzahl**: Wie viele Positionen pro Richtung angezeigt werden (Standard: 10)
 - **Diagrammtyp**: Kreisdiagramm (nur eine Richtung) oder horizontales Balkendiagramm
-- **Positionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Produkte
-- **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen nach Kontokategorie
-- **Richtungs-Umschalter**: Steigerung, Rückgang oder beide (Umschaltflächen)
+- **Positionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Positionen
+- **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
+- **Richtung**: Tabs **Anstiege**, **Rückgänge** oder **Beide**
 
-Wenn beide Richtungen ausgewählt sind, wird die Kreisdiagramm-Option deaktiviert und der Bericht wechselt automatisch zum Balkendiagramm.
+Die Jahresauswahlen listen die Jahre, die Daten enthalten. Die Kennzahlauswahlen bieten die vier Berichtsspalten: Budget, Ist-Werte, Erwarteter Endwert und Revision.
+
+Wenn **Beide** ausgewählt ist, wird die Kreisdiagramm-Option deaktiviert und der Bericht wechselt automatisch zum Balkendiagramm.
 
 ### Was Sie sehen
 
-**Diagramm**: Visualisierung der Top-Veränderungen.
+**Diagramm**: Visualisierung der Top-Veränderungen. Sein Titel nennt den Typ, zum Beispiel „Top 10 OPEX-Anstiege".
 
 **Tabellenspalten**:
 
-- Produktname
+- Position
 - Quellwert (vorher)
 - Zielwert (aktuell)
 - Delta (absolute Änderung)
@@ -251,7 +266,7 @@ Identisches Layout wie der OPEX-Trendbericht, aber mit CAPEX-Budgetdaten.
 
 ---
 
-## Budgetspalten-Vergleich
+## Budgetspaltenvergleich
 
 Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen für entweder OPEX oder CAPEX.
 
@@ -283,10 +298,11 @@ Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen für entweder OPEX
 
 ## Konsolidierungskonten
 
-Zeigen Sie OPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wobei sich der Diagrammtyp an den Jahresbereich anpasst.
+Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wobei sich der Diagrammtyp an den Jahresbereich anpasst.
 
 ### Steuerungen
 
+- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Kennzahl**: Budget, Ist-Werte, Erwarteter Endwert oder Revision
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur verfügbar bei Auswahl eines einzelnen Jahres)
@@ -309,29 +325,30 @@ Positionen ohne Konsolidierungskonto erscheinen als „Nicht zugewiesen".
 
 ---
 
-## Analysekategorien
+## Analysedimensionen
 
-Zeigen Sie OPEX-Budgetdaten gruppiert nach Analysekategorie. Das Layout entspricht dem Konsolidierungskonten-Bericht.
+Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Analysedimension. Das Layout entspricht dem Bericht Konsolidierungskonten.
 
 ### Steuerungen
 
+- **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Kennzahl**: Budget, Ist-Werte, Erwarteter Endwert oder Revision
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur Einzeljahr)
-- **Analysekategorien ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Kategorien
+- **Analysedimensionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Dimensionen
 
 ### Was Sie sehen
 
 **Einzeljahr-Modus**:
 
-- Kreis- oder Balkendiagramm der Summen nach Analysekategorie
+- Kreis- oder Balkendiagramm der Summen nach Analysedimension
 - Fußnote mit der Kennzahl-Summe
 
 **Mehrjahr-Modus**:
 
-- Liniendiagramm mit einer Serie pro Kategorie
+- Liniendiagramm mit einer Serie pro Analysedimension
 
-**Tabelle**: Eine Zeile pro Kategorie mit Jahresspalten. Eine angeheftete Summenzeile unten. Positionen ohne Kategorie erscheinen als „Nicht zugewiesen".
+**Tabelle**: Eine Zeile pro Analysedimension mit Jahresspalten. Eine angeheftete Summenzeile unten. Positionen ohne Analysedimension erscheinen als „Nicht zugewiesen".
 
 ---
 
@@ -365,8 +382,8 @@ Jeder Bericht zeigt eine Breadcrumb-Navigation zurück zum **Berichte**-Hub, sod
 ## Tipps
 
 - **Mit der Globalen Leistungsverrechnung beginnen**: Verschaffen Sie sich den Gesamtüberblick über Zuordnungen, bevor Sie in ein einzelnes Unternehmen eintauchen.
-- **Top OPEX für schnelle Erfolge nutzen**: Die größten Kostenpositionen sind Ihre ersten Kandidaten für Optimierung.
-- **Budget vs. Erwarteter Endwert vergleichen**: Verwenden Sie den Spaltenvergleichsbericht, um die Prognosegenauigkeit über Jahre zu messen.
+- **Top-Positionen für schnelle Erfolge nutzen**: Die größten Kostenpositionen sind Ihre ersten Kandidaten für Optimierung.
+- **Budget vs. Erwarteter Endwert vergleichen**: Verwenden Sie den Bericht Budgetspaltenvergleich, um die Prognosegenauigkeit über Jahre zu messen.
 - **Abschnitte in Leistungsverrechnungsberichten umschalten**: Die Kontrollkästchen ermöglichen es, sich nur auf die benötigten Daten zu konzentrieren -- Abteilungen, Positionen, KPIs oder Flüsse -- ohne visuelle Unordnung.
-- **Jahresgruppierung im Spaltenvergleich**: Wenn Sie die gleiche Kennzahl über mehrere Jahre vergleichen, aktivieren Sie die Jahresgruppierung für ein übersichtlicheres Liniendiagramm.
+- **Jahresgruppierung im Budgetspaltenvergleich**: Wenn Sie die gleiche Kennzahl über mehrere Jahre vergleichen, aktivieren Sie die Jahresgruppierung für ein übersichtlicheres Liniendiagramm.
 - **Für Präsentationen exportieren**: Diagramme exportieren als PNG und Tabellen als CSV, beides bereit für Folien oder Tabellenkalkulationen.

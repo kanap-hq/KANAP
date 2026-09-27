@@ -6,23 +6,25 @@ The OPEX workspace helps you manage each spend item from initial budgeting throu
 
 ## Getting started
 
-Navigate to **Budget Management > OPEX** to see your list. Click **New** to create your first item.
+Navigate to **Budget management > OPEX** to see your list. Click **New** to create your first item.
 
 The workspace opens in creation mode, with the **Properties** panel open on the right. Type the product name in the title at the top, fill in the properties, then click **Create**.
 
 **Required fields**:
   - **Product name** (the title): What you are spending on (e.g., "Salesforce Licenses", "AWS Compute")
-  - **Supplier**: Who you are paying. Links to your Suppliers master data
-  - **Paying company**: Which company is paying the supplier (required for accounting)
-  - **Account**: The general ledger account for this spend. Only accounts from the paying company's Chart of Accounts will appear
+  - **Paying company**: Which company pays for this spend (required for accounting)
+  - **Account**: The general ledger account for this spend. Only accounts from the paying company's chart of accounts appear
   - **Currency**: ISO code (e.g., USD, EUR). Defaults to your workspace currency; you can override per item
   - **Effective start**: When this spend begins (DD/MM/YYYY)
 
 **Optional but useful**:
+  - **Supplier**: Who you are paying. Links to your suppliers in master data
   - **Analytics category**: Custom grouping for reporting (e.g., "Infrastructure", "Business Apps"). New categories can be created on the fly
   - **End of validity**: The date this spend stops. Leave it blank if there is no end. After it, the item is disabled and later years no longer count in the budget views
   - **IT owner** / **Business owner**: Who is responsible
   - **Description** and **Notes**: Free text on the Overview tab
+
+Once set, **Paying company** and **Account** can be changed but not emptied. **Supplier** can be cleared at any time.
 
 Once the item is created, the workspace unlocks all four tabs: **Overview**, **Budget**, **Allocations**, and **Relations**.
 
@@ -32,12 +34,12 @@ Once the item is created, the workspace unlocks all four tabs: **Overview**, **B
 
 ## Working with the OPEX list
 
-The OPEX list (at **Budget Management > OPEX**) is your main view for browsing, filtering, and navigating spend items.
+The OPEX list (at **Budget management > OPEX**) is your main view for browsing, filtering, and navigating spend items.
 
 **Default columns**:
-  - **Product Name**: The item name (links to the Overview tab)
+  - **Product name**: The item name (links to the Overview tab)
   - **Supplier**: The supplier name
-  - **Paying Company**: Which company pays for this item
+  - **Paying company**: Which company pays for this item
   - **Contract**: The latest linked contract name (links to the Contract workspace)
   - **Account**: The GL account number and name
   - **Allocation**: The allocation method label for the current year (links to the Allocations tab)
@@ -50,9 +52,9 @@ The OPEX list (at **Budget Management > OPEX**) is your main view for browsing, 
   - **Enabled**: Item status (enabled or disabled)
   - **Description**: Item description
   - **Currency**: ISO currency code
-  - **Effective Start**: Start date
+  - **Effective start**: Start date
   - **End of validity**: Date the item stops (blank means no end)
-  - **IT Owner / Business Owner**: Responsible users
+  - **IT owner** / **Business owner**: Responsible users
   - **Analytics**: Analytics category name
   - **Project**: Names of the projects linked on the Relations tab
   - **Notes**: Internal notes
@@ -60,7 +62,7 @@ The OPEX list (at **Budget Management > OPEX**) is your main view for browsing, 
 
 **Filtering**:
   - **Quick search**: Searches the reference, product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics category, notes, currency and status. Filters the list in real time as you type
-  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner** and **Analytics** use checkbox set filters (multi-select)
+  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, **Analytics** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**
   - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
   - **Date filters**: **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank
   - **Text columns** use text filters. On **Ref**, type the number or the full reference, for example `12` or `OPX-12`
@@ -77,7 +79,7 @@ The OPEX list (at **Budget Management > OPEX**) is your main view for browsing, 
 
 **Deep linking**:
   - Clicking any cell opens the workspace on the most relevant tab:
-    - **Product Name**, **Supplier**, **Paying Company**, **Account**, and other general columns: Opens the **Overview** tab
+    - **Product name**, **Supplier**, **Paying company**, **Account**, and other general columns: Opens the **Overview** tab
     - **Amount columns** (Budget Y, Expected landing Y, Revision Y+1, etc.): Opens the **Budget** tab pre-set to the column's year
     - **Allocation**: Opens the **Allocations** tab for the current year
     - **Task**: Opens the **Overview** tab, where the Tasks panel sits
@@ -87,7 +89,7 @@ The OPEX list (at **Budget Management > OPEX**) is your main view for browsing, 
   - **New**: Create a new OPEX item (requires `opex:manager`)
   - **Import CSV**: Bulk-load items from CSV (requires `opex:admin`)
   - **Export CSV**: Export items to CSV (requires `opex:admin`)
-  - **Delete Selected**: Bulk-delete selected items (requires `opex:admin`; select rows via checkboxes)
+  - **Delete selected**: Bulk-delete selected items (requires `opex:admin`; select rows via checkboxes)
 
 **Prev/Next navigation**:
   - When you open an item, the workspace shows **Prev** and **Next** buttons
@@ -130,11 +132,11 @@ The Overview tab holds the free-text fields and the tasks of the item.
   - Tasks can also be viewed and managed from **Portfolio > Tasks**, which shows all tasks across your organization
 
 **Properties panel**:
-  - **Supplier**, **Paying company**, **Account** (filtered by the paying company's Chart of Accounts), **Currency** (only the currencies allowed in your workspace), **Analytics category**, and **Effective start**
-  - **Lifecycle**: the **Enabled** switch and the **End of validity** date. See [Status and Lifecycle](#status-and-lifecycle)
+  - **Supplier**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **Analytics category**, and **Effective start**
+  - **Lifecycle**: the **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
   - **Created** and **Updated** dates (read only)
 
-**Tip**: When you create an item, an "Obsolete account" warning means the selected account does not belong to the paying company's Chart of Accounts. Choose a different account to resolve the warning.
+**Tip**: When you create an item, an "Obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning.
 
 ---
 
@@ -167,7 +169,7 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 
 **Freeze behavior**:
   - If a year's budget columns are frozen (via Budget Administration), the corresponding inputs become read-only and show a lock icon
-  - You can still view frozen data; admins can unfreeze via **Budget Management > Budget Administration > Freeze/Unfreeze**
+  - You can still view frozen data; admins can unfreeze via **Budget management > Administration > Freeze / unfreeze data**
   - Each column can be frozen independently (Budget, Revision, Forecast, Actuals, Expected landing)
 
 **Spreading an amount**:
@@ -227,7 +229,7 @@ The Allocations tab distributes the spend across your companies and departments.
 | **Manual percentages** | You pick the companies and type each percentage yourself. The percentages must add up to 100%. |
 
 **Default vs pinned methods**:
-  - The **default** entry -- shown as *Headcount (default)* until your organisation configures another method -- follows the setting in **Budget Management > Administration > Default Allocation Method**. Every item left on the default is re-driven when an admin changes that setting
+  - The **default** entry -- shown as *Headcount (default)* until your organisation configures another method -- follows the setting in **Budget management > Administration > Default allocation method**. Every item left on the default is re-driven when an admin changes that setting
   - That setting can also restrict the default to a **selection of companies** (for example the entity that carries the IT budget): the driver then applies to those companies only, and the option reads *Default (n companies)*
   - **Headcount**, **IT users** and **Turnover** pin that method on the item: a pinned method keeps working even if the organisation default changes later
   - Items with a manual allocation are never affected by the default setting
@@ -245,7 +247,7 @@ The Allocations tab distributes the spend across your companies and departments.
   4. Changes save automatically
 
 **Common issues**:
-  - **Missing metrics**: One or more companies have zero or missing headcount/IT users/turnover for the selected year. Fill in the metrics in **Master Data > Companies** (Details tab)
+  - **Missing metrics**: One or more companies have zero or missing headcount/IT users/turnover for the selected year. Fill in the metrics in **Master data > Companies** (Details tab)
   - **"Manual percentages must sum to 100%."**: Adjust the rows, or click **Split equally**
 
 **Tip**: Use Headcount (default) for most items -- it is the simplest and updates automatically. Reserve manual methods for spend that benefits specific companies or departments only.
@@ -292,7 +294,7 @@ The Relations tab links this OPEX item to related objects: Projects, Application
 
 ---
 
-## CSV Import/Export
+## CSV import/export
 
 You can bulk-load OPEX items via CSV to speed up initial setup or sync with external systems.
 
@@ -314,24 +316,31 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   2. Upload your CSV file (drag-and-drop or file picker)
   3. Click **Preflight** to validate:
      - Headers match exactly
-     - Suppliers, companies, accounts, and users exist in your workspace
      - Required fields (product_name, company_name, account_number) are present. A new item also needs a currency
+     - Each company, supplier, account, and owner in the file exists in your workspace
+     - Dates are valid, and no two rows describe the same item
      - Currencies are allowed in your workspace currency settings
      - Owners are active users
-  4. Review the preflight report (shows counts and up to 5 sample errors)
+  4. Review the preflight report (shows counts and up to 5 sample errors). A file with any error loads nothing: fix the rows and run the preflight again
   5. If OK, click **Load** to import
 
 **Important notes**:
-  - **Matching**: A row is matched to an OPEX item by `(product_name, supplier_name)`. A row that matches an existing item updates it; any other row creates a new item. When several rows share the same combination, the first one counts
+  - **Matching**: A row is matched to an OPEX item by product name and supplier. A row that matches an existing item updates it; any other row creates a new item. A row with an empty `supplier_name` matches only an item that has no supplier. Two rows with the same product name and supplier are an error ("Same line as row N"): keep one row per item
   - **Currency**: Required for a new item, and it must be allowed in your workspace currency settings. On an existing item, an empty cell keeps its currency
-  - **References**: `supplier_name` must match a Supplier by name (case-insensitive). `company_name` must match a Company and `account_number` an Account. `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused
-  - **Analytics Category**: If the category does not exist, it is created automatically during import
+  - **Supplier**: `supplier_name` is optional. When filled, a supplier with exactly this name is used. Otherwise the name is matched without regard to case. A name that matches no supplier is an error, and so is a name that matches several suppliers only by case (for example "Acme" and "ACME" when the file says "acme")
+  - **Company and account**: `company_name` must match a company by name (case-insensitive). `account_number` is looked up in the chart of accounts of that company, or in the default chart of accounts when the company has none. An account number that exists only in another chart is an error
+  - **Owners**: `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused
+  - **Dates**: `effective_start` (and `effective_end` in older files) must be a real calendar day in `YYYY-MM-DD` format, for example `2026-01-01`. Other formats, such as `01/03/2026`, are errors. An empty `effective_start` keeps the stored date of an existing item; a new item starts on January 1 of the current year
+  - **Analytics category**: If the category does not exist, it is created automatically during import
   - **Budgets**: Budget columns populate Y-1, Y, and Y+1 versions. Amounts are spread evenly across 12 months (Flat mode) and the column's period becomes the whole year. An empty cell leaves the column as it is; `0` clears it
   - **Monthly amounts**: to load or review amounts month by month, with the period of each column, use the **Budget rows file** in Budget Administration
 
 **Common errors**:
-  - **"Supplier not found"**: Create the supplier in **Master Data > Suppliers** first, then re-import
-  - **"Account not found"**: Add the account in **Master Data > Charts of Accounts**, then re-import
+  - **"Supplier '...' not found"**: Check the spelling, or create the supplier in **Master data > Suppliers** first, then re-import
+  - **"Supplier '...' matches more than one supplier"**: Several suppliers differ from this name only by case. Write the name exactly as one of them, or rename one in **Master data > Suppliers**, then re-import
+  - **"Same line as row N"**: Two rows describe the same item. Merge them into one row, then re-import
+  - **"Account ... not found in ...'s chart of accounts"**: Use an account of the paying company's chart, or add the account in **Master data > Charts of accounts**, then re-import
+  - **"effective_start must be a valid date"**: Use the `YYYY-MM-DD` format
   - **"Invalid currency"**: Use 3-letter ISO codes (USD, EUR, GBP) that are allowed in your workspace currency settings
   - **"Header mismatch"**: Download a fresh template; headers must match exactly (including order)
 
@@ -339,7 +348,7 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
 
 ---
 
-## Status and Lifecycle
+## Status and lifecycle
 
 Every OPEX item has a **status** (Enabled or Disabled) and an optional **End of validity** that controls when it appears in reports and selection lists. It is the only end date of an item.
 
@@ -362,18 +371,18 @@ Every OPEX item has a **status** (Enabled or Disabled) and an optional **End of 
 
 **When to disable vs delete**:
   - **Prefer disabling**: Keeps history intact, ensures reports remain consistent, and supports audit trails
-  - **Delete only if**: The item was created by mistake and has no budgets, allocations, or tasks
-  - Deletion is guarded: you cannot delete an item that is referenced by contracts, tasks, or has budget data
+  - **Delete only if**: The item was created by mistake
+  - Deleting an item also removes its budgets, allocations, tasks, relevant websites, attachments (with their files), and its links to contracts. If one of its tasks was turned into a request, the request is kept: it has its own copy of the title, description, and attachments, and only its link to the task goes
 
 **Tip**: Use the End of validity to sunset OPEX items when contracts end or services are discontinued. Do not delete unless it is a true mistake.
 
 ---
 
-## Tips and Best Practices
+## Tips and best practices
 
-1. **Start simple**: Create items with just the essentials (product name, supplier, paying company, account), then add budgets and allocations as you plan.
+1. **Start simple**: Create items with just the essentials (product name, paying company, account), then add budgets and allocations as you plan.
 
-2. **Use the default allocation method**: For most items, Headcount (Default) is enough. Reserve manual allocations for spend that benefits specific companies or departments only.
+2. **Use the default allocation method**: For most items, Headcount (default) is enough. Reserve manual allocations for spend that benefits specific companies or departments only.
 
 3. **Link contracts**: If you manage spend via contracts, link them in the Relations tab. It makes renewals easier to track.
 
@@ -381,7 +390,7 @@ Every OPEX item has a **status** (Enabled or Disabled) and an optional **End of 
 
 5. **Upload documentation**: Use the Attachments feature to store vendor contracts, quotes, invoices, and SOWs.
 
-6. **Add vendor portal links**: Use Relevant Websites to link to vendor admin consoles, support portals, and documentation for quick access.
+6. **Add vendor portal links**: Use Relevant websites to link to vendor admin consoles, support portals, and documentation for quick access.
 
 7. **Track contacts**: Add supplier contacts with roles (Commercial, Technical, Support) so your team knows who to call for each spend item.
 
@@ -421,5 +430,5 @@ If you cannot perform an action (e.g., **Import CSV** button is missing, cannot 
 
 - **CSV issues**: Download a fresh template, ensure UTF-8 encoding, and run preflight to see detailed errors
 - **Allocation errors**: Check that all companies have the required metrics (headcount, IT users, turnover) for the selected year
-- **Obsolete account warning**: The account does not belong to the paying company's Chart of Accounts; pick a different account
+- **Obsolete account warning**: The account does not belong to the paying company's chart of accounts; pick a different account
 - **Missing buttons or tabs**: Your role may not have the required permission level (manager or admin). Contact your workspace admin

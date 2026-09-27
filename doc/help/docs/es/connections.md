@@ -43,7 +43,7 @@ La lista proporciona una visión filtrable de todas las conexiones en su registr
 
 **Filtrado**:
   - Búsqueda rápida: Busca en los campos de conexión
-  - Filtros de columna: Topología, Criticidad, Clase de datos, PII, Riesgo, Ciclo de vida
+  - Filtros de columna: Topología y Ciclo de vida (listas de casillas). Criticidad, Clase de datos y PII no tienen filtro de columna
 
 **Acciones**:
   - **Añadir conexión**: Crear una nueva conexión (requiere `infrastructure:member`)

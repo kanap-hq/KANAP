@@ -17,19 +17,30 @@ The landing page shows a card for each available report with a short description
 
 | Report | What it covers |
 |--------|----------------|
-| **Global Chargeback** | Company-level allocation totals, KPIs, and intercompany flows |
-| **Company Chargeback** | Single-company drilldown with departments, items, and KPIs |
-| **Top OPEX** | Largest OPEX items for a selected year (custom top N) |
-| **Top OPEX Increase/Decrease** | Biggest year-over-year OPEX changes (custom top N) |
-| **Budget Trend (OPEX)** | Compare OPEX metrics across a year range |
-| **Budget Trend (CAPEX)** | Compare CAPEX metrics across a year range |
-| **Budget Column Comparison** | Pick up to 10 year+column totals for OPEX or CAPEX |
-| **Consolidation Accounts** | Budget grouped by consolidation account |
-| **Analytics Categories** | Budget grouped by analytics category |
+| **Global chargeback** | Company-level allocation totals, KPIs, and intercompany flows (OPEX) |
+| **Company chargeback** | Single-company drilldown with departments, items, and KPIs (OPEX) |
+| **Top items** | Largest OPEX or CAPEX items for a selected year (custom top N) |
+| **Top increase / decrease** | Biggest OPEX or CAPEX changes between two budget columns (custom top N) |
+| **Budget trend (OPEX)** | Compare OPEX metrics across a year range |
+| **Budget trend (CAPEX)** | Compare CAPEX metrics across a year range |
+| **Budget column comparison** | Pick up to 10 year+column totals for OPEX or CAPEX |
+| **Consolidation accounts** | OPEX or CAPEX budget grouped by consolidation account |
+| **Analytics dimensions** | OPEX or CAPEX budget grouped by analytics dimension |
+
+### Choosing OPEX or CAPEX
+
+**Top items**, **Top increase / decrease**, **Consolidation accounts**, and **Analytics dimensions** each start with an **OPEX** / **CAPEX** switch, the first control of the filter bar.
+
+- The report opens on a type you can read, OPEX first. A type you cannot read is disabled.
+- The page address keeps the chosen type (`?scope=opex` or `?scope=capex`), so a bookmarked or shared link opens on the same type.
+- The subtitle and the chart title name the type, so a printout or an exported PNG shows which type it covers.
+- Switching the type clears the items you excluded, since each type has its own items.
+
+The two chargeback reports cover OPEX only.
 
 ---
 
-## Global Chargeback
+## Global chargeback
 
 View cost allocations across all companies with summary KPIs and intercompany flows.
 
@@ -92,7 +103,7 @@ A totals row is pinned at the bottom.
 
 ---
 
-## Company Chargeback
+## Company chargeback
 
 Drill down into a single company's chargeback allocations across departments, budget items, intercompany flows, and KPIs.
 
@@ -128,7 +139,7 @@ Drill down into a single company's chargeback allocations across departments, bu
 - Pinned totals row
 - Separate **Export flows CSV** button
 
-**KPI table** (when enabled): Same columns as the Global Chargeback KPI table, with a "Global totals" row at the bottom for comparison.
+**KPI table** (when enabled): Same columns as the Global chargeback KPI table, with a "Global totals" row at the bottom for comparison.
 
 ### Export
 
@@ -138,26 +149,27 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 ---
 
-## Top OPEX
+## Top items
 
-Identify your largest recurring OPEX costs for a given year.
+Identify your largest OPEX or CAPEX items for a given year.
 
 ### Controls
 
+- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
 - **Year**: Previous, current, or next year
 - **Metric**: Budget, Revision, Actuals, or Expected landing
 - **Top count**: How many items to show (default: 10, minimum: 1)
 - **Chart type**: Pie chart or horizontal bar chart
-- **Exclude items**: Multi-select autocomplete to exclude specific products
-- **Exclude accounts**: Multi-select autocomplete to exclude by account category
+- **Exclude items**: Multi-select autocomplete to exclude specific items
+- **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
 
 ### What you'll see
 
-**Chart**: Pie or horizontal bar chart of the top items.
+**Chart**: Pie or horizontal bar chart of the top items. Its title names the type, for example "Top 10 CAPEX · Budget 2026".
 
 **Table columns**:
 
-- Product name
+- Item
 - Value for the selected metric and year
 - Share of total (percentage)
 
@@ -172,29 +184,32 @@ Use this report to quickly spot where most of your IT budget goes and identify c
 
 ---
 
-## Top OPEX Increase / Decrease
+## Top increase / decrease
 
-Identify the biggest changes between two budget columns (any combination of year and metric).
+Identify the biggest OPEX or CAPEX changes between two budget columns (any combination of year and metric).
 
 ### Controls
 
+- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
 - **Source year** and **Source metric**: The baseline column to compare from
 - **Destination year** and **Destination metric**: The target column to compare to
 - **Top count**: How many items to show per direction (default: 10)
 - **Chart type**: Pie chart (single direction only) or horizontal bar chart
-- **Exclude items**: Multi-select autocomplete to exclude specific products
-- **Exclude accounts**: Multi-select autocomplete to exclude by account category
-- **Direction toggle**: Increase, Decrease, or both (toggle buttons)
+- **Exclude items**: Multi-select autocomplete to exclude specific items
+- **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
+- **Direction**: **Increases**, **Decreases**, or **Both** tabs
 
-When both directions are selected, the pie chart option is disabled and the report automatically switches to bar.
+The year pickers list the years that hold data. The metric pickers offer the four report columns: Budget, Actuals, Expected landing, and Revision.
+
+When **Both** is selected, the pie chart option is disabled and the report automatically switches to bar.
 
 ### What you'll see
 
-**Chart**: Visualisation of the top changes.
+**Chart**: Visualisation of the top changes. Its title names the type, for example "Top 10 OPEX increases".
 
 **Table columns**:
 
-- Product name
+- Item
 - Source value (previous)
 - Destination value (current)
 - Delta (absolute change)
@@ -212,7 +227,7 @@ Use this report for identifying cost overruns, spotting savings opportunities, a
 
 ---
 
-## Budget Trend (OPEX)
+## Budget trend (OPEX)
 
 Compare OPEX metrics across multiple years on a single line chart.
 
@@ -236,7 +251,7 @@ Compare OPEX metrics across multiple years on a single line chart.
 
 ---
 
-## Budget Trend (CAPEX)
+## Budget trend (CAPEX)
 
 Identical layout to the OPEX trend report, but pulls from CAPEX budget data.
 
@@ -251,7 +266,7 @@ Identical layout to the OPEX trend report, but pulls from CAPEX budget data.
 
 ---
 
-## Budget Column Comparison
+## Budget column comparison
 
 Flexibly compare up to 10 year+column combinations for either OPEX or CAPEX.
 
@@ -281,12 +296,13 @@ Flexibly compare up to 10 year+column combinations for either OPEX or CAPEX.
 
 ---
 
-## Consolidation Accounts
+## Consolidation accounts
 
-View OPEX budget data grouped by consolidation account, with chart type adapting to the year range.
+View OPEX or CAPEX budget data grouped by consolidation account, with chart type adapting to the year range.
 
 ### Controls
 
+- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Budget, Actuals, Expected landing, or Revision
 - **Chart type**: Pie chart or horizontal bar chart (only available when a single year is selected)
@@ -309,29 +325,30 @@ Items without a consolidation account appear as "Unassigned".
 
 ---
 
-## Analytics Categories
+## Analytics dimensions
 
-View OPEX budget data grouped by analytics category. The layout mirrors the Consolidation Accounts report.
+View OPEX or CAPEX budget data grouped by analytics dimension. The layout mirrors the Consolidation accounts report.
 
 ### Controls
 
+- **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Budget, Actuals, Expected landing, or Revision
 - **Chart type**: Pie chart or horizontal bar chart (single-year only)
-- **Exclude analytics categories**: Multi-select autocomplete to exclude specific categories
+- **Exclude analytics dimensions**: Multi-select autocomplete to exclude specific dimensions
 
 ### What you'll see
 
 **Single-year mode**:
 
-- Pie or bar chart of totals by analytics category
+- Pie or bar chart of totals by analytics dimension
 - Footnote with the metric total
 
 **Multi-year mode**:
 
-- Line chart with one series per category
+- Line chart with one series per analytics dimension
 
-**Table**: One row per category with year columns. A pinned totals row at the bottom. Items without a category appear as "Unassigned".
+**Table**: One row per analytics dimension with year columns. A pinned totals row at the bottom. Items without an analytics dimension appear as "Unassigned".
 
 ---
 
@@ -364,9 +381,9 @@ Every report shows a breadcrumb trail back to the **Reporting** hub, so you can 
 
 ## Tips
 
-- **Start with Global Chargeback**: Get the big picture of allocations before drilling into a single company.
-- **Use Top OPEX for quick wins**: The largest cost items are your first candidates for optimization.
-- **Compare Budget vs Expected landing**: Use the Column Comparison report to measure forecast accuracy across years.
+- **Start with Global chargeback**: Get the big picture of allocations before drilling into a single company.
+- **Use Top items for quick wins**: The largest cost items are your first candidates for optimization.
+- **Compare Budget vs Expected landing**: Use the Budget column comparison report to measure forecast accuracy across years.
 - **Toggle sections on chargeback reports**: The checkbox controls let you focus on just the data you need -- departments, items, KPIs, or flows -- without visual clutter.
-- **Year grouping in Column Comparison**: When comparing the same metric across multiple years, enable year grouping for a cleaner line chart.
+- **Year grouping in Budget column comparison**: When comparing the same metric across multiple years, enable year grouping for a cleaner line chart.
 - **Export for presentations**: Charts export as PNG and tables as CSV, both ready for slides or spreadsheets.

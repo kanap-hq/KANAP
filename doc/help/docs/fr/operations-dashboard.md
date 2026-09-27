@@ -1,11 +1,11 @@
 # Vue d'ensemble de la gestion budgétaire
 
-Le tableau de bord de la gestion budgétaire est la première page que vous voyez après la connexion. Il vous offre une vue d'ensemble de l'état de vos dépenses IT — aperçus OPEX et CAPEX, échéances à venir, indicateurs de qualité des données et les éléments qui méritent le plus votre attention — le tout en un seul endroit.
+La vue d'ensemble de la gestion budgétaire vous offre une vision globale de l'état de vos dépenses IT : aperçus OPEX et CAPEX, échéances à venir, indicateurs de qualité des données et éléments qui méritent le plus votre attention, le tout en un seul endroit.
 
 ## Où le trouver
 
 - Chemin : **Gestion budgétaire > Vue d'ensemble** (`/ops`)
-- C'est également la page d'accueil par défaut après connexion.
+- La page qui s'ouvre après la connexion est votre [tableau de bord](my-dashboard.md) personnel. Ouvrez cette vue d'ensemble depuis l'espace **Gestion budgétaire**.
 
 ## Disposition
 
@@ -29,45 +29,47 @@ Cliquez sur **Voir** pour ouvrir la liste CAPEX.
 
 Affiche le nombre total de tâches ouvertes qui vous sont assignées (les tâches terminées sont exclues), suivi des cinq tâches dont les dates d'échéance sont les plus proches. Les tâches en retard sont surlignées en rouge. Les tâches sans date d'échéance n'apparaissent pas ici.
 
-Cliquez sur **Voir tout** pour ouvrir la page Tâches.
+Cliquez sur **Tout voir** pour ouvrir la page Tâches.
 
 ### Prochains renouvellements
 
 Liste les cinq prochaines échéances de résiliation de contrats encore dans le futur. Les échéances passées sont automatiquement filtrées pour que vous ne voyiez que ce qui arrive.
 
-Cliquez sur **Voir tout** pour ouvrir la page Contrats.
+Cliquez sur **Tout voir** pour ouvrir la page Contrats.
 
-### Hygiène des données (OPEX)
+### Hygiène des données
 
-Quatre pastilles indicatrices qui vous aident à repérer les enregistrements OPEX incomplets en un coup d'œil :
+Quatre contrôles qui vous aident à repérer les enregistrements incomplets en un coup d'œil. La tuile affiche une colonne de compteurs par type de poste que vous pouvez consulter : **OPEX** et **CAPEX** côte à côte.
 
-- **Pas de responsable IT** — éléments sans responsable IT assigné
-- **Pas de responsable métier** — éléments sans responsable métier assigné
-- **Pas de société payeuse** — éléments sans société payeuse définie
-- **Incohérences CoA** — éléments où le compte sélectionné n'appartient pas au plan comptable de la société payeuse
+- **Sans responsable IT** : postes sans responsable IT
+- **Sans responsable métier** : postes sans responsable métier
+- **Sans société payeuse** : postes sans société payeuse
+- **Compte hors du plan de la société** : postes dont le compte n'appartient pas au plan comptable de la société payeuse
 
-Les pastilles deviennent orange (ou rouges pour les incohérences CoA) lorsque le compteur est supérieur à zéro. Cliquez sur n'importe quelle pastille pour accéder à la liste OPEX.
+Un compteur devient orange (rouge pour le contrôle du plan comptable) lorsqu'il est supérieur à zéro. Cliquez sur un compteur pour ouvrir la liste du type correspondant.
 
 ### Actions rapides
 
 Boutons de raccourci pour créer un nouveau poste OPEX ou CAPEX directement depuis le tableau de bord. Ces boutons ne sont visibles que si votre rôle vous accorde au moins les autorisations `opex:manager` ou `capex:manager`.
 
-Sous les boutons, une section **Mises à jour OPEX récentes** liste les cinq postes OPEX les plus récemment modifiés avec leur date de dernière modification.
+Sous les boutons, une section **Mises à jour récentes** liste les cinq postes les plus récemment modifiés, OPEX et CAPEX confondus. Chaque ligne affiche la date de la dernière modification, le nom du poste et son type. Cliquez sur une ligne pour ouvrir le poste.
 
-### Top OPEX (A)
+### Top postes (A)
 
-Les cinq postes OPEX les plus importants de l'année en cours, classés par montant budgétaire. Les montants sont arrondis au millier avec un suffixe « k ».
+Les cinq postes les plus importants de l'année en cours, classés par montant budgétaire. Les montants sont arrondis au millier avec un suffixe « k ».
 
-Cliquez sur **Ouvrir** pour voir le rapport Top OPEX complet.
+Utilisez les onglets **OPEX** / **CAPEX** de l'en-tête de la tuile pour choisir le type de poste. La tuile mémorise votre choix. Cliquez sur **Ouvrir** pour voir le rapport Top postes complet sur le même type.
 
 ### Plus fortes hausses (A vs A-1)
 
-Les cinq postes OPEX avec la plus forte augmentation de budget par rapport à l'année précédente. Les montants sont arrondis au millier avec un suffixe « k ».
+Les cinq postes avec la plus forte augmentation de budget par rapport à l'année précédente, calculée sur tous les postes du type. Les postes dont le budget est stable ou en baisse n'apparaissent pas. Les montants sont arrondis au millier avec un suffixe « k ».
 
-Cliquez sur **Ouvrir** pour voir le rapport complet des variations OPEX.
+Utilisez les onglets **OPEX** / **CAPEX** de l'en-tête de la tuile pour choisir le type de poste. La tuile mémorise votre choix. Cliquez sur **Ouvrir** pour voir le rapport Top hausse / baisse complet sur le même type.
+
+Un type que vous ne pouvez pas consulter est désactivé dans les onglets et n'a pas de colonne dans **Hygiène des données**. Si vous ne pouvez consulter ni OPEX ni CAPEX, ces tuiles sont masquées.
 
 ## Conseils
 
-- **Montants arrondis** : Tous les montants du tableau de bord sont arrondis au millier pour une vue compacte. Ouvrez la liste OPEX ou CAPEX — ou la section Rapports — lorsque vous avez besoin de chiffres exacts.
+- **Montants arrondis** : Tous les montants du tableau de bord sont arrondis au millier pour une vue compacte. Ouvrez la liste OPEX ou CAPEX, ou les rapports, lorsque vous avez besoin de chiffres exacts.
 - **Boutons manquants** : Si vous ne voyez pas les boutons **Nouveau OPEX** ou **Nouveau CAPEX**, votre rôle actuel n'inclut pas l'autorisation manager requise. Demandez à votre administrateur de vérifier votre accès.
 - **Tuiles vides** : Une tuile qui affiche « Pas de données » signifie simplement qu'il n'y a pas encore d'enregistrements de ce type. Dès que vous ou votre équipe commencez à saisir des données, la tuile se remplira automatiquement.

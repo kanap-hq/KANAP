@@ -43,7 +43,7 @@ Die Liste gibt Ihnen einen filterbaren Überblick über jede Verbindung in Ihrem
 
 **Filterung**:
   - Schnellsuche: Durchsucht Verbindungsfelder
-  - Spaltenfilter: Topologie, Kritikalität, Datenklasse, PII, Risiko, Lebenszyklus
+  - Spaltenfilter: Topologie und Lebenszyklus (Kontrollkästchenlisten). Kritikalität, Datenklasse und PII haben keinen Spaltenfilter
 
 **Aktionen**:
   - **Verbindung hinzufügen**: Eine neue Verbindung erstellen (erfordert `infrastructure:member`)

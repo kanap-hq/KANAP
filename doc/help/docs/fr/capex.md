@@ -2,7 +2,7 @@
 
 Les postes CAPEX (dépenses d'investissement) sont vos investissements dans des actifs à long terme : achats de matériel, licences logicielles à valeur pluriannuelle, projets d'infrastructure et équipements. C'est ici que vous planifiez les budgets d'investissement, suivez les dépenses de projet et répartissez les coûts à travers votre organisation.
 
-L'espace de travail CAPEX vous aide à gérer chaque poste d'investissement de la budgétisation initiale jusqu'à l'exécution et le reporting -- le tout en un seul endroit avec des colonnes budgétaires annuelles, des méthodes de ventilation flexibles et des liens directs vers les projets, contrats et contacts.
+L'espace de travail CAPEX vous aide à gérer chaque poste d'investissement de la budgétisation initiale jusqu'à l'exécution et le reporting -- le tout en un seul endroit avec des colonnes budgétaires annuelles, des méthodes de ventilation flexibles et des liens directs vers les projets, applications, contrats et contacts.
 
 ## Premiers pas
 
@@ -14,23 +14,22 @@ L'espace de travail s'ouvre en mode création, avec le panneau **Propriétés** 
 
 - **Titre** : Ce dans quoi vous investissez (ex. : « Nouvelle infrastructure serveur », « Licence logiciel ERP »). C'est la description du poste, affichée dans la colonne **Description** de la liste
 - **Société payeuse** : Quelle société réalise l'investissement (obligatoire pour la comptabilité)
+- **Compte** : Le compte du grand livre pour cette dépense d'investissement. Seuls les comptes du plan comptable de la société payeuse apparaissent
 - **Devise** : Code ISO (ex. : USD, EUR). Par défaut la devise CAPEX de votre espace de travail ; modifiable par poste
 - **Type d'immobilisation** : Classification des immobilisations corporelles -- Matériel ou Logiciel
 - **Type d'investissement** : Objectif de l'investissement (voir les options ci-dessous)
 - **Priorité** : Niveau de priorité métier (voir les options ci-dessous)
 - **Début d'effet** : Quand cet investissement commence (JJ/MM/AAAA)
 
-**Fortement recommandé** :
-
-- **Compte** : Le compte du grand livre pour cette dépense d'investissement. Seuls les comptes du plan comptable de la société payeuse apparaissent
-- **Fournisseur** : Le vendeur ou fournisseur de cet investissement. Sélectionnez-le dans vos données de référence fournisseurs
-
 **Optionnel mais utile** :
 
+- **Fournisseur** : Le vendeur ou fournisseur de cet investissement. Sélectionnez-le parmi vos fournisseurs dans les données de référence
 - **Catégorie analytique** : Regroupement personnalisé pour le reporting
 - **Fin de validité** : La date à laquelle cet investissement s'arrête, par exemple à la fin de la durée de vie utile de l'actif ou à l'achèvement du projet. Laissez-la vide s'il n'y a pas de fin. Après cette date, le poste est désactivé et les années suivantes ne comptent plus dans les vues budgétaires
 - **Responsable IT** / **Responsable métier** : Qui est en charge
 - **Description** (onglet Vue d'ensemble) : Détails libres sur l'investissement
+
+Une fois renseignés, **Société payeuse** et **Compte** peuvent être modifiés mais pas vidés. **Fournisseur** peut être effacé à tout moment. Les postes créés par un import CSV n'ont pas de compte (le fichier CAPEX n'a pas de colonne de compte) : renseignez-le dans le panneau **Propriétés**.
 
 Une fois le poste créé, l'espace de travail déverrouille les quatre onglets : **Vue d'ensemble**, **Budget**, **Ventilations** et **Relations**.
 
@@ -104,7 +103,7 @@ Le champ de recherche en haut porte sur la référence, la description, le fourn
 
 ### Filtres de colonnes
 
-Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier** et **Analytique** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Plusieurs filtres se combinent avec une logique ET.
+Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, **Analytique** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Plusieurs filtres se combinent avec une logique ET.
 
 Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants.
 
@@ -226,7 +225,7 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
 
 - Si le budget d'une année est gelé (via l'Administration budgétaire), les champs passent en lecture seule et affichent un cadenas
 - Chaque colonne peut être gelée indépendamment (Budget, Révision, Prévision, Réalisé, Atterrissage prévu)
-- Vous pouvez toujours consulter les données gelées ; les administrateurs peuvent dégeler via **Gestion budgétaire > Administration > Geler/Dégeler**
+- Vous pouvez toujours consulter les données gelées ; les administrateurs peuvent dégeler via **Gestion budgétaire > Administration > Geler / Dégeler les données**
 
 **Répartir un montant** :
 
@@ -332,7 +331,7 @@ L'onglet Ventilations répartit la dépense d'investissement entre vos société
 
 ### Relations
 
-L'onglet Relations lie ce poste CAPEX aux objets associés : Projets, Contrats, Contacts, Sites web pertinents et Pièces jointes. Tout ce qui se trouve dans cet onglet s'enregistre automatiquement.
+L'onglet Relations lie ce poste CAPEX aux objets associés : Projets, Applications, Contrats, Contacts, Sites web pertinents et Pièces jointes. Tout ce qui se trouve dans cet onglet s'enregistre automatiquement.
 
 **Projets** :
 
@@ -340,6 +339,12 @@ L'onglet Relations lie ce poste CAPEX aux objets associés : Projets, Contrats, 
 - Cela aide à regrouper les dépenses d'investissement par projet dans les rapports et permet la comptabilité projet
 - Les noms des projets apparaissent dans la colonne **Projet** de la liste CAPEX, et la recherche rapide les trouve
 - Retirez un projet en cliquant sur le X de sa puce
+
+**Applications** :
+
+- Utilisez l'autocomplétion pour lier une ou plusieurs applications ou services de votre catalogue IT
+- Cela aide à savoir quels postes CAPEX financent quelles applications ou quels services
+- Retirez une application en cliquant sur le X de sa puce
 
 **Contrats** :
 
@@ -369,9 +374,10 @@ L'onglet Relations lie ce poste CAPEX aux objets associés : Projets, Contrats, 
 **Pourquoi lier ?** :
 
 - **Projets** : Consolider les dépenses d'investissement par projet pour la comptabilité et le reporting projet
+- **Applications** : Voir quelles applications ou quels services un investissement finance
 - **Contrats** : Savoir quels postes d'investissement sont couverts par des contrats d'achat ou de service
 - **Contacts** : Garder les coordonnées des fournisseurs et parties prenantes associées à l'investissement
-- **Sites web et pièces jointes** : Centraliser toute la documentation et les références de l'investissement pour y accéder facilement
+- **Sites web pertinents et pièces jointes** : Centraliser toute la documentation et les références de l'investissement pour y accéder facilement
 
 **Conseil** : Téléversez les devis fournisseur, notes d'approbation et spécifications techniques en pièces jointes. Liez les contrats pour suivre les achats. Utilisez les contacts pour associer les interlocuteurs fournisseurs à chaque poste d'investissement.
 
@@ -407,13 +413,15 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
    - Les devises sont autorisées dans les paramètres de devise de votre espace de travail
    - Les responsables sont des utilisateurs actifs
    - Un `item_number` correspond à un poste CAPEX existant
-4. Examinez le rapport de vérification (il affiche les totaux et jusqu'à 5 exemples d'erreurs)
+   - Les dates sont valides, et deux lignes ne décrivent pas le même poste
+4. Examinez le rapport de vérification (il affiche les totaux et jusqu'à 5 exemples d'erreurs). Un fichier qui contient une erreur ne charge rien : corrigez les lignes et relancez la vérification
 5. Si tout est correct, cliquez sur **Charger** pour importer
 
 **Remarques importantes** :
 
-- **Correspondance** : Une ligne avec un `item_number` met à jour ce poste CAPEX ; la vérification signale un numéro qui ne correspond à aucun poste. Une ligne sans numéro est rattachée par `description` : si elle correspond, elle met à jour le poste, sinon elle crée un nouveau poste. Si plusieurs lignes correspondent au même poste, seule la première compte.
+- **Correspondance** : Une ligne avec un `item_number` met à jour ce poste CAPEX ; la vérification signale un numéro qui ne correspond à aucun poste. Une ligne sans numéro est rattachée par `description` : si elle correspond, elle met à jour le poste, sinon elle crée un nouveau poste. Deux lignes avec le même `item_number`, ou avec la même `description` et sans numéro, sont une erreur (« Same line as row N ») : gardez une seule ligne par poste.
 - **Nouveaux postes** : `company_name` et `currency` sont obligatoires pour un nouveau poste. La devise doit être autorisée dans les paramètres de devise de votre espace de travail. Sur un poste existant, une cellule de devise vide conserve sa devise.
+- **Dates** : `effective_start` (et `effective_end` dans les anciens fichiers) doit être un jour calendaire réel au format `YYYY-MM-DD`, par exemple `2026-01-01`. Les autres formats, comme `01/03/2026`, sont des erreurs. Un `effective_start` vide conserve la date enregistrée d'un poste existant ; un nouveau poste commence le 1er janvier de l'année en cours.
 - **Références** : `company_name` doit correspondre à une Société par nom (insensible à la casse). `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail : un utilisateur invité ou un contact sans compte est refusé.
 - **Type d'immobilisation** : Doit être `hardware` ou `software` (insensible à la casse).
 - **Type d'investissement** : Doit être l'un des suivants : `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (insensible à la casse).
@@ -429,6 +437,8 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 - **« Priorité invalide »** : Utilisez `mandatory`, `high`, `medium` ou `low`.
 - **« Devise invalide »** : Utilisez des codes ISO à 3 lettres (USD, EUR, GBP) autorisés dans les paramètres de devise de votre espace de travail.
 - **« En-têtes non conformes »** : Téléchargez un modèle récent ; les en-têtes doivent correspondre exactement (ordre compris).
+- **« effective_start must be a valid date »** : Utilisez le format `YYYY-MM-DD`.
+- **« Same line as row N »** : Deux lignes décrivent le même poste. Fusionnez-les en une seule ligne, puis relancez l'import.
 
 **Conseil** : Commencez par l'export du modèle, remplissez quelques lignes et lancez une vérification pour détecter les erreurs tôt. Corrigez les erreurs dans le CSV et téléversez-le à nouveau jusqu'à ce que la vérification passe, puis chargez.
 
@@ -461,8 +471,8 @@ Chaque poste CAPEX a un **statut** (Activé ou Désactivé) et une **Fin de vali
 **Désactiver ou supprimer** :
 
 - **Privilégiez la désactivation** : Elle préserve l'historique, garantit la cohérence des rapports et conserve la piste d'audit
-- **Supprimez uniquement si** : Le poste a été créé par erreur et n'a ni budget, ni ventilation, ni tâche
-- La suppression est protégée : vous ne pouvez pas supprimer un poste qui a des données budgétaires, des ventilations ou des tâches, ou qui est référencé par des contrats
+- **Supprimez uniquement si** : Le poste a été créé par erreur
+- Supprimer un poste supprime aussi ses budgets, ventilations, tâches, sites web pertinents, pièces jointes (avec leurs fichiers) et ses liens vers des contrats. Si l'une de ses tâches a été transformée en demande, la demande est conservée : elle possède sa propre copie du titre, de la description et des pièces jointes, et seul son lien vers la tâche disparaît
 
 **Conseil** : Utilisez la Fin de validité pour marquer les actifs entièrement amortis ou cédés, ou les projets terminés. Ne supprimez qu'en cas de véritable erreur.
 
@@ -487,7 +497,7 @@ Si vous ne pouvez pas effectuer une action (ex. : le bouton **Import CSV** est a
 
 ## Conseils
 
-- **Commencez simple** : Créez les postes avec juste l'essentiel (description, type d'immobilisation, type d'investissement, société), puis ajoutez les budgets et ventilations au fur et à mesure.
+- **Commencez simple** : Créez les postes avec juste l'essentiel (description, type d'immobilisation, type d'investissement, société payeuse, compte), puis ajoutez les budgets et ventilations au fur et à mesure.
 - **Utilisez la ventilation par effectif** : Pour la plupart des investissements, Effectif suffit. Réservez les ventilations manuelles aux investissements qui ne bénéficient qu'à des sociétés ou départements spécifiques.
 - **Liez les contrats** : Si vous gérez les achats d'investissement via des contrats, liez-les dans l'onglet Relations pour suivre les achats.
 - **Téléversez la documentation** : Utilisez les pièces jointes pour stocker les devis fournisseur, notes d'approbation et spécifications techniques avec le poste.

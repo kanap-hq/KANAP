@@ -2,7 +2,7 @@
 
 CAPEX-Positionen (Capital Expenditure / Investitionsausgaben) sind Ihre Investitionen in langfristige Vermögenswerte: Hardwarekäufe, Softwarelizenzen mit mehrjährigem Wert, Infrastrukturprojekte und Ausrüstung. Hier planen Sie Investitionsbudgets, verfolgen Projektausgaben und ordnen Kosten Ihrer Organisation zu.
 
-Der CAPEX-Arbeitsbereich unterstützt Sie bei der Verwaltung jeder Investitionsposition von der ersten Budgetierung über die Durchführung bis zur Berichterstattung -- alles an einem Ort mit jahresbezogenen Budgetspalten, flexiblen Zuordnungsmethoden und direkten Verknüpfungen zu Projekten, Verträgen und Kontakten.
+Der CAPEX-Arbeitsbereich unterstützt Sie bei der Verwaltung jeder Investitionsposition von der ersten Budgetierung über die Durchführung bis zur Berichterstattung -- alles an einem Ort mit jahresbezogenen Budgetspalten, flexiblen Zuordnungsmethoden und direkten Verknüpfungen zu Projekten, Anwendungen, Verträgen und Kontakten.
 
 ## Erste Schritte
 
@@ -14,23 +14,22 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus, mit geöffnetem Bereich **E
 
 - **Titel**: Was Sie investieren (z. B. „Neue Server-Infrastruktur", „ERP-Softwarelizenz"). Das ist die Beschreibung der Position, die in der Spalte **Beschreibung** der Liste erscheint
 - **Zahlendes Unternehmen**: Welches Unternehmen die Investition tätigt (erforderlich für die Buchhaltung)
+- **Konto**: Das Sachkonto für diese Investitionsausgabe. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens
 - **Währung**: ISO-Code (z. B. USD, EUR). Standardmäßig Ihre Arbeitsbereich-CAPEX-Währung; kann pro Position überschrieben werden
 - **Anlagentyp**: Sachanlagen-Klassifizierung -- Hardware oder Software
 - **Investitionsart**: Zweck der Investition (siehe Optionen unten)
 - **Priorität**: Geschäftliche Prioritätsstufe (siehe Optionen unten)
 - **Beginn der Gültigkeit**: Wann diese Investition beginnt (TT/MM/JJJJ)
 
-**Dringend empfohlen**:
-
-- **Konto**: Das Sachkonto für diese Investitionsausgabe. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens
-- **Lieferant**: Der Anbieter oder Lieferant dieser Investition. Wählen Sie ihn aus Ihren Stammdaten-Lieferanten
-
 **Optional aber nützlich**:
 
+- **Lieferant**: Der Anbieter oder Lieferant dieser Investition. Wählen Sie ihn aus Ihren Lieferanten in den Stammdaten
 - **Analysekategorie**: Benutzerdefinierte Gruppierung für Berichte
 - **Ende der Gültigkeit**: Das Datum, an dem diese Investition endet, zum Beispiel am Ende der Nutzungsdauer des Assets oder beim Projektabschluss. Lassen Sie es leer, wenn es kein Ende gibt. Danach ist die Position deaktiviert und spätere Jahre zählen in den Budgetansichten nicht mehr
 - **IT-Verantwortlicher** / **Fachverantwortlicher**: Wer verantwortlich ist
 - **Beschreibung** (Tab Übersicht): Freitext-Details zur Investition
+
+Einmal gesetzt, können **Zahlendes Unternehmen** und **Konto** geändert, aber nicht geleert werden. **Lieferant** können Sie jederzeit leeren. Positionen aus einem CSV-Import haben kein Konto (die CAPEX-Datei hat keine Kontospalte): Legen Sie es im Bereich **Eigenschaften** fest.
 
 Sobald die Position erstellt ist, schaltet der Arbeitsbereich alle vier Tabs frei: **Übersicht**, **Budget**, **Zuordnungen** und **Verknüpfungen**.
 
@@ -104,7 +103,7 @@ Das Suchfeld oben durchsucht Referenz, Beschreibung, Lieferant, zahlendes Untern
 
 ### Spaltenfilter
 
-Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher** und **Analytik** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Mehrere Filter werden mit UND-Logik kombiniert.
+Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, **Analytik** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht. Mehrere Filter werden mit UND-Logik kombiniert.
 
 Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen.
 
@@ -226,7 +225,7 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
 
 - Wenn das Budget eines Jahres eingefroren ist (über die Budgetadministration), sind die Felder schreibgeschützt und zeigen ein Schloss-Symbol
 - Jede Spalte kann unabhängig eingefroren werden (Budget, Revision, Prognose, Ist-Werte, Erwarteter Endwert)
-- Sie können eingefrorene Daten weiterhin ansehen; Administratoren können sie über **Budgetverwaltung > Administration > Einfrieren/Freigeben** wieder freigeben
+- Sie können eingefrorene Daten weiterhin ansehen; Administratoren können sie über **Budgetverwaltung > Administration > Daten einfrieren / auftauen** wieder freigeben
 
 **Einen Betrag verteilen**:
 
@@ -332,7 +331,7 @@ Der Tab Zuordnungen verteilt die Investitionsausgabe auf Ihre Unternehmen und Ab
 
 ### Verknüpfungen
 
-Der Tab Verknüpfungen verbindet diese CAPEX-Position mit zugehörigen Objekten: Projekte, Verträge, Kontakte, Relevante Websites und Anhänge. Alles in diesem Tab wird automatisch gespeichert.
+Der Tab Verknüpfungen verbindet diese CAPEX-Position mit zugehörigen Objekten: Projekte, Anwendungen, Verträge, Kontakte, Relevante Websites und Anhänge. Alles in diesem Tab wird automatisch gespeichert.
 
 **Projekte**:
 
@@ -340,6 +339,12 @@ Der Tab Verknüpfungen verbindet diese CAPEX-Position mit zugehörigen Objekten:
 - Das hilft, Investitionsausgaben in Berichten nach Projekt zu gruppieren, und ermöglicht die Projektbuchhaltung
 - Die Projektnamen erscheinen in der Spalte **Projekt** der CAPEX-Liste, und die Schnellsuche findet sie
 - Entfernen Sie ein Projekt mit dem X auf seinem Chip
+
+**Anwendungen**:
+
+- Verknüpfen Sie über die Autovervollständigung eine oder mehrere Anwendungen oder Dienste aus Ihrem IT-Katalog
+- So verfolgen Sie, welche CAPEX-Positionen welche Anwendungen oder Dienste finanzieren
+- Entfernen Sie eine Anwendung mit dem X auf ihrem Chip
 
 **Verträge**:
 
@@ -369,9 +374,10 @@ Der Tab Verknüpfungen verbindet diese CAPEX-Position mit zugehörigen Objekten:
 **Warum verknüpfen?**:
 
 - **Projekte**: Investitionsausgaben nach Projekt für Projektbuchhaltung und Berichte zusammenfassen
+- **Anwendungen**: Sehen, welche Anwendungen oder Dienste eine Investition finanziert
 - **Verträge**: Nachverfolgen, welche Investitionen durch Kauf- oder Serviceverträge abgedeckt sind
 - **Kontakte**: Kontaktdaten von Lieferanten und Beteiligten mit der Investition verbunden halten
-- **Websites und Anhänge**: Alle Unterlagen und Referenzen zur Investition an einem Ort bündeln
+- **Relevante Websites und Anhänge**: Alle Unterlagen und Referenzen zur Investition an einem Ort bündeln
 
 **Tipp**: Laden Sie Lieferantenangebote, Genehmigungsvermerke und technische Spezifikationen als Anhänge hoch. Verknüpfen Sie Verträge, um Beschaffungen nachzuverfolgen. Nutzen Sie Kontakte, um die Ansprechpartner des Lieferanten jeder Investition zuzuordnen.
 
@@ -407,13 +413,15 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
    - Währungen sind in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt
    - Verantwortliche sind aktive Benutzer
    - Eine `item_number` entspricht einer bestehenden CAPEX-Position
-4. Überprüfen Sie den Vorprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler)
+   - Datumsangaben sind gültig, und keine zwei Zeilen beschreiben dieselbe Position
+4. Überprüfen Sie den Vorprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorprüfung erneut aus
 5. Wenn OK, klicken Sie auf **Laden** zum Importieren
 
 **Wichtige Hinweise**:
 
-- **Abgleich**: Eine Zeile mit einer `item_number` aktualisiert diese CAPEX-Position; die Vorprüfung meldet eine Nummer, die zu keiner Position passt. Eine Zeile ohne Nummer wird über `description` zugeordnet: Bei einem Treffer wird die Position aktualisiert, sonst legt die Zeile eine neue Position an. Passen mehrere Zeilen zur selben Position, zählt die erste.
+- **Abgleich**: Eine Zeile mit einer `item_number` aktualisiert diese CAPEX-Position; die Vorprüfung meldet eine Nummer, die zu keiner Position passt. Eine Zeile ohne Nummer wird über `description` zugeordnet: Bei einem Treffer wird die Position aktualisiert, sonst legt die Zeile eine neue Position an. Zwei Zeilen mit derselben `item_number` oder mit derselben `description` ohne Nummer sind ein Fehler („Same line as row N"): Behalten Sie eine Zeile pro Position.
 - **Neue Positionen**: `company_name` und `currency` sind für eine neue Position Pflicht. Die Währung muss in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt sein. Bei einer bestehenden Position behält eine leere Währungszelle deren Währung.
+- **Datumsangaben**: `effective_start` (und `effective_end` in älteren Dateien) muss ein echter Kalendertag im Format `YYYY-MM-DD` sein, zum Beispiel `2026-01-01`. Andere Formate wie `01/03/2026` sind Fehler. Ein leeres `effective_start` behält das gespeicherte Datum einer bestehenden Position; eine neue Position beginnt am 1. Januar des laufenden Jahres.
 - **Referenzen**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt.
 - **Anlagentyp**: Muss `hardware` oder `software` sein (Groß-/Kleinschreibung wird ignoriert).
 - **Investitionsart**: Muss eine von: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` sein (Groß-/Kleinschreibung wird ignoriert).
@@ -429,6 +437,8 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 - **„Ungültige Priorität"**: Verwenden Sie `mandatory`, `high`, `medium` oder `low`.
 - **„Ungültige Währung"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind.
 - **„Kopfzeilen stimmen nicht überein"**: Laden Sie eine frische Vorlage herunter; Kopfzeilen müssen exakt übereinstimmen (einschließlich Reihenfolge).
+- **„effective_start must be a valid date"**: Verwenden Sie das Format `YYYY-MM-DD`.
+- **„Same line as row N"**: Zwei Zeilen beschreiben dieselbe Position. Führen Sie sie zu einer Zeile zusammen und importieren Sie dann erneut.
 
 **Tipp**: Beginnen Sie mit dem Vorlagenexport, füllen Sie einige Zeilen aus und führen Sie eine Vorprüfung durch, um Probleme frühzeitig zu erkennen. Beheben Sie Fehler in der CSV und laden Sie sie erneut hoch, bis die Vorprüfung besteht, dann laden Sie.
 
@@ -461,8 +471,8 @@ Jede CAPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein op
 **Wann deaktivieren vs. löschen**:
 
 - **Bevorzugen Sie das Deaktivieren**: Bewahrt die Historie, stellt konsistente Berichte sicher und unterstützt Audit-Trails
-- **Nur löschen, wenn**: Die Position versehentlich erstellt wurde und keine Budgets, Zuordnungen oder Aufgaben hat
-- Das Löschen ist geschützt: Sie können keine Position löschen, die Budgetdaten, Zuordnungen, Aufgaben hat oder von Verträgen referenziert wird
+- **Nur löschen, wenn**: Die Position versehentlich erstellt wurde
+- Beim Löschen einer Position werden auch ihre Budgets, Zuordnungen, Aufgaben, relevanten Websites, Anhänge (mit ihren Dateien) und ihre Verknüpfungen zu Verträgen entfernt. Wurde eine ihrer Aufgaben in eine Anfrage umgewandelt, bleibt die Anfrage erhalten: Sie hat eine eigene Kopie von Titel, Beschreibung und Anhängen, und nur ihre Verknüpfung zur Aufgabe entfällt
 
 **Tipp**: Verwenden Sie das Ende der Gültigkeit, um vollständig abgeschriebene, veräußerte Vermögenswerte oder abgeschlossene Projekte zu kennzeichnen. Löschen Sie nur bei echten Fehlern.
 
@@ -487,7 +497,7 @@ Wenn Sie eine Aktion nicht ausführen können (z. B. die Schaltfläche **CSV imp
 
 ## Tipps
 
-- **Einfach anfangen**: Erstellen Sie Positionen nur mit dem Wesentlichen (Beschreibung, Anlagentyp, Investitionsart, Unternehmen), dann ergänzen Sie Budgets und Zuordnungen bei der Planung.
+- **Einfach anfangen**: Erstellen Sie Positionen nur mit dem Wesentlichen (Beschreibung, Anlagentyp, Investitionsart, zahlendes Unternehmen, Konto), dann ergänzen Sie Budgets und Zuordnungen bei der Planung.
 - **Mitarbeiterzahl-Zuordnung verwenden**: Für die meisten Investitionen reicht Mitarbeiterzahl aus. Reservieren Sie manuelle Zuordnungen für Investitionen, die nur bestimmten Unternehmen oder Abteilungen zugutekommen.
 - **Verträge verknüpfen**: Wenn Sie Investitionen über Verträge verwalten, verknüpfen Sie sie im Verknüpfungen-Tab für die Beschaffungsverfolgung.
 - **Dokumentation hochladen**: Verwenden Sie die Anhangfunktion, um Lieferantenangebote, Genehmigungsvermerke und technische Spezifikationen neben der Position zu speichern.

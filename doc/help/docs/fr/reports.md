@@ -17,15 +17,26 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 
 | Rapport | Ce qu'il couvre |
 |---------|----------------|
-| **Refacturation globale** | Totaux de ventilation par société, KPI et flux intersociétés |
-| **Refacturation par société** | Vue détaillée d'une société avec départements, postes et KPI |
-| **Top OPEX** | Plus gros postes OPEX pour une année sélectionnée (top N personnalisable) |
-| **Top OPEX Hausse/Baisse** | Plus grandes variations OPEX d'une année sur l'autre (top N personnalisable) |
+| **Refacturation globale** | Totaux de ventilation par société, KPI et flux intersociétés (OPEX) |
+| **Refacturation par société** | Vue détaillée d'une société avec départements, postes et KPI (OPEX) |
+| **Top postes** | Plus gros postes OPEX ou CAPEX pour une année sélectionnée (top N personnalisable) |
+| **Top hausse / baisse** | Plus grandes variations OPEX ou CAPEX entre deux colonnes budgétaires (top N personnalisable) |
 | **Tendance budgétaire (OPEX)** | Comparer les métriques OPEX sur une plage d'années |
 | **Tendance budgétaire (CAPEX)** | Comparer les métriques CAPEX sur une plage d'années |
 | **Comparaison de colonnes budgétaires** | Choisir jusqu'à 10 combinaisons année+colonne pour OPEX ou CAPEX |
-| **Comptes de consolidation** | Budget regroupé par compte de consolidation |
-| **Catégories analytiques** | Budget regroupé par catégorie analytique |
+| **Comptes de consolidation** | Budget OPEX ou CAPEX regroupé par compte de consolidation |
+| **Dimensions analytiques** | Budget OPEX ou CAPEX regroupé par dimension analytique |
+
+### Choisir OPEX ou CAPEX
+
+**Top postes**, **Top hausse / baisse**, **Comptes de consolidation** et **Dimensions analytiques** commencent chacun par un sélecteur **OPEX** / **CAPEX**, la première commande de la barre de filtres.
+
+- Le rapport s'ouvre sur un type que vous pouvez consulter, OPEX en priorité. Un type que vous ne pouvez pas consulter est désactivé.
+- L'adresse de la page conserve le type choisi (`?scope=opex` ou `?scope=capex`) : un lien enregistré en favori ou partagé s'ouvre sur le même type.
+- Le sous-titre et le titre du graphique nomment le type : une impression ou un PNG exporté indique le type couvert.
+- Changer de type efface les postes que vous avez exclus, car chaque type a ses propres postes.
+
+Les deux rapports de refacturation couvrent uniquement les OPEX.
 
 ---
 
@@ -138,26 +149,27 @@ Vue détaillée des ventilations de refacturation d'une société avec départem
 
 ---
 
-## Top OPEX
+## Top postes
 
-Identifiez vos coûts OPEX récurrents les plus importants pour une année donnée.
+Identifiez vos postes OPEX ou CAPEX les plus importants pour une année donnée.
 
 ### Contrôles
 
+- **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
 - **Année** : Année précédente, en cours ou suivante
 - **Métrique** : Budget, Révision, Réalisé ou Atterrissage prévu
 - **Nombre top** : Combien de postes afficher (par défaut : 10, minimum : 1)
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales
-- **Exclure des postes** : Autocomplétion multi-sélection pour exclure des produits spécifiques
-- **Exclure des comptes** : Autocomplétion multi-sélection pour exclure par catégorie de compte
+- **Exclure des postes** : Autocomplétion multi-sélection pour exclure des postes spécifiques
+- **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
 
 ### Ce que vous verrez
 
-**Graphique** : Graphique en secteurs ou en barres horizontales des postes les plus importants.
+**Graphique** : Graphique en secteurs ou en barres horizontales des postes les plus importants. Son titre nomme le type, par exemple « Top 10 CAPEX · Budget 2026 ».
 
 **Colonnes du tableau** :
 
-- Nom du produit
+- Poste
 - Valeur pour la métrique et l'année sélectionnées
 - Part du total (pourcentage)
 
@@ -172,29 +184,32 @@ Utilisez ce rapport pour repérer rapidement où va la majeure partie de votre b
 
 ---
 
-## Top OPEX Hausse / Baisse
+## Top hausse / baisse
 
-Identifiez les plus grandes variations entre deux colonnes budgétaires (toute combinaison d'année et de métrique).
+Identifiez les plus grandes variations OPEX ou CAPEX entre deux colonnes budgétaires (toute combinaison d'année et de métrique).
 
 ### Contrôles
 
+- **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
 - **Année source** et **Métrique source** : La colonne de référence pour la comparaison
 - **Année destination** et **Métrique destination** : La colonne cible de comparaison
 - **Nombre top** : Combien de postes afficher par direction (par défaut : 10)
 - **Type de graphique** : Graphique en secteurs (une seule direction) ou en barres horizontales
-- **Exclure des postes** : Autocomplétion multi-sélection pour exclure des produits spécifiques
-- **Exclure des comptes** : Autocomplétion multi-sélection pour exclure par catégorie de compte
-- **Bascule de direction** : Hausse, Baisse ou les deux (boutons bascule)
+- **Exclure des postes** : Autocomplétion multi-sélection pour exclure des postes spécifiques
+- **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
+- **Direction** : onglets **Hausses**, **Baisses** ou **Les deux**
 
-Lorsque les deux directions sont sélectionnées, l'option graphique en secteurs est désactivée et le rapport bascule automatiquement en barres.
+Les sélecteurs d'année listent les années qui contiennent des données. Les sélecteurs de métrique proposent les quatre colonnes des rapports : Budget, Réalisé, Atterrissage prévu et Révision.
+
+Lorsque **Les deux** est sélectionné, l'option graphique en secteurs est désactivée et le rapport bascule automatiquement en barres.
 
 ### Ce que vous verrez
 
-**Graphique** : Visualisation des plus grandes variations.
+**Graphique** : Visualisation des plus grandes variations. Son titre nomme le type, par exemple « Top 10 hausses OPEX ».
 
 **Colonnes du tableau** :
 
-- Nom du produit
+- Poste
 - Valeur source (précédente)
 - Valeur destination (actuelle)
 - Delta (variation absolue)
@@ -283,10 +298,11 @@ Comparez de manière flexible jusqu'à 10 combinaisons année+colonne pour OPEX 
 
 ## Comptes de consolidation
 
-Consultez les données budgétaires OPEX regroupées par compte de consolidation, avec un type de graphique qui s'adapte à la plage d'années.
+Consultez les données budgétaires OPEX ou CAPEX regroupées par compte de consolidation, avec un type de graphique qui s'adapte à la plage d'années.
 
 ### Contrôles
 
+- **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Budget, Réalisé, Atterrissage prévu ou Révision
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (disponible uniquement pour une seule année sélectionnée)
@@ -309,29 +325,30 @@ Les postes sans compte de consolidation apparaissent comme « Non assigné ».
 
 ---
 
-## Catégories analytiques
+## Dimensions analytiques
 
-Consultez les données budgétaires OPEX regroupées par catégorie analytique. La disposition reprend celle du rapport Comptes de consolidation.
+Consultez les données budgétaires OPEX ou CAPEX regroupées par dimension analytique. La disposition reprend celle du rapport Comptes de consolidation.
 
 ### Contrôles
 
+- **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Budget, Réalisé, Atterrissage prévu ou Révision
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (année unique uniquement)
-- **Exclure des catégories analytiques** : Autocomplétion multi-sélection pour exclure des catégories spécifiques
+- **Exclure des dimensions analytiques** : Autocomplétion multi-sélection pour exclure des dimensions spécifiques
 
 ### Ce que vous verrez
 
 **Mode année unique** :
 
-- Graphique en secteurs ou en barres des totaux par catégorie analytique
+- Graphique en secteurs ou en barres des totaux par dimension analytique
 - Note de bas de page avec le total de la métrique
 
 **Mode multi-années** :
 
-- Graphique en courbe avec une série par catégorie
+- Graphique en courbe avec une série par dimension analytique
 
-**Tableau** : Une ligne par catégorie avec des colonnes d'années. Une ligne de totaux épinglée en bas. Les postes sans catégorie apparaissent comme « Non assigné ».
+**Tableau** : Une ligne par dimension analytique avec des colonnes d'années. Une ligne de totaux épinglée en bas. Les postes sans dimension analytique apparaissent comme « Non assigné ».
 
 ---
 
@@ -365,8 +382,8 @@ Chaque rapport affiche un fil d'Ariane vers le hub **Rapports**, vous permettant
 ## Conseils
 
 - **Commencez par la refacturation globale** : Obtenez la vue d'ensemble des ventilations avant de plonger dans une société spécifique.
-- **Utilisez le Top OPEX pour des gains rapides** : Les postes les plus importants sont vos premiers candidats à l'optimisation.
-- **Comparez Budget vs Atterrissage prévu** : Utilisez le rapport de comparaison de colonnes pour mesurer la précision des prévisions sur plusieurs années.
+- **Utilisez le Top postes pour des gains rapides** : Les postes les plus importants sont vos premiers candidats à l'optimisation.
+- **Comparez Budget vs Atterrissage prévu** : Utilisez le rapport Comparaison de colonnes budgétaires pour mesurer la précision des prévisions sur plusieurs années.
 - **Basculez les sections sur les rapports de refacturation** : Les cases à cocher vous permettent de vous concentrer uniquement sur les données dont vous avez besoin -- départements, postes, KPI ou flux -- sans encombrement visuel.
-- **Regroupement par année dans la comparaison de colonnes** : Lorsque vous comparez la même métrique sur plusieurs années, activez le regroupement par année pour un graphique en courbe plus lisible.
+- **Regroupement par année dans la Comparaison de colonnes budgétaires** : Lorsque vous comparez la même métrique sur plusieurs années, activez le regroupement par année pour un graphique en courbe plus lisible.
 - **Exportez pour les présentations** : Les graphiques s'exportent en PNG et les tableaux en CSV, tous deux prêts pour les diaporamas ou les tableurs.
