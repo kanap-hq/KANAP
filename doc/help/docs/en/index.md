@@ -68,6 +68,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 
 - [Companies](companies.md) - Manage company entities
 - [Departments](departments.md) - Organize by department structure
+- [Cost centers](cost-centers.md) - Say who owns each budget line
 
 **External Parties**
 

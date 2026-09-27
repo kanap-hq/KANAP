@@ -24,12 +24,14 @@ El espacio de trabajo se abre en modo de creación, con el panel **Propiedades**
 **Opcional pero útil**:
 
 - **Proveedor**: El proveedor de esta inversión. Selecciónelo entre sus proveedores en datos maestros
+- **Centro de coste**: Quién es responsable de la inversión. Consulte [Centros de coste](cost-centers.md). Cuando la empresa pagadora aún está vacía, elegir un centro de coste la completa con la empresa del centro de coste
+- **Run o build**: **Run** para el gasto que mantiene en funcionamiento los servicios existentes, **Build** para el gasto que los crea o los modifica
 - **Categoría analítica**: Agrupación personalizada para informes
 - **Fin de validez**: La fecha en que termina esta inversión, por ejemplo al final de la vida útil del activo o al completarse el proyecto. Déjela en blanco si no hay fin. Después de esa fecha, la partida queda desactivada y los años posteriores dejan de contar en las vistas presupuestarias
 - **Responsable de TI** / **Responsable de negocio**: Quién es responsable
 - **Descripción** (pestaña Vista general): Detalles en texto libre sobre la inversión
 
-Una vez definidas, **Empresa pagadora** y **Cuenta** se pueden cambiar, pero no vaciar. **Proveedor** se puede borrar en cualquier momento. Las partidas creadas por una importación CSV no tienen cuenta (el archivo CAPEX no tiene columna de cuenta): defínala en el panel **Propiedades**.
+Una vez definidas, **Empresa pagadora** y **Cuenta** se pueden cambiar, pero no vaciar. **Proveedor** se puede borrar en cualquier momento. Cuando cambia la empresa pagadora de una partida que tiene una cuenta y la nueva empresa usa otro plan de cuentas, la cuenta se borra en el mismo guardado: elija la nueva cuenta en el plan de la nueva empresa. Las partidas creadas por una importación CSV no tienen cuenta (el archivo CAPEX no tiene columna de cuenta): defínala en el panel **Propiedades**.
 
 Una vez creada la partida, el espacio de trabajo desbloquea las cuatro pestañas: **Vista general**, **Presupuesto**, **Asignaciones** y **Relaciones**.
 
@@ -91,6 +93,9 @@ Estas columnas están ocultas por defecto. Muéstrelas desde el selector de colu
 | **Fin de validez** | Fecha en que la partida termina (en blanco significa sin fin) |
 | **Responsable IT** / **Responsable de negocio** | Usuarios responsables |
 | **Analítica** | Nombre de la categoría analítica |
+| **Centro de coste** | El código y el nombre del centro de coste. Pase el cursor por encima para ver su ruta completa en el árbol; haga clic para abrir el centro de coste |
+| **Responsable del presupuesto** | El responsable del presupuesto del centro de coste de la partida. Se deriva del centro de coste y no se almacena en la partida: cambie el responsable del presupuesto de un centro de coste y todas sus partidas lo siguen |
+| **Run o build** | **Run** o **Build** |
 | **Proyecto** | Nombres de los proyectos vinculados en la pestaña Relaciones |
 | **Notas** | Notas de texto libre |
 | **Habilitado** | Estado (habilitado o deshabilitado) |
@@ -98,11 +103,11 @@ Estas columnas están ocultas por defecto. Muéstrelas desde el selector de colu
 
 ### Búsqueda rápida
 
-El cuadro de búsqueda en la parte superior busca en la referencia, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, la categoría analítica, el tipo de activo fijo, el tipo de inversión, la prioridad, las notas, la moneda y el estado. Los resultados se actualizan en tiempo real mientras escribe.
+El cuadro de búsqueda en la parte superior busca en la referencia, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, la categoría analítica, el centro de coste (código, nombre y ruta), el responsable del presupuesto, el tipo de activo fijo, el tipo de inversión, la prioridad, las notas, la moneda y el estado. Los resultados se actualizan en tiempo real mientras escribe.
 
 ### Filtros de columna
 
-Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, **Analítica** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Múltiples filtros se combinan con lógica AND.
+Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, **Analítica**, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Múltiples filtros se combinan con lógica AND.
 
 Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes.
 
@@ -127,6 +132,7 @@ Haga clic en cualquier celda de una fila para abrir el espacio de trabajo en la 
 - **Asignación**: Abre la pestaña **Asignaciones** para el año actual
 - **Tarea**: Abre la pestaña **Vista general**, donde está el panel de tareas
 - **Contrato**: Abre directamente el contrato vinculado
+- **Centro de coste**: Abre el espacio de trabajo del centro de coste
 
 ### Filtro de estado
 
@@ -149,7 +155,7 @@ Cuando abre una partida, el espacio de trabajo muestra botones **Ant.** y **Sig.
 Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Tiene cuatro partes:
 
 - **Cabecera**: la referencia de la partida (p. ej., `CPX-7`) con un botón para copiarla, el nombre de la inversión (haga clic en él para cambiar el nombre de la partida), **Ant.** / **Sig.**, **Enviar enlace** y el botón de cierre
-- **Barra de metadatos** bajo el título: **Estado**, **Prioridad**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio
+- **Barra de metadatos** bajo el título: **Estado**, **Prioridad**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la partida tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la partida: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
 - **Cuatro pestañas**: **Vista general**, **Presupuesto**, **Asignaciones** y **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la partida)
 - **Panel Propiedades** a la derecha: los campos principales de la partida. Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
 
@@ -179,12 +185,22 @@ La pestaña Vista general contiene los detalles de la inversión y sus tareas.
 
 **Panel Propiedades**:
 
-- **Proveedor**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora), **Moneda** (solo las monedas permitidas en su espacio de trabajo), **Tipo de activo fijo**, **Tipo de inversión**, **Categoría analítica** e **Inicio de vigencia**
+- **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora), **Moneda** (solo las monedas permitidas en su espacio de trabajo), **Tipo de activo fijo**, **Tipo de inversión**, **Categoría analítica**, **Run o build** e **Inicio de vigencia**
 - **Ciclo de vida**: el interruptor **Activado** y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 - Fechas **Creado** y **Actualizado** (solo lectura)
 - La **Prioridad** se define en el panel Propiedades al crear la partida y después en la barra de metadatos
 
-**Consejo**: Al crear una partida, una advertencia de "cuenta obsoleta" significa que la cuenta seleccionada no pertenece al plan de cuentas de la empresa pagadora. Elija otra cuenta para resolver la advertencia.
+**Centro de coste**:
+
+- La lista muestra el árbol de centros de coste. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Busque por código, nombre o nombre de grupo
+- Un centro de coste desactivado aparece marcado como **Desactivado**. Se mantiene en las partidas que ya lo tienen y no se puede elegir para otra partida
+- Cuando crea una partida y la empresa pagadora está vacía, elegir un centro de coste completa la empresa pagadora con la empresa del centro de coste, de modo que la lista **Cuenta** se abre en el plan de cuentas de esa empresa. Hasta que usted elija una empresa o una cuenta, elegir otro centro de coste también actualiza la empresa
+- Cuando la empresa pagadora difiere de la empresa del centro de coste, se conservan ambas. Una indicación bajo el campo dice "Este centro de coste pertenece a" seguido del nombre de la empresa
+- Una partida guardada mediante la API con un centro de coste y sin empresa pagadora toma la empresa del centro de coste. Para los archivos CSV, consulte [Importación/exportación CSV](#importacionexportacion-csv)
+
+**Run o build**: **Run**, **Build** o **Sin definir**. Úselo para repartir el presupuesto entre mantener los servicios en funcionamiento y modificarlos.
+
+**Consejo**: Al crear una partida, una advertencia de "cuenta obsoleta" significa que la cuenta seleccionada no pertenece al plan de cuentas de la empresa pagadora. Elija otra cuenta para resolver la advertencia. Una partida existente cuya cuenta está fuera del plan de su empresa se puede seguir editando: el plan solo se comprueba cuando cambia la empresa o la cuenta.
 
 ---
 
@@ -404,9 +420,10 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 
 - Delimitador: punto y coma `;` (no coma)
 - Codificación: UTF-8 (guarde como "CSV UTF-8" en Excel)
-- Encabezados: `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
+- Encabezados: `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
 - `disabled_at` es el fin de validez: la fecha en que la partida termina. Utilice una fecha (`2026-12-31`) o una fecha y hora completas. Déjelo vacío si no hay fin
 - Los archivos antiguos con una columna `effective_end` se siguen importando: su fecha rellena el fin de validez cuando `disabled_at` está vacío
+- `cost_center_code` y `run_build` son columnas opcionales: las exportaciones y la plantilla siempre las incluyen, y los archivos sin ellas se siguen importando
 
 **Importar**:
 
@@ -414,8 +431,9 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 2. Suba su archivo CSV (arrastrar y soltar o selector de archivos)
 3. Haga clic en **Verificación previa** para validar:
    - Los encabezados coinciden exactamente
-   - Las empresas y los usuarios existen en su espacio de trabajo
-   - Los campos obligatorios (description, ppe_type, investment_type, priority) están presentes. Una partida nueva también necesita company_name y currency
+   - Las empresas, los centros de coste y los usuarios existen en su espacio de trabajo
+   - Los campos obligatorios (description, ppe_type, investment_type, priority) están presentes. Una partida nueva también necesita una moneda, y un company_name salvo que tenga un centro de coste
+   - Un cambio de empresa en una partida que tiene una cuenta se mantiene dentro del plan de cuentas de esa cuenta
    - Las monedas están permitidas en la configuración de monedas de su espacio de trabajo
    - Los responsables son usuarios activos
    - Un `item_number` corresponde a una partida CAPEX existente
@@ -426,9 +444,12 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 **Notas importantes**:
 
 - **Correspondencia**: Una fila con un `item_number` actualiza esa partida CAPEX; la verificación previa señala un número que no corresponde a ninguna partida. Una fila sin número se asocia por `description`: si coincide, actualiza la partida; si no, crea una partida nueva. Dos filas con el mismo `item_number`, o con la misma `description` y sin número, son un error ("Same line as row N"): conserve una sola fila por partida.
-- **Partidas nuevas**: `company_name` y `currency` son obligatorios para una partida nueva. La moneda debe estar permitida en la configuración de monedas de su espacio de trabajo. En una partida existente, una celda de moneda vacía conserva su moneda.
+- **Partidas nuevas**: `currency` es obligatorio para una partida nueva, y también `company_name` salvo que la fila tenga un `cost_center_code`: una partida nueva con `company_name` vacío toma la empresa de su centro de coste. Sin ninguna de las dos, la fila se rechaza: "Company is required unless the line has a cost center." La moneda debe estar permitida en la configuración de monedas de su espacio de trabajo. En una partida existente, una celda de moneda vacía conserva su moneda.
 - **Fechas**: `effective_start` (y `effective_end` en archivos antiguos) debe ser un día real del calendario en formato `YYYY-MM-DD`, por ejemplo `2026-01-01`. Otros formatos, como `01/03/2026`, son errores. Un `effective_start` vacío conserva la fecha guardada de una partida existente; una partida nueva empieza el 1 de enero del año en curso.
 - **Referencias**: `company_name` debe coincidir con una empresa por nombre (sin distinguir mayúsculas). `owner_it_email` y `owner_business_email` deben coincidir con usuarios activos por correo electrónico: un usuario invitado o un contacto sin cuenta se rechaza.
+- **Centro de coste**: `cost_center_code` es el código de un centro de coste, sin distinguir mayúsculas. Un grupo se rechaza. Un centro de coste desactivado se acepta en una partida que ya lo tiene y se rechaza como valor nuevo. Una celda vacía borra el centro de coste de la partida. Cuando falta toda la columna, las partidas conservan su centro de coste.
+- **Run o build**: `run_build` es `run`, `build` o vacío (sin distinguir mayúsculas). Una celda vacía borra el valor. Cuando falta toda la columna, las partidas conservan su valor.
+- **Empresa en las partidas existentes**: un `company_name` vacío conserva la empresa pagadora de la partida. Un `company_name` informado se conserva, aunque difiera de la empresa del centro de coste. Cuando una partida tiene una cuenta, un nuevo `company_name` debe usar el mismo plan de cuentas que esa cuenta; si no, la verificación previa rechaza la fila: "Account ... is not in ...'s chart of accounts. Change the line's account first." Cambie la cuenta en el panel **Propiedades** de la partida y vuelva a importar.
 - **Tipo de activo fijo**: Debe ser `hardware` o `software` (sin distinguir mayúsculas).
 - **Tipo de inversión**: Debe ser uno de: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (sin distinguir mayúsculas).
 - **Prioridad**: Debe ser `mandatory`, `high`, `medium` o `low` (sin distinguir mayúsculas).
@@ -445,6 +466,12 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 - **"Desajuste de encabezados"**: Descargue una plantilla nueva; los encabezados deben coincidir exactamente (incluido el orden).
 - **"effective_start must be a valid date"**: Use el formato `YYYY-MM-DD`.
 - **"Same line as row N"**: Dos filas describen la misma partida. Combínelas en una sola fila, luego reimporte.
+- **"Company is required unless the line has a cost center."**: Complete `company_name` o `cost_center_code` para la partida nueva.
+- **"Account ... is not in ...'s chart of accounts. Change the line's account first."**: Consulte **Empresa en las partidas existentes** más arriba.
+- **"Cost center ... was not found."**: Compruebe el código o cree el centro de coste en **Datos maestros > Centros de coste** y vuelva a importar.
+- **"... is a group. Choose a cost center."**: Use el código de un centro de coste de ese grupo.
+- **"Cost center ... is disabled."**: Use un centro de coste activado, o vuelva a activarlo en **Datos maestros > Centros de coste**.
+- **"Run or build must be run, build or blank."**: Corrija la celda `run_build`.
 
 **Consejo**: Comience con la exportación de plantilla, rellene algunas filas y ejecute una verificación previa para detectar problemas temprano. Corrija errores en el CSV y vuelva a subirlo hasta que la verificación previa pase, luego cargue.
 

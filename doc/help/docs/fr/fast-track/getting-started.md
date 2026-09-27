@@ -27,7 +27,7 @@ KANAP est organisé autour d'une structure simple. La barre supérieure affiche 
 | **Cartographie SI** | Applications, Interfaces, Carte des interfaces, Actifs, Connexions, Carte des connexions, Sites |
 | **Base de connaissances** | Documents et modèles avec workflows de revue |
 | **Gestion budgétaire** | OPEX, CAPEX, Contrats, Rapports, Administration |
-| **Données de référence** | Sociétés, Départements, Fournisseurs, Contacts, Plans comptables, Devise, Processus métier, Dimensions analytiques |
+| **Données de référence** | Sociétés, Départements, Centres de coûts, Fournisseurs, Contacts, Plans comptables, Devise, Processus métier, Dimensions analytiques |
 | **Administration** | Utilisateurs, Rôles, Journal d'audit, Facturation, Authentification, Personnalisation (admin uniquement) |
 
 Vous n'avez pas besoin d'accéder à tout. Votre rôle détermine quelles sections et actions sont disponibles. Si quelque chose manque dans votre menu, demandez à votre administrateur.

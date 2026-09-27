@@ -68,6 +68,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 
 - [Empresas](companies.md) - Gestión de entidades empresariales
 - [Departamentos](departments.md) - Organización por estructura departamental
+- [Centros de coste](cost-centers.md) - Indique quién es responsable de cada línea de presupuesto
 
 **Partes externas**
 

@@ -258,6 +258,7 @@ Resources are organized into groups for easier management:
 |----------|------------------|
 | `companies` | Company master data |
 | `departments` | Department master data |
+| `cost_centers` | Cost centers and their groups |
 | `suppliers` | Supplier master data |
 | `contacts` | Contact directory |
 | `accounts` | Chart of accounts |
@@ -456,7 +457,7 @@ The sync needs a one-time approval by a Microsoft Entra administrator. Until it 
 |-----------------|---------------|
 | **Not authorized yet...** | No Microsoft Entra administrator has approved the sync, or the required permission is missing from the app registration. |
 | **Grant access in Microsoft Entra** | Sends you to Microsoft's approval page. Shown while the sync is not authorized. You return with **Access granted. The first sync is running.** |
-| **Last synced {date} — N accounts refreshed, N disabled.** | Result of the last successful run. |
+| **Last synced {date}: N accounts refreshed, N disabled.** | Result of the last successful run. |
 | **The last sync failed: {message}** | The last run did not complete. The message comes from Microsoft. |
 | **Sync now** | Runs the sync immediately instead of waiting for tonight. Reports **Sync complete: N accounts refreshed, N disabled.** |
 

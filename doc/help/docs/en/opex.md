@@ -19,12 +19,16 @@ The workspace opens in creation mode, with the **Properties** panel open on the 
 
 **Optional but useful**:
   - **Supplier**: Who you are paying. Links to your suppliers in master data
+  - **Cost center**: Who owns the spend. See [Cost centers](cost-centers.md). When the paying company is still empty, picking a cost center fills it with the cost center's company
+  - **Run or build**: **Run** for spend that keeps existing services running, **Build** for spend that creates or changes them
   - **Analytics category**: Custom grouping for reporting (e.g., "Infrastructure", "Business Apps"). New categories can be created on the fly
   - **End of validity**: The date this spend stops. Leave it blank if there is no end. After it, the item is disabled and later years no longer count in the budget views
   - **IT owner** / **Business owner**: Who is responsible
   - **Description** and **Notes**: Free text on the Overview tab
 
 Once set, **Paying company** and **Account** can be changed but not emptied. **Supplier** can be cleared at any time.
+
+When you change the paying company of an item that has an account, and the new company uses another chart of accounts, the account is cleared in the same save. **Account** then shows as required, with the list on the new company's chart. Pick the new account to finish.
 
 Once the item is created, the workspace unlocks all four tabs: **Overview**, **Budget**, **Allocations**, and **Relations**.
 
@@ -55,13 +59,16 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
   - **End of validity**: Date the item stops (blank means no end)
   - **IT owner** / **Business owner**: Responsible users
   - **Analytics**: Analytics category name
+  - **Cost center**: The code and name of the cost center. Hover it to see its full path in the tree; click it to open the cost center
+  - **Budget holder**: The budget holder of the item's cost center. It is derived from the cost center, not stored on the item: change the budget holder of a cost center and every item on it follows
+  - **Run or build**: **Run** or **Build**
   - **Project**: Names of the projects linked on the Relations tab
   - **Notes**: Internal notes
   - **Created / Updated**: Timestamps
 
 **Filtering**:
-  - **Quick search**: Searches the reference, product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics category, notes, currency and status. Filters the list in real time as you type
-  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, **Analytics** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**
+  - **Quick search**: Searches the reference, product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics category, cost center (code, name and path), budget holder, notes, currency and status. Filters the list in real time as you type
+  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, **Analytics**, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**
   - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
   - **Date filters**: **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank
   - **Text columns** use text filters. On **Ref**, type the number or the full reference, for example `12` or `OPX-12`
@@ -83,6 +90,7 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
     - **Allocation**: Opens the **Allocations** tab for the current year
     - **Task**: Opens the **Overview** tab, where the Tasks panel sits
     - **Contract**: Opens the linked Contract workspace directly (not the OPEX workspace)
+    - **Cost center**: Opens the cost center workspace
 
 **Actions**:
   - **New**: Create a new OPEX item (requires `opex:manager`)
@@ -105,7 +113,7 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
 Click any row in the list to open the workspace. It has four parts:
 
   - **Header**: the item reference (e.g., `OPX-12`) with a copy button, the product name (click it to rename the item), **Prev** / **Next**, **Send link**, and the close button
-  - **Metadata bar** under the title: **Status**, **IT owner**, and **Business owner**, each editable in place
+  - **Metadata bar** under the title: **Status**, **IT owner**, and **Business owner**, each editable in place. When the item's cost center has a budget holder, **Budget holder** follows them. It is read only and derived from the cost center, not stored on the item: hover it to see which cost center it comes from, and change it on the cost center (see [Cost centers](cost-centers.md#budget-holder-on-budget-lines))
   - **Four tabs**: **Overview**, **Budget**, **Allocations**, and **Relations** (the Relations tab shows how many links the item has)
   - **Properties panel** on the right: the item's main fields. Open or close it with the properties button; the workspace remembers your choice
 
@@ -131,11 +139,20 @@ The Overview tab holds the free-text fields and the tasks of the item.
   - Tasks can also be viewed and managed from **Portfolio > Tasks**, which shows all tasks across your organization
 
 **Properties panel**:
-  - **Supplier**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **Analytics category**, and **Effective start**
+  - **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **Analytics category**, **Run or build**, and **Effective start**
   - **Lifecycle**: the **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
   - **Created** and **Updated** dates (read only)
 
-**Tip**: When you create an item, an "Obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning.
+**Cost center**:
+  - The list shows the cost center tree. Groups are shown to help you find your way and cannot be picked. Search by code, name or group name
+  - A disabled cost center is marked **Disabled**. It stays on the items that already have it, and cannot be picked for another item
+  - When you create an item and the paying company is empty, picking a cost center fills the paying company with the cost center's company, so the **Account** list opens on that company's chart of accounts. Until you pick a company or an account yourself, choosing another cost center updates the company too
+  - When the paying company differs from the cost center's company, both are kept. A hint under the field says "This cost center belongs to" followed by the company name
+  - An item saved through the API with a cost center and no paying company takes the cost center's company. For CSV files, see [CSV import/export](#csv-importexport)
+
+**Run or build**: **Run**, **Build**, or **Not set**. Use it to split the budget between keeping services running and changing them.
+
+**Tip**: When you create an item, an "Obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning. An existing item whose account is outside its company's chart can still be edited: the chart is checked only when the company or the account changes.
 
 ---
 
@@ -311,17 +328,18 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
 **CSV structure**:
   - Delimiter: semicolon `;` (not comma)
   - Encoding: UTF-8 (save as "CSV UTF-8" in Excel)
-  - Headers: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
+  - Headers: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
   - `disabled_at` is the end of validity: the date the item stops. Use a date (`2026-12-31`) or a full date and time. Leave it empty if there is no end
   - Older files with an `effective_end` column still import: its date fills the end of validity when `disabled_at` is empty
+  - `cost_center_code` and `run_build` are optional columns: exports and the template always carry them, and files without them still import
 
 **Import**:
   1. Click **Import CSV** in the OPEX list
   2. Upload your CSV file (drag-and-drop or file picker)
   3. Click **Preflight** to validate:
      - Headers match exactly
-     - Required fields (product_name, company_name, account_number) are present. A new item also needs a currency
-     - Each company, supplier, account, and owner in the file exists in your workspace
+     - Required fields (product_name, account_number) are present. A new item also needs a currency, and a company_name unless it has a cost center
+     - Each company, supplier, account, cost center, and owner in the file exists in your workspace
      - Dates are valid, and no two rows describe the same item
      - Currencies are allowed in your workspace currency settings
      - Owners are active users
@@ -332,10 +350,13 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   - **Matching**: A row is matched to an OPEX item by product name and supplier. A row that matches an existing item updates it; any other row creates a new item. A row with an empty `supplier_name` matches only an item that has no supplier. Two rows with the same product name and supplier are an error ("Same line as row N"): keep one row per item
   - **Currency**: Required for a new item, and it must be allowed in your workspace currency settings. On an existing item, an empty cell keeps its currency
   - **Supplier**: `supplier_name` is optional. When filled, a supplier with exactly this name is used. Otherwise the name is matched without regard to case. A name that matches no supplier is an error, and so is a name that matches several suppliers only by case (for example "Acme" and "ACME" when the file says "acme")
-  - **Company and account**: `company_name` must match a company by name (case-insensitive). `account_number` is looked up in the chart of accounts of that company, or in the default chart of accounts when the company has none. An account number that exists only in another chart is an error
+  - **Company and account**: `company_name` must match a company by name (case-insensitive). An empty `company_name` keeps the company of an existing item; a new item takes the company of its cost center. With neither, the row is refused: "Company is required unless the line has a cost center." `account_number` is looked up in the chart of accounts of that company, or in the default chart of accounts when the company has none. An account number that exists only in another chart is an error
   - **Owners**: `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused
   - **Dates**: `effective_start` (and `effective_end` in older files) must be a real calendar day in `YYYY-MM-DD` format, for example `2026-01-01`. Other formats, such as `01/03/2026`, are errors. An empty `effective_start` keeps the stored date of an existing item; a new item starts on January 1 of the current year
   - **Analytics category**: If the category does not exist, it is created automatically during import
+  - **Cost center**: `cost_center_code` is the code of a cost center, regardless of case. A group is refused. A disabled cost center is accepted on an item that already has it, and refused as a new value. An empty cell clears the item's cost center. When the whole column is absent, items keep their cost center
+  - **Run or build**: `run_build` is `run`, `build` or empty (regardless of case). An empty cell clears the value. When the whole column is absent, items keep their value
+  - **Company from the cost center**: A new item with an empty `company_name` takes its cost center's company, and `account_number` is looked up in that company's chart of accounts. A filled `company_name` is kept, even when it differs from the cost center's company
   - **Budgets**: Budget columns populate Y-1, Y, and Y+1 versions. Amounts are spread evenly across 12 months (Flat mode) and the column's period becomes the whole year. An empty cell leaves the column as it is; `0` clears it. The headers keep their technical names whatever your organisation calls the columns, and they also load hidden columns
   - **Monthly amounts**: to load or review amounts month by month, with the period of each column, use the **Budget rows file** in Budget Administration
 
@@ -345,6 +366,11 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   - **"Same line as row N"**: Two rows describe the same item. Merge them into one row, then re-import
   - **"Account ... not found in ...'s chart of accounts"**: Use an account of the paying company's chart, or add the account in **Master data > Charts of accounts**, then re-import
   - **"effective_start must be a valid date"**: Use the `YYYY-MM-DD` format
+  - **"Company is required unless the line has a cost center."**: Fill `company_name` or `cost_center_code` for the new item
+  - **"Cost center ... was not found."**: Check the code, or create the cost center in **Master data > Cost centers**, then re-import
+  - **"... is a group. Choose a cost center."**: Use the code of a cost center inside that group
+  - **"Cost center ... is disabled."**: Use an enabled cost center, or enable it again in **Master data > Cost centers**
+  - **"Run or build must be run, build or blank."**: Fix the `run_build` cell
   - **"Invalid currency"**: Use 3-letter ISO codes (USD, EUR, GBP) that are allowed in your workspace currency settings
   - **"Header mismatch"**: Download a fresh template; headers must match exactly (including order)
 

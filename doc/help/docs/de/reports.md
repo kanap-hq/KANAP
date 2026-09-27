@@ -42,6 +42,27 @@ Die beiden Leistungsverrechnungsberichte decken nur OPEX ab.
 
 Jede Spalten- oder Kennzahlauswahl bietet die Budgetspalten an, die Ihre Organisation anzeigt, unter ihren Namen und in der festen Spaltenreihenfolge. Prognose wird angeboten, wenn sie angezeigt wird. Ausgeblendete Spalten werden nicht angeboten. Jeder Bericht beginnt mit der Standardspalte, wie unten beschrieben. Budgetadministratoren legen die Namen, die angezeigten Spalten und die Standardspalte unter [Budgetspalten](budget-operations.md#budgetspalten) fest.
 
+### Filter nach Kostenstelle und Run oder Build
+
+Die sieben Budgetberichte (**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgettrend (OPEX)**, **Budgettrend (CAPEX)**, **Budgetspaltenvergleich**, **Konsolidierungskonten** und **Analysedimensionen**) lassen sich mit zwei Filtern auf einen Teil des Budgets eingrenzen:
+
+- **Kostenstelle**: Wählen Sie eine Kostenstelle oder eine Gruppe. Eine Gruppe umfasst alles, was darunter liegt, einschließlich deaktivierter Kostenstellen, da deren Zeilen weiterhin zur Gruppe gehören. **Alle Kostenstellen** entfernt den Filter. Siehe [Kostenstellen](cost-centers.md).
+- **Run oder Build**: **Alle**, **Run**, **Build** oder **Nicht festgelegt** für die Zeilen, die keines von beiden haben.
+
+Wann die Filter erscheinen:
+
+- **Kostenstelle** erscheint, sobald Ihr Arbeitsbereich mindestens eine Kostenstelle oder Gruppe hat.
+- **Run oder Build** erscheint, sobald eine Zeile des Berichts als **Run** oder **Build** markiert ist oder die Seitenadresse den Filter bereits enthält.
+- Ohne beides zeigt die Filterleiste nur die eigenen Steuerelemente des Berichts.
+
+So funktionieren sie:
+
+- Die Filter wirken vor jeder Summe. Beträge, Anteile, Diagramme und Summen umfassen nur die verbleibenden Zeilen.
+- Die Listen der auszuschließenden Positionen und Konten bieten weiterhin alle Zeilen an.
+- Die Seitenadresse speichert beide Filter (`?costCenter=` und `?runBuild=`), sodass ein gespeicherter oder geteilter Link den Bericht bereits eingegrenzt öffnet.
+- Nennt der Link eine inzwischen gelöschte Kostenstelle oder konnten die Kostenstellen nicht geladen werden, zeigt der Bericht keine Zeilen und eine Textzeile: „Diese Kostenstelle existiert nicht mehr oder konnte nicht geladen werden." Klicken Sie auf **Filter entfernen**, um den Bericht wieder zu sehen.
+- Die beiden Leistungsverrechnungsberichte haben keine solchen Filter und sind nicht betroffen.
+
 ---
 
 ## Globale Leistungsverrechnung
@@ -166,6 +187,7 @@ Identifizieren Sie Ihre größten OPEX- oder CAPEX-Positionen für ein bestimmte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm
 - **Positionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Positionen
 - **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
+- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
 
 ### Was Sie sehen
 
@@ -204,6 +226,7 @@ Identifizieren Sie die größten OPEX- oder CAPEX-Veränderungen zwischen zwei B
 - **Positionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Positionen
 - **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
 - **Richtung**: Tabs **Anstiege**, **Rückgänge** oder **Beide**
+- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
 
 Die Jahresauswahlen listen die Jahre, die Daten enthalten. Die Kennzahlauswahlen bieten die angezeigten Budgetspalten an. Der Bericht beginnt mit der Standardspalte des Vorjahres als Quelle und der Standardspalte des aktuellen Jahres als Ziel.
 
@@ -242,6 +265,7 @@ Vergleichen Sie OPEX-Kennzahlen über mehrere Jahre in einem einzelnen Liniendia
 - **Startjahr**: Beginn des Bereichs (aktuelles Jahr minus 2 bis plus 2)
 - **Endjahr**: Ende des Bereichs
 - **Kennzahlen**: Mehrfachauswahl aus den angezeigten Budgetspalten. Der Bericht beginnt mit der Standardspalte und der letzten angezeigten Spalte (Budget und Erwarteter Endwert mit den Standardeinstellungen). Wenn Sie alle Kennzahlen entfernen, wird die Standardspalte verwendet
+- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
 
 ### Was Sie sehen
 
@@ -264,6 +288,7 @@ Identisches Layout wie der OPEX-Trendbericht, aber mit CAPEX-Budgetdaten.
 ### Steuerungen
 
 - **Startjahr**, **Endjahr**, **Kennzahlen**: Gleich wie beim OPEX-Trendbericht
+- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
 
 ### Was Sie sehen
 
@@ -281,6 +306,7 @@ Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen für entweder OPEX
 - **Positionstyp**: OPEX- oder CAPEX-Umschalter
 - **Auswahlen**: Jede Auswahl hat eine Jahrauswahl und eine Spaltenauswahl mit den angezeigten Budgetspalten. Der Bericht beginnt mit zwei Auswahlen: der Standardspalte des aktuellen Jahres und des nächsten Jahres. **Hinzufügen** fügt die Standardspalte des aktuellen Jahres hinzu, und das Löschsymbol entfernt eine Auswahl. Maximum von 10 Auswahlen; Minimum von 1.
 - **Jahresgruppierung** (Kontrollkästchen): Wenn aktiviert und mindestens zwei Jahre eine Kennzahl teilen, wechselt zu einem gruppierten Liniendiagramm mit einer Serie pro Kennzahl und Jahren auf der X-Achse. Wenn deaktiviert, zeigt ein flaches Liniendiagramm mit jeder Auswahl als Datenpunkt.
+- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
 
 ### Was Sie sehen
 
@@ -313,6 +339,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wob
 - **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur verfügbar bei Auswahl eines einzelnen Jahres)
 - **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
+- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
 
 ### Was Sie sehen
 
@@ -342,6 +369,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Analysedimension. Das Lay
 - **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur Einzeljahr)
 - **Analysedimensionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Dimensionen
+- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
 
 ### Was Sie sehen
 

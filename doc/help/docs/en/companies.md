@@ -146,7 +146,7 @@ Use the **End of validity** to control when a company stops being active.
 - After the end of validity:
     - The company no longer appears in selection lists for new allocations and is excluded from reports for strictly later years.
     - Historical data remains intact; the company still appears in reports covering years when it was active.
-- **Prefer disabling over deleting.** Deletion is only possible if nothing references the company (no allocations or spend).
+- **Prefer disabling over deleting.** Deletion is only possible if nothing references the company (no allocations, spend or cost centers). A company that cost centers belong to is refused with a message such as "Company A is used by 3 cost centers. Change their company or disable it instead."
 
 ## Yearly metrics
 

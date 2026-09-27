@@ -2,6 +2,8 @@
 
 Abteilungen repräsentieren organisatorische Einheiten innerhalb Ihrer Unternehmen. Verwenden Sie sie, um die Mitarbeiterzahl nach Jahr zu verfolgen, Kosten zuzuordnen und Zielgruppen für Anwendungen zu definieren. Jede Abteilung gehört zu einem Unternehmen und enthält jahresbezogene Mitarbeiterzahldaten, die in Leistungsverrechnungs- und Zuordnungsberechnungen einfließen.
 
+Um festzuhalten, wer für jede Budgetzeile verantwortlich ist, verwenden Sie [Kostenstellen](cost-centers.md): Anders als Abteilungen lassen sie sich über Unternehmen hinweg gruppieren.
+
 ## Erste Schritte
 
 Navigieren Sie zu **Stammdaten > Abteilungen**, um Ihre Abteilungsliste zu sehen. Klicken Sie auf **Neu**, um Ihren ersten Eintrag zu erstellen.
@@ -49,21 +51,24 @@ Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer
 
 ## Der Abteilungs-Arbeitsbereich
 
-Klicken Sie auf eine beliebige Zeile, um den Arbeitsbereich zu öffnen. Er hat zwei Tabs, vertikal links angeordnet: **Übersicht** und **Details**.
+Klicken Sie auf eine beliebige Zeile, um den Arbeitsbereich zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**.
 
-Die Arbeitsbereich-Symbolleiste enthält **Zurück** / **Weiter**-Schaltflächen zum Wechseln zwischen Abteilungen ohne Rückkehr zur Liste sowie **Zurücksetzen** und **Speichern**-Schaltflächen. Bei nicht gespeicherten Änderungen beim Navigieren werden Sie aufgefordert, zu speichern oder zu verwerfen.
+- **Kopfzeile**: der Name der Abteilung. Klicken Sie darauf, um die Abteilung umzubenennen. **Zurück** / **Weiter** wechseln zwischen Abteilungen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren, und die Schließen-Schaltfläche führt zur Liste zurück
+- **Bereich Eigenschaften** rechts: **Unternehmen** und **Lebenszyklus**
+
+**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Name und Beschreibung werden gespeichert, wenn Sie das Feld verlassen; Unternehmen und Lebenszyklus werden gespeichert, sobald Sie sie ändern. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, außer beim Namen, dessen Ablehnung oben auf der Seite angezeigt wird.
 
 ### Übersicht
 
-Der Übersichts-Tab erfasst die Identität und den Status der Abteilung.
+Der Übersichts-Tab enthält die Beschreibung. Die übrigen Felder befinden sich in der Kopfzeile und im Bereich **Eigenschaften**.
 
 **Was Sie bearbeiten können**:
-- **Name**: Abteilungsname (Pflicht)
-- **Unternehmen**: Übergeordnetes Unternehmen -- verknüpft mit Unternehmen-Stammdaten (Pflicht). Unternehmen, die bereits eine Abteilung mit gleichem Namen haben, werden automatisch aus dem Dropdown ausgeschlossen, um Duplikate zu vermeiden.
+- **Name**: Abteilungsname (Pflicht), in der Kopfzeile
+- **Unternehmen**: Übergeordnetes Unternehmen, verknüpft mit den Unternehmen-Stammdaten (Pflicht). Ein Unternehmen, das bereits eine Abteilung mit gleichem Namen hat, wird abgelehnt: „A department with this name already exists in the selected company."
 - **Beschreibung**: Freitext-Beschreibung
 - **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Lassen Sie das Datum leer, damit die Abteilung unbegrenzt aktiv bleibt, oder setzen Sie ein zukünftiges Datum, um ihr Ende zu planen. Wenn Sie die Abteilung ohne Datum auf **Deaktiviert** setzen, wird das Ende der Gültigkeit auf heute gesetzt
 
-**Tipp**: Beim Erstellen einer neuen Abteilung wird der Details-Tab erst nach dem Speichern des initialen Datensatzes verfügbar.
+**Eine Abteilung erstellen**: **Neu** öffnet ein Formular mit **Name**, **Unternehmen** und **Beschreibung**. Klicken Sie auf **Erstellen**, um sie zu speichern. Der Details-Tab wird verfügbar, nachdem Sie die Abteilung erstellt haben.
 
 ---
 
@@ -77,8 +82,9 @@ Der Details-Tab verwaltet jahresbezogene Mitarbeiterzahl-Kennzahlen.
 - **Mitarbeiterzahl**: Gesamtzahl der Mitarbeiter in dieser Abteilung für das ausgewählte Jahr
 
 **Funktionsweise**:
+- Die Mitarbeiterzahl wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen (oder Enter drücken). Alles andere als eine ganze Zahl von 0 oder mehr zeigt „Geben Sie eine ganze Zahl ein, 0 oder mehr." unter dem Feld
 - Die Mitarbeiterzahl fließt in Zielgruppenberechnungen für Anwendungen ein
-- Werte werden pro Jahr gespeichert -- ein Jahreswechsel lädt die Daten dieses Jahres unabhängig
+- Jedes Jahr wird für sich gespeichert: Ein Jahreswechsel lädt den Wert dieses Jahres
 - Wenn die Kennzahlen für das ausgewählte Jahr von einem Administrator **eingefroren** wurden, ist das Feld gesperrt und ein Hinweis erklärt, wie die Sperre aufgehoben werden kann
 
 **Tipp**: Aktualisieren Sie die Mitarbeiterzahl jährlich während Ihres Budgetplanungszyklus. Verwenden Sie die Jahrreiter, um zukünftige Jahre zu überprüfen oder vorzufüllen.

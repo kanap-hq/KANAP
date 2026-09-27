@@ -258,6 +258,7 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 |-----------|-----------------|
 | `companies` | Unternehmens-Stammdaten |
 | `departments` | Abteilungs-Stammdaten |
+| `cost_centers` | Kostenstellen und ihre Gruppen |
 | `suppliers` | Lieferanten-Stammdaten |
 | `contacts` | Kontaktverzeichnis |
 | `accounts` | Kontenplan |
@@ -456,7 +457,7 @@ Die Synchronisierung erfordert eine einmalige Genehmigung durch einen Microsoft 
 |---------------------|-----------------|
 | **Noch nicht autorisiert...** | Kein Microsoft Entra-Administrator hat die Synchronisierung genehmigt, oder die erforderliche Berechtigung fehlt in der App-Registrierung. |
 | **Zugriff in Microsoft Entra gewähren** | Führt Sie zur Genehmigungsseite von Microsoft. Wird angezeigt, solange die Synchronisierung nicht autorisiert ist. Sie kehren zurück mit **Zugriff gewährt. Die erste Synchronisierung läuft.** |
-| **Zuletzt synchronisiert {Datum} — N Konten aktualisiert, N deaktiviert.** | Ergebnis des letzten erfolgreichen Laufs. |
+| **Zuletzt synchronisiert {Datum}: N Konten aktualisiert, N deaktiviert.** | Ergebnis des letzten erfolgreichen Laufs. |
 | **Die letzte Synchronisierung ist fehlgeschlagen: {Meldung}** | Der letzte Lauf wurde nicht abgeschlossen. Die Meldung stammt von Microsoft. |
 | **Jetzt synchronisieren** | Startet die Synchronisierung sofort, statt auf die kommende Nacht zu warten. Meldet **Synchronisierung abgeschlossen: N Konten aktualisiert, N deaktiviert.** |
 

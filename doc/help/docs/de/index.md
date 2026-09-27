@@ -68,6 +68,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 
 - [Unternehmen](companies.md) - Unternehmenseinheiten verwalten
 - [Abteilungen](departments.md) - Nach Abteilungsstruktur organisieren
+- [Kostenstellen](cost-centers.md) - Festhalten, wer für jede Budgetzeile verantwortlich ist
 
 **Externe Parteien**
 
