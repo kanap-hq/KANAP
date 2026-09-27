@@ -170,8 +170,8 @@
       "noPayingCompany": "Ohne zahlendes Unternehmen",
       "accountOutsideChart": "Konto nicht im Kontenplan des Unternehmens"
     },
-    "topItemsY": "Top-Positionen (J)",
-    "topIncreasesYvsYminus1": "Stärkste Zuwächse (J vs J-1)",
+    "topItemsY": "Top-Positionen ({{column}}, J)",
+    "topIncreasesYvsYminus1": "Stärkste Zuwächse ({{column}}, J vs J-1)",
     "noIncreases": "Keine Zuwächse",
     "settings": {
       "title": "Dashboard-Einstellungen",

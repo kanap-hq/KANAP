@@ -1,20 +1,14 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { FinanceModuleConfig } from './config';
+import type { FreezeColumn } from '../../services/freeze';
+import type { AmountMeasure } from './roundPeriod';
+import { AMOUNT_COLUMNS } from './amountColumns';
 
-export type YearTotals = {
-  year: number;
-  budget: number;
-  revision: number;
-  actual: number;
-  landing: number;
-};
+/** One year of the yearly totals endpoint: every column, keyed like the freeze keys. */
+export type YearTotals = { year: number } & Record<FreezeColumn, number>;
 
-export type LiveBudgetTotals = {
-  planned: number;
-  committed: number;
-  actual: number;
-  expected_landing: number;
-};
+/** The budget tab's yearly totals, keyed by storage key. */
+export type LiveBudgetTotals = Record<AmountMeasure, number>;
 
 /** Multi-year vision window: N-3 … N+1 around the current calendar year. */
 const N = new Date().getFullYear();
@@ -26,21 +20,13 @@ export function yearlyTotalsQueryKey(config: FinanceModuleConfig, id: string) {
 }
 
 export function toChartYearRow(year: number, live: LiveBudgetTotals): YearTotals {
-  return {
-    year,
-    budget: Number(live.planned) || 0,
-    revision: Number(live.committed) || 0,
-    actual: Number(live.actual) || 0,
-    landing: Number(live.expected_landing) || 0,
-  };
+  const row = { year } as YearTotals;
+  for (const column of AMOUNT_COLUMNS) row[column.freezeKey] = Number(live[column.measure]) || 0;
+  return row;
 }
 
 function sameRow(a: YearTotals, b: YearTotals): boolean {
-  return a.year === b.year
-    && a.budget === b.budget
-    && a.revision === b.revision
-    && a.actual === b.actual
-    && a.landing === b.landing;
+  return a.year === b.year && AMOUNT_COLUMNS.every((column) => a[column.freezeKey] === b[column.freezeKey]);
 }
 
 /** Overlay live form totals onto the fetched multi-year series for `year`. */

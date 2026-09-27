@@ -438,6 +438,32 @@ return (
 );
 ```
 
+### useBudgetColumns
+The tenant's settings for the five budget columns: names, which columns are shown, which follow "Apply to all columns", and the default column.
+
+**Location:** `frontend/src/hooks/useBudgetColumns.ts` (service `services/budgetColumns.ts`, `GET|PATCH /budget-columns`; query key `['budget-columns']`, 5 min `staleTime`; the settings page `/ops/operations/columns` writes the saved value into the cache).
+
+```typescript
+type BudgetColumns = {
+  ready: boolean;                      // false until loaded; every field holds the product defaults meanwhile
+  error: Error | null;                 // the setting could not be loaded: ready, with the product defaults (the settings page shows the error and edits nothing)
+  settings: BudgetColumnsSettings;     // the raw setting (storage keys)
+  all: BudgetColumnView[];             // five, fixed order: column 1 to 5
+  shown: BudgetColumnView[];           // enabled, fixed order
+  defaultColumn: BudgetColumnView;
+  group: BudgetColumnView[];           // shown and following "Apply to all columns"
+  displayDefaults: BudgetColumnView[]; // list columns visible by default: the default column, then the last shown one
+  get(key: string): BudgetColumnView;  // storage, summary or freeze key; throws on anything else
+  label(key: string): string;          // tenant name, else the translated product name
+  defaultSort: string;                 // `y${defaultColumn.suffix}:DESC`
+};
+```
+
+- `BudgetColumnView` extends one row of `AMOUNT_COLUMNS` (`components/finance/amountColumns.ts`), the single table of the five columns in fixed order with every key they have: storage key (`measure`), summary and copy/clear key (`key`), summary field suffix, freeze key and product label key.
+- Screens iterate `shown` (or `all` where hidden columns matter, such as the freeze page), never a column name. A default derived from the setting (list sort, spread panel column, report column) follows `defaultColumn`; a screen whose first request depends on it waits for `ready`.
+- Hidden columns are not built as list columns; a saved or linked sort or filter on one falls back to the defaults (`sortOnShownColumn`, `filtersOnShownColumns`, `settleListSearch` in `amountColumns.ts`). The OPEX and CAPEX lists mount their grid once the URL is settled, so the first request already uses the tenant's default sort.
+- `resolveBudgetColumns(settings, t)` is the hook's pure core; tests mock `/budget-columns` or the hook.
+
 ## Shared Components
 - `FormModal` (`src/components/forms/FormModal.tsx`)
   - Replaces `FormDrawer` for create/edit forms, providing a centered modal overlay.

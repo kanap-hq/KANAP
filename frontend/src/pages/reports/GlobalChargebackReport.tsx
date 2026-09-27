@@ -23,7 +23,9 @@ import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import api from '../../api';
-import { getMetricLabels, MetricKey, horizontalBarChartHeight } from './reportMetrics';
+import { MetricKey, horizontalBarChartHeight, metricFileName, useReportMetric } from './reportMetrics';
+import { escapeTooltipText } from './tooltipText';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 
@@ -118,14 +120,14 @@ type GlobalChargebackReportResponse = {
 
 export default function GlobalChargebackReport() {
   const { t } = useTranslation(["ops"]);
-  const metricLabels = useMemo(() => getMetricLabels(t), [t]);
+  const budgetColumns = useBudgetColumns();
   const locale = useLocale();
   const now = new Date();
   const currentYear = now.getFullYear();
   const allowedYears = [currentYear - 1, currentYear, currentYear + 1];
 
   const [year, setYear] = useState<number>(currentYear);
-  const [metric, setMetric] = useState<MetricKey>('budget');
+  const [metric, setMetric] = useReportMetric(budgetColumns);
   const [showCompanies, setShowCompanies] = useState(true);
   const [showDetailed, setShowDetailed] = useState(true);
   const [showKpis, setShowKpis] = useState(true);
@@ -150,6 +152,8 @@ export default function GlobalChargebackReport() {
   const queryKey = ['global-chargeback-report', year, metric];
   const { data, isLoading, isFetching, refetch } = useQuery<GlobalChargebackReportResponse>({
     queryKey,
+    // The preselected column is the tenant's default: wait for it rather than fetch twice.
+    enabled: budgetColumns.ready,
     queryFn: async () => {
       const response = await api.get<GlobalChargebackReportResponse>('/reports/chargeback/global', {
         params: { year, metric },
@@ -161,7 +165,8 @@ export default function GlobalChargebackReport() {
 
   const totalAmount = data?.total ?? 0;
   const reportingCurrency = (data?.reportingCurrency || 'EUR').toUpperCase();
-  const metricLabel = metricLabels[metric];
+  const metricLabel = budgetColumns.label(metric);
+  const metricFile = metricFileName(budgetColumns, metric);
 
   const detailedRows = useMemo<GlobalChargebackDetailedDisplayRow[]>(() => {
     const rows: GlobalChargebackDetailedRow[] = data?.detailed ?? [];
@@ -275,7 +280,7 @@ export default function GlobalChargebackReport() {
         ...companyRowsForId[0],
         rowType: 'company',
         companyDisplay: companyName,
-        departmentDisplay: 'Total',
+        departmentDisplay: t('reports.columns.total'),
         amount: companyInfo?.amount ?? companyRowsForId.reduce((sum, row) => sum + row.amount, 0),
         amountRaw: companyAmountRaw,
         share: companyInfo?.share ?? (totalAmount > 0 ? (companyAmountRaw / totalAmount) * 100 : null),
@@ -394,7 +399,7 @@ export default function GlobalChargebackReport() {
 
   const flowsGridApiRef = useRef<any>(null);
   const exportFlowsCsv = () => {
-    flowsGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-flows-netted-${year}-${metric}.csv` });
+    flowsGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-flows-netted-${year}-${metricFile}.csv` });
   };
 
   const chartOptions = useMemo(() => {
@@ -429,7 +434,7 @@ export default function GlobalChargebackReport() {
               const value = Number(datum.value || 0);
               const pct = totalAmount > 0 ? (value / totalAmount) * 100 : 0;
               return {
-                title: datum.label,
+                title: escapeTooltipText(datum.label),
                 data: [
                   { label: metricLabel, value: formatNumber(value) },
                   { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -445,11 +450,11 @@ export default function GlobalChargebackReport() {
   }, [chartData, formatCurrency, formatNumber, metricLabel, t, totalAmount, year]);
 
   const exportCsv = () => {
-    detailedGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-detailed-${year}-${metric}.csv` });
+    detailedGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-detailed-${year}-${metricFile}.csv` });
   };
 
   const exportChart = () => {
-    chartRef.current?.download(`global-chargeback-company-${year}-${metric}`);
+    chartRef.current?.download(`global-chargeback-company-${year}-${metricFile}`);
   };
 
   const kpiTotals = useMemo(() => {
@@ -509,10 +514,9 @@ export default function GlobalChargebackReport() {
             onChange={(event) => setMetric(event.target.value as MetricKey)}
             sx={{ minWidth: 160 }}
           >
-            <MenuItem value="budget">{metricLabels.budget}</MenuItem>
-            <MenuItem value="landing">{metricLabels.landing}</MenuItem>
-            <MenuItem value="follow_up">{metricLabels.follow_up}</MenuItem>
-            <MenuItem value="revision">{metricLabels.revision}</MenuItem>
+            {budgetColumns.shown.map((column) => (
+              <MenuItem key={column.key} value={column.key}>{column.label}</MenuItem>
+            ))}
           </TextField>
           <FormControlLabel
             control={<Checkbox checked={showCompanies} onChange={(_, checked) => setShowCompanies(checked)} />}
@@ -533,7 +537,7 @@ export default function GlobalChargebackReport() {
         </>
       )}
       actions={(
-        <Button variant="contained" size="small" onClick={() => refetch()} disabled={isFetching}>
+        <Button variant="contained" size="small" onClick={() => refetch()} disabled={isFetching || !budgetColumns.ready}>
           {isFetching ? t('reports.shared.refreshing') : t('reports.shared.run')}
         </Button>
       )}
@@ -689,7 +693,7 @@ export default function GlobalChargebackReport() {
                   {kpiRows.length === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={8} sx={{ color: 'text.secondary' }}>
-                        No KPI data available for the selected year.
+                        {t('reports.shared.noDataForYear')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -711,7 +715,7 @@ export default function GlobalChargebackReport() {
           </Paper>
         )}
 
-        {isLoading && (
+        {(isLoading || !budgetColumns.ready) && (
           <Typography variant="body2" color="text.secondary">{t("reports.shared.loadingReport")}</Typography>
         )}
       </Stack>

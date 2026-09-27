@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { DATE_COLUMN_FILTER, StatusScope } from '../components/ServerDataGrid';
-import { Button, Stack } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
@@ -17,7 +17,16 @@ import { readStoredCapexListContext, writeStoredCapexListContext } from './capex
 import { statusScopeParams } from '../utils/statusScopeParams';
 import ForbiddenPage from './ForbiddenPage';
 import { STATUS_VALUES } from '../constants/status';
-import { amountColumnYear, buildAmountColumnDefs, SummaryVersions, totalsToVersions } from '../components/finance/amountColumns';
+import {
+  amountColumnYear,
+  buildAmountColumnDefs,
+  filtersOnShownColumns,
+  settleListSearch,
+  explicitSort,
+  SummaryVersions,
+  totalsToVersions,
+} from '../components/finance/amountColumns';
+import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../lib/dateFormat';
 // import StatusSwitch from '../components/fields/StatusSwitch';
@@ -65,6 +74,7 @@ export default function CapexPage() {
   const { hasLevel } = useAuth();
   const { t } = useTranslation(["ops", "common"]);
   const locale = useLocale();
+  const budgetColumns = useBudgetColumns();
 
   if (!hasLevel('capex', 'reader')) {
     return <ForbiddenPage />;
@@ -82,9 +92,40 @@ export default function CapexPage() {
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; filtersString: string; statusScope?: StatusScope } | null>(null);
   const gridApiRef = useRef<any>(null);
   const storedContextRef = useRef(readStoredCapexListContext());
+  // The default sort and the shown columns come from the budget columns setting; callbacks
+  // created once read them here.
+  const budgetColumnsRef = useRef(budgetColumns);
+  budgetColumnsRef.current = budgetColumns;
+  // The sort to keep in the URL and the list context: '' for the default, which then follows a default change.
+  const listSort = useCallback(
+    (sort?: string | null) => explicitSort(sort, budgetColumnsRef.current.shown, budgetColumnsRef.current.defaultSort),
+    [],
+  );
+  const gridDefaultSort = useMemo(
+    () => ({ field: budgetColumns.defaultSort.split(':')[0], direction: 'DESC' as const }),
+    [budgetColumns.defaultSort],
+  );
+
+  // The URL once the stored list context has filled it and a sort or filter on a hidden column
+  // has fallen back; null until the setting is loaded. The grid mounts on that URL only, so the
+  // first request already uses the tenant's default sort.
+  const settledSearch = useMemo(() => {
+    if (!budgetColumns.ready) return null;
+    const stored = storedContextRef.current || readStoredCapexListContext();
+    if (stored && !storedContextRef.current) storedContextRef.current = stored;
+    return settleListSearch(location.search, stored, budgetColumns.shown, budgetColumns.defaultSort);
+  }, [budgetColumns.ready, budgetColumns.shown, budgetColumns.defaultSort, location.search]);
+  const currentSearch = new URLSearchParams(location.search).toString();
+  useEffect(() => {
+    if (settledSearch != null && settledSearch !== currentSearch) navigate({ search: settledSearch }, { replace: true });
+  }, [settledSearch, currentSearch, navigate]);
+  const [gridMounted, setGridMounted] = useState(false);
+  const gridCanMount = gridMounted || (settledSearch != null && settledSearch === currentSearch);
+  useEffect(() => { if (gridCanMount && !gridMounted) setGridMounted(true); }, [gridCanMount, gridMounted]);
 
   const initialGridState = useMemo(() => {
-    const raw = new URLSearchParams(window.location.search).get('filters') || storedContextRef.current?.filters || '';
+    if (!gridCanMount) return undefined;
+    const raw = new URLSearchParams(location.search).get('filters') || '';
     if (!raw) return undefined;
     try {
       const parsed = JSON.parse(raw);
@@ -93,7 +134,9 @@ export default function CapexPage() {
       }
     } catch {}
     return undefined;
-  }, []);
+    // Read once, when the grid mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gridCanMount]);
 
   const getCapexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string> }) => {
     const emptyLabel = opts?.emptyLabel ?? t('shared.blank');
@@ -148,33 +191,6 @@ export default function CapexPage() {
     low: t('capex.priorityTypes.low'),
   }), [t]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = storedContextRef.current || readStoredCapexListContext();
-    if (stored && !storedContextRef.current) {
-      storedContextRef.current = stored;
-    }
-    if (!stored) return;
-
-    const currentParams = new URLSearchParams(location.search);
-    const currentSort = currentParams.get('sort') || '';
-    const currentQ = currentParams.get('q') || '';
-    const currentFilters = currentParams.get('filters') || '';
-
-    const shouldApplySort = !!stored.sort && !currentSort;
-    const shouldApplyQ = !!stored.q && !currentQ;
-    const shouldApplyFilters = !!stored.filters && !currentFilters;
-
-    if (!shouldApplySort && !shouldApplyQ && !shouldApplyFilters) return;
-
-    const newParams = new URLSearchParams(location.search);
-    if (shouldApplySort) newParams.set('sort', stored.sort);
-    if (shouldApplyQ) newParams.set('q', stored.q);
-    if (shouldApplyFilters) newParams.set('filters', stored.filters);
-
-    navigate({ search: newParams.toString() }, { replace: true });
-  }, [location.search, navigate]);
-
   const updateTotals = useCallback(async ({ q, filterModel, statusScope }: { q: string; filterModel: any; statusScope?: StatusScope }) => {
     try {
       const params: Record<string, any> = {};
@@ -197,6 +213,7 @@ export default function CapexPage() {
   }, []);
 
   useEffect(() => {
+    if (!budgetColumns.ready) return;
     let urlParams: URLSearchParams | null = null;
     if (typeof window !== 'undefined') {
       urlParams = new URLSearchParams(window.location.search);
@@ -212,20 +229,22 @@ export default function CapexPage() {
       } catch {}
     }
     const statusScope = lastQueryRef.current?.statusScope ?? 'enabled';
-    updateTotals({ q, filterModel: fm, statusScope });
-  }, [refreshKey, updateTotals]);
+    updateTotals({ q, filterModel: filtersOnShownColumns(fm, budgetColumns.shown), statusScope });
+    // The shown columns only matter once, when the setting arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, updateTotals, budgetColumns.ready]);
 
   const buildGridSearch = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const stored = storedContextRef.current || readStoredCapexListContext();
     if (stored && !storedContextRef.current) storedContextRef.current = stored;
-    const fallbackSort = lastQueryRef.current?.sort || urlParams.get('sort') || stored?.sort || 'yBudget:DESC';
+    const fallbackSort = listSort(lastQueryRef.current?.sort || urlParams.get('sort') || stored?.sort);
     const sortModel = gridApiRef.current?.getSortModel?.() as Array<{ colId?: string; sort?: 'asc' | 'desc' | undefined }> | undefined;
     const primarySort = Array.isArray(sortModel) && sortModel.length > 0 ? sortModel[0] : undefined;
     let sort = fallbackSort;
     if (primarySort?.colId) {
       const direction = primarySort.sort === 'asc' ? 'ASC' : 'DESC';
-      sort = `${primarySort.colId}:${direction}`;
+      sort = listSort(`${primarySort.colId}:${direction}`);
     }
     const q = lastQueryRef.current?.q ?? urlParams.get('q') ?? stored?.q ?? '';
     const gridFilterModel = gridApiRef.current?.getFilterModel?.() || lastQueryRef.current?.filters || {};
@@ -379,7 +398,7 @@ export default function CapexPage() {
         filterParams: { getValues: getCapexFilterValues('allocation_label'), searchable: false },
         cellRenderer: linkCell('allocation_label'),
       },
-      ...buildAmountColumnDefs<SummaryRow>({ t, currentYear: Y, cellRenderer: linkCell }),
+      ...buildAmountColumnDefs<SummaryRow>({ t, currentYear: Y, cellRenderer: linkCell, columns: budgetColumns }),
       {
         field: 'currency',
         headerName: t('capex.columns.currency'),
@@ -497,7 +516,7 @@ export default function CapexPage() {
         cellRenderer: linkCell('updated_at'),
       },
     ];
-  }, [Y, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, locale, navigate, t]);
+  }, [Y, budgetColumns, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, locale, navigate, t]);
 
   const canCreate = hasLevel('capex','manager');
   const canAdmin = hasLevel('capex','admin');
@@ -511,7 +530,7 @@ export default function CapexPage() {
             const urlParams = new URLSearchParams(window.location.search);
             const stored = storedContextRef.current || readStoredCapexListContext();
             if (stored && !storedContextRef.current) storedContextRef.current = stored;
-            const sort = urlParams.get('sort') || stored?.sort || 'yBudget:DESC';
+            const sort = listSort(urlParams.get('sort') || stored?.sort);
             const q = urlParams.get('q') || stored?.q || '';
             const filters = urlParams.get('filters') || stored?.filters || '';
             const sp = new URLSearchParams();
@@ -542,14 +561,18 @@ export default function CapexPage() {
   return (
     <>
       <PageHeader title={t('capex.titleWithCurrency', { currency: reportingCurrency })} actions={actions} />
-      <ServerDataGrid<SummaryRow>
+      {!gridCanMount && (
+        // One line while the budget columns setting loads: the grid waits for the default sort.
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', py: 1 }}>{t('common:status.loading')}</Typography>
+      )}
+      {gridCanMount && <ServerDataGrid<SummaryRow>
         columns={columns as any}
         endpoint="/capex-items/summary"
         queryKey="capex-summary"
         getRowId={(r) => r.id || '__capex_totals__'}
         enableSearch
         pinnedBottomRowData={pinnedTotals}
-        defaultSort={{ field: 'yBudget', direction: 'DESC' }}
+        defaultSort={gridDefaultSort}
         extraParams={{ years: [Y - 1, Y, Y + 1, Y + 2].join(',') }}
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="capex-summary"
@@ -557,7 +580,7 @@ export default function CapexPage() {
         refreshKey={refreshKey}
         onGridApiReady={(gridApi) => { gridApiRef.current = gridApi; }}
         onQueryStateChange={(state) => {
-          const normalizedSort = state.sort || 'yBudget:DESC';
+          const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};
           const filtersString = filtersObject && Object.keys(filtersObject).length > 0 ? JSON.stringify(filtersObject) : '';
           const scope = state.statusScope ?? 'enabled';
@@ -569,7 +592,7 @@ export default function CapexPage() {
         }}
         enableRowSelection={canAdmin}
         onSelectionChanged={setSelectedRows}
-      />
+      />}
       <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/capex-items" title={t("capex.exportTitle")} />
       <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/capex-items" title={t("capex.importTitle")} onImported={() => setRefreshKey((k) => k + 1)} />
     </>

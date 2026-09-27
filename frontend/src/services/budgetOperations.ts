@@ -1,6 +1,7 @@
 import api from '../api';
 
-export type BudgetColumn = 'budget' | 'revision' | 'follow_up' | 'landing';
+/** A column in the copy and clear API (summary key vocabulary). */
+export type BudgetColumn = 'budget' | 'revision' | 'forecast' | 'follow_up' | 'landing';
 
 /** Which items a column operation runs on. */
 export type BudgetScope = 'opex' | 'capex';

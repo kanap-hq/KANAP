@@ -1,5 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../../api';
+import type { AmountColumnKey } from '../../components/finance/amountColumns';
+
+/** Totals of one year slot: every budget column, whatever the tenant shows. */
+export type SummaryYearSlot = {
+  year?: number;
+  totals: Record<AmountColumnKey, number>;
+  reporting?: Record<AmountColumnKey, number>;
+};
 
 export type SummaryRow = {
   id: string;
@@ -10,26 +18,10 @@ export type SummaryRow = {
   analytics_category_id?: string | null;
   analytics_category_name?: string | null;
   versions?: {
-    yMinus1?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-    };
-    y?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-    };
-    yPlus1?: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-    };
-    [key: string]: {
-      year?: number;
-      totals: { budget: number; follow_up: number; landing: number; revision: number };
-      reporting?: { budget: number; follow_up: number; landing: number; revision: number };
-    } | undefined;
+    yMinus1?: SummaryYearSlot;
+    y?: SummaryYearSlot;
+    yPlus1?: SummaryYearSlot;
+    [key: string]: SummaryYearSlot | undefined;
   };
 };
 

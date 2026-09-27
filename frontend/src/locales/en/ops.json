@@ -99,12 +99,6 @@
       "annualTotals": "Annual totals ({{year}})",
       "monthlyEntry": "Monthly entry ({{year}})",
       "month": "Month",
-      "budgetPlanned": "Budget (planned)",
-      "revisionCommitted": "Revision (committed)",
-      "followUpActual": "Actuals",
-      "landingExpected": "Expected landing",
-      "frozen": "frozen",
-      "forecast": "Forecast",
       "checkingFreeze": "Checking freeze state…",
       "someColumnsFrozen": "Some columns are frozen and read-only.",
       "allColumnsEditable": "All columns are editable.",
@@ -126,7 +120,7 @@
       "allocateBy": "Allocate by",
       "headcount": "Headcount",
       "allocationPct": "Allocation %",
-      "yearBudget": "Year budget",
+      "yearTotal": "{{column}}, year total",
       "splitEqually": "Split equally",
       "clearPins": "Clear manual pins",
       "company": "Company",
@@ -277,12 +271,6 @@
       "annualTotals": "Annual totals ({{year}})",
       "monthlyEntry": "Monthly entry ({{year}})",
       "month": "Month",
-      "budgetPlanned": "Budget (planned)",
-      "revisionCommitted": "Revision (committed)",
-      "followUpActual": "Actuals",
-      "landingExpected": "Expected landing",
-      "frozen": "frozen",
-      "forecast": "Forecast",
       "checkingFreeze": "Checking freeze state…",
       "someColumnsFrozen": "Some columns are frozen and read-only.",
       "allColumnsEditable": "All columns are editable.",
@@ -304,7 +292,7 @@
       "allocateBy": "Allocate by",
       "headcount": "Headcount",
       "allocationPct": "Allocation %",
-      "yearBudget": "Year budget",
+      "yearTotal": "{{column}}, year total",
       "splitEqually": "Split equally",
       "clearPins": "Clear manual pins",
       "company": "Company",
@@ -499,7 +487,9 @@
       "allocationDefaultTitle": "Default allocation method",
       "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX items left on the default allocation",
       "budgetRowsTitle": "Budget rows file",
-      "budgetRowsDesc": "Export or import the monthly amounts of every OPEX and CAPEX line, one row per line, year and column."
+      "budgetRowsDesc": "Export or import the monthly amounts of every OPEX and CAPEX line, one row per line, year and column.",
+      "budgetColumnsTitle": "Budget columns",
+      "budgetColumnsDesc": "Name the five budget columns, choose which ones are shown and which one is the default"
     },
     "allocationDefault": {
       "title": "Default allocation method",
@@ -536,7 +526,6 @@
     },
     "freeze": {
       "title": "Freeze / unfreeze data",
-      "noPermission": "You need Budget Admin permissions to freeze or unfreeze data. You can still review the current freeze status below.",
       "frozenSuccess": "Columns frozen successfully.",
       "unfrozenSuccess": "Columns unfrozen successfully.",
       "freezeError": "Unable to freeze columns.",
@@ -551,7 +540,8 @@
       "unfreezing": "Unfreezing…",
       "updating": "Updating freeze status…",
       "frozen": "Frozen",
-      "editable": "Editable"
+      "editable": "Editable",
+      "hidden": "Hidden"
     },
     "columnReset": {
       "title": "Reset budget column",
@@ -579,7 +569,9 @@
       "confirmAffected_other": "{{count}} items are affected, for a total of {{value}}.",
       "clearDone_one": "Cleared {{count}} item.",
       "clearDone_other": "Cleared {{count}} items.",
-      "confirmPeriodsOnly": "The {{column}} column for {{year}} holds no amount. Only its spread periods will be removed."
+      "confirmPeriodsOnly": "The {{column}} column for {{year}} holds no amount. Only its spread periods will be removed.",
+      "chooseColumn": "Choose a column",
+      "chooseColumnFirst": "Choose a column to see the amounts it holds."
     },
     "copyAllocations": {
       "title": "Copy allocations",
@@ -700,7 +692,37 @@
       "export": "Export",
       "import": "Import",
       "exportTitle": "Export budget rows",
-      "importTitle": "Import budget rows"
+      "importTitle": "Import budget rows",
+      "fileNames": "In the file, the measure column names each budget column: {{names}}.",
+      "fileName": "{{key}} for {{column}}"
+    },
+    "budgetAdminOnly": "Only budget administrators can change this page.",
+    "budgetColumnsSettings": {
+      "title": "Budget columns",
+      "subtitle": "Name the columns your budget uses, choose which ones everyone sees, and which one reports and lists start from.",
+      "loadError": "The column settings could not be loaded.",
+      "column": "Column",
+      "name": "Name",
+      "shown": "Shown",
+      "follows": "Follows \"Apply to all columns\"",
+      "default": "Default",
+      "nameOf": "Name of column {{position}}",
+      "shownOf": "Show {{column}}",
+      "followsOf": "{{column}} follows \"Apply to all columns\"",
+      "defaultOf": "Make {{column}} the default column",
+      "inFiles": "In files: {{name}}",
+      "nameHint": "Leave a name empty to use the standard name.",
+      "helpHidden": "Hidden columns keep their amounts and still accept imports and freezes.",
+      "helpDefault": "The default column is preselected in reports and sorts the lists and the dashboard. Freezing it fixes the year's exchange rates.",
+      "helpFollows": "Columns that follow \"Apply to all columns\" take the same period when a spread is applied to all columns.",
+      "errors": {
+        "allHidden": "At least one column must stay shown.",
+        "defaultHidden": "The default column must be shown: choose another default column first.",
+        "duplicate": "Two columns cannot both be named \"{{name}}\".",
+        "tooLong": "A column name can have at most {{max}} characters.",
+        "saveFailed": "The budget columns could not be saved.",
+        "controlCharacters": "A column name cannot contain control or invisible characters."
+      }
     },
     "results": {
       "skipped_one": "{{count}} item skipped.",
@@ -924,8 +946,8 @@
       "title": "Top items",
       "subtitle": "Largest {{type}} items by selected year ({{metric}})",
       "topTotal": "Top {{count}} total",
-      "totalMetric": "Total {{metric}}",
-      "ofFilteredMetric": "{{pct}}% of filtered {{metric}}",
+      "totalMetric": "{{metric}}, total",
+      "ofFilteredMetric": "{{pct}}% of the filtered total",
       "shareSubtitle": "Share of annual total ({{metric}})",
       "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}"
     },
@@ -978,8 +1000,8 @@
     "budgetColumnsCompare": {
       "title": "Budget column comparison",
       "subtitle": "Compare up to ten budget columns for OPEX or CAPEX",
-      "yearGroupingSubtitle": "{{type}} — Year grouping",
-      "selectionsSubtitle": "{{type}} — {{count}} selection(s)",
+      "yearGroupingSubtitle": "{{type}}: year grouping",
+      "selectionsSubtitle": "{{type}}: {{count}} selection(s)",
       "addSelection": "Add"
     },
     "consolidation": {

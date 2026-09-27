@@ -23,10 +23,27 @@ vi.mock('../../api', () => ({
   default: { get: vi.fn() },
 }));
 
+// The tenant's column settings, set per test; the hook resolves them once per settings object.
+const columnsSetting = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
+  let cache: { settings: unknown; value: ReturnType<typeof mod.resolveBudgetColumns> } | null = null;
+  const t = ((key: string) => key) as unknown as Parameters<typeof mod.resolveBudgetColumns>[1];
+  return {
+    ...mod,
+    useBudgetColumns: () => {
+      if (!cache || cache.settings !== columnsSetting.current) {
+        cache = { settings: columnsSetting.current, value: mod.resolveBudgetColumns(columnsSetting.current as never, t) };
+      }
+      return cache.value;
+    },
+  };
+});
+
 type LegendEvent = { itemId: string; enabled: boolean };
 type ChartOptions = {
   data?: YearTotals[];
-  series?: { yKey: string; visible: boolean }[];
+  series?: { yKey: string; yName: string; visible: boolean; stroke: string }[];
   legend?: {
     listeners?: {
       legendItemClick?: (e: LegendEvent) => void;
@@ -51,6 +68,7 @@ vi.mock('ag-charts-react', () => ({
 }));
 
 import BudgetTrendChart from './BudgetTrendChart';
+import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 
 // jsdom here ships without localStorage; the chart persists its legend choice there.
 if (!window.localStorage) {
@@ -74,9 +92,13 @@ const seeded: YearTotals[] = Array.from({ length: 5 }, (_, i) => ({
   year: YEARLY_TOTALS_FROM + i,
   budget: 1,
   revision: 2,
+  forecast: 5,
   actual: 3,
   landing: 4,
 }));
+const live = (over: Partial<LiveBudgetTotals> = {}): LiveBudgetTotals => ({
+  planned: 10, committed: 20, forecast: 25, actual: 30, expected_landing: 40, ...over,
+});
 
 function renderChart(liveTotals?: LiveBudgetTotals) {
   const queryClient = new QueryClient({
@@ -107,23 +129,20 @@ describe('BudgetTrendChart', () => {
     chartState.mounts = 0;
     chartState.lastOptions = null;
     window.localStorage.clear();
+    columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
   });
 
   const visibleKeys = () =>
     (chartState.lastOptions?.series ?? []).filter((s) => s.visible).map((s) => s.yKey);
 
   it('overlays live totals onto the selected year and leaves other years unchanged', () => {
-    renderChart({
-      planned: 10,
-      committed: 20,
-      actual: 30,
-      expected_landing: 40,
-    });
+    renderChart(live());
 
     expect(chartState.lastOptions?.data?.find((row) => row.year === year)).toEqual({
       year,
       budget: 10,
       revision: 20,
+      forecast: 25,
       actual: 30,
       landing: 40,
     });
@@ -131,22 +150,18 @@ describe('BudgetTrendChart', () => {
       year: year - 1,
       budget: 1,
       revision: 2,
+      forecast: 5,
       actual: 3,
       landing: 4,
     });
   });
 
   it('updates series data in place when live totals change', () => {
-    const { rerenderWith } = renderChart({
-      planned: 10,
-      committed: 20,
-      actual: 30,
-      expected_landing: 40,
-    });
+    const { rerenderWith } = renderChart(live());
     expect(chartState.mounts).toBe(1);
     expect(chartState.lastOptions?.data?.find((row) => row.year === year)?.budget).toBe(10);
 
-    rerenderWith({ planned: 250000, committed: 20, actual: 30, expected_landing: 40 });
+    rerenderWith(live({ planned: 250000 }));
     expect(chartState.mounts).toBe(1);
     expect(chartState.lastOptions?.data?.find((row) => row.year === year)?.budget).toBe(250000);
     expect(chartState.lastOptions?.data).not.toEqual([]);
@@ -187,5 +202,25 @@ describe('BudgetTrendChart', () => {
     expect(visibleKeys()).toEqual(['actual']);
     dblclick('actual');
     expect(visibleKeys()).toEqual(['budget', 'revision', 'actual', 'landing']);
+  });
+
+  it('draws Forecast as a fifth series when it is shown, in the fixed order, with the tenant names and its own colour', () => {
+    columnsSetting.current = {
+      ...DEFAULT_BUDGET_COLUMNS,
+      enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, forecast: true },
+      labels: { ...DEFAULT_BUDGET_COLUMNS.labels, forecast: 'A2' },
+    };
+    renderChart(live());
+    const series = chartState.lastOptions?.series ?? [];
+    expect(series.map((s) => s.yKey)).toEqual(['budget', 'revision', 'forecast', 'actual', 'landing']);
+    expect(series[2].yName).toBe('A2');
+    expect(new Set(series.map((s) => s.stroke)).size).toBe(5);
+    expect(chartState.lastOptions?.data?.find((row) => row.year === year)?.forecast).toBe(25);
+  });
+
+  it('leaves out the series of a hidden column', () => {
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, committed: false } };
+    renderChart(undefined);
+    expect((chartState.lastOptions?.series ?? []).map((s) => s.yKey)).toEqual(['budget', 'actual', 'landing']);
   });
 });

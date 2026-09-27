@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useCapexNav } from '../../hooks/useCapexNav';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
 import useAutosave from '../../hooks/useAutosave';
 import { formatItemRef } from '../../utils/item-ref';
 import {
@@ -242,23 +244,28 @@ export default function CapexItemPage() {
     return createAccountCoaId !== createCompanyCoaId;
   }, [createAccountCoaId, createCompanyCoaId, createForm.account_id, createForm.paying_company_id, isCreate]);
 
-  const sort = searchParams.get('sort') || storedListContext?.sort || 'yBudget:DESC';
+  // The list's sort, '' for the default one: prev/next and the list then use the current default.
+  const budgetColumns = useBudgetColumns();
+  const sort = explicitSort(searchParams.get('sort') || storedListContext?.sort, budgetColumns.shown, budgetColumns.defaultSort);
   const q = searchParams.get('q') || storedListContext?.q || '';
-  const filters = searchParams.get('filters') || storedListContext?.filters || '';
+  // A filter on a column that is not shown falls back like the list's, so prev/next walks the rows on screen.
+  const filters = filtersStringOnShownColumns(searchParams.get('filters') || storedListContext?.filters, budgetColumns.shown);
   // Status scope of the list we came from. The grid keeps it in local state, so it reaches
   // us through the stored list context; it must be forwarded to prev/next or the navigation
   // walks a different set from the one on screen.
   const statusScope = storedListContext?.statusScope || 'enabled';
-  React.useEffect(() => { writeStoredCapexListContext({ sort, q, filters, statusScope }); }, [sort, q, filters, statusScope]);
+  React.useEffect(() => {
+    if (budgetColumns.ready) writeStoredCapexListContext({ sort, q, filters, statusScope });
+  }, [budgetColumns.ready, sort, q, filters, statusScope]);
   const buildListContextParams = React.useCallback(() => {
     const sp = new URLSearchParams(searchParamsString);
-    if (!sp.get('sort') && sort) sp.set('sort', sort);
+    if (sort) sp.set('sort', sort); else sp.delete('sort');
     if (!sp.get('q') && q) sp.set('q', q);
     if (!sp.get('filters') && filters) sp.set('filters', filters);
     return sp;
   }, [filters, q, searchParamsString, sort]);
 
-  const nav = useCapexNav({ id: uuid || idParam, sort, q, filters, statusScope });
+  const nav = useCapexNav({ id: uuid || idParam, sort: sort || null, q, filters, statusScope, enabled: budgetColumns.ready });
   const { index, total, hasPrev, hasNext, prevId, nextId } = isCreate
     ? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null as any, nextId: null as any }
     : nav;

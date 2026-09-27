@@ -4,6 +4,7 @@ import api from '../api';
 import { ModuleItemNavParams, ModuleItemNavResult } from './useModuleItemNav';
 import { formatItemRef } from '../utils/item-ref';
 import { statusScopeParams } from '../utils/statusScopeParams';
+import { useBudgetColumns } from './useBudgetColumns';
 
 export type SpendNavParams = ModuleItemNavParams;
 
@@ -16,8 +17,10 @@ export type SpendNavParams = ModuleItemNavParams;
  * Indexing still uses the UUID list, matched against the resolved current id.
  */
 export function useSpendNav(params: SpendNavParams): ModuleItemNavResult {
-  const { id, sort, q, filters, year, statusScope } = params;
-  const effectiveSort = sort || 'yBudget:DESC';
+  const { id, sort, q, filters, year, statusScope, enabled = true } = params;
+  const budgetColumns = useBudgetColumns();
+  // Without a sort from the list, the default column's sort, once the setting is known.
+  const effectiveSort = sort || budgetColumns.defaultSort;
   const effectiveQ = q || '';
   const effectiveFilters = filters || '';
   const effectiveYear = year ?? '';
@@ -38,6 +41,7 @@ export function useSpendNav(params: SpendNavParams): ModuleItemNavResult {
       const res = await api.get<{ ids: string[]; item_numbers: number[] }>('/spend-items/summary/ids', { params: apiParams });
       return { ids: res.data?.ids || [], itemNumbers: res.data?.item_numbers || [] };
     },
+    enabled: enabled && (!!sort || budgetColumns.ready),
     staleTime: 30_000,
   });
 

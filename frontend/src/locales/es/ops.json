@@ -71,12 +71,6 @@
       "annualTotals": "Totales anuales ({{year}})",
       "monthlyEntry": "Entrada mensual ({{year}})",
       "month": "Mes",
-      "budgetPlanned": "Presupuesto (planificado)",
-      "revisionCommitted": "Revisión (comprometido)",
-      "followUpActual": "Realizado",
-      "landingExpected": "Aterrizaje previsto",
-      "frozen": "congelado",
-      "forecast": "Previsión",
       "checkingFreeze": "Verificando estado de congelación…",
       "someColumnsFrozen": "Algunas columnas están congeladas y son de solo lectura.",
       "allColumnsEditable": "Todas las columnas son editables.",
@@ -98,7 +92,7 @@
       "allocateBy": "Asignar por",
       "headcount": "Plantilla",
       "allocationPct": "Asignación %",
-      "yearBudget": "Presupuesto del año",
+      "yearTotal": "{{column}}, total del año",
       "splitEqually": "Repartir equitativamente",
       "clearPins": "Borrar fijaciones manuales",
       "company": "Empresa",
@@ -277,12 +271,6 @@
       "annualTotals": "Totales anuales ({{year}})",
       "monthlyEntry": "Entrada mensual ({{year}})",
       "month": "Mes",
-      "budgetPlanned": "Presupuesto (planificado)",
-      "revisionCommitted": "Revisión (comprometido)",
-      "followUpActual": "Realizado",
-      "landingExpected": "Aterrizaje previsto",
-      "frozen": "congelado",
-      "forecast": "Previsión",
       "checkingFreeze": "Verificando estado de congelación…",
       "someColumnsFrozen": "Algunas columnas están congeladas y son de solo lectura.",
       "allColumnsEditable": "Todas las columnas son editables.",
@@ -304,7 +292,7 @@
       "allocateBy": "Asignar por",
       "headcount": "Plantilla",
       "allocationPct": "Asignación %",
-      "yearBudget": "Presupuesto del año",
+      "yearTotal": "{{column}}, total del año",
       "splitEqually": "Repartir equitativamente",
       "clearPins": "Borrar fijaciones manuales",
       "company": "Empresa",
@@ -499,7 +487,9 @@
       "allocationDefaultTitle": "Método de asignación por defecto",
       "allocationDefaultDesc": "Elegir el método aplicado a las partidas de OPEX y CAPEX que siguen con la asignación por defecto",
       "budgetRowsTitle": "Archivo de filas presupuestarias",
-      "budgetRowsDesc": "Exportar o importar los importes mensuales de cada partida OPEX y CAPEX, una fila por partida, año y columna."
+      "budgetRowsDesc": "Exportar o importar los importes mensuales de cada partida OPEX y CAPEX, una fila por partida, año y columna.",
+      "budgetColumnsTitle": "Columnas presupuestarias",
+      "budgetColumnsDesc": "Nombrar las cinco columnas presupuestarias, elegir cuáles se muestran y cuál es la columna por defecto"
     },
     "allocationDefault": {
       "title": "Método de asignación por defecto",
@@ -536,7 +526,6 @@
     },
     "freeze": {
       "title": "Congelar / Descongelar datos",
-      "noPermission": "Necesita permisos de administrador de presupuesto para congelar o descongelar datos. Puede consultar el estado de congelación actual a continuación.",
       "frozenSuccess": "Columnas congeladas correctamente.",
       "unfrozenSuccess": "Columnas descongeladas correctamente.",
       "freezeError": "No se pudieron congelar las columnas.",
@@ -551,7 +540,8 @@
       "unfreezing": "Descongelando…",
       "updating": "Actualizando estado de congelación…",
       "frozen": "Congelado",
-      "editable": "Editable"
+      "editable": "Editable",
+      "hidden": "Oculta"
     },
     "columnReset": {
       "title": "Restablecer columna presupuestaria",
@@ -579,7 +569,9 @@
       "confirmAffected_other": "{{count}} partidas afectadas, por un total de {{value}}.",
       "clearDone_one": "{{count}} partida borrada.",
       "clearDone_other": "{{count}} partidas borradas.",
-      "confirmPeriodsOnly": "La columna {{column}} de {{year}} no tiene importes. Solo se quitarán sus periodos de reparto."
+      "confirmPeriodsOnly": "La columna {{column}} de {{year}} no tiene importes. Solo se quitarán sus periodos de reparto.",
+      "chooseColumn": "Elegir una columna",
+      "chooseColumnFirst": "Elija una columna para ver los importes que contiene."
     },
     "copyAllocations": {
       "title": "Copiar asignaciones",
@@ -700,7 +692,37 @@
       "export": "Exportar",
       "import": "Importar",
       "exportTitle": "Exportar filas presupuestarias",
-      "importTitle": "Importar filas presupuestarias"
+      "importTitle": "Importar filas presupuestarias",
+      "fileNames": "En el archivo, la columna measure designa cada columna presupuestaria: {{names}}.",
+      "fileName": "{{key}} para {{column}}"
+    },
+    "budgetAdminOnly": "Solo los administradores de presupuesto pueden cambiar esta página.",
+    "budgetColumnsSettings": {
+      "title": "Columnas presupuestarias",
+      "subtitle": "Dé nombre a las columnas de su presupuesto, elija cuáles ve todo el mundo y de cuál parten los informes y las listas.",
+      "loadError": "No se pudo cargar la configuración de las columnas.",
+      "column": "Columna",
+      "name": "Nombre",
+      "shown": "Visible",
+      "follows": "Sigue «Aplicar a todas las columnas»",
+      "default": "Por defecto",
+      "nameOf": "Nombre de la columna {{position}}",
+      "shownOf": "Mostrar {{column}}",
+      "followsOf": "{{column}} sigue «Aplicar a todas las columnas»",
+      "defaultOf": "Hacer de {{column}} la columna por defecto",
+      "inFiles": "En los archivos: {{name}}",
+      "nameHint": "Deje un nombre vacío para usar el nombre estándar.",
+      "helpHidden": "Las columnas ocultas conservan sus importes y siguen aceptando importaciones y congelaciones.",
+      "helpDefault": "La columna por defecto está preseleccionada en los informes y ordena las listas y el panel. Congelarla fija los tipos de cambio del año.",
+      "helpFollows": "Las columnas que siguen «Aplicar a todas las columnas» toman el mismo periodo cuando un reparto se aplica a todas las columnas.",
+      "errors": {
+        "allHidden": "Al menos una columna debe seguir visible.",
+        "defaultHidden": "La columna por defecto debe estar visible: elija antes otra columna por defecto.",
+        "duplicate": "Dos columnas no pueden llamarse ambas «{{name}}».",
+        "tooLong": "Un nombre de columna puede tener como máximo {{max}} caracteres.",
+        "saveFailed": "No se pudieron guardar las columnas presupuestarias.",
+        "controlCharacters": "Un nombre de columna no puede contener caracteres de control ni invisibles."
+      }
     },
     "results": {
       "skipped_one": "{{count}} partida omitida.",
@@ -924,8 +946,8 @@
       "title": "Top partidas",
       "subtitle": "Mayores partidas {{type}} por año seleccionado ({{metric}})",
       "topTotal": "Total top {{count}}",
-      "totalMetric": "Total {{metric}}",
-      "ofFilteredMetric": "{{pct}} % del {{metric}} filtrado",
+      "totalMetric": "{{metric}}, total",
+      "ofFilteredMetric": "{{pct}} % del total filtrado",
       "shareSubtitle": "Participación en el total anual ({{metric}})",
       "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}"
     },
@@ -978,8 +1000,8 @@
     "budgetColumnsCompare": {
       "title": "Comparación de columnas presupuestarias",
       "subtitle": "Comparar hasta diez columnas presupuestarias para OPEX o CAPEX",
-      "yearGroupingSubtitle": "{{type}} — Agrupación por año",
-      "selectionsSubtitle": "{{type}} — {{count}} selección(es)",
+      "yearGroupingSubtitle": "{{type}}: agrupación por año",
+      "selectionsSubtitle": "{{type}}: {{count}} selección(es)",
       "addSelection": "Agregar"
     },
     "consolidation": {

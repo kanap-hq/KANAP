@@ -5,11 +5,11 @@ import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import { BudgetSummaryRow, itemName, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
-import { getMetricLabels, MetricKey } from './reportMetrics';
+import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
+import { escapeTooltipText } from './tooltipText';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
-
-const METRIC_SELECTION_ORDER: MetricKey[] = ['budget', 'revision', 'follow_up', 'landing'];
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -20,16 +20,16 @@ function formatNumber(v: any) {
 
 export default function TopOpexReport() {
   const { t } = useTranslation(["ops"]);
-  const metricLabels = useMemo(() => getMetricLabels(t), [t]);
+  const budgetColumns = useBudgetColumns();
   const now = new Date();
   const Y = now.getFullYear();
   const [year, setYear] = useState<number>(Y);
-  const [metric, setMetric] = useState<MetricKey>('budget');
+  const [metric, setMetric] = useReportMetric(budgetColumns);
   const [topCount, setTopCount] = useState<number>(10);
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const [excludedAccounts, setExcludedAccounts] = useState<string[]>([]);
   const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
-  const metricLabel = metricLabels[metric];
+  const metricLabel = budgetColumns.label(metric);
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
 
@@ -162,7 +162,7 @@ export default function TopOpexReport() {
                 const value = Number(datum[angleKey] || 0);
                 const pct = totalMetric > 0 ? (value / totalMetric) * 100 : 0;
                 return {
-                  title: datum.name,
+                  title: escapeTooltipText(datum.name),
                   data: [
                     { label: metricLabel, value: formatNumber(value) },
                     { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -202,7 +202,7 @@ export default function TopOpexReport() {
               const value = Number(datum.value || 0);
               const pct = totalMetric > 0 ? (value / totalMetric) * 100 : 0;
               return {
-                title: datum.name,
+                title: escapeTooltipText(datum.name),
                 data: [
                   { label: metricLabel, value: formatNumber(value) },
                   { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
@@ -246,8 +246,8 @@ export default function TopOpexReport() {
             onChange={(e) => setMetric(e.target.value as MetricKey)}
             sx={{ minWidth: 180 }}
           >
-            {METRIC_SELECTION_ORDER.map((key) => (
-              <MenuItem key={key} value={key}>{metricLabels[key]}</MenuItem>
+            {budgetColumns.shown.map((column) => (
+              <MenuItem key={column.key} value={column.key}>{column.label}</MenuItem>
             ))}
           </TextField>
           <TextField
@@ -370,7 +370,7 @@ export default function TopOpexReport() {
         </Box>
       )}
       onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`top${processed.length}-${scope}-${year}-${metric}-${chartType}`)}
+      onExportChartPng={() => chartRef.current?.download(`top${processed.length}-${scope}-${year}-${metricFileName(budgetColumns, metric)}-${chartType}`)}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>
@@ -390,11 +390,11 @@ export default function TopOpexReport() {
               <Typography variant="body2" color="text.secondary">{t('reports.topOpex.topTotal', { count: processed.length })}</Typography>
               <Typography variant="subtitle2">{formatNumber(topSelectionTotal)}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {selectionSharePct == null ? '—' : t('reports.topOpex.ofFilteredMetric', { pct: selectionSharePct, metric: metricLabel.toLowerCase() })}
+                {selectionSharePct == null ? '—' : t('reports.topOpex.ofFilteredMetric', { pct: selectionSharePct })}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="body2" color="text.secondary">{t('reports.topOpex.totalMetric', { metric: metricLabel.toLowerCase() })}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('reports.topOpex.totalMetric', { metric: metricLabel })}</Typography>
               <Typography variant="subtitle2">{formatNumber(totalMetric)}</Typography>
             </Box>
           </Box>

@@ -6,7 +6,8 @@ import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import { useOpexSummaryAll, pickYearSlot } from './useOpexSummary';
 import { useTranslation } from 'react-i18next';
-import { getMetricLabels } from './reportMetrics';
+import { metricFileName, useReportMetrics } from './reportMetrics';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -24,11 +25,15 @@ export default function ComparisonReport() {
 
   const [startYear, setStartYear] = useState<number>(Y - 1);
   const [endYear, setEndYear] = useState<number>(Y + 1);
-  const [metrics, setMetrics] = useState<Array<'budget' | 'follow_up' | 'landing' | 'revision'>>(['budget', 'landing']);
+  const budgetColumns = useBudgetColumns();
+  const [metrics, setMetrics] = useReportMetrics(budgetColumns);
 
   // Keep range valid and within allowed set
   const years = useMemo(() => allowedYears.filter((yr) => yr >= startYear && yr <= endYear), [allowedYears, startYear, endYear]);
-  const metricLabels: Record<string, string> = useMemo(() => getMetricLabels(t), [t]);
+  const metricLabels = useMemo(
+    () => Object.fromEntries(budgetColumns.all.map((column) => [column.key, column.label])) as Record<string, string>,
+    [budgetColumns],
+  );
 
   const totalsByMetricAndYear = useMemo(() => {
     const acc: Record<string, Record<number, number>> = {};
@@ -121,18 +126,18 @@ export default function ComparisonReport() {
             onChange={(e) => {
               const value = e.target.value as unknown as string[];
               const arr = Array.isArray(value) ? value : [value];
-              if (arr.length === 0) setMetrics(['budget']); else setMetrics(arr as any);
+              setMetrics(arr);
             }}
             sx={{ minWidth: 240 }}
           >
-            {(['budget', 'follow_up', 'landing', 'revision'] as const).map((m) => (
-              <MenuItem key={m} value={m}>{metricLabels[m]}</MenuItem>
+            {budgetColumns.shown.map((column) => (
+              <MenuItem key={column.key} value={column.key}>{column.label}</MenuItem>
             ))}
           </TextField>
         </>
       )}
       onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
-      onExportChartPng={() => chartRef.current?.download(`comparison-${years[0]}-${years[years.length - 1]}-${metrics.join('_')}`)}
+      onExportChartPng={() => chartRef.current?.download(`comparison-${years[0]}-${years[years.length - 1]}-${metrics.map((m) => metricFileName(budgetColumns, m)).join('_')}`)}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>
