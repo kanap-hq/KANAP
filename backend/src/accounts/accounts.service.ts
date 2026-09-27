@@ -90,7 +90,8 @@ export class AccountsService {
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
     const lifecycleStatus = effectiveStatus ?? StatusState.ENABLED;
-    if (!includeDisabled) {
+    // "All" lifts only the default scope: an explicit status (query or status column filter) still applies.
+    if (!includeDisabled || effectiveStatus) {
       if (lifecycleStatus === StatusState.DISABLED) {
         where.disabled_at = Raw((alias) => `${alias} IS NOT NULL AND ${alias} <= NOW()`);
       } else {
@@ -233,7 +234,8 @@ export class AccountsService {
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
     const lifecycleStatus = effectiveStatus ?? StatusState.ENABLED;
-    if (!includeDisabled) {
+    // "All" lifts only the default scope: an explicit status (query or status column filter) still applies.
+    if (!includeDisabled || effectiveStatus) {
       if (lifecycleStatus === StatusState.DISABLED) {
         where.disabled_at = Raw((alias) => `${alias} IS NOT NULL AND ${alias} <= NOW()`);
       } else {

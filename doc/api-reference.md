@@ -729,6 +729,11 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
 - Contracts
   - GET `/capex-items/:id/contracts` → `{ items: [{ id, name }] }`
   - POST `/capex-items/:id/contracts/bulk-replace` → `{ contract_ids: uuid[] }`
+- Applications (same shape as `/spend-items/:id/applications`; `:id` is a UUID or a `CPX-n` reference)
+  - GET `/capex-items/:id/applications` (`capex` reader) → `{ items: [{ id, name }] }` sorted by name
+  - POST `/capex-items/:id/applications/bulk-replace` (`capex` member) with `{ application_ids: uuid[] }` → replaces the whole set, returns the new list
+    - `400` "One or more applications not found" when an id is not an application of the tenant
+    - One audit row on `application_capex_items` when the set changes (`record_id` = the CAPEX item, before/after = sorted application ids); the OPEX route writes the same on `application_spend_items`
 - Relevant Websites (Links)
   - GET `/capex-items/:id/links`
   - POST `/capex-items/:id/links` → `{ description?: string, url: string }`

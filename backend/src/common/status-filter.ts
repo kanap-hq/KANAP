@@ -51,11 +51,12 @@ export function buildStatusWhereFragment(opts: StatusFilterOptions): StatusWhere
   const disabledColumn = `${opts.alias}.${opts.disabledAtColumn ?? DEFAULT_DISABLED_AT_COLUMN}`;
   const paramBase = buildParamBase(opts.alias);
 
-  if (opts.includeDisabled) {
+  const explicit = opts.explicitStatus ?? null;
+  // "All" lifts only the default scope: an explicit status (query or status column filter) still applies.
+  if (opts.includeDisabled && !explicit) {
     return null;
   }
 
-  const explicit = opts.explicitStatus ?? null;
   const periodStart = opts.period ? coerceDate(opts.period.start) : null;
   const periodEnd = opts.period ? coerceDate(opts.period.end) : null;
   const asOf = coerceDate(opts.asOf ?? periodEnd) ?? new Date();

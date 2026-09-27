@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { EntityManager, In, Repository } from 'typeorm';
+import { EntityManager, In, IsNull, Repository } from 'typeorm';
 import { SpendItem } from './spend-item.entity';
 import { SpendVersion } from './spend-version.entity';
 import { SpendAmount } from './spend-amount.entity';
@@ -22,6 +22,7 @@ import { writeItemCsvTotals } from './round-inputs.util';
 import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
 import { SpendItemUpsertDto } from './dto/spend-item.dto';
 import { ItemNumberService } from '../common/item-number.service';
+import { csvDateError, parseCsvDate } from './csv-date';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
@@ -217,20 +218,58 @@ export class SpendItemsCsvService {
     });
     if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors, allowedCurrencies: Array.from(allowedSet) };
 
-    const supplierCache = new Map<string, Supplier | null>();
-    const findSupplier = async (name: string): Promise<Supplier | null> => {
-      const key = name.toLowerCase();
-      if (supplierCache.has(key)) return supplierCache.get(key) ?? null;
-      const s = await mg.getRepository(Supplier).findOne({ where: { name } });
-      supplierCache.set(key, s ?? null);
-      return s ?? null;
+    // A supplier name matches on the trimmed name; names are unique only case-sensitively,
+    // so the exact name wins and a case-insensitive match is used only when there is none
+    // (several of those is ambiguous).
+    const supplierCache = new Map<string, string[]>();
+    const findSupplierIds = async (name: string): Promise<string[]> => {
+      const cell = name.trim();
+      const cached = supplierCache.get(cell);
+      if (cached) return cached;
+      const found: Array<{ id: string; name: string }> = await mg.query(
+        `SELECT id, TRIM(name) AS name FROM suppliers WHERE tenant_id = $1 AND LOWER(TRIM(name)) = LOWER($2) ORDER BY id`,
+        [tenantId, cell],
+      );
+      const exact = found.filter((s) => s.name === cell);
+      const ids = (exact.length > 0 ? exact : found).map((s) => s.id);
+      supplierCache.set(cell, ids);
+      return ids;
     };
-    const accountCache = new Map<string, Account | null>();
-    const findAccount = async (accountNumber: string): Promise<Account | null> => {
-      if (accountCache.has(accountNumber)) return accountCache.get(accountNumber) ?? null;
-      const a = await mg.getRepository(Account).findOne({ where: { account_number: accountNumber } });
-      accountCache.set(accountNumber, a ?? null);
-      return a ?? null;
+    // An account number resolves within the paying company's chart of accounts;
+    // a company without a chart uses the tenant's default chart, as the account picker does.
+    let defaultChartId: string | null | undefined;
+    const companyChartId = async (company: Company): Promise<string | null> => {
+      if (company.coa_id) return company.coa_id;
+      if (defaultChartId === undefined) {
+        const [chart] = await mg.query(
+          `SELECT id FROM chart_of_accounts WHERE tenant_id = $1 AND is_global_default = true LIMIT 1`,
+          [tenantId],
+        );
+        defaultChartId = (chart?.id as string | undefined) ?? null;
+      }
+      return defaultChartId;
+    };
+    const accountCache = new Map<string, string | null>();
+    const findAccountId = async (company: Company, accountNumber: string): Promise<string | null> => {
+      // The column is an integer: a number beyond its range names no account.
+      if (Number(accountNumber) > 2147483647) return null;
+      const chartId = await companyChartId(company);
+      const key = `${chartId ?? ''}|${accountNumber}`;
+      if (accountCache.has(key)) return accountCache.get(key) ?? null;
+      const [account] = await mg.query(
+        `SELECT id FROM accounts
+         WHERE tenant_id = $1 AND account_number = $2::integer AND coa_id IS NOT DISTINCT FROM $3::uuid`,
+        [tenantId, accountNumber, chartId],
+      );
+      const id = (account?.id as string | undefined) ?? null;
+      accountCache.set(key, id);
+      return id;
+    };
+    /** A YYYY-MM-DD cell (see `csv-date.ts`): null when blank; any other value is the row's error. */
+    const readDate = (raw: unknown, field: string, line: number): string | null => {
+      const value = parseCsvDate(raw);
+      if (value === undefined) errors.push({ row: line, message: csvDateError(field) });
+      return value ?? null;
     };
     const categoryRepo = mg.getRepository(AnalyticsCategory);
     const categoryCache = new Map<string, AnalyticsCategory | null>();
@@ -284,11 +323,11 @@ export class SpendItemsCsvService {
     const normalized: Array<{
       product_name: string;
       description: string | null;
-      supplier_name: string | null;
-      company_name: string | null;
-      account_number: string | null;
+      supplier_id: string | null;
+      paying_company_id: string | null;
+      account_id: string | null;
       currency: string;
-      effective_start: string;
+      effective_start: string | null;
       status: StatusState;
       disabled_at: string | null;
       notes: string | null;
@@ -316,6 +355,7 @@ export class SpendItemsCsvService {
       return Number(formatCents(cents));
     };
 
+    const rowByLine = new Map<string, number>();
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       const line = i + 2;
@@ -323,8 +363,23 @@ export class SpendItemsCsvService {
       const supplier_name = ((r['supplier_name'] ?? '').toString().trim()) || null;
       const company_name = ((r['company_name'] ?? '').toString().trim()) || null;
       if (!company_name) errors.push({ row: line, message: 'company_name is required' });
-      if (company_name && !companiesByName.has(company_name.toLowerCase())) {
+      const company = company_name ? companiesByName.get(company_name.toLowerCase()) ?? null : null;
+      if (company_name && !company) {
         errors.push({ row: line, message: `Company '${company_name}' not found` });
+      }
+      let supplier_id: string | null = null;
+      if (supplier_name) {
+        const supplierIds = await findSupplierIds(supplier_name);
+        if (supplierIds.length === 0) errors.push({ row: line, message: `Supplier '${supplier_name}' not found` });
+        else if (supplierIds.length > 1) errors.push({ row: line, message: `Supplier '${supplier_name}' matches more than one supplier` });
+        else supplier_id = supplierIds[0];
+      }
+      // A line is its product name and supplier (the existing-line match): a second row for it is refused, never dropped.
+      if (product_name && (!supplier_name || supplier_id)) {
+        const lineKey = `${product_name}|${supplier_id ?? ''}`;
+        const firstRow = rowByLine.get(lineKey);
+        if (firstRow !== undefined) errors.push({ row: line, message: `Same line as row ${firstRow}` });
+        else rowByLine.set(lineKey, line);
       }
       const accountNumStr = (r['account_number'] ?? '').toString().trim();
       const accountNumberSanitized = accountNumStr.replace(/\s+/g, '');
@@ -336,8 +391,16 @@ export class SpendItemsCsvService {
       const normalizedAccountNumber = accountNumberSanitized !== '' && accountIsNumeric
         ? String(Number(accountNumberSanitized))
         : null;
+      let account_id: string | null = null;
+      if (company && normalizedAccountNumber != null) {
+        account_id = await findAccountId(company, normalizedAccountNumber);
+        if (!account_id) {
+          errors.push({ row: line, message: `Account ${normalizedAccountNumber} not found in ${company.name}'s chart of accounts` });
+        }
+      }
       const currency = (r['currency'] ?? '').toString().trim().toUpperCase();
-      const effective_start = ((r['effective_start'] ?? '').toString().trim()) || defaultStart;
+      // Blank: 1 January of this year for a new line, the stored date on an update.
+      const effective_start = readDate(r['effective_start'], 'effective_start', line);
       const statusRaw = (r['status'] ?? 'enabled').toString().trim().toLowerCase();
       if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
@@ -351,13 +414,9 @@ export class SpendItemsCsvService {
         errors.push({ row: line, message: `Invalid disabled_at '${disabledAtRaw}'. Use ISO date format.` });
       }
       // Files from before the single end date carry effective_end: it fills an empty end of validity.
-      const legacyEndRaw = (r['effective_end'] ?? '').toString().trim();
-      if (!disabledAtRaw && legacyEndRaw) {
-        try {
-          disabled_at = parseEndOfValidityInput(legacyEndRaw)?.toISOString() ?? null;
-        } catch {
-          errors.push({ row: line, message: `Invalid effective_end '${legacyEndRaw}'. Use YYYY-MM-DD.` });
-        }
+      if (!disabledAtRaw) {
+        const legacyEnd = readDate(r['effective_end'], 'effective_end', line);
+        if (legacyEnd) disabled_at = parseEndOfValidityInput(legacyEnd)?.toISOString() ?? null;
       }
       const ownerItEmailRaw = (r['owner_it_email'] ?? '').toString().trim();
       const ownerBizEmailRaw = (r['owner_business_email'] ?? '').toString().trim();
@@ -402,9 +461,9 @@ export class SpendItemsCsvService {
       normalized.push({
         product_name,
         description: ((r['description'] ?? '').toString().trim()) || null,
-        supplier_name,
-        company_name,
-        account_number: normalizedAccountNumber,
+        supplier_id,
+        paying_company_id: company ? company.id : null,
+        account_id,
         currency,
         effective_start,
         status,
@@ -418,22 +477,19 @@ export class SpendItemsCsvService {
       });
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
+    // Pass 1 refused any repeated line, so every row is its own line.
+    const unique = normalized;
 
-    const uniqueMap = new Map<string, typeof normalized[number]>();
-    for (const item of normalized) {
-      const key = `${item.product_name.toLowerCase()}|${(item.supplier_name || '').toLowerCase()}`;
-      if (!uniqueMap.has(key)) uniqueMap.set(key, item);
-    }
-    const unique = Array.from(uniqueMap.values());
-
+    // The existing line of each row, resolved once for the dry run and the load: same
+    // product name and same supplier, a blank supplier matching only a line without one
+    // (a null in a TypeORM `where` is dropped, so it would match any supplier).
+    const existingByItem = new Map<typeof normalized[number], SpendItem | null>();
     let inserted = 0; let updated = 0;
     for (const item of unique) {
-      let supplierId: string | null = null;
-      if (item.supplier_name) {
-        const s = await findSupplier(item.supplier_name);
-        supplierId = s ? s.id : null;
-      }
-      const exists = await mg.getRepository(SpendItem).findOne({ where: { product_name: item.product_name, supplier_id: supplierId as any } as any });
+      const exists = await mg.getRepository(SpendItem).findOne({
+        where: { tenant_id: tenantId ?? undefined, product_name: item.product_name, supplier_id: item.supplier_id ?? IsNull() },
+      });
+      existingByItem.set(item, exists);
       // A new line needs its currency; on an update a blank cell keeps the stored one.
       if (!exists && !item.currency) {
         errors.push({ row: item.line, message: 'currency is required' });
@@ -451,27 +507,16 @@ export class SpendItemsCsvService {
     let processed = 0;
     const checkedFreeze = new Set<string>();
     for (const item of unique) {
-      let supplierId: string | null = null;
-      if (item.supplier_name) {
-        const s = await findSupplier(item.supplier_name);
-        supplierId = s ? s.id : null;
-      }
-      const exists = await mg.getRepository(SpendItem).findOne({ where: { product_name: item.product_name, supplier_id: supplierId as any } as any });
-      const company = item.company_name ? companiesByName.get(item.company_name.toLowerCase()) : null;
-      let accountId: string | null = null;
-      if (item.account_number != null) {
-        const a = await findAccount(item.account_number);
-        accountId = a ? a.id : null;
-      }
+      const exists = existingByItem.get(item) ?? null;
       const analyticsCategory = await ensureCategory(item.analytics_category_name ?? null, true);
       const body = {
         product_name: item.product_name,
         description: item.description ?? null,
-        supplier_id: supplierId,
-        paying_company_id: company ? company.id : null,
-        account_id: accountId,
+        supplier_id: item.supplier_id,
+        paying_company_id: item.paying_company_id,
+        account_id: item.account_id,
         ...(item.currency ? { currency: item.currency } : {}),
-        effective_start: item.effective_start,
+        ...(item.effective_start ? { effective_start: item.effective_start } : exists ? {} : { effective_start: defaultStart }),
         status: item.status,
         disabled_at: item.disabled_at,
         analytics_category_id: analyticsCategory ? analyticsCategory.id : null,
@@ -573,6 +618,7 @@ export class SpendItemsCsvService {
     Object.assign(existing, rest);
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
+    existing.updated_at = new Date();
     const saved = await repo.save(existing);
     await this.audit.log({ table: 'spend_items', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager });
     return saved;

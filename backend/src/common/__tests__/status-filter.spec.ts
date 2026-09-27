@@ -89,8 +89,26 @@ async function testApplyStatusFilterSkipsWhenIncludingDisabled() {
   assert.equal(called, false);
 }
 
+async function testExplicitStatusAppliesWithIncludeDisabled() {
+  // "All" lifts only the default scope: a status ticked in the column filter still applies.
+  const disabled = buildStatusWhereFragment({ alias: 'c', explicitStatus: StatusState.DISABLED, includeDisabled: true });
+  assert.equal(disabled?.sql, '(c.disabled_at IS NOT NULL AND c.disabled_at <= :c_as_of)');
+  const enabled = buildStatusWhereFragment({ alias: 'c', explicitStatus: StatusState.ENABLED, includeDisabled: true });
+  assert.equal(enabled?.sql, '(c.disabled_at IS NULL OR c.disabled_at > :c_as_of)');
+  const withPeriod = buildStatusWhereFragment({
+    alias: 'c',
+    explicitStatus: StatusState.DISABLED,
+    includeDisabled: true,
+    period: { start: '2026-01-01', end: '2026-12-31T23:59:59.999Z' },
+  });
+  assert.equal(withPeriod?.sql, '(c.disabled_at IS NOT NULL AND c.disabled_at <= :c_as_of)');
+  assert.equal((withPeriod?.params.c_as_of as Date).toISOString(), '2026-12-31T23:59:59.999Z');
+  assert.equal(buildStatusWhereFragment({ alias: 'c', explicitStatus: null, includeDisabled: true }), null);
+}
+
 (async () => {
   await testExplicitStatusFragment();
+  await testExplicitStatusAppliesWithIncludeDisabled();
   await testDefaultActiveFragment();
   await testPeriodWindowFragment();
   await testPeriodStartBoundaryInclusive();

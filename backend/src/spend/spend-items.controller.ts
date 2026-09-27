@@ -183,7 +183,7 @@ export class SpendItemsController {
     @Body() body: { application_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], { manager: ctx.manager });
+    return this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, { manager: ctx.manager });
   }
 
   // Links (OPEX)
@@ -299,7 +299,7 @@ export class SpendItemsController {
     @Body() body: { contactId: string; role: SupplierContactRole },
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.contactsSvc.attachManual(id, body, { manager: ctx.manager });
+    return this.contactsSvc.attachManual(id, body, ctx.userId || null, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
@@ -310,7 +310,7 @@ export class SpendItemsController {
     @Param('linkId') linkId: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.contactsSvc.detach(linkId, { manager: ctx.manager });
+    return this.contactsSvc.detach(id, linkId, ctx.userId || null, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
@@ -320,7 +320,7 @@ export class SpendItemsController {
     @Param('id') id: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.contactsSvc.syncFromSupplierForItem(id, { manager: ctx.manager });
+    return this.contactsSvc.syncFromSupplierForItem(id, ctx.userId || null, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)

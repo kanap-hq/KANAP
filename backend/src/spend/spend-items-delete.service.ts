@@ -8,6 +8,16 @@ import { SpendAllocation } from './spend-allocation.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
+import { StorageService } from '../common/storage/storage.service';
+import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
+import {
+  bulkDeleteFailureReason,
+  currentTenantId,
+  deleteBlobs,
+  deleteItemDependents,
+  underItemSavepoint,
+  unreferencedPaths,
+} from './item-delete-cleanup';
 
 @Injectable()
 export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
@@ -19,58 +29,53 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
     @InjectRepository(SpendAmount) private readonly amounts: Repository<SpendAmount>,
     @InjectRepository(SpendAllocation) private readonly allocations: Repository<SpendAllocation>,
     audit: AuditService,
+    storage: StorageService,
+    private readonly timeAggregates: UserTimeAggregateService,
   ) {
-    super(repository, null, audit, {
+    super(repository, storage, audit, {
       entityName: 'SpendItem',
       auditTable: 'spend_items',
       cascadeRelations: [],
     });
   }
 
-  /**
-   * Delete a single item with CASCADE to all children
-   * Automatically deletes versions, amounts, allocations, and tasks
-   */
+  /** Deletes the item and everything that belongs to it, then its attachment files. */
   override async delete(itemId: string, opts?: DeleteOptions): Promise<void> {
     const manager = opts?.manager ?? this.repository.manager;
+    const tenantId = await currentTenantId(manager);
+    const paths = await this.deleteRows(itemId, tenantId, manager, opts?.userId ?? null, !!opts?.skipAudit);
+    await deleteBlobs(this.storage, paths, this.logger);
+  }
+
+  /** Deletes the item's rows; returns the attachment paths nothing references any more. */
+  private async deleteRows(itemId: string, tenantId: string, manager: EntityManager, userId: string | null, skipAudit: boolean) {
     const itemRepo = this.getRepo(manager);
     const versionRepo = manager.getRepository(SpendVersion);
     const amountRepo = manager.getRepository(SpendAmount);
     const allocationRepo = manager.getRepository(SpendAllocation);
 
-    const item = await itemRepo.findOne({ where: { id: itemId } as any });
+    const item = await itemRepo.findOne({ where: { id: itemId, tenant_id: tenantId } as any });
     if (!item) {
       throw new NotFoundException('Item not found');
     }
 
-    // Get versions for cascade deletion
-    const versions = await versionRepo.find({ where: { spend_item_id: itemId } });
+    const paths = await deleteItemDependents(manager, 'opex', tenantId, itemId, {
+      audit: this.audit,
+      timeAggregates: this.timeAggregates,
+      userId,
+    });
+
+    const versions = await versionRepo.find({ where: { tenant_id: tenantId, spend_item_id: itemId } });
     const versionIds = versions.map(v => v.id);
-
-    // CASCADE DELETE: Delete in reverse dependency order
-    // 1. Delete allocations (depends on versions)
     if (versionIds.length > 0) {
-      await allocationRepo.delete({ version_id: In(versionIds) });
+      await allocationRepo.delete({ tenant_id: tenantId, version_id: In(versionIds) });
+      await amountRepo.delete({ tenant_id: tenantId, version_id: In(versionIds) });
+      await versionRepo.delete({ tenant_id: tenantId, spend_item_id: itemId });
     }
 
-    // 2. Delete amounts (depends on versions)
-    if (versionIds.length > 0) {
-      await amountRepo.delete({ version_id: In(versionIds) });
-    }
+    await itemRepo.delete({ tenant_id: tenantId, id: itemId } as any);
 
-    // 3. Delete versions (depends on item)
-    if (versionIds.length > 0) {
-      await versionRepo.delete({ spend_item_id: itemId });
-    }
-
-    // 4. Delete tasks (depends on item) from unified table
-    await manager.query(`DELETE FROM tasks WHERE related_object_type = 'spend_item' AND related_object_id = $1`, [itemId]);
-
-    // 5. Finally delete the item itself
-    await itemRepo.delete({ id: itemId } as any);
-
-    // Audit log
-    if (!opts?.skipAudit) {
+    if (!skipAudit) {
       await this.audit.log(
         {
           table: 'spend_items',
@@ -78,31 +83,34 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
           action: 'delete',
           before: item,
           after: null,
-          userId: opts?.userId ?? null,
+          userId,
         },
         { manager }
       );
     }
+    return unreferencedPaths(manager, tenantId, paths);
   }
 
   /**
    * Bulk delete multiple items
-   * Returns both successful deletions and failures
+   * Each item runs under its own savepoint: a failing item is undone and
+   * reported, the others are deleted. Files go once an item's savepoint is
+   * released; only the storage calls run after it.
    */
   async bulkDelete(itemIds: string[], userId: string | null, opts?: { manager?: EntityManager }): Promise<BulkDeleteResult> {
     const manager = opts?.manager ?? this.repository.manager;
     const itemRepo = this.getRepo(manager);
     const result: BulkDeleteResult = { deleted: [], failed: [] };
+    const tenantId = await currentTenantId(manager);
 
-    for (const itemId of itemIds) {
+    for (const [index, itemId] of itemIds.entries()) {
+      let paths: string[];
       try {
-        await this.delete(itemId, { manager, userId });
-        result.deleted.push(itemId);
-      } catch (error: any) {
-        // Get product name for error reporting
+        paths = await underItemSavepoint(manager, index, () => this.deleteRows(itemId, tenantId, manager, userId, false));
+      } catch (error: unknown) {
         let name = 'Unknown';
         try {
-          const item = await itemRepo.findOne({ where: { id: itemId } as any });
+          const item = await itemRepo.findOne({ where: { id: itemId, tenant_id: tenantId } as any });
           if (item) name = item.product_name;
         } catch (err: any) {
           this.logger.warn(`Failed to fetch spend item name for error reporting: ${err?.message || 'Unknown error'}`);
@@ -111,9 +119,12 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
         result.failed.push({
           id: itemId,
           name,
-          reason: error.message || 'Unknown error',
+          reason: bulkDeleteFailureReason(error, this.logger, itemId),
         });
+        continue;
       }
+      result.deleted.push(itemId);
+      await deleteBlobs(this.storage, paths, this.logger);
     }
 
     return result;

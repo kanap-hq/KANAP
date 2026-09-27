@@ -51,9 +51,18 @@ async function withTenant(tag: string, fn: (runner: QueryRunner, tenantId: strin
       [tenantId, `newline-${tag}-${tenantId.slice(0, 8)}`, `New line test ${tag}`],
     );
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    // The OPEX line's account 6000 must exist in the company's chart of accounts.
+    const [chart] = await runner.query(
+      `INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, 'NEWLINE', 'New line test chart', 'FR') RETURNING id`,
+      [tenantId],
+    );
     await runner.query(
-      `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, $2, 'FR', 'Lyon')`,
-      [tenantId, COMPANY],
+      `INSERT INTO companies (tenant_id, name, country_iso, city, coa_id) VALUES ($1, $2, 'FR', 'Lyon', $3)`,
+      [tenantId, COMPANY, chart.id],
+    );
+    await runner.query(
+      `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES ($1, $2, 6000, 'New line test account')`,
+      [tenantId, chart.id],
     );
     await fn(runner, tenantId);
   } finally {

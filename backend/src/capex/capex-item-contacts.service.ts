@@ -88,11 +88,12 @@ export class CapexItemContactsService {
     return saved;
   }
 
-  async detach(linkId: string, userId?: string | null, opts?: { manager?: EntityManager }) {
+  /** Remove one contact link of the item; a link of another item is not found. */
+  async detach(itemId: string, linkId: string, userId?: string | null, opts?: { manager?: EntityManager }) {
     const repo = this.getLinkRepo(opts?.manager);
-    const existing = await repo.findOne({ where: { id: linkId } });
+    const existing = await repo.findOne({ where: { id: linkId, capex_item_id: itemId } });
     if (!existing) throw new NotFoundException('Link not found');
-    await repo.delete({ id: linkId });
+    await repo.delete({ id: linkId, capex_item_id: itemId });
     await this.audit.log(
       {
         table: 'capex_item_contacts',

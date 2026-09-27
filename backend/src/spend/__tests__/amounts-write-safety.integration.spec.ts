@@ -577,10 +577,19 @@ function csvLine(kind: Kind): Record<string, string> {
     : { description: 'Write safety line', ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium', currency: 'EUR', status: 'enabled', company_name: 'Csv test company' };
 }
 
+/** The company of the CSV line, with account 6000 in its chart of accounts (the OPEX line's). */
 async function seedCompany(runner: QueryRunner, tenantId: string) {
-  await runner.query(
-    `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Csv test company', 'FR', 'Lyon')`,
+  const [chart] = await runner.query(
+    `INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, 'CSV', 'Csv test chart', 'FR') RETURNING id`,
     [tenantId],
+  );
+  await runner.query(
+    `INSERT INTO companies (tenant_id, name, country_iso, city, coa_id) VALUES ($1, 'Csv test company', 'FR', 'Lyon', $2)`,
+    [tenantId, chart.id],
+  );
+  await runner.query(
+    `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES ($1, $2, 6000, 'Csv test account')`,
+    [tenantId, chart.id],
   );
 }
 
