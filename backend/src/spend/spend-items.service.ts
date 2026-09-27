@@ -27,6 +27,7 @@ import { randomUUID } from 'crypto';
 import { Application } from '../applications/application.entity';
 import { ApplicationSpendItemLink } from '../applications/application-spend-item.entity';
 import { SpendItemContactsService } from './spend-item-contacts.service';
+import { listItemApplications, replaceItemApplications } from './item-applications';
 import { PortfolioProjectOpex } from '../portfolio/portfolio-project-opex.entity';
 import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -214,38 +215,18 @@ export class SpendItemsService {
     return { success: true };
   }
 
+  /** Applications linked to the line; see `item-applications.ts`. */
   async listApplications(spendItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const spend = await this.get(spendItemId, { manager: mg });
-    const rows = await mg.query(
-      `SELECT l.application_id as id, a.name
-       FROM application_spend_items l
-       JOIN applications a ON a.id = l.application_id
-       WHERE l.spend_item_id = $1
-       ORDER BY a.name ASC`,
-      [spendItemId],
-    );
-    return { items: rows };
+    return listItemApplications(mg, 'opex', spend);
   }
 
-  async bulkReplaceApplications(spendItemId: string, applicationIds: string[], opts?: { manager?: EntityManager }) {
+  /** Replace the line's applications (audited when the set changes); see `item-applications.ts`. */
+  async bulkReplaceApplications(spendItemId: string, applicationIds: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const spend = await this.get(spendItemId, { manager: mg });
-    const cleanIds = Array.from(new Set((applicationIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
-    if (cleanIds.length) {
-      const apps = await mg.getRepository(Application).find({ where: { id: In(cleanIds) } as any });
-      if (apps.length !== cleanIds.length) throw new BadRequestException('One or more applications not found');
-      const invalid = apps.find((a) => (a as any).tenant_id !== (spend as any).tenant_id);
-      if (invalid) throw new BadRequestException('Application does not belong to tenant');
-    }
-    const repo = mg.getRepository(ApplicationSpendItemLink);
-    const existing = await repo.find({ where: { spend_item_id: spendItemId } as any });
-    if (existing.length) await repo.delete({ id: In(existing.map((x) => x.id)) as any });
-    if (cleanIds.length) {
-      const rows = cleanIds.map((appId) => repo.create({ tenant_id: (spend as any).tenant_id, application_id: appId, spend_item_id: spendItemId }));
-      await repo.save(rows);
-    }
-    return this.listApplications(spendItemId, { manager: mg });
+    return replaceItemApplications({ manager: mg, audit: this.audit }, 'opex', spend, applicationIds, userId ?? null);
   }
 
   async create(body: SpendItemUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
@@ -320,6 +301,8 @@ export class SpendItemsService {
     });
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
+    // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
+    existing.updated_at = new Date();
 
     // Detect supplier change for contact sync
     const oldSupplierId = before.supplier_id;
@@ -330,7 +313,7 @@ export class SpendItemsService {
 
     // Sync contacts from supplier if supplier changed
     if (oldSupplierId !== newSupplierId) {
-      await this.itemContacts.syncFromSupplier(id, newSupplierId, { manager: mg });
+      await this.itemContacts.syncFromSupplier(id, newSupplierId, userId ?? null, { manager: mg });
     }
 
     // Notify owners on status change

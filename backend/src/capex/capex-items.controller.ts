@@ -264,8 +264,8 @@ export class CapexItemsController {
     @Param('linkId') linkId: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.contactsSvc.detach(linkId, ctx.userId || null, { manager: ctx.manager });
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.contactsSvc.detach(id, linkId, ctx.userId || null, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
@@ -301,6 +301,30 @@ export class CapexItemsController {
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], { manager: ctx.manager });
+  }
+
+  // Applications
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'reader')
+  @Get(':id/applications')
+  async listApplications(
+    @Param('id') idOrRef: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.svc.listApplications(id, { manager: ctx.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'member')
+  @Post(':id/applications/bulk-replace')
+  async bulkReplaceApplications(
+    @Param('id') idOrRef: string,
+    @Body() body: { application_ids: string[] },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)

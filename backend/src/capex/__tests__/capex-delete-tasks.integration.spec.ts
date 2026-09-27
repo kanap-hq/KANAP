@@ -29,6 +29,7 @@ async function testDeleteRemovesItsTasks() {
     const audit = captureAudit();
     const svc = new CapexItemsDeleteService(
       runner.manager.getRepository(CapexItem), undefined as any, undefined as any, undefined as any, audit as any,
+      undefined as any, undefined as any,
     );
     await svc.delete(deleted, { manager: runner.manager, userId: null });
 

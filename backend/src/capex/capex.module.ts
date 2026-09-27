@@ -34,6 +34,7 @@ import { PortfolioProjectCapex } from '../portfolio/portfolio-project-capex.enti
 import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { CommonModule } from '../common/common.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 
 @Module({
   imports: [
@@ -49,7 +50,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [CapexItemsController, CapexVersionsController, CapexTasksController],
-  providers: [CapexItemsService, CapexItemsDeleteService, CapexVersionsService, CapexAmountsService, CapexAllocationsService, CapexAllocationCalculatorService, CapexItemContactsService],
+  providers: [CapexItemsService, CapexItemsDeleteService, CapexVersionsService, CapexAmountsService, CapexAllocationsService, CapexAllocationCalculatorService, CapexItemContactsService, UserTimeAggregateService],
   exports: [CapexItemsService, CapexVersionsService, CapexAmountsService, CapexAllocationsService],
 })
 export class CapexModule {}

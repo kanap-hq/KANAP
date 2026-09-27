@@ -55,6 +55,7 @@ import { CommonModule } from '../common/common.module';
 import { CapexVersion } from '../capex/capex-version.entity';
 import { BudgetRowsCsvService } from './budget-rows-csv.service';
 import { BudgetRowsController } from './budget-rows.controller';
+import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { BudgetRowsController } from './budget-rows.controller';
     ChargebackReportService,
     SpendItemContactsService,
     BudgetRowsCsvService,
+    UserTimeAggregateService,
   ],
   exports: [
     SpendItemsService,

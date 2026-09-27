@@ -34,6 +34,8 @@ import { CapexItemUpsertDto } from './dto/capex-item.dto';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
 import { CapexItemContactsService } from './capex-item-contacts.service';
+import { listItemApplications, replaceItemApplications } from '../spend/item-applications';
+import { csvDateError, parseCsvDate } from '../spend/csv-date';
 import { PortfolioProjectCapex } from '../portfolio/portfolio-project-capex.entity';
 import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { validateUploadedFile } from '../common/upload-validation';
@@ -395,6 +397,8 @@ export class CapexItemsService {
     });
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
+    // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
+    existing.updated_at = new Date();
     this.logger.log(`[update] id=${itemId} incoming company=${nextPayingCompanyId} account=${body.account_id ?? null}`);
     const saved = await repo.save(existing);
     if ('account_id' in body) {
@@ -643,17 +647,11 @@ export class CapexItemsService {
     const allCompanies = await mg.getRepository(Company).find();
     const companiesByName = new Map(allCompanies.map(c => [c.name.toLowerCase(), c.id]));
 
-    const normalizeDateField = <T extends string | null>(
-      raw: unknown,
-      { fallback, field, line }: { fallback: T; field: string; line: number },
-    ): T => {
-      const str = raw == null ? '' : raw.toString().trim();
-      if (str === '') return fallback;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str as T;
-      const parsed = new Date(str);
-      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10) as T;
-      errors.push({ row: line, message: `${field} must be a valid date in YYYY-MM-DD format` });
-      return fallback;
+    /** A YYYY-MM-DD cell (see `spend/csv-date.ts`): null when blank; any other value is the row's error. */
+    const readDate = (raw: unknown, field: string, line: number): string | null => {
+      const value = parseCsvDate(raw);
+      if (value === undefined) errors.push({ row: line, message: csvDateError(field) });
+      return value ?? null;
     };
     const userCache = new Map<string, User | null>();
     const findUserByEmail = async (email: string): Promise<User | null> => {
@@ -684,7 +682,7 @@ export class CapexItemsService {
     const normalized: Array<{
       line: number;
       item_number: number | null;
-      description: string; ppe_type: string; investment_type: string; priority: string; currency: string; effective_start: string; status: StatusState; disabled_at: Date | null; notes: string | null;
+      description: string; ppe_type: string; investment_type: string; priority: string; currency: string; effective_start: string | null; status: StatusState; disabled_at: Date | null; notes: string | null;
       paying_company_id: string | null;
       owner_it_id: string | null;
       owner_business_id: string | null;
@@ -692,6 +690,7 @@ export class CapexItemsService {
       totals: { [year: number]: { planned?: number; actual?: number; expected_landing?: number; committed?: number } };
     }> = [];
 
+    const rowByLine = new Map<string, number>();
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i]; const line = i + 2;
       const description = (r['description'] ?? '').toString().trim();
@@ -699,7 +698,8 @@ export class CapexItemsService {
       const investment_type = (r['investment_type'] ?? '').toString().trim().toLowerCase();
       const priority = (r['priority'] ?? '').toString().trim().toLowerCase();
       const currency = (r['currency'] ?? '').toString().trim().toUpperCase();
-      const effective_start = normalizeDateField(r['effective_start'], { fallback: `${Y}-01-01`, field: 'effective_start', line });
+      // Blank: 1 January of this year for a new line, the stored date on an update.
+      const effective_start = readDate(r['effective_start'], 'effective_start', line);
       const statusRaw = (r['status'] ?? 'enabled').toString().trim().toLowerCase();
       if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
@@ -714,7 +714,7 @@ export class CapexItemsService {
       }
       // Files from before the single end date carry effective_end: it fills an empty end of validity.
       if (!disabledAtRaw) {
-        const legacyEnd = normalizeDateField(r['effective_end'], { fallback: null, field: 'effective_end', line });
+        const legacyEnd = readDate(r['effective_end'], 'effective_end', line);
         if (legacyEnd) {
           try {
             disabled_at = parseEndOfValidityInput(legacyEnd);
@@ -734,6 +734,13 @@ export class CapexItemsService {
         } else {
           item_number = parsedNumber;
         }
+      }
+      // A line is its item number, else its description (the existing-line match): a second row for it is refused, never merged.
+      const lineKey = item_number != null ? `#${item_number}` : itemNumberRaw === '' && description ? `d:${description}` : null;
+      if (lineKey) {
+        const firstRow = rowByLine.get(lineKey);
+        if (firstRow !== undefined) errors.push({ row: line, message: `Same line as row ${firstRow}` });
+        else rowByLine.set(lineKey, line);
       }
       const ownerItEmail = (r['owner_it_email'] ?? '').toString().trim();
       const ownerBizEmail = (r['owner_business_email'] ?? '').toString().trim();
@@ -803,13 +810,8 @@ export class CapexItemsService {
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
 
-    // Deduplicate by item_number when provided, else by description (first wins)
-    const uniqueMap = new Map<string, typeof normalized[number]>();
-    for (const item of normalized) {
-      const key = item.item_number != null ? `#${item.item_number}` : item.description.toLowerCase();
-      if (!uniqueMap.has(key)) uniqueMap.set(key, item);
-    }
-    const unique = Array.from(uniqueMap.values());
+    // Pass 1 refused any repeated line, so every row is its own line.
+    const unique = normalized;
 
     // Existing items match by item_number when provided, else by description
     const findExisting = async (item: typeof normalized[number]): Promise<CapexItem | null> => {
@@ -866,7 +868,7 @@ export class CapexItemsService {
         investment_type: item.investment_type as any,
         priority: item.priority as any,
         ...(item.currency ? { currency: item.currency } : {}),
-        effective_start: item.effective_start,
+        ...(item.effective_start ? { effective_start: item.effective_start } : exists ? {} : { effective_start: `${Y}-01-01` }),
         status: item.status,
         disabled_at: item.disabled_at,
         notes: item.notes ?? null,
@@ -1043,5 +1045,20 @@ export class CapexItemsService {
       await repo.save(rows);
     }
     return this.listProjects(itemId, { manager: mg });
+  }
+
+  // Applications
+  /** Applications linked to the line; see `spend/item-applications.ts`. */
+  async listApplications(capexItemId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const capex = await this.get(capexItemId, { manager: mg });
+    return listItemApplications(mg, 'capex', capex);
+  }
+
+  /** Replace the line's applications (audited when the set changes); see `spend/item-applications.ts`. */
+  async bulkReplaceApplications(capexItemId: string, applicationIds: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const capex = await this.get(capexItemId, { manager: mg });
+    return replaceItemApplications({ manager: mg, audit: this.audit }, 'capex', capex, applicationIds, userId ?? null);
   }
 }
