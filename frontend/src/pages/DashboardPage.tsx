@@ -10,6 +10,7 @@ import api from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/useLocale';
 import DashboardTile from './workspace/tiles/DashboardTile';
+import { AMOUNT_COLUMNS, AmountColumnKey, slotAmount, totalsToVersions, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
 
@@ -248,47 +249,26 @@ export default function DashboardPage() {
     return items;
   }, [nextContract]);
 
-  // Budget snapshot table helpers
-  const buildSnapshot = (totals: Record<string, number> | undefined) => {
-    const safe = totals || {} as Record<string, number>;
-    const rows: Array<{ label: string; values: Record<string, number> }> = [
-      { label: `Y-1 (${Y - 1})`, values: {
-        budget: Number(safe.yMinus1Budget || 0),
-        revision: Number((safe as any).yMinus1Revision || 0),
-        follow_up: Number((safe as any).yMinus1FollowUp || 0),
-        landing: Number(safe.yMinus1Landing || 0),
-      } },
-      { label: `Y (${Y})`, values: {
-        budget: Number(safe.yBudget || 0),
-        revision: Number(safe.yRevision || 0),
-        follow_up: Number(safe.yFollowUp || 0),
-        landing: Number(safe.yLanding || 0),
-      } },
-      { label: `Y+1 (${Y + 1})`, values: {
-        budget: Number(safe.yPlus1Budget || 0),
-        revision: Number(safe.yPlus1Revision || 0),
-        follow_up: Number((safe as any).yPlus1FollowUp || 0),
-        landing: Number((safe as any).yPlus1Landing || 0),
-      } },
-    ];
-    const columns = ['budget', 'revision', 'follow_up', 'landing'] as const;
-    const visibleCols = columns.filter((col) => rows.some((r) => Number(r.values[col] || 0) !== 0));
-    return { rows, columns: visibleCols } as { rows: typeof rows; columns: typeof visibleCols };
+  // Budget snapshot: one row per year, every column read from the totals key of the same name.
+  const snapshotSlots: readonly YearSlot[] = ['yMinus1', 'y', 'yPlus1'];
+  const buildSnapshot = (totals: Record<string, unknown> | undefined) => {
+    const versions = totalsToVersions(totals, snapshotSlots);
+    const rows = snapshotSlots.map((slot) => ({
+      slot,
+      label: yearSlotLabel(t, slot, Y),
+      values: Object.fromEntries(AMOUNT_COLUMNS.map((c) => [c.key, slotAmount(versions[slot], c.key)])) as Record<AmountColumnKey, number>,
+    }));
+    const columns = AMOUNT_COLUMNS.filter((c) => rows.some((r) => r.values[c.key] !== 0)).map((c) => c.key);
+    return { rows, columns };
   };
 
   const opexSnapshot = buildSnapshot(opexTotals);
   const capexSnapshot = buildSnapshot(capexTotals);
-  const colOrder = ['budget', 'revision', 'follow_up', 'landing'] as const;
   // Same labels as the budget tab of OPEX and CAPEX items.
-  const snapshotColumnLabelKeys: Record<(typeof colOrder)[number], string> = {
-    budget: 'ops:operations.budgetColumns.budget',
-    revision: 'ops:operations.budgetColumns.revision',
-    follow_up: 'ops:operations.budgetColumns.followUp',
-    landing: 'ops:operations.budgetColumns.landing',
-  };
-  const unionCols = colOrder.filter((c) => opexSnapshot.columns.includes(c) || capexSnapshot.columns.includes(c));
+  const snapshotColumnLabelKeys = Object.fromEntries(AMOUNT_COLUMNS.map((c) => [c.key, c.labelKey])) as Record<AmountColumnKey, string>;
+  const unionCols = AMOUNT_COLUMNS.map((c) => c.key).filter((c) => opexSnapshot.columns.includes(c) || capexSnapshot.columns.includes(c));
 
-  const SnapshotTable = ({ rows, columns }: { rows: Array<{ label: string; values: Record<string, number> }>; columns: ReadonlyArray<'budget' | 'revision' | 'follow_up' | 'landing'> }) => (
+  const SnapshotTable = ({ rows, columns }: { rows: Array<{ slot: YearSlot; label: string; values: Record<AmountColumnKey, number> }>; columns: ReadonlyArray<AmountColumnKey> }) => (
       <TableContainer>
         <Table size="small" sx={{ '& th, & td': { py: 0.75 } }}>
           <TableHead>
@@ -303,10 +283,10 @@ export default function DashboardPage() {
           </TableHead>
           <TableBody>
             {rows.map((r) => (
-              <TableRow key={`r-${r.label}`}>
+              <TableRow key={r.slot}>
                 <TableCell align="left" sx={{ fontWeight: 500 }}>{r.label}</TableCell>
                 {columns.map((c) => (
-                  <TableCell key={`c-${r.label}-${c}`} align="center" sx={{ minWidth: 76 }}>{formatThousandsK(r.values[c])}</TableCell>
+                  <TableCell key={`${r.slot}-${c}`} align="center" sx={{ minWidth: 76 }}>{formatThousandsK(r.values[c])}</TableCell>
                 ))}
               </TableRow>
             ))}

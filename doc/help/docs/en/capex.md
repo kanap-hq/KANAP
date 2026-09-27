@@ -67,15 +67,19 @@ The CAPEX list (at **Budget Management > CAPEX**) is your main view for browsing
 
 | Column | What it shows |
 |---|---|
+| **Ref** | Item reference, for example CPX-12 |
 | **Description** | Name of the investment |
-| **Company** | Paying company |
-| **PP&E Type** | Hardware or Software |
-| **Investment Type** | Purpose of the investment |
+| **Supplier** | The supplier name |
+| **Paying company** | Which company pays for this item |
+| **Contract** | The latest linked contract name |
+| **Account** | The GL account number and name |
+| **PP&E type** | Hardware or Software |
+| **Investment type** | Purpose of the investment |
 | **Priority** | Business priority level |
-| **Y Allocation** | Current-year allocation method label |
-| **Y Budget** | Current-year planned capital budget (reporting currency) |
-| **Y expected landing** | Current-year final actual capital expenditure (reporting currency) |
-| **Y+1 Budget** | Next-year planned capital budget (reporting currency) |
+| **Allocation** | Current-year allocation method label |
+| **Budget Y** | Current-year planned capital budget (reporting currency) |
+| **Expected landing Y** | Current-year expected landing (reporting currency) |
+| **Task** | Title of the most recent task linked to this item |
 
 ### Additional columns
 
@@ -83,42 +87,48 @@ These columns are hidden by default. Show them from the column chooser (hamburge
 
 | Column | What it shows |
 |---|---|
-| **Y+1 Allocation** | Next-year allocation method label |
-| **Y-1 expected landing** | Prior-year final actual capital expenditure |
+| **Amount columns** | Every budget column (Budget, Revision, Forecast, Actuals and Expected landing) for Y-1, Y, Y+1 and Y+2. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Amounts are in the reporting currency |
 | **Currency** | Item-level currency code |
-| **Start** | Effective start date |
+| **Effective start** | Start date |
 | **End of validity** | Date the item stops (blank means no end) |
+| **IT owner** / **Business owner** | Responsible users |
+| **Analytics** | Analytics category name |
+| **Project** | Names of the projects linked on the Relations tab |
 | **Notes** | Free-form notes |
-| **Task** | Title of the most recent task linked to this item |
 | **Enabled** | Status (enabled or disabled) |
+| **Created** / **Updated** | Timestamps |
 
 ### Quick search
 
-The search box at the top searches across description, notes, PP&E type, investment type, priority, currency, and status. Results update in real time as you type.
+The search box at the top searches the reference, description, supplier, paying company, account, contract, project names, allocation, owners, analytics category, PP&E type, investment type, priority, notes, currency and status. Results update in real time as you type.
 
 ### Column filters
 
-Each filterable column header has a filter icon. **Company**, **PP&E Type**, **Investment Type**, **Priority**, and **Currency** use checkbox set filters with **All**, **None**, and a clear button. Multiple filters combine with AND logic.
+Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner** and **Analytics** use checkbox set filters with **All**, **None**, and a clear button. Multiple filters combine with AND logic.
+
+Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts.
+
+**Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank.
+
+Text columns use text filters. On **Ref**, type the number or the full reference, for example `12` or `CPX-12`.
 
 ### Sorting
 
-Click a column header to sort ascending or descending. The list remembers your last sort when you return.
+Click a column header to sort ascending or descending. Every column sorts, including every amount column. The default sort is **Budget Y**, highest first. The list remembers your last sort when you return.
 
 ### Totals row
 
-The pinned row at the bottom shows totals for all budget columns. Totals respect your current filters and search. All amounts are converted to your reporting currency, shown in the page title (e.g., "CAPEX (EUR)").
+The pinned row at the bottom shows the total of every amount column. Totals respect your current filters and search. All amounts are converted to your reporting currency, shown in the page title.
 
 ### Deep linking
 
 Click any cell in a row to open the workspace on the tab most relevant to that column:
 
-- **Description**, **Company**, **PP&E Type**, **Investment Type**, **Priority**: Opens **Overview**
-- **Y Budget**, **Y expected landing**: Opens **Budget** tab for the current year
-- **Y-1 expected landing**: Opens **Budget** tab for the prior year
-- **Y+1 Budget**: Opens **Budget** tab for next year
-- **Y Allocation**: Opens **Allocations** tab for the current year
-- **Y+1 Allocation**: Opens **Allocations** tab for next year
+- **Description**, **Supplier**, **Paying company**, **PP&E type**, **Investment type**, **Priority** and the other general columns: Opens **Overview**
+- **Amount columns** (Budget Y, Expected landing Y, Revision Y+1, etc.): Opens the **Budget** tab for the column's year
+- **Allocation**: Opens the **Allocations** tab for the current year
 - **Task**: Opens the **Overview** tab, where the Tasks panel sits
+- **Contract**: Opens the linked contract directly
 
 ### Status filter
 
@@ -328,12 +338,13 @@ The Relations tab links this CAPEX item to related objects: Projects, Contracts,
 
 - Use the autocomplete to link one or more projects
 - This helps group capital spend by project in reports and enables project accounting
+- The project names appear in the CAPEX list **Project** column, and the quick search finds them
 - Remove a project by clicking the X on its chip
 
 **Contracts**:
 
 - Use the autocomplete to link one or more contracts
-- When linked, the contract name appears for quick reference
+- When linked, the contract name appears in the CAPEX list **Contract** column for quick reference
 - Contracts can also link to multiple CAPEX items (many-to-many relationship)
 - Remove a contract by clicking the X on its chip
 
@@ -375,7 +386,7 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 1. Click **Export CSV** in the CAPEX list
 2. Choose:
    - **Template**: Headers only (use this to create a blank CSV to fill in)
-   - **Data**: All current CAPEX items with budgets for Y-1, Y, and Y+1
+   - **Data**: Every CAPEX item, including ended ones, with budgets for Y-1 to Y+2
 
 **CSV structure**:
 
@@ -391,17 +402,19 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 2. Upload your CSV file (drag-and-drop or file picker)
 3. Click **Preflight** to validate:
    - Headers match exactly
-   - Companies exist in your workspace
-   - Required fields (description, ppe_type, investment_type, priority, currency, effective_start, company_name) are present
-   - No duplicate descriptions
+   - Companies and users exist in your workspace
+   - Required fields (description, ppe_type, investment_type, priority) are present. A new item also needs company_name and currency
+   - Currencies are allowed in your workspace currency settings
+   - Owners are active users
+   - An `item_number` matches an existing CAPEX item
 4. Review the preflight report (shows counts and up to 5 sample errors)
 5. If OK, click **Load** to import
 
 **Important notes**:
 
-- **Unique key**: CAPEX items are identified by `description`. If a description already exists, it is **skipped** (no updates).
-- **Insert-only**: The importer only creates new items; it will not update existing ones. Use the UI to edit existing items.
-- **References**: `company_name` must match a Company by name (case-insensitive).
+- **Matching**: A row with an `item_number` updates that CAPEX item; the preflight reports a number that matches no item. A row without one is matched by `description`: a match updates the item, otherwise the row creates a new item. When several rows match the same item, the first one counts.
+- **New items**: `company_name` and `currency` are required for a new item. The currency must be allowed in your workspace currency settings. On an existing item, an empty currency cell keeps its currency.
+- **References**: `company_name` must match a Company by name (case-insensitive). `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused.
 - **PP&E Type**: Must be `hardware` or `software` (case-insensitive).
 - **Investment Type**: Must be one of: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (case-insensitive).
 - **Priority**: Must be `mandatory`, `high`, `medium`, or `low` (case-insensitive).

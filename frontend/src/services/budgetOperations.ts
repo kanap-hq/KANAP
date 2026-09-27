@@ -84,8 +84,8 @@ export type AllocationCopyResponse = {
   results: AllocationCopyResult[];
 };
 
-export const copyAllocations = async (operation: AllocationCopyOperation): Promise<AllocationCopyResponse> => {
-  const response = await api.post<AllocationCopyResponse>('/spend-items/budget-operations/copy-allocations', operation);
+export const copyAllocations = async (scope: BudgetScope, operation: AllocationCopyOperation): Promise<AllocationCopyResponse> => {
+  const response = await api.post<AllocationCopyResponse>(`${OPERATIONS_BASE[scope]}/copy-allocations`, operation);
   return response.data;
 };
 

@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ColDef } from 'ag-grid-community';
-import ServerDataGrid, { StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, StatusScope } from '../components/ServerDataGrid';
 import PageHeader from '../components/PageHeader';
 import { Button, Stack } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
@@ -15,7 +15,7 @@ import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { formatItemRef } from '../utils/item-ref';
-import { formatAmount as formatNumber } from '../i18n/formatters';
+import { amountColumnYear, buildAmountColumnDefs, SummaryVersions, totalsToVersions } from '../components/finance/amountColumns';
 import { readStoredOpexListContext, writeStoredOpexListContext } from './opex/listContextStorage';
 import { statusScopeParams } from '../utils/statusScopeParams';
 import { STATUS_VALUES } from '../constants/status';
@@ -39,18 +39,15 @@ type SummaryRow = {
   analytics_category_id?: string | null;
   analytics_category_name?: string | null;
   project_id?: string | null;
+  project_name?: string | null;
   notes?: string | null;
   created_at: string;
   updated_at?: string;
   main_recipient?: { company_id: string; department_id: string; pct: number; label: string } | null;
-  versions?: {
-    yMinus1?: { year?: number; totals: { budget: number; follow_up: number; landing: number; revision: number }; reporting?: { budget: number; follow_up: number; landing: number; revision: number }; version_id?: string };
-    y?: { year?: number; totals: { budget: number; follow_up: number; landing: number; revision: number }; reporting?: { budget: number; follow_up: number; landing: number; revision: number }; version_id?: string };
-    yPlus1?: { year?: number; totals: { budget: number; follow_up: number; landing: number; revision: number }; reporting?: { budget: number; follow_up: number; landing: number; revision: number }; version_id?: string };
-    yPlus2?: { year?: number; totals: { budget: number; follow_up: number; landing: number; revision: number }; reporting?: { budget: number; follow_up: number; landing: number; revision: number }; version_id?: string };
-  };
+  versions?: SummaryVersions;
   latest_task?: { id: string; title?: string; description?: string; status?: string; created_at?: string } | null;
   spread_mode_for_y?: 'flat' | 'manual' | null;
+  latest_contract_id?: string | null;
   latest_contract_name?: string | null;
   allocation_method_label?: string | null;
   allocation_warning?: string | null;
@@ -183,40 +180,10 @@ export default function OpexListPage() {
       if (filterModel && Object.keys(filterModel).length > 0) params.filters = JSON.stringify(filterModel);
       Object.assign(params, statusScopeParams(statusScope));
       const res = await api.get('/spend-items/summary/totals', { params });
-      const totals = res.data || {};
-      const yMinus1 = {
-        budget: Number(totals.yMinus1Budget || 0),
-        landing: Number(totals.yMinus1Landing || 0),
-        revision: 0,
-        follow_up: 0,
-      };
-      const y = {
-        budget: Number(totals.yBudget || 0),
-        revision: Number(totals.yRevision || 0),
-        follow_up: Number(totals.yFollowUp || 0),
-        landing: Number(totals.yLanding || 0),
-      };
-      const yPlus1 = {
-        budget: Number(totals.yPlus1Budget || 0),
-        revision: Number(totals.yPlus1Revision || 0),
-        landing: 0,
-        follow_up: 0,
-      };
-      const yPlus2 = {
-        budget: Number(totals.yPlus2Budget || 0),
-        revision: 0,
-        landing: 0,
-        follow_up: 0,
-      };
       const pinned = {
         id: '__opex_totals__',
         product_name: t('shared.total'),
-        versions: {
-          yMinus1: { reporting: yMinus1, totals: yMinus1 },
-          y: { reporting: y, totals: y },
-          yPlus1: { reporting: yPlus1, totals: yPlus1 },
-          yPlus2: { reporting: yPlus2, totals: yPlus2 },
-        },
+        versions: totalsToVersions(res.data),
       };
       setPinnedTotals([pinned]);
     } catch (err) {
@@ -312,27 +279,22 @@ export default function OpexListPage() {
     const item = row as SummaryRow | null | undefined;
     if (!item?.id) return null;
     if (colId === 'contract_name') {
-      const contractId = (item as any)?.latest_contract_id;
+      const contractId = item.latest_contract_id;
       return contractId ? `/ops/contracts/${contractId}/overview` : null;
     }
     const sp = buildGridSearch();
     const next = new URLSearchParams(sp);
     let tab = 'overview';
+    const amountYear = amountColumnYear(colId, Y);
     if (colId === 'allocation_label') {
       tab = 'allocations';
       next.set('year', String(Y));
-    } else if (colId === 'yMinus1Budget' || colId === 'yMinus1Landing') {
+    } else if (amountYear != null) {
       tab = 'budget';
-      next.set('year', String(Y - 1));
-    } else if (colId === 'yBudget' || colId === 'yRevision' || colId === 'yFollowUp' || colId === 'yLanding' || colId === 'spread_mode_for_y') {
+      next.set('year', String(amountYear));
+    } else if (colId === 'spread_mode_for_y') {
       tab = 'budget';
       next.set('year', String(Y));
-    } else if (colId === 'yPlus1Budget' || colId === 'yPlus1Revision') {
-      tab = 'budget';
-      next.set('year', String(Y + 1));
-    } else if (colId === 'yPlus2Budget') {
-      tab = 'budget';
-      next.set('year', String(Y + 2));
     } else if (colId === 'latest_task_text') {
       tab = 'overview'; // tasks now live in the overview tab
     }
@@ -383,6 +345,12 @@ export default function OpexListPage() {
         return d?.supplier?.name ?? d?.supplier_name ?? d?.supplier ?? '';
       },
       width: 180,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        getValues: getOpexFilterValues('supplier_name'),
+        searchable: false,
+      },
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}
@@ -482,157 +450,18 @@ export default function OpexListPage() {
         />
       ),
     },
-    {
-      colId: 'yMinus1Budget',
-      headerName: t('opex.columns.yMinus1Budget', { year: Y - 1 }),
-      valueGetter: (p) => p.data?.versions?.yMinus1?.reporting?.budget ?? p.data?.versions?.yMinus1?.totals?.budget ?? 0,
-      valueFormatter: (p) => formatNumber(p.value),
-      type: 'rightAligned',
-      width: 170,
-      cellRenderer: (params: any) => (
+    ...buildAmountColumnDefs<SummaryRow>({
+      t,
+      currentYear: Y,
+      cellRenderer: (colId) => (params: any) => (
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'yMinus1Budget')}
+          getHref={(row) => getOpexHref(row, colId)}
           onNavigate={(href) => navigate(href)}
         />
       ),
-      defaultHidden: true,
-    },
-    {
-      colId: 'yMinus1Landing',
-      headerName: t('opex.columns.yMinus1Landing', { year: Y - 1 }),
-      valueGetter: (p) => p.data?.versions?.yMinus1?.reporting?.landing ?? p.data?.versions?.yMinus1?.totals?.landing ?? 0,
-      valueFormatter: (p) => formatNumber(p.value),
-      type: 'rightAligned',
-      width: 170,
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getOpexHref(row, 'yMinus1Landing')}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
-      defaultHidden: true,
-    },
-    {
-      colId: 'yBudget',
-      headerName: t('opex.columns.yBudget', { year: Y }),
-      valueGetter: (p) => p.data?.versions?.y?.reporting?.budget ?? p.data?.versions?.y?.totals?.budget ?? 0,
-      valueFormatter: (p) => formatNumber(p.value),
-      type: 'rightAligned',
-      width: 160,
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getOpexHref(row, 'yBudget')}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
-    },
-    {
-      colId: 'yRevision',
-      headerName: t('opex.columns.yRevision', { year: Y }),
-      valueGetter: (p) => p.data?.versions?.y?.reporting?.revision ?? p.data?.versions?.y?.totals?.revision ?? 0,
-      valueFormatter: (p) => formatNumber(p.value),
-      type: 'rightAligned',
-      width: 160,
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getOpexHref(row, 'yRevision')}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
-      defaultHidden: true,
-    },
-    {
-      colId: 'yFollowUp',
-      headerName: t('opex.columns.yFollowUp', { year: Y }),
-      valueGetter: (p) => p.data?.versions?.y?.reporting?.follow_up ?? p.data?.versions?.y?.totals?.follow_up ?? 0,
-      valueFormatter: (p) => formatNumber(p.value),
-      type: 'rightAligned',
-      width: 170,
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getOpexHref(row, 'yFollowUp')}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
-      defaultHidden: true,
-    },
-    {
-      colId: 'yLanding',
-      headerName: t('opex.columns.yLanding', { year: Y }),
-      valueGetter: (p) => p.data?.versions?.y?.reporting?.landing ?? p.data?.versions?.y?.totals?.landing ?? 0,
-      valueFormatter: (p) => formatNumber(p.value),
-      type: 'rightAligned',
-      width: 160,
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getOpexHref(row, 'yLanding')}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
-    },
-    {
-      colId: 'yPlus1Budget',
-      headerName: t('opex.columns.yPlus1Budget', { year: Y + 1 }),
-      valueGetter: (p) => p.data?.versions?.yPlus1?.reporting?.budget ?? p.data?.versions?.yPlus1?.totals?.budget ?? 0,
-      valueFormatter: (p) => formatNumber(p.value),
-      type: 'rightAligned',
-      width: 180,
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getOpexHref(row, 'yPlus1Budget')}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
-      defaultHidden: true,
-    },
-    {
-      colId: 'yPlus1Revision',
-      headerName: t('opex.columns.yPlus1Revision', { year: Y + 1 }),
-      valueGetter: (p) => p.data?.versions?.yPlus1?.reporting?.revision ?? p.data?.versions?.yPlus1?.totals?.revision ?? 0,
-      valueFormatter: (p) => formatNumber(p.value),
-      type: 'rightAligned',
-      width: 190,
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getOpexHref(row, 'yPlus1Revision')}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
-      defaultHidden: true,
-    },
-    {
-      colId: 'yPlus2Budget',
-      headerName: t('opex.columns.yPlus2Budget', { year: Y + 2 }),
-      valueGetter: (p) => p.data?.versions?.yPlus2?.totals?.budget ?? 0,
-      valueFormatter: (p) => formatNumber(p.value),
-      type: 'rightAligned',
-      width: 180,
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getOpexHref(row, 'yPlus2Budget')}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
-      defaultHidden: true,
-    },
+    }),
     {
       colId: 'latest_task_text',
       headerName: t('opex.columns.task'),
@@ -702,6 +531,7 @@ export default function OpexListPage() {
     {
       field: 'effective_start',
       headerName: t('opex.columns.effectiveStart'),
+      ...DATE_COLUMN_FILTER,
       width: 150,
       defaultHidden: true,
       valueFormatter: (p) => formatShortDate(p.value as string | null, locale),
@@ -719,7 +549,7 @@ export default function OpexListPage() {
       headerName: t('opex.columns.endOfValidity'),
       width: 150,
       defaultHidden: true,
-      filter: 'agDateColumnFilter',
+      ...DATE_COLUMN_FILTER,
       // A timestamp: shown as the calendar day in the viewer's time zone, like the drawer.
       valueFormatter: (p) => formatShortDate(p.value ? new Date(p.value as string) : null, locale),
       cellRenderer: (params: any) => (
@@ -794,15 +624,16 @@ export default function OpexListPage() {
       ),
     },
     {
-      field: 'project_id',
-      headerName: t('opex.columns.projectId'),
-      width: 150,
+      field: 'project_name',
+      headerName: t('opex.columns.project'),
+      width: 200,
       defaultHidden: true,
+      tooltipValueGetter: (p) => p.data?.project_name ?? '',
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}
           linkType="internal"
-          getHref={(row) => getOpexHref(row, 'project_id')}
+          getHref={(row) => getOpexHref(row, 'project_name')}
           onNavigate={(href) => navigate(href)}
         />
       ),
@@ -824,6 +655,7 @@ export default function OpexListPage() {
     {
       field: 'created_at',
       headerName: t('opex.columns.created'),
+      ...DATE_COLUMN_FILTER,
       width: 200,
       valueFormatter: (p) => formatShortDateTime(p.value as string | null, locale),
       defaultHidden: true,
@@ -839,6 +671,7 @@ export default function OpexListPage() {
     {
       field: 'updated_at',
       headerName: t('opex.columns.updated'),
+      ...DATE_COLUMN_FILTER,
       width: 200,
       valueFormatter: (p) => formatShortDateTime(p.value as string | null, locale),
       defaultHidden: true,

@@ -212,13 +212,11 @@ export default function CapexPropertiesDrawer({
             />
           </PropertyRow>
         )}
-        {mode === 'edit' && (
-          <PropertyRow label={t('capex.fields.analyticsCategory')}>
-            <Box sx={hideInnerLabelSx}>
-              <AnalyticsCategorySelect value={analyticsCategoryId || null} onChange={(v) => onAnalyticsCategoryChange(v ?? '')} disabled={disabled} />
-            </Box>
-          </PropertyRow>
-        )}
+        <PropertyRow label={t('capex.fields.analyticsCategory')}>
+          <Box sx={hideInnerLabelSx}>
+            <AnalyticsCategorySelect value={analyticsCategoryId || null} onChange={(v) => onAnalyticsCategoryChange(v ?? '')} disabled={disabled} />
+          </Box>
+        </PropertyRow>
       </PropertyGroup>
 
       <PropertyGroup>

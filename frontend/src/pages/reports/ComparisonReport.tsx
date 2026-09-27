@@ -20,7 +20,7 @@ export default function ComparisonReport() {
   const now = new Date();
   const Y = now.getFullYear();
   const allowedYears = [Y - 2, Y - 1, Y, Y + 1, Y + 2];
-  const { data: rows, isLoading } = useOpexSummaryAll();
+  const { data: rows, isLoading } = useOpexSummaryAll(allowedYears);
 
   const [startYear, setStartYear] = useState<number>(Y - 1);
   const [endYear, setEndYear] = useState<number>(Y + 1);
