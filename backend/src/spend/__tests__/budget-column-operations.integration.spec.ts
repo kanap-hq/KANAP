@@ -25,6 +25,7 @@ import {
   seedMonths,
   seedTenant,
   seedVersion,
+  setBudgetColumns,
   underSavepoint,
 } from './round-inputs.fixtures';
 
@@ -341,6 +342,45 @@ async function testDryRunSkippedFlag(kind: Kind) {
   });
 }
 
+/**
+ * Forecast is copied and cleared like any column; a created destination
+ * version is named neutrally; an unknown column lists the five API names; a
+ * frozen destination is refused with the tenant's name for the column.
+ */
+async function testForecastCopyAndClear(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-forecast`);
+    await setBudgetColumns(runner, tenantId, { labels: { forecast: 'A2' } });
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { forecast: repeat('7', 12), planned: repeat('1', 12) });
+
+    const copied = await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'forecast', destinationYear: YEAR + 1, destinationColumn: 'forecast', percentageIncrease: 0 });
+    assert.deepEqual([copied.summary.processed, copied.summary.skipped], [1, 0], `${kind}: forecast copied`);
+    const destination = await findVersion(runner, kind, itemId, YEAR + 1);
+    assert.deepEqual(await readMeasure(runner, kind, destination!.id, 'forecast', YEAR + 1), repeat('7.00', 12));
+    assert.deepEqual(await readMeasure(runner, kind, destination!.id, 'planned', YEAR + 1), repeat('0.00', 12), `${kind}: only the destination column is written`);
+    const [{ version_name }] = await runner.query(
+      `SELECT version_name FROM ${kind === 'opex' ? 'spend_versions' : 'capex_versions'} WHERE id = $1`,
+      [destination!.id],
+    );
+    assert.equal(version_name, `Y${YEAR + 1}`, `${kind}: a created version is named after its year`);
+
+    const cleared = await budgetOperations(kind).clearBudgetColumn({ year: YEAR, column: 'forecast' }, null, { manager: runner.manager });
+    assert.equal(cleared.summary.cleared, 1, `${kind}: forecast cleared`);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'forecast', YEAR), repeat('0.00', 12));
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('1.00', 12));
+
+    await assert.rejects(
+      () => budgetOperations(kind).clearBudgetColumn({ year: YEAR, column: 'bogus' }, null, { manager: runner.manager }),
+      (err: any) => err instanceof BadRequestException && err.message === 'column must be one of budget, revision, forecast, follow_up, landing.',
+    );
+    await freezeColumn(runner, kind, tenantId, YEAR + 1, 'forecast');
+    await assert.rejects(
+      () => copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'forecast', percentageIncrease: 0, overwrite: true }, captureAudit(), realFreeze()),
+      (err: any) => err instanceof ForbiddenException && err.message === `Copy not allowed: ${kind.toUpperCase()} A2 for ${YEAR + 1} is frozen`,
+    );
+  });
+}
+
 /** Copy of allocations is all or nothing too: a failure on one item fails the request, nothing is kept. */
 async function testCopyAllocationsIsAllOrNothing() {
   await inRolledBackTransaction(async (runner) => {
@@ -397,6 +437,7 @@ void runSpecs('budget-column-operations.integration.spec', [
     [`testCopyAndClearAreAllOrNothing(${kind})`, () => testCopyAndClearAreAllOrNothing(kind)],
     [`testClear(${kind})`, () => testClear(kind)],
     [`testDryRunSkippedFlag(${kind})`, () => testDryRunSkippedFlag(kind)],
+    [`testForecastCopyAndClear(${kind})`, () => testForecastCopyAndClear(kind)],
   ] as Array<[string, () => Promise<void>]>),
 ]);
 

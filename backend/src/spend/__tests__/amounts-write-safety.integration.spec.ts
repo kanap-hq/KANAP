@@ -232,7 +232,7 @@ async function testExplicitZeroClears(kind: Kind) {
 
 /** Malformed writes are refused before anything is written. */
 async function testInvalidPayloadsAreRefused(kind: Kind) {
-  await withTransaction(kind, 'invalid', async (runner, versionId) => {
+  await withTransaction(kind, 'invalid', async (runner, versionId, tenantId) => {
     const svc = service(kind);
     const refused = async (payload: unknown, label: string) => {
       await assert.rejects(
@@ -267,6 +267,16 @@ async function testInvalidPayloadsAreRefused(kind: Kind) {
       () => svc.bulkUpsert(versionId, { kind: 'annual', year: YEAR, totals: { planned: '1e350' } }, undefined, { manager: runner.manager }),
       /Budget total is too large/,
     );
+    // Messages name the column as the tenant does.
+    await setColumnName(runner, tenantId, 'planned', 'A0');
+    await assert.rejects(
+      () => svc.bulkUpsert(versionId, { kind: 'annual', year: YEAR, totals: { planned: '1e350' } }, undefined, { manager: runner.manager }),
+      (err: any) => err instanceof BadRequestException && err.message === 'A0 total is too large.',
+    );
+    await assert.rejects(
+      () => svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(2), planned: null }] }, undefined, { manager: runner.manager }),
+      (err: any) => err instanceof BadRequestException && err.message === `A0 for ${period(2)} cannot be empty; send 0 to clear it.`,
+    );
     await refused({ kind: 'quarterly', year: YEAR, measure: 'committed', Q1: 100, Q2: null }, 'null quarter');
     await refused({ kind: 'quarterly', year: YEAR, measure: 'budget', Q1: 100 }, 'unknown quarterly measure');
     await refused({ kind: 'weekly', year: YEAR }, 'unknown kind');
@@ -275,7 +285,14 @@ async function testInvalidPayloadsAreRefused(kind: Kind) {
   });
 }
 
-/** A frozen Forecast refuses every write that targets it, and only those. */
+async function setColumnName(runner: QueryRunner, tenantId: string, measure: Measure, name: string) {
+  await runner.query(
+    `UPDATE tenants SET metadata = jsonb_set(metadata, '{budget_columns}', $2::jsonb, true) WHERE id = $1`,
+    [tenantId, JSON.stringify({ labels: { [measure]: name } })],
+  );
+}
+
+/** A frozen Forecast refuses every write that targets it, and only those, naming it as the tenant does. */
 async function testFrozenForecastIsRefused(kind: Kind) {
   await withTransaction(kind, 'frozen', async (runner, versionId, tenantId) => {
     await runner.query(
@@ -295,6 +312,11 @@ async function testFrozenForecastIsRefused(kind: Kind) {
         `${kind}: ${JSON.stringify(payload)} must be refused while Forecast is frozen`,
       );
     }
+    await setColumnName(runner, tenantId, 'forecast', 'A2');
+    await assert.rejects(
+      () => svc.bulkUpsert(versionId, { kind: 'annual', year: YEAR, totals: { forecast: 1200 } }, undefined, { manager: runner.manager }),
+      (err: any) => err instanceof ForbiddenException && err.message === `${kind.toUpperCase()} A2 for 2031 is frozen`,
+    );
     assertUntouched(await readMonths(runner, kind, versionId), MEASURES, `${kind} frozen Forecast`);
 
     await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(1), planned: 5 }] }, undefined, { manager: runner.manager });

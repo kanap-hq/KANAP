@@ -187,14 +187,18 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     try {
       const status = await this.queueManualRefresh(tenantId, years, { label: this.loginAutoLabel });
       if (status === 'queued' || status === 'skipped') {
-        const updated: Record<string, any> = {
-          ...tenantMetadata,
+        // Only these keys are merged in one statement: the metadata read above
+        // is stale by now, and writing it back would erase a settings save.
+        const refresh = {
           fx_last_login_refresh_at: now.toISOString(),
           fx_last_login_refresh_label: this.loginAutoLabel,
           fx_login_refresh_interval_ms: this.loginAutoIntervalMs,
           fx_last_login_refresh_years: years,
         };
-        await manager.getRepository(Tenant).update(tenantId, { metadata: updated as any });
+        await manager.query(
+          `UPDATE tenants SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb WHERE id = $1`,
+          [tenantId, JSON.stringify(refresh)],
+        );
         if (status === 'queued') {
           this.logger.log(
             `[${this.loginAutoLabel}] queued FX refresh for tenant ${tenantId}: years ${years.join(', ')}`,

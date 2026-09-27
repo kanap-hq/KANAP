@@ -673,6 +673,22 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
   - Used when a spend version or capex version has `allocation_method='default'`; `allocation_rules`, `spend_versions` and `capex_versions` share this resolution (`resolveDefault` in the allocation calculators)
   - `allocation_rules` holds global standard rows plus per-tenant rows and is RLS-scoped: a tenant sees the global rows and its own overrides only. DB CHECKs enforce that `manual_company` always carries companies and that the global row never does
 
+## Budget Columns (tenant settings)
+- GET `/budget-columns` → `BudgetColumnsSettings`
+  ```json
+  { "labels": { "planned": null, "committed": null, "forecast": null, "actual": null, "expected_landing": null },
+    "enabled": { "planned": true, "committed": true, "forecast": false, "actual": true, "expected_landing": true },
+    "group_spread": { "planned": true, "committed": true, "forecast": true, "actual": true, "expected_landing": true },
+    "default_column": "planned" }
+  ```
+  - The five budget columns keyed by storage name, in the fixed order (column 1 to 5). `labels`: the tenant's name per column, `null` = the product name (Budget, Revision, Forecast, Actuals, Expected landing). `enabled`: shown in lists, the budget tab, report pickers and the dashboard. `group_spread`: follows "Apply to all columns" in the budget tab. `default_column`: preselected in reports, default sort of the lists and the dashboard; freezing it pins the year's FX rate set
+  - A tenant that never saved gets the product defaults above (stored in `tenants.metadata.budget_columns`, no migration)
+- PATCH `/budget-columns` with a partial `{ labels?, enabled?, group_spread?, default_column? }` → the full settings
+  - The patch is merged onto the stored settings, then the whole is validated: names trimmed (inner whitespace collapsed, blank = `null`, at most 40 characters, no control characters) and distinct after case folding across the five resolved names; at least one column shown; the default column shown. Unknown keys, unknown columns and non-boolean flags are refused. Every refusal is a 400 with a readable message, e.g. `The default column must be shown: choose another default column first.`
+  - The write locks the tenant row and replaces only the `budget_columns` key; audited on `tenants` when the settings change
+  - Hidden columns keep their amounts: the summary API, CSV files, budget rows imports, freezes and AI keys still carry every column
+  - Permissions: any authenticated member of the tenant for GET, `budget_ops:admin` for PATCH
+
 ## Spend Items & Versions (OPEX)
 - POST `/spend-items` → create item
 - GET `/spend-items/:id` → detail
@@ -705,7 +721,7 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
 
 ## Amounts (CAPEX)
 - POST `/capex-versions/:id/amounts/bulk-upsert` → annual or monthly payload; server writes the appropriate rows to `capex_amounts`
-  - Annual payload: `{ kind: 'annual', year, totals: { planned, actual, expected_landing, committed } }`
+  - Annual payload: `{ kind: 'annual', year, totals: { planned?, committed?, forecast?, actual?, expected_landing? } }` (at least one; each named column is spread over the year, the others are kept)
   - Monthly payload: `{ kind: 'monthly', year, months: [{ period: 'YYYY-MM-01', planned?, actual?, expected_landing?, committed?, forecast? }] }`
 
 ## Allocations (CAPEX)
@@ -1118,6 +1134,12 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - Each slot contains: `{ year?, totals: { budget, follow_up, landing, revision }, approved?, version_id? }`
   - Note: Use the `years` query parameter to fetch arbitrary years (Y-5 through Y+5). Without it, defaults to Y-1, Y, Y+1.
 
+### Chargeback (OPEX)
+- GET `/reports/chargeback/global?year=YYYY&metric=<column>`
+- GET `/reports/chargeback/company?companyId=<uuid>&year=YYYY&metric=<column>`
+  - `metric`: one of `budget`, `revision`, `forecast`, `follow_up`, `landing`; omitted = the tenant's default column (`/budget-columns`); anything else is a 400 listing the five names
+  - Requires `reporting:reader`
+
 ### Disabled Date Semantics (applies to Reporting endpoints)
 - Fiscal year = calendar year.
 - Items contribute through their `disabled_at` year and contribute zero for strictly later years.
@@ -1225,7 +1247,7 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 ### Copy Budget Columns
 - POST `/spend-items/budget-operations/copy-column`
   - Body: `{ sourceYear: number, sourceColumn: BudgetColumn, destinationYear: number, destinationColumn: BudgetColumn, percentageIncrease: number, overwrite: boolean, dryRun: boolean }`
-  - Budget columns: `budget`, `revision`, `follow_up`, `landing` (mapped to database columns: `planned`, `committed`, `actual`, `expected_landing`)
+  - Budget columns: `budget`, `revision`, `forecast`, `follow_up`, `landing` (mapped to database columns: `planned`, `committed`, `forecast`, `actual`, `expected_landing`)
   - Year range: Y-1 to Y+5 (relative to current year)
   - Features:
     - `percentageIncrease`: Apply percentage adjustment (e.g., 5.0 for 5% increase) with integer rounding
@@ -1237,7 +1259,7 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Notes:
     - True copy operation - source data is never modified
     - Preserves all other columns when updating destination column
-    - Creates versions/amounts for destination year if they don't exist
+    - Creates versions/amounts for destination year if they don't exist; a created version is named `Y<year>`
     - Full audit logging for compliance
 
 ### Copy Allocations
@@ -1255,12 +1277,12 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 ### Clear Budget Column
 - POST `/spend-items/budget-operations/clear-column`
   - Body: `{ year: number, column: BudgetColumn }`
-  - Budget columns: `budget`, `revision`, `follow_up`, `landing`
+  - Budget columns: `budget`, `revision`, `forecast`, `follow_up`, `landing`
   - Year range: Y-1 to Y+5 (relative to current year)
   - Returns: `{ success: boolean, summary: { totalItems, cleared, skipped, errors } }`
   - Requires: `opex:admin` level
   - Notes:
-    - Sets all values in the specified column to NULL (not zero)
+    - Sets all values in the specified column to zero
     - Preserves all other columns
     - Only processes items that have data in the target column
     - Full audit logging for compliance
@@ -1271,8 +1293,9 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Returns `{ year, entries: FreezeState[], summary }`
   - `entries` list raw rows (`scope`, optional `column`, timestamps, user IDs); `summary` aggregates by scope/column for quick status checks
 - POST `/freeze-states/freeze`
-  - Body: `{ year: number, scopes: Array<{ scope: 'opex'|'capex'|'companies'|'departments', columns?: ('budget'|'revision'|'actual'|'landing')[] }> }`
-  - Locks the requested year/scope combinations (columns required for OPEX/CAPEX; ignored for company/department metrics)
+  - Body: `{ year: number, scopes: Array<{ scope: 'opex'|'capex'|'companies'|'departments', columns?: ('budget'|'revision'|'forecast'|'actual'|'landing')[] }> }`
+  - Locks the requested year/scope combinations (OPEX/CAPEX without `columns` freezes all five; ignored for company/department metrics)
+  - Freezing the tenant's default column (`/budget-columns`) pins the year's latest FX rate set on the versions of that year and scope; unfreezing it unpins. Changing the default column pins or unpins nothing by itself
   - Requires `budget_ops:admin`
 - POST `/freeze-states/unfreeze`
   - Body mirrors the freeze payload

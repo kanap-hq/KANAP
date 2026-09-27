@@ -8,6 +8,8 @@ import { CapexVersionsService } from '../../capex/capex-versions.service';
 import { SpendAllocationsService } from '../../spend/spend-allocations.service';
 import { SpendAmountsService } from '../../spend/spend-amounts.service';
 import { SpendVersionsService } from '../../spend/spend-versions.service';
+import { AMOUNT_MEASURES, AmountMeasure } from '../../spend/amounts-write.util';
+import { budgetColumnName, BudgetColumnsSettings, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
@@ -94,9 +96,6 @@ type AllocationInput = {
   department_id: string | null;
 };
 
-type AmountMeasure = 'planned' | 'forecast' | 'committed' | 'actual' | 'expected_landing';
-
-const AMOUNT_MEASURES: AmountMeasure[] = ['planned', 'forecast', 'committed', 'actual', 'expected_landing'];
 const INPUT_GRAINS = ['annual', 'quarterly', 'monthly'] as const;
 const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover', 'manual_company', 'manual_department'] as const;
 const ALLOCATION_DRIVERS = ['headcount', 'it_users', 'turnover'] as const;
@@ -360,6 +359,7 @@ export class AiFinancialPlanMutationSupportService {
       const amounts = this.normalizeAmountPayload(input.amounts);
       this.assertAmountsYearMatchesVersion(amounts, version);
       const before = await this.listAmounts(context, entityType, version.id, amounts.year);
+      const columns = await readBudgetColumns(context.manager, context.tenantId);
       const beforeItems = Array.isArray(before.items) ? before.items : [];
       const reverseItems = completeAmountRowsForPeriods(beforeItems, amountTouchedPeriods(amounts));
       return {
@@ -384,8 +384,8 @@ export class AiFinancialPlanMutationSupportService {
             signature: amountRowsSignature(beforeItems),
           },
           display_values: {
-            from: this.formatAmountSummary(before),
-            to: this.formatAmountPayload(amounts),
+            from: this.formatAmountSummary(before, columns),
+            to: this.formatAmountPayload(amounts, columns),
           },
         },
       };
@@ -1122,21 +1122,25 @@ export class AiFinancialPlanMutationSupportService {
     );
   }
 
-  private formatAmountSummary(value: Record<string, unknown>): string {
+  // The approval card names columns as the tenant does, in the fixed column order.
+  private formatAmountSummary(value: Record<string, unknown>, columns: BudgetColumnsSettings): string {
     const year = value.year == null ? 'selected year' : String(value.year);
     const totals = value.totals && typeof value.totals === 'object' ? value.totals as Record<string, unknown> : {};
     const parts = AMOUNT_MEASURES
-      .map((measure) => `${measure}: ${totals[measure] ?? 0}`)
+      .map((measure) => `${budgetColumnName(columns, measure)}: ${totals[measure] ?? 0}`)
       .join(', ');
     return `${year} totals (${parts})`;
   }
 
-  private formatAmountPayload(payload: AmountPayload): string {
+  private formatAmountPayload(payload: AmountPayload, columns: BudgetColumnsSettings): string {
     if (payload.kind === 'annual') {
-      return `${payload.year} annual totals (${Object.entries(payload.totals).map(([key, value]) => `${key}: ${value}`).join(', ')})`;
+      const parts = AMOUNT_MEASURES
+        .filter((measure) => payload.totals[measure] !== undefined)
+        .map((measure) => `${budgetColumnName(columns, measure)}: ${payload.totals[measure]}`);
+      return `${payload.year} annual totals (${parts.join(', ')})`;
     }
     if (payload.kind === 'quarterly') {
-      return `${payload.year} quarterly ${payload.measure} (${['Q1', 'Q2', 'Q3', 'Q4'].map((q) => `${q}: ${(payload as any)[q] ?? 0}`).join(', ')})`;
+      return `${payload.year} quarterly ${budgetColumnName(columns, payload.measure)} (${['Q1', 'Q2', 'Q3', 'Q4'].map((q) => `${q}: ${(payload as any)[q] ?? 0}`).join(', ')})`;
     }
     return `${payload.year} monthly rows (${payload.months.length})`;
   }

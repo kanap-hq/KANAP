@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { FreezeScope, FreezeState } from './freeze-state.entity';
@@ -7,6 +7,8 @@ import { FxRateService } from '../currency/fx-rate.service';
 import { CurrencySettingsService } from '../currency/currency-settings.service';
 import { SpendVersion } from '../spend/spend-version.entity';
 import { CapexVersion } from '../capex/capex-version.entity';
+import { AmountMeasure, AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN } from '../spend/amounts-write.util';
+import { budgetColumnName, readBudgetColumns } from '../budget-columns/budget-columns.util';
 
 export type FreezeColumn = 'budget' | 'revision' | 'forecast' | 'actual' | 'landing';
 export type FreezeTarget = { scope: FreezeScope; columns?: FreezeColumn[] };
@@ -19,14 +21,9 @@ const COLUMN_MAP: Record<FreezeColumn, FreezeColumn> = {
   landing: 'landing',
 };
 
-// Column names as the budget screens show them, for error messages.
-const COLUMN_LABELS: Record<FreezeColumn, string> = {
-  budget: 'Budget',
-  revision: 'Revision',
-  forecast: 'Forecast',
-  actual: 'Actuals',
-  landing: 'Expected landing',
-};
+const FREEZE_COLUMN_MEASURE = Object.fromEntries(
+  AMOUNT_MEASURES.map((measure) => [MEASURE_FREEZE_COLUMN[measure], measure]),
+) as Record<FreezeColumn, AmountMeasure>;
 
 export const ALL_KEY = '__all__';
 
@@ -74,10 +71,20 @@ export class FreezeService {
     return tenantId && typeof tenantId === 'string' && tenantId.length ? tenantId : null;
   }
 
-  private async attachFxRates(scope: 'opex' | 'capex', year: number, manager: EntityManager) {
+  /** Every freeze_states query names the tenant, besides RLS. */
+  private async requireTenantId(manager: EntityManager): Promise<string> {
     const tenantId = await this.currentTenantId(manager);
-    if (!tenantId) return;
+    if (!tenantId) throw new InternalServerErrorException('Freezes need a tenant context.');
+    return tenantId;
+  }
 
+  /** The column whose freeze pins the year's exchange rates: the tenant's default column. */
+  private async fxPinColumn(manager: EntityManager, tenantId: string): Promise<FreezeColumn> {
+    const settings = await readBudgetColumns(manager, tenantId);
+    return MEASURE_FREEZE_COLUMN[settings.default_column];
+  }
+
+  private async attachFxRates(scope: 'opex' | 'capex', year: number, tenantId: string, manager: EntityManager) {
     await this.fxIngestion.refreshTenant(tenantId, year, { manual: true, manager });
     const settings = await this.currencySettings.getSettings(tenantId, { manager });
     const rateSet = await this.fxRates.getLatestRateSet(tenantId, year, settings.reportingCurrency, { manager });
@@ -90,16 +97,16 @@ export class FreezeService {
         fx_rate_set_id: rateSet.id,
         reporting_currency: settings.reportingCurrency,
       })
-      .where('budget_year = :year', { year })
+      .where('tenant_id = :tenantId AND budget_year = :year', { tenantId, year })
       .execute();
   }
 
-  private async detachFxRates(scope: 'opex' | 'capex', year: number, manager: EntityManager) {
+  private async detachFxRates(scope: 'opex' | 'capex', year: number, tenantId: string, manager: EntityManager) {
     const repo = manager.getRepository(scope === 'opex' ? SpendVersion : CapexVersion);
     await repo.createQueryBuilder()
       .update()
       .set({ fx_rate_set_id: null })
-      .where('budget_year = :year', { year })
+      .where('tenant_id = :tenantId AND budget_year = :year', { tenantId, year })
       .execute();
   }
 
@@ -110,8 +117,10 @@ export class FreezeService {
     const repo = mg.getRepository(FreezeState);
 
     const toProcess: Array<{ scope: FreezeScope; columnKey: string }> = [];
-    let freezeOpexBudget = false;
-    let freezeCapexBudget = false;
+    const tenantId = await this.requireTenantId(mg);
+    const pinColumn = await this.fxPinColumn(mg, tenantId);
+    let pinOpex = false;
+    let pinCapex = false;
 
     for (const target of targets) {
       const scope = this.normalizeScope(target.scope);
@@ -122,8 +131,8 @@ export class FreezeService {
         }
         for (const col of cols) {
           const columnKey = this.normalizeColumn(scope, col);
-          if (scope === 'opex' && columnKey === 'budget') freezeOpexBudget = true;
-          if (scope === 'capex' && columnKey === 'budget') freezeCapexBudget = true;
+          if (scope === 'opex' && columnKey === pinColumn) pinOpex = true;
+          if (scope === 'capex' && columnKey === pinColumn) pinCapex = true;
           toProcess.push({ scope, columnKey });
         }
       } else {
@@ -133,9 +142,10 @@ export class FreezeService {
 
     const now = new Date();
     for (const item of toProcess) {
-      let state = await repo.findOne({ where: { budget_year: year, scope: item.scope, columnKey: item.columnKey } as any });
+      let state = await repo.findOne({ where: { tenant_id: tenantId, budget_year: year, scope: item.scope, columnKey: item.columnKey } as any });
       if (!state) {
         state = repo.create({
+          tenant_id: tenantId,
           budget_year: year,
           scope: item.scope,
           columnKey: item.columnKey,
@@ -149,11 +159,11 @@ export class FreezeService {
       await repo.save(state);
     }
 
-    if (freezeOpexBudget) {
-      await this.attachFxRates('opex', year, mg);
+    if (pinOpex) {
+      await this.attachFxRates('opex', year, tenantId, mg);
     }
-    if (freezeCapexBudget) {
-      await this.attachFxRates('capex', year, mg);
+    if (pinCapex) {
+      await this.attachFxRates('capex', year, tenantId, mg);
     }
 
     return this.getYearState(year, opts);
@@ -166,8 +176,10 @@ export class FreezeService {
     const repo = mg.getRepository(FreezeState);
 
     const toProcess: Array<{ scope: FreezeScope; columnKey: string }> = [];
-    let unfreezeOpexBudget = false;
-    let unfreezeCapexBudget = false;
+    const tenantId = await this.requireTenantId(mg);
+    const pinColumn = await this.fxPinColumn(mg, tenantId);
+    let unpinOpex = false;
+    let unpinCapex = false;
 
     for (const target of targets) {
       const scope = this.normalizeScope(target.scope);
@@ -178,8 +190,8 @@ export class FreezeService {
         }
         for (const col of cols) {
           const columnKey = this.normalizeColumn(scope, col);
-          if (scope === 'opex' && columnKey === 'budget') unfreezeOpexBudget = true;
-          if (scope === 'capex' && columnKey === 'budget') unfreezeCapexBudget = true;
+          if (scope === 'opex' && columnKey === pinColumn) unpinOpex = true;
+          if (scope === 'capex' && columnKey === pinColumn) unpinCapex = true;
           toProcess.push({ scope, columnKey });
         }
       } else {
@@ -189,18 +201,18 @@ export class FreezeService {
 
     const now = new Date();
     for (const item of toProcess) {
-      await repo.update({ budget_year: year, scope: item.scope, columnKey: item.columnKey } as any, {
+      await repo.update({ tenant_id: tenantId, budget_year: year, scope: item.scope, columnKey: item.columnKey } as any, {
         is_frozen: false,
         unfrozen_at: now,
         unfrozen_by: userId ?? null,
       });
     }
 
-    if (unfreezeOpexBudget) {
-      await this.detachFxRates('opex', year, mg);
+    if (unpinOpex) {
+      await this.detachFxRates('opex', year, tenantId, mg);
     }
-    if (unfreezeCapexBudget) {
-      await this.detachFxRates('capex', year, mg);
+    if (unpinCapex) {
+      await this.detachFxRates('capex', year, tenantId, mg);
     }
 
     return this.getYearState(year, opts);
@@ -209,7 +221,7 @@ export class FreezeService {
   async getYearState(year: number, opts?: { manager?: EntityManager }) {
     const mg = this.manager(opts);
     const repo = mg.getRepository(FreezeState);
-    const entries = await repo.find({ where: { budget_year: year } as any });
+    const entries = await repo.find({ where: { tenant_id: await this.requireTenantId(mg), budget_year: year } as any });
     return entries;
   }
 
@@ -221,6 +233,7 @@ export class FreezeService {
     const repo = mg.getRepository(FreezeState);
     const found = await repo.findOne({
       where: {
+        tenant_id: await this.requireTenantId(mg),
         budget_year: year,
         scope,
         columnKey,
@@ -234,10 +247,16 @@ export class FreezeService {
     const frozen = await this.isFrozen(params, opts);
     if (frozen) {
       const column = String(params.column ?? '').toLowerCase();
-      const columnLabel = isColumn(column) ? COLUMN_LABELS[column] : 'data';
+      const columnLabel = isColumn(column) ? await this.columnName(column, this.manager(opts)) : 'data';
       const what = `${params.scope.toUpperCase()} ${columnLabel} for ${params.year} is frozen`;
       throw new ForbiddenException(params.action ? `${params.action} not allowed: ${what}` : what);
     }
+  }
+
+  /** The tenant's name for a column. */
+  private async columnName(column: FreezeColumn, manager: EntityManager): Promise<string> {
+    const settings = await readBudgetColumns(manager, await this.requireTenantId(manager));
+    return budgetColumnName(settings, FREEZE_COLUMN_MEASURE[column]);
   }
 
   summarize(year: number, entries: FreezeState[]) {

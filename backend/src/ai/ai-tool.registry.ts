@@ -13,6 +13,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
 import { AiAggregateExecutor } from './query/ai-aggregate.executor';
 import { AiQueryExecutor } from './query/ai-query.executor';
 import { describeAiEntityFilters } from './query/ai-filter-description.util';
+import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiSettings } from './ai-settings.entity';
 import { AiAdapterConfig } from './control-plane/providers/adapter-config.entity';
@@ -298,7 +299,10 @@ export class AiToolRegistry {
           readOnly: true,
           execute: async (context, input) => {
             await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
-            return describeAiEntityFilters(input.entity_type);
+            const description = describeAiEntityFilters(input.entity_type);
+            if (input.entity_type !== 'spend_items' && input.entity_type !== 'capex_items') return description;
+            // Amount field descriptions are positional; the tenant's column names come with them (MCP clients have no system prompt).
+            return { ...description, budget_columns: budgetColumnsAiContext(await readBudgetColumns(context.manager, context.tenantId)) };
           },
         },
       ],

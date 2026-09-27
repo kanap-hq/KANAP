@@ -10,18 +10,19 @@ import { AiFilterFieldDef } from '../ai-filter.types';
 export function budgetAmountFields(): Record<string, AiFilterFieldDef> {
   const fields: Record<string, AiFilterFieldDef> = {};
   for (const slot of FIXED_SLOTS) {
-    for (const column of SUMMARY_COLUMNS) {
+    SUMMARY_COLUMNS.forEach((column, index) => {
       const ai = `${slot.ai}_${column.ai}`;
+      // Tenants rename the columns: the description is positional; the tenant's names come with the context.
       fields[ai] = {
         ai,
         grid: `${slot.key}${column.suffix}`,
         type: 'number',
-        description: `Total of the ${column.label} column (product default name) for ${slot.offset === 0 ? 'Y, the current year' : slot.label}, in the reporting currency.`,
+        description: `Total of column ${index + 1} (named ${column.label} by default) for ${slot.offset === 0 ? 'Y, the current year' : slot.label}, in the reporting currency.`,
         sortable: true,
         groupable: false,
         aggregable: true,
       };
-    }
+    });
   }
   return fields;
 }

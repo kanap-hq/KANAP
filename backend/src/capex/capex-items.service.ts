@@ -214,27 +214,29 @@ export class CapexItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const lo = Math.min(from, to);
     const hi = Math.min(Math.max(from, to), lo + 20);
-    const rows: Array<{ year: number; budget: string; revision: string; actual: string; landing: string }> = await mg.query(
+    const rows: Array<{ year: number; budget: string; revision: string; forecast: string; actual: string; landing: string }> = await mg.query(
       `SELECT v.budget_year AS year,
               COALESCE(SUM(a.planned), 0) AS budget,
               COALESCE(SUM(a.committed), 0) AS revision,
+              COALESCE(SUM(a.forecast), 0) AS forecast,
               COALESCE(SUM(a.actual), 0) AS actual,
               COALESCE(SUM(a.expected_landing), 0) AS landing
        FROM capex_versions v
-       LEFT JOIN capex_amounts a ON a.version_id = v.id AND EXTRACT(YEAR FROM a.period) = v.budget_year
-       WHERE v.capex_item_id = $1 AND v.budget_year BETWEEN $2 AND $3
+       LEFT JOIN capex_amounts a ON a.tenant_id = v.tenant_id AND a.version_id = v.id AND EXTRACT(YEAR FROM a.period) = v.budget_year
+       WHERE v.tenant_id = app_current_tenant() AND v.capex_item_id = $1 AND v.budget_year BETWEEN $2 AND $3
        GROUP BY v.budget_year
        ORDER BY v.budget_year`,
       [capexItemId, lo, hi],
     );
     const byYear = new Map(rows.map((r) => [Number(r.year), r]));
-    const years: Array<{ year: number; budget: number; revision: number; actual: number; landing: number }> = [];
+    const years: Array<{ year: number; budget: number; revision: number; forecast: number; actual: number; landing: number }> = [];
     for (let y = lo; y <= hi; y += 1) {
       const row = byYear.get(y);
       years.push({
         year: y,
         budget: Number(row?.budget) || 0,
         revision: Number(row?.revision) || 0,
+        forecast: Number(row?.forecast) || 0,
         actual: Number(row?.actual) || 0,
         landing: Number(row?.landing) || 0,
       });

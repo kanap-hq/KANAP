@@ -68,6 +68,10 @@ async function testSelectsExpectedProfilesForObservedWorkflows() {
     ['Change ABC-12 status to done.', 'write_general'],
     ["cherche la météo d'obernai pour demain sur internet", 'web'],
     ['What is the latest Windows Server version?', 'web'],
+    ['What is the weather forecast for tomorrow?', 'web'],
+    // Forecast is a budget column: these are data questions.
+    ['What is the total forecast of OPEX items for 2026?', 'read_query'],
+    ['Top 5 OPEX items by forecast in 2026', 'read_query'],
   ] as const;
 
   for (const [prompt, expectedProfile] of cases) {
