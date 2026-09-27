@@ -27,7 +27,7 @@ KANAP está organizado en torno a una estructura simple. La barra superior muest
 | **Panorama IT** | Aplicaciones, Interfaces, Mapa de interfaces, Activos, Conexiones, Mapa de conexiones, Ubicaciones |
 | **Base de conocimiento** | Documentos y plantillas con flujos de trabajo de revisión |
 | **Gestión presupuestaria** | OPEX, CAPEX, Contratos, Informes, Administración |
-| **Datos maestros** | Empresas, Departamentos, Proveedores, Contactos, Planes de cuentas, Moneda, Procesos de negocio, Dimensiones analíticas |
+| **Datos maestros** | Empresas, Departamentos, Centros de coste, Proveedores, Contactos, Planes de cuentas, Moneda, Procesos de negocio, Dimensiones analíticas |
 | **Administración** | Usuarios, Roles, Registro de auditoría, Facturación, Autenticación, Personalización (solo admin) |
 
 No necesita acceso a todo. Su rol determina qué secciones y acciones están disponibles. Si falta algo en su menú, pregunte a su administrador.

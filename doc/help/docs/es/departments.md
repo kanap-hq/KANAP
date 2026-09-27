@@ -2,6 +2,8 @@
 
 Los Departamentos representan unidades organizativas dentro de sus empresas. Utilícelos para hacer seguimiento de la plantilla por año, asignar costes y definir audiencias para aplicaciones. Cada departamento pertenece a una empresa y lleva datos de plantilla año a año que alimentan los cálculos de contracargo y asignación.
 
+Para registrar quién es responsable de cada línea de presupuesto, use [Centros de coste](cost-centers.md): a diferencia de los departamentos, se pueden agrupar entre varias empresas.
+
 ## Primeros pasos
 
 Navegue a **Datos maestros > Departamentos** para ver su lista de departamentos. Haga clic en **Nuevo** para crear su primera entrada.
@@ -49,21 +51,24 @@ La cuadrícula de Departamentos proporciona una visión general de todos los dep
 
 ## El espacio de trabajo de Departamentos
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene dos pestañas dispuestas verticalmente a la izquierda: **Visión general** y **Detalles**.
+Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene dos pestañas: **Visión general** y **Detalles**.
 
-La barra de herramientas del espacio de trabajo incluye botones **Anterior** / **Siguiente** para moverse entre departamentos sin volver a la lista, además de botones **Restablecer** y **Guardar**. Si tiene cambios sin guardar al navegar fuera, se le solicitará que guarde o descarte.
+- **Encabezado**: el nombre del departamento. Haga clic en él para cambiar el nombre del departamento. **Ant.** / **Sig.** permiten moverse entre departamentos en el orden y con los filtros de la lista sin volver a ella, y el botón de cierre vuelve a la lista
+- **Panel Propiedades** a la derecha: **Empresa** y **Ciclo de vida**
+
+**Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. El nombre y la descripción se guardan al salir del campo; la empresa y el ciclo de vida se guardan en cuanto los cambia. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, salvo para el nombre, cuyo rechazo se muestra en la parte superior de la página.
 
 ### Visión general
 
-La pestaña Visión general captura la identidad y estado del departamento.
+La pestaña Visión general contiene la descripción. Los demás campos están en el encabezado y en el panel **Propiedades**.
 
 **Qué puede editar**:
-- **Nombre**: Nombre del departamento (obligatorio)
-- **Empresa**: Empresa matriz -- vinculada a los datos maestros de Empresas (obligatorio). Las empresas que ya tienen un departamento con el mismo nombre se excluyen automáticamente del desplegable para prevenir duplicados.
+- **Nombre**: Nombre del departamento (obligatorio), en el encabezado
+- **Empresa**: Empresa matriz, vinculada a los datos maestros de Empresas (obligatorio). Una empresa que ya tiene un departamento con el mismo nombre se rechaza: "A department with this name already exists in the selected company."
 - **Descripción**: Descripción de texto libre
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Deje la fecha en blanco para que el departamento permanezca activo indefinidamente, o fije una fecha futura para programar su fin. Si cambia el departamento a **Desactivado** sin fecha, el fin de validez se fija en hoy
 
-**Consejo**: Al crear un nuevo departamento, la pestaña Detalles está disponible solo después de guardar el registro inicial.
+**Crear un departamento**: **Nuevo** abre un formulario con **Nombre**, **Empresa** y **Descripción**. Haga clic en **Crear** para guardarlo. La pestaña Detalles está disponible después de crear el departamento.
 
 ---
 
@@ -77,8 +82,9 @@ La pestaña Detalles gestiona las métricas de plantilla año a año.
 - **Plantilla**: Número total de empleados en este departamento para el año seleccionado
 
 **Cómo funciona**:
+- La plantilla se guarda para el año seleccionado al salir del campo (o al pulsar Intro). Cualquier valor que no sea un número entero igual o superior a cero muestra "Introduzca un número entero, 0 o más." bajo el campo
 - La plantilla alimenta los cálculos de audiencia para aplicaciones
-- Los valores se guardan por año -- cambiar de año carga los datos de ese año de forma independiente
+- Cada año se guarda por separado: cambiar de año carga el valor de ese año
 - Si las métricas del año seleccionado han sido **congeladas** (por un administrador), el campo está bloqueado y un aviso explica cómo descongelar
 
 **Consejo**: Actualice la plantilla anualmente durante su ciclo de planificación presupuestaria. Utilice las pestañas de año para revisar o prerellenar años futuros.

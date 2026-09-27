@@ -24,12 +24,14 @@ The workspace opens in creation mode, with the **Properties** panel open on the 
 **Optional but useful**:
 
 - **Supplier**: The vendor or supplier for this investment. Select from your suppliers in master data
+- **Cost center**: Who owns the investment. See [Cost centers](cost-centers.md). When the paying company is still empty, picking a cost center fills it with the cost center's company
+- **Run or build**: **Run** for spend that keeps existing services running, **Build** for spend that creates or changes them
 - **Analytics category**: Custom grouping for reporting
 - **End of validity**: The date this investment stops, for example when the asset's useful life ends or the project completes. Leave it blank if there is no end. After it, the item is disabled and later years no longer count in the budget views
 - **IT owner** / **Business owner**: Who is responsible
 - **Description** (Overview tab): Free-form details about the investment
 
-Once set, **Paying company** and **Account** can be changed but not emptied. **Supplier** can be cleared at any time. Items created by a CSV import have no account (the CAPEX file has no account column): set it in the **Properties** panel.
+Once set, **Paying company** and **Account** can be changed but not emptied. **Supplier** can be cleared at any time. When you change the paying company of an item that has an account, and the new company uses another chart of accounts, the account is cleared in the same save: pick the new account on the new company's chart. Items created by a CSV import have no account (the CAPEX file has no account column): set it in the **Properties** panel.
 
 Once the item is created, the workspace unlocks all four tabs: **Overview**, **Budget**, **Allocations**, and **Relations**.
 
@@ -91,6 +93,9 @@ These columns are hidden by default. Show them from the column chooser (hamburge
 | **End of validity** | Date the item stops (blank means no end) |
 | **IT owner** / **Business owner** | Responsible users |
 | **Analytics** | Analytics category name |
+| **Cost center** | The code and name of the cost center. Hover it to see its full path in the tree; click it to open the cost center |
+| **Budget holder** | The budget holder of the item's cost center. It is derived from the cost center, not stored on the item: change the budget holder of a cost center and every item on it follows |
+| **Run or build** | **Run** or **Build** |
 | **Project** | Names of the projects linked on the Relations tab |
 | **Notes** | Free-form notes |
 | **Enabled** | Status (enabled or disabled) |
@@ -98,11 +103,11 @@ These columns are hidden by default. Show them from the column chooser (hamburge
 
 ### Quick search
 
-The search box at the top searches the reference, description, supplier, paying company, account, contract, project names, allocation, owners, analytics category, PP&E type, investment type, priority, notes, currency and status. Results update in real time as you type.
+The search box at the top searches the reference, description, supplier, paying company, account, contract, project names, allocation, owners, analytics category, cost center (code, name and path), budget holder, PP&E type, investment type, priority, notes, currency and status. Results update in real time as you type.
 
 ### Column filters
 
-Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, **Analytics** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Multiple filters combine with AND logic.
+Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, **Analytics**, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Multiple filters combine with AND logic.
 
 Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts.
 
@@ -127,6 +132,7 @@ Click any cell in a row to open the workspace on the tab most relevant to that c
 - **Allocation**: Opens the **Allocations** tab for the current year
 - **Task**: Opens the **Overview** tab, where the Tasks panel sits
 - **Contract**: Opens the linked contract directly
+- **Cost center**: Opens the cost center workspace
 
 ### Status filter
 
@@ -149,7 +155,7 @@ When you open an item, the workspace shows **Prev** and **Next** buttons. These 
 Click any row in the list to open the workspace. It has four parts:
 
 - **Header**: the item reference (e.g., `CPX-7`) with a copy button, the investment's name (click it to rename the item), **Prev** / **Next**, **Send link**, and the close button
-- **Metadata bar** under the title: **Status**, **Priority**, **IT owner**, and **Business owner**, each editable in place
+- **Metadata bar** under the title: **Status**, **Priority**, **IT owner**, and **Business owner**, each editable in place. When the item's cost center has a budget holder, **Budget holder** follows them. It is read only and derived from the cost center, not stored on the item: hover it to see which cost center it comes from, and change it on the cost center (see [Cost centers](cost-centers.md#budget-holder-on-budget-lines))
 - **Four tabs**: **Overview**, **Budget**, **Allocations**, and **Relations** (the Relations tab shows how many links the item has)
 - **Properties panel** on the right: the item's main fields. Open or close it with the properties button; the workspace remembers your choice
 
@@ -179,12 +185,22 @@ The Overview tab holds the details of the investment and its tasks.
 
 **Properties panel**:
 
-- **Supplier**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **PP&E type**, **Investment type**, **Analytics category**, and **Effective start**
+- **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **PP&E type**, **Investment type**, **Analytics category**, **Run or build**, and **Effective start**
 - **Lifecycle**: the **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 - **Created** and **Updated** dates (read only)
 - **Priority** is set in the Properties panel when you create the item, then in the metadata bar
 
-**Tip**: When you create an item, an "obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning.
+**Cost center**:
+
+- The list shows the cost center tree. Groups are shown to help you find your way and cannot be picked. Search by code, name or group name
+- A disabled cost center is marked **Disabled**. It stays on the items that already have it, and cannot be picked for another item
+- When you create an item and the paying company is empty, picking a cost center fills the paying company with the cost center's company, so the **Account** list opens on that company's chart of accounts. Until you pick a company or an account yourself, choosing another cost center updates the company too
+- When the paying company differs from the cost center's company, both are kept. A hint under the field says "This cost center belongs to" followed by the company name
+- An item saved through the API with a cost center and no paying company takes the cost center's company. For CSV files, see [CSV import/export](#csv-importexport)
+
+**Run or build**: **Run**, **Build**, or **Not set**. Use it to split the budget between keeping services running and changing them.
+
+**Tip**: When you create an item, an "obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning. An existing item whose account is outside its company's chart can still be edited: the chart is checked only when the company or the account changes.
 
 ---
 
@@ -404,9 +420,10 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 
 - Delimiter: semicolon `;` (not comma)
 - Encoding: UTF-8 (save as "CSV UTF-8" in Excel)
-- Headers: `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
+- Headers: `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
 - `disabled_at` is the end of validity: the date the item stops. Use a date (`2026-12-31`) or a full date and time. Leave it empty if there is no end
 - Older files with an `effective_end` column still import: its date fills the end of validity when `disabled_at` is empty
+- `cost_center_code` and `run_build` are optional columns: exports and the template always carry them, and files without them still import
 
 **Import**:
 
@@ -414,8 +431,9 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 2. Upload your CSV file (drag-and-drop or file picker)
 3. Click **Preflight** to validate:
    - Headers match exactly
-   - Companies and users exist in your workspace
-   - Required fields (description, ppe_type, investment_type, priority) are present. A new item also needs company_name and currency
+   - Companies, cost centers and users exist in your workspace
+   - Required fields (description, ppe_type, investment_type, priority) are present. A new item also needs a currency, and a company_name unless it has a cost center
+   - A company change on an item that has an account stays within the account's chart of accounts
    - Currencies are allowed in your workspace currency settings
    - Owners are active users
    - An `item_number` matches an existing CAPEX item
@@ -426,9 +444,12 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 **Important notes**:
 
 - **Matching**: A row with an `item_number` updates that CAPEX item; the preflight reports a number that matches no item. A row without one is matched by `description`: a match updates the item, otherwise the row creates a new item. Two rows with the same `item_number`, or with the same `description` and no number, are an error ("Same line as row N"): keep one row per item.
-- **New items**: `company_name` and `currency` are required for a new item. The currency must be allowed in your workspace currency settings. On an existing item, an empty currency cell keeps its currency.
+- **New items**: `currency` is required for a new item, and so is `company_name` unless the row has a `cost_center_code`: a new item with an empty `company_name` takes its cost center's company. With neither, the row is refused: "Company is required unless the line has a cost center." The currency must be allowed in your workspace currency settings. On an existing item, an empty currency cell keeps its currency.
 - **Dates**: `effective_start` (and `effective_end` in older files) must be a real calendar day in `YYYY-MM-DD` format, for example `2026-01-01`. Other formats, such as `01/03/2026`, are errors. An empty `effective_start` keeps the stored date of an existing item; a new item starts on January 1 of the current year.
 - **References**: `company_name` must match a Company by name (case-insensitive). `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused.
+- **Cost center**: `cost_center_code` is the code of a cost center, regardless of case. A group is refused. A disabled cost center is accepted on an item that already has it, and refused as a new value. An empty cell clears the item's cost center. When the whole column is absent, items keep their cost center.
+- **Run or build**: `run_build` is `run`, `build` or empty (regardless of case). An empty cell clears the value. When the whole column is absent, items keep their value.
+- **Company on existing items**: an empty `company_name` keeps the item's paying company. A filled `company_name` is kept, even when it differs from the cost center's company. When an item has an account, a new `company_name` must use the same chart of accounts as that account; otherwise the preflight refuses the row: "Account ... is not in ...'s chart of accounts. Change the line's account first." Change the account in the item's **Properties** panel, then re-import.
 - **PP&E type**: Must be `hardware` or `software` (case-insensitive).
 - **Investment type**: Must be one of: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (case-insensitive).
 - **Priority**: Must be `mandatory`, `high`, `medium`, or `low` (case-insensitive).
@@ -445,6 +466,12 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 - **"Header mismatch"**: Download a fresh template; headers must match exactly (including order).
 - **"effective_start must be a valid date"**: Use the `YYYY-MM-DD` format.
 - **"Same line as row N"**: Two rows describe the same item. Merge them into one row, then re-import.
+- **"Company is required unless the line has a cost center."**: Fill `company_name` or `cost_center_code` for the new item.
+- **"Account ... is not in ...'s chart of accounts. Change the line's account first."**: See **Company on existing items** above.
+- **"Cost center ... was not found."**: Check the code, or create the cost center in **Master data > Cost centers**, then re-import.
+- **"... is a group. Choose a cost center."**: Use the code of a cost center inside that group.
+- **"Cost center ... is disabled."**: Use an enabled cost center, or enable it again in **Master data > Cost centers**.
+- **"Run or build must be run, build or blank."**: Fix the `run_build` cell.
 
 **Tip**: Start with the template export, fill in a few rows, and run a preflight to catch issues early. Fix errors in the CSV and re-upload until preflight passes, then load.
 

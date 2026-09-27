@@ -19,12 +19,16 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus, mit geöffnetem Bereich **E
 
 **Optional aber nützlich**:
   - **Lieferant**: Wen Sie bezahlen. Verknüpft mit Ihren Lieferanten in den Stammdaten
+  - **Kostenstelle**: Wer für die Ausgabe verantwortlich ist. Siehe [Kostenstellen](cost-centers.md). Ist das zahlende Unternehmen noch leer, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle
+  - **Run oder Build**: **Run** für Ausgaben, die bestehende Services am Laufen halten, **Build** für Ausgaben, die sie schaffen oder verändern
   - **Analysekategorie**: Benutzerdefinierte Gruppierung für Berichte (z. B. „Infrastruktur", „Business Apps"). Neue Kategorien können spontan erstellt werden
   - **Ende der Gültigkeit**: Das Datum, an dem diese Ausgabe endet. Lassen Sie es leer, wenn es kein Ende gibt. Danach ist die Position deaktiviert und spätere Jahre zählen in den Budgetansichten nicht mehr
   - **IT-Verantwortlicher** / **Fachverantwortlicher**: Wer verantwortlich ist
   - **Beschreibung** und **Notizen**: Freitext im Tab Übersicht
 
 Einmal gesetzt, können **Zahlendes Unternehmen** und **Konto** geändert, aber nicht geleert werden. **Lieferant** können Sie jederzeit leeren.
+
+Wenn Sie das zahlende Unternehmen einer Position mit Konto ändern und das neue Unternehmen einen anderen Kontenplan verwendet, wird das Konto in derselben Speicherung geleert. **Konto** erscheint dann als Pflichtfeld, mit der Liste aus dem Kontenplan des neuen Unternehmens. Wählen Sie das neue Konto, um abzuschließen.
 
 Sobald die Position erstellt ist, schaltet der Arbeitsbereich alle vier Tabs frei: **Übersicht**, **Budget**, **Zuordnungen** und **Verknüpfungen**.
 
@@ -55,13 +59,16 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Ende der Gültigkeit**: Datum, an dem die Position endet (leer bedeutet kein Ende)
   - **IT-Verantwortlicher** / **Fachbereichsverantwortlicher**: Zuständige Benutzer
   - **Analytik**: Name der Analysekategorie
+  - **Kostenstelle**: Code und Name der Kostenstelle. Fahren Sie mit der Maus darüber, um ihren vollständigen Pfad im Baum zu sehen; klicken Sie darauf, um die Kostenstelle zu öffnen
+  - **Budgetverantwortlicher**: Der Budgetverantwortliche der Kostenstelle der Position. Er wird aus der Kostenstelle abgeleitet und nicht auf der Position gespeichert: Ändern Sie den Budgetverantwortlichen einer Kostenstelle, und alle ihre Positionen folgen
+  - **Run oder Build**: **Run** oder **Build**
   - **Projekt**: Namen der im Tab Verknüpfungen verknüpften Projekte
   - **Notizen**: Interne Notizen
   - **Erstellt / Aktualisiert**: Zeitstempel
 
 **Filtern**:
-  - **Schnellsuche**: Durchsucht Referenz, Produktname, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysekategorie, Notizen, Währung und Status. Filtert die Liste in Echtzeit während der Eingabe
-  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, **Analytik** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht
+  - **Schnellsuche**: Durchsucht Referenz, Produktname, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysekategorie, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Notizen, Währung und Status. Filtert die Liste in Echtzeit während der Eingabe
+  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, **Analytik**, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht
   - **Betragsfilter**: Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen
   - **Datumsfilter**: **Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer
   - **Textspalten** verwenden Textfilter. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `OPX-12`
@@ -83,6 +90,7 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
     - **Zuordnung**: Öffnet den **Zuordnungen**-Tab für das aktuelle Jahr
     - **Aufgabe**: Öffnet den Tab **Übersicht**, in dem sich der Aufgabenbereich befindet
     - **Vertrag**: Öffnet den verknüpften Vertrags-Arbeitsbereich direkt (nicht den OPEX-Arbeitsbereich)
+    - **Kostenstelle**: Öffnet den Kostenstellen-Arbeitsbereich
 
 **Aktionen**:
   - **Neu**: Neue OPEX-Position erstellen (erfordert `opex:manager`)
@@ -105,7 +113,7 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
 Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen. Er besteht aus vier Teilen:
 
   - **Kopfzeile**: die Referenz der Position (z. B. `OPX-12`) mit einer Kopierschaltfläche, der Produktname (anklicken, um die Position umzubenennen), **Zurück** / **Weiter**, **Link senden** und die Schaltfläche zum Schließen
-  - **Metadatenleiste** unter dem Titel: **Status**, **IT-Verantwortlicher** und **Fachverantwortlicher**, direkt bearbeitbar
+  - **Metadatenleiste** unter dem Titel: **Status**, **IT-Verantwortlicher** und **Fachverantwortlicher**, direkt bearbeitbar. Hat die Kostenstelle der Position einen Budgetverantwortlichen, folgt **Budgetverantwortlicher** danach. Er ist schreibgeschützt und aus der Kostenstelle abgeleitet, nicht auf der Position gespeichert: Fahren Sie mit der Maus darüber, um zu sehen, aus welcher Kostenstelle er stammt, und ändern Sie ihn auf der Kostenstelle (siehe [Kostenstellen](cost-centers.md#budgetverantwortlicher-auf-budgetzeilen))
   - **Vier Tabs**: **Übersicht**, **Budget**, **Zuordnungen** und **Verknüpfungen** (der Tab Verknüpfungen zeigt die Anzahl der Verknüpfungen der Position)
   - **Bereich Eigenschaften** rechts: die Hauptfelder der Position. Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl
 
@@ -131,11 +139,20 @@ Der Tab Übersicht enthält die Freitextfelder und die Aufgaben der Position.
   - Aufgaben können auch unter **Portfolio > Aufgaben** angezeigt und verwaltet werden, wo alle Aufgaben Ihrer Organisation erscheinen
 
 **Bereich Eigenschaften**:
-  - **Lieferant**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), **Analysekategorie** und **Beginn der Gültigkeit**
+  - **Lieferant**, **Kostenstelle**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), **Analysekategorie**, **Run oder Build** und **Beginn der Gültigkeit**
   - **Lebenszyklus**: der Schalter **Aktiviert** und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
   - Die Daten **Erstellt** und **Aktualisiert** (schreibgeschützt)
 
-**Tipp**: Beim Erstellen einer Position bedeutet die Warnung „Veraltetes Konto", dass das ausgewählte Konto nicht zum Kontenplan des zahlenden Unternehmens gehört. Wählen Sie ein anderes Konto, um die Warnung zu beheben.
+**Kostenstelle**:
+  - Die Liste zeigt den Kostenstellenbaum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Suchen Sie nach Code, Name oder Gruppenname
+  - Eine deaktivierte Kostenstelle ist als **Deaktiviert** markiert. Sie bleibt auf den Positionen, die sie bereits haben, und kann für keine andere Position gewählt werden
+  - Wenn Sie eine Position erstellen und das zahlende Unternehmen leer ist, füllt die Wahl einer Kostenstelle das zahlende Unternehmen mit dem Unternehmen der Kostenstelle, sodass die Liste **Konto** den Kontenplan dieses Unternehmens zeigt. Solange Sie nicht selbst ein Unternehmen oder ein Konto wählen, aktualisiert die Wahl einer anderen Kostenstelle auch das Unternehmen
+  - Wenn sich das zahlende Unternehmen vom Unternehmen der Kostenstelle unterscheidet, bleiben beide erhalten. Ein Hinweis unter dem Feld lautet „Diese Kostenstelle gehört zu", gefolgt vom Namen des Unternehmens
+  - Eine über die API gespeicherte Position mit Kostenstelle und ohne zahlendes Unternehmen erhält das Unternehmen der Kostenstelle. Für CSV-Dateien siehe [CSV-Import/Export](#csv-importexport)
+
+**Run oder Build**: **Run**, **Build** oder **Nicht festgelegt**. Damit teilen Sie das Budget auf zwischen dem Betrieb bestehender Services und deren Veränderung.
+
+**Tipp**: Beim Erstellen einer Position bedeutet die Warnung „Veraltetes Konto", dass das ausgewählte Konto nicht zum Kontenplan des zahlenden Unternehmens gehört. Wählen Sie ein anderes Konto, um die Warnung zu beheben. Eine bestehende Position, deren Konto außerhalb des Kontenplans ihres Unternehmens liegt, lässt sich weiterhin bearbeiten: Der Kontenplan wird nur geprüft, wenn sich das Unternehmen oder das Konto ändert.
 
 ---
 
@@ -311,17 +328,18 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
 **CSV-Struktur**:
   - Trennzeichen: Semikolon `;` (kein Komma)
   - Kodierung: UTF-8 (in Excel als „CSV UTF-8" speichern)
-  - Kopfzeilen: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
+  - Kopfzeilen: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
   - `disabled_at` ist das Ende der Gültigkeit: das Datum, an dem die Position endet. Verwenden Sie ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Lassen Sie das Feld leer, wenn es kein Ende gibt
   - Ältere Dateien mit einer Spalte `effective_end` werden weiterhin importiert: Das Datum dieser Spalte füllt das Ende der Gültigkeit, wenn `disabled_at` leer ist
+  - `cost_center_code` und `run_build` sind optionale Spalten: Exporte und die Vorlage enthalten sie immer, und Dateien ohne sie werden weiterhin importiert
 
 **Import**:
   1. Klicken Sie in der OPEX-Liste auf **CSV importieren**
   2. Laden Sie Ihre CSV-Datei hoch (Drag-and-Drop oder Dateiauswahl)
   3. Klicken Sie auf **Vorprüfung** zur Validierung:
      - Kopfzeilen stimmen exakt überein
-     - Pflichtfelder (product_name, company_name, account_number) sind vorhanden. Eine neue Position braucht außerdem eine Währung
-     - Jedes Unternehmen, jeder Lieferant, jedes Konto und jeder Verantwortliche aus der Datei existiert in Ihrem Arbeitsbereich
+     - Pflichtfelder (product_name, account_number) sind vorhanden. Eine neue Position braucht außerdem eine Währung und einen company_name, sofern sie keine Kostenstelle hat
+     - Jedes Unternehmen, jeder Lieferant, jedes Konto, jede Kostenstelle und jeder Verantwortliche aus der Datei existiert in Ihrem Arbeitsbereich
      - Datumsangaben sind gültig, und keine zwei Zeilen beschreiben dieselbe Position
      - Währungen sind in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt
      - Verantwortliche sind aktive Benutzer
@@ -332,10 +350,13 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   - **Abgleich**: Eine Zeile wird einer OPEX-Position über Produktname und Lieferant zugeordnet. Eine Zeile, die zu einer bestehenden Position passt, aktualisiert sie; jede andere Zeile legt eine neue Position an. Eine Zeile mit leerem `supplier_name` passt nur zu einer Position ohne Lieferant. Zwei Zeilen mit demselben Produktnamen und Lieferanten sind ein Fehler („Same line as row N"): Behalten Sie eine Zeile pro Position
   - **Währung**: Pflicht für eine neue Position, und sie muss in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt sein. Bei einer bestehenden Position behält eine leere Zelle deren Währung
   - **Lieferant**: `supplier_name` ist optional. Ist das Feld gefüllt, wird ein Lieferant mit genau diesem Namen verwendet. Andernfalls wird der Name ohne Rücksicht auf Groß-/Kleinschreibung abgeglichen. Ein Name, der zu keinem Lieferanten passt, ist ein Fehler. Ebenso ein Name, der zu mehreren Lieferanten nur über die Groß-/Kleinschreibung passt (zum Beispiel „Acme" und „ACME", wenn die Datei „acme" enthält)
-  - **Unternehmen und Konto**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `account_number` wird im Kontenplan dieses Unternehmens gesucht, oder im Standard-Kontenplan, wenn das Unternehmen keinen hat. Eine Kontonummer, die nur in einem anderen Kontenplan existiert, ist ein Fehler
+  - **Unternehmen und Konto**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). Ein leeres `company_name` behält das Unternehmen einer bestehenden Position; eine neue Position erhält das Unternehmen ihrer Kostenstelle. Fehlt beides, wird die Zeile abgelehnt: „Company is required unless the line has a cost center." `account_number` wird im Kontenplan dieses Unternehmens gesucht, oder im Standard-Kontenplan, wenn das Unternehmen keinen hat. Eine Kontonummer, die nur in einem anderen Kontenplan existiert, ist ein Fehler
   - **Verantwortliche**: `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt
   - **Datumsangaben**: `effective_start` (und `effective_end` in älteren Dateien) muss ein echter Kalendertag im Format `YYYY-MM-DD` sein, zum Beispiel `2026-01-01`. Andere Formate wie `01/03/2026` sind Fehler. Ein leeres `effective_start` behält das gespeicherte Datum einer bestehenden Position; eine neue Position beginnt am 1. Januar des laufenden Jahres
   - **Analysekategorie**: Existiert die Kategorie nicht, wird sie beim Import automatisch erstellt
+  - **Kostenstelle**: `cost_center_code` ist der Code einer Kostenstelle, unabhängig von Groß- und Kleinschreibung. Eine Gruppe wird abgelehnt. Eine deaktivierte Kostenstelle wird auf einer Position akzeptiert, die sie bereits hat, und als neuer Wert abgelehnt. Eine leere Zelle entfernt die Kostenstelle der Position. Fehlt die ganze Spalte, behalten die Positionen ihre Kostenstelle
+  - **Run oder Build**: `run_build` ist `run`, `build` oder leer (unabhängig von Groß- und Kleinschreibung). Eine leere Zelle entfernt den Wert. Fehlt die ganze Spalte, behalten die Positionen ihren Wert
+  - **Unternehmen aus der Kostenstelle**: Eine neue Position mit leerem `company_name` erhält das Unternehmen ihrer Kostenstelle, und `account_number` wird im Kontenplan dieses Unternehmens gesucht. Ein gefülltes `company_name` bleibt erhalten, auch wenn es vom Unternehmen der Kostenstelle abweicht
   - **Budgets**: Budgetspalten füllen J-1, J und J+1 Versionen. Beträge werden gleichmäßig auf 12 Monate verteilt (Modus Jährlich), und der Zeitraum der Spalte wird das ganze Jahr. Eine leere Zelle lässt die Spalte unverändert; `0` leert sie. Die Überschriften behalten ihre technischen Namen, egal wie Ihre Organisation die Spalten nennt, und sie laden auch ausgeblendete Spalten
   - **Monatsbeträge**: Um Beträge Monat für Monat zu laden oder zu prüfen, mit dem Zeitraum jeder Spalte, verwenden Sie die **Datei der Budgetzeilen** in der Budgetadministration
 
@@ -345,6 +366,11 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   - **„Same line as row N"**: Zwei Zeilen beschreiben dieselbe Position. Führen Sie sie zu einer Zeile zusammen und importieren Sie dann erneut
   - **„Account ... not found in ...'s chart of accounts"**: Verwenden Sie ein Konto aus dem Kontenplan des zahlenden Unternehmens, oder fügen Sie das Konto unter **Stammdaten > Kontenpläne** hinzu, dann importieren Sie erneut
   - **„effective_start must be a valid date"**: Verwenden Sie das Format `YYYY-MM-DD`
+  - **„Company is required unless the line has a cost center."**: Füllen Sie `company_name` oder `cost_center_code` für die neue Position
+  - **„Cost center ... was not found."**: Prüfen Sie den Code, oder legen Sie die Kostenstelle unter **Stammdaten > Kostenstellen** an, dann importieren Sie erneut
+  - **„... is a group. Choose a cost center."**: Verwenden Sie den Code einer Kostenstelle innerhalb dieser Gruppe
+  - **„Cost center ... is disabled."**: Verwenden Sie eine aktivierte Kostenstelle, oder aktivieren Sie sie unter **Stammdaten > Kostenstellen** wieder
+  - **„Run or build must be run, build or blank."**: Korrigieren Sie die Zelle `run_build`
   - **„Ungültige Währung"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind
   - **„Kopfzeilen stimmen nicht überein"**: Laden Sie eine frische Vorlage herunter; Kopfzeilen müssen exakt übereinstimmen (einschließlich Reihenfolge)
 

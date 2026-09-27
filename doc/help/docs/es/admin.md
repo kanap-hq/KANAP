@@ -258,6 +258,7 @@ Los recursos están organizados en grupos para facilitar la gestión:
 |---------|--------------|
 | `companies` | Datos maestros de empresas |
 | `departments` | Datos maestros de departamentos |
+| `cost_centers` | Centros de coste y sus grupos |
 | `suppliers` | Datos maestros de proveedores |
 | `contacts` | Directorio de contactos |
 | `accounts` | Plan de cuentas |
@@ -456,7 +457,7 @@ La sincronización necesita una aprobación única por parte de un administrador
 |-----------------|---------------|
 | **Aún no autorizado...** | Ningún administrador de Microsoft Entra ha aprobado la sincronización, o falta el permiso requerido en el registro de aplicación. |
 | **Conceder acceso en Microsoft Entra** | Le lleva a la página de aprobación de Microsoft. Se muestra mientras la sincronización no está autorizada. Vuelve con **Acceso concedido. La primera sincronización está en curso.** |
-| **Última sincronización {fecha} — N cuentas actualizadas, N desactivadas.** | Resultado de la última ejecución correcta. |
+| **Última sincronización {fecha}: N cuentas actualizadas, N desactivadas.** | Resultado de la última ejecución correcta. |
 | **La última sincronización falló: {mensaje}** | La última ejecución no se completó. El mensaje proviene de Microsoft. |
 | **Sincronizar ahora** | Ejecuta la sincronización de inmediato en lugar de esperar a esta noche. Informa **Sincronización completada: N cuentas actualizadas, N desactivadas.** |
 

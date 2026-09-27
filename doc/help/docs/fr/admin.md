@@ -258,6 +258,7 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 |-----------|---------------------|
 | `companies` | Données de référence des sociétés |
 | `departments` | Données de référence des départements |
+| `cost_centers` | Centres de coûts et leurs groupes |
 | `suppliers` | Données de référence des fournisseurs |
 | `contacts` | Répertoire des contacts |
 | `accounts` | Plan comptable |
@@ -456,7 +457,7 @@ La synchronisation nécessite une approbation unique par un administrateur Micro
 |----------------|---------------|
 | **Pas encore autorisé...** | Aucun administrateur Microsoft Entra n'a approuvé la synchronisation, ou l'autorisation requise manque dans l'enregistrement d'application. |
 | **Autoriser dans Microsoft Entra** | Vous envoie vers la page d'approbation de Microsoft. Affiché tant que la synchronisation n'est pas autorisée. Vous revenez avec **Accès accordé. La première synchronisation est en cours.** |
-| **Dernière synchronisation {date} — N comptes actualisés, N désactivés.** | Résultat de la dernière exécution réussie. |
+| **Dernière synchronisation {date} : N comptes actualisés, N désactivés.** | Résultat de la dernière exécution réussie. |
 | **La dernière synchronisation a échoué : {message}** | La dernière exécution ne s'est pas terminée. Le message provient de Microsoft. |
 | **Synchroniser maintenant** | Lance la synchronisation immédiatement au lieu d'attendre la nuit. Affiche **Synchronisation terminée : N comptes actualisés, N désactivés.** |
 

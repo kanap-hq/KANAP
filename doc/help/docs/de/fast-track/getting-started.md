@@ -27,7 +27,7 @@ KANAP ist um eine einfache Struktur herum organisiert. Die obere Leiste zeigt di
 | **IT-Landschaft** | Anwendungen, Schnittstellen, Schnittstellenkarte, Assets, Verbindungen, Verbindungskarte, Standorte |
 | **Wissensdatenbank** | Dokumente und Vorlagen mit Review-Workflows |
 | **Budgetverwaltung** | OPEX, CAPEX, Verträge, Berichte, Administration |
-| **Stammdaten** | Unternehmen, Abteilungen, Lieferanten, Kontakte, Kontenpläne, Währungen, Geschäftsprozesse, Analysedimensionen |
+| **Stammdaten** | Unternehmen, Abteilungen, Kostenstellen, Lieferanten, Kontakte, Kontenpläne, Währungen, Geschäftsprozesse, Analysedimensionen |
 | **Administration** | Benutzer, Rollen, Audit-Protokoll, Abrechnung, Authentifizierung, Branding (nur Admin) |
 
 Sie brauchen nicht auf alles Zugriff. Ihre Rolle bestimmt, welche Bereiche und Aktionen für Sie verfügbar sind. Wenn etwas in Ihrem Menü fehlt, fragen Sie Ihren Administrator.

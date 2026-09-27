@@ -24,12 +24,14 @@ L'espace de travail s'ouvre en mode création, avec le panneau **Propriétés** 
 **Optionnel mais utile** :
 
 - **Fournisseur** : Le vendeur ou fournisseur de cet investissement. Sélectionnez-le parmi vos fournisseurs dans les données de référence
+- **Centre de coûts** : Qui porte l'investissement. Voir [Centres de coûts](cost-centers.md). Lorsque la société payeuse est encore vide, choisir un centre de coûts la remplit avec la société du centre de coûts
+- **Run ou build** : **Run** pour une dépense qui maintient les services existants, **Build** pour une dépense qui les crée ou les fait évoluer
 - **Catégorie analytique** : Regroupement personnalisé pour le reporting
 - **Fin de validité** : La date à laquelle cet investissement s'arrête, par exemple à la fin de la durée de vie utile de l'actif ou à l'achèvement du projet. Laissez-la vide s'il n'y a pas de fin. Après cette date, le poste est désactivé et les années suivantes ne comptent plus dans les vues budgétaires
 - **Responsable IT** / **Responsable métier** : Qui est en charge
 - **Description** (onglet Vue d'ensemble) : Détails libres sur l'investissement
 
-Une fois renseignés, **Société payeuse** et **Compte** peuvent être modifiés mais pas vidés. **Fournisseur** peut être effacé à tout moment. Les postes créés par un import CSV n'ont pas de compte (le fichier CAPEX n'a pas de colonne de compte) : renseignez-le dans le panneau **Propriétés**.
+Une fois renseignés, **Société payeuse** et **Compte** peuvent être modifiés mais pas vidés. **Fournisseur** peut être effacé à tout moment. Lorsque vous changez la société payeuse d'un poste qui a un compte, et que la nouvelle société utilise un autre plan comptable, le compte est effacé dans le même enregistrement : choisissez le nouveau compte sur le plan comptable de la nouvelle société. Les postes créés par un import CSV n'ont pas de compte (le fichier CAPEX n'a pas de colonne de compte) : renseignez-le dans le panneau **Propriétés**.
 
 Une fois le poste créé, l'espace de travail déverrouille les quatre onglets : **Vue d'ensemble**, **Budget**, **Ventilations** et **Relations**.
 
@@ -91,6 +93,9 @@ Ces colonnes sont masquées par défaut. Affichez-les depuis le sélecteur de co
 | **Fin de validité** | Date à laquelle le poste s'arrête (vide signifie sans fin) |
 | **Responsable IT** / **Responsable métier** | Utilisateurs responsables |
 | **Analytique** | Nom de la catégorie analytique |
+| **Centre de coûts** | Le code et le nom du centre de coûts. Survolez-le pour voir son chemin complet dans l'arbre ; cliquez dessus pour ouvrir le centre de coûts |
+| **Responsable budgétaire** | Le responsable budgétaire du centre de coûts du poste. Il est déduit du centre de coûts et non enregistré sur le poste : changez le responsable budgétaire d'un centre de coûts et tous ses postes suivent |
+| **Run ou build** | **Run** ou **Build** |
 | **Projet** | Noms des projets liés dans l'onglet Relations |
 | **Notes** | Notes libres |
 | **Activé** | Statut (activé ou désactivé) |
@@ -98,11 +103,11 @@ Ces colonnes sont masquées par défaut. Affichez-les depuis le sélecteur de co
 
 ### Recherche rapide
 
-Le champ de recherche en haut porte sur la référence, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, la catégorie analytique, le type d'immobilisation, le type d'investissement, la priorité, les notes, la devise et le statut. Les résultats se mettent à jour en temps réel pendant la saisie.
+Le champ de recherche en haut porte sur la référence, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, la catégorie analytique, le centre de coûts (code, nom et chemin), le responsable budgétaire, le type d'immobilisation, le type d'investissement, la priorité, les notes, la devise et le statut. Les résultats se mettent à jour en temps réel pendant la saisie.
 
 ### Filtres de colonnes
 
-Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, **Analytique** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Plusieurs filtres se combinent avec une logique ET.
+Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, **Analytique**, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Plusieurs filtres se combinent avec une logique ET.
 
 Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants.
 
@@ -127,6 +132,7 @@ Cliquez sur n'importe quelle cellule d'une ligne pour ouvrir l'espace de travail
 - **Ventilation** : Ouvre l'onglet **Ventilations** pour l'année en cours
 - **Tâche** : Ouvre l'onglet **Vue d'ensemble**, où se trouve le panneau des tâches
 - **Contrat** : Ouvre directement le contrat lié
+- **Centre de coûts** : Ouvre l'espace de travail du centre de coûts
 
 ### Filtre de statut
 
@@ -149,7 +155,7 @@ Lorsque vous ouvrez un poste, l'espace de travail affiche les boutons **Préc.**
 Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. Il comporte quatre parties :
 
 - **En-tête** : la référence du poste (ex. : `CPX-7`) avec un bouton de copie, le nom de l'investissement (cliquez dessus pour renommer le poste), **Préc.** / **Suiv.**, **Envoyer le lien** et le bouton de fermeture
-- **Barre de métadonnées** sous le titre : **Statut**, **Priorité**, **Responsable IT** et **Responsable métier**, modifiables sur place
+- **Barre de métadonnées** sous le titre : **Statut**, **Priorité**, **Responsable IT** et **Responsable métier**, modifiables sur place. Lorsque le centre de coûts du poste a un responsable budgétaire, **Responsable budgétaire** vient ensuite. Il est en lecture seule et déduit du centre de coûts, non enregistré sur le poste : survolez-le pour voir de quel centre de coûts il provient, et modifiez-le sur le centre de coûts (voir [Centres de coûts](cost-centers.md#responsable-budgetaire-sur-les-lignes-budgetaires))
 - **Quatre onglets** : **Vue d'ensemble**, **Budget**, **Ventilations** et **Relations** (l'onglet Relations indique le nombre de liens du poste)
 - **Panneau Propriétés** à droite : les champs principaux du poste. Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
 
@@ -179,12 +185,22 @@ L'onglet Vue d'ensemble contient les détails de l'investissement et ses tâches
 
 **Panneau Propriétés** :
 
-- **Fournisseur**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse), **Devise** (seulement les devises autorisées dans votre espace de travail), **Type d'immobilisation**, **Type d'investissement**, **Catégorie analytique** et **Début d'effet**
+- **Fournisseur**, **Centre de coûts**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse), **Devise** (seulement les devises autorisées dans votre espace de travail), **Type d'immobilisation**, **Type d'investissement**, **Catégorie analytique**, **Run ou build** et **Début d'effet**
 - **Cycle de vie** : l'interrupteur **Activé** et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
 - Dates **Créé** et **Mis à jour** (lecture seule)
 - La **Priorité** se règle dans le panneau Propriétés à la création du poste, puis dans la barre de métadonnées
 
-**Conseil** : Lors de la création d'un poste, un avertissement « compte obsolète » signifie que le compte sélectionné n'appartient pas au plan comptable de la société payeuse. Choisissez un autre compte pour résoudre l'avertissement.
+**Centre de coûts** :
+
+- La liste présente l'arbre des centres de coûts. Les groupes s'affichent pour vous aider à vous repérer et ne peuvent pas être choisis. Recherchez par code, nom ou nom de groupe
+- Un centre de coûts désactivé est marqué **Désactivé**. Il reste sur les postes qui l'ont déjà et ne peut pas être choisi pour un autre poste
+- Lorsque vous créez un poste et que la société payeuse est vide, choisir un centre de coûts remplit la société payeuse avec la société du centre de coûts : la liste **Compte** s'ouvre alors sur le plan comptable de cette société. Tant que vous n'avez pas choisi vous-même une société ou un compte, choisir un autre centre de coûts met aussi à jour la société
+- Lorsque la société payeuse diffère de la société du centre de coûts, les deux sont conservées. Une indication sous le champ affiche « Ce centre de coûts appartient à » suivi du nom de la société
+- Un poste enregistré via l'API avec un centre de coûts et sans société payeuse prend la société du centre de coûts. Pour les fichiers CSV, voir [Import/export CSV](#importexport-csv)
+
+**Run ou build** : **Run**, **Build** ou **Non défini**. Utilisez-le pour répartir le budget entre le maintien des services et leur évolution.
+
+**Conseil** : Lors de la création d'un poste, un avertissement « compte obsolète » signifie que le compte sélectionné n'appartient pas au plan comptable de la société payeuse. Choisissez un autre compte pour résoudre l'avertissement. Un poste existant dont le compte est hors du plan comptable de sa société reste modifiable : le plan comptable n'est vérifié que lorsque la société ou le compte change.
 
 ---
 
@@ -404,9 +420,10 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 
 - Séparateur : point-virgule `;` (pas de virgule)
 - Encodage : UTF-8 (enregistrez au format « CSV UTF-8 » dans Excel)
-- En-têtes : `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
+- En-têtes : `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
 - `disabled_at` est la fin de validité : la date à laquelle le poste s'arrête. Indiquez une date (`2026-12-31`) ou une date avec heure. Laissez vide s'il n'y a pas de fin
 - Les anciens fichiers avec une colonne `effective_end` s'importent toujours : sa date alimente la fin de validité lorsque `disabled_at` est vide
+- `cost_center_code` et `run_build` sont des colonnes facultatives : les exports et le modèle les contiennent toujours, et les fichiers qui ne les ont pas s'importent toujours
 
 **Import** :
 
@@ -414,8 +431,9 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 2. Téléversez votre fichier CSV (glisser-déposer ou sélecteur de fichiers)
 3. Cliquez sur **Vérification** pour valider :
    - Les en-têtes correspondent exactement
-   - Les sociétés et utilisateurs existent dans votre espace de travail
-   - Les champs obligatoires (description, ppe_type, investment_type, priority) sont présents. Un nouveau poste nécessite aussi company_name et currency
+   - Les sociétés, centres de coûts et utilisateurs existent dans votre espace de travail
+   - Les champs obligatoires (description, ppe_type, investment_type, priority) sont présents. Un nouveau poste nécessite aussi une devise, et un company_name sauf s'il a un centre de coûts
+   - Un changement de société sur un poste qui a un compte reste dans le plan comptable de ce compte
    - Les devises sont autorisées dans les paramètres de devise de votre espace de travail
    - Les responsables sont des utilisateurs actifs
    - Un `item_number` correspond à un poste CAPEX existant
@@ -426,9 +444,12 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 **Remarques importantes** :
 
 - **Correspondance** : Une ligne avec un `item_number` met à jour ce poste CAPEX ; la vérification signale un numéro qui ne correspond à aucun poste. Une ligne sans numéro est rattachée par `description` : si elle correspond, elle met à jour le poste, sinon elle crée un nouveau poste. Deux lignes avec le même `item_number`, ou avec la même `description` et sans numéro, sont une erreur (« Same line as row N ») : gardez une seule ligne par poste.
-- **Nouveaux postes** : `company_name` et `currency` sont obligatoires pour un nouveau poste. La devise doit être autorisée dans les paramètres de devise de votre espace de travail. Sur un poste existant, une cellule de devise vide conserve sa devise.
+- **Nouveaux postes** : `currency` est obligatoire pour un nouveau poste, de même que `company_name` sauf si la ligne a un `cost_center_code` : un nouveau poste avec un `company_name` vide prend la société de son centre de coûts. Sans l'un ni l'autre, la ligne est refusée : « Company is required unless the line has a cost center. » La devise doit être autorisée dans les paramètres de devise de votre espace de travail. Sur un poste existant, une cellule de devise vide conserve sa devise.
 - **Dates** : `effective_start` (et `effective_end` dans les anciens fichiers) doit être un jour calendaire réel au format `YYYY-MM-DD`, par exemple `2026-01-01`. Les autres formats, comme `01/03/2026`, sont des erreurs. Un `effective_start` vide conserve la date enregistrée d'un poste existant ; un nouveau poste commence le 1er janvier de l'année en cours.
 - **Références** : `company_name` doit correspondre à une Société par nom (insensible à la casse). `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail : un utilisateur invité ou un contact sans compte est refusé.
+- **Centre de coûts** : `cost_center_code` est le code d'un centre de coûts, sans tenir compte de la casse. Un groupe est refusé. Un centre de coûts désactivé est accepté sur un poste qui l'a déjà, et refusé comme nouvelle valeur. Une cellule vide efface le centre de coûts du poste. Lorsque la colonne entière est absente, les postes conservent leur centre de coûts.
+- **Run ou build** : `run_build` vaut `run`, `build` ou vide (sans tenir compte de la casse). Une cellule vide efface la valeur. Lorsque la colonne entière est absente, les postes conservent leur valeur.
+- **Société des postes existants** : un `company_name` vide conserve la société payeuse du poste. Un `company_name` renseigné est conservé, même s'il diffère de la société du centre de coûts. Lorsqu'un poste a un compte, un nouveau `company_name` doit utiliser le même plan comptable que ce compte ; sinon la vérification refuse la ligne : « Account ... is not in ...'s chart of accounts. Change the line's account first. » Changez le compte dans le panneau **Propriétés** du poste, puis relancez l'import.
 - **Type d'immobilisation** : Doit être `hardware` ou `software` (insensible à la casse).
 - **Type d'investissement** : Doit être l'un des suivants : `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (insensible à la casse).
 - **Priorité** : Doit être `mandatory`, `high`, `medium` ou `low` (insensible à la casse).
@@ -445,6 +466,12 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 - **« En-têtes non conformes »** : Téléchargez un modèle récent ; les en-têtes doivent correspondre exactement (ordre compris).
 - **« effective_start must be a valid date »** : Utilisez le format `YYYY-MM-DD`.
 - **« Same line as row N »** : Deux lignes décrivent le même poste. Fusionnez-les en une seule ligne, puis relancez l'import.
+- **« Company is required unless the line has a cost center. »** : Renseignez `company_name` ou `cost_center_code` pour le nouveau poste.
+- **« Account ... is not in ...'s chart of accounts. Change the line's account first. »** : Voir **Société des postes existants** ci-dessus.
+- **« Cost center ... was not found. »** : Vérifiez le code, ou créez le centre de coûts dans **Données de référence > Centres de coûts**, puis relancez l'import.
+- **« ... is a group. Choose a cost center. »** : Utilisez le code d'un centre de coûts de ce groupe.
+- **« Cost center ... is disabled. »** : Utilisez un centre de coûts activé, ou réactivez-le dans **Données de référence > Centres de coûts**.
+- **« Run or build must be run, build or blank. »** : Corrigez la cellule `run_build`.
 
 **Conseil** : Commencez par l'export du modèle, remplissez quelques lignes et lancez une vérification pour détecter les erreurs tôt. Corrigez les erreurs dans le CSV et téléversez-le à nouveau jusqu'à ce que la vérification passe, puis chargez.
 

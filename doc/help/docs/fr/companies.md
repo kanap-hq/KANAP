@@ -146,7 +146,7 @@ Utilisez la **Fin de validité** pour contrôler quand une société cesse d'êt
 - Après la fin de validité :
     - La société n'apparaît plus dans les listes de sélection pour les nouvelles ventilations et est exclue des rapports pour les années strictement postérieures.
     - Les données historiques restent intactes ; la société apparaît toujours dans les rapports couvrant les années où elle était active.
-- **Préférez la désactivation à la suppression.** La suppression n'est possible que si rien ne référence la société (pas de ventilations ni de dépenses).
+- **Préférez la désactivation à la suppression.** La suppression n'est possible que si rien ne référence la société (pas de ventilations, de dépenses ni de centres de coûts). Une société à laquelle appartiennent des centres de coûts est refusée avec un message tel que « Company A is used by 3 cost centers. Change their company or disable it instead. »
 
 ## Métriques annuelles
 

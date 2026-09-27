@@ -2,6 +2,8 @@
 
 Departments represent organizational units within your companies. Use them to track headcount by year, allocate costs, and define audiences for applications. Each department belongs to a company and carries year-by-year headcount data that feeds into chargeback and allocation calculations.
 
+To record who owns each budget line, use [Cost centers](cost-centers.md): unlike departments, they can be grouped across companies.
+
 ## Getting started
 
 Navigate to **Master Data > Departments** to see your department list. Click **New** to create your first entry.
@@ -49,21 +51,24 @@ The Departments grid gives you an overview of all departments with their headcou
 
 ## The Departments workspace
 
-Click any row to open the workspace. It has two tabs arranged vertically on the left: **Overview** and **Details**.
+Click any row to open the workspace. It has two tabs: **Overview** and **Details**.
 
-The workspace toolbar includes **Prev** / **Next** buttons to move between departments without returning to the list, plus **Reset** and **Save** buttons. If you have unsaved changes when navigating away, you will be prompted to save or discard them.
+- **Header**: the department name. Click it to rename the department. **Prev** / **Next** move between departments in the list's order and filters without returning to the list, and the close button returns to the list
+- **Properties panel** on the right: **Company** and **Lifecycle**
+
+**Autosave**: Every change saves on its own. There is no Save button. The name and the description save when you leave the field; the company and the lifecycle save as soon as you change them. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it, except for the name, which shows its refusal at the top of the page.
 
 ### Overview
 
-The Overview tab captures the department's identity and status.
+The Overview tab holds the description. The other fields are in the header and the **Properties** panel.
 
 **What you can edit**:
-- **Name**: Department name (required)
-- **Company**: Parent company -- links to Companies master data (required). Companies that already have a department with the same name are automatically excluded from the dropdown to prevent duplicates.
+- **Name**: Department name (required), in the header
+- **Company**: Parent company, linked to Companies master data (required). A company that already has a department with the same name is refused: "A department with this name already exists in the selected company."
 - **Description**: Free-text description
 - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. Leave the date blank to keep the department active indefinitely, or set a future date to schedule its end. Switching the department to **Disabled** without a date sets the end of validity to today
 
-**Tip**: When creating a new department, the Details tab becomes available only after you save the initial record.
+**Creating a department**: **New** opens a form with **Name**, **Company** and **Description**. Click **Create** to save it. The Details tab becomes available after you create the department.
 
 ---
 
@@ -77,8 +82,9 @@ The Details tab manages year-by-year headcount metrics.
 - **Headcount**: Total number of employees in this department for the selected year
 
 **How it works**:
+- Headcount is saved for the selected year when you leave the field (or press Enter). Anything other than a whole number of zero or more shows "Enter a whole number, 0 or more." under the field
 - Headcount feeds into audience calculations for applications
-- Values are saved per year -- switching years loads that year's data independently
+- Each year is stored on its own: switching years loads that year's value
 - If metrics for the selected year have been **frozen** (by an administrator), the field is locked and a notice explains how to unfreeze
 
 **Tip**: Update headcount annually during your budget planning cycle. Use the year tabs to review or pre-fill future years.

@@ -68,6 +68,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 
 - [Sociétés](companies.md) - Gérez les entités société
 - [Départements](departments.md) - Organisez par structure de départements
+- [Centres de coûts](cost-centers.md) - Indiquez qui porte chaque ligne budgétaire
 
 **Parties externes**
 

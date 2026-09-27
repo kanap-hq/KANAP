@@ -2,6 +2,8 @@
 
 Les départements représentent les unités organisationnelles au sein de vos sociétés. Utilisez-les pour suivre l'effectif par année, ventiler les coûts et définir les audiences pour les applications. Chaque département appartient à une société et porte des données d'effectif annuelles qui alimentent les calculs de refacturation et de ventilation.
 
+Pour indiquer qui porte chaque ligne budgétaire, utilisez les [Centres de coûts](cost-centers.md) : contrairement aux départements, ils peuvent être regroupés entre plusieurs sociétés.
+
 ## Premiers pas
 
 Naviguez vers **Données de référence > Départements** pour voir votre liste de départements. Cliquez sur **Nouveau** pour créer votre première entrée.
@@ -49,21 +51,24 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 
 ## L'espace de travail Départements
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte deux onglets disposés verticalement à gauche : **Vue d'ensemble** et **Détails**.
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte deux onglets : **Vue d'ensemble** et **Détails**.
 
-La barre d'outils de l'espace de travail inclut les boutons **Préc** / **Suiv** pour naviguer entre les départements sans revenir à la liste, plus les boutons **Réinitialiser** et **Enregistrer**. Si vous avez des modifications non enregistrées en quittant la page, vous serez invité à enregistrer ou à les annuler.
+- **En-tête** : le nom du département. Cliquez dessus pour renommer le département. **Préc** / **Suiv** parcourent les départements dans l'ordre et les filtres de la liste sans revenir à la liste, et le bouton de fermeture ramène à la liste
+- **Panneau Propriétés** à droite : **Société** et **Cycle de vie**
+
+**Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Le nom et la description s'enregistrent quand vous quittez le champ ; la société et le cycle de vie s'enregistrent dès que vous les changez. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, sauf pour le nom, dont le refus s'affiche en haut de la page.
 
 ### Vue d'ensemble
 
-L'onglet Vue d'ensemble capture l'identité et le statut du département.
+L'onglet Vue d'ensemble contient la description. Les autres champs se trouvent dans l'en-tête et le panneau **Propriétés**.
 
 **Ce que vous pouvez modifier** :
-- **Nom** : Nom du département (obligatoire)
-- **Société** : Société parente — liée aux données de référence Sociétés (obligatoire). Les sociétés qui ont déjà un département du même nom sont automatiquement exclues de la liste déroulante pour éviter les doublons.
+- **Nom** : Nom du département (obligatoire), dans l'en-tête
+- **Société** : Société parente, liée aux données de référence Sociétés (obligatoire). Une société qui a déjà un département du même nom est refusée : « A department with this name already exists in the selected company. »
 - **Description** : Description libre
 - **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Laissez la date vide pour que le département reste actif indéfiniment, ou fixez une date future pour programmer sa fin. Passer le département à **Désactivé** sans date fixe la fin de validité à aujourd'hui
 
-**Conseil** : Lors de la création d'un nouveau département, l'onglet Détails ne devient disponible qu'après l'enregistrement initial.
+**Créer un département** : **Nouveau** ouvre un formulaire avec **Nom**, **Société** et **Description**. Cliquez sur **Créer** pour l'enregistrer. L'onglet Détails devient disponible après la création du département.
 
 ---
 
@@ -77,8 +82,9 @@ L'onglet Détails gère les métriques d'effectif année par année.
 - **Effectif** : Nombre total d'employés dans ce département pour l'année sélectionnée
 
 **Comment ça fonctionne** :
+- L'effectif est enregistré pour l'année sélectionnée quand vous quittez le champ (ou appuyez sur Entrée). Toute valeur autre qu'un nombre entier de zéro ou plus affiche « Saisissez un nombre entier, 0 ou plus. » sous le champ
 - L'effectif alimente les calculs d'audience pour les applications
-- Les valeurs sont enregistrées par année — changer d'année charge indépendamment les données de cette année
+- Chaque année est enregistrée séparément : changer d'année charge la valeur de cette année
 - Si les métriques pour l'année sélectionnée ont été **gelées** (par un administrateur), le champ est verrouillé et un avis explique comment dégeler
 
 **Conseil** : Mettez à jour l'effectif annuellement lors de votre cycle de planification budgétaire. Utilisez les onglets d'année pour consulter ou pré-remplir les années futures.
