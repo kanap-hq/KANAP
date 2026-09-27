@@ -2,7 +2,7 @@
 
 CAPEX-Positionen (Capital Expenditure / Investitionsausgaben) sind Ihre Investitionen in langfristige Vermögenswerte: Hardwarekäufe, Softwarelizenzen mit mehrjährigem Wert, Infrastrukturprojekte und Ausrüstung. Hier planen Sie Investitionsbudgets, verfolgen Projektausgaben und ordnen Kosten Ihrer Organisation zu.
 
-Der CAPEX-Arbeitsbereich unterstützt Sie bei der Verwaltung jeder Investitionsposition von der ersten Budgetierung über die Durchführung bis zur Berichterstattung -- alles an einem Ort mit jahresbezogenen Budgetspalten, flexiblen Zuordnungsmethoden und direkten Verknüpfungen zu Projekten, Anwendungen, Verträgen und Kontakten.
+Der CAPEX-Arbeitsbereich unterstützt Sie bei der Verwaltung jeder Investitionsposition von der ersten Budgetierung über die Durchführung bis zur Berichterstattung. Alles liegt an einem Ort, mit jahresbezogenen Budgetspalten, flexiblen Zuordnungsmethoden und direkten Verknüpfungen zu Projekten, Anwendungen, Verträgen und Kontakten.
 
 ## Erste Schritte
 
@@ -16,7 +16,7 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus, mit geöffnetem Bereich **E
 - **Zahlendes Unternehmen**: Welches Unternehmen die Investition tätigt (erforderlich für die Buchhaltung)
 - **Konto**: Das Sachkonto für diese Investitionsausgabe. Es erscheinen nur Konten aus dem Kontenplan des zahlenden Unternehmens
 - **Währung**: ISO-Code (z. B. USD, EUR). Standardmäßig Ihre Arbeitsbereich-CAPEX-Währung; kann pro Position überschrieben werden
-- **Anlagentyp**: Sachanlagen-Klassifizierung -- Hardware oder Software
+- **Anlagentyp**: Sachanlagen-Klassifizierung: Hardware oder Software
 - **Investitionsart**: Zweck der Investition (siehe Optionen unten)
 - **Priorität**: Geschäftliche Prioritätsstufe (siehe Optionen unten)
 - **Beginn der Gültigkeit**: Wann diese Investition beginnt (TT/MM/JJJJ)
@@ -76,8 +76,7 @@ Die CAPEX-Liste (unter **Budgetverwaltung > CAPEX**) ist Ihre Hauptansicht zum D
 | **Investitionsart** | Zweck der Investition |
 | **Priorität** | Geschäftliche Prioritätsstufe |
 | **Zuordnung** | Zuordnungsmethoden-Bezeichnung des aktuellen Jahres |
-| **Budget J** | Geplantes Investitionsbudget des aktuellen Jahres (Berichtswährung) |
-| **Erwarteter Endwert J** | Erwarteter Endwert des aktuellen Jahres (Berichtswährung) |
+| **Budget J** und **Erwarteter Endwert J** | Die Beträge des aktuellen Jahres in der Standardspalte und in der letzten angezeigten Spalte, in der Berichtswährung. Mit den Standardeinstellungen sind das Budget und Erwarteter Endwert. Ist die Standardspalte zugleich die letzte angezeigte Spalte, erscheint nur eine Betragsspalte. Siehe [Budgetspalten](budget-operations.md#budgetspalten) |
 | **Aufgabe** | Titel der neuesten mit dieser Position verknüpften Aufgabe |
 
 ### Zusätzliche Spalten
@@ -86,7 +85,7 @@ Diese Spalten sind standardmäßig ausgeblendet. Zeigen Sie sie über die Spalte
 
 | Spalte | Was sie zeigt |
 |--------|---------------|
-| **Betragsspalten** | Jede Budgetspalte (Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert) für J-1, J, J+1 und J+2. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Die Beträge sind in der Berichtswährung |
+| **Betragsspalten** | Jede angezeigte Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Die Beträge sind in der Berichtswährung. Ausgeblendete Spalten werden nicht angeboten |
 | **Währung** | Währungscode der Position |
 | **Gültig ab** | Startdatum |
 | **Ende der Gültigkeit** | Datum, an dem die Position endet (leer bedeutet kein Ende) |
@@ -113,7 +112,7 @@ Textspalten verwenden Textfilter. Geben Sie bei **Ref** die Nummer oder die voll
 
 ### Sortierung
 
-Klicken Sie auf eine Spaltenüberschrift, um aufsteigend oder absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betragsspalte. Standardmäßig wird nach **Budget J** sortiert, der höchste Betrag zuerst. Die Liste merkt sich Ihre letzte Sortierung bei der Rückkehr.
+Klicken Sie auf eine Spaltenüberschrift, um aufsteigend oder absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betragsspalte. Standardmäßig wird nach der Standardspalte des aktuellen Jahres sortiert, höchster Betrag zuerst (**Budget J** mit den Standardeinstellungen). **Zurück** und **Weiter** im Arbeitsbereich folgen derselben Reihenfolge. Die Liste merkt sich Ihre letzte Sortierung bei der Rückkehr.
 
 ### Summenzeile
 
@@ -135,7 +134,7 @@ Verwenden Sie den Umschalter **Anzeigen: Aktiviert / Deaktiviert / Alle** über 
 
 ### Suchkontext-Erhaltung
 
-Ihr Listenkontext -- Sortierreihenfolge, Suchtext und aktive Filter -- wird beibehalten, wenn Sie eine Position öffnen, und wiederhergestellt, wenn Sie zur Liste zurückkehren. Sie können also mehrere Positionen nacheinander aufrufen, ohne Ihren Platz zu verlieren.
+Ihr Listenkontext (Sortierreihenfolge, Suchtext und aktive Filter) wird beibehalten, wenn Sie eine Position öffnen, und wiederhergestellt, wenn Sie zur Liste zurückkehren. Sie können also mehrere Positionen nacheinander aufrufen, ohne Ihren Platz zu verlieren.
 
 ### Zurück/Weiter-Navigation
 
@@ -201,14 +200,19 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
 
 **Budgetspalten** (alle Jahre):
 
+Der Tab zeigt die Spalten, die Ihre Organisation anzeigt, unter ihren Namen und immer in derselben Reihenfolge. Die Standardspalten sind:
+
 - **Budget**: Ursprünglich geplantes Investitionsbudget
 - **Revision**: Budgetaktualisierung im Jahresverlauf (z. B. nach Umfangsänderungen oder Neuprognosen)
-- **Ist-Werte**: Erwartete tatsächliche Ausgaben (Ihre beste Schätzung im Jahresverlauf)
-- **Erwarteter Endwert**: Tatsächliche Investitionsausgaben nach dem Jahresabschluss
+- **Prognose**: Eine zusätzliche Planungsspalte, standardmäßig ausgeblendet
+- **Ist-Werte**: Tatsächliche Investitionsausgaben, so wie sie im Jahresverlauf erfasst werden
+- **Erwarteter Endwert**: Ihre beste Schätzung der Investitionsausgaben zum Jahresende
+
+Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die Standardspalte unter **Budgetverwaltung > Administration > Budgetspalten** wählen (siehe [Budgetspalten](budget-operations.md#budgetspalten)). Eine ausgeblendete Spalte behält ihre Beträge.
 
 **Zeitraum einer Spalte**:
 
-- Jede Spalte (Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert) hat einen Zeitraum innerhalb des Jahres, zum Beispiel April bis Dezember
+- Jede Spalte hat einen Zeitraum innerhalb des Jahres, zum Beispiel April bis Dezember
 - Ein Monat zählt, wenn der Zeitraum seinen 15. Tag abdeckt. Ein Zeitraum, der am 10. April beginnt, schließt den April ein; einer, der am 20. April beginnt, startet im Mai
 - Eine Spalte ohne Betrag und ohne Zeitraum erhält einen Vorschlag: **Beginn der Gültigkeit** und **Ende der Gültigkeit** der Position, begrenzt auf das Jahr. Eine Investition, die am 1. April beginnt, ergibt den Vorschlag April bis Dezember
 - Eine Spalte, die bereits Beträge enthält und keinen Zeitraum hat, gilt als ganzes Jahr, sodass sich vorhandene Daten wie bisher verhalten
@@ -217,23 +221,25 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
 
 - **Jährlich**: Geben Sie eine Summe pro Spalte ein. Die Summe wird gleichmäßig auf die Monate des Zeitraums der Spalte verteilt, und die Monate außerhalb des Zeitraums werden auf null gesetzt. Der Zeitraum wird unter jeder Summe angezeigt, bevor Sie etwas eingeben, zum Beispiel „9 Monate, April bis Dezember“. Nur die Summe, die Sie bearbeiten, wird gespeichert. Die anderen Spalten behalten ihre Monatsbeträge.
 - Klicken Sie auf das Stiftsymbol neben dem Zeitraum unter einer Summe (**Zeitraum ändern**), um das Verteilungsfeld für diese Spalte mit ihrer aktuellen Summe zu öffnen. Lassen die Daten der Position keinen Monat im Jahr übrig, ist die Summe deaktiviert und zeigt „Kein Monat von 2026 liegt innerhalb der Daten der Position.“ Klicken Sie auf das Stiftsymbol daneben (**Zeitraum wählen**), um selbst einen festzulegen.
-- **Monatlich**: Geben Sie Beträge pro Monat (Januar bis Dezember) für eine genaue Verfolgung der Projektausgaben ein, plus eine Spalte **Prognose**. Quartalszwischensummen und eine Jahressumme werden angezeigt. Nur die Monate, die Sie ändern, werden gespeichert.
+- **Monatlich**: Geben Sie Beträge pro Monat (Januar bis Dezember) für jede angezeigte Spalte ein, für eine genaue Verfolgung der Projektausgaben. Quartalszwischensummen und eine Jahressumme werden angezeigt. Nur die Monate, die Sie ändern, werden gespeichert.
+- Beide Tabs zeigen dieselben Spalten: Prognose erscheint auch in **Jährlich**, wenn sie angezeigt wird.
 - Wechseln Sie mit den Tabs **Jährlich** und **Monatlich** zwischen den Modi
 - Der Moduswechsel ändert Ihre Beträge nicht, nur die Ansicht. Jährlich zeigt die Jahressumme der gespeicherten Monate, Monatlich zeigt die gespeicherten Monate.
 
 **Einfrierverhalten**:
 
 - Wenn das Budget eines Jahres eingefroren ist (über die Budgetadministration), sind die Felder schreibgeschützt und zeigen ein Schloss-Symbol
-- Jede Spalte kann unabhängig eingefroren werden (Budget, Revision, Prognose, Ist-Werte, Erwarteter Endwert)
+- Jede Spalte kann unabhängig eingefroren werden
 - Sie können eingefrorene Daten weiterhin ansehen; Administratoren können sie über **Budgetverwaltung > Administration > Daten einfrieren / auftauen** wieder freigeben
 
 **Einen Betrag verteilen**:
 
 - Das Verteilungsfeld ist im Tab **Monatlich** immer sichtbar. Im Tab **Jährlich** öffnet es sich über das Stiftsymbol unter einer Summe
-- Wählen Sie eine **Spalte** (Budget, Revision, Prognose, Erwarteter Endwert oder Ist-Werte), prüfen Sie den **Betrag**, wählen Sie eine **Verteilung** (**Gleichmäßig** oder **4-4-5**) und legen Sie die Daten **Von** und **Bis** fest. Die Daten gehen vom aktuellen Zeitraum der Spalte aus, die Verteilung von der bisherigen Verteilung der Spalte
-- Der Betrag übernimmt die aktuelle Summe der Spalte, in beiden Tabs, und passt sich an, wenn Sie eine andere Spalte wählen. Er bleibt leer, wenn die Spalte keinen Betrag hat
-- **Auf alle Spalten anwenden** ist standardmäßig aktiviert: Jede Spalte (Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert) erhält denselben Zeitraum und dieselbe Verteilung, jeweils mit ihrer eigenen aktuellen Summe. Ausgenommen sind eingefrorene Spalten: Sie ändern sich nie. Fahren Sie mit der Maus über den Schalter, um zu sehen, welche Spalten folgen. Schalten Sie den Schalter aus, um nur die gewählte Spalte zu verteilen
-- **Zurücksetzen** füllt das Feld mit der aktuellen Summe der Spalte, **Gleichmäßig** und dem ganzen Jahr. Dabei wird nichts gespeichert: Klicken Sie auf **Anwenden**, um es zu übernehmen. Ist **Auf alle Spalten anwenden** aktiviert, setzen **Zurücksetzen** und dann **Anwenden** jede Spalte auf eine gleichmäßige Verteilung über zwölf Monate zurück
+- Wählen Sie eine **Spalte** unter den angezeigten Spalten, prüfen Sie den **Betrag**, wählen Sie eine **Verteilung** (**Gleichmäßig** oder **4-4-5**) und legen Sie die Daten **Von** und **Bis** fest. Die Daten gehen vom aktuellen Zeitraum der Spalte aus, die Verteilung von der bisherigen Verteilung der Spalte
+- Das Feld öffnet sich mit der Standardspalte. Der Betrag übernimmt die aktuelle Summe der Spalte, in beiden Tabs, und passt sich an, wenn Sie eine andere Spalte wählen. Er bleibt leer, wenn die Spalte keinen Betrag hat
+- **Auf alle Spalten anwenden** ist standardmäßig aktiviert: Jede Spalte, die dieser Option folgt, erhält denselben Zeitraum und dieselbe Verteilung, jeweils mit ihrer eigenen aktuellen Summe. Standardmäßig folgt jede Spalte. Ein Budgetadministrator legt unter [Budgetspalten](budget-operations.md#budgetspalten) fest, welche folgen. Eingefrorene Spalten ändern sich nie. Fahren Sie mit der Maus über den Schalter, um zu sehen, welche Spalten folgen und welche ihren eigenen Zeitraum behalten. Schalten Sie den Schalter aus, um nur die gewählte Spalte zu verteilen
+- Eine Spalte, die „Auf alle Spalten anwenden“ nicht folgt, wird allein verteilt: Der Schalter erscheint nicht, wenn Sie sie verteilen. Der Schalter ist auch ausgeblendet, wenn sich keine andere folgende Spalte ändern kann
+- **Zurücksetzen** füllt das Feld mit der aktuellen Summe der Spalte, **Gleichmäßig** und dem ganzen Jahr. Dabei wird nichts gespeichert: Klicken Sie auf **Anwenden**, um es zu übernehmen. Ist **Auf alle Spalten anwenden** aktiviert, setzen **Zurücksetzen** und dann **Anwenden** jede folgende Spalte auf eine gleichmäßige Verteilung über zwölf Monate zurück
 - Summen, die Sie im Tab **Jährlich** eingeben, gelten weiterhin nur für ihre eigene Spalte
 - Die Felder **Von** und **Bis** zeigen den Zeitraum. Fallen Monate heraus, nennt das Feld die Monate, die auf null gesetzt werden („Januar bis März werden auf null gesetzt.“). Ein Zeitraum über das ganze Jahr zeigt keine Zeile. Fahren Sie mit der Maus über das Info-Symbol neben dem Titel des Felds, um die Regel zum 15. zu sehen
 - Mit **4-4-5** werden die Gewichte der zählenden Monate hochskaliert, sodass der gesamte Betrag auf sie entfällt
@@ -257,7 +263,7 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
 
 **Mehrjahrestrend**:
 
-- Ein Diagramm unter der Tabelle zeigt die Budgetspalten der Position über mehrere Jahre und aktualisiert sich während der Eingabe
+- Ein Diagramm unter der Tabelle zeigt jede angezeigte Spalte über mehrere Jahre, auch Prognose, wenn sie angezeigt wird, und aktualisiert sich während der Eingabe
 
 **So verwenden Sie ihn**:
 
@@ -278,7 +284,7 @@ Der Tab Zuordnungen verteilt die Investitionsausgabe auf Ihre Unternehmen und Ab
 
 - Funktioniert wie beim Budget: Wechseln Sie mit den Jahres-Tabs zwischen J-2, J-1, J, J+1, J+2
 - Jedes Jahr kann eine andere Zuordnungsmethode haben
-- Das **Jahresbudget** des ausgewählten Jahres erscheint rechts
+- Die Jahressumme der Standardspalte erscheint rechts, zum Beispiel **Budget, Jahressumme**
 
 **Zuordnungsmethoden**:
 
@@ -296,7 +302,7 @@ Der Tab Zuordnungen verteilt die Investitionsausgabe auf Ihre Unternehmen und Ab
 
 **Standard- und fixierte Methoden**:
 
-- Der **Standard**-Eintrag -- angezeigt als *Mitarbeiterzahl (Standard)*, bis Ihre Organisation eine andere Methode konfiguriert -- folgt der Einstellung unter **Budgetverwaltung > Administration > Standard-Zuordnungsmethode**. Jede Investition, die auf Standard bleibt, wird neu berechnet, wenn ein Administrator diese Einstellung ändert.
+- Der **Standard**-Eintrag, angezeigt als *Mitarbeiterzahl (Standard)*, bis Ihre Organisation eine andere Methode konfiguriert, folgt der Einstellung unter **Budgetverwaltung > Administration > Standard-Zuordnungsmethode**. Jede Investition, die auf Standard bleibt, wird neu berechnet, wenn ein Administrator diese Einstellung ändert.
 - Diese Einstellung kann den Standard auch auf eine **Auswahl von Unternehmen** beschränken (zum Beispiel das Unternehmen, das das IT-Budget trägt): Der Treiber gilt dann nur für diese Unternehmen, und die Option lautet *Standard (n Unternehmen)*.
 - **Mitarbeiterzahl**, **IT-Benutzer** und **Umsatz** fixieren diese Methode an der Investition: Eine fixierte Methode funktioniert weiterhin, auch wenn sich der Standard der Organisation später ändert.
 - Investitionen mit einer manuellen Zuordnung sind vom Standard nie betroffen.
@@ -426,7 +432,7 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 - **Anlagentyp**: Muss `hardware` oder `software` sein (Groß-/Kleinschreibung wird ignoriert).
 - **Investitionsart**: Muss eine von: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` sein (Groß-/Kleinschreibung wird ignoriert).
 - **Priorität**: Muss `mandatory`, `high`, `medium` oder `low` sein (Groß-/Kleinschreibung wird ignoriert).
-- **Budgets**: Budgetspalten füllen J-1, J und J+1 Versionen. Beträge werden gleichmäßig auf 12 Monate verteilt (Modus Jährlich), und der Zeitraum der Spalte wird das ganze Jahr. Eine leere Zelle lässt die Spalte unverändert; `0` leert sie.
+- **Budgets**: Budgetspalten füllen J-1, J und J+1 Versionen. Beträge werden gleichmäßig auf 12 Monate verteilt (Modus Jährlich), und der Zeitraum der Spalte wird das ganze Jahr. Eine leere Zelle lässt die Spalte unverändert; `0` leert sie. Die Überschriften behalten ihre technischen Namen, egal wie Ihre Organisation die Spalten nennt, und sie laden auch ausgeblendete Spalten.
 - **Monatsbeträge**: Um Beträge Monat für Monat zu laden oder zu prüfen, mit dem Zeitraum jeder Spalte, verwenden Sie die **Datei der Budgetzeilen** in der Budgetadministration.
 
 **Häufige Fehler**:
@@ -482,9 +488,9 @@ Jede CAPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein op
 
 Der CAPEX-Zugriff wird durch drei Stufen gesteuert:
 
-- `capex:reader` -- CAPEX-Liste anzeigen, Positionen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt)
-- `capex:manager` -- CAPEX-Positionen erstellen und bearbeiten, Budgets und Zuordnungen aktualisieren, Anhänge hochladen, Verknüpfungen und Kontakte verwalten
-- `capex:admin` -- Alle Manager-Rechte plus CSV-Import, Budget-Operationen (Einfrieren, Kopieren, Zurücksetzen) und Massenlöschung
+- `capex:reader`: CAPEX-Liste anzeigen, Positionen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt)
+- `capex:manager`: CAPEX-Positionen erstellen und bearbeiten, Budgets und Zuordnungen aktualisieren, Anhänge hochladen, Verknüpfungen und Kontakte verwalten
+- `capex:admin`: Alle Manager-Rechte plus CSV-Import, Budget-Operationen (Einfrieren, Kopieren, Zurücksetzen) und Massenlöschung
 
 Zusätzlich:
 

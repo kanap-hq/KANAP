@@ -76,8 +76,7 @@ The CAPEX list (at **Budget management > CAPEX**) is your main view for browsing
 | **Investment type** | Purpose of the investment |
 | **Priority** | Business priority level |
 | **Allocation** | Current-year allocation method label |
-| **Budget Y** | Current-year planned capital budget (reporting currency) |
-| **Expected landing Y** | Current-year expected landing (reporting currency) |
+| **Budget Y** and **Expected landing Y** | The current-year amounts of the default column and of the last shown column, in the reporting currency. With the standard settings these are Budget and Expected landing. When the default column is also the last shown one, a single amount column appears. See [Budget columns](budget-operations.md#budget-columns) |
 | **Task** | Title of the most recent task linked to this item |
 
 ### Additional columns
@@ -86,7 +85,7 @@ These columns are hidden by default. Show them from the column chooser (hamburge
 
 | Column | What it shows |
 |---|---|
-| **Amount columns** | Every budget column (Budget, Revision, Forecast, Actuals and Expected landing) for Y-1, Y, Y+1 and Y+2. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Amounts are in the reporting currency |
+| **Amount columns** | Every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Amounts are in the reporting currency. Hidden columns are not offered |
 | **Currency** | Item-level currency code |
 | **Effective start** | Start date |
 | **End of validity** | Date the item stops (blank means no end) |
@@ -113,7 +112,7 @@ Text columns use text filters. On **Ref**, type the number or the full reference
 
 ### Sorting
 
-Click a column header to sort ascending or descending. Every column sorts, including every amount column. The default sort is **Budget Y**, highest first. The list remembers your last sort when you return.
+Click a column header to sort ascending or descending. Every column sorts, including every amount column. The default sort is the default column of the current year, highest first (**Budget Y** with the standard settings). **Prev** and **Next** in the workspace follow the same order. The list remembers your last sort when you return.
 
 ### Totals row
 
@@ -201,14 +200,19 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 
 **Budget columns** (all years):
 
+The tab shows the columns your organisation shows, under their names, always in the same order. The standard columns are:
+
 - **Budget**: Initial planned capital budget
 - **Revision**: Mid-year budget update (e.g., after scope changes or reforecasts)
-- **Actuals**: Expected actual spending (your best estimate as the year progresses)
-- **Expected landing**: Final actual capital expenditure after year-end close
+- **Forecast**: An additional planning column, hidden by default
+- **Actuals**: Actual capital spending, as it is recorded during the year
+- **Expected landing**: Your best estimate of the year-end capital expenditure
+
+A budget administrator can rename the columns, hide some and choose the default column in **Budget management > Administration > Budget columns** (see [Budget columns](budget-operations.md#budget-columns)). A hidden column keeps its amounts.
 
 **Period of a column**:
 
-- Every column (Budget, Revision, Forecast, Actuals and Expected landing) has a period inside the year, for example April to December
+- Every column has a period inside the year, for example April to December
 - A month counts when the period covers its 15th. A period that starts on April 10 includes April; one that starts on April 20 begins in May
 - A column with no amount and no period yet gets a suggestion: the item's **Effective start** and **End of validity**, limited to the year. An investment that starts on April 1 suggests April to December
 - A column that already holds amounts and has no period reads as the whole year, so existing data behaves as before
@@ -217,23 +221,25 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 
 - **Flat**: Enter one total per column. The total is spread evenly over the months of the column's period, and the months outside it are set to zero. The period shows under each total before you type, for example "9 months, April to December". Only the total you edit is saved. The other columns keep their monthly amounts.
 - Click the pencil icon next to the period under a total (**Change period**) to open the spread panel on that column, with its current total. If the item's dates leave no month in the year, the total is disabled and reads "No month of 2026 is within the item's dates." Click the pencil icon next to it (**Choose the period**) to set one yourself.
-- **Monthly**: Enter amounts per month (Jan through Dec) for granular project spend tracking, plus a **Forecast** column. Quarter subtotals and a yearly total are shown. Only the months you change are saved.
+- **Monthly**: Enter amounts per month (Jan through Dec) for each shown column, for granular project spend tracking. Quarter subtotals and a yearly total are shown. Only the months you change are saved.
+- Both tabs show the same columns: Forecast appears in **Flat** too when it is shown.
 - Switch between modes with the **Flat** and **Monthly** tabs
 - Switching modes does not change your amounts: it only changes the view. Flat shows the yearly total of the stored months, and Monthly shows the stored months.
 
 **Freeze behavior**:
 
 - If a year's budget is frozen (via Budget Administration), inputs are read-only and show a lock icon
-- Each column can be frozen independently (Budget, Revision, Forecast, Actuals, Expected landing)
+- Each column can be frozen independently
 - You can still view frozen data; admins can unfreeze via **Budget management > Administration > Freeze / unfreeze data**
 
 **Spreading an amount**:
 
 - The spread panel is always visible in the **Monthly** tab. In the **Flat** tab it opens from the pencil icon under a total
-- Choose a **Column** (Budget, Revision, Forecast, Expected landing or Actuals), check the **Amount**, pick a **Distribution** (**Flat** or **4-4-5**), and set the **From** and **To** dates. The dates start from the column's current period, and the distribution from the column's own
-- The amount starts with the column's current total, in both tabs, and follows when you choose another column. It is empty when the column has no amount
-- **Apply to all columns** is on by default: every column (Budget, Revision, Forecast, Actuals and Expected landing) gets the same period and distribution, each with its own current total. Frozen columns are the exception: they never change. Hover the switch to see which columns follow. Turn the switch off to spread only the selected column
-- **Reset** fills the panel with the column's current total, **Flat** and the whole year. It saves nothing: click **Apply** to use it. With **Apply to all columns** on, **Reset** then **Apply** brings every column back to a flat spread over twelve months
+- Choose a **Column** among the shown columns, check the **Amount**, pick a **Distribution** (**Flat** or **4-4-5**), and set the **From** and **To** dates. The dates start from the column's current period, and the distribution from the column's own
+- The panel opens on the default column. The amount starts with the column's current total, in both tabs, and follows when you choose another column. It is empty when the column has no amount
+- **Apply to all columns** is on by default: every column that follows it gets the same period and distribution, each with its own current total. By default every column follows. A budget administrator chooses which ones in [Budget columns](budget-operations.md#budget-columns). Frozen columns never change. Hover the switch to see which columns follow and which keep their own period. Turn the switch off to spread only the selected column
+- A column that does not follow "Apply to all columns" spreads alone: the switch does not appear when you spread it. The switch is also hidden when no other following column can change
+- **Reset** fills the panel with the column's current total, **Flat** and the whole year. It saves nothing: click **Apply** to use it. With **Apply to all columns** on, **Reset** then **Apply** brings every following column back to a flat spread over twelve months
 - Totals typed in the **Flat** tab still apply to their own column only
 - The **From** and **To** dates show the period. When some months fall outside it, the panel says which ones will be set to zero ("January to March will be set to zero."). A whole-year period shows no line. Hover the info icon next to the panel title to see the 15th rule
 - With **4-4-5**, the weights of the months that count are scaled up so the whole amount lands on them
@@ -257,7 +263,7 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 
 **Multi-year trend**:
 
-- A chart below the table shows the item's budget columns across years and updates as you type
+- A chart below the table shows every shown column across years, Forecast included when it is shown, and updates as you type
 
 **How to use it**:
 
@@ -278,7 +284,7 @@ The Allocations tab distributes the capital expenditure across your companies an
 
 - Works the same as Budget: use year tabs to switch between Y-2, Y-1, Y, Y+1, Y+2
 - Each year can have a different allocation method
-- The **Year budget** of the selected year shows on the right
+- The year total of the default column shows on the right, for example **Budget, year total**
 
 **Allocation methods**:
 
@@ -426,7 +432,7 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 - **PP&E type**: Must be `hardware` or `software` (case-insensitive).
 - **Investment type**: Must be one of: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (case-insensitive).
 - **Priority**: Must be `mandatory`, `high`, `medium`, or `low` (case-insensitive).
-- **Budgets**: Budget columns populate Y-1, Y, and Y+1 versions. Amounts are spread evenly across 12 months (Flat mode) and the column's period becomes the whole year. An empty cell leaves the column as it is; `0` clears it.
+- **Budgets**: Budget columns populate Y-1, Y, and Y+1 versions. Amounts are spread evenly across 12 months (Flat mode) and the column's period becomes the whole year. An empty cell leaves the column as it is; `0` clears it. The headers keep their technical names whatever your organisation calls the columns, and they also load hidden columns.
 - **Monthly amounts**: to load or review amounts month by month, with the period of each column, use the **Budget rows file** in Budget Administration.
 
 **Common errors**:

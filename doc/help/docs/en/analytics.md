@@ -83,7 +83,7 @@ The **Analytics dimensions** report (under **Reporting**) shows how the budget o
 **Report features**:
 - **Item type**: OPEX or CAPEX
 - **Year range**: Single year (pie or bar chart) or multi-year (line chart)
-- **Metric**: Budget, Actuals, Expected landing, or Revision
+- **Metric**: Any budget column your organisation shows, under its name. Starts on the default column
 - **Chart type** (single year): Pie chart or horizontal bar chart
 - **Category exclusion**: Filter out specific categories to focus on a subset
 

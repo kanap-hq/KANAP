@@ -1,6 +1,6 @@
 # Dimensiones analíticas
 
-Las Dimensiones analíticas ofrecen una forma flexible de clasificar y analizar su presupuesto IT fuera de su estructura contable formal. En lugar de reorganizar Empresas, Departamentos o Cuentas, puede crear categorías ligeras -- "Infraestructura", "Migración a la nube", "Licencias" -- y etiquetar partidas de gasto para informes personalizados.
+Las Dimensiones analíticas ofrecen una forma flexible de clasificar y analizar su presupuesto IT fuera de su estructura contable formal. En lugar de reorganizar Empresas, Departamentos o Cuentas, puede crear categorías ligeras ("Infraestructura", "Migración a la nube", "Licencias") y etiquetar partidas de gasto para informes personalizados.
 
 ## Primeros pasos
 
@@ -26,7 +26,7 @@ La lista de categorías proporciona una visión rápida de cada dimensión anal�
 
 | Columna | Qué muestra |
 |---------|-------------|
-| **Nombre** | Etiqueta de la categoría (se puede hacer clic -- abre el espacio de trabajo) |
+| **Nombre** | Etiqueta de la categoría (se puede hacer clic: abre el espacio de trabajo) |
 | **Descripción** | Breve explicación del propósito de la categoría |
 | **Estado** | Habilitada o Deshabilitada |
 | **Actualizado** | Marca de tiempo del último cambio |
@@ -83,7 +83,7 @@ El informe **Dimensiones analíticas** (en **Informes**) muestra cómo se repart
 **Características del informe**:
 - **Tipo de partida**: OPEX o CAPEX
 - **Rango de años**: Un solo año (gráfico circular o de barras) o varios años (gráfico de líneas)
-- **Métrica**: Presupuesto, Realizado, Aterrizaje previsto o Revisión
+- **Métrica**: Cualquier columna presupuestaria que muestre su organización, con su nombre. Empieza en la columna por defecto
 - **Tipo de gráfico** (un solo año): Gráfico circular o gráfico de barras horizontal
 - **Exclusión de categorías**: Filtrar categorías específicas para centrarse en un subconjunto
 
@@ -98,7 +98,7 @@ El informe **Dimensiones analíticas** (en **Informes**) muestra cómo se repart
 - **Documente con descripciones**: Una breve descripción contribuye mucho a un uso consistente entre equipos.
 - **No fuerce**: "Sin asignar" es un estado válido. Evite crear categorías genéricas vagas solo para llenar el vacío.
 - **Desactive, no elimine**: Retirar una categoría preserva la precisión histórica en los informes.
-- **Use informes para refinar**: Ejecute el Informe de Dimensiones analíticas periódicamente -- si una categoría captura demasiado o muy poco gasto, divídala o fusione en consecuencia.
+- **Use informes para refinar**: Ejecute el Informe de Dimensiones analíticas periódicamente. Si una categoría captura demasiado o muy poco gasto, divídala o fusione en consecuencia.
 
 ## Preguntas frecuentes
 
@@ -115,4 +115,4 @@ Comience con 5--10. Más de 20 suele indicar sobreingeniería. Siempre puede div
 Los **Departamentos** son unidades organizativas formales con factores de asignación precisos. Las **Dimensiones analíticas** son etiquetas informales y opcionales para informes flexibles sin la sobrecarga de la asignación.
 
 **¿Por qué algunos elementos muestran "Sin asignar"?**
-Los elementos sin categoría analítica aparecen como "Sin asignar" en los informes. Esto es esperado -- las categorías son totalmente opcionales.
+Los elementos sin categoría analítica aparecen como "Sin asignar" en los informes. Esto es esperado: las categorías son totalmente opcionales.

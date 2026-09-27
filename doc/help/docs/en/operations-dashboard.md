@@ -15,7 +15,7 @@ The dashboard is built from tiles arranged in a responsive grid: three columns o
 
 ### OPEX snapshot
 
-A compact table covering three fiscal years: last year (Y-1), current year (Y), and next year (Y+1). Up to five value columns appear: **Budget**, **Revision**, **Forecast**, **Actuals**, and **Expected landing**. A column shows when it holds an amount for at least one of the three years. The OPEX and CAPEX tiles show the same columns. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7 846k`).
+A compact table covering three fiscal years: last year (Y-1), current year (Y), and next year (Y+1). Up to five value columns appear: the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). A column shows when it holds an amount for at least one of the three years. Hidden columns never appear. The OPEX and CAPEX tiles show the same columns. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7 846k`).
 
 Click **View** to open the OPEX list.
 
@@ -56,13 +56,13 @@ Below the buttons, a **Recent updates** section lists the five most recently edi
 
 ### Top items (Y)
 
-The five largest items for the current year, ranked by budget amount. Amounts are rounded to thousands with a "k" suffix.
+The five largest items for the current year, ranked by the default column. The title names the column, for example **Top items (Budget, Y)**. Amounts are rounded to thousands with a "k" suffix.
 
 Use the **OPEX** / **CAPEX** tabs in the tile header to choose the item type. The tile remembers your choice. Click **Open** to view the full Top items report on the same type.
 
 ### Top increases (Y vs Y-1)
 
-The five items with the largest budget increase compared to the previous year, computed over every item of the type. Items whose budget stayed flat or went down do not appear. Amounts are rounded to thousands with a "k" suffix.
+The five items with the largest increase in the default column compared to the previous year, computed over every item of the type. The title names the column, for example **Top increases (Budget, Y vs Y-1)**. Items whose amount stayed flat or went down do not appear. Amounts are rounded to thousands with a "k" suffix.
 
 Use the **OPEX** / **CAPEX** tabs in the tile header to choose the item type. The tile remembers your choice. Click **Open** to view the full Top increase / decrease report on the same type.
 
@@ -70,6 +70,7 @@ A type you cannot read is disabled in the tabs and has no column in **Data hygie
 
 ## Tips
 
+- **Which column the tiles use**: A budget administrator chooses the default column and the column names in [Budget columns](budget-operations.md#budget-columns). The top tiles and the reports they open follow that choice.
 - **Rounded numbers**: Every amount on the dashboard is rounded to thousands for a compact view. Open the OPEX or CAPEX list, or the reports, when you need exact figures.
 - **Missing buttons**: If you do not see the **New OPEX** or **New CAPEX** buttons, your current role does not include the required manager permission. Ask your administrator to check your access.
 - **Empty tiles**: A tile that shows "No data" simply means there are no records of that type yet. Once you or your team start entering data, the tile will populate automatically.

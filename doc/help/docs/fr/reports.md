@@ -38,6 +38,10 @@ La page d'accueil affiche une carte par rapport disponible avec une courte descr
 
 Les deux rapports de refacturation couvrent uniquement les OPEX.
 
+### Colonnes budgétaires dans les rapports
+
+Chaque sélecteur de colonne ou de métrique propose les colonnes budgétaires affichées par votre organisation, sous leurs noms, dans l'ordre fixe des colonnes. Prévision est proposée quand elle est affichée. Les colonnes masquées ne sont pas proposées. Chaque rapport démarre sur la colonne par défaut, comme décrit ci-dessous. Les administrateurs budgétaires définissent les noms, les colonnes affichées et la colonne par défaut dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires).
+
 ---
 
 ## Refacturation globale
@@ -47,7 +51,7 @@ Consultez les ventilations de coûts à travers toutes les sociétés avec des K
 ### Contrôles
 
 - **Année** : Année fiscale précédente, en cours ou suivante
-- **Colonne** : Budget, Atterrissage prévu, Réalisé ou Révision
+- **Colonne** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Totaux par société** (case à cocher) : Afficher ou masquer le tableau et le graphique en barres des totaux par société
 - **Ventilations détaillées** (case à cocher) : Afficher ou masquer la ventilation société/département
 - **Inclure les KPI** (case à cocher) : Afficher ou masquer le tableau des KPI
@@ -111,7 +115,7 @@ Vue détaillée des ventilations de refacturation d'une société avec départem
 
 - **Société** : Sélectionnez la société à analyser
 - **Année** : Année fiscale précédente, en cours ou suivante
-- **Colonne** : Budget, Atterrissage prévu, Réalisé ou Révision
+- **Colonne** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Totaux par département** (case à cocher) : Afficher ou masquer la ventilation par département
 - **Postes de refacturation** (case à cocher) : Afficher ou masquer les ventilations détaillées par poste
 - **KPI de refacturation** (case à cocher) : Afficher ou masquer le tableau comparatif des KPI
@@ -157,7 +161,7 @@ Identifiez vos postes OPEX ou CAPEX les plus importants pour une année donnée.
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
 - **Année** : Année précédente, en cours ou suivante
-- **Métrique** : Budget, Révision, Réalisé ou Atterrissage prévu
+- **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Nombre top** : Combien de postes afficher (par défaut : 10, minimum : 1)
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales
 - **Exclure des postes** : Autocomplétion multi-sélection pour exclure des postes spécifiques
@@ -175,8 +179,10 @@ Identifiez vos postes OPEX ou CAPEX les plus importants pour une année donnée.
 
 **Cartes récapitulatives sous le tableau** :
 
-- Total du Top N (avec pourcentage de la métrique filtrée)
-- Valeur totale pour la métrique sélectionnée à travers tous les postes
+- **Total top N**, avec sa part du total filtré, par exemple « 45 % du total filtré »
+- Le total de la colonne sélectionnée sur tous les postes, libellé avec le nom de la colonne, par exemple **Budget, total**
+
+La note sous le graphique donne le même total, par exemple « Budget, total : 1 234 ».
 
 ### Cas d'usage
 
@@ -199,7 +205,7 @@ Identifiez les plus grandes variations OPEX ou CAPEX entre deux colonnes budgét
 - **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
 - **Direction** : onglets **Hausses**, **Baisses** ou **Les deux**
 
-Les sélecteurs d'année listent les années qui contiennent des données. Les sélecteurs de métrique proposent les quatre colonnes des rapports : Budget, Réalisé, Atterrissage prévu et Révision.
+Les sélecteurs d'année listent les années qui contiennent des données. Les sélecteurs de métrique proposent les colonnes budgétaires affichées. Le rapport démarre avec la colonne par défaut de l'année précédente comme source et la colonne par défaut de l'année en cours comme destination.
 
 Lorsque **Les deux** est sélectionné, l'option graphique en secteurs est désactivée et le rapport bascule automatiquement en barres.
 
@@ -235,7 +241,7 @@ Comparez les métriques OPEX sur plusieurs années sur un seul graphique en cour
 
 - **Année de début** : Début de la plage (année en cours moins 2 à plus 2)
 - **Année de fin** : Fin de la plage
-- **Métriques** : Multi-sélection parmi Budget, Réalisé, Atterrissage prévu, Révision (au moins une requise)
+- **Métriques** : Multi-sélection parmi les colonnes budgétaires affichées. Le rapport démarre sur la colonne par défaut et la dernière colonne affichée (Budget et Atterrissage prévu avec les réglages standard). Si vous retirez toutes les métriques, la colonne par défaut est utilisée
 
 ### Ce que vous verrez
 
@@ -273,7 +279,7 @@ Comparez de manière flexible jusqu'à 10 combinaisons année+colonne pour OPEX 
 ### Contrôles
 
 - **Type de poste** : Bascule OPEX ou CAPEX
-- **Sélections** : Chaque sélection a un sélecteur d'année et un sélecteur de colonne (Budget, Révision, Réalisé, Atterrissage prévu). Ajoutez des sélections avec le bouton **Ajouter** et supprimez avec l'icône de suppression. Maximum 10 sélections ; minimum 1.
+- **Sélections** : Chaque sélection a un sélecteur d'année et un sélecteur de colonne avec les colonnes budgétaires affichées. Le rapport démarre avec deux sélections : la colonne par défaut de l'année en cours et celle de l'année suivante. **Ajouter** ajoute la colonne par défaut de l'année en cours, et l'icône de suppression retire une sélection. Maximum 10 sélections ; minimum 1.
 - **Regroupement par année** (case à cocher) : Lorsque activé et qu'au moins deux années partagent une métrique, bascule vers un graphique en courbe groupé avec une série par métrique et les années sur l'axe X. Lorsque désactivé, affiche un graphique en courbe plat avec chaque sélection comme point de données.
 
 ### Ce que vous verrez
@@ -304,7 +310,7 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par compte de cons
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
-- **Métrique** : Budget, Réalisé, Atterrissage prévu ou Révision
+- **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (disponible uniquement pour une seule année sélectionnée)
 - **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
 
@@ -333,7 +339,7 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par dimension anal
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
-- **Métrique** : Budget, Réalisé, Atterrissage prévu ou Révision
+- **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (année unique uniquement)
 - **Exclure des dimensions analytiques** : Autocomplétion multi-sélection pour exclure des dimensions spécifiques
 
@@ -362,16 +368,11 @@ Chaque rapport partage ces capacités via la barre d'outils partagée :
 - **Exporter le graphique en PNG** (icône image) : Télécharge le graphique en tant qu'image PNG
 - **Imprimer / Enregistrer en PDF** (icône imprimante) : Ouvre la boîte de dialogue d'impression du navigateur. Vous pouvez aussi ajouter `?print=1` à n'importe quelle URL de rapport pour déclencher l'impression automatiquement au chargement.
 
+Les noms des fichiers exportés contiennent le nom de la colonne, par exemple `top10-opex-2026-budget-bar.png`.
+
 ### Métriques disponibles
 
-Tous les rapports qui proposent un sélecteur de métrique utilisent les mêmes quatre colonnes :
-
-| Clé | Libellé |
-|-----|---------|
-| `budget` | Budget |
-| `revision` | Révision |
-| `follow_up` | Réalisé |
-| `landing` | Atterrissage prévu |
+Chaque sélecteur de métrique ou de colonne propose les mêmes colonnes budgétaires : celles que votre organisation affiche, sous leurs noms. Avec les réglages standard, ce sont Budget, Révision, Réalisé et Atterrissage prévu. Prévision est proposée quand elle est affichée. Voir [Colonnes budgétaires dans les rapports](#colonnes-budgetaires-dans-les-rapports).
 
 ### Navigation
 
@@ -384,6 +385,6 @@ Chaque rapport affiche un fil d'Ariane vers le hub **Rapports**, vous permettant
 - **Commencez par la refacturation globale** : Obtenez la vue d'ensemble des ventilations avant de plonger dans une société spécifique.
 - **Utilisez le Top postes pour des gains rapides** : Les postes les plus importants sont vos premiers candidats à l'optimisation.
 - **Comparez Budget vs Atterrissage prévu** : Utilisez le rapport Comparaison de colonnes budgétaires pour mesurer la précision des prévisions sur plusieurs années.
-- **Basculez les sections sur les rapports de refacturation** : Les cases à cocher vous permettent de vous concentrer uniquement sur les données dont vous avez besoin -- départements, postes, KPI ou flux -- sans encombrement visuel.
+- **Basculez les sections sur les rapports de refacturation** : Les cases à cocher vous permettent de vous concentrer uniquement sur les données dont vous avez besoin (départements, postes, KPI ou flux) sans encombrement visuel.
 - **Regroupement par année dans la Comparaison de colonnes budgétaires** : Lorsque vous comparez la même métrique sur plusieurs années, activez le regroupement par année pour un graphique en courbe plus lisible.
 - **Exportez pour les présentations** : Les graphiques s'exportent en PNG et les tableaux en CSV, tous deux prêts pour les diaporamas ou les tableurs.

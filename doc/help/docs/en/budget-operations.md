@@ -1,22 +1,25 @@
 # Budget Administration
 
-Budget Administration gives you a set of tools for managing and transforming budget data across years and columns. These are the operations you reach for during budget planning cycles -- preparing next year's numbers, locking approved budgets, and managing year-over-year transitions.
+Budget Administration gives you a set of tools for managing and transforming budget data across years and columns. These are the operations you reach for during budget planning cycles: preparing next year's numbers, locking approved budgets, and managing year-over-year transitions.
 
 ## Where to find it
 
 - Path: **Budget Management > Administration**
 - Permissions: Most operations require `budget_ops:admin`
 
-The landing page shows six cards, each linking to a dedicated tool:
+The landing page shows seven cards, each linking to a dedicated tool:
 
 | Tool | Purpose |
 |------|---------|
-| **Freeze / Unfreeze Data** | Lock budget columns to prevent changes |
-| **Copy Budget Columns** | Copy data between years and columns with adjustments |
-| **Copy Allocations** | Copy allocation methods from one year to another |
-| **Reset Budget Column** | Clear all data from a specific column |
-| **Default Allocation Method** | Set the method OPEX and CAPEX items follow by default |
+| **Freeze / unfreeze data** | Lock budget columns to prevent changes |
+| **Copy budget columns** | Copy data between years and columns with adjustments |
+| **Copy allocations** | Copy allocation methods from one year to another |
+| **Reset budget column** | Clear all data from a specific column |
+| **Default allocation method** | Set the method OPEX and CAPEX items follow by default |
 | **Budget rows file** | Export or import the monthly amounts of every OPEX and CAPEX line |
+| **Budget columns** | Name the five budget columns, choose which ones are shown and which one is the default |
+
+The budget columns are Budget, Revision, Forecast, Actuals and Expected landing. These are the standard names. Your organisation can rename them, hide some and choose a default column in [Budget columns](#budget-columns). Every page below shows the names your organisation chose.
 
 ---
 
@@ -34,23 +37,30 @@ Lock budget columns so they cannot be edited, imported into, or modified in any 
 
 1. **Select a year** from the dropdown (range: current year minus one through current year plus four)
 2. **Select scopes**: tick **OPEX**, **CAPEX**, or both
-3. **Select columns** for each scope: Budget, Revision, Forecast, Actuals, Expected landing (all five are selected by default)
-4. Click **Freeze Data** to lock, or **Unfreeze Data** to unlock
+3. **Select columns** for each scope. The list offers all five columns. Hidden columns are marked **Hidden**. Every column is selected by default, so freezing a year freezes every column, hidden ones included. Untick a column to leave it out
+4. Click **Freeze data** to lock, or **Unfreeze data** to unlock. Both buttons stay disabled while a selected scope has no column picked
 
 ### What freezing does
 
 - Prevents edits to frozen columns in OPEX and CAPEX workspaces
 - Blocks CSV imports to frozen columns
 - Blocks copy and reset operations targeting frozen columns
-- Does **not** affect read access -- data remains visible
+- Does **not** affect read access: data remains visible
+- Applies to hidden columns too. A frozen column stays frozen when it is hidden, and imports into it are still refused
+
+### Freezing the default column fixes the exchange rates
+
+Freezing the [default column](#budget-columns) for a year also fixes that year's exchange rates for the scope you freeze. KANAP refreshes the rates for the year, then keeps the latest set for every OPEX or CAPEX amount of that year. Reports then convert those amounts with the same rates, even when newer rates arrive. Unfreezing the default column releases them.
+
+Freezing another column does not touch the rates. Changing the default column later does not fix or release anything by itself: the rates follow the next freeze or unfreeze of the new default column.
 
 ### Current status
 
-Below the controls, two cards show the real-time freeze state for every column in OPEX and CAPEX. Each column displays either **Frozen** (in red) or **Editable**.
+Below the controls, two cards show the real-time freeze state of all five columns in OPEX and CAPEX. Each column displays either **Frozen** (in red) or **Editable**. Hidden columns are marked **Hidden**.
 
 ### Permissions
 
-Without `budget_ops:admin` you can still view the freeze status, but the controls are disabled. An info banner explains what is needed.
+Without `budget_ops:admin` you can still view the freeze status, but the controls are disabled. A banner reads "Only budget administrators can change this page."
 
 ---
 
@@ -72,24 +82,26 @@ Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
 
 | Field | Description |
 |-------|-------------|
-| **Source Year** | Year to copy from (range: current year minus one through current year plus five) |
-| **Source Column** | Budget, Revision, Actuals, or Expected landing |
-| **Destination Year** | Year to copy to (same range) |
-| **Destination Column** | Budget, Revision, Actuals, or Expected landing |
-| **Percentage Increase** | Adjustment applied to every copied month (e.g., `3` = +3%). Defaults to 0. Accepts decimals and negative values. |
+| **Source year** | Year to copy from (range: current year minus one through current year plus five) |
+| **Source column** | Any shown column, Forecast included when it is shown. Starts on the default column |
+| **Destination year** | Year to copy to (same range) |
+| **Destination column** | Any shown column. Starts on the default column |
+| **Percentage increase** | Adjustment applied to every copied month (e.g., `3` = +3%). Defaults to 0. Accepts decimals and negative values. |
 | **Overwrite existing data** | Toggle. When off, items that already have a value in the destination are skipped. When on, all destination values are replaced. |
+
+The page opens on the default column of the current year as the source and the default column of next year as the destination. Hidden columns are not offered.
 
 ### Two-step process: Dry Run, then Copy
 
-1. Click **Dry Run** to generate a preview without changing any data
+1. Click **Dry run** to generate a preview without changing any data
 2. Review the preview grid, which shows:
    - **Item** name (items marked **Skipped** keep their current value)
    - **Source value** (from the source year/column)
    - **Current destination value**
    - **Preview value** (what the destination will become after copy)
-3. When you are satisfied, click **Copy Data** to apply
+3. When you are satisfied, click **Copy data** to apply
 
-The **Copy Data** button is only enabled after a successful dry run.
+The **Copy data** button is only enabled after a successful dry run.
 
 ### Summary statistics
 
@@ -123,7 +135,7 @@ Below the grid, a stats bar shows:
 
 ### Frozen column protection
 
-If the destination column is frozen, both **Dry Run** and **Copy Data** are disabled. An error banner tells you to unfreeze first.
+If the destination column is frozen, both **Dry run** and **Copy data** are disabled. An error banner tells you to unfreeze first.
 
 ---
 
@@ -145,20 +157,20 @@ Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
 
 | Field | Description |
 |-------|-------------|
-| **Source Year** | Year to copy allocations from (range: current year minus one through current year plus five) |
-| **Destination Year** | Year to copy allocations to (same range). Must differ from Source Year. |
+| **Source year** | Year to copy allocations from (range: current year minus one through current year plus five) |
+| **Destination year** | Year to copy allocations to (same range). Must differ from the source year. |
 | **Overwrite existing data** | Toggle. When off, items that already have allocations in the destination are skipped. |
 
 ### Two-step process: Dry Run, then Copy
 
-1. Click **Dry Run** to see a preview
+1. Click **Dry run** to see a preview
 2. The preview grid shows each OPEX or CAPEX item with:
    - **Item** name
-   - **Action** -- what will happen (Will copy, Skip -- no source year, Skip -- no allocations in source, Skip -- destination has data, Error)
+   - **Action**: what will happen (Will copy, Skip – no source year, Skip – no allocations in source, Skip – destination has data, Error)
    - **Source** method and label
    - **Destination** current method and label
-   - **Result after copy** -- what the destination will look like
-3. Click **Copy Data** to apply
+   - **Result after copy**: what the destination will look like
+3. Click **Copy data** to apply
 
 ### Validation
 
@@ -192,11 +204,11 @@ A column whose items hold no amount can still be reset: the reset then only remo
 | Field | Description |
 |-------|-------------|
 | **Year** | The fiscal year to clear (range: current year minus one through current year plus five) |
-| **Budget Column** | Budget, Revision, Actuals, or Expected landing |
+| **Budget column** | Any shown column, Forecast included when it is shown. No column is preselected: the field reads **Choose a column** and **Clear column** stays disabled until you pick one |
 
 ### Preview
 
-The page loads a grid showing every OPEX or CAPEX item and its current value in the selected column. Amounts that will be cleared are shown in medium weight; empty values are muted. Below the grid, three stats appear:
+Before you choose a column, one line replaces the grid: "Choose a column to see the amounts it holds." Once you choose a column, a grid shows every OPEX or CAPEX item and its current value in that column. Amounts that will be cleared are shown in medium weight; empty values are muted. Below the grid, three stats appear:
 
 - **Total items**
 - **Items with a non-zero total**
@@ -204,19 +216,20 @@ The page loads a grid showing every OPEX or CAPEX item and its current value in 
 
 ### Confirmation
 
-Clicking **Clear Column** opens a confirmation dialog that shows:
+Clicking **Clear column** opens a confirmation dialog that shows:
 
 - The column and year being reset
 - The number of items affected
 - The total value being deleted
 - A clear warning that this action cannot be undone
 
-You must click **Clear Column** in the dialog to proceed, or **Cancel** to abort.
+You must click **Clear column** in the dialog to proceed, or **Cancel** to abort.
 
 ### Safety features
 
-- The **Clear Column** button stays available when no item has an amount, so the spread periods can still be removed
-- Frozen columns cannot be reset -- unfreeze first
+- The **Clear column** button stays available when no item has an amount, so the spread periods can still be removed
+- No column is preselected, so you always choose the column to clear
+- Frozen columns cannot be reset. Unfreeze them first
 - The confirmation dialog requires explicit acknowledgement
 
 ---
@@ -243,7 +256,7 @@ Set the method that OPEX items and CAPEX investments follow when they are left o
 ### How it works
 
 1. **Select a year**
-2. **Pick the company scope** -- *All enabled companies*, or *Selected companies* and then the companies themselves
+2. **Pick the company scope**: *All enabled companies*, or *Selected companies* and then the companies themselves
 3. **Pick the driver** that weights the companies (Headcount, IT Users, or Turnover)
 4. Every change saves immediately, there is no Save button
 5. To return to the standard, click **Use the standard method** (shown only while a custom default is configured)
@@ -253,12 +266,12 @@ Set the method that OPEX items and CAPEX investments follow when they are left o
 - The driver is applied to the selected companies only: their percentages are computed from their own headcount, IT users or turnover for the year
 - The page shows the resulting split, so you can check the effect before relying on it
 - A single selected company always takes **100%**, with no driver value required
-- With two companies or more, every selected company needs a value for the chosen driver. A company without one is rejected when you save -- fix the company metrics in **Master Data > Companies** first
+- With two companies or more, every selected company needs a value for the chosen driver. A company without one is rejected when you save. Fix the company metrics in **Master Data > Companies** first
 - A company disabled for the year cannot be selected: disabled companies are excluded from that year's allocations
 
 ### What it affects
 
-- Every OPEX item and CAPEX investment whose allocation method is **default** -- shown as *Headcount (default)* (or *Default (n companies)*) in the Allocations tab until an organisation default is set
+- Every OPEX item and CAPEX investment whose allocation method is **default**, shown as *Headcount (default)* (or *Default (n companies)*) in the Allocations tab until an organisation default is set
 - Items with an explicit method (Headcount, IT Users, or Turnover pinned on the item) or a manual allocation keep their own setting
 - Allocated amounts are recomputed the next time allocations are displayed. Budget amounts themselves are never modified
 
@@ -268,7 +281,7 @@ Until an organisation configures a default, the standard applies: **Headcount** 
 
 ### Changing the default after the fact
 
-The default is resolved every time allocations are displayed, so editing it re-drives every item left on the default. If a company included in the selection later loses its driver value or is disabled, the affected items show an error instead of a silently rebalanced split -- the page warns you about the current selection.
+The default is resolved every time allocations are displayed, so editing it re-drives every item left on the default. If a company included in the selection later loses its driver value or is disabled, the affected items show an error instead of a silently rebalanced split. The page warns you about the current selection.
 
 ### Permissions
 
@@ -291,7 +304,9 @@ Export or import the monthly amounts of every OPEX and CAPEX line in one file, w
 1. Choose a year, or keep **All years**
 2. Click **Export**, then **Export data**
 
-The file lists every OPEX and CAPEX line you can read, for every year that has amounts. Each line and year gets five rows, in this order: Budget, Revision, Forecast, Actuals, Expected landing. Columns without amounts are included too. When the file covers one year, or only OPEX or only CAPEX because of your permissions, its name ends with `partial`.
+The file lists every OPEX and CAPEX line you can read, for every year that has amounts. Each line and year gets five rows, one per budget column in the fixed order (Budget, Revision, Forecast, Actuals, Expected landing under their standard names). Columns without amounts and hidden columns are included too.
+
+Under the intro, the page shows which technical name in the file stands for which of your columns, for example "`planned` for Budget". The same technical names appear as **In files** on the [Budget columns](#budget-columns) page. When the file covers one year, or only OPEX or only CAPEX because of your permissions, its name ends with `partial`.
 
 A file can be imported up to 10 MB. For a larger budget, export and import one year at a time: a year-limited export gives a smaller file.
 
@@ -304,7 +319,7 @@ The file uses a semicolon `;` as separator and UTF-8 encoding.
 | `item_type` | `opex` or `capex` |
 | `item_number` | The item number, for example `7`. On import, the reference also works (`OPX-7`, `CPX-7`) |
 | `year` | Four digits |
-| `measure` | The column: `planned` (Budget), `committed` (Revision), `forecast` (Forecast), `actual` (Actuals), `expected_landing` (Expected landing). On import, `budget`, `revision`, `follow_up` and `landing` also work |
+| `measure` | The column, by its technical name, whatever your organisation calls it: `planned` (column 1, standard name Budget), `committed` (column 2, Revision), `forecast` (column 3, Forecast), `actual` (column 4, Actuals), `expected_landing` (column 5, Expected landing). On import, `budget`, `revision`, `follow_up` and `landing` also work |
 | `period_start`, `period_end` | The column's period as `YYYY-MM-DD`, inside the row's year. On import, both empty means the whole year |
 | `jan` to `dec` | The twelve monthly amounts, with a dot as decimal separator. On import, a comma and spaces are accepted too |
 | `method` | How the column was produced: `spread`, `copied` or `manual`. For information only, ignored on import |
@@ -322,14 +337,60 @@ The file uses a semicolon `;` as separator and UTF-8 encoding.
 - A row that only changes the period updates the period and keeps the rest
 - Actuals rows follow the same rules, which lets you import monthly actuals
 - A changed row on a frozen column is refused. An identical row on a frozen column is accepted
+- Rows for a hidden column are imported like any other row. Hiding a column never blocks its imports, and a hidden frozen column still refuses changed rows
 - Repeated rows (same item, year and column), unknown item numbers, and items of a type you cannot administer are errors
 - Importing needs administration rights on OPEX or on CAPEX. Exporting needs read access to either
 
 ---
 
+## Budget columns
+
+Name the five budget columns, choose which ones everyone sees, and which one reports and lists start from. The setting applies to the whole organisation, for OPEX and CAPEX alike.
+
+### When to use it
+
+- Your budget rounds have their own names, for example A0, A1, A2 and Actual
+- Your organisation does not use every column and wants a lighter screen
+- Reports and lists should start from a column other than Budget
+
+### The table
+
+One row per column, always in the same order, from column 1 to column 5. The standard names are Budget, Revision, Forecast, Actuals and Expected landing.
+
+| Field | Description |
+|-------|-------------|
+| **Column** | The position, 1 to 5. Columns cannot be reordered |
+| **Name** | The name everyone sees in lists, the Budget tab, reports, the overview and Budget administration. Leave it empty to use the standard name, shown as a placeholder. At most 40 characters, with no control or invisible characters. Each name must differ from the other columns' names, including the standard name of a column you have not renamed, whatever the capitals |
+| **In files** | The line under each name. It gives the technical name of the column in the budget rows file and its imports, for example `planned` for column 1. It never changes when you rename a column |
+| **Shown** | Whether the column appears on screen. At least one column must stay shown |
+| **Follows "Apply to all columns"** | Whether the column takes the same period when a spread in the Budget tab is applied to all columns. A column that does not follow keeps its own period, and when you spread it, it spreads alone |
+| **Default** | The column that reports preselect and that sorts the lists and the overview. Freezing it fixes the year's exchange rates. The default column must be shown |
+
+The **Follows "Apply to all columns"** and **Default** headers carry an info icon. Hover over it, or move the keyboard focus to it, to read the same explanation on the page.
+
+By default, Budget, Revision, Actuals and Expected landing are shown and Forecast is hidden, every column follows "Apply to all columns", and Budget is the default column.
+
+### What the settings change
+
+- **Hidden columns** leave the lists, the column chooser, the Budget tab, the report pickers, the copy and reset pages and the overview. They keep their amounts: hiding a column never clears data, and showing it again brings the amounts back. Hidden columns still accept imports through the budget rows file, and freezes still apply to them. The freeze page lists hidden columns too, marked **Hidden**, so freezing a year freezes them along with the others
+- **The default column** is preselected in every report. It sorts the OPEX and CAPEX lists, their previous and next navigation, and the **Top items** and **Top increases** tiles of the overview. The lists show it for the current year, next to the last shown column. It is also the reference amount of the Allocations tab and the column the spread panel opens on. Freezing it for a year fixes that year's exchange rates (see [Freezing the default column fixes the exchange rates](#freezing-the-default-column-fixes-the-exchange-rates))
+- **Follows "Apply to all columns"** decides which columns move together when a spread is applied to all columns. Frozen columns never change, whatever this setting says
+
+### Saving
+
+Click **Save** to apply your changes. The button stays disabled until something changed and every name is valid. **Reset** discards the changes you have not saved yet. Mistakes are explained under the field or the table, for example "At least one column must stay shown." or "The default column must be shown: choose another default column first." To hide the current default column, choose another default column first. Both changes can be saved together.
+
+### Permissions
+
+Changing the settings needs Budget administration admin rights (`budget_ops:admin`). Everyone else can open the page and see the settings, read-only, under the banner "Only budget administrators can change this page."
+
+If the settings cannot be loaded, the page shows one line, "The column settings could not be loaded.", and no controls.
+
+---
+
 ## Workflow Example: Annual Budget Cycle
 
-Here is a typical sequence using these tools:
+Here is a typical sequence using these tools, with the standard column names and Budget as the default column:
 
 ### 1. End of Year N
 
@@ -344,7 +405,7 @@ Here is a typical sequence using these tools:
 
 ### 3. Budget Approval
 
-1. Freeze N+1 Budget (lock the approved budget)
+1. Freeze N+1 Budget (lock the approved budget and fix the year's exchange rates)
 2. Copy N+1 Budget to N+1 Revision (starting point for in-year tracking)
 
 ### 4. Mid-Year Revision
@@ -359,6 +420,6 @@ Here is a typical sequence using these tools:
 - **Always dry-run first**: Copy Budget Columns and Copy Allocations both support a dry run. Use it every time to verify the outcome before committing.
 - **Freeze after approval**: Locking columns after approval maintains your audit trail and prevents accidental edits.
 - **Use percentage adjustments**: When copying between years, apply an inflation or growth factor so you do not have to adjust every line manually.
-- **Check freeze status before bulk operations**: Frozen columns block copy and reset operations. If a button is greyed out, check the Freeze page first.
+- **Check freeze status before bulk operations**: Frozen columns block copy and reset operations. If a button is greyed out, check the freeze page first.
 - **Set the year's default before entering budgets**: If your allocation basis is not headcount, configure it in Default Allocation Method first, so items are created on the right basis instead of being re-driven later.
 - **Reset with caution**: Column reset is irreversible. Double-check the year and column before confirming.
