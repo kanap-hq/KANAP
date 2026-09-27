@@ -70,9 +70,11 @@ export function pickYearSlot<T extends SummaryRow>(row: T, year: number) {
     return row.versions[dynamicKey];
   }
   // Fallback to legacy keys for backward compatibility
+  if (year === y - 2) return row.versions?.yMinus2;
   if (year === y - 1) return row.versions?.yMinus1;
   if (year === y) return row.versions?.y;
   if (year === y + 1) return row.versions?.yPlus1;
+  if (year === y + 2) return row.versions?.yPlus2;
   // Return undefined if year not found
   return undefined;
 }

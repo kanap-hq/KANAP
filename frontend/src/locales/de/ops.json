@@ -511,7 +511,9 @@
       "resetColumnTitle": "Budgetspalte zurücksetzen",
       "resetColumnDesc": "Alle Daten einer Budgetspalte für ein bestimmtes Jahr löschen",
       "allocationDefaultTitle": "Standard-Zuordnungsmethode",
-      "allocationDefaultDesc": "Methode wählen, die für OPEX- und CAPEX-Positionen mit Standard-Zuordnung gilt"
+      "allocationDefaultDesc": "Methode wählen, die für OPEX- und CAPEX-Positionen mit Standard-Zuordnung gilt",
+      "budgetRowsTitle": "Datei der Budgetzeilen",
+      "budgetRowsDesc": "Die Monatsbeträge aller OPEX- und CAPEX-Positionen exportieren oder importieren, eine Zeile pro Position, Jahr und Spalte."
     },
     "allocationDefault": {
       "title": "Standard-Zuordnungsmethode",
@@ -567,27 +569,31 @@
     },
     "columnReset": {
       "title": "Budgetspalte zurücksetzen",
-      "subtitle": "Alle Daten einer Budgetspalte für ein bestimmtes Jahr löschen",
+      "subtitle": "Eine Spalte für ein Jahr leeren, für OPEX oder CAPEX: ihre zwölf Monate und ihren Verteilungszeitraum.",
       "year": "Jahr",
       "budgetColumn": "Budgetspalte",
-      "processing": "Verarbeitung...",
+      "processing": "Wird verarbeitet…",
       "clearColumn": "Spalte leeren",
-      "product": "Produkt",
-      "current": "Aktuell",
+      "product": "Position",
       "dataPreview": "Datenvorschau",
       "totalItems": "Positionen gesamt",
-      "itemsWithData": "Positionen mit Daten (werden gelöscht)",
+      "itemsWithData": "Positionen mit einer Summe ungleich null",
       "currentTotalValue": "Aktueller Gesamtwert",
       "columnFrozenError": "Die Spalte {{column}} für {{year}} ist eingefroren. Tauen Sie sie auf, bevor Sie Daten löschen.",
-      "noDataInfo": "Keine Daten in der Spalte {{column}} für {{year}} gefunden. Nichts zu löschen.",
-      "clearWarning": "Warnung: Dieser Vorgang entfernt dauerhaft alle Daten aus der Spalte {{column}} für das Jahr {{year}}. Diese Aktion kann nicht rückgängig gemacht werden. {{count}} Positionen sind betroffen.",
+      "noDataInfo": "Die Spalte {{column}} für {{year}} enthält keinen Betrag. Das Leeren entfernt nur ihre Verteilungszeiträume.",
       "confirmTitle": "Spaltenrücksetzung bestätigen",
-      "confirmMessage": "Möchten Sie wirklich alle Daten aus der Spalte <strong>{{column}}</strong> für das Jahr <strong>{{year}}</strong> löschen?",
-      "confirmAffected": "Dies betrifft <strong>{{count}} Positionen</strong> mit einem Gesamtwert von <strong>{{value}}</strong>.",
       "confirmUndoWarning": "Diese Aktion kann nicht rückgängig gemacht werden.",
-      "clearSuccess": "Spalte erfolgreich geleert!\nGelöscht: {{cleared}} Positionen\nÜbersprungen: {{skipped}} Positionen\nFehler: {{errors}} Positionen",
-      "clearFailed": "Löschvorgang fehlgeschlagen. Bitte prüfen Sie die Konsole für Details.",
-      "loadingData": "Daten werden geladen…"
+      "clearFailed": "Das Leeren ist fehlgeschlagen. Es wurde nichts geändert.",
+      "loadingData": "Daten werden geladen…",
+      "currentHeader": "{{column}} {{year}}, aktuell",
+      "clearWarning_one": "Das Leeren entfernt die Beträge und den Zeitraum von {{column}} {{year}} für {{count}} Position. Dies kann nicht rückgängig gemacht werden.",
+      "clearWarning_other": "Das Leeren entfernt die Beträge und den Zeitraum von {{column}} {{year}} für {{count}} Positionen. Dies kann nicht rückgängig gemacht werden.",
+      "confirmMessage": "Die Spalte {{column}} für {{year}} leeren?",
+      "confirmAffected_one": "{{count}} Position ist betroffen, mit insgesamt {{value}}.",
+      "confirmAffected_other": "{{count}} Positionen sind betroffen, mit insgesamt {{value}}.",
+      "clearDone_one": "{{count}} Position geleert.",
+      "clearDone_other": "{{count}} Positionen geleert.",
+      "confirmPeriodsOnly": "Die Spalte {{column}} für {{year}} enthält keinen Betrag. Nur ihre Verteilungszeiträume werden entfernt."
     },
     "copyAllocations": {
       "title": "Zuordnungen kopieren",
@@ -625,7 +631,7 @@
     },
     "copyBudgetColumns": {
       "title": "Budgetspalten kopieren",
-      "subtitle": "Budgetdaten zwischen Jahren und Spalten mit optionalen prozentualen Anpassungen kopieren",
+      "subtitle": "Eine Spalte in ein anderes Jahr oder eine andere Spalte kopieren, für OPEX oder CAPEX. Jeder Monat behält seinen Betrag, und der Prozentsatz gilt für jeden Monat.",
       "sourceYear": "Quelljahr",
       "sourceColumn": "Quellspalte",
       "destinationYear": "Zieljahr",
@@ -634,8 +640,8 @@
       "overwriteExisting": "Vorhandene Daten überschreiben",
       "dryRun": "Testlauf",
       "copyData": "Daten kopieren",
-      "processing": "Verarbeitung...",
-      "product": "Produkt",
+      "processing": "Wird verarbeitet…",
+      "product": "Position",
       "dataPreview": "Datenvorschau",
       "totalItems": "Positionen gesamt",
       "itemsToProcess": "Zu verarbeitende Positionen",
@@ -643,13 +649,20 @@
       "currentDestTotal": "Aktuelles Zieltotal",
       "previewTotal": "Vorschautotal",
       "frozenError": "Die Spalte {{column}} für {{year}} ist eingefroren. Tauen Sie sie auf, bevor Sie Daten kopieren.",
-      "existingDataWarning": "{{count}} Positionen haben bereits Daten in der Zielspalte und werden übersprungen. Aktivieren Sie \"Vorhandene Daten überschreiben\", um sie zu ersetzen.",
-      "previewInfo": "Die Vorschau zeigt alle {{total}} Positionen. {{toProcess}} Positionen werden verarbeitet, {{skipped}} werden übersprungen. Mit [SKIP] markierte Positionen werden beim Kopieren nicht geändert.",
-      "copySuccess": "Kopiervorgang erfolgreich abgeschlossen!\nVerarbeitet: {{processed}} Positionen\nÜbersprungen: {{skipped}} Positionen\nFehler: {{errors}} Positionen",
-      "dryRunFailed": "Testlauf fehlgeschlagen. Bitte prüfen Sie die Konsole für Details.",
-      "copyFailed": "Kopiervorgang fehlgeschlagen. Bitte prüfen Sie die Konsole für Details.",
+      "dryRunFailed": "Der Testlauf ist fehlgeschlagen.",
+      "copyFailed": "Das Kopieren ist fehlgeschlagen. Es wurde nichts geändert.",
       "loadingData": "Daten werden geladen…",
-      "skip": "[SKIP]"
+      "roundingNote": "Mit einem Prozentsatz werden die Beträge auf ganze Beträge gerundet.",
+      "sourceHeader": "{{column}} {{year}}",
+      "currentHeader": "{{column}} {{year}}, aktuell",
+      "previewHeader": "{{column}} {{year}}, Vorschau",
+      "skipped": "Übersprungen",
+      "previewInfo_one": "{{count}} Position in der Vorschau: {{toProcess}} zu kopieren, {{skipped}} übersprungen. Übersprungene Positionen behalten ihren aktuellen Wert.",
+      "previewInfo_other": "{{count}} Positionen in der Vorschau: {{toProcess}} zu kopieren, {{skipped}} übersprungen. Übersprungene Positionen behalten ihren aktuellen Wert.",
+      "existingDataWarning_one": "{{count}} Position hat bereits einen Betrag in der Zielspalte und wird übersprungen. Aktivieren Sie „Vorhandene Daten überschreiben“, um ihn zu ersetzen.",
+      "existingDataWarning_other": "{{count}} Positionen haben bereits einen Betrag in der Zielspalte und werden übersprungen. Aktivieren Sie „Vorhandene Daten überschreiben“, um sie zu ersetzen.",
+      "copyDone_one": "{{count}} Position kopiert.",
+      "copyDone_other": "{{count}} Positionen kopiert."
     },
     "currency": {
       "title": "Währungseinstellungen",
@@ -686,6 +699,28 @@
       "followUp": "Ist-Werte",
       "landing": "Erwarteter Endwert",
       "forecast": "Prognose"
+    },
+    "scope": {
+      "label": "Positionstyp",
+      "opex": "OPEX",
+      "capex": "CAPEX"
+    },
+    "budgetRows": {
+      "title": "Datei der Budgetzeilen",
+      "intro": "Eine Zeile pro Position, Jahr und Spalte, mit dem Zeitraum der Spalte und ihren zwölf Monatsbeträgen. Der Export umfasst die OPEX- und CAPEX-Positionen, die Sie lesen dürfen.",
+      "importRules": "Ein Import ersetzt die zwölf Monate jeder Zeile der Datei. Identische Zeilen bleiben unverändert, und die ganze Datei wird geprüft, bevor etwas gespeichert wird.",
+      "year": "Jahr",
+      "allYears": "Alle Jahre",
+      "export": "Exportieren",
+      "import": "Importieren",
+      "exportTitle": "Budgetzeilen exportieren",
+      "importTitle": "Budgetzeilen importieren"
+    },
+    "results": {
+      "skipped_one": "{{count}} Position übersprungen.",
+      "skipped_other": "{{count}} Positionen übersprungen.",
+      "failed_one": "{{count}} Position fehlgeschlagen.",
+      "failed_other": "{{count}} Positionen fehlgeschlagen."
     }
   },
   "confirmations": {
@@ -975,5 +1010,47 @@
       "unassigned": "Nicht zugeordnet",
       "unnamed": "Unbenannte Dimension"
     }
+  },
+  "budgetTab": {
+    "periodText_one": "{{count}} Monat, {{months}}",
+    "periodText_other": "{{count}} Monate, {{months}}",
+    "monthRange": "{{from}} bis {{to}}",
+    "monthAnd": "{{first}} und {{second}}",
+    "zeroedMonths_one": "{{months}} wird auf null gesetzt.",
+    "zeroedMonths_other": "{{months}} werden auf null gesetzt.",
+    "changePeriod": "Zeitraum ändern",
+    "choosePeriod": "Zeitraum wählen",
+    "noMonthInItemDates": "Kein Monat von {{year}} liegt innerhalb der Daten der Position.",
+    "column": "Spalte",
+    "distribution": "Verteilung",
+    "from": "Von",
+    "to": "Bis",
+    "convention": "Ein Monat zählt, wenn der Zeitraum seinen 15. Tag umfasst.",
+    "beyondItemDates": "Der Zeitraum reicht über die Daten der Position hinaus.",
+    "problem": {
+      "missing": "Wählen Sie ein Start- und ein Enddatum.",
+      "invalid": "Geben Sie gültige Daten ein.",
+      "outsideYear": "Wählen Sie Daten im Jahr {{year}}.",
+      "startAfterEnd": "Das Startdatum liegt nach dem Enddatum.",
+      "noMonth": "In diesem Zeitraum zählt kein Monat."
+    },
+    "chip": {
+      "spreadFlat": "Gleichmäßig verteilt",
+      "spread445": "Nach 4-4-5 verteilt",
+      "spreadQuarterly": "Nach Quartal verteilt",
+      "spread": "Verteilt",
+      "copied": "Kopiert aus {{column}} {{year}}",
+      "copiedUplift": "Kopiert aus {{column}} {{year}} {{uplift}}",
+      "copiedPlain": "Kopiert",
+      "manual": "Von Hand geändert"
+    },
+    "listAnd": "{{first}} und {{last}}",
+    "amount": "Betrag",
+    "reset": "Zurücksetzen",
+    "applyToAll": "Auf alle Spalten anwenden",
+    "applyToAllFollow": "{{columns}} folgen demselben Zeitraum.",
+    "applyToAllOthers_one": "Für {{columns}} gilt weiterhin der eigene Zeitraum.",
+    "applyToAllOthers_other": "Für {{columns}} gilt weiterhin der eigene Zeitraum.",
+    "applyToAllFrozen": "Eingefrorene Spalten ändern sich nie."
   }
 }

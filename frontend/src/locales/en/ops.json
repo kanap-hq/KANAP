@@ -511,7 +511,9 @@
       "resetColumnTitle": "Reset budget column",
       "resetColumnDesc": "Clear all data from a budget column for a specific year",
       "allocationDefaultTitle": "Default allocation method",
-      "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX items left on the default allocation"
+      "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX items left on the default allocation",
+      "budgetRowsTitle": "Budget rows file",
+      "budgetRowsDesc": "Export or import the monthly amounts of every OPEX and CAPEX line, one row per line, year and column."
     },
     "allocationDefault": {
       "title": "Default allocation method",
@@ -567,27 +569,31 @@
     },
     "columnReset": {
       "title": "Reset budget column",
-      "subtitle": "Clear all data from a budget column for a specific year",
+      "subtitle": "Clear a column for one year, for OPEX or CAPEX: its twelve months and its spread period.",
       "year": "Year",
       "budgetColumn": "Budget column",
-      "processing": "Processing...",
+      "processing": "Processing…",
       "clearColumn": "Clear column",
-      "product": "Product",
-      "current": "Current",
+      "product": "Item",
       "dataPreview": "Data preview",
       "totalItems": "Total items",
-      "itemsWithData": "Items with data (will be cleared)",
+      "itemsWithData": "Items with a non-zero total",
       "currentTotalValue": "Current total value",
       "columnFrozenError": "The {{year}} {{column}} column is frozen. Unfreeze it before clearing data.",
-      "noDataInfo": "No data found in the {{column}} column for {{year}}. Nothing to clear.",
-      "clearWarning": "Warning: This operation will permanently remove all data from the {{column}} column for year {{year}}. This action cannot be undone. {{count}} items will be affected.",
+      "noDataInfo": "The {{column}} column of {{year}} holds no amount. Clearing only removes its spread periods.",
       "confirmTitle": "Confirm column reset",
-      "confirmMessage": "Are you sure you want to clear all data from the <strong>{{column}}</strong> column for year <strong>{{year}}</strong>?",
-      "confirmAffected": "This will affect <strong>{{count}} items</strong> with a total value of <strong>{{value}}</strong>.",
       "confirmUndoWarning": "This action cannot be undone.",
-      "clearSuccess": "Column cleared successfully!\nCleared: {{cleared}} items\nskipped: {{skipped}} items\nerrors: {{errors}} items",
-      "clearFailed": "Clear operation failed. Please check the console for details.",
-      "loadingData": "Loading data…"
+      "clearFailed": "The reset failed. Nothing was changed.",
+      "loadingData": "Loading data…",
+      "currentHeader": "{{column}} {{year}}, current",
+      "clearWarning_one": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} item. This cannot be undone.",
+      "clearWarning_other": "Clearing removes the {{column}} amounts and period of {{year}} for {{count}} items. This cannot be undone.",
+      "confirmMessage": "Clear the {{column}} column for {{year}}?",
+      "confirmAffected_one": "{{count}} item is affected, for a total of {{value}}.",
+      "confirmAffected_other": "{{count}} items are affected, for a total of {{value}}.",
+      "clearDone_one": "Cleared {{count}} item.",
+      "clearDone_other": "Cleared {{count}} items.",
+      "confirmPeriodsOnly": "The {{column}} column for {{year}} holds no amount. Only its spread periods will be removed."
     },
     "copyAllocations": {
       "title": "Copy allocations",
@@ -625,7 +631,7 @@
     },
     "copyBudgetColumns": {
       "title": "Copy budget columns",
-      "subtitle": "Copy budget data between years and columns with optional percentage adjustments",
+      "subtitle": "Copy a column to another year or column, for OPEX or CAPEX. Each month keeps its amount, and the percentage applies to every month.",
       "sourceYear": "Source year",
       "sourceColumn": "Source column",
       "destinationYear": "Destination year",
@@ -634,8 +640,8 @@
       "overwriteExisting": "Overwrite existing data",
       "dryRun": "Dry run",
       "copyData": "Copy data",
-      "processing": "Processing...",
-      "product": "Product",
+      "processing": "Processing…",
+      "product": "Item",
       "dataPreview": "Data preview",
       "totalItems": "Total items",
       "itemsToProcess": "Items to be processed",
@@ -643,13 +649,20 @@
       "currentDestTotal": "Current destination total",
       "previewTotal": "Preview total",
       "frozenError": "The {{year}} {{column}} column is frozen. Unfreeze it before copying data.",
-      "existingDataWarning": "{{count}} items already have data in the destination column and will be skipped. Enable \"Overwrite existing data\" to replace them.",
-      "previewInfo": "Preview shows all {{total}} items. {{toProcess}} items will be processed, {{skipped}} will be skipped. Items marked with [SKIP] will not be modified during copy operation.",
-      "copySuccess": "Copy operation completed successfully!\nProcessed: {{processed}} items\nskipped: {{skipped}} items\nerrors: {{errors}} items",
-      "dryRunFailed": "Dry run failed. Please check the console for details.",
-      "copyFailed": "Copy operation failed. Please check the console for details.",
+      "dryRunFailed": "The dry run failed.",
+      "copyFailed": "The copy failed. Nothing was changed.",
       "loadingData": "Loading data…",
-      "skip": "[SKIP]"
+      "roundingNote": "With a percentage, amounts are rounded to whole amounts.",
+      "sourceHeader": "{{column}} {{year}}",
+      "currentHeader": "{{column}} {{year}}, current",
+      "previewHeader": "{{column}} {{year}}, preview",
+      "skipped": "Skipped",
+      "previewInfo_one": "{{count}} item in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
+      "previewInfo_other": "{{count}} items in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
+      "existingDataWarning_one": "{{count}} item already has an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace it.",
+      "existingDataWarning_other": "{{count}} items already have an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace them.",
+      "copyDone_one": "Copied {{count}} item.",
+      "copyDone_other": "Copied {{count}} items."
     },
     "currency": {
       "title": "Currency settings",
@@ -686,6 +699,28 @@
       "followUp": "Actuals",
       "landing": "Expected landing",
       "forecast": "Forecast"
+    },
+    "scope": {
+      "label": "Item type",
+      "opex": "OPEX",
+      "capex": "CAPEX"
+    },
+    "budgetRows": {
+      "title": "Budget rows file",
+      "intro": "One row per line, year and column, with the period of the column and its twelve monthly amounts. The export covers the OPEX and CAPEX lines you can read.",
+      "importRules": "An import replaces the twelve months of each row in the file. Identical rows are left untouched, and the whole file is checked before anything is saved.",
+      "year": "Year",
+      "allYears": "All years",
+      "export": "Export",
+      "import": "Import",
+      "exportTitle": "Export budget rows",
+      "importTitle": "Import budget rows"
+    },
+    "results": {
+      "skipped_one": "{{count}} item skipped.",
+      "skipped_other": "{{count}} items skipped.",
+      "failed_one": "{{count}} item failed.",
+      "failed_other": "{{count}} items failed."
     }
   },
   "confirmations": {
@@ -975,5 +1010,47 @@
       "unassigned": "Unassigned",
       "unnamed": "Unnamed dimension"
     }
+  },
+  "budgetTab": {
+    "periodText_one": "{{count}} month, {{months}}",
+    "periodText_other": "{{count}} months, {{months}}",
+    "monthRange": "{{from}} to {{to}}",
+    "monthAnd": "{{first}} and {{second}}",
+    "zeroedMonths_one": "{{months}} will be set to zero.",
+    "zeroedMonths_other": "{{months}} will be set to zero.",
+    "changePeriod": "Change period",
+    "choosePeriod": "Choose the period",
+    "noMonthInItemDates": "No month of {{year}} is within the item's dates.",
+    "column": "Column",
+    "distribution": "Distribution",
+    "from": "From",
+    "to": "To",
+    "convention": "A month counts when the period covers its 15th.",
+    "beyondItemDates": "The period goes beyond the item's dates.",
+    "problem": {
+      "missing": "Choose a start and an end date.",
+      "invalid": "Enter valid dates.",
+      "outsideYear": "Choose dates in {{year}}.",
+      "startAfterEnd": "The start date is after the end date.",
+      "noMonth": "No month counts in this period."
+    },
+    "chip": {
+      "spreadFlat": "Spread flat",
+      "spread445": "Spread 4-4-5",
+      "spreadQuarterly": "Spread by quarter",
+      "spread": "Spread",
+      "copied": "Copied from {{column}} {{year}}",
+      "copiedUplift": "Copied from {{column}} {{year}} {{uplift}}",
+      "copiedPlain": "Copied",
+      "manual": "Edited by hand"
+    },
+    "listAnd": "{{first}} and {{last}}",
+    "amount": "Amount",
+    "reset": "Reset",
+    "applyToAll": "Apply to all columns",
+    "applyToAllFollow": "{{columns}} follow the same period.",
+    "applyToAllOthers_one": "{{columns}} keeps its own period.",
+    "applyToAllOthers_other": "{{columns}} keep their own period.",
+    "applyToAllFrozen": "Frozen columns never change."
   }
 }

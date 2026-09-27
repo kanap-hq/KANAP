@@ -356,7 +356,9 @@
     "warnings": "Warnings ({{count}})",
     "andMoreErrors2": "...and {{count}} more errors",
     "andMoreWarnings": "...and {{count}} more warnings",
-    "rowPrefix": "Row {{row}}:"
+    "rowPrefix": "Row {{row}}:",
+    "rowsUnchanged_one": "{{count}} row unchanged.",
+    "rowsUnchanged_other": "{{count}} rows unchanged."
   },
   "selects": {
     "loading": "Loading...",

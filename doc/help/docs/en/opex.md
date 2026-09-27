@@ -153,8 +153,15 @@ The Budget tab is where you enter financial data per year. It supports multiple 
   - **Actuals**: Expected actual spend (your best estimate as the year progresses)
   - **Expected landing**: Final actual spend after year-end close
 
+**Period of a column**:
+  - Every column (Budget, Revision, Forecast, Actuals and Expected landing) has a period inside the year, for example April to December
+  - A month counts when the period covers its 15th. A period that starts on April 10 includes April; one that starts on April 20 begins in May
+  - A column with no amount and no period yet gets a suggestion: the item's **Effective start** and **End of validity**, limited to the year. An item that starts on April 1 suggests April to December
+  - A column that already holds amounts and has no period reads as the whole year, so existing data behaves as before
+
 **Flat vs Monthly**:
-  - **Flat**: Enter one total per column; amounts are spread evenly across 12 months for allocation purposes. Only the total you edit is saved. The other columns keep their monthly amounts.
+  - **Flat**: Enter one total per column. The total is spread evenly over the months of the column's period, and the months outside it are set to zero. The period shows under each total before you type, for example "9 months, April to December". Only the total you edit is saved. The other columns keep their monthly amounts.
+  - Click the pencil icon next to the period under a total (**Change period**) to open the spread panel on that column, with its current total. If the item's dates leave no month in the year, the total is disabled and reads "No month of 2026 is within the item's dates." Click the pencil icon next to it (**Choose the period**) to set one yourself.
   - **Monthly**: Enter amounts per month (Jan-Dec) for each column, plus a **Forecast** column for additional planning. Quarter subtotals and a yearly total are shown. Only the months you change are saved.
   - Switch between modes with the **Flat** and **Monthly** tabs. Switching does not change your amounts.
 
@@ -163,9 +170,28 @@ The Budget tab is where you enter financial data per year. It supports multiple 
   - You can still view frozen data; admins can unfreeze via **Budget Management > Budget Administration > Freeze/Unfreeze**
   - Each column can be frozen independently (Budget, Revision, Forecast, Actuals, Expected landing)
 
+**Spreading an amount**:
+  - The spread panel is always visible in the **Monthly** tab. In the **Flat** tab it opens from the pencil icon under a total
+  - Choose a **Column** (Budget, Revision, Forecast, Expected landing or Actuals), check the **Amount**, pick a **Distribution** (**Flat** or **4-4-5**), and set the **From** and **To** dates. The dates start from the column's current period, and the distribution from the column's own
+  - The amount starts with the column's current total, in both tabs, and follows when you choose another column. It is empty when the column has no amount
+  - **Apply to all columns** is on by default: the selected column, plus Budget, Revision, Forecast and Expected landing, all get the same period and distribution, each with its own current total. Hover the switch to see which columns follow. The other columns keep their own period, and frozen columns never change. Turn the switch off to spread only the selected column
+  - **Reset** fills the panel with the column's current total, **Flat** and the whole year. It saves nothing: click **Apply** to use it. With **Apply to all columns** on, **Reset** then **Apply** brings every column back to a flat spread over twelve months
+  - Totals typed in the **Flat** tab still apply to their own column only
+  - The **From** and **To** dates show the period. When some months fall outside it, the panel says which ones will be set to zero ("January to March will be set to zero."). A whole-year period shows no line. Hover the info icon next to the panel title to see the 15th rule
+  - With **4-4-5**, the weights of the months that count are scaled up so the whole amount lands on them
+  - A soft warning appears when the period goes beyond the item's dates. You can still apply
+  - **Apply** stays disabled while a date is missing or no month counts. Nothing is saved before you click **Apply**
+  - From the **Monthly** tab, Apply fills the grid. From the **Flat** tab, you stay in the Flat view
+
+**How each column was produced**:
+  - A short label tells you where the amounts of a column come from. In the **Monthly** tab it sits under the column header (hover it to see the period). In the **Flat** tab it sits next to the period
+  - **Spread flat**, **Spread 4-4-5** or **Spread by quarter**: the amounts come from a spread
+  - **Copied from Budget 2025 +2%**: the amounts come from **Copy budget columns** in Budget Administration, with the percentage shown when there is one
+  - **Edited by hand**: a month was changed in the grid or by a budget rows import
+  - A column with no label kept the data it had before periods existed
+
 **Monthly tools**:
-  - **Spread an annual amount**: choose a column, type a yearly amount and a profile (**Flat** or **4-4-5**), then click **Apply** to fill the 12 months
-  - **Clear column**: the icon next to a column header sets every month of that column to zero, for example before entering the whole amount in a single month
+  - **Clear column**: the icon next to a column header sets every month of that column to zero, for example before entering the whole amount in a single month. It counts as an edit by hand. To remove both the amounts and the period of a column for every item, use **Reset budget column** in Budget Administration
 
 **Multi-year trend**:
   - A chart below the grid shows the item's budget columns across years and updates as you type
@@ -298,7 +324,8 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   - **Insert-only**: The importer only creates new items; it will not update existing ones. Use the UI to edit existing items
   - **References**: `supplier_name` must match a Supplier by name (case-insensitive). `account_number` must match an Account. `owner_it_email` and `owner_business_email` must match enabled users by email
   - **Analytics Category**: If the category does not exist, it is created automatically during import
-  - **Budgets**: Budget columns populate Y-1, Y, and Y+1 versions. Amounts are spread evenly across 12 months (Flat mode)
+  - **Budgets**: Budget columns populate Y-1, Y, and Y+1 versions. Amounts are spread evenly across 12 months (Flat mode) and the column's period becomes the whole year. An empty cell leaves the column as it is; `0` clears it
+  - **Monthly amounts**: to load or review amounts month by month, with the period of each column, use the **Budget rows file** in Budget Administration
 
 **Common errors**:
   - **"Supplier not found"**: Create the supplier in **Master Data > Suppliers** first, then re-import

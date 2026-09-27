@@ -1,7 +1,9 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { Alert, Box, Button, IconButton, MenuItem, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, FormControlLabel, IconButton, MenuItem, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -13,9 +15,30 @@ import useAutosave from '../../hooks/useAutosave';
 import YearTabs from '../navigation/YearTabs';
 import FormattedNumberField from '../inputs/FormattedNumberField';
 import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx } from '../../theme/formSx';
+import DateEUField from '../fields/DateEUField';
+import { FieldLabel } from '../design';
 import BudgetTrendChart from './BudgetTrendChart';
 import { FinanceModuleConfig } from './config';
 import { patchYearlyTotalsCache } from './yearlyTotals';
+import {
+  AMOUNT_MEASURES,
+  APPLY_TO_ALL_COLUMNS,
+  AmountMeasure,
+  Period,
+  RoundInput,
+  activeMonths,
+  centsToDecimal,
+  chipText,
+  columnLabel,
+  joinList,
+  periodForEdit,
+  periodProblem,
+  periodText,
+  suggestedPeriod,
+  toCents,
+  wholeYear,
+  zeroedMonthsText,
+} from './roundPeriod';
 
 export type BudgetTabHandle = {
   flush: () => Promise<boolean>;
@@ -29,12 +52,15 @@ type Props = {
   availableYears?: number[];
   onYearChange: (y: number) => void;
   config: FinanceModuleConfig;
+  /** Item dates as the item page shows them (`YYYY-MM-DD`), used to suggest a column's period. */
+  effectiveStart?: string | null;
+  endOfValidity?: string | null;
 };
 
 type Version = { id: string; input_grain: 'annual' | 'quarterly' | 'monthly'; budget_year?: number };
 
 type MeasureKey = 'planned' | 'committed' | 'actual' | 'expected_landing';
-type AmountCol = MeasureKey | 'forecast';
+type AmountCol = AmountMeasure;
 
 type AmountRow = Record<AmountCol, number> & { period: string };
 
@@ -42,18 +68,41 @@ type YearAmounts = {
   items: Array<Partial<Record<AmountCol, number | string>> & { period: string }>;
   totals: Record<MeasureKey | 'forecast', number>;
   year: number;
+  round_inputs?: RoundInput[];
 };
+
+type BulkUpsertResponse = { updated?: number; round_inputs?: RoundInput[] };
 
 type FreezeKey = 'budget' | 'revision' | 'forecast' | 'actual' | 'landing';
 
-const MEASURES: Array<{ key: MeasureKey; labelKey: string; freezeKey: FreezeKey }> = [
-  { key: 'planned', labelKey: 'operations.budgetColumns.budget', freezeKey: 'budget' },
-  { key: 'committed', labelKey: 'operations.budgetColumns.revision', freezeKey: 'revision' },
-  { key: 'actual', labelKey: 'operations.budgetColumns.followUp', freezeKey: 'actual' },
-  { key: 'expected_landing', labelKey: 'operations.budgetColumns.landing', freezeKey: 'landing' },
+const MEASURES: Array<{ key: MeasureKey; freezeKey: FreezeKey }> = [
+  { key: 'planned', freezeKey: 'budget' },
+  { key: 'committed', freezeKey: 'revision' },
+  { key: 'actual', freezeKey: 'actual' },
+  { key: 'expected_landing', freezeKey: 'landing' },
 ];
 
 const ALL_COLS: AmountCol[] = ['planned', 'committed', 'actual', 'expected_landing', 'forecast'];
+/** Spread panel column order. */
+const SPREAD_COLS: AmountCol[] = AMOUNT_MEASURES;
+const NO_STORED_AMOUNTS: Record<AmountCol, boolean> = { planned: false, committed: false, forecast: false, actual: false, expected_landing: false };
+/** The columns the yearly view shows a total for. */
+const isYearlyColumn = (col: AmountCol): col is MeasureKey => MEASURES.some((m) => m.key === col);
+
+/** A column's yearly total in cents, summed month by month. */
+function monthsCents(rows: AmountRow[], col: AmountCol): number {
+  return rows.reduce((sum, row) => sum + toCents(row[col]), 0);
+}
+
+/** The spread panel's amount field: the total, or empty when it is zero. */
+function amountOrEmpty(cents: number): number | '' {
+  return cents === 0 ? '' : cents / 100;
+}
+
+/** The distribution the spread panel starts with: the column's own, so a period change keeps its shape. */
+function profileOf(measure: AmountCol, inputs: RoundInput[]): 'flat' | '4-4-5' {
+  return inputs.find((r) => r.measure === measure)?.spread_profile_name === '4-4-5' ? '4-4-5' : 'flat';
+}
 const FREEZE_KEY: Record<AmountCol, FreezeKey> = {
   planned: 'budget', committed: 'revision', actual: 'actual', expected_landing: 'landing', forecast: 'forecast',
 };
@@ -71,7 +120,7 @@ const QUARTERS = [
   { label: 'Q4', months: [9, 10, 11] },
 ];
 
-export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year, currency, availableYears, onYearChange, config }, ref) {
+export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year, currency, availableYears, onYearChange, config, effectiveStart, endOfValidity }, ref) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const queryClient = useQueryClient();
@@ -85,11 +134,28 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   // Overlay the chart only once this `year`'s amounts are in local state — otherwise
   // a year-tab switch would paint the previous year's figures onto the new year.
   const [loadedYear, setLoadedYear] = React.useState<number | null>(null);
+  // How each column was produced and over which period, as stored.
+  const [roundInputs, setRoundInputs] = React.useState<RoundInput[]>([]);
+  // Columns that held a non-zero month when loaded: without a stored period they read as the whole year.
+  const [storedAmounts, setStoredAmounts] = React.useState<Record<AmountCol, boolean>>(NO_STORED_AMOUNTS);
 
-  // Spread-from-annual helper state.
-  const [spreadMeasure, setSpreadMeasure] = React.useState<MeasureKey>('planned');
+  // Spread panel state. `spreadDates` is null until the user edits a date: the
+  // column's own period is shown until then.
+  const [spreadMeasure, setSpreadMeasure] = React.useState<AmountCol>('planned');
   const [spreadAmount, setSpreadAmount] = React.useState<number | ''>('');
   const [spreadProfile, setSpreadProfile] = React.useState<'flat' | '4-4-5'>('flat');
+  const spreadMeasureRef = React.useRef(spreadMeasure); spreadMeasureRef.current = spreadMeasure;
+  const [spreadDates, setSpreadDates] = React.useState<Period | null>(null);
+  const [spreadBusy, setSpreadBusy] = React.useState(false);
+  // On by default: the panel's period and distribution go to every column of the shared group.
+  const [spreadAllColumns, setSpreadAllColumns] = React.useState(true);
+  // The yearly view shows the panel only when asked for, on one column.
+  const [panelOpen, setPanelOpen] = React.useState(false);
+
+  const suggestion = React.useMemo(() => suggestedPeriod(year, effectiveStart, endOfValidity), [year, effectiveStart, endOfValidity]);
+  const periodFor = React.useCallback((measure: AmountCol, inputs: RoundInput[], stored: Record<AmountCol, boolean>): Period | null => {
+    return periodForEdit(year, inputs.find((r) => r.measure === measure), stored[measure], suggestion);
+  }, [year, suggestion]);
 
   const { data: freezeData } = useFreezeState(year);
   const frozen = React.useMemo(() => {
@@ -112,6 +178,17 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const monthsRef = React.useRef(months); monthsRef.current = months;
   const versionRef = React.useRef(version); versionRef.current = version;
   const frozenRef = React.useRef(frozen); frozenRef.current = frozen;
+  const roundInputsRef = React.useRef(roundInputs); roundInputsRef.current = roundInputs;
+  const storedAmountsRef = React.useRef(storedAmounts); storedAmountsRef.current = storedAmounts;
+  const periodForRef = React.useRef(periodFor); periodForRef.current = periodFor;
+
+  // Every write answers with the version's stored periods: keep them so the
+  // column labels follow without reloading the grid.
+  const keepRoundInputs = (data: BulkUpsertResponse | undefined) => {
+    if (!Array.isArray(data?.round_inputs)) return;
+    roundInputsRef.current = data!.round_inputs;
+    setRoundInputs(data!.round_inputs);
+  };
 
   // Edits not saved yet: yearly totals in flat mode, (period, measure) cells in
   // monthly mode. A save sends only these, so it never overwrites a measure or
@@ -150,11 +227,15 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     try {
       const res = await api.get<Version[]>(`${config.itemsApi}/${id}/versions`);
       const v = (res.data || []).find((vv) => Number(vv.budget_year) === year);
+      setSpreadDates(null);
       if (!v) {
         setVersion(null);
         setMode('flat');
         setFlat({ planned: '', committed: '', actual: '', expected_landing: '' });
         setMonths(emptyMonths(year));
+        setRoundInputs([]);
+        setStoredAmounts(NO_STORED_AMOUNTS);
+        setSpreadAmount('');
         resetDirty();
         setLoadedYear(year);
         return;
@@ -170,14 +251,21 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         expected_landing: Number(totals?.expected_landing || 0),
       });
       const byPeriod = new Map((amt.data?.items || []).map((r) => [r.period, r]));
-      setMonths(Array.from({ length: 12 }, (_, i) => {
+      const loadedMonths = Array.from({ length: 12 }, (_, i) => {
         const p = monthPeriod(year, i + 1);
         const found = byPeriod.get(p);
         const num = (k: AmountCol) => Number((found?.[k] as any) || 0);
         return found
           ? { period: p, planned: num('planned'), committed: num('committed'), actual: num('actual'), expected_landing: num('expected_landing'), forecast: num('forecast') }
           : { period: p, planned: 0, committed: 0, actual: 0, expected_landing: 0, forecast: 0 };
-      }));
+      });
+      setMonths(loadedMonths);
+      const hasAmounts = (m: AmountCol) => loadedMonths.some((row) => row[m] !== 0);
+      setStoredAmounts(Object.fromEntries(AMOUNT_MEASURES.map((m) => [m, hasAmounts(m)])) as Record<AmountCol, boolean>);
+      const loadedInputs = Array.isArray(amt.data?.round_inputs) ? amt.data.round_inputs : [];
+      setRoundInputs(loadedInputs);
+      setSpreadProfile(profileOf(spreadMeasureRef.current, loadedInputs));
+      setSpreadAmount(amountOrEmpty(monthsCents(loadedMonths, spreadMeasureRef.current)));
       resetDirty();
       setLoadedYear(year);
     } catch (e) {
@@ -188,6 +276,11 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   }, [id, year, t]);
 
   React.useEffect(() => { void load(); }, [load]);
+  // A year switch closes the panel: its total belongs to the previous year.
+  React.useEffect(() => {
+    setPanelOpen(false);
+    setSpreadAmount('');
+  }, [year]);
 
   // Persist the edited totals (flat) or cells (monthly), creating the version on
   // first edit. Frozen measures are never sent.
@@ -199,15 +292,28 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     const totalsSnapshot = flatMode ? dirtyTotalsRef.current : new Set<MeasureKey>();
     const cellsSnapshot = flatMode ? new Map<string, Set<AmountCol>>() : dirtyCellsRef.current;
     if (flatMode) dirtyTotalsRef.current = new Set(); else dirtyCellsRef.current = new Map();
+    // Totals not saved yet; a request that succeeds takes its own out.
+    const unsavedTotals = new Set(totalsSnapshot);
     try {
-      let body: Record<string, unknown> | null = null;
+      const bodies: Array<{ body: Record<string, unknown>; measures: MeasureKey[] }> = [];
       if (flatMode) {
+        // A yearly total is spread flat over its column's period: one request
+        // per period (in practice one).
         const f = flatRef.current;
-        const totals: Partial<Record<MeasureKey, number>> = {};
+        const groups = new Map<string, { period: Period; totals: Partial<Record<MeasureKey, number>> }>();
         MEASURES.forEach((m) => {
-          if (totalsSnapshot.has(m.key) && !fr[m.freezeKey]) totals[m.key] = Number(f[m.key] || 0);
+          if (!totalsSnapshot.has(m.key) || fr[m.freezeKey]) return;
+          const period = periodForRef.current(m.key, roundInputsRef.current, storedAmountsRef.current);
+          if (!period) return;
+          const key = `${period.start}|${period.end}`;
+          const group = groups.get(key) ?? { period, totals: {} };
+          group.totals[m.key] = Number(f[m.key] || 0);
+          groups.set(key, group);
         });
-        if (Object.keys(totals).length > 0) body = { kind: 'annual', year, totals };
+        groups.forEach(({ period, totals }) => bodies.push({
+          body: { kind: 'annual', year, totals, period_start: period.start, period_end: period.end },
+          measures: Object.keys(totals) as MeasureKey[],
+        }));
       } else {
         const rows = monthsRef.current.flatMap((m) => {
           const cols = cellsSnapshot.get(m.period);
@@ -217,9 +323,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
           });
           return Object.keys(row).length > 1 ? [row] : [];
         });
-        if (rows.length > 0) body = { kind: 'monthly', year, months: rows };
+        if (rows.length > 0) bodies.push({ body: { kind: 'monthly', year, months: rows }, measures: [] });
       }
-      if (!body) return;
+      if (bodies.length === 0) return;
 
       const v = await ensureVersion();
       const nextGrain = flatMode ? 'annual' : 'monthly';
@@ -227,9 +333,13 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         await api.patch(`${config.itemsApi}/${id}/versions`, { id: v.id, input_grain: nextGrain });
         setVersion((prev) => (prev ? { ...prev, input_grain: nextGrain } : prev));
       }
-      await api.post(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, body);
+      for (const { body, measures } of bodies) {
+        const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, body);
+        keepRoundInputs(res?.data);
+        measures.forEach((k) => unsavedTotals.delete(k));
+      }
     } catch (e) {
-      totalsSnapshot.forEach((k) => dirtyTotalsRef.current.add(k));
+      unsavedTotals.forEach((k) => dirtyTotalsRef.current.add(k));
       cellsSnapshot.forEach((cols, period) => cols.forEach((c) => markCellDirty(period, c)));
       // The save may have been refused because a column was frozen meanwhile:
       // refresh the freeze state so that column turns read-only and the next
@@ -284,6 +394,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     // If they cannot be saved, stay: the reload would discard them.
     if (!(await flushEdits())) return;
     setMode(next);
+    setPanelOpen(false);
     const v = versionRef.current;
     if (!v) return; // no version yet — grain persists on first edit
     try {
@@ -294,25 +405,97 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     }
   }, [flushEdits, id, load, t]);
 
+  // The period the panel shows: what the user typed, else the column's own period.
+  const spreadPeriod: Period = spreadDates
+    ?? periodFor(spreadMeasure, roundInputs, storedAmounts)
+    ?? { start: '', end: '' };
+  const spreadProblem = periodProblem(year, spreadPeriod.start, spreadPeriod.end);
+  const spreadActive = spreadProblem ? [] : activeMonths(year, spreadPeriod.start, spreadPeriod.end);
+  const spreadBeyondItem = !spreadProblem && (
+    (!!effectiveStart && spreadPeriod.start < effectiveStart) || (!!endOfValidity && spreadPeriod.end > endOfValidity)
+  );
+  const spreadFrozen = frozen[FREEZE_KEY[spreadMeasure]];
+
+  // A column's current total in cents: the typed yearly total in the yearly
+  // view (it may not be saved yet), else the sum of its months.
+  const currentCents = (col: AmountCol): number => (
+    mode === 'flat' && isYearlyColumn(col) ? toCents(flat[col]) : monthsCents(months, col)
+  );
+
+  const onSpreadMeasureChange = (measure: AmountCol) => {
+    setSpreadMeasure(measure);
+    setSpreadDates(null);
+    setSpreadProfile(profileOf(measure, roundInputs));
+    setSpreadAmount(amountOrEmpty(currentCents(measure)));
+  };
+  // Back to a flat spread of the column's current total over the whole year. Writes nothing.
+  const resetSpread = () => {
+    setSpreadAmount(amountOrEmpty(currentCents(spreadMeasure)));
+    setSpreadProfile('flat');
+    setSpreadDates(wholeYear(year));
+  };
+
+  // With "Apply to all columns", the columns of the shared group that are not
+  // frozen are spread too, each with its own current total. The selected column
+  // is spread whether it belongs to the group or not.
+  const alsoSpread = spreadAllColumns
+    ? APPLY_TO_ALL_COLUMNS.filter((col) => col !== spreadMeasure && !frozen[FREEZE_KEY[col]])
+    : [];
+  const onSpreadDateChange = (bound: 'start' | 'end', value: string) => {
+    setSpreadDates({ ...spreadPeriod, [bound]: value });
+  };
+  // Yearly view: open the panel on one column with its current total.
+  const openSpreadPanel = (measure: MeasureKey) => {
+    setSpreadMeasure(measure);
+    setSpreadDates(null);
+    setSpreadProfile(profileOf(measure, roundInputs));
+    setSpreadAmount(amountOrEmpty(toCents(flat[measure])));
+    setPanelOpen(true);
+  };
+  const closeSpreadPanel = () => {
+    setPanelOpen(false);
+    setSpreadDates(null);
+    setSpreadAmount('');
+  };
+
+  // Nothing is written before Apply. From the monthly view the grid switches to
+  // monthly as before; from the yearly view it stays there.
   const applySpread = async () => {
     const amount = Number(spreadAmount || 0);
-    if (!amount) return;
+    if (!amount || spreadProblem || spreadFrozen) return;
+    // Totals in cents, sent as two-decimal strings: no float sum reaches the server.
+    const totals: Record<string, string> = { [spreadMeasure]: centsToDecimal(toCents(amount)) };
+    alsoSpread.forEach((col) => { totals[col] = centsToDecimal(currentCents(col)); });
+    const fromYearly = modeRef.current === 'flat';
     setError(null);
+    setSpreadBusy(true);
     try {
-      // Save pending cell edits first: the reload below replaces the grid.
+      // Save pending edits first: the reload below replaces the grid.
       if (!(await flushEdits())) return;
       const v = await ensureVersion();
-      await api.post(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, {
-        kind: 'annual', year, totals: { [spreadMeasure]: amount }, spread_profile_name: spreadProfile,
+      const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, {
+        kind: 'annual',
+        year,
+        totals,
+        spread_profile_name: spreadProfile,
+        period_start: spreadPeriod.start,
+        period_end: spreadPeriod.end,
       });
-      if (v.input_grain !== 'monthly') {
-        await api.patch(`${config.itemsApi}/${id}/versions`, { id: v.id, input_grain: 'monthly' });
+      keepRoundInputs(res?.data);
+      if (fromYearly) {
+        setPanelOpen(false);
+      } else {
+        if (v.input_grain !== 'monthly') {
+          await api.patch(`${config.itemsApi}/${id}/versions`, { id: v.id, input_grain: 'monthly' });
+        }
+        setMode('monthly');
       }
-      setMode('monthly');
       setSpreadAmount('');
       await load();
     } catch (e) {
       setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToSave`)));
+    } finally {
+      setSpreadBusy(false);
     }
   };
 
@@ -346,16 +529,124 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
 
   const fmt = (n: number) => formatAmount(n);
 
-  const labelFor = (m: typeof MEASURES[number]) => t(m.labelKey);
+  const labelFor = (col: AmountCol) => columnLabel(t, col);
   const isFrozen = (m: typeof MEASURES[number]) => frozen[m.freezeKey];
   const gridColumns = ALL_COLS.map((col) => ({ col, fr: frozen[FREEZE_KEY[col]] }));
+  const recordFor = (col: AmountCol) => roundInputs.find((r) => r.measure === col);
+  const periodTextOf = (period: Period | null) => (period ? periodText(t, locale, activeMonths(year, period.start, period.end)) : '');
 
   const savingHint = autosave.status === 'saving' || autosave.status === 'pending'
     ? t('common:status.saving', 'Saving…')
     : autosave.status === 'saved' ? t('common:status.saved', 'Saved') : null;
 
   const numCellSx = { textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, color: 'kanap.text.primary', px: 1, py: 0 } as const;
-  const headCellSx = { textAlign: 'right', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1, py: 0.75, whiteSpace: 'nowrap' } as const;
+  const headCellSx = { textAlign: 'right', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1, py: 0.75, whiteSpace: 'nowrap', verticalAlign: 'top' } as const;
+  const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
+
+  // Every control has its label above it, so the row sits on one baseline and wraps cleanly.
+  const panelField = (label: string, width: number, control: React.ReactNode) => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', width }}>
+      <FieldLabel sx={{ mb: '2px' }}>{label}</FieldLabel>
+      {control}
+    </Box>
+  );
+  // Built from the group and the column names: nothing here knows what a column means.
+  const outsideGroup = AMOUNT_MEASURES.filter((col) => !APPLY_TO_ALL_COLUMNS.includes(col));
+  const applyToAllHint = [
+    t('budgetTab.applyToAllFollow', { columns: joinList(t, APPLY_TO_ALL_COLUMNS.map((col) => labelFor(col))) }),
+    outsideGroup.length > 0
+      ? t('budgetTab.applyToAllOthers', { count: outsideGroup.length, columns: joinList(t, outsideGroup.map((col) => labelFor(col))) })
+      : '',
+    t('budgetTab.applyToAllFrozen'),
+  ].filter(Boolean).join(' ');
+  const zeroedText = spreadProblem ? '' : zeroedMonthsText(t, locale, spreadActive);
+
+  const spreadPanel = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, bgcolor: 'kanap.bg.drawer', border: '1px solid', borderColor: 'kanap.border.soft', borderRadius: '8px', p: 1.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t(`${config.i18nPrefix}.budget.spreadHelper`)}</Typography>
+        {/* The 15th rule, one hover away instead of a permanent line. */}
+        <Tooltip title={t('budgetTab.convention')}>
+          <InfoOutlinedIcon tabIndex={0} aria-label={t('budgetTab.convention')} sx={{ fontSize: 13, color: 'kanap.text.tertiary' }} />
+        </Tooltip>
+      </Box>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 1.5, rowGap: 1 }}>
+        {panelField(t('budgetTab.column'), 150, (
+          <TextField
+            select size="small" variant="standard" value={spreadMeasure}
+            onChange={(e) => onSpreadMeasureChange(e.target.value as AmountCol)}
+            inputProps={{ 'aria-label': t('budgetTab.column') }}
+            sx={drawerSelectSx}
+          >
+            {SPREAD_COLS.map((col) => <MenuItem key={col} value={col} sx={drawerMenuItemSx}>{labelFor(col)}</MenuItem>)}
+          </TextField>
+        ))}
+        {panelField(t('budgetTab.amount'), 130, (
+          <FormattedNumberField
+            value={spreadAmount}
+            onChange={(e) => setSpreadAmount(e.target.value as unknown as number | '')}
+            variant="standard" size="small" fullWidth
+            placeholder={t(`${config.i18nPrefix}.budget.spreadPlaceholder`)}
+            inputProps={{ 'aria-label': t('budgetTab.amount') }}
+          />
+        ))}
+        {panelField(t('budgetTab.distribution'), 120, (
+          <TextField
+            select size="small" variant="standard" value={spreadProfile}
+            onChange={(e) => setSpreadProfile(e.target.value as 'flat' | '4-4-5')}
+            inputProps={{ 'aria-label': t('budgetTab.distribution') }}
+            sx={drawerSelectSx}
+          >
+            <MenuItem value="flat" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profileFlat`)}</MenuItem>
+            <MenuItem value="4-4-5" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profile445`)}</MenuItem>
+          </TextField>
+        ))}
+        <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} size="small" sx={{ width: 150 }} />
+        <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} size="small" sx={{ width: 150 }} />
+      </Box>
+      {/* Only the lines that apply: a whole-year period shows none. */}
+      {(spreadProblem || zeroedText || spreadBeyondItem || spreadFrozen) && (
+        <Box data-testid="spread-notes">
+          {spreadProblem && (
+            <Typography sx={{ ...captionSx, color: 'error.main' }}>{t(`budgetTab.problem.${spreadProblem}`, { year })}</Typography>
+          )}
+          {zeroedText && (
+            <Typography sx={{ ...captionSx, color: 'kanap.text.secondary' }}>{zeroedText}</Typography>
+          )}
+          {spreadBeyondItem && (
+            <Typography sx={{ ...captionSx, color: 'warning.main' }}>{t('budgetTab.beyondItemDates')}</Typography>
+          )}
+          {spreadFrozen && (
+            <Typography sx={captionSx}>{t(`${config.i18nPrefix}.budget.someColumnsFrozen`)}</Typography>
+          )}
+        </Box>
+      )}
+      <Box>
+        <FormControlLabel
+          control={<Switch size="small" checked={spreadAllColumns} onChange={(e) => setSpreadAllColumns(e.target.checked)} />}
+          label={(
+            <Tooltip title={applyToAllHint}>
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyToAll')}</Typography>
+            </Tooltip>
+          )}
+          sx={{ ml: 0 }}
+        />
+      </Box>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Button
+          size="small" variant="contained"
+          onClick={() => void applySpread()}
+          disabled={!spreadAmount || !!spreadProblem || spreadFrozen || spreadBusy}
+        >
+          {t(`${config.i18nPrefix}.budget.spreadApply`)}
+        </Button>
+        <Button size="small" variant="action" onClick={resetSpread}>{t('budgetTab.reset')}</Button>
+        {mode === 'flat' && (
+          <Button size="small" onClick={closeSpreadPanel} sx={{ textTransform: 'none' }}>{t('common:buttons.cancel')}</Button>
+        )}
+      </Stack>
+    </Box>
+  );
 
   return (
     <Stack spacing={2.5} sx={{ pt: 1 }}>
@@ -377,75 +668,89 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       </Tabs>
 
       {mode === 'flat' ? (
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 2.5 }}>
-          {MEASURES.map((m) => (
-            <Box key={m.key} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                {labelFor(m)}
-                {isFrozen(m) && <LockOutlinedIcon sx={{ fontSize: 12 }} />}
-              </Typography>
-              <FormattedNumberField
-                value={flat[m.key]}
-                onChange={(e) => onFlatChange(m.key, (e.target.value as unknown as number | ''))}
-                variant="standard"
-                disabled={loading || isFrozen(m)}
-                InputProps={{ readOnly: isFrozen(m) }}
-                sx={{ maxWidth: 220, '& .MuiInputBase-input': { fontSize: '15px !important', fontWeight: 500 } }}
-              />
-            </Box>
-          ))}
-        </Box>
+        <Stack spacing={2}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 2.5 }}>
+            {MEASURES.map((m) => {
+              // Until this year's data is in, the previous year's periods would be read against this year.
+              const loaded = loadedYear === year;
+              const period = loaded ? periodFor(m.key, roundInputs, storedAmounts) : null;
+              const text = periodTextOf(period);
+              // No stored period, no amounts and no month of the year within the item's dates.
+              const noMonth = loaded && !text;
+              const chip = loaded ? chipText(t, locale, recordFor(m.key)) : '';
+              return (
+                <Box key={m.key} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {labelFor(m.key)}
+                    {isFrozen(m) && <LockOutlinedIcon sx={{ fontSize: 12 }} />}
+                  </Typography>
+                  <FormattedNumberField
+                    value={flat[m.key]}
+                    onChange={(e) => onFlatChange(m.key, (e.target.value as unknown as number | ''))}
+                    variant="standard"
+                    disabled={loading || isFrozen(m) || noMonth}
+                    InputProps={{ readOnly: isFrozen(m) }}
+                    sx={{ maxWidth: 220, '& .MuiInputBase-input': { fontSize: '15px !important', fontWeight: 500 } }}
+                  />
+                  {loaded && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                      <Typography sx={captionSx} data-testid={`period-line-${m.key}`}>
+                        {noMonth ? t('budgetTab.noMonthInItemDates', { year }) : [chip, text].filter(Boolean).join(' · ')}
+                      </Typography>
+                      {!isFrozen(m) && !loading && (
+                        <Tooltip title={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}>
+                          <IconButton
+                            size="small"
+                            aria-label={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}
+                            onClick={() => openSpreadPanel(m.key)}
+                            sx={{ p: '2px', color: 'kanap.text.tertiary', '&:hover': { color: 'primary.main', bgcolor: 'transparent' } }}
+                          >
+                            <EditOutlinedIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+          {panelOpen && spreadPanel}
+        </Stack>
       ) : (
         <Stack spacing={2}>
-          {/* Spread-from-annual helper */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 1.5, bgcolor: 'kanap.bg.drawer', border: '1px solid', borderColor: 'kanap.border.soft', borderRadius: '8px', p: 1.5 }}>
-            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center' }}>{t(`${config.i18nPrefix}.budget.spreadHelper`)}</Typography>
-            <TextField select size="small" variant="standard" value={spreadMeasure} onChange={(e) => setSpreadMeasure(e.target.value as MeasureKey)} sx={[drawerSelectSx, { width: 'auto', minWidth: 120 }]}>
-              {MEASURES.map((m) => <MenuItem key={m.key} value={m.key} sx={drawerMenuItemSx}>{labelFor(m)}</MenuItem>)}
-            </TextField>
-            <FormattedNumberField value={spreadAmount} onChange={(e) => setSpreadAmount(e.target.value as unknown as number | '')} variant="standard" size="small" placeholder={t(`${config.i18nPrefix}.budget.spreadPlaceholder`)} sx={{ width: 120 }} />
-            <TextField select size="small" variant="standard" value={spreadProfile} onChange={(e) => setSpreadProfile(e.target.value as 'flat' | '4-4-5')} sx={[drawerSelectSx, { width: 'auto', minWidth: 90 }]}>
-              <MenuItem value="flat" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profileFlat`)}</MenuItem>
-              <MenuItem value="4-4-5" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profile445`)}</MenuItem>
-            </TextField>
-            <Button size="small" variant="contained" onClick={() => void applySpread()} disabled={!spreadAmount}>{t(`${config.i18nPrefix}.budget.spreadApply`)}</Button>
-          </Box>
+          {spreadPanel}
 
           {/* Dense monthly table */}
           <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', '& td, & th': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}>
             <Box component="thead">
               <Box component="tr">
                 <Box component="th" sx={{ ...headCellSx, textAlign: 'left' }}>{t(`${config.i18nPrefix}.budget.month`)}</Box>
-                {MEASURES.map((m) => (
-                  <Box component="th" key={m.key} sx={headCellSx}>
-                    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, justifyContent: 'flex-end' }}>
-                      {labelFor(m)}
-                      {isFrozen(m) ? (
-                        <LockOutlinedIcon sx={{ fontSize: 12, color: 'kanap.text.tertiary' }} />
-                      ) : (
-                        <Tooltip title={t(`${config.i18nPrefix}.budget.clearColumn`)}>
-                          <IconButton size="small" aria-label={t(`${config.i18nPrefix}.budget.clearColumn`)} onClick={() => clearColumn(m.key)} sx={{ p: '2px' }}>
-                            <BackspaceOutlinedIcon sx={{ fontSize: 13 }} />
-                          </IconButton>
+                {gridColumns.map(({ col, fr }) => {
+                  const record = loadedYear === year ? recordFor(col) : undefined;
+                  const chip = chipText(t, locale, record);
+                  return (
+                    <Box component="th" key={col} sx={headCellSx}>
+                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, justifyContent: 'flex-end' }}>
+                        {labelFor(col)}
+                        {fr ? (
+                          <LockOutlinedIcon sx={{ fontSize: 12, color: 'kanap.text.tertiary' }} />
+                        ) : (
+                          <Tooltip title={t(`${config.i18nPrefix}.budget.clearColumn`)}>
+                            <IconButton size="small" aria-label={t(`${config.i18nPrefix}.budget.clearColumn`)} onClick={() => clearColumn(col)} sx={{ p: '2px' }}>
+                              <BackspaceOutlinedIcon sx={{ fontSize: 13 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                      {chip && record && (
+                        <Tooltip title={periodTextOf({ start: record.period_start, end: record.period_end })}>
+                          <Box sx={{ fontSize: 11, fontWeight: 400, color: 'kanap.text.tertiary', whiteSpace: 'normal', lineHeight: 1.3 }}>{chip}</Box>
                         </Tooltip>
                       )}
                     </Box>
-                  </Box>
-                ))}
-                <Box component="th" sx={headCellSx}>
-                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, justifyContent: 'flex-end' }}>
-                    {t(`${config.i18nPrefix}.budget.forecast`)}
-                    {frozen.forecast ? (
-                      <LockOutlinedIcon sx={{ fontSize: 12, color: 'kanap.text.tertiary' }} />
-                    ) : (
-                      <Tooltip title={t(`${config.i18nPrefix}.budget.clearColumn`)}>
-                        <IconButton size="small" aria-label={t(`${config.i18nPrefix}.budget.clearColumn`)} onClick={() => clearColumn('forecast')} sx={{ p: '2px' }}>
-                          <BackspaceOutlinedIcon sx={{ fontSize: 13 }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </Box>
-                </Box>
+                  );
+                })}
               </Box>
             </Box>
             <Box component="tbody">

@@ -7,7 +7,7 @@ Budget Administration gives you a set of tools for managing and transforming bud
 - Path: **Budget Management > Administration**
 - Permissions: Most operations require `budget_ops:admin`
 
-The landing page shows five cards, each linking to a dedicated tool:
+The landing page shows six cards, each linking to a dedicated tool:
 
 | Tool | Purpose |
 |------|---------|
@@ -16,6 +16,7 @@ The landing page shows five cards, each linking to a dedicated tool:
 | **Copy Allocations** | Copy allocation methods from one year to another |
 | **Reset Budget Column** | Clear all data from a specific column |
 | **Default Allocation Method** | Set the method OPEX and CAPEX items follow by default |
+| **Budget rows file** | Export or import the monthly amounts of every OPEX and CAPEX line |
 
 ---
 
@@ -57,6 +58,10 @@ Without `budget_ops:admin` you can still view the freeze status, but the control
 
 Copy budget data from one year and column to another, with an optional percentage adjustment. This is the primary tool for seeding next year's budget from the current one.
 
+The **OPEX** / **CAPEX** switch at the top chooses which items the copy runs on. OPEX is selected by default when you can read OPEX items, otherwise CAPEX.
+
+Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
+
 ### When to use it
 
 - Preparing next year's budget from the current year
@@ -71,14 +76,14 @@ Copy budget data from one year and column to another, with an optional percentag
 | **Source Column** | Budget, Revision, Actuals, or Expected landing |
 | **Destination Year** | Year to copy to (same range) |
 | **Destination Column** | Budget, Revision, Actuals, or Expected landing |
-| **Percentage Increase** | Adjustment applied to copied values (e.g., `3` = +3%). Defaults to 0. Accepts decimals. |
+| **Percentage Increase** | Adjustment applied to every copied month (e.g., `3` = +3%). Defaults to 0. Accepts decimals and negative values. |
 | **Overwrite existing data** | Toggle. When off, items that already have a value in the destination are skipped. When on, all destination values are replaced. |
 
 ### Two-step process: Dry Run, then Copy
 
 1. Click **Dry Run** to generate a preview without changing any data
 2. Review the preview grid, which shows:
-   - **Product** name (items tagged `[SKIP]` will not be modified)
+   - **Item** name (items marked **Skipped** keep their current value)
    - **Source value** (from the source year/column)
    - **Current destination value**
    - **Preview value** (what the destination will become after copy)
@@ -104,6 +109,17 @@ Below the grid, a stats bar shows:
 | Off | No (zero) | Copied |
 | On | Yes | Replaced |
 | On | No (zero) | Copied |
+
+### How amounts are copied
+
+- The copy keeps the monthly shape. Each of the twelve months is copied to the same month of the destination, so a column spread from April to December stays April to December
+- Without a percentage, amounts are copied exactly, to the cent
+- With a percentage, each month is rounded to a whole amount. The yearly total is the source total with the percentage applied, rounded to a whole amount. The small difference lands on the last month that has an amount. For example, 12,000 spread from April to December (1,333.33 a month and 1,333.36 in December) copied with +2% gives 1,360 a month and 12,240 for the year
+- The column's period moves with the copy: April to December 2026 becomes April to December 2027. A period that ends on February 29 ends on February 28 in a year without one
+- A source without a period gives a whole-year period
+- In the Budget tab, the destination column shows "Copied from Budget 2026 +2%"
+- Copying a column onto itself (same year and same column) is refused
+- The copy is all or nothing: if one item fails, nothing is saved
 
 ### Frozen column protection
 
@@ -153,7 +169,13 @@ After a dry run, a banner shows the count of items ready to copy, skipped, and e
 
 ## Reset Budget Column
 
-Clear all data from a specific budget column for a given year. This is a destructive operation -- use it when you need to start fresh.
+Clear all data from a specific budget column for a given year. This is a destructive operation: use it when you need to start fresh.
+
+The **OPEX** / **CAPEX** switch at the top chooses which items are cleared. The reset sets the twelve months of the column to zero and removes its period. In the Budget tab, the column then gets a new suggestion from the item's dates. The reset is all or nothing: if one item fails, nothing is cleared.
+
+Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
+
+A column whose items hold no amount can still be reset: the reset then only removes the spread periods, and the confirmation says so.
 
 ### When to use it
 
@@ -170,10 +192,10 @@ Clear all data from a specific budget column for a given year. This is a destruc
 
 ### Preview
 
-The page loads a grid showing every OPEX item and its current value in the selected column. Items with data are highlighted in red. Below the grid, three stats appear:
+The page loads a grid showing every OPEX or CAPEX item and its current value in the selected column. Amounts that will be cleared are shown in medium weight; empty values are muted. Below the grid, three stats appear:
 
 - **Total items**
-- **Items with data** (will be cleared)
+- **Items with a non-zero total**
 - **Current total value**
 
 ### Confirmation
@@ -189,7 +211,7 @@ You must click **Clear Column** in the dialog to proceed, or **Cancel** to abort
 
 ### Safety features
 
-- The **Clear Column** button is disabled when there is no data to clear
+- The **Clear Column** button stays available when no item has an amount, so the spread periods can still be removed
 - Frozen columns cannot be reset -- unfreeze first
 - The confirmation dialog requires explicit acknowledgement
 
@@ -247,6 +269,57 @@ The default is resolved every time allocations are displayed, so editing it re-d
 ### Permissions
 
 Without `budget_ops:admin` you can view the current setting but not change it.
+
+---
+
+## Budget rows file
+
+Export or import the monthly amounts of every OPEX and CAPEX line in one file, with one row per line, year and column.
+
+### When to use it
+
+- Load monthly budgets prepared in a spreadsheet
+- Import monthly actuals from your accounting system
+- Review or archive every column, including Forecast
+
+### Export
+
+1. Choose a year, or keep **All years**
+2. Click **Export**, then **Export data**
+
+The file lists every OPEX and CAPEX line you can read, for every year that has amounts. Each line and year gets five rows, in this order: Budget, Revision, Forecast, Actuals, Expected landing. Columns without amounts are included too. When the file covers one year, or only OPEX or only CAPEX because of your permissions, its name ends with `partial`.
+
+A file can be imported up to 10 MB. For a larger budget, export and import one year at a time: a year-limited export gives a smaller file.
+
+### Columns
+
+The file uses a semicolon `;` as separator and UTF-8 encoding.
+
+| Column | Content |
+|--------|---------|
+| `item_type` | `opex` or `capex` |
+| `item_number` | The item number, for example `7`. On import, the reference also works (`OPX-7`, `CPX-7`) |
+| `year` | Four digits |
+| `measure` | The column: `planned` (Budget), `committed` (Revision), `forecast` (Forecast), `actual` (Actuals), `expected_landing` (Expected landing). On import, `budget`, `revision`, `follow_up` and `landing` also work |
+| `period_start`, `period_end` | The column's period as `YYYY-MM-DD`, inside the row's year. On import, both empty means the whole year |
+| `jan` to `dec` | The twelve monthly amounts, with a dot as decimal separator. On import, a comma and spaces are accepted too |
+| `method` | How the column was produced: `spread`, `copied` or `manual`. For information only, ignored on import |
+
+### Import rules
+
+1. Click **Import**, choose the file and run **Preflight check**
+2. Review the report, then click **Load**
+
+- The whole file is checked before anything is saved. If one row has an error, nothing is saved and the report lists the errors by line number
+- Each row replaces the twelve months of its line, year and column. Lines, years and columns that are not in the file stay untouched
+- All twelve months are required. Write `0` for a month without an amount
+- A row identical to what is stored is left untouched, including how the column was produced. Re-importing an export changes nothing
+- A row whose amounts change marks the column as **Edited by hand**, with the period from the file
+- A row that only changes the period updates the period and keeps the rest
+- Actuals rows follow the same rules, which lets you import monthly actuals
+- A changed row on a frozen column is refused. An identical row on a frozen column is accepted
+- Repeated rows (same item, year and column), unknown item numbers, and items of a type you cannot administer are errors
+- Importing needs administration rights on OPEX or on CAPEX. Exporting needs read access to either
 
 ---
 

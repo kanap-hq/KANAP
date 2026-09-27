@@ -511,7 +511,9 @@
       "resetColumnTitle": "Restablecer columna presupuestaria",
       "resetColumnDesc": "Borrar todos los datos de una columna presupuestaria para un año específico",
       "allocationDefaultTitle": "Método de asignación por defecto",
-      "allocationDefaultDesc": "Elegir el método aplicado a las partidas de OPEX y CAPEX que siguen con la asignación por defecto"
+      "allocationDefaultDesc": "Elegir el método aplicado a las partidas de OPEX y CAPEX que siguen con la asignación por defecto",
+      "budgetRowsTitle": "Archivo de filas presupuestarias",
+      "budgetRowsDesc": "Exportar o importar los importes mensuales de cada partida OPEX y CAPEX, una fila por partida, año y columna."
     },
     "allocationDefault": {
       "title": "Método de asignación por defecto",
@@ -567,27 +569,31 @@
     },
     "columnReset": {
       "title": "Restablecer columna presupuestaria",
-      "subtitle": "Borrar todos los datos de una columna presupuestaria para un año específico",
+      "subtitle": "Borrar una columna de un año, en OPEX o CAPEX: sus doce meses y su periodo de reparto.",
       "year": "Año",
       "budgetColumn": "Columna presupuestaria",
-      "processing": "Procesando...",
+      "processing": "Procesando…",
       "clearColumn": "Borrar columna",
-      "product": "Producto",
-      "current": "Actual",
+      "product": "Partida",
       "dataPreview": "Vista previa de datos",
       "totalItems": "Total de partidas",
-      "itemsWithData": "Partidas con datos (se borrarán)",
+      "itemsWithData": "Partidas con un total distinto de cero",
       "currentTotalValue": "Valor total actual",
       "columnFrozenError": "La columna {{column}} de {{year}} está congelada. Descongélela antes de borrar los datos.",
-      "noDataInfo": "No se encontraron datos en la columna {{column}} para {{year}}. Nada que borrar.",
-      "clearWarning": "Advertencia: esta operación eliminará permanentemente todos los datos de la columna {{column}} para el año {{year}}. Esta acción no se puede deshacer. {{count}} partidas se verán afectadas.",
+      "noDataInfo": "La columna {{column}} de {{year}} no tiene importes. Al borrar solo se quitan sus periodos de reparto.",
       "confirmTitle": "Confirmar restablecimiento de columna",
-      "confirmMessage": "¿Está seguro de que desea borrar todos los datos de la columna <strong>{{column}}</strong> para el año <strong>{{year}}</strong>?",
-      "confirmAffected": "Esto afectará a <strong>{{count}} partidas</strong> con un valor total de <strong>{{value}}</strong>.",
       "confirmUndoWarning": "Esta acción no se puede deshacer.",
-      "clearSuccess": "Columna borrada correctamente.\nBorradas: {{cleared}} partidas\nOmitidas: {{skipped}} partidas\nErrores: {{errors}} partidas",
-      "clearFailed": "La operación de borrado falló. Consulte la consola para más detalles.",
-      "loadingData": "Cargando datos…"
+      "clearFailed": "El borrado ha fallado. No se ha modificado nada.",
+      "loadingData": "Cargando datos…",
+      "currentHeader": "{{column}} {{year}}, actual",
+      "clearWarning_one": "Al borrar se eliminan los importes y el periodo de {{column}} {{year}} de {{count}} partida. No se puede deshacer.",
+      "clearWarning_other": "Al borrar se eliminan los importes y el periodo de {{column}} {{year}} de {{count}} partidas. No se puede deshacer.",
+      "confirmMessage": "¿Borrar la columna {{column}} de {{year}}?",
+      "confirmAffected_one": "{{count}} partida afectada, por un total de {{value}}.",
+      "confirmAffected_other": "{{count}} partidas afectadas, por un total de {{value}}.",
+      "clearDone_one": "{{count}} partida borrada.",
+      "clearDone_other": "{{count}} partidas borradas.",
+      "confirmPeriodsOnly": "La columna {{column}} de {{year}} no tiene importes. Solo se quitarán sus periodos de reparto."
     },
     "copyAllocations": {
       "title": "Copiar asignaciones",
@@ -625,7 +631,7 @@
     },
     "copyBudgetColumns": {
       "title": "Copiar columnas presupuestarias",
-      "subtitle": "Copiar datos presupuestarios entre años y columnas con ajustes porcentuales opcionales",
+      "subtitle": "Copiar una columna a otro año u otra columna, en OPEX o CAPEX. Cada mes conserva su importe y el porcentaje se aplica a todos los meses.",
       "sourceYear": "Año de origen",
       "sourceColumn": "Columna de origen",
       "destinationYear": "Año de destino",
@@ -634,8 +640,8 @@
       "overwriteExisting": "Sobrescribir datos existentes",
       "dryRun": "Simulación",
       "copyData": "Copiar datos",
-      "processing": "Procesando...",
-      "product": "Producto",
+      "processing": "Procesando…",
+      "product": "Partida",
       "dataPreview": "Vista previa de datos",
       "totalItems": "Total de partidas",
       "itemsToProcess": "Partidas a procesar",
@@ -643,13 +649,20 @@
       "currentDestTotal": "Total actual de destino",
       "previewTotal": "Total previsualizado",
       "frozenError": "La columna {{column}} de {{year}} está congelada. Descongélela antes de copiar los datos.",
-      "existingDataWarning": "{{count}} partidas ya tienen datos en la columna de destino y serán omitidas. Active \"Sobrescribir datos existentes\" para reemplazarlas.",
-      "previewInfo": "La vista previa muestra las {{total}} partidas. {{toProcess}} partidas se procesarán, {{skipped}} se omitirán. Las partidas marcadas con [SKIP] no se modificarán durante la copia.",
-      "copySuccess": "Operación de copia completada correctamente.\nProcesadas: {{processed}} partidas\nOmitidas: {{skipped}} partidas\nErrores: {{errors}} partidas",
-      "dryRunFailed": "La simulación falló. Consulte la consola para más detalles.",
-      "copyFailed": "La operación de copia falló. Consulte la consola para más detalles.",
+      "dryRunFailed": "La simulación ha fallado.",
+      "copyFailed": "La copia ha fallado. No se ha modificado nada.",
       "loadingData": "Cargando datos…",
-      "skip": "[SKIP]"
+      "roundingNote": "Con un porcentaje, los importes se redondean a importes enteros.",
+      "sourceHeader": "{{column}} {{year}}",
+      "currentHeader": "{{column}} {{year}}, actual",
+      "previewHeader": "{{column}} {{year}}, vista previa",
+      "skipped": "Omitida",
+      "previewInfo_one": "{{count}} partida en la vista previa: {{toProcess}} por copiar y {{skipped}} por omitir. Las partidas omitidas conservan su valor actual.",
+      "previewInfo_other": "{{count}} partidas en la vista previa: {{toProcess}} por copiar y {{skipped}} por omitir. Las partidas omitidas conservan su valor actual.",
+      "existingDataWarning_one": "{{count}} partida ya tiene un importe en la columna de destino y se omitirá. Active «Sobrescribir datos existentes» para reemplazarlo.",
+      "existingDataWarning_other": "{{count}} partidas ya tienen un importe en la columna de destino y se omitirán. Active «Sobrescribir datos existentes» para reemplazarlos.",
+      "copyDone_one": "{{count}} partida copiada.",
+      "copyDone_other": "{{count}} partidas copiadas."
     },
     "currency": {
       "title": "Configuración de moneda",
@@ -686,6 +699,28 @@
       "followUp": "Realizado",
       "landing": "Aterrizaje previsto",
       "forecast": "Previsión"
+    },
+    "scope": {
+      "label": "Tipo de partida",
+      "opex": "OPEX",
+      "capex": "CAPEX"
+    },
+    "budgetRows": {
+      "title": "Archivo de filas presupuestarias",
+      "intro": "Una fila por partida, año y columna, con el periodo de la columna y sus doce importes mensuales. La exportación incluye las partidas OPEX y CAPEX que puede consultar.",
+      "importRules": "Una importación sustituye los doce meses de cada fila del archivo. Las filas idénticas no se modifican, y todo el archivo se comprueba antes de guardar nada.",
+      "year": "Año",
+      "allYears": "Todos los años",
+      "export": "Exportar",
+      "import": "Importar",
+      "exportTitle": "Exportar filas presupuestarias",
+      "importTitle": "Importar filas presupuestarias"
+    },
+    "results": {
+      "skipped_one": "{{count}} partida omitida.",
+      "skipped_other": "{{count}} partidas omitidas.",
+      "failed_one": "{{count}} partida con error.",
+      "failed_other": "{{count}} partidas con error."
     }
   },
   "confirmations": {
@@ -975,5 +1010,47 @@
       "unassigned": "Sin asignar",
       "unnamed": "Dimensión sin nombre"
     }
+  },
+  "budgetTab": {
+    "periodText_one": "{{count}} mes, {{months}}",
+    "periodText_other": "{{count}} meses, {{months}}",
+    "monthRange": "de {{from}} a {{to}}",
+    "monthAnd": "{{first}} y {{second}}",
+    "zeroedMonths_one": "{{months}} se pondrá a cero.",
+    "zeroedMonths_other": "{{months}} se pondrán a cero.",
+    "changePeriod": "Cambiar el periodo",
+    "choosePeriod": "Elegir el periodo",
+    "noMonthInItemDates": "Ningún mes de {{year}} está dentro de las fechas de la partida.",
+    "column": "Columna",
+    "distribution": "Distribución",
+    "from": "Desde",
+    "to": "Hasta",
+    "convention": "Un mes cuenta cuando el periodo cubre su día 15.",
+    "beyondItemDates": "El periodo va más allá de las fechas de la partida.",
+    "problem": {
+      "missing": "Elija una fecha de inicio y una fecha de fin.",
+      "invalid": "Introduzca fechas válidas.",
+      "outsideYear": "Elija fechas de {{year}}.",
+      "startAfterEnd": "La fecha de inicio es posterior a la fecha de fin.",
+      "noMonth": "Ningún mes cuenta en este periodo."
+    },
+    "chip": {
+      "spreadFlat": "Reparto uniforme",
+      "spread445": "Reparto 4-4-5",
+      "spreadQuarterly": "Reparto por trimestre",
+      "spread": "Reparto",
+      "copied": "Copiado de {{column}} {{year}}",
+      "copiedUplift": "Copiado de {{column}} {{year}} {{uplift}}",
+      "copiedPlain": "Copiado",
+      "manual": "Editado a mano"
+    },
+    "listAnd": "{{first}} y {{last}}",
+    "amount": "Importe",
+    "reset": "Restablecer",
+    "applyToAll": "Aplicar a todas las columnas",
+    "applyToAllFollow": "{{columns}} siguen el mismo periodo.",
+    "applyToAllOthers_one": "{{columns}} conserva su propio periodo.",
+    "applyToAllOthers_other": "{{columns}} conservan su propio periodo.",
+    "applyToAllFrozen": "Las columnas congeladas nunca cambian."
   }
 }

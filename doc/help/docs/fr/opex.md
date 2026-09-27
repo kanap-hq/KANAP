@@ -153,8 +153,15 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
   - **Réalisé** : Dépense réelle attendue (votre meilleure estimation au fil de l'année)
   - **Atterrissage prévu** : Dépense réelle finale après la clôture de fin d'année
 
+**Période d'une colonne** :
+  - Chaque colonne (Budget, Révision, Prévision, Réalisé et Atterrissage prévu) a une période à l'intérieur de l'année, par exemple d'avril à décembre
+  - Un mois compte lorsque la période couvre son 15. Une période qui commence le 10 avril inclut avril ; une période qui commence le 20 avril débute en mai
+  - Une colonne sans montant ni période reçoit une suggestion : le **Début d'effet** et la **Fin de validité** du poste, limités à l'année. Un poste qui commence le 1er avril suggère d'avril à décembre
+  - Une colonne qui porte déjà des montants sans période est lue comme couvrant toute l'année : les données existantes se comportent comme avant
+
 **Annuel ou Mensuel** :
-  - **Annuel** : Saisissez un total par colonne ; les montants sont répartis uniformément sur 12 mois pour les besoins de ventilation. Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
+  - **Annuel** : Saisissez un total par colonne. Le total est réparti uniformément sur les mois de la période de la colonne, et les mois hors de cette période sont mis à zéro. La période s'affiche sous chaque total avant la saisie, par exemple « 9 mois, avril à décembre ». Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
+  - Cliquez sur l'icône crayon à côté de la période sous un total (**Modifier la période**) pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates du poste ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates du poste. » Cliquez sur l'icône crayon à côté (**Choisir la période**) pour la définir vous-même.
   - **Mensuel** : Saisissez les montants par mois (Jan-Déc) pour chaque colonne, plus une colonne **Prévision** pour la planification complémentaire. Des sous-totaux par trimestre et un total annuel sont affichés. Seuls les mois que vous modifiez sont enregistrés.
   - Passez d'un mode à l'autre avec les onglets **Annuel** et **Mensuel**. Changer de mode ne modifie pas vos montants.
 
@@ -163,9 +170,28 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
   - Vous pouvez toujours consulter les données gelées ; les administrateurs peuvent dégeler via **Gestion budgétaire > Administration > Geler/Dégeler**
   - Chaque colonne peut être gelée indépendamment (Budget, Révision, Prévision, Réalisé, Atterrissage prévu)
 
+**Répartir un montant** :
+  - Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis l'icône crayon sous un total
+  - Choisissez une **Colonne** (Budget, Révision, Prévision, Atterrissage prévu ou Réalisé), vérifiez le **Montant**, choisissez une **Répartition** (**Linéaire** ou **4-4-5**), puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne, et la répartition de celle de la colonne
+  - Le montant reprend le total actuel de la colonne, dans les deux onglets, et suit lorsque vous choisissez une autre colonne. Il reste vide lorsque la colonne n'a aucun montant
+  - **Appliquer à toutes les colonnes** est activé par défaut : la colonne choisie, ainsi que Budget, Révision, Prévision et Atterrissage prévu, reçoivent la même période et la même répartition, chacune avec son propre total actuel. Survolez l'interrupteur pour voir les colonnes concernées. Les autres colonnes gardent leur propre période, et les colonnes gelées ne changent jamais. Désactivez l'interrupteur pour ne répartir que la colonne choisie
+  - **Réinitialiser** remplit le panneau avec le total actuel de la colonne, **Linéaire** et l'année entière. Rien n'est enregistré : cliquez sur **Appliquer** pour l'utiliser. Avec **Appliquer à toutes les colonnes** activé, **Réinitialiser** puis **Appliquer** remet chaque colonne en répartition linéaire sur douze mois
+  - Les totaux saisis dans l'onglet **Annuel** s'appliquent toujours à leur seule colonne
+  - Les dates **Du** et **Au** affichent la période. Quand des mois tombent en dehors, le panneau indique lesquels seront mis à zéro (« Janvier à mars seront mis à zéro. »). Une période sur l'année entière n'affiche aucune ligne. Survolez l'icône d'information à côté du titre du panneau pour voir la règle du 15
+  - Avec **4-4-5**, les poids des mois qui comptent sont augmentés pour que tout le montant se répartisse sur eux
+  - Un avertissement non bloquant apparaît lorsque la période dépasse les dates du poste. Vous pouvez tout de même appliquer
+  - **Appliquer** reste désactivé tant qu'une date manque ou qu'aucun mois ne compte. Rien n'est enregistré avant que vous cliquiez sur **Appliquer**
+  - Depuis l'onglet **Mensuel**, Appliquer remplit la grille. Depuis l'onglet **Annuel**, vous restez dans la vue Annuel
+
+**Origine de chaque colonne** :
+  - Un court libellé indique d'où viennent les montants d'une colonne. Dans l'onglet **Mensuel**, il se trouve sous l'en-tête de colonne (survolez-le pour voir la période). Dans l'onglet **Annuel**, il se trouve à côté de la période
+  - **Répartition linéaire**, **Répartition 4-4-5** ou **Répartition par trimestre** : les montants proviennent d'une répartition
+  - **Copié depuis Budget 2025 +2 %** : les montants proviennent de **Copier les colonnes budgétaires** dans l'Administration budgétaire, avec le pourcentage affiché lorsqu'il y en a un
+  - **Modifié à la main** : un mois a été modifié dans la grille ou par un import du fichier des lignes budgétaires
+  - Une colonne sans libellé a conservé les données qu'elle avait avant l'arrivée des périodes
+
 **Outils du mode mensuel** :
-  - **Répartir un montant annuel** : choisissez une colonne, saisissez un montant annuel et un profil (**Linéaire** ou **4-4-5**), puis cliquez sur **Appliquer** pour remplir les 12 mois
-  - **Effacer la colonne** : l'icône à côté d'un en-tête de colonne remet à zéro tous les mois de cette colonne, par exemple avant de saisir tout le montant sur un seul mois
+  - **Effacer la colonne** : l'icône à côté d'un en-tête de colonne remet à zéro tous les mois de cette colonne, par exemple avant de saisir tout le montant sur un seul mois. Cela compte comme une modification à la main. Pour retirer à la fois les montants et la période d'une colonne pour tous les postes, utilisez **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire
 
 **Tendance pluriannuelle** :
   - Un graphique sous la grille montre les colonnes budgétaires du poste sur plusieurs années et se met à jour pendant la saisie
@@ -298,7 +324,8 @@ Vous pouvez charger en masse les postes OPEX via CSV pour accélérer la configu
   - **Insertion uniquement** : L'importateur ne crée que de nouveaux postes ; il ne met pas à jour les existants. Utilisez l'interface pour modifier les postes existants
   - **Références** : `supplier_name` doit correspondre à un Fournisseur par nom (insensible à la casse). `account_number` doit correspondre à un Compte. `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail
   - **Catégorie analytique** : Si la catégorie n'existe pas, elle est créée automatiquement pendant l'import
-  - **Budgets** : Les colonnes budgétaires alimentent les versions A-1, A et A+1. Les montants sont répartis uniformément sur 12 mois (mode Annuel)
+  - **Budgets** : Les colonnes budgétaires alimentent les versions A-1, A et A+1. Les montants sont répartis uniformément sur 12 mois (mode Annuel) et la période de la colonne devient l'année entière. Une cellule vide laisse la colonne telle quelle ; `0` l'efface
+  - **Montants mensuels** : pour charger ou relire les montants mois par mois, avec la période de chaque colonne, utilisez le **Fichier des lignes budgétaires** dans l'Administration budgétaire
 
 **Erreurs courantes** :
   - **« Fournisseur introuvable »** : Créez d'abord le fournisseur dans **Données de référence > Fournisseurs**, puis relancez l'import
