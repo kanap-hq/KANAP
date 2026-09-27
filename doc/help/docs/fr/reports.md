@@ -42,25 +42,29 @@ Les deux rapports de refacturation couvrent uniquement les OPEX.
 
 Chaque sélecteur de colonne ou de métrique propose les colonnes budgétaires affichées par votre organisation, sous leurs noms, dans l'ordre fixe des colonnes. Prévision est proposée quand elle est affichée. Les colonnes masquées ne sont pas proposées. Chaque rapport démarre sur la colonne par défaut, comme décrit ci-dessous. Les administrateurs budgétaires définissent les noms, les colonnes affichées et la colonne par défaut dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires).
 
-### Filtres par centre de coûts et run ou build
+### Filtres par centre de coûts, run ou build et dimensions analytiques
 
-Les sept rapports budgétaires (**Top postes**, **Top hausse / baisse**, **Tendance budgétaire (OPEX)**, **Tendance budgétaire (CAPEX)**, **Comparaison de colonnes budgétaires**, **Comptes de consolidation** et **Dimensions analytiques**) peuvent être restreints à une partie du budget avec deux filtres :
+Les sept rapports budgétaires (**Top postes**, **Top hausse / baisse**, **Tendance budgétaire (OPEX)**, **Tendance budgétaire (CAPEX)**, **Comparaison de colonnes budgétaires**, **Comptes de consolidation** et **Dimensions analytiques**) peuvent être restreints à une partie du budget avec ces filtres :
 
 - **Centre de coûts** : choisissez un centre de coûts ou un groupe. Un groupe inclut tout ce qui se trouve en dessous, y compris les centres de coûts désactivés, car leurs lignes appartiennent toujours au groupe. **Tous les centres de coûts** retire le filtre. Voir [Centres de coûts](cost-centers.md).
 - **Run ou build** : **Tous**, **Run**, **Build**, ou **Non défini** pour les lignes qui n'ont ni l'un ni l'autre.
+- **Dimensions analytiques** : un filtre par dimension, au nom de la dimension. La dimension par défaut s'affiche comme **Dimension analytique** tant qu'elle n'est pas renommée. Choisissez une valeur, **Aucune valeur** pour les lignes sans valeur sur cette dimension, ou **Toutes** pour retirer le filtre. Chaque filtre propose les valeurs que portent les lignes du rapport. Voir [Dimensions analytiques](analytics.md).
 
 Quand les filtres apparaissent :
 
 - **Centre de coûts** s'affiche dès que votre espace de travail compte au moins un centre de coûts ou un groupe.
 - **Run ou build** s'affiche dès qu'une ligne du rapport est marquée **Run** ou **Build**, ou lorsque l'adresse de la page contient déjà le filtre.
-- Sans l'un ni l'autre, la barre de filtres n'affiche que les contrôles propres au rapport.
+- Le filtre d'une dimension s'affiche dès qu'une ligne du rapport a une valeur sur cette dimension, ou lorsque l'adresse de la page le contient déjà. Les dimensions désactivées n'ont pas de filtre.
+- Sans aucun de ces filtres, la barre de filtres n'affiche que les contrôles propres au rapport.
 
 Fonctionnement :
 
 - Les filtres s'appliquent avant tout total. Les montants, les parts, les graphiques et les totaux ne couvrent que les lignes retenues.
-- Les listes de postes et de comptes à exclure continuent de proposer toutes les lignes.
-- L'adresse de la page conserve les deux filtres (`?costCenter=` et `?runBuild=`) : un lien enregistré en favori ou partagé ouvre le rapport déjà restreint.
+- Les filtres sur plusieurs dimensions se combinent : une ligne doit correspondre à chacun d'eux.
+- Les listes de postes, de comptes et de valeurs à exclure continuent de proposer toutes les lignes.
+- L'adresse de la page conserve les filtres (`?costCenter=`, `?runBuild=` et `?analytics=`) : un lien enregistré en favori ou partagé ouvre le rapport déjà restreint. Un lien qui désigne une dimension désactivée ou supprimée depuis ignore cette partie.
 - Si le lien désigne un centre de coûts supprimé depuis, ou si les centres de coûts n'ont pas pu être chargés, le rapport n'affiche aucune ligne et une ligne de texte : « Ce centre de coûts n'existe plus ou n'a pas pu être chargé. » Cliquez sur **Retirer le filtre** pour retrouver le rapport.
+- Si le lien contient un filtre analytique et que les dimensions n'ont pas pu être chargées, le rapport n'affiche aucune ligne et une ligne de texte : « Le filtre analytique n'a pas pu être appliqué. Retirez-le ou réessayez. » Cliquez sur **Retirer le filtre** pour retirer les filtres analytiques et retrouver le rapport.
 - Les deux rapports de refacturation n'ont pas ces filtres et ne sont pas concernés.
 
 ---
@@ -187,7 +191,7 @@ Identifiez vos postes OPEX ou CAPEX les plus importants pour une année donnée.
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales
 - **Exclure des postes** : Autocomplétion multi-sélection pour exclure des postes spécifiques
 - **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
-- **Centre de coûts** et **Run ou build** : Voir [Filtres par centre de coûts et run ou build](#filtres-par-centre-de-couts-et-run-ou-build)
+- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -226,7 +230,7 @@ Identifiez les plus grandes variations OPEX ou CAPEX entre deux colonnes budgét
 - **Exclure des postes** : Autocomplétion multi-sélection pour exclure des postes spécifiques
 - **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
 - **Direction** : onglets **Hausses**, **Baisses** ou **Les deux**
-- **Centre de coûts** et **Run ou build** : Voir [Filtres par centre de coûts et run ou build](#filtres-par-centre-de-couts-et-run-ou-build)
+- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 Les sélecteurs d'année listent les années qui contiennent des données. Les sélecteurs de métrique proposent les colonnes budgétaires affichées. Le rapport démarre avec la colonne par défaut de l'année précédente comme source et la colonne par défaut de l'année en cours comme destination.
 
@@ -265,7 +269,7 @@ Comparez les métriques OPEX sur plusieurs années sur un seul graphique en cour
 - **Année de début** : Début de la plage (année en cours moins 2 à plus 2)
 - **Année de fin** : Fin de la plage
 - **Métriques** : Multi-sélection parmi les colonnes budgétaires affichées. Le rapport démarre sur la colonne par défaut et la dernière colonne affichée (Budget et Atterrissage prévu avec les réglages standard). Si vous retirez toutes les métriques, la colonne par défaut est utilisée
-- **Centre de coûts** et **Run ou build** : Voir [Filtres par centre de coûts et run ou build](#filtres-par-centre-de-couts-et-run-ou-build)
+- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -288,7 +292,7 @@ Disposition identique au rapport de tendance OPEX, mais exploitant les données 
 ### Contrôles
 
 - **Année de début**, **Année de fin**, **Métriques** : Identiques au rapport de tendance OPEX
-- **Centre de coûts** et **Run ou build** : Voir [Filtres par centre de coûts et run ou build](#filtres-par-centre-de-couts-et-run-ou-build)
+- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -306,7 +310,7 @@ Comparez de manière flexible jusqu'à 10 combinaisons année+colonne pour OPEX 
 - **Type de poste** : Bascule OPEX ou CAPEX
 - **Sélections** : Chaque sélection a un sélecteur d'année et un sélecteur de colonne avec les colonnes budgétaires affichées. Le rapport démarre avec deux sélections : la colonne par défaut de l'année en cours et celle de l'année suivante. **Ajouter** ajoute la colonne par défaut de l'année en cours, et l'icône de suppression retire une sélection. Maximum 10 sélections ; minimum 1.
 - **Regroupement par année** (case à cocher) : Lorsque activé et qu'au moins deux années partagent une métrique, bascule vers un graphique en courbe groupé avec une série par métrique et les années sur l'axe X. Lorsque désactivé, affiche un graphique en courbe plat avec chaque sélection comme point de données.
-- **Centre de coûts** et **Run ou build** : Voir [Filtres par centre de coûts et run ou build](#filtres-par-centre-de-couts-et-run-ou-build)
+- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -339,7 +343,7 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par compte de cons
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (disponible uniquement pour une seule année sélectionnée)
 - **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
-- **Centre de coûts** et **Run ou build** : Voir [Filtres par centre de coûts et run ou build](#filtres-par-centre-de-couts-et-run-ou-build)
+- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
 
@@ -360,29 +364,32 @@ Les postes sans compte de consolidation apparaissent comme « Non assigné ».
 
 ## Dimensions analytiques
 
-Consultez les données budgétaires OPEX ou CAPEX regroupées par dimension analytique. La disposition reprend celle du rapport Comptes de consolidation.
+Consultez les données budgétaires OPEX ou CAPEX regroupées par les valeurs d'une dimension analytique. La disposition reprend celle du rapport Comptes de consolidation. Voir [Dimensions analytiques](analytics.md) pour configurer les dimensions et les valeurs.
 
 ### Contrôles
 
 - **Type de poste** : OPEX ou CAPEX (voir [Choisir OPEX ou CAPEX](#choisir-opex-ou-capex))
+- **Dimension** : la dimension sur laquelle le rapport regroupe. Elle s'affiche lorsque vous avez au moins deux dimensions activées, et le rapport s'ouvre sur la dimension par défaut. L'adresse de la page conserve votre choix : un lien enregistré en favori ou partagé s'ouvre sur la même dimension
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (année unique uniquement)
-- **Exclure des dimensions analytiques** : Autocomplétion multi-sélection pour exclure des dimensions spécifiques
-- **Centre de coûts** et **Run ou build** : Voir [Filtres par centre de coûts et run ou build](#filtres-par-centre-de-couts-et-run-ou-build)
+- **Exclure des valeurs** : Autocomplétion multi-sélection pour exclure des valeurs précises de la dimension choisie. Changer le type de poste ou la dimension la vide
+- **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
+
+Le sous-titre, le titre du graphique et la première colonne du tableau nomment la dimension choisie, par exemple « OPEX par Nature ».
 
 ### Ce que vous verrez
 
 **Mode année unique** :
 
-- Graphique en secteurs ou en barres des totaux par dimension analytique
+- Graphique en secteurs ou en barres des totaux par valeur
 - Note de bas de page avec le total de la métrique
 
 **Mode multi-années** :
 
-- Graphique en courbe avec une série par dimension analytique
+- Graphique en courbe avec une série par valeur
 
-**Tableau** : Une ligne par dimension analytique avec des colonnes d'années. Une ligne de totaux épinglée en bas. Les postes sans dimension analytique apparaissent comme « Non assigné ».
+**Tableau** : Une ligne par valeur avec des colonnes d'années. Une ligne de totaux épinglée en bas. Les lignes sans valeur sur la dimension choisie apparaissent comme « Non affecté ».
 
 ---
 

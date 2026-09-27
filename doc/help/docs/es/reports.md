@@ -42,25 +42,29 @@ Los dos informes de contracargo cubren solo OPEX.
 
 Cada selector de columna o de métrica ofrece las columnas presupuestarias que muestra su organización, con sus nombres, en el orden fijo de las columnas. Previsión se ofrece cuando se muestra. Las columnas ocultas no se ofrecen. Cada informe empieza en la columna por defecto, como se describe a continuación. Los administradores de presupuesto definen los nombres, las columnas visibles y la columna por defecto en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias).
 
-### Filtros de centro de coste y de Run o build
+### Filtros de centro de coste, de Run o build y de dimensiones analíticas
 
-Los siete informes presupuestarios (**Top partidas**, **Top aumento / disminución**, **Tendencia presupuestaria (OPEX)**, **Tendencia presupuestaria (CAPEX)**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación** y **Dimensiones analíticas**) se pueden limitar a una parte del presupuesto con dos filtros:
+Los siete informes presupuestarios (**Top partidas**, **Top aumento / disminución**, **Tendencia presupuestaria (OPEX)**, **Tendencia presupuestaria (CAPEX)**, **Comparación de columnas presupuestarias**, **Cuentas de consolidación** y **Dimensiones analíticas**) se pueden limitar a una parte del presupuesto con estos filtros:
 
 - **Centro de coste**: elija un centro de coste o un grupo. Un grupo incluye todo lo que tiene por debajo, también los centros de coste desactivados, ya que sus líneas siguen perteneciendo al grupo. **Todos los centros de coste** quita el filtro. Consulte [Centros de coste](cost-centers.md).
 - **Run o build**: **Todos**, **Run**, **Build** o **Sin definir** para las líneas que no tienen ninguno de los dos.
+- **Dimensiones analíticas**: un filtro por dimensión, con el nombre de la dimensión. La dimensión por defecto se muestra como **Dimensión analítica** hasta que se le da un nombre. Elija un valor, **Sin valor** para las líneas sin valor en esa dimensión, o **Todos** para quitar el filtro. Cada filtro ofrece los valores que tienen las líneas del informe. Consulte [Dimensiones analíticas](analytics.md).
 
 Cuándo aparecen los filtros:
 
 - **Centro de coste** aparece en cuanto su espacio de trabajo tiene al menos un centro de coste o un grupo.
 - **Run o build** aparece en cuanto una línea del informe está marcada como **Run** o **Build**, o cuando la dirección de la página ya incluye el filtro.
-- Sin ninguno de los dos, la barra de filtros solo muestra los controles propios del informe.
+- El filtro de una dimensión aparece en cuanto una línea del informe tiene un valor en esa dimensión, o cuando la dirección de la página ya lo incluye. Las dimensiones desactivadas no tienen filtro.
+- Sin ninguno de ellos, la barra de filtros solo muestra los controles propios del informe.
 
 Cómo funcionan:
 
 - Los filtros se aplican antes de cualquier total. Los importes, las proporciones, los gráficos y los totales cubren solo las líneas conservadas.
-- Las listas de partidas y cuentas que se pueden excluir siguen ofreciendo todas las líneas.
-- La dirección de la página conserva ambos filtros (`?costCenter=` y `?runBuild=`), de modo que un enlace guardado o compartido abre el informe ya filtrado.
+- Los filtros de varias dimensiones se combinan: una línea debe cumplir cada uno de ellos.
+- Las listas de partidas, cuentas y valores que se pueden excluir siguen ofreciendo todas las líneas.
+- La dirección de la página conserva los filtros (`?costCenter=`, `?runBuild=` y `?analytics=`), de modo que un enlace guardado o compartido abre el informe ya filtrado. Un enlace que indica una dimensión desactivada o eliminada desde entonces ignora esa parte.
 - Si el enlace indica un centro de coste que se ha eliminado desde entonces, o si los centros de coste no se pudieron cargar, el informe no muestra ninguna línea y sí una línea de texto: "Este centro de coste ya no existe o no se pudo cargar." Haga clic en **Quitar el filtro** para volver a ver el informe.
+- Si el enlace incluye un filtro analítico y las dimensiones no se pudieron cargar, el informe no muestra ninguna línea y sí una línea de texto: "No se pudo aplicar el filtro analítico. Quítelo o vuelva a intentarlo." Haga clic en **Quitar el filtro** para quitar los filtros analíticos y volver a ver el informe.
 - Los dos informes de contracargo no tienen estos filtros y no se ven afectados.
 
 ---
@@ -187,7 +191,7 @@ Identifique sus mayores partidas OPEX o CAPEX para un año dado.
 - **Tipo de gráfico**: Gráfico circular o gráfico de barras horizontales
 - **Excluir partidas**: Autocompletado de selección múltiple para excluir partidas específicas
 - **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
-- **Centro de coste** y **Run o build**: Consulte [Filtros de centro de coste y de Run o build](#filtros-de-centro-de-coste-y-de-run-o-build)
+- **Centro de coste**, **Run o build** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
 
@@ -226,7 +230,7 @@ Identifique los mayores cambios OPEX o CAPEX entre dos columnas presupuestarias 
 - **Excluir partidas**: Autocompletado de selección múltiple para excluir partidas específicas
 - **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
 - **Dirección**: pestañas **Aumentos**, **Disminuciones** o **Ambos**
-- **Centro de coste** y **Run o build**: Consulte [Filtros de centro de coste y de Run o build](#filtros-de-centro-de-coste-y-de-run-o-build)
+- **Centro de coste**, **Run o build** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 Los selectores de año muestran los años que contienen datos. Los selectores de métrica ofrecen las columnas presupuestarias visibles. El informe empieza en la columna por defecto del año pasado como origen y en la columna por defecto del año actual como destino.
 
@@ -265,7 +269,7 @@ Compare métricas OPEX en múltiples años en un solo gráfico de líneas.
 - **Año de inicio**: Inicio del rango (año actual menos 2 hasta más 2)
 - **Año de fin**: Fin del rango
 - **Métricas**: Selección múltiple entre las columnas presupuestarias visibles. El informe empieza en la columna por defecto y en la última columna visible (Presupuesto y Aterrizaje previsto con la configuración estándar). Si quita todas las métricas, se usa la columna por defecto
-- **Centro de coste** y **Run o build**: Consulte [Filtros de centro de coste y de Run o build](#filtros-de-centro-de-coste-y-de-run-o-build)
+- **Centro de coste**, **Run o build** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
 
@@ -288,7 +292,7 @@ Diseño idéntico al informe de tendencia OPEX, pero extrae datos del presupuest
 ### Controles
 
 - **Año de inicio**, **Año de fin**, **Métricas**: Igual que el informe de tendencia OPEX
-- **Centro de coste** y **Run o build**: Consulte [Filtros de centro de coste y de Run o build](#filtros-de-centro-de-coste-y-de-run-o-build)
+- **Centro de coste**, **Run o build** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
 
@@ -306,7 +310,7 @@ Compare de forma flexible hasta 10 combinaciones de año+columna para OPEX o CAP
 - **Tipo de partida**: Conmutador OPEX o CAPEX
 - **Selecciones**: Cada selección tiene un selector de año y un selector de columna con las columnas presupuestarias visibles. El informe empieza con dos selecciones: la columna por defecto del año actual y la del año siguiente. **Añadir** añade la columna por defecto del año actual, y el icono de borrar elimina una selección. Máximo de 10 selecciones; mínimo de 1.
 - **Agrupación por año** (casilla): Cuando está habilitada y al menos dos años comparten una métrica, cambia a un gráfico de líneas agrupado con una serie por métrica y años en el eje X. Cuando está deshabilitada, muestra un gráfico de líneas plano con cada selección como punto de datos.
-- **Centro de coste** y **Run o build**: Consulte [Filtros de centro de coste y de Run o build](#filtros-de-centro-de-coste-y-de-run-o-build)
+- **Centro de coste**, **Run o build** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
 
@@ -339,7 +343,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, c
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo disponible cuando se selecciona un solo año)
 - **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
-- **Centro de coste** y **Run o build**: Consulte [Filtros de centro de coste y de Run o build](#filtros-de-centro-de-coste-y-de-run-o-build)
+- **Centro de coste**, **Run o build** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
 
@@ -360,29 +364,32 @@ Las partidas sin cuenta de consolidación aparecen como "Sin asignar".
 
 ## Dimensiones analíticas
 
-Vea datos presupuestarios OPEX o CAPEX agrupados por dimensión analítica. El diseño es idéntico al informe de Cuentas de consolidación.
+Vea datos presupuestarios OPEX o CAPEX agrupados por los valores de una dimensión analítica. El diseño es idéntico al informe de Cuentas de consolidación. Consulte [Dimensiones analíticas](analytics.md) para configurar las dimensiones y los valores.
 
 ### Controles
 
 - **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
+- **Dimensión**: la dimensión por la que agrupa el informe. Aparece cuando tiene dos o más dimensiones activadas, y el informe se abre en la dimensión por defecto. La dirección de la página conserva su elección, de modo que un enlace guardado o compartido se abre en la misma dimensión
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo un año)
-- **Excluir dimensiones analíticas**: Autocompletado de selección múltiple para excluir dimensiones específicas
-- **Centro de coste** y **Run o build**: Consulte [Filtros de centro de coste y de Run o build](#filtros-de-centro-de-coste-y-de-run-o-build)
+- **Excluir valores**: Autocompletado de selección múltiple para excluir valores concretos de la dimensión elegida. Cambiar el tipo de partida o la dimensión borra esta selección
+- **Centro de coste**, **Run o build** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
+
+El subtítulo, el título del gráfico y la primera columna de la tabla indican la dimensión elegida, por ejemplo "OPEX por Nature".
 
 ### Qué verá
 
 **Modo un solo año**:
 
-- Gráfico circular o de barras de totales por dimensión analítica
+- Gráfico circular o de barras de totales por valor
 - Nota al pie con el total de la métrica
 
 **Modo varios años**:
 
-- Gráfico de líneas con una serie por dimensión analítica
+- Gráfico de líneas con una serie por valor
 
-**Tabla**: Una fila por dimensión analítica con columnas de año. Una fila de totales fijada en la parte inferior. Las partidas sin dimensión analítica aparecen como "Sin asignar".
+**Tabla**: Una fila por valor con columnas de año. Una fila de totales fijada en la parte inferior. Las líneas sin valor en la dimensión elegida aparecen como "Sin asignar".
 
 ---
 

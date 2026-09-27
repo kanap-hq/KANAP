@@ -83,7 +83,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 **Classification**
 
 - [Business Processes](business-processes.md) - Document business process hierarchy
-- [Analytics Dimensions](analytics.md) - Set up reporting dimensions
+- [Analytics dimensions](analytics.md) - Set up reporting dimensions
 
 ### Plaid
 

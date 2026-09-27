@@ -1,118 +1,305 @@
-# Analytics Dimensions
+# Analytics dimensions
 
-Analytics Dimensions give you a flexible way to classify and analyze your IT budget outside of your formal accounting structure. Instead of reworking Companies, Departments, or Accounts, you create lightweight categories -- "Infrastructure," "Cloud Migration," "Licenses" -- and tag spend items for custom reporting.
+Analytics dimensions classify your IT budget for reporting, outside your accounting structure. You choose your own ways of reading the budget, such as the nature of the spend or the program it serves, without reworking companies, departments, accounts or cost centers.
+
+## Dimensions and values
+
+A **dimension** is one way of classifying budget lines, for example **Nature** or **Program**. Its **values** are the choices it offers, for example **Licenses**, **Cloud** and **Services** for Nature.
+
+- Each dimension has its own list of values.
+- Each OPEX and CAPEX line can hold one value per dimension. A line can be **Licenses** on Nature and **Workplace** on Program at the same time.
+- A line can also have no value on a dimension. Reports show these lines as "Unassigned".
+
+For example:
+
+```
+Nature          Program
+  Licenses        Workplace
+  Cloud           ERP
+  Services        Security
+```
+
+### The default dimension
+
+Every workspace starts with one dimension, the default dimension. Until you give it a name, it shows as **Analytics dimension**, in each person's language. If your workspace already had analytics values, they belong to this dimension and every line keeps its value.
+
+The default dimension has a special role:
+
+- It cannot be disabled or deleted. Its workspace has no **Delete** button, and one line under **Lifecycle** says why: "This dimension cannot be disabled or deleted: older files and AI questions use it."
+- Older CSV files and questions to Plaid about the analytics category use it. See [CSV import/export](#csv-importexport) and [Analytics dimensions in Plaid](#analytics-dimensions-in-plaid).
+- It stays the default dimension when you rename it, change its code or change its order.
+- Its label is reserved: no other dimension can be named "Analytics dimension", in any of the app's languages.
+
+---
 
 ## Getting started
 
-Navigate to **Master Data > Analytics** to open the category list.
+Navigate to **Master data > Analytics dimensions** (in the **Classification** section).
 
-**Required fields**:
-- **Name**: The label that appears in dropdowns and reports. Must be unique.
+1. **Name the default dimension** if "Analytics dimension" does not suit you: click the edit button next to its chip, then type a name in its workspace, for example **Nature**.
+2. **Add its values**: click **New value**.
+3. **Add a dimension** when you need another way of reading the budget: click **New dimension**, then add its values.
 
-**Optional fields**:
-- **Description**: Explain when this category should be used so teammates apply it consistently.
+**Tip**: Start with one or two dimensions and 5 to 10 values each. Consistent naming makes the lists easier to scan.
 
-**Permissions**:
-- View the list: `analytics:reader`
-- Create or edit categories: `analytics:member`
+---
 
-**Tip**: Start with 5--10 broad categories. Consistent naming (all nouns or all gerunds) makes lists easier to scan.
+## The Analytics dimensions page
 
-## Working with the list
+### Dimension chips
 
-The category list gives you a quick overview of every analytics dimension in your tenant.
+Under the title, one line of chips shows your dimensions in order. A disabled dimension is marked **Disabled**.
+
+- Click a chip to list the values of that dimension. The page address keeps your choice, so a bookmarked link opens on the same dimension. Without a choice, the page opens on the default dimension.
+- The selected chip has an edit button (pencil icon). Click it to open the dimension's workspace.
+- **New dimension**, at the end of the line, creates a dimension (requires `analytics:member`).
+
+With a single dimension, the page shows one chip and its values.
+
+### Values list
+
+The list shows the values of the selected dimension.
 
 **Columns**:
 
 | Column | What it shows |
 |---|---|
-| **Name** | Category label (clickable -- opens the workspace) |
-| **Description** | Short explanation of the category's purpose |
-| **Status** | Enabled or Disabled |
-| **Updated** | Timestamp of the last change |
+| **Name** | The name of the value |
+| **Description** | What the value covers |
+| **Status** | **Enabled** or **Disabled** |
+| **Updated** | Date and time of the last change |
+
+Click any cell to open the value's workspace.
 
 **Filtering**:
-- Quick search: searches across name and description
-- Status filter: narrow the list to Enabled or Disabled categories
+
+- **Quick search**: searches the name and the description
+- **Status filter**: a checkbox filter on the **Status** column
+- **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list. The list shows enabled values by default
 
 **Actions**:
-- **New Category**: Creates a new analytics dimension (requires `analytics:member`)
 
-## The Analytics workspace
+- **New value**: create a value in the selected dimension (requires `analytics:member`). While the selected dimension is disabled, the button is disabled and its tooltip says "Enable this dimension to add values."
+- **Import CSV**: load values from a file (requires `analytics:admin`)
+- **Export CSV**: download the values of every dimension (requires `analytics:admin`)
+- **Delete selected**: delete the selected values (requires `analytics:admin`). Values used by budget lines are kept
 
-Click any row to open the workspace for that category.
+---
 
-### Overview tab
+## Dimensions
 
-This is the only tab. It contains every field for the category.
+### Creating a dimension
 
-**What you can edit**:
-- **Name**: The category label. Changing it updates dropdowns and reports everywhere.
-- **Description**: Free-text explanation of the category's intended use.
-- **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle).
+Click **New dimension**, fill in the fields, then click **Create**. The workspace of the new dimension opens. A new dimension is enabled.
 
-**Workspace navigation**: Use the **Prev** and **Next** buttons to step through categories without returning to the list. The workspace preserves your current sort, search, and filter context. If you have unsaved changes, you will be prompted before navigating away.
+- **Name** is required.
+- **Code** is proposed from the name: lowercase, accents removed, spaces replaced by `-`. You can change it before you create the dimension.
+- **Order** is proposed so the new dimension comes last.
+- **Description** is optional.
 
-**Tip**: Click the close icon (X) in the top-right corner to return to the list with your filters intact.
+Then go back to the page to add the values of the new dimension.
+
+### The dimension workspace
+
+Open it with the edit button of the selected chip.
+
+- **Header**: the name of the dimension. Click it to rename the dimension. **Prev** / **Next** move through the dimensions in order, and the close button returns to the page on this dimension
+- **Main area**: a usage line, for example "12 values, used by 27 OPEX lines and 2 CAPEX lines.", then the **Description**
+- **Properties panel** on the right: **Name**, **Code**, **Order** and **Lifecycle**
+
+**Autosave**: Every change saves on its own. There is no Save button. Text fields save when you leave them (in **Name**, **Code** and **Order**, press Enter to save at once); the lifecycle saves as soon as you change it. When a change is refused, the reason shows under the field that caused it, for example a duplicate code under **Code**. A name refused in the header shows at the top of the page.
+
+### Dimension fields
+
+| Field | What to enter |
+|---|---|
+| **Name** | Up to 200 characters. Names are unique regardless of case. Required, except on the default dimension: leave it empty there to show "Analytics dimension" in each person's language. The default dimension's label is reserved in every app language ("Analytics dimension", "Dimension analytique", "Analysedimension", "Dimensión analítica"), regardless of case: another dimension with one of these names is refused with "This name is reserved for the default dimension." |
+| **Code** | 1 to 40 characters: lowercase letters, digits, `-` or `_`, starting with a letter or a digit. Each code is unique. The code names the dimension's column in the OPEX and CAPEX CSV files, so changing it changes that column name. Budget lines keep their values when the code changes |
+| **Order** | A whole number. Dimensions are listed by this number, lowest first: on this page, on budget lines, in the report filters and in the report's dimension picker |
+| **Description** | What the dimension is for, so teammates classify lines the same way |
+| **Lifecycle** | The **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle). Locked on the default dimension, with one line under it: "This dimension cannot be disabled or deleted: older files and AI questions use it." |
+
+### Deleting a dimension
+
+The **Delete** button in the header deletes the dimension at once (requires `analytics:admin`). While the dimension still has values, the button is disabled and one line under the usage line says why: "To delete this dimension, delete its values first."
+
+The default dimension has no **Delete** button: it cannot be deleted.
+
+To keep the values on the lines instead, disable the dimension.
+
+---
+
+## Values
+
+### Creating a value
+
+Click **New value**. The **Dimension** field starts on the dimension selected on the page and offers the enabled dimensions only. Enter the **Name**, and a **Description** if you like, then click **Create**. The workspace of the new value opens. A new value is enabled.
+
+### The value workspace
+
+- **Header**: the name of the value. Click it to rename the value. **Prev** / **Next** move through the values of the same dimension, in the list's current order and filters. The close button returns to the list
+- **Main area**: a line such as "Used by 3 OPEX lines and 1 CAPEX line." when budget lines use the value, then the **Description**
+- **Properties panel** on the right: **Dimension** (read only) and **Lifecycle**
+
+Changes save on their own, as in the dimension workspace. A name refused in the header shows at the top of the page.
+
+### Rules for values
+
+- **One list per dimension**: names are unique within a dimension, regardless of case. Two dimensions can each have a value called "Other". A duplicate is refused, for example "A value named Licenses already exists in Nature."
+- **A value stays in its dimension**: the dimension is set when the value is created and cannot change. To move a value, create it in the other dimension, change the lines, then delete the old value.
+- **Renaming keeps the lines**: lines point to the value itself, so the new name shows at once in lists and reports.
+- **Deleting**: the **Delete** button in the header deletes the value at once (requires `analytics:admin`). It is disabled when budget lines use the value, with the reason, for example "Used by 3 OPEX lines and 1 CAPEX line. Disable it instead." Remove the value from these lines first, or disable it.
+
+---
 
 ## Status and lifecycle
 
-Every category has a status (**Enabled** or **Disabled**) and an optional **End of validity**. Use them to retire a category without deleting it.
+Dimensions and values each have a status (**Enabled** or **Disabled**) and an optional **End of validity**. Use them to retire a dimension or a value without deleting it.
 
-- **End of validity**: the date the category stops. Leave it blank to keep the category active indefinitely. You can also schedule a future date.
-- Switching the category to **Disabled** without a date sets its end of validity to today. Switching it back to **Enabled** clears the date.
-- After the end of validity, the category no longer appears in selection dropdowns for new items.
-- Existing items keep their assignment, and historical reports remain accurate.
-- **Prefer disabling over deleting**: there is no delete action on this page. Disabling preserves reporting continuity while keeping the list clean.
+- **End of validity**: the date it stops. Leave it blank to keep it active. You can also schedule a future date.
+- Switching to **Disabled** without a date sets the end of validity to today. Switching back to **Enabled** clears the date.
 
-## Tagging spend items
+**A disabled value**:
 
-When creating or editing OPEX or CAPEX items:
+- Cannot be picked for a line, in the app, in a CSV file or through Plaid.
+- Stays on the lines that already have it and keeps counting in reports. In the field's list it is marked **Disabled**.
 
-1. Open the **Overview** tab of the spend item.
-2. Find the **Analytics Category** field.
-3. Select a category from the dropdown, or leave it blank for "Unassigned."
-4. Save the item.
+**A disabled dimension**:
 
-You can change or remove the category at any time. The category applies to the entire item across all fiscal years.
+- Disappears from the item forms, the OPEX and CAPEX lists, the report filters, the report's dimension picker, the OPEX and CAPEX CSV exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
+- Keeps its values on the lines. Enable the dimension again and they show again.
+- Takes no new values. **New value** is disabled while the dimension is selected, and CSV files cannot add or change its values.
 
-## The Analytics Report
+The default dimension cannot be disabled.
 
-The **Analytics dimensions** report (under **Reporting**) shows how the budget of your OPEX or CAPEX items is spread across your categories. See [Reporting](reports.md) for the full description.
+**Prefer disabling over deleting**: disabling keeps reports consistent while keeping the lists clean.
 
-**Report features**:
+---
+
+## Values on budget lines
+
+In the **Properties** panel of an OPEX or CAPEX item, and when you create one, each enabled dimension has its own field, named after the dimension, in dimension order. The default dimension shows as **Analytics dimension** until you rename it.
+
+- Pick a value, or clear the field to leave the line without a value on that dimension. The change saves at once.
+- The field lists the enabled values of its dimension. A disabled value stays shown on the lines that have it.
+- The field cannot create a value. Create values on the Analytics dimensions page, or let an OPEX or CAPEX CSV import create them.
+- A value applies to the whole line, across all years.
+- If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
+
+The OPEX and CAPEX lists have one column per enabled dimension, hidden by default, with checkbox filters. See [OPEX](opex.md) and [CAPEX](capex.md).
+
+---
+
+## Reports
+
+The **Analytics dimensions** report (under **Reporting**) shows how the budget of your OPEX or CAPEX lines is spread across the values of one dimension. See [Reporting](reports.md#analytics-dimensions) for the full description.
+
 - **Item type**: OPEX or CAPEX
-- **Year range**: Single year (pie or bar chart) or multi-year (line chart)
-- **Metric**: Any budget column your organisation shows, under its name. Starts on the default column
-- **Chart type** (single year): Pie chart or horizontal bar chart
-- **Category exclusion**: Filter out specific categories to focus on a subset
+- **Dimension**: the dimension the report groups on. It shows when you have two or more enabled dimensions, and starts on the default dimension
+- **Year range**: single year (pie or bar chart) or several years (line chart)
+- **Metric**: any budget column your organization shows, under its name. Starts on the default column
+- **Exclude values**: leave out some values to focus on the others
 
-**Report outputs**:
-- Visual chart showing budget distribution
-- Summary table with totals by category and year
-- Export to CSV (table), PNG (chart), or PDF (full report)
+The seven budget reports can also be narrowed to one value of a dimension, with one filter per dimension. See [Cost center, run or build and analytics filters](reports.md#cost-center-run-or-build-and-analytics-filters).
+
+---
+
+## Analytics dimensions in Plaid
+
+- Plaid can filter and group OPEX and CAPEX lines on every enabled dimension.
+- A question about the analytics category uses the default dimension, whatever its name or order.
+- Plaid can change a line's value on the default dimension only. Set the other dimensions in the app or with a CSV file.
+
+---
+
+## CSV import/export
+
+Load or update the values of every dimension from one file. Dimensions are created on the page.
+
+To set values on budget lines from a file, use the OPEX and CAPEX CSV files. In those files, the column `analytics_category` holds the default dimension, and one `analytics:<code>` column holds each other dimension. See [OPEX](opex.md#csv-importexport) and [CAPEX](capex.md#csv-importexport).
+
+**Export**: click **Export CSV**, then **Export data**. The file lists the values of every dimension, enabled or disabled, dimension by dimension. For an empty file with the headers only, use **Download template** in the import dialog.
+
+**CSV structure**:
+
+- Delimiter: semicolon `;`
+- Encoding: UTF-8 (save as "CSV UTF-8" in Excel)
+- Headers: `axis_code;name;description;status;disabled_at`
+
+| Column | Content |
+|---|---|
+| `axis_code` | The code of the value's dimension, regardless of case. Empty means the default dimension |
+| `name` | Required. The name of the value |
+| `description` | Free text |
+| `status` | `enabled` or `disabled`. Empty means `enabled` |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. Empty if there is no end |
+
+Only `name` is a required column. When the `description`, `status` or `disabled_at` column is missing, existing values keep what is stored for it, and new values are enabled with no description. A file without `axis_code` puts every row in the default dimension.
+
+**Import**:
+
+1. Click **Import CSV** on the page
+2. Choose your file
+3. Click **Preflight check**. The report gives the number of rows, the values to create and update, and the rows that change nothing
+4. If the preflight is clean, click **Load**
+
+**How the import works**:
+
+- **The whole file is checked before anything is written.** A file with any error loads nothing: fix the rows and run the preflight again.
+- **Matching by dimension and name**: a row whose name exists in its dimension updates that value; any other row creates one. Each cell replaces the stored value, so an empty `description` clears it. A name written with another case finds the stored value and does not rename it. To rename a value, rename it on the page.
+- **Unchanged rows**: a row identical to the stored value changes nothing. Exporting and importing the same file reports every row as unchanged.
+- **Disabled dimensions**: a row of a disabled dimension is accepted when it changes nothing, so an exported file imports as it is. A row that would create or change a value there is refused.
+- **Values missing from the file** are left as they are. The import never deletes.
+
+**Common errors**:
+
+- **"Unknown dimension '...'."**: the `axis_code` cell matches no dimension. Check the code in the dimension's workspace, or create the dimension first.
+- **"The ... dimension is disabled. Enable it or leave it out."**: a row creates or changes a value in a disabled dimension. Enable the dimension, or remove the row.
+- **"... is already on row N."**: two rows carry the same name for the same dimension. Keep one.
+- **"Invalid status '...'. Use 'enabled' or 'disabled'."**: fix the `status` cell.
+- **"Header mismatch"**: download a fresh template.
+
+---
+
+## Permissions
+
+| Level | What it allows |
+|---|---|
+| `analytics:reader` | View the Analytics dimensions page and open dimensions and values |
+| `analytics:member` | Create dimensions and values, and edit them |
+| `analytics:admin` | Everything above, plus CSV import and export, and deletion |
+
+The built-in Budget Administrator role is admin, Budget Member is member and Budget Reader is reader. Anyone who can read OPEX, CAPEX or reporting sees the dimensions and their values on budget lines, in the lists and in the reports, without access to this page.
+
+---
 
 ## Tips
 
-- **Keep it simple**: 5--10 broad categories usually reveal more than dozens of granular tags.
-- **Document with descriptions**: A short description goes a long way toward consistent usage across teams.
-- **Don't force it**: "Unassigned" is a valid state. Avoid creating vague catch-all categories just to fill the gap.
-- **Disable, don't delete**: Retiring a category preserves historical accuracy in reports.
-- **Use reports to refine**: Run the Analytics Report periodically -- if a category captures too much or too little spend, split or merge accordingly.
+- **Keep it simple**: a few dimensions with 5 to 10 broad values each usually reveal more than dozens of detailed values.
+- **One question per dimension**: each dimension should answer one question about the spend, such as "what kind of spend is it?" or "which program does it serve?".
+- **Document with descriptions**: a short description goes a long way toward consistent use across teams.
+- **Leave gaps when you have to**: "Unassigned" is a valid state. Avoid vague catch-all values just to fill the gap.
+- **Disable, do not delete**: retiring a value keeps reports accurate.
+- **Use reports to refine**: run the Analytics dimensions report from time to time. If a value captures too much or too little spend, split or merge it.
+
+---
 
 ## Frequently asked questions
 
-**Can I assign multiple analytics dimensions to one item?**
-No. Each spend item has zero or one category. For multi-dimensional analysis, consider combining categories or using Departments with Allocations.
+**Can a line have several analytics values?**
+Yes, one per dimension. A line can be **Licenses** on Nature and **Workplace** on Program. Within one dimension, a line has one value or none.
 
 **Do analytics dimensions affect allocations or accounting?**
-No. They are purely for reporting and have no impact on cost allocations or formal accounting.
+No. They are for reporting only and have no impact on cost allocations or formal accounting.
 
-**How many categories should I create?**
-Start with 5--10. More than 20 usually indicates over-engineering. You can always split later.
+**How many values should I create?**
+Start with 5 to 10 per dimension. More than 20 usually means the dimension tries to answer too many questions: split it into two dimensions.
 
-**What is the difference between analytics dimensions and departments?**
-**Departments** are formal organizational units with precise allocation drivers. **Analytics dimensions** are informal, optional tags for flexible reporting without allocation overhead.
+**What is the difference between analytics dimensions, departments and cost centers?**
+**Departments** are formal organizational units with precise allocation drivers. **Cost centers** say who owns and answers for the spend. **Analytics dimensions** are free, optional classifications for reporting, with no allocation or ownership attached.
 
-**Why do some items show "Unassigned"?**
-Items without an analytics category appear as "Unassigned" in reports. This is expected -- categories are entirely optional.
+**Why do some lines show "Unassigned"?**
+In the Analytics dimensions report, lines without a value on the chosen dimension appear as "Unassigned". This is expected: values are optional.
+
+**What happens to the lines when I rename a value or a dimension?**
+Nothing changes on the lines. Lists and reports show the new name at once.

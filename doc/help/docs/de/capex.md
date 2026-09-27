@@ -26,7 +26,7 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus, mit geöffnetem Bereich **E
 - **Lieferant**: Der Anbieter oder Lieferant dieser Investition. Wählen Sie ihn aus Ihren Lieferanten in den Stammdaten
 - **Kostenstelle**: Wer für die Investition verantwortlich ist. Siehe [Kostenstellen](cost-centers.md). Ist das zahlende Unternehmen noch leer, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle
 - **Run oder Build**: **Run** für Ausgaben, die bestehende Services am Laufen halten, **Build** für Ausgaben, die sie schaffen oder verändern
-- **Analysekategorie**: Benutzerdefinierte Gruppierung für Berichte
+- **Analysedimensionen**: Ein Feld pro Dimension, nach ihr benannt, für eine eigene Gruppierung in Berichten. Die Standarddimension erscheint als **Analysedimension**, bis sie umbenannt wird. Siehe [Analysedimensionen](analytics.md)
 - **Ende der Gültigkeit**: Das Datum, an dem diese Investition endet, zum Beispiel am Ende der Nutzungsdauer des Assets oder beim Projektabschluss. Lassen Sie es leer, wenn es kein Ende gibt. Danach ist die Position deaktiviert und spätere Jahre zählen in den Budgetansichten nicht mehr
 - **IT-Verantwortlicher** / **Fachverantwortlicher**: Wer verantwortlich ist
 - **Beschreibung** (Tab Übersicht): Freitext-Details zur Investition
@@ -92,7 +92,7 @@ Diese Spalten sind standardmäßig ausgeblendet. Zeigen Sie sie über die Spalte
 | **Gültig ab** | Startdatum |
 | **Ende der Gültigkeit** | Datum, an dem die Position endet (leer bedeutet kein Ende) |
 | **IT-Verantwortlicher** / **Fachbereichsverantwortlicher** | Zuständige Benutzer |
-| **Analytik** | Name der Analysekategorie |
+| **Analysedimensionen** | Eine Spalte pro aktivierter Dimension, nach ihr benannt, mit dem Wert der Position. Die Spalte der Standarddimension steht zuerst (**Analysedimension**, bis sie umbenannt wird), danach die anderen Dimensionen in ihrer Reihenfolge |
 | **Kostenstelle** | Code und Name der Kostenstelle. Fahren Sie mit der Maus darüber, um ihren vollständigen Pfad im Baum zu sehen; klicken Sie darauf, um die Kostenstelle zu öffnen |
 | **Budgetverantwortlicher** | Der Budgetverantwortliche der Kostenstelle der Position. Er wird aus der Kostenstelle abgeleitet und nicht auf der Position gespeichert: Ändern Sie den Budgetverantwortlichen einer Kostenstelle, und alle ihre Positionen folgen |
 | **Run oder Build** | **Run** oder **Build** |
@@ -103,11 +103,11 @@ Diese Spalten sind standardmäßig ausgeblendet. Zeigen Sie sie über die Spalte
 
 ### Schnellsuche
 
-Das Suchfeld oben durchsucht Referenz, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysekategorie, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Anlagentyp, Investitionsart, Priorität, Notizen, Währung und Status. Ergebnisse aktualisieren sich in Echtzeit während der Eingabe.
+Das Suchfeld oben durchsucht Referenz, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysewerte, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Anlagentyp, Investitionsart, Priorität, Notizen, Währung und Status. Ergebnisse aktualisieren sich in Echtzeit während der Eingabe.
 
 ### Spaltenfilter
 
-Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, **Analytik**, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht. Mehrere Filter werden mit UND-Logik kombiniert.
+Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht. Mehrere Filter werden mit UND-Logik kombiniert.
 
 Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen.
 
@@ -185,7 +185,7 @@ Der Tab Übersicht enthält die Details der Investition und ihre Aufgaben.
 
 **Bereich Eigenschaften**:
 
-- **Lieferant**, **Kostenstelle**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), **Anlagentyp**, **Investitionsart**, **Analysekategorie**, **Run oder Build** und **Beginn der Gültigkeit**
+- **Lieferant**, **Kostenstelle**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), **Anlagentyp**, **Investitionsart**, ein Feld pro Analysedimension, **Run oder Build** und **Beginn der Gültigkeit**
 - **Lebenszyklus**: der Schalter **Aktiviert** und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
 - Die Daten **Erstellt** und **Aktualisiert** (schreibgeschützt)
 - Die **Priorität** stellen Sie beim Erstellen im Bereich Eigenschaften ein, danach in der Metadatenleiste
@@ -199,6 +199,13 @@ Der Tab Übersicht enthält die Details der Investition und ihre Aufgaben.
 - Eine über die API gespeicherte Position mit Kostenstelle und ohne zahlendes Unternehmen erhält das Unternehmen der Kostenstelle. Für CSV-Dateien siehe [CSV-Import/Export](#csv-importexport)
 
 **Run oder Build**: **Run**, **Build** oder **Nicht festgelegt**. Damit teilen Sie das Budget auf zwischen dem Betrieb bestehender Services und deren Veränderung.
+
+**Analysedimensionen**:
+
+- Jede aktivierte Dimension hat ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Wählen Sie einen Wert oder leeren Sie das Feld; die Änderung wird sofort gespeichert
+- Jedes Feld listet die aktivierten Werte seiner Dimension. Ein deaktivierter Wert bleibt auf den Positionen, die ihn bereits haben, und kann für keine andere Position gewählt werden
+- Das Feld kann keinen Wert erstellen: Erstellen Sie ihn unter [Analysedimensionen](analytics.md), oder lassen Sie ihn von einem CSV-Import erstellen
+- Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
 
 **Tipp**: Beim Erstellen einer Position bedeutet die Warnung „veraltetes Konto", dass das ausgewählte Konto nicht zum Kontenplan des zahlenden Unternehmens gehört. Wählen Sie ein anderes Konto, um die Warnung zu beheben. Eine bestehende Position, deren Konto außerhalb des Kontenplans ihres Unternehmens liegt, lässt sich weiterhin bearbeiten: Der Kontenplan wird nur geprüft, wenn sich das Unternehmen oder das Konto ändert.
 
@@ -423,14 +430,15 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 - Kopfzeilen: `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
 - `disabled_at` ist das Ende der Gültigkeit: das Datum, an dem die Position endet. Verwenden Sie ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Lassen Sie das Feld leer, wenn es kein Ende gibt
 - Ältere Dateien mit einer Spalte `effective_end` werden weiterhin importiert: Das Datum dieser Spalte füllt das Ende der Gültigkeit, wenn `disabled_at` leer ist
-- `cost_center_code` und `run_build` sind optionale Spalten: Exporte und die Vorlage enthalten sie immer, und Dateien ohne sie werden weiterhin importiert
+- `analytics_category` enthält den Wert der Standarddimension, unabhängig von ihrem Namen. Jede andere aktivierte Dimension hat eine eigene Spalte, `analytics:<code>`, wobei `<code>` der Code der Dimension ist. Exporte und die Vorlage führen diese Spalten direkt nach `analytics_category`, in der Reihenfolge der Dimensionen
+- `analytics_category`, die Spalten `analytics:<code>`, `cost_center_code` und `run_build` sind optionale Spalten: Exporte und die Vorlage enthalten sie immer, und Dateien ohne sie werden weiterhin importiert
 
 **Import**:
 
 1. Klicken Sie in der CAPEX-Liste auf **CSV importieren**
 2. Laden Sie Ihre CSV-Datei hoch (Drag-and-Drop oder Dateiauswahl)
 3. Klicken Sie auf **Vorprüfung** zur Validierung:
-   - Kopfzeilen stimmen exakt überein
+   - Jede Pflichtspalte ist vorhanden, und keine Spalte ist unbekannt. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge
    - Unternehmen, Kostenstellen und Benutzer existieren in Ihrem Arbeitsbereich
    - Pflichtfelder (description, ppe_type, investment_type, priority) sind vorhanden. Eine neue Position braucht außerdem eine Währung und einen company_name, sofern sie keine Kostenstelle hat
    - Ein Unternehmenswechsel auf einer Position mit Konto bleibt innerhalb des Kontenplans dieses Kontos
@@ -449,6 +457,7 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 - **Referenzen**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt.
 - **Kostenstelle**: `cost_center_code` ist der Code einer Kostenstelle, unabhängig von Groß- und Kleinschreibung. Eine Gruppe wird abgelehnt. Eine deaktivierte Kostenstelle wird auf einer Position akzeptiert, die sie bereits hat, und als neuer Wert abgelehnt. Eine leere Zelle entfernt die Kostenstelle der Position. Fehlt die ganze Spalte, behalten die Positionen ihre Kostenstelle.
 - **Run oder Build**: `run_build` ist `run`, `build` oder leer (unabhängig von Groß- und Kleinschreibung). Eine leere Zelle entfernt den Wert. Fehlt die ganze Spalte, behalten die Positionen ihren Wert.
+- **Analysedimensionen**: Jede Analysezelle nennt einen Wert der Dimension ihrer Spalte, unabhängig von Groß- und Kleinschreibung. Ein Wert, der noch nicht existiert, wird beim Laden in dieser Dimension erstellt. Ein deaktivierter Wert wird auf einer Position akzeptiert, die ihn bereits hat, und als neuer Wert abgelehnt. Eine leere Zelle entfernt den Wert der Position in dieser Dimension. Fehlt eine Spalte, behalten die Positionen ihren Wert in dieser Dimension. Eine Spalte für eine unbekannte oder deaktivierte Dimension lehnt die ganze Datei ab, ebenso zwei Spalten für dieselbe Dimension (`analytics_category` und der eigene Code der Standarddimension). Wenn Sie dieselbe Datei exportieren und importieren, ändert sich nichts.
 - **Unternehmen bestehender Positionen**: Ein leeres `company_name` behält das zahlende Unternehmen der Position. Ein gefülltes `company_name` bleibt erhalten, auch wenn es vom Unternehmen der Kostenstelle abweicht. Hat eine Position ein Konto, muss ein neues `company_name` denselben Kontenplan wie dieses Konto verwenden; andernfalls lehnt die Vorabprüfung die Zeile ab: „Account ... is not in ...'s chart of accounts. Change the line's account first." Ändern Sie das Konto im Bereich **Eigenschaften** der Position und importieren Sie dann erneut.
 - **Anlagentyp**: Muss `hardware` oder `software` sein (Groß-/Kleinschreibung wird ignoriert).
 - **Investitionsart**: Muss eine von: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` sein (Groß-/Kleinschreibung wird ignoriert).
@@ -463,7 +472,7 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 - **„Ungültiger investment_type"**: Verwenden Sie eine der 7 gültigen Investitionsarten (siehe Liste oben).
 - **„Ungültige Priorität"**: Verwenden Sie `mandatory`, `high`, `medium` oder `low`.
 - **„Ungültige Währung"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind.
-- **„Kopfzeilen stimmen nicht überein"**: Laden Sie eine frische Vorlage herunter; Kopfzeilen müssen exakt übereinstimmen (einschließlich Reihenfolge).
+- **„Header mismatch“**: Eine Pflichtspalte fehlt, oder eine Spalte ist unbekannt; die Meldung nennt sie. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge, und die Analysespalten sind optional. Vergleichen Sie Ihre erste Zeile mit einer frischen Vorlage.
 - **„effective_start must be a valid date"**: Verwenden Sie das Format `YYYY-MM-DD`.
 - **„Same line as row N"**: Zwei Zeilen beschreiben dieselbe Position. Führen Sie sie zu einer Zeile zusammen und importieren Sie dann erneut.
 - **„Company is required unless the line has a cost center."**: Füllen Sie `company_name` oder `cost_center_code` für die neue Position.
@@ -472,6 +481,10 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 - **„... is a group. Choose a cost center."**: Verwenden Sie den Code einer Kostenstelle innerhalb dieser Gruppe.
 - **„Cost center ... is disabled."**: Verwenden Sie eine aktivierte Kostenstelle, oder aktivieren Sie sie unter **Stammdaten > Kostenstellen** wieder.
 - **„Run or build must be run, build or blank."**: Korrigieren Sie die Zelle `run_build`.
+- **„The column analytics:... names no dimension. Check the dimension code or remove the column.“**: Verwenden Sie den Code, der im Arbeitsbereich der Dimension unter **Stammdaten > Analysedimensionen** steht, oder entfernen Sie die Spalte.
+- **„The ... dimension is disabled. Enable it or leave it out.“**: Aktivieren Sie die Dimension unter **Stammdaten > Analysedimensionen**, oder entfernen Sie ihre Spalte.
+- **„The file has two columns for ...“**: Zwei Spalten nennen dieselbe Dimension, zum Beispiel `analytics_category` und der eigene Code der Standarddimension. Behalten Sie eine Spalte.
+- **„... is disabled. Pick an enabled value.“**: Verwenden Sie einen aktivierten Wert dieser Dimension, oder aktivieren Sie den Wert wieder.
 
 **Tipp**: Beginnen Sie mit dem Vorlagenexport, füllen Sie einige Zeilen aus und führen Sie eine Vorprüfung durch, um Probleme frühzeitig zu erkennen. Beheben Sie Fehler in der CSV und laden Sie sie erneut hoch, bis die Vorprüfung besteht, dann laden Sie.
 

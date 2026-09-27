@@ -9,7 +9,7 @@ Eine Kostenstelle gibt an, wer für eine Budgetzeile verantwortlich ist: das Tea
 | **Unternehmen** | Welche juristische Person zahlt | Das **Zahlende Unternehmen** |
 | **Abteilungen** | Welche Einheiten eines Unternehmens IT nutzen, mit ihrer Mitarbeiterzahl | Für Zuordnungen und Leistungsverrechnung verwendet |
 | **Kostenstellen** | Wer für die Ausgaben verantwortlich ist und einsteht | Die **Kostenstelle** |
-| **Analysedimensionen** | Eine freie Klassifizierung für das Reporting | Die **Analysekategorie** |
+| **Analysedimensionen** | Freie Klassifizierungen für das Reporting | Ein Feld pro Dimension, zum Beispiel **Nature** |
 
 Eine Abteilung gehört zu einem Unternehmen und steuert Zuordnungen über ihre Mitarbeiterzahl. Eine Kostenstelle trägt einen Code, ein Unternehmen, einen Budgetverantwortlichen und einen Platz in einem Baum, und Gruppen von Kostenstellen können mehrere Unternehmen umfassen. Kostenstellen ändern weder Zuordnungen noch die Leistungsverrechnung.
 
@@ -161,7 +161,7 @@ Die Schaltfläche **Löschen** in der Kopfzeile löscht das Element sofort (erfo
 
 - **OPEX und CAPEX**: Das Feld **Kostenstelle** im Bereich **Eigenschaften** zeigt den Baum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Wenn Sie eine Zeile erstellen und das zahlende Unternehmen leer ist, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle, und das Unternehmen folgt der Kostenstelle, bis Sie selbst ein Unternehmen oder ein Konto wählen. Wenn sich die beiden Unternehmen unterscheiden, bleiben beide erhalten und ein Hinweis weist darauf hin. Siehe [OPEX](opex.md) und [CAPEX](capex.md).
 - **Listen**: die Spalten und Filter **Kostenstelle** und **Run oder Build** der OPEX- und CAPEX-Listen.
-- **Berichte**: Die Budgetberichte können auf eine Kostenstelle oder eine Gruppe gefiltert werden. Siehe [Filter nach Kostenstelle und Run oder Build](reports.md#filter-nach-kostenstelle-und-run-oder-build).
+- **Berichte**: Die Budgetberichte können auf eine Kostenstelle oder eine Gruppe gefiltert werden. Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](reports.md#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen).
 
 ---
 

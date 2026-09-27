@@ -21,7 +21,7 @@ El espacio de trabajo se abre en modo de creación, con el panel **Propiedades**
   - **Proveedor**: A quién paga. Vinculado a sus proveedores en datos maestros
   - **Centro de coste**: Quién es responsable del gasto. Consulte [Centros de coste](cost-centers.md). Cuando la empresa pagadora aún está vacía, elegir un centro de coste la completa con la empresa del centro de coste
   - **Run o build**: **Run** para el gasto que mantiene en funcionamiento los servicios existentes, **Build** para el gasto que los crea o los modifica
-  - **Categoría analítica**: Agrupación personalizada para informes (p. ej., "Infraestructura", "Apps de negocio"). Se pueden crear categorías nuevas sobre la marcha
+  - **Dimensiones analíticas**: Un campo por dimensión, con el nombre de la dimensión, para agrupar a medida en los informes (p. ej., "Licenses" en Nature). La dimensión por defecto se muestra como **Dimensión analítica** hasta que se le da un nombre. Consulte [Dimensiones analíticas](analytics.md)
   - **Fin de validez**: La fecha en que termina este gasto. Déjela en blanco si no hay fin. Después de esa fecha, la partida queda desactivada y los años posteriores dejan de contar en las vistas presupuestarias
   - **Responsable de TI** / **Responsable de negocio**: Quién es responsable
   - **Descripción** y **Notas**: Texto libre en la pestaña Vista general
@@ -58,7 +58,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Inicio efectivo**: Fecha de inicio
   - **Fin de validez**: Fecha en que la partida termina (en blanco significa sin fin)
   - **Responsable IT** / **Responsable de negocio**: Usuarios responsables
-  - **Analítica**: Nombre de la categoría analítica
+  - **Dimensiones analíticas**: Una columna por dimensión activada, con el nombre de la dimensión y el valor de la partida. La columna de la dimensión por defecto va primero (**Dimensión analítica** hasta que se le da un nombre) y después las demás dimensiones en su orden
   - **Centro de coste**: El código y el nombre del centro de coste. Pase el cursor por encima para ver su ruta completa en el árbol; haga clic para abrir el centro de coste
   - **Responsable del presupuesto**: El responsable del presupuesto del centro de coste de la partida. Se deriva del centro de coste y no se almacena en la partida: cambie el responsable del presupuesto de un centro de coste y todas sus partidas lo siguen
   - **Run o build**: **Run** o **Build**
@@ -67,8 +67,8 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Creado / Actualizado**: Marcas de tiempo
 
 **Filtrado**:
-  - **Búsqueda rápida**: Busca en la referencia, el nombre del producto, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, la categoría analítica, el centro de coste (código, nombre y ruta), el responsable del presupuesto, las notas, la moneda y el estado. Filtra la lista en tiempo real mientras escribe
-  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, **Analítica**, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas (selección múltiple). El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**
+  - **Búsqueda rápida**: Busca en la referencia, el nombre del producto, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, los valores analíticos, el centro de coste (código, nombre y ruta), el responsable del presupuesto, las notas, la moneda y el estado. Filtra la lista en tiempo real mientras escribe
+  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas (selección múltiple). El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**
   - **Filtros de importe**: Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes
   - **Filtros de fecha**: **Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío
   - **Columnas de texto**: usan filtros de texto. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` u `OPX-12`
@@ -139,7 +139,7 @@ La pestaña Vista general contiene los campos de texto libre y las tareas de la 
   - Las tareas también se pueden ver y gestionar desde **Portafolio > Tareas**, que muestra todas las tareas de su organización
 
 **Panel Propiedades**:
-  - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora), **Moneda** (solo las monedas permitidas en su espacio de trabajo), **Categoría analítica**, **Run o build** e **Inicio de vigencia**
+  - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora), **Moneda** (solo las monedas permitidas en su espacio de trabajo), un campo por dimensión analítica, **Run o build** e **Inicio de vigencia**
   - **Ciclo de vida**: el interruptor **Activado** y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
   - Fechas **Creado** y **Actualizado** (solo lectura)
 
@@ -151,6 +151,12 @@ La pestaña Vista general contiene los campos de texto libre y las tareas de la 
   - Una partida guardada mediante la API con un centro de coste y sin empresa pagadora toma la empresa del centro de coste. Para los archivos CSV, consulte [Importación/exportación CSV](#importacionexportacion-csv)
 
 **Run o build**: **Run**, **Build** o **Sin definir**. Úselo para repartir el presupuesto entre mantener los servicios en funcionamiento y modificarlos.
+
+**Dimensiones analíticas**:
+  - Cada dimensión activada tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. Elija un valor o vacíe el campo; el cambio se guarda de inmediato
+  - Cada campo lista los valores activados de su dimensión. Un valor desactivado se mantiene en las partidas que ya lo tienen y no se puede elegir para otra partida
+  - El campo no puede crear un valor: créelo en [Dimensiones analíticas](analytics.md) o deje que lo cree una importación CSV
+  - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 
 **Consejo**: Al crear una partida, una advertencia de "Cuenta obsoleta" significa que la cuenta seleccionada no pertenece al plan de cuentas de la empresa pagadora. Elija otra cuenta para resolver la advertencia. Una partida existente cuya cuenta está fuera del plan de su empresa se puede seguir editando: el plan solo se comprueba cuando cambia la empresa o la cuenta.
 
@@ -331,13 +337,14 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   - Encabezados: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
   - `disabled_at` es el fin de validez: la fecha en que la partida termina. Utilice una fecha (`2026-12-31`) o una fecha y hora completas. Déjelo vacío si no hay fin
   - Los archivos antiguos con una columna `effective_end` se siguen importando: su fecha rellena el fin de validez cuando `disabled_at` está vacío
-  - `cost_center_code` y `run_build` son columnas opcionales: las exportaciones y la plantilla siempre las incluyen, y los archivos sin ellas se siguen importando
+  - `analytics_category` contiene el valor de la dimensión analítica por defecto, sea cual sea su nombre. Cada una de las demás dimensiones activadas tiene su propia columna, `analytics:<code>`, donde `<code>` es el código de la dimensión. Las exportaciones y la plantilla incluyen estas columnas justo después de `analytics_category`, en el orden de las dimensiones
+  - `analytics_category`, las columnas `analytics:<code>`, `cost_center_code` y `run_build` son columnas opcionales: las exportaciones y la plantilla siempre las incluyen, y los archivos sin ellas se siguen importando
 
 **Importar**:
   1. Haga clic en **Importar CSV** en la lista OPEX
   2. Suba su archivo CSV (arrastrar y soltar o selector de archivos)
   3. Haga clic en **Verificación previa** para validar:
-     - Los encabezados coinciden exactamente
+     - Todas las columnas obligatorias están presentes y ninguna columna es desconocida. Las columnas se reconocen por su nombre, en cualquier orden
      - Los campos obligatorios (product_name, account_number) están presentes. Una partida nueva también necesita una moneda, y un company_name salvo que tenga un centro de coste
      - Cada empresa, proveedor, cuenta, centro de coste y responsable del archivo existe en su espacio de trabajo
      - Las fechas son válidas y no hay dos filas que describan la misma partida
@@ -353,7 +360,7 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   - **Empresa y cuenta**: `company_name` debe coincidir con una empresa por nombre (sin distinguir mayúsculas). Un `company_name` vacío conserva la empresa de una partida existente; una partida nueva toma la empresa de su centro de coste. Sin ninguna de las dos, la fila se rechaza: "Company is required unless the line has a cost center." `account_number` se busca en el plan de cuentas de esa empresa, o en el plan de cuentas por defecto cuando la empresa no tiene ninguno. Un número de cuenta que solo existe en otro plan es un error
   - **Responsables**: `owner_it_email` y `owner_business_email` deben coincidir con usuarios activos por correo electrónico: un usuario invitado o un contacto sin cuenta se rechaza
   - **Fechas**: `effective_start` (y `effective_end` en archivos antiguos) debe ser un día real del calendario en formato `YYYY-MM-DD`, por ejemplo `2026-01-01`. Otros formatos, como `01/03/2026`, son errores. Un `effective_start` vacío conserva la fecha guardada de una partida existente; una partida nueva empieza el 1 de enero del año en curso
-  - **Categoría analítica**: Si la categoría no existe, se crea automáticamente durante la importación
+  - **Dimensiones analíticas**: Cada celda analítica nombra un valor de la dimensión de su columna, sin distinguir mayúsculas. Un valor que aún no existe se crea en esa dimensión durante la carga. Un valor desactivado se acepta en una partida que ya lo tiene y se rechaza como valor nuevo. Una celda vacía borra el valor de la partida en esa dimensión. Cuando falta una columna, las partidas conservan su valor en esa dimensión. Una columna de una dimensión desconocida o desactivada rechaza todo el archivo, igual que dos columnas para la misma dimensión (`analytics_category` y el propio código de la dimensión por defecto). Exportar e importar el mismo archivo no cambia nada
   - **Centro de coste**: `cost_center_code` es el código de un centro de coste, sin distinguir mayúsculas. Un grupo se rechaza. Un centro de coste desactivado se acepta en una partida que ya lo tiene y se rechaza como valor nuevo. Una celda vacía borra el centro de coste de la partida. Cuando falta toda la columna, las partidas conservan su centro de coste
   - **Run o build**: `run_build` es `run`, `build` o vacío (sin distinguir mayúsculas). Una celda vacía borra el valor. Cuando falta toda la columna, las partidas conservan su valor
   - **Empresa del centro de coste**: Una partida nueva con `company_name` vacío toma la empresa de su centro de coste, y `account_number` se busca en el plan de cuentas de esa empresa. Un `company_name` informado se conserva, aunque difiera de la empresa del centro de coste
@@ -371,8 +378,12 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   - **"... is a group. Choose a cost center."**: Use el código de un centro de coste de ese grupo
   - **"Cost center ... is disabled."**: Use un centro de coste activado, o vuelva a activarlo en **Datos maestros > Centros de coste**
   - **"Run or build must be run, build or blank."**: Corrija la celda `run_build`
+  - **"The column analytics:... names no dimension. Check the dimension code or remove the column."**: Use el código que se muestra en el espacio de trabajo de la dimensión en **Datos maestros > Dimensiones analíticas**, o elimine la columna
+  - **"The ... dimension is disabled. Enable it or leave it out."**: Active la dimensión en **Datos maestros > Dimensiones analíticas**, o elimine su columna
+  - **"The file has two columns for ..."**: Dos columnas nombran la misma dimensión, por ejemplo `analytics_category` y el propio código de la dimensión por defecto. Conserve una sola columna
+  - **"... is disabled. Pick an enabled value."**: Use un valor activado de esa dimensión, o vuelva a activar el valor
   - **"Moneda inválida"**: Utilice códigos ISO de 3 letras (USD, EUR, GBP) que estén permitidos en la configuración de monedas de su espacio de trabajo
-  - **"Desajuste de encabezados"**: Descargue una plantilla nueva; los encabezados deben coincidir exactamente (incluido el orden)
+  - **"Header mismatch"**: Falta una columna obligatoria o hay una columna desconocida; el mensaje las indica. Las columnas se reconocen por su nombre, en cualquier orden, y las columnas analíticas son opcionales. Compare la primera línea de su archivo con una plantilla nueva
 
 **Consejo**: Comience con la exportación de plantilla, rellene algunas filas y ejecute una verificación previa para detectar problemas temprano. Corrija errores en el CSV y vuelva a subirlo hasta que la verificación previa pase, luego cargue.
 
@@ -424,7 +435,7 @@ Cada partida OPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de
 
 7. **Registre contactos**: Añada contactos de proveedor con roles (Comercial, Técnico, Soporte) para que su equipo sepa a quién llamar para cada partida de gasto.
 
-8. **Aproveche las categorías analíticas**: Etiquete partidas con categorías (Infraestructura, Apps de negocio, Seguridad) para agrupar gasto en informes.
+8. **Aproveche las dimensiones analíticas**: Dé a las partidas un valor en cada dimensión (por ejemplo Licenses en Nature, Workplace en Program) para agrupar el gasto en los informes.
 
 9. **Mantenga actualizadas las métricas de empresa**: Las asignaciones dependen de la plantilla, usuarios IT y facturación de la empresa. Las métricas desactualizadas causan errores de asignación.
 

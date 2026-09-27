@@ -21,7 +21,7 @@ The workspace opens in creation mode, with the **Properties** panel open on the 
   - **Supplier**: Who you are paying. Links to your suppliers in master data
   - **Cost center**: Who owns the spend. See [Cost centers](cost-centers.md). When the paying company is still empty, picking a cost center fills it with the cost center's company
   - **Run or build**: **Run** for spend that keeps existing services running, **Build** for spend that creates or changes them
-  - **Analytics category**: Custom grouping for reporting (e.g., "Infrastructure", "Business Apps"). New categories can be created on the fly
+  - **Analytics dimensions**: One field per dimension, named after it, for custom grouping in reports (e.g., "Licenses" on Nature). The default dimension shows as **Analytics dimension** until it is renamed. See [Analytics dimensions](analytics.md)
   - **End of validity**: The date this spend stops. Leave it blank if there is no end. After it, the item is disabled and later years no longer count in the budget views
   - **IT owner** / **Business owner**: Who is responsible
   - **Description** and **Notes**: Free text on the Overview tab
@@ -58,7 +58,7 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
   - **Effective start**: Start date
   - **End of validity**: Date the item stops (blank means no end)
   - **IT owner** / **Business owner**: Responsible users
-  - **Analytics**: Analytics category name
+  - **Analytics dimensions**: One column per enabled dimension, named after it, with the item's value. The default dimension's column comes first (**Analytics dimension** until it is renamed), then the other dimensions in their order
   - **Cost center**: The code and name of the cost center. Hover it to see its full path in the tree; click it to open the cost center
   - **Budget holder**: The budget holder of the item's cost center. It is derived from the cost center, not stored on the item: change the budget holder of a cost center and every item on it follows
   - **Run or build**: **Run** or **Build**
@@ -67,8 +67,8 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
   - **Created / Updated**: Timestamps
 
 **Filtering**:
-  - **Quick search**: Searches the reference, product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics category, cost center (code, name and path), budget holder, notes, currency and status. Filters the list in real time as you type
-  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, **Analytics**, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**
+  - **Quick search**: Searches the reference, product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics values, cost center (code, name and path), budget holder, notes, currency and status. Filters the list in real time as you type
+  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**
   - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
   - **Date filters**: **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank
   - **Text columns** use text filters. On **Ref**, type the number or the full reference, for example `12` or `OPX-12`
@@ -139,7 +139,7 @@ The Overview tab holds the free-text fields and the tasks of the item.
   - Tasks can also be viewed and managed from **Portfolio > Tasks**, which shows all tasks across your organization
 
 **Properties panel**:
-  - **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **Analytics category**, **Run or build**, and **Effective start**
+  - **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), one field per analytics dimension, **Run or build**, and **Effective start**
   - **Lifecycle**: the **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
   - **Created** and **Updated** dates (read only)
 
@@ -151,6 +151,12 @@ The Overview tab holds the free-text fields and the tasks of the item.
   - An item saved through the API with a cost center and no paying company takes the cost center's company. For CSV files, see [CSV import/export](#csv-importexport)
 
 **Run or build**: **Run**, **Build**, or **Not set**. Use it to split the budget between keeping services running and changing them.
+
+**Analytics dimensions**:
+  - Each enabled dimension has its own field, named after the dimension, in dimension order. Pick a value or clear the field; the change saves at once
+  - Each field lists the enabled values of its dimension. A disabled value stays on the items that already have it, and cannot be picked for another item
+  - The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let a CSV import create it
+  - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 
 **Tip**: When you create an item, an "Obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning. An existing item whose account is outside its company's chart can still be edited: the chart is checked only when the company or the account changes.
 
@@ -331,13 +337,14 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   - Headers: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
   - `disabled_at` is the end of validity: the date the item stops. Use a date (`2026-12-31`) or a full date and time. Leave it empty if there is no end
   - Older files with an `effective_end` column still import: its date fills the end of validity when `disabled_at` is empty
-  - `cost_center_code` and `run_build` are optional columns: exports and the template always carry them, and files without them still import
+  - `analytics_category` holds the value of the default analytics dimension, whatever its name. Each other enabled dimension has its own column, `analytics:<code>`, where `<code>` is the dimension's code. Exports and the template carry these columns right after `analytics_category`, in dimension order
+  - `analytics_category`, the `analytics:<code>` columns, `cost_center_code` and `run_build` are optional columns: exports and the template always carry them, and files without them still import
 
 **Import**:
   1. Click **Import CSV** in the OPEX list
   2. Upload your CSV file (drag-and-drop or file picker)
   3. Click **Preflight** to validate:
-     - Headers match exactly
+     - Every required column is present and no column is unknown. Columns are matched by name, in any order
      - Required fields (product_name, account_number) are present. A new item also needs a currency, and a company_name unless it has a cost center
      - Each company, supplier, account, cost center, and owner in the file exists in your workspace
      - Dates are valid, and no two rows describe the same item
@@ -353,7 +360,7 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   - **Company and account**: `company_name` must match a company by name (case-insensitive). An empty `company_name` keeps the company of an existing item; a new item takes the company of its cost center. With neither, the row is refused: "Company is required unless the line has a cost center." `account_number` is looked up in the chart of accounts of that company, or in the default chart of accounts when the company has none. An account number that exists only in another chart is an error
   - **Owners**: `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused
   - **Dates**: `effective_start` (and `effective_end` in older files) must be a real calendar day in `YYYY-MM-DD` format, for example `2026-01-01`. Other formats, such as `01/03/2026`, are errors. An empty `effective_start` keeps the stored date of an existing item; a new item starts on January 1 of the current year
-  - **Analytics category**: If the category does not exist, it is created automatically during import
+  - **Analytics dimensions**: Each analytics cell names a value of its column's dimension, regardless of case. A value that does not exist yet is created in that dimension during the load. A disabled value is accepted on an item that already has it, and refused as a new value. An empty cell clears the item's value on that dimension. When a column is absent, items keep their value on that dimension. A column for an unknown or disabled dimension refuses the whole file, and so do two columns for the same dimension (`analytics_category` and the default dimension's own code). Exporting and importing the same file changes nothing
   - **Cost center**: `cost_center_code` is the code of a cost center, regardless of case. A group is refused. A disabled cost center is accepted on an item that already has it, and refused as a new value. An empty cell clears the item's cost center. When the whole column is absent, items keep their cost center
   - **Run or build**: `run_build` is `run`, `build` or empty (regardless of case). An empty cell clears the value. When the whole column is absent, items keep their value
   - **Company from the cost center**: A new item with an empty `company_name` takes its cost center's company, and `account_number` is looked up in that company's chart of accounts. A filled `company_name` is kept, even when it differs from the cost center's company
@@ -371,8 +378,12 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   - **"... is a group. Choose a cost center."**: Use the code of a cost center inside that group
   - **"Cost center ... is disabled."**: Use an enabled cost center, or enable it again in **Master data > Cost centers**
   - **"Run or build must be run, build or blank."**: Fix the `run_build` cell
+  - **"The column analytics:... names no dimension. Check the dimension code or remove the column."**: Use the code shown in the dimension's workspace in **Master data > Analytics dimensions**, or remove the column
+  - **"The ... dimension is disabled. Enable it or leave it out."**: Enable the dimension in **Master data > Analytics dimensions**, or remove its column
+  - **"The file has two columns for ..."**: Two columns name the same dimension, for example `analytics_category` and the default dimension's own code. Keep one column
+  - **"... is disabled. Pick an enabled value."**: Use an enabled value of that dimension, or enable the value again
   - **"Invalid currency"**: Use 3-letter ISO codes (USD, EUR, GBP) that are allowed in your workspace currency settings
-  - **"Header mismatch"**: Download a fresh template; headers must match exactly (including order)
+  - **"Header mismatch"**: A required column is missing, or a column is unknown; the message lists them. Columns are matched by name, in any order, and the analytics columns are optional. Compare your first line with a fresh template
 
 **Tip**: Start with the template export, fill in a few rows, and run a preflight to catch issues early. Fix errors in the CSV and re-upload until preflight passes, then load.
 
@@ -424,7 +435,7 @@ Every OPEX item has a **status** (Enabled or Disabled) and an optional **End of 
 
 7. **Track contacts**: Add supplier contacts with roles (Commercial, Technical, Support) so your team knows who to call for each spend item.
 
-8. **Leverage analytics categories**: Tag items with categories (Infrastructure, Business Apps, Security) to group spend in reports.
+8. **Leverage analytics dimensions**: Give items a value on each dimension (for example Licenses on Nature, Workplace on Program) to group spend in reports.
 
 9. **Keep company metrics up to date**: Allocations depend on company headcount, IT users, and turnover. Outdated metrics cause allocation errors.
 

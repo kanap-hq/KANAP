@@ -138,7 +138,7 @@ plugins:
             Currencies: Devise
             Classification: Classification
             Business Processes: Processus métier
-            Analytics Dimensions: Dimensions analytiques
+            Analytics dimensions: Dimensions analytiques
             Administration: Administration
             "Admin & Users": Utilisateurs
             Branding: Personnalisation
@@ -214,7 +214,7 @@ plugins:
             Currencies: Währung
             Classification: Klassifizierung
             Business Processes: Geschäftsprozesse
-            Analytics Dimensions: Analysedimensionen
+            Analytics dimensions: Analysedimensionen
             Administration: Administration
             "Admin & Users": Benutzer
             Branding: Branding
@@ -290,7 +290,7 @@ plugins:
             Currencies: Moneda
             Classification: Clasificación
             Business Processes: Procesos de negocio
-            Analytics Dimensions: Dimensiones analíticas
+            Analytics dimensions: Dimensiones analíticas
             Administration: Administración
             "Admin & Users": Usuarios
             Branding: Personalización
@@ -373,7 +373,7 @@ nav:
       - Currencies: currencies.md
     - Classification:
       - Business Processes: business-processes.md
-      - Analytics Dimensions: analytics.md
+      - Analytics dimensions: analytics.md
 
   - Plaid:
     - Plaid: ai-assistant.md
