@@ -78,12 +78,13 @@ You can change or remove the category at any time. The category applies to the e
 
 ## The Analytics Report
 
-The **Analytics Report** (found under **Reports > Analytics**) visualizes budget distribution across your categories.
+The **Analytics dimensions** report (under **Reporting**) shows how the budget of your OPEX or CAPEX items is spread across your categories. See [Reporting](reports.md) for the full description.
 
 **Report features**:
+- **Item type**: OPEX or CAPEX
 - **Year range**: Single year (pie or bar chart) or multi-year (line chart)
-- **Metric selection**: Budget, OPEX, CAPEX, allocated costs, or various KPIs
-- **Chart type** (single year): Toggle between pie and horizontal bar
+- **Metric**: Budget, Actuals, Expected landing, or Revision
+- **Chart type** (single year): Pie chart or horizontal bar chart
 - **Category exclusion**: Filter out specific categories to focus on a subset
 
 **Report outputs**:

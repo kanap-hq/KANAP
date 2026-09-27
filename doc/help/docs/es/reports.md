@@ -17,15 +17,26 @@ La página principal muestra una tarjeta para cada informe disponible con una br
 
 | Informe | Qué cubre |
 |---------|-----------|
-| **Contracargo global** | Totales de asignación por empresa, KPI y flujos intercompañía |
-| **Contracargo por empresa** | Detalle de una empresa con departamentos, partidas y KPI |
-| **Top OPEX** | Mayores partidas OPEX para un año seleccionado (top N personalizable) |
-| **Top OPEX Aumento/Disminución** | Mayores cambios OPEX año a año (top N personalizable) |
+| **Contracargo global** | Totales de asignación por empresa, KPI y flujos intercompañía (OPEX) |
+| **Contracargo por empresa** | Detalle de una empresa con departamentos, partidas y KPI (OPEX) |
+| **Top partidas** | Mayores partidas OPEX o CAPEX para un año seleccionado (top N personalizable) |
+| **Top aumento / disminución** | Mayores cambios OPEX o CAPEX entre dos columnas presupuestarias (top N personalizable) |
 | **Tendencia presupuestaria (OPEX)** | Comparar métricas OPEX en un rango de años |
 | **Tendencia presupuestaria (CAPEX)** | Comparar métricas CAPEX en un rango de años |
 | **Comparación de columnas presupuestarias** | Seleccione hasta 10 combinaciones de año+columna para OPEX o CAPEX |
-| **Cuentas de consolidación** | Presupuesto agrupado por cuenta de consolidación |
-| **Categorías analíticas** | Presupuesto agrupado por categoría analítica |
+| **Cuentas de consolidación** | Presupuesto OPEX o CAPEX agrupado por cuenta de consolidación |
+| **Dimensiones analíticas** | Presupuesto OPEX o CAPEX agrupado por dimensión analítica |
+
+### Elegir OPEX o CAPEX
+
+**Top partidas**, **Top aumento / disminución**, **Cuentas de consolidación** y **Dimensiones analíticas** empiezan con un conmutador **OPEX** / **CAPEX**, el primer control de la barra de filtros.
+
+- El informe se abre en un tipo que usted puede consultar, primero OPEX. Un tipo que no puede consultar aparece desactivado.
+- La dirección de la página conserva el tipo elegido (`?scope=opex` o `?scope=capex`), de modo que un enlace guardado o compartido se abre en el mismo tipo.
+- El subtítulo y el título del gráfico indican el tipo, de modo que una impresión o un PNG exportado muestra qué tipo cubre.
+- Cambiar de tipo borra las partidas que excluyó, ya que cada tipo tiene sus propias partidas.
+
+Los dos informes de contracargo cubren solo OPEX.
 
 ---
 
@@ -138,26 +149,27 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 
 ---
 
-## Top OPEX
+## Top partidas
 
-Identifique sus mayores costes OPEX recurrentes para un año dado.
+Identifique sus mayores partidas OPEX o CAPEX para un año dado.
 
 ### Controles
 
+- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
 - **Año**: Año anterior, actual o siguiente
 - **Métrica**: Presupuesto, Revisión, Realizado o Aterrizaje previsto
 - **Cantidad top**: Cuántas partidas mostrar (predeterminado: 10, mínimo: 1)
 - **Tipo de gráfico**: Gráfico circular o gráfico de barras horizontales
-- **Excluir partidas**: Autocompletado de selección múltiple para excluir productos específicos
-- **Excluir cuentas**: Autocompletado de selección múltiple para excluir por categoría de cuenta
+- **Excluir partidas**: Autocompletado de selección múltiple para excluir partidas específicas
+- **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
 
 ### Qué verá
 
-**Gráfico**: Gráfico circular o de barras horizontales de las partidas principales.
+**Gráfico**: Gráfico circular o de barras horizontales de las partidas principales. Su título indica el tipo, por ejemplo "Top 10 CAPEX · Presupuesto 2026".
 
 **Columnas de la tabla**:
 
-- Nombre del producto
+- Partida
 - Valor para la métrica y año seleccionados
 - Participación en el total (porcentaje)
 
@@ -172,29 +184,32 @@ Utilice este informe para detectar rápidamente dónde va la mayor parte de su p
 
 ---
 
-## Top OPEX Aumento / Disminución
+## Top aumento / disminución
 
-Identifique los mayores cambios entre dos columnas presupuestarias (cualquier combinación de año y métrica).
+Identifique los mayores cambios OPEX o CAPEX entre dos columnas presupuestarias (cualquier combinación de año y métrica).
 
 ### Controles
 
+- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
 - **Año de origen** y **Métrica de origen**: La columna base de comparación
 - **Año de destino** y **Métrica de destino**: La columna objetivo de comparación
 - **Cantidad top**: Cuántas partidas mostrar por dirección (predeterminado: 10)
 - **Tipo de gráfico**: Gráfico circular (solo una dirección) o gráfico de barras horizontales
-- **Excluir partidas**: Autocompletado de selección múltiple para excluir productos específicos
-- **Excluir cuentas**: Autocompletado de selección múltiple para excluir por categoría de cuenta
-- **Conmutador de dirección**: Aumento, Disminución o ambos (botones de alternancia)
+- **Excluir partidas**: Autocompletado de selección múltiple para excluir partidas específicas
+- **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
+- **Dirección**: pestañas **Aumentos**, **Disminuciones** o **Ambos**
 
-Cuando ambas direcciones están seleccionadas, la opción de gráfico circular se deshabilita y el informe cambia automáticamente a barras.
+Los selectores de año muestran los años que contienen datos. Los selectores de métrica ofrecen las cuatro columnas del informe: Presupuesto, Realizado, Aterrizaje previsto y Revisión.
+
+Cuando se selecciona **Ambos**, la opción de gráfico circular se deshabilita y el informe cambia automáticamente a barras.
 
 ### Qué verá
 
-**Gráfico**: Visualización de los principales cambios.
+**Gráfico**: Visualización de los principales cambios. Su título indica el tipo, por ejemplo "Top 10 aumentos OPEX".
 
 **Columnas de la tabla**:
 
-- Nombre del producto
+- Partida
 - Valor de origen (anterior)
 - Valor de destino (actual)
 - Delta (cambio absoluto)
@@ -283,10 +298,11 @@ Compare de forma flexible hasta 10 combinaciones de año+columna para OPEX o CAP
 
 ## Cuentas de consolidación
 
-Vea datos presupuestarios OPEX agrupados por cuenta de consolidación, con el tipo de gráfico adaptándose al rango de años.
+Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, con el tipo de gráfico adaptándose al rango de años.
 
 ### Controles
 
+- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Presupuesto, Realizado, Aterrizaje previsto o Revisión
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo disponible cuando se selecciona un solo año)
@@ -309,29 +325,30 @@ Las partidas sin cuenta de consolidación aparecen como "Sin asignar".
 
 ---
 
-## Categorías analíticas
+## Dimensiones analíticas
 
-Vea datos presupuestarios OPEX agrupados por categoría analítica. El diseño es idéntico al informe de Cuentas de consolidación.
+Vea datos presupuestarios OPEX o CAPEX agrupados por dimensión analítica. El diseño es idéntico al informe de Cuentas de consolidación.
 
 ### Controles
 
+- **Tipo de partida**: OPEX o CAPEX (ver [Elegir OPEX o CAPEX](#elegir-opex-o-capex))
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Presupuesto, Realizado, Aterrizaje previsto o Revisión
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo un año)
-- **Excluir categorías analíticas**: Autocompletado de selección múltiple para excluir categorías específicas
+- **Excluir dimensiones analíticas**: Autocompletado de selección múltiple para excluir dimensiones específicas
 
 ### Qué verá
 
 **Modo un solo año**:
 
-- Gráfico circular o de barras de totales por categoría analítica
+- Gráfico circular o de barras de totales por dimensión analítica
 - Nota al pie con el total de la métrica
 
 **Modo varios años**:
 
-- Gráfico de líneas con una serie por categoría
+- Gráfico de líneas con una serie por dimensión analítica
 
-**Tabla**: Una fila por categoría con columnas de año. Una fila de totales fijada en la parte inferior. Las partidas sin categoría aparecen como "Sin asignar".
+**Tabla**: Una fila por dimensión analítica con columnas de año. Una fila de totales fijada en la parte inferior. Las partidas sin dimensión analítica aparecen como "Sin asignar".
 
 ---
 
@@ -365,8 +382,8 @@ Cada informe muestra una ruta de migas de pan de vuelta al centro de **Informes*
 ## Consejos
 
 - **Empiece con el Contracargo global**: Obtenga una imagen general de las asignaciones antes de profundizar en una empresa.
-- **Use Top OPEX para victorias rápidas**: Las partidas de coste más grandes son sus primeros candidatos para optimización.
-- **Compare Presupuesto vs Aterrizaje previsto**: Utilice el informe de Comparación de columnas para medir la precisión de la previsión entre años.
+- **Use Top partidas para victorias rápidas**: Las partidas de coste más grandes son sus primeros candidatos para optimización.
+- **Compare Presupuesto vs Aterrizaje previsto**: Utilice el informe de Comparación de columnas presupuestarias para medir la precisión de la previsión entre años.
 - **Alterne secciones en informes de contracargo**: Los controles de casilla le permiten centrarse solo en los datos que necesita -- departamentos, partidas, KPI o flujos -- sin ruido visual.
-- **Agrupación por año en Comparación de columnas**: Al comparar la misma métrica en múltiples años, active la agrupación por año para un gráfico de líneas más limpio.
+- **Agrupación por año en Comparación de columnas presupuestarias**: Al comparar la misma métrica en múltiples años, active la agrupación por año para un gráfico de líneas más limpio.
 - **Exporte para presentaciones**: Los gráficos se exportan como PNG y las tablas como CSV, ambos listos para diapositivas u hojas de cálculo.

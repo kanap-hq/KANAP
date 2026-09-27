@@ -2,11 +2,11 @@
 
 CAPEX (Capital Expenditure) items are your investments in long-term assets: hardware purchases, software licenses with multi-year value, infrastructure projects, and equipment. This is where you plan capital budgets, track project spending, and allocate costs across your organization.
 
-The CAPEX workspace helps you manage each capital item from initial budgeting through execution and reporting -- all in one place with year-by-year budget columns, flexible allocation methods, and direct links to projects, contracts, and contacts.
+The CAPEX workspace helps you manage each capital item from initial budgeting through execution and reporting -- all in one place with year-by-year budget columns, flexible allocation methods, and direct links to projects, applications, contracts, and contacts.
 
 ## Getting started
 
-Navigate to **Budget Management > CAPEX** to see your list. Click **New** to create your first item.
+Navigate to **Budget management > CAPEX** to see your list. Click **New** to create your first item.
 
 The workspace opens in creation mode, with the **Properties** panel open on the right. Type the investment's name in the title at the top, fill in the properties, then click **Create**.
 
@@ -14,23 +14,22 @@ The workspace opens in creation mode, with the **Properties** panel open on the 
 
 - **Title**: What you are investing in (e.g., "New Server Infrastructure", "ERP Software License"). This is the item's description, shown in the **Description** column of the list
 - **Paying company**: Which company is making the investment (required for accounting)
+- **Account**: The general ledger account for this capital expenditure. Only accounts from the paying company's chart of accounts appear
 - **Currency**: ISO code (e.g., USD, EUR). Defaults to your workspace CAPEX currency; you can override per item
 - **PP&E type**: Property, Plant & Equipment classification -- Hardware or Software
 - **Investment type**: Purpose of the investment (see options below)
 - **Priority**: Business priority level (see options below)
 - **Effective start**: When this investment begins (DD/MM/YYYY)
 
-**Strongly recommended**:
-
-- **Account**: The general ledger account for this capital expenditure. Only accounts from the paying company's Chart of Accounts will appear
-- **Supplier**: The vendor or supplier for this investment. Select from your master data suppliers
-
 **Optional but useful**:
 
+- **Supplier**: The vendor or supplier for this investment. Select from your suppliers in master data
 - **Analytics category**: Custom grouping for reporting
 - **End of validity**: The date this investment stops, for example when the asset's useful life ends or the project completes. Leave it blank if there is no end. After it, the item is disabled and later years no longer count in the budget views
 - **IT owner** / **Business owner**: Who is responsible
 - **Description** (Overview tab): Free-form details about the investment
+
+Once set, **Paying company** and **Account** can be changed but not emptied. **Supplier** can be cleared at any time. Items created by a CSV import have no account (the CAPEX file has no account column): set it in the **Properties** panel.
 
 Once the item is created, the workspace unlocks all four tabs: **Overview**, **Budget**, **Allocations**, and **Relations**.
 
@@ -47,7 +46,7 @@ CAPEX items must be classified by investment type. This helps analyze capital sp
 - **Productivity**: Improving efficiency or reducing operational costs
 - **Security**: Enhancing security posture, compliance, or risk mitigation
 - **Conformity**: Meeting regulatory or compliance requirements
-- **Business Growth**: Enabling new products, markets, or business capabilities
+- **Business growth**: Enabling new products, markets, or business capabilities
 - **Other**: Investments that do not fit the above categories
 
 **Priority levels**:
@@ -61,7 +60,7 @@ CAPEX items must be classified by investment type. This helps analyze capital sp
 
 ## Working with the CAPEX list
 
-The CAPEX list (at **Budget Management > CAPEX**) is your main view for browsing, filtering, and navigating capital items.
+The CAPEX list (at **Budget management > CAPEX**) is your main view for browsing, filtering, and navigating capital items.
 
 ### Default columns
 
@@ -104,7 +103,7 @@ The search box at the top searches the reference, description, supplier, paying 
 
 ### Column filters
 
-Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner** and **Analytics** use checkbox set filters with **All**, **None**, and a clear button. Multiple filters combine with AND logic.
+Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, **Analytics** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Multiple filters combine with AND logic.
 
 Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts.
 
@@ -181,12 +180,12 @@ The Overview tab holds the details of the investment and its tasks.
 
 **Properties panel**:
 
-- **Supplier**, **Paying company**, **Account** (filtered by the paying company's Chart of Accounts), **Currency** (only the currencies allowed in your workspace), **PP&E type**, **Investment type**, **Analytics category**, and **Effective start**
+- **Supplier**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **PP&E type**, **Investment type**, **Analytics category**, and **Effective start**
 - **Lifecycle**: the **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 - **Created** and **Updated** dates (read only)
 - **Priority** is set in the Properties panel when you create the item, then in the metadata bar
 
-**Tip**: When you create an item, an "obsolete account" warning means the selected account does not belong to the paying company's Chart of Accounts. Choose a different account to resolve the warning.
+**Tip**: When you create an item, an "obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning.
 
 ---
 
@@ -226,7 +225,7 @@ The Budget tab is where you enter financial data per year. It supports multiple 
 
 - If a year's budget is frozen (via Budget Administration), inputs are read-only and show a lock icon
 - Each column can be frozen independently (Budget, Revision, Forecast, Actuals, Expected landing)
-- You can still view frozen data; admins can unfreeze via **Budget Management > Budget Administration > Freeze/Unfreeze**
+- You can still view frozen data; admins can unfreeze via **Budget management > Administration > Freeze / unfreeze data**
 
 **Spreading an amount**:
 
@@ -297,7 +296,7 @@ The Allocations tab distributes the capital expenditure across your companies an
 
 **Default vs pinned methods**:
 
-- The **default** entry -- shown as *Headcount (default)* until your organisation configures another method -- follows the setting in **Budget Management > Administration > Default Allocation Method**. Every investment left on the default is re-driven when an admin changes that setting.
+- The **default** entry -- shown as *Headcount (default)* until your organisation configures another method -- follows the setting in **Budget management > Administration > Default allocation method**. Every investment left on the default is re-driven when an admin changes that setting.
 - That setting can also restrict the default to a **selection of companies** (for example the entity that carries the IT budget): the driver then applies to those companies only, and the option reads *Default (n companies)*.
 - **Headcount**, **IT users** and **Turnover** pin that method on the investment: a pinned method keeps working even if the organisation default changes later.
 - Investments with a manual allocation are never affected by the default setting.
@@ -323,7 +322,7 @@ The Allocations tab distributes the capital expenditure across your companies an
 
 **Common issues**:
 
-- **Missing metrics**: One or more companies have zero or missing headcount/IT users/turnover for the selected year. Fill in the metrics in **Master Data > Companies** (Details tab).
+- **Missing metrics**: One or more companies have zero or missing headcount/IT users/turnover for the selected year. Fill in the metrics in **Master data > Companies** (Details tab).
 - **"Manual percentages must sum to 100%."**: Adjust the rows, or click **Split equally**.
 
 **Tip**: Use Headcount for most items (it is simplest and updates automatically). Reserve Manual by company for investments that benefit only specific entities (e.g., regional data center). Use Manual by department for highly targeted investments.
@@ -332,7 +331,7 @@ The Allocations tab distributes the capital expenditure across your companies an
 
 ### Relations
 
-The Relations tab links this CAPEX item to related objects: Projects, Contracts, Contacts, Relevant websites, and Attachments. Everything on this tab saves automatically.
+The Relations tab links this CAPEX item to related objects: Projects, Applications, Contracts, Contacts, Relevant websites, and Attachments. Everything on this tab saves automatically.
 
 **Projects**:
 
@@ -340,6 +339,12 @@ The Relations tab links this CAPEX item to related objects: Projects, Contracts,
 - This helps group capital spend by project in reports and enables project accounting
 - The project names appear in the CAPEX list **Project** column, and the quick search finds them
 - Remove a project by clicking the X on its chip
+
+**Applications**:
+
+- Use the autocomplete to link one or more applications or services from your IT catalogue
+- This helps track which CAPEX items fund which applications or services
+- Remove an application by clicking the X on its chip
 
 **Contracts**:
 
@@ -369,9 +374,10 @@ The Relations tab links this CAPEX item to related objects: Projects, Contracts,
 **Why link?**:
 
 - **Projects**: Roll up capital spend by project for project accounting and reporting
+- **Applications**: See which applications or services an investment funds
 - **Contracts**: Track which capital items are covered by purchase agreements or service contracts
 - **Contacts**: Keep vendor and stakeholder contact details associated with the investment
-- **Websites & Attachments**: Centralize all investment-related documentation and references for easy access
+- **Relevant websites and attachments**: Centralize all investment-related documentation and references for easy access
 
 **Tip**: Upload vendor quotes, approval memos, and technical specs as attachments. Link contracts for procurement tracking. Use contacts to keep vendor representatives associated with each capital item.
 
@@ -407,28 +413,32 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
    - Currencies are allowed in your workspace currency settings
    - Owners are active users
    - An `item_number` matches an existing CAPEX item
-4. Review the preflight report (shows counts and up to 5 sample errors)
+   - Dates are valid, and no two rows describe the same item
+4. Review the preflight report (shows counts and up to 5 sample errors). A file with any error loads nothing: fix the rows and run the preflight again
 5. If OK, click **Load** to import
 
 **Important notes**:
 
-- **Matching**: A row with an `item_number` updates that CAPEX item; the preflight reports a number that matches no item. A row without one is matched by `description`: a match updates the item, otherwise the row creates a new item. When several rows match the same item, the first one counts.
+- **Matching**: A row with an `item_number` updates that CAPEX item; the preflight reports a number that matches no item. A row without one is matched by `description`: a match updates the item, otherwise the row creates a new item. Two rows with the same `item_number`, or with the same `description` and no number, are an error ("Same line as row N"): keep one row per item.
 - **New items**: `company_name` and `currency` are required for a new item. The currency must be allowed in your workspace currency settings. On an existing item, an empty currency cell keeps its currency.
+- **Dates**: `effective_start` (and `effective_end` in older files) must be a real calendar day in `YYYY-MM-DD` format, for example `2026-01-01`. Other formats, such as `01/03/2026`, are errors. An empty `effective_start` keeps the stored date of an existing item; a new item starts on January 1 of the current year.
 - **References**: `company_name` must match a Company by name (case-insensitive). `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused.
-- **PP&E Type**: Must be `hardware` or `software` (case-insensitive).
-- **Investment Type**: Must be one of: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (case-insensitive).
+- **PP&E type**: Must be `hardware` or `software` (case-insensitive).
+- **Investment type**: Must be one of: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (case-insensitive).
 - **Priority**: Must be `mandatory`, `high`, `medium`, or `low` (case-insensitive).
 - **Budgets**: Budget columns populate Y-1, Y, and Y+1 versions. Amounts are spread evenly across 12 months (Flat mode) and the column's period becomes the whole year. An empty cell leaves the column as it is; `0` clears it.
 - **Monthly amounts**: to load or review amounts month by month, with the period of each column, use the **Budget rows file** in Budget Administration.
 
 **Common errors**:
 
-- **"Company not found"**: Create the company in **Master Data > Companies** first, then re-import.
+- **"Company not found"**: Create the company in **Master data > Companies** first, then re-import.
 - **"Invalid ppe_type"**: Use `hardware` or `software` exactly.
 - **"Invalid investment_type"**: Use one of the 7 valid investment types (see list above).
 - **"Invalid priority"**: Use `mandatory`, `high`, `medium`, or `low`.
 - **"Invalid currency"**: Use 3-letter ISO codes (USD, EUR, GBP) that are allowed in your workspace currency settings.
 - **"Header mismatch"**: Download a fresh template; headers must match exactly (including order).
+- **"effective_start must be a valid date"**: Use the `YYYY-MM-DD` format.
+- **"Same line as row N"**: Two rows describe the same item. Merge them into one row, then re-import.
 
 **Tip**: Start with the template export, fill in a few rows, and run a preflight to catch issues early. Fix errors in the CSV and re-upload until preflight passes, then load.
 
@@ -461,8 +471,8 @@ Every CAPEX item has a **status** (Enabled or Disabled) and an optional **End of
 **When to disable vs delete**:
 
 - **Prefer disabling**: Keeps history intact, ensures reports remain consistent, and supports audit trails
-- **Delete only if**: The item was created by mistake and has no budgets, allocations, or tasks
-- Deletion is guarded: you cannot delete an item that has budget data, allocations, tasks, or is referenced by contracts
+- **Delete only if**: The item was created by mistake
+- Deleting an item also removes its budgets, allocations, tasks, relevant websites, attachments (with their files), and its links to contracts. If one of its tasks was turned into a request, the request is kept: it has its own copy of the title, description, and attachments, and only its link to the task goes
 
 **Tip**: Use the End of validity to mark assets that have been fully depreciated, disposed of, or projects that have completed. Do not delete unless it is a true mistake.
 
@@ -487,11 +497,11 @@ If you cannot perform an action (e.g., the **Import CSV** button is missing), ch
 
 ## Tips
 
-- **Start simple**: Create items with just the essentials (description, PP&E type, investment type, company), then add budgets and allocations as you plan.
+- **Start simple**: Create items with just the essentials (description, PP&E type, investment type, paying company, account), then add budgets and allocations as you plan.
 - **Use Headcount allocation**: For most capital investments, Headcount is enough. Reserve manual allocations for investments that benefit specific companies or departments only.
 - **Link contracts**: If you manage capital purchases via contracts, link them in the Relations tab for procurement tracking.
 - **Upload documentation**: Use the attachments feature to store vendor quotes, approval memos, and technical specs alongside the item.
-- **Classify accurately**: Use Investment Type and Priority consistently to enable meaningful capital spend analysis and prioritization.
+- **Classify accurately**: Use Investment type and Priority consistently to enable meaningful capital spend analysis and prioritization.
 - **Keep company metrics current**: Allocations depend on company headcount, IT users, and turnover. Outdated metrics cause allocation errors.
 - **Use CSV for bulk setup**: If you are migrating from another system or have many capital items, start with CSV import.
 - **Disable, do not delete**: Preserve history by disabling items when assets are disposed of or projects complete.

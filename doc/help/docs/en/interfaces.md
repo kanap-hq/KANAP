@@ -45,7 +45,7 @@ The Interfaces grid shows your integration registry at a glance.
 **Filtering**:
 
 - Quick search across all text columns
-- Column filters on lifecycle, criticality, data category, business process, contains PII, integration route, and data classification
+- Column filters on the text columns, including lifecycle and criticality. Business process, data category and contains PII have no column filter
 
 **Actions**:
 

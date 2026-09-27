@@ -78,12 +78,13 @@ Puede cambiar o eliminar la categoría en cualquier momento. La categoría se ap
 
 ## El informe de Dimensiones analíticas
 
-El **Informe de Dimensiones analíticas** (disponible en **Informes > Dimensiones analíticas**) visualiza la distribución presupuestaria entre sus categorías.
+El informe **Dimensiones analíticas** (en **Informes**) muestra cómo se reparte el presupuesto de sus partidas OPEX o CAPEX entre sus categorías. Consulte [Informes](reports.md) para la descripción completa.
 
 **Características del informe**:
+- **Tipo de partida**: OPEX o CAPEX
 - **Rango de años**: Un solo año (gráfico circular o de barras) o varios años (gráfico de líneas)
-- **Selección de métrica**: Presupuesto, OPEX, CAPEX, costes asignados u otros KPI
-- **Tipo de gráfico** (un solo año): Alternar entre circular y barras horizontales
+- **Métrica**: Presupuesto, Realizado, Aterrizaje previsto o Revisión
+- **Tipo de gráfico** (un solo año): Gráfico circular o gráfico de barras horizontal
 - **Exclusión de categorías**: Filtrar categorías específicas para centrarse en un subconjunto
 
 **Salidas del informe**:

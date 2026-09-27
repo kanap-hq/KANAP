@@ -12,17 +12,19 @@ L'espace de travail s'ouvre en mode création, avec le panneau **Propriétés** 
 
 **Champs obligatoires** :
   - **Nom du produit** (le titre) : Ce que vous dépensez (ex. : « Licences Salesforce », « Compute AWS »)
-  - **Fournisseur** : À qui vous payez. Lié à vos données de référence Fournisseurs
-  - **Société payeuse** : Quelle société paie le fournisseur (obligatoire pour la comptabilité)
+  - **Société payeuse** : Quelle société paie cette dépense (obligatoire pour la comptabilité)
   - **Compte** : Le compte du grand livre pour cette dépense. Seuls les comptes du plan comptable de la société payeuse apparaissent
   - **Devise** : Code ISO (ex. : USD, EUR). Par défaut la devise de votre espace de travail ; modifiable par poste
   - **Début d'effet** : Quand cette dépense commence (JJ/MM/AAAA)
 
 **Optionnel mais utile** :
+  - **Fournisseur** : À qui vous payez. Lié à vos fournisseurs dans les données de référence
   - **Catégorie analytique** : Regroupement personnalisé pour le reporting (ex. : « Infrastructure », « Apps métier »). De nouvelles catégories peuvent être créées à la volée
   - **Fin de validité** : La date à laquelle cette dépense s'arrête. Laissez-la vide s'il n'y a pas de fin. Après cette date, le poste est désactivé et les années suivantes ne comptent plus dans les vues budgétaires
   - **Responsable IT** / **Responsable métier** : Qui est en charge
   - **Description** et **Notes** : Texte libre dans l'onglet Vue d'ensemble
+
+Une fois renseignés, **Société payeuse** et **Compte** peuvent être modifiés mais pas vidés. **Fournisseur** peut être effacé à tout moment.
 
 Une fois le poste créé, l'espace de travail déverrouille les quatre onglets : **Vue d'ensemble**, **Budget**, **Ventilations** et **Relations**.
 
@@ -52,7 +54,7 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
   - **Devise** : Code devise ISO
   - **Début effectif** : Date de début
   - **Fin de validité** : Date à laquelle le poste s'arrête (vide signifie sans fin)
-  - **Responsable IT / Responsable métier** : Utilisateurs responsables
+  - **Responsable IT** / **Responsable métier** : Utilisateurs responsables
   - **Analytique** : Nom de la catégorie analytique
   - **Projet** : Noms des projets liés dans l'onglet Relations
   - **Notes** : Notes internes
@@ -60,7 +62,7 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
 
 **Filtrage** :
   - **Recherche rapide** : Recherche dans la référence, le nom du produit, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, la catégorie analytique, les notes, la devise et le statut. Filtre la liste en temps réel pendant la saisie
-  - **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Fournisseur**, **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier** et **Analytique** utilisent des filtres par jeu de cases à cocher (multi-sélection)
+  - **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Fournisseur**, **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, **Analytique** et **Activé** utilisent des filtres par jeu de cases à cocher (multi-sélection). Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**
   - **Filtres de montants** : Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants
   - **Filtres de dates** : **Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide
   - **Colonnes texte** : elles utilisent des filtres texte. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `OPX-12`
@@ -167,7 +169,7 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
 
 **Comportement du gel** :
   - Si les colonnes budgétaires d'une année sont gelées (via l'Administration budgétaire), les champs correspondants passent en lecture seule et affichent un cadenas
-  - Vous pouvez toujours consulter les données gelées ; les administrateurs peuvent dégeler via **Gestion budgétaire > Administration > Geler/Dégeler**
+  - Vous pouvez toujours consulter les données gelées ; les administrateurs peuvent dégeler via **Gestion budgétaire > Administration > Geler / Dégeler les données**
   - Chaque colonne peut être gelée indépendamment (Budget, Révision, Prévision, Réalisé, Atterrissage prévu)
 
 **Répartir un montant** :
@@ -314,24 +316,31 @@ Vous pouvez charger en masse les postes OPEX via CSV pour accélérer la configu
   2. Téléversez votre fichier CSV (glisser-déposer ou sélecteur de fichiers)
   3. Cliquez sur **Vérification** pour valider :
      - Les en-têtes correspondent exactement
-     - Les fournisseurs, sociétés, comptes et utilisateurs existent dans votre espace de travail
      - Les champs obligatoires (product_name, company_name, account_number) sont présents. Un nouveau poste nécessite aussi une devise
+     - Chaque société, fournisseur, compte et responsable du fichier existe dans votre espace de travail
+     - Les dates sont valides, et deux lignes ne décrivent pas le même poste
      - Les devises sont autorisées dans les paramètres de devise de votre espace de travail
      - Les responsables sont des utilisateurs actifs
-  4. Examinez le rapport de vérification (il affiche les totaux et jusqu'à 5 exemples d'erreurs)
+  4. Examinez le rapport de vérification (il affiche les totaux et jusqu'à 5 exemples d'erreurs). Un fichier qui contient une erreur ne charge rien : corrigez les lignes et relancez la vérification
   5. Si tout est correct, cliquez sur **Charger** pour importer
 
 **Remarques importantes** :
-  - **Correspondance** : Une ligne est rattachée à un poste OPEX par `(product_name, supplier_name)`. Une ligne qui correspond à un poste existant le met à jour ; toute autre ligne crée un nouveau poste. Si plusieurs lignes partagent la même combinaison, seule la première compte
+  - **Correspondance** : Une ligne est rattachée à un poste OPEX par le nom du produit et le fournisseur. Une ligne qui correspond à un poste existant le met à jour ; toute autre ligne crée un nouveau poste. Une ligne dont `supplier_name` est vide ne correspond qu'à un poste sans fournisseur. Deux lignes avec le même nom de produit et le même fournisseur sont une erreur (« Same line as row N ») : gardez une seule ligne par poste
   - **Devise** : Obligatoire pour un nouveau poste, et elle doit être autorisée dans les paramètres de devise de votre espace de travail. Sur un poste existant, une cellule vide conserve sa devise
-  - **Références** : `supplier_name` doit correspondre à un Fournisseur par nom (insensible à la casse). `company_name` doit correspondre à une Société et `account_number` à un Compte. `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail : un utilisateur invité ou un contact sans compte est refusé
+  - **Fournisseur** : `supplier_name` est facultatif. S'il est renseigné, le fournisseur qui porte exactement ce nom est utilisé. Sinon, le nom est rapproché sans tenir compte de la casse. Un nom qui ne correspond à aucun fournisseur est une erreur, tout comme un nom qui correspond à plusieurs fournisseurs ne différant que par la casse (par exemple « Acme » et « ACME » quand le fichier indique « acme »)
+  - **Société et compte** : `company_name` doit correspondre à une société par nom (insensible à la casse). `account_number` est recherché dans le plan comptable de cette société, ou dans le plan comptable par défaut si la société n'en a pas. Un numéro de compte qui n'existe que dans un autre plan comptable est une erreur
+  - **Responsables** : `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail : un utilisateur invité ou un contact sans compte est refusé
+  - **Dates** : `effective_start` (et `effective_end` dans les anciens fichiers) doit être un jour calendaire réel au format `YYYY-MM-DD`, par exemple `2026-01-01`. Les autres formats, comme `01/03/2026`, sont des erreurs. Un `effective_start` vide conserve la date enregistrée d'un poste existant ; un nouveau poste commence le 1er janvier de l'année en cours
   - **Catégorie analytique** : Si la catégorie n'existe pas, elle est créée automatiquement pendant l'import
   - **Budgets** : Les colonnes budgétaires alimentent les versions A-1, A et A+1. Les montants sont répartis uniformément sur 12 mois (mode Annuel) et la période de la colonne devient l'année entière. Une cellule vide laisse la colonne telle quelle ; `0` l'efface
   - **Montants mensuels** : pour charger ou relire les montants mois par mois, avec la période de chaque colonne, utilisez le **Fichier des lignes budgétaires** dans l'Administration budgétaire
 
 **Erreurs courantes** :
-  - **« Fournisseur introuvable »** : Créez d'abord le fournisseur dans **Données de référence > Fournisseurs**, puis relancez l'import
-  - **« Compte introuvable »** : Ajoutez le compte dans **Données de référence > Plans comptables**, puis relancez l'import
+  - **« Supplier '...' not found »** : Vérifiez l'orthographe, ou créez d'abord le fournisseur dans **Données de référence > Fournisseurs**, puis relancez l'import
+  - **« Supplier '...' matches more than one supplier »** : Plusieurs fournisseurs ne diffèrent de ce nom que par la casse. Écrivez le nom exactement comme l'un d'eux, ou renommez-en un dans **Données de référence > Fournisseurs**, puis relancez l'import
+  - **« Same line as row N »** : Deux lignes décrivent le même poste. Fusionnez-les en une seule ligne, puis relancez l'import
+  - **« Account ... not found in ...'s chart of accounts »** : Utilisez un compte du plan comptable de la société payeuse, ou ajoutez le compte dans **Données de référence > Plans comptables**, puis relancez l'import
+  - **« effective_start must be a valid date »** : Utilisez le format `YYYY-MM-DD`
   - **« Devise invalide »** : Utilisez des codes ISO à 3 lettres (USD, EUR, GBP) autorisés dans les paramètres de devise de votre espace de travail
   - **« En-têtes non conformes »** : Téléchargez un modèle récent ; les en-têtes doivent correspondre exactement (ordre compris)
 
@@ -362,8 +371,8 @@ Chaque poste OPEX a un **statut** (Activé ou Désactivé) et une **Fin de valid
 
 **Désactiver ou supprimer** :
   - **Privilégiez la désactivation** : Elle préserve l'historique, garantit la cohérence des rapports et conserve la piste d'audit
-  - **Supprimez uniquement si** : Le poste a été créé par erreur et n'a ni budget, ni ventilation, ni tâche
-  - La suppression est protégée : vous ne pouvez pas supprimer un poste référencé par des contrats ou des tâches, ou qui a des données budgétaires
+  - **Supprimez uniquement si** : Le poste a été créé par erreur
+  - Supprimer un poste supprime aussi ses budgets, ventilations, tâches, sites web pertinents, pièces jointes (avec leurs fichiers) et ses liens vers des contrats. Si l'une de ses tâches a été transformée en demande, la demande est conservée : elle possède sa propre copie du titre, de la description et des pièces jointes, et seul son lien vers la tâche disparaît
 
 **Conseil** : Utilisez la Fin de validité pour clore les postes OPEX lorsque les contrats se terminent ou que les services sont arrêtés. Ne supprimez qu'en cas de véritable erreur.
 
@@ -371,9 +380,9 @@ Chaque poste OPEX a un **statut** (Activé ou Désactivé) et une **Fin de valid
 
 ## Conseils et bonnes pratiques
 
-1. **Commencez simple** : Créez les postes avec juste l'essentiel (nom du produit, fournisseur, société payeuse, compte), puis ajoutez les budgets et ventilations au fur et à mesure que vous planifiez.
+1. **Commencez simple** : Créez les postes avec juste l'essentiel (nom du produit, société payeuse, compte), puis ajoutez les budgets et ventilations au fur et à mesure que vous planifiez.
 
-2. **Utilisez la méthode de ventilation par défaut** : Pour la plupart des postes, Effectif (Par défaut) suffit. Réservez les ventilations manuelles aux dépenses qui ne bénéficient qu'à des sociétés ou départements spécifiques.
+2. **Utilisez la méthode de ventilation par défaut** : Pour la plupart des postes, Effectif (par défaut) suffit. Réservez les ventilations manuelles aux dépenses qui ne bénéficient qu'à des sociétés ou départements spécifiques.
 
 3. **Liez les contrats** : Si vous gérez les dépenses via des contrats, liez-les dans l'onglet Relations. Cela facilite le suivi des renouvellements.
 

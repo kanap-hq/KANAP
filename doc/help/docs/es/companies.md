@@ -173,8 +173,8 @@ Mantenga grandes conjuntos sincronizados con sus sistemas de origen usando CSV (
 
 **Exportar**:
 
-- **Plantilla**: archivo solo con encabezados que puede rellenar (incluye columnas dinámicas para Y-1, Y, Y+1 basadas en el año seleccionado)
-- **Datos**: empresas actuales más sus métricas para Y-1 / Y / Y+1
+- **Plantilla**: archivo solo con encabezados que puede rellenar (incluye columnas dinámicas para A-1, A, A+1 basadas en el año seleccionado)
+- **Datos**: empresas actuales más sus métricas para A-1 / A / A+1
 
 **Importar**:
 

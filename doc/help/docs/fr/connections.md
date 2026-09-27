@@ -43,7 +43,7 @@ La liste vous offre une vue filtrable de chaque connexion de votre registre.
 
 **Filtrage** :
   - Recherche rapide : Recherche dans les champs de connexion
-  - Filtres de colonnes : Topologie, Criticité, Classe de données, PII, Risque, Cycle de vie
+  - Filtres de colonnes : Topologie et Cycle de vie (listes à cocher). Criticité, Classe de données et PII n'ont pas de filtre de colonne
 
 **Actions** :
   - **Ajouter une connexion** : Créer une nouvelle connexion (nécessite `infrastructure:member`)

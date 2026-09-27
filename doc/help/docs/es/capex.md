@@ -2,7 +2,7 @@
 
 Las partidas CAPEX (gasto de capital) son sus inversiones en activos a largo plazo: compras de hardware, licencias de software con valor plurianual, proyectos de infraestructura y equipamiento. Aquí es donde planifica los presupuestos de capital, hace seguimiento del gasto de proyectos y asigna costes en toda su organización.
 
-El espacio de trabajo CAPEX le ayuda a gestionar cada partida de capital desde la presupuestación inicial hasta la ejecución y los informes -- todo en un solo lugar con columnas presupuestarias año a año, métodos flexibles de asignación y vínculos directos a proyectos, contratos y contactos.
+El espacio de trabajo CAPEX le ayuda a gestionar cada partida de capital desde la presupuestación inicial hasta la ejecución y los informes -- todo en un solo lugar con columnas presupuestarias año a año, métodos flexibles de asignación y vínculos directos a proyectos, aplicaciones, contratos y contactos.
 
 ## Primeros pasos
 
@@ -14,23 +14,22 @@ El espacio de trabajo se abre en modo de creación, con el panel **Propiedades**
 
 - **Título**: En qué invierte (p. ej., "Nueva infraestructura de servidores", "Licencia de software ERP"). Es la descripción de la partida, que aparece en la columna **Descripción** de la lista
 - **Empresa pagadora**: Qué empresa realiza la inversión (obligatorio para contabilidad)
+- **Cuenta**: La cuenta contable de este gasto de capital. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora
 - **Moneda**: Código ISO (p. ej., USD, EUR). Por defecto la moneda CAPEX de su espacio de trabajo; puede cambiarla por partida
 - **Tipo de activo fijo**: Clasificación de propiedad, planta y equipo -- Hardware o Software
 - **Tipo de inversión**: Propósito de la inversión (vea las opciones más abajo)
 - **Prioridad**: Nivel de prioridad de negocio (vea las opciones más abajo)
 - **Inicio de vigencia**: Cuándo comienza esta inversión (DD/MM/AAAA)
 
-**Muy recomendado**:
-
-- **Cuenta**: La cuenta contable de este gasto de capital. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora
-- **Proveedor**: El proveedor de esta inversión. Selecciónelo en sus datos maestros de proveedores
-
 **Opcional pero útil**:
 
+- **Proveedor**: El proveedor de esta inversión. Selecciónelo entre sus proveedores en datos maestros
 - **Categoría analítica**: Agrupación personalizada para informes
 - **Fin de validez**: La fecha en que termina esta inversión, por ejemplo al final de la vida útil del activo o al completarse el proyecto. Déjela en blanco si no hay fin. Después de esa fecha, la partida queda desactivada y los años posteriores dejan de contar en las vistas presupuestarias
 - **Responsable de TI** / **Responsable de negocio**: Quién es responsable
 - **Descripción** (pestaña Vista general): Detalles en texto libre sobre la inversión
+
+Una vez definidas, **Empresa pagadora** y **Cuenta** se pueden cambiar, pero no vaciar. **Proveedor** se puede borrar en cualquier momento. Las partidas creadas por una importación CSV no tienen cuenta (el archivo CAPEX no tiene columna de cuenta): defínala en el panel **Propiedades**.
 
 Una vez creada la partida, el espacio de trabajo desbloquea las cuatro pestañas: **Vista general**, **Presupuesto**, **Asignaciones** y **Relaciones**.
 
@@ -47,7 +46,7 @@ Las partidas CAPEX deben clasificarse por tipo de inversión. Esto ayuda a anali
 - **Productividad**: Mejorar la eficiencia o reducir costes operativos
 - **Seguridad**: Reforzar la postura de seguridad, la conformidad o la mitigación de riesgos
 - **Conformidad**: Cumplir requisitos regulatorios o de conformidad
-- **Crecimiento de negocio**: Habilitar nuevos productos, mercados o capacidades de negocio
+- **Crecimiento del negocio**: Habilitar nuevos productos, mercados o capacidades de negocio
 - **Otro**: Inversiones que no encajan en las categorías anteriores
 
 **Niveles de prioridad**:
@@ -104,7 +103,7 @@ El cuadro de búsqueda en la parte superior busca en la referencia, la descripci
 
 ### Filtros de columna
 
-Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio** y **Analítica** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. Múltiples filtros se combinan con lógica AND.
+Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, **Analítica** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Múltiples filtros se combinan con lógica AND.
 
 Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes.
 
@@ -226,7 +225,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 
 - Si el presupuesto de un año está congelado (vía Administración presupuestaria), los campos pasan a solo lectura y muestran un candado
 - Cada columna puede congelarse independientemente (Presupuesto, Revisión, Previsión, Realizado, Aterrizaje previsto)
-- Puede ver los datos congelados; los administradores pueden descongelar vía **Gestión presupuestaria > Administración > Congelar/Descongelar**
+- Puede ver los datos congelados; los administradores pueden descongelar vía **Gestión presupuestaria > Administración > Congelar / Descongelar datos**
 
 **Repartir un importe**:
 
@@ -332,7 +331,7 @@ La pestaña Asignaciones distribuye el gasto de capital entre sus empresas y dep
 
 ### Relaciones
 
-La pestaña Relaciones vincula esta partida CAPEX con objetos relacionados: Proyectos, Contratos, Contactos, Sitios web relevantes y Adjuntos. Todo lo de esta pestaña se guarda automáticamente.
+La pestaña Relaciones vincula esta partida CAPEX con objetos relacionados: Proyectos, Aplicaciones, Contratos, Contactos, Sitios web relevantes y Adjuntos. Todo lo de esta pestaña se guarda automáticamente.
 
 **Proyectos**:
 
@@ -340,6 +339,12 @@ La pestaña Relaciones vincula esta partida CAPEX con objetos relacionados: Proy
 - Esto ayuda a agrupar el gasto de capital por proyecto en los informes y permite la contabilidad de proyectos
 - Los nombres de los proyectos aparecen en la columna **Proyecto** de la lista CAPEX, y la búsqueda rápida los encuentra
 - Quite un proyecto haciendo clic en la X de su chip
+
+**Aplicaciones**:
+
+- Use el autocompletado para vincular una o más aplicaciones o servicios de su catálogo IT
+- Esto ayuda a saber qué partidas CAPEX financian qué aplicaciones o servicios
+- Quite una aplicación haciendo clic en la X de su chip
 
 **Contratos**:
 
@@ -369,9 +374,10 @@ La pestaña Relaciones vincula esta partida CAPEX con objetos relacionados: Proy
 **¿Por qué vincular?**:
 
 - **Proyectos**: Consolidar el gasto de capital por proyecto para la contabilidad y los informes de proyectos
+- **Aplicaciones**: Ver qué aplicaciones o servicios financia una inversión
 - **Contratos**: Saber qué partidas de capital están cubiertas por acuerdos de compra o contratos de servicio
 - **Contactos**: Mantener los datos de contacto de proveedores y partes interesadas asociados a la inversión
-- **Sitios web y adjuntos**: Centralizar toda la documentación y las referencias de la inversión para acceder fácilmente
+- **Sitios web relevantes y adjuntos**: Centralizar toda la documentación y las referencias de la inversión para acceder fácilmente
 
 **Consejo**: Suba presupuestos de proveedores, memorandos de aprobación y especificaciones técnicas como adjuntos. Vincule contratos para seguir las compras. Use los contactos para asociar los interlocutores del proveedor a cada partida de capital.
 
@@ -386,7 +392,7 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 1. Haga clic en **Exportar CSV** en la lista CAPEX
 2. Elija:
    - **Plantilla**: Solo encabezados (úselo para crear un CSV en blanco para rellenar)
-   - **Datos**: Todas las partidas CAPEX, incluidas las finalizadas, con presupuestos de Y-1 a Y+2
+   - **Datos**: Todas las partidas CAPEX, incluidas las finalizadas, con presupuestos de A-1 a A+2
 
 **Estructura del CSV**:
 
@@ -407,18 +413,20 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
    - Las monedas están permitidas en la configuración de monedas de su espacio de trabajo
    - Los responsables son usuarios activos
    - Un `item_number` corresponde a una partida CAPEX existente
-4. Revise el informe de verificación previa (muestra conteos y hasta 5 errores de ejemplo)
+   - Las fechas son válidas y no hay dos filas que describan la misma partida
+4. Revise el informe de verificación previa (muestra conteos y hasta 5 errores de ejemplo). Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa
 5. Si es correcto, haga clic en **Cargar** para importar
 
 **Notas importantes**:
 
-- **Correspondencia**: Una fila con un `item_number` actualiza esa partida CAPEX; la verificación previa señala un número que no corresponde a ninguna partida. Una fila sin número se asocia por `description`: si coincide, actualiza la partida; si no, crea una partida nueva. Si varias filas coinciden con la misma partida, cuenta la primera.
+- **Correspondencia**: Una fila con un `item_number` actualiza esa partida CAPEX; la verificación previa señala un número que no corresponde a ninguna partida. Una fila sin número se asocia por `description`: si coincide, actualiza la partida; si no, crea una partida nueva. Dos filas con el mismo `item_number`, o con la misma `description` y sin número, son un error ("Same line as row N"): conserve una sola fila por partida.
 - **Partidas nuevas**: `company_name` y `currency` son obligatorios para una partida nueva. La moneda debe estar permitida en la configuración de monedas de su espacio de trabajo. En una partida existente, una celda de moneda vacía conserva su moneda.
+- **Fechas**: `effective_start` (y `effective_end` en archivos antiguos) debe ser un día real del calendario en formato `YYYY-MM-DD`, por ejemplo `2026-01-01`. Otros formatos, como `01/03/2026`, son errores. Un `effective_start` vacío conserva la fecha guardada de una partida existente; una partida nueva empieza el 1 de enero del año en curso.
 - **Referencias**: `company_name` debe coincidir con una empresa por nombre (sin distinguir mayúsculas). `owner_it_email` y `owner_business_email` deben coincidir con usuarios activos por correo electrónico: un usuario invitado o un contacto sin cuenta se rechaza.
 - **Tipo de activo fijo**: Debe ser `hardware` o `software` (sin distinguir mayúsculas).
 - **Tipo de inversión**: Debe ser uno de: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (sin distinguir mayúsculas).
 - **Prioridad**: Debe ser `mandatory`, `high`, `medium` o `low` (sin distinguir mayúsculas).
-- **Presupuestos**: Las columnas presupuestarias rellenan las versiones Y-1, Y e Y+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual) y el periodo de la columna pasa a ser todo el año. Una celda vacía deja la columna como está; `0` la borra.
+- **Presupuestos**: Las columnas presupuestarias rellenan las versiones A-1, A y A+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual) y el periodo de la columna pasa a ser todo el año. Una celda vacía deja la columna como está; `0` la borra.
 - **Importes mensuales**: para cargar o revisar los importes mes a mes, con el periodo de cada columna, use el **Archivo de filas presupuestarias** en la Administración presupuestaria.
 
 **Errores comunes**:
@@ -429,6 +437,8 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 - **"Prioridad inválida"**: Utilice `mandatory`, `high`, `medium` o `low`.
 - **"Moneda inválida"**: Utilice códigos ISO de 3 letras (USD, EUR, GBP) que estén permitidos en la configuración de monedas de su espacio de trabajo.
 - **"Desajuste de encabezados"**: Descargue una plantilla nueva; los encabezados deben coincidir exactamente (incluido el orden).
+- **"effective_start must be a valid date"**: Use el formato `YYYY-MM-DD`.
+- **"Same line as row N"**: Dos filas describen la misma partida. Combínelas en una sola fila, luego reimporte.
 
 **Consejo**: Comience con la exportación de plantilla, rellene algunas filas y ejecute una verificación previa para detectar problemas temprano. Corrija errores en el CSV y vuelva a subirlo hasta que la verificación previa pase, luego cargue.
 
@@ -461,8 +471,8 @@ Cada partida CAPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin d
 **Cuándo desactivar vs eliminar**:
 
 - **Prefiera desactivar**: Mantiene el historial intacto, asegura que los informes permanezcan consistentes y soporta registros de auditoría
-- **Elimine solo si**: La partida se creó por error y no tiene presupuestos, asignaciones ni tareas
-- La eliminación está protegida: no puede eliminar una partida que tiene datos presupuestarios, asignaciones, tareas o está referenciada por contratos
+- **Elimine solo si**: La partida se creó por error
+- Eliminar una partida también elimina sus presupuestos, asignaciones, tareas, sitios web relevantes, adjuntos (con sus archivos) y sus vínculos con contratos. Si una de sus tareas se convirtió en una solicitud, la solicitud se conserva: tiene su propia copia del título, la descripción y los adjuntos, y solo se pierde su vínculo con la tarea
 
 **Consejo**: Utilice el Fin de validez para marcar activos que han sido completamente depreciados, eliminados o proyectos completados. No elimine a menos que sea un verdadero error.
 
@@ -487,7 +497,7 @@ Si no puede realizar una acción (p. ej., falta el botón **Importar CSV**), con
 
 ## Consejos
 
-- **Empiece simple**: Cree partidas con solo lo esencial (descripción, tipo de activo fijo, tipo de inversión, empresa), luego añada presupuestos y asignaciones a medida que planifica.
+- **Empiece simple**: Cree partidas con solo lo esencial (descripción, tipo de activo fijo, tipo de inversión, empresa pagadora, cuenta), luego añada presupuestos y asignaciones a medida que planifica.
 - **Use asignación por Plantilla**: Para la mayoría de inversiones de capital, Plantilla es suficiente. Reserve asignaciones manuales para inversiones que benefician solo a empresas o departamentos específicos.
 - **Vincule contratos**: Si gestiona compras de capital mediante contratos, vincúlelos en la pestaña Relaciones para el seguimiento de adquisiciones.
 - **Suba documentación**: Utilice la funcionalidad de adjuntos para almacenar presupuestos de proveedores, memorandos de aprobación y especificaciones técnicas junto a la partida.

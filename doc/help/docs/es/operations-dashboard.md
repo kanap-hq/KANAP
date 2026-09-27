@@ -1,11 +1,11 @@
 # Vista general de la gestión presupuestaria
 
-El Panel de control de la gestión presupuestaria es la primera página que ve después de iniciar sesión. Le ofrece una vista de alto nivel de dónde se encuentra su gasto IT en este momento -- resúmenes de OPEX y CAPEX, próximos plazos, indicadores de calidad de datos y los elementos que más merecen su atención -- todo en un solo lugar.
+La vista general de la gestión presupuestaria le ofrece una vista de alto nivel de dónde se encuentra su gasto IT en este momento: resúmenes de OPEX y CAPEX, próximos plazos, indicadores de calidad de datos y los elementos que más merecen su atención, todo en un solo lugar.
 
 ## Dónde encontrarlo
 
 - Ruta: **Gestión presupuestaria > Vista general** (`/ops`)
-- Esta es también la página de destino predeterminada después del inicio de sesión.
+- La página que ve después de iniciar sesión es su [panel de control](my-dashboard.md) personal. Abra esta vista general desde el espacio **Gestión presupuestaria**.
 
 ## Diseño
 
@@ -37,37 +37,39 @@ Lista los próximos cinco plazos de cancelación de contratos que aún están en
 
 Haga clic en **Ver todo** para abrir la página de Contratos.
 
-### Calidad de datos (OPEX)
+### Calidad de datos
 
-Cuatro indicadores que le ayudan a detectar registros OPEX incompletos de un vistazo:
+Cuatro controles que le ayudan a detectar registros incompletos de un vistazo. El mosaico muestra una columna de recuentos por cada tipo de partida que usted puede consultar: **OPEX** y **CAPEX** uno junto al otro.
 
-- **Sin responsable IT** -- elementos sin asignación de responsable IT
-- **Sin responsable de negocio** -- elementos sin asignación de responsable de negocio
-- **Sin empresa pagadora** -- elementos sin empresa pagadora establecida
-- **Desajustes de CoA** -- elementos donde la cuenta seleccionada no pertenece al plan de cuentas de la empresa pagadora
+- **Sin responsable IT**: partidas sin responsable IT
+- **Sin responsable de negocio**: partidas sin responsable de negocio
+- **Sin empresa pagadora**: partidas sin empresa pagadora
+- **Cuenta fuera del plan de la empresa**: partidas cuya cuenta no pertenece al plan de cuentas de la empresa pagadora
 
-Los indicadores se vuelven naranja (o rojo para desajustes de CoA) cuando el recuento es superior a cero. Haga clic en cualquier indicador para ir a la lista OPEX.
+Un recuento se vuelve naranja (rojo para el control del plan de cuentas) cuando es superior a cero. Haga clic en un recuento para abrir la lista de ese tipo.
 
 ### Acciones rápidas
 
 Botones de acceso directo para crear una nueva partida OPEX o CAPEX directamente desde el panel de control. Estos botones solo son visibles si su rol le otorga al menos permisos de `opex:manager` o `capex:manager`.
 
-Debajo de los botones, una sección de **Actualizaciones recientes de OPEX** lista las cinco partidas OPEX modificadas más recientemente con su fecha de última modificación.
+Debajo de los botones, una sección de **Actualizaciones recientes** lista las cinco partidas modificadas más recientemente, OPEX y CAPEX juntas. Cada fila muestra la fecha de la última modificación, el nombre de la partida y su tipo. Haga clic en una fila para abrir la partida.
 
-### Top OPEX (A)
+### Top partidas (A)
 
-Las cinco partidas OPEX más grandes para el año actual, clasificadas por importe presupuestario. Los importes se redondean a miles con sufijo "k".
+Las cinco partidas más grandes para el año actual, clasificadas por importe presupuestario. Los importes se redondean a miles con sufijo "k".
 
-Haga clic en **Abrir** para ver el informe completo de Top OPEX.
+Use las pestañas **OPEX** / **CAPEX** del encabezado del mosaico para elegir el tipo de partida. El mosaico recuerda su elección. Haga clic en **Abrir** para ver el informe completo Top partidas sobre el mismo tipo.
 
 ### Mayores incrementos (A vs A-1)
 
-Las cinco partidas OPEX con el mayor incremento presupuestario comparado con el año anterior. Los importes se redondean a miles con sufijo "k".
+Las cinco partidas con el mayor incremento presupuestario comparado con el año anterior, calculado sobre todas las partidas del tipo. Las partidas cuyo presupuesto se mantuvo o bajó no aparecen. Los importes se redondean a miles con sufijo "k".
 
-Haga clic en **Abrir** para ver el informe completo de Delta OPEX.
+Use las pestañas **OPEX** / **CAPEX** del encabezado del mosaico para elegir el tipo de partida. El mosaico recuerda su elección. Haga clic en **Abrir** para ver el informe completo Top aumento / disminución sobre el mismo tipo.
+
+Un tipo que usted no puede consultar aparece desactivado en las pestañas y no tiene columna en **Calidad de datos**. Si no puede consultar ni OPEX ni CAPEX, estos mosaicos se ocultan.
 
 ## Consejos
 
-- **Números redondeados**: Cada importe en el panel de control se redondea a miles para una vista compacta. Abra la lista OPEX o CAPEX -- o la sección de Informes -- cuando necesite cifras exactas.
+- **Números redondeados**: Cada importe en el panel de control se redondea a miles para una vista compacta. Abra la lista OPEX o CAPEX, o los informes, cuando necesite cifras exactas.
 - **Botones ausentes**: Si no ve los botones **Nuevo OPEX** o **Nuevo CAPEX**, su rol actual no incluye el permiso de gestor requerido. Solicite a su administrador que verifique su acceso.
 - **Mosaicos vacíos**: Un mosaico que muestra "Sin datos" simplemente significa que no hay registros de ese tipo todavía. Una vez que usted o su equipo empiecen a introducir datos, el mosaico se llenará automáticamente.

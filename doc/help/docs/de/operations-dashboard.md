@@ -1,11 +1,11 @@
 # Budgetverwaltung -- Übersicht
 
-Das Dashboard der Budgetverwaltung ist die erste Seite, die Sie nach der Anmeldung sehen. Es bietet Ihnen einen Überblick darüber, wo Ihre IT-Ausgaben aktuell stehen -- OPEX- und CAPEX-Überblick, anstehende Fristen, Datenqualitätsindikatoren und die Positionen, die Ihre Aufmerksamkeit am meisten verdienen -- alles an einem Ort.
+Die Übersicht der Budgetverwaltung zeigt Ihnen auf einen Blick, wo Ihre IT-Ausgaben aktuell stehen: OPEX- und CAPEX-Überblick, anstehende Fristen, Datenqualitätsindikatoren und die Positionen, die Ihre Aufmerksamkeit am meisten verdienen, alles an einem Ort.
 
 ## Wo Sie es finden
 
 - Pfad: **Budgetverwaltung > Übersicht** (`/ops`)
-- Dies ist auch die Standard-Startseite nach der Anmeldung.
+- Nach der Anmeldung landen Sie auf Ihrem persönlichen [Dashboard](my-dashboard.md). Diese Übersicht öffnen Sie im Arbeitsbereich **Budgetverwaltung**.
 
 ## Layout
 
@@ -37,37 +37,39 @@ Listet die nächsten fünf Vertragskündigungsfristen auf, die noch in der Zukun
 
 Klicken Sie auf **Alle anzeigen**, um die Verträge-Seite zu öffnen.
 
-### Datenqualität (OPEX)
+### Datenqualität
 
-Vier Indikator-Chips, die Ihnen helfen, unvollständige OPEX-Datensätze auf einen Blick zu erkennen:
+Vier Prüfungen, die Ihnen helfen, unvollständige Datensätze auf einen Blick zu erkennen. Die Kachel zeigt eine Spalte mit Zählern pro Positionstyp, den Sie lesen dürfen: **OPEX** und **CAPEX** nebeneinander.
 
-- **Kein IT-Verantwortlicher** -- Positionen ohne zugewiesenen IT-Verantwortlichen
-- **Kein Fachverantwortlicher** -- Positionen ohne zugewiesenen Fachbereichsverantwortlichen
-- **Kein zahlendes Unternehmen** -- Positionen ohne zugewiesenes zahlendes Unternehmen
-- **Kontenplan-Abweichungen** -- Positionen, bei denen das ausgewählte Konto nicht zum Kontenplan des zahlenden Unternehmens gehört
+- **Ohne IT-Verantwortlichen**: Positionen ohne IT-Verantwortlichen
+- **Ohne Fachbereichsverantwortlichen**: Positionen ohne Fachbereichsverantwortlichen
+- **Ohne zahlendes Unternehmen**: Positionen ohne zahlendes Unternehmen
+- **Konto nicht im Kontenplan des Unternehmens**: Positionen, deren Konto nicht zum Kontenplan des zahlenden Unternehmens gehört
 
-Chips werden orange (oder rot bei Kontenplan-Abweichungen), wenn die Anzahl über null liegt. Klicken Sie auf einen beliebigen Chip, um zur OPEX-Liste zu springen.
+Ein Zähler wird orange (rot bei der Kontenplan-Prüfung), wenn er über null liegt. Klicken Sie auf einen Zähler, um die Liste dieses Typs zu öffnen.
 
 ### Schnellaktionen
 
 Verknüpfungsschaltflächen zum direkten Erstellen einer neuen OPEX- oder CAPEX-Position vom Dashboard aus. Diese Schaltflächen sind nur sichtbar, wenn Ihre Rolle Ihnen mindestens die Berechtigung `opex:manager` oder `capex:manager` gewährt.
 
-Unterhalb der Schaltflächen listet ein Abschnitt **Letzte OPEX-Aktualisierungen** die fünf zuletzt geänderten OPEX-Positionen mit ihrem Änderungsdatum auf.
+Unterhalb der Schaltflächen listet ein Abschnitt **Aktuelle Änderungen** die fünf zuletzt bearbeiteten Positionen auf, OPEX und CAPEX zusammen. Jede Zeile zeigt das Datum der letzten Bearbeitung, den Namen der Position und ihren Typ. Klicken Sie auf eine Zeile, um die Position zu öffnen.
 
-### Top OPEX (J)
+### Top-Positionen (J)
 
-Die fünf größten OPEX-Positionen für das aktuelle Jahr, nach Budgetbetrag sortiert. Beträge sind auf Tausender gerundet mit dem Suffix „k".
+Die fünf größten Positionen für das aktuelle Jahr, nach Budgetbetrag sortiert. Beträge sind auf Tausender gerundet mit dem Suffix „k".
 
-Klicken Sie auf **Öffnen**, um den vollständigen Top-OPEX-Bericht anzuzeigen.
+Wählen Sie mit den Tabs **OPEX** / **CAPEX** im Kopf der Kachel den Positionstyp. Die Kachel merkt sich Ihre Wahl. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top-Positionen** für denselben Typ anzuzeigen.
 
 ### Stärkste Zuwächse (J vs J-1)
 
-Die fünf OPEX-Positionen mit der größten Budgeterhöhung im Vergleich zum Vorjahr. Beträge sind auf Tausender gerundet mit dem Suffix „k".
+Die fünf Positionen mit der größten Budgeterhöhung im Vergleich zum Vorjahr, berechnet über alle Positionen des Typs. Positionen, deren Budget gleich geblieben oder gesunken ist, erscheinen nicht. Beträge sind auf Tausender gerundet mit dem Suffix „k".
 
-Klicken Sie auf **Öffnen**, um den vollständigen OPEX-Delta-Bericht anzuzeigen.
+Wählen Sie mit den Tabs **OPEX** / **CAPEX** im Kopf der Kachel den Positionstyp. Die Kachel merkt sich Ihre Wahl. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top Anstieg / Rückgang** für denselben Typ anzuzeigen.
+
+Ein Typ, den Sie nicht lesen dürfen, ist in den Tabs deaktiviert und hat keine Spalte in **Datenqualität**. Dürfen Sie weder OPEX noch CAPEX lesen, sind diese Kacheln ausgeblendet.
 
 ## Tipps
 
-- **Gerundete Zahlen**: Jeder Betrag auf dem Dashboard ist zur kompakten Darstellung auf Tausender gerundet. Öffnen Sie die OPEX- oder CAPEX-Liste -- oder den Berichtsbereich -- wenn Sie genaue Zahlen benötigen.
+- **Gerundete Zahlen**: Jeder Betrag auf dem Dashboard ist zur kompakten Darstellung auf Tausender gerundet. Öffnen Sie die OPEX- oder CAPEX-Liste oder die Berichte, wenn Sie genaue Zahlen benötigen.
 - **Fehlende Schaltflächen**: Wenn Sie die Schaltflächen **Neue OPEX** oder **Neue CAPEX** nicht sehen, enthält Ihre aktuelle Rolle nicht die erforderliche Manager-Berechtigung. Bitten Sie Ihren Administrator, Ihren Zugriff zu prüfen.
 - **Leere Kacheln**: Eine Kachel, die „Keine Daten" zeigt, bedeutet einfach, dass noch keine Datensätze dieses Typs vorhanden sind. Sobald Sie oder Ihr Team mit der Dateneingabe beginnen, wird die Kachel automatisch befüllt.

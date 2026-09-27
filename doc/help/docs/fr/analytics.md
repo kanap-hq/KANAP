@@ -78,12 +78,13 @@ Vous pouvez changer ou supprimer la catégorie à tout moment. La catégorie s'a
 
 ## Le rapport Dimensions analytiques
 
-Le rapport **Dimensions analytiques** (disponible sous **Rapports > Dimensions analytiques**) visualise la répartition budgétaire par catégorie.
+Le rapport **Dimensions analytiques** (sous **Rapports**) montre comment le budget de vos postes OPEX ou CAPEX se répartit entre vos catégories. Consultez [Rapports](reports.md) pour la description complète.
 
 **Fonctionnalités du rapport** :
+- **Type de poste** : OPEX ou CAPEX
 - **Plage d'années** : Année unique (graphique circulaire ou en barres) ou multi-année (graphique en ligne)
-- **Sélection de métrique** : Budget, OPEX, CAPEX, coûts ventilés ou divers KPI
-- **Type de graphique** (année unique) : Basculer entre circulaire et barres horizontales
+- **Métrique** : Budget, Réalisé, Atterrissage prévu ou Révision
+- **Type de graphique** (année unique) : Graphique circulaire ou graphique en barres horizontales
 - **Exclusion de catégories** : Filtrer des catégories spécifiques pour se concentrer sur un sous-ensemble
 
 **Sorties du rapport** :
