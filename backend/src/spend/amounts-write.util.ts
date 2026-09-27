@@ -2,6 +2,7 @@ import { BadRequestException, InternalServerErrorException } from '@nestjs/commo
 import { EntityManager } from 'typeorm';
 import { FreezeColumn, FreezeService } from '../freeze/freeze.service';
 import { formatCents, toCents } from '../common/amount';
+import { budgetColumnName, DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import {
   activeMonths,
   FLAT_WEIGHTS,
@@ -37,19 +38,12 @@ export const MEASURE_FREEZE_COLUMN: Record<AmountMeasure, FreezeColumn> = {
   expected_landing: 'landing',
 };
 
-const MEASURE_LABELS: Record<AmountMeasure, string> = {
-  planned: 'Budget',
-  committed: 'Revision',
-  forecast: 'Forecast',
-  actual: 'Actuals',
-  expected_landing: 'Expected landing',
-};
-
-/** Columns as the budget operations screens name them. */
-export type BudgetColumn = 'budget' | 'revision' | 'follow_up' | 'landing';
+/** Columns by their API names (copy, clear, reports), in the fixed order. */
+export type BudgetColumn = 'budget' | 'revision' | 'forecast' | 'follow_up' | 'landing';
 export const BUDGET_COLUMN_MEASURE: Record<BudgetColumn, AmountMeasure> = {
   budget: 'planned',
   revision: 'committed',
+  forecast: 'forecast',
   follow_up: 'actual',
   landing: 'expected_landing',
 };
@@ -94,8 +88,35 @@ export function isAmountMeasure(value: unknown): value is AmountMeasure {
   return typeof value === 'string' && (AMOUNT_MEASURES as readonly string[]).includes(value);
 }
 
-export function measureLabel(measure: AmountMeasure): string {
-  return MEASURE_LABELS[measure];
+/**
+ * A 400 that names a column. It is thrown bare where the tenant is not at
+ * hand and becomes a BadRequestException with the tenant's column name in
+ * `withColumnNames`, so the names are read only when a message is built.
+ */
+class ColumnMessageError extends Error {
+  constructor(readonly measure: AmountMeasure, readonly rest: string) {
+    super(`${measure}${rest}`);
+  }
+}
+
+/** Where a value sits: free text (a file column), or a column and a place (' for 2026-03'). */
+export type ValueLabel = string | { measure: AmountMeasure; where: string };
+
+function badValue(label: ValueLabel, text: string): Error {
+  return typeof label === 'string'
+    ? new BadRequestException(`${label} ${text}`)
+    : new ColumnMessageError(label.measure, `${label.where} ${text}`);
+}
+
+async function withColumnNames<T>(ctx: Pick<AmountsWriteContext, 'manager' | 'version'>, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (!(err instanceof ColumnMessageError)) throw err;
+    const tenantId = ctx.version?.tenant_id;
+    const settings = tenantId ? await readBudgetColumns(ctx.manager, tenantId) : DEFAULT_BUDGET_COLUMNS;
+    throw new BadRequestException(`${budgetColumnName(settings, err.measure)}${err.rest}`);
+  }
 }
 
 function unknownMeasure(key: string): BadRequestException {
@@ -105,24 +126,24 @@ function unknownMeasure(key: string): BadRequestException {
 // Amount columns are numeric(18,2): at most 16 digits before the decimal point.
 const CENTS_LIMIT = 10n ** 18n;
 
-function assertInRange(cents: bigint, label: string): bigint {
-  if ((cents < 0n ? -cents : cents) >= CENTS_LIMIT) throw new BadRequestException(`${label} is too large.`);
+function assertInRange(cents: bigint, label: ValueLabel): bigint {
+  if ((cents < 0n ? -cents : cents) >= CENTS_LIMIT) throw badValue(label, 'is too large.');
   return cents;
 }
 
 /** A finite number or a numeric string, in cents. Null is refused: zero is how a value is cleared. */
-export function validateAmountValue(value: unknown, label: string): bigint {
+export function validateAmountValue(value: unknown, label: ValueLabel): bigint {
   if (value === null || value === undefined) {
-    throw new BadRequestException(`${label} cannot be empty; send 0 to clear it.`);
+    throw badValue(label, 'cannot be empty; send 0 to clear it.');
   }
   if (typeof value === 'number' ? !Number.isFinite(value) : typeof value !== 'string' || value.trim() === '') {
-    throw new BadRequestException(`${label} must be a number.`);
+    throw badValue(label, 'must be a number.');
   }
   let cents: bigint;
   try {
     cents = toCents(value as number | string);
   } catch {
-    throw new BadRequestException(`${label} must be a number.`);
+    throw badValue(label, 'must be a number.');
   }
   return assertInRange(cents, label);
 }
@@ -172,9 +193,9 @@ function inspectRows(year: number, rows: AmountRowInput[]) {
       if (!isAmountMeasure(key)) throw unknownMeasure(key);
       const cents = row[key];
       if (typeof cents !== 'bigint') {
-        throw new BadRequestException(`${measureLabel(key)} for ${period} cannot be empty; send 0 to clear it.`);
+        throw badValue({ measure: key, where: ` for ${period}` }, 'cannot be empty; send 0 to clear it.');
       }
-      assertInRange(cents, `${measureLabel(key)} for ${period}`);
+      assertInRange(cents, { measure: key, where: ` for ${period}` });
       measures.add(key);
       count += 1;
     }
@@ -294,24 +315,28 @@ export async function lockYearMonths(ctx: MonthsContext, year: number): Promise<
  * first-of-month dates of the year.
  */
 export async function replaceAmounts(ctx: AmountsWriteContext, year: number, rows: AmountRowInput[]): Promise<AmountsWriteResult> {
-  assertYearMatchesVersion(year, ctx.version);
-  const { periods, measures } = inspectRows(year, rows);
-  if (rows.length !== 12) {
-    throw new BadRequestException(`Replacing a year needs its twelve months; ${rows.length} given.`);
-  }
-  for (const row of rows) {
-    const missing = measures.find((m) => row[m] === undefined);
-    if (missing) throw new BadRequestException(`${measureLabel(missing)} for ${row.period} is missing.`);
-  }
-  return write(ctx, year, rows, periods, measures);
+  return withColumnNames(ctx, async () => {
+    assertYearMatchesVersion(year, ctx.version);
+    const { periods, measures } = inspectRows(year, rows);
+    if (rows.length !== 12) {
+      throw new BadRequestException(`Replacing a year needs its twelve months; ${rows.length} given.`);
+    }
+    for (const row of rows) {
+      const missing = measures.find((m) => row[m] === undefined);
+      if (missing) throw badValue({ measure: missing, where: ` for ${row.period}` }, 'is missing.');
+    }
+    return write(ctx, year, rows, periods, measures);
+  });
 }
 
 /** Write only the cells supplied; everything else stays as stored. */
 export async function patchAmounts(ctx: AmountsWriteContext, year: number, rows: AmountRowInput[]): Promise<AmountsWriteResult> {
-  assertYearMatchesVersion(year, ctx.version);
-  if (rows.length === 0) throw new BadRequestException('Send at least one month.');
-  const { periods, measures } = inspectRows(year, rows);
-  return write(ctx, year, rows, periods, measures);
+  return withColumnNames(ctx, async () => {
+    assertYearMatchesVersion(year, ctx.version);
+    if (rows.length === 0) throw new BadRequestException('Send at least one month.');
+    const { periods, measures } = inspectRows(year, rows);
+    return write(ctx, year, rows, periods, measures);
+  });
 }
 
 /** Spread yearly totals over the twelve months (flat unless weights are given); rows carry only the measures named. */
@@ -412,6 +437,10 @@ function asObject(value: unknown, label: string): Record<string, unknown> {
  * year. Everything is validated before the first write.
  */
 export async function writeAmountsPayload(ctx: AmountsWriteContext, rawPayload: unknown): Promise<AmountsPayloadResult> {
+  return withColumnNames(ctx, () => writePayload(ctx, rawPayload));
+}
+
+async function writePayload(ctx: AmountsWriteContext, rawPayload: unknown): Promise<AmountsPayloadResult> {
   const payload = asObject(rawPayload, 'The amounts');
   const year = assertYearMatchesVersion(payload.year, ctx.version);
   const profileName = payload.spread_profile_name;
@@ -421,7 +450,7 @@ export async function writeAmountsPayload(ctx: AmountsWriteContext, rawPayload: 
     const totals: Partial<Record<AmountMeasure, bigint>> = {};
     for (const [key, value] of Object.entries(input)) {
       if (!isAmountMeasure(key)) throw unknownMeasure(key);
-      totals[key] = validateAmountValue(value, `${measureLabel(key)} total`);
+      totals[key] = validateAmountValue(value, { measure: key, where: ' total' });
     }
     if (Object.keys(totals).length === 0) {
       throw new BadRequestException('The yearly totals must name at least one amount.');
@@ -440,7 +469,7 @@ export async function writeAmountsPayload(ctx: AmountsWriteContext, rawPayload: 
     const quarters: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', bigint> = { Q1: 0n, Q2: 0n, Q3: 0n, Q4: 0n };
     for (const quarter of ['Q1', 'Q2', 'Q3', 'Q4'] as const) {
       if (!Object.prototype.hasOwnProperty.call(payload, quarter)) continue;
-      quarters[quarter] = validateAmountValue(payload[quarter], `${measureLabel(measure)} ${quarter}`);
+      quarters[quarter] = validateAmountValue(payload[quarter], { measure, where: ` ${quarter}` });
     }
     const distribution = profileName === undefined || profileName === null || profileName === ''
       ? 'equal'
@@ -466,7 +495,7 @@ export async function writeAmountsPayload(ctx: AmountsWriteContext, rawPayload: 
       for (const [key, value] of Object.entries(input)) {
         if (key === 'period') continue;
         if (!isAmountMeasure(key)) throw unknownMeasure(key);
-        row[key] = validateAmountValue(value, `${measureLabel(key)} for ${period || `month ${index + 1}`}`);
+        row[key] = validateAmountValue(value, { measure: key, where: ` for ${period || `month ${index + 1}`}` });
       }
       return row;
     });

@@ -94,6 +94,9 @@ export class CurrencySettingsService {
     opts?: { manager?: EntityManager },
   ): Promise<CurrencySettings> {
     const repo = this.repo(opts?.manager);
+    // The whole metadata object is saved below: lock the row first so a
+    // concurrent writer of another key is not erased by a stale copy.
+    await repo.manager.query('SELECT id FROM tenants WHERE id = $1 FOR NO KEY UPDATE', [tenantId]);
     const tenant = await repo.findOne({ where: { id: tenantId } });
     if (!tenant) {
       throw new Error(`Tenant ${tenantId} not found`);

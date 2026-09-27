@@ -241,7 +241,7 @@ export async function copyAllocations(
       destinationVersion = await versionRepo.save(versionRepo.create({
         [t.itemFk]: item.id,
         budget_year: destinationYear,
-        version_name: `Budget ${destinationYear}`,
+        version_name: `Y${destinationYear}`,
         input_grain: sourceVersion.input_grain ?? 'annual',
         is_approved: false,
         as_of_date: `${destinationYear}-01-01`,

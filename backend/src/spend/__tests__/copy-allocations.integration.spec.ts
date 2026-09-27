@@ -120,7 +120,7 @@ async function testManualCopy(kind: Kind) {
     const done = await copyAllocations(kind, runner, { sourceYear: YEAR, destinationYear: YEAR + 1 }, audit);
     assert.deepEqual([done.success, done.summary.processed, done.summary.skipped, done.results], [true, 1, 3, []], `${kind}: copy summary`);
     assert.deepEqual(await readVersion(runner, kind, manual, YEAR + 1), {
-      version_name: `Budget ${YEAR + 1}`,
+      version_name: `Y${YEAR + 1}`,
       input_grain: 'quarterly',
       allocation_method: 'manual_pct',
       notes: 'Source notes',

@@ -4,6 +4,8 @@ import { FreezeService } from '../freeze.service';
 
 // Forecast is a freezable budget column like the others.
 
+const TENANT = 'tenant-1';
+
 function createService() {
   const rows: any[] = [];
   const repo = {
@@ -16,9 +18,18 @@ function createService() {
       return row;
     },
   };
-  // No tenant in the mocked session: attaching FX rates on a Budget freeze is skipped.
-  const manager = { getRepository: () => repo, query: async () => [] };
-  const service = new FreezeService(repo as any, undefined as any, undefined as any, undefined as any);
+  // One tenant in the mocked session, no stored settings (Budget is the default column),
+  // and no FX rate set: a Budget freeze refreshes FX but pins nothing.
+  const manager = {
+    getRepository: () => repo,
+    query: async (sql: string) => (sql.includes('current_setting') ? [{ tenant_id: TENANT }] : []),
+  };
+  const service = new FreezeService(
+    repo as any,
+    { refreshTenant: async () => undefined } as any,
+    { getLatestRateSet: async () => null } as any,
+    { getSettings: async () => ({ reportingCurrency: 'EUR' }) } as any,
+  );
   return { service, rows, opts: { manager: manager as any } };
 }
 
@@ -48,7 +59,15 @@ async function testFreezeAllColumnsIncludesForecast() {
   const { service, rows, opts } = createService();
   await service.freeze(2026, [{ scope: 'capex' }], 'user-1', opts);
   assert.deepEqual(rows.map((r) => r.columnKey).sort(), ['actual', 'budget', 'forecast', 'landing', 'revision']);
-  assert.ok(rows.every((r) => r.is_frozen && r.scope === 'capex' && r.budget_year === 2026));
+  assert.ok(rows.every((r) => r.is_frozen && r.scope === 'capex' && r.budget_year === 2026 && r.tenant_id === TENANT));
+}
+
+async function testFreezeStatesAreReadForTheSessionTenant() {
+  const { service, rows, opts } = createService();
+  rows.push({ tenant_id: 'other-tenant', budget_year: 2026, scope: 'opex', columnKey: 'budget', is_frozen: true });
+  assert.equal(await service.isFrozen({ scope: 'opex', column: 'budget', year: 2026 }, opts), false, 'another tenant\'s freeze is not read');
+  const noTenant = { manager: { getRepository: () => ({}), query: async () => [] } as any };
+  await assert.rejects(() => service.isFrozen({ scope: 'opex', column: 'budget', year: 2026 }, noTenant), /tenant context/);
 }
 
 async function testFrozenForecastIsRefusedWithAReadableMessage() {
@@ -72,6 +91,7 @@ async function main() {
   testNormalizeColumnAcceptsForecast();
   await testFreezeAllColumnsIncludesForecast();
   await testFrozenForecastIsRefusedWithAReadableMessage();
+  await testFreezeStatesAreReadForTheSessionTenant();
   console.log('freeze.service.spec: ok');
 }
 

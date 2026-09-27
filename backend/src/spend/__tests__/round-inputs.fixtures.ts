@@ -220,6 +220,14 @@ export async function freezeColumn(runner: QueryRunner, kind: Kind, tenantId: st
   );
 }
 
+/** Store budget column settings on the tenant (merged onto the product defaults when read). */
+export async function setBudgetColumns(runner: QueryRunner, tenantId: string, settings: Record<string, unknown>) {
+  await runner.query(
+    `UPDATE tenants SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{budget_columns}', $2::jsonb, true) WHERE id = $1`,
+    [tenantId, JSON.stringify(settings)],
+  );
+}
+
 /** Run `fn` in a transaction that is always rolled back. */
 export async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void>) {
   const runner = dataSource.createQueryRunner();

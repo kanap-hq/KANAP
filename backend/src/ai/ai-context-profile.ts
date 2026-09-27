@@ -375,7 +375,8 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const referencedTypes = extractReferencedEntityTypes(raw);
   const hasUnknownReference = hasEntityReference(raw) && referencedTypes.size === 0;
   const needsWeb = containsAny(text, [
-    /\b(web|internet|online|google|site web|actualite|eol|end of life|weather|meteo|forecast)\b/,
+    // Not the bare word "forecast": it names a budget column; a weather forecast matches below.
+    /\b(web|internet|online|google|site web|actualite|eol|end of life|weather|meteo)\b/,
     /\b(latest|current|derniere)\b.*\b(version|release)\b/,
     /\b(demain|today|tomorrow)\b.*\b(meteo|weather|forecast)\b/,
   ]);

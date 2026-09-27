@@ -23,6 +23,7 @@ import { EmailModule } from './email/email.module';
 import { TrialSignup } from './public/trial-signup.entity';
 import { AdminTenantsModule } from './admin/tenants/admin-tenants.module';
 import { FreezeModule } from './freeze/freeze.module';
+import { BudgetColumnsModule } from './budget-columns/budget-columns.module';
 import { MasterDataOperationsModule } from './master-data/master-data-operations.module';
 import { CurrencyModule } from './currency/currency.module';
 import { ContactsModule } from './contacts/contacts.module';
@@ -113,6 +114,7 @@ import { NetboxModule } from './netbox/netbox.module';
     AdminOpsModule,
     AdminBrandingModule,
     FreezeModule,
+    BudgetColumnsModule,
     CurrencyModule,
     ContactsModule,
     MasterDataOperationsModule,

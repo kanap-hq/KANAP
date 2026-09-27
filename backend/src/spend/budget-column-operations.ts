@@ -277,7 +277,7 @@ export async function copyBudgetColumn(
       destinationVersion = await createBudgetVersion(
         deps,
         scope,
-        { itemId: item.id, tenantId: item.tenant_id, year: destinationYear, name: `Budget ${destinationYear}`, inputGrain: sourceVersion.input_grain ?? 'annual' },
+        { itemId: item.id, tenantId: item.tenant_id, year: destinationYear, name: `Y${destinationYear}`, inputGrain: sourceVersion.input_grain ?? 'annual' },
         userId,
       );
     }

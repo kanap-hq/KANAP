@@ -150,7 +150,7 @@ async function testManualPctBulkUpsert() {
 async function testYearlyTotalsFillsMissingYears() {
   const manager = {
     query: async () => [
-      { year: 2026, budget: '1200.50', revision: '1000.00', actual: '800.25', landing: '1100.75' },
+      { year: 2026, budget: '1200.50', revision: '1000.00', forecast: '950.10', actual: '800.25', landing: '1100.75' },
     ],
   };
   const service = createCapexItemsService(manager);
@@ -158,9 +158,9 @@ async function testYearlyTotalsFillsMissingYears() {
   const result = await service.yearlyTotals('capex-1', 2025, 2027, { manager: manager as any });
 
   assert.deepEqual(result.items, [
-    { year: 2025, budget: 0, revision: 0, actual: 0, landing: 0 },
-    { year: 2026, budget: 1200.5, revision: 1000, actual: 800.25, landing: 1100.75 },
-    { year: 2027, budget: 0, revision: 0, actual: 0, landing: 0 },
+    { year: 2025, budget: 0, revision: 0, forecast: 0, actual: 0, landing: 0 },
+    { year: 2026, budget: 1200.5, revision: 1000, forecast: 950.1, actual: 800.25, landing: 1100.75 },
+    { year: 2027, budget: 0, revision: 0, forecast: 0, actual: 0, landing: 0 },
   ]);
 }
 

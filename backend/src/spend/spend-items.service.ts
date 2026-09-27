@@ -35,6 +35,7 @@ import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItemNumberService } from '../common/item-number.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import type { BudgetColumn } from './amounts-write.util';
 
 @Injectable()
 export class SpendItemsService {
@@ -137,35 +138,37 @@ export class SpendItemsService {
     return found;
   }
 
-  /** Per-year budget/revision/actual/landing totals for one item (multi-year trend chart). */
+  /** Per-year totals of the five columns for one item (multi-year trend chart). */
   async yearlyTotals(spendItemId: string, from: number, to: number, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const lo = Math.min(from, to);
     // Clamp the span (defensive against an unbounded ?from&to driving a huge fill loop).
     const hi = Math.min(Math.max(from, to), lo + 20);
-    const rows: Array<{ year: number; budget: string; revision: string; actual: string; landing: string }> = await mg.query(
+    const rows: Array<{ year: number; budget: string; revision: string; forecast: string; actual: string; landing: string }> = await mg.query(
       // Only count amount rows whose period falls within the version's budget_year,
       // as the list engine sums them (loadVersionTotals), so the chart agrees with the Budget tab / list.
       `SELECT v.budget_year AS year,
               COALESCE(SUM(a.planned), 0) AS budget,
               COALESCE(SUM(a.committed), 0) AS revision,
+              COALESCE(SUM(a.forecast), 0) AS forecast,
               COALESCE(SUM(a.actual), 0) AS actual,
               COALESCE(SUM(a.expected_landing), 0) AS landing
        FROM spend_versions v
-       LEFT JOIN spend_amounts a ON a.version_id = v.id AND EXTRACT(YEAR FROM a.period) = v.budget_year
-       WHERE v.spend_item_id = $1 AND v.budget_year BETWEEN $2 AND $3
+       LEFT JOIN spend_amounts a ON a.tenant_id = v.tenant_id AND a.version_id = v.id AND EXTRACT(YEAR FROM a.period) = v.budget_year
+       WHERE v.tenant_id = app_current_tenant() AND v.spend_item_id = $1 AND v.budget_year BETWEEN $2 AND $3
        GROUP BY v.budget_year
        ORDER BY v.budget_year`,
       [spendItemId, lo, hi],
     );
     const byYear = new Map(rows.map((r) => [Number(r.year), r]));
-    const years: Array<{ year: number; budget: number; revision: number; actual: number; landing: number }> = [];
+    const years: Array<{ year: number; budget: number; revision: number; forecast: number; actual: number; landing: number }> = [];
     for (let y = lo; y <= hi; y += 1) {
       const r = byYear.get(y);
       years.push({
         year: y,
         budget: Number(r?.budget) || 0,
         revision: Number(r?.revision) || 0,
+        forecast: Number(r?.forecast) || 0,
         actual: Number(r?.actual) || 0,
         landing: Number(r?.landing) || 0,
       });
@@ -399,9 +402,9 @@ export class SpendItemsService {
   async copyBudgetColumn(
     operation: {
       sourceYear: number;
-      sourceColumn: 'budget' | 'revision' | 'follow_up' | 'landing';
+      sourceColumn: BudgetColumn;
       destinationYear: number;
-      destinationColumn: 'budget' | 'revision' | 'follow_up' | 'landing';
+      destinationColumn: BudgetColumn;
       percentageIncrease: number | string;
       overwrite: boolean;
       dryRun: boolean;
@@ -435,7 +438,7 @@ export class SpendItemsService {
   async clearBudgetColumn(
     operation: {
       year: number;
-      column: 'budget' | 'revision' | 'follow_up' | 'landing';
+      column: BudgetColumn;
     },
     userId: string | null,
     opts?: { manager?: EntityManager }

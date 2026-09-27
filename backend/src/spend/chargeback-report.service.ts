@@ -10,17 +10,23 @@ import { CompanyMetric } from '../companies/company-metric.entity';
 import { DepartmentMetric } from '../departments/department-metric.entity';
 import { AllocationCalculatorService, AllocationComputation } from './allocation-calculator.service';
 import { FxRateService, FxLookupKey, FxResolvedRate } from '../currency/fx-rate.service';
+import { BUDGET_COLUMN_MEASURE, BudgetColumn } from './amounts-write.util';
+import { DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 
-export type ChargebackMetricKey = 'budget' | 'follow_up' | 'landing' | 'revision';
+/** A chargeback runs on one budget column, named by its API name. */
+export type ChargebackMetricKey = BudgetColumn;
 
 type ResolvedAllocationMethod = AllocationComputation['resolvedMethod'];
 
-const METRIC_COLUMN_MAP: Record<ChargebackMetricKey, keyof SpendAmount> = {
-  budget: 'planned',
-  follow_up: 'actual',
-  landing: 'expected_landing',
-  revision: 'committed',
-};
+const METRIC_COLUMN_MAP: Record<ChargebackMetricKey, keyof SpendAmount> = BUDGET_COLUMN_MEASURE;
+
+function isMetric(value: unknown): value is ChargebackMetricKey {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(METRIC_COLUMN_MAP, value);
+}
+
+function invalidMetric(value: unknown): BadRequestException {
+  return new BadRequestException(`Unknown column '${String(value)}'. Use ${Object.keys(METRIC_COLUMN_MAP).join(', ')}.`);
+}
 
 const ALLOCATION_METHOD_LABELS: Record<ResolvedAllocationMethod, string> = {
   headcount: 'Headcount',
@@ -149,6 +155,17 @@ export class ChargebackReportService {
     private readonly allocationCalculator: AllocationCalculatorService,
     private readonly fxRates: FxRateService,
   ) {}
+
+  /** The column a request names; none given is the tenant's default column. */
+  async resolveMetric(raw: unknown, tenantId: string | null, opts?: { manager?: EntityManager }): Promise<ChargebackMetricKey> {
+    if (raw === undefined || raw === null || raw === '') {
+      const manager = opts?.manager ?? this.versionsRepo.manager;
+      const settings = tenantId ? await readBudgetColumns(manager, tenantId) : DEFAULT_BUDGET_COLUMNS;
+      return (Object.keys(METRIC_COLUMN_MAP) as ChargebackMetricKey[]).find((key) => METRIC_COLUMN_MAP[key] === settings.default_column)!;
+    }
+    if (!isMetric(raw)) throw invalidMetric(raw);
+    return raw;
+  }
 
   async generate(
     year: number,
@@ -522,9 +539,7 @@ export class ChargebackReportService {
     opts?: { manager?: EntityManager },
   ): Promise<ChargebackComputationContext> {
     const yr = Number.isFinite(year) ? Math.trunc(year) : new Date().getFullYear();
-    if (!(metric in METRIC_COLUMN_MAP)) {
-      throw new BadRequestException('Invalid metric');
-    }
+    if (!isMetric(metric)) throw invalidMetric(metric);
     const metricColumn = METRIC_COLUMN_MAP[metric];
 
     const manager = opts?.manager ?? this.versionsRepo.manager;

@@ -15,6 +15,7 @@ import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
+import type { BudgetColumn } from './amounts-write.util';
 import {
   CreateSpendItemInput,
   UpdateSpendItemInput,
@@ -363,9 +364,9 @@ export class SpendItemsController {
   copyBudgetColumn(
     @Body() body: {
       sourceYear: number;
-      sourceColumn: 'budget' | 'revision' | 'follow_up' | 'landing';
+      sourceColumn: BudgetColumn;
       destinationYear: number;
-      destinationColumn: 'budget' | 'revision' | 'follow_up' | 'landing';
+      destinationColumn: BudgetColumn;
       percentageIncrease: number | string;
       overwrite: boolean;
       dryRun: boolean;
@@ -396,7 +397,7 @@ export class SpendItemsController {
   clearBudgetColumn(
     @Body() body: {
       year: number;
-      column: 'budget' | 'revision' | 'follow_up' | 'landing';
+      column: BudgetColumn;
     },
     @Tenant() ctx: TenantRequest,
   ) {

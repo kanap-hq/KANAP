@@ -49,6 +49,7 @@ import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiApprovalService } from './control-plane/approval/ai-approval.service';
 import { AiCapabilityRegistry, EXECUTE_APPROVED_PREVIEW_CAPABILITY } from './control-plane/capability/ai-capability.registry';
 import { AiCapabilityDispatcherService } from './control-plane/dispatcher/ai-capability-dispatcher.service';
+import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -1725,6 +1726,15 @@ export class AiChatOrchestratorService {
     });
   }
 
+  /** The tenant's budget column names for users who can read OPEX or CAPEX items; none otherwise. */
+  private async loadBudgetColumnsPromptContext(
+    ctx: AiExecutionContext & { manager: any },
+    readableTypes: readonly string[],
+  ): Promise<ReturnType<typeof budgetColumnsAiContext> | undefined> {
+    if (!readableTypes.includes('spend_items') && !readableTypes.includes('capex_items')) return undefined;
+    return budgetColumnsAiContext(await readBudgetColumns(ctx.manager, ctx.tenantId));
+  }
+
   private async loadCurrentUserPromptContext(ctx: AiExecutionContext & { manager: any }): Promise<CurrentUserPromptContext> {
     const userRows = await ctx.manager.query(
       `SELECT u.email,
@@ -2096,12 +2106,14 @@ export class AiChatOrchestratorService {
               )
               : [];
             const currentUser = await this.loadCurrentUserPromptContext(ctx);
+            const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes);
             const builtSystemPrompt = this.systemPrompt.buildWithMetadata({
               tenantName,
               availableTools,
               readableEntityTypes: readableTypes,
               currentUser,
               contextProfile,
+              budgetColumns,
             });
             const latestUserMessageRow = [...historyAfterApproval]
               .reverse()
@@ -2292,6 +2304,7 @@ export class AiChatOrchestratorService {
           )
           : [];
         const currentUser = await this.loadCurrentUserPromptContext(ctx);
+        const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes);
 
         const builtSystemPrompt = this.systemPrompt.buildWithMetadata({
           tenantName,
@@ -2299,6 +2312,7 @@ export class AiChatOrchestratorService {
           readableEntityTypes: readableTypes,
           currentUser,
           contextProfile,
+          budgetColumns,
         });
         const sysPrompt = builtSystemPrompt.text;
 

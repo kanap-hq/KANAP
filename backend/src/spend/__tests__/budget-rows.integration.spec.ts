@@ -20,6 +20,7 @@ import {
   seedItem,
   seedLine,
   seedTenant,
+  setBudgetColumns,
   setTenant,
 } from './round-inputs.fixtures';
 
@@ -273,6 +274,26 @@ async function testFreeze() {
   });
 }
 
+/** A hidden column is still exported and imported; frozen, it refuses changes under the tenant's name. */
+async function testHiddenColumns() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, opex } = await seedBook(runner, 'hidden');
+    await setBudgetColumns(runner, tenantId, { labels: { forecast: 'A2' }, enabled: { forecast: false } });
+    const { lines } = await exportLines(runner, tenantId);
+    const forecast = lines.find((l) => l.item_type === 'opex' && l.measure === 'forecast')!;
+    assert.ok(forecast, 'the hidden column is exported');
+    const accepted = await importLines(runner, tenantId, [{ ...forecast, jan: '1' }], { freeze: realFreeze() });
+    assert.equal(accepted.ok, true, 'a hidden column accepts imports');
+    assert.equal((await readMeasure(runner, 'opex', opex.versionId, 'forecast', YEAR))[0], '1.00');
+
+    await freezeColumn(runner, 'opex', tenantId, YEAR, 'forecast');
+    const refused = await importLines(runner, tenantId, [{ ...forecast, jan: '2' }], { freeze: realFreeze() });
+    assert.equal(refused.ok, false);
+    assert.deepEqual(refused.errors, [{ row: 2, message: `Import not allowed: OPEX A2 for ${YEAR} is frozen` }]);
+    assert.equal((await readMeasure(runner, 'opex', opex.versionId, 'forecast', YEAR))[0], '1.00', 'a hidden frozen column is not written');
+  });
+}
+
 /** Permissions per item type, partial exports. */
 async function testPermissionsAndPartialExports() {
   await inRolledBackTransaction(async (runner) => {
@@ -422,6 +443,7 @@ void runSpecs('budget-rows.integration.spec', [
   ['testNewYearsAndAliases', testNewYearsAndAliases],
   ['testRowErrors', testRowErrors],
   ['testFreeze', testFreeze],
+  ['testHiddenColumns', testHiddenColumns],
   ['testPermissionsAndPartialExports', testPermissionsAndPartialExports],
   ['testRightsOnlyForRowsThatWrite', testRightsOnlyForRowsThatWrite],
   ['testPeriodOnlyGroup', testPeriodOnlyGroup],
