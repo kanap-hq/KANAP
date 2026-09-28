@@ -10,7 +10,7 @@ import { useSpendNav } from '../../hooks/useSpendNav';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
-import useAutosave from '../../hooks/useAutosave';
+import useAutosave, { useAutosaveRegistry } from '../../hooks/useAutosave';
 import { formatItemRef } from '../../utils/item-ref';
 import {
   StatusValue,
@@ -217,9 +217,6 @@ export default function SpendItemPage() {
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   React.useEffect(() => {
-    if (data && !isCreate) setForm(toForm(data));
-  }, [data, isCreate]);
-  React.useEffect(() => {
     if (!isCreate) return;
     setCreateForm(createEmptySpendForm(defaultSpendCurrency));
     setCreateCurrencyTouched(false);
@@ -342,9 +339,25 @@ export default function SpendItemPage() {
   };
 
   // ----- Autosave (overview metadata / drawer / notes / title) -----
+  const autosaveRegistry = useAutosaveRegistry();
   const autosave = useAutosave({
     onError: (e) => setSaveError(getApiErrorMessage(e, t, t('opex.editor.failedToSave'))),
+    registry: autosaveRegistry,
   });
+  // Resync the form on every refetch. While autosave is busy the local text is newer than the
+  // server's; once idle, every debounced edit has been saved and refetched, so the server copy wins.
+  const { isBusy: isAutosaveBusy } = autosave;
+  React.useEffect(() => {
+    if (!data || isCreate) return;
+    // The fields typed through patchDebounced.
+    const DEBOUNCED_FIELDS: ReadonlyArray<keyof SpendForm> = ['description', 'notes'];
+    setForm((prev) => {
+      const next = toForm(data);
+      if (prev.id !== next.id || !isAutosaveBusy()) return next;
+      const kept = Object.fromEntries(DEBOUNCED_FIELDS.map((field) => [field, prev[field]]));
+      return { ...next, ...kept };
+    });
+  }, [data, isCreate, isAutosaveBusy]);
   const pendingPatchRef = React.useRef<Record<string, any>>({});
 
   const flushPending = React.useCallback(async () => {
@@ -672,7 +685,6 @@ export default function SpendItemPage() {
             onCostCenterChange={(v) => void patchNow({ cost_center_id: v })}
             onRunBuildChange={(v) => void patchNow({ run_build: v })}
             onEffectiveStartChange={(v) => void patchNow({ effective_start: v })}
-            onStatusChange={handleStatusChange}
             onDisabledAtChange={handleDisabledAtChange}
           />
         )}

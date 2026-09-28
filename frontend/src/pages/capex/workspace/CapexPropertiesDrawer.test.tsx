@@ -24,7 +24,6 @@ vi.mock('../../../components/fields/AccountSelect', () => ({
 }));
 vi.mock('../../../components/fields/UserSelect', () => ({ default: () => null }));
 vi.mock('../../../components/fields/DateEUField', () => ({ default: () => null }));
-vi.mock('../../../components/fields/StatusLifecycleField', () => ({ default: () => null }));
 vi.mock('../../../components/fields/CostCenterSelect', () => ({
   default: (p: { value: string | null; selectable?: string; onChange: (v: string | null) => void }) => (
     <div data-testid="cost-center-select" data-selectable={p.selectable}>
@@ -110,7 +109,6 @@ function renderDrawer(mode: 'create' | 'edit', props: Partial<DrawerProps> = {})
         onRunBuildChange={noop}
         onEffectiveStartChange={noop}
         onDisabledAtChange={noop}
-        onStatusChange={noop}
         onOwnerItChange={noop}
         onOwnerBusinessChange={noop}
         {...props}
@@ -211,5 +209,25 @@ describe('CapexPropertiesDrawer cost center and run or build', () => {
     ]);
     fireEvent.click(listbox.getByText('capex.runBuild.run'));
     expect(onRunBuildChange).toHaveBeenLastCalledWith('run');
+  });
+});
+
+describe('CapexPropertiesDrawer end of validity', () => {
+  // Regression: the page saves the date and its derived status in one write. A second, status-only
+  // write from the same pick raced it and could clear the date just picked.
+  it('reports a picked end date once when editing, and no status change beside it', () => {
+    const onDisabledAtChange = vi.fn();
+    const onStatusChange = vi.fn();
+    // A caller still wiring a status handler must not get a second write from the same pick.
+    const legacy = { onStatusChange } as Partial<DrawerProps>;
+    renderDrawer('edit', { status: 'enabled', disabledAt: null, onDisabledAtChange, ...legacy });
+
+    // The calendar's native input inside the lifecycle group (the dates group has its own).
+    const lifecycle = screen.getByText('capex.fields.lifecycle').parentElement as HTMLElement;
+    const nativeDate = lifecycle.querySelector('input[type="date"]') as HTMLInputElement;
+    fireEvent.change(nativeDate, { target: { value: '2099-12-31' } });
+
+    expect(onDisabledAtChange.mock.calls).toEqual([[new Date(2099, 11, 31, 23, 59, 0, 0).toISOString()]]);
+    expect(onStatusChange).not.toHaveBeenCalled();
   });
 });

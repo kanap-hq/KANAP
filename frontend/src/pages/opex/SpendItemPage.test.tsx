@@ -307,6 +307,55 @@ describe('SpendItemPage edit', () => {
   });
 });
 
+describe('SpendItemPage notes typed during a save', () => {
+  // What the server holds; a PATCH applies to it only when the test resolves it.
+  const server: Record<string, unknown> = {};
+  const saves: Array<() => void> = [];
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    saves.length = 0;
+    Object.assign(server, { notes: 'Renewal', account_id: 'account-1' });
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/spend-items/${ITEM_ID}`) {
+        return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', ...server } };
+      }
+      return { data: {} };
+    });
+    mocked.patch.mockImplementation((_url: string, patch: Record<string, unknown>) => new Promise((resolve) => {
+      saves.push(() => {
+        Object.assign(server, patch);
+        resolve({ data: {} });
+      });
+    }));
+  });
+
+  it('keeps text typed while the save and its refetch run, and saves it next', async () => {
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    const notes = await screen.findByDisplayValue('Renewal');
+    // Writes wait for the line to load; retry the change until it sticks.
+    await waitFor(() => {
+      fireEvent.change(notes, { target: { value: 'Renewal A' } });
+      expect(notes).toHaveValue('Renewal A');
+    });
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    // The user keeps typing while the first save is in flight.
+    fireEvent.change(notes, { target: { value: 'Renewal AB' } });
+    // Another field changes on the server too, so the refetch visibly lands on screen.
+    server.account_id = 'account-2';
+    saves[0]();
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-2'));
+    // The refetch carries the older 'Renewal A'; the newer text stays in the box.
+    expect(notes).toHaveValue('Renewal AB');
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    expect(mocked.patch.mock.calls[1][1]).toEqual({ notes: 'Renewal AB' });
+    saves[1]();
+    await waitFor(() => expect(mocked.get.mock.calls.filter(([u]) => u === `/spend-items/${ITEM_ID}`).length).toBeGreaterThanOrEqual(3));
+    expect(notes).toHaveValue('Renewal AB');
+  });
+});
+
 describe('SpendItemPage analytics dimensions', () => {
   beforeEach(() => {
     mocked.get.mockReset();
