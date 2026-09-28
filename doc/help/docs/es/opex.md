@@ -72,7 +72,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Filtros de importe**: Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes
   - **Filtros de fecha**: **Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío
   - **Columnas de texto**: usan filtros de texto. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` u `OPX-12`
-  - **Alcance de estado**: Utilice el conmutador **Mostrar: Habilitados / Deshabilitados / Todos** encima de la cuadrícula (predeterminado: **Habilitados**)
+  - **Alcance de estado**: Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula (predeterminado: **Activos**)
 
 **Ordenación**:
   - Haga clic en un encabezado de columna para ordenar ascendente/descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe
@@ -382,7 +382,7 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   - **"The ... dimension is disabled. Enable it or leave it out."**: Active la dimensión en **Datos maestros > Dimensiones analíticas**, o elimine su columna
   - **"The file has two columns for ..."**: Dos columnas nombran la misma dimensión, por ejemplo `analytics_category` y el propio código de la dimensión por defecto. Conserve una sola columna
   - **"... is disabled. Pick an enabled value."**: Use un valor activado de esa dimensión, o vuelva a activar el valor
-  - **"Moneda inválida"**: Utilice códigos ISO de 3 letras (USD, EUR, GBP) que estén permitidos en la configuración de monedas de su espacio de trabajo
+  - **"Invalid currency"**: Utilice códigos ISO de 3 letras (USD, EUR, GBP) que estén permitidos en la configuración de monedas de su espacio de trabajo
   - **"Header mismatch"**: Falta una columna obligatoria o hay una columna desconocida; el mensaje las indica. Las columnas se reconocen por su nombre, en cualquier orden, y las columnas analíticas son opcionales. Compare la primera línea de su archivo con una plantilla nueva
 
 **Consejo**: Comience con la exportación de plantilla, rellene algunas filas y ejecute una verificación previa para detectar problemas temprano. Corrija errores en el CSV y vuelva a subirlo hasta que la verificación previa pase, luego cargue.
@@ -408,7 +408,7 @@ Cada partida OPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de
 
 **Ver partidas deshabilitadas**:
   - Por defecto, la lista OPEX muestra solo partidas **Habilitadas**
-  - Utilice el conmutador **Mostrar: Deshabilitados** o **Mostrar: Todos** para ver partidas deshabilitadas
+  - Utilice el conmutador **Mostrar: Desactivados** o **Mostrar: Todos** para ver partidas deshabilitadas
 
 **Cuándo desactivar vs eliminar**:
   - **Prefiera desactivar**: Mantiene el historial intacto, asegura que los informes permanezcan consistentes y soporta registros de auditoría

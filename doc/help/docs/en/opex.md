@@ -72,7 +72,7 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
   - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
   - **Date filters**: **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank
   - **Text columns** use text filters. On **Ref**, type the number or the full reference, for example `12` or `OPX-12`
-  - **Status scope**: Use the **Show: Enabled / Disabled / All** toggle above the grid (defaults to **Enabled**)
+  - **Status scope**: Use the **Show: All / Enabled / Disabled** toggle above the grid (defaults to **Enabled**)
 
 **Sorting**:
   - Click a column header to sort ascending/descending. Every column sorts, including every amount column
@@ -343,7 +343,7 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
 **Import**:
   1. Click **Import CSV** in the OPEX list
   2. Upload your CSV file (drag-and-drop or file picker)
-  3. Click **Preflight** to validate:
+  3. Click **Preflight check** to validate:
      - Every required column is present and no column is unknown. Columns are matched by name, in any order
      - Required fields (product_name, account_number) are present. A new item also needs a currency, and a company_name unless it has a cost center
      - Each company, supplier, account, cost center, and owner in the file exists in your workspace

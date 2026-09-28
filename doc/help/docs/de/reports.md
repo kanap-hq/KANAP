@@ -358,7 +358,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wob
 
 **Tabelle**: Eine Zeile pro Konsolidierungskonto mit Jahresspalten. Eine angeheftete Summenzeile unten summiert alle Gruppen.
 
-Positionen ohne Konsolidierungskonto erscheinen als „Nicht zugewiesen".
+Positionen ohne Konsolidierungskonto erscheinen als „Nicht zugeordnet".
 
 ---
 

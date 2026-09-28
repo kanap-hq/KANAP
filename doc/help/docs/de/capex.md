@@ -136,7 +136,7 @@ Klicken Sie auf eine beliebige Zelle in einer Zeile, um den Arbeitsbereich auf d
 
 ### Statusfilter
 
-Verwenden Sie den Umschalter **Anzeigen: Aktiviert / Deaktiviert / Alle** über dem Grid, um den Lebenszyklusbereich zu steuern (Standard ist **Aktiviert**). Wählen Sie **Deaktiviert**, um archivierte Investitionen zu überprüfen, oder **Alle**, um beide Zustände einzuschließen. Summen aktualisieren sich sofort.
+Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid, um den Lebenszyklusbereich zu steuern (Standard ist **Aktiv**). Wählen Sie **Deaktiviert**, um archivierte Investitionen zu überprüfen, oder **Alle**, um beide Zustände einzuschließen. Summen aktualisieren sich sofort.
 
 ### Suchkontext-Erhaltung
 
@@ -437,7 +437,7 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 
 1. Klicken Sie in der CAPEX-Liste auf **CSV importieren**
 2. Laden Sie Ihre CSV-Datei hoch (Drag-and-Drop oder Dateiauswahl)
-3. Klicken Sie auf **Vorprüfung** zur Validierung:
+3. Klicken Sie auf **Vorabprüfung** zur Validierung:
    - Jede Pflichtspalte ist vorhanden, und keine Spalte ist unbekannt. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge
    - Unternehmen, Kostenstellen und Benutzer existieren in Ihrem Arbeitsbereich
    - Pflichtfelder (description, ppe_type, investment_type, priority) sind vorhanden. Eine neue Position braucht außerdem eine Währung und einen company_name, sofern sie keine Kostenstelle hat
@@ -446,12 +446,12 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
    - Verantwortliche sind aktive Benutzer
    - Eine `item_number` entspricht einer bestehenden CAPEX-Position
    - Datumsangaben sind gültig, und keine zwei Zeilen beschreiben dieselbe Position
-4. Überprüfen Sie den Vorprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorprüfung erneut aus
+4. Überprüfen Sie den Vorabprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus
 5. Wenn OK, klicken Sie auf **Laden** zum Importieren
 
 **Wichtige Hinweise**:
 
-- **Abgleich**: Eine Zeile mit einer `item_number` aktualisiert diese CAPEX-Position; die Vorprüfung meldet eine Nummer, die zu keiner Position passt. Eine Zeile ohne Nummer wird über `description` zugeordnet: Bei einem Treffer wird die Position aktualisiert, sonst legt die Zeile eine neue Position an. Zwei Zeilen mit derselben `item_number` oder mit derselben `description` ohne Nummer sind ein Fehler („Same line as row N"): Behalten Sie eine Zeile pro Position.
+- **Abgleich**: Eine Zeile mit einer `item_number` aktualisiert diese CAPEX-Position; die Vorabprüfung meldet eine Nummer, die zu keiner Position passt. Eine Zeile ohne Nummer wird über `description` zugeordnet: Bei einem Treffer wird die Position aktualisiert, sonst legt die Zeile eine neue Position an. Zwei Zeilen mit derselben `item_number` oder mit derselben `description` ohne Nummer sind ein Fehler („Same line as row N"): Behalten Sie eine Zeile pro Position.
 - **Neue Positionen**: `currency` ist für eine neue Position Pflicht, ebenso `company_name`, sofern die Zeile kein `cost_center_code` hat: Eine neue Position mit leerem `company_name` erhält das Unternehmen ihrer Kostenstelle. Fehlt beides, wird die Zeile abgelehnt: „Company is required unless the line has a cost center." Die Währung muss in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt sein. Bei einer bestehenden Position behält eine leere Währungszelle deren Währung.
 - **Datumsangaben**: `effective_start` (und `effective_end` in älteren Dateien) muss ein echter Kalendertag im Format `YYYY-MM-DD` sein, zum Beispiel `2026-01-01`. Andere Formate wie `01/03/2026` sind Fehler. Ein leeres `effective_start` behält das gespeicherte Datum einer bestehenden Position; eine neue Position beginnt am 1. Januar des laufenden Jahres.
 - **Referenzen**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt.
@@ -467,11 +467,11 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 
 **Häufige Fehler**:
 
-- **„Unternehmen nicht gefunden"**: Erstellen Sie das Unternehmen zuerst unter **Stammdaten > Unternehmen**, dann importieren Sie erneut.
-- **„Ungültiger ppe_type"**: Verwenden Sie exakt `hardware` oder `software`.
-- **„Ungültiger investment_type"**: Verwenden Sie eine der 7 gültigen Investitionsarten (siehe Liste oben).
-- **„Ungültige Priorität"**: Verwenden Sie `mandatory`, `high`, `medium` oder `low`.
-- **„Ungültige Währung"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind.
+- **„Company not found"**: Erstellen Sie das Unternehmen zuerst unter **Stammdaten > Unternehmen**, dann importieren Sie erneut.
+- **„Invalid ppe_type"**: Verwenden Sie exakt `hardware` oder `software`.
+- **„Invalid investment_type"**: Verwenden Sie eine der 7 gültigen Investitionsarten (siehe Liste oben).
+- **„Invalid priority"**: Verwenden Sie `mandatory`, `high`, `medium` oder `low`.
+- **„Invalid currency"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind.
 - **„Header mismatch“**: Eine Pflichtspalte fehlt, oder eine Spalte ist unbekannt; die Meldung nennt sie. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge, und die Analysespalten sind optional. Vergleichen Sie Ihre erste Zeile mit einer frischen Vorlage.
 - **„effective_start must be a valid date"**: Verwenden Sie das Format `YYYY-MM-DD`.
 - **„Same line as row N"**: Zwei Zeilen beschreiben dieselbe Position. Führen Sie sie zu einer Zeile zusammen und importieren Sie dann erneut.
@@ -486,7 +486,7 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
 - **„The file has two columns for ...“**: Zwei Spalten nennen dieselbe Dimension, zum Beispiel `analytics_category` und der eigene Code der Standarddimension. Behalten Sie eine Spalte.
 - **„... is disabled. Pick an enabled value.“**: Verwenden Sie einen aktivierten Wert dieser Dimension, oder aktivieren Sie den Wert wieder.
 
-**Tipp**: Beginnen Sie mit dem Vorlagenexport, füllen Sie einige Zeilen aus und führen Sie eine Vorprüfung durch, um Probleme frühzeitig zu erkennen. Beheben Sie Fehler in der CSV und laden Sie sie erneut hoch, bis die Vorprüfung besteht, dann laden Sie.
+**Tipp**: Beginnen Sie mit dem Vorlagenexport, füllen Sie einige Zeilen aus und führen Sie eine Vorabprüfung durch, um Probleme frühzeitig zu erkennen. Beheben Sie Fehler in der CSV und laden Sie sie erneut hoch, bis die Vorabprüfung besteht, dann laden Sie.
 
 ---
 
@@ -512,7 +512,7 @@ Jede CAPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein op
 **Deaktivierte Positionen anzeigen**:
 
 - Standardmäßig zeigt die CAPEX-Liste nur **aktivierte** Positionen
-- Verwenden Sie den Umschalter **Anzeigen: Aktiviert / Deaktiviert / Alle**, um den Bereich zu ändern
+- Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert**, um den Bereich zu ändern
 
 **Wann deaktivieren vs. löschen**:
 

@@ -72,7 +72,7 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
   - **Filtres de montants** : Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants
   - **Filtres de dates** : **Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide
   - **Colonnes texte** : elles utilisent des filtres texte. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `OPX-12`
-  - **Périmètre par statut** : Utilisez la bascule **Afficher : Activé / Désactivé / Tous** au-dessus de la grille (par défaut **Activé**)
+  - **Périmètre par statut** : Utilisez la bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille (par défaut **Activés**)
 
 **Tri** :
   - Cliquez sur un en-tête de colonne pour trier croissant/décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant
@@ -343,7 +343,7 @@ Vous pouvez charger en masse les postes OPEX via CSV pour accélérer la configu
 **Import** :
   1. Cliquez sur **Import CSV** dans la liste OPEX
   2. Téléversez votre fichier CSV (glisser-déposer ou sélecteur de fichiers)
-  3. Cliquez sur **Vérification** pour valider :
+  3. Cliquez sur **Vérification préalable** pour valider :
      - Chaque colonne obligatoire est présente et aucune colonne n'est inconnue. Les colonnes sont reconnues par leur nom, dans n'importe quel ordre
      - Les champs obligatoires (product_name, account_number) sont présents. Un nouveau poste nécessite aussi une devise, et un company_name sauf s'il a un centre de coûts
      - Chaque société, fournisseur, compte, centre de coûts et responsable du fichier existe dans votre espace de travail
@@ -382,7 +382,7 @@ Vous pouvez charger en masse les postes OPEX via CSV pour accélérer la configu
   - **« The ... dimension is disabled. Enable it or leave it out. »** : Activez la dimension dans **Données de référence > Dimensions analytiques**, ou retirez sa colonne
   - **« The file has two columns for ... »** : Deux colonnes désignent la même dimension, par exemple `analytics_category` et le code propre de la dimension par défaut. Gardez une seule colonne
   - **« ... is disabled. Pick an enabled value. »** : Utilisez une valeur activée de cette dimension, ou réactivez la valeur
-  - **« Devise invalide »** : Utilisez des codes ISO à 3 lettres (USD, EUR, GBP) autorisés dans les paramètres de devise de votre espace de travail
+  - **« Invalid currency »** : Utilisez des codes ISO à 3 lettres (USD, EUR, GBP) autorisés dans les paramètres de devise de votre espace de travail
   - **« Header mismatch »** : Une colonne obligatoire manque, ou une colonne est inconnue ; le message les liste. Les colonnes sont reconnues par leur nom, dans n'importe quel ordre, et les colonnes analytiques sont facultatives. Comparez la première ligne de votre fichier avec un nouveau modèle
 
 **Conseil** : Commencez par l'export du modèle, remplissez quelques lignes et lancez une vérification pour détecter les erreurs tôt. Corrigez les erreurs dans le CSV et téléversez-le à nouveau jusqu'à ce que la vérification passe, puis chargez.
@@ -408,7 +408,7 @@ Chaque poste OPEX a un **statut** (Activé ou Désactivé) et une **Fin de valid
 
 **Afficher les postes désactivés** :
   - Par défaut, la liste OPEX n'affiche que les postes **Activés**
-  - Utilisez la bascule **Afficher : Désactivé** ou **Afficher : Tous** pour voir les postes désactivés
+  - Utilisez la bascule **Afficher : Désactivés** ou **Afficher : Tous** pour voir les postes désactivés
 
 **Désactiver ou supprimer** :
   - **Privilégiez la désactivation** : Elle préserve l'historique, garantit la cohérence des rapports et conserve la piste d'audit

@@ -80,7 +80,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 
 - **Recherche rapide** : recherche dans le code, le nom et le chemin complet. Rechercher le nom d'un groupe trouve aussi tout ce qu'il contient
 - **Filtres de colonnes** : **Type**, **Parent**, **Société** et **Statut** utilisent des filtres par cases à cocher
-- **Filtre de statut** : le bouton bascule **Activé / Désactivé / Tous** au-dessus de la liste. Par défaut, la liste affiche les éléments activés
+- **Filtre de statut** : le bouton bascule **Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les éléments activés
 
 **Actions** :
 

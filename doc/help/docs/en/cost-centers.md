@@ -80,7 +80,7 @@ Click any cell to open the workspace.
 
 - **Quick search**: searches the code, the name and the full path. Searching for a group's name also finds everything inside it
 - **Column filters**: **Type**, **Parent**, **Company** and **Status** use checkbox filters
-- **Status scope**: the **Enabled / Disabled / All** toggle above the list. The list shows enabled nodes by default
+- **Status scope**: the **All / Enabled / Disabled** toggle above the list. The list shows enabled nodes by default
 
 **Actions**:
 

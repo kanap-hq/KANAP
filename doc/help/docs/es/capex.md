@@ -136,7 +136,7 @@ Haga clic en cualquier celda de una fila para abrir el espacio de trabajo en la 
 
 ### Filtro de estado
 
-Utilice el conmutador **Mostrar: Habilitados / Deshabilitados / Todos** encima de la cuadrícula para controlar el alcance del ciclo de vida (predeterminado: **Habilitados**). Seleccione **Deshabilitados** para revisar inversiones archivadas o **Todos** para incluir ambos estados. Los totales se actualizan inmediatamente.
+Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula para controlar el alcance del ciclo de vida (predeterminado: **Activos**). Seleccione **Desactivados** para revisar inversiones archivadas o **Todos** para incluir ambos estados. Los totales se actualizan inmediatamente.
 
 ### Preservación del contexto de búsqueda
 
@@ -467,11 +467,11 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 
 **Errores comunes**:
 
-- **"Empresa no encontrada"**: Cree la empresa en **Datos maestros > Empresas** primero, luego reimporte.
-- **"Tipo de activo fijo inválido"**: Utilice `hardware` o `software` exactamente.
-- **"Tipo de inversión inválido"**: Utilice uno de los 7 tipos válidos (ver lista arriba).
-- **"Prioridad inválida"**: Utilice `mandatory`, `high`, `medium` o `low`.
-- **"Moneda inválida"**: Utilice códigos ISO de 3 letras (USD, EUR, GBP) que estén permitidos en la configuración de monedas de su espacio de trabajo.
+- **"Company not found"**: Cree la empresa en **Datos maestros > Empresas** primero, luego reimporte.
+- **"Invalid ppe_type"**: Utilice `hardware` o `software` exactamente.
+- **"Invalid investment_type"**: Utilice uno de los 7 tipos válidos (ver lista arriba).
+- **"Invalid priority"**: Utilice `mandatory`, `high`, `medium` o `low`.
+- **"Invalid currency"**: Utilice códigos ISO de 3 letras (USD, EUR, GBP) que estén permitidos en la configuración de monedas de su espacio de trabajo.
 - **"Header mismatch"**: Falta una columna obligatoria o hay una columna desconocida; el mensaje las indica. Las columnas se reconocen por su nombre, en cualquier orden, y las columnas analíticas son opcionales. Compare la primera línea de su archivo con una plantilla nueva.
 - **"effective_start must be a valid date"**: Use el formato `YYYY-MM-DD`.
 - **"Same line as row N"**: Dos filas describen la misma partida. Combínelas en una sola fila, luego reimporte.
@@ -512,7 +512,7 @@ Cada partida CAPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin d
 **Ver partidas deshabilitadas**:
 
 - Por defecto, la lista CAPEX muestra solo partidas **Habilitadas**
-- Utilice el conmutador **Mostrar: Habilitados / Deshabilitados / Todos** para cambiar el alcance
+- Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** para cambiar el alcance
 
 **Cuándo desactivar vs eliminar**:
 

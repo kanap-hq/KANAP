@@ -136,7 +136,7 @@ Click any cell in a row to open the workspace on the tab most relevant to that c
 
 ### Status filter
 
-Use the **Show: Enabled / Disabled / All** toggle above the grid to control lifecycle scope (defaults to **Enabled**). Pick **Disabled** to review archived investments or **All** to include both states. Totals update immediately.
+Use the **Show: All / Enabled / Disabled** toggle above the grid to control lifecycle scope (defaults to **Enabled**). Pick **Disabled** to review archived investments or **All** to include both states. Totals update immediately.
 
 ### Search context preservation
 
@@ -437,7 +437,7 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 
 1. Click **Import CSV** in the CAPEX list
 2. Upload your CSV file (drag-and-drop or file picker)
-3. Click **Preflight** to validate:
+3. Click **Preflight check** to validate:
    - Every required column is present and no column is unknown. Columns are matched by name, in any order
    - Companies, cost centers and users exist in your workspace
    - Required fields (description, ppe_type, investment_type, priority) are present. A new item also needs a currency, and a company_name unless it has a cost center
@@ -512,7 +512,7 @@ Every CAPEX item has a **status** (Enabled or Disabled) and an optional **End of
 **Viewing disabled items**:
 
 - By default, the CAPEX list shows only **Enabled** items
-- Use the **Show: Enabled / Disabled / All** toggle to change the scope
+- Use the **Show: All / Enabled / Disabled** toggle to change the scope
 
 **When to disable vs delete**:
 

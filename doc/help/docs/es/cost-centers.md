@@ -80,14 +80,14 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 
 - **Búsqueda rápida**: busca en el código, el nombre y la ruta completa. Buscar el nombre de un grupo también encuentra todo lo que contiene
 - **Filtros de columna**: **Tipo**, **Superior**, **Empresa** y **Estado** usan filtros de casillas
-- **Ámbito de estado**: el selector **Activados / Desactivados / Todos** sobre la lista. La lista muestra por defecto los elementos activados
+- **Ámbito de estado**: el selector **Todos / Activos / Desactivados** sobre la lista. La lista muestra por defecto los elementos activados
 
 **Acciones**:
 
 - **Nuevo**: crear un grupo o un centro de coste (requiere `cost_centers:member`)
 - **Importar CSV**: cargar el árbol desde un archivo (requiere `cost_centers:admin`)
 - **Exportar CSV**: descargar todos los elementos (requiere `cost_centers:admin`)
-- **Eliminar seleccionados**: eliminar los elementos seleccionados (requiere `cost_centers:admin`). Los elementos que no se pueden eliminar se conservan y se listan con el motivo. El contenido se elimina antes que su grupo, de modo que seleccionar un grupo junto con todo lo que contiene lo elimina todo
+- **Eliminar selección**: eliminar los elementos seleccionados (requiere `cost_centers:admin`). Los elementos que no se pueden eliminar se conservan y se listan con el motivo. El contenido se elimina antes que su grupo, de modo que seleccionar un grupo junto con todo lo que contiene lo elimina todo
 
 ---
 
@@ -223,7 +223,7 @@ Cargue o actualice todo el árbol desde un archivo.
 | `cost_centers:member` | Crear centros de coste y grupos, y editarlos |
 | `cost_centers:admin` | Todo lo anterior, más la importación y exportación CSV y la eliminación |
 
-Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado Budget Administrator, que recibe admin. Así, Budget Administrator y Master Data Administrator son administradores, Budget Member y Master Data Member son miembros, y los roles de lectura pueden leer. Cualquier persona que pueda leer OPEX, CAPEX o los informes puede elegir un centro de coste en una línea o en un filtro de informe sin acceso a esta página.
+Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado Administrador de presupuesto, que recibe admin. Así, Administrador de presupuesto y Administrador de datos maestros son administradores, Miembro de presupuesto y Miembro de datos maestros son miembros, y los roles de lectura pueden leer. Cualquier persona que pueda leer OPEX, CAPEX o los informes puede elegir un centro de coste en una línea o en un filtro de informe sin acceso a esta página.
 
 ---
 

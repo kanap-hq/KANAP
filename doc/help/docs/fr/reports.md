@@ -358,7 +358,7 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par compte de cons
 
 **Tableau** : Une ligne par compte de consolidation avec des colonnes d'années. Une ligne de totaux épinglée en bas additionne tous les groupes.
 
-Les postes sans compte de consolidation apparaissent comme « Non assigné ».
+Les postes sans compte de consolidation apparaissent comme « Non affecté ».
 
 ---
 

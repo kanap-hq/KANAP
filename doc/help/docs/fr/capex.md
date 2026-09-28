@@ -136,7 +136,7 @@ Cliquez sur n'importe quelle cellule d'une ligne pour ouvrir l'espace de travail
 
 ### Filtre de statut
 
-Utilisez la bascule **Afficher : Activé / Désactivé / Tous** au-dessus de la grille pour choisir le périmètre de cycle de vie (par défaut **Activé**). Choisissez **Désactivé** pour revoir les investissements archivés, ou **Tous** pour inclure les deux états. Les totaux se mettent à jour immédiatement.
+Utilisez la bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille pour choisir le périmètre de cycle de vie (par défaut **Activés**). Choisissez **Désactivés** pour revoir les investissements archivés, ou **Tous** pour inclure les deux états. Les totaux se mettent à jour immédiatement.
 
 ### Conservation du contexte de recherche
 
@@ -437,7 +437,7 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 
 1. Cliquez sur **Import CSV** dans la liste CAPEX
 2. Téléversez votre fichier CSV (glisser-déposer ou sélecteur de fichiers)
-3. Cliquez sur **Vérification** pour valider :
+3. Cliquez sur **Vérification préalable** pour valider :
    - Chaque colonne obligatoire est présente et aucune colonne n'est inconnue. Les colonnes sont reconnues par leur nom, dans n'importe quel ordre
    - Les sociétés, centres de coûts et utilisateurs existent dans votre espace de travail
    - Les champs obligatoires (description, ppe_type, investment_type, priority) sont présents. Un nouveau poste nécessite aussi une devise, et un company_name sauf s'il a un centre de coûts
@@ -467,11 +467,11 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 
 **Erreurs courantes** :
 
-- **« Société introuvable »** : Créez d'abord la société dans **Données de référence > Sociétés**, puis relancez l'import.
-- **« ppe_type invalide »** : Utilisez exactement `hardware` ou `software`.
-- **« investment_type invalide »** : Utilisez l'un des 7 types d'investissement valides (voir la liste ci-dessus).
-- **« Priorité invalide »** : Utilisez `mandatory`, `high`, `medium` ou `low`.
-- **« Devise invalide »** : Utilisez des codes ISO à 3 lettres (USD, EUR, GBP) autorisés dans les paramètres de devise de votre espace de travail.
+- **« Company not found »** : Créez d'abord la société dans **Données de référence > Sociétés**, puis relancez l'import.
+- **« Invalid ppe_type »** : Utilisez exactement `hardware` ou `software`.
+- **« Invalid investment_type »** : Utilisez l'un des 7 types d'investissement valides (voir la liste ci-dessus).
+- **« Invalid priority »** : Utilisez `mandatory`, `high`, `medium` ou `low`.
+- **« Invalid currency »** : Utilisez des codes ISO à 3 lettres (USD, EUR, GBP) autorisés dans les paramètres de devise de votre espace de travail.
 - **« Header mismatch »** : Une colonne obligatoire manque, ou une colonne est inconnue ; le message les liste. Les colonnes sont reconnues par leur nom, dans n'importe quel ordre, et les colonnes analytiques sont facultatives. Comparez la première ligne de votre fichier avec un nouveau modèle.
 - **« effective_start must be a valid date »** : Utilisez le format `YYYY-MM-DD`.
 - **« Same line as row N »** : Deux lignes décrivent le même poste. Fusionnez-les en une seule ligne, puis relancez l'import.
@@ -512,7 +512,7 @@ Chaque poste CAPEX a un **statut** (Activé ou Désactivé) et une **Fin de vali
 **Afficher les postes désactivés** :
 
 - Par défaut, la liste CAPEX n'affiche que les postes **Activés**
-- Utilisez la bascule **Afficher : Activé / Désactivé / Tous** pour changer le périmètre
+- Utilisez la bascule **Afficher : Tous / Activés / Désactivés** pour changer le périmètre
 
 **Désactiver ou supprimer** :
 

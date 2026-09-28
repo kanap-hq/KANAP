@@ -72,7 +72,7 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Betragsfilter**: Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen
   - **Datumsfilter**: **Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer
   - **Textspalten** verwenden Textfilter. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `OPX-12`
-  - **Statusbereich**: Verwenden Sie den Umschalter **Anzeigen: Aktiviert / Deaktiviert / Alle** über dem Grid (Standard ist **Aktiviert**)
+  - **Statusbereich**: Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid (Standard ist **Aktiv**)
 
 **Sortierung**:
   - Klicken Sie auf eine Spaltenüberschrift, um aufsteigend/absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betragsspalte
@@ -343,14 +343,14 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
 **Import**:
   1. Klicken Sie in der OPEX-Liste auf **CSV importieren**
   2. Laden Sie Ihre CSV-Datei hoch (Drag-and-Drop oder Dateiauswahl)
-  3. Klicken Sie auf **Vorprüfung** zur Validierung:
+  3. Klicken Sie auf **Vorabprüfung** zur Validierung:
      - Jede Pflichtspalte ist vorhanden, und keine Spalte ist unbekannt. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge
      - Pflichtfelder (product_name, account_number) sind vorhanden. Eine neue Position braucht außerdem eine Währung und einen company_name, sofern sie keine Kostenstelle hat
      - Jedes Unternehmen, jeder Lieferant, jedes Konto, jede Kostenstelle und jeder Verantwortliche aus der Datei existiert in Ihrem Arbeitsbereich
      - Datumsangaben sind gültig, und keine zwei Zeilen beschreiben dieselbe Position
      - Währungen sind in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt
      - Verantwortliche sind aktive Benutzer
-  4. Überprüfen Sie den Vorprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorprüfung erneut aus
+  4. Überprüfen Sie den Vorabprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus
   5. Wenn OK, klicken Sie auf **Laden** zum Importieren
 
 **Wichtige Hinweise**:
@@ -382,10 +382,10 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   - **„The ... dimension is disabled. Enable it or leave it out.“**: Aktivieren Sie die Dimension unter **Stammdaten > Analysedimensionen**, oder entfernen Sie ihre Spalte
   - **„The file has two columns for ...“**: Zwei Spalten nennen dieselbe Dimension, zum Beispiel `analytics_category` und der eigene Code der Standarddimension. Behalten Sie eine Spalte
   - **„... is disabled. Pick an enabled value.“**: Verwenden Sie einen aktivierten Wert dieser Dimension, oder aktivieren Sie den Wert wieder
-  - **„Ungültige Währung"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind
+  - **„Invalid currency"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind
   - **„Header mismatch“**: Eine Pflichtspalte fehlt, oder eine Spalte ist unbekannt; die Meldung nennt sie. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge, und die Analysespalten sind optional. Vergleichen Sie Ihre erste Zeile mit einer frischen Vorlage
 
-**Tipp**: Beginnen Sie mit dem Vorlagenexport, füllen Sie einige Zeilen aus und führen Sie eine Vorprüfung durch, um Probleme frühzeitig zu erkennen. Beheben Sie Fehler in der CSV und laden Sie sie erneut hoch, bis die Vorprüfung besteht, dann laden Sie.
+**Tipp**: Beginnen Sie mit dem Vorlagenexport, füllen Sie einige Zeilen aus und führen Sie eine Vorabprüfung durch, um Probleme frühzeitig zu erkennen. Beheben Sie Fehler in der CSV und laden Sie sie erneut hoch, bis die Vorabprüfung besteht, dann laden Sie.
 
 ---
 
@@ -469,7 +469,7 @@ Wenn Sie eine Aktion nicht ausführen können (z. B. die Schaltfläche **CSV imp
 
 ## Hilfe benötigt?
 
-- **CSV-Probleme**: Laden Sie eine frische Vorlage herunter, stellen Sie UTF-8-Kodierung sicher und führen Sie eine Vorprüfung durch, um detaillierte Fehler zu sehen
+- **CSV-Probleme**: Laden Sie eine frische Vorlage herunter, stellen Sie UTF-8-Kodierung sicher und führen Sie eine Vorabprüfung durch, um detaillierte Fehler zu sehen
 - **Zuordnungsfehler**: Prüfen Sie, ob alle Unternehmen die erforderlichen Kennzahlen (Mitarbeiterzahl, IT-Benutzer, Umsatz) für das ausgewählte Jahr haben
 - **Warnung „Veraltetes Konto"**: Das Konto gehört nicht zum Kontenplan des zahlenden Unternehmens; wählen Sie ein anderes Konto
 - **Fehlende Schaltflächen oder Tabs**: Ihre Rolle hat möglicherweise nicht die erforderliche Berechtigungsstufe (Manager oder Admin). Kontaktieren Sie Ihren Arbeitsbereich-Administrator

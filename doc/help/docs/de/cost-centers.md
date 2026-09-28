@@ -80,7 +80,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 
 - **Schnellsuche**: durchsucht den Code, den Namen und den vollständigen Pfad. Die Suche nach dem Namen einer Gruppe findet auch alles, was sie enthält
 - **Spaltenfilter**: **Typ**, **Übergeordnet**, **Unternehmen** und **Status** verwenden Kontrollkästchen-Filter
-- **Statusbereich**: der Umschalter **Aktiviert / Deaktiviert / Alle** über der Liste. Standardmäßig zeigt die Liste aktivierte Elemente
+- **Statusbereich**: der Umschalter **Alle / Aktiv / Deaktiviert** über der Liste. Standardmäßig zeigt die Liste aktivierte Elemente
 
 **Aktionen**:
 
@@ -223,7 +223,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 | `cost_centers:member` | Kostenstellen und Gruppen erstellen und bearbeiten |
 | `cost_centers:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
 
-Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der integrierten Rolle Budget Administrator, die admin erhält. Budget Administrator und Master Data Administrator sind also Administratoren, Budget Member und Master Data Member sind Mitglieder, und die Leserollen können lesen. Wer OPEX, CAPEX oder Reporting lesen kann, kann eine Kostenstelle auf einer Zeile oder in einem Berichtsfilter wählen, ohne Zugriff auf diese Seite zu haben.
+Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der integrierten Rolle Budget-Administrator, die admin erhält. Budget-Administrator und Stammdaten-Administrator sind also Administratoren, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen. Wer OPEX, CAPEX oder Reporting lesen kann, kann eine Kostenstelle auf einer Zeile oder in einem Berichtsfilter wählen, ohne Zugriff auf diese Seite zu haben.
 
 ---
 
