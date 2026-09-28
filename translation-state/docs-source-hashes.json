@@ -14,9 +14,9 @@
     "applications.md": "7ce3c64340079438c3a1bdd87f98cce4",
     "assets.md": "8e77fc10282aec40a92cab9dd0f2a1dd",
     "branding.md": "cf408195e3f5ee413f3c86bc9cccbc0e",
-    "budget-operations.md": "f0feec8f1cfd32e10827e6bb05733fbd",
+    "budget-operations.md": "068f16e16b9a9580ee1e18d2a59932d5",
     "business-processes.md": "71c2fb579c691c2579975b0b61c5064e",
-    "capex.md": "8613c347eb5d7eb238ba169d66a658ed",
+    "capex.md": "a81d23bafe4b93bb3feda78cf47e3d43",
     "chart-of-accounts.md": "1435e9d777e3cbb3f98d2097efc770f2",
     "companies.md": "7139c0895ce9901adf9a18fd177e03c4",
     "connection-map.md": "414a6eb72d51725f780134263d775afd",
@@ -31,7 +31,7 @@
     "fast-track/index.md": "fffb386bc0e49a991c10444e214fa264",
     "fast-track/task-types.md": "fe1839b6a2c0419758a7e8c646dc5080",
     "incidents.md": "f24bc0d1e519918ff814802b24176fd9",
-    "index.md": "f6ff6d417a0791c8242bad2ab48d0b8a",
+    "index.md": "ec6fe2e3bc793c1e758c18776c7317d4",
     "integrations.md": "d3eae2fff1055b55dc86d3272b7d28ac",
     "interface-map.md": "6caaf67bd4de7106e22bc4ab1f7e0278",
     "interfaces.md": "52ef405ba771e27e5b81f6723090589c",
@@ -49,7 +49,7 @@
     "on-premise/operations.md": "ba26f5c7262aaafedbd764b94d202118",
     "on-premise/sso-entra.md": "3e756086410cd9efc7e78025cfd3d291",
     "operations-dashboard.md": "f2141d4a9c46b90529a5eb9a197ea84e",
-    "opex.md": "7cf8ed983c317d8706582f24fbf12e59",
+    "opex.md": "036f5a2ef5053fb050cac3c51514169e",
     "portfolio-planning.md": "90a8528b994c5c562148b8f069a0701e",
     "portfolio-projects.md": "09edbb86533fddfd3098301db23ced9d",
     "portfolio-reporting.md": "9af8265c555b5dc2cb479cf00591bb90",
@@ -60,7 +60,7 @@
     "scheduled-tasks.md": "e72da539219d2c403fa7af6b2af003f7",
     "suppliers.md": "314a344bad49914542d63ff860053b3d",
     "tasks.md": "2c322538f508cec71a27e8861d0d4ad6",
-    "working-day-calendars.md": "314c593c0dac30b30da008a7b72a4846"
+    "working-day-calendars.md": "6c043aa1d8808f797870b5b5a7fb03f7"
   },
   "glossary_hash": "981506c36ae03055093db384b046315e",
   "nav_hashes": {

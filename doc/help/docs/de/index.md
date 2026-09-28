@@ -79,7 +79,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 
 - [Kontenplan](chart-of-accounts.md) - Finanzkonten konfigurieren
 - [Währungen](currencies.md) - Währungseinstellungen konfigurieren
-- [Arbeitstagekalender](working-day-calendars.md) - Arbeitstage jedes Monats für Zeilen mit Preis pro Tag festlegen
+- [Arbeitstagekalender](working-day-calendars.md) - Arbeitstage jedes Monats, aus den Feiertagen eines Landes oder von Hand eingegeben, für Zeilen mit Preis pro Tag
 
 **Klassifizierung**
 

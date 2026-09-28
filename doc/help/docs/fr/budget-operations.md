@@ -137,14 +137,14 @@ Sous la grille, une barre de statistiques affiche :
 
 ### Copier une colonne calculée
 
-Une colonne calculée à partir de la quantité et du prix porte une formule de calcul : la base de calcul, la quantité, le prix unitaire, l'indice de prix, le calendrier et **Compte en ETP**. Voir [Calculer à partir de la quantité et du prix](opex.md#calculer-a-partir-de-la-quantite-et-du-prix).
+Une colonne peut être construite à partir de lignes, chacune étant une quantité multipliée par un prix unitaire. Voir [Quantité et prix](opex.md#quantite-et-prix).
 
-- La copie reporte telle quelle la formule de la source sur la destination : même quantité, même prix unitaire, même indice et même calendrier
-- Les mois sont copiés comme pour toute autre colonne. Le pourcentage d'augmentation s'applique uniquement aux montants copiés. La formule n'est pas modifiée, et l'indice de prix n'est jamais appliqué une seconde fois
-- Une copie depuis une colonne sans formule retire la formule de la colonne de destination : celle-ci n'en a plus ensuite, et son ETP devient inconnu.
-- Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 » avec la formule dans son info-bulle, et **Recalculer** est disponible
-- Pour calculer l'année de destination à partir de la formule, ouvrez l'onglet Budget de la ligne et cliquez sur **Recalculer**. Le panneau affiche d'abord ce qui changerait. Le calendrier doit contenir l'année de destination : sinon, le recalcul est refusé, par exemple « Personnel du siège has no working days for 2027. Add them on the Working-day calendars page. »
-- Pour augmenter le prix de la nouvelle année, modifiez l'**Indice de prix (%)** dans le panneau avant de cliquer sur **Recalculer**
+- La copie reporte les lignes de la colonne source sur la destination, avec leur description, leur quantité, leur unité, leur prix unitaire et leur calendrier. Leurs périodes passent à l'année de destination, comme la période de la colonne : mars à décembre 2026 devient mars à décembre 2027, et une ligne qui se termine le 29 février se termine le 28 février dans une année qui n'en a pas
+- La copie reporte aussi l'ETP de la colonne source
+- Les mois sont copiés comme pour toute autre colonne. Le pourcentage d'augmentation s'applique uniquement aux montants copiés. Les lignes gardent leurs prix unitaires
+- Une copie depuis une colonne sans ligne laisse la destination sans ligne, et son ETP devient vide
+- Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 », et son onglet **Quantité et prix** indique « Les montants ont été copiés depuis Budget 2026. Utiliser à nouveau les lignes. »
+- Pour planifier l'année de destination à ses propres prix, ouvrez l'onglet Budget du poste et modifiez les prix unitaires dans l'onglet **Quantité et prix** : chaque modification recalcule la colonne à partir des lignes. Pour garder les prix, cliquez sur **Utiliser à nouveau les lignes**. Une ligne au prix par jour a besoin d'un calendrier qui contient l'année de destination : un calendrier standard la contient toujours, un calendrier personnalisé peut ne pas la contenir, par exemple « Personnel du siège has no working days for 2027. Add them on the Working-day calendars page. »
 
 ### Protection des colonnes gelées
 
@@ -200,7 +200,7 @@ Après une simulation, une bannière affiche le nombre de postes prêts à être
 
 Effacez toutes les données d'une colonne budgétaire spécifique pour une année donnée. C'est une opération destructive : utilisez-la lorsque vous devez repartir de zéro.
 
-Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les postes à effacer. La réinitialisation met à zéro les douze mois de la colonne et retire sa période, ainsi que sa formule de calcul lorsque la colonne était calculée à partir de la quantité et du prix. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates du poste. La réinitialisation couvre tous les postes, y compris ceux dont la fin de validité est passée. Elle se fait en tout ou rien : si un poste échoue, rien n'est effacé.
+Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les postes à effacer. La réinitialisation met à zéro les douze mois de la colonne et retire sa période, ainsi que ses lignes lorsque la colonne était construite à partir de la quantité et du prix. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates du poste. La réinitialisation couvre tous les postes, y compris ceux dont la fin de validité est passée. Elle se fait en tout ou rien : si un poste échoue, rien n'est effacé.
 
 Nécessite les droits d'administration sur les OPEX, ou sur les CAPEX pour les postes CAPEX.
 
@@ -335,8 +335,7 @@ Le fichier utilise le point-virgule `;` comme séparateur et l'encodage UTF-8.
 | `measure` | La colonne, par son nom technique, quel que soit le nom choisi par votre organisation : `planned` (colonne 1, nom standard Budget), `committed` (colonne 2, Révision), `forecast` (colonne 3, Prévision), `actual` (colonne 4, Réalisé), `expected_landing` (colonne 5, Atterrissage prévu). À l'import, `budget`, `revision`, `follow_up` et `landing` fonctionnent aussi |
 | `period_start`, `period_end` | La période de la colonne au format `YYYY-MM-DD`, à l'intérieur de l'année de la ligne. À l'import, deux valeurs vides signifient toute l'année |
 | `jan` à `dec` | Les douze montants mensuels, avec un point comme séparateur décimal. À l'import, la virgule et les espaces sont aussi acceptés |
-| `method` | La façon dont la colonne a été produite : `spread`, `copied`, `manual` ou `computed`. À titre d'information uniquement, ignorée à l'import |
-| `pricing_basis` à `counts_as_fte` | Les six colonnes de chiffrage. Voir [Colonnes de chiffrage](#colonnes-de-chiffrage) |
+| `method` | La façon dont la colonne a été produite : `spread`, `copied`, `manual` ou `computed` (construite à partir de la quantité et du prix). À titre d'information uniquement, ignorée à l'import |
 
 ### Règles d'import
 
@@ -347,48 +346,14 @@ Le fichier utilise le point-virgule `;` comme séparateur et l'encodage UTF-8.
 - Chaque ligne remplace les douze mois de son poste, de son année et de sa colonne. Les postes, années et colonnes absents du fichier ne sont pas modifiés
 - Les douze mois sont obligatoires. Saisissez `0` pour un mois sans montant
 - Une ligne identique à ce qui est enregistré n'est pas modifiée, y compris la façon dont la colonne a été produite. Réimporter un export ne change rien
-- Une ligne dont les montants changent marque la colonne comme **Modifié à la main**, avec la période du fichier
+- Une ligne dont les montants changent marque la colonne comme **Modifié à la main**, avec la période du fichier. Une colonne construite à partir de la quantité et du prix garde ses lignes, et son onglet Budget propose de les utiliser à nouveau. Voir [Quantité et prix](opex.md#quantite-et-prix)
+- Le fichier ne contient que des montants. Les lignes d'une colonne se gèrent dans l'onglet Budget
 - Une ligne qui ne change que la période met à jour la période et conserve le reste
 - Les lignes Réalisé suivent les mêmes règles, ce qui permet d'importer le réalisé mensuel
 - Une ligne modifiée sur une colonne gelée est refusée. Une ligne identique sur une colonne gelée est acceptée
 - Les lignes d'une colonne masquée sont importées comme les autres. Masquer une colonne ne bloque jamais ses imports, et une colonne masquée gelée refuse toujours les lignes modifiées
 - Les lignes en double (même poste, même année et même colonne), les numéros de poste inconnus et les postes d'un type que vous ne pouvez pas administrer sont des erreurs
 - L'import nécessite les droits d'administration sur les OPEX ou sur les CAPEX. L'export nécessite l'accès en lecture à l'un des deux
-
-### Colonnes de chiffrage
-
-Les colonnes de chiffrage contiennent la formule de calcul d'une colonne calculée à partir de la quantité et du prix. Voir [Calculer à partir de la quantité et du prix](opex.md#calculer-a-partir-de-la-quantite-et-du-prix). L'export et le modèle les écrivent toujours : remplies lorsque la colonne a une formule, vides sinon.
-
-| Colonne | Contenu |
-|---------|---------|
-| `pricing_basis` | `per_day` (Par jour), `per_month` (Par mois) ou `per_period` (Pour toute la période). La casse n'a pas d'importance |
-| `quantity` | Zéro ou plus, jusqu'à 3 décimales. Obligatoire avec une base de calcul |
-| `unit_price` | Jusqu'à 4 décimales. Un prix négatif est accepté, pour un avoir. Obligatoire avec une base de calcul |
-| `price_index_pct` | L'indice de prix en pourcentage, par exemple `3` pour +3 %. Jusqu'à 4 décimales, pas en dessous de -100. Vide signifie 0 |
-| `working_day_profile_code` | Le code d'un calendrier de jours ouvrés. Obligatoire avec `per_day`, et seulement avec lui. Rapproché sans tenir compte de la casse |
-| `counts_as_fte` | `true` ou `false` (`yes`, `no`, `1` et `0` fonctionnent aussi). Vide signifie `false` |
-
-Les colonnes de chiffrage sont facultatives à l'import : fournissez les six, ou aucune. Un fichier sans elles s'importe comme avant, et chaque formule enregistrée est conservée.
-
-Avec les colonnes de chiffrage, chaque ligne relève de l'un de trois cas :
-
-1. **Les douze mois sont fournis** : les mois sont enregistrés tels quels, et les cellules de chiffrage de la ligne deviennent la formule de la colonne. Des cellules de chiffrage vides retirent la formule. Lorsque les mois changent, la colonne est marquée **Modifié à la main**. Lorsque seule la formule d'une colonne calculée change, la colonne est aussi marquée **Modifié à la main** : ses mois ne proviennent plus de sa formule
-2. **Aucun mois fourni, avec une formule** : les mois sont calculés à partir de la formule sur la période de la ligne (toute l'année lorsque la période est vide), exactement comme le fait **Calculer** dans l'onglet Budget. La colonne est marquée comme calculée. Une ligne dont les mois calculés, la période et la formule correspondent à ce qui est enregistré compte comme inchangée
-3. **Une partie des mois fournie** : la ligne est refusée. Fournissez les douze mois, ou aucun
-
-Chaque calcul s'exécute pendant la vérification préalable : une vérification qui passe se charge donc sans surprise. Réimporter un export ne change rien, colonnes calculées comprises.
-
-**Erreurs courantes** :
-
-- **« Give all twelve months, or none to compute them from quantity and price. »** : la ligne ne fournit qu'une partie des mois
-- **« Give all twelve months, or a pricing basis with quantity and unit price. »** : la ligne ne fournit ni mois ni formule complète
-- **« Give the code of a working-day calendar for a price per day. »** : renseignez `working_day_profile_code`
-- **« A calendar is used only with a price per day. »** : videz `working_day_profile_code`, ou passez la base de calcul à `per_day`
-- **« No working-day calendar has the code '...'. »** : créez le calendrier dans **Données de référence > Calendriers de jours ouvrés**, ou corrigez le code
-- **« ... is disabled. Pick an enabled calendar. »** : un calendrier désactivé reste sur les colonnes qui l'utilisent déjà, et ne peut pas être attribué à une autre
-- **« ... has no working days for 2027. Add them on the Working-day calendars page. »** : ajoutez l'année au calendrier, puis relancez la vérification préalable
-- **« counts_as_fte '...' is not understood. Use true or false. »** : corrigez la cellule
-- **« Header mismatch »** : certaines colonnes de chiffrage manquent. Fournissez les six, ou retirez-les toutes
 
 ---
 

@@ -137,14 +137,14 @@ Unterhalb des Grids zeigt eine Statistikleiste:
 
 ### Eine berechnete Spalte kopieren
 
-Eine aus Menge und Preis berechnete Spalte trägt eine Berechnungsgrundlage: die Berechnungsbasis, die Menge, den Stückpreis, den Preisindex, den Kalender und **Zählt als VZÄ**. Siehe [Aus Menge und Preis berechnen](opex.md#aus-menge-und-preis-berechnen).
+Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis. Siehe [Menge und Preis](opex.md#menge-und-preis).
 
-- Die Kopie überträgt die Berechnungsgrundlage der Quelle unverändert auf das Ziel: dieselbe Menge, derselbe Stückpreis, derselbe Index und derselbe Kalender
-- Die Monate werden wie bei jeder anderen Spalte kopiert. Die prozentuale Erhöhung gilt nur für die kopierten Beträge. Die Berechnungsgrundlage wird nicht geändert, und der Preisindex wird nie ein zweites Mal angewendet
-- Eine Kopie aus einer Spalte ohne Berechnungsgrundlage entfernt die Berechnungsgrundlage der Zielspalte: Die Zielspalte hat danach keine mehr, und ihre VZÄ werden unbekannt.
-- Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026“, mit der Berechnungsgrundlage im Tooltip, und **Neu berechnen** ist verfügbar
-- Um das Zieljahr aus der Berechnungsgrundlage zu berechnen, öffnen Sie den Budget-Tab der Zeile und klicken Sie auf **Neu berechnen**. Das Feld zeigt zuerst, was sich ändern würde. Der Kalender muss das Zieljahr enthalten. Andernfalls wird Neu berechnen abgelehnt, zum Beispiel mit „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“
-- Um den Preis für das neue Jahr zu erhöhen, ändern Sie den **Preisindex (%)** im Feld, bevor Sie auf **Neu berechnen** klicken
+- Die Kopie überträgt die Zeilen der Quellspalte auf das Ziel, mit Beschreibung, Menge, Einheit, Stückpreis und Kalender. Ihre Zeiträume wandern ins Zieljahr, wie der Zeitraum der Spalte: März bis Dezember 2026 wird zu März bis Dezember 2027, und eine Zeile, die am 29. Februar endet, endet in einem Jahr ohne diesen Tag am 28. Februar
+- Die Kopie überträgt auch die VZÄ der Quellspalte
+- Die Monate werden wie bei jeder anderen Spalte kopiert. Die prozentuale Erhöhung gilt nur für die kopierten Beträge. Die Zeilen behalten ihre Stückpreise
+- Eine Kopie aus einer Spalte ohne Zeilen lässt das Ziel ohne Zeilen, und seine VZÄ bleiben leer
+- Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026“, und ihr Tab **Menge und Preis** meldet „Die Beträge wurden aus Budget 2026 kopiert. Die Zeilen wieder verwenden.“
+- Um das Zieljahr zu eigenen Preisen zu planen, öffnen Sie den Budget-Tab der Position und ändern Sie die Stückpreise im Tab **Menge und Preis**: Jede Änderung berechnet die Spalte erneut aus den Zeilen. Um die Preise zu behalten, klicken Sie auf **Die Zeilen wieder verwenden**. Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält: Ein Standardkalender enthält es immer, ein individueller Kalender unter Umständen nicht, zum Beispiel „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“
 
 ### Schutz eingefrorener Spalten
 
@@ -200,7 +200,7 @@ Nach einem Testlauf zeigt ein Banner die Anzahl der kopierbereiten, übersprunge
 
 Löschen Sie alle Daten einer bestimmten Budgetspalte für ein gegebenes Jahr. Dies ist eine destruktive Operation: Verwenden Sie sie, wenn Sie neu beginnen müssen.
 
-Der Umschalter **OPEX** / **CAPEX** oben auf der Seite legt fest, welche Positionen geleert werden. Das Zurücksetzen setzt die zwölf Monate der Spalte auf null und entfernt ihren Zeitraum sowie ihre Berechnungsgrundlage, wenn die Spalte aus Menge und Preis berechnet wurde. Im Budget-Tab erhält die Spalte danach einen neuen Vorschlag aus den Daten der Position. Das Zurücksetzen erfasst alle Positionen, auch solche, deren Gültigkeit bereits abgelaufen ist. Es gilt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts geleert.
+Der Umschalter **OPEX** / **CAPEX** oben auf der Seite legt fest, welche Positionen geleert werden. Das Zurücksetzen setzt die zwölf Monate der Spalte auf null und entfernt ihren Zeitraum sowie ihre Zeilen, wenn die Spalte aus Menge und Preis aufgebaut wurde. Im Budget-Tab erhält die Spalte danach einen neuen Vorschlag aus den Daten der Position. Das Zurücksetzen erfasst alle Positionen, auch solche, deren Gültigkeit bereits abgelaufen ist. Es gilt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts geleert.
 
 Erfordert Administrationsrechte für OPEX, bzw. für CAPEX bei CAPEX-Positionen.
 
@@ -335,8 +335,7 @@ Die Datei verwendet das Semikolon `;` als Trennzeichen und die Kodierung UTF-8.
 | `measure` | Die Spalte, mit ihrem technischen Namen, egal wie Ihre Organisation sie nennt: `planned` (Spalte 1, Standardname Budget), `committed` (Spalte 2, Revision), `forecast` (Spalte 3, Prognose), `actual` (Spalte 4, Ist-Werte), `expected_landing` (Spalte 5, Erwarteter Endwert). Beim Import funktionieren auch `budget`, `revision`, `follow_up` und `landing` |
 | `period_start`, `period_end` | Der Zeitraum der Spalte im Format `YYYY-MM-DD`, innerhalb des Jahres der Zeile. Beim Import bedeuten zwei leere Werte das ganze Jahr |
 | `jan` bis `dec` | Die zwölf Monatsbeträge, mit einem Punkt als Dezimaltrennzeichen. Beim Import werden auch ein Komma und Leerzeichen akzeptiert |
-| `method` | Wie die Spalte entstanden ist: `spread`, `copied`, `manual` oder `computed`. Nur zur Information, beim Import ignoriert |
-| `pricing_basis` bis `counts_as_fte` | Die sechs Kalkulationsspalten. Siehe [Kalkulationsspalten](#kalkulationsspalten) |
+| `method` | Wie die Spalte entstanden ist: `spread`, `copied`, `manual` oder `computed` (aus Menge und Preis aufgebaut). Nur zur Information, beim Import ignoriert |
 
 ### Importregeln
 
@@ -347,48 +346,14 @@ Die Datei verwendet das Semikolon `;` als Trennzeichen und die Kodierung UTF-8.
 - Jede Zeile ersetzt die zwölf Monate ihrer Position, ihres Jahres und ihrer Spalte. Positionen, Jahre und Spalten, die nicht in der Datei stehen, bleiben unverändert
 - Alle zwölf Monate sind Pflicht. Tragen Sie `0` für einen Monat ohne Betrag ein
 - Eine Zeile, die dem gespeicherten Stand entspricht, bleibt unverändert, einschließlich der Angabe, wie die Spalte entstanden ist. Ein erneuter Import eines Exports ändert nichts
-- Eine Zeile mit geänderten Beträgen kennzeichnet die Spalte als **Von Hand geändert**, mit dem Zeitraum aus der Datei
+- Eine Zeile mit geänderten Beträgen kennzeichnet die Spalte als **Von Hand geändert**, mit dem Zeitraum aus der Datei. Eine aus Menge und Preis aufgebaute Spalte behält ihre Zeilen, und ihr Budget-Tab bietet an, sie wieder zu verwenden. Siehe [Menge und Preis](opex.md#menge-und-preis)
+- Die Datei enthält nur Beträge. Die Zeilen einer Spalte werden im Budget-Tab verwaltet
 - Eine Zeile, die nur den Zeitraum ändert, aktualisiert den Zeitraum und behält den Rest bei
 - Ist-Werte-Zeilen folgen denselben Regeln, sodass Sie monatliche Ist-Werte importieren können
 - Eine geänderte Zeile in einer eingefrorenen Spalte wird abgelehnt. Eine unveränderte Zeile in einer eingefrorenen Spalte wird akzeptiert
 - Zeilen für eine ausgeblendete Spalte werden wie jede andere Zeile importiert. Das Ausblenden einer Spalte blockiert nie ihre Importe, und eine ausgeblendete eingefrorene Spalte lehnt geänderte Zeilen weiterhin ab
 - Doppelte Zeilen (gleiche Position, gleiches Jahr und gleiche Spalte), unbekannte Positionsnummern und Positionen eines Typs, den Sie nicht administrieren dürfen, sind Fehler
 - Der Import erfordert Administrationsrechte für OPEX oder für CAPEX. Der Export erfordert Lesezugriff auf einen der beiden Bereiche
-
-### Kalkulationsspalten
-
-Die Kalkulationsspalten enthalten die Berechnungsgrundlage einer aus Menge und Preis berechneten Spalte. Siehe [Aus Menge und Preis berechnen](opex.md#aus-menge-und-preis-berechnen). Export und Vorlage schreiben sie immer: gefüllt, wenn die Spalte eine Berechnungsgrundlage hat, sonst leer.
-
-| Spalte | Inhalt |
-|--------|--------|
-| `pricing_basis` | `per_day` (Pro Tag), `per_month` (Pro Monat) oder `per_period` (Für den gesamten Zeitraum). Groß- und Kleinschreibung spielen keine Rolle |
-| `quantity` | Null oder mehr, bis zu 3 Dezimalstellen. Pflicht mit einer Berechnungsbasis |
-| `unit_price` | Bis zu 4 Dezimalstellen. Ein negativer Preis wird akzeptiert, für eine Gutschrift. Pflicht mit einer Berechnungsbasis |
-| `price_index_pct` | Der Preisindex in Prozent, zum Beispiel `3` für +3 %. Bis zu 4 Dezimalstellen, nicht unter -100. Leer bedeutet 0 |
-| `working_day_profile_code` | Der Code eines Arbeitstagekalenders. Pflicht mit `per_day`, und nur damit. Unabhängig von Groß- und Kleinschreibung zugeordnet |
-| `counts_as_fte` | `true` oder `false` (`yes`, `no`, `1` und `0` funktionieren auch). Leer bedeutet `false` |
-
-Die Kalkulationsspalten sind beim Import optional: Geben Sie alle sechs an oder keine. Eine Datei ohne sie wird wie bisher importiert, und jede gespeicherte Berechnungsgrundlage bleibt erhalten.
-
-Mit den Kalkulationsspalten fällt jede Zeile in einen von drei Fällen:
-
-1. **Alle zwölf Monate angegeben**: Die Monate werden wie angegeben gespeichert, und die Kalkulationszellen der Zeile werden zur Berechnungsgrundlage der Spalte. Leere Kalkulationszellen entfernen die Berechnungsgrundlage. Ändern sich die Monate, wird die Spalte als **Von Hand geändert** gekennzeichnet. Ändert sich nur die Berechnungsgrundlage einer berechneten Spalte, wird die Spalte ebenfalls als **Von Hand geändert** gekennzeichnet: Ihre Monate stammen nicht mehr aus ihrer Berechnungsgrundlage
-2. **Kein Monat angegeben, mit Berechnungsgrundlage**: Die Monate werden aus der Berechnungsgrundlage über den Zeitraum der Zeile berechnet (das ganze Jahr, wenn der Zeitraum leer ist), genau wie **Berechnen** im Budget-Tab. Die Spalte wird als berechnet gekennzeichnet. Eine Zeile, deren berechnete Monate, Zeitraum und Berechnungsgrundlage dem gespeicherten Stand entsprechen, gilt als unverändert
-3. **Einige Monate angegeben**: Die Zeile wird abgelehnt. Geben Sie alle zwölf Monate an oder keinen
-
-Jede Berechnung läuft während der Vorabprüfung, sodass eine bestandene Vorabprüfung ohne Überraschung lädt. Ein erneuter Import eines Exports ändert nichts, auch nicht an berechneten Spalten.
-
-**Häufige Fehler**:
-
-- **„Give all twelve months, or none to compute them from quantity and price.“**: Die Zeile gibt nur einige Monate an
-- **„Give all twelve months, or a pricing basis with quantity and unit price.“**: Die Zeile gibt keinen Monat und keine vollständige Berechnungsgrundlage an
-- **„Give the code of a working-day calendar for a price per day.“**: Füllen Sie `working_day_profile_code` aus
-- **„A calendar is used only with a price per day.“**: Leeren Sie `working_day_profile_code` oder ändern Sie die Berechnungsbasis auf `per_day`
-- **„No working-day calendar has the code '...'.“**: Legen Sie den Kalender unter **Stammdaten > Arbeitstagekalender** an oder korrigieren Sie den Code
-- **„... is disabled. Pick an enabled calendar.“**: Ein deaktivierter Kalender bleibt auf den Spalten, die ihn bereits verwenden, und kann keiner anderen zugewiesen werden
-- **„... has no working days for 2027. Add them on the Working-day calendars page.“**: Fügen Sie das Jahr dem Kalender hinzu und führen Sie dann die Vorabprüfung erneut aus
-- **„counts_as_fte '...' is not understood. Use true or false.“**: Korrigieren Sie die Zelle
-- **„Header mismatch“**: Einige Kalkulationsspalten fehlen. Geben Sie alle sechs an oder entfernen Sie alle
 
 ---
 
