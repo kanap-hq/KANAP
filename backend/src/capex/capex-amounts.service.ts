@@ -7,7 +7,15 @@ import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
 import { writeAmountsPayload } from '../spend/amounts-write.util';
-import { recordPayloadRoundInputs, versionRoundInputs } from '../spend/round-inputs.util';
+import { resolveItemYear } from '../spend/budget-column-operations';
+import {
+  ComputedAmountsPayload,
+  isComputedPayload,
+  previewComputedRound,
+  recordPayloadRoundInputs,
+  versionRoundInputs,
+  writeComputedPayload,
+} from '../spend/round-inputs.util';
 
 type AnnualPayload = {
   kind: 'annual';
@@ -50,18 +58,37 @@ export class CapexAmountsService {
     private readonly freeze: FreezeService,
   ) {}
 
-  async bulkUpsert(versionId: string, payload: AnnualPayload | QuarterlyPayload | MonthlyPayload, userId?: string | null, opts?: { manager?: EntityManager }) {
+  async bulkUpsert(
+    versionId: string,
+    payload: AnnualPayload | QuarterlyPayload | MonthlyPayload | ComputedAmountsPayload,
+    userId?: string | null,
+    opts?: { manager?: EntityManager },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
     const version = await mg.getRepository(CapexVersion).findOne({ where: { id: versionId } });
     if (!version) throw new NotFoundException('Version not found');
 
     // Spread profiles resolve as on OPEX (flat, or a named SpreadProfile); an unknown one is a 400.
-    const result = await writeAmountsPayload({ manager: mg, freeze: this.freeze, scope: 'capex', version }, payload);
+    const ctx = { manager: mg, freeze: this.freeze, scope: 'capex' as const, version };
+    // A computed round resolves its calendar under the tenant and replaces that one column.
+    const result = isComputedPayload(payload) ? await writeComputedPayload(ctx, payload) : await writeAmountsPayload(ctx, payload);
     const { before, after } = result;
 
     await this.audit.log({ table: 'capex_amounts', recordId: null, action: 'update', before, after, userId }, { manager: mg });
     await recordPayloadRoundInputs({ manager: mg, scope: 'capex', version, userId: userId ?? null, audit: this.audit }, result);
     return { updated: after.length, round_inputs: await versionRoundInputs(mg, 'capex', version) };
+  }
+
+  /**
+   * What a computed round of an item's year would write, compared with what is
+   * stored: the year's newest version when there is one, else nothing stored.
+   * Writes nothing (no version either), checks no freeze.
+   */
+  async computePreview(payload: unknown, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const body = payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {};
+    const { tenantId, year, version } = await resolveItemYear(mg, 'capex', body.item_id, body.year);
+    return previewComputedRound({ manager: mg, scope: 'capex', version: version ?? { id: null, tenant_id: tenantId, budget_year: year } }, body);
   }
 
   async listByYear(versionId: string, year?: number, opts?: { manager?: EntityManager }) {

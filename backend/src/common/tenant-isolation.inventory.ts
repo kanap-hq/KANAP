@@ -217,6 +217,7 @@ export const TENANT_SCOPED_TABLES = [
   'user_roles',
   'user_time_monthly_aggregates',
   'users',
+  'working_day_profiles',
 ] as const;
 
 /**

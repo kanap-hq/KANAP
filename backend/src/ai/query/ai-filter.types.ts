@@ -125,7 +125,8 @@ export type AiAggregateResult = {
   function?: 'count' | 'sum' | 'avg' | 'min' | 'max';
   groups: Array<
     | { key: string | null; count: number }
-    | { key: string | null; value: number | string | null }
+    // `unknown`: FTE metrics only, the lines of the group without an FTE (left out of the value).
+    | { key: string | null; value: number | string | null; unknown?: number }
   >;
   total: number;
   returned: number;

@@ -244,6 +244,7 @@ if [[ -n "$DEFAULT_TENANT_ID" ]]; then
     item_sequences
     spend_amounts
     spend_allocations
+    spend_round_inputs
     spend_versions
     spend_tasks
     spend_links
@@ -259,6 +260,8 @@ if [[ -n "$DEFAULT_TENANT_ID" ]]; then
     analytics_axes
     capex_amounts
     capex_allocations
+    capex_round_inputs
+    working_day_profiles
     capex_versions
     capex_links
     capex_attachments

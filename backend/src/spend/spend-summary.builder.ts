@@ -17,6 +17,8 @@ import { StatusState } from '../common/status';
 import { formatAllocationMethodLabel } from './allocation-utils';
 import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center-tree.util';
 import { analyticsFieldKey, parseAnalyticsFieldKey } from '../analytics/analytics-axes.util';
+import { activeMonths } from './spread.util';
+import { yearlyFte } from './costing.util';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -62,6 +64,8 @@ export interface SummaryScopeConfig {
   itemTable: string;
   versionTable: string;
   amountTable: string;
+  /** One round per version and column: period, method and costing inputs (the FTE source). */
+  roundTable: string;
   versionItemFk: string;
   contractLink: { table: string; itemColumn: string };
   projectLink: { table: string; itemColumn: string };
@@ -89,6 +93,7 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     itemTable: 'spend_items',
     versionTable: 'spend_versions',
     amountTable: 'spend_amounts',
+    roundTable: 'spend_round_inputs',
     versionItemFk: 'spend_item_id',
     contractLink: { table: 'contract_spend_items', itemColumn: 'spend_item_id' },
     projectLink: { table: 'portfolio_project_opex', itemColumn: 'opex_id' },
@@ -112,6 +117,7 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     itemTable: 'capex_items',
     versionTable: 'capex_versions',
     amountTable: 'capex_amounts',
+    roundTable: 'capex_round_inputs',
     versionItemFk: 'capex_item_id',
     contractLink: { table: 'contract_capex_items', itemColumn: 'capex_item_id' },
     projectLink: { table: 'portfolio_project_capex', itemColumn: 'capex_id' },
@@ -245,6 +251,12 @@ export interface VersionTotals {
   /** Per version with amounts, converted to the reporting currency. */
   reporting: Map<string, VersionReporting>;
   reportingCurrency: string;
+  /**
+   * Per version and measure with costing inputs, the yearly FTE (2 decimals;
+   * `0` when the inputs do not count as FTE). Filled only when asked; a
+   * measure without costing inputs is absent (unknown, never 0).
+   */
+  fte: Map<string, Map<string, string>>;
 }
 
 const zeroCents = (): Cents => Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, 0n])) as Cents;
@@ -299,11 +311,24 @@ export function resolveAmountField(field: string): { slot: string; year: number 
   return { slot, year: null, column };
 }
 
-/** Years named by `y<YYYY><Suffix>` fields (a sort or a filter key), so their slot is loaded. */
+/** The FTE field of an amount field: `fte_<slot><Suffix>` (`fte_yBudget`, `fte_y2028Revision`). */
+export const FTE_FIELD_PREFIX = 'fte_';
+
+export function fteFieldKey(amountField: string): string {
+  return `${FTE_FIELD_PREFIX}${amountField}`;
+}
+
+/** `fte_<slot><Suffix>` to its slot and column, like `resolveAmountField`; null for any other field. */
+export function resolveFteField(field: string): ReturnType<typeof resolveAmountField> {
+  const text = String(field ?? '');
+  return text.startsWith(FTE_FIELD_PREFIX) ? resolveAmountField(text.slice(FTE_FIELD_PREFIX.length)) : null;
+}
+
+/** Years named by `y<YYYY><Suffix>` and `fte_y<YYYY><Suffix>` fields (a sort or a filter key), so their slot is loaded. */
 export function yearsNamedByFields(fields: string[]): number[] {
   const years = new Set<number>();
   for (const field of fields) {
-    const resolved = resolveAmountField(field);
+    const resolved = resolveAmountField(field) ?? resolveFteField(field);
     if (resolved?.year != null) years.add(resolved.year);
   }
   return Array.from(years);
@@ -361,9 +386,9 @@ export async function loadVersionTotals(
   tenantId: string,
   items: any[],
   years: number[],
-  opts: { reporting: boolean },
+  opts: { reporting: boolean; fte?: boolean },
 ): Promise<VersionTotals> {
-  const result: VersionTotals = { versionsByItemYear: new Map(), cents: new Map(), reporting: new Map(), reportingCurrency: 'EUR' };
+  const result: VersionTotals = { versionsByItemYear: new Map(), cents: new Map(), reporting: new Map(), reportingCurrency: 'EUR', fte: new Map() };
   const itemIds = items.map((item) => item.id);
   const uniqueYears = Array.from(new Set(years));
   const versions: any[] = itemIds.length && uniqueYears.length
@@ -404,6 +429,7 @@ export async function loadVersionTotals(
     for (const row of sums) {
       result.cents.set(row.version_id, Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, toCents(row[c.measure])])) as Cents);
     }
+    if (opts.fte) result.fte = await loadVersionFte(config, manager, tenantId, kept.map((v) => v.id));
   }
 
   if (!opts.reporting) return result;
@@ -437,6 +463,65 @@ export async function loadVersionTotals(
     });
   }
   return result;
+}
+
+/**
+ * The yearly FTE of each round with costing inputs, in one query: the round's
+ * quantity, flag and period, and the months of its version's year whose stored
+ * amount in the round's column is positive.
+ */
+async function loadVersionFte(
+  config: SummaryScopeConfig,
+  manager: EntityManager,
+  tenantId: string,
+  versionIds: string[],
+): Promise<Map<string, Map<string, string>>> {
+  const amountOfRound = `CASE r.measure ${SUMMARY_COLUMNS.map((c) => `WHEN '${c.measure}' THEN a.${c.measure}`).join(' ')} END`;
+  const rounds: Array<{
+    version_id: string;
+    measure: string;
+    quantity: string;
+    counts_as_fte: boolean;
+    period_start: string;
+    period_end: string;
+    positive_months: number[];
+  }> = await manager.query(
+    `SELECT r.version_id, r.measure, r.quantity::text AS quantity, r.counts_as_fte,
+            to_char(r.period_start, 'YYYY-MM-DD') AS period_start, to_char(r.period_end, 'YYYY-MM-DD') AS period_end,
+            COALESCE(array_agg(EXTRACT(MONTH FROM a.period)::int) FILTER (WHERE a.id IS NOT NULL), '{}') AS positive_months
+     FROM ${config.roundTable} r
+     JOIN ${config.versionTable} v ON v.id = r.version_id AND v.tenant_id = r.tenant_id
+     LEFT JOIN ${config.amountTable} a
+       ON a.tenant_id = r.tenant_id
+      AND a.version_id = r.version_id
+      AND EXTRACT(YEAR FROM a.period) = v.budget_year
+      AND ${amountOfRound} > 0
+     WHERE r.tenant_id = $1
+       AND r.version_id = ANY($2::uuid[])
+       AND r.pricing_basis IS NOT NULL
+     GROUP BY r.id`,
+    [tenantId, versionIds],
+  );
+  const result = new Map<string, Map<string, string>>();
+  for (const round of rounds) {
+    // The period lies in one year (table CHECK), so the 15th rule never refuses it.
+    const year = Number(round.period_start.slice(0, 4));
+    const value = round.counts_as_fte
+      ? yearlyFte(round.quantity, activeMonths(year, round.period_start, round.period_end), (round.positive_months ?? []).map(Number))
+      : '0';
+    let perMeasure = result.get(round.version_id);
+    if (!perMeasure) {
+      perMeasure = new Map();
+      result.set(round.version_id, perMeasure);
+    }
+    perMeasure.set(round.measure, value);
+  }
+  return result;
+}
+
+/** The yearly FTE a version holds in one column: null (unknown) without a version or costing inputs. */
+export function versionFte(totals: VersionTotals, version: any | undefined, measure: string): string | null {
+  return version ? totals.fte.get(version.id)?.get(measure) ?? null : null;
 }
 
 function toSlot(version: any | undefined, totals: VersionTotals): SummarySlot {
@@ -544,7 +629,7 @@ export async function buildBudgetSummaryRows(
   const Y = options.currentYear;
   const years = Array.from(new Set(options.years)).sort((a, b) => a - b);
   const itemIds = items.map((item) => item.id);
-  const totals = await loadVersionTotals(config, deps, manager, tenantId, items, years, { reporting: true });
+  const totals = await loadVersionTotals(config, deps, manager, tenantId, items, years, { reporting: true, fte: true });
 
   const versionsOfYear = (year: number) => Array.from(totals.versionsByItemYear.values())
     .map((perYear) => perYear.get(year))
@@ -650,8 +735,16 @@ export async function buildBudgetSummaryRows(
     const perYear = totals.versionsByItemYear.get(item.id);
     const shown = (year: number) => versionWithinValidity(perYear, year, item.disabled_at);
     const versions: Record<string, SummarySlot> = {};
-    for (const slot of FIXED_SLOTS) versions[slot.key] = toSlot(shown(Y + slot.offset), totals);
-    for (const year of years) versions[`y${year}`] = toSlot(shown(year), totals);
+    const fte: Record<string, number | null> = {};
+    const slotYears: Array<[string, number]> = [...FIXED_SLOTS.map((slot): [string, number] => [slot.key, Y + slot.offset]), ...years.map((year): [string, number] => [`y${year}`, year])];
+    for (const [slotKey, year] of slotYears) {
+      const version = shown(year);
+      versions[slotKey] = toSlot(version, totals);
+      for (const column of SUMMARY_COLUMNS) {
+        const value = versionFte(totals, version, column.measure);
+        fte[fteFieldKey(`${slotKey}${column.suffix}`)] = value == null ? null : Number(value);
+      }
+    }
 
     const current = shown(Y);
     const allocation = current ? allocationForY.get(current.id) : undefined;
@@ -719,6 +812,7 @@ export async function buildBudgetSummaryRows(
       allocation_method_label: formatAllocationMethodLabel(allocation?.resolvedMethod ?? current?.allocation_method ?? null),
       allocation_warning: allocation?.error ?? null,
       versions,
+      ...fte,
     };
     if (options.includeRecipientDetails) row.main_recipient = mainRecipient(allocation);
     if (options.includeNextYearAllocation) {
@@ -756,12 +850,14 @@ export async function buildSpendSummaryRows(params: {
 /**
  * The value a sort, a filter or a filter-value list reads for `field`: an
  * amount field is the slot's reporting total (item currency when there is no
- * reporting), a derived field its row value, anything else the item column.
- * Blank derived text reads as null so blanks sort last ascending.
+ * reporting), an FTE field its number or null (unknown), a derived field its
+ * row value, anything else the item column. Blank derived text reads as null
+ * so blanks sort last ascending.
  */
 export function getSummaryFieldValue(row: any, field: string): any {
   const amount = resolveAmountField(field);
   if (amount) return slotValue(row, amount.slot, amount.column.key);
+  if (resolveFteField(field)) return typeof row?.[field] === 'number' ? row[field] : null;
   const blankToNull = (value: unknown) => (value == null || value === '' ? null : value);
   switch (field) {
     case 'supplier_name':

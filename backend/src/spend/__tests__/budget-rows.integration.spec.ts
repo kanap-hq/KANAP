@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { BUDGET_ROWS_HEADERS, BudgetRowsAccess, BudgetRowsCsvService } from '../budget-rows-csv.service';
+import { BUDGET_ROWS_BASE_HEADERS, BUDGET_ROWS_HEADERS, BudgetRowsAccess, BudgetRowsCsvService } from '../budget-rows-csv.service';
 import { upsertRoundInput } from '../round-inputs.util';
 import {
   amountsService,
@@ -43,7 +43,8 @@ function parseCsv(content: string): Line[] {
   return lines.map((line) => Object.fromEntries(line.split(';').map((value, i) => [columns[i], value])));
 }
 
-function toFile(lines: Line[], headers: readonly string[] = BUDGET_ROWS_HEADERS) {
+// Files without the costing columns (step A files): the costing spec covers them.
+function toFile(lines: Line[], headers: readonly string[] = BUDGET_ROWS_BASE_HEADERS) {
   const body = lines.map((line) => headers.map((h) => line[h] ?? '').join(';')).join('\n');
   return { buffer: Buffer.from(`\ufeff${headers.join(';')}\n${body}\n`, 'utf8') } as any;
 }
@@ -86,7 +87,7 @@ async function seedBook(runner: QueryRunner, tag: string) {
   const record = (kind: Kind, versionId: string, measure: string, start: string, end: string, method: 'spread' | 'copied' | 'manual') => upsertRoundInput(
     { manager: runner.manager, scope: kind, version: { id: versionId, tenant_id: tenantId, budget_year: YEAR }, userId: null, audit: captureAudit() },
     measure,
-    { period_start: start, period_end: end, method, spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '1341.90', profile: '4-4-5', active_months: [4], weights: ['1'] } },
+    { period_start: start, period_end: end, method, spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '1341.90', profile: '4-4-5', active_months: [4], weights: ['1'] }, recipe: null },
   );
   await record('opex', opex.versionId, 'planned', `${YEAR}-04-01`, `${YEAR}-12-31`, 'spread');
   await record('opex', opex.versionId, 'committed', `${YEAR}-01-01`, `${YEAR}-06-30`, 'copied');

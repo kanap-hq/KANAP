@@ -338,6 +338,28 @@ Validation/behavior:
   - Upsert matched by code (case-insensitive); parents resolve against the file and the stored tree, so any row order imports; the whole resulting tree is checked before anything is written. → `{ ok, dryRun, total, inserted, updated, unchanged, errors: { row, message }[] }`; an export imported back is all `unchanged`.
 - Every write takes a per-tenant advisory lock (`cost-center:<tenant>`), so concurrent tree edits are serialized.
 
+## Working-day Calendars
+- RBAC: resource `working_day_profiles` ("Working-day calendars" in the UI). `GET /working-day-profiles`, `/ids` and `/:id` answer `reader` on any of `working_day_profiles`, `opex`, `capex` (the budget tab's compute panel lists the calendars); `member` creates and edits; `admin` deletes, imports and exports.
+- A calendar holds, per year, the working days of the twelve months: `days_by_year: { "<year>": string[12] }`. A price per day multiplies them; a round that uses a calendar references it by `(tenant_id, working_day_profile_id)` with `ON DELETE RESTRICT`. Table `working_day_profiles`, tenant-scoped with forced RLS.
+- Days rules (one helper shared by the API, the CSV and the computation): a year key of four digits from 2000 to 2100; exactly twelve values; each a decimal from 0 to the month's calendar days (29 in a leap February), at most 6 decimals, a decimal comma accepted, numbers or strings. Stored and returned normalised, without trailing zeros (`"18"`, `"19.083333"`). Refusals are sentences: "March 2027 has 31 days: enter 31 or less.", "Enter the working days of all twelve months of 2027.", "Use at most 6 decimals.", "2201 is not a year between 2000 and 2100.".
+- `WorkingDayProfile` = `{ id, code, name, description, days_by_year, status, disabled_at, created_at, updated_at }` (`status` is the effective lifecycle: disabled once `disabled_at` has passed; years in ascending order).
+- GET `/working-day-profiles?page&limit&sort&q&filters&status|includeDisabled` → `{ items: (WorkingDayProfile & { years: string[] })[], total, page, limit }`
+  - Default sort `code:ASC`; sort on `code`, `name`, `description`, `status`, `years`, `disabled_at`, `created_at`, `updated_at` (blanks last ascending). Filters (grid model, set or text) on `code`, `name`, `description`, `status`, `years` (read as `2026, 2027`), `disabled_at`; `q` matches code, name and description. Enabled calendars only unless `status`, a `status` filter or `includeDisabled=1|true` says otherwise.
+- GET `/working-day-profiles/ids` (same params) → `{ ids: string[], total }` (at most 10,000 ids) for the workspace prev/next.
+- GET `/working-day-profiles/:id` → `WorkingDayProfile & { opex_count, capex_count }`: the distinct OPEX and CAPEX lines with at least one round (any year, any column) using the calendar. `404` "Calendar not found." for an unknown id or another tenant's.
+- POST `/working-day-profiles` `{ code, name, description?, days_by_year?, status?, disabled_at? }` → as GET `/:id`.
+- PATCH `/working-day-profiles/:id` (any subset) → as GET `/:id`. `days_by_year` is merged per year: a year sent replaces that year, a year sent as `null` is removed, the other years stay as stored. An unchanged body writes nothing (no audit row).
+  - Code 1 to 50 characters and name 1 to 200, both trimmed and unique per tenant case-insensitively. Refusals are `400 { message, field }`: "Code is required.", "A calendar with code FR218 already exists.", "A calendar named France 218 already exists." (checked before the unique indexes, which answer with the same sentences), a days rule above (`field: 'days_by_year'`), an invalid status or end of validity.
+  - Lifecycle as on cost centers: `status: 'disabled'` sets `disabled_at` to now when none is stored, `status: 'enabled'` clears it, a `disabled_at` still to come keeps the calendar enabled until then. A disabled calendar keeps its days and stays valid on the rounds that use it; it cannot be newly assigned to a round (compute, budget rows file), and recomputing a round whose stored calendar is disabled warns.
+  - Editing a calendar never rewrites a stored amount or explanation: a computation keeps the day counts it used in the round's `last_calculation`.
+- DELETE `/working-day-profiles/:id` → 200, or 409 while a round uses it ("France 218 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead."; counts are distinct lines through their versions). The calendar row is locked before the count, so a round assigned concurrently is either counted or refused by its key.
+- DELETE `/working-day-profiles/bulk` `{ ids }` (at most 1,000) → `{ deleted: string[], failed: { id, name, reason }[] }` (each delete under its own savepoint: a refused one leaves the others deleted).
+- Create, update and delete write an audit row (`table_name = 'working_day_profiles'`).
+- GET `/working-day-profiles/export?scope=data|template` and POST `/working-day-profiles/import?dryRun=true|false` (multipart `file`, `;`-separated UTF-8)
+  - Headers `code;name;description;status;disabled_at;year;jan;feb;mar;apr;may;jun;jul;aug;sep;oct;nov;dec` (`disabled_at` optional on import). One row per calendar and year, years ascending; a calendar without years exports one row with a blank year and blank months.
+  - Rows match stored calendars on code (case-insensitive) and fold into one calendar per code. The whole file is validated before anything is written: rows of one code must agree on name, description, status and end of validity ("Rows of FR218 disagree on the name."); a year appears once per code ("FR218 has 2026 twice (rows 2 and 4)."); a row with a year gives its twelve months (days rules above); months without a year are refused; names stay unique across the stored calendars and the file. Years absent from the file are kept: an import never removes a year.
+  - → `{ ok, dryRun, total, inserted, updated, unchanged, errors: { row, message }[] }`, counted per row: `inserted` for a new calendar or a new year, `updated` for a changed year (or the first row of a calendar whose fields changed), `unchanged` otherwise. A header mismatch is an error at row 0. One audit row per calendar written; an export imported back is all `unchanged` and writes nothing.
+
 ## Applications (IT Landscape)
 - RBAC: resource `applications` (`reader` to view, `manager` to mutate). Admin inherits all.
 
@@ -774,7 +796,23 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - `budget_year` immutable; `allocation_method` can change
 
 ## Amounts (OPEX)
-- POST `/spend-versions/:id/amounts/bulk-upsert` → annual or monthly payload (see README); server expands to months
+- POST `/spend-versions/:id/amounts/bulk-upsert` (`opex:member`) → `{ updated, round_inputs: RoundInput[] }`; `year` must be the version's year, each column written is checked against the freeze in the request transaction
+  - `annual`, `quarterly` and `monthly` payloads as before (see README; `period_start` / `period_end` both or neither)
+  - Computed payload (one column): `{ kind: 'computed', year, measure, period_start?, period_end?, pricing_basis, quantity, unit_price, price_index_pct?, working_day_profile_id?, counts_as_fte? }`
+    - `measure`: any of the five columns, including one hidden by the settings; `pricing_basis`: `per_day`, `per_month` or `per_period`; `quantity` at most 3 decimals, from 0 to below 10^9; `unit_price` at most 4 decimals, below 10^14 either way (credits allowed); `price_index_pct` at most 4 decimals, from -100 to below 1000, blank = 0; `counts_as_fte` a boolean, default `false`. Numbers or decimal strings, read exactly
+    - `working_day_profile_id`: required for `per_day`, refused otherwise; resolved in the current tenant (an unknown id or another tenant's is a `400` "The calendar was not found."); a disabled calendar is refused ("France 218 is disabled. Pick an enabled calendar.") unless the round already uses it
+    - Months (only those whose 15th the period covers; the others are zero): `per_day` = the calendar's days of that month in `year` × quantity × unit price × (1 + index / 100), each month rounded half away from zero to cents; `per_month` = quantity × indexed price per month; `per_period` = quantity × indexed price rounded once, split equally, the remainder on the last month. A calendar without days for `year`: `400` "France 218 has no working days for 2027. Add them on the Working-day calendars page."
+    - Replaces the twelve months of that column only, then stores the round with `method: 'computed'`, the recipe and `last_calculation` of kind `computed`. Every refusal is a `400` sentence and nothing is written
+- POST `/spend-versions/compute-preview` (`opex:member`) with `{ item_id, year, measure, period_start?, period_end?, pricing_basis, quantity, unit_price, price_index_pct?, working_day_profile_id?, counts_as_fte? }` → `ComputePreview`
+  - `item_id` is a UUID resolved in the current tenant; unknown, malformed or another tenant's: `404` "Item not found."; a missing year: `400` "A budget year is required."
+  - Compared with the newest version of that item and year; when the year has no version yet, with nothing stored (months zero, `stored.method` and `stored.last_calculation` null)
+  - Writes nothing (no version, round or month) and checks no freeze; the other refusals are the computed payload's `400`s
+  - `{ active_months, day_counts: string[12] | null, total_days: string | null, month_amounts: string[12], total, fte: string | null, calendar: { id, code, name, disabled } | null, stored: { month_amounts, method, last_calculation }, changed_months, calendar_changed_months, warnings }`
+  - `changed_months`: months whose amount would change; `calendar_changed_months`: active months whose days differ from those the stored computation used; `warnings`: "This calendar is disabled. The computation still uses it." when recomputing with the round's disabled calendar; `fte` only when `counts_as_fte`
+- GET `/spend-versions/:id/amounts?year=` (`opex:reader`) → `{ items, totals, year, round_inputs: RoundInput[] }`
+- `RoundInput`: `{ measure, period_start, period_end, method: 'spread'|'copied'|'manual'|'computed', spread_profile_name, last_calculation, pricing_basis, quantity, unit_price, price_index_pct, working_day_profile_id, working_day_profile_code, working_day_profile_name, counts_as_fte, updated_at, updated_by }`; recipe decimals are plain strings without trailing zeros, all `null` (and `counts_as_fte: false`) on a round without a recipe
+  - The recipe is set by a computation, deleted with the record by Clear, and set or cleared by a budget rows file with costing columns; a hand edit, a spread, the item CSV and a copy keep it (a copy carries the source's recipe as it is, index included, or keeps the destination's when the source has none)
+  - `last_calculation` of kind `computed`: `{ kind, pricing_basis, quantity, unit_price, price_index_pct, working_day_profile_code, working_day_profile_name, active_months, day_counts, total_days, month_amounts, total, counts_as_fte }`: what the computation used, so editing the calendar later never changes it. `copy.source_method` may be `computed`
 
 ## Allocations (OPEX)
 - GET `/spend-versions/:id/allocations` → `{ items: AllocationRow[], total_pct, resolved_method }`
@@ -799,6 +837,8 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
 - POST `/capex-versions/:id/amounts/bulk-upsert` → annual or monthly payload; server writes the appropriate rows to `capex_amounts`
   - Annual payload: `{ kind: 'annual', year, totals: { planned?, committed?, forecast?, actual?, expected_landing? } }` (at least one; each named column is spread over the year, the others are kept)
   - Monthly payload: `{ kind: 'monthly', year, months: [{ period: 'YYYY-MM-01', planned?, actual?, expected_landing?, committed?, forecast? }] }`
+  - Computed payload, response and round inputs as OPEX (see above), with `capex:member`
+- POST `/capex-versions/compute-preview` (`capex:member`), `item_id` a CAPEX item → `ComputePreview`, as OPEX
 
 ## Allocations (CAPEX)
 - GET `/capex-versions/:id/allocations` → `{ items: AllocationRow[], total_pct, resolved_method }`
@@ -855,6 +895,11 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
     - `analytics_<axis_id>`: the value's name on each dimension of the tenant (disabled ones included), `null` when the line has none. The key uses `_`, not `:`, because sort strings are `field:DIR`
     - `analytics_value_ids`: `{ [axis_id]: category_id }` for the dimensions the line has a value on
     - Every analytics field filters (set, text, blank) and sorts in memory, `analytics_category_id` included; the quick search reads the value names of every dimension
+  - FTE (both item types): `fte_<slot><Suffix>` (`fte_yBudget`, `fte_yPlus1Revision`, `fte_y2027Landing`), one per slot (the five fixed ones and each requested `y<YYYY>`) and column, `number | null`. Read from the round of that column on the version the amounts show (the newest per item and year):
+    - costing inputs with `counts_as_fte`: the quantity summed over the round's active months whose stored amount is positive, divided by 12, rounded half away from zero to 2 decimals (`0.75`)
+    - costing inputs without `counts_as_fte`: `0`
+    - no round, a round without costing inputs, no version for that year, or a year after the end of validity: `null` (unknown, never 0)
+    - Number filters (`blank` = unknown; `null` fails every comparison) and sort (unknown last ascending) run in memory; a sort or filter key naming `fte_y<YYYY><Suffix>` loads that year, as for the amount fields
 - GET `/spend-items/summary/filter-values?fields=fieldA,fieldB&q&filters&years=2024,2025,2026` **[Requires: opex:reader]**
   - Fields include `cost_center_label`, `cost_center_code`, `cost_center_name`, `cost_center_path`, `budget_holder_name`, `run_build`, `analytics_category_name` and any `analytics_<axis_id>` (both item types)
   - Distinct filter values for closed-choice columns in the OPEX summary grid.
@@ -868,6 +913,7 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Cost center and run or build fields, analytics dimension fields, filters, sort and quick search as OPEX (see above)
 - GET `/capex-items/summary/ids` → `{ ids, total }` ordered by requested sort (supports derived fields like `yBudget`)
 - GET `/capex-items/summary/totals` → `{ reportingCurrency, ...amounts }`: one key per `<slot><Suffix>` for the slots `yMinus2`, `yMinus1`, `y`, `yPlus1`, `yPlus2` and the suffixes `Budget`, `Revision`, `Forecast`, `FollowUp`, `Landing` (25 keys, for example `yBudget`, `yPlus2Forecast`), plus `y<YYYY><Suffix>` for each requested year. Same shape as the OPEX totals
+  - Optional `fte=<comma-separated FTE keys>` (for example `fte=fte_yBudget,fte_y2027Revision`; other keys ignored) adds `fte: { [key]: { total, unknown } }`: the sum of the lines' FTE values as listed (2 decimals each, summed exactly; `null` when no line of the selection has an FTE, never 0) and the number of lines whose FTE is unknown. A key naming `y<YYYY>` reads that year without `years`. Without `fte` the response keeps the amount keys and `reportingCurrency` only. Same on `/spend-items/summary/totals`
 - GET `/capex-items/summary/filter-values?fields=fieldA,fieldB&q&filters` **[Requires: capex:reader]**
   - Distinct filter values for closed-choice columns in the CAPEX summary grid.
   - Response: `{ fieldA: Array<string | null>, fieldB: Array<string | null> }`
@@ -1375,6 +1421,26 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
     - Only processes items that have data in the target column
     - Full audit logging for compliance
     - Permanent operation - cannot be undone
+
+### Budget Rows File
+The monthly amounts of every OPEX and CAPEX line, one row per line, year and budget column, with each column's period and, optionally, its costing recipe (quantity × price).
+- GET `/budget-rows/export?scope=data|template&year=YYYY`
+  - Requires `opex:reader` or `capex:reader`; the file holds the item types the user can read (`budget_rows_partial.csv` otherwise, `budget_rows_<year>_partial.csv` with `year`)
+  - Headers (`;`, UTF-8 with BOM): `item_type;item_number;year;measure;period_start;period_end;jan;…;dec;method;pricing_basis;quantity;unit_price;price_index_pct;working_day_profile_code;counts_as_fte`
+  - `method`: `spread|copied|manual|computed`, blank when the column has no record. The six costing cells are filled when the column has a recipe (`counts_as_fte` `true`/`false`), blank otherwise
+- POST `/budget-rows/import?dryRun=true|false` (multipart `file`, 10 MB)
+  - Requires `opex:admin` or `capex:admin`; each row that writes needs administration of its item type, reading is enough for an identical row
+  - Returns `{ ok, dryRun, total, inserted, updated, unchanged, errors: [{ row, message }] }`; the whole file is checked before anything is written, and every computation runs during the check (a dry run that passes never fails at load)
+  - `item_type` `opex|capex`; `item_number` a number or the reference (`OPX-7`, `CPX-3`); `measure` one of the five columns (aliases `budget`, `revision`, `follow_up`, `landing`); period both or neither (whole year); `method` optional and never read
+  - Identical rows are `unchanged` before the administration and freeze checks. A changed row is refused when its column is frozen for the year
+  - Without the costing headers: all twelve months required; changed months mark the column `manual` with the file's period and keep its spread profile, explanation and recipe; a period-only change keeps the method
+  - With the costing headers (all six, or none; a subset is a header mismatch):
+    - All twelve months: stored as given; the costing cells become the column's recipe (all blank clears it); `last_calculation` is cleared when the months or the recipe change; `method` becomes `manual` when the months change, or when a `computed` column's recipe changes, else stays
+    - No month and a complete recipe: the months are computed exactly as `bulk-upsert` `kind: 'computed'` over the row's period (whole year when blank); `method: 'computed'`; `unchanged` when the computed months, the period and the recipe equal what is stored
+    - Some months: row error; no month without `pricing_basis`, `quantity` and `unit_price`: row error
+    - Cells: `pricing_basis` `per_day|per_month|per_period` (any case); `quantity` (≤ 3 decimals, ≥ 0), `unit_price` (≤ 4 decimals, credits allowed), `price_index_pct` (≤ 4 decimals, ≥ -100, blank = 0); `working_day_profile_code` required for `per_day`, refused otherwise, resolved case-insensitively among the tenant's calendars; `counts_as_fte` `true|false|yes|no|1|0`, blank = false
+    - Calendar row errors: unknown code, disabled calendar not already used by the column, and (computed rows) no working days for the row's year
+  - An exported file re-imports as unchanged, computed rows included
 
 ### Freeze / Unfreeze Data
 - GET `/freeze-states?year=YYYY`

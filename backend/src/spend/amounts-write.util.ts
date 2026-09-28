@@ -1,7 +1,7 @@
 import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { FreezeColumn, FreezeService } from '../freeze/freeze.service';
-import { formatCents, toCents } from '../common/amount';
+import { CENTS_LIMIT, formatCents, toCents } from '../common/amount';
 import { budgetColumnName, DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import {
   activeMonths,
@@ -123,8 +123,8 @@ function unknownMeasure(key: string): BadRequestException {
   return new BadRequestException(`Unknown amount '${key}'. Use ${AMOUNT_MEASURES.join(', ')}.`);
 }
 
-// Amount columns are numeric(18,2): at most 16 digits before the decimal point.
-const CENTS_LIMIT = 10n ** 18n;
+// Amount columns are numeric(18,2); the limit lives in common/amount so pure utils can read it.
+export { CENTS_LIMIT };
 
 function assertInRange(cents: bigint, label: ValueLabel): bigint {
   if ((cents < 0n ? -cents : cents) >= CENTS_LIMIT) throw badValue(label, 'is too large.');
@@ -148,7 +148,7 @@ export function validateAmountValue(value: unknown, label: ValueLabel): bigint {
   return assertInRange(cents, label);
 }
 
-export function assertYearMatchesVersion(year: unknown, version: AmountVersion): number {
+export function assertYearMatchesVersion(year: unknown, version: Pick<AmountVersion, 'budget_year'>): number {
   const parsed = typeof year === 'string' && /^\d{4}$/.test(year.trim()) ? Number(year) : year;
   if (typeof parsed !== 'number' || !Number.isInteger(parsed)) {
     throw new BadRequestException('A budget year is required.');

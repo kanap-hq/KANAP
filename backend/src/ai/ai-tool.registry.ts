@@ -344,7 +344,7 @@ export class AiToolRegistry {
             entity_type: `One of ${QUERY_ENTITY_TYPE_SUMMARY}.`,
             scope: 'Optional first-person scope. Use "me" or "my_team" for tasks, projects, and requests.',
             group_by: 'A supported group-by field from the query layer registry.',
-            metric: 'Optional numeric or date field to aggregate when using sum, avg, min, or max.',
+            metric: 'Optional numeric or date field to aggregate when using sum, avg, min, or max. On OPEX and CAPEX items, an FTE field (`<year>_<column>_fte`, e.g. `y_budget_fte`) names its year and column; each group then also returns `unknown`, the number of lines without costing inputs, left out of the value.',
             function: 'Optional aggregation function: count, sum, avg, min, or max. Defaults to count.',
             filters: 'Optional field filters keyed by AI field name.',
             q: 'Optional literal quick-search text. Use plain text only; never encode filters like status:in_progress or assignee=bob@example.com here.',

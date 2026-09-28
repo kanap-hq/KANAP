@@ -38,6 +38,7 @@ export function realFreeze() {
 
 export function amountsService(kind: Kind, audit: unknown = captureAudit(), freeze: unknown = noFreeze): {
   bulkUpsert: (...args: any[]) => Promise<any>;
+  computePreview: (payload: unknown, opts?: { manager?: any }) => Promise<any>;
   listByYear: (...args: any[]) => Promise<any>;
 } {
   return kind === 'opex'
@@ -202,18 +203,47 @@ export type StoredRecord = {
   method: string;
   spread_profile_name: string | null;
   last_calculation: any;
+  pricing_basis: string | null;
+  quantity: string | null;
+  unit_price: string | null;
+  price_index_pct: string | null;
+  working_day_profile_id: string | null;
+  counts_as_fte: boolean;
   updated_at: Date;
   updated_by: string | null;
 };
 
+/** The stored records of a version by measure; recipe decimals as stored ('1.000', '400.0000'). */
 export async function readRecords(runner: QueryRunner, kind: Kind, versionId: string): Promise<Record<string, StoredRecord>> {
   const rows: StoredRecord[] = await runner.query(
     `SELECT id, tenant_id, version_id, measure, to_char(period_start, 'YYYY-MM-DD') AS period_start,
-            to_char(period_end, 'YYYY-MM-DD') AS period_end, method, spread_profile_name, last_calculation, updated_at, updated_by
+            to_char(period_end, 'YYYY-MM-DD') AS period_end, method, spread_profile_name, last_calculation,
+            pricing_basis::text AS pricing_basis, quantity::text AS quantity, unit_price::text AS unit_price,
+            price_index_pct::text AS price_index_pct, working_day_profile_id, counts_as_fte, updated_at, updated_by
      FROM ${TABLES[kind].rounds} WHERE version_id = $1`,
     [versionId],
   );
   return Object.fromEntries(rows.map((r) => [r.measure, r]));
+}
+
+/** Working days of the France 218 calendar in 2026 (218 days); February to October is 163. */
+export const FRANCE_218_2026 = ['18', '18', '20', '20', '15', '20', '15', '16', '20', '19', '18', '19'];
+
+/** A working-day calendar of the current tenant; returns its id. */
+export async function seedCalendar(
+  runner: QueryRunner,
+  tenantId: string,
+  calendar: { code: string; name: string; days_by_year: Record<string, string[]>; status?: 'enabled' | 'disabled' },
+): Promise<string> {
+  const [{ id }] = await runner.query(
+    `INSERT INTO working_day_profiles (tenant_id, code, name, days_by_year, status, disabled_at)
+     VALUES ($1, $2, $3, $4::jsonb, $5, $6::timestamptz) RETURNING id`,
+    [
+      tenantId, calendar.code, calendar.name, JSON.stringify(calendar.days_by_year), calendar.status ?? 'enabled',
+      calendar.status === 'disabled' ? '2020-01-01T12:00:00Z' : null,
+    ],
+  );
+  return id;
 }
 
 export async function findVersion(runner: QueryRunner, kind: Kind, itemId: string, year: number) {

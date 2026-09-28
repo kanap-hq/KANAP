@@ -51,9 +51,9 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { resolveAiEntityRegistry } from './registries';
-import { getSpendSummaryFieldValue } from '../../spend/spend-summary.builder';
+import { getSpendSummaryFieldValue, resolveFteField } from '../../spend/spend-summary.builder';
 import { formatCents, toCents } from '../../common/amount';
-import { divRoundHalfAway } from '../../common/decimal';
+import { Decimal, divRoundHalfAway } from '../../common/decimal';
 
 type DocumentSearchState = { term: string; itemNumber: number | null };
 type AiAggregateFunction = 'count' | 'sum' | 'avg' | 'min' | 'max';
@@ -403,6 +403,75 @@ function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: str
     default:
       return 'COUNT(*)::int';
   }
+}
+
+type BudgetValueGroup = { key: string | null; value: number | null; unknown?: number };
+
+/** Largest value first (smallest for min), groups without a value last, then by key. */
+function sortValueGroups<T extends BudgetValueGroup>(groups: T[], fn: AiAggregateFunction): T[] {
+  return groups.sort((a, b) => {
+    const av = a.value;
+    const bv = b.value;
+    if (av == null && bv == null) return (a.key ?? '').localeCompare(b.key ?? '');
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (av !== bv) {
+      return fn === 'min' ? av - bv : bv - av;
+    }
+    return (a.key ?? '').localeCompare(b.key ?? '');
+  });
+}
+
+/**
+ * An FTE metric of the OPEX and CAPEX aggregates: exact decimal arithmetic on
+ * the lines' FTE (2 decimals each, never through cents of money), and per group
+ * `unknown`, the lines without costing inputs, left out of the value. A group
+ * of unknown lines only has a null value.
+ */
+function aggregateFteGroups(rows: any[], groupGrid: string, metricGrid: string, fn: AiAggregateFunction): BudgetValueGroup[] {
+  type FteBucket = { key: string | null; sum: Decimal; count: number; unknown: number; min: Decimal | null; max: Decimal | null };
+  const buckets = new Map<string, FteBucket>();
+  for (const row of rows) {
+    const rawKey = getSpendSummaryFieldValue(row, groupGrid);
+    const key = rawKey == null || rawKey === '' ? null : String(rawKey);
+    const bucketKey = key ?? '__NULL__';
+    const bucket = buckets.get(bucketKey) ?? { key, sum: Decimal.ZERO, count: 0, unknown: 0, min: null, max: null };
+    buckets.set(bucketKey, bucket);
+    const raw = getSpendSummaryFieldValue(row, metricGrid);
+    if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+      bucket.unknown += 1;
+      continue;
+    }
+    const value = Decimal.from(raw);
+    bucket.sum = bucket.sum.add(value);
+    bucket.count += 1;
+    if (bucket.min == null || value.cmp(bucket.min) < 0) bucket.min = value;
+    if (bucket.max == null || value.cmp(bucket.max) > 0) bucket.max = value;
+  }
+  const toNumber = (value: Decimal | null) => (value == null ? null : Number(value.toString()));
+  return Array.from(buckets.values()).map((bucket) => {
+    let value: number | null = null;
+    if (bucket.count > 0) {
+      switch (fn) {
+        case 'sum':
+          value = toNumber(bucket.sum);
+          break;
+        case 'avg':
+          // Rounded once to 2 decimals, like the line values.
+          value = toNumber(bucket.sum.divRound(bucket.count, 2));
+          break;
+        case 'min':
+          value = toNumber(bucket.min);
+          break;
+        case 'max':
+          value = toNumber(bucket.max);
+          break;
+        default:
+          value = null;
+      }
+    }
+    return { key: bucket.key, value, unknown: bucket.unknown };
+  });
 }
 
 function normalizeAggregateValue(value: any, metricType: AiAggregateMetricType): number | string | null {
@@ -1127,7 +1196,7 @@ export class AiAggregateExecutor {
     ids: string[],
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
-  ): Promise<Array<{ key: string | null; count: number } | { key: string | null; value: number | string | null }>> {
+  ): Promise<Array<{ key: string | null; count: number } | BudgetValueGroup>> {
     const groupField = registry.fields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1155,6 +1224,9 @@ export class AiAggregateExecutor {
     const metricField = registry.fields[metric.key];
     if (!metricField) {
       throw new BadRequestException('Unsupported metric field.');
+    }
+    if (resolveFteField(metricField.grid)) {
+      return sortValueGroups(aggregateFteGroups(rows, groupField.grid, metricField.grid, fn), fn);
     }
 
     // Amounts are summed in cents and converted once: never money in binary floating point.
@@ -1215,17 +1287,7 @@ export class AiAggregateExecutor {
       };
     });
 
-    return values.sort((a, b) => {
-      const av = a.value;
-      const bv = b.value;
-      if (av == null && bv == null) return (a.key ?? '').localeCompare(b.key ?? '');
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      if (av !== bv) {
-        return fn === 'min' ? av - bv : bv - av;
-      }
-      return (a.key ?? '').localeCompare(b.key ?? '');
-    });
+    return sortValueGroups(values, fn);
   }
 
   async execute(

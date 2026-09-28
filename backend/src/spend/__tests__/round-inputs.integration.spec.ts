@@ -63,6 +63,14 @@ async function testAnnualSpreadRecordsItsPeriod(kind: Kind) {
       method: 'spread',
       spread_profile_name: 'flat',
       last_calculation: { kind: 'annual', total: '12000.00', profile: 'flat', active_months: [4, 5, 6, 7, 8, 9, 10, 11, 12], weights: repeat('1', 9) },
+      pricing_basis: null,
+      quantity: null,
+      unit_price: null,
+      price_index_pct: null,
+      working_day_profile_id: null,
+      working_day_profile_code: null,
+      working_day_profile_name: null,
+      counts_as_fte: false,
       updated_by: null,
     };
     assert.equal(response.updated, 12, `${kind}: twelve months written`);
@@ -214,7 +222,7 @@ async function testActualsBehaveLikeTheOthers(kind: Kind) {
       () => upsertRoundInput(
         { manager: runner.manager, scope: kind, version: { id: versionId, tenant_id: tenantId, budget_year: YEAR }, userId: null, audit: captureAudit() },
         'budget',
-        { period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`, method: 'spread', spread_profile_name: null, last_calculation: null },
+        { period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`, method: 'spread', spread_profile_name: null, last_calculation: null, recipe: null },
       ),
       (err: any) => err instanceof InternalServerErrorException && /Unknown budget column 'budget'/.test(err.message),
     );

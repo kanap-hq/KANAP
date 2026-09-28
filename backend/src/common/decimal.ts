@@ -4,8 +4,8 @@
  * A `Decimal` holds its value as an integer count of 10^-20 units, so
  * quantity × price × days and indexation never go through binary floating
  * point. The scale is fixed and wide enough for a product to stay exact:
- * days (1 decimal) × quantity (3) × unit price (4) × (1 + index / 100) with a
- * 4-decimal index (6) needs 14 fractional digits. Inputs with more than 20
+ * days (6 decimals) × quantity (3) × unit price (4) × (1 + index / 100) with a
+ * 4-decimal index (6) needs 19 fractional digits. Inputs with more than 20
  * fractional digits are refused instead of being silently rounded.
  *
  * A product that would need more than 20 digits is rescaled half away from
@@ -100,6 +100,22 @@ export class Decimal {
     return new Decimal(divRoundHalfAway(this.units * factor, 100n * SCALE));
   }
 
+  /** −1, 0 or 1 as this value is below, equal to or above `other`. */
+  cmp(other: string | number | bigint | Decimal): number {
+    const units = Decimal.from(other).units;
+    return this.units < units ? -1 : this.units > units ? 1 : 0;
+  }
+
+  /** `this ÷ divisor` (a positive integer), rounded once, half away from zero, to `decimals` places. */
+  divRound(divisor: number | bigint, decimals: number): Decimal {
+    const d = BigInt(divisor);
+    if (d <= 0n || !Number.isInteger(decimals) || decimals < 0 || decimals > DECIMAL_SCALE_DIGITS) {
+      throw new Error(`Invalid division: ÷ ${String(divisor)} to ${decimals} decimals`);
+    }
+    const drop = 10n ** BigInt(DECIMAL_SCALE_DIGITS - decimals);
+    return new Decimal(divRoundHalfAway(this.units, d * drop) * drop);
+  }
+
   /** The value in cents, rounded half away from zero. */
   toCents(): bigint {
     return divRoundHalfAway(this.units, 10n ** BigInt(DECIMAL_SCALE_DIGITS - 2));
@@ -114,4 +130,57 @@ export class Decimal {
     const text = fracPart ? `${intPart}.${fracPart}` : intPart;
     return negative ? `-${text}` : text;
   }
+}
+
+/** A value the user must correct; the message is a sentence naming the field. */
+export class DecimalLimitError extends Error {}
+
+/** The limits of one input field, from its column type (`numeric(p, s)`). */
+export type DecimalLimits = {
+  /** The field as a sentence starts with it, e.g. `Quantity`. */
+  label: string;
+  /** At most this many decimals; trailing zeros do not count. */
+  decimals: number;
+  /** Smallest value accepted, inclusive. */
+  min?: string;
+  /** The refusal below `min`; by default "{label} cannot be below {min}." */
+  minMessage?: string;
+  /** The absolute value must stay below this (the column's integer digits). */
+  maxAbs: string;
+};
+
+/**
+ * An exact decimal within the limits of the column it goes to, or a
+ * `DecimalLimitError`: never rounded, never truncated, never read through
+ * `Number()`. Accepts a number (its shortest round-trip form) or a string with
+ * the separators `parseDecimalLiteral` accepts; blank is refused, the caller
+ * decides what a blank field means.
+ */
+export function parseLimitedDecimal(value: unknown, limits: DecimalLimits): Decimal {
+  const { label } = limits;
+  if (value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
+    throw new DecimalLimitError(`${label} is required.`);
+  }
+  if (typeof value !== 'string' && typeof value !== 'number') throw new DecimalLimitError(`${label} must be a number.`);
+  let parsed: { mantissa: bigint; scale: number };
+  try {
+    parsed = parseDecimalLiteral(value);
+  } catch {
+    throw new DecimalLimitError(`${label} must be a number.`);
+  }
+  let { mantissa, scale } = parsed;
+  while (scale > 0 && mantissa % 10n === 0n) {
+    mantissa /= 10n;
+    scale -= 1;
+  }
+  if (scale > limits.decimals) {
+    throw new DecimalLimitError(`${label} accepts at most ${limits.decimals} decimal${limits.decimals === 1 ? '' : 's'}.`);
+  }
+  const result = Decimal.from(`${mantissa}e${-scale}`);
+  if (limits.min !== undefined && result.cmp(limits.min) < 0) {
+    throw new DecimalLimitError(limits.minMessage ?? `${label} cannot be below ${limits.min}.`);
+  }
+  const magnitude = result.units < 0n ? Decimal.ZERO.sub(result) : result;
+  if (magnitude.cmp(limits.maxAbs) >= 0) throw new DecimalLimitError(`${label} is too large.`);
+  return result;
 }

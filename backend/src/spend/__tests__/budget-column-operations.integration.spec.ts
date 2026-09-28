@@ -63,7 +63,7 @@ async function spreadRecord(
   await upsertRoundInput(
     { manager: runner.manager, scope: kind, version: { id: versionId, tenant_id: tenantId, budget_year: year }, userId: null, audit: captureAudit() },
     measure,
-    { period_start: start, period_end: end, method: 'spread', spread_profile_name: '4-4-5', last_calculation: null },
+    { period_start: start, period_end: end, method: 'spread', spread_profile_name: '4-4-5', last_calculation: null, recipe: null },
   );
 }
 

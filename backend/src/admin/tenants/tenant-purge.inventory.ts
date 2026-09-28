@@ -204,6 +204,8 @@ export const TENANT_PURGE_TABLES = [
   'capex_amounts',
   'capex_allocations',
   'capex_round_inputs',
+  // After both round tables (a round references its calendar ON DELETE RESTRICT)
+  'working_day_profiles',
   'capex_versions',
   'capex_links',
   'capex_attachments',

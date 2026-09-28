@@ -133,6 +133,7 @@ TENANT_TABLES=(
   capex_item_contacts
   capex_items
   capex_links
+  capex_round_inputs
   capex_versions
   chart_of_accounts
   companies
@@ -237,6 +238,7 @@ TENANT_TABLES=(
   spend_item_contacts
   spend_items
   spend_links
+  spend_round_inputs
   spend_tasks
   spend_versions
   subscriptions
@@ -251,6 +253,7 @@ TENANT_TABLES=(
   user_roles
   user_time_monthly_aggregates
   users
+  working_day_profiles
 )
 
 # Tables to skip

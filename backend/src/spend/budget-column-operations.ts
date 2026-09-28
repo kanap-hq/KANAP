@@ -1,4 +1,4 @@
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { DeepPartial, EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
@@ -23,7 +23,8 @@ import {
   listRoundInputs,
   RoundInput,
   RoundInputsContext,
-  upsertRoundInput,
+  roundRecipe,
+  saveRoundInput,
   wholeYear,
 } from './round-inputs.util';
 import { activeMonths } from './spread.util';
@@ -206,6 +207,33 @@ export async function loadVersions(
   return byItemYear;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The item and year of a year-scoped request: the item resolved in the current
+ * tenant (404 otherwise, another tenant's included) and the newest version of
+ * that year, or null when the year has none yet. Creates nothing.
+ */
+export async function resolveItemYear(
+  manager: EntityManager,
+  scope: AmountScope,
+  rawItemId: unknown,
+  rawYear: unknown,
+): Promise<{ tenantId: string; year: number; version: BudgetVersionRow | null }> {
+  const tenantId = await currentTenantId(manager);
+  const itemId = typeof rawItemId === 'string' ? rawItemId.trim() : '';
+  const items: Array<{ id: string }> = UUID.test(itemId)
+    ? await manager.query(`SELECT id FROM ${SCOPES[scope].items} WHERE tenant_id = $1 AND id = $2`, [tenantId, itemId])
+    : [];
+  if (items.length === 0) throw new NotFoundException('Item not found.');
+  const parsed = typeof rawYear === 'string' && /^\d{4}$/.test(rawYear.trim()) ? Number(rawYear) : rawYear;
+  if (typeof parsed !== 'number' || !Number.isInteger(parsed) || parsed < 1000 || parsed > 9999) {
+    throw new BadRequestException('A budget year is required.');
+  }
+  const version = (await loadVersions(manager, scope, tenantId, [items[0].id], [parsed])).get(`${items[0].id}:${parsed}`) ?? null;
+  return { tenantId, year: parsed, version };
+}
+
 /** Create the version of an item's year, with the item's tenant_id, and audit it. */
 export async function createBudgetVersion(
   deps: Pick<BudgetOperationDeps, 'manager' | 'audit'>,
@@ -354,7 +382,9 @@ export async function copyBudgetColumn(
     const sourceRecord = records.get(sourceVersion.id)?.find((r) => r.measure === sourceMeasure);
     const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
     const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear);
-    await upsertRoundInput(rctx, destinationMeasure, {
+    // The source's recipe travels as it is (same calendar, quantity, price and
+    // index: never re-applied); a source without one leaves the destination's.
+    await saveRoundInput(rctx, destinationMeasure, (stored) => ({
       ...periodWithinValidity(copiedPeriod, item.validity),
       method: 'copied',
       spread_profile_name: sourceRecord?.spread_profile_name ?? null,
@@ -367,7 +397,8 @@ export async function copyBudgetColumn(
         total: centsToDecimal(targetTotal),
         source_method: sourceRecord?.method ?? null,
       },
-    });
+      recipe: roundRecipe(sourceRecord) ?? roundRecipe(stored),
+    }));
 
     await deps.audit.log(
       {
