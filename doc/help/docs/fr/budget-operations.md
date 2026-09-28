@@ -95,7 +95,7 @@ La page s'ouvre avec la colonne par défaut de l'année en cours comme source et
 
 1. Cliquez sur **Simulation** pour générer un aperçu sans modifier aucune donnée
 2. Examinez la grille d'aperçu, qui affiche :
-   - Nom du **Poste** (les postes marqués **Ignoré** conservent leur valeur actuelle)
+   - Nom du **Poste** (les postes marqués **Ignoré** conservent leur valeur actuelle ; les postes marqués **Au prorata** commencent ou se terminent pendant l'année de destination et ne reçoivent que les mois de leur période de validité)
    - **Valeur source** (de l'année/colonne source)
    - **Valeur destination actuelle**
    - **Valeur d'aperçu** (ce que la destination deviendra après la copie)
@@ -125,6 +125,8 @@ Sous la grille, une barre de statistiques affiche :
 ### Comment les montants sont copiés
 
 - La copie conserve la répartition mensuelle. Chacun des douze mois est copié vers le même mois de la destination : une colonne répartie d'avril à décembre reste répartie d'avril à décembre
+- Seuls les postes valides l'année de destination sont copiés. Un poste compte pour les mois dont le 15 tombe entre son **Début d'effet** et sa **Fin de validité**. Un poste sans aucun de ces mois est exclu, car l'onglet Budget ne l'affiche pas non plus
+- Un poste valide une partie de l'année de destination ne reçoit que ces mois. Les autres mois gardent leur montant, et la période est ramenée aux dates du poste. Par exemple, une source sur douze mois copiée vers un poste qui se termine le 30 juin donne janvier à juin
 - Sans pourcentage, les montants sont copiés à l'identique, au centime près
 - Avec un pourcentage, chaque mois est arrondi à l'unité. Le total annuel est le total source auquel on applique le pourcentage, arrondi à l'unité. Le petit écart est reporté sur le dernier mois qui porte un montant. Par exemple, 12 000 répartis d'avril à décembre (1 333,33 par mois et 1 333,36 en décembre) copiés avec +2 % donnent 1 360 par mois et 12 240 pour l'année
 - La période de la colonne suit la copie : avril à décembre 2026 devient avril à décembre 2027. Une période qui se termine le 29 février se termine le 28 février dans une année non bissextile
@@ -143,7 +145,7 @@ Si la colonne destination est gelée, **Simulation** et **Copier les données** 
 
 Copiez les méthodes et pourcentages de ventilation d'une année à l'autre. Cela vous évite de ressaisir les configurations de refacturation lors de la mise en place d'une nouvelle année fiscale.
 
-La bascule **OPEX** / **CAPEX** en haut choisit les postes copiés. La copie se fait en bloc : si un poste échoue, rien n'est copié.
+La bascule **OPEX** / **CAPEX** en haut choisit les postes copiés. Seuls les postes valides l'année de destination sont copiés, avec la même règle que **Copier les colonnes budgétaires**. La copie se fait en bloc : si un poste échoue, rien n'est copié.
 
 Nécessite les droits d'administration sur OPEX, ou sur CAPEX pour les postes CAPEX.
 
@@ -187,7 +189,7 @@ Après une simulation, une bannière affiche le nombre de postes prêts à être
 
 Effacez toutes les données d'une colonne budgétaire spécifique pour une année donnée. C'est une opération destructive : utilisez-la lorsque vous devez repartir de zéro.
 
-Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les postes à effacer. La réinitialisation met à zéro les douze mois de la colonne et retire sa période. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates du poste. La réinitialisation se fait en tout ou rien : si un poste échoue, rien n'est effacé.
+Le sélecteur **OPEX** / **CAPEX** en haut de la page choisit les postes à effacer. La réinitialisation met à zéro les douze mois de la colonne et retire sa période. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates du poste. La réinitialisation couvre tous les postes, y compris ceux dont la fin de validité est passée. Elle se fait en tout ou rien : si un poste échoue, rien n'est effacé.
 
 Nécessite les droits d'administration sur les OPEX, ou sur les CAPEX pour les postes CAPEX.
 

@@ -95,7 +95,7 @@ La página se abre con la columna por defecto del año actual como origen y la c
 
 1. Haga clic en **Simulación** para generar una vista previa sin cambiar ningún dato
 2. Revise la cuadrícula de vista previa, que muestra:
-   - Nombre de la **Partida** (las partidas marcadas como **Omitida** conservan su valor actual)
+   - Nombre de la **Partida** (las partidas marcadas como **Omitida** conservan su valor actual; las marcadas como **Prorrateada** empiezan o terminan durante el año de destino y solo reciben los meses dentro de su periodo de validez)
    - **Valor de origen** (del año/columna de origen)
    - **Valor actual de destino**
    - **Valor de vista previa** (lo que será el destino después de la copia)
@@ -125,6 +125,8 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 ### Cómo se copian los importes
 
 - La copia conserva el reparto mensual. Cada uno de los doce meses se copia al mismo mes del destino, de modo que una columna repartida de abril a diciembre sigue repartida de abril a diciembre
+- Solo se copian las partidas válidas en el año de destino. Una partida cuenta para los meses cuyo día 15 cae entre su **Inicio de vigencia** y su **Fin de validez**. Una partida sin ninguno de esos meses se excluye, ya que la pestaña Presupuesto tampoco la muestra
+- Una partida válida solo una parte del año de destino recibe únicamente esos meses. Los demás meses conservan su importe, y el periodo se ajusta a las fechas de la partida. Por ejemplo, un origen de doce meses copiado a una partida que termina el 30 de junio da de enero a junio
 - Sin porcentaje, los importes se copian exactamente, al céntimo
 - Con un porcentaje, cada mes se redondea a un importe entero. El total anual es el total de origen con el porcentaje aplicado, redondeado a un importe entero. La pequeña diferencia se asigna al último mes que tiene importe. Por ejemplo, 12.000 repartidos de abril a diciembre (1.333,33 al mes y 1.333,36 en diciembre) copiados con +2 % dan 1.360 al mes y 12.240 para el año
 - El periodo de la columna se desplaza con la copia: de abril a diciembre de 2026 pasa a ser de abril a diciembre de 2027. Un periodo que termina el 29 de febrero termina el 28 de febrero en un año que no lo tiene
@@ -143,7 +145,7 @@ Si la columna de destino está congelada, tanto **Simulación** como **Copiar da
 
 Copie métodos y porcentajes de asignación de un año a otro. Esto le ahorra tener que volver a introducir las configuraciones de contracargo al configurar un nuevo ejercicio fiscal.
 
-El conmutador **OPEX** / **CAPEX** de la parte superior elige qué partidas se copian. La copia es de todo o nada: si una partida falla, no se copia nada.
+El conmutador **OPEX** / **CAPEX** de la parte superior elige qué partidas se copian. Solo se copian las partidas válidas en el año de destino, con la misma regla que **Copiar columnas presupuestarias**. La copia es de todo o nada: si una partida falla, no se copia nada.
 
 Requiere derechos de administración sobre OPEX, o sobre CAPEX para las partidas CAPEX.
 
@@ -187,7 +189,7 @@ Después de una simulación, un banner muestra el conteo de elementos listos par
 
 Borre todos los datos de una columna presupuestaria específica para un año determinado. Esta es una operación destructiva: utilícela cuando necesite comenzar de cero.
 
-El selector **OPEX** / **CAPEX** de la parte superior elige las partidas que se borran. El restablecimiento pone a cero los doce meses de la columna y quita su periodo. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la partida. El restablecimiento es de todo o nada: si una partida falla, no se borra nada.
+El selector **OPEX** / **CAPEX** de la parte superior elige las partidas que se borran. El restablecimiento pone a cero los doce meses de la columna y quita su periodo. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la partida. El restablecimiento abarca todas las partidas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una partida falla, no se borra nada.
 
 Requiere permisos de administración sobre OPEX, o sobre CAPEX para las partidas CAPEX.
 

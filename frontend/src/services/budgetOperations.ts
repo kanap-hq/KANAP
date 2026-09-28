@@ -32,6 +32,8 @@ export type BudgetOperationResult = {
   newValue: number;
   /** The server skips this item (source all zero, or destination not empty without overwrite), month by month. */
   skipped: boolean;
+  /** The item is valid for part of the destination year: the months outside its validity are not copied. */
+  prorated?: boolean;
 };
 
 export type BudgetOperationResponse = {

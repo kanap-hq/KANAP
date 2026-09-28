@@ -625,7 +625,7 @@
     },
     "copyBudgetColumns": {
       "title": "Budgetspalten kopieren",
-      "subtitle": "Eine Spalte in ein anderes Jahr oder eine andere Spalte kopieren, für OPEX oder CAPEX. Jeder Monat behält seinen Betrag, und der Prozentsatz gilt für jeden Monat.",
+      "subtitle": "Eine Spalte in ein anderes Jahr oder eine andere Spalte kopieren, für OPEX oder CAPEX. Jeder Monat behält seinen Betrag, und der Prozentsatz gilt für jeden Monat. Positionen, die im Zieljahr nicht gültig sind, werden ausgelassen. Positionen, die nur einen Teil des Jahres gültig sind, erhalten nur diese Monate.",
       "sourceYear": "Quelljahr",
       "sourceColumn": "Quellspalte",
       "destinationYear": "Zieljahr",
@@ -651,6 +651,8 @@
       "currentHeader": "{{column}} {{year}}, aktuell",
       "previewHeader": "{{column}} {{year}}, Vorschau",
       "skipped": "Übersprungen",
+      "prorated": "Anteilig",
+      "proratedHelp": "Diese Position beginnt oder endet im Jahr {{year}}. Nur die Monate innerhalb ihrer Gültigkeit werden kopiert.",
       "previewInfo_one": "{{count}} Position in der Vorschau: {{toProcess}} zu kopieren, {{skipped}} übersprungen. Übersprungene Positionen behalten ihren aktuellen Wert.",
       "previewInfo_other": "{{count}} Positionen in der Vorschau: {{toProcess}} zu kopieren, {{skipped}} übersprungen. Übersprungene Positionen behalten ihren aktuellen Wert.",
       "existingDataWarning_one": "{{count}} Position hat bereits einen Betrag in der Zielspalte und wird übersprungen. Aktivieren Sie „Vorhandene Daten überschreiben“, um ihn zu ersetzen.",

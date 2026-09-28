@@ -625,7 +625,7 @@
     },
     "copyBudgetColumns": {
       "title": "Copy budget columns",
-      "subtitle": "Copy a column to another year or column, for OPEX or CAPEX. Each month keeps its amount, and the percentage applies to every month.",
+      "subtitle": "Copy a column to another year or column, for OPEX or CAPEX. Each month keeps its amount, and the percentage applies to every month. Lines that are not valid in the destination year are left out. Lines valid for part of it get only those months.",
       "sourceYear": "Source year",
       "sourceColumn": "Source column",
       "destinationYear": "Destination year",
@@ -651,6 +651,8 @@
       "currentHeader": "{{column}} {{year}}, current",
       "previewHeader": "{{column}} {{year}}, preview",
       "skipped": "Skipped",
+      "prorated": "Prorated",
+      "proratedHelp": "This line starts or ends during {{year}}. Only the months within its validity are copied.",
       "previewInfo_one": "{{count}} item in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
       "previewInfo_other": "{{count}} items in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
       "existingDataWarning_one": "{{count}} item already has an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace it.",

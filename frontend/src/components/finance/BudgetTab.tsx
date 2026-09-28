@@ -30,6 +30,7 @@ import {
   activeMonths,
   centsToDecimal,
   chipText,
+  columnPeriod,
   joinList,
   periodForEdit,
   periodProblem,
@@ -144,8 +145,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const [panelOpen, setPanelOpen] = React.useState(false);
 
   const suggestion = React.useMemo(() => suggestedPeriod(year, effectiveStart, endOfValidity), [year, effectiveStart, endOfValidity]);
+  // A column's own period: shown under the column and used to spread a typed yearly total.
   const periodFor = React.useCallback((measure: AmountCol, inputs: RoundInput[], stored: Record<AmountCol, boolean>): Period | null => {
-    return periodForEdit(year, inputs.find((r) => r.measure === measure), stored[measure], suggestion);
+    return columnPeriod(year, inputs.find((r) => r.measure === measure), stored[measure], suggestion);
   }, [year, suggestion]);
 
   const { data: freezeData } = useFreezeState(year);
@@ -382,9 +384,10 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     }
   }, [flushEdits, id, load, t]);
 
-  // The period the panel shows: what the user typed, else the column's own period.
+  // The period the panel shows: what the user typed, else the column's own
+  // period within the item's dates. Nothing is saved before Apply.
   const spreadPeriod: Period = spreadDates
-    ?? periodFor(spreadMeasure, roundInputs, storedAmounts)
+    ?? periodForEdit(year, roundInputs.find((r) => r.measure === spreadMeasure), storedAmounts[spreadMeasure], suggestion)
     ?? { start: '', end: '' };
   const spreadProblem = periodProblem(year, spreadPeriod.start, spreadPeriod.end);
   const spreadActive = spreadProblem ? [] : activeMonths(year, spreadPeriod.start, spreadPeriod.end);

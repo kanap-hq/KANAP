@@ -15,6 +15,7 @@ import {
   seedItem,
   seedTenant,
   seedVersion,
+  setItemDates,
   underSavepoint,
 } from './round-inputs.fixtures';
 
@@ -22,7 +23,8 @@ import {
 // CAPEX: manual methods copy their rows, automatic methods only take the
 // method, the dry run writes nothing and lists what would happen, a line whose
 // rules refuse it is an error in the dry run and fails the real copy, and the
-// copy is all or nothing.
+// copy is all or nothing. Only the lines valid in the destination year are
+// copied.
 
 const YEAR = 2031;
 const KINDS: Kind[] = ['opex', 'capex'];
@@ -199,6 +201,33 @@ async function testRefusedLine(kind: Kind) {
   });
 }
 
+/** A line not valid in the destination year is left out; a line valid for part of it is copied. */
+async function testDestinationYearValidity(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-alloc-validity`);
+    const north = await seedCompany(runner, tenantId, 'North');
+    const ended = await seedItem(runner, kind, tenantId, 1, 'Ended');
+    await setItemDates(runner, kind, ended, { disabledAt: `${YEAR}-12-31T12:00:00Z` });
+    await seedAllocatedVersion(runner, kind, tenantId, ended, YEAR, 'manual_pct', [[north, 100]]);
+    const partial = await seedItem(runner, kind, tenantId, 2, 'Partial');
+    await setItemDates(runner, kind, partial, { disabledAt: `${YEAR + 1}-06-30T12:00:00Z` });
+    await seedAllocatedVersion(runner, kind, tenantId, partial, YEAR, 'manual_pct', [[north, 100]]);
+
+    const preview = await copyAllocations(kind, runner, { sourceYear: YEAR, destinationYear: YEAR + 1, dryRun: true });
+    assert.deepEqual(preview.results.map((r: any) => [r.itemName, r.action]), [['Partial', 'copy']], `${kind}: the ended line is not listed`);
+    assert.deepEqual(preview.summary, { totalItems: 1, processed: 1, skipped: 0, errors: 0 });
+
+    const done = await copyAllocations(kind, runner, { sourceYear: YEAR, destinationYear: YEAR + 1 });
+    assert.deepEqual(done.summary, { totalItems: 1, processed: 1, skipped: 0, errors: 0 });
+    assert.equal(await findVersion(runner, kind, ended, YEAR + 1), undefined, `${kind}: no version for the ended line`);
+    assert.deepEqual((await readVersion(runner, kind, partial, YEAR + 1))!.rows, [[north, 100]], `${kind}: the partial line is copied`);
+
+    // Validity follows the destination year, not today: back into the source year, the ended line is copied.
+    const back = await copyAllocations(kind, runner, { sourceYear: YEAR + 1, destinationYear: YEAR, overwrite: true, dryRun: true });
+    assert.deepEqual(back.results.map((r: any) => r.itemName).sort(), ['Ended', 'Partial']);
+  });
+}
+
 /** A failure after a first line was written fails the request and keeps nothing. */
 async function testAllOrNothing(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
@@ -228,6 +257,7 @@ void runSpecs('copy-allocations.integration.spec', KINDS.flatMap((kind) => [
   [`testAutomaticMethod(${kind})`, () => testAutomaticMethod(kind)],
   [`testRefusedLine(${kind})`, () => testRefusedLine(kind)],
   [`testAllOrNothing(${kind})`, () => testAllOrNothing(kind)],
+  [`testDestinationYearValidity(${kind})`, () => testDestinationYearValidity(kind)],
 ] as Array<[string, () => Promise<void>]>));
 
 // `dataSource` is imported so the CI runner schedules this spec on the database lane.

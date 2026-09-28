@@ -95,7 +95,7 @@ Die Seite öffnet mit der Standardspalte des aktuellen Jahres als Quelle und der
 
 1. Klicken Sie auf **Testlauf**, um eine Vorschau zu erstellen, ohne Daten zu ändern
 2. Überprüfen Sie das Vorschau-Grid, das zeigt:
-   - Name der **Position** (mit **Übersprungen** markierte Positionen behalten ihren aktuellen Wert)
+   - Name der **Position** (mit **Übersprungen** markierte Positionen behalten ihren aktuellen Wert; mit **Anteilig** markierte Positionen beginnen oder enden im Zieljahr und erhalten nur die Monate innerhalb ihrer Gültigkeit)
    - **Quellwert** (aus dem Quelljahr/der Quellspalte)
    - **Aktueller Zielwert**
    - **Vorschauwert** (was das Ziel nach dem Kopieren wird)
@@ -125,6 +125,8 @@ Unterhalb des Grids zeigt eine Statistikleiste:
 ### Wie Beträge kopiert werden
 
 - Die Kopie behält die monatliche Verteilung bei. Jeder der zwölf Monate wird in denselben Monat des Ziels kopiert: Eine Spalte, die von April bis Dezember verteilt ist, bleibt von April bis Dezember verteilt
+- Nur Positionen, die im Zieljahr gültig sind, werden kopiert. Eine Position zählt für die Monate, deren 15. zwischen ihrem **Beginn der Gültigkeit** und ihrem **Ende der Gültigkeit** liegt. Eine Position ohne solchen Monat wird ausgelassen, da der Budget-Tab sie ebenfalls nicht anzeigt
+- Eine Position, die nur einen Teil des Zieljahres gültig ist, erhält nur diese Monate. Die übrigen Monate behalten ihren Betrag, und der Zeitraum wird auf die Daten der Position gekürzt. Beispiel: Eine Quelle über zwölf Monate, kopiert auf eine Position, die am 30. Juni endet, ergibt Januar bis Juni
 - Ohne Prozentsatz werden die Beträge exakt kopiert, auf den Cent genau
 - Mit einem Prozentsatz wird jeder Monat auf einen ganzen Betrag gerundet. Die Jahressumme ist die Quellsumme mit angewendetem Prozentsatz, auf einen ganzen Betrag gerundet. Die kleine Differenz wird dem letzten Monat mit einem Betrag zugeschlagen. Beispiel: 12.000, verteilt von April bis Dezember (1.333,33 pro Monat und 1.333,36 im Dezember), ergeben mit +2 % kopiert 1.360 pro Monat und 12.240 für das Jahr
 - Der Zeitraum der Spalte wandert mit der Kopie: April bis Dezember 2026 wird zu April bis Dezember 2027. Ein Zeitraum, der am 29. Februar endet, endet in einem Jahr ohne diesen Tag am 28. Februar
@@ -143,7 +145,7 @@ Wenn die Zielspalte eingefroren ist, sind sowohl **Testlauf** als auch **Daten k
 
 Kopieren Sie Zuordnungsmethoden und Prozentsätze von einem Jahr in ein anderes. Dies erspart Ihnen die Neueingabe der Leistungsverrechnungs-Konfigurationen beim Einrichten eines neuen Geschäftsjahres.
 
-Der Umschalter **OPEX** / **CAPEX** oben legt fest, welche Positionen kopiert werden. Die Kopie erfolgt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts kopiert.
+Der Umschalter **OPEX** / **CAPEX** oben legt fest, welche Positionen kopiert werden. Nur Positionen, die im Zieljahr gültig sind, werden kopiert, nach derselben Regel wie bei **Budgetspalten kopieren**. Die Kopie erfolgt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts kopiert.
 
 Erfordert Administrationsrechte für OPEX, bei CAPEX-Positionen für CAPEX.
 
@@ -187,7 +189,7 @@ Nach einem Testlauf zeigt ein Banner die Anzahl der kopierbereiten, übersprunge
 
 Löschen Sie alle Daten einer bestimmten Budgetspalte für ein gegebenes Jahr. Dies ist eine destruktive Operation: Verwenden Sie sie, wenn Sie neu beginnen müssen.
 
-Der Umschalter **OPEX** / **CAPEX** oben auf der Seite legt fest, welche Positionen geleert werden. Das Zurücksetzen setzt die zwölf Monate der Spalte auf null und entfernt ihren Zeitraum. Im Budget-Tab erhält die Spalte danach einen neuen Vorschlag aus den Daten der Position. Das Zurücksetzen gilt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts geleert.
+Der Umschalter **OPEX** / **CAPEX** oben auf der Seite legt fest, welche Positionen geleert werden. Das Zurücksetzen setzt die zwölf Monate der Spalte auf null und entfernt ihren Zeitraum. Im Budget-Tab erhält die Spalte danach einen neuen Vorschlag aus den Daten der Position. Das Zurücksetzen erfasst alle Positionen, auch solche, deren Gültigkeit bereits abgelaufen ist. Es gilt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts geleert.
 
 Erfordert Administrationsrechte für OPEX, bzw. für CAPEX bei CAPEX-Positionen.
 
