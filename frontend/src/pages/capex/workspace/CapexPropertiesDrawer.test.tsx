@@ -47,8 +47,34 @@ vi.mock('../../../hooks/useCostCenterTree', () => {
   return { useCostCenterTree: () => tree };
 });
 vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({
-  default: ({ value }: { value: string | null }) => <div data-testid="analytics-select">{value ?? ''}</div>,
+  default: (p: { axisId: string; label?: string; value: string | null; onChange: (v: string | null) => void }) => (
+    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label}>
+      {p.value ?? ''}
+      <button type="button" onClick={() => p.onChange(`value-${p.axisId}`)}>{`pick ${p.axisId}`}</button>
+      <button type="button" onClick={() => p.onChange(null)}>{`clear ${p.axisId}`}</button>
+    </div>
+  ),
 }));
+// The tenant's dimensions, out of order on purpose: the hook's own core orders them and names the
+// default, which has no name; one dimension is disabled. `failed` stands for a load that failed.
+const dimensions = vi.hoisted(() => ({ failed: false }));
+vi.mock('../../../hooks/useAnalyticsAxes', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../../../hooks/useAnalyticsAxes')>();
+  const t = ((key: string) => key) as unknown as Parameters<typeof mod.buildAnalyticsAxes>[1];
+  const dimension = (id: string, name: string | null, sort_order: number, extra: Record<string, unknown> = {}) => ({
+    id, code: id, name, description: null, sort_order, is_default: false, status: 'enabled', disabled_at: null, ...extra,
+  });
+  const list = [
+    dimension('activity', 'Activity', 3),
+    dimension('old', 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
+    dimension('nature', 'Nature', 1),
+    dimension('default', null, 0, { is_default: true }),
+  ];
+  return {
+    ...mod,
+    useAnalyticsAxes: () => (dimensions.failed ? mod.buildAnalyticsAxes([], t, true, true) : mod.buildAnalyticsAxes(list as never, t)),
+  };
+});
 
 import CapexPropertiesDrawer from './CapexPropertiesDrawer';
 
@@ -68,7 +94,7 @@ function renderDrawer(mode: 'create' | 'edit', props: Partial<DrawerProps> = {})
         ppeType="hardware"
         investmentType="replacement"
         priority="medium"
-        analyticsCategoryId="category-1"
+        analyticsValues={{ default: 'category-1', old: 'category-9' }}
         costCenterId=""
         runBuild=""
         effectiveStart="2026-01-01"
@@ -79,7 +105,7 @@ function renderDrawer(mode: 'create' | 'edit', props: Partial<DrawerProps> = {})
         onPpeTypeChange={noop}
         onInvestmentTypeChange={noop}
         onPriorityChange={noop}
-        onAnalyticsCategoryChange={noop}
+        onAnalyticsValueChange={noop}
         onCostCenterChange={noop}
         onRunBuildChange={noop}
         onEffectiveStartChange={noop}
@@ -106,10 +132,45 @@ describe('CapexPropertiesDrawer', () => {
     expect(screen.getByTestId('account-select')).toHaveAttribute('data-clearable', 'false');
   });
 
-  it.each(['create', 'edit'] as const)('offers the analytics category in %s mode', (mode) => {
+  it.each(['create', 'edit'] as const)('offers one select per enabled dimension in %s mode, in dimension order, named after it', (mode) => {
     renderDrawer(mode);
-    expect(screen.getByText('capex.fields.analyticsCategory')).toBeInTheDocument();
-    expect(screen.getByTestId('analytics-select')).toHaveTextContent('category-1');
+    const selects = screen.getAllByTestId(/^analytics-select-/);
+    expect(selects.map((el) => el.getAttribute('data-testid'))).toEqual([
+      'analytics-select-default', 'analytics-select-nature', 'analytics-select-activity',
+    ]);
+    // The default dimension has no name yet: the translated default label names it.
+    expect(selects.map((el) => el.getAttribute('data-label'))).toEqual([
+      'master-data:analytics.analyticsCategoryFallback', 'Nature', 'Activity',
+    ]);
+    expect(screen.getByText('master-data:analytics.analyticsCategoryFallback')).toBeInTheDocument();
+    expect(screen.queryByText('Old')).toBeNull();
+    expect(screen.getByTestId('analytics-select-default')).toHaveTextContent('category-1');
+  });
+
+  it.each(['create', 'edit'] as const)('says so in one line when the dimensions cannot be loaded (%s)', (mode) => {
+    dimensions.failed = true;
+    try {
+      renderDrawer(mode);
+      expect(screen.getByText('shared.dimensionsLoadFailed')).toBeInTheDocument();
+      expect(screen.queryAllByTestId(/^analytics-select-/)).toHaveLength(0);
+      expect(screen.getByText('capex.fields.runBuild')).toBeInTheDocument();
+    } finally {
+      dimensions.failed = false;
+    }
+  });
+
+  it('names each currency with its code and name, without a dash', () => {
+    renderDrawer('edit', { currency: 'EUR' });
+    expect(screen.getByDisplayValue(/^EUR · /)).toBeInTheDocument();
+    expect(screen.queryByText('shared.dimensionsLoadFailed')).toBeNull();
+  });
+
+  it('reports a picked value and a cleared one with their dimension', () => {
+    const onAnalyticsValueChange = vi.fn();
+    renderDrawer('edit', { onAnalyticsValueChange });
+    fireEvent.click(screen.getByRole('button', { name: 'pick nature' }));
+    fireEvent.click(screen.getByRole('button', { name: 'clear default' }));
+    expect(onAnalyticsValueChange.mock.calls).toEqual([['nature', 'value-nature'], ['default', null]]);
   });
 });
 

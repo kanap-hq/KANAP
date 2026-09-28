@@ -3,10 +3,12 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
+import type { TFunction } from 'i18next';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { AMOUNT_COLUMNS } from '../../components/finance/amountColumns';
 import type { CostCenterNode } from '../../services/costCenters';
+import type { AnalyticsAxis } from '../../services/analytics';
 
 vi.mock('react-i18next', () => {
   const t = (key: string, options?: Record<string, unknown>) => (options ? `${key} ${JSON.stringify(options)}` : key);
@@ -26,6 +28,19 @@ vi.mock('../../hooks/useCostCenterTree', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useCostCenterTree')>();
   return { ...actual, useCostCenterTree: () => actual.buildCostCenterTree(tree.nodes as CostCenterNode[]) };
 });
+const axesState = vi.hoisted(() => ({ list: [] as unknown[] }));
+vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
+  const { useMemo } = await import('react');
+  const t = ((key: string) => (key === 'master-data:analytics.analyticsCategoryFallback' ? 'Analytics dimension' : key)) as unknown as TFunction;
+  return {
+    ...actual,
+    useAnalyticsAxes: () => {
+      const list = axesState.list;
+      return useMemo(() => actual.buildAnalyticsAxes(list as AnalyticsAxis[], t), [list]);
+    },
+  };
+});
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
   default: ({ filters, children }: { filters?: React.ReactNode; children?: React.ReactNode }) => (
@@ -42,8 +57,12 @@ vi.mock('../../components/reports/ChartCard', () => ({
     return null;
   }),
 }));
+const grid = vi.hoisted(() => ({ columns: [] as Array<{ headerName?: string }> }));
 vi.mock('../../components/reports/ReportGrid', () => ({
-  default: ({ rowData }: { rowData?: unknown[] }) => <pre data-testid="grid">{JSON.stringify(rowData ?? [])}</pre>,
+  default: ({ rowData, columnDefs }: { rowData?: unknown[]; columnDefs?: Array<{ headerName?: string }> }) => {
+    grid.columns = columnDefs ?? [];
+    return <pre data-testid="grid">{JSON.stringify(rowData ?? [])}</pre>;
+  },
 }));
 
 import api from '../../api';
@@ -83,7 +102,17 @@ function slot(year: number, amount: number) {
   return { year, totals: columns, reporting: { ...columns, currency: 'X', reporting_currency: 'X' } };
 }
 
+function axis(id: string, patch: Partial<AnalyticsAxis>): AnalyticsAxis {
+  return { id, code: id, name: null, description: null, sort_order: 0, is_default: false, status: 'enabled', disabled_at: null, ...patch };
+}
+
+// The default dimension has no name of its own and reads as the translated default label.
+const DEFAULT_AXIS = axis('ax-def', { is_default: true });
+const NATURE = axis('ax-nat', { name: 'Nature', sort_order: 1 });
+const NATURE_VALUES: Record<string, [string, string]> = { a: ['n-hw', 'Hardware'], c: ['n-sw', 'Software'], d: ['n-hw', 'Hardware'] };
+
 function line(id: string, costCenterId: string | null, runBuild: 'run' | 'build' | null, previous: number, current: number) {
+  const nature = NATURE_VALUES[id];
   return {
     id,
     product_name: `Line ${id}`,
@@ -91,6 +120,9 @@ function line(id: string, costCenterId: string | null, runBuild: 'run' | 'build'
     account_display: `Account ${id}`,
     analytics_category_id: `cat-${id}`,
     analytics_category_name: `Category ${id}`,
+    analytics_value_ids: { 'ax-def': `cat-${id}`, ...(nature ? { 'ax-nat': nature[0] } : {}) } as Record<string, string>,
+    'analytics_ax-def': `Category ${id}`,
+    'analytics_ax-nat': nature ? nature[1] : null,
     cost_center_id: costCenterId,
     run_build: runBuild,
     versions: { yMinus1: slot(Y - 1, previous), y: slot(Y, current) } as Record<string, ReturnType<typeof slot>>,
@@ -98,6 +130,7 @@ function line(id: string, costCenterId: string | null, runBuild: 'run' | 'build'
 }
 
 // Under grp: a, b (on a disabled cost center) and c (two levels down) = 123 in Y.
+// Nature: a and d are Hardware (1 100 in Y), c is Software, b and e hold no Nature value.
 const ROWS = [
   line('a', 'cc1', 'run', 10, 100),
   line('b', 'cc2', 'build', 5, 20),
@@ -124,6 +157,7 @@ const gridRows = (index = 0) => JSON.parse(screen.getAllByTestId('grid')[index].
 beforeEach(() => {
   setBudgetColumns();
   tree.nodes = NODES;
+  axesState.list = [DEFAULT_AXIS, NATURE];
   chart.options = null;
   get.mockReset();
   get.mockImplementation(async (url: string) => {
@@ -234,5 +268,109 @@ describe('Option lists under a filter', () => {
     expect(await optionsOf('reports.filters.excludeCategories', 'keyDown')).toEqual([
       'Category a', 'Category b', 'Category c', 'Category d', 'Category e',
     ]);
+  });
+});
+
+describe('Reports with a dimension value picked', () => {
+  it('Top items: totals and shares read the lines holding the value only', async () => {
+    renderReport(<TopOpexReport />, '/report?analytics=ax-nat:n-hw');
+    await waitFor(() => expect(gridRows().map((row) => [row.name, row.value])).toEqual([
+      ['Line d', 1000],
+      ['Line a', 100],
+    ]));
+    // The total the shares are taken on is the kept lines', 1 000 + 100.
+    expect(chart.options.footnote.text).toMatch(/: 1 100$/);
+    expect(gridRows()[0].pct_of_total).toBe(Math.round((1000 / 1100) * 100));
+  });
+
+  it('CAPEX trend: sums the lines holding no value on the dimension', async () => {
+    renderReport(<CapexBudgetTrendReport />, '/report?analytics=ax-nat:none');
+    await waitFor(() => expect(gridRows()[0]?.[String(Y)]).toBe(7020));
+    expect(gridRows()[0][String(Y - 1)]).toBe(5);
+  });
+});
+
+describe('Analytics report dimensions', () => {
+  const dimensionPicker = () => screen.queryByRole('combobox', { name: 'reports.filters.dimension' });
+  const groups = () => gridRows().map((row) => [row.group, row[String(Y)]]);
+  const valueCalls = () => get.mock.calls.filter(([url]) => url === '/analytics-categories').map(([, config]) => config?.params);
+
+  async function exclude(option: string) {
+    const input = screen.getByRole('combobox', { name: 'reports.filters.excludeCategories' });
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.click(await screen.findByRole('option', { name: option }));
+    fireEvent.keyDown(input, { key: 'Escape' });
+  }
+
+  it('hides the picker with one enabled dimension and groups on the default one', async () => {
+    axesState.list = [DEFAULT_AXIS, axis('ax-off', { name: 'Old split', sort_order: 2, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' })];
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-off');
+    await waitFor(() => expect(groups()).toHaveLength(5));
+    expect(dimensionPicker()).toBeNull();
+    expect(groups()[0]).toEqual(['Category e', 7000]);
+    // The default without a name reads in lowercase inside a sentence; the grid header keeps the label.
+    expect(chart.options.title.text).toContain('"dimension":"reports.analyticsCategory.defaultDimensionInSentence"');
+    expect(grid.columns[0].headerName).toBe('Analytics dimension');
+  });
+
+  it('names the default dimension in titles by its own name once it has one', async () => {
+    axesState.list = [axis('ax-def', { is_default: true, name: 'Cost type' }), NATURE];
+    renderReport(<AnalyticsCategoryReport />, '/report');
+    await waitFor(() => expect(groups()).toHaveLength(5));
+    expect(chart.options.title.text).toContain('"dimension":"Cost type"');
+    expect(grid.columns[0].headerName).toBe('Cost type');
+    expect(await optionsOf('reports.filters.dimension', 'mouseDown')).toEqual(['Cost type', 'Nature']);
+  });
+
+  it('offers the enabled dimensions and groups on the picked one, lines without a value as unassigned', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report');
+    await waitFor(() => expect(groups()).toHaveLength(5));
+    expect(await optionsOf('reports.filters.dimension', 'mouseDown')).toEqual(['Analytics dimension', 'Nature']);
+    expect(valueCalls()).toContainEqual({ axis_id: 'ax-def', limit: 1000, sort: 'name:ASC' });
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.dimension' }));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Nature' }));
+
+    await waitFor(() => expect(groups()).toEqual([
+      ['reports.analyticsCategory.unassigned', 7020],
+      ['Hardware', 1100],
+      ['Software', 3],
+    ]));
+    expect(chart.options.title.text).toContain('"dimension":"Nature"');
+    expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC' });
+  });
+
+  it('opens on the dimension the address names', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat&costCenter=grp');
+    // Under grp: a is Hardware (100), b has no Nature value (20), c is Software (3).
+    await waitFor(() => expect(groups()).toEqual([
+      ['Hardware', 100],
+      ['reports.analyticsCategory.unassigned', 20],
+      ['Software', 3],
+    ]));
+    expect(screen.getByRole('combobox', { name: 'reports.filters.dimension' }).textContent).toBe('Nature');
+  });
+
+  it('drops the value exclusions when the dimension or the item type changes', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report');
+    await waitFor(() => expect(groups()).toHaveLength(5));
+    const filters = screen.getByTestId('filters');
+
+    await exclude('Category e');
+    await waitFor(() => expect(groups()).toHaveLength(4));
+    expect(filters.textContent).toContain('reports.filters.categorySelected {"count":1}');
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.dimension' }));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Nature' }));
+    await waitFor(() => expect(groups()).toHaveLength(3));
+    expect(filters.textContent).not.toContain('reports.filters.categorySelected');
+
+    await exclude('Hardware');
+    await waitFor(() => expect(groups()).toHaveLength(2));
+    expect(filters.textContent).toContain('reports.filters.categorySelected {"count":1}');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await waitFor(() => expect(filters.textContent).not.toContain('reports.filters.categorySelected'));
+    await waitFor(() => expect(groups()).toHaveLength(3));
   });
 });

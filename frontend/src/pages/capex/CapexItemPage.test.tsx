@@ -11,8 +11,12 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+const nav = vi.hoisted(() => ({ calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
 vi.mock('../../hooks/useCapexNav', () => ({
-  useCapexNav: () => ({ index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
+  useCapexNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }) => {
+    nav.calls.push(params);
+    return { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null };
+  },
 }));
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultCapexCurrency: 'EUR' } }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
@@ -31,14 +35,20 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
 vi.mock('./workspace/CapexPropertiesDrawer', () => ({
   default: (props: {
     mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
-    onAccountChange: (v: string) => void; onAnalyticsCategoryChange: (v: string) => void;
+    onAccountChange: (v: string) => void; onAnalyticsValueChange: (axisId: string, v: string | null) => void;
     onCostCenterChange: (v: string) => void; onRunBuildChange: (v: string) => void;
+    analyticsValues: Record<string, string | null>;
   }) => (
-    <div data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}>
+    <div
+      data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
+      data-analytics={JSON.stringify(props.analyticsValues)}
+    >
       <button type="button" onClick={() => props.onPayingCompanyChange('company-1')}>pick company</button>
       <button type="button" onClick={() => props.onPayingCompanyChange('company-2')}>pick other company</button>
       <button type="button" onClick={() => props.onAccountChange('account-1')}>pick account</button>
-      <button type="button" onClick={() => props.onAnalyticsCategoryChange('category-1')}>pick category</button>
+      <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'category-1')}>pick category</button>
+      <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', null)}>clear category</button>
+      <button type="button" onClick={() => props.onAnalyticsValueChange('axis-nature', 'category-2')}>pick nature value</button>
       <button type="button" onClick={() => props.onCostCenterChange('cc-2')}>pick cost center</button>
       <button type="button" onClick={() => props.onCostCenterChange('cc-3')}>pick third cost center</button>
       <button type="button" onClick={() => props.onCostCenterChange('')}>clear cost center</button>
@@ -67,6 +77,7 @@ vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 
 import api from '../../api';
 import CapexItemPage from './CapexItemPage';
+import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>;
@@ -97,13 +108,14 @@ describe('CapexItemPage create', () => {
     mocked.post.mockResolvedValue({ data: { id: 'new-id' } });
   });
 
-  it('sends the analytics category picked in the drawer', async () => {
+  it('sends the value picked for each dimension, and never the old single field', async () => {
     renderAt();
     expect(document.querySelector('[data-mode="create"]')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][0]).toBe('/capex-items');
@@ -111,21 +123,24 @@ describe('CapexItemPage create', () => {
       description: 'New servers',
       paying_company_id: 'company-1',
       account_id: 'account-1',
-      analytics_category_id: 'category-1',
+      analytics_values: { 'axis-default': 'category-1', 'axis-nature': 'category-2' },
     });
+    expect(mocked.post.mock.calls[0][1]).not.toHaveProperty('analytics_category_id');
     // The page moves on to the new line's workspace.
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/capex-items/new-id'));
   });
 
-  it('sends no analytics category when none is picked', async () => {
+  it('sends no analytics value when none is picked', async () => {
     renderAt();
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
+    fireEvent.click(screen.getByRole('button', { name: 'clear category' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     // Supplier is optional: none picked, none sent.
-    expect(mocked.post.mock.calls[0][1]).toMatchObject({ analytics_category_id: null, supplier_id: null });
+    expect(mocked.post.mock.calls[0][1]).toMatchObject({ analytics_values: {}, supplier_id: null });
     // The page moves on to the new line's workspace.
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/capex-items/new-id'));
   });
@@ -247,5 +262,108 @@ describe('CapexItemPage edit', () => {
       { run_build: null },
       { run_build: 'run' },
     ]);
+  });
+});
+
+describe('CapexItemPage analytics dimensions', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/capex-items/${ITEM_ID}`) {
+        return {
+          data: {
+            id: ITEM_ID, item_number: 7, description: 'New servers', paying_company_id: 'company-1', account_id: 'account-1',
+            currency: 'EUR', effective_start: '2026-01-01',
+            analytics_values: [{
+              axis_id: 'axis-default', axis_code: 'default', axis_name: null, is_default: true,
+              category_id: 'category-1', category_name: 'Licences',
+            }],
+            analytics_category_id: 'category-1', analytics_category_name: 'Licences',
+          },
+        };
+      }
+      return { data: {} };
+    });
+    mocked.patch.mockResolvedValue({ data: {} });
+  });
+
+  it('patches one dimension at a time, as null when cleared, and keeps the others on screen', async () => {
+    renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    const drawer = () => document.querySelector('[data-mode="edit"]');
+    // The drawer reads the line's values from the detail's list, by dimension.
+    await waitFor(() => expect(drawer()).toHaveAttribute('data-analytics', JSON.stringify({ 'axis-default': 'category-1' })));
+    fireEvent.click(screen.getByRole('button', { name: 'pick nature value' }));
+    expect(JSON.parse(drawer()!.getAttribute('data-analytics')!)).toEqual({ 'axis-default': 'category-1', 'axis-nature': 'category-2' });
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'clear category' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    // Only the changed dimension is sent, never the old single field.
+    expect(mocked.patch.mock.calls.map((call) => call[1])).toEqual([
+      { analytics_values: { 'axis-nature': 'category-2' } },
+      { analytics_values: { 'axis-default': null } },
+    ]);
+  });
+});
+
+describe('CapexItemPage list context and dimensions', () => {
+  const NATURE = '11111111-1111-4111-8111-111111111111';
+  const OLD = '22222222-2222-4222-8222-222222222222';
+  const GONE = '33333333-3333-4333-8333-333333333333';
+  const dimension = (id: string, name: string | null, sort_order: number, extra: Record<string, unknown> = {}) => ({
+    id, code: id, name, description: null, sort_order, is_default: false, status: 'enabled', disabled_at: null, ...extra,
+  });
+
+  beforeEach(() => {
+    nav.calls = [];
+    window.sessionStorage.clear();
+    mocked.get.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
+      if (url === '/analytics-axes') {
+        return {
+          data: {
+            items: [
+              dimension('44444444-4444-4444-8444-444444444444', null, 0, { is_default: true }),
+              dimension(NATURE, 'Nature', 1),
+              dimension(OLD, 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
+            ],
+          },
+        };
+      }
+      if (url === `/capex-items/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, description: 'Line', currency: 'EUR' } };
+      return { data: {} };
+    });
+  });
+
+  it('walks prev/next like the list: a sort or filter on a dimension it has no column for falls back', async () => {
+    const kept = { [`analytics_${NATURE}`]: { filterType: 'set', values: ['Licences'] } };
+    const filters = {
+      ...kept,
+      [`analytics_${OLD}`]: { filterType: 'set', values: ['Hardware'] },
+      [`analytics_${GONE}`]: { filterType: 'set', values: [null] },
+    };
+    window.sessionStorage.setItem('capex-list-context', JSON.stringify({
+      sort: `analytics_${OLD}:ASC`, q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
+    }));
+    renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    // Never enabled before the dimensions are known.
+    for (const call of nav.calls.filter((c) => c.enabled)) {
+      expect(call.sort ?? null).toBeNull();
+      expect(JSON.parse(call.filters ?? '{}')).toEqual(kept);
+    }
+    const stored = JSON.parse(window.sessionStorage.getItem('capex-list-context') ?? '{}');
+    expect(stored.sort).toBe('');
+    expect(JSON.parse(stored.filters)).toEqual(kept);
+  });
+
+  it('keeps a sort on an enabled dimension', async () => {
+    window.sessionStorage.setItem('capex-list-context', JSON.stringify({
+      sort: `analytics_${NATURE}:DESC`, q: '', filters: '', statusScope: 'enabled',
+    }));
+    renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === `analytics_${NATURE}:DESC`)).toBe(true);
   });
 });

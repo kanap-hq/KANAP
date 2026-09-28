@@ -24,6 +24,38 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => ({
   },
 }));
 
+// The tenant's dimensions, set per test; the hook's own core orders them and names the default.
+// A small store, so a test can let the dimensions arrive after the first render.
+const dimensions = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  const store = {
+    list: [] as unknown[],
+    ready: true,
+    set(next: { list?: unknown[]; ready?: boolean }) {
+      Object.assign(store, next);
+      listeners.forEach((listener) => listener());
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
+    },
+  };
+  return store;
+});
+vi.mock('../hooks/useAnalyticsAxes', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../hooks/useAnalyticsAxes')>();
+  const { useSyncExternalStore } = await import('react');
+  const t = ((key: string) => key) as unknown as Parameters<typeof mod.buildAnalyticsAxes>[1];
+  let cache: { list: unknown[]; ready: boolean; value: ReturnType<typeof mod.buildAnalyticsAxes> } | null = null;
+  const snapshot = () => {
+    if (!cache || cache.list !== dimensions.list || cache.ready !== dimensions.ready) {
+      cache = { list: dimensions.list, ready: dimensions.ready, value: mod.buildAnalyticsAxes(dimensions.list as never, t, dimensions.ready) };
+    }
+    return cache.value;
+  };
+  return { ...mod, useAnalyticsAxes: () => useSyncExternalStore(dimensions.subscribe, snapshot) };
+});
+
 import api from '../api';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import OpexListPage from './OpexListPage';
@@ -54,6 +86,11 @@ function LocationProbe() {
 }
 let columnsSetting: BudgetColumnsSettings = DEFAULT_BUDGET_COLUMNS;
 
+const dimension = (id: string, name: string | null, sort_order: number, extra: Record<string, unknown> = {}) => ({
+  id, code: id, name, description: null, sort_order, is_default: false, status: 'enabled', disabled_at: null, ...extra,
+});
+const DEFAULT_DIMENSION = dimension('default', null, 0, { is_default: true });
+
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const lastProps = () => grid.mock.calls[grid.mock.calls.length - 1][0] as GridProps;
 const column = (id: string) => lastProps().columns.find((c) => (c.colId ?? c.field) === id);
@@ -76,6 +113,8 @@ describe('OpexListPage', () => {
     get.mockReset();
     window.sessionStorage.clear();
     columnsSetting = DEFAULT_BUDGET_COLUMNS;
+    dimensions.list = [DEFAULT_DIMENSION];
+    dimensions.ready = true;
     get.mockImplementation(async (url: string) => {
       if (url === '/users') return { data: { items: [] } };
       if (url === '/budget-columns') return { data: columnsSetting };
@@ -255,5 +294,139 @@ describe('OpexListPage', () => {
     const el = holder!.cellRenderer!({ data, value: 'Ada Holder', colDef: {} });
     const href = (el.props as { getHref: (row: unknown) => string | null }).getHref(data);
     expect(href).toMatch(/^\/ops\/opex\/OPX-3\/overview/);
+  });
+
+  it('names the default dimension column after the dimension, hidden by default as before', async () => {
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field);
+    expect(ids.filter((id) => id?.startsWith('analytics_'))).toEqual(['analytics_category_name']);
+    // No name yet: the translated default label.
+    expect(column('analytics_category_name')).toMatchObject({
+      headerName: 'master-data:analytics.analyticsCategoryFallback', defaultHidden: true, filter: CheckboxSetFilter,
+    });
+    expect(column('analytics_category_name')!.valueGetter!({ data: { analytics_category_name: 'Licences' } })).toBe('Licences');
+  });
+
+  it('adds one column per other enabled dimension, hidden, right after the default one, in dimension order', async () => {
+    dimensions.list = [
+      dimension('activity', 'Activity', 3),
+      dimension('old', 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
+      dimension('nature', 'Nature', 1),
+      dimension('default', 'Cost type', 0, { is_default: true }),
+    ];
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field);
+    const at = ids.indexOf('analytics_category_name');
+    expect(ids.slice(at, at + 4)).toEqual(['analytics_category_name', 'analytics_nature', 'analytics_activity', 'cost_center_label']);
+    expect(ids).not.toContain('analytics_old');
+    expect(column('analytics_category_name')?.headerName).toBe('Cost type');
+    expect(column('analytics_nature')).toMatchObject({
+      headerName: 'Nature', defaultHidden: true, filter: CheckboxSetFilter,
+    });
+    expect(column('analytics_activity')).toMatchObject({ headerName: 'Activity', defaultHidden: true });
+    expect(column('analytics_nature')!.valueGetter!({ data: { analytics_nature: 'Licences' } })).toBe('Licences');
+
+    // The cell opens the line.
+    const data = { id: 'o-1', item_number: 3, analytics_nature: 'Licences' };
+    const el = column('analytics_nature')!.cellRenderer!({ data, value: 'Licences', colDef: {} });
+    expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(/^\/ops\/opex\/OPX-3\/overview/);
+
+    // A set filter on the values the server lists for that dimension.
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
+      if (url !== '/spend-items/summary/filter-values') return { data: {} };
+      return { data: { [config?.params?.fields ?? '']: [null, 'Services', 'Licences'] } };
+    });
+    const options = await column('analytics_nature')!.filterParams!.getValues!({ context: { getQueryState: () => ({}) } });
+    expect(options).toEqual([
+      { value: 'Licences', label: 'Licences' },
+      { value: 'Services', label: 'Services' },
+      { value: null, label: 'shared.blank' },
+    ]);
+    const calls = get.mock.calls.filter(([url]) => url === '/spend-items/summary/filter-values');
+    expect(calls.map(([, config]) => config.params.fields)).toEqual(['analytics_nature']);
+  });
+
+  it('mounts the grid only once the dimensions are known, so a saved layout finds their columns', async () => {
+    dimensions.ready = false;
+    dimensions.list = [];
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <OpexListPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    // The budget columns setting has arrived; the grid and the footer totals still wait.
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/budget-columns'));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(screen.getByText('common:status.loading')).toBeInTheDocument();
+    expect(grid).not.toHaveBeenCalled();
+    expect(get.mock.calls.some(([url]) => url === '/spend-items/summary/totals')).toBe(false);
+
+    act(() => dimensions.set({ ready: true, list: [DEFAULT_DIMENSION, dimension('nature', 'Nature', 1)] }));
+    await waitFor(() => expect(grid).toHaveBeenCalled());
+    // Never mounted without the dimension columns.
+    for (const [props] of grid.mock.calls) {
+      expect((props as GridProps).columns.map((c) => c.colId ?? c.field)).toContain('analytics_nature');
+    }
+  });
+
+  it('drops a stored sort or filter on a dimension the list has no column for, and keeps an enabled one', async () => {
+    const NATURE = '11111111-1111-4111-8111-111111111111';
+    const OLD = '22222222-2222-4222-8222-222222222222';
+    const GONE = '33333333-3333-4333-8333-333333333333';
+    dimensions.list = [
+      DEFAULT_DIMENSION,
+      dimension(NATURE, 'Nature', 1),
+      dimension(OLD, 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
+    ];
+    const kept = { [`analytics_${NATURE}`]: { filterType: 'set', values: ['Licences'] } };
+    const filters = {
+      ...kept,
+      [`analytics_${OLD}`]: { filterType: 'set', values: ['Hardware'] },
+      [`analytics_${GONE}`]: { filterType: 'set', values: [null] },
+    };
+    window.sessionStorage.setItem('opex-list-context', JSON.stringify({
+      sort: `analytics_${OLD}:ASC`, q: '', filters: JSON.stringify(filters), statusScope: 'enabled',
+    }));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/ops/opex']}>
+          <LocationProbe />
+          <OpexListPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
+    const params = new URLSearchParams(location.search);
+    expect(params.get('sort')).toBeNull();
+    expect(JSON.parse(params.get('filters') ?? '{}')).toEqual(kept);
+    // The grid mounts with the kept filter only, and the footer totals use the same.
+    const initial = (lastProps() as unknown as { initialState?: { filter?: { filterModel?: unknown } } }).initialState;
+    expect(initial?.filter?.filterModel).toEqual(kept);
+    const totals = get.mock.calls.filter(([url]) => url === '/spend-items/summary/totals');
+    expect(totals.length).toBeGreaterThan(0);
+    for (const [, config] of totals) expect(JSON.parse(config.params.filters)).toEqual(kept);
+  });
+
+  it('keeps a stored sort on an enabled dimension', async () => {
+    const NATURE = '11111111-1111-4111-8111-111111111111';
+    dimensions.list = [DEFAULT_DIMENSION, dimension(NATURE, 'Nature', 1)];
+    window.sessionStorage.setItem('opex-list-context', JSON.stringify({
+      sort: `analytics_${NATURE}:ASC`, q: '', filters: '', statusScope: 'enabled',
+    }));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/ops/opex']}>
+          <LocationProbe />
+          <OpexListPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
+    expect(new URLSearchParams(location.search).get('sort')).toBe(`analytics_${NATURE}:ASC`);
   });
 });

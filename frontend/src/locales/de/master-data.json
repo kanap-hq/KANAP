@@ -374,16 +374,80 @@
   },
   "analytics": {
     "title": "Analysedimensionen",
-    "entity": "Analysedimension",
-    "newCategory": "Neue Dimension",
-    "newAnalyticsCategory": "Neue Analysedimension",
     "analyticsCategoryFallback": "Analysedimension",
-    "loadError": "Fehler beim Laden der Analysedimension.",
-    "noOptions": "Keine Analysedimensionen gefunden",
+    "noOptions": "Keine Werte gefunden",
+    "newValue": "Neuer Wert",
+    "newDimension": "Neue Dimension",
+    "valueFallback": "Wert",
+    "dimensionFallback": "Dimension",
+    "dimensionsLabel": "Dimensionen",
+    "editDimension": "{{name}} bearbeiten",
+    "openDimension": "{{name}} öffnen",
+    "disabledDimension": "{{name}}, deaktiviert",
+    "disabledMark": "Deaktiviert",
+    "enableToAddValues": "Aktivieren Sie diese Dimension, um Werte hinzuzufügen.",
+    "export": "Werte exportieren",
+    "import": "Werte importieren",
+    "previousValue": "Vorheriger Wert",
+    "nextValue": "Nächster Wert",
+    "previousDimension": "Vorherige Dimension",
+    "nextDimension": "Nächste Dimension",
     "fields": {
-      "nameHelper": "Geben Sie einen eindeutigen Namen für die Analysedimension ein",
-      "descriptionPlaceholder": "Optionale Beschreibung",
-      "statusHelper": "Deaktivieren, um diese Dimension zu sperren"
+      "name": "Name",
+      "code": "Code",
+      "order": "Reihenfolge",
+      "description": "Beschreibung",
+      "dimension": "Dimension",
+      "lifecycle": "Lebenszyklus"
+    },
+    "hints": {
+      "nameDefault": "Leer lassen, um „{{label}}“ in der Sprache jeder Person anzuzeigen.",
+      "code": "Wird als Spaltenname in CSV-Dateien verwendet: analytics:{{code}}. Eine Änderung ändert den Spaltennamen.",
+      "codeDefault": "Ältere Dateien verwenden für diese Dimension die Spalte analytics_category; analytics:{{code}} funktioniert ebenfalls.",
+      "codeCreate": "Wird als Spaltenname in CSV-Dateien verwendet. Kleinbuchstaben, Ziffern, - oder _.",
+      "order": "Die Dimensionen werden nach dieser Zahl sortiert, die kleinste zuerst.",
+      "defaultLocked": "Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie."
+    },
+    "placeholders": {
+      "dimensionName": "z. B. Kostenart",
+      "dimensionCode": "z. B. kostenart",
+      "dimensionDescription": "z. B. Die Art der Ausgabe",
+      "valueName": "z. B. Lizenzen",
+      "valueDescription": "z. B. Softwareabonnements und Support"
+    },
+    "usage": {
+      "values_one": "{{count}} Wert",
+      "values_other": "{{count}} Werte",
+      "opex_one": "{{count}} OPEX-Zeile",
+      "opex_other": "{{count}} OPEX-Zeilen",
+      "capex_one": "{{count}} CAPEX-Zeile",
+      "capex_other": "{{count}} CAPEX-Zeilen",
+      "noValues": "Noch keine Werte.",
+      "dimensionUnused": "{{values}}, noch von keiner Zeile verwendet.",
+      "dimensionOne": "{{values}}, verwendet von {{lines}}.",
+      "dimensionBoth": "{{values}}, verwendet von {{opex}} und {{capex}}.",
+      "valueOne": "Verwendet von {{lines}}.",
+      "valueBoth": "Verwendet von {{opex}} und {{capex}}."
+    },
+    "deleteBlocked": {
+      "dimensionHasValues": "Um diese Dimension zu löschen, löschen Sie zuerst ihre Werte.",
+      "valueUsed": "{{usage}} Deaktivieren Sie ihn stattdessen."
+    },
+    "messages": {
+      "loadFailed": "Der Wert konnte nicht geladen werden.",
+      "saveFailed": "Der Wert konnte nicht gespeichert werden.",
+      "createFailed": "Der Wert konnte nicht erstellt werden.",
+      "deleteFailed": "Der Wert konnte nicht gelöscht werden.",
+      "dimensionsLoadFailed": "Die Dimensionen konnten nicht geladen werden.",
+      "dimensionLoadFailed": "Die Dimension konnte nicht geladen werden.",
+      "dimensionSaveFailed": "Die Dimension konnte nicht gespeichert werden.",
+      "dimensionCreateFailed": "Die Dimension konnte nicht erstellt werden.",
+      "dimensionDeleteFailed": "Die Dimension konnte nicht gelöscht werden.",
+      "nameRequired": "Geben Sie einen Namen ein.",
+      "codeRequired": "Geben Sie einen Code ein.",
+      "codeInvalid": "Verwenden Sie Kleinbuchstaben, Ziffern, - oder _ (höchstens 40).",
+      "orderInvalid": "Geben Sie eine ganze Zahl ein.",
+      "dimensionRequired": "Wählen Sie eine Dimension."
     }
   },
   "businessProcesses": {

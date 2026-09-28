@@ -8,7 +8,8 @@ import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useSpendNav } from '../../hooks/useSpendNav';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
-import { explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
+import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
 import useAutosave from '../../hooks/useAutosave';
 import { formatItemRef } from '../../utils/item-ref';
 import {
@@ -31,6 +32,7 @@ import { fetchSpendRelationsCount } from '../../utils/workspaceTabCounts';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { isoToLocalDateInput } from '../../lib/datetime';
+import type { ItemAnalyticsValue } from '../../services/analytics';
 
 type TabKey = 'overview' | 'budget' | 'allocations' | 'relations';
 const TAB_KEYS: TabKey[] = ['overview', 'budget', 'allocations', 'relations'];
@@ -49,7 +51,7 @@ type SpendForm = {
   disabled_at: string | null;
   owner_it_id: string;
   owner_business_id: string;
-  analytics_category_id: string;
+  analytics_values: AnalyticsValues;
   cost_center_id: string;
   run_build: RunBuild | '';
   notes: string;
@@ -57,10 +59,13 @@ type SpendForm = {
   updated_at: string | null;
 };
 
+/** The line's value per dimension id; null clears that dimension. */
+type AnalyticsValues = Record<string, string | null>;
+
 const EMPTY_FORM: SpendForm = {
   product_name: '', description: '', supplier_id: '', currency: 'EUR', account_id: '',
   paying_company_id: '', effective_start: '', status: 'enabled', disabled_at: null,
-  owner_it_id: '', owner_business_id: '', analytics_category_id: '', cost_center_id: '', run_build: '',
+  owner_it_id: '', owner_business_id: '', analytics_values: {}, cost_center_id: '', run_build: '',
   notes: '', created_at: null, updated_at: null,
 };
 
@@ -87,7 +92,6 @@ const NULLABLE_PATCH_FIELDS = new Set([
   'paying_company_id',
   'owner_it_id',
   'owner_business_id',
-  'analytics_category_id',
   'cost_center_id',
   'run_build',
   'disabled_at',
@@ -96,10 +100,24 @@ const NULLABLE_PATCH_FIELDS = new Set([
 ]);
 
 function normalizePatch(patch: Record<string, any>): Record<string, any> {
-  return Object.fromEntries(Object.entries(patch).map(([key, value]) => [
-    key,
-    NULLABLE_PATCH_FIELDS.has(key) && value === '' ? null : value,
-  ]));
+  return Object.fromEntries(Object.entries(patch).map(([key, value]) => {
+    if (key === 'analytics_values') {
+      return [key, Object.fromEntries(Object.entries(value as AnalyticsValues).map(([axisId, id]) => [axisId, id || null]))];
+    }
+    return [key, NULLABLE_PATCH_FIELDS.has(key) && value === '' ? null : value];
+  }));
+}
+
+// Analytics values merge per dimension, so a change on one dimension keeps the others.
+function mergePatch<T extends { analytics_values?: AnalyticsValues }>(prev: T, patch: Partial<T>): T {
+  if (!patch.analytics_values) return { ...prev, ...patch };
+  return { ...prev, ...patch, analytics_values: { ...prev.analytics_values, ...patch.analytics_values } };
+}
+
+// The detail lists the dimensions that hold a value on the line.
+function toAnalyticsValues(data: any): AnalyticsValues {
+  const list: ItemAnalyticsValue[] = Array.isArray(data?.analytics_values) ? data.analytics_values : [];
+  return Object.fromEntries(list.filter((v) => !!v?.axis_id).map((v) => [String(v.axis_id), v.category_id ?? null]));
 }
 
 function toForm(data: any): SpendForm {
@@ -118,7 +136,7 @@ function toForm(data: any): SpendForm {
     disabled_at: normalizedDisabledAt,
     owner_it_id: data?.owner_it_id || '',
     owner_business_id: data?.owner_business_id || '',
-    analytics_category_id: data?.analytics_category_id || '',
+    analytics_values: toAnalyticsValues(data),
     cost_center_id: data?.cost_center_id || '',
     run_build: data?.run_build === 'run' || data?.run_build === 'build' ? data.run_build : '',
     notes: data?.notes || '',
@@ -216,7 +234,7 @@ export default function SpendItemPage() {
   }, [createCurrencyTouched, defaultSpendCurrency, isCreate]);
 
   const updateCreateForm = React.useCallback((patch: Partial<SpendForm>) => {
-    setCreateForm((prev) => ({ ...prev, ...patch }));
+    setCreateForm((prev) => mergePatch(prev, patch));
     setSaveError(null);
   }, []);
 
@@ -276,17 +294,25 @@ export default function SpendItemPage() {
   // List context for prev/next + return navigation.
   // The list's sort, '' for the default one: prev/next and the list then use the current default.
   const budgetColumns = useBudgetColumns();
-  const sort = explicitSort(searchParams.get('sort') || storedListContext?.sort, budgetColumns.shown, budgetColumns.defaultSort);
+  // The list builds a column for each enabled dimension besides the default one; a sort or filter
+  // on another dimension falls back there, and here too.
+  const analyticsAxes = useAnalyticsAxes();
+  const isListField = React.useMemo(
+    () => dimensionFieldPredicate(analyticsAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
+    [analyticsAxes],
+  );
+  const listContextReady = budgetColumns.ready && analyticsAxes.ready;
+  const sort = explicitSort(searchParams.get('sort') || storedListContext?.sort, budgetColumns.shown, budgetColumns.defaultSort, isListField);
   const q = searchParams.get('q') || storedListContext?.q || '';
   // A filter on a column that is not shown falls back like the list's, so prev/next walks the rows on screen.
-  const filters = filtersStringOnShownColumns(searchParams.get('filters') || storedListContext?.filters, budgetColumns.shown);
+  const filters = filtersStringOnShownColumns(searchParams.get('filters') || storedListContext?.filters, budgetColumns.shown, isListField);
   // Status scope of the list we came from. The grid keeps it in local state, so it reaches
   // us through the stored list context; it must be forwarded to prev/next or the navigation
   // walks a different set from the one on screen.
   const statusScope = storedListContext?.statusScope || 'enabled';
   React.useEffect(() => {
-    if (budgetColumns.ready) writeStoredOpexListContext({ sort, q, filters, statusScope });
-  }, [budgetColumns.ready, sort, q, filters, statusScope]);
+    if (listContextReady) writeStoredOpexListContext({ sort, q, filters, statusScope });
+  }, [listContextReady, sort, q, filters, statusScope]);
   const buildListContextParams = React.useCallback(() => {
     const sp = new URLSearchParams(searchParamsString);
     if (sort) sp.set('sort', sort); else sp.delete('sort');
@@ -295,7 +321,7 @@ export default function SpendItemPage() {
     return sp;
   }, [filters, q, searchParamsString, sort]);
 
-  const nav = useSpendNav({ id: uuid || idParam, sort: sort || null, q, filters, statusScope, enabled: budgetColumns.ready });
+  const nav = useSpendNav({ id: uuid || idParam, sort: sort || null, q, filters, statusScope, enabled: listContextReady });
   const { index, total, hasPrev, hasNext, prevId, nextId } = isCreate
     ? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null as any, nextId: null as any }
     : nav;
@@ -335,7 +361,7 @@ export default function SpendItemPage() {
   // Immediate persist — selects, dates, pickers, status, title-on-blur.
   const patchNow = React.useCallback(async (patch: Partial<SpendForm>) => {
     if (isCreate || !uuid || stale) return;
-    setForm((prev) => ({ ...prev, ...patch }));
+    setForm((prev) => mergePatch(prev, patch));
     setSaveError(null);
     try {
       await api.patch(`/spend-items/${uuid}`, normalizePatch(patch));
@@ -372,8 +398,8 @@ export default function SpendItemPage() {
   // Debounced persist — long-form notes / description while typing.
   const patchDebounced = React.useCallback((patch: Partial<SpendForm>) => {
     if (isCreate || !uuid || stale) return;
-    setForm((prev) => ({ ...prev, ...patch }));
-    pendingPatchRef.current = { ...pendingPatchRef.current, ...patch };
+    setForm((prev) => mergePatch(prev, patch));
+    pendingPatchRef.current = mergePatch(pendingPatchRef.current, patch);
     autosave.schedule(flushPending);
   }, [isCreate, uuid, stale, autosave, flushPending]);
 
@@ -464,7 +490,8 @@ export default function SpendItemPage() {
           : {}),
         owner_it_id: toNull(createForm.owner_it_id),
         owner_business_id: toNull(createForm.owner_business_id),
-        analytics_category_id: toNull(createForm.analytics_category_id),
+        // Only the dimensions given a value: the others stay empty on the new line.
+        analytics_values: Object.fromEntries(Object.entries(createForm.analytics_values).filter(([, id]) => !!id)),
         cost_center_id: toNull(createForm.cost_center_id),
         run_build: toNull(createForm.run_build),
         notes: toNull(createForm.notes),
@@ -596,7 +623,7 @@ export default function SpendItemPage() {
             payingCompanyId={createForm.paying_company_id}
             accountId={createForm.account_id}
             currency={createForm.currency}
-            analyticsCategoryId={createForm.analytics_category_id}
+            analyticsValues={createForm.analytics_values}
             costCenterId={createForm.cost_center_id}
             runBuild={createForm.run_build}
             effectiveStart={createForm.effective_start}
@@ -614,7 +641,7 @@ export default function SpendItemPage() {
               setCreateCurrencyTouched(true);
               updateCreateForm({ currency: v.toUpperCase() });
             }}
-            onAnalyticsCategoryChange={(v) => updateCreateForm({ analytics_category_id: v })}
+            onAnalyticsValueChange={(axisId, v) => updateCreateForm({ analytics_values: { [axisId]: v } })}
             onCostCenterChange={pickCreateCostCenter}
             onRunBuildChange={(v) => updateCreateForm({ run_build: v })}
             onEffectiveStartChange={(v) => updateCreateForm({ effective_start: v })}
@@ -629,7 +656,7 @@ export default function SpendItemPage() {
             payingCompanyId={form.paying_company_id}
             accountId={form.account_id}
             currency={form.currency}
-            analyticsCategoryId={form.analytics_category_id}
+            analyticsValues={form.analytics_values}
             costCenterId={form.cost_center_id}
             runBuild={form.run_build}
             effectiveStart={form.effective_start}
@@ -641,7 +668,7 @@ export default function SpendItemPage() {
             onPayingCompanyChange={(v) => void changePayingCompany(v)}
             onAccountChange={(v) => void patchNow({ account_id: v })}
             onCurrencyChange={(v) => void patchNow({ currency: v.toUpperCase() })}
-            onAnalyticsCategoryChange={(v) => void patchNow({ analytics_category_id: v })}
+            onAnalyticsValueChange={(axisId, v) => void patchNow({ analytics_values: { [axisId]: v } })}
             onCostCenterChange={(v) => void patchNow({ cost_center_id: v })}
             onRunBuildChange={(v) => void patchNow({ run_build: v })}
             onEffectiveStartChange={(v) => void patchNow({ effective_start: v })}

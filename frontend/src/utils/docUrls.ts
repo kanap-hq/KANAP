@@ -77,7 +77,6 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/master-data\/accounts\/\d+/, 'chart-of-accounts'],
   [/^\/master-data\/accounts/, 'chart-of-accounts'],
   [/^\/master-data\/coa/, 'chart-of-accounts'],
-  [/^\/master-data\/analytics\/\d+/, 'analytics'],
   [/^\/master-data\/analytics/, 'analytics'],
   [/^\/master-data\/currency/, 'currencies'],
   [/^\/master-data\/operations/, 'master-data-operations'],

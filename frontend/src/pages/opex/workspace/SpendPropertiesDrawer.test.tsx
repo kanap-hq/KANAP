@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
@@ -22,7 +22,22 @@ vi.mock('../../../components/fields/AccountSelect', () => ({
     <div data-testid="account-select" data-clearable={String(!p.disableClearable)} data-required={String(!!p.required)} />
   ),
 }));
-vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({ default: () => null }));
+vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({
+  default: (p: { axisId: string; label?: string; value: string | null; onChange: (v: string | null) => void }) => (
+    <div data-testid={`analytics-select-${p.axisId}`} data-label={p.label}>
+      {p.value ?? ''}
+      <button type="button" onClick={() => p.onChange(`value-${p.axisId}`)}>{`pick ${p.axisId}`}</button>
+      <button type="button" onClick={() => p.onChange(null)}>{`clear ${p.axisId}`}</button>
+    </div>
+  ),
+}));
+// The tenant's dimensions, set per test; the hook's own core orders them and names the default.
+const dimensions = vi.hoisted(() => ({ list: [] as unknown[], isError: false }));
+vi.mock('../../../hooks/useAnalyticsAxes', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../../../hooks/useAnalyticsAxes')>();
+  const t = ((key: string) => key) as unknown as Parameters<typeof mod.buildAnalyticsAxes>[1];
+  return { ...mod, useAnalyticsAxes: () => mod.buildAnalyticsAxes(dimensions.list as never, t, true, dimensions.isError) };
+});
 vi.mock('../../../components/fields/UserSelect', () => ({ default: () => null }));
 vi.mock('../../../components/fields/CostCenterSelect', () => ({
   default: (p: { value: string | null; selectable?: string; onChange: (v: string | null) => void }) => (
@@ -51,6 +66,17 @@ import SpendPropertiesDrawer from './SpendPropertiesDrawer';
 
 const noop = () => undefined;
 
+const dimension = (id: string, name: string | null, sort_order: number, extra: Record<string, unknown> = {}) => ({
+  id, code: id, name, description: null, sort_order, is_default: false, status: 'enabled', disabled_at: null, ...extra,
+});
+// Out of order on purpose; the default has no name, one dimension is disabled.
+const DIMENSIONS = [
+  dimension('activity', 'Activity', 3),
+  dimension('old', 'Old', 2, { status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' }),
+  dimension('nature', 'Nature', 1),
+  dimension('default', null, 0, { is_default: true }),
+];
+
 function renderDrawer(props: Partial<React.ComponentProps<typeof SpendPropertiesDrawer>>) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
@@ -59,7 +85,7 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SpendProperties
         payingCompanyId=""
         accountId=""
         currency="EUR"
-        analyticsCategoryId=""
+        analyticsValues={{}}
         costCenterId=""
         runBuild=""
         effectiveStart="2026-01-01"
@@ -67,7 +93,7 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SpendProperties
         onPayingCompanyChange={noop}
         onAccountChange={noop}
         onCurrencyChange={noop}
-        onAnalyticsCategoryChange={noop}
+        onAnalyticsValueChange={noop}
         onCostCenterChange={noop}
         onRunBuildChange={noop}
         onEffectiveStartChange={noop}
@@ -163,5 +189,64 @@ describe('SpendPropertiesDrawer cost center and run or build', () => {
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'opex.fields.runBuild' }));
     fireEvent.click(within(screen.getByRole('listbox')).getByText('common:selects.notSet'));
     expect(onRunBuildChange).toHaveBeenLastCalledWith('');
+  });
+});
+
+describe('SpendPropertiesDrawer analytics dimensions', () => {
+  beforeEach(() => {
+    dimensions.list = DIMENSIONS;
+    dimensions.isError = false;
+  });
+
+  it.each(['create', 'edit'] as const)('shows one select per enabled dimension, in dimension order, named after it (%s)', (mode) => {
+    renderDrawer({ mode, analyticsValues: { default: 'value-1', old: 'value-9' } });
+    const selects = screen.getAllByTestId(/^analytics-select-/);
+    expect(selects.map((el) => el.getAttribute('data-testid'))).toEqual([
+      'analytics-select-default', 'analytics-select-nature', 'analytics-select-activity',
+    ]);
+    // The default dimension has no name yet: the translated default label names it.
+    expect(selects.map((el) => el.getAttribute('data-label'))).toEqual([
+      'master-data:analytics.analyticsCategoryFallback', 'Nature', 'Activity',
+    ]);
+    expect(screen.getByText('master-data:analytics.analyticsCategoryFallback')).toBeInTheDocument();
+    expect(screen.getByText('Nature')).toBeInTheDocument();
+    expect(screen.queryByText('Old')).toBeNull();
+    expect(screen.getByTestId('analytics-select-default')).toHaveTextContent('value-1');
+    expect(screen.getByTestId('analytics-select-nature')).not.toHaveTextContent('value');
+  });
+
+  it('names the default dimension once it has a name', () => {
+    dimensions.list = [dimension('default', 'Cost type', 0, { is_default: true })];
+    renderDrawer({ mode: 'edit' });
+    expect(screen.getByTestId('analytics-select-default')).toHaveAttribute('data-label', 'Cost type');
+    expect(screen.getByText('Cost type')).toBeInTheDocument();
+  });
+
+  it('reports a picked value and a cleared one with their dimension', () => {
+    const onAnalyticsValueChange = vi.fn();
+    renderDrawer({ mode: 'edit', analyticsValues: { default: 'value-1' }, onAnalyticsValueChange });
+    fireEvent.click(screen.getByRole('button', { name: 'pick nature' }));
+    fireEvent.click(screen.getByRole('button', { name: 'clear default' }));
+    expect(onAnalyticsValueChange.mock.calls).toEqual([['nature', 'value-nature'], ['default', null]]);
+  });
+
+  it.each(['create', 'edit'] as const)('says so in one line when the dimensions cannot be loaded (%s)', (mode) => {
+    dimensions.list = [];
+    dimensions.isError = true;
+    renderDrawer({ mode });
+    expect(screen.getByText('shared.dimensionsLoadFailed')).toBeInTheDocument();
+    expect(screen.queryAllByTestId(/^analytics-select-/)).toHaveLength(0);
+    // The rest of the drawer is still there.
+    expect(screen.getByText('opex.fields.runBuild')).toBeInTheDocument();
+  });
+
+  it('shows no such line when the dimensions load', () => {
+    renderDrawer({ mode: 'edit' });
+    expect(screen.queryByText('shared.dimensionsLoadFailed')).toBeNull();
+  });
+
+  it('names each currency with its code and name, without a dash', () => {
+    renderDrawer({ mode: 'edit', currency: 'EUR' });
+    expect(screen.getByDisplayValue(/^EUR · /)).toBeInTheDocument();
   });
 });

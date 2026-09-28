@@ -20,6 +20,7 @@ import { STATUS_VALUES } from '../constants/status';
 import {
   amountColumnYear,
   buildAmountColumnDefs,
+  dimensionFieldPredicate,
   filtersOnShownColumns,
   settleListSearch,
   explicitSort,
@@ -27,6 +28,8 @@ import {
   totalsToVersions,
 } from '../components/finance/amountColumns';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
+import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
+import { analyticsFieldKey } from '../services/analytics';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../lib/dateFormat';
 // import StatusSwitch from '../components/fields/StatusSwitch';
@@ -47,6 +50,7 @@ type SummaryRow = {
   owner_business_name?: string | null;
   analytics_category_id?: string | null;
   analytics_category_name?: string | null;
+  analytics_value_ids?: Record<string, string> | null;
   cost_center_id?: string | null;
   cost_center_code?: string | null;
   cost_center_name?: string | null;
@@ -83,6 +87,7 @@ export default function CapexPage() {
   const { t } = useTranslation(["ops", "common"]);
   const locale = useLocale();
   const budgetColumns = useBudgetColumns();
+  const analyticsAxes = useAnalyticsAxes();
 
   if (!hasLevel('capex', 'reader')) {
     return <ForbiddenPage />;
@@ -104,9 +109,16 @@ export default function CapexPage() {
   // created once read them here.
   const budgetColumnsRef = useRef(budgetColumns);
   budgetColumnsRef.current = budgetColumns;
+  // The dimension columns the list builds: a sort or filter on another dimension falls back like a hidden amount column.
+  const isListField = useMemo(
+    () => dimensionFieldPredicate(analyticsAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
+    [analyticsAxes],
+  );
+  const isListFieldRef = useRef(isListField);
+  isListFieldRef.current = isListField;
   // The sort to keep in the URL and the list context: '' for the default, which then follows a default change.
   const listSort = useCallback(
-    (sort?: string | null) => explicitSort(sort, budgetColumnsRef.current.shown, budgetColumnsRef.current.defaultSort),
+    (sort?: string | null) => explicitSort(sort, budgetColumnsRef.current.shown, budgetColumnsRef.current.defaultSort, isListFieldRef.current),
     [],
   );
   const gridDefaultSort = useMemo(
@@ -115,14 +127,15 @@ export default function CapexPage() {
   );
 
   // The URL once the stored list context has filled it and a sort or filter on a hidden column
-  // has fallen back; null until the setting is loaded. The grid mounts on that URL only, so the
-  // first request already uses the tenant's default sort.
+  // has fallen back; null until the setting and the dimensions are loaded. The grid mounts on that
+  // URL only, so the first request already uses the tenant's default sort, and a saved layout
+  // (applied at mount only) finds the dimension columns.
   const settledSearch = useMemo(() => {
-    if (!budgetColumns.ready) return null;
+    if (!budgetColumns.ready || !analyticsAxes.ready) return null;
     const stored = storedContextRef.current || readStoredCapexListContext();
     if (stored && !storedContextRef.current) storedContextRef.current = stored;
-    return settleListSearch(location.search, stored, budgetColumns.shown, budgetColumns.defaultSort);
-  }, [budgetColumns.ready, budgetColumns.shown, budgetColumns.defaultSort, location.search]);
+    return settleListSearch(location.search, stored, budgetColumns.shown, budgetColumns.defaultSort, isListField);
+  }, [budgetColumns.ready, budgetColumns.shown, budgetColumns.defaultSort, analyticsAxes.ready, isListField, location.search]);
   const currentSearch = new URLSearchParams(location.search).toString();
   useEffect(() => {
     if (settledSearch != null && settledSearch !== currentSearch) navigate({ search: settledSearch }, { replace: true });
@@ -226,7 +239,7 @@ export default function CapexPage() {
   }, []);
 
   useEffect(() => {
-    if (!budgetColumns.ready) return;
+    if (!budgetColumns.ready || !analyticsAxes.ready) return;
     let urlParams: URLSearchParams | null = null;
     if (typeof window !== 'undefined') {
       urlParams = new URLSearchParams(window.location.search);
@@ -242,10 +255,10 @@ export default function CapexPage() {
       } catch {}
     }
     const statusScope = lastQueryRef.current?.statusScope ?? 'enabled';
-    updateTotals({ q, filterModel: filtersOnShownColumns(fm, budgetColumns.shown), statusScope });
-    // The shown columns only matter once, when the setting arrives.
+    updateTotals({ q, filterModel: filtersOnShownColumns(fm, budgetColumns.shown, isListField), statusScope });
+    // The shown columns and the dimensions only matter once, when both are loaded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey, updateTotals, budgetColumns.ready]);
+  }, [refreshKey, updateTotals, budgetColumns.ready, analyticsAxes.ready]);
 
   const buildGridSearch = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -297,6 +310,8 @@ export default function CapexPage() {
     const ref = item.item_number != null ? formatItemRef('capex', item.item_number) : item.id;
     return `/ops/capex/${ref}/${tab}?${next.toString()}`;
   }, [Y, buildGridSearch]);
+
+  const defaultAnalyticsLabel = analyticsAxes.label(analyticsAxes.defaultAxis ?? { name: null });
 
   const columns = useMemo(() => {
     const linkCell = (colId: string) => (params: any) => (
@@ -466,16 +481,23 @@ export default function CapexPage() {
         filterParams: { getValues: getCapexFilterValues('owner_business_name'), searchable: false },
         cellRenderer: linkCell('owner_business_name'),
       },
-      {
-        field: 'analytics_category_name',
-        headerName: t('capex.columns.analytics'),
+      // The default dimension keeps its column id, so saved layouts, links and AI filters still find it;
+      // every other enabled dimension follows it, in dimension order.
+      ...[
+        { field: 'analytics_category_name', label: defaultAnalyticsLabel },
+        ...analyticsAxes.enabled
+          .filter((axis) => !axis.is_default)
+          .map((axis) => ({ field: analyticsFieldKey(axis.id), label: analyticsAxes.label(axis) })),
+      ].map(({ field, label }) => ({
+        field,
+        headerName: label,
         width: 200,
         defaultHidden: true,
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: { getValues: getCapexFilterValues('analytics_category_name'), searchable: false },
-        cellRenderer: linkCell('analytics_category_name'),
-      },
+        filterParams: { getValues: getCapexFilterValues(field), searchable: false },
+        cellRenderer: linkCell(field),
+      })),
       {
         field: 'cost_center_label',
         headerName: t('capex.columns.costCenter'),
@@ -564,7 +586,7 @@ export default function CapexPage() {
         cellRenderer: linkCell('updated_at'),
       },
     ];
-  }, [Y, budgetColumns, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, RUN_BUILD_LABELS, locale, navigate, t]);
+  }, [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, RUN_BUILD_LABELS, locale, navigate, t]);
 
   const canCreate = hasLevel('capex','manager');
   const canAdmin = hasLevel('capex','admin');
@@ -610,7 +632,8 @@ export default function CapexPage() {
     <>
       <PageHeader title={t('capex.titleWithCurrency', { currency: reportingCurrency })} actions={actions} />
       {!gridCanMount && (
-        // One line while the budget columns setting loads: the grid waits for the default sort.
+        // One line while the budget columns setting and the dimensions load: the grid waits for the
+        // default sort and the dimension columns.
         <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', py: 1 }}>{t('common:status.loading')}</Typography>
       )}
       {gridCanMount && <ServerDataGrid<SummaryRow>

@@ -27,6 +27,7 @@ const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'));
 const CapexItemPage = React.lazy(() => import('./pages/capex/CapexItemPage'));
 const AnalyticsCategoriesPage = React.lazy(() => import('./pages/AnalyticsCategoriesPage'));
 const AnalyticsWorkspacePage = React.lazy(() => import('./pages/analytics/AnalyticsWorkspacePage'));
+const AnalyticsDimensionWorkspacePage = React.lazy(() => import('./pages/analytics/AnalyticsDimensionWorkspacePage'));
 const ReportsLandingPage = React.lazy(() => import('./pages/reports/ReportsLandingPage'));
 const TopOpexReport = React.lazy(() => import('./pages/reports/TopOpexReport'));
 const OpexDeltaReport = React.lazy(() => import('./pages/reports/OpexDeltaReport'));
@@ -303,6 +304,9 @@ function AppRoutes() {
           <Route path="/master-data/accounts/:id" element={<AccountWorkspacePage />} />
           <Route path="/master-data/accounts/:id/:tab" element={<AccountWorkspacePage />} />
           <Route path="/master-data/analytics" element={<AnalyticsCategoriesPage />} />
+          <Route path="/master-data/analytics/dimensions" element={<Navigate to="/master-data/analytics" replace />} />
+          <Route path="/master-data/analytics/dimensions/:id" element={<AnalyticsDimensionWorkspacePage />} />
+          <Route path="/master-data/analytics/dimensions/:id/:tab" element={<AnalyticsDimensionWorkspacePage />} />
           <Route path="/master-data/analytics/:id" element={<AnalyticsWorkspacePage />} />
           <Route path="/master-data/analytics/:id/:tab" element={<AnalyticsWorkspacePage />} />
           <Route path="/master-data/currency" element={<CurrencySettingsPage />} />

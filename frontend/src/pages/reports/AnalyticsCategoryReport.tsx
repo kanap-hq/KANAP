@@ -1,17 +1,21 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Autocomplete, Box, Checkbox, ListItemText, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
 import { useQuery } from '@tanstack/react-query';
-import ReportLayout from '../../components/reports/ReportLayout';
+import { useSearchParams } from 'react-router-dom';
+import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import api from '../../api';
-import { pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
+import { type BudgetSummaryRow, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import { ANALYTICS_VALUES_ENDPOINT, analyticsFieldKey, type AnalyticsAxis } from '../../services/analytics';
+import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
 
 type AnalyticsCategory = {
@@ -21,6 +25,37 @@ type AnalyticsCategory = {
 };
 
 type CategoryOption = { id: string; label: string };
+
+/** `?axis=<dimension id>`: the dimension the report groups on. */
+const AXIS_PARAM = 'axis';
+
+/**
+ * The dimension named in the address when it is enabled, else the default one. Kept in the address
+ * with `replace`, like the item type, so a link opens the report on that dimension.
+ */
+function useReportAxis(axes: AnalyticsAxes): [AnalyticsAxis | null, (id: string) => void] {
+  const [params, setParams] = useSearchParams();
+  const raw = params.get(AXIS_PARAM);
+  const axis = axes.enabled.find((candidate) => candidate.id === raw) ?? axes.defaultAxis ?? axes.enabled[0] ?? null;
+  const setAxis = useCallback((id: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set(AXIS_PARAM, id);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+  return [axis, setAxis];
+}
+
+/**
+ * The line's value on the dimension and that value's name. Until the dimensions are known the line's
+ * default-dimension value stands in: it is the dimension the report opens on.
+ */
+function valueOf(row: BudgetSummaryRow, axisId: string | null): { id: string | null; name: string | null } {
+  if (!axisId) return { id: row.analytics_category_id ?? null, name: row.analytics_category_name ?? null };
+  const name = (row as Record<string, unknown>)[analyticsFieldKey(axisId)];
+  return { id: row.analytics_value_ids?.[axisId] ?? null, name: typeof name === 'string' ? name : null };
+}
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -50,12 +85,26 @@ export default function AnalyticsCategoryReport() {
   const { data: allRows, isLoading } = useBudgetSummaryAll(scope);
   const reportFilters = useBudgetReportFilters();
   const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
+  const analyticsAxes = reportFilters.analyticsAxes;
+  const [axis, setAxis] = useReportAxis(analyticsAxes);
+  const axisId = axis?.id ?? null;
+  // Headers and the picker take the label; sentences take the name, or a lowercase form for the default
+  // dimension without one ("OPEX by analytics dimension").
+  const dimensionLabel = axis ? analyticsAxes.label(axis) : t('reports.columns.analyticsCategory');
+  const dimensionInSentence = axis?.name?.trim() || t('reports.analyticsCategory.defaultDimensionInSentence');
+  // Values belong to one dimension and lines differ between OPEX and CAPEX: either switch drops the exclusions.
+  useEffect(() => {
+    setExcludedCategories((prev) => (prev.length > 0 ? [] : prev));
+  }, [scope, axisId]);
   const { data: categories } = useQuery<AnalyticsCategory[]>({
-    queryKey: ['analytics-categories', 'reporting'],
+    queryKey: ['analytics-categories', 'reporting', axisId],
     queryFn: async () => {
-      const res = await api.get<{ items: AnalyticsCategory[] }>('/analytics-categories', { params: { limit: 1000, sort: 'name:ASC' } });
+      const res = await api.get<{ items: AnalyticsCategory[] }>(ANALYTICS_VALUES_ENDPOINT, {
+        params: { axis_id: axisId, limit: 1000, sort: 'name:ASC' },
+      });
       return res.data.items;
     },
+    enabled: Boolean(axisId),
   });
 
   const categoryById = useMemo(() => {
@@ -73,15 +122,15 @@ export default function AnalyticsCategoryReport() {
       map.set(cat.id, { id: cat.id, label });
     }
     for (const row of allRows ?? []) {
-      const id = row.analytics_category_id ?? undefined;
-      if (!id || map.has(id)) continue;
-      const label = (row.analytics_category_name ?? '').trim() || t('reports.analyticsCategory.unnamed');
-      map.set(id, { id, label });
+      const value = valueOf(row, axisId);
+      if (!value.id || map.has(value.id)) continue;
+      const label = (value.name ?? '').trim() || t('reports.analyticsCategory.unnamed');
+      map.set(value.id, { id: value.id, label });
     }
     const list = Array.from(map.values());
     list.sort((a, b) => a.label.localeCompare(b.label));
     return list;
-  }, [categories, allRows, t]);
+  }, [categories, allRows, axisId, t]);
 
   const selectedOptions = useMemo<CategoryOption[]>(() => {
     if (excludedCategories.length === 0) return [];
@@ -107,9 +156,10 @@ export default function AnalyticsCategoryReport() {
       return { key: `cat_${id}`, label };
     };
     for (const row of source) {
-      const id = row.analytics_category_id ?? null;
+      const value = valueOf(row, axisId);
+      const id = value.id;
       if (id && excludedCategories.includes(id)) continue;
-      const keyInfo = makeKey(id, row.analytics_category_name ?? null);
+      const keyInfo = makeKey(id, value.name);
       let group = acc.get(keyInfo.key);
       if (!group) { group = { key: keyInfo.key, label: keyInfo.label, values: {} }; acc.set(keyInfo.key, group); }
       for (const yr of years) {
@@ -123,7 +173,7 @@ export default function AnalyticsCategoryReport() {
       const pYear = years[0];
       return (b.values[pYear] || 0) - (a.values[pYear] || 0);
     });
-  }, [rows, years, metric, excludedCategories, categoryById, t]);
+  }, [rows, years, metric, excludedCategories, categoryById, axisId, t]);
 
   const tableRows = useMemo(() => groups.map((group) => {
     const row: any = { group: group.label };
@@ -133,13 +183,13 @@ export default function AnalyticsCategoryReport() {
 
   const columns = useMemo<ColDef[]>(() => {
     const cols: ColDef[] = [
-      { field: 'group', headerName: t('reports.columns.analyticsCategory'), flex: 1, minWidth: 240 },
+      { field: 'group', headerName: dimensionLabel, flex: 1, minWidth: 240 },
     ];
     for (const yr of years) {
       cols.push({ field: String(yr), headerName: String(yr), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
     }
     return cols;
-  }, [years]);
+  }, [years, dimensionLabel]);
 
   const metricLabel = budgetColumns.label(metric);
 
@@ -162,7 +212,7 @@ export default function AnalyticsCategoryReport() {
       const chartData = groups.map((group) => ({ label: group.label, value: group.values[year] || 0 }));
       const total = chartData.reduce((acc, datum) => acc + (Number(datum.value) || 0), 0);
       const base = {
-        title: { text: t('reports.analyticsCategory.chartTitleSingle', { type: scopeLabel, year }) },
+        title: { text: t('reports.analyticsCategory.chartTitleSingle', { type: scopeLabel, dimension: dimensionInSentence, year }) },
         subtitle: { text: metricsCaption || t('reports.analyticsCategory.shareSubtitle') },
         footnote: { text: t('reports.analyticsCategory.totalLabel', { metric: metricsCaption, value: formatNumber(total) }) },
         data: chartData,
@@ -240,7 +290,7 @@ export default function AnalyticsCategoryReport() {
     });
     const series = groups.map((group) => ({ type: 'line', xKey: 'year', yKey: group.key, yName: group.label }));
     return {
-      title: { text: t('reports.analyticsCategory.chartTitleRange', { type: scopeLabel, start: years[0], end: years[years.length - 1] }) },
+      title: { text: t('reports.analyticsCategory.chartTitleRange', { type: scopeLabel, dimension: dimensionInSentence, start: years[0], end: years[years.length - 1] }) },
       subtitle: { text: metricsCaption || t('reports.analyticsCategory.annualSubtitle') },
       data: chartData,
       series,
@@ -250,15 +300,34 @@ export default function AnalyticsCategoryReport() {
       ],
       legend: { enabled: true },
     };
-  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, t]);
+  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, dimensionInSentence, t]);
 
   return (
     <ReportLayout
       title={t("reports.analyticsCategory.title")}
-      subtitle={t('reports.analyticsCategory.subtitle', { type: scopeLabel })}
+      subtitle={t('reports.analyticsCategory.subtitle', { type: scopeLabel, dimension: dimensionInSentence })}
       filters={(
         <>
           <ItemScopeTabs value={scope} onChange={setScope} />
+          {axis && analyticsAxes.enabled.length >= 2 && (
+            <ReportFilter label={t('reports.filters.dimension')} width={200}>
+              <TextField
+                select
+                size="small"
+                value={axis.id}
+                onChange={(e) => setAxis(String(e.target.value))}
+                SelectProps={{
+                  MenuProps: reportFilterMenuProps,
+                  inputProps: { 'aria-label': t('reports.filters.dimension') },
+                }}
+                sx={reportFilterSelectSx}
+              >
+                {analyticsAxes.enabled.map((option) => (
+                  <MenuItem key={option.id} value={option.id} sx={drawerMenuItemSx}>{analyticsAxes.label(option)}</MenuItem>
+                ))}
+              </TextField>
+            </ReportFilter>
+          )}
           <BudgetReportFilters filters={reportFilters} rows={allRows} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
             const v = parseInt(e.target.value, 10);

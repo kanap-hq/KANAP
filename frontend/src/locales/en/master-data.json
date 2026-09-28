@@ -374,16 +374,80 @@
   },
   "analytics": {
     "title": "Analytics dimensions",
-    "entity": "analytics dimension",
-    "newCategory": "New dimension",
-    "newAnalyticsCategory": "New analytics dimension",
     "analyticsCategoryFallback": "Analytics dimension",
-    "loadError": "Failed to load analytics dimension.",
-    "noOptions": "No analytics dimensions found",
+    "noOptions": "No values found",
+    "newValue": "New value",
+    "newDimension": "New dimension",
+    "valueFallback": "Value",
+    "dimensionFallback": "Dimension",
+    "dimensionsLabel": "Dimensions",
+    "editDimension": "Edit {{name}}",
+    "openDimension": "Open {{name}}",
+    "disabledDimension": "{{name}}, disabled",
+    "disabledMark": "Disabled",
+    "enableToAddValues": "Enable this dimension to add values.",
+    "export": "Export values",
+    "import": "Import values",
+    "previousValue": "Previous value",
+    "nextValue": "Next value",
+    "previousDimension": "Previous dimension",
+    "nextDimension": "Next dimension",
     "fields": {
-      "nameHelper": "Enter a unique analytics dimension name",
-      "descriptionPlaceholder": "Optional description",
-      "statusHelper": "Toggle off to disable this dimension"
+      "name": "Name",
+      "code": "Code",
+      "order": "Order",
+      "description": "Description",
+      "dimension": "Dimension",
+      "lifecycle": "Lifecycle"
+    },
+    "hints": {
+      "nameDefault": "Leave empty to show \"{{label}}\" in each person's language.",
+      "code": "Used as the column name in CSV files: analytics:{{code}}. Changing it changes the column name.",
+      "codeDefault": "Older files use the column analytics_category for this dimension; analytics:{{code}} works too.",
+      "codeCreate": "Used as the column name in CSV files. Lowercase letters, digits, - or _.",
+      "order": "Dimensions are listed by this number, lowest first.",
+      "defaultLocked": "This dimension cannot be disabled or deleted: older files and AI questions use it."
+    },
+    "placeholders": {
+      "dimensionName": "e.g., Nature",
+      "dimensionCode": "e.g., nature",
+      "dimensionDescription": "e.g., The kind of expense",
+      "valueName": "e.g., Licenses",
+      "valueDescription": "e.g., Software subscriptions and support"
+    },
+    "usage": {
+      "values_one": "{{count}} value",
+      "values_other": "{{count}} values",
+      "opex_one": "{{count}} OPEX line",
+      "opex_other": "{{count}} OPEX lines",
+      "capex_one": "{{count}} CAPEX line",
+      "capex_other": "{{count}} CAPEX lines",
+      "noValues": "No values yet.",
+      "dimensionUnused": "{{values}}, not used by any line yet.",
+      "dimensionOne": "{{values}}, used by {{lines}}.",
+      "dimensionBoth": "{{values}}, used by {{opex}} and {{capex}}.",
+      "valueOne": "Used by {{lines}}.",
+      "valueBoth": "Used by {{opex}} and {{capex}}."
+    },
+    "deleteBlocked": {
+      "dimensionHasValues": "To delete this dimension, delete its values first.",
+      "valueUsed": "{{usage}} Disable it instead."
+    },
+    "messages": {
+      "loadFailed": "Failed to load the value.",
+      "saveFailed": "Failed to save the value.",
+      "createFailed": "Failed to create the value.",
+      "deleteFailed": "Failed to delete the value.",
+      "dimensionsLoadFailed": "Failed to load the dimensions.",
+      "dimensionLoadFailed": "Failed to load the dimension.",
+      "dimensionSaveFailed": "Failed to save the dimension.",
+      "dimensionCreateFailed": "Failed to create the dimension.",
+      "dimensionDeleteFailed": "Failed to delete the dimension.",
+      "nameRequired": "Enter a name.",
+      "codeRequired": "Enter a code.",
+      "codeInvalid": "Use lowercase letters, digits, - or _ (40 at most).",
+      "orderInvalid": "Enter a whole number.",
+      "dimensionRequired": "Choose a dimension."
     }
   },
   "businessProcesses": {

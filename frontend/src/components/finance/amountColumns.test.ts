@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { TFunction } from 'i18next';
 import {
   AMOUNT_COLUMNS,
+  amountFieldKey,
   explicitSort,
   amountColumnYear,
   buildAmountColumnDefs,
+  dimensionFieldPredicate,
   filtersOnShownColumns,
+  filtersStringOnShownColumns,
   settleListSearch,
   slotAmount,
   sortOnShownColumn,
@@ -143,5 +146,52 @@ describe('saved sorts and filters on hidden columns', () => {
     expect(explicitSort('yForecast:ASC', shown, 'yBudget:DESC')).toBe('');
     expect(explicitSort('yBudget:ASC', shown, 'yBudget:DESC')).toBe('yBudget:ASC');
     expect(explicitSort('product_name:ASC', shown, 'yBudget:DESC')).toBe('product_name:ASC');
+  });
+});
+
+describe('saved sorts and filters on dimension columns', () => {
+  const shown = columnsOf().shown;
+  const NATURE = '11111111-1111-4111-8111-111111111111';
+  const OLD = '22222222-2222-4222-8222-222222222222';
+  const GONE = '33333333-3333-4333-8333-333333333333';
+  // The list builds a column for Nature only; Old is disabled and Gone deleted.
+  const isListField = dimensionFieldPredicate([NATURE]);
+
+  it('knows the dimension columns the list builds and every other field', () => {
+    expect(isListField(`analytics_${NATURE}`)).toBe(true);
+    expect(isListField(`analytics_${NATURE.toUpperCase()}`)).toBe(true);
+    expect(isListField(`analytics_${OLD}`)).toBe(false);
+    expect(isListField(`analytics_${GONE}`)).toBe(false);
+    // The default dimension's column and the other fields are not dimension keys.
+    expect(isListField('analytics_category_name')).toBe(true);
+    expect(isListField('product_name')).toBe(true);
+    expect(isListField(amountFieldKey('y', AMOUNT_COLUMNS[0]))).toBe(true);
+  });
+
+  it('drops a sort or filter on a dimension the list does not build, and keeps an enabled one', () => {
+    expect(explicitSort(`analytics_${OLD}:ASC`, shown, 'yBudget:DESC', isListField)).toBe('');
+    expect(explicitSort(`analytics_${GONE}:DESC`, shown, 'yBudget:DESC', isListField)).toBe('');
+    expect(explicitSort(`analytics_${NATURE}:ASC`, shown, 'yBudget:DESC', isListField)).toBe(`analytics_${NATURE}:ASC`);
+    const model = {
+      [`analytics_${NATURE}`]: { filterType: 'set', values: ['Licences'] },
+      [`analytics_${OLD}`]: { filterType: 'set', values: ['Hardware'] },
+      [`analytics_${GONE}`]: { filterType: 'set', values: [null] },
+      yForecast: { type: 'greaterThan', filter: 1 },
+    };
+    expect(filtersOnShownColumns(model, shown, isListField)).toEqual({ [`analytics_${NATURE}`]: model[`analytics_${NATURE}`] });
+    expect(JSON.parse(filtersStringOnShownColumns(JSON.stringify(model), shown, isListField))).toEqual({
+      [`analytics_${NATURE}`]: model[`analytics_${NATURE}`],
+    });
+
+    const stored = { sort: `analytics_${OLD}:ASC`, filters: JSON.stringify(model) };
+    const settled = new URLSearchParams(settleListSearch('', stored, shown, 'yBudget:DESC', isListField));
+    expect(settled.get('sort')).toBeNull();
+    expect(JSON.parse(settled.get('filters') ?? '{}')).toEqual({ [`analytics_${NATURE}`]: model[`analytics_${NATURE}`] });
+  });
+
+  it('keeps every dimension key without a predicate, as before', () => {
+    const model = { [`analytics_${OLD}`]: { filterType: 'set', values: ['Hardware'] } };
+    expect(filtersOnShownColumns(model, shown)).toBe(model);
+    expect(explicitSort(`analytics_${OLD}:ASC`, shown, 'yBudget:DESC')).toBe(`analytics_${OLD}:ASC`);
   });
 });

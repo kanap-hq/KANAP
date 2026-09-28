@@ -15,8 +15,14 @@ export type SummaryRow = {
   supplier_name?: string;
   account_display?: string;
   account?: { id?: string | null } | null;
+  /** The default dimension's value. */
   analytics_category_id?: string | null;
   analytics_category_name?: string | null;
+  /**
+   * The line's value on each dimension it has one on, by dimension id. The value's name is under
+   * `analytics_<dimension id>` (`analyticsFieldKey`), read by key.
+   */
+  analytics_value_ids?: Record<string, string> | null;
   cost_center_id?: string | null;
   cost_center_code?: string | null;
   cost_center_name?: string | null;
