@@ -358,7 +358,7 @@ Neu berechnen verwendet die aktuellen Tage des Kalenders und die Berechnungsgrun
 
 - Die Berechnungsgrundlage bleibt nach einer Änderung von Hand oder einer Verteilung auf der Spalte. Die Kennzeichnung lautet dann **Von Hand geändert** oder **Gleichmäßig verteilt**, die Berechnungsgrundlage erscheint weiterhin, wenn Sie mit der Maus darüber fahren, und **Neu berechnen** bleibt verfügbar
 - **Budgetspalten kopieren** in der Budgetadministration überträgt die Berechnungsgrundlage der Quellspalte zusammen mit den Beträgen. Siehe [Eine berechnete Spalte kopieren](budget-operations.md#eine-berechnete-spalte-kopieren)
-- Eine Kopie aus einer Spalte ohne Berechnungsgrundlage behält die eigene Berechnungsgrundlage der Zielspalte.
+- Eine Kopie aus einer Spalte ohne Berechnungsgrundlage entfernt die Berechnungsgrundlage der Zielspalte: Die Zielspalte hat danach keine mehr, und ihre VZÄ werden unbekannt.
 - **Budgetspalte zurücksetzen** in der Budgetadministration entfernt die Berechnungsgrundlage zusammen mit den Beträgen. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen)
 - Eine Datei der Budgetzeilen mit den Kalkulationsspalten setzt oder entfernt sie. Siehe [Datei der Budgetzeilen](budget-operations.md#datei-der-budgetzeilen)
 - Eine Änderung der Arbeitstage eines Kalenders ändert nichts an der Spalte, bis Sie sie neu berechnen

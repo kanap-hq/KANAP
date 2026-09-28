@@ -287,7 +287,7 @@ Le recalcul utilise les jours actuels du calendrier et la formule de calcul du p
 **Effet des modifications ultérieures sur la formule de calcul** :
   - La formule de calcul reste sur la colonne après une modification à la main ou une répartition. Le libellé indique alors **Modifié à la main** ou **Répartition linéaire**, la formule de calcul s'affiche toujours au survol, et **Recalculer** reste disponible
   - **Copier les colonnes budgétaires** dans l'Administration budgétaire reporte la formule de calcul de la colonne source avec les montants. Voir [Copier une colonne calculée](budget-operations.md#copier-une-colonne-calculee)
-  - Une copie depuis une colonne sans formule de calcul conserve la formule de calcul propre à la colonne de destination.
+  - Une copie depuis une colonne sans formule de calcul retire la formule de calcul de la colonne de destination : celle-ci n'en a plus ensuite, et son ETP devient inconnu.
   - **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire retire la formule de calcul avec les montants. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
   - Un fichier des lignes budgétaires avec les colonnes de chiffrage la définit ou l'efface. Voir [Fichier des lignes budgétaires](budget-operations.md#fichier-des-lignes-budgetaires)
   - Modifier les jours ouvrés d'un calendrier ne change rien sur la colonne tant que vous ne la recalculez pas

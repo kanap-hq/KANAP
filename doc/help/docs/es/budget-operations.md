@@ -141,7 +141,7 @@ Una columna calculada a partir de cantidad y precio lleva una receta: la base de
 
 - La copia lleva la receta del origen al destino tal cual: misma cantidad, mismo precio unitario, mismo índice y mismo calendario
 - Los meses se copian como en cualquier otra columna. El porcentaje de incremento solo se aplica a los importes copiados. La receta no cambia, y el índice de precios nunca se aplica una segunda vez
-- Una copia desde una columna sin receta conserva la propia receta de la columna de destino.
+- Una copia desde una columna sin receta elimina la receta de la columna de destino: después no tiene ninguna, y su ETC pasa a ser desconocido.
 - En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026» con la receta en su información emergente, y **Recalcular** está disponible
 - Para calcular el año de destino a partir de la receta, abra la pestaña Presupuesto de la línea y haga clic en **Recalcular**. El panel muestra primero lo que cambiaría. El calendario debe contener el año de destino: de lo contrario, Recalcular se rechaza, por ejemplo «Personal de la sede has no working days for 2027. Add them on the Working-day calendars page.»
 - Para subir el precio del nuevo año, cambie el **Índice de precios (%)** en el panel antes de hacer clic en **Recalcular**

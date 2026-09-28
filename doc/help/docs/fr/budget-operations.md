@@ -141,7 +141,7 @@ Une colonne calculée à partir de la quantité et du prix porte une formule de 
 
 - La copie reporte telle quelle la formule de la source sur la destination : même quantité, même prix unitaire, même indice et même calendrier
 - Les mois sont copiés comme pour toute autre colonne. Le pourcentage d'augmentation s'applique uniquement aux montants copiés. La formule n'est pas modifiée, et l'indice de prix n'est jamais appliqué une seconde fois
-- Une copie depuis une colonne sans formule conserve la formule propre à la colonne de destination.
+- Une copie depuis une colonne sans formule retire la formule de la colonne de destination : celle-ci n'en a plus ensuite, et son ETP devient inconnu.
 - Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 » avec la formule dans son info-bulle, et **Recalculer** est disponible
 - Pour calculer l'année de destination à partir de la formule, ouvrez l'onglet Budget de la ligne et cliquez sur **Recalculer**. Le panneau affiche d'abord ce qui changerait. Le calendrier doit contenir l'année de destination : sinon, le recalcul est refusé, par exemple « Personnel du siège has no working days for 2027. Add them on the Working-day calendars page. »
 - Pour augmenter le prix de la nouvelle année, modifiez l'**Indice de prix (%)** dans le panneau avant de cliquer sur **Recalculer**

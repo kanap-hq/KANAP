@@ -287,7 +287,7 @@ Recalcular usa los días actuales del calendario y la receta del panel. Cambie a
 **Qué hacen con la receta los cambios posteriores**:
   - La receta se mantiene en la columna tras una edición a mano o un reparto. La etiqueta indica entonces **Editado a mano** o **Reparto uniforme**, la receta sigue apareciendo al pasar el cursor, y **Recalcular** sigue disponible
   - **Copiar columnas presupuestarias** en la Administración presupuestaria lleva la receta de la columna de origen junto con los importes. Consulte [Copiar una columna calculada](budget-operations.md#copiar-una-columna-calculada)
-  - Una copia desde una columna sin receta conserva la propia receta de la columna de destino.
+  - Una copia desde una columna sin receta elimina la receta de la columna de destino: después no tiene ninguna, y su ETC pasa a ser desconocido.
   - **Restablecer columna presupuestaria** en la Administración presupuestaria quita la receta junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
   - Un archivo de filas presupuestarias con las columnas de cálculo la define o la borra. Consulte [Archivo de filas presupuestarias](budget-operations.md#archivo-de-filas-presupuestarias)
   - Cambiar los días laborables de un calendario no cambia nada en la columna hasta que la recalcule

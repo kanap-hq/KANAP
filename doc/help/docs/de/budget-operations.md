@@ -141,7 +141,7 @@ Eine aus Menge und Preis berechnete Spalte trägt eine Berechnungsgrundlage: die
 
 - Die Kopie überträgt die Berechnungsgrundlage der Quelle unverändert auf das Ziel: dieselbe Menge, derselbe Stückpreis, derselbe Index und derselbe Kalender
 - Die Monate werden wie bei jeder anderen Spalte kopiert. Die prozentuale Erhöhung gilt nur für die kopierten Beträge. Die Berechnungsgrundlage wird nicht geändert, und der Preisindex wird nie ein zweites Mal angewendet
-- Eine Kopie aus einer Spalte ohne Berechnungsgrundlage behält die eigene Berechnungsgrundlage der Zielspalte.
+- Eine Kopie aus einer Spalte ohne Berechnungsgrundlage entfernt die Berechnungsgrundlage der Zielspalte: Die Zielspalte hat danach keine mehr, und ihre VZÄ werden unbekannt.
 - Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026“, mit der Berechnungsgrundlage im Tooltip, und **Neu berechnen** ist verfügbar
 - Um das Zieljahr aus der Berechnungsgrundlage zu berechnen, öffnen Sie den Budget-Tab der Zeile und klicken Sie auf **Neu berechnen**. Das Feld zeigt zuerst, was sich ändern würde. Der Kalender muss das Zieljahr enthalten. Andernfalls wird Neu berechnen abgelehnt, zum Beispiel mit „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“
 - Um den Preis für das neue Jahr zu erhöhen, ändern Sie den **Preisindex (%)** im Feld, bevor Sie auf **Neu berechnen** klicken

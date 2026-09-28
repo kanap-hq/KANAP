@@ -287,7 +287,7 @@ Recompute uses the calendar's current days and the recipe in the panel. Change a
 **What later changes do to the recipe**:
   - The recipe stays on the column after an edit by hand or a spread. The label then says **Edited by hand** or **Spread flat**, the recipe still shows when you hover it, and **Recompute** stays available
   - **Copy budget columns** in Budget Administration brings the source column's recipe with the amounts. See [Copying a computed column](budget-operations.md#copying-a-computed-column)
-  - A copy from a column without a recipe keeps the destination column's own recipe.
+  - A copy from a column without a recipe removes the destination column's recipe: the destination has none afterwards, and its FTE becomes unknown.
   - **Reset budget column** in Budget Administration removes the recipe with the amounts. See [Reset budget column](budget-operations.md#reset-budget-column)
   - A budget rows file with the costing columns sets or clears it. See [Budget rows file](budget-operations.md#budget-rows-file)
   - Changing a calendar's working days changes nothing on the column until you recompute it

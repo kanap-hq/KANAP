@@ -141,7 +141,7 @@ A column computed from quantity and price carries a recipe: the basis, the quant
 
 - The copy carries the source's recipe to the destination as it is: same quantity, same unit price, same index and same calendar
 - The months are copied like any other column. The percentage increase applies to the copied amounts only. The recipe is not changed, and the price index is never applied a second time
-- A copy from a column without a recipe keeps the destination column's own recipe.
+- A copy from a column without a recipe removes the destination column's recipe: the destination has none afterwards, and its FTE becomes unknown.
 - In the Budget tab, the destination column shows "Copied from Budget 2026" with the recipe in its tooltip, and **Recompute** is available
 - To compute the destination year from the recipe, open the line's Budget tab and click **Recompute**. The panel shows what would change first. The calendar must hold the destination year: otherwise Recompute is refused, for example "Head office staff has no working days for 2027. Add them on the Working-day calendars page."
 - To raise the price for the new year, change the **Price index (%)** in the panel before you click **Recompute**
