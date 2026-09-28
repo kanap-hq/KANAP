@@ -5,7 +5,7 @@ import { CapexAllocation } from '../capex/capex-allocation.entity';
 import { CapexVersion } from '../capex/capex-version.entity';
 import { AmountScope } from './amounts-write.util';
 import { formatAllocationMethodLabel } from './allocation-utils';
-import { currentTenantId, loadVersions } from './budget-column-operations';
+import { currentTenantId, loadItemsValidIn, loadVersions } from './budget-column-operations';
 import { SpendAllocation } from './spend-allocation.entity';
 import { SpendVersion } from './spend-version.entity';
 
@@ -22,12 +22,12 @@ import { SpendVersion } from './spend-version.entity';
 // Table and entity names come only from here: never from the caller.
 const SCOPES = {
   opex: {
-    items: 'spend_items', itemName: 'product_name', itemFk: 'spend_item_id',
+    itemFk: 'spend_item_id',
     versions: 'spend_versions', allocations: 'spend_allocations',
     versionEntity: SpendVersion, allocationEntity: SpendAllocation,
   },
   capex: {
-    items: 'capex_items', itemName: 'description', itemFk: 'capex_item_id',
+    itemFk: 'capex_item_id',
     versions: 'capex_versions', allocations: 'capex_allocations',
     versionEntity: CapexVersion, allocationEntity: CapexAllocation,
   },
@@ -121,10 +121,10 @@ async function sourceShares(
 }
 
 /**
- * Copy the allocations of `sourceYear` to `destinationYear` for every enabled
- * item, reading the newest version of each item and year (the one the budget
- * tab shows). A missing destination version is created with the source's
- * grain, method and notes.
+ * Copy the allocations of `sourceYear` to `destinationYear` for every item
+ * valid in the destination year (see `validityInYear`), reading the newest
+ * version of each item and year (the one the budget tab shows). A missing
+ * destination version is created with the source's grain, method and notes.
  */
 export async function copyAllocations(
   deps: AllocationOperationDeps,
@@ -146,13 +146,7 @@ export async function copyAllocations(
   }
 
   const tenantId = await currentTenantId(mg);
-  const items: Array<{ id: string; tenant_id: string; name: string }> = await mg.query(
-    `SELECT id, tenant_id, ${t.itemName} AS name
-     FROM ${t.items}
-     WHERE tenant_id = $1 AND (disabled_at IS NULL OR disabled_at > now())
-     ORDER BY created_at DESC`,
-    [tenantId],
-  );
+  const items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
   const picked = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
   const versionIds = Array.from(picked.values()).map((v) => v.id);
   const versionRepo = mg.getRepository<AllocationVersion>(t.versionEntity);

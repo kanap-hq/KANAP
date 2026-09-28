@@ -117,6 +117,18 @@ export async function seedItem(runner: QueryRunner, kind: Kind, tenantId: string
   return itemId;
 }
 
+/** Set an item's effective start (a date) and end of validity (a timestamp, e.g. `2027-06-30T12:00:00Z` for a bare date). */
+export async function setItemDates(
+  runner: QueryRunner, kind: Kind, itemId: string, dates: { effectiveStart?: string; disabledAt?: string | null },
+) {
+  if (dates.effectiveStart !== undefined) {
+    await runner.query(`UPDATE ${TABLES[kind].items} SET effective_start = $2 WHERE id = $1`, [itemId, dates.effectiveStart]);
+  }
+  if (dates.disabledAt !== undefined) {
+    await runner.query(`UPDATE ${TABLES[kind].items} SET disabled_at = $2 WHERE id = $1`, [itemId, dates.disabledAt]);
+  }
+}
+
 export async function seedVersion(runner: QueryRunner, kind: Kind, tenantId: string, itemId: string, year: number, inputGrain = 'monthly') {
   const versionId = randomUUID();
   if (kind === 'opex') {

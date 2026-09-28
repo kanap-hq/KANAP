@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { copiedMonths, shiftPeriod } from '../budget-column-operations';
+import { copiedMonths, periodWithinValidity, shiftPeriod, validityInYear } from '../budget-column-operations';
 import { Decimal } from '../../common/decimal';
 import { upsertRoundInput } from '../round-inputs.util';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
@@ -26,13 +26,15 @@ import {
   seedTenant,
   seedVersion,
   setBudgetColumns,
+  setItemDates,
   underSavepoint,
 } from './round-inputs.fixtures';
 
 // Copy and clear of a budget column on OPEX and CAPEX: the monthly shape is
 // kept, an uplift rounds to whole units with the remainder on the last month
 // that has an amount, the period follows the copy, and both operations are
-// all or nothing.
+// all or nothing. A copy writes only the lines valid in the destination
+// year, prorated to the months of their validity; a clear runs on every line.
 
 const YEAR = 2031;
 const KINDS: Kind[] = ['opex', 'capex'];
@@ -381,6 +383,159 @@ async function testForecastCopyAndClear(kind: Kind) {
   });
 }
 
+/** Pure checks of the validity window of an item within a year. */
+async function testValidityInYear() {
+  const months = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  const at = (effective_start: string | null, end_of_validity: string | null) => validityInYear(2027, { effective_start, end_of_validity });
+  assert.deepEqual(at(null, null), { start: '2027-01-01', end: '2027-12-31', months: months(1, 12) });
+  assert.deepEqual(at('2020-01-01', null), { start: '2027-01-01', end: '2027-12-31', months: months(1, 12) });
+  assert.equal(at('2020-01-01', '2026-12-31'), null, 'ended the year before');
+  assert.deepEqual(at('2020-01-01', '2027-06-30'), { start: '2027-01-01', end: '2027-06-30', months: months(1, 6) });
+  assert.deepEqual(at('2020-01-01', '2027-06-10'), { start: '2027-01-01', end: '2027-06-10', months: months(1, 5) });
+  assert.deepEqual(at('2020-01-01', '2027-06-15')?.months, months(1, 6), 'the 15th counts');
+  assert.deepEqual(at('2020-01-01', '2027-02-28')?.months, months(1, 2));
+  assert.equal(at('2020-01-01', '2027-01-10'), null, 'no 15th before the end');
+  assert.deepEqual(at('2027-04-01', null), { start: '2027-04-01', end: '2027-12-31', months: months(4, 12) });
+  assert.deepEqual(at('2027-06-15', null)?.months, months(6, 12));
+  assert.deepEqual(at('2027-06-16', null)?.months, months(7, 12));
+  assert.equal(at('2027-12-16', null), null, 'starts after the last 15th');
+  assert.equal(at('2028-01-01', null), null, 'starts the year after');
+  assert.deepEqual(at('2027-03-01', '2027-09-30'), { start: '2027-03-01', end: '2027-09-30', months: months(3, 9) });
+  assert.equal(at('2027-09-01', '2027-03-31'), null, 'starts after it ends');
+
+  const window = at('2027-04-01', '2027-10-31')!;
+  assert.deepEqual(periodWithinValidity({ period_start: '2027-01-01', period_end: '2027-12-31' }, window), { period_start: '2027-04-01', period_end: '2027-10-31' });
+  assert.deepEqual(periodWithinValidity({ period_start: '2027-05-01', period_end: '2027-06-30' }, window), { period_start: '2027-05-01', period_end: '2027-06-30' });
+  assert.deepEqual(periodWithinValidity({ period_start: '2027-01-01', period_end: '2027-03-31' }, window), { period_start: '2027-04-01', period_end: '2027-10-31' }, 'no month in common: the validity');
+  assert.deepEqual(periodWithinValidity({ period_start: '2027-10-20', period_end: '2027-12-31' }, window), { period_start: '2027-04-01', period_end: '2027-10-31' }, 'days in common but no 15th: the validity');
+}
+
+/**
+ * A line ending on December 31 of the source year is not valid in the next
+ * year: left out of the dry run and of the copy. The end of validity is read
+ * as its UTC calendar date, whatever the session time zone.
+ */
+async function testEndedLineIsNotCopied(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-ended`);
+    // UTC+14: 12:00 UTC on December 31 is already January 1 here, 12:00 UTC on June 14 is June 15.
+    await runner.query(`SET LOCAL TIME ZONE 'Pacific/Kiritimati'`);
+    const ended = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('10', 12) }, 1);
+    await setItemDates(runner, kind, ended.itemId, { disabledAt: `${YEAR}-12-31T12:00:00Z` });
+    const fourteenth = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('10', 12) }, 2);
+    await setItemDates(runner, kind, fourteenth.itemId, { disabledAt: `${YEAR + 1}-06-14T12:00:00Z` });
+    const open = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('10', 12) }, 3);
+
+    const op = { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0 };
+    const preview = await copy(kind, runner, { ...op, dryRun: true });
+    assert.deepEqual(
+      preview.results.map((r: any) => [r.itemId, r.newValue, r.prorated]).sort(),
+      [[fourteenth.itemId, 50, true], [open.itemId, 120, false]].sort(),
+      `${kind}: the ended line is not in the dry run; June 14 at 12:00 UTC ends before the 15th`,
+    );
+    assert.deepEqual(preview.summary, { totalItems: 2, processed: 2, skipped: 0, errors: 0 });
+
+    const done = await copy(kind, runner, op);
+    assert.deepEqual(done.summary, { totalItems: 2, processed: 2, skipped: 0, errors: 0 });
+    assert.equal(await findVersion(runner, kind, ended.itemId, YEAR + 1), undefined, `${kind}: no version for the ended line`);
+    const next = await findVersion(runner, kind, fourteenth.itemId, YEAR + 1);
+    assert.deepEqual(await readMeasure(runner, kind, next!.id, 'planned', YEAR + 1), [...repeat('10.00', 5), ...repeat('0.00', 7)]);
+  });
+}
+
+/** Lines ending mid destination year get only their months; the uplift remainder lands on the last month kept. */
+async function testCopyProratesTheEnd(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-prorata-end`);
+    const june30 = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('100.40', 12) }, 1);
+    await setItemDates(runner, kind, june30.itemId, { disabledAt: `${YEAR + 1}-06-30T12:00:00Z` });
+    await spreadRecord(runner, kind, tenantId, june30.versionId, YEAR, `${YEAR}-01-01`, `${YEAR}-12-31`);
+    const june10 = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('10', 12) }, 2);
+    await setItemDates(runner, kind, june10.itemId, { disabledAt: `${YEAR + 1}-06-10T12:00:00Z` });
+    // Amounts only within the validity: nothing is cut, so not prorated.
+    const early = await seedLine(runner, kind, tenantId, YEAR, { planned: [...repeat('5', 3), ...repeat('0', 9)] }, 3);
+    await setItemDates(runner, kind, early.itemId, { disabledAt: `${YEAR + 1}-06-30T12:00:00Z` });
+
+    const op = { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: '2.5' };
+    const preview = await copy(kind, runner, { ...op, dryRun: true });
+    const byItem = new Map(preview.results.map((r: any) => [r.itemId, [r.sourceValue, r.newValue, r.skipped, r.prorated]]));
+    assert.deepEqual(byItem.get(june30.itemId), [1204.8, 617, false, true], `${kind}: 602.40 +2.5 % is 617`);
+    assert.deepEqual(byItem.get(june10.itemId), [120, 51, false, true], `${kind}: 50 +2.5 % is 51`);
+    assert.deepEqual(byItem.get(early.itemId), [15, 15, false, false], `${kind}: nothing cut`);
+
+    const audit = captureAudit();
+    await copy(kind, runner, op, audit);
+    const june30Next = await findVersion(runner, kind, june30.itemId, YEAR + 1);
+    assert.deepEqual(await readMeasure(runner, kind, june30Next!.id, 'planned', YEAR + 1), [...repeat('103.00', 5), '102.00', ...repeat('0.00', 6)]);
+    let { planned } = await readRecords(runner, kind, june30Next!.id);
+    assert.deepEqual([planned.period_start, planned.period_end, planned.last_calculation.total], [`${YEAR + 1}-01-01`, `${YEAR + 1}-06-30`, '617.00']);
+
+    const june10Next = await findVersion(runner, kind, june10.itemId, YEAR + 1);
+    assert.deepEqual(await readMeasure(runner, kind, june10Next!.id, 'planned', YEAR + 1), [...repeat('10.00', 4), '11.00', ...repeat('0.00', 7)]);
+    ({ planned } = await readRecords(runner, kind, june10Next!.id));
+    assert.deepEqual([planned.period_start, planned.period_end], [`${YEAR + 1}-01-01`, `${YEAR + 1}-06-10`], `${kind}: the whole year cut at the end of validity`);
+
+    const itemAudit = (itemId: string) => audit.entries.find((e) => e.table === (kind === 'opex' ? 'spend_items' : 'capex_items') && e.recordId === itemId)?.after;
+    assert.equal(itemAudit(june30.itemId)?.prorated, true, `${kind}: the audit says prorated`);
+    assert.equal(itemAudit(june10.itemId)?.prorated, true);
+    assert.equal('prorated' in itemAudit(early.itemId), false, `${kind}: no prorated flag when nothing is cut`);
+  });
+}
+
+/** A line starting mid destination year: the months before are zero, the period starts with it. */
+async function testCopyProratesTheStart(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-prorata-start`);
+    const source = ['0', ...repeat('10', 10), '0'];
+    const late = await seedLine(runner, kind, tenantId, YEAR, { planned: source }, 1);
+    await setItemDates(runner, kind, late.itemId, { effectiveStart: `${YEAR + 1}-04-01` });
+    await spreadRecord(runner, kind, tenantId, late.versionId, YEAR, `${YEAR}-02-01`, `${YEAR}-11-30`);
+    // Its source period (January to March) shares no month with the validity: the record takes the validity.
+    const apart = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('10', 12) }, 2);
+    await setItemDates(runner, kind, apart.itemId, { effectiveStart: `${YEAR + 1}-04-01` });
+    await spreadRecord(runner, kind, tenantId, apart.versionId, YEAR, `${YEAR}-01-01`, `${YEAR}-03-31`);
+
+    await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0 });
+    const lateNext = await findVersion(runner, kind, late.itemId, YEAR + 1);
+    assert.deepEqual(await readMeasure(runner, kind, lateNext!.id, 'planned', YEAR + 1), [...repeat('0.00', 3), ...repeat('10.00', 8), '0.00']);
+    let { planned } = await readRecords(runner, kind, lateNext!.id);
+    assert.deepEqual([planned.period_start, planned.period_end], [`${YEAR + 1}-04-01`, `${YEAR + 1}-11-30`], `${kind}: period start clamped`);
+
+    const apartNext = await findVersion(runner, kind, apart.itemId, YEAR + 1);
+    assert.deepEqual(await readMeasure(runner, kind, apartNext!.id, 'planned', YEAR + 1), [...repeat('0.00', 3), ...repeat('10.00', 9)]);
+    ({ planned } = await readRecords(runner, kind, apartNext!.id));
+    assert.deepEqual([planned.period_start, planned.period_end], [`${YEAR + 1}-04-01`, `${YEAR + 1}-12-31`], `${kind}: no month in common, the validity`);
+  });
+}
+
+/** Validity follows the destination year, not today: a copy into 2020 keeps a line that ended on 2020-06-30. */
+async function testCopyIntoAPastYear(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-past`);
+    const line = await seedLine(runner, kind, tenantId, 2020, { expected_landing: repeat('10', 12) });
+    await setItemDates(runner, kind, line.itemId, { disabledAt: '2020-06-30T12:00:00Z' });
+
+    const done = await copy(kind, runner, { sourceYear: 2020, sourceColumn: 'landing', destinationYear: 2020, destinationColumn: 'budget', percentageIncrease: 0 });
+    assert.deepEqual([done.summary.totalItems, done.summary.processed], [1, 1], `${kind}: the ended line is copied`);
+    assert.deepEqual(await readMeasure(runner, kind, line.versionId, 'planned', 2020), [...repeat('10.00', 6), ...repeat('0.00', 6)]);
+    const { planned } = await readRecords(runner, kind, line.versionId);
+    assert.deepEqual([planned.period_start, planned.period_end], ['2020-01-01', '2020-06-30']);
+  });
+}
+
+/** Clear runs on every line: amounts of a line that ended long ago are cleared too. */
+async function testClearEndedLine(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-clear-ended`);
+    const line = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('10', 12) });
+    await setItemDates(runner, kind, line.itemId, { disabledAt: '2020-06-30T12:00:00Z' });
+
+    const result = await budgetOperations(kind).clearBudgetColumn({ year: YEAR, column: 'budget' }, null, { manager: runner.manager });
+    assert.deepEqual(result.summary, { totalItems: 1, cleared: 1, skipped: 0, errors: 0 });
+    assert.deepEqual(await readMeasure(runner, kind, line.versionId, 'planned', YEAR), repeat('0.00', 12));
+  });
+}
+
 /** Copy of allocations is all or nothing too: a failure on one item fails the request, nothing is kept. */
 async function testCopyAllocationsIsAllOrNothing() {
   await inRolledBackTransaction(async (runner) => {
@@ -428,6 +583,7 @@ async function testCopyAllocationsIsAllOrNothing() {
 
 void runSpecs('budget-column-operations.integration.spec', [
   ['testCopyArithmetic', testCopyArithmetic],
+  ['testValidityInYear', testValidityInYear],
   ['testCopyAllocationsIsAllOrNothing', testCopyAllocationsIsAllOrNothing],
   ...KINDS.flatMap((kind) => [
     [`testCopyKeepsTheShape(${kind})`, () => testCopyKeepsTheShape(kind)],
@@ -438,6 +594,11 @@ void runSpecs('budget-column-operations.integration.spec', [
     [`testClear(${kind})`, () => testClear(kind)],
     [`testDryRunSkippedFlag(${kind})`, () => testDryRunSkippedFlag(kind)],
     [`testForecastCopyAndClear(${kind})`, () => testForecastCopyAndClear(kind)],
+    [`testEndedLineIsNotCopied(${kind})`, () => testEndedLineIsNotCopied(kind)],
+    [`testCopyProratesTheEnd(${kind})`, () => testCopyProratesTheEnd(kind)],
+    [`testCopyProratesTheStart(${kind})`, () => testCopyProratesTheStart(kind)],
+    [`testCopyIntoAPastYear(${kind})`, () => testCopyIntoAPastYear(kind)],
+    [`testClearEndedLine(${kind})`, () => testClearEndedLine(kind)],
   ] as Array<[string, () => Promise<void>]>),
 ]);
 

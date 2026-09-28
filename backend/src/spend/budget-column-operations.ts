@@ -26,6 +26,7 @@ import {
   upsertRoundInput,
   wholeYear,
 } from './round-inputs.util';
+import { activeMonths } from './spread.util';
 
 /**
  * Budget column operations (copy a column to another year or column, clear a
@@ -35,6 +36,12 @@ import {
  * any item fails the request, and the request transaction rolls every item
  * back. Items without a source, with an all-zero source, or with a
  * destination that already has amounts (without overwrite) are skipped.
+ *
+ * A copy writes only the items valid in the destination year, like the grid
+ * shows them: an item counts for the months whose 15th lies between its
+ * effective start and its end of validity (see `validityInYear`). An item
+ * without such a month is left out; an item valid for part of the year gets
+ * only those months. A clear runs on every item, ended or not.
  */
 
 // Table and column names come only from here: never from the caller.
@@ -49,7 +56,8 @@ export type BudgetOperationDeps = {
   freeze: Pick<FreezeService, 'assertNotFrozen'>;
 };
 
-type ItemRow = { id: string; tenant_id: string; name: string };
+/** An item with its dates as `YYYY-MM-DD` text: the effective start and the UTC calendar date of the end of validity. */
+export type ItemRow = { id: string; tenant_id: string; name: string; effective_start: string | null; end_of_validity: string | null };
 export type BudgetVersionRow = AmountVersion & { item_id: string; input_grain: 'annual' | 'quarterly' | 'monthly' };
 
 export async function currentTenantId(manager: EntityManager): Promise<string> {
@@ -118,15 +126,58 @@ export function shiftPeriod(record: Pick<RoundInput, 'period_start' | 'period_en
   return { period_start: shift(record.period_start), period_end: shift(record.period_end) };
 }
 
+/** The window of `year` in which an item is valid, and its months (1..12). */
+export type YearValidity = { start: string; end: string; months: number[] };
+
+/**
+ * Where an item is valid within `year`: from its effective start (or January 1)
+ * to its end of validity (or December 31), both clamped to the year. Its
+ * months are those whose 15th lies in that window, the rule of
+ * `activeMonths`. Null when no month counts: the item is not valid in the year.
+ */
+export function validityInYear(year: number, item: Pick<ItemRow, 'effective_start' | 'end_of_validity'>): YearValidity | null {
+  const first = `${year}-01-01`;
+  const last = `${year}-12-31`;
+  const start = item.effective_start && item.effective_start > first ? item.effective_start : first;
+  const end = item.end_of_validity && item.end_of_validity < last ? item.end_of_validity : last;
+  const months = start <= end ? activeMonths(year, start, end) : [];
+  return months.length > 0 ? { start, end, months } : null;
+}
+
+/** Every item of the tenant, ended or not. Dates are read as text so no time zone shifts them. */
 async function loadItems(manager: EntityManager, scope: AmountScope, tenantId: string): Promise<ItemRow[]> {
   const t = SCOPES[scope];
   return manager.query(
-    `SELECT id, tenant_id, ${t.itemName} AS name
+    `SELECT id, tenant_id, ${t.itemName} AS name,
+            to_char(effective_start, 'YYYY-MM-DD') AS effective_start,
+            to_char(disabled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS end_of_validity
      FROM ${t.items}
-     WHERE tenant_id = $1 AND (disabled_at IS NULL OR disabled_at > now())
+     WHERE tenant_id = $1
      ORDER BY created_at DESC`,
     [tenantId],
   );
+}
+
+/** Items valid in `year` (see `validityInYear`), each with its window. */
+export async function loadItemsValidIn(manager: EntityManager, scope: AmountScope, tenantId: string, year: number) {
+  const items = await loadItems(manager, scope, tenantId);
+  return items.flatMap((item) => {
+    const validity = validityInYear(year, item);
+    return validity ? [{ ...item, validity }] : [];
+  });
+}
+
+/**
+ * The copied period within the item's validity. When they share no month
+ * (no 15th), the validity window itself.
+ */
+export function periodWithinValidity(period: { period_start: string; period_end: string }, validity: YearValidity) {
+  const start = period.period_start > validity.start ? period.period_start : validity.start;
+  const end = period.period_end < validity.end ? period.period_end : validity.end;
+  const year = Number(validity.start.slice(0, 4));
+  return start <= end && activeMonths(year, start, end).length > 0
+    ? { period_start: start, period_end: end }
+    : { period_start: validity.start, period_end: validity.end };
 }
 
 /** Versions of the items for the years given, one per item and year (both version tables are unique per item and year). */
@@ -196,11 +247,17 @@ export type CopyColumnOperation = {
 };
 
 /**
- * Copy one column of a year to a column of a year for every enabled item:
- * the twelve months keep their shape (see `copiedMonths`), the destination
- * column's record takes the source period shifted to the destination year
- * (whole year when the source has none) and says where the column was
- * copied from. Every column is treated alike.
+ * Copy one column of a year to a column of a year for every item valid in
+ * the destination year: the twelve months keep their shape (see
+ * `copiedMonths`), the destination column's record takes the source period
+ * shifted to the destination year (whole year when the source has none) and
+ * says where the column was copied from. Every column is treated alike.
+ *
+ * An item valid for part of the destination year is prorated: the source
+ * months outside its validity become zero before the uplift, so the rounding
+ * remainder lands on the last month kept. The other months keep their amount
+ * (an annual fee billed in January stays whole), and the period is cut to the
+ * validity window.
  */
 export async function copyBudgetColumn(
   deps: BudgetOperationDeps,
@@ -230,7 +287,7 @@ export async function copyBudgetColumn(
   const checkedFreeze = new Set<string>();
 
   const tenantId = await currentTenantId(mg);
-  const items = await loadItems(mg, scope, tenantId);
+  const items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
   const versions = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
   const allVersions = Array.from(versions.values());
   const months = await readVersionMonths(mg, scope, tenantId, allVersions);
@@ -247,10 +304,14 @@ export async function copyBudgetColumn(
       skipped++;
       continue;
     }
-    const source = months.get(sourceVersion.id)!.months[sourceMeasure];
+    const fullSource = months.get(sourceVersion.id)!.months[sourceMeasure];
+    // Months outside the item's validity in the destination year are not copied.
+    const valid = (index: number) => item.validity.months.includes(index + 1);
+    const source = fullSource.map((v, i) => (valid(i) ? v : 0n));
+    const prorated = fullSource.some((v, i) => v !== 0n && !valid(i));
     let destinationVersion = versions.get(`${item.id}:${destinationYear}`);
     const current = destinationVersion ? months.get(destinationVersion.id)!.months[destinationMeasure] : [];
-    const sourceTotal = sum(source);
+    const sourceTotal = sum(fullSource);
     const currentTotal = sum(current);
     const target = copiedMonths(source, pct);
     const targetTotal = sum(target);
@@ -263,6 +324,7 @@ export async function copyBudgetColumn(
       currentDestinationValue: toNumber(currentTotal),
       newValue: toNumber(skip ? currentTotal : targetTotal),
       skipped: skip,
+      prorated,
     });
     if (skip) {
       skipped++;
@@ -291,8 +353,9 @@ export async function copyBudgetColumn(
 
     const sourceRecord = records.get(sourceVersion.id)?.find((r) => r.measure === sourceMeasure);
     const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
+    const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear);
     await upsertRoundInput(rctx, destinationMeasure, {
-      ...(sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear)),
+      ...periodWithinValidity(copiedPeriod, item.validity),
       method: 'copied',
       spread_profile_name: sourceRecord?.spread_profile_name ?? null,
       last_calculation: {
@@ -320,6 +383,7 @@ export async function copyBudgetColumn(
           destinationYear,
           destinationColumn,
           percentageIncrease: pctText,
+          ...(prorated ? { prorated: true } : {}),
         },
         userId,
       },
@@ -337,9 +401,10 @@ export async function copyBudgetColumn(
 }
 
 /**
- * Clear one column of a year for every enabled item: its twelve months become
- * zero and its record (period, provenance) is deleted. A version whose column
- * is already all zero is skipped, but its record is deleted too.
+ * Clear one column of a year for every item, ended or not (amounts hidden
+ * behind an end of validity are cleared too): its twelve months become zero
+ * and its record (period, provenance) is deleted. A version whose column is
+ * already all zero is skipped, but its record is deleted too.
  */
 export async function clearBudgetColumn(
   deps: BudgetOperationDeps,
