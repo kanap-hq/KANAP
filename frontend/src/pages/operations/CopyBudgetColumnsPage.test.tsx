@@ -166,6 +166,15 @@ describe('CopyBudgetColumnsPage', () => {
     await waitFor(() => expect(copy()).toBeDisabled());
   });
 
+  it('drops the leading zero from the percentage on blur', () => {
+    renderPage();
+    const field = screen.getByRole('spinbutton', { name: 'operations.copyBudgetColumns.percentageIncrease' });
+    fireEvent.change(field, { target: { value: '03' } });
+    fireEvent.blur(field);
+    expect(field).toHaveValue(3);
+    expect((field as HTMLInputElement).value).toBe('3');
+  });
+
   it('opens on CAPEX for a user who can read CAPEX only', async () => {
     readable.delete('opex');
     renderPage();
