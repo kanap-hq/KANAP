@@ -93,7 +93,7 @@ describe('AnalyticsCategoriesPage', () => {
 
   it('shows one chip per dimension in order, the unnamed default by its translated label, a disabled one marked', () => {
     renderPage();
-    expect(chips().map((c) => c.textContent)).toEqual(['Analytics dimension', 'Nature', 'Internal ordercommon:statuses.disabled']);
+    expect(chips().map((c) => c.textContent)).toEqual(['Analytics dimension', 'Nature', 'Internal orderanalytics.disabledMark']);
     // The accessible name separates the mark from the name.
     expect(screen.getByRole('button', { name: 'analytics.disabledDimension:Internal order' })).toBe(chips()[2]);
     expect(screen.getByRole('button', { name: 'Nature' })).toBe(chips()[1]);

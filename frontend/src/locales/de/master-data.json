@@ -384,6 +384,7 @@
     "editDimension": "{{name}} bearbeiten",
     "openDimension": "{{name}} öffnen",
     "disabledDimension": "{{name}}, deaktiviert",
+    "disabledMark": "Deaktiviert",
     "enableToAddValues": "Aktivieren Sie diese Dimension, um Werte hinzuzufügen.",
     "export": "Werte exportieren",
     "import": "Werte importieren",

@@ -20,7 +20,7 @@ type Props = {
 
 /** One line of dimension toggles above the values grid; the selected one carries its edit button. */
 export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label, onSelect, onEdit, canEdit, onCreate }: Props) {
-  const { t } = useTranslation(['master-data', 'common']);
+  const { t } = useTranslation('master-data');
   return (
     <Box
       role="group"
@@ -47,7 +47,7 @@ export default function AnalyticsDimensionChipBar({ axes, selectedAxisId, label,
                   {name}
                   {!active && (
                     <Box component="span" sx={{ ml: 0.75, opacity: 0.7 }}>
-                      {t('common:statuses.disabled')}
+                      {t('analytics.disabledMark')}
                     </Box>
                   )}
                 </>

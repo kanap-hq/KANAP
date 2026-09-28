@@ -269,10 +269,10 @@ export default function SpendPropertiesDrawer({
       {mode === 'edit' && (
         <PropertyGroup>
           <PropertyRow label={t('opex.fields.created')}>
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { empty: '—' })}</Typography>
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { empty: '-' })}</Typography>
           </PropertyRow>
           <PropertyRow label={t('opex.fields.updated')}>
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { empty: '—' })}</Typography>
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { empty: '-' })}</Typography>
           </PropertyRow>
         </PropertyGroup>
       )}
