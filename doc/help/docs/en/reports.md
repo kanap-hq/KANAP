@@ -42,25 +42,29 @@ The two chargeback reports cover OPEX only.
 
 Every column or metric picker offers the budget columns your organisation shows, under their names, in the fixed column order. Forecast is offered when it is shown. Hidden columns are not offered. Each report starts on the default column, as described below. Budget administrators set the names, the shown columns and the default column in [Budget columns](budget-operations.md#budget-columns).
 
-### Cost center and run or build filters
+### Cost center, run or build and analytics filters
 
-The seven budget reports (**Top items**, **Top increase / decrease**, **Budget trend (OPEX)**, **Budget trend (CAPEX)**, **Budget column comparison**, **Consolidation accounts** and **Analytics dimensions**) can be narrowed to one part of the budget with two filters:
+The seven budget reports (**Top items**, **Top increase / decrease**, **Budget trend (OPEX)**, **Budget trend (CAPEX)**, **Budget column comparison**, **Consolidation accounts** and **Analytics dimensions**) can be narrowed to one part of the budget with these filters:
 
 - **Cost center**: pick a cost center or a group. A group includes everything below it, disabled cost centers included, since their lines still belong to the group. **All cost centers** removes the filter. See [Cost centers](cost-centers.md).
 - **Run or build**: **All**, **Run**, **Build**, or **Not set** for the lines that have neither.
+- **Analytics dimensions**: one filter per dimension, named after it. The default dimension shows as **Analytics dimension** until it is renamed. Pick a value, **No value** for the lines without a value on that dimension, or **All** to remove the filter. Each filter offers the values the report's lines hold. See [Analytics dimensions](analytics.md).
 
 When the filters appear:
 
 - **Cost center** shows once your workspace has at least one cost center or group.
 - **Run or build** shows once a line of the report is marked **Run** or **Build**, or when the page address already carries the filter.
-- With neither, the filter bar shows only the report's own controls.
+- A dimension's filter shows once a line of the report has a value on that dimension, or when the page address already carries it. Disabled dimensions have no filter.
+- With none of these, the filter bar shows only the report's own controls.
 
 How they work:
 
 - The filters apply before any total. Amounts, shares, charts and totals cover the kept lines only.
-- The lists of items and accounts to exclude keep offering every line.
-- The page address keeps both filters (`?costCenter=` and `?runBuild=`), so a bookmarked or shared link opens the report already narrowed.
+- Filters on several dimensions combine: a line must match each of them.
+- The lists of items, accounts and values to exclude keep offering every line.
+- The page address keeps the filters (`?costCenter=`, `?runBuild=` and `?analytics=`), so a bookmarked or shared link opens the report already narrowed. A link that names a dimension since disabled or deleted ignores that part.
 - If the link names a cost center that was deleted since, or the cost centers could not be loaded, the report shows no lines and one line of text: "This cost center no longer exists or could not be loaded." Click **Clear filter** to see the report again.
+- If the link carries an analytics filter and the dimensions could not be loaded, the report shows no lines and one line of text: "The analytics filter could not be applied. Clear it or try again." Click **Clear filter** to remove the analytics filters and see the report again.
 - The two chargeback reports have no such filters and are not affected.
 
 ---
@@ -187,7 +191,7 @@ Identify your largest OPEX or CAPEX items for a given year.
 - **Chart type**: Pie chart or horizontal bar chart
 - **Exclude items**: Multi-select autocomplete to exclude specific items
 - **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
-- **Cost center** and **Run or build**: See [Cost center and run or build filters](#cost-center-and-run-or-build-filters)
+- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -226,7 +230,7 @@ Identify the biggest OPEX or CAPEX changes between two budget columns (any combi
 - **Exclude items**: Multi-select autocomplete to exclude specific items
 - **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
 - **Direction**: **Increases**, **Decreases**, or **Both** tabs
-- **Cost center** and **Run or build**: See [Cost center and run or build filters](#cost-center-and-run-or-build-filters)
+- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 The year pickers list the years that hold data. The metric pickers offer the shown budget columns. The report starts on the default column of last year as the source and the default column of the current year as the destination.
 
@@ -265,7 +269,7 @@ Compare OPEX metrics across multiple years on a single line chart.
 - **Start year**: Beginning of the range (current year minus 2 through plus 2)
 - **End year**: End of the range
 - **Metrics**: Multi-select from the shown budget columns. The report starts on the default column and the last shown column (Budget and Expected landing with the standard settings). If you clear every metric, the default column is used
-- **Cost center** and **Run or build**: See [Cost center and run or build filters](#cost-center-and-run-or-build-filters)
+- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -288,7 +292,7 @@ Identical layout to the OPEX trend report, but pulls from CAPEX budget data.
 ### Controls
 
 - **Start year**, **End year**, **Metrics**: Same as the OPEX trend report
-- **Cost center** and **Run or build**: See [Cost center and run or build filters](#cost-center-and-run-or-build-filters)
+- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -306,7 +310,7 @@ Flexibly compare up to 10 year+column combinations for either OPEX or CAPEX.
 - **Item type**: OPEX or CAPEX toggle
 - **Selections**: Each selection has a year picker and a column picker with the shown budget columns. The report starts with two selections: the default column of the current year and of next year. **Add** adds the default column of the current year, and the delete icon removes a selection. Maximum of 10 selections; minimum of 1.
 - **Year grouping** (checkbox): When enabled and at least two years share a metric, switches to a grouped line chart with one series per metric and years on the X axis. When disabled, shows a flat line chart with each selection as a data point.
-- **Cost center** and **Run or build**: See [Cost center and run or build filters](#cost-center-and-run-or-build-filters)
+- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -339,7 +343,7 @@ View OPEX or CAPEX budget data grouped by consolidation account, with chart type
 - **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (only available when a single year is selected)
 - **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
-- **Cost center** and **Run or build**: See [Cost center and run or build filters](#cost-center-and-run-or-build-filters)
+- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
 
@@ -360,29 +364,32 @@ Items without a consolidation account appear as "Unassigned".
 
 ## Analytics dimensions
 
-View OPEX or CAPEX budget data grouped by analytics dimension. The layout mirrors the Consolidation accounts report.
+View OPEX or CAPEX budget data grouped by the values of one analytics dimension. The layout mirrors the Consolidation accounts report. See [Analytics dimensions](analytics.md) to set up dimensions and values.
 
 ### Controls
 
 - **Item type**: OPEX or CAPEX (see [Choosing OPEX or CAPEX](#choosing-opex-or-capex))
+- **Dimension**: the dimension the report groups on. It shows when you have two or more enabled dimensions, and the report opens on the default dimension. The page address keeps your choice, so a bookmarked or shared link opens on the same dimension
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (single-year only)
-- **Exclude analytics dimensions**: Multi-select autocomplete to exclude specific dimensions
-- **Cost center** and **Run or build**: See [Cost center and run or build filters](#cost-center-and-run-or-build-filters)
+- **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. Switching the item type or the dimension clears it
+- **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
+
+The subtitle, the chart title and the first column of the table name the chosen dimension, for example "OPEX by Nature".
 
 ### What you'll see
 
 **Single-year mode**:
 
-- Pie or bar chart of totals by analytics dimension
+- Pie or bar chart of totals by value
 - Footnote with the metric total
 
 **Multi-year mode**:
 
-- Line chart with one series per analytics dimension
+- Line chart with one series per value
 
-**Table**: One row per analytics dimension with year columns. A pinned totals row at the bottom. Items without an analytics dimension appear as "Unassigned".
+**Table**: One row per value with year columns. A pinned totals row at the bottom. Lines without a value on the chosen dimension appear as "Unassigned".
 
 ---
 

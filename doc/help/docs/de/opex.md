@@ -21,7 +21,7 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus, mit geöffnetem Bereich **E
   - **Lieferant**: Wen Sie bezahlen. Verknüpft mit Ihren Lieferanten in den Stammdaten
   - **Kostenstelle**: Wer für die Ausgabe verantwortlich ist. Siehe [Kostenstellen](cost-centers.md). Ist das zahlende Unternehmen noch leer, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle
   - **Run oder Build**: **Run** für Ausgaben, die bestehende Services am Laufen halten, **Build** für Ausgaben, die sie schaffen oder verändern
-  - **Analysekategorie**: Benutzerdefinierte Gruppierung für Berichte (z. B. „Infrastruktur", „Business Apps"). Neue Kategorien können spontan erstellt werden
+  - **Analysedimensionen**: Ein Feld pro Dimension, nach ihr benannt, für eine eigene Gruppierung in Berichten (z. B. „Licenses“ in Nature). Die Standarddimension erscheint als **Analysedimension**, bis sie umbenannt wird. Siehe [Analysedimensionen](analytics.md)
   - **Ende der Gültigkeit**: Das Datum, an dem diese Ausgabe endet. Lassen Sie es leer, wenn es kein Ende gibt. Danach ist die Position deaktiviert und spätere Jahre zählen in den Budgetansichten nicht mehr
   - **IT-Verantwortlicher** / **Fachverantwortlicher**: Wer verantwortlich ist
   - **Beschreibung** und **Notizen**: Freitext im Tab Übersicht
@@ -58,7 +58,7 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Gültig ab**: Startdatum
   - **Ende der Gültigkeit**: Datum, an dem die Position endet (leer bedeutet kein Ende)
   - **IT-Verantwortlicher** / **Fachbereichsverantwortlicher**: Zuständige Benutzer
-  - **Analytik**: Name der Analysekategorie
+  - **Analysedimensionen**: Eine Spalte pro aktivierter Dimension, nach ihr benannt, mit dem Wert der Position. Die Spalte der Standarddimension steht zuerst (**Analysedimension**, bis sie umbenannt wird), danach die anderen Dimensionen in ihrer Reihenfolge
   - **Kostenstelle**: Code und Name der Kostenstelle. Fahren Sie mit der Maus darüber, um ihren vollständigen Pfad im Baum zu sehen; klicken Sie darauf, um die Kostenstelle zu öffnen
   - **Budgetverantwortlicher**: Der Budgetverantwortliche der Kostenstelle der Position. Er wird aus der Kostenstelle abgeleitet und nicht auf der Position gespeichert: Ändern Sie den Budgetverantwortlichen einer Kostenstelle, und alle ihre Positionen folgen
   - **Run oder Build**: **Run** oder **Build**
@@ -67,12 +67,12 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Erstellt / Aktualisiert**: Zeitstempel
 
 **Filtern**:
-  - **Schnellsuche**: Durchsucht Referenz, Produktname, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysekategorie, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Notizen, Währung und Status. Filtert die Liste in Echtzeit während der Eingabe
-  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, **Analytik**, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht
+  - **Schnellsuche**: Durchsucht Referenz, Produktname, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysewerte, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Notizen, Währung und Status. Filtert die Liste in Echtzeit während der Eingabe
+  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht
   - **Betragsfilter**: Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen
   - **Datumsfilter**: **Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer
   - **Textspalten** verwenden Textfilter. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `OPX-12`
-  - **Statusbereich**: Verwenden Sie den Umschalter **Anzeigen: Aktiviert / Deaktiviert / Alle** über dem Grid (Standard ist **Aktiviert**)
+  - **Statusbereich**: Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid (Standard ist **Aktiv**)
 
 **Sortierung**:
   - Klicken Sie auf eine Spaltenüberschrift, um aufsteigend/absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betragsspalte
@@ -139,7 +139,7 @@ Der Tab Übersicht enthält die Freitextfelder und die Aufgaben der Position.
   - Aufgaben können auch unter **Portfolio > Aufgaben** angezeigt und verwaltet werden, wo alle Aufgaben Ihrer Organisation erscheinen
 
 **Bereich Eigenschaften**:
-  - **Lieferant**, **Kostenstelle**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), **Analysekategorie**, **Run oder Build** und **Beginn der Gültigkeit**
+  - **Lieferant**, **Kostenstelle**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), ein Feld pro Analysedimension, **Run oder Build** und **Beginn der Gültigkeit**
   - **Lebenszyklus**: der Schalter **Aktiviert** und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
   - Die Daten **Erstellt** und **Aktualisiert** (schreibgeschützt)
 
@@ -151,6 +151,12 @@ Der Tab Übersicht enthält die Freitextfelder und die Aufgaben der Position.
   - Eine über die API gespeicherte Position mit Kostenstelle und ohne zahlendes Unternehmen erhält das Unternehmen der Kostenstelle. Für CSV-Dateien siehe [CSV-Import/Export](#csv-importexport)
 
 **Run oder Build**: **Run**, **Build** oder **Nicht festgelegt**. Damit teilen Sie das Budget auf zwischen dem Betrieb bestehender Services und deren Veränderung.
+
+**Analysedimensionen**:
+  - Jede aktivierte Dimension hat ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Wählen Sie einen Wert oder leeren Sie das Feld; die Änderung wird sofort gespeichert
+  - Jedes Feld listet die aktivierten Werte seiner Dimension. Ein deaktivierter Wert bleibt auf den Positionen, die ihn bereits haben, und kann für keine andere Position gewählt werden
+  - Das Feld kann keinen Wert erstellen: Erstellen Sie ihn unter [Analysedimensionen](analytics.md), oder lassen Sie ihn von einem CSV-Import erstellen
+  - Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
 
 **Tipp**: Beim Erstellen einer Position bedeutet die Warnung „Veraltetes Konto", dass das ausgewählte Konto nicht zum Kontenplan des zahlenden Unternehmens gehört. Wählen Sie ein anderes Konto, um die Warnung zu beheben. Eine bestehende Position, deren Konto außerhalb des Kontenplans ihres Unternehmens liegt, lässt sich weiterhin bearbeiten: Der Kontenplan wird nur geprüft, wenn sich das Unternehmen oder das Konto ändert.
 
@@ -331,19 +337,20 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   - Kopfzeilen: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
   - `disabled_at` ist das Ende der Gültigkeit: das Datum, an dem die Position endet. Verwenden Sie ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Lassen Sie das Feld leer, wenn es kein Ende gibt
   - Ältere Dateien mit einer Spalte `effective_end` werden weiterhin importiert: Das Datum dieser Spalte füllt das Ende der Gültigkeit, wenn `disabled_at` leer ist
-  - `cost_center_code` und `run_build` sind optionale Spalten: Exporte und die Vorlage enthalten sie immer, und Dateien ohne sie werden weiterhin importiert
+  - `analytics_category` enthält den Wert der Standarddimension, unabhängig von ihrem Namen. Jede andere aktivierte Dimension hat eine eigene Spalte, `analytics:<code>`, wobei `<code>` der Code der Dimension ist. Exporte und die Vorlage führen diese Spalten direkt nach `analytics_category`, in der Reihenfolge der Dimensionen
+  - `analytics_category`, die Spalten `analytics:<code>`, `cost_center_code` und `run_build` sind optionale Spalten: Exporte und die Vorlage enthalten sie immer, und Dateien ohne sie werden weiterhin importiert
 
 **Import**:
   1. Klicken Sie in der OPEX-Liste auf **CSV importieren**
   2. Laden Sie Ihre CSV-Datei hoch (Drag-and-Drop oder Dateiauswahl)
-  3. Klicken Sie auf **Vorprüfung** zur Validierung:
-     - Kopfzeilen stimmen exakt überein
+  3. Klicken Sie auf **Vorabprüfung** zur Validierung:
+     - Jede Pflichtspalte ist vorhanden, und keine Spalte ist unbekannt. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge
      - Pflichtfelder (product_name, account_number) sind vorhanden. Eine neue Position braucht außerdem eine Währung und einen company_name, sofern sie keine Kostenstelle hat
      - Jedes Unternehmen, jeder Lieferant, jedes Konto, jede Kostenstelle und jeder Verantwortliche aus der Datei existiert in Ihrem Arbeitsbereich
      - Datumsangaben sind gültig, und keine zwei Zeilen beschreiben dieselbe Position
      - Währungen sind in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt
      - Verantwortliche sind aktive Benutzer
-  4. Überprüfen Sie den Vorprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorprüfung erneut aus
+  4. Überprüfen Sie den Vorabprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus
   5. Wenn OK, klicken Sie auf **Laden** zum Importieren
 
 **Wichtige Hinweise**:
@@ -353,7 +360,7 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   - **Unternehmen und Konto**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). Ein leeres `company_name` behält das Unternehmen einer bestehenden Position; eine neue Position erhält das Unternehmen ihrer Kostenstelle. Fehlt beides, wird die Zeile abgelehnt: „Company is required unless the line has a cost center." `account_number` wird im Kontenplan dieses Unternehmens gesucht, oder im Standard-Kontenplan, wenn das Unternehmen keinen hat. Eine Kontonummer, die nur in einem anderen Kontenplan existiert, ist ein Fehler
   - **Verantwortliche**: `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt
   - **Datumsangaben**: `effective_start` (und `effective_end` in älteren Dateien) muss ein echter Kalendertag im Format `YYYY-MM-DD` sein, zum Beispiel `2026-01-01`. Andere Formate wie `01/03/2026` sind Fehler. Ein leeres `effective_start` behält das gespeicherte Datum einer bestehenden Position; eine neue Position beginnt am 1. Januar des laufenden Jahres
-  - **Analysekategorie**: Existiert die Kategorie nicht, wird sie beim Import automatisch erstellt
+  - **Analysedimensionen**: Jede Analysezelle nennt einen Wert der Dimension ihrer Spalte, unabhängig von Groß- und Kleinschreibung. Ein Wert, der noch nicht existiert, wird beim Laden in dieser Dimension erstellt. Ein deaktivierter Wert wird auf einer Position akzeptiert, die ihn bereits hat, und als neuer Wert abgelehnt. Eine leere Zelle entfernt den Wert der Position in dieser Dimension. Fehlt eine Spalte, behalten die Positionen ihren Wert in dieser Dimension. Eine Spalte für eine unbekannte oder deaktivierte Dimension lehnt die ganze Datei ab, ebenso zwei Spalten für dieselbe Dimension (`analytics_category` und der eigene Code der Standarddimension). Wenn Sie dieselbe Datei exportieren und importieren, ändert sich nichts
   - **Kostenstelle**: `cost_center_code` ist der Code einer Kostenstelle, unabhängig von Groß- und Kleinschreibung. Eine Gruppe wird abgelehnt. Eine deaktivierte Kostenstelle wird auf einer Position akzeptiert, die sie bereits hat, und als neuer Wert abgelehnt. Eine leere Zelle entfernt die Kostenstelle der Position. Fehlt die ganze Spalte, behalten die Positionen ihre Kostenstelle
   - **Run oder Build**: `run_build` ist `run`, `build` oder leer (unabhängig von Groß- und Kleinschreibung). Eine leere Zelle entfernt den Wert. Fehlt die ganze Spalte, behalten die Positionen ihren Wert
   - **Unternehmen aus der Kostenstelle**: Eine neue Position mit leerem `company_name` erhält das Unternehmen ihrer Kostenstelle, und `account_number` wird im Kontenplan dieses Unternehmens gesucht. Ein gefülltes `company_name` bleibt erhalten, auch wenn es vom Unternehmen der Kostenstelle abweicht
@@ -371,10 +378,14 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   - **„... is a group. Choose a cost center."**: Verwenden Sie den Code einer Kostenstelle innerhalb dieser Gruppe
   - **„Cost center ... is disabled."**: Verwenden Sie eine aktivierte Kostenstelle, oder aktivieren Sie sie unter **Stammdaten > Kostenstellen** wieder
   - **„Run or build must be run, build or blank."**: Korrigieren Sie die Zelle `run_build`
-  - **„Ungültige Währung"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind
-  - **„Kopfzeilen stimmen nicht überein"**: Laden Sie eine frische Vorlage herunter; Kopfzeilen müssen exakt übereinstimmen (einschließlich Reihenfolge)
+  - **„The column analytics:... names no dimension. Check the dimension code or remove the column.“**: Verwenden Sie den Code, der im Arbeitsbereich der Dimension unter **Stammdaten > Analysedimensionen** steht, oder entfernen Sie die Spalte
+  - **„The ... dimension is disabled. Enable it or leave it out.“**: Aktivieren Sie die Dimension unter **Stammdaten > Analysedimensionen**, oder entfernen Sie ihre Spalte
+  - **„The file has two columns for ...“**: Zwei Spalten nennen dieselbe Dimension, zum Beispiel `analytics_category` und der eigene Code der Standarddimension. Behalten Sie eine Spalte
+  - **„... is disabled. Pick an enabled value.“**: Verwenden Sie einen aktivierten Wert dieser Dimension, oder aktivieren Sie den Wert wieder
+  - **„Invalid currency"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind
+  - **„Header mismatch“**: Eine Pflichtspalte fehlt, oder eine Spalte ist unbekannt; die Meldung nennt sie. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge, und die Analysespalten sind optional. Vergleichen Sie Ihre erste Zeile mit einer frischen Vorlage
 
-**Tipp**: Beginnen Sie mit dem Vorlagenexport, füllen Sie einige Zeilen aus und führen Sie eine Vorprüfung durch, um Probleme frühzeitig zu erkennen. Beheben Sie Fehler in der CSV und laden Sie sie erneut hoch, bis die Vorprüfung besteht, dann laden Sie.
+**Tipp**: Beginnen Sie mit dem Vorlagenexport, füllen Sie einige Zeilen aus und führen Sie eine Vorabprüfung durch, um Probleme frühzeitig zu erkennen. Beheben Sie Fehler in der CSV und laden Sie sie erneut hoch, bis die Vorabprüfung besteht, dann laden Sie.
 
 ---
 
@@ -424,7 +435,7 @@ Jede OPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein opt
 
 7. **Kontakte verfolgen**: Fügen Sie Lieferantenkontakte mit Rollen (Kommerziell, Technisch, Support) hinzu, damit Ihr Team weiß, wen es für jede Ausgabenposition kontaktieren soll.
 
-8. **Analysekategorien nutzen**: Taggen Sie Positionen mit Kategorien (Infrastruktur, Business Apps, Sicherheit), um Ausgaben in Berichten zu gruppieren.
+8. **Analysedimensionen nutzen**: Geben Sie Positionen einen Wert in jeder Dimension (zum Beispiel Licenses in Nature, Workplace in Program), um Ausgaben in Berichten zu gruppieren.
 
 9. **Unternehmenskennzahlen aktuell halten**: Zuordnungen hängen von Mitarbeiterzahl, IT-Benutzern und Umsatz der Unternehmen ab. Veraltete Kennzahlen verursachen Zuordnungsfehler.
 
@@ -458,7 +469,7 @@ Wenn Sie eine Aktion nicht ausführen können (z. B. die Schaltfläche **CSV imp
 
 ## Hilfe benötigt?
 
-- **CSV-Probleme**: Laden Sie eine frische Vorlage herunter, stellen Sie UTF-8-Kodierung sicher und führen Sie eine Vorprüfung durch, um detaillierte Fehler zu sehen
+- **CSV-Probleme**: Laden Sie eine frische Vorlage herunter, stellen Sie UTF-8-Kodierung sicher und führen Sie eine Vorabprüfung durch, um detaillierte Fehler zu sehen
 - **Zuordnungsfehler**: Prüfen Sie, ob alle Unternehmen die erforderlichen Kennzahlen (Mitarbeiterzahl, IT-Benutzer, Umsatz) für das ausgewählte Jahr haben
 - **Warnung „Veraltetes Konto"**: Das Konto gehört nicht zum Kontenplan des zahlenden Unternehmens; wählen Sie ein anderes Konto
 - **Fehlende Schaltflächen oder Tabs**: Ihre Rolle hat möglicherweise nicht die erforderliche Berechtigungsstufe (Manager oder Admin). Kontaktieren Sie Ihren Arbeitsbereich-Administrator

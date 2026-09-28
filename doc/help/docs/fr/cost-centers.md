@@ -9,7 +9,7 @@ Un centre de coûts indique qui porte une ligne budgétaire : l'équipe ou l'uni
 | **Sociétés** | Quelle entité juridique paie | La **Société payeuse** |
 | **Départements** | Quelles unités d'une société consomment l'IT, avec leur effectif | Utilisés par les ventilations et la refacturation |
 | **Centres de coûts** | Qui porte la dépense et en répond | Le **Centre de coûts** |
-| **Dimensions analytiques** | Une classification libre pour le reporting | La **Catégorie analytique** |
+| **Dimensions analytiques** | Des classifications libres pour le reporting | Un champ par dimension, par exemple **Nature** |
 
 Un département appartient à une seule société et pilote les ventilations par son effectif. Un centre de coûts porte un code, une société, un responsable budgétaire et une place dans un arbre, et les groupes de centres de coûts peuvent couvrir plusieurs sociétés. Les centres de coûts ne modifient ni les ventilations ni la refacturation.
 
@@ -80,7 +80,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 
 - **Recherche rapide** : recherche dans le code, le nom et le chemin complet. Rechercher le nom d'un groupe trouve aussi tout ce qu'il contient
 - **Filtres de colonnes** : **Type**, **Parent**, **Société** et **Statut** utilisent des filtres par cases à cocher
-- **Filtre de statut** : le bouton bascule **Activé / Désactivé / Tous** au-dessus de la liste. Par défaut, la liste affiche les éléments activés
+- **Filtre de statut** : le bouton bascule **Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les éléments activés
 
 **Actions** :
 
@@ -161,7 +161,7 @@ Le bouton **Supprimer** de l'en-tête supprime l'élément immédiatement (néce
 
 - **OPEX et CAPEX** : le champ **Centre de coûts** du panneau **Propriétés** présente l'arbre. Les groupes s'affichent pour vous aider à vous repérer et ne peuvent pas être choisis. Lorsque vous créez une ligne et que la société payeuse est vide, choisir un centre de coûts la remplit avec la société du centre de coûts, et la société suit le centre de coûts jusqu'à ce que vous choisissiez vous-même une société ou un compte. Lorsque les deux sociétés diffèrent, les deux sont conservées et une indication le signale. Voir [OPEX](opex.md) et [CAPEX](capex.md).
 - **Listes** : les colonnes et filtres **Centre de coûts** et **Run ou build** des listes OPEX et CAPEX.
-- **Rapports** : les rapports budgétaires peuvent être filtrés sur un centre de coûts ou un groupe. Voir [Filtres par centre de coûts et run ou build](reports.md#filtres-par-centre-de-couts-et-run-ou-build).
+- **Rapports** : les rapports budgétaires peuvent être filtrés sur un centre de coûts ou un groupe. Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](reports.md#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques).
 
 ---
 

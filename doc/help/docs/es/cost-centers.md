@@ -9,7 +9,7 @@ Un centro de coste indica quién es responsable de una línea de presupuesto: el
 | **Empresas** | Qué entidad jurídica paga | La **Empresa pagadora** |
 | **Departamentos** | Qué unidades de una empresa consumen TI, con su plantilla | Usados por las asignaciones y el contracargo |
 | **Centros de coste** | Quién es responsable del gasto y responde de él | El **Centro de coste** |
-| **Dimensiones analíticas** | Una clasificación libre para los informes | La **Categoría analítica** |
+| **Dimensiones analíticas** | Clasificaciones libres para los informes | Un campo por dimensión, por ejemplo **Nature** |
 
 Un departamento pertenece a una sola empresa y determina las asignaciones mediante su plantilla. Un centro de coste lleva un código, una empresa, un responsable del presupuesto y un lugar en un árbol, y los grupos de centros de coste pueden abarcar varias empresas. Los centros de coste no modifican las asignaciones ni el contracargo.
 
@@ -80,14 +80,14 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 
 - **Búsqueda rápida**: busca en el código, el nombre y la ruta completa. Buscar el nombre de un grupo también encuentra todo lo que contiene
 - **Filtros de columna**: **Tipo**, **Superior**, **Empresa** y **Estado** usan filtros de casillas
-- **Ámbito de estado**: el selector **Activados / Desactivados / Todos** sobre la lista. La lista muestra por defecto los elementos activados
+- **Ámbito de estado**: el selector **Todos / Activos / Desactivados** sobre la lista. La lista muestra por defecto los elementos activados
 
 **Acciones**:
 
 - **Nuevo**: crear un grupo o un centro de coste (requiere `cost_centers:member`)
 - **Importar CSV**: cargar el árbol desde un archivo (requiere `cost_centers:admin`)
 - **Exportar CSV**: descargar todos los elementos (requiere `cost_centers:admin`)
-- **Eliminar seleccionados**: eliminar los elementos seleccionados (requiere `cost_centers:admin`). Los elementos que no se pueden eliminar se conservan y se listan con el motivo. El contenido se elimina antes que su grupo, de modo que seleccionar un grupo junto con todo lo que contiene lo elimina todo
+- **Eliminar selección**: eliminar los elementos seleccionados (requiere `cost_centers:admin`). Los elementos que no se pueden eliminar se conservan y se listan con el motivo. El contenido se elimina antes que su grupo, de modo que seleccionar un grupo junto con todo lo que contiene lo elimina todo
 
 ---
 
@@ -161,7 +161,7 @@ El botón **Eliminar** del encabezado elimina el elemento de inmediato (requiere
 
 - **OPEX y CAPEX**: el campo **Centro de coste** del panel **Propiedades** muestra el árbol. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Cuando crea una línea y la empresa pagadora está vacía, elegir un centro de coste la completa con la empresa del centro de coste, y la empresa sigue al centro de coste hasta que usted elija una empresa o una cuenta. Cuando las dos empresas difieren, se conservan ambas y una indicación lo señala. Consulte [OPEX](opex.md) y [CAPEX](capex.md).
 - **Listas**: las columnas y filtros **Centro de coste** y **Run o build** de las listas OPEX y CAPEX.
-- **Informes**: los informes presupuestarios se pueden filtrar por un centro de coste o un grupo. Consulte [Filtros de centro de coste y de Run o build](reports.md#filtros-de-centro-de-coste-y-de-run-o-build).
+- **Informes**: los informes presupuestarios se pueden filtrar por un centro de coste o un grupo. Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](reports.md#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas).
 
 ---
 
@@ -223,7 +223,7 @@ Cargue o actualice todo el árbol desde un archivo.
 | `cost_centers:member` | Crear centros de coste y grupos, y editarlos |
 | `cost_centers:admin` | Todo lo anterior, más la importación y exportación CSV y la eliminación |
 
-Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado Budget Administrator, que recibe admin. Así, Budget Administrator y Master Data Administrator son administradores, Budget Member y Master Data Member son miembros, y los roles de lectura pueden leer. Cualquier persona que pueda leer OPEX, CAPEX o los informes puede elegir un centro de coste en una línea o en un filtro de informe sin acceso a esta página.
+Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado Administrador de presupuesto, que recibe admin. Así, Administrador de presupuesto y Administrador de datos maestros son administradores, Miembro de presupuesto y Miembro de datos maestros son miembros, y los roles de lectura pueden leer. Cualquier persona que pueda leer OPEX, CAPEX o los informes puede elegir un centro de coste en una línea o en un filtro de informe sin acceso a esta página.
 
 ---
 

@@ -26,7 +26,7 @@ L'espace de travail s'ouvre en mode création, avec le panneau **Propriétés** 
 - **Fournisseur** : Le vendeur ou fournisseur de cet investissement. Sélectionnez-le parmi vos fournisseurs dans les données de référence
 - **Centre de coûts** : Qui porte l'investissement. Voir [Centres de coûts](cost-centers.md). Lorsque la société payeuse est encore vide, choisir un centre de coûts la remplit avec la société du centre de coûts
 - **Run ou build** : **Run** pour une dépense qui maintient les services existants, **Build** pour une dépense qui les crée ou les fait évoluer
-- **Catégorie analytique** : Regroupement personnalisé pour le reporting
+- **Dimensions analytiques** : Un champ par dimension, à son nom, pour des regroupements personnalisés dans les rapports. La dimension par défaut s'affiche comme **Dimension analytique** tant qu'elle n'est pas renommée. Voir [Dimensions analytiques](analytics.md)
 - **Fin de validité** : La date à laquelle cet investissement s'arrête, par exemple à la fin de la durée de vie utile de l'actif ou à l'achèvement du projet. Laissez-la vide s'il n'y a pas de fin. Après cette date, le poste est désactivé et les années suivantes ne comptent plus dans les vues budgétaires
 - **Responsable IT** / **Responsable métier** : Qui est en charge
 - **Description** (onglet Vue d'ensemble) : Détails libres sur l'investissement
@@ -92,7 +92,7 @@ Ces colonnes sont masquées par défaut. Affichez-les depuis le sélecteur de co
 | **Début effectif** | Date de début |
 | **Fin de validité** | Date à laquelle le poste s'arrête (vide signifie sans fin) |
 | **Responsable IT** / **Responsable métier** | Utilisateurs responsables |
-| **Analytique** | Nom de la catégorie analytique |
+| **Dimensions analytiques** | Une colonne par dimension activée, à son nom, avec la valeur du poste. La colonne de la dimension par défaut vient en premier (**Dimension analytique** tant qu'elle n'est pas renommée), puis les autres dimensions dans leur ordre |
 | **Centre de coûts** | Le code et le nom du centre de coûts. Survolez-le pour voir son chemin complet dans l'arbre ; cliquez dessus pour ouvrir le centre de coûts |
 | **Responsable budgétaire** | Le responsable budgétaire du centre de coûts du poste. Il est déduit du centre de coûts et non enregistré sur le poste : changez le responsable budgétaire d'un centre de coûts et tous ses postes suivent |
 | **Run ou build** | **Run** ou **Build** |
@@ -103,11 +103,11 @@ Ces colonnes sont masquées par défaut. Affichez-les depuis le sélecteur de co
 
 ### Recherche rapide
 
-Le champ de recherche en haut porte sur la référence, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, la catégorie analytique, le centre de coûts (code, nom et chemin), le responsable budgétaire, le type d'immobilisation, le type d'investissement, la priorité, les notes, la devise et le statut. Les résultats se mettent à jour en temps réel pendant la saisie.
+Le champ de recherche en haut porte sur la référence, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, les valeurs analytiques, le centre de coûts (code, nom et chemin), le responsable budgétaire, le type d'immobilisation, le type d'investissement, la priorité, les notes, la devise et le statut. Les résultats se mettent à jour en temps réel pendant la saisie.
 
 ### Filtres de colonnes
 
-Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, **Analytique**, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Plusieurs filtres se combinent avec une logique ET.
+Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Plusieurs filtres se combinent avec une logique ET.
 
 Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants.
 
@@ -136,7 +136,7 @@ Cliquez sur n'importe quelle cellule d'une ligne pour ouvrir l'espace de travail
 
 ### Filtre de statut
 
-Utilisez la bascule **Afficher : Activé / Désactivé / Tous** au-dessus de la grille pour choisir le périmètre de cycle de vie (par défaut **Activé**). Choisissez **Désactivé** pour revoir les investissements archivés, ou **Tous** pour inclure les deux états. Les totaux se mettent à jour immédiatement.
+Utilisez la bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille pour choisir le périmètre de cycle de vie (par défaut **Activés**). Choisissez **Désactivés** pour revoir les investissements archivés, ou **Tous** pour inclure les deux états. Les totaux se mettent à jour immédiatement.
 
 ### Conservation du contexte de recherche
 
@@ -185,7 +185,7 @@ L'onglet Vue d'ensemble contient les détails de l'investissement et ses tâches
 
 **Panneau Propriétés** :
 
-- **Fournisseur**, **Centre de coûts**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse), **Devise** (seulement les devises autorisées dans votre espace de travail), **Type d'immobilisation**, **Type d'investissement**, **Catégorie analytique**, **Run ou build** et **Début d'effet**
+- **Fournisseur**, **Centre de coûts**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse), **Devise** (seulement les devises autorisées dans votre espace de travail), **Type d'immobilisation**, **Type d'investissement**, un champ par dimension analytique, **Run ou build** et **Début d'effet**
 - **Cycle de vie** : l'interrupteur **Activé** et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
 - Dates **Créé** et **Mis à jour** (lecture seule)
 - La **Priorité** se règle dans le panneau Propriétés à la création du poste, puis dans la barre de métadonnées
@@ -199,6 +199,13 @@ L'onglet Vue d'ensemble contient les détails de l'investissement et ses tâches
 - Un poste enregistré via l'API avec un centre de coûts et sans société payeuse prend la société du centre de coûts. Pour les fichiers CSV, voir [Import/export CSV](#importexport-csv)
 
 **Run ou build** : **Run**, **Build** ou **Non défini**. Utilisez-le pour répartir le budget entre le maintien des services et leur évolution.
+
+**Dimensions analytiques** :
+
+- Chaque dimension activée a son propre champ, au nom de la dimension, dans l'ordre des dimensions. Choisissez une valeur ou videz le champ ; la modification s'enregistre aussitôt
+- Chaque champ liste les valeurs activées de sa dimension. Une valeur désactivée reste sur les postes qui l'ont déjà, et ne peut pas être choisie pour un autre poste
+- Le champ ne peut pas créer de valeur : créez-la dans [Dimensions analytiques](analytics.md), ou laissez un import CSV la créer
+- Si les dimensions ne peuvent pas être chargées, une ligne remplace ces champs : « Les dimensions n'ont pas pu être chargées. »
 
 **Conseil** : Lors de la création d'un poste, un avertissement « compte obsolète » signifie que le compte sélectionné n'appartient pas au plan comptable de la société payeuse. Choisissez un autre compte pour résoudre l'avertissement. Un poste existant dont le compte est hors du plan comptable de sa société reste modifiable : le plan comptable n'est vérifié que lorsque la société ou le compte change.
 
@@ -423,14 +430,15 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 - En-têtes : `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
 - `disabled_at` est la fin de validité : la date à laquelle le poste s'arrête. Indiquez une date (`2026-12-31`) ou une date avec heure. Laissez vide s'il n'y a pas de fin
 - Les anciens fichiers avec une colonne `effective_end` s'importent toujours : sa date alimente la fin de validité lorsque `disabled_at` est vide
-- `cost_center_code` et `run_build` sont des colonnes facultatives : les exports et le modèle les contiennent toujours, et les fichiers qui ne les ont pas s'importent toujours
+- `analytics_category` contient la valeur de la dimension analytique par défaut, quel que soit son nom. Chaque autre dimension activée a sa propre colonne, `analytics:<code>`, où `<code>` est le code de la dimension. Les exports et le modèle placent ces colonnes juste après `analytics_category`, dans l'ordre des dimensions
+- `analytics_category`, les colonnes `analytics:<code>`, `cost_center_code` et `run_build` sont des colonnes facultatives : les exports et le modèle les contiennent toujours, et les fichiers qui ne les ont pas s'importent toujours
 
 **Import** :
 
 1. Cliquez sur **Import CSV** dans la liste CAPEX
 2. Téléversez votre fichier CSV (glisser-déposer ou sélecteur de fichiers)
-3. Cliquez sur **Vérification** pour valider :
-   - Les en-têtes correspondent exactement
+3. Cliquez sur **Vérification préalable** pour valider :
+   - Chaque colonne obligatoire est présente et aucune colonne n'est inconnue. Les colonnes sont reconnues par leur nom, dans n'importe quel ordre
    - Les sociétés, centres de coûts et utilisateurs existent dans votre espace de travail
    - Les champs obligatoires (description, ppe_type, investment_type, priority) sont présents. Un nouveau poste nécessite aussi une devise, et un company_name sauf s'il a un centre de coûts
    - Un changement de société sur un poste qui a un compte reste dans le plan comptable de ce compte
@@ -449,6 +457,7 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 - **Références** : `company_name` doit correspondre à une Société par nom (insensible à la casse). `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail : un utilisateur invité ou un contact sans compte est refusé.
 - **Centre de coûts** : `cost_center_code` est le code d'un centre de coûts, sans tenir compte de la casse. Un groupe est refusé. Un centre de coûts désactivé est accepté sur un poste qui l'a déjà, et refusé comme nouvelle valeur. Une cellule vide efface le centre de coûts du poste. Lorsque la colonne entière est absente, les postes conservent leur centre de coûts.
 - **Run ou build** : `run_build` vaut `run`, `build` ou vide (sans tenir compte de la casse). Une cellule vide efface la valeur. Lorsque la colonne entière est absente, les postes conservent leur valeur.
+- **Dimensions analytiques** : Chaque cellule analytique désigne une valeur de la dimension de sa colonne, sans tenir compte de la casse. Une valeur qui n'existe pas encore est créée dans cette dimension pendant le chargement. Une valeur désactivée est acceptée sur un poste qui l'a déjà, et refusée comme nouvelle valeur. Une cellule vide efface la valeur du poste sur cette dimension. Lorsqu'une colonne est absente, les postes conservent leur valeur sur cette dimension. Une colonne pour une dimension inconnue ou désactivée refuse le fichier entier, de même que deux colonnes pour la même dimension (`analytics_category` et le code propre de la dimension par défaut). Exporter puis importer le même fichier ne change rien.
 - **Société des postes existants** : un `company_name` vide conserve la société payeuse du poste. Un `company_name` renseigné est conservé, même s'il diffère de la société du centre de coûts. Lorsqu'un poste a un compte, un nouveau `company_name` doit utiliser le même plan comptable que ce compte ; sinon la vérification refuse la ligne : « Account ... is not in ...'s chart of accounts. Change the line's account first. » Changez le compte dans le panneau **Propriétés** du poste, puis relancez l'import.
 - **Type d'immobilisation** : Doit être `hardware` ou `software` (insensible à la casse).
 - **Type d'investissement** : Doit être l'un des suivants : `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (insensible à la casse).
@@ -458,12 +467,12 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 
 **Erreurs courantes** :
 
-- **« Société introuvable »** : Créez d'abord la société dans **Données de référence > Sociétés**, puis relancez l'import.
-- **« ppe_type invalide »** : Utilisez exactement `hardware` ou `software`.
-- **« investment_type invalide »** : Utilisez l'un des 7 types d'investissement valides (voir la liste ci-dessus).
-- **« Priorité invalide »** : Utilisez `mandatory`, `high`, `medium` ou `low`.
-- **« Devise invalide »** : Utilisez des codes ISO à 3 lettres (USD, EUR, GBP) autorisés dans les paramètres de devise de votre espace de travail.
-- **« En-têtes non conformes »** : Téléchargez un modèle récent ; les en-têtes doivent correspondre exactement (ordre compris).
+- **« Company not found »** : Créez d'abord la société dans **Données de référence > Sociétés**, puis relancez l'import.
+- **« Invalid ppe_type »** : Utilisez exactement `hardware` ou `software`.
+- **« Invalid investment_type »** : Utilisez l'un des 7 types d'investissement valides (voir la liste ci-dessus).
+- **« Invalid priority »** : Utilisez `mandatory`, `high`, `medium` ou `low`.
+- **« Invalid currency »** : Utilisez des codes ISO à 3 lettres (USD, EUR, GBP) autorisés dans les paramètres de devise de votre espace de travail.
+- **« Header mismatch »** : Une colonne obligatoire manque, ou une colonne est inconnue ; le message les liste. Les colonnes sont reconnues par leur nom, dans n'importe quel ordre, et les colonnes analytiques sont facultatives. Comparez la première ligne de votre fichier avec un nouveau modèle.
 - **« effective_start must be a valid date »** : Utilisez le format `YYYY-MM-DD`.
 - **« Same line as row N »** : Deux lignes décrivent le même poste. Fusionnez-les en une seule ligne, puis relancez l'import.
 - **« Company is required unless the line has a cost center. »** : Renseignez `company_name` ou `cost_center_code` pour le nouveau poste.
@@ -472,6 +481,10 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 - **« ... is a group. Choose a cost center. »** : Utilisez le code d'un centre de coûts de ce groupe.
 - **« Cost center ... is disabled. »** : Utilisez un centre de coûts activé, ou réactivez-le dans **Données de référence > Centres de coûts**.
 - **« Run or build must be run, build or blank. »** : Corrigez la cellule `run_build`.
+- **« The column analytics:... names no dimension. Check the dimension code or remove the column. »** : Utilisez le code affiché dans l'espace de travail de la dimension, dans **Données de référence > Dimensions analytiques**, ou retirez la colonne.
+- **« The ... dimension is disabled. Enable it or leave it out. »** : Activez la dimension dans **Données de référence > Dimensions analytiques**, ou retirez sa colonne.
+- **« The file has two columns for ... »** : Deux colonnes désignent la même dimension, par exemple `analytics_category` et le code propre de la dimension par défaut. Gardez une seule colonne.
+- **« ... is disabled. Pick an enabled value. »** : Utilisez une valeur activée de cette dimension, ou réactivez la valeur.
 
 **Conseil** : Commencez par l'export du modèle, remplissez quelques lignes et lancez une vérification pour détecter les erreurs tôt. Corrigez les erreurs dans le CSV et téléversez-le à nouveau jusqu'à ce que la vérification passe, puis chargez.
 
@@ -499,7 +512,7 @@ Chaque poste CAPEX a un **statut** (Activé ou Désactivé) et une **Fin de vali
 **Afficher les postes désactivés** :
 
 - Par défaut, la liste CAPEX n'affiche que les postes **Activés**
-- Utilisez la bascule **Afficher : Activé / Désactivé / Tous** pour changer le périmètre
+- Utilisez la bascule **Afficher : Tous / Activés / Désactivés** pour changer le périmètre
 
 **Désactiver ou supprimer** :
 

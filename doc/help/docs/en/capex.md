@@ -26,7 +26,7 @@ The workspace opens in creation mode, with the **Properties** panel open on the 
 - **Supplier**: The vendor or supplier for this investment. Select from your suppliers in master data
 - **Cost center**: Who owns the investment. See [Cost centers](cost-centers.md). When the paying company is still empty, picking a cost center fills it with the cost center's company
 - **Run or build**: **Run** for spend that keeps existing services running, **Build** for spend that creates or changes them
-- **Analytics category**: Custom grouping for reporting
+- **Analytics dimensions**: One field per dimension, named after it, for custom grouping in reports. The default dimension shows as **Analytics dimension** until it is renamed. See [Analytics dimensions](analytics.md)
 - **End of validity**: The date this investment stops, for example when the asset's useful life ends or the project completes. Leave it blank if there is no end. After it, the item is disabled and later years no longer count in the budget views
 - **IT owner** / **Business owner**: Who is responsible
 - **Description** (Overview tab): Free-form details about the investment
@@ -92,7 +92,7 @@ These columns are hidden by default. Show them from the column chooser (hamburge
 | **Effective start** | Start date |
 | **End of validity** | Date the item stops (blank means no end) |
 | **IT owner** / **Business owner** | Responsible users |
-| **Analytics** | Analytics category name |
+| **Analytics dimensions** | One column per enabled dimension, named after it, with the item's value. The default dimension's column comes first (**Analytics dimension** until it is renamed), then the other dimensions in their order |
 | **Cost center** | The code and name of the cost center. Hover it to see its full path in the tree; click it to open the cost center |
 | **Budget holder** | The budget holder of the item's cost center. It is derived from the cost center, not stored on the item: change the budget holder of a cost center and every item on it follows |
 | **Run or build** | **Run** or **Build** |
@@ -103,11 +103,11 @@ These columns are hidden by default. Show them from the column chooser (hamburge
 
 ### Quick search
 
-The search box at the top searches the reference, description, supplier, paying company, account, contract, project names, allocation, owners, analytics category, cost center (code, name and path), budget holder, PP&E type, investment type, priority, notes, currency and status. Results update in real time as you type.
+The search box at the top searches the reference, description, supplier, paying company, account, contract, project names, allocation, owners, analytics values, cost center (code, name and path), budget holder, PP&E type, investment type, priority, notes, currency and status. Results update in real time as you type.
 
 ### Column filters
 
-Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, **Analytics**, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Multiple filters combine with AND logic.
+Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Multiple filters combine with AND logic.
 
 Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts.
 
@@ -136,7 +136,7 @@ Click any cell in a row to open the workspace on the tab most relevant to that c
 
 ### Status filter
 
-Use the **Show: Enabled / Disabled / All** toggle above the grid to control lifecycle scope (defaults to **Enabled**). Pick **Disabled** to review archived investments or **All** to include both states. Totals update immediately.
+Use the **Show: All / Enabled / Disabled** toggle above the grid to control lifecycle scope (defaults to **Enabled**). Pick **Disabled** to review archived investments or **All** to include both states. Totals update immediately.
 
 ### Search context preservation
 
@@ -185,7 +185,7 @@ The Overview tab holds the details of the investment and its tasks.
 
 **Properties panel**:
 
-- **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **PP&E type**, **Investment type**, **Analytics category**, **Run or build**, and **Effective start**
+- **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **PP&E type**, **Investment type**, one field per analytics dimension, **Run or build**, and **Effective start**
 - **Lifecycle**: the **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 - **Created** and **Updated** dates (read only)
 - **Priority** is set in the Properties panel when you create the item, then in the metadata bar
@@ -199,6 +199,13 @@ The Overview tab holds the details of the investment and its tasks.
 - An item saved through the API with a cost center and no paying company takes the cost center's company. For CSV files, see [CSV import/export](#csv-importexport)
 
 **Run or build**: **Run**, **Build**, or **Not set**. Use it to split the budget between keeping services running and changing them.
+
+**Analytics dimensions**:
+
+- Each enabled dimension has its own field, named after the dimension, in dimension order. Pick a value or clear the field; the change saves at once
+- Each field lists the enabled values of its dimension. A disabled value stays on the items that already have it, and cannot be picked for another item
+- The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let a CSV import create it
+- If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 
 **Tip**: When you create an item, an "obsolete account" warning means the selected account does not belong to the paying company's chart of accounts. Choose a different account to resolve the warning. An existing item whose account is outside its company's chart can still be edited: the chart is checked only when the company or the account changes.
 
@@ -423,14 +430,15 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 - Headers: `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
 - `disabled_at` is the end of validity: the date the item stops. Use a date (`2026-12-31`) or a full date and time. Leave it empty if there is no end
 - Older files with an `effective_end` column still import: its date fills the end of validity when `disabled_at` is empty
-- `cost_center_code` and `run_build` are optional columns: exports and the template always carry them, and files without them still import
+- `analytics_category` holds the value of the default analytics dimension, whatever its name. Each other enabled dimension has its own column, `analytics:<code>`, where `<code>` is the dimension's code. Exports and the template carry these columns right after `analytics_category`, in dimension order
+- `analytics_category`, the `analytics:<code>` columns, `cost_center_code` and `run_build` are optional columns: exports and the template always carry them, and files without them still import
 
 **Import**:
 
 1. Click **Import CSV** in the CAPEX list
 2. Upload your CSV file (drag-and-drop or file picker)
-3. Click **Preflight** to validate:
-   - Headers match exactly
+3. Click **Preflight check** to validate:
+   - Every required column is present and no column is unknown. Columns are matched by name, in any order
    - Companies, cost centers and users exist in your workspace
    - Required fields (description, ppe_type, investment_type, priority) are present. A new item also needs a currency, and a company_name unless it has a cost center
    - A company change on an item that has an account stays within the account's chart of accounts
@@ -449,6 +457,7 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 - **References**: `company_name` must match a Company by name (case-insensitive). `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused.
 - **Cost center**: `cost_center_code` is the code of a cost center, regardless of case. A group is refused. A disabled cost center is accepted on an item that already has it, and refused as a new value. An empty cell clears the item's cost center. When the whole column is absent, items keep their cost center.
 - **Run or build**: `run_build` is `run`, `build` or empty (regardless of case). An empty cell clears the value. When the whole column is absent, items keep their value.
+- **Analytics dimensions**: Each analytics cell names a value of its column's dimension, regardless of case. A value that does not exist yet is created in that dimension during the load. A disabled value is accepted on an item that already has it, and refused as a new value. An empty cell clears the item's value on that dimension. When a column is absent, items keep their value on that dimension. A column for an unknown or disabled dimension refuses the whole file, and so do two columns for the same dimension (`analytics_category` and the default dimension's own code). Exporting and importing the same file changes nothing.
 - **Company on existing items**: an empty `company_name` keeps the item's paying company. A filled `company_name` is kept, even when it differs from the cost center's company. When an item has an account, a new `company_name` must use the same chart of accounts as that account; otherwise the preflight refuses the row: "Account ... is not in ...'s chart of accounts. Change the line's account first." Change the account in the item's **Properties** panel, then re-import.
 - **PP&E type**: Must be `hardware` or `software` (case-insensitive).
 - **Investment type**: Must be one of: `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (case-insensitive).
@@ -463,7 +472,7 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 - **"Invalid investment_type"**: Use one of the 7 valid investment types (see list above).
 - **"Invalid priority"**: Use `mandatory`, `high`, `medium`, or `low`.
 - **"Invalid currency"**: Use 3-letter ISO codes (USD, EUR, GBP) that are allowed in your workspace currency settings.
-- **"Header mismatch"**: Download a fresh template; headers must match exactly (including order).
+- **"Header mismatch"**: A required column is missing, or a column is unknown; the message lists them. Columns are matched by name, in any order, and the analytics columns are optional. Compare your first line with a fresh template.
 - **"effective_start must be a valid date"**: Use the `YYYY-MM-DD` format.
 - **"Same line as row N"**: Two rows describe the same item. Merge them into one row, then re-import.
 - **"Company is required unless the line has a cost center."**: Fill `company_name` or `cost_center_code` for the new item.
@@ -472,6 +481,10 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 - **"... is a group. Choose a cost center."**: Use the code of a cost center inside that group.
 - **"Cost center ... is disabled."**: Use an enabled cost center, or enable it again in **Master data > Cost centers**.
 - **"Run or build must be run, build or blank."**: Fix the `run_build` cell.
+- **"The column analytics:... names no dimension. Check the dimension code or remove the column."**: Use the code shown in the dimension's workspace in **Master data > Analytics dimensions**, or remove the column.
+- **"The ... dimension is disabled. Enable it or leave it out."**: Enable the dimension in **Master data > Analytics dimensions**, or remove its column.
+- **"The file has two columns for ..."**: Two columns name the same dimension, for example `analytics_category` and the default dimension's own code. Keep one column.
+- **"... is disabled. Pick an enabled value."**: Use an enabled value of that dimension, or enable the value again.
 
 **Tip**: Start with the template export, fill in a few rows, and run a preflight to catch issues early. Fix errors in the CSV and re-upload until preflight passes, then load.
 
@@ -499,7 +512,7 @@ Every CAPEX item has a **status** (Enabled or Disabled) and an optional **End of
 **Viewing disabled items**:
 
 - By default, the CAPEX list shows only **Enabled** items
-- Use the **Show: Enabled / Disabled / All** toggle to change the scope
+- Use the **Show: All / Enabled / Disabled** toggle to change the scope
 
 **When to disable vs delete**:
 

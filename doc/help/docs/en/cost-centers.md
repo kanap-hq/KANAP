@@ -9,7 +9,7 @@ A cost center says who owns a budget line: the team or unit that answers for the
 | **Companies** | Which legal entity pays | The **Paying company** |
 | **Departments** | Which units of a company consume IT, with their headcount | Used by allocations and chargeback |
 | **Cost centers** | Who owns and answers for the spend | The **Cost center** |
-| **Analytics dimensions** | A free classification for reporting | The **Analytics category** |
+| **Analytics dimensions** | Free classifications for reporting | One field per dimension, for example **Nature** |
 
 A department belongs to one company and drives allocations through its headcount. A cost center carries a code, a company, a budget holder and a place in a tree, and groups of cost centers can span several companies. Cost centers do not change allocations or chargeback.
 
@@ -80,7 +80,7 @@ Click any cell to open the workspace.
 
 - **Quick search**: searches the code, the name and the full path. Searching for a group's name also finds everything inside it
 - **Column filters**: **Type**, **Parent**, **Company** and **Status** use checkbox filters
-- **Status scope**: the **Enabled / Disabled / All** toggle above the list. The list shows enabled nodes by default
+- **Status scope**: the **All / Enabled / Disabled** toggle above the list. The list shows enabled nodes by default
 
 **Actions**:
 
@@ -161,7 +161,7 @@ The **Delete** button in the header deletes the node at once (requires `cost_cen
 
 - **OPEX and CAPEX**: the **Cost center** field in the **Properties** panel lists the tree. Groups are shown to help you find your way and cannot be picked. When you create a line and the paying company is empty, picking a cost center fills it with the cost center's company, and the company follows the cost center until you pick a company or an account yourself. When the two companies differ, both are kept and a hint says so. See [OPEX](opex.md) and [CAPEX](capex.md).
 - **Lists**: the **Cost center** and **Run or build** columns and filters of the OPEX and CAPEX lists.
-- **Reports**: the budget reports can be filtered on a cost center or a group. See [Cost center and run or build filters](reports.md#cost-center-and-run-or-build-filters).
+- **Reports**: the budget reports can be filtered on a cost center or a group. See [Cost center, run or build and analytics filters](reports.md#cost-center-run-or-build-and-analytics-filters).
 
 ---
 

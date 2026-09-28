@@ -42,25 +42,29 @@ Die beiden Leistungsverrechnungsberichte decken nur OPEX ab.
 
 Jede Spalten- oder Kennzahlauswahl bietet die Budgetspalten an, die Ihre Organisation anzeigt, unter ihren Namen und in der festen Spaltenreihenfolge. Prognose wird angeboten, wenn sie angezeigt wird. Ausgeblendete Spalten werden nicht angeboten. Jeder Bericht beginnt mit der Standardspalte, wie unten beschrieben. Budgetadministratoren legen die Namen, die angezeigten Spalten und die Standardspalte unter [Budgetspalten](budget-operations.md#budgetspalten) fest.
 
-### Filter nach Kostenstelle und Run oder Build
+### Filter nach Kostenstelle, Run oder Build und Analysedimensionen
 
-Die sieben Budgetberichte (**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgettrend (OPEX)**, **Budgettrend (CAPEX)**, **Budgetspaltenvergleich**, **Konsolidierungskonten** und **Analysedimensionen**) lassen sich mit zwei Filtern auf einen Teil des Budgets eingrenzen:
+Die sieben Budgetberichte (**Top-Positionen**, **Top Anstieg / Rückgang**, **Budgettrend (OPEX)**, **Budgettrend (CAPEX)**, **Budgetspaltenvergleich**, **Konsolidierungskonten** und **Analysedimensionen**) lassen sich mit diesen Filtern auf einen Teil des Budgets eingrenzen:
 
 - **Kostenstelle**: Wählen Sie eine Kostenstelle oder eine Gruppe. Eine Gruppe umfasst alles, was darunter liegt, einschließlich deaktivierter Kostenstellen, da deren Zeilen weiterhin zur Gruppe gehören. **Alle Kostenstellen** entfernt den Filter. Siehe [Kostenstellen](cost-centers.md).
 - **Run oder Build**: **Alle**, **Run**, **Build** oder **Nicht festgelegt** für die Zeilen, die keines von beiden haben.
+- **Analysedimensionen**: ein Filter pro Dimension, nach ihr benannt. Die Standarddimension erscheint als **Analysedimension**, bis sie umbenannt wird. Wählen Sie einen Wert, **Kein Wert** für die Zeilen ohne Wert in dieser Dimension oder **Alle**, um den Filter zu entfernen. Jeder Filter bietet die Werte an, die die Zeilen des Berichts tragen. Siehe [Analysedimensionen](analytics.md).
 
 Wann die Filter erscheinen:
 
 - **Kostenstelle** erscheint, sobald Ihr Arbeitsbereich mindestens eine Kostenstelle oder Gruppe hat.
 - **Run oder Build** erscheint, sobald eine Zeile des Berichts als **Run** oder **Build** markiert ist oder die Seitenadresse den Filter bereits enthält.
-- Ohne beides zeigt die Filterleiste nur die eigenen Steuerelemente des Berichts.
+- Der Filter einer Dimension erscheint, sobald eine Zeile des Berichts einen Wert in dieser Dimension hat oder die Seitenadresse ihn bereits enthält. Deaktivierte Dimensionen haben keinen Filter.
+- Ohne all diese zeigt die Filterleiste nur die eigenen Steuerelemente des Berichts.
 
 So funktionieren sie:
 
 - Die Filter wirken vor jeder Summe. Beträge, Anteile, Diagramme und Summen umfassen nur die verbleibenden Zeilen.
-- Die Listen der auszuschließenden Positionen und Konten bieten weiterhin alle Zeilen an.
-- Die Seitenadresse speichert beide Filter (`?costCenter=` und `?runBuild=`), sodass ein gespeicherter oder geteilter Link den Bericht bereits eingegrenzt öffnet.
+- Filter in mehreren Dimensionen werden kombiniert: Eine Zeile muss jedem von ihnen entsprechen.
+- Die Listen der auszuschließenden Positionen, Konten und Werte bieten weiterhin alle Zeilen an.
+- Die Seitenadresse speichert die Filter (`?costCenter=`, `?runBuild=` und `?analytics=`), sodass ein gespeicherter oder geteilter Link den Bericht bereits eingegrenzt öffnet. Nennt ein Link eine inzwischen deaktivierte oder gelöschte Dimension, wird dieser Teil ignoriert.
 - Nennt der Link eine inzwischen gelöschte Kostenstelle oder konnten die Kostenstellen nicht geladen werden, zeigt der Bericht keine Zeilen und eine Textzeile: „Diese Kostenstelle existiert nicht mehr oder konnte nicht geladen werden." Klicken Sie auf **Filter entfernen**, um den Bericht wieder zu sehen.
+- Enthält der Link einen Analysefilter und konnten die Dimensionen nicht geladen werden, zeigt der Bericht keine Zeilen und eine Textzeile: „Der Analysefilter konnte nicht angewendet werden. Entfernen Sie ihn oder versuchen Sie es erneut.“ Klicken Sie auf **Filter entfernen**, um die Analysefilter zu entfernen und den Bericht wieder zu sehen.
 - Die beiden Leistungsverrechnungsberichte haben keine solchen Filter und sind nicht betroffen.
 
 ---
@@ -187,7 +191,7 @@ Identifizieren Sie Ihre größten OPEX- oder CAPEX-Positionen für ein bestimmte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm
 - **Positionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Positionen
 - **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
-- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
+- **Kostenstelle**, **Run oder Build** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
 ### Was Sie sehen
 
@@ -226,7 +230,7 @@ Identifizieren Sie die größten OPEX- oder CAPEX-Veränderungen zwischen zwei B
 - **Positionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Positionen
 - **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
 - **Richtung**: Tabs **Anstiege**, **Rückgänge** oder **Beide**
-- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
+- **Kostenstelle**, **Run oder Build** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
 Die Jahresauswahlen listen die Jahre, die Daten enthalten. Die Kennzahlauswahlen bieten die angezeigten Budgetspalten an. Der Bericht beginnt mit der Standardspalte des Vorjahres als Quelle und der Standardspalte des aktuellen Jahres als Ziel.
 
@@ -265,7 +269,7 @@ Vergleichen Sie OPEX-Kennzahlen über mehrere Jahre in einem einzelnen Liniendia
 - **Startjahr**: Beginn des Bereichs (aktuelles Jahr minus 2 bis plus 2)
 - **Endjahr**: Ende des Bereichs
 - **Kennzahlen**: Mehrfachauswahl aus den angezeigten Budgetspalten. Der Bericht beginnt mit der Standardspalte und der letzten angezeigten Spalte (Budget und Erwarteter Endwert mit den Standardeinstellungen). Wenn Sie alle Kennzahlen entfernen, wird die Standardspalte verwendet
-- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
+- **Kostenstelle**, **Run oder Build** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
 ### Was Sie sehen
 
@@ -288,7 +292,7 @@ Identisches Layout wie der OPEX-Trendbericht, aber mit CAPEX-Budgetdaten.
 ### Steuerungen
 
 - **Startjahr**, **Endjahr**, **Kennzahlen**: Gleich wie beim OPEX-Trendbericht
-- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
+- **Kostenstelle**, **Run oder Build** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
 ### Was Sie sehen
 
@@ -306,7 +310,7 @@ Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen für entweder OPEX
 - **Positionstyp**: OPEX- oder CAPEX-Umschalter
 - **Auswahlen**: Jede Auswahl hat eine Jahrauswahl und eine Spaltenauswahl mit den angezeigten Budgetspalten. Der Bericht beginnt mit zwei Auswahlen: der Standardspalte des aktuellen Jahres und des nächsten Jahres. **Hinzufügen** fügt die Standardspalte des aktuellen Jahres hinzu, und das Löschsymbol entfernt eine Auswahl. Maximum von 10 Auswahlen; Minimum von 1.
 - **Jahresgruppierung** (Kontrollkästchen): Wenn aktiviert und mindestens zwei Jahre eine Kennzahl teilen, wechselt zu einem gruppierten Liniendiagramm mit einer Serie pro Kennzahl und Jahren auf der X-Achse. Wenn deaktiviert, zeigt ein flaches Liniendiagramm mit jeder Auswahl als Datenpunkt.
-- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
+- **Kostenstelle**, **Run oder Build** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
 ### Was Sie sehen
 
@@ -339,7 +343,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wob
 - **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur verfügbar bei Auswahl eines einzelnen Jahres)
 - **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
-- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
+- **Kostenstelle**, **Run oder Build** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
 ### Was Sie sehen
 
@@ -354,35 +358,38 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wob
 
 **Tabelle**: Eine Zeile pro Konsolidierungskonto mit Jahresspalten. Eine angeheftete Summenzeile unten summiert alle Gruppen.
 
-Positionen ohne Konsolidierungskonto erscheinen als „Nicht zugewiesen".
+Positionen ohne Konsolidierungskonto erscheinen als „Nicht zugeordnet".
 
 ---
 
 ## Analysedimensionen
 
-Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Analysedimension. Das Layout entspricht dem Bericht Konsolidierungskonten.
+Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach den Werten einer Analysedimension. Das Layout entspricht dem Bericht Konsolidierungskonten. Siehe [Analysedimensionen](analytics.md), um Dimensionen und Werte einzurichten.
 
 ### Steuerungen
 
 - **Positionstyp**: OPEX oder CAPEX (siehe [OPEX oder CAPEX wählen](#opex-oder-capex-wahlen))
+- **Dimension**: die Dimension, nach der der Bericht gruppiert. Sie erscheint, wenn Sie zwei oder mehr aktivierte Dimensionen haben, und der Bericht öffnet mit der Standarddimension. Die Seitenadresse speichert Ihre Wahl, sodass ein gespeicherter oder geteilter Link mit derselben Dimension öffnet
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur Einzeljahr)
-- **Analysedimensionen ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Dimensionen
-- **Kostenstelle** und **Run oder Build**: Siehe [Filter nach Kostenstelle und Run oder Build](#filter-nach-kostenstelle-und-run-oder-build)
+- **Werte ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Werte der gewählten Dimension. Ein Wechsel des Positionstyps oder der Dimension leert die Auswahl
+- **Kostenstelle**, **Run oder Build** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
+
+Untertitel, Diagrammtitel und erste Tabellenspalte nennen die gewählte Dimension, zum Beispiel „OPEX nach Nature“.
 
 ### Was Sie sehen
 
 **Einzeljahr-Modus**:
 
-- Kreis- oder Balkendiagramm der Summen nach Analysedimension
+- Kreis- oder Balkendiagramm der Summen nach Wert
 - Fußnote mit der Kennzahl-Summe
 
 **Mehrjahr-Modus**:
 
-- Liniendiagramm mit einer Serie pro Analysedimension
+- Liniendiagramm mit einer Serie pro Wert
 
-**Tabelle**: Eine Zeile pro Analysedimension mit Jahresspalten. Eine angeheftete Summenzeile unten. Positionen ohne Analysedimension erscheinen als „Nicht zugewiesen".
+**Tabelle**: Eine Zeile pro Wert mit Jahresspalten. Eine angeheftete Summenzeile unten. Zeilen ohne Wert in der gewählten Dimension erscheinen als „Nicht zugeordnet“.
 
 ---
 
