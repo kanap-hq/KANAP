@@ -1,5 +1,7 @@
-import type { ColDef } from 'ag-grid-community';
+import { createElement } from 'react';
+import type { ColDef, ICellRendererParams } from 'ag-grid-community';
 import type { TFunction } from 'i18next';
+import { Box } from '@mui/material';
 import { formatAmount } from '../../i18n/formatters';
 import type { FreezeColumn } from '../../services/freeze';
 import type { AmountMeasure } from './roundPeriod';
@@ -74,9 +76,23 @@ export function parseAmountField(colId: string | null | undefined): { slot: Year
   return null;
 }
 
-/** Calendar year of an amount column (`yPlus1Forecast` gives Y+1), null for any other column. */
+const FTE_PREFIX = 'fte_';
+
+/** Summary field key of the FTE of an amount column (`fte_yBudget`). */
+export const fteFieldKey = (slot: string, column: AmountColumn): string => `${FTE_PREFIX}${amountFieldKey(slot, column)}`;
+
+/** Year slot and column of an FTE field key (`fte_yPlus1Forecast`), null for any other column. */
+export function parseFteField(colId: string | null | undefined): { slot: YearSlot; column: AmountColumn } | null {
+  if (!colId || !colId.startsWith(FTE_PREFIX)) return null;
+  return parseAmountField(colId.slice(FTE_PREFIX.length));
+}
+
+/**
+ * Calendar year of an amount column or of its FTE (`yPlus1Forecast` and `fte_yPlus1Forecast` give
+ * Y+1), null for any other column.
+ */
 export function amountColumnYear(colId: string | undefined, currentYear: number): number | null {
-  const field = parseAmountField(colId);
+  const field = parseAmountField(colId) ?? parseFteField(colId);
   return field ? slotYear(field.slot, currentYear) : null;
 }
 
@@ -86,9 +102,12 @@ export type ListAmountColumns = {
   displayDefaults: ReadonlyArray<AmountColumn>;
 };
 
-/** True when a list column id names an amount column that is not shown (so the list does not build it). */
+/**
+ * True when a list column id names an amount column, or its FTE, whose budget column is not shown
+ * (so the list does not build it).
+ */
 function isHiddenAmountField(colId: string | null | undefined, shown: ListAmountColumns['shown']): boolean {
-  const field = parseAmountField(colId);
+  const field = parseAmountField(colId) ?? parseFteField(colId);
   return !!field && !shown.some((c) => c.measure === field.column.measure);
 }
 
@@ -272,6 +291,123 @@ export function buildAmountColumnDefs<T>({
       floatingFilterComponent: 'agNumberColumnFloatingFilter',
       defaultHidden: !visibleByDefault.has(colId),
       cellRenderer: cellRenderer(colId),
+    };
+  }));
+}
+
+/** Header of an FTE column from the column name and the year, e.g. "Budget FTE (2026)". */
+export function fteColumnHeader(t: TFunction, slot: YearSlot, columnName: string, currentYear: number): string {
+  return t('ops:shared.fteColumnHeader', { column: columnName, year: slotYear(slot, currentYear) });
+}
+
+/** FTE with two decimals, as the server rounds it; blank when unknown. */
+export function formatFte(value: unknown, locale: string): string {
+  if (value == null || value === '') return '';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+}
+
+/**
+ * Like the amounts, plus blank / not blank: a line without costing inputs has no FTE (blank), which
+ * is not the same as zero people.
+ */
+export const FTE_FILTER_PARAMS = {
+  ...AMOUNT_FILTER_PARAMS,
+  filterOptions: [...AMOUNT_FILTER_PARAMS.filterOptions, 'blank', 'notBlank'],
+};
+
+/** Field of the totals row that holds, per FTE key, the number of lines whose FTE is unknown. */
+const FTE_UNKNOWN_FIELD = 'fteUnknown';
+
+/**
+ * The FTE fields of a totals row, from the `fte` block of the totals response: each requested key
+ * gets its sum, and the lines it could not count are kept for the tooltip.
+ */
+export function fteTotalsToRow(fte: unknown): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  const unknownByKey: Record<string, number> = {};
+  if (fte && typeof fte === 'object') {
+    for (const [key, entry] of Object.entries(fte as Record<string, { total?: unknown; unknown?: unknown } | null>)) {
+      if (!parseFteField(key)) continue;
+      const total = Number(entry?.total);
+      row[key] = entry?.total != null && Number.isFinite(total) ? total : null;
+      const unknown = Number(entry?.unknown);
+      if (Number.isFinite(unknown) && unknown > 0) unknownByKey[key] = unknown;
+    }
+  }
+  row[FTE_UNKNOWN_FIELD] = unknownByKey;
+  return row;
+}
+
+/** Lines of the totals row whose FTE is unknown for a key; 0 on any other row. */
+function unknownLines(data: unknown, colId: string): number {
+  return ((data as Record<string, unknown> | undefined)?.[FTE_UNKNOWN_FIELD] as Record<string, number> | undefined)?.[colId] ?? 0;
+}
+
+/** The FTE fields the grid shows, in grid order: the totals request asks for those only. */
+export function visibleFteFields(state: ReadonlyArray<{ colId?: string | null; hide?: boolean | null }> | null | undefined): string[] {
+  return (state ?? []).flatMap((col) => (col.colId && !col.hide && parseFteField(col.colId) ? [col.colId] : []));
+}
+
+/**
+ * The FTE of every shown column of every list year, in the amount columns' order, all hidden by
+ * default. Cells show the line's FTE (blank when unknown); the totals row shows the sum of the lines
+ * (blank when no line has one) followed by how many lines it could not count, and the full sentence
+ * in a tooltip. The server filters and sorts them by the same key.
+ */
+export function buildFteColumnDefs<T>({
+  t,
+  currentYear,
+  locale,
+  cellRenderer,
+  columns,
+}: {
+  t: TFunction;
+  currentYear: number;
+  locale: string;
+  cellRenderer: (colId: string) => ColDef<T>['cellRenderer'];
+  columns: ListAmountColumns;
+}): AmountColDef<T>[] {
+  return LIST_YEAR_SLOTS.flatMap((slot) => columns.shown.map((column): AmountColDef<T> => {
+    const colId = fteFieldKey(slot, column);
+    const lineCell = cellRenderer(colId);
+    const totalCell = (p: ICellRendererParams) => {
+      const unknown = unknownLines(p.data, colId);
+      const total = p.valueFormatted ?? '';
+      if (!unknown) return total;
+      const count = t('ops:shared.fteUnknownCount', { count: unknown });
+      return createElement(
+        Box,
+        { component: 'span', sx: { display: 'block', textAlign: 'right' } },
+        total,
+        createElement(Box, { component: 'span', sx: { color: 'kanap.text.tertiary' } }, total ? ` · ${count}` : count),
+      );
+    };
+    return {
+      colId,
+      headerName: fteColumnHeader(t, slot, column.label, currentYear),
+      valueGetter: (p) => {
+        const value = (p.data as Record<string, unknown> | undefined)?.[colId];
+        if (value == null || value === '') return null;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
+      },
+      valueFormatter: (p) => formatFte(p.value, locale),
+      tooltipValueGetter: (p) => {
+        if (!p.node?.rowPinned) return undefined;
+        const unknown = unknownLines(p.data, colId);
+        return unknown ? t('ops:shared.fteUnknownLines', { count: unknown }) : undefined;
+      },
+      type: 'rightAligned',
+      width: 160,
+      filter: 'agNumberColumnFilter',
+      filterParams: FTE_FILTER_PARAMS,
+      floatingFilterComponent: 'agNumberColumnFloatingFilter',
+      defaultHidden: true,
+      // A selector rather than `cellRenderer`, which the grid drops on the totals row: the total
+      // shows how many lines it could not count without a hover.
+      cellRendererSelector: (p) => (p.node?.rowPinned ? { component: totalCell } : { component: lineCell }),
     };
   }));
 }

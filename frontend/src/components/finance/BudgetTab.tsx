@@ -4,6 +4,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -19,12 +20,15 @@ import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx } from '../../theme/
 import DateEUField from '../fields/DateEUField';
 import { FieldLabel } from '../design';
 import BudgetTrendChart from './BudgetTrendChart';
+import ComputePanel from './ComputePanel';
 import { FinanceModuleConfig } from './config';
 import { patchYearlyTotalsCache } from './yearlyTotals';
 import { AMOUNT_COLUMNS } from './amountColumns';
 import type { FreezeColumn } from '../../services/freeze';
 import {
   AmountMeasure,
+  ComputePreview,
+  ComputeRequest,
   Period,
   RoundInput,
   activeMonths,
@@ -35,6 +39,7 @@ import {
   periodForEdit,
   periodProblem,
   periodText,
+  recipeText,
   suggestedPeriod,
   toCents,
   wholeYear,
@@ -143,6 +148,11 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const [spreadAllColumns, setSpreadAllColumns] = React.useState(true);
   // The yearly view shows the panel only when asked for, on one column.
   const [panelOpen, setPanelOpen] = React.useState(false);
+  // The panel box holds one panel at a time: spread an amount, or compute from quantity and price.
+  const [panelKind, setPanelKind] = React.useState<'spread' | 'compute'>('spread');
+  const [computeBusy, setComputeBusy] = React.useState(false);
+  // Bumped on every load, so the compute panel starts again from the stored recipes.
+  const [loadCount, setLoadCount] = React.useState(0);
 
   const suggestion = React.useMemo(() => suggestedPeriod(year, effectiveStart, endOfValidity), [year, effectiveStart, endOfValidity]);
   // A column's own period: shown under the column and used to spread a typed yearly total.
@@ -225,6 +235,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         setSpreadAmount('');
         resetDirty();
         setLoadedYear(year);
+        setLoadCount((n) => n + 1);
         return;
       }
       setVersion(v);
@@ -247,6 +258,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       setSpreadAmount(amountOrEmpty(monthsCents(loadedMonths, spreadMeasureRef.current)));
       resetDirty();
       setLoadedYear(year);
+      setLoadCount((n) => n + 1);
     } catch (e) {
       setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToLoad`)));
     } finally {
@@ -447,7 +459,13 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     setSpreadDates(null);
     setSpreadProfile(profileOf(measure, roundInputs));
     setSpreadAmount(amountOrEmpty(toCents(flat[measure])));
+    setPanelKind('spread');
     setPanelOpen(true);
+  };
+  // Yearly view: open the same box on "Compute from quantity and price" for one column.
+  const openComputePanel = (measure: AmountCol) => {
+    openSpreadPanel(measure);
+    setPanelKind('compute');
   };
   const closeSpreadPanel = () => {
     setPanelOpen(false);
@@ -496,6 +514,37 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     }
   };
 
+  // The computation of the panel's inputs, from the server: nothing is computed here, nothing is
+  // written. The route takes the item and the year, so a year without a version stays without one.
+  const requestComputePreview = React.useCallback(async (body: ComputeRequest): Promise<ComputePreview> => {
+    const res = await api.post<ComputePreview>(`${config.versionsApi}/compute-preview`, { ...body, item_id: id });
+    return res.data;
+  }, [id]);
+
+  // Same path as Apply: pending edits first, then the write, then a reload of the grid.
+  const applyCompute = async (body: ComputeRequest) => {
+    if (frozen[FREEZE_KEY[body.measure]]) return;
+    const fromYearly = modeRef.current === 'flat';
+    setError(null);
+    setComputeBusy(true);
+    try {
+      if (!(await flushEdits())) return;
+      const v = await ensureVersion();
+      const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, body);
+      keepRoundInputs(res?.data);
+      if (fromYearly) {
+        setPanelOpen(false);
+      } else if (v.input_grain !== 'monthly') {
+        await api.patch(`${config.itemsApi}/${id}/versions`, { id: v.id, input_grain: 'monthly' });
+      }
+      await load();
+    } catch (e) {
+      setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToSave`)));
+    } finally {
+      setComputeBusy(false);
+    }
+  };
+
   // Totals: flat values in flat mode, live column sums in monthly mode.
   const totals = React.useMemo<Record<AmountCol, number>>(() => {
     if (mode === 'flat') return perColumn((col) => Number(flat[col] || 0));
@@ -532,6 +581,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const numCellSx = { textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, color: 'kanap.text.primary', px: 1, py: 0 } as const;
   const headCellSx = { textAlign: 'right', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1, py: 0.75, whiteSpace: 'nowrap', verticalAlign: 'top' } as const;
   const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
+  const captionIconSx = { p: '2px', color: 'kanap.text.tertiary', '&:hover': { color: 'primary.main', bgcolor: 'transparent' } } as const;
+  // The column's recipe, as the tooltip of how it was produced; empty (no tooltip) when it has none.
+  const recipeOf = (col: AmountCol) => (loadedYear === year ? recipeText(t, locale, recordFor(col)) : '');
 
   // Every control has its label above it, so the row sits on one baseline and wraps cleanly.
   const panelField = (label: string, width: number, control: React.ReactNode) => (
@@ -551,15 +603,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   ].filter(Boolean).join(' ');
   const zeroedText = spreadProblem ? '' : zeroedMonthsText(t, locale, spreadActive);
 
-  const spreadPanel = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, bgcolor: 'kanap.bg.drawer', border: '1px solid', borderColor: 'kanap.border.soft', borderRadius: '8px', p: 1.5 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>{t(`${config.i18nPrefix}.budget.spreadHelper`)}</Typography>
-        {/* The 15th rule, one hover away instead of a permanent line. */}
-        <Tooltip title={t('budgetTab.convention')}>
-          <InfoOutlinedIcon tabIndex={0} aria-label={t('budgetTab.convention')} sx={{ fontSize: 13, color: 'kanap.text.tertiary' }} />
-        </Tooltip>
-      </Box>
+  const computeColumns = shown.map((c) => ({ measure: c.measure, label: c.label, frozen: frozen[c.freezeKey] }));
+  const spreadFields = (
+    <>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 1.5, rowGap: 1 }}>
         {panelField(t('budgetTab.column'), 150, (
           <TextField
@@ -637,6 +683,38 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
           <Button size="small" onClick={closeSpreadPanel} sx={{ textTransform: 'none' }}>{t('common:buttons.cancel')}</Button>
         )}
       </Stack>
+    </>
+  );
+
+  const spreadPanel = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, bgcolor: 'kanap.bg.drawer', border: '1px solid', borderColor: 'kanap.border.soft', borderRadius: '8px', p: 1.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        <Tabs value={panelKind} onChange={(_, kind) => setPanelKind(kind)}>
+          <Tab value="spread" label={t('budgetTab.panel.spread')} />
+          <Tab value="compute" label={t('budgetTab.panel.compute')} />
+        </Tabs>
+        {/* The 15th rule, one hover away instead of a permanent line. */}
+        <Tooltip title={t('budgetTab.convention')}>
+          <InfoOutlinedIcon tabIndex={0} aria-label={t('budgetTab.convention')} sx={{ fontSize: 13, color: 'kanap.text.tertiary' }} />
+        </Tooltip>
+      </Box>
+      {panelKind === 'spread' ? spreadFields : (
+        <ComputePanel
+          key={`${year}:${loadCount}`}
+          year={year}
+          measure={spreadMeasure}
+          columns={computeColumns}
+          onMeasureChange={onSpreadMeasureChange}
+          record={loadedYear === year ? recordFor(spreadMeasure) : undefined}
+          period={periodFor(spreadMeasure, roundInputs, storedAmounts)}
+          frozen={spreadFrozen}
+          frozenHint={t(`${config.i18nPrefix}.budget.someColumnsFrozen`)}
+          busy={computeBusy || loading}
+          requestPreview={requestComputePreview}
+          onCompute={(body) => void applyCompute(body)}
+          onCancel={mode === 'flat' ? closeSpreadPanel : undefined}
+        />
+      )}
     </Box>
   );
 
@@ -687,20 +765,34 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                   />
                   {loaded && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                      <Typography sx={captionSx} data-testid={`period-line-${m.measure}`}>
-                        {noMonth ? t('budgetTab.noMonthInItemDates', { year }) : [chip, text].filter(Boolean).join(' · ')}
-                      </Typography>
+                      <Tooltip title={recipeOf(m.measure)}>
+                        <Typography sx={captionSx} data-testid={`period-line-${m.measure}`}>
+                          {noMonth ? t('budgetTab.noMonthInItemDates', { year }) : [chip, text].filter(Boolean).join(' · ')}
+                        </Typography>
+                      </Tooltip>
                       {!isFrozen && !loading && (
-                        <Tooltip title={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}>
-                          <IconButton
-                            size="small"
-                            aria-label={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}
-                            onClick={() => openSpreadPanel(m.measure)}
-                            sx={{ p: '2px', color: 'kanap.text.tertiary', '&:hover': { color: 'primary.main', bgcolor: 'transparent' } }}
-                          >
-                            <EditOutlinedIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        </Tooltip>
+                        <>
+                          <Tooltip title={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}>
+                            <IconButton
+                              size="small"
+                              aria-label={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}
+                              onClick={() => openSpreadPanel(m.measure)}
+                              sx={captionIconSx}
+                            >
+                              <EditOutlinedIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title={t('budgetTab.panel.compute')}>
+                            <IconButton
+                              size="small"
+                              aria-label={t('budgetTab.panel.compute')}
+                              onClick={() => openComputePanel(m.measure)}
+                              sx={captionIconSx}
+                            >
+                              <CalculateOutlinedIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </>
                       )}
                     </Box>
                   )}
@@ -737,7 +829,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                         )}
                       </Box>
                       {chip && record && (
-                        <Tooltip title={periodTextOf({ start: record.period_start, end: record.period_end })}>
+                        <Tooltip title={[periodTextOf({ start: record.period_start, end: record.period_end }), recipeOf(col)].filter(Boolean).join(' · ')}>
                           <Box sx={{ fontSize: 11, fontWeight: 400, color: 'kanap.text.tertiary', whiteSpace: 'normal', lineHeight: 1.3 }}>{chip}</Box>
                         </Tooltip>
                       )}

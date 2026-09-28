@@ -15,6 +15,8 @@
       "coaDescription": "Gérez les plans comptables et les comptes",
       "currencyTitle": "Devise",
       "currencyDescription": "Configurez les devises de reporting et par défaut",
+      "workingDayCalendarsTitle": "Calendriers de jours ouvrés",
+      "workingDayCalendarsDescription": "Définissez les jours ouvrés de chaque mois pour les lignes au prix par jour",
       "businessProcessesTitle": "Processus métier",
       "businessProcessesDescription": "Gérez les processus métier de type ISO 9001",
       "analyticsDimensionsTitle": "Dimensions analytiques",
@@ -222,6 +224,75 @@
       "nameRequired": "Saisissez un nom.",
       "companyRequired": "Choisissez une société.",
       "chooseCompany": "Choisissez la société pour faire de ce groupe un centre de coûts."
+    }
+  },
+  "workingDayCalendars": {
+    "title": "Calendriers de jours ouvrés",
+    "newCalendar": "Nouveau calendrier",
+    "fallback": "Calendrier",
+    "emptyExplainer": "Un calendrier indique les jours ouvrés de chaque mois, pour les lignes au prix par jour. Créez-en un ou importez un fichier.",
+    "export": "Exporter les calendriers",
+    "import": "Importer les calendriers",
+    "previous": "Calendrier précédent",
+    "next": "Calendrier suivant",
+    "createHint": "Une fois le calendrier créé, saisissez les jours ouvrés de chaque année.",
+    "columns": {
+      "code": "Code",
+      "name": "Nom",
+      "years": "Années",
+      "status": "Statut",
+      "updated": "Mis à jour"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Nom",
+      "description": "Description",
+      "lifecycle": "Cycle de vie"
+    },
+    "hints": {
+      "code": "Un code court que votre équipe reconnaît. Les fichiers d'import l'utilisent pour trouver le calendrier."
+    },
+    "placeholders": {
+      "code": "ex. CAL-01",
+      "name": "ex. Personnel du siège",
+      "description": "ex. Jours ouvrés des salariés, jours fériés exclus",
+      "days": "ex. 20"
+    },
+    "usage": {
+      "opex_one": "{{count}} ligne OPEX",
+      "opex_other": "{{count}} lignes OPEX",
+      "capex_one": "{{count}} ligne CAPEX",
+      "capex_other": "{{count}} lignes CAPEX",
+      "one": "Utilisé par {{lines}}.",
+      "both": "Utilisé par {{opex}} et {{capex}}."
+    },
+    "deleteBlocked": "{{usage}} Désactivez-le plutôt.",
+    "days": {
+      "title": "Jours ouvrés",
+      "hint": "Les jours ouvrés de chaque mois. Un prix par jour est multiplié par ces valeurs.",
+      "monthField": "{{month}} {{year}}",
+      "total_one": "{{total}} jour en {{year}}",
+      "total_other": "{{total}} jours en {{year}}",
+      "copyFrom": "Copier depuis {{year}}",
+      "removeYear": "Retirer {{year}}",
+      "removeDialog": {
+        "title": "Retirer les jours ouvrés de {{year}} ?",
+        "body": "{{usage}} Leurs montants et leurs explications restent tels quels. Tant que les jours de {{year}} ne sont pas saisis à nouveau, aucune de ces lignes ne peut être recalculée pour {{year}}, et le fichier des lignes budgétaires ne peut pas les calculer.",
+        "confirm": "Retirer quand même"
+      },
+      "fillToSave": "Renseignez les douze mois pour enregistrer {{year}}.",
+      "incomplete": "Saisissez les jours ouvrés des douze mois de {{year}}.",
+      "tooMany": "{{month}} {{year}} compte {{max}} jours : saisissez {{max}} ou moins.",
+      "negative": "Saisissez 0 jour ou plus pour {{month}} {{year}}.",
+      "decimals": "Utilisez 6 décimales au plus."
+    },
+    "messages": {
+      "loadFailed": "Échec du chargement du calendrier.",
+      "saveFailed": "Échec de l'enregistrement du calendrier.",
+      "createFailed": "Échec de la création du calendrier.",
+      "deleteFailed": "Échec de la suppression du calendrier.",
+      "codeRequired": "Saisissez un code.",
+      "nameRequired": "Saisissez un nom."
     }
   },
   "suppliers": {

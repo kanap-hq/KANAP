@@ -11,6 +11,28 @@ import type { TFunction } from 'i18next';
  */
 export type AmountMeasure = 'planned' | 'committed' | 'forecast' | 'actual' | 'expected_landing';
 
+export type RoundMethod = 'spread' | 'copied' | 'manual' | 'computed';
+
+export type PricingBasis = 'per_day' | 'per_month' | 'per_period';
+export const PRICING_BASES: PricingBasis[] = ['per_day', 'per_month', 'per_period'];
+
+/** The explanation of a computation. Decimals are plain strings; months are 1..12, arrays hold twelve values. */
+export type ComputedCalculation = {
+  kind: 'computed';
+  pricing_basis: PricingBasis;
+  quantity: string;
+  unit_price: string;
+  price_index_pct: string;
+  working_day_profile_code: string | null;
+  working_day_profile_name: string | null;
+  active_months: number[];
+  day_counts: string[] | null;
+  total_days: string | null;
+  month_amounts: string[];
+  total: string;
+  counts_as_fte: boolean;
+};
+
 export type LastCalculation =
   | { kind: 'annual'; total: string; profile: 'flat' | '4-4-5'; active_months: number[]; weights: string[]; source?: 'item_csv' }
   | { kind: 'quarterly'; quarters: { Q1: string; Q2: string; Q3: string; Q4: string }; distribution: 'equal' | '445'; active_months: number[] }
@@ -21,19 +43,64 @@ export type LastCalculation =
     uplift_pct: string;
     source_total: string;
     total: string;
-    source_method: 'spread' | 'copied' | 'manual' | null;
-  };
+    source_method: RoundMethod | null;
+  }
+  | ComputedCalculation;
 
 export type RoundInput = {
   measure: AmountMeasure;
   period_start: string;
   period_end: string;
-  method: 'spread' | 'copied' | 'manual';
+  method: RoundMethod;
   spread_profile_name: string | null;
   last_calculation: LastCalculation | null;
   updated_at: string;
   updated_by: string | null;
+  /** The recipe: all null (and `counts_as_fte` false) when the column has none. */
+  pricing_basis: PricingBasis | null;
+  quantity: string | null;
+  unit_price: string | null;
+  price_index_pct: string | null;
+  working_day_profile_id: string | null;
+  working_day_profile_code: string | null;
+  working_day_profile_name: string | null;
+  counts_as_fte: boolean;
 };
+
+/** Body of `bulk-upsert` with `kind: 'computed'` and of `compute-preview`. */
+export type ComputeRequest = {
+  kind: 'computed';
+  year: number;
+  measure: AmountMeasure;
+  period_start: string;
+  period_end: string;
+  pricing_basis: PricingBasis;
+  quantity: string;
+  unit_price: string;
+  price_index_pct: string;
+  working_day_profile_id: string | null;
+  counts_as_fte: boolean;
+};
+
+/** What `compute-preview` answers: the computation and how it differs from what is stored. Writes nothing. */
+export type ComputePreview = {
+  active_months: number[];
+  day_counts: string[] | null;
+  total_days: string | null;
+  month_amounts: string[];
+  total: string;
+  fte: string | null;
+  calendar: { id: string; code: string; name: string; disabled: boolean } | null;
+  stored: { month_amounts: string[]; method: RoundMethod | null; last_calculation: LastCalculation | null };
+  changed_months: number[];
+  calendar_changed_months: number[];
+  warnings: string[];
+};
+
+/** True when the column keeps a recipe (a computation, or a file that gave one), so it can be recomputed. */
+export function hasRecipe(record: RoundInput | null | undefined): record is RoundInput & { pricing_basis: PricingBasis } {
+  return !!record?.pricing_basis;
+}
 
 export type Period = { start: string; end: string };
 
@@ -183,7 +250,8 @@ export function formatUplift(locale: string, pct: string | number | null | undef
 }
 
 /**
- * How the column was produced: "Spread flat", "Copied from Budget 2025 +2 %", "Edited by hand".
+ * How the column was produced: "Spread flat", "Copied from Budget 2025 +2 %", "Edited by hand",
+ * "Computed per day, France 218".
  * `nameOf` names the source column of a copy (the tenant's names; the product names by default).
  */
 export function chipText(
@@ -195,6 +263,16 @@ export function chipText(
   if (!record) return '';
   const calc = record.last_calculation;
   if (record.method === 'manual') return t('budgetTab.chip.manual');
+  if (record.method === 'computed') {
+    const basis = calc?.kind === 'computed' ? calc.pricing_basis : record.pricing_basis;
+    if (basis === 'per_day') {
+      const calendar = record.working_day_profile_name ?? (calc?.kind === 'computed' ? calc.working_day_profile_name : null);
+      return calendar ? t('budgetTab.chip.computedPerDay', { calendar }) : t('budgetTab.chip.computedPerDayPlain');
+    }
+    if (basis === 'per_month') return t('budgetTab.chip.computedPerMonth');
+    if (basis === 'per_period') return t('budgetTab.chip.computedPerPeriod');
+    return t('budgetTab.chip.computed');
+  }
   if (record.method === 'copied') {
     if (calc?.kind !== 'copy') return t('budgetTab.chip.copiedPlain');
     const column = nameOf(calc.source_measure);
@@ -208,6 +286,85 @@ export function chipText(
   if (profile === '4-4-5') return t('budgetTab.chip.spread445');
   if (profile === 'flat' || profile == null) return t('budgetTab.chip.spreadFlat');
   return t('budgetTab.chip.spread');
+}
+
+/**
+ * A decimal string from the server (days, FTE, quantity, price) as the budget tab writes numbers:
+ * space groups, dot decimals, no trailing zeros ("163", "171.75", "0.75"). Read from the string.
+ */
+function formatDecimal(value: string | null | undefined): string {
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value ?? '').trim());
+  if (!match) return String(value ?? '');
+  const [, sign, int, frac = ''] = match;
+  const decimals = frac.replace(/0+$/, '');
+  const grouped = int.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  if (grouped === '0' && !decimals) return '0';
+  return `${sign}${grouped}${decimals ? `.${decimals}` : ''}`;
+}
+
+/**
+ * A money string from the server as the budget fields show it ("65 200", "91 599.96"): whole
+ * units unless there are cents. Read from the string, so nothing goes through a float.
+ */
+export function formatMoney(value: string | null | undefined): string {
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value ?? '').trim());
+  if (!match) return String(value ?? '');
+  const [, sign, int, frac = ''] = match;
+  const cents = frac.padEnd(2, '0').slice(0, 2);
+  const grouped = int.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  if (grouped === '0' && cents === '00') return '0';
+  return `${sign}${grouped}${cents === '00' ? '' : `.${cents}`}`;
+}
+
+/** The recipe in one line, for a tooltip: "Per day · Quantity 1 · Unit price 400 · Calendar France 218 · Counts as FTE". */
+export function recipeText(t: TFunction, locale: string, record: RoundInput | null | undefined): string {
+  if (!hasRecipe(record)) return '';
+  const index = Number(record.price_index_pct);
+  const calendar = record.working_day_profile_name
+    ?? (record.last_calculation?.kind === 'computed' ? record.last_calculation.working_day_profile_name : null);
+  return [
+    t(`budgetTab.basis.${record.pricing_basis}`),
+    t('budgetTab.recipe.quantity', { value: formatDecimal(record.quantity) }),
+    t('budgetTab.recipe.unitPrice', { value: formatDecimal(record.unit_price) }),
+    Number.isFinite(index) && index !== 0 ? t('budgetTab.recipe.index', { value: formatUplift(locale, record.price_index_pct) }) : '',
+    record.pricing_basis === 'per_day' && calendar ? t('budgetTab.recipe.calendar', { name: calendar }) : '',
+    record.counts_as_fte ? t('budgetTab.recipe.countsAsFte') : '',
+  ].filter(Boolean).join(' · ');
+}
+
+/** The live line of the compute panel: "9 months · 163 days · 65 200 · 0.75 FTE" (days per day only, FTE when counted). */
+export function computeLineText(t: TFunction, locale: string, preview: ComputePreview): string {
+  const days = preview.total_days == null ? null : Number(preview.total_days);
+  return [
+    t('budgetTab.compute.months', { count: preview.active_months.length }),
+    days == null ? '' : t('budgetTab.compute.days', { count: days, days: formatDecimal(preview.total_days) }),
+    formatMoney(preview.total),
+    preview.fte == null ? '' : t('budgetTab.compute.fte', { value: formatDecimal(preview.fte) }),
+  ].filter(Boolean).join(' · ');
+}
+
+/**
+ * What a recompute would change, one line per month: the calendar days that changed since the
+ * last computation ("March: 20 days, now 19"), then the amounts that would change ("March: 8 000, now 7 600").
+ */
+export function computeChangeLines(t: TFunction, locale: string, preview: ComputePreview): { days: string[]; amounts: string[] } {
+  const calc = preview.stored.last_calculation;
+  const storedDays = calc?.kind === 'computed' ? calc.day_counts : null;
+  const month = (m: number) => capitalize(monthName(locale, m), locale);
+  const days = storedDays && preview.day_counts
+    ? preview.calendar_changed_months.map((m) => t('budgetTab.compute.dayChange', {
+      count: Number(storedDays[m - 1]),
+      month: month(m),
+      before: formatDecimal(storedDays[m - 1]),
+      after: formatDecimal(preview.day_counts![m - 1]),
+    }))
+    : [];
+  const amounts = preview.changed_months.map((m) => t('budgetTab.compute.amountChange', {
+    month: month(m),
+    before: formatMoney(preview.stored.month_amounts[m - 1] ?? '0'),
+    after: formatMoney(preview.month_amounts[m - 1] ?? '0'),
+  }));
+  return { days, amounts };
 }
 
 /** "A", "A and B", "A, B and C" in the viewer's language. */

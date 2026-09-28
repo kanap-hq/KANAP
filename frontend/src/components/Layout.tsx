@@ -31,6 +31,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import LocationCityIcon from '@mui/icons-material/LocationCity';
 import InboxIcon from '@mui/icons-material/Inbox';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import DateRangeIcon from '@mui/icons-material/DateRange';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import HistoryIcon from '@mui/icons-material/History';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -151,6 +152,7 @@ export default function Layout() {
     { divider: t('nav:sidebar.masterData.sections.finance') },
     { to: '/master-data/coa', label: t('nav:sidebar.masterData.chartsOfAccounts'), icon: <StorageIcon />, resource: 'accounts' },
     { to: '/master-data/currency', label: t('nav:sidebar.masterData.currency'), icon: <AttachMoneyIcon />, resource: 'settings' },
+    { to: '/master-data/working-day-calendars', label: t('nav:sidebar.masterData.workingDayCalendars'), icon: <DateRangeIcon />, resource: 'working_day_profiles' },
     { divider: t('nav:sidebar.masterData.sections.classification') },
     { to: '/master-data/business-processes', label: t('nav:sidebar.masterData.businessProcesses'), icon: <WorkOutlineIcon />, resource: 'business_processes' },
     { to: '/master-data/analytics', label: t('nav:sidebar.masterData.analyticsDimensions'), icon: <InsightsIcon />, resource: 'analytics' },

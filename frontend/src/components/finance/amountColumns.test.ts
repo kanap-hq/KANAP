@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { ReactElement } from 'react';
+import { render } from '@testing-library/react';
 import type { TFunction } from 'i18next';
 import {
   AMOUNT_COLUMNS,
@@ -6,13 +8,17 @@ import {
   explicitSort,
   amountColumnYear,
   buildAmountColumnDefs,
+  buildFteColumnDefs,
   dimensionFieldPredicate,
+  fteFieldKey,
+  fteTotalsToRow,
   filtersOnShownColumns,
   filtersStringOnShownColumns,
   settleListSearch,
   slotAmount,
   sortOnShownColumn,
   totalsToVersions,
+  visibleFteFields,
 } from './amountColumns';
 import { resolveBudgetColumns } from '../../hooks/useBudgetColumns';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
@@ -193,5 +199,129 @@ describe('saved sorts and filters on dimension columns', () => {
     const model = { [`analytics_${OLD}`]: { filterType: 'set', values: ['Hardware'] } };
     expect(filtersOnShownColumns(model, shown)).toBe(model);
     expect(explicitSort(`analytics_${OLD}:ASC`, shown, 'yBudget:DESC')).toBe(`analytics_${OLD}:ASC`);
+  });
+});
+
+describe('buildFteColumnDefs', () => {
+  const buildFte = (over: Partial<BudgetColumnsSettings> = {}) =>
+    buildFteColumnDefs({ t, currentYear: Y, locale: 'en', cellRenderer: () => undefined, columns: columnsOf(over) });
+
+  it('offers the FTE of every shown column of every list year, in the amount columns order, all hidden by default', () => {
+    const amounts = build().map((d) => d.colId);
+    const fte = buildFte();
+    expect(fte.map((d) => d.colId)).toEqual(amounts.map((id) => `fte_${id}`));
+    expect(fte).toHaveLength(16);
+    expect(fte.every((d) => d.defaultHidden)).toBe(true);
+    expect(fteFieldKey('yPlus1', AMOUNT_COLUMNS[1])).toBe(`fte_${amountFieldKey('yPlus1', AMOUNT_COLUMNS[1])}`);
+    // A column the tenant hides has no FTE column either.
+    const onlyFirst = buildFte({ enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, committed: false, actual: false, expected_landing: false } });
+    expect(onlyFirst.map((d) => d.colId)).toEqual(
+      ['yMinus1', 'y', 'yPlus1', 'yPlus2'].map((slot) => fteFieldKey(slot, AMOUNT_COLUMNS[0])),
+    );
+  });
+
+  it('names the headers with the tenant names and the year', () => {
+    const named = buildFte({ labels: { ...DEFAULT_BUDGET_COLUMNS.labels, planned: 'A0' } });
+    const header = named.find((d) => d.colId === fteFieldKey('yPlus1', AMOUNT_COLUMNS[0]))?.headerName;
+    expect(header).toBe('ops:shared.fteColumnHeader|A0');
+  });
+
+  it('filters with number models, blank meaning unknown', () => {
+    for (const d of buildFte()) {
+      expect(d.filter).toBe('agNumberColumnFilter');
+      expect(d.floatingFilterComponent).toBe('agNumberColumnFloatingFilter');
+      expect(d.filterParams).toMatchObject({ maxNumConditions: 1, defaultOption: 'greaterThanOrEqual' });
+      expect(d.filterParams.filterOptions).toEqual(expect.arrayContaining(['blank', 'notBlank', 'equals', 'inRange']));
+    }
+  });
+
+  it('reads the line FTE, blank when unknown, two decimals', () => {
+    const key = fteFieldKey('y', AMOUNT_COLUMNS[0]);
+    const def = buildFte().find((d) => d.colId === key)!;
+    const getter = def.valueGetter as (p: unknown) => number | null;
+    const format = def.valueFormatter as (p: unknown) => string;
+    expect(getter({ data: { [key]: 0.75 } })).toBe(0.75);
+    expect(getter({ data: { [key]: 0 } })).toBe(0);
+    expect(getter({ data: { [key]: null } })).toBeNull();
+    expect(getter({ data: {} })).toBeNull();
+    expect(format({ value: 0.75 })).toBe('0.75');
+    expect(format({ value: 0 })).toBe('0.00');
+    expect(format({ value: null })).toBe('');
+  });
+
+  it('shows the sum in the totals row and the unknown lines in its tooltip', () => {
+    const key = fteFieldKey('y', AMOUNT_COLUMNS[0]);
+    const known = fteFieldKey('y', AMOUNT_COLUMNS[4]);
+    const row = fteTotalsToRow({ [key]: { total: 12.5, unknown: 3 }, [known]: { total: 2, unknown: 0 }, other: { total: 9 } });
+    expect(row[key]).toBe(12.5);
+    expect(row[known]).toBe(2);
+    expect(row.other).toBeUndefined();
+    const defs = buildFte();
+    const tooltip = (id: string, pinned: boolean) =>
+      (defs.find((d) => d.colId === id)!.tooltipValueGetter as (p: unknown) => string | undefined)({ data: row, node: { rowPinned: pinned ? 'bottom' : undefined } });
+    expect(tooltip(key, true)).toBe('ops:shared.fteUnknownLines');
+    expect(tooltip(known, true)).toBeUndefined();
+    // Lines carry no tooltip.
+    expect(tooltip(key, false)).toBeUndefined();
+    expect(fteTotalsToRow(undefined)).toEqual({ fteUnknown: {} });
+  });
+
+  it('shows the unknown lines next to the total without a hover, and a blank total when no line has an FTE', () => {
+    const key = fteFieldKey('y', AMOUNT_COLUMNS[0]);
+    const none = fteFieldKey('y', AMOUNT_COLUMNS[1]);
+    const known = fteFieldKey('y', AMOUNT_COLUMNS[4]);
+    const row = fteTotalsToRow({ [key]: { total: 1.38, unknown: 3 }, [none]: { total: null, unknown: 5 }, [known]: { total: 2, unknown: 0 } });
+    expect(row[none]).toBeNull();
+    const lineCell = () => 'line';
+    const defs = buildFteColumnDefs({ t, currentYear: Y, locale: 'en', cellRenderer: () => lineCell, columns: columnsOf() });
+    const def = (id: string) => defs.find((d) => d.colId === id)!;
+    const shown = (id: string) => {
+      const d = def(id);
+      const value = (d.valueGetter as (p: unknown) => unknown)({ data: row });
+      const valueFormatted = (d.valueFormatter as (p: unknown) => string)({ value });
+      const { component } = (d.cellRendererSelector as (p: unknown) => { component: (p: unknown) => unknown })({ node: { rowPinned: 'bottom' } });
+      const out = component({ data: row, value, valueFormatted });
+      return typeof out === 'string' ? out : render(out as ReactElement).container.textContent;
+    };
+    expect(shown(key)).toBe('1.38 · ops:shared.fteUnknownCount');
+    expect(shown(none)).toBe('ops:shared.fteUnknownCount');
+    expect(shown(known)).toBe('2.00');
+    // Lines keep the list's own cell.
+    expect((def(key).cellRendererSelector as (p: unknown) => { component: unknown })({ node: {} }).component).toBe(lineCell);
+  });
+
+  it('lists the FTE columns the grid shows, in grid order', () => {
+    const state = [
+      { colId: 'product_name', hide: false },
+      { colId: fteFieldKey('yPlus1', AMOUNT_COLUMNS[0]), hide: false },
+      { colId: fteFieldKey('y', AMOUNT_COLUMNS[0]), hide: true },
+      { colId: fteFieldKey('y', AMOUNT_COLUMNS[4]), hide: null },
+      { colId: 'fte_unknown', hide: false },
+    ];
+    expect(visibleFteFields(state)).toEqual([fteFieldKey('yPlus1', AMOUNT_COLUMNS[0]), fteFieldKey('y', AMOUNT_COLUMNS[4])]);
+    expect(visibleFteFields(undefined)).toEqual([]);
+  });
+});
+
+describe('saved sorts and filters on FTE columns', () => {
+  const shown = columnsOf().shown;
+  const hiddenColumn = AMOUNT_COLUMNS[2];
+  const hiddenFte = fteFieldKey('yPlus1', hiddenColumn);
+  const shownFte = fteFieldKey('y', AMOUNT_COLUMNS[1]);
+
+  it('maps an FTE column to its calendar year', () => {
+    expect(amountColumnYear(fteFieldKey('yPlus1', AMOUNT_COLUMNS[0]), Y)).toBe(2027);
+    expect(amountColumnYear(fteFieldKey('yMinus1', AMOUNT_COLUMNS[4]), Y)).toBe(2025);
+    expect(amountColumnYear('fte_unknown', Y)).toBeNull();
+  });
+
+  it('falls back like the amounts when the FTE column belongs to a column that is not shown', () => {
+    expect(sortOnShownColumn(`${hiddenFte}:ASC`, shown, 'yBudget:DESC')).toBe('yBudget:DESC');
+    expect(sortOnShownColumn(`${shownFte}:ASC`, shown, 'yBudget:DESC')).toBe(`${shownFte}:ASC`);
+    const model = { [hiddenFte]: { type: 'blank' }, [shownFte]: { type: 'greaterThan', filter: 0.5 } };
+    expect(filtersOnShownColumns(model, shown)).toEqual({ [shownFte]: model[shownFte] });
+    const settled = new URLSearchParams(settleListSearch('', { sort: `${hiddenFte}:DESC`, filters: JSON.stringify(model) }, shown, 'yBudget:DESC'));
+    expect(settled.get('sort')).toBeNull();
+    expect(JSON.parse(settled.get('filters') ?? '{}')).toEqual({ [shownFte]: model[shownFte] });
   });
 });

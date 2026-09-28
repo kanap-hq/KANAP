@@ -44,6 +44,7 @@ function useBreadcrumbs(): Crumb[] {
       'companies': 'companies',
       'departments': 'departments',
       'cost-centers': 'costCenters',
+      'working-day-calendars': 'workingDayCalendars',
       'suppliers': 'suppliers',
       'accounts': 'accounts',
       'coa': 'coa',

@@ -15,6 +15,8 @@
       "coaDescription": "Gestione los planes de cuentas y las cuentas",
       "currencyTitle": "Moneda",
       "currencyDescription": "Configure las monedas de reporte y por defecto",
+      "workingDayCalendarsTitle": "Calendarios laborales",
+      "workingDayCalendarsDescription": "Defina los días laborables de cada mes para las líneas con precio por día",
       "businessProcessesTitle": "Procesos de negocio",
       "businessProcessesDescription": "Gestione los procesos de negocio de tipo ISO 9001",
       "analyticsDimensionsTitle": "Dimensiones analíticas",
@@ -222,6 +224,75 @@
       "nameRequired": "Introduzca un nombre.",
       "companyRequired": "Elija una empresa.",
       "chooseCompany": "Elija la empresa para convertir este grupo en un centro de coste."
+    }
+  },
+  "workingDayCalendars": {
+    "title": "Calendarios laborales",
+    "newCalendar": "Nuevo calendario",
+    "fallback": "Calendario",
+    "emptyExplainer": "Un calendario indica los días laborables de cada mes, para las líneas con precio por día. Cree uno o importe un archivo.",
+    "export": "Exportar calendarios",
+    "import": "Importar calendarios",
+    "previous": "Calendario anterior",
+    "next": "Calendario siguiente",
+    "createHint": "Una vez creado el calendario, introduzca los días laborables de cada año.",
+    "columns": {
+      "code": "Código",
+      "name": "Nombre",
+      "years": "Años",
+      "status": "Estado",
+      "updated": "Actualizado"
+    },
+    "fields": {
+      "code": "Código",
+      "name": "Nombre",
+      "description": "Descripción",
+      "lifecycle": "Ciclo de vida"
+    },
+    "hints": {
+      "code": "Un código corto que su equipo reconoce. Los archivos de importación lo usan para encontrar el calendario."
+    },
+    "placeholders": {
+      "code": "p. ej., CAL-01",
+      "name": "p. ej., Personal de la sede",
+      "description": "p. ej., Días laborables del personal asalariado, sin festivos",
+      "days": "p. ej., 20"
+    },
+    "usage": {
+      "opex_one": "{{count}} línea OPEX",
+      "opex_other": "{{count}} líneas OPEX",
+      "capex_one": "{{count}} línea CAPEX",
+      "capex_other": "{{count}} líneas CAPEX",
+      "one": "Usado por {{lines}}.",
+      "both": "Usado por {{opex}} y {{capex}}."
+    },
+    "deleteBlocked": "{{usage}} Desactívelo en su lugar.",
+    "days": {
+      "title": "Días laborables",
+      "hint": "Los días laborables de cada mes. Un precio por día se multiplica por ellos.",
+      "monthField": "{{month}} {{year}}",
+      "total_one": "{{total}} día en {{year}}",
+      "total_other": "{{total}} días en {{year}}",
+      "copyFrom": "Copiar de {{year}}",
+      "removeYear": "Quitar {{year}}",
+      "removeDialog": {
+        "title": "¿Quitar los días laborables de {{year}}?",
+        "body": "{{usage}} Sus importes y explicaciones se mantienen. Hasta que se vuelvan a introducir los días de {{year}}, ninguna de estas líneas podrá recalcularse para {{year}} y el archivo de filas presupuestarias no podrá calcularlas.",
+        "confirm": "Quitar de todos modos"
+      },
+      "fillToSave": "Complete los doce meses para guardar {{year}}.",
+      "incomplete": "Introduzca los días laborables de los doce meses de {{year}}.",
+      "tooMany": "{{month}} de {{year}} tiene {{max}} días: introduzca {{max}} o menos.",
+      "negative": "Introduzca 0 días o más para {{month}} de {{year}}.",
+      "decimals": "Use 6 decimales como máximo."
+    },
+    "messages": {
+      "loadFailed": "Error al cargar el calendario.",
+      "saveFailed": "Error al guardar el calendario.",
+      "createFailed": "Error al crear el calendario.",
+      "deleteFailed": "Error al eliminar el calendario.",
+      "codeRequired": "Introduzca un código.",
+      "nameRequired": "Introduzca un nombre."
     }
   },
   "suppliers": {

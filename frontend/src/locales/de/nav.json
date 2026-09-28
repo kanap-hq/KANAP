@@ -47,6 +47,7 @@
       "contacts": "Kontakte",
       "chartsOfAccounts": "Kontenpläne",
       "currency": "Währung",
+      "workingDayCalendars": "Arbeitstagekalender",
       "businessProcesses": "Geschäftsprozesse",
       "analyticsDimensions": "Analysedimensionen",
       "administration": "Administration"
@@ -127,6 +128,7 @@
     "companies": "Unternehmen",
     "departments": "Abteilungen",
     "costCenters": "Kostenstellen",
+    "workingDayCalendars": "Arbeitstagekalender",
     "suppliers": "Lieferanten",
     "accounts": "Konten",
     "coa": "Kontenpläne",

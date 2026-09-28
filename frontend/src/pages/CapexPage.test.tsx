@@ -90,12 +90,17 @@ type Col = {
   headerName?: string;
   valueGetter?: (p: unknown) => unknown;
   valueFormatter?: (p: unknown) => unknown;
+  tooltipValueGetter?: (p: unknown) => unknown;
   cellRenderer?: (p: unknown) => React.ReactElement;
+  cellRendererSelector?: (p: unknown) => { component: unknown };
 };
 type GridProps = {
   columns: Col[];
-  pinnedBottomRowData: Array<{ versions?: Record<string, { totals?: Record<string, number> }> }>;
+  pinnedBottomRowData: Array<{ versions?: Record<string, { totals?: Record<string, number> }> } & Record<string, unknown>>;
   defaultSort: { field: string; direction: string };
+  onQueryStateChange: (state: { sort: string; filterModel: Record<string, unknown>; q: string; statusScope: string }) => void;
+  onGridApiReady: (api: unknown) => void;
+  onColumnStateChange: (state: Array<{ colId: string; hide?: boolean }>) => void;
 };
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
@@ -138,8 +143,9 @@ describe('CapexPage', () => {
   it('offers every shown column of every list year, filtered with number models', async () => {
     await renderPage();
     const amounts = lastProps().columns.filter((c) => c.filter === 'agNumberColumnFilter');
-    // Forecast is hidden by default: not in the chooser, sort or filters.
-    expect(amounts).toHaveLength(16);
+    // Forecast is hidden by default: not in the chooser, sort or filters. Sixteen amounts, sixteen FTE.
+    expect(amounts).toHaveLength(32);
+    expect(column('fte_yPlus2Forecast')).toBeUndefined();
     expect(amounts.filter((c) => !c.defaultHidden).map((c) => c.colId)).toEqual(['yBudget', 'yLanding']);
     expect(column('yPlus2Forecast')).toBeUndefined();
     expect(column('yMinus1Revision')).toBeDefined();
@@ -152,8 +158,9 @@ describe('CapexPage', () => {
       labels: { ...DEFAULT_BUDGET_COLUMNS.labels, forecast: 'A2' },
     };
     await renderPage();
-    expect(lastProps().columns.filter((c) => c.filter === 'agNumberColumnFilter')).toHaveLength(20);
+    expect(lastProps().columns.filter((c) => c.filter === 'agNumberColumnFilter')).toHaveLength(40);
     expect(column('yPlus2Forecast')?.headerName).toBe('ops:shared.amountColumnHeader');
+    expect(column('fte_yPlus2Forecast')?.headerName).toBe('ops:shared.fteColumnHeader');
   });
 
   it('sorts by the default column of Y by default', async () => {
@@ -233,6 +240,45 @@ describe('CapexPage', () => {
     expect(hrefOf('contract_name', row)).toBe('/ops/contracts/k-1/overview');
     const Y = new Date().getFullYear();
     expect(hrefOf('yPlus1Revision', row)).toMatch(new RegExp(`^/ops/capex/CPX-7/budget\\?.*year=${Y + 1}`));
+  });
+
+  it('offers the FTE of every shown column, hidden by default, right after the amount columns', async () => {
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field ?? '');
+    const amounts = ids.filter((id) => /^y(Minus1|Plus1|Plus2)?[A-Z]/.test(id));
+    const fte = ids.filter((id) => id.startsWith('fte_'));
+    expect(fte).toEqual(amounts.map((id) => `fte_${id}`));
+    expect(ids.indexOf(fte[0])).toBe(ids.indexOf(amounts[amounts.length - 1]) + 1);
+    for (const id of fte) expect(column(id)).toMatchObject({ defaultHidden: true, filter: 'agNumberColumnFilter' });
+    const Y = new Date().getFullYear();
+    const data = { id: 'c-1', item_number: 7 };
+    const el = (column('fte_yMinus1Budget')!.cellRendererSelector!({ node: {} }).component as (p: unknown) => React.ReactElement)({ data, value: null, colDef: {} });
+    expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(new RegExp(`^/ops/capex/CPX-7/budget\\?.*year=${Y - 1}`));
+  });
+
+  it('asks the totals for the FTE columns shown only, and shows their sums in the footer', async () => {
+    get.mockImplementation(async (_url: string, config?: { params?: { fte?: string } }) => {
+      const fte = config?.params?.fte
+        ? Object.fromEntries(config.params.fte.split(',').map((key) => [key, { total: 2, unknown: 1 }]))
+        : undefined;
+      return { data: { yBudget: 10, reportingCurrency: 'X', ...(fte ? { fte } : {}) } };
+    });
+    await renderPage();
+    const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals');
+    for (const [, config] of totalsCalls()) expect(config.params.fte).toBeUndefined();
+
+    act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'fte_yLanding', hide: false }] }));
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yLanding).toBe(2));
+    expect(totalsCalls().slice(-1)[0][1].params.fte).toBe('fte_yLanding');
+    const pinned = lastProps().pinnedBottomRowData[0];
+    expect(column('fte_yLanding')!.tooltipValueGetter!({ data: pinned, node: { rowPinned: 'bottom' } })).toBe('ops:shared.fteUnknownLines');
+
+    const count = totalsCalls().length;
+    act(() => lastProps().onColumnStateChange([{ colId: 'fte_yLanding', hide: true }]));
+    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
+    expect(totalsCalls().slice(-1)[0][1].params.fte).toBeUndefined();
+    await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yLanding).toBeUndefined());
   });
 
   it('fills the footer from the totals keys of the same name', async () => {

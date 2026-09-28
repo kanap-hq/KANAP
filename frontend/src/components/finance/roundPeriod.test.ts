@@ -3,13 +3,19 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import enOps from '../../locales/en/ops.json';
 import frOps from '../../locales/fr/ops.json';
 import {
+  ComputePreview,
   RoundInput,
   activeMonths,
   centsToDecimal,
   chipText,
   columnLabel,
   columnPeriod,
+  computeChangeLines,
+  computeLineText,
+  formatMoney,
   formatUplift,
+  hasRecipe,
+  recipeText,
   joinList,
   periodForEdit,
   periodProblem,
@@ -41,6 +47,14 @@ const record = (over: Partial<RoundInput>): RoundInput => ({
   last_calculation: null,
   updated_at: '2026-09-26T10:00:00Z',
   updated_by: null,
+  pricing_basis: null,
+  quantity: null,
+  unit_price: null,
+  price_index_pct: null,
+  working_day_profile_id: null,
+  working_day_profile_code: null,
+  working_day_profile_name: null,
+  counts_as_fte: false,
   ...over,
 });
 
@@ -205,3 +219,93 @@ describe('amount helpers', () => {
   });
 });
 
+
+const SFR_DAYS = ['18', '18', '20', '20', '15', '20', '15', '16', '20', '19', '18', '19'];
+const SFR_MONTHS = ['0.00', '7200.00', '8000.00', '8000.00', '6000.00', '8000.00', '6000.00', '6400.00', '8000.00', '7600.00', '0.00', '0.00'];
+const FEB_TO_OCT = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const perDay = (over: Partial<RoundInput> = {}) => record({
+  method: 'computed',
+  pricing_basis: 'per_day',
+  quantity: '1',
+  unit_price: '400',
+  price_index_pct: '0',
+  working_day_profile_id: 'cal-1',
+  working_day_profile_code: 'FR218',
+  working_day_profile_name: 'France 218',
+  counts_as_fte: true,
+  ...over,
+});
+
+const preview = (over: Partial<ComputePreview> = {}): ComputePreview => ({
+  active_months: FEB_TO_OCT,
+  day_counts: SFR_DAYS,
+  total_days: '163',
+  month_amounts: SFR_MONTHS,
+  total: '65200.00',
+  fte: '0.75',
+  calendar: { id: 'cal-1', code: 'FR218', name: 'France 218', disabled: false },
+  stored: { month_amounts: Array.from({ length: 12 }, () => '0.00'), method: null, last_calculation: null },
+  changed_months: FEB_TO_OCT,
+  calendar_changed_months: [],
+  warnings: [],
+  ...over,
+});
+
+describe('computed columns', () => {
+  it('names the basis in the chip', () => {
+    expect(chipText(en(), 'en', perDay())).toBe('Computed per day, France 218');
+    expect(chipText(en(), 'en', perDay({ pricing_basis: 'per_month', working_day_profile_name: null }))).toBe('Computed per month');
+    expect(chipText(en(), 'en', perDay({ pricing_basis: 'per_period', working_day_profile_name: null }))).toBe('Computed for the whole period');
+    expect(chipText(fr(), 'fr', perDay())).toBe('Calculé par jour, France 218');
+    // A hand edit keeps the recipe but says so.
+    expect(chipText(en(), 'en', perDay({ method: 'manual' }))).toBe('Edited by hand');
+  });
+
+  it('writes the recipe for the tooltip, only when there is one', () => {
+    expect(hasRecipe(record({}))).toBe(false);
+    expect(recipeText(en(), 'en', record({}))).toBe('');
+    expect(recipeText(en(), 'en', perDay())).toBe('Per day · Quantity 1 · Unit price 400 · Calendar France 218 · Counts as FTE');
+    expect(recipeText(en(), 'en', perDay({
+      method: 'spread', pricing_basis: 'per_month', quantity: '10', unit_price: '199.5', price_index_pct: '2',
+      working_day_profile_id: null, working_day_profile_name: null, counts_as_fte: false,
+    }))).toBe('Per month · Quantity 10 · Unit price 199.5 · Price index +2%');
+  });
+
+  it('writes the live line from the server figures', () => {
+    expect(computeLineText(en(), 'en', preview())).toBe('9 months · 163 days · 65 200 · 0.75 FTE');
+    expect(computeLineText(fr(), 'fr', preview())).toBe('9 mois · 163 jours · 65 200 · 0.75 ETP');
+    // No days without a calendar, no FTE when the quantity is not people, cents when there are some.
+    expect(computeLineText(en(), 'en', preview({
+      active_months: [1], day_counts: null, total_days: null, total: '2000.5', fte: null,
+    }))).toBe('1 month · 2 000.50');
+    expect(computeLineText(en(), 'en', preview({ total_days: '171.75' }))).toBe('9 months · 171.75 days · 65 200 · 0.75 FTE');
+  });
+
+  it('lists the calendar days and the amounts a recompute changes', () => {
+    const days = [...SFR_DAYS]; days[2] = '19';
+    const months = [...SFR_MONTHS]; months[2] = '7600.00';
+    const stored = {
+      kind: 'computed' as const, pricing_basis: 'per_day' as const, quantity: '1', unit_price: '400', price_index_pct: '0',
+      working_day_profile_code: 'FR218', working_day_profile_name: 'France 218', active_months: FEB_TO_OCT,
+      day_counts: SFR_DAYS, total_days: '163', month_amounts: SFR_MONTHS, total: '65200.00', counts_as_fte: true,
+    };
+    const lines = computeChangeLines(en(), 'en', preview({
+      day_counts: days, month_amounts: months,
+      stored: { month_amounts: SFR_MONTHS, method: 'computed', last_calculation: stored },
+      changed_months: [3], calendar_changed_months: [3],
+    }));
+    expect(lines).toEqual({ days: ['March: 20 days, now 19'], amounts: ['March: 8 000, now 7 600'] });
+    // A round that was not computed has no day counts to compare.
+    expect(computeChangeLines(en(), 'en', preview({ changed_months: [], calendar_changed_months: [3] }))).toEqual({ days: [], amounts: [] });
+  });
+
+  it('formats money strings without a float', () => {
+    expect(formatMoney('65200.00')).toBe('65 200');
+    expect(formatMoney('91599.96')).toBe('91 599.96');
+    expect(formatMoney('-1234.5')).toBe('-1 234.50');
+    expect(formatMoney('123456789012345678.01')).toBe('123 456 789 012 345 678.01');
+    expect(formatMoney('0.00')).toBe('0');
+    expect(formatMoney('-0.00')).toBe('0');
+  });
+});
