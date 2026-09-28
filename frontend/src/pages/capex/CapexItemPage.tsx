@@ -684,7 +684,6 @@ export default function CapexItemPage() {
             onCostCenterChange={(v) => void patchNow({ cost_center_id: v })}
             onRunBuildChange={(v) => void patchNow({ run_build: v })}
             onEffectiveStartChange={(v) => void patchNow({ effective_start: v })}
-            onStatusChange={handleStatusChange}
             onDisabledAtChange={handleDisabledAtChange}
           />
         )}

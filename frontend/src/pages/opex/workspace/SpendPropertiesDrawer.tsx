@@ -48,7 +48,6 @@ type Props = {
   onCostCenterChange: (next: string) => void;
   onRunBuildChange: (next: RunBuild | '') => void;
   onEffectiveStartChange: (next: string) => void;
-  onStatusChange?: (next: StatusValue) => void;
   onDisabledAtChange?: (next: string | null) => void;
   onOwnerItChange?: (next: string) => void;
   onOwnerBusinessChange?: (next: string) => void;
@@ -86,7 +85,6 @@ export default function SpendPropertiesDrawer({
   onCostCenterChange,
   onRunBuildChange,
   onEffectiveStartChange,
-  onStatusChange,
   onDisabledAtChange,
   onOwnerItChange,
   onOwnerBusinessChange,
@@ -247,13 +245,14 @@ export default function SpendPropertiesDrawer({
         </PropertyGroup>
       )}
 
-      {mode === 'edit' && onStatusChange && onDisabledAtChange && (
+      {mode === 'edit' && onDisabledAtChange && (
         <PropertyGroup>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: '5px' }}>
             <Typography sx={{ fontSize: 12, lineHeight: 1.3, color: 'kanap.text.tertiary' }}>{t('opex.fields.lifecycle')}</Typography>
             <StatusLifecycleField
               status={status}
-              onStatusChange={onStatusChange}
+              // The date handler derives and saves the status; a second write here would race it.
+              onStatusChange={() => undefined}
               disabledAt={disabledAt}
               onDisabledAtChange={onDisabledAtChange}
               disabled={disabled}

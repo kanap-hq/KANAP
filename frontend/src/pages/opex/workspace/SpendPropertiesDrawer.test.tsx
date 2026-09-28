@@ -138,10 +138,28 @@ describe('SpendPropertiesDrawer end of validity', () => {
   });
 
   it('keeps the end of validity inside the lifecycle group when editing', () => {
-    renderDrawer({ mode: 'edit', disabledAt: null, onDisabledAtChange: noop, onStatusChange: noop });
+    renderDrawer({ mode: 'edit', disabledAt: null, onDisabledAtChange: noop });
 
     expect(screen.getAllByText('opex.fields.endOfValidity')).toHaveLength(1);
     expect(screen.queryByText('opex.fields.effectiveEnd')).toBeNull();
+  });
+
+  // Regression: the page saves the date and its derived status in one write. A second, status-only
+  // write from the same pick raced it and could clear the date just picked.
+  it('reports a picked end date once when editing, and no status change beside it', () => {
+    const onDisabledAtChange = vi.fn();
+    const onStatusChange = vi.fn();
+    // A caller still wiring a status handler must not get a second write from the same pick.
+    const legacy = { onStatusChange } as Partial<React.ComponentProps<typeof SpendPropertiesDrawer>>;
+    renderDrawer({ mode: 'edit', status: 'enabled', disabledAt: null, onDisabledAtChange, ...legacy });
+
+    // The calendar's native input inside the lifecycle group (the dates group has its own).
+    const lifecycle = screen.getByText('opex.fields.lifecycle').parentElement as HTMLElement;
+    const nativeDate = lifecycle.querySelector('input[type="date"]') as HTMLInputElement;
+    fireEvent.change(nativeDate, { target: { value: '2099-12-31' } });
+
+    expect(onDisabledAtChange.mock.calls).toEqual([[new Date(2099, 11, 31, 23, 59, 0, 0).toISOString()]]);
+    expect(onStatusChange).not.toHaveBeenCalled();
   });
 });
 
