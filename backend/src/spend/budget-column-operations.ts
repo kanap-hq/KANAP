@@ -24,7 +24,7 @@ import {
   RoundInput,
   RoundInputsContext,
   roundRecipe,
-  saveRoundInput,
+  upsertRoundInput,
   wholeYear,
 } from './round-inputs.util';
 import { activeMonths } from './spread.util';
@@ -382,9 +382,10 @@ export async function copyBudgetColumn(
     const sourceRecord = records.get(sourceVersion.id)?.find((r) => r.measure === sourceMeasure);
     const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
     const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear);
-    // The source's recipe travels as it is (same calendar, quantity, price and
-    // index: never re-applied); a source without one leaves the destination's.
-    await saveRoundInput(rctx, destinationMeasure, (stored) => ({
+    // A copy replaces the whole destination column, recipe included: the
+    // source's recipe travels as it is (same calendar, quantity, price and
+    // index: never re-applied), and a source without one leaves none.
+    await upsertRoundInput(rctx, destinationMeasure, {
       ...periodWithinValidity(copiedPeriod, item.validity),
       method: 'copied',
       spread_profile_name: sourceRecord?.spread_profile_name ?? null,
@@ -397,8 +398,8 @@ export async function copyBudgetColumn(
         total: centsToDecimal(targetTotal),
         source_method: sourceRecord?.method ?? null,
       },
-      recipe: roundRecipe(sourceRecord) ?? roundRecipe(stored),
-    }));
+      recipe: roundRecipe(sourceRecord),
+    });
 
     await deps.audit.log(
       {

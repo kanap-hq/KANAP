@@ -424,7 +424,7 @@ async function testCopyCarriesTheRecipe(kind: Kind) {
     assert.deepEqual([recomputed[1], recomputed[9]], ['7344.00', '7752.00'], `${kind}: 408 a day over ${YEAR + 1}`);
     assert.equal((await readRecords(runner, kind, destination!.id)).planned.method, 'computed');
 
-    // A source without a recipe leaves the destination's recipe as it is.
+    // A copy replaces the whole destination column: a source without a recipe leaves none.
     await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(1, YEAR), committed: 5 }] }, null, { manager: runner.manager });
     await budgetOperations(kind).copyBudgetColumn(
       { sourceYear: YEAR, sourceColumn: 'revision', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0, overwrite: true, dryRun: false },
@@ -432,7 +432,12 @@ async function testCopyCarriesTheRecipe(kind: Kind) {
       { manager: runner.manager },
     );
     const overwritten = (await readRecords(runner, kind, destination!.id)).planned;
-    assert.deepEqual([overwritten.method, overwritten.last_calculation.source_method, overwritten.pricing_basis], ['copied', 'manual', 'per_day']);
+    assert.deepEqual(
+      [overwritten.method, overwritten.last_calculation.source_method,
+        overwritten.pricing_basis, overwritten.quantity, overwritten.unit_price, overwritten.price_index_pct, overwritten.working_day_profile_id, overwritten.counts_as_fte],
+      ['copied', 'manual', null, null, null, null, null, false],
+      `${kind}: the destination loses its recipe`,
+    );
 
     await budgetOperations(kind).clearBudgetColumn({ year: YEAR + 1, column: 'budget' }, null, { manager: runner.manager });
     assert.equal((await readRecords(runner, kind, destination!.id)).planned, undefined, `${kind}: clear deletes the record and its recipe`);
