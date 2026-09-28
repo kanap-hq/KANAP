@@ -91,7 +91,10 @@ export default function CopyBudgetColumnsPage() {
   const [destinationYear, setDestinationYear] = useState<number>(Y + 1);
   const [pickedDestination, setDestinationColumn] = useState<BudgetColumn | null>(null);
   const destinationColumn = usableColumn(pickedDestination);
-  const [percentageIncrease, setPercentageIncrease] = useState<number>(0);
+  // The field holds its own text, cleaned on blur ("03" -> "3"): React does not
+  // rewrite a number input whose value already matches, so "03" would stay.
+  const [percentageInput, setPercentageInput] = useState('');
+  const percentageIncrease = parseFloat(percentageInput) || 0;
   const [overwrite, setOverwrite] = useState<boolean>(false);
   const [previewData, setPreviewData] = useState<ProcessedRow[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -358,16 +361,22 @@ export default function CopyBudgetColumnsPage() {
           {columnSelect(t('operations.copyBudgetColumns.sourceColumn'), sourceColumn, setSourceColumn)}
           {yearSelect(t('operations.copyBudgetColumns.destinationYear'), destinationYear, setDestinationYear)}
           {columnSelect(t('operations.copyBudgetColumns.destinationColumn'), destinationColumn, setDestinationColumn)}
-          <ReportFilter label={t('operations.copyBudgetColumns.percentageIncrease')} width={200}>
-            <TextField
-              size="small"
-              type="number"
-              value={percentageIncrease}
-              onChange={(e) => setPercentageIncrease(parseFloat(e.target.value) || 0)}
-              inputProps={{ step: 0.1, 'aria-label': t('operations.copyBudgetColumns.percentageIncrease') }}
-              helperText={t('operations.copyBudgetColumns.roundingNote')}
-              sx={reportFilterSelectSx}
-            />
+          <ReportFilter label={t('operations.copyBudgetColumns.percentageIncrease')} width={120}>
+            <Tooltip title={t('operations.copyBudgetColumns.roundingNote')} placement="top">
+              <TextField
+                size="small"
+                type="number"
+                value={percentageInput}
+                placeholder="0"
+                onChange={(e) => setPercentageInput(e.target.value)}
+                onBlur={(e) => {
+                  const parsed = parseFloat(e.target.value);
+                  setPercentageInput(Number.isFinite(parsed) && parsed !== 0 ? String(parsed) : '');
+                }}
+                inputProps={{ step: 0.1, 'aria-label': t('operations.copyBudgetColumns.percentageIncrease') }}
+                sx={reportFilterSelectSx}
+              />
+            </Tooltip>
           </ReportFilter>
           <FormControlLabel
             control={
