@@ -1,6 +1,6 @@
 {
   "files": {
-    "admin.md": "d601a4e845ad33f40ab4dff796a88098",
+    "admin.md": "ae7f2ce75f8decba611930c357a7793f",
     "agents-activity.md": "b34017d2899defb00d1a4b0e4455d75d",
     "agents-approvals.md": "425e35673c172a25dd171a49a91a167c",
     "agents-overview.md": "26607a780b60fc9a1ec39f0444ab6853",
@@ -14,9 +14,9 @@
     "applications.md": "7ce3c64340079438c3a1bdd87f98cce4",
     "assets.md": "8e77fc10282aec40a92cab9dd0f2a1dd",
     "branding.md": "cf408195e3f5ee413f3c86bc9cccbc0e",
-    "budget-operations.md": "77171623af43facc852d36d50e63467e",
+    "budget-operations.md": "afce029a28018fdfde802913e3f08ff1",
     "business-processes.md": "71c2fb579c691c2579975b0b61c5064e",
-    "capex.md": "10df72709ded2d9b61abe5a37b0a378e",
+    "capex.md": "009e08339a0068b068a79164ac5b6024",
     "chart-of-accounts.md": "1435e9d777e3cbb3f98d2097efc770f2",
     "companies.md": "7139c0895ce9901adf9a18fd177e03c4",
     "connection-map.md": "414a6eb72d51725f780134263d775afd",
@@ -31,7 +31,7 @@
     "fast-track/index.md": "fffb386bc0e49a991c10444e214fa264",
     "fast-track/task-types.md": "fe1839b6a2c0419758a7e8c646dc5080",
     "incidents.md": "f24bc0d1e519918ff814802b24176fd9",
-    "index.md": "5721f36062c83b301a78a8537d5b8322",
+    "index.md": "f6ff6d417a0791c8242bad2ab48d0b8a",
     "integrations.md": "d3eae2fff1055b55dc86d3272b7d28ac",
     "interface-map.md": "6caaf67bd4de7106e22bc4ab1f7e0278",
     "interfaces.md": "52ef405ba771e27e5b81f6723090589c",
@@ -49,7 +49,7 @@
     "on-premise/operations.md": "ba26f5c7262aaafedbd764b94d202118",
     "on-premise/sso-entra.md": "3e756086410cd9efc7e78025cfd3d291",
     "operations-dashboard.md": "f2141d4a9c46b90529a5eb9a197ea84e",
-    "opex.md": "e6225f9bb32c740038b55f87303964cb",
+    "opex.md": "e3cc2daa08e8d0975c31ffc2d1c1a684",
     "portfolio-planning.md": "90a8528b994c5c562148b8f069a0701e",
     "portfolio-projects.md": "09edbb86533fddfd3098301db23ced9d",
     "portfolio-reporting.md": "9af8265c555b5dc2cb479cf00591bb90",
@@ -59,12 +59,13 @@
     "reports.md": "f11d046ddd2d4a54fdf7f7450c1eff13",
     "scheduled-tasks.md": "e72da539219d2c403fa7af6b2af003f7",
     "suppliers.md": "314a344bad49914542d63ff860053b3d",
-    "tasks.md": "2c322538f508cec71a27e8861d0d4ad6"
+    "tasks.md": "2c322538f508cec71a27e8861d0d4ad6",
+    "working-day-calendars.md": "314c593c0dac30b30da008a7b72a4846"
   },
   "glossary_hash": "981506c36ae03055093db384b046315e",
   "nav_hashes": {
-    "fr": "1a11c8478a30183342797a1695ea7df0",
-    "de": "809ac29c03121490ee9869889b342955",
-    "es": "3716d5bf68f31f12d6c54ff67f755035"
+    "fr": "0c16f8d8e21d9ee40e2f06d013d312a3",
+    "de": "8de4791f964e1894a714c69c4c9925da",
+    "es": "7d37aea95f04086c110dcb0b595a1c10"
   }
 }

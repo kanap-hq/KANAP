@@ -79,6 +79,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 
 - [Plan de cuentas](chart-of-accounts.md) - Configuración de cuentas contables
 - [Monedas](currencies.md) - Configuración de divisas
+- [Calendarios laborales](working-day-calendars.md) - Defina los días laborables de cada mes para las líneas con precio por día
 
 **Clasificación**
 

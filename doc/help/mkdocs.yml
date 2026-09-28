@@ -136,6 +136,7 @@ plugins:
             Finance: Finance
             Chart of Accounts: Plans comptables
             Currencies: Devise
+            Working-day calendars: Calendriers de jours ouvrés
             Classification: Classification
             Business Processes: Processus métier
             Analytics dimensions: Dimensions analytiques
@@ -212,6 +213,7 @@ plugins:
             Finance: Finanzen
             Chart of Accounts: Kontenpläne
             Currencies: Währung
+            Working-day calendars: Arbeitstagekalender
             Classification: Klassifizierung
             Business Processes: Geschäftsprozesse
             Analytics dimensions: Analysedimensionen
@@ -288,6 +290,7 @@ plugins:
             Finance: Finanzas
             Chart of Accounts: Planes de cuentas
             Currencies: Moneda
+            Working-day calendars: Calendarios laborales
             Classification: Clasificación
             Business Processes: Procesos de negocio
             Analytics dimensions: Dimensiones analíticas
@@ -371,6 +374,7 @@ nav:
     - Finance:
       - Chart of Accounts: chart-of-accounts.md
       - Currencies: currencies.md
+      - Working-day calendars: working-day-calendars.md
     - Classification:
       - Business Processes: business-processes.md
       - Analytics dimensions: analytics.md

@@ -259,6 +259,7 @@ Los recursos están organizados en grupos para facilitar la gestión:
 | `companies` | Datos maestros de empresas |
 | `departments` | Datos maestros de departamentos |
 | `cost_centers` | Centros de coste y sus grupos |
+| `working_day_profiles` | Calendarios laborales, para las líneas con precio por día |
 | `suppliers` | Datos maestros de proveedores |
 | `contacts` | Directorio de contactos |
 | `accounts` | Plan de cuentas |

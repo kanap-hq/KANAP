@@ -88,6 +88,7 @@ Ces colonnes sont masquées par défaut. Affichez-les depuis le sélecteur de co
 | Colonne | Ce qu'elle affiche |
 |---|---|
 | **Colonnes de montants** | Chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation. L'en-tête indique la colonne, l'année par rapport à aujourd'hui et l'année civile, par exemple **Révision A+1 (2027)**. Les montants sont dans la devise de reporting. Les colonnes masquées ne sont pas proposées |
+| **Colonnes ETP** | L'ETP de chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation, juste après les colonnes de montants dans le sélecteur de colonnes. L'en-tête indique la colonne et l'année civile, par exemple **ETP Budget (2026)**. Une ligne a un ETP lorsque la colonne a été calculée à partir de la quantité et du prix. Voir [ETP](#etp). La cellule est vide lorsque l'ETP est inconnu |
 | **Devise** | Code de devise du poste |
 | **Début effectif** | Date de début |
 | **Fin de validité** | Date à laquelle le poste s'arrête (vide signifie sans fin) |
@@ -111,24 +112,28 @@ Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **
 
 Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants.
 
+Chaque colonne ETP a un filtre numérique avec les mêmes conditions, plus vide et non vide. **Vide** garde les lignes dont l'ETP est inconnu.
+
 **Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide.
 
 Les colonnes texte utilisent des filtres texte. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `CPX-12`.
 
 ### Tri
 
-Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant. Le tri par défaut suit la colonne par défaut de l'année en cours, du plus élevé au plus faible (**Budget A** avec les réglages standard). **Préc.** et **Suiv.** dans l'espace de travail suivent le même ordre. La liste mémorise votre dernier tri quand vous revenez.
+Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant et chaque colonne ETP. Les lignes dont l'ETP est inconnu viennent en dernier dans l'ordre croissant. Le tri par défaut suit la colonne par défaut de l'année en cours, du plus élevé au plus faible (**Budget A** avec les réglages standard). **Préc.** et **Suiv.** dans l'espace de travail suivent le même ordre. La liste mémorise votre dernier tri quand vous revenez.
 
 ### Ligne de totaux
 
 La ligne épinglée en bas affiche le total de chaque colonne de montant. Les totaux respectent vos filtres et recherche actuels. Tous les montants sont convertis dans votre devise de reporting, affichée dans le titre de la page.
+
+Chaque colonne ETP affichée montre la somme des ETP des lignes. Lorsque certaines lignes n'ont pas d'ETP, leur nombre suit le total, par exemple « 3.50 · 12 inconnues ». Survolez-le pour lire la phrase complète : « Inconnu pour 12 lignes ». Lorsqu'aucune ligne n'a d'ETP, le total est vide et seul le nombre s'affiche.
 
 ### Liens profonds
 
 Cliquez sur n'importe quelle cellule d'une ligne pour ouvrir l'espace de travail sur l'onglet le plus pertinent pour cette colonne :
 
 - **Description**, **Fournisseur**, **Société payeuse**, **Type d'immobilisation**, **Type d'investissement**, **Priorité** et les autres colonnes générales : Ouvre la **Vue d'ensemble**
-- **Colonnes de montants** (Budget A, Atterrissage prévu A, Révision A+1, etc.) : Ouvre l'onglet **Budget** sur l'année de la colonne
+- **Colonnes de montants** (Budget A, Atterrissage prévu A, Révision A+1, etc.) et **Colonnes ETP** : Ouvre l'onglet **Budget** sur l'année de la colonne
 - **Ventilation** : Ouvre l'onglet **Ventilations** pour l'année en cours
 - **Tâche** : Ouvre l'onglet **Vue d'ensemble**, où se trouve le panneau des tâches
 - **Contrat** : Ouvre directement le contrat lié
@@ -244,6 +249,7 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 
 - **Annuel** : Saisissez un total par colonne. Le total est réparti uniformément sur les mois de la période de la colonne, et les mois hors de cette période sont mis à zéro. La période s'affiche sous chaque total avant la saisie, par exemple « 9 mois, avril à décembre ». Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
 - Cliquez sur l'icône crayon à côté de la période sous un total (**Modifier la période**) pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates du poste ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates du poste. » Cliquez sur l'icône crayon à côté (**Choisir la période**) pour la définir vous-même.
+- Cliquez sur l'icône calculatrice à côté du crayon (**Calculer à partir de la quantité et du prix**) pour ouvrir le même encadré sur le calcul de cette colonne. Voir [Calculer à partir de la quantité et du prix](#calculer-a-partir-de-la-quantite-et-du-prix).
 - **Mensuel** : Saisissez les montants par mois (Jan à Déc) pour chaque colonne affichée, pour un suivi fin des dépenses projet. Des sous-totaux par trimestre et un total annuel sont affichés. Seuls les mois que vous modifiez sont enregistrés.
 - Les deux onglets montrent les mêmes colonnes : Prévision apparaît aussi dans **Annuel** quand elle est affichée.
 - Passez d'un mode à l'autre avec les onglets **Annuel** et **Mensuel**
@@ -257,6 +263,7 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 
 **Répartir un montant** :
 
+- L'encadré du panneau a deux onglets : **Répartir un montant** et **Calculer à partir de la quantité et du prix**. Cette partie couvre le premier
 - Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis l'icône crayon sous un total
 - Choisissez une **Colonne** parmi les colonnes affichées, vérifiez le **Montant**, choisissez une **Répartition** (**Linéaire** ou **4-4-5**), puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne, et la répartition de celle de la colonne
 - Le panneau s'ouvre sur la colonne par défaut. Le montant reprend le total actuel de la colonne, dans les deux onglets, et suit lorsque vous choisissez une autre colonne. Il reste vide lorsque la colonne n'a aucun montant
@@ -275,6 +282,7 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 - Un court libellé indique d'où viennent les montants d'une colonne. Dans l'onglet **Mensuel**, il se trouve sous l'en-tête de colonne (survolez-le pour voir la période). Dans l'onglet **Annuel**, il se trouve à côté de la période
 - **Répartition linéaire**, **Répartition 4-4-5** ou **Répartition par trimestre** : les montants proviennent d'une répartition
 - **Copié depuis Budget 2025 +2 %** : les montants proviennent de **Copier les colonnes budgétaires** dans l'Administration budgétaire, avec le pourcentage affiché lorsqu'il y en a un
+- **Calculé par jour, Personnel du siège**, **Calculé par mois** ou **Calculé pour toute la période** : les montants proviennent d'une quantité et d'un prix. Survolez le libellé pour voir la formule de calcul, par exemple « Par jour · Quantité 1 · Prix unitaire 400 · Calendrier Personnel du siège · Compte en ETP »
 - **Modifié à la main** : un mois a été modifié dans la grille ou par un import du fichier des lignes budgétaires
 - Une colonne sans libellé a conservé les données qu'elle avait avant l'arrivée des périodes
 
@@ -296,6 +304,76 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 4. Vos modifications s'enregistrent automatiquement ; l'indication **Enregistrement...** / **Enregistré** apparaît à côté des onglets d'année
 
 **Conseil** : Pour la plupart des postes, le mode Annuel est plus rapide. Utilisez le mode Mensuel lorsque vous devez suivre le calendrier des dépenses d'un projet ou un déploiement par phases.
+
+#### Calculer à partir de la quantité et du prix
+
+Calculez une colonne à partir d'une quantité et d'un prix unitaire au lieu de saisir ses montants. Par exemple : un prestataire sur un projet de build, 400 par jour, sur les jours ouvrés de février à octobre.
+
+**Ouvrir le panneau** :
+
+- Onglet **Annuel** : cliquez sur l'icône calculatrice à côté de la période sous un total. L'encadré s'ouvre sur **Calculer à partir de la quantité et du prix** pour cette colonne
+- Onglet **Mensuel** : cliquez sur **Calculer à partir de la quantité et du prix** en haut de l'encadré du panneau
+
+**Champs** :
+
+| Champ | Ce qu'il faut saisir |
+|---|---|
+| **Colonne** | La colonne à calculer, parmi les colonnes affichées. Les colonnes gelées ne peuvent pas être choisies |
+| **Du** / **Au** | La période. Elle part de la période actuelle de la colonne. Un mois compte lorsque la période couvre son 15, comme pour une répartition |
+| **Base de calcul** | **Par jour** : le prix unitaire est un prix par jour ouvré. **Par mois** : le prix unitaire est un prix par mois. **Pour toute la période** : le prix unitaire est le prix de toute la période |
+| **Quantité** | Le nombre d'unités, par exemple 1 prestataire ou 20 ordinateurs portables. Zéro ou plus, jusqu'à 3 décimales |
+| **Prix unitaire** | Le prix d'une unité, dans la devise du poste. Jusqu'à 4 décimales. Un prix négatif est accepté, pour un avoir |
+| **Indice de prix (%)** | Une augmentation appliquée au prix unitaire, par exemple `3` pour +3 %. Vide signifie 0. Jusqu'à 4 décimales, et pas en dessous de -100 |
+| **Calendrier** | **Par jour** uniquement. Le calendrier de jours ouvrés dont les jours multiplient le prix. La liste propose les calendriers activés, plus le calendrier propre à la colonne s'il a été désactivé depuis, marqué « (désactivé) ». Lorsqu'il n'existe encore aucun calendrier, le champ indique « Aucun calendrier de jours ouvrés pour l'instant. », avec un lien **Ajouter un calendrier** pour les personnes qui peuvent créer des calendriers. Voir [Calendriers de jours ouvrés](working-day-calendars.md) |
+| **Compte en ETP** | Activez-le lorsque la quantité correspond à des personnes. Les listes l'affichent alors en ETP pour les mois qui portent un montant. Désactivé, les listes affichent 0 ETP pour cette colonne. Survolez le libellé pour lire cette indication. Voir [ETP](#etp) |
+
+**Calcul des mois** :
+
+- **Par jour** : chaque mois de la période reçoit ses jours ouvrés × quantité × prix unitaire avec l'indice. Les jours du calendrier pour l'année de la colonne sont utilisés. Un mois en partie dans la période compte en entier, avec tous ses jours ouvrés, lorsque la période couvre son 15
+- **Par mois** : chaque mois de la période reçoit quantité × prix unitaire avec l'indice
+- **Pour toute la période** : le total est quantité × prix unitaire avec l'indice. Il est réparti uniformément sur les mois de la période, et l'écart d'arrondi est reporté sur le dernier mois
+- Chaque mois est arrondi au centime. Les mois hors de la période sont mis à zéro
+- L'indice de prix s'applique au prix unitaire avant tout le reste : 400 avec un indice de 2 donne 408
+
+**La ligne de résultat** : pendant la saisie, le panneau affiche le résultat sous les champs, par exemple « 9 mois · 163 jours · 65 200 · 0.75 ETP ». Elle donne les mois de la période, les jours ouvrés (par jour uniquement), le total et l'ETP (lorsque **Compte en ETP** est activé). Les nombres suivent le style de l'onglet Budget : des espaces entre les milliers et un point pour les décimales. La saisie dans le panneau n'enregistre jamais rien, et elle ne crée jamais l'année sur le poste : seul **Calculer** écrit. Lorsque les valeurs sont incomplètes ou refusées, une phrase remplace la ligne, par exemple « Saisissez une quantité et un prix unitaire pour voir le résultat. » ou « Choisissez un calendrier de jours ouvrés pour un prix par jour. »
+
+**Calculer** : cliquez sur **Calculer** pour remplacer les douze mois de cette colonne par le résultat. Les autres colonnes gardent leurs montants. Le bouton reste désactivé tant que les valeurs sont incomplètes, tant que la colonne est gelée, et jusqu'à ce que le résultat s'affiche. Depuis l'onglet **Annuel**, le panneau se ferme. Depuis l'onglet **Mensuel**, la grille affiche les nouveaux mois.
+
+**Recalculer** : sur une colonne qui a déjà une formule de calcul, le panneau s'ouvre avec celle-ci, et le bouton indique **Recalculer**. Avant que vous cliquiez, le panneau liste ce qui changerait :
+
+- Les jours ouvrés modifiés dans le calendrier depuis le dernier calcul, par exemple « Jours ouvrés modifiés depuis le dernier calcul : Mars : 20 jours, maintenant 19 »
+- Les mois dont le montant changerait, par exemple « Montants qui changeraient : Mars : 8 000, maintenant 7 600 »
+- Ou « Les montants enregistrés correspondent déjà. » lorsque rien ne changerait
+
+Le recalcul utilise les jours actuels du calendrier et la formule de calcul du panneau. Modifiez d'abord un champ pour calculer avec de nouvelles valeurs, par exemple un nouvel indice pour l'année suivante.
+
+**Refus possibles** :
+
+- « Personnel du siège has no working days for 2027. Add them on the Working-day calendars page. » : le calendrier ne contient pas encore l'année de la colonne
+- « Personnel du siège is disabled. Pick an enabled calendar. » : un calendrier désactivé ne peut pas être choisi pour une autre colonne. Une colonne qui l'utilise déjà peut toujours être recalculée, avec l'avertissement « This calendar is disabled. The computation still uses it. »
+- « Quantity accepts at most 3 decimals. », « Quantity cannot be negative. », « The price index cannot be below -100%. »
+- « The computed amount is too large. »
+
+**Effet des modifications ultérieures sur la formule de calcul** :
+
+- La formule de calcul reste sur la colonne après une modification à la main ou une répartition. Le libellé indique alors **Modifié à la main** ou **Répartition linéaire**, la formule de calcul s'affiche toujours au survol, et **Recalculer** reste disponible
+- **Copier les colonnes budgétaires** dans l'Administration budgétaire reporte la formule de calcul de la colonne source avec les montants. Voir [Copier une colonne calculée](budget-operations.md#copier-une-colonne-calculee)
+- Une copie depuis une colonne sans formule de calcul conserve la formule de calcul propre à la colonne de destination.
+- **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire retire la formule de calcul avec les montants. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
+- Un fichier des lignes budgétaires avec les colonnes de chiffrage la définit ou l'efface. Voir [Fichier des lignes budgétaires](budget-operations.md#fichier-des-lignes-budgetaires)
+- Modifier les jours ouvrés d'un calendrier ne change rien sur la colonne tant que vous ne la recalculez pas
+
+#### ETP
+
+L'ETP (équivalent temps plein) indique pour combien de personnes une ligne paie sur l'année. KANAP suit la convention habituelle des classeurs budgétaires : chaque mois qui porte un montant compte la quantité, et l'année est la somme des mois divisée par 12.
+
+Par exemple, 1 prestataire de février à octobre : 9 mois × 1 ÷ 12 = 0.75 ETP.
+
+- **Compté** : une colonne avec une formule de calcul et **Compte en ETP** activé. Seuls comptent les mois de la période dont le montant est supérieur à zéro. Le résultat est arrondi à 2 décimales, et les totaux additionnent les valeurs arrondies des lignes
+- **Zéro** : une colonne avec une formule de calcul et **Compte en ETP** désactivé, par exemple du matériel. Son ETP vaut 0
+- **Inconnu** : une colonne sans formule de calcul, un poste sans version pour cette année, ou une année postérieure à la fin de validité du poste. Son ETP est vide, jamais 0, car KANAP ne peut pas savoir pour combien de personnes il paie
+- L'ETP suit les mois qui portent un montant. Après une répartition ou une modification à la main sur une colonne calculée, l'ETP compte toujours la quantité pour chaque mois qui porte un montant
+- L'ETP s'affiche dans la ligne de résultat du panneau, et dans les colonnes ETP de la liste CAPEX
 
 ---
 

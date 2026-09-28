@@ -135,6 +135,17 @@ Below the grid, a stats bar shows:
 - Copying a column onto itself (same year and same column) is refused
 - The copy is all or nothing: if one item fails, nothing is saved
 
+### Copying a computed column
+
+A column computed from quantity and price carries a recipe: the basis, the quantity, the unit price, the price index, the calendar and **Counts as FTE**. See [Compute from quantity and price](opex.md#compute-from-quantity-and-price).
+
+- The copy carries the source's recipe to the destination as it is: same quantity, same unit price, same index and same calendar
+- The months are copied like any other column. The percentage increase applies to the copied amounts only. The recipe is not changed, and the price index is never applied a second time
+- A copy from a column without a recipe keeps the destination column's own recipe.
+- In the Budget tab, the destination column shows "Copied from Budget 2026" with the recipe in its tooltip, and **Recompute** is available
+- To compute the destination year from the recipe, open the line's Budget tab and click **Recompute**. The panel shows what would change first. The calendar must hold the destination year: otherwise Recompute is refused, for example "Head office staff has no working days for 2027. Add them on the Working-day calendars page."
+- To raise the price for the new year, change the **Price index (%)** in the panel before you click **Recompute**
+
 ### Frozen column protection
 
 If the destination column is frozen, both **Dry run** and **Copy data** are disabled. An error banner tells you to unfreeze first.
@@ -189,7 +200,7 @@ After a dry run, a banner shows the count of items ready to copy, skipped, and e
 
 Clear all data from a specific budget column for a given year. This is a destructive operation: use it when you need to start fresh.
 
-The **OPEX** / **CAPEX** switch at the top chooses which items are cleared. The reset sets the twelve months of the column to zero and removes its period. In the Budget tab, the column then gets a new suggestion from the item's dates. The reset covers every item, including items whose end of validity has passed. The reset is all or nothing: if one item fails, nothing is cleared.
+The **OPEX** / **CAPEX** switch at the top chooses which items are cleared. The reset sets the twelve months of the column to zero and removes its period, and its recipe when the column was computed from quantity and price. In the Budget tab, the column then gets a new suggestion from the item's dates. The reset covers every item, including items whose end of validity has passed. The reset is all or nothing: if one item fails, nothing is cleared.
 
 Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
 
@@ -324,7 +335,8 @@ The file uses a semicolon `;` as separator and UTF-8 encoding.
 | `measure` | The column, by its technical name, whatever your organisation calls it: `planned` (column 1, standard name Budget), `committed` (column 2, Revision), `forecast` (column 3, Forecast), `actual` (column 4, Actuals), `expected_landing` (column 5, Expected landing). On import, `budget`, `revision`, `follow_up` and `landing` also work |
 | `period_start`, `period_end` | The column's period as `YYYY-MM-DD`, inside the row's year. On import, both empty means the whole year |
 | `jan` to `dec` | The twelve monthly amounts, with a dot as decimal separator. On import, a comma and spaces are accepted too |
-| `method` | How the column was produced: `spread`, `copied` or `manual`. For information only, ignored on import |
+| `method` | How the column was produced: `spread`, `copied`, `manual` or `computed`. For information only, ignored on import |
+| `pricing_basis` to `counts_as_fte` | The six costing columns. See [Costing columns](#costing-columns) |
 
 ### Import rules
 
@@ -342,6 +354,41 @@ The file uses a semicolon `;` as separator and UTF-8 encoding.
 - Rows for a hidden column are imported like any other row. Hiding a column never blocks its imports, and a hidden frozen column still refuses changed rows
 - Repeated rows (same item, year and column), unknown item numbers, and items of a type you cannot administer are errors
 - Importing needs administration rights on OPEX or on CAPEX. Exporting needs read access to either
+
+### Costing columns
+
+The costing columns hold the recipe of a column computed from quantity and price. See [Compute from quantity and price](opex.md#compute-from-quantity-and-price). The export and the template always write them, filled when the column has a recipe and empty otherwise.
+
+| Column | Content |
+|--------|---------|
+| `pricing_basis` | `per_day` (Per day), `per_month` (Per month) or `per_period` (For the whole period). Case does not matter |
+| `quantity` | Zero or more, up to 3 decimals. Required with a basis |
+| `unit_price` | Up to 4 decimals. A negative price is accepted, for a credit. Required with a basis |
+| `price_index_pct` | The price index in percent, for example `3` for +3%. Up to 4 decimals, not below -100. Empty means 0 |
+| `working_day_profile_code` | The code of a working-day calendar. Required with `per_day`, and only with it. Matched regardless of case |
+| `counts_as_fte` | `true` or `false` (`yes`, `no`, `1` and `0` also work). Empty means `false` |
+
+The costing columns are optional on import: give all six, or none. A file without them imports as before, and every stored recipe is kept.
+
+With the costing columns, each row falls in one of three cases:
+
+1. **All twelve months given**: the months are stored as given, and the row's costing cells become the column's recipe. Empty costing cells remove the recipe. When the months change, the column is marked **Edited by hand**. When only the recipe of a computed column changes, the column is marked **Edited by hand** too: its months no longer come from its recipe
+2. **No month given, with a recipe**: the months are computed from the recipe over the row's period (the whole year when the period is empty), exactly as **Compute** does in the Budget tab. The column is marked as computed. A row whose computed months, period and recipe match what is stored counts as unchanged
+3. **Some months given**: the row is refused. Give all twelve months, or none
+
+Every computation runs during the preflight check, so a preflight that passes loads without surprise. Re-importing an export changes nothing, computed columns included.
+
+**Common errors**:
+
+- **"Give all twelve months, or none to compute them from quantity and price."**: the row gives some months only
+- **"Give all twelve months, or a pricing basis with quantity and unit price."**: the row gives no month and no complete recipe
+- **"Give the code of a working-day calendar for a price per day."**: fill `working_day_profile_code`
+- **"A calendar is used only with a price per day."**: empty `working_day_profile_code`, or change the basis to `per_day`
+- **"No working-day calendar has the code '...'."**: create the calendar in **Master data > Working-day calendars**, or fix the code
+- **"... is disabled. Pick an enabled calendar."**: a disabled calendar stays on the columns that already use it, and cannot be given to another one
+- **"... has no working days for 2027. Add them on the Working-day calendars page."**: add the year to the calendar, then run the preflight again
+- **"counts_as_fte '...' is not understood. Use true or false."**: fix the cell
+- **"Header mismatch"**: some costing columns are missing. Give all six, or remove them all
 
 ---
 

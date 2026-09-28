@@ -170,7 +170,7 @@ Das Entfernen aller Rollen löscht das Konto nicht. Der Benutzer fällt auf die 
 
 ### Platzverwaltung
 
-Das gehostete Abonnement umfasst **unbegrenzte Nutzer** — es gibt kein Platzlimit zu verwalten:
+Das gehostete Abonnement umfasst **unbegrenzte Nutzer**. Es gibt kein Platzlimit zu verwalten:
 - **Aktivierte Benutzer**: Können sich anmelden und KANAP nutzen
 - **Deaktivierte Benutzer**: Behalten ihre Daten, können sich aber nicht mehr anmelden
 - Der Zähler in der Symbolleiste zeigt die Anzahl der aktivierten Benutzer
@@ -259,6 +259,7 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 | `companies` | Unternehmens-Stammdaten |
 | `departments` | Abteilungs-Stammdaten |
 | `cost_centers` | Kostenstellen und ihre Gruppen |
+| `working_day_profiles` | Arbeitstagekalender, für Zeilen mit Preis pro Tag |
 | `suppliers` | Lieferanten-Stammdaten |
 | `contacts` | Kontaktverzeichnis |
 | `accounts` | Kontenplan |
@@ -368,7 +369,7 @@ Verwalten Sie Ihr Abonnement, Ihre Benutzer und Rechnungen.
 ### Abonnement-Übersicht
 
 Die Abonnementkarte zeigt Ihren aktuellen Tarif auf einen Blick:
-- **Tarif**: Hosted KANAP (oder Kostenlose Testversion). Das Abonnement umfasst unbegrenzte Nutzer — monatliche oder jährliche Abrechnung
+- **Tarif**: Hosted KANAP (oder Kostenlose Testversion). Das Abonnement umfasst unbegrenzte Nutzer, mit monatlicher oder jährlicher Abrechnung
 - **Plätze**: Anzahl der aktivierten Benutzer
 - **Status**: Aktiv, Testphase, Überfällig, Gekündigt usw.
 - **Verlängerungsdatum**: Wann der nächste Abrechnungszeitraum beginnt

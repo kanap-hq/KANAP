@@ -88,6 +88,7 @@ Diese Spalten sind standardmäßig ausgeblendet. Zeigen Sie sie über die Spalte
 | Spalte | Was sie zeigt |
 |--------|---------------|
 | **Betragsspalten** | Jede angezeigte Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Die Beträge sind in der Berichtswährung. Ausgeblendete Spalten werden nicht angeboten |
+| **VZÄ-Spalten** | Die VZÄ jeder angezeigten Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat, in der Spaltenauswahl direkt nach den Betragsspalten. Die Überschrift nennt die Spalte und das Kalenderjahr, zum Beispiel **VZÄ Budget (2026)**. Eine Zeile hat VZÄ, wenn die Spalte aus Menge und Preis berechnet wurde. Siehe [VZÄ](#vza). Die Zelle ist leer, wenn die VZÄ unbekannt sind |
 | **Währung** | Währungscode der Position |
 | **Gültig ab** | Startdatum |
 | **Ende der Gültigkeit** | Datum, an dem die Position endet (leer bedeutet kein Ende) |
@@ -111,24 +112,28 @@ Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahle
 
 Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen.
 
+Jede VZÄ-Spalte hat einen Zahlenfilter mit denselben Bedingungen, dazu leer und nicht leer. **Leer** behält die Zeilen, deren VZÄ unbekannt sind.
+
 **Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer.
 
 Textspalten verwenden Textfilter. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `CPX-12`.
 
 ### Sortierung
 
-Klicken Sie auf eine Spaltenüberschrift, um aufsteigend oder absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betragsspalte. Standardmäßig wird nach der Standardspalte des aktuellen Jahres sortiert, höchster Betrag zuerst (**Budget J** mit den Standardeinstellungen). **Zurück** und **Weiter** im Arbeitsbereich folgen derselben Reihenfolge. Die Liste merkt sich Ihre letzte Sortierung bei der Rückkehr.
+Klicken Sie auf eine Spaltenüberschrift, um aufsteigend oder absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betrags- und VZÄ-Spalte. Zeilen mit unbekannten VZÄ stehen bei aufsteigender Sortierung am Ende. Standardmäßig wird nach der Standardspalte des aktuellen Jahres sortiert, höchster Betrag zuerst (**Budget J** mit den Standardeinstellungen). **Zurück** und **Weiter** im Arbeitsbereich folgen derselben Reihenfolge. Die Liste merkt sich Ihre letzte Sortierung bei der Rückkehr.
 
 ### Summenzeile
 
 Die angeheftete Zeile unten zeigt die Summe jeder Betragsspalte. Summen berücksichtigen Ihre aktuellen Filter und Suche. Alle Beträge werden in Ihre Berichtswährung umgerechnet, die im Seitentitel angezeigt wird.
+
+Jede angezeigte VZÄ-Spalte zeigt die Summe der VZÄ der Zeilen. Haben einige Zeilen keine VZÄ, folgt die Anzahl auf die Summe, zum Beispiel „3.50 · 12 unbekannt“. Fahren Sie mit der Maus darüber, um den vollständigen Satz zu lesen: „Unbekannt für 12 Zeilen“. Hat keine Zeile VZÄ, bleibt die Summe leer, und nur die Anzahl erscheint.
 
 ### Deep Linking
 
 Klicken Sie auf eine beliebige Zelle in einer Zeile, um den Arbeitsbereich auf dem für diese Spalte relevantesten Tab zu öffnen:
 
 - **Beschreibung**, **Lieferant**, **Zahlendes Unternehmen**, **Anlagentyp**, **Investitionsart**, **Priorität** und die anderen allgemeinen Spalten: Öffnet die **Übersicht**
-- **Betragsspalten** (Budget J, Erwarteter Endwert J, Revision J+1 usw.): Öffnet den **Budget**-Tab für das Jahr der Spalte
+- **Betragsspalten** (Budget J, Erwarteter Endwert J, Revision J+1 usw.) und **VZÄ-Spalten**: Öffnet den **Budget**-Tab für das Jahr der Spalte
 - **Zuordnung**: Öffnet den **Zuordnungen**-Tab für das aktuelle Jahr
 - **Aufgabe**: Öffnet den Tab **Übersicht**, in dem sich der Aufgabenbereich befindet
 - **Vertrag**: Öffnet direkt den verknüpften Vertrag
@@ -244,6 +249,7 @@ Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die S
 
 - **Jährlich**: Geben Sie eine Summe pro Spalte ein. Die Summe wird gleichmäßig auf die Monate des Zeitraums der Spalte verteilt, und die Monate außerhalb des Zeitraums werden auf null gesetzt. Der Zeitraum wird unter jeder Summe angezeigt, bevor Sie etwas eingeben, zum Beispiel „9 Monate, April bis Dezember“. Nur die Summe, die Sie bearbeiten, wird gespeichert. Die anderen Spalten behalten ihre Monatsbeträge.
 - Klicken Sie auf das Stiftsymbol neben dem Zeitraum unter einer Summe (**Zeitraum ändern**), um das Verteilungsfeld für diese Spalte mit ihrer aktuellen Summe zu öffnen. Lassen die Daten der Position keinen Monat im Jahr übrig, ist die Summe deaktiviert und zeigt „Kein Monat von 2026 liegt innerhalb der Daten der Position.“ Klicken Sie auf das Stiftsymbol daneben (**Zeitraum wählen**), um selbst einen festzulegen.
+- Klicken Sie auf das Rechnersymbol neben dem Stift (**Aus Menge und Preis berechnen**), um dasselbe Feld mit der Berechnung für diese Spalte zu öffnen. Siehe [Aus Menge und Preis berechnen](#aus-menge-und-preis-berechnen).
 - **Monatlich**: Geben Sie Beträge pro Monat (Januar bis Dezember) für jede angezeigte Spalte ein, für eine genaue Verfolgung der Projektausgaben. Quartalszwischensummen und eine Jahressumme werden angezeigt. Nur die Monate, die Sie ändern, werden gespeichert.
 - Beide Tabs zeigen dieselben Spalten: Prognose erscheint auch in **Jährlich**, wenn sie angezeigt wird.
 - Wechseln Sie mit den Tabs **Jährlich** und **Monatlich** zwischen den Modi
@@ -257,6 +263,7 @@ Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die S
 
 **Einen Betrag verteilen**:
 
+- Das Feld hat zwei Tabs: **Betrag verteilen** und **Aus Menge und Preis berechnen**. Dieser Teil behandelt den ersten
 - Das Verteilungsfeld ist im Tab **Monatlich** immer sichtbar. Im Tab **Jährlich** öffnet es sich über das Stiftsymbol unter einer Summe
 - Wählen Sie eine **Spalte** unter den angezeigten Spalten, prüfen Sie den **Betrag**, wählen Sie eine **Verteilung** (**Gleichmäßig** oder **4-4-5**) und legen Sie die Daten **Von** und **Bis** fest. Die Daten gehen vom aktuellen Zeitraum der Spalte aus, die Verteilung von der bisherigen Verteilung der Spalte
 - Das Feld öffnet sich mit der Standardspalte. Der Betrag übernimmt die aktuelle Summe der Spalte, in beiden Tabs, und passt sich an, wenn Sie eine andere Spalte wählen. Er bleibt leer, wenn die Spalte keinen Betrag hat
@@ -275,6 +282,7 @@ Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die S
 - Eine kurze Kennzeichnung zeigt, woher die Beträge einer Spalte stammen. Im Tab **Monatlich** steht sie unter der Spaltenüberschrift (fahren Sie mit der Maus darüber, um den Zeitraum zu sehen). Im Tab **Jährlich** steht sie neben dem Zeitraum
 - **Gleichmäßig verteilt**, **Nach 4-4-5 verteilt** oder **Nach Quartal verteilt**: Die Beträge stammen aus einer Verteilung
 - **Kopiert aus Budget 2025 +2 %**: Die Beträge stammen aus **Budgetspalten kopieren** in der Budgetadministration, mit dem Prozentsatz, falls einer angewendet wurde
+- **Berechnet pro Tag, Mitarbeitende am Hauptsitz**, **Berechnet pro Monat** oder **Berechnet für den gesamten Zeitraum**: Die Beträge stammen aus einer Menge und einem Preis. Fahren Sie mit der Maus über die Kennzeichnung, um die Berechnungsgrundlage zu sehen, zum Beispiel „Pro Tag · Menge 1 · Stückpreis 400 · Kalender Mitarbeitende am Hauptsitz · Zählt als VZÄ“
 - **Von Hand geändert**: Ein Monat wurde im Raster oder durch einen Import der Datei der Budgetzeilen geändert
 - Eine Spalte ohne Kennzeichnung hat die Daten behalten, die sie vor der Einführung der Zeiträume hatte
 
@@ -296,6 +304,76 @@ Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die S
 4. Ihre Änderungen werden automatisch gespeichert; neben den Jahres-Tabs erscheint der Hinweis **Wird gespeichert...** / **Gespeichert**
 
 **Tipp**: Für die meisten Positionen ist der Modus Jährlich schneller. Verwenden Sie den Modus Monatlich, wenn Sie die zeitliche Verteilung von Projektausgaben oder phasenweise Einführungen verfolgen müssen.
+
+#### Aus Menge und Preis berechnen
+
+Berechnen Sie eine Spalte aus einer Menge und einem Stückpreis, statt ihre Beträge einzugeben. Zum Beispiel: ein externer Mitarbeiter in einem Build-Projekt, 400 pro Tag, an den Arbeitstagen von Februar bis Oktober.
+
+**Das Feld öffnen**:
+
+- Tab **Jährlich**: Klicken Sie auf das Rechnersymbol neben dem Zeitraum unter einer Summe. Das Feld öffnet sich auf **Aus Menge und Preis berechnen** für diese Spalte
+- Tab **Monatlich**: Klicken Sie oben im Feld auf **Aus Menge und Preis berechnen**
+
+**Felder**:
+
+| Feld | Was Sie eingeben |
+|---|---|
+| **Spalte** | Die zu berechnende Spalte, unter den angezeigten Spalten. Eingefrorene Spalten können nicht gewählt werden |
+| **Von** / **Bis** | Der Zeitraum. Er geht vom aktuellen Zeitraum der Spalte aus. Ein Monat zählt, wenn der Zeitraum seinen 15. Tag abdeckt, wie bei einer Verteilung |
+| **Berechnungsbasis** | **Pro Tag**: Der Stückpreis ist ein Preis pro Arbeitstag. **Pro Monat**: Der Stückpreis ist ein Preis pro Monat. **Für den gesamten Zeitraum**: Der Stückpreis ist der Preis des gesamten Zeitraums |
+| **Menge** | Wie viele Einheiten, zum Beispiel 1 externer Mitarbeiter oder 20 Laptops. Null oder mehr, bis zu 3 Dezimalstellen |
+| **Stückpreis** | Der Preis einer Einheit, in der Währung der Position. Bis zu 4 Dezimalstellen. Ein negativer Preis wird akzeptiert, für eine Gutschrift |
+| **Preisindex (%)** | Eine Erhöhung des Stückpreises, zum Beispiel `3` für +3 %. Leer bedeutet 0. Bis zu 4 Dezimalstellen, und nicht unter -100 |
+| **Kalender** | Nur **Pro Tag**. Der Arbeitstagekalender, mit dessen Tagen der Preis multipliziert wird. Die Liste bietet die aktivierten Kalender an, dazu den eigenen Kalender der Spalte, falls er inzwischen deaktiviert wurde, mit dem Zusatz „(deaktiviert)“. Gibt es noch keinen Kalender, zeigt das Feld „Noch kein Arbeitstagekalender vorhanden.“, mit einem Link **Kalender hinzufügen** für alle, die Kalender anlegen dürfen. Siehe [Arbeitstagekalender](working-day-calendars.md) |
+| **Zählt als VZÄ** | Schalten Sie es ein, wenn die Menge für Personen steht. Die Listen zeigen sie dann als VZÄ für die Monate, die einen Betrag enthalten. Ist es aus, zeigen die Listen 0 VZÄ für diese Spalte. Fahren Sie mit der Maus über die Bezeichnung, um diesen Hinweis zu lesen. Siehe [VZÄ](#vza) |
+
+**Wie die Monate berechnet werden**:
+
+- **Pro Tag**: Jeder Monat des Zeitraums erhält seine Arbeitstage × Menge × Stückpreis mit Index. Verwendet werden die Tage des Kalenders im Jahr der Spalte. Ein Monat, der teilweise im Zeitraum liegt, zählt ganz, mit allen seinen Arbeitstagen, wenn der Zeitraum seinen 15. Tag abdeckt
+- **Pro Monat**: Jeder Monat des Zeitraums erhält Menge × Stückpreis mit Index
+- **Für den gesamten Zeitraum**: Die Summe ist Menge × Stückpreis mit Index. Sie wird gleichmäßig auf die Monate des Zeitraums verteilt, und die Rundungsdifferenz fällt auf den letzten Monat
+- Jeder Monat wird auf den Cent gerundet. Die Monate außerhalb des Zeitraums werden auf null gesetzt
+- Der Preisindex gilt vor allem anderen für den Stückpreis: 400 mit einem Index von 2 ergibt 408
+
+**Die Ergebniszeile**: Während der Eingabe zeigt das Feld das Ergebnis unter den Feldern, zum Beispiel „9 Monate · 163 Tage · 65 200 · 0.75 VZÄ“. Sie nennt die Monate des Zeitraums, die Arbeitstage (nur pro Tag), die Summe und die VZÄ (wenn **Zählt als VZÄ** eingeschaltet ist). Die Zahlen folgen dem Stil des Budget-Tabs: Leerzeichen zwischen den Tausendern und ein Punkt für Dezimalstellen. Eine Eingabe im Feld speichert nie etwas und legt nie das Jahr auf der Position an: Nur **Berechnen** schreibt. Sind die Eingaben unvollständig oder abgelehnt, ersetzt ein Satz die Zeile, zum Beispiel „Geben Sie Menge und Stückpreis ein, um das Ergebnis zu sehen.“ oder „Wählen Sie für einen Preis pro Tag einen Arbeitstagekalender.“
+
+**Berechnen**: Klicken Sie auf **Berechnen**, um die zwölf Monate dieser Spalte durch das Ergebnis zu ersetzen. Die anderen Spalten behalten ihre Beträge. Die Schaltfläche bleibt deaktiviert, solange die Eingaben unvollständig sind, solange die Spalte eingefroren ist und bis das Ergebnis angezeigt wird. Im Tab **Jährlich** schließt sich das Feld. Im Tab **Monatlich** zeigt das Raster die neuen Monate.
+
+**Neu berechnen**: Bei einer Spalte, die bereits eine Berechnungsgrundlage hat, öffnet sich das Feld mit dieser Grundlage, und die Schaltfläche heißt **Neu berechnen**. Bevor Sie klicken, listet das Feld auf, was sich ändern würde:
+
+- Die Arbeitstage, die sich im Kalender seit der letzten Berechnung geändert haben, zum Beispiel „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19“
+- Die Monate, deren Betrag sich ändern würde, zum Beispiel „Beträge, die sich ändern würden: März: 8 000, jetzt 7 600“
+- Oder „Die gespeicherten Beträge stimmen bereits überein.“, wenn sich nichts ändern würde
+
+Neu berechnen verwendet die aktuellen Tage des Kalenders und die Berechnungsgrundlage im Feld. Ändern Sie vorher ein beliebiges Feld, um mit neuen Werten zu rechnen, zum Beispiel mit einem neuen Index für das nächste Jahr.
+
+**Mögliche Ablehnungen**:
+
+- „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“: Der Kalender enthält das Jahr der Spalte noch nicht
+- „Mitarbeitende am Hauptsitz is disabled. Pick an enabled calendar.“: Ein deaktivierter Kalender kann nicht für eine andere Spalte gewählt werden. Eine Spalte, die ihn bereits verwendet, kann weiterhin neu berechnet werden, mit der Warnung „This calendar is disabled. The computation still uses it.“
+- „Quantity accepts at most 3 decimals.“, „Quantity cannot be negative.“, „The price index cannot be below -100%.“
+- „The computed amount is too large.“
+
+**Was spätere Änderungen mit der Berechnungsgrundlage tun**:
+
+- Die Berechnungsgrundlage bleibt nach einer Änderung von Hand oder einer Verteilung auf der Spalte. Die Kennzeichnung lautet dann **Von Hand geändert** oder **Gleichmäßig verteilt**, die Berechnungsgrundlage erscheint weiterhin, wenn Sie mit der Maus darüber fahren, und **Neu berechnen** bleibt verfügbar
+- **Budgetspalten kopieren** in der Budgetadministration überträgt die Berechnungsgrundlage der Quellspalte zusammen mit den Beträgen. Siehe [Eine berechnete Spalte kopieren](budget-operations.md#eine-berechnete-spalte-kopieren)
+- Eine Kopie aus einer Spalte ohne Berechnungsgrundlage behält die eigene Berechnungsgrundlage der Zielspalte.
+- **Budgetspalte zurücksetzen** in der Budgetadministration entfernt die Berechnungsgrundlage zusammen mit den Beträgen. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen)
+- Eine Datei der Budgetzeilen mit den Kalkulationsspalten setzt oder entfernt sie. Siehe [Datei der Budgetzeilen](budget-operations.md#datei-der-budgetzeilen)
+- Eine Änderung der Arbeitstage eines Kalenders ändert nichts an der Spalte, bis Sie sie neu berechnen
+
+#### VZÄ
+
+VZÄ (Vollzeitäquivalente) geben an, für wie viele Personen eine Zeile über das Jahr bezahlt. KANAP folgt der üblichen Konvention von Budgetarbeitsmappen: Jeder Monat, der einen Betrag enthält, zählt die Menge, und das Jahr ist die Summe der Monate geteilt durch 12.
+
+Zum Beispiel 1 externer Mitarbeiter von Februar bis Oktober: 9 Monate × 1 ÷ 12 = 0,75 VZÄ.
+
+- **Gezählt**: eine Spalte mit Berechnungsgrundlage und eingeschaltetem **Zählt als VZÄ**. Nur die Monate des Zeitraums mit einem Betrag über null zählen. Das Ergebnis wird auf 2 Dezimalstellen gerundet, und Summen addieren die gerundeten Werte der Zeilen
+- **Null**: eine Spalte mit Berechnungsgrundlage und ausgeschaltetem **Zählt als VZÄ**, zum Beispiel Hardware. Ihre VZÄ sind 0
+- **Unbekannt**: eine Spalte ohne Berechnungsgrundlage, eine Position ohne Version für dieses Jahr oder ein Jahr nach dem Ende der Gültigkeit der Position. Ihre VZÄ sind leer, nie 0, weil KANAP nicht sagen kann, für wie viele Personen sie bezahlt
+- Die VZÄ folgen den Monaten, die einen Betrag enthalten. Nach einer Verteilung oder einer Änderung von Hand über einer berechneten Spalte zählen die VZÄ weiterhin die Menge für jeden Monat, der einen Betrag enthält
+- Die VZÄ erscheinen in der Ergebniszeile des Felds und in den VZÄ-Spalten der CAPEX-Liste
 
 ---
 

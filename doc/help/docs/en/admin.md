@@ -259,6 +259,7 @@ Resources are organized into groups for easier management:
 | `companies` | Company master data |
 | `departments` | Department master data |
 | `cost_centers` | Cost centers and their groups |
+| `working_day_profiles` | Working-day calendars, for lines priced per day |
 | `suppliers` | Supplier master data |
 | `contacts` | Contact directory |
 | `accounts` | Chart of accounts |

@@ -135,6 +135,17 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 - Copiar una columna sobre sí misma (mismo año y misma columna) se rechaza
 - La copia es de todo o nada: si una partida falla, no se guarda nada
 
+### Copiar una columna calculada
+
+Una columna calculada a partir de cantidad y precio lleva una receta: la base de cálculo, la cantidad, el precio unitario, el índice de precios, el calendario y **Cuenta como ETC**. Consulte [Calcular a partir de cantidad y precio](opex.md#calcular-a-partir-de-cantidad-y-precio).
+
+- La copia lleva la receta del origen al destino tal cual: misma cantidad, mismo precio unitario, mismo índice y mismo calendario
+- Los meses se copian como en cualquier otra columna. El porcentaje de incremento solo se aplica a los importes copiados. La receta no cambia, y el índice de precios nunca se aplica una segunda vez
+- Una copia desde una columna sin receta conserva la propia receta de la columna de destino.
+- En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026» con la receta en su información emergente, y **Recalcular** está disponible
+- Para calcular el año de destino a partir de la receta, abra la pestaña Presupuesto de la línea y haga clic en **Recalcular**. El panel muestra primero lo que cambiaría. El calendario debe contener el año de destino: de lo contrario, Recalcular se rechaza, por ejemplo «Personal de la sede has no working days for 2027. Add them on the Working-day calendars page.»
+- Para subir el precio del nuevo año, cambie el **Índice de precios (%)** en el panel antes de hacer clic en **Recalcular**
+
 ### Protección de columnas congeladas
 
 Si la columna de destino está congelada, tanto **Simulación** como **Copiar datos** están deshabilitados. Un banner de error le indica que descongele primero.
@@ -189,7 +200,7 @@ Después de una simulación, un banner muestra el conteo de elementos listos par
 
 Borre todos los datos de una columna presupuestaria específica para un año determinado. Esta es una operación destructiva: utilícela cuando necesite comenzar de cero.
 
-El selector **OPEX** / **CAPEX** de la parte superior elige las partidas que se borran. El restablecimiento pone a cero los doce meses de la columna y quita su periodo. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la partida. El restablecimiento abarca todas las partidas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una partida falla, no se borra nada.
+El selector **OPEX** / **CAPEX** de la parte superior elige las partidas que se borran. El restablecimiento pone a cero los doce meses de la columna y quita su periodo, así como su receta cuando la columna se calculó a partir de cantidad y precio. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la partida. El restablecimiento abarca todas las partidas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una partida falla, no se borra nada.
 
 Requiere permisos de administración sobre OPEX, o sobre CAPEX para las partidas CAPEX.
 
@@ -324,7 +335,8 @@ El archivo usa el punto y coma `;` como separador y la codificación UTF-8.
 | `measure` | La columna, por su nombre técnico, sea cual sea el nombre que le da su organización: `planned` (columna 1, nombre estándar Presupuesto), `committed` (columna 2, Revisión), `forecast` (columna 3, Previsión), `actual` (columna 4, Realizado), `expected_landing` (columna 5, Aterrizaje previsto). Al importar, `budget`, `revision`, `follow_up` y `landing` también funcionan |
 | `period_start`, `period_end` | El periodo de la columna en formato `YYYY-MM-DD`, dentro del año de la fila. Al importar, ambos vacíos significan todo el año |
 | `jan` a `dec` | Los doce importes mensuales, con un punto como separador decimal. Al importar, también se aceptan la coma y los espacios |
-| `method` | Cómo se produjo la columna: `spread`, `copied` o `manual`. Solo informativo, se ignora al importar |
+| `method` | Cómo se produjo la columna: `spread`, `copied`, `manual` o `computed`. Solo informativo, se ignora al importar |
+| `pricing_basis` a `counts_as_fte` | Las seis columnas de cálculo. Consulte [Columnas de cálculo](#columnas-de-calculo) |
 
 ### Reglas de importación
 
@@ -342,6 +354,41 @@ El archivo usa el punto y coma `;` como separador y la codificación UTF-8.
 - Las filas de una columna oculta se importan como cualquier otra fila. Ocultar una columna nunca bloquea sus importaciones, y una columna oculta congelada sigue rechazando las filas modificadas
 - Las filas repetidas (misma partida, año y columna), los números de partida desconocidos y las partidas de un tipo que no puede administrar son errores
 - Importar requiere permisos de administración sobre OPEX o sobre CAPEX. Exportar requiere acceso de lectura a uno de los dos
+
+### Columnas de cálculo
+
+Las columnas de cálculo contienen la receta de una columna calculada a partir de cantidad y precio. Consulte [Calcular a partir de cantidad y precio](opex.md#calcular-a-partir-de-cantidad-y-precio). La exportación y la plantilla siempre las escriben, completas cuando la columna tiene una receta y vacías en caso contrario.
+
+| Columna | Contenido |
+|---------|-----------|
+| `pricing_basis` | `per_day` (Por día), `per_month` (Por mes) o `per_period` (Para todo el periodo). No distingue mayúsculas y minúsculas |
+| `quantity` | Cero o más, hasta 3 decimales. Obligatoria con una base de cálculo |
+| `unit_price` | Hasta 4 decimales. Se acepta un precio negativo, para un abono. Obligatoria con una base de cálculo |
+| `price_index_pct` | El índice de precios en porcentaje, por ejemplo `3` para +3 %. Hasta 4 decimales, no inferior a -100. Vacía significa 0 |
+| `working_day_profile_code` | El código de un calendario laboral. Obligatoria con `per_day`, y solo con ella. Se empareja sin distinguir mayúsculas y minúsculas |
+| `counts_as_fte` | `true` o `false` (`yes`, `no`, `1` y `0` también funcionan). Vacía significa `false` |
+
+Las columnas de cálculo son opcionales al importar: indique las seis o ninguna. Un archivo sin ellas se importa como antes, y se conservan todas las recetas guardadas.
+
+Con las columnas de cálculo, cada fila entra en uno de tres casos:
+
+1. **Los doce meses indicados**: los meses se guardan tal cual, y las celdas de cálculo de la fila pasan a ser la receta de la columna. Las celdas de cálculo vacías quitan la receta. Cuando los meses cambian, la columna se marca como **Editado a mano**. Cuando solo cambia la receta de una columna calculada, la columna también se marca como **Editado a mano**: sus meses ya no proceden de su receta
+2. **Ningún mes indicado, con una receta**: los meses se calculan a partir de la receta sobre el periodo de la fila (todo el año cuando el periodo está vacío), exactamente como hace **Calcular** en la pestaña Presupuesto. La columna se marca como calculada. Una fila cuyos meses calculados, periodo y receta coinciden con lo guardado cuenta como sin cambios
+3. **Algunos meses indicados**: la fila se rechaza. Indique los doce meses o ninguno
+
+Todos los cálculos se ejecutan durante la verificación previa, de modo que una verificación previa correcta carga sin sorpresas. Volver a importar una exportación no cambia nada, incluidas las columnas calculadas.
+
+**Errores frecuentes**:
+
+- **"Give all twelve months, or none to compute them from quantity and price."**: la fila solo indica algunos meses
+- **"Give all twelve months, or a pricing basis with quantity and unit price."**: la fila no indica ningún mes ni una receta completa
+- **"Give the code of a working-day calendar for a price per day."**: complete `working_day_profile_code`
+- **"A calendar is used only with a price per day."**: vacíe `working_day_profile_code`, o cambie la base de cálculo a `per_day`
+- **"No working-day calendar has the code '...'."**: cree el calendario en **Datos maestros > Calendarios laborales** o corrija el código
+- **"... is disabled. Pick an enabled calendar."**: un calendario desactivado se mantiene en las columnas que ya lo usan y no se puede asignar a otra
+- **"... has no working days for 2027. Add them on the Working-day calendars page."**: añada el año al calendario y vuelva a ejecutar la verificación previa
+- **"counts_as_fte '...' is not understood. Use true or false."**: corrija la celda
+- **"Header mismatch"**: faltan algunas columnas de cálculo. Indique las seis o quítelas todas
 
 ---
 

@@ -52,6 +52,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
 
 **Columnas adicionales** (ocultas por defecto, habilítelas mediante el selector de columnas):
   - **Columnas de importes**: Cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Los importes están en la moneda de reporte. Las columnas ocultas no se ofrecen
+  - **Columnas de ETC**: El ETC de cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización, justo después de las columnas de importes en el selector de columnas. El encabezado indica la columna y el año natural, por ejemplo **ETC Presupuesto (2026)**. Una línea tiene un ETC cuando la columna se calculó a partir de cantidad y precio. Consulte [ETC](#etc). La celda queda vacía cuando el ETC es desconocido
   - **Habilitado**: Estado de la partida (habilitado o deshabilitado)
   - **Descripción**: Descripción de la partida
   - **Moneda**: Código de moneda ISO
@@ -70,23 +71,25 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Búsqueda rápida**: Busca en la referencia, el nombre del producto, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, los valores analíticos, el centro de coste (código, nombre y ruta), el responsable del presupuesto, las notas, la moneda y el estado. Filtra la lista en tiempo real mientras escribe
   - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas (selección múltiple). El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**
   - **Filtros de importe**: Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes
+  - **Filtros de ETC**: Cada columna de ETC tiene un filtro numérico con las mismas condiciones, más vacío y no vacío. **Vacío** conserva las líneas cuyo ETC es desconocido
   - **Filtros de fecha**: **Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío
   - **Columnas de texto**: usan filtros de texto. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` u `OPX-12`
   - **Alcance de estado**: Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula (predeterminado: **Activos**)
 
 **Ordenación**:
-  - Haga clic en un encabezado de columna para ordenar ascendente/descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe
+  - Haga clic en un encabezado de columna para ordenar ascendente/descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe y de ETC. Las líneas cuyo ETC es desconocido van al final en orden ascendente
   - La ordenación predeterminada es por la columna por defecto del año actual, de mayor a menor (**Presupuesto A** con la configuración estándar). Los botones **Anterior** y **Siguiente** del espacio de trabajo siguen el mismo orden
   - La lista recuerda su última ordenación, búsqueda y filtros cuando regresa
 
 **Fila de totales**:
   - La fila fijada en la parte inferior muestra el total de cada columna de importe, en la moneda de reporte
+  - Cada columna de ETC visible muestra la suma del ETC de las líneas. Cuando algunas líneas no tienen ETC, el recuento sigue al total, por ejemplo «3.50 · 12 desconocidas». Pase el cursor por encima para ver la frase completa: «Desconocido para 12 líneas». Cuando ninguna línea tiene ETC, el total queda vacío y solo se muestra el recuento
   - Los totales respetan sus filtros y búsqueda actuales
 
 **Enlace directo**:
   - Hacer clic en cualquier celda abre el espacio de trabajo en la pestaña más relevante:
     - **Nombre del producto**, **Proveedor**, **Empresa pagadora**, **Cuenta** y otras columnas generales: Abre la pestaña **Vista general**
-    - **Columnas de importes** (Presupuesto A, Aterrizaje previsto A, Revisión A+1, etc.): Abre la pestaña **Presupuesto** preconfigurada en el año de la columna
+    - **Columnas de importes** (Presupuesto A, Aterrizaje previsto A, Revisión A+1, etc.) y **Columnas de ETC**: Abre la pestaña **Presupuesto** preconfigurada en el año de la columna
     - **Asignación**: Abre la pestaña **Asignaciones** para el año actual
     - **Tarea**: Abre la pestaña **Vista general**, donde está el panel de tareas
     - **Contrato**: Abre directamente el espacio de trabajo del Contrato vinculado (no el espacio de trabajo OPEX)
@@ -189,6 +192,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 **Anual o Mensual**:
   - **Anual**: Introduzca un total por columna. El total se reparte uniformemente entre los meses del periodo de la columna, y los meses fuera de él se ponen a cero. El periodo aparece bajo cada total antes de escribir, por ejemplo «9 meses, de abril a diciembre». Solo se guarda el total que usted modifica. Las demás columnas conservan sus importes mensuales.
   - Haga clic en el icono de lápiz junto al periodo bajo un total (**Cambiar el periodo**) para abrir el panel de reparto en esa columna, con su total actual. Si las fechas de la partida no dejan ningún mes en el año, el total se deshabilita y muestra «Ningún mes de 2026 está dentro de las fechas de la partida.» Haga clic en el icono de lápiz junto a ese texto (**Elegir el periodo**) para definirlo usted mismo.
+  - Haga clic en el icono de calculadora junto al lápiz (**Calcular a partir de cantidad y precio**) para abrir el mismo cuadro en el cálculo de esa columna. Consulte [Calcular a partir de cantidad y precio](#calcular-a-partir-de-cantidad-y-precio).
   - **Mensual**: Introduzca importes por mes (Ene-Dic) para cada columna visible. Se muestran subtotales trimestrales y un total anual. Solo se guardan los meses que usted modifica.
   - Ambas pestañas muestran las mismas columnas: Previsión también aparece en **Anual** cuando se muestra.
   - Cambie de modo con las pestañas **Anual** y **Mensual**. Cambiar de modo no modifica sus importes.
@@ -199,6 +203,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - Cada columna puede congelarse independientemente
 
 **Repartir un importe**:
+  - El cuadro del panel tiene dos pestañas: **Repartir un importe** y **Calcular a partir de cantidad y precio**. Esta parte trata de la primera
   - El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde el icono de lápiz bajo un total
   - Elija una **Columna** entre las columnas visibles, compruebe el **Importe**, elija una **Distribución** (**Uniforme** o **4-4-5**) y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna, y la distribución de la que ya tiene la columna
   - El panel se abre en la columna por defecto. El importe parte del total actual de la columna, en ambas pestañas, y se actualiza cuando elige otra columna. Queda vacío cuando la columna no tiene importe
@@ -216,6 +221,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - Una etiqueta breve indica de dónde vienen los importes de una columna. En la pestaña **Mensual** aparece bajo el encabezado de la columna (pase el cursor por encima para ver el periodo). En la pestaña **Anual** aparece junto al periodo
   - **Reparto uniforme**, **Reparto 4-4-5** o **Reparto por trimestre**: los importes proceden de un reparto
   - **Copiado de Presupuesto 2025 +2 %**: los importes proceden de **Copiar columnas presupuestarias** en la Administración presupuestaria, con el porcentaje visible cuando lo hay
+  - **Calculado por día, Personal de la sede**, **Calculado por mes** o **Calculado para todo el periodo**: los importes proceden de una cantidad y un precio. Pase el cursor sobre la etiqueta para ver la receta, por ejemplo «Por día · Cantidad 1 · Precio unitario 400 · Calendario Personal de la sede · Cuenta como ETC»
   - **Editado a mano**: se modificó un mes en la cuadrícula o mediante una importación del archivo de filas presupuestarias
   - Una columna sin etiqueta conserva los datos que tenía antes de que existieran los periodos
 
@@ -232,6 +238,71 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   4. Sus cambios se guardan automáticamente; junto a las pestañas de año aparece la indicación **Guardando...** / **Guardado**
 
 **Consejo**: Para la mayoría de partidas, el modo Anual es más rápido. Utilice el modo Mensual cuando el gasto varíe significativamente por mes (p. ej., licencias estacionales, cuotas de configuración únicas).
+
+#### Calcular a partir de cantidad y precio
+
+Calcule una columna a partir de una cantidad y un precio unitario en lugar de escribir sus importes. Por ejemplo: un consultor, 400 por día, en los días laborables de febrero a octubre.
+
+**Abrir el panel**:
+  - Pestaña **Anual**: haga clic en el icono de calculadora junto al periodo bajo un total. El cuadro se abre en **Calcular a partir de cantidad y precio** para esa columna
+  - Pestaña **Mensual**: haga clic en **Calcular a partir de cantidad y precio** en la parte superior del cuadro del panel
+
+**Campos**:
+
+| Campo | Qué introducir |
+|---|---|
+| **Columna** | La columna que se calcula, entre las columnas visibles. Las columnas congeladas no se pueden elegir |
+| **Desde** / **Hasta** | El periodo. Parte del periodo actual de la columna. Un mes cuenta cuando el periodo cubre su día 15, como en un reparto |
+| **Base de cálculo** | **Por día**: el precio unitario es un precio por día laborable. **Por mes**: el precio unitario es un precio mensual. **Para todo el periodo**: el precio unitario es el precio de todo el periodo |
+| **Cantidad** | Cuántas unidades, por ejemplo 1 consultor o 50 licencias. Cero o más, hasta 3 decimales |
+| **Precio unitario** | El precio de una unidad, en la moneda de la partida. Hasta 4 decimales. Se acepta un precio negativo, para un abono |
+| **Índice de precios (%)** | Un incremento aplicado al precio unitario, por ejemplo `3` para +3 %. Vacío significa 0. Hasta 4 decimales, y no inferior a -100 |
+| **Calendario** | Solo **Por día**. El calendario laboral cuyos días multiplican el precio. La lista ofrece los calendarios activados, más el propio calendario de la columna si se desactivó después, marcado «(desactivado)». Cuando aún no hay ningún calendario, el campo indica «Aún no hay ningún calendario laboral.», con un enlace **Añadir un calendario** para quienes pueden crear calendarios. Consulte [Calendarios laborales](working-day-calendars.md) |
+| **Cuenta como ETC** | Actívelo cuando la cantidad son personas. Las listas la muestran entonces como ETC en los meses que tienen un importe. Si está desactivado, las listas muestran 0 ETC para esta columna. Pase el cursor sobre la etiqueta para leer esta indicación. Consulte [ETC](#etc) |
+
+**Cómo se calculan los meses**:
+  - **Por día**: cada mes del periodo recibe sus días laborables × cantidad × precio unitario con el índice. Se usan los días del calendario para el año de la columna. Un mes que está en parte dentro del periodo cuenta entero, con todos sus días laborables, cuando el periodo cubre su día 15
+  - **Por mes**: cada mes del periodo recibe cantidad × precio unitario con el índice
+  - **Para todo el periodo**: el total es cantidad × precio unitario con el índice. Se reparte uniformemente entre los meses del periodo, y la diferencia de redondeo recae en el último mes
+  - Cada mes se redondea al céntimo. Los meses fuera del periodo se ponen a cero
+  - El índice de precios se aplica al precio unitario antes que nada: 400 con un índice de 2 da 408
+
+**La línea en directo**: mientras escribe, el panel muestra el resultado bajo los campos, por ejemplo «9 meses · 163 días · 65 200 · 0.75 ETC». Indica los meses del periodo, los días laborables (solo por día), el total y el ETC (cuando **Cuenta como ETC** está activado). Los números siguen el estilo de la pestaña Presupuesto: espacios entre los miles y un punto para los decimales. Escribir en el panel nunca guarda nada, y nunca crea el año en la partida: solo **Calcular** escribe. Cuando los datos están incompletos o se rechazan, una frase sustituye a la línea, por ejemplo «Introduzca una cantidad y un precio unitario para ver el resultado.» o «Elija un calendario laboral para un precio por día.»
+
+**Calcular**: haga clic en **Calcular** para sustituir los doce meses de esa columna por el resultado. Las demás columnas conservan sus importes. El botón permanece deshabilitado mientras los datos estén incompletos, mientras la columna esté congelada y hasta que se muestre el resultado. Desde la pestaña **Anual**, el panel se cierra. Desde la pestaña **Mensual**, la cuadrícula muestra los nuevos meses.
+
+**Recalcular**: en una columna que ya tiene una receta, el panel se abre con ella y el botón indica **Recalcular**. Antes de hacer clic, el panel lista lo que cambiaría:
+  - Los días laborables que cambiaron en el calendario desde el último cálculo, por ejemplo «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19»
+  - Los meses cuyo importe cambiaría, por ejemplo «Importes que cambiarían: marzo: 8 000, ahora 7 600»
+  - O «Los importes guardados ya coinciden.» cuando nada cambiaría
+
+Recalcular usa los días actuales del calendario y la receta del panel. Cambie antes cualquier campo para calcular con valores nuevos, por ejemplo un nuevo índice para el año siguiente.
+
+**Rechazos que puede encontrar**:
+  - «Personal de la sede has no working days for 2027. Add them on the Working-day calendars page.»: el calendario aún no contiene el año de la columna
+  - «Personal de la sede is disabled. Pick an enabled calendar.»: un calendario desactivado no se puede elegir para otra columna. Una columna que ya lo usa todavía puede recalcularse, con el aviso «This calendar is disabled. The computation still uses it.»
+  - «Quantity accepts at most 3 decimals.», «Quantity cannot be negative.», «The price index cannot be below -100%.»
+  - «The computed amount is too large.»
+
+**Qué hacen con la receta los cambios posteriores**:
+  - La receta se mantiene en la columna tras una edición a mano o un reparto. La etiqueta indica entonces **Editado a mano** o **Reparto uniforme**, la receta sigue apareciendo al pasar el cursor, y **Recalcular** sigue disponible
+  - **Copiar columnas presupuestarias** en la Administración presupuestaria lleva la receta de la columna de origen junto con los importes. Consulte [Copiar una columna calculada](budget-operations.md#copiar-una-columna-calculada)
+  - Una copia desde una columna sin receta conserva la propia receta de la columna de destino.
+  - **Restablecer columna presupuestaria** en la Administración presupuestaria quita la receta junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
+  - Un archivo de filas presupuestarias con las columnas de cálculo la define o la borra. Consulte [Archivo de filas presupuestarias](budget-operations.md#archivo-de-filas-presupuestarias)
+  - Cambiar los días laborables de un calendario no cambia nada en la columna hasta que la recalcule
+
+#### ETC
+
+El ETC (equivalente a tiempo completo) indica cuántas personas paga una línea a lo largo del año. KANAP sigue la convención habitual de las hojas de cálculo presupuestarias: cada mes que tiene un importe cuenta la cantidad, y el año es la suma de los meses dividida entre 12.
+
+Por ejemplo, 1 consultor de febrero a octubre: 9 meses × 1 ÷ 12 = 0.75 ETC.
+
+  - **Contado**: una columna con receta y **Cuenta como ETC** activado. Solo cuentan los meses del periodo cuyo importe es mayor que cero. El resultado se redondea a 2 decimales, y los totales suman los valores redondeados de las líneas
+  - **Cero**: una columna con receta y **Cuenta como ETC** desactivado, por ejemplo licencias. Su ETC es 0
+  - **Desconocido**: una columna sin receta, o una partida sin versión para ese año, o un año posterior al fin de validez de la partida. Su ETC queda vacío, nunca 0, porque KANAP no puede saber cuántas personas paga
+  - El ETC sigue los meses que tienen un importe. Tras un reparto o una edición a mano sobre una columna calculada, el ETC sigue contando la cantidad en cada mes que tiene un importe
+  - El ETC aparece en la línea en directo del panel y en las columnas de ETC de la lista OPEX
 
 ---
 
