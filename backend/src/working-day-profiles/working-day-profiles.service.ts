@@ -3,7 +3,24 @@ import { EntityManager } from 'typeorm';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { parsePagination } from '../common/pagination';
 import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
-import { CalendarDays, isProfileActive, mergeDaysByYear, normalizeDaysByYear } from './working-day-profiles.util';
+import {
+  canonicalCountry,
+  canonicalRegion,
+  countryName,
+  generateWorkingDays,
+  HolidayDay,
+  holidayLanguage,
+  listCountries,
+  regionName,
+} from './public-holidays';
+import {
+  CALENDAR_YEAR_MAX,
+  CALENDAR_YEAR_MIN,
+  CalendarDays,
+  isProfileActive,
+  mergeDaysByYear,
+  normalizeDaysByYear,
+} from './working-day-profiles.util';
 
 /** Every call runs in the caller's tenant transaction; there is no fallback manager. */
 export interface WorkingDayProfileContext {
@@ -21,13 +38,15 @@ export interface StoredWorkingDayProfile {
   name: string;
   description: string | null;
   days_by_year: CalendarDays;
+  country_iso: string | null;
+  region_code: string | null;
   status: StatusState;
   disabled_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
 
-/** The writable values of a calendar, normalized. */
+/** The writable values of a calendar, normalized. The source is written on creation only. */
 export interface WorkingDayProfileValues {
   code: string;
   name: string;
@@ -35,6 +54,8 @@ export interface WorkingDayProfileValues {
   days_by_year: CalendarDays;
   status: StatusState;
   disabled_at: Date | null;
+  country_iso?: string | null;
+  region_code?: string | null;
 }
 
 export interface WorkingDayProfileInput {
@@ -44,17 +65,33 @@ export interface WorkingDayProfileInput {
   days_by_year?: unknown;
   status?: unknown;
   disabled_at?: unknown;
+  country_iso?: unknown;
+  region_code?: unknown;
 }
 
-export type WorkingDayProfileField = 'code' | 'name' | 'description' | 'days_by_year' | 'status' | 'disabled_at';
+export type WorkingDayProfileField =
+  | 'code' | 'name' | 'description' | 'days_by_year' | 'status' | 'disabled_at' | 'country_iso' | 'region_code';
 
-/** The API shape: `status` is the effective lifecycle, `disabled_at` an ISO string. */
+/** The source of a standard calendar; both null on a custom one. */
+export interface CalendarSource {
+  country_iso: string | null;
+  region_code: string | null;
+}
+
+/**
+ * The API shape: `status` is the effective lifecycle, `disabled_at` an ISO
+ * string, the country and region names in the language asked for.
+ */
 export interface WorkingDayProfileRow {
   id: string;
   code: string;
   name: string;
   description: string | null;
   days_by_year: CalendarDays;
+  country_iso: string | null;
+  region_code: string | null;
+  country_name: string | null;
+  region_name: string | null;
   status: 'enabled' | 'disabled';
   disabled_at: string | null;
   created_at: string;
@@ -68,6 +105,25 @@ export type WorkingDayProfileDetail = WorkingDayProfileRow & { opex_count: numbe
 export interface WorkingDayProfileUsage {
   opex: number;
   capex: number;
+}
+
+/**
+ * One year of a calendar: `edited` when stored, `standard` when it follows
+ * the public holidays, `none` on a custom calendar without that year. A
+ * standard calendar also gives its standard values and holidays when edited.
+ */
+export interface WorkingDayProfileYear {
+  year: number;
+  source: 'edited' | 'standard' | 'none';
+  days: string[] | null;
+  standard_days: string[] | null;
+  holidays: HolidayDay[];
+}
+
+export interface CalendarSuggestion {
+  country_iso: string;
+  country_name: string;
+  companies: string[];
 }
 
 // -------------------------------------------------------------- field rules ----
@@ -104,6 +160,44 @@ export function normalizeCalendarDescription(raw: unknown): string | null {
   if (raw == null) return null;
   const text = String(raw).trim();
   return text === '' ? null : text;
+}
+
+export const SOURCE_CHANGE_REFUSAL = 'The country of a calendar cannot be changed. Create another calendar.';
+
+const blankToNull = (raw: unknown): string | null => {
+  const text = raw == null ? '' : String(raw).trim();
+  return text === '' ? null : text;
+};
+
+/**
+ * The country and region of a new calendar, as the public holiday package
+ * codes them ("fr" -> "FR"). Blank means a custom calendar; a region needs
+ * its country and must be one of its regions.
+ */
+export function normalizeCalendarSource(countryRaw: unknown, regionRaw: unknown): CalendarSource {
+  const countryText = blankToNull(countryRaw);
+  const regionText = blankToNull(regionRaw);
+  if (!countryText) {
+    if (regionText) throw calendarRefusal(`Give the country of region ${regionText}.`, 'country_iso');
+    return { country_iso: null, region_code: null };
+  }
+  const country = canonicalCountry(countryText);
+  if (!country) throw calendarRefusal(`Country ${countryText} is not in the list.`, 'country_iso');
+  if (!regionText) return { country_iso: country, region_code: null };
+  const region = canonicalRegion(country, regionText);
+  if (!region) throw calendarRefusal(`${regionText} is not a region of ${countryName(country, 'en')}.`, 'region_code');
+  return { country_iso: country, region_code: region };
+}
+
+/**
+ * Whether a country and region given for an existing calendar are its own:
+ * an absent value (undefined) always is; a given one must match what is
+ * stored, codes compared without case.
+ */
+export function isSameCalendarSource(stored: CalendarSource, countryRaw: unknown, regionRaw: unknown): boolean {
+  const same = (storedValue: string | null, raw: unknown) =>
+    raw === undefined || (blankToNull(raw)?.toLowerCase() ?? null) === (storedValue?.toLowerCase() ?? null);
+  return same(stored.country_iso, countryRaw) && same(stored.region_code, regionRaw);
 }
 
 /** The days of a body, as the util normalizes them; its refusal keeps its sentence and names the field. */
@@ -157,13 +251,19 @@ export function calendarValuesEqual(stored: StoredWorkingDayProfile, next: Worki
 const iso = (value: Date | string | null | undefined): string | null =>
   value == null ? null : new Date(value).toISOString();
 
-export function toCalendarRow(stored: StoredWorkingDayProfile): WorkingDayProfileRow {
+export function toCalendarRow(stored: StoredWorkingDayProfile, lang = 'en'): WorkingDayProfileRow {
+  const country = stored.country_iso ?? null;
+  const region = stored.region_code ?? null;
   return {
     id: stored.id,
     code: stored.code,
     name: stored.name,
     description: stored.description ?? null,
     days_by_year: sortDays(stored.days_by_year ?? {}),
+    country_iso: country,
+    region_code: region,
+    country_name: country ? countryName(country, lang) : null,
+    region_name: country && region ? regionName(country, region, lang) : null,
     status: effectiveStatus(stored),
     disabled_at: iso(stored.disabled_at),
     created_at: iso(stored.created_at)!,
@@ -195,8 +295,9 @@ export function uniqueViolation(err: any, values: Pick<WorkingDayProfileValues, 
 
 // ------------------------------------------------------------ list helpers ----
 
-const FILTER_FIELDS = new Set(['code', 'name', 'description', 'status', 'years', 'disabled_at']);
-const SORT_FIELDS = new Set(['code', 'name', 'description', 'status', 'years', 'disabled_at', 'created_at', 'updated_at']);
+const SOURCE_FIELDS = ['country', 'country_iso', 'country_name', 'region_code', 'region_name'];
+const FILTER_FIELDS = new Set(['code', 'name', 'description', 'status', 'years', 'disabled_at', ...SOURCE_FIELDS]);
+const SORT_FIELDS = new Set(['code', 'name', 'description', 'status', 'years', 'disabled_at', 'created_at', 'updated_at', ...SOURCE_FIELDS]);
 const MAX_IDS = 10_000;
 
 /** A grid filter model on one value: set, blank, text operators, combined AND/OR. */
@@ -232,9 +333,16 @@ function passesFilter(value: unknown, raw: any): boolean {
   }
 }
 
-/** The value a filter or a sort reads: the years column reads as its displayed text. */
+/** "France (Moselle)", "France", or '' on a custom calendar. */
+export function calendarSourceLabel(row: Pick<WorkingDayProfileRow, 'country_name' | 'region_name'>): string {
+  if (!row.country_name) return '';
+  return row.region_name ? `${row.country_name} (${row.region_name})` : row.country_name;
+}
+
+/** The value a filter or a sort reads: the years and country columns read as their displayed text. */
 function fieldValue(row: WorkingDayProfileListRow, field: string): unknown {
   if (field === 'years') return row.years.join(', ');
+  if (field === 'country') return calendarSourceLabel(row);
   return (row as any)[field];
 }
 
@@ -262,19 +370,99 @@ export class WorkingDayProfilesService {
     return { ids: rows.slice(0, MAX_IDS).map((row) => row.id), total: rows.length };
   }
 
-  async get(id: string, ctx: WorkingDayProfileContext): Promise<WorkingDayProfileDetail> {
+  async get(id: string, ctx: WorkingDayProfileContext, lang?: string): Promise<WorkingDayProfileDetail> {
     this.assertContext(ctx);
     const [stored] = await this.loadByIds(ctx, [id]);
     if (!stored) throw new NotFoundException('Calendar not found.');
     const usage = (await this.countUsage(ctx, [id])).get(id) ?? { opex: 0, capex: 0 };
-    return { ...toCalendarRow(stored), opex_count: usage.opex, capex_count: usage.capex };
+    return { ...toCalendarRow(stored, holidayLanguage(lang)), opex_count: usage.opex, capex_count: usage.capex };
+  }
+
+  /**
+   * One year of a calendar with the values it computes with: the edited
+   * year when stored, else the standard values on a standard calendar.
+   */
+  async getYear(id: string, yearRaw: unknown, ctx: WorkingDayProfileContext, lang?: string): Promise<WorkingDayProfileYear> {
+    this.assertContext(ctx);
+    const text = String(yearRaw ?? '').trim();
+    const year = /^\d{4}$/.test(text) ? Number(text) : NaN;
+    if (!(year >= CALENDAR_YEAR_MIN && year <= CALENDAR_YEAR_MAX)) {
+      throw calendarRefusal(`Pick a year between ${CALENDAR_YEAR_MIN} and ${CALENDAR_YEAR_MAX}.`);
+    }
+    const [stored] = await this.loadByIds(ctx, [id]);
+    if (!stored) throw new NotFoundException('Calendar not found.');
+    const edited = (stored.days_by_year ?? {})[String(year)] ?? null;
+    const country = canonicalCountry(stored.country_iso);
+    const region = stored.region_code ? canonicalRegion(country, stored.region_code) : null;
+    if (country && (!stored.region_code || region)) {
+      const standard = generateWorkingDays(country, region, year, holidayLanguage(lang));
+      return {
+        year,
+        source: edited ? 'edited' : 'standard',
+        days: edited ?? standard.days,
+        standard_days: standard.days,
+        holidays: standard.holidays,
+      };
+    }
+    return { year, source: edited ? 'edited' : 'none', days: edited, standard_days: null, holidays: [] };
+  }
+
+  /** Every country with public holiday rules, and its regions, names in `lang`. */
+  countries(lang?: string) {
+    return { items: listCountries(holidayLanguage(lang)) };
+  }
+
+  /**
+   * The countries of the tenant's enabled companies that have no standard
+   * calendar for the whole country yet (whatever its status), with the
+   * companies there, sorted by country name in `lang`. A country whose code,
+   * or name in `lang`, is already a calendar's code or name (without case) is
+   * left out too: creating it would be refused.
+   */
+  async suggestions(ctx: WorkingDayProfileContext, lang?: string): Promise<{ items: CalendarSuggestion[] }> {
+    this.assertContext(ctx);
+    const language = holidayLanguage(lang);
+    const companies: Array<{ name: string; country_iso: string; status: string; disabled_at: Date | null }> = await ctx.manager.query(
+      `SELECT c.name, upper(btrim(c.country_iso)) AS country_iso, c.status, c.disabled_at
+         FROM companies c
+        WHERE c.tenant_id = $1
+          AND c.country_iso IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM working_day_profiles w
+             WHERE w.tenant_id = $1 AND w.country_iso = upper(btrim(c.country_iso)) AND w.region_code IS NULL
+          )`,
+      [ctx.tenantId],
+    );
+    const taken: Array<{ code: string; name: string }> = await ctx.manager.query(
+      `SELECT code, name FROM working_day_profiles WHERE tenant_id = $1`,
+      [ctx.tenantId],
+    );
+    const takenCodes = new Set(taken.map((row) => row.code.toLowerCase()));
+    const takenNames = new Set(taken.map((row) => row.name.toLowerCase()));
+    const byCountry = new Map<string, string[]>();
+    for (const company of companies) {
+      const country = canonicalCountry(company.country_iso);
+      if (!country || !isProfileActive(company)) continue;
+      if (takenCodes.has(country.toLowerCase()) || takenNames.has(countryName(country, language).toLowerCase())) continue;
+      byCountry.set(country, [...(byCountry.get(country) ?? []), company.name]);
+    }
+    const collator = new Intl.Collator([language, 'en'], { sensitivity: 'base' });
+    const items = [...byCountry.entries()]
+      .map(([country, names]) => ({
+        country_iso: country,
+        country_name: countryName(country, language),
+        companies: [...new Set(names)].sort((a, b) => collator.compare(a, b)),
+      }))
+      .sort((a, b) => collator.compare(a.country_name, b.country_name) || a.country_iso.localeCompare(b.country_iso));
+    return { items };
   }
 
   private async listRows(query: any, parsed: ReturnType<typeof parsePagination>, ctx: WorkingDayProfileContext): Promise<WorkingDayProfileListRow[]> {
     this.assertContext(ctx);
+    const lang = holidayLanguage(query?.lang);
     const stored = await this.loadStored(ctx);
     let rows: WorkingDayProfileListRow[] = stored.map((row) => {
-      const api = toCalendarRow(row);
+      const api = toCalendarRow(row, lang);
       return { ...api, years: Object.keys(api.days_by_year) };
     });
 
@@ -291,7 +479,8 @@ export class WorkingDayProfilesService {
     }
     const q = String(parsed.q ?? '').trim().toLowerCase();
     if (q) {
-      rows = rows.filter((row) => [row.code, row.name, row.description ?? ''].some((value) => value.toLowerCase().includes(q)));
+      rows = rows.filter((row) => [row.code, row.name, row.description ?? '', calendarSourceLabel(row)]
+        .some((value) => value.toLowerCase().includes(q)));
     }
 
     const field = SORT_FIELDS.has(parsed.sort.field) ? parsed.sort.field : 'code';
@@ -313,7 +502,11 @@ export class WorkingDayProfilesService {
 
   // Writes -----------------------------------------------------------------
 
-  async create(body: WorkingDayProfileInput, ctx: WorkingDayProfileContext): Promise<WorkingDayProfileDetail> {
+  /**
+   * With a country (and maybe a region), a standard calendar: its years follow
+   * the public holidays and the days given become edited years.
+   */
+  async create(body: WorkingDayProfileInput, ctx: WorkingDayProfileContext, lang?: string): Promise<WorkingDayProfileDetail> {
     this.assertContext(ctx);
     const lifecycle = this.lifecycle(null, body);
     const days = normalizeCalendarDays(body?.days_by_year ?? {}, false);
@@ -324,19 +517,26 @@ export class WorkingDayProfilesService {
       days_by_year: mergeDaysByYear({}, days),
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
+      ...normalizeCalendarSource(body?.country_iso, body?.region_code),
     };
     await this.assertUnique(ctx, values, null);
     const saved = await this.persist(ctx, null, values);
-    return this.get(saved.id, ctx);
+    return this.get(saved.id, ctx, lang);
   }
 
-  /** PATCH semantics: an absent key keeps the stored value; `days_by_year` is merged per year. */
-  async update(id: string, body: WorkingDayProfileInput, ctx: WorkingDayProfileContext): Promise<WorkingDayProfileDetail> {
+  /**
+   * PATCH semantics: an absent key keeps the stored value; `days_by_year` is
+   * merged per year. The country and region are accepted only unchanged.
+   */
+  async update(id: string, body: WorkingDayProfileInput, ctx: WorkingDayProfileContext, lang?: string): Promise<WorkingDayProfileDetail> {
     this.assertContext(ctx);
     const has = (key: keyof WorkingDayProfileInput) =>
       body != null && Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined;
     const [existing] = await this.lockByIds(ctx, [id]);
     if (!existing) throw new NotFoundException('Calendar not found.');
+    if (!isSameCalendarSource(existing, body?.country_iso, body?.region_code)) {
+      throw calendarRefusal(SOURCE_CHANGE_REFUSAL, 'country_iso');
+    }
 
     const lifecycle = this.lifecycle(existing, body);
     const values: WorkingDayProfileValues = {
@@ -353,7 +553,7 @@ export class WorkingDayProfilesService {
       await this.assertUnique(ctx, values, id);
       await this.persist(ctx, existing, values);
     }
-    return this.get(id, ctx);
+    return this.get(id, ctx, lang);
   }
 
   // Shared with the delete and CSV services ----------------------------------
@@ -389,9 +589,10 @@ export class WorkingDayProfilesService {
   }
 
   /**
-   * Distinct OPEX and CAPEX lines whose rounds use each calendar, one query.
-   * Lock the calendars first when the count guards a delete: a round naming
-   * a calendar takes a key-share lock on it, which waits for FOR UPDATE.
+   * Distinct OPEX and CAPEX lines (items) with a quantity × price line on each
+   * calendar, whatever the year or column, one query. Lock the calendars first
+   * when the count guards a delete: a lines write takes a key-share lock on
+   * the calendars it names, which waits for FOR UPDATE.
    */
   async countUsage(ctx: WorkingDayProfileContext, ids: string[]): Promise<Map<string, WorkingDayProfileUsage>> {
     const usage = new Map<string, WorkingDayProfileUsage>();
@@ -399,13 +600,15 @@ export class WorkingDayProfilesService {
     const rows: Array<{ id: string; opex: number; capex: number }> = await ctx.manager.query(
       `SELECT p.id,
               (SELECT count(DISTINCT v.spend_item_id)::int
-                 FROM spend_round_inputs r
+                 FROM spend_round_input_lines l
+                 JOIN spend_round_inputs r ON r.tenant_id = l.tenant_id AND r.id = l.round_input_id
                  JOIN spend_versions v ON v.tenant_id = r.tenant_id AND v.id = r.version_id
-                WHERE r.tenant_id = $1 AND v.tenant_id = $1 AND r.working_day_profile_id = p.id) AS opex,
+                WHERE l.tenant_id = $1 AND r.tenant_id = $1 AND v.tenant_id = $1 AND l.working_day_profile_id = p.id) AS opex,
               (SELECT count(DISTINCT v.capex_item_id)::int
-                 FROM capex_round_inputs r
+                 FROM capex_round_input_lines l
+                 JOIN capex_round_inputs r ON r.tenant_id = l.tenant_id AND r.id = l.round_input_id
                  JOIN capex_versions v ON v.tenant_id = r.tenant_id AND v.id = r.version_id
-                WHERE r.tenant_id = $1 AND v.tenant_id = $1 AND r.working_day_profile_id = p.id) AS capex
+                WHERE l.tenant_id = $1 AND r.tenant_id = $1 AND v.tenant_id = $1 AND l.working_day_profile_id = p.id) AS capex
          FROM working_day_profiles p
         WHERE p.tenant_id = $1 AND p.id = ANY($2::uuid[])`,
       [ctx.tenantId, ids],
@@ -430,7 +633,7 @@ export class WorkingDayProfilesService {
     }
   }
 
-  /** Inserts (existing = null) or updates one calendar and writes its audit row. */
+  /** Inserts (existing = null) or updates one calendar and writes its audit row. An update never changes the source. */
   async persist(
     ctx: WorkingDayProfileContext,
     existing: StoredWorkingDayProfile | null,
@@ -448,10 +651,13 @@ export class WorkingDayProfilesService {
           [ctx.tenantId, existing.id, values.code, values.name, values.description, days, values.status, values.disabled_at],
         )
         : await ctx.manager.query(
-          `INSERT INTO working_day_profiles (tenant_id, code, name, description, days_by_year, status, disabled_at)
-           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
+          `INSERT INTO working_day_profiles (tenant_id, code, name, description, days_by_year, status, disabled_at, country_iso, region_code)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9)
         RETURNING *`,
-          [ctx.tenantId, values.code, values.name, values.description, days, values.status, values.disabled_at],
+          [
+            ctx.tenantId, values.code, values.name, values.description, days, values.status, values.disabled_at,
+            values.country_iso ?? null, values.region_code ?? null,
+          ],
         );
       // An UPDATE … RETURNING through the query runner comes back as [rows, count].
       saved = (Array.isArray(rows[0]) ? (rows[0] as any)[0] : rows[0]) as StoredWorkingDayProfile | undefined;

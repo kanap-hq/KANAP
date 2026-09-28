@@ -7,14 +7,18 @@ import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.se
 import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
 import { mergeDaysByYear } from './working-day-profiles.util';
 import {
+  CalendarSource,
   calendarValuesEqual,
   effectiveStatus,
+  isSameCalendarSource,
   normalizeCalendarCode,
   normalizeCalendarDays,
   normalizeCalendarDescription,
   normalizeCalendarName,
+  normalizeCalendarSource,
   refusalMessage,
   sortDays,
+  SOURCE_CHANGE_REFUSAL,
   StoredWorkingDayProfile,
   WorkingDayProfileContext,
   WorkingDayProfilesService,
@@ -23,10 +27,14 @@ import {
 
 export const CALENDAR_MONTH_HEADERS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const;
 export const WORKING_DAY_PROFILE_CSV_HEADERS = [
-  'code', 'name', 'description', 'status', 'disabled_at', 'year', ...CALENDAR_MONTH_HEADERS,
+  'code', 'name', 'description', 'country', 'region', 'status', 'disabled_at', 'year', ...CALENDAR_MONTH_HEADERS,
 ] as const;
-/** Accepted when absent (the file then sets the lifecycle through `status` alone). */
-const OPTIONAL_HEADERS = new Set<string>(['disabled_at']);
+/**
+ * Accepted when absent: without `disabled_at` the file sets the lifecycle
+ * through `status` alone; without `country` and `region` it creates custom
+ * calendars and keeps the source of the existing ones.
+ */
+const OPTIONAL_HEADERS = new Set<string>(['disabled_at', 'country', 'region']);
 const DELIMITER = ';';
 
 export interface WorkingDayProfileImportResult {
@@ -48,6 +56,9 @@ interface ParsedRow {
   description: string | null;
   status: StatusState;
   disabledAt: Date | null | undefined;
+  /** The cells as written (trimmed, blank = null); validated once per calendar. */
+  country: string | null;
+  region: string | null;
   year: string | null;
   days: string[] | null;
 }
@@ -67,7 +78,11 @@ const iso = (value: Date | string | null | undefined) => (value == null ? '' : n
 export class WorkingDayProfilesCsvService {
   constructor(private readonly calendars: WorkingDayProfilesService) {}
 
-  /** One row per calendar and year, years ascending; a calendar without years is one row with a blank year and months. */
+  /**
+   * One row per calendar and year, years ascending; a calendar without years
+   * is one row with a blank year and months. A standard calendar exports its
+   * country and region codes and its edited years only.
+   */
   async exportCsv(scope: 'data' | 'template', ctx: WorkingDayProfileContext): Promise<{ filename: string; content: string }> {
     const rows: Array<Record<string, string>> = [];
     if (scope === 'data') {
@@ -78,6 +93,8 @@ export class WorkingDayProfilesCsvService {
           code: calendar.code,
           name: calendar.name,
           description: calendar.description ?? '',
+          country: calendar.country_iso ?? '',
+          region: calendar.region_code ?? '',
           status: effectiveStatus(calendar),
           disabled_at: iso(calendar.disabled_at),
         };
@@ -114,7 +131,9 @@ export class WorkingDayProfilesCsvService {
    * agree on the calendar's fields, a year appears once per code, a row with a
    * year gives its twelve months. Years absent from the file are kept: an
    * import never removes a year. A row identical to what is stored is counted
-   * unchanged, and a calendar without any change writes nothing.
+   * unchanged, and a calendar without any change writes nothing. The country
+   * and region are applied on creation; on an existing calendar they are
+   * blank or its own. The years of a standard calendar are its edited years.
    */
   async importCsv(
     { file, dryRun }: { file: Express.Multer.File; dryRun: boolean },
@@ -158,6 +177,25 @@ export class WorkingDayProfilesCsvService {
       group.rows.push(row);
     });
 
+    // The source of each calendar: validated for a new one, blank or unchanged for a stored one.
+    const sources = new Map<string, CalendarSource>();
+    for (const [key, group] of calendars) {
+      const existing = storedByCode.get(key) ?? null;
+      const { first } = group;
+      if (existing) {
+        // A blank cell keeps the stored value; a filled one must be it.
+        if (!isSameCalendarSource(existing, first.country ?? undefined, first.region ?? undefined)) {
+          errors.push({ row: first.line, message: SOURCE_CHANGE_REFUSAL });
+        }
+        continue;
+      }
+      try {
+        sources.set(key, normalizeCalendarSource(first.country, first.region));
+      } catch (err) {
+        errors.push({ row: first.line, message: refusalMessage(err) });
+      }
+    }
+
     // The resulting calendars: names stay unique across the stored ones and the file.
     const results = new Map<string, { existing: StoredWorkingDayProfile | null; values: WorkingDayProfileValues }>();
     for (const [key, group] of calendars) {
@@ -178,6 +216,7 @@ export class WorkingDayProfilesCsvService {
           days_by_year: mergeDaysByYear(existing?.days_by_year ?? {}, patch),
           status: lifecycle.status,
           disabled_at: lifecycle.disabled_at,
+          ...(existing ? {} : sources.get(key)),
         },
       });
     }
@@ -291,6 +330,8 @@ export class WorkingDayProfilesCsvService {
       description: normalizeCalendarDescription(cell(raw, 'description')),
       status: (statusRaw || StatusState.ENABLED) as StatusState,
       disabledAt,
+      country: cell(raw, 'country') || null,
+      region: cell(raw, 'region') || null,
       year: normalizedYear,
       days,
     };
@@ -329,6 +370,8 @@ export class WorkingDayProfilesCsvService {
 function disagreeOn(first: ParsedRow, row: ParsedRow): string | null {
   if (first.name !== row.name) return 'name';
   if (first.description !== row.description) return 'description';
+  if ((first.country ?? '').toLowerCase() !== (row.country ?? '').toLowerCase()) return 'country';
+  if ((first.region ?? '').toLowerCase() !== (row.region ?? '').toLowerCase()) return 'region';
   if (first.status !== row.status) return 'status';
   const a = first.disabledAt ? first.disabledAt.getTime() : null;
   const b = row.disabledAt ? row.disabledAt.getTime() : null;

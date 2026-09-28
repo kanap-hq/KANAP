@@ -17,8 +17,7 @@ import { StatusState } from '../common/status';
 import { formatAllocationMethodLabel } from './allocation-utils';
 import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center-tree.util';
 import { analyticsFieldKey, parseAnalyticsFieldKey } from '../analytics/analytics-axes.util';
-import { activeMonths } from './spread.util';
-import { yearlyFte } from './costing.util';
+import { Decimal } from '../common/decimal';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -64,7 +63,7 @@ export interface SummaryScopeConfig {
   itemTable: string;
   versionTable: string;
   amountTable: string;
-  /** One round per version and column: period, method and costing inputs (the FTE source). */
+  /** One round per version and column: period, method and the FTE of its lines. */
   roundTable: string;
   versionItemFk: string;
   contractLink: { table: string; itemColumn: string };
@@ -252,9 +251,9 @@ export interface VersionTotals {
   reporting: Map<string, VersionReporting>;
   reportingCurrency: string;
   /**
-   * Per version and measure with costing inputs, the yearly FTE (2 decimals;
-   * `0` when the inputs do not count as FTE). Filled only when asked; a
-   * measure without costing inputs is absent (unknown, never 0).
+   * Per version and measure with quantity × price lines, the yearly FTE the
+   * lines give (2 decimals; `0` when no line counts people or days). Filled
+   * only when asked; a measure without lines is absent (unknown, never 0).
    */
   fte: Map<string, Map<string, string>>;
 }
@@ -466,9 +465,9 @@ export async function loadVersionTotals(
 }
 
 /**
- * The yearly FTE of each round with costing inputs, in one query: the round's
- * quantity, flag and period, and the months of its version's year whose stored
- * amount in the round's column is positive.
+ * The yearly FTE of each round with lines, in one query: stored with the
+ * round when its lines are written, so a later hand edit or spread of the
+ * months leaves it as the lines gave it.
  */
 async function loadVersionFte(
   config: SummaryScopeConfig,
@@ -476,50 +475,27 @@ async function loadVersionFte(
   tenantId: string,
   versionIds: string[],
 ): Promise<Map<string, Map<string, string>>> {
-  const amountOfRound = `CASE r.measure ${SUMMARY_COLUMNS.map((c) => `WHEN '${c.measure}' THEN a.${c.measure}`).join(' ')} END`;
-  const rounds: Array<{
-    version_id: string;
-    measure: string;
-    quantity: string;
-    counts_as_fte: boolean;
-    period_start: string;
-    period_end: string;
-    positive_months: number[];
-  }> = await manager.query(
-    `SELECT r.version_id, r.measure, r.quantity::text AS quantity, r.counts_as_fte,
-            to_char(r.period_start, 'YYYY-MM-DD') AS period_start, to_char(r.period_end, 'YYYY-MM-DD') AS period_end,
-            COALESCE(array_agg(EXTRACT(MONTH FROM a.period)::int) FILTER (WHERE a.id IS NOT NULL), '{}') AS positive_months
+  const rounds: Array<{ version_id: string; measure: string; fte: string }> = await manager.query(
+    `SELECT r.version_id, r.measure, r.fte::text AS fte
      FROM ${config.roundTable} r
-     JOIN ${config.versionTable} v ON v.id = r.version_id AND v.tenant_id = r.tenant_id
-     LEFT JOIN ${config.amountTable} a
-       ON a.tenant_id = r.tenant_id
-      AND a.version_id = r.version_id
-      AND EXTRACT(YEAR FROM a.period) = v.budget_year
-      AND ${amountOfRound} > 0
      WHERE r.tenant_id = $1
        AND r.version_id = ANY($2::uuid[])
-       AND r.pricing_basis IS NOT NULL
-     GROUP BY r.id`,
+       AND r.fte IS NOT NULL`,
     [tenantId, versionIds],
   );
   const result = new Map<string, Map<string, string>>();
   for (const round of rounds) {
-    // The period lies in one year (table CHECK), so the 15th rule never refuses it.
-    const year = Number(round.period_start.slice(0, 4));
-    const value = round.counts_as_fte
-      ? yearlyFte(round.quantity, activeMonths(year, round.period_start, round.period_end), (round.positive_months ?? []).map(Number))
-      : '0';
     let perMeasure = result.get(round.version_id);
     if (!perMeasure) {
       perMeasure = new Map();
       result.set(round.version_id, perMeasure);
     }
-    perMeasure.set(round.measure, value);
+    perMeasure.set(round.measure, Decimal.from(round.fte).toString());
   }
   return result;
 }
 
-/** The yearly FTE a version holds in one column: null (unknown) without a version or costing inputs. */
+/** The yearly FTE a version holds in one column: null (unknown) without a version or lines. */
 export function versionFte(totals: VersionTotals, version: any | undefined, measure: string): string | null {
   return version ? totals.fte.get(version.id)?.get(measure) ?? null : null;
 }

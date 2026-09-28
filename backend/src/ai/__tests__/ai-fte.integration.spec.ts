@@ -65,35 +65,31 @@ function aggregateExecutor(kind: Kind): AiAggregateExecutor {
 type Seed = { tenantId: string; items: Record<'alpha' | 'bravo' | 'charlie' | 'delta', string> };
 
 /**
- * Four lines with a Budget of Y: Alpha counts 1.2 people in March (FTE 0.1),
- * Bravo 2.4 in March (0.2), Charlie has a round without costing inputs
- * (unknown), Delta is costed without the FTE flag (0).
+ * Four lines with a Budget of Y, the FTE as a lines write stores it on the
+ * round: Alpha 0.1 (1.2 people in March), Bravo 0.2 (2.4 in March), Charlie
+ * has a round without lines (unknown), Delta's lines are units only (0).
  */
 async function seedFte(runner: QueryRunner, kind: Kind): Promise<Seed> {
   const [budget] = SUMMARY_COLUMNS;
   const tenantId = await seedTenant(runner, `ai-fte-${kind}`);
-  const line = async (itemNumber: number, name: string, recipe: { quantity: string; fte: boolean } | null) => {
+  const line = async (itemNumber: number, name: string, fte: string | null) => {
     const itemId = await seedItem(runner, kind, tenantId, itemNumber, name);
     const versionId = await seedVersion(runner, kind, tenantId, itemId, Y);
     await seedMonths(runner, kind, tenantId, versionId, Y, { [budget.measure]: [0, 0, 300, ...repeat(0, 9)] });
     await runner.query(
-      `INSERT INTO ${TABLES[kind].rounds}
-         (tenant_id, version_id, measure, period_start, period_end, method, pricing_basis, quantity, unit_price, price_index_pct, counts_as_fte)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [
-        tenantId, versionId, budget.measure, period(3, Y), `${Y}-03-31`, recipe ? 'computed' : 'spread',
-        recipe ? 'per_month' : null, recipe?.quantity ?? null, recipe ? '250' : null, recipe ? '0' : null, recipe?.fte ?? false,
-      ],
+      `INSERT INTO ${TABLES[kind].rounds} (tenant_id, version_id, measure, period_start, period_end, method, fte)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [tenantId, versionId, budget.measure, period(3, Y), `${Y}-03-31`, fte === null ? 'spread' : 'computed', fte],
     );
     return itemId;
   };
   return {
     tenantId,
     items: {
-      alpha: await line(1, 'Alpha line', { quantity: '1.2', fte: true }),
-      bravo: await line(2, 'Bravo line', { quantity: '2.4', fte: true }),
+      alpha: await line(1, 'Alpha line', '0.1'),
+      bravo: await line(2, 'Bravo line', '0.2'),
       charlie: await line(3, 'Charlie line', null),
-      delta: await line(4, 'Delta line', { quantity: '5', fte: false }),
+      delta: await line(4, 'Delta line', '0'),
     },
   };
 }
@@ -120,7 +116,7 @@ async function testRegistryListsFteFields() {
       }
     }
     assert.match(registry.fields.y_plus1_review_fte.description, /column 2 \(named Revision by default\) for Y\+1/);
-    assert.match(registry.fields.y_budget_fte.description, /null \(unknown\) when the line has no costing inputs/);
+    assert.match(registry.fields.y_budget_fte.description, /null \(unknown\) when the column has no lines for that year/);
   }
   assert.equal(Object.keys(budgetAmountFields()).length, 25, 'the amount fields are unchanged');
 }

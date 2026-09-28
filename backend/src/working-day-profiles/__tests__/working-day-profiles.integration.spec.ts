@@ -2,7 +2,13 @@ import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
-import { isProfileActive } from '../working-day-profiles.util';
+import { AuditLog } from '../../audit/audit.entity';
+import { AuditService } from '../../audit/audit.service';
+import { CompaniesService } from '../../companies/companies.service';
+import { Company } from '../../companies/company.entity';
+import { SpendAmountsService } from '../../spend/spend-amounts.service';
+import { captureAudit, noFreeze, readMeasure } from '../../spend/__tests__/round-inputs.fixtures';
+import { calendarDaysFor, isProfileActive, loadWorkingDayProfiles } from '../working-day-profiles.util';
 import {
   auditCount,
   context,
@@ -19,10 +25,45 @@ import {
 // Working-day calendars against a real database: create, read and list, the
 // field and days rules, uniqueness (service sentence, then the unique indexes
 // behind it), the per-year merge of a PATCH, the lifecycle, the in-use delete
-// refusal counted in lines through the rounds of both item types, and the
-// bulk delete that keeps going past a refusal.
+// refusal counted in budget lines through the quantity × price lines of both
+// item types, and the
+// bulk delete that keeps going past a refusal. Standard calendars: the source
+// set at creation and never changed, the year route in its three cases, reset
+// to standard, the standard values in a computation, the suggestions from the
+// companies, and the calendar a company creation adds.
 
 const DE_OFFICE = ['21', '20', '22', '20', '19', '21', '23', '21', '21', '21', '20', '20'];
+const FRANCE_2026 = ['21', '20', '22', '21', '17', '22', '22', '21', '22', '22', '20', '22'];
+const SOURCE_REFUSAL = /^The country of a calendar cannot be changed\. Create another calendar\.$/;
+
+async function seedCompany(
+  runner: QueryRunner,
+  tenantId: string,
+  name: string,
+  countryIso: string,
+  lifecycle: { status?: 'enabled' | 'disabled'; disabledAt?: string | null } = {},
+) {
+  await runner.query(
+    `INSERT INTO companies (tenant_id, name, country_iso, city, status, disabled_at) VALUES ($1, $2, $3, 'Test city', $4, $5)`,
+    [tenantId, name, countryIso, lifecycle.status ?? 'enabled', lifecycle.disabledAt ?? null],
+  );
+}
+
+async function seedUser(runner: QueryRunner, tenantId: string, locale: string | null): Promise<string> {
+  const roleId = randomUUID();
+  await runner.query(
+    `INSERT INTO roles (id, tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
+     VALUES ($1, $2, 'Calendar tester', 'Calendar tester', false, false, now(), now())`,
+    [roleId, tenantId],
+  );
+  const userId = randomUUID();
+  await runner.query(
+    `INSERT INTO users (id, tenant_id, first_name, last_name, email, role_id, mfa_enabled, status, locale)
+     VALUES ($1, $2, 'Cal', 'Tester', $3, $4, false, 'enabled', $5)`,
+    [userId, tenantId, `cal.tester.${userId.slice(0, 8)}@example.test`, roleId, locale],
+  );
+  return userId;
+}
 
 async function seed(runner: QueryRunner, tag: string) {
   const tenantId = await seedTenant(runner, tag);
@@ -231,7 +272,7 @@ async function testDeleteInUse() {
     const fr = await svc.create({ code: 'FR218', name: 'France 218', days_by_year: { 2026: FR218, 2027: FR218 } }, ctx);
     const spare = await svc.create({ code: 'SPARE', name: 'Spare calendar' }, ctx);
 
-    // Three OPEX lines, one of them through two rounds and two years (counted once), and one CAPEX line.
+    // Three OPEX lines, one of them through two columns and two years (counted once), and one CAPEX line.
     const a = await seedLine(runner, 'opex', tenantId);
     await seedCalendarRound(runner, 'opex', tenantId, a.versionId, fr.id, 'planned');
     await seedCalendarRound(runner, 'opex', tenantId, a.versionId, fr.id, 'actual');
@@ -252,16 +293,16 @@ async function testDeleteInUse() {
     assert.deepEqual([detail.opex_count, detail.capex_count], [3, 1]);
 
     await expectRefused(runner, /^France 218 is used by 3 OPEX lines and 1 CAPEX line\. Disable it instead\.$/, () => del.delete(fr.id, ctx));
-    // Disabling stays possible, and the rounds keep it.
+    // Disabling stays possible, and the lines keep it.
     await svc.update(fr.id, { status: 'disabled' }, ctx);
     const [{ n }] = await runner.query(
-      `SELECT count(*)::int AS n FROM spend_round_inputs WHERE tenant_id = $1 AND working_day_profile_id = $2`,
+      `SELECT count(*)::int AS n FROM spend_round_input_lines WHERE tenant_id = $1 AND working_day_profile_id = $2`,
       [tenantId, fr.id],
     );
     assert.equal(n, 5);
 
     // Only CAPEX left: the sentence names what is there.
-    await runner.query(`DELETE FROM spend_round_inputs WHERE tenant_id = $1 AND working_day_profile_id = $2`, [tenantId, fr.id]);
+    await runner.query(`DELETE FROM spend_round_input_lines WHERE tenant_id = $1 AND working_day_profile_id = $2`, [tenantId, fr.id]);
     await expectRefused(runner, /^France 218 is used by 1 CAPEX line\. Disable it instead\.$/, () => del.delete(fr.id, ctx));
 
     // An unused calendar goes, with an audit row.
@@ -303,6 +344,270 @@ async function testBulkDeleteKeepsGoing() {
   });
 }
 
+async function testStandardCalendarSource() {
+  await withRollback(async (runner) => {
+    const { tenantId, svc, ctx } = await seed(runner, 'source');
+    const moselle = await svc.create({ code: 'FR-57', name: 'France (Moselle)', country_iso: ' fr ', region_code: '57' }, ctx);
+    assert.deepEqual(
+      [moselle.country_iso, moselle.region_code, moselle.country_name, moselle.region_name, moselle.days_by_year],
+      ['FR', '57', 'France', 'Département Moselle', {}],
+      'codes as the rules know them, names in English by default, no stored year',
+    );
+    const bavaria = await svc.create({ code: 'DE-BY', name: 'Bavaria', country_iso: 'DE', region_code: 'by', days_by_year: { 2026: DE_OFFICE } }, ctx);
+    assert.deepEqual([bavaria.region_code, Object.keys(bavaria.days_by_year)], ['BY', ['2026']], 'days given at creation are edited years');
+    const custom = await svc.create({ code: 'CUSTOM', name: 'Custom days', country_iso: '', region_code: null }, ctx);
+    assert.deepEqual([custom.country_iso, custom.region_code, custom.country_name, custom.region_name], [null, null, null, null]);
+
+    // Names in the language asked for, on the detail and the list.
+    const french = await svc.get(bavaria.id, ctx, 'fr');
+    assert.deepEqual([french.country_name, french.region_name], ['Allemagne', 'Bayern']);
+    const list = await svc.list({ lang: 'fr', sort: 'country:ASC' }, ctx);
+    assert.deepEqual(list.items.map((row) => [row.code, row.country_name]), [['DE-BY', 'Allemagne'], ['FR-57', 'France'], ['CUSTOM', null]]);
+    assert.deepEqual(list.items.find((row) => row.code === 'FR-57')!.years, [], 'years keeps its meaning: the stored years');
+    assert.deepEqual((await svc.list({ q: 'moselle' }, ctx)).items.map((row) => row.code), ['FR-57']);
+    const byCountry = await svc.list({ filters: JSON.stringify({ country_iso: { filterType: 'set', values: ['FR'] } }) }, ctx);
+    assert.deepEqual(byCountry.items.map((row) => row.code), ['FR-57']);
+
+    // The rules must know the country and the region.
+    await expectRefused(runner, /^Country ZZ is not in the list\.$/, () => svc.create({ code: 'ZZ', name: 'Nowhere', country_iso: 'ZZ' }, ctx));
+    await expectRefused(runner, /^BY is not a region of France\.$/, () =>
+      svc.create({ code: 'FR-BY', name: 'Wrong region', country_iso: 'FR', region_code: 'BY' }, ctx));
+    await expectRefused(runner, /^Give the country of region 57\.$/, () => svc.create({ code: 'R57', name: 'Region only', region_code: '57' }, ctx));
+    const [{ n: refusedRows }] = await runner.query(`SELECT count(*)::int AS n FROM working_day_profiles WHERE tenant_id = $1`, [tenantId]);
+    assert.equal(refusedRows, 3);
+
+    // The source never changes, whichever side the change comes from; the same values pass.
+    const updates = await auditCount(runner, tenantId, 'update');
+    for (const body of [
+      { country_iso: 'DE' },
+      { region_code: '67' },
+      { region_code: null },
+      { country_iso: null },
+      { country_iso: 'FR', region_code: '' },
+    ]) {
+      await expectRefused(runner, SOURCE_REFUSAL, () => svc.update(moselle.id, body, ctx));
+    }
+    await expectRefused(runner, SOURCE_REFUSAL, () => svc.update(custom.id, { country_iso: 'FR' }, ctx));
+    try {
+      await svc.update(moselle.id, { country_iso: 'PL' }, ctx);
+      assert.fail('should be refused');
+    } catch (err: any) {
+      assert.equal(err.getResponse().field, 'country_iso');
+    }
+    const same = await svc.update(moselle.id, { country_iso: 'fr', region_code: '57', name: 'France (Moselle)' }, ctx);
+    assert.deepEqual([same.country_iso, same.region_code], ['FR', '57']);
+    await svc.update(custom.id, { country_iso: null, region_code: '' }, ctx);
+    assert.equal(await auditCount(runner, tenantId, 'update'), updates, 'an unchanged source writes nothing');
+    const renamed = await svc.update(moselle.id, { name: 'Moselle office' }, ctx);
+    assert.deepEqual([renamed.name, renamed.country_iso, renamed.region_code], ['Moselle office', 'FR', '57'], 'other fields change freely');
+
+    // The database keeps the shape, raw SQL included.
+    for (const [pattern, country, region] of [
+      [/working_day_profiles_country_iso_check/, 'fr', null],
+      [/working_day_profiles_country_iso_check/, 'FRA', null],
+      [/working_day_profiles_region_country_check/, null, '57'],
+      [/working_day_profiles_region_code_check/, 'FR', 'ABCDEFGHIJK'],
+    ] as const) {
+      await expectRefused(runner, pattern, () => runner.query(
+        `INSERT INTO working_day_profiles (tenant_id, code, name, country_iso, region_code) VALUES ($1, 'RAW', 'Raw', $2, $3)`,
+        [tenantId, country, region],
+      ));
+    }
+  });
+}
+
+async function testYearRouteAndReset() {
+  await withRollback(async (runner) => {
+    const { svc, ctx } = await seed(runner, 'year');
+    const france = await svc.create({ code: 'FR', name: 'France', country_iso: 'FR' }, ctx);
+    const custom = await svc.create({ code: 'CUSTOM', name: 'Custom days', days_by_year: { 2027: FR218 } }, ctx);
+
+    // A year nobody edited follows the rules: its standard values, and the holidays behind them.
+    const standard = await svc.getYear(france.id, '2026', ctx, 'fr');
+    assert.deepEqual([standard.year, standard.source, standard.days, standard.standard_days], [2026, 'standard', FRANCE_2026, FRANCE_2026]);
+    assert.equal(standard.holidays.length, 11);
+    assert.deepEqual(standard.holidays[0], { date: '2026-01-01', name: 'Nouvel An', weekend: false });
+    assert.deepEqual(standard.holidays.filter((holiday) => holiday.weekend).map((holiday) => holiday.name), ['Assomption', 'Toussaint']);
+    // Any year of the range exists by construction.
+    assert.equal((await svc.getYear(france.id, '2100', ctx)).source, 'standard');
+
+    // Editing a month stores the whole year: it is now edited, the standard values stay alongside.
+    const edited = [...FRANCE_2026];
+    edited[4] = '16.5';
+    await svc.update(france.id, { days_by_year: { 2026: edited } }, ctx);
+    const afterEdit = await svc.getYear(france.id, 2026, ctx);
+    assert.deepEqual([afterEdit.source, afterEdit.days, afterEdit.standard_days], ['edited', edited, FRANCE_2026]);
+    assert.equal(afterEdit.holidays[0].name, "New Year's Day");
+    assert.equal((await svc.getYear(france.id, 2027, ctx)).source, 'standard', 'the other years keep following the rules');
+
+    // Reset to standard: the edited year is removed and the rules apply again.
+    const reset = await svc.update(france.id, { days_by_year: { 2026: null } }, ctx);
+    assert.deepEqual(reset.days_by_year, {});
+    const afterReset = await svc.getYear(france.id, 2026, ctx);
+    assert.deepEqual([afterReset.source, afterReset.days], ['standard', FRANCE_2026]);
+
+    // A custom calendar: its stored years only, no standard values, no holidays.
+    assert.deepEqual(await svc.getYear(custom.id, 2027, ctx), { year: 2027, source: 'edited', days: FR218, standard_days: null, holidays: [] });
+    assert.deepEqual(await svc.getYear(custom.id, 2026, ctx), { year: 2026, source: 'none', days: null, standard_days: null, holidays: [] });
+
+    await expectRefused(runner, /^Pick a year between 2000 and 2100\.$/, () => svc.getYear(france.id, '1999', ctx));
+    await expectRefused(runner, /^Pick a year between 2000 and 2100\.$/, () => svc.getYear(france.id, '2026a', ctx));
+    await expectRefused(runner, /Calendar not found/, () => svc.getYear(randomUUID(), '2026', ctx));
+
+    // The countries route: every country of the rules, names in the language asked for.
+    const countries = svc.countries('es').items;
+    assert.equal(countries.length, 207);
+    assert.equal(countries.find((country) => country.code === 'DE')!.name, 'Alemania');
+  });
+}
+
+async function testStandardValuesInComputation() {
+  await withRollback(async (runner) => {
+    const { tenantId, svc, ctx } = await seed(runner, 'compute');
+    const france = await svc.create({ code: 'FR', name: 'France', country_iso: 'FR', days_by_year: { 2027: FR218 } }, ctx);
+    const custom = await svc.create({ code: 'CUSTOM', name: 'Custom days', days_by_year: { 2027: FR218 } }, ctx);
+
+    const loaded = await loadWorkingDayProfiles(runner.manager, tenantId, [france.id, custom.id]);
+    assert.deepEqual([loaded.get(france.id)!.country_iso, loaded.get(france.id)!.region_code], ['FR', null]);
+    assert.deepEqual(calendarDaysFor(loaded.get(france.id)!, 2026), FRANCE_2026, 'a standard calendar computes any year');
+    assert.deepEqual(calendarDaysFor(loaded.get(france.id)!, 2027), FR218, 'an edited year wins');
+    assert.deepEqual(calendarDaysFor(loaded.get(custom.id)!, 2027), FR218);
+    assert.equal(calendarDaysFor(loaded.get(custom.id)!, 2026), null);
+
+    // A line priced per day reads the same days.
+    const { versionId } = await seedLine(runner, 'opex', tenantId, 2026);
+    const amounts = new SpendAmountsService(undefined as any, undefined as any, undefined as any, captureAudit() as any, noFreeze as any);
+    const payload = (calendarId: string) => ({
+      kind: 'lines' as const,
+      year: 2026,
+      measure: 'planned' as const,
+      lines: [{
+        label: '', quantity_unit: 'people' as const, quantity: '1', unit_price: '400', price_basis: 'per_day' as const,
+        period_start: '2026-01-01', period_end: '2026-12-31', working_day_profile_id: calendarId,
+      }],
+    });
+    const written: any = await amounts.bulkUpsert(versionId, payload(france.id), null, { manager: runner.manager });
+    const calculation = written.round_inputs[0].last_calculation;
+    assert.deepEqual([calculation.lines[0].day_counts, calculation.lines[0].total_days, calculation.total], [FRANCE_2026, '252', '100800.00']);
+    assert.deepEqual(await readMeasure(runner, 'opex', versionId, 'planned', 2026), FRANCE_2026.map((days) => `${Number(days) * 400}.00`));
+    await expectRefused(
+      runner,
+      /^Line 1: Custom days has no working days for 2026\. Add them on the Working-day calendars page\.$/,
+      () => amounts.bulkUpsert(versionId, payload(custom.id), null, { manager: runner.manager }),
+    );
+  });
+}
+
+async function testSuggestions() {
+  await withRollback(async (runner) => {
+    const { tenantId, svc, ctx } = await seed(runner, 'suggest');
+    await seedCompany(runner, tenantId, 'Fromagerie Nord', 'FR');
+    await seedCompany(runner, tenantId, 'Atelier Sud', 'fr');
+    await seedCompany(runner, tenantId, 'Kaas BV', 'NL');
+    await seedCompany(runner, tenantId, 'Formaggi', 'IT', { status: 'disabled', disabledAt: '2020-01-01T12:00:00Z' });
+    await seedCompany(runner, tenantId, 'Cheese Inc', 'US');
+    await seedCompany(runner, tenantId, 'Käse GmbH', 'DE');
+    await seedCompany(runner, tenantId, 'Nowhere Ltd', 'ZZ');
+    // A standard calendar for the whole country (whatever its status) takes the country out; a region does not.
+    const us = await svc.create({ code: 'US-OFFICE', name: 'US office', country_iso: 'US' }, ctx);
+    await svc.update(us.id, { status: 'disabled' }, ctx);
+    await svc.create({ code: 'DE-BY', name: 'Bavaria', country_iso: 'DE', region_code: 'BY' }, ctx);
+
+    const isos = async (lang?: string) => (await svc.suggestions(ctx, lang)).items.map((item) => item.country_iso);
+    assert.deepEqual((await svc.suggestions(ctx)).items, [
+      { country_iso: 'FR', country_name: 'France', companies: ['Atelier Sud', 'Fromagerie Nord'] },
+      { country_iso: 'DE', country_name: 'Germany', companies: ['Käse GmbH'] },
+      { country_iso: 'NL', country_name: 'Netherlands', companies: ['Kaas BV'] },
+    ].sort((a, b) => a.country_name.localeCompare(b.country_name)));
+    assert.deepEqual((await svc.suggestions(ctx, 'fr')).items.map((item) => item.country_name), ['Allemagne', 'France', 'Pays-Bas']);
+
+    // A custom calendar with the country's code (without case) takes it out: creating it would be refused.
+    const custom = await svc.create({ code: 'fr', name: 'Head office' }, ctx);
+    assert.deepEqual(await isos(), ['DE', 'NL']);
+    await svc.update(custom.id, { code: 'HQ' }, ctx);
+    assert.deepEqual(await isos(), ['FR', 'DE', 'NL']);
+    // So does one named like the country, without case.
+    await svc.update(custom.id, { name: 'FRANCE' }, ctx);
+    assert.deepEqual(await isos(), ['DE', 'NL']);
+    // The name compared is the one in the language asked for.
+    await svc.create({ code: 'DE-OFFICE', name: 'germany' }, ctx);
+    assert.deepEqual(await isos(), ['NL']);
+    assert.deepEqual((await svc.suggestions(ctx, 'fr')).items.map((item) => item.country_name), ['Allemagne', 'Pays-Bas']);
+
+    // Once created, a country leaves the suggestions.
+    await svc.create({ code: 'NL', name: 'Netherlands', country_iso: 'NL' }, ctx);
+    assert.deepEqual(await isos(), []);
+  });
+}
+
+async function testCompanyCreationAddsCalendar() {
+  await withRollback(async (runner) => {
+    const { tenantId, svc, ctx } = await seed(runner, 'company');
+    const audit = new AuditService(runner.manager.getRepository(AuditLog));
+    const companies = new CompaniesService(runner.manager.getRepository(Company), audit, undefined as any);
+    const frenchUser = await seedUser(runner, tenantId, 'fr');
+    const create = (name: string, country: string, userId: string | undefined) =>
+      companies.create({ name, country_iso: country, city: 'Test city' } as any, userId, { manager: runner.manager });
+    const standardCalendars = async () => runner.query(
+      `SELECT code, name, country_iso, region_code FROM working_day_profiles WHERE tenant_id = $1 AND country_iso IS NOT NULL ORDER BY code`,
+      [tenantId],
+    );
+
+    // The first company of a country adds its standard calendar, named in the creator's language.
+    await create('Käse GmbH', 'DE', frenchUser);
+    assert.deepEqual(await standardCalendars(), [{ code: 'DE', name: 'Allemagne', country_iso: 'DE', region_code: null }]);
+    const [{ n: created }] = await runner.query(
+      `SELECT count(*)::int AS n FROM audit_log WHERE tenant_id = $1 AND table_name = 'working_day_profiles' AND action = 'create' AND user_id = $2`,
+      [tenantId, frenchUser],
+    );
+    assert.equal(created, 1, 'audited as the creator');
+
+    // Once only: a second company of the country adds nothing, nor does a calendar already there.
+    await create('Käse Zwei', 'DE', frenchUser);
+    await svc.create({ code: 'IT-OFFICE', name: 'Italy office', country_iso: 'IT' }, ctx);
+    await create('Formaggi', 'IT', frenchUser);
+    // Without a creator, the name is English.
+    await create('Cheese Inc', 'us', undefined);
+    assert.deepEqual((await standardCalendars()).map((row: any) => [row.code, row.name]), [
+      ['DE', 'Allemagne'], ['IT-OFFICE', 'Italy office'], ['US', 'United States'],
+    ]);
+
+    // A taken code, or a country without rules, never fails the company, and the transaction goes on.
+    await svc.create({ code: 'NL', name: 'Netherlands custom' }, ctx);
+    const warn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(' ')); };
+    try {
+      const dutch = await create('Kaas BV', 'NL', frenchUser);
+      assert.ok(dutch.id, 'the company is created');
+      // A broken audit fails the calendar write after its insert: rolled back to the savepoint, the company stays.
+      const broken = new CompaniesService(runner.manager.getRepository(Company), {
+        log: async (entry: any) => {
+          if (entry.table === 'working_day_profiles') throw new Error('audit down');
+          return audit.log(entry, { manager: runner.manager });
+        },
+      } as any, undefined as any);
+      const spanish = await broken.create({ name: 'Queso SL', country_iso: 'ES', city: 'Test city' } as any, frenchUser, { manager: runner.manager });
+      assert.ok(spanish.id);
+      await create('Nowhere Ltd', 'ZZ', frenchUser);
+    } finally {
+      console.warn = warn;
+    }
+    const calendarWarnings = warnings.filter((warning) => warning.includes('Standard calendar'));
+    assert.equal(calendarWarnings.length, 2, calendarWarnings.join(' | '));
+    assert.match(calendarWarnings[0], /Standard calendar for NL not created: A calendar with code NL already exists\./);
+    assert.match(calendarWarnings[1], /Standard calendar for ES not created: audit down/);
+    assert.deepEqual((await standardCalendars()).map((row: any) => row.code), ['DE', 'IT-OFFICE', 'US']);
+    const names = await runner.query(`SELECT name FROM companies WHERE tenant_id = $1 ORDER BY name`, [tenantId]);
+    assert.deepEqual(names.map((row: any) => row.name), ['Cheese Inc', 'Formaggi', 'Kaas BV', 'Käse GmbH', 'Käse Zwei', 'Nowhere Ltd', 'Queso SL']);
+
+    // Not on update.
+    const [dutch] = await runner.query(`SELECT id FROM companies WHERE tenant_id = $1 AND name = 'Kaas BV'`, [tenantId]);
+    await companies.update(dutch.id, { country_iso: 'BE' } as any, frenchUser, { manager: runner.manager });
+    assert.deepEqual((await standardCalendars()).map((row: any) => row.code), ['DE', 'IT-OFFICE', 'US']);
+  });
+}
+
 runSpecs('working-day-profiles.integration.spec', [
   testCreateAndRead,
   testFieldAndDaysRules,
@@ -311,6 +616,11 @@ runSpecs('working-day-profiles.integration.spec', [
   testLifecycle,
   testDeleteInUse,
   testBulkDeleteKeepsGoing,
+  testStandardCalendarSource,
+  testYearRouteAndReset,
+  testStandardValuesInComputation,
+  testSuggestions,
+  testCompanyCreationAddsCalendar,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

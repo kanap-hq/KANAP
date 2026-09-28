@@ -8,14 +8,13 @@ import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
 import { writeAmountsPayload } from './amounts-write.util';
-import { resolveItemYear } from './budget-column-operations';
 import {
-  ComputedAmountsPayload,
-  isComputedPayload,
-  previewComputedRound,
+  isLinesPayload,
+  isLinesResult,
+  LinesAmountsPayload,
   recordPayloadRoundInputs,
   versionRoundInputs,
-  writeComputedPayload,
+  writeLinesPayload,
 } from './round-inputs.util';
 
 type AnnualPayload = {
@@ -62,7 +61,7 @@ export class SpendAmountsService {
 
   async bulkUpsert(
     versionId: string,
-    payload: AnnualPayload | QuarterlyPayload | MonthlyPayload | ComputedAmountsPayload,
+    payload: AnnualPayload | QuarterlyPayload | MonthlyPayload | LinesAmountsPayload,
     userId?: string | null,
     opts?: { manager?: EntityManager },
   ) {
@@ -72,26 +71,19 @@ export class SpendAmountsService {
 
     // Spread profiles (flat, or a named SpreadProfile) are resolved by the writer; an unknown one is a 400.
     const ctx = { manager: mg, freeze: this.freeze, scope: 'opex' as const, version };
-    // A computed round resolves its calendar under the tenant and replaces that one column.
-    const result = isComputedPayload(payload) ? await writeComputedPayload(ctx, payload) : await writeAmountsPayload(ctx, payload);
+    // Lines resolve their calendars under the tenant and replace the months of the columns they name.
+    const result = isLinesPayload(payload) ? await writeLinesPayload(ctx, payload) : await writeAmountsPayload(ctx, payload);
     const { before, after } = result;
 
-    await this.audit.log({ table: 'spend_amounts', recordId: null, action: 'update', before, after, userId }, { manager: mg });
+    // Removing the lines writes no amount: nothing to audit here.
+    if (after.length > 0) {
+      await this.audit.log({ table: 'spend_amounts', recordId: null, action: 'update', before, after, userId }, { manager: mg });
+    }
     await recordPayloadRoundInputs({ manager: mg, scope: 'opex', version, userId: userId ?? null, audit: this.audit }, result);
 
-    return { updated: after.length, round_inputs: await versionRoundInputs(mg, 'opex', version) };
-  }
-
-  /**
-   * What a computed round of an item's year would write, compared with what is
-   * stored: the year's newest version when there is one, else nothing stored.
-   * Writes nothing (no version either), checks no freeze.
-   */
-  async computePreview(payload: unknown, opts?: { manager?: EntityManager }) {
-    const mg = opts?.manager ?? this.repo.manager;
-    const body = payload && typeof payload === 'object' && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {};
-    const { tenantId, year, version } = await resolveItemYear(mg, 'opex', body.item_id, body.year);
-    return previewComputedRound({ manager: mg, scope: 'opex', version: version ?? { id: null, tenant_id: tenantId, budget_year: year } }, body);
+    const round_inputs = await versionRoundInputs(mg, 'opex', version);
+    // A lines write also says when a disabled calendar was kept.
+    return isLinesResult(result) ? { updated: after.length, round_inputs, warnings: result.lines.warnings } : { updated: after.length, round_inputs };
   }
 
   async listByYear(versionId: string, year?: number, opts?: { manager?: EntityManager }) {

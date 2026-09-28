@@ -23,31 +23,8 @@ import {
   yearPeriods,
 } from './amounts-write.util';
 import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, SpreadInputError } from './spread.util';
-import {
-  computedRound,
-  listRoundInputs,
-  ROUND_MEASURES,
-  RoundInput,
-  RoundInputFields,
-  roundRecipe,
-  saveRoundInput,
-  wholeYear,
-} from './round-inputs.util';
+import { listRoundInputs, ROUND_MEASURES, RoundInput, saveRoundInput, wholeYear } from './round-inputs.util';
 import { BudgetVersionRow, createBudgetVersion, loadVersions } from './budget-column-operations';
-import {
-  CALENDAR_REQUIRED_MESSAGE,
-  computeCosting,
-  CostingInputError,
-  CostingRecipe,
-  CostingResult,
-  parseCostingRecipe,
-  sameRecipe,
-} from './costing.util';
-import {
-  isProfileActive,
-  loadWorkingDayProfilesByCode,
-  WorkingDayProfileInfo,
-} from '../working-day-profiles/working-day-profiles.util';
 
 /**
  * Budget rows file: the monthly amounts of every OPEX and CAPEX line, one row
@@ -61,25 +38,19 @@ import {
  * change is the period updates the period and keeps how the column was
  * produced. The whole file is checked before anything is written.
  *
- * Costing columns (optional, all six or none): with them, a row either gives
- * its twelve months (stored as above; the row's costing cells become the
- * column's recipe, blank cells clear it) or gives no month and a recipe, and
- * the months are computed as the budget tab computes them. Without them, the
- * stored recipe is kept. Every computation runs while the file is checked, so
- * a dry run that passes never fails when the file is loaded.
+ * The file carries months, not quantity × price lines: a row's `method` is
+ * never read, so a `computed` column is treated like any other. Its months
+ * changed by a file make it `manual`; its lines and FTE stay, as after a hand
+ * edit in the budget tab.
  */
 
 const MONTH_COLUMNS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const;
-/** The headers of a file without costing columns (step A files keep importing as they did). */
 export const BUDGET_ROWS_BASE_HEADERS = [
   'item_type', 'item_number', 'year', 'measure', 'period_start', 'period_end', ...MONTH_COLUMNS, 'method',
 ] as const;
-export const BUDGET_ROWS_COSTING_HEADERS = [
-  'pricing_basis', 'quantity', 'unit_price', 'price_index_pct', 'working_day_profile_code', 'counts_as_fte',
-] as const;
 /** What the export and the template write. */
-export const BUDGET_ROWS_HEADERS = [...BUDGET_ROWS_BASE_HEADERS, ...BUDGET_ROWS_COSTING_HEADERS] as const;
-const REQUIRED_HEADERS: readonly string[] = BUDGET_ROWS_BASE_HEADERS.filter((h) => h !== 'method');
+export const BUDGET_ROWS_HEADERS = BUDGET_ROWS_BASE_HEADERS;
+const REQUIRED_HEADERS: readonly string[] = BUDGET_ROWS_HEADERS.filter((h) => h !== 'method');
 
 const SCOPES: readonly AmountScope[] = ['opex', 'capex'];
 // Table names come only from here: never from the file.
@@ -107,13 +78,6 @@ function hasLevel(access: BudgetRowsAccess, scope: AmountScope, level: 'reader' 
 
 type ErrorEntry = { row: number; message: string };
 
-/** A row's costing cells, parsed; the calendar is still a code. */
-type ParsedCosting = {
-  /** Null: the costing cells are blank (the recipe is cleared). `working_day_profile_id` is null until resolved. */
-  recipe: CostingRecipe | null;
-  calendarCode: string | null;
-};
-
 type ParsedRow = {
   line: number;
   scope: AmountScope;
@@ -121,21 +85,13 @@ type ParsedRow = {
   year: number;
   measure: AmountMeasure;
   period: { period_start: string; period_end: string };
-  /** The file's twelve months, or null when they are computed from the recipe. */
-  months: bigint[] | null;
-  /** Null when the file has no costing columns: the stored recipe is kept. */
-  costing: ParsedCosting | null;
+  months: bigint[];
 };
 
-type PlannedRow = Omit<ParsedRow, 'months' | 'costing'> & {
+type PlannedRow = ParsedRow & {
   item: { id: string; tenant_id: string };
   version: BudgetVersionRow | null;
-  months: bigint[];
   monthsChanged: boolean;
-  /** The recipe to store, calendar resolved; undefined without costing columns (the stored one is kept). */
-  recipe?: CostingRecipe | null;
-  /** Set when the months come from the recipe. */
-  computed: { calendar: WorkingDayProfileInfo | null; result: CostingResult } | null;
 };
 
 const ref = (scope: AmountScope, itemNumber: number) => `${REF_PREFIX[scope]}-${itemNumber}`;
@@ -149,13 +105,6 @@ function parseYear(raw: string): number | null {
   const year = /^\d{4}$/.test(raw) ? Number(raw) : null;
   return year !== null && year >= 1000 ? year : null;
 }
-
-const FTE_WORDS: Record<string, boolean> = { true: true, yes: true, '1': true, false: false, no: false, '0': false };
-const PARTIAL_MONTHS_MESSAGE = 'Give all twelve months, or none to compute them from quantity and price.';
-const NO_MONTHS_MESSAGE = 'Give all twelve months, or a pricing basis with quantity and unit price.';
-
-const unknownCalendar = (code: string) => `No working-day calendar has the code '${code}'.`;
-const disabledCalendar = (name: string) => `${name} is disabled. Pick an enabled calendar.`;
 
 @Injectable()
 export class BudgetRowsCsvService {
@@ -200,7 +149,6 @@ export class BudgetRowsCsvService {
           const record = records.get(version.id)?.find((r) => r.measure === measure);
           const period = record ?? wholeYear(versionYear);
           const values = months.get(version.id)!.months[measure];
-          const recipe = roundRecipe(record);
           lines.push({
             item_type: scope,
             item_number: String(numberOf.get(version.item_id)),
@@ -210,12 +158,6 @@ export class BudgetRowsCsvService {
             period_end: period.period_end,
             ...Object.fromEntries(MONTH_COLUMNS.map((column, i) => [column, formatCents(values[i])])),
             method: record?.method ?? '',
-            pricing_basis: recipe?.pricing_basis ?? '',
-            quantity: recipe?.quantity ?? '',
-            unit_price: recipe?.unit_price ?? '',
-            price_index_pct: recipe?.price_index_pct ?? '',
-            working_day_profile_code: recipe ? record?.working_day_profile_code ?? '' : '',
-            counts_as_fte: recipe ? String(recipe.counts_as_fte) : '',
           });
         }
       }
@@ -244,10 +186,7 @@ export class BudgetRowsCsvService {
     });
 
     const { headers, rows } = await this.readFile(params.file);
-    // The costing columns come together: a file with some of them is incomplete.
-    const withCosting = BUDGET_ROWS_COSTING_HEADERS.some((h) => headers.includes(h));
-    const required = withCosting ? [...REQUIRED_HEADERS, ...BUDGET_ROWS_COSTING_HEADERS] : REQUIRED_HEADERS;
-    const missing = required.filter((h) => !headers.includes(h));
+    const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
     const extras = headers.filter((h) => !(BUDGET_ROWS_HEADERS as readonly string[]).includes(h));
     if (missing.length || extras.length) {
       return fail([{ row: 1, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` }], 0);
@@ -257,7 +196,7 @@ export class BudgetRowsCsvService {
     const errors: ErrorEntry[] = [];
     const parsed: ParsedRow[] = [];
     rows.forEach((raw, index) => {
-      const row = this.parseRow(raw, index + 2, withCosting, errors);
+      const row = this.parseRow(raw, index + 2, errors);
       if (row) parsed.push(row);
     });
 
@@ -279,16 +218,6 @@ export class BudgetRowsCsvService {
       }
       unique.push(row);
     }
-
-    // One lookup of the calendars the file names, under the tenant. A load
-    // holds them (key share) until the request ends, so a racing calendar
-    // delete waits and then counts the new rounds; a dry run writes nothing.
-    const calendars = await loadWorkingDayProfilesByCode(
-      ctx.manager,
-      ctx.tenantId,
-      unique.flatMap((r) => (r.costing?.calendarCode ? [r.costing.calendarCode] : [])),
-      dryRun ? {} : { lock: 'key share' },
-    );
 
     const planned: PlannedRow[] = [];
     let unchanged = 0;
@@ -315,26 +244,16 @@ export class BudgetRowsCsvService {
           continue;
         }
         const version = versions.get(`${item.id}:${row.year}`) ?? null;
-        const record = version ? records.get(version.id)?.find((r) => r.measure === row.measure) : undefined;
-        const costed = this.resolveCosting(row, record ?? null, calendars);
-        if (typeof costed === 'string') {
-          errors.push({ row: row.line, message: costed });
-          continue;
-        }
-        const rowMonths = costed.computed ? costed.computed.result.month_cents : row.months!;
         const stored = version ? months.get(version.id)!.months[row.measure] : null;
-        const monthsChanged = stored ? rowMonths.some((v, i) => v !== stored[i]) : rowMonths.some((v) => v !== 0n);
+        const monthsChanged = stored ? row.months.some((v, i) => v !== stored[i]) : row.months.some((v) => v !== 0n);
+        const record = version ? records.get(version.id)?.find((r) => r.measure === row.measure) : undefined;
         const storedPeriod = record ?? wholeYear(row.year);
         const periodChanged = row.period.period_start !== storedPeriod.period_start || row.period.period_end !== storedPeriod.period_end;
-        // Without costing columns the recipe is not compared: it is kept.
-        const recipeChanged = costed.recipe !== undefined && !sameRecipe(costed.recipe, roundRecipe(record));
-        // No year stored: the period alone writes nothing; amounts or a recipe create the year.
-        if (!monthsChanged && !recipeChanged && (!version || !periodChanged)) {
+        if (!monthsChanged && (!version || !periodChanged)) {
           unchanged++;
           continue;
         }
-        const { costing: _costing, ...rest } = row;
-        planned.push({ ...rest, item, version, months: rowMonths, monthsChanged, recipe: costed.recipe, computed: costed.computed });
+        planned.push({ ...row, item, version, monthsChanged });
       }
     }
 
@@ -402,87 +321,18 @@ export class BudgetRowsCsvService {
       const byColumn = [...group].sort((a, b) => COLUMN_ORDER(a.measure) - COLUMN_ORDER(b.measure));
       for (const row of byColumn) {
         const period = row.period;
-        await saveRoundInput(
-          { manager, scope, version, userId, audit: this.audit },
-          row.measure,
-          (stored: RoundInput | null) => this.recordFields(row, period, stored),
-        );
+        await saveRoundInput({ manager, scope, version, userId, audit: this.audit }, row.measure, (stored: RoundInput | null) => ({
+          ...period,
+          method: row.monthsChanged ? 'manual' : stored?.method ?? 'manual',
+          spread_profile_name: stored?.spread_profile_name ?? null,
+          last_calculation: stored?.last_calculation ?? null,
+          fte: stored?.fte ?? null,
+        }));
       }
     }
   }
 
-  /** The record a written row leaves (decision D16 with costing columns, step A without). */
-  private recordFields(
-    row: PlannedRow,
-    period: { period_start: string; period_end: string },
-    stored: RoundInput | null,
-  ): RoundInputFields {
-    if (row.computed) {
-      const { calendar, result } = row.computed;
-      return computedRound(period, row.recipe!, calendar && { code: calendar.code, name: calendar.name }, result);
-    }
-    const storedRecipe = roundRecipe(stored);
-    if (row.recipe === undefined) {
-      return {
-        ...period,
-        method: row.monthsChanged ? 'manual' : stored?.method ?? 'manual',
-        spread_profile_name: stored?.spread_profile_name ?? null,
-        last_calculation: stored?.last_calculation ?? null,
-        recipe: storedRecipe,
-      };
-    }
-    // Months given with costing columns: the explanation no longer describes
-    // the months or the recipe once either changes; a computed column whose
-    // recipe alone changes no longer comes from its recipe.
-    const recipeChanged = !sameRecipe(row.recipe, storedRecipe);
-    const method = row.monthsChanged || (recipeChanged && stored?.method === 'computed') ? 'manual' : stored?.method ?? 'manual';
-    return {
-      ...period,
-      method,
-      spread_profile_name: stored?.spread_profile_name ?? null,
-      last_calculation: row.monthsChanged || recipeChanged ? null : stored?.last_calculation ?? null,
-      recipe: row.recipe,
-    };
-  }
-
-  /**
-   * The row's recipe with its calendar resolved, and its months when they are
-   * computed; or the sentence refusing the row. Without costing columns the
-   * recipe is undefined (kept as stored).
-   */
-  private resolveCosting(
-    row: ParsedRow,
-    record: RoundInput | null,
-    calendars: Map<string, WorkingDayProfileInfo>,
-  ): { recipe?: CostingRecipe | null; computed: PlannedRow['computed'] } | string {
-    if (!row.costing) return { computed: null };
-    const { recipe: parsed, calendarCode } = row.costing;
-    if (!parsed) return { recipe: null, computed: null };
-    let calendar: WorkingDayProfileInfo | null = null;
-    if (calendarCode) {
-      calendar = calendars.get(calendarCode.toLowerCase()) ?? null;
-      if (!calendar) return unknownCalendar(calendarCode);
-      // A disabled calendar stays valid on the rounds that already use it.
-      if (!isProfileActive(calendar) && record?.working_day_profile_id !== calendar.id) return disabledCalendar(calendar.name);
-    }
-    const recipe: CostingRecipe = { ...parsed, working_day_profile_id: calendar?.id ?? null };
-    if (row.months) return { recipe, computed: null };
-    try {
-      const result = computeCosting({
-        year: row.year,
-        period_start: row.period.period_start,
-        period_end: row.period.period_end,
-        recipe,
-        calendar: calendar && { code: calendar.code, name: calendar.name, days: calendar.days_by_year[String(row.year)] ?? null },
-      });
-      return { recipe, computed: { calendar, result } };
-    } catch (err) {
-      if (!(err instanceof CostingInputError)) throw err;
-      return err.message;
-    }
-  }
-
-  private parseRow(raw: Record<string, string>, line: number, withCosting: boolean, errors: ErrorEntry[]): ParsedRow | null {
+  private parseRow(raw: Record<string, string>, line: number, errors: ErrorEntry[]): ParsedRow | null {
     const cell = (column: string) => String(raw[column] ?? '').trim();
     const before = errors.length;
     const error = (message: string) => errors.push({ row: line, message });
@@ -538,12 +388,11 @@ export class BudgetRowsCsvService {
       }
     }
 
-    const given = MONTH_COLUMNS.filter((column) => cell(column) !== '').length;
     const months: bigint[] = [];
     for (const column of MONTH_COLUMNS) {
       const value = cell(column);
       if (value === '') {
-        if (!withCosting) error(`${column} is required; use 0 for an empty month.`);
+        error(`${column} is required; use 0 for an empty month.`);
         continue;
       }
       try {
@@ -554,51 +403,8 @@ export class BudgetRowsCsvService {
       }
     }
 
-    let costing: ParsedCosting | null = null;
-    if (withCosting) {
-      if (given > 0 && given < MONTH_COLUMNS.length) error(PARTIAL_MONTHS_MESSAGE);
-      costing = this.parseCosting(cell, given === 0, error);
-    }
-
     if (errors.length > before || !scope || itemNumber === null || year === null || !measure || !period) return null;
-    return { line, scope, itemNumber, year, measure, period, months: given === 0 && withCosting ? null : months, costing };
-  }
-
-  /**
-   * The costing cells of a row. Blank cells (and `counts_as_fte` false) mean
-   * no recipe; a row without months needs at least a basis, a quantity and a
-   * unit price. The calendar code is checked for presence here and resolved
-   * under the tenant with the other rows' codes.
-   */
-  private parseCosting(cell: (column: string) => string, noMonths: boolean, error: (message: string) => void): ParsedCosting | null {
-    const fteText = cell('counts_as_fte');
-    const fte = fteText === '' ? false : FTE_WORDS[fteText.toLowerCase()];
-    if (fte === undefined) {
-      error(`counts_as_fte '${fteText}' is not understood. Use true or false.`);
-      return null;
-    }
-    const code = cell('working_day_profile_code');
-    const given = ['pricing_basis', 'quantity', 'unit_price', 'price_index_pct', 'working_day_profile_code'].some((c) => cell(c) !== '');
-    if (noMonths && (cell('pricing_basis') === '' || cell('quantity') === '' || cell('unit_price') === '')) {
-      error(NO_MONTHS_MESSAGE);
-      return null;
-    }
-    if (!given && !fte) return { recipe: null, calendarCode: null };
-    try {
-      const recipe = parseCostingRecipe({
-        pricing_basis: cell('pricing_basis'),
-        quantity: cell('quantity'),
-        unit_price: cell('unit_price'),
-        price_index_pct: cell('price_index_pct'),
-        working_day_profile_id: code,
-        counts_as_fte: fte,
-      });
-      return { recipe: { ...recipe, working_day_profile_id: null }, calendarCode: code || null };
-    } catch (err) {
-      if (!(err instanceof CostingInputError)) throw err;
-      error(err.message === CALENDAR_REQUIRED_MESSAGE ? 'Give the code of a working-day calendar for a price per day.' : err.message);
-      return null;
-    }
+    return { line, scope, itemNumber, year, measure, period, months };
   }
 
   private async readFile(file: Express.Multer.File | undefined): Promise<{ headers: string[]; rows: Array<Record<string, string>> }> {

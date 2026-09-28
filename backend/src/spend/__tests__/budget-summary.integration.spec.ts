@@ -742,43 +742,28 @@ async function testAnalyticsDimensions(kind: Kind) {
 }
 
 /**
- * Costing inputs on the fixture: Alpha's Budget of Y counts as FTE (1.5 a
- * month, whole year), Bravo's is costed per day without the flag, Charlie's
- * round has no costing inputs, Echo holds a costed round of Y after its end of
- * validity, Alpha's Forecast of Y+3 counts as FTE from February to October.
+ * FTE on the fixture, as a lines write stores it on the round: Alpha's Budget
+ * of Y 1.5, Bravo's 0 (units only), Charlie's round has no lines (unknown),
+ * Echo holds lines of Y after its end of validity, Alpha's Forecast of Y+3
+ * 0.75.
  */
 async function seedFteRounds(runner: QueryRunner, kind: Kind, tenantId: string, ids: Fixture['ids']) {
   const [budget, , forecast] = SUMMARY_COLUMNS;
-  const [calendar] = await runner.query(
-    `INSERT INTO working_day_profiles (tenant_id, code, name, days_by_year) VALUES ($1, 'WD20', 'Twenty days', $2::jsonb) RETURNING id`,
-    [tenantId, JSON.stringify({ [Y]: repeat('20', 12) })],
-  );
-  const round = async (
-    itemId: string,
-    year: number,
-    measure: string,
-    months: [number, number],
-    recipe: { basis: string; quantity: string; fte: boolean; calendar?: string } | null,
-  ) => {
+  const round = async (itemId: string, year: number, measure: string, fte: string | null) => {
     const versionId = (await findVersion(runner, kind, itemId, year))?.id ?? (await seedVersion(runner, kind, tenantId, itemId, year));
-    const end = new Date(Date.UTC(year, months[1], 0)).toISOString().slice(0, 10);
     await runner.query(
-      `INSERT INTO ${TABLES[kind].rounds}
-         (tenant_id, version_id, measure, period_start, period_end, method, pricing_basis, quantity, unit_price, price_index_pct, working_day_profile_id, counts_as_fte)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-      [
-        tenantId, versionId, measure, period(months[0], year), end, recipe ? 'computed' : 'spread',
-        recipe?.basis ?? null, recipe?.quantity ?? null, recipe ? '100' : null, recipe ? '0' : null, recipe?.calendar ?? null, recipe?.fte ?? false,
-      ],
+      `INSERT INTO ${TABLES[kind].rounds} (tenant_id, version_id, measure, period_start, period_end, method, fte)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [tenantId, versionId, measure, `${year}-01-01`, `${year}-12-31`, fte === null ? 'spread' : 'computed', fte],
     );
     return versionId;
   };
-  const alphaBudget = await round(ids.alpha, Y, budget.measure, [1, 12], { basis: 'per_month', quantity: '1.5', fte: true });
-  await round(ids.bravo, Y, budget.measure, [1, 12], { basis: 'per_day', quantity: '2', fte: false, calendar: calendar.id });
-  await round(ids.charlie, Y, budget.measure, [1, 12], null);
-  const echo = await round(ids.echo, Y, budget.measure, [1, 12], { basis: 'per_month', quantity: '1', fte: true });
+  const alphaBudget = await round(ids.alpha, Y, budget.measure, '1.5');
+  await round(ids.bravo, Y, budget.measure, '0');
+  await round(ids.charlie, Y, budget.measure, null);
+  const echo = await round(ids.echo, Y, budget.measure, '1');
   await seedMonths(runner, kind, tenantId, echo, Y, { [budget.measure]: repeat('100', 12) });
-  await round(ids.alpha, Y + 3, forecast.measure, [2, 10], { basis: 'per_period', quantity: '1', fte: true });
+  await round(ids.alpha, Y + 3, forecast.measure, '0.75');
   return { alphaBudget, budget };
 }
 
@@ -794,7 +779,7 @@ async function testFteFields(kind: Kind) {
     assert.deepEqual(
       await byId('fte_yBudget'),
       { [ids.alpha]: 1.5, [ids.bravo]: 0, [ids.charlie]: null, [ids.delta]: null, [ids.echo]: null },
-      `${kind}: flagged line 1.5, unflagged costed line 0, no costing inputs, no version and after the end of validity unknown`,
+      `${kind}: the stored FTE (0 included); no lines, no version and after the end of validity unknown`,
     );
     const { items } = await svc.summary({ ...ALL, years: String(Y + 3), limit: 100 }, opts);
     const alpha = items.find((row: any) => row.id === ids.alpha);
@@ -803,15 +788,15 @@ async function testFteFields(kind: Kind) {
     assert.deepEqual(
       [alpha[`fte_y${Y + 3}Forecast`], alpha.fte_yForecast, alpha.fte_yRevision],
       [0.75, null, null],
-      `${kind}: nine active months of 1 over 12; a column without a round is unknown`,
+      `${kind}: a later year as stored; a column without a round is unknown`,
     );
 
-    // April at zero drops from the mask: 1.5 × 11 / 12 = 1.375, shown 1.38.
+    // A month set to zero afterwards leaves the FTE the lines gave.
     await runner.query(
       `UPDATE ${TABLES[kind].amounts} SET ${budget.measure} = 0 WHERE tenant_id = $1 AND version_id = $2 AND period = $3`,
       [tenantId, alphaBudget, period(4, Y)],
     );
-    assert.equal((await byId('fte_yBudget'))[ids.alpha], 1.38, `${kind}: a zero month drops from the mask`);
+    assert.equal((await byId('fte_yBudget'))[ids.alpha], 1.5, `${kind}: the months do not move the FTE`);
 
     const idsOf = (page: any) => page.items.map((row: any) => row.id).sort();
     const filtered = async (model: Record<string, unknown>) => idsOf(await svc.summary({ ...ALL, filters: filters({ fte_yBudget: model }) }, opts));
@@ -822,7 +807,7 @@ async function testFteFields(kind: Kind) {
     assert.deepEqual(await filtered({ filterType: 'number', type: 'notBlank' }), [ids.alpha, ids.bravo].sort());
 
     const ascending = await svc.summary({ ...ALL, sort: 'fte_yBudget:ASC' }, opts);
-    assert.deepEqual(ascending.items.map((row: any) => row.fte_yBudget), [0, 1.38, null, null, null], `${kind}: sort ascending, unknown last`);
+    assert.deepEqual(ascending.items.map((row: any) => row.fte_yBudget), [0, 1.5, null, null, null], `${kind}: sort ascending, unknown last`);
     // A sort key naming a year outside the fixed window loads that year.
     const later = await svc.summary({ ...ALL, sort: `fte_y${Y + 3}Forecast:ASC` }, opts);
     assert.deepEqual([later.items[0].id, later.items[0][`fte_y${Y + 3}Forecast`]], [ids.alpha, 0.75], `${kind}: sort on a year outside the window`);
@@ -833,7 +818,7 @@ async function testFteFields(kind: Kind) {
     assert.deepEqual(
       totals.fte,
       {
-        fte_yBudget: { total: 1.38, unknown: 3 },
+        fte_yBudget: { total: 1.5, unknown: 3 },
         fte_yRevision: { total: null, unknown: 5 },
         [`fte_y${Y + 3}Forecast`]: { total: 0.75, unknown: 4 },
       },

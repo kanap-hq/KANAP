@@ -425,7 +425,7 @@ function sortValueGroups<T extends BudgetValueGroup>(groups: T[], fn: AiAggregat
 /**
  * An FTE metric of the OPEX and CAPEX aggregates: exact decimal arithmetic on
  * the lines' FTE (2 decimals each, never through cents of money), and per group
- * `unknown`, the lines without costing inputs, left out of the value. A group
+ * `unknown`, the lines whose column has no quantity × price lines, left out of the value. A group
  * of unknown lines only has a null value.
  */
 function aggregateFteGroups(rows: any[], groupGrid: string, metricGrid: string, fn: AiAggregateFunction): BudgetValueGroup[] {

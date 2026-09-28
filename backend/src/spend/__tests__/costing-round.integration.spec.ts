@@ -6,7 +6,7 @@ import dataSource from '../../data-source';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { SpendVersionsController } from '../spend-versions.controller';
 import { CapexVersionsController } from '../../capex/capex-versions.controller';
-import { roundRecipe, upsertRoundInput, versionRoundInputs } from '../round-inputs.util';
+import { DISABLED_CALENDAR_WARNING } from '../round-inputs.util';
 import {
   amountsService,
   assert,
@@ -19,512 +19,523 @@ import {
   itemCsvImporter,
   Kind,
   period,
+  readLines,
   readMeasure,
   readRecords,
   realFreeze,
   repeat,
   runSpecs,
   seedCalendar,
-  seedItem,
   seedLine,
   seedTenant,
+  setItemDates,
   setTenant,
+  TABLES,
 } from './round-inputs.fixtures';
 
-// Costed rounds through the amounts services (bulk-upsert `kind: 'computed'`
-// and compute-preview), on OPEX and CAPEX: what is written, the recipe kept by
-// hand edits, spreads and copies, the preview's comparisons, disabled and
-// foreign calendars, against the database behind `dataSource`.
+// Columns computed from quantity × price lines through the amounts services
+// (bulk-upsert `kind: 'lines'`), on OPEX and CAPEX, against the database
+// behind `dataSource`: what is written (months, record, lines, the
+// explanation, the response), wholesale replacement, `also_measures`, `[]`,
+// the freeze, calendars (disabled, another tenant's, the key-share lock),
+// another tenant's version, the lines kept by hand edits, spreads and the
+// item CSV, copy and clear.
 
 const YEAR = 2026;
 const KINDS: Kind[] = ['opex', 'capex'];
 
 const SFR_MONTHS = ['0.00', '7200.00', '8000.00', '8000.00', '6000.00', '8000.00', '6000.00', '6400.00', '8000.00', '7600.00', '0.00', '0.00'];
+const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 type Ctx = { runner: QueryRunner; tenantId: string; versionId: string; itemId: string; calendarId: string };
 
 async function withCalendarLine(kind: Kind, fn: (ctx: Ctx) => Promise<void>, values: Parameters<typeof seedLine>[4] = {}) {
   await inRolledBackTransaction(async (runner) => {
-    const tenantId = await seedTenant(runner, `${kind}-cost`);
+    const tenantId = await seedTenant(runner, `${kind}-lines`);
     const calendarId = await seedCalendar(runner, tenantId, { code: 'FR218', name: 'France 218', days_by_year: { [YEAR]: FRANCE_218_2026 } });
     const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, values);
     await fn({ runner, tenantId, versionId, itemId, calendarId });
   });
 }
 
-/** The SFR row: February to October, per day, quantity 1, 400 a day, counts as FTE. */
-function sfrPayload(calendarId: string, overrides: Record<string, unknown> = {}) {
+/** The SFR row as a line: a project manager, February to October, 400 a day on France 218. */
+function sfrLine(calendarId: string, overrides: Record<string, unknown> = {}) {
   return {
-    kind: 'computed',
-    year: YEAR,
-    measure: 'planned',
-    period_start: `${YEAR}-02-01`,
-    period_end: `${YEAR}-10-30`,
-    pricing_basis: 'per_day',
+    label: 'Project manager',
+    quantity_unit: 'people',
     quantity: '1',
     unit_price: '400',
-    price_index_pct: '0',
+    price_basis: 'per_day',
+    period_start: `${YEAR}-02-01`,
+    period_end: `${YEAR}-10-30`,
     working_day_profile_id: calendarId,
-    counts_as_fte: true,
     ...overrides,
   };
 }
 
+/** Ten licences at 200 a month, over the year. */
+function licenceLine(overrides: Record<string, unknown> = {}) {
+  return {
+    label: 'Licences',
+    quantity_unit: 'units',
+    quantity: 10,
+    unit_price: '200',
+    price_basis: 'per_month',
+    period_start: `${YEAR}-01-01`,
+    period_end: `${YEAR}-12-31`,
+    working_day_profile_id: null,
+    ...overrides,
+  };
+}
+
+function linesPayload(lines: unknown[], overrides: Record<string, unknown> = {}) {
+  return { kind: 'lines', year: YEAR, measure: 'planned', lines, ...overrides };
+}
+
 const roundAudits = (audit: ReturnType<typeof captureAudit>) => audit.entries.filter((e) => e.table.endsWith('_round_inputs'));
+const amountsTable = (kind: Kind) => TABLES[kind].amounts;
+const shape = (lines: Array<Record<string, any>>) => lines.map((l) => [l.sort, l.label, l.quantity_unit, l.quantity, l.unit_price, l.price_basis, l.period_start, l.period_end]);
 
-/** The item + year preview route's body: the computed payload with the item instead of a version. */
-const previewBody = (itemId: string, payload: Record<string, unknown>) => ({ ...payload, item_id: itemId });
+async function countLines(runner: QueryRunner, kind: Kind, tenantId: string): Promise<number> {
+  const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM ${TABLES[kind].lines} WHERE tenant_id = $1`, [tenantId]);
+  return n;
+}
 
-/** A computation writes its column's twelve months, keeps the other columns, and stores the recipe and what it used. */
-async function testComputedWrite(kind: Kind) {
+/** Two lines: the column's months, the other columns untouched, the record, the lines, the explanation, the response. */
+async function testLinesWrite(kind: Kind) {
   await withCalendarLine(kind, async ({ runner, versionId, calendarId }) => {
     const audit = captureAudit();
     const svc = amountsService(kind, audit);
-    const response = await svc.bulkUpsert(versionId, sfrPayload(calendarId), null, { manager: runner.manager });
+    const response = await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId), licenceLine()]), null, { manager: runner.manager });
+    const columnMonths = SFR_MONTHS.map((m) => (Number(m) + 2000).toFixed(2));
     assert.equal(response.updated, 12, `${kind}: twelve months written`);
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), SFR_MONTHS, `${kind}: February 7 200 … October 7 600`);
+    assert.deepEqual(response.warnings, [], `${kind}: no warning`);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), columnMonths, `${kind}: the two lines summed`);
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'committed', YEAR), repeat('6.00', 12), `${kind}: other columns untouched`);
 
     const { planned } = await readRecords(runner, kind, versionId);
     assert.deepEqual(
-      [planned.method, planned.period_start, planned.period_end, planned.spread_profile_name],
-      ['computed', `${YEAR}-02-01`, `${YEAR}-10-30`, null],
-    );
-    assert.deepEqual(
-      [planned.pricing_basis, planned.quantity, planned.unit_price, planned.price_index_pct, planned.working_day_profile_id, planned.counts_as_fte],
-      ['per_day', '1.000', '400.0000', '0.0000', calendarId, true],
-      `${kind}: the recipe in its columns`,
+      [planned.method, planned.period_start, planned.period_end, planned.spread_profile_name, planned.fte],
+      ['computed', `${YEAR}-01-01`, `${YEAR}-12-31`, null, '0.75'],
+      `${kind}: from the earliest start to the latest end; 9 people-months ÷ 12`,
     );
     assert.deepEqual(planned.last_calculation, {
       kind: 'computed',
-      pricing_basis: 'per_day',
-      quantity: '1',
-      unit_price: '400',
-      price_index_pct: '0',
-      working_day_profile_code: 'FR218',
-      working_day_profile_name: 'France 218',
-      active_months: [2, 3, 4, 5, 6, 7, 8, 9, 10],
-      day_counts: FRANCE_218_2026,
-      total_days: '163',
-      month_amounts: SFR_MONTHS,
-      total: '65200.00',
-      counts_as_fte: true,
-    }, `${kind}: the explanation carries the day counts used`);
+      total: '89200.00',
+      fte: '0.75',
+      month_amounts: columnMonths,
+      fte_months: ['0', ...repeat('1', 9), '0', '0'],
+      active_months: MONTHS,
+      lines: [
+        {
+          label: 'Project manager', quantity_unit: 'people', quantity: '1', unit_price: '400', price_basis: 'per_day',
+          period_start: `${YEAR}-02-01`, period_end: `${YEAR}-10-30`,
+          working_day_profile_id: calendarId, working_day_profile_code: 'FR218', working_day_profile_name: 'France 218',
+          active_months: [2, 3, 4, 5, 6, 7, 8, 9, 10], day_counts: FRANCE_218_2026, total_days: '163',
+          month_amounts: SFR_MONTHS, fte_months: ['0', ...repeat('1', 9), '0', '0'], total: '65200.00',
+        },
+        {
+          label: 'Licences', quantity_unit: 'units', quantity: '10', unit_price: '200', price_basis: 'per_month',
+          period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`,
+          working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null,
+          active_months: MONTHS, day_counts: null, total_days: null,
+          month_amounts: repeat('2000.00', 12), fte_months: repeat('0', 12), total: '24000.00',
+        },
+      ],
+    }, `${kind}: the explanation carries each line and the day counts used`);
+
+    const stored = await readLines(runner, kind, versionId, 'planned');
+    assert.deepEqual(
+      stored.map((l) => [l.sort, l.label, l.quantity_unit, l.quantity, l.unit_price, l.price_basis, l.working_day_profile_id, l.period_start, l.period_end]),
+      [
+        [1, 'Project manager', 'people', '1.000', '400.0000', 'per_day', calendarId, `${YEAR}-02-01`, `${YEAR}-10-30`],
+        [2, 'Licences', 'units', '10.000', '200.0000', 'per_month', null, `${YEAR}-01-01`, `${YEAR}-12-31`],
+      ],
+      `${kind}: the lines in their table, in order`,
+    );
 
     const { updated_at, ...returned } = response.round_inputs[0];
     assert.deepEqual(returned, {
       measure: 'planned',
-      period_start: `${YEAR}-02-01`,
-      period_end: `${YEAR}-10-30`,
+      period_start: `${YEAR}-01-01`,
+      period_end: `${YEAR}-12-31`,
       method: 'computed',
       spread_profile_name: null,
       last_calculation: planned.last_calculation,
-      pricing_basis: 'per_day',
-      quantity: '1',
-      unit_price: '400',
-      price_index_pct: '0',
-      working_day_profile_id: calendarId,
-      working_day_profile_code: 'FR218',
-      working_day_profile_name: 'France 218',
-      counts_as_fte: true,
+      fte: '0.75',
+      lines: [
+        {
+          id: stored[0].id, sort: 1, label: 'Project manager', quantity_unit: 'people', quantity: '1', unit_price: '400', price_basis: 'per_day',
+          period_start: `${YEAR}-02-01`, period_end: `${YEAR}-10-30`,
+          working_day_profile_id: calendarId, working_day_profile_code: 'FR218', working_day_profile_name: 'France 218',
+        },
+        {
+          id: stored[1].id, sort: 2, label: 'Licences', quantity_unit: 'units', quantity: '10', unit_price: '200', price_basis: 'per_month',
+          period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`,
+          working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null,
+        },
+      ],
       updated_by: null,
     }, `${kind}: the API record, decimals without trailing zeros, calendar code and name`);
     assert.ok(!Number.isNaN(Date.parse(updated_at)));
+    const listed = await svc.listByYear(versionId, YEAR, { manager: runner.manager });
+    assert.deepEqual(listed.round_inputs, response.round_inputs, `${kind}: GET amounts returns the same records and lines`);
 
-    const amountsTable = kind === 'opex' ? 'spend_amounts' : 'capex_amounts';
-    assert.equal(audit.entries.filter((e) => e.table === amountsTable).length, 1, `${kind}: the amounts are audited`);
-    assert.deepEqual(roundAudits(audit).map((e) => [e.action, e.after?.method]), [['create', 'computed']], `${kind}: the record is audited`);
+    assert.equal(audit.entries.filter((e) => e.table === amountsTable(kind)).length, 1, `${kind}: the amounts are audited`);
+    const [roundAudit] = roundAudits(audit);
+    assert.deepEqual([roundAudit.action, roundAudit.after?.method, roundAudit.after?.lines?.length], ['create', 'computed', 2], `${kind}: one audit row, lines included`);
   }, { committed: repeat('6', 12) });
 }
 
-/** Actuals are computed like any column; a per-month line over the year. */
-async function testComputedActuals(kind: Kind) {
-  await withCalendarLine(kind, async ({ runner, versionId }) => {
-    const svc = amountsService(kind);
-    await svc.bulkUpsert(
-      versionId,
-      { kind: 'computed', year: YEAR, measure: 'actual', pricing_basis: 'per_month', quantity: '10', unit_price: '200' },
-      null,
-      { manager: runner.manager },
-    );
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'actual', YEAR), repeat('2000.00', 12));
+/** Days × per day: fried's line, 100 days at 600 a day from March, with a calendar for the FTE. */
+async function testDaysLine(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, versionId, calendarId }) => {
+    const line = sfrLine(calendarId, { label: 'Managed services', quantity_unit: 'days', quantity: '100', unit_price: '600', period_start: `${YEAR}-03-01`, period_end: `${YEAR}-12-31` });
+    await amountsService(kind).bulkUpsert(versionId, linesPayload([line], { measure: 'actual' }), null, { manager: runner.manager });
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'actual', YEAR), ['0.00', '0.00', ...repeat('6000.00', 10)], `${kind}: 6 000 a month`);
     const { actual } = await readRecords(runner, kind, versionId);
-    assert.deepEqual(
-      [actual.method, actual.period_start, actual.period_end, actual.pricing_basis, actual.working_day_profile_id, actual.counts_as_fte],
-      ['computed', `${YEAR}-01-01`, `${YEAR}-12-31`, 'per_month', null, false],
-      `${kind}: without a period the whole year; FTE off by default`,
-    );
-    assert.deepEqual([actual.last_calculation.day_counts, actual.last_calculation.total_days, actual.last_calculation.total], [null, null, '24000.00']);
-    // A hand edit of Actuals marks it manual and keeps the recipe, like any column.
-    await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(3, YEAR), actual: 1 }] }, null, { manager: runner.manager });
-    const edited = (await readRecords(runner, kind, versionId)).actual;
-    assert.deepEqual([edited.method, edited.pricing_basis, edited.quantity], ['manual', 'per_month', '10.000']);
+    assert.deepEqual([actual.method, actual.fte, actual.last_calculation.lines[0].fte_months[4]], ['computed', '0.46', '0.666667'],
+      `${kind}: 10 days ÷ the working days of each month; any column, Actuals included`);
   });
 }
 
-/** A frozen column refuses the computation before anything is written. */
-async function testComputedRespectsFreeze(kind: Kind) {
-  await withCalendarLine(kind, async ({ runner, tenantId, versionId, itemId, calendarId }) => {
-    await freezeColumn(runner, kind, tenantId, YEAR, 'budget');
-    await assert.rejects(
-      () => amountsService(kind, captureAudit(), realFreeze()).bulkUpsert(versionId, sfrPayload(calendarId), null, { manager: runner.manager }),
-      (err: any) => err instanceof ForbiddenException && /is frozen/.test(err.message),
-    );
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('0.00', 12), `${kind}: no month written`);
-    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: no record written`);
-    // The preview checks no freeze.
-    const preview = await amountsService(kind, captureAudit(), realFreeze()).computePreview(previewBody(itemId, sfrPayload(calendarId)), { manager: runner.manager });
-    assert.equal(preview.total, '65200.00');
-  });
-}
-
-/** D9: a hand edit, a spread, the legacy item CSV and the recipe survive; only a computation sets it. */
-async function testRecipeSurvivesOtherWrites(kind: Kind) {
-  await withCalendarLine(kind, async ({ runner, tenantId, versionId, calendarId }) => {
-    const svc = amountsService(kind);
-    await svc.bulkUpsert(versionId, sfrPayload(calendarId), null, { manager: runner.manager });
-    const computed = (await readRecords(runner, kind, versionId)).planned;
-    const recipeOf = (r: typeof computed) => [r.pricing_basis, r.quantity, r.unit_price, r.price_index_pct, r.working_day_profile_id, r.counts_as_fte];
-
-    // Hand edit of March: manual, period, explanation and recipe kept.
-    await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(3, YEAR), planned: 1 }] }, null, { manager: runner.manager });
-    const manual = (await readRecords(runner, kind, versionId)).planned;
-    assert.equal(manual.method, 'manual', `${kind}: edited by hand`);
-    assert.deepEqual([manual.period_start, manual.period_end], [computed.period_start, computed.period_end]);
-    assert.deepEqual(manual.last_calculation, computed.last_calculation, `${kind}: the explanation is kept`);
-    assert.deepEqual(recipeOf(manual), recipeOf(computed), `${kind}: the recipe is kept by a hand edit`);
-
-    // A spread over the column: spread, recipe kept.
-    await svc.bulkUpsert(versionId, { kind: 'annual', year: YEAR, totals: { planned: 1200 }, period_start: `${YEAR}-01-01`, period_end: `${YEAR}-06-30` }, null, { manager: runner.manager });
-    const spread = (await readRecords(runner, kind, versionId)).planned;
-    assert.deepEqual([spread.method, spread.last_calculation.kind], ['spread', 'annual']);
-    assert.deepEqual(recipeOf(spread), recipeOf(computed), `${kind}: the recipe is kept by a spread`);
-
-    // A quarterly spread, then the legacy item CSV: still kept.
-    await svc.bulkUpsert(versionId, { kind: 'quarterly', year: YEAR, measure: 'planned', Q1: 30 }, null, { manager: runner.manager });
-    assert.deepEqual(recipeOf((await readRecords(runner, kind, versionId)).planned), recipeOf(computed), `${kind}: kept by a quarterly spread`);
-    await itemCsvImporter(kind).writeImportedTotals(runner.manager, { id: versionId, tenant_id: tenantId, budget_year: YEAR }, YEAR, { planned: 2400 });
-    const csv = (await readRecords(runner, kind, versionId)).planned;
-    assert.deepEqual([csv.method, csv.last_calculation.source], ['spread', 'item_csv']);
-    assert.deepEqual(recipeOf(csv), recipeOf(computed), `${kind}: kept by the item CSV`);
-
-    // Recompute: computed again from the stored recipe, months back to the SFR vector.
-    await svc.bulkUpsert(versionId, sfrPayload(calendarId), null, { manager: runner.manager });
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), SFR_MONTHS);
-    assert.equal((await readRecords(runner, kind, versionId)).planned.method, 'computed');
-  });
-}
-
-/** An identical resubmit writes no record; a difference in the recipe alone is written. */
-async function testNoOpAndRecipeOnlyChange(kind: Kind) {
-  await withCalendarLine(kind, async ({ runner, tenantId, versionId, calendarId }) => {
+/** Every write replaces the lines wholesale; an identical resubmit writes no record. */
+async function testWholesaleReplacement(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, versionId, calendarId }) => {
     const audit = captureAudit();
     const svc = amountsService(kind, audit);
-    await svc.bulkUpsert(versionId, sfrPayload(calendarId), null, { manager: runner.manager });
-    const first = (await readRecords(runner, kind, versionId)).planned;
-    await svc.bulkUpsert(versionId, sfrPayload(calendarId, { quantity: '1.000', unit_price: 400 }), null, { manager: runner.manager });
-    const again = (await readRecords(runner, kind, versionId)).planned;
-    assert.equal(again.updated_at.getTime(), first.updated_at.getTime(), `${kind}: an identical computation writes no record`);
-    assert.equal(roundAudits(audit).length, 1, `${kind}: and audits none`);
+    await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId), licenceLine()]), null, { manager: runner.manager });
+    const [first] = await readLines(runner, kind, versionId, 'planned');
 
-    // Same period, method, profile and explanation; only counts_as_fte differs in the recipe.
-    const version = { id: versionId, tenant_id: tenantId, budget_year: YEAR };
-    const [stored] = await versionRoundInputs(runner.manager, kind, version);
-    const recipe = roundRecipe(stored)!;
-    const rctx = { manager: runner.manager, scope: kind, version, userId: null, audit };
-    const saved = await upsertRoundInput(rctx, 'planned', {
-      period_start: stored.period_start,
-      period_end: stored.period_end,
-      method: stored.method,
-      spread_profile_name: stored.spread_profile_name,
-      last_calculation: stored.last_calculation,
-      recipe: { ...recipe, counts_as_fte: false },
-    });
-    assert.equal(saved!.counts_as_fte, false, `${kind}: a recipe-only change is written`);
-    assert.equal(roundAudits(audit).length, 2);
-    // The recipe is checked against the column limits on every write, whoever builds it.
-    await assert.rejects(
-      () => upsertRoundInput(rctx, 'planned', { ...stored, recipe: { ...recipe, quantity: '1.0001' } }),
-      (err: any) => err instanceof BadRequestException && err.message === 'Quantity accepts at most 3 decimals.',
-    );
+    const reply = await svc.bulkUpsert(versionId, linesPayload([licenceLine({ quantity: '5', label: 'Fewer licences' })]), null, { manager: runner.manager });
+    const lines = await readLines(runner, kind, versionId, 'planned');
+    assert.deepEqual(shape(lines), [[1, 'Fewer licences', 'units', '5.000', '200.0000', 'per_month', `${YEAR}-01-01`, `${YEAR}-12-31`]]);
+    assert.notEqual(lines[0].id, first.id, `${kind}: new rows`);
+    assert.deepEqual(reply.round_inputs[0].lines.map((l: any) => l.id), [lines[0].id], `${kind}: the response carries the new ids`);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('1000.00', 12), `${kind}: months recomputed`);
+    assert.equal((await readRecords(runner, kind, versionId)).planned.fte, '0.00', `${kind}: units give no FTE`);
+
+    const before = (await readRecords(runner, kind, versionId)).planned;
+    const audits = roundAudits(audit).length;
+    await svc.bulkUpsert(versionId, linesPayload([licenceLine({ quantity: '5.000', unit_price: 200, label: ' Fewer licences ' })]), null, { manager: runner.manager });
+    const after = (await readRecords(runner, kind, versionId)).planned;
+    assert.equal(after.updated_at.getTime(), before.updated_at.getTime(), `${kind}: the same lines write no record`);
+    assert.equal(roundAudits(audit).length, audits, `${kind}: and audit none`);
+    assert.equal((await readLines(runner, kind, versionId, 'planned'))[0].id, lines[0].id, `${kind}: nor lines`);
+
+    // The order is part of the lines: swapping two lines rewrites them.
+    await svc.bulkUpsert(versionId, linesPayload([licenceLine(), sfrLine(calendarId)]), null, { manager: runner.manager });
+    await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId), licenceLine()]), null, { manager: runner.manager });
+    assert.deepEqual((await readLines(runner, kind, versionId, 'planned')).map((l) => l.label), ['Project manager', 'Licences']);
   });
 }
 
-/** Refusals are readable 400s and write nothing. */
-async function testComputedRefusals(kind: Kind) {
-  await withCalendarLine(kind, async ({ runner, versionId, itemId, calendarId }) => {
+/** `also_measures`: the same lines on other columns, in one write; unknown columns refused. */
+async function testAlsoMeasures(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, versionId, calendarId }) => {
     const svc = amountsService(kind);
-    const refused = async (overrides: Record<string, unknown>, message: string | RegExp) => {
-      const calls = [
-        (body: Record<string, unknown>) => svc.bulkUpsert(versionId, body, null, { manager: runner.manager }),
-        (body: Record<string, unknown>) => svc.computePreview(previewBody(itemId, body), { manager: runner.manager }),
-      ];
-      for (const call of calls) {
-        await assert.rejects(
-          () => call(sfrPayload(calendarId, overrides)),
-          (err: any) => err instanceof BadRequestException && (typeof message === 'string' ? err.message === message : message.test(err.message)),
-          `${kind}: ${String(message)}`,
-        );
-      }
-    };
-    await refused({ quantity: '1.0001' }, 'Quantity accepts at most 3 decimals.');
-    await refused({ quantity: '-1' }, 'Quantity cannot be negative.');
-    await refused({ unit_price: '400.00001' }, 'Unit price accepts at most 4 decimals.');
-    await refused({ price_index_pct: '-101' }, 'The price index cannot be below -100%.');
-    await refused({ working_day_profile_id: null }, 'Choose a working-day calendar for a price per day.');
-    await refused({ pricing_basis: 'per_month' }, 'A calendar is used only with a price per day.');
-    await refused({ working_day_profile_id: '6f1c1b1e-0000-4000-8000-000000000000' }, 'The calendar was not found.');
-    await refused({ working_day_profile_id: 'not-a-uuid' }, 'The calendar was not found.');
-    // The version's route checks the year against the version; the preview reads the year it is given.
-    await assert.rejects(
-      () => svc.bulkUpsert(versionId, sfrPayload(calendarId, { year: YEAR + 1 }), null, { manager: runner.manager }),
-      (err: any) => err instanceof BadRequestException && err.message === `The year ${YEAR + 1} does not match this version's year ${YEAR}.`,
-    );
-    await refused({ measure: 'budget' }, /^Unknown amount 'budget'\./);
-    await refused({ period_end: undefined }, 'Send both period_start and period_end, or neither for the whole year.');
-    await refused({ period_start: `${YEAR}-02-16`, period_end: `${YEAR}-03-14` }, /^No month of the period counts/);
-    await refused({ pricing_basis: 'weekly' }, "Unknown pricing basis 'weekly'. Use per_day, per_month, per_period.");
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('0.00', 12), `${kind}: nothing written`);
-    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: no record written`);
-  });
-}
-
-/** The preview writes nothing; after a calendar edit it lists the months whose days and amounts changed. */
-async function testPreviewAfterCalendarEdit(kind: Kind) {
-  await withCalendarLine(kind, async ({ runner, versionId, itemId, calendarId }) => {
-    const svc = amountsService(kind);
-    const preview = (payload: Record<string, unknown>) => svc.computePreview(previewBody(itemId, payload), { manager: runner.manager });
-    const fresh = await preview(sfrPayload(calendarId));
-    assert.deepEqual(fresh, {
-      active_months: [2, 3, 4, 5, 6, 7, 8, 9, 10],
-      day_counts: FRANCE_218_2026,
-      total_days: '163',
-      month_amounts: SFR_MONTHS,
-      total: '65200.00',
-      fte: '0.75',
-      calendar: { id: calendarId, code: 'FR218', name: 'France 218', disabled: false },
-      stored: { month_amounts: repeat('0.00', 12), method: null, last_calculation: null },
-      changed_months: [2, 3, 4, 5, 6, 7, 8, 9, 10],
-      calendar_changed_months: [],
-      warnings: [],
-    }, `${kind}: the live line`);
-    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: the preview writes no record`);
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('0.00', 12), `${kind}: nor months`);
-
-    await svc.bulkUpsert(versionId, sfrPayload(calendarId), null, { manager: runner.manager });
-    const explanation = (await readRecords(runner, kind, versionId)).planned.last_calculation;
-    const same = await preview(sfrPayload(calendarId));
-    assert.deepEqual([same.changed_months, same.calendar_changed_months, same.stored.method], [[], [], 'computed']);
-
-    // March 2026 goes from 20 to 19 days: the stored explanation and amounts do not move.
-    const days = [...FRANCE_218_2026];
-    days[2] = '19';
-    await runner.query(`UPDATE working_day_profiles SET days_by_year = $2::jsonb WHERE id = $1`, [calendarId, JSON.stringify({ [YEAR]: days })]);
-    assert.deepEqual((await readRecords(runner, kind, versionId)).planned.last_calculation, explanation, `${kind}: explanation unchanged`);
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), SFR_MONTHS, `${kind}: amounts unchanged`);
-    const after = await preview(sfrPayload(calendarId));
-    assert.deepEqual(
-      [after.changed_months, after.calendar_changed_months, after.month_amounts[2], after.stored.month_amounts[2], after.total_days],
-      [[3], [3], '7600.00', '8000.00', '162'],
-      `${kind}: Recompute shows the difference`,
-    );
-    assert.deepEqual(after.stored.last_calculation.day_counts[2], '20', `${kind}: what the last computation used`);
-    // A day change outside the period is no difference.
-    days[11] = '18';
-    await runner.query(`UPDATE working_day_profiles SET days_by_year = $2::jsonb WHERE id = $1`, [calendarId, JSON.stringify({ [YEAR]: days })]);
-    assert.deepEqual((await preview(sfrPayload(calendarId))).calendar_changed_months, [3]);
-  });
-}
-
-/** A disabled calendar cannot be newly assigned; the round that uses it recomputes with a warning. */
-async function testDisabledCalendar(kind: Kind) {
-  await withCalendarLine(kind, async ({ runner, tenantId, versionId, itemId, calendarId }) => {
-    const svc = amountsService(kind);
-    const retired = await seedCalendar(runner, tenantId, { code: 'OLD', name: 'Old calendar', days_by_year: { [YEAR]: FRANCE_218_2026 }, status: 'disabled' });
-    for (const call of [
-      () => svc.bulkUpsert(versionId, sfrPayload(retired), null, { manager: runner.manager }),
-      () => svc.computePreview(previewBody(itemId, sfrPayload(retired)), { manager: runner.manager }),
-    ]) {
-      await assert.rejects(call, (err: any) => err instanceof BadRequestException && err.message === 'Old calendar is disabled. Pick an enabled calendar.');
-    }
-    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: nothing written`);
-
-    await svc.bulkUpsert(versionId, sfrPayload(calendarId), null, { manager: runner.manager });
-    await runner.query(`UPDATE working_day_profiles SET status = 'disabled', disabled_at = '2020-01-01T12:00:00Z' WHERE id = $1`, [calendarId]);
-    const preview = await svc.computePreview(previewBody(itemId, sfrPayload(calendarId, { quantity: '2' })), { manager: runner.manager });
-    assert.deepEqual([preview.calendar.disabled, preview.warnings], [true, ['This calendar is disabled. The computation still uses it.']]);
-    await svc.bulkUpsert(versionId, sfrPayload(calendarId, { quantity: '2' }), null, { manager: runner.manager });
-    assert.equal((await readMeasure(runner, kind, versionId, 'planned', YEAR))[1], '14400.00', `${kind}: the round that uses it recomputes`);
-    // Another column of the same line did not use it: refused there.
-    await assert.rejects(
-      () => svc.bulkUpsert(versionId, sfrPayload(calendarId, { measure: 'committed' }), null, { manager: runner.manager }),
-      (err: any) => err instanceof BadRequestException && err.message === 'France 218 is disabled. Pick an enabled calendar.',
-    );
-  });
-}
-
-/** Tenant B cannot compute with tenant A's calendar: not found, nothing written. */
-async function testForeignCalendar(kind: Kind) {
-  await inRolledBackTransaction(async (runner) => {
-    const tenantA = await seedTenant(runner, `${kind}-cal-a`);
-    const calendarA = await seedCalendar(runner, tenantA, { code: 'FR218', name: 'France 218', days_by_year: { [YEAR]: FRANCE_218_2026 } });
-    const tenantB = await seedTenant(runner, `${kind}-cal-b`);
-    await setTenant(runner, tenantB);
-    const { versionId, itemId } = await seedLine(runner, kind, tenantB, YEAR);
-    const svc = amountsService(kind);
-    for (const call of [
-      () => svc.bulkUpsert(versionId, sfrPayload(calendarA), null, { manager: runner.manager }),
-      () => svc.computePreview(previewBody(itemId, sfrPayload(calendarA)), { manager: runner.manager }),
-    ]) {
-      await assert.rejects(call, (err: any) => err instanceof BadRequestException && err.message === 'The calendar was not found.');
-    }
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('0.00', 12), `${kind}: no month written`);
-    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: no record written`);
-  });
-}
-
-/** D12: a copy carries the recipe as it is (index never re-applied); recompute for the new year is explicit; clear deletes it. */
-async function testCopyCarriesTheRecipe(kind: Kind) {
-  await withCalendarLine(kind, async ({ runner, versionId, itemId, calendarId }) => {
-    const svc = amountsService(kind);
-    await svc.bulkUpsert(versionId, sfrPayload(calendarId, { price_index_pct: '2' }), null, { manager: runner.manager });
-    const source = (await readRecords(runner, kind, versionId)).planned;
-    await budgetOperations(kind).copyBudgetColumn(
-      { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: '5', overwrite: false, dryRun: false },
+    const response = await svc.bulkUpsert(
+      versionId,
+      linesPayload([sfrLine(calendarId)], { measure: 'forecast', also_measures: ['planned', 'forecast', 'expected_landing'] }),
       null,
       { manager: runner.manager },
     );
-    const destination = await findVersion(runner, kind, itemId, YEAR + 1);
-    const copied = (await readRecords(runner, kind, destination!.id)).planned;
-    assert.deepEqual(
-      [copied.method, copied.period_start, copied.period_end, copied.last_calculation.kind, copied.last_calculation.source_method, copied.last_calculation.uplift_pct],
-      ['copied', `${YEAR + 1}-02-01`, `${YEAR + 1}-10-30`, 'copy', 'computed', '5'],
-    );
-    assert.deepEqual(
-      [copied.pricing_basis, copied.quantity, copied.unit_price, copied.price_index_pct, copied.working_day_profile_id, copied.counts_as_fte],
-      [source.pricing_basis, source.quantity, source.unit_price, '2.0000', calendarId, true],
-      `${kind}: the recipe as it is, the index unchanged by the uplift`,
-    );
-
-    // Recompute for the new year: refused readably while the calendar has no days for it.
-    const next = (overrides: Record<string, unknown> = {}) => sfrPayload(calendarId, {
-      year: YEAR + 1, period_start: `${YEAR + 1}-02-01`, period_end: `${YEAR + 1}-10-30`, price_index_pct: '2', ...overrides,
-    });
-    await assert.rejects(
-      () => svc.computePreview(previewBody(itemId, next()), { manager: runner.manager }),
-      (err: any) => err instanceof BadRequestException
-        && err.message === `France 218 has no working days for ${YEAR + 1}. Add them on the Working-day calendars page.`,
-    );
-    await runner.query(
-      `UPDATE working_day_profiles SET days_by_year = $2::jsonb WHERE id = $1`,
-      [calendarId, JSON.stringify({ [YEAR]: FRANCE_218_2026, [YEAR + 1]: FRANCE_218_2026 })],
-    );
-    await svc.bulkUpsert(destination!.id, next(), null, { manager: runner.manager });
-    const recomputed = await readMeasure(runner, kind, destination!.id, 'planned', YEAR + 1);
-    assert.deepEqual([recomputed[1], recomputed[9]], ['7344.00', '7752.00'], `${kind}: 408 a day over ${YEAR + 1}`);
-    assert.equal((await readRecords(runner, kind, destination!.id)).planned.method, 'computed');
-
-    // A copy replaces the whole destination column: a source without a recipe leaves none.
-    await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(1, YEAR), committed: 5 }] }, null, { manager: runner.manager });
-    await budgetOperations(kind).copyBudgetColumn(
-      { sourceYear: YEAR, sourceColumn: 'revision', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0, overwrite: true, dryRun: false },
-      null,
-      { manager: runner.manager },
-    );
-    const overwritten = (await readRecords(runner, kind, destination!.id)).planned;
-    assert.deepEqual(
-      [overwritten.method, overwritten.last_calculation.source_method,
-        overwritten.pricing_basis, overwritten.quantity, overwritten.unit_price, overwritten.price_index_pct, overwritten.working_day_profile_id, overwritten.counts_as_fte],
-      ['copied', 'manual', null, null, null, null, null, false],
-      `${kind}: the destination loses its recipe`,
-    );
-
-    await budgetOperations(kind).clearBudgetColumn({ year: YEAR + 1, column: 'budget' }, null, { manager: runner.manager });
-    assert.equal((await readRecords(runner, kind, destination!.id)).planned, undefined, `${kind}: clear deletes the record and its recipe`);
-    // The source round still uses the calendar: deleting it is refused (RESTRICT).
-    await runner.query('SAVEPOINT in_use');
-    await assert.rejects(() => runner.query(`DELETE FROM working_day_profiles WHERE id = $1`, [calendarId]), /working_day_profile_fk/);
-    await runner.query('ROLLBACK TO SAVEPOINT in_use');
-  });
-}
-
-/** A preview of a year without a version: computed against nothing stored, and nothing is created (no version, round or month). */
-async function testPreviewWithoutVersion(kind: Kind) {
-  await inRolledBackTransaction(async (runner) => {
-    const tenantId = await seedTenant(runner, `${kind}-nover`);
-    const calendarId = await seedCalendar(runner, tenantId, { code: 'FR218', name: 'France 218', days_by_year: { [YEAR]: FRANCE_218_2026 } });
-    const itemId = await seedItem(runner, kind, tenantId);
-    const preview = await amountsService(kind).computePreview(previewBody(itemId, sfrPayload(calendarId)), { manager: runner.manager });
-    assert.deepEqual(preview, {
-      active_months: [2, 3, 4, 5, 6, 7, 8, 9, 10],
-      day_counts: FRANCE_218_2026,
-      total_days: '163',
-      month_amounts: SFR_MONTHS,
-      total: '65200.00',
-      fte: '0.75',
-      calendar: { id: calendarId, code: 'FR218', name: 'France 218', disabled: false },
-      stored: { month_amounts: repeat('0.00', 12), method: null, last_calculation: null },
-      changed_months: [2, 3, 4, 5, 6, 7, 8, 9, 10],
-      calendar_changed_months: [],
-      warnings: [],
-    }, `${kind}: the SFR vector against nothing stored`);
-    assert.equal(await findVersion(runner, kind, itemId, YEAR), undefined, `${kind}: no version created`);
-    const itemFk = kind === 'opex' ? 'spend_item_id' : 'capex_item_id';
-    const [counts] = await runner.query(
-      `SELECT (SELECT count(*)::int FROM ${kind === 'opex' ? 'spend_versions' : 'capex_versions'} WHERE ${itemFk} = $1) AS versions,
-              (SELECT count(*)::int FROM ${kind === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs'} WHERE tenant_id = $2) AS rounds,
-              (SELECT count(*)::int FROM ${kind === 'opex' ? 'spend_amounts' : 'capex_amounts'} WHERE tenant_id = $2) AS amounts`,
-      [itemId, tenantId],
-    );
-    assert.deepEqual(counts, { versions: 0, rounds: 0, amounts: 0 }, `${kind}: nothing written`);
-    // Year and item are required; a year without calendar days is refused as on the version's route.
-    await assert.rejects(
-      () => amountsService(kind).computePreview(previewBody(itemId, sfrPayload(calendarId, { year: undefined })), { manager: runner.manager }),
-      (err: any) => err instanceof BadRequestException && err.message === 'A budget year is required.',
-    );
-    await assert.rejects(
-      () => amountsService(kind).computePreview(
-        previewBody(itemId, sfrPayload(calendarId, { year: YEAR + 1, period_start: `${YEAR + 1}-02-01`, period_end: `${YEAR + 1}-10-30` })),
-        { manager: runner.manager },
-      ),
-      (err: any) => err instanceof BadRequestException && err.message === `France 218 has no working days for ${YEAR + 1}. Add them on the Working-day calendars page.`,
-    );
-  });
-}
-
-/** Another tenant's item, an unknown item or a malformed id: 404, whatever the rest of the body. */
-async function testPreviewForeignItem(kind: Kind) {
-  await inRolledBackTransaction(async (runner) => {
-    const tenantA = await seedTenant(runner, `${kind}-item-a`);
-    const { itemId: itemA } = await seedLine(runner, kind, tenantA, YEAR);
-    const tenantB = await seedTenant(runner, `${kind}-item-b`);
-    const calendarB = await seedCalendar(runner, tenantB, { code: 'FR218', name: 'France 218', days_by_year: { [YEAR]: FRANCE_218_2026 } });
-    for (const item of [itemA, '6f1c1b1e-0000-4000-8000-000000000000', 'OPX-1', undefined]) {
-      await assert.rejects(
-        () => amountsService(kind).computePreview(previewBody(item as string, sfrPayload(calendarB)), { manager: runner.manager }),
-        (err: any) => err instanceof NotFoundException && err.message === 'Item not found.',
-        `${kind}: ${String(item)}`,
-      );
+    for (const measure of ['planned', 'forecast', 'expected_landing'] as const) {
+      assert.deepEqual(await readMeasure(runner, kind, versionId, measure, YEAR), SFR_MONTHS, `${kind}: ${measure} written`);
+      assert.deepEqual(shape(await readLines(runner, kind, versionId, measure)).map((l) => l[1]), ['Project manager'], `${kind}: ${measure} lines`);
     }
-    await setTenant(runner, tenantA);
-    assert.equal((await findVersion(runner, kind, itemA, YEAR + 1)), undefined);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'actual', YEAR), repeat('0.00', 12), `${kind}: the others untouched`);
+    assert.deepEqual(response.round_inputs.map((r: any) => [r.measure, r.method, r.fte]), [
+      ['planned', 'computed', '0.75'], ['forecast', 'computed', '0.75'], ['expected_landing', 'computed', '0.75'],
+    ], `${kind}: each column, in column order`);
+    await assert.rejects(
+      () => svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId)], { also_measures: ['budget'] }), null, { manager: runner.manager }),
+      (err: any) => err instanceof BadRequestException && /^Unknown amount 'budget'\./.test(err.message),
+    );
+    await assert.rejects(
+      () => svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId)], { also_measures: 'forecast' }), null, { manager: runner.manager }),
+      (err: any) => err instanceof BadRequestException && err.message === 'also_measures must be a list of columns.',
+    );
   });
 }
 
 /**
- * D-N2: the computed write takes its calendar FOR KEY SHARE when it reads it,
- * before the months and the round, so a delete (FOR UPDATE) cannot count zero
- * rounds in between. The writer is held between the two (another transaction
- * holds the line's months) while the delete's lock is tried; the preview,
- * which writes nothing, takes no lock.
+ * `[]` removes the lines: the amounts stay, the FTE becomes unknown, a column
+ * computed from them reads as edited by hand; another method stays.
  */
-async function testComputedWriteLocksItsCalendar() {
+async function testEmptyLines(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, tenantId, versionId, calendarId }) => {
+    const audit = captureAudit();
+    const svc = amountsService(kind, audit);
+    const nothing = await svc.bulkUpsert(versionId, linesPayload([]), null, { manager: runner.manager });
+    assert.deepEqual([nothing.updated, nothing.round_inputs, nothing.warnings], [0, [], []], `${kind}: no lines, no record: nothing written`);
+
+    await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId)], { also_measures: ['forecast'] }), null, { manager: runner.manager });
+    // Forecast is spread over afterwards: its lines stay as a reference.
+    await svc.bulkUpsert(versionId, { kind: 'annual', year: YEAR, totals: { forecast: 1200 } }, null, { manager: runner.manager });
+    const amountAudits = audit.entries.filter((e) => e.table === amountsTable(kind)).length;
+
+    const removed = await svc.bulkUpsert(versionId, linesPayload([], { also_measures: ['forecast'] }), null, { manager: runner.manager });
+    assert.equal(removed.updated, 0, `${kind}: no month written`);
+    assert.equal(audit.entries.filter((e) => e.table === amountsTable(kind)).length, amountAudits, `${kind}: no amounts audit`);
+    const { planned, forecast } = await readRecords(runner, kind, versionId);
+    assert.deepEqual([planned.method, planned.fte, planned.last_calculation], ['manual', null, null], `${kind}: computed becomes manual`);
+    assert.deepEqual([planned.period_start, planned.period_end], [`${YEAR}-02-01`, `${YEAR}-10-30`], `${kind}: the period stays`);
+    assert.deepEqual([forecast.method, forecast.fte, forecast.last_calculation.kind], ['spread', null, 'annual'], `${kind}: a spread stays a spread`);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), SFR_MONTHS, `${kind}: the amounts stay`);
+    assert.equal(await countLines(runner, kind, tenantId), 0, `${kind}: the lines are gone`);
+    assert.deepEqual(removed.round_inputs.map((r: any) => r.lines), [[], []]);
+  });
+}
+
+/** A frozen column refuses the write, `also_measures` and `[]` included; nothing is written. */
+async function testLinesRespectFreeze(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, tenantId, versionId, calendarId }) => {
+    await amountsService(kind).bulkUpsert(versionId, linesPayload([sfrLine(calendarId)], { measure: 'actual' }), null, { manager: runner.manager });
+    await freezeColumn(runner, kind, tenantId, YEAR, 'budget');
+    const svc = amountsService(kind, captureAudit(), realFreeze());
+    for (const payload of [
+      linesPayload([sfrLine(calendarId)]),
+      linesPayload([sfrLine(calendarId)], { measure: 'forecast', also_measures: ['planned'] }),
+      linesPayload([], { measure: 'actual', also_measures: ['planned'] }),
+    ]) {
+      await assert.rejects(
+        () => svc.bulkUpsert(versionId, payload, null, { manager: runner.manager }),
+        (err: any) => err instanceof ForbiddenException && /is frozen/.test(err.message),
+        `${kind}: ${payload.measure} ${JSON.stringify((payload as Record<string, unknown>).also_measures ?? [])}`,
+      );
+    }
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('0.00', 12), `${kind}: no month written`);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'forecast', YEAR), repeat('0.00', 12), `${kind}: nor on the other column`);
+    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), ['actual'], `${kind}: no record written`);
+    assert.equal((await readLines(runner, kind, versionId, 'actual')).length, 1, `${kind}: the lines of the refused [] stay`);
+  });
+}
+
+/** Refusals are readable 400s naming the line, and write nothing. */
+async function testLinesRefusals(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, tenantId, versionId, calendarId }) => {
+    const svc = amountsService(kind);
+    const refused = async (payload: Record<string, unknown>, message: string | RegExp) => {
+      await assert.rejects(
+        () => svc.bulkUpsert(versionId, payload, null, { manager: runner.manager }),
+        (err: any) => err instanceof BadRequestException && (typeof message === 'string' ? err.message === message : message.test(err.message)),
+        `${kind}: ${String(message)}`,
+      );
+    };
+    const second = (overrides: Record<string, unknown>) => linesPayload([licenceLine(), sfrLine(calendarId, overrides)]);
+    await refused(second({ quantity: '1.0001' }), 'Line 2: quantity accepts at most 3 decimals.');
+    await refused(second({ quantity: '-1' }), 'Line 2: quantity cannot be negative.');
+    await refused(second({ unit_price: '400.00001' }), 'Line 2: unit price accepts at most 4 decimals.');
+    await refused(second({ working_day_profile_id: null }), 'Line 2: choose a calendar for a price per day.');
+    await refused(second({ price_basis: 'per_month' }), 'Line 2: a calendar is used only with a price per day.');
+    await refused(second({ price_basis: 'once', working_day_profile_id: null }), 'Line 2: a price for people is per day or per month.');
+    await refused(second({ working_day_profile_id: '6f1c1b1e-0000-4000-8000-000000000000' }), 'Line 2: the calendar was not found.');
+    await refused(second({ working_day_profile_id: 'not-a-uuid' }), 'Line 2: the calendar was not found.');
+    await refused(second({ period_start: `${YEAR}-02-16`, period_end: `${YEAR}-03-14` }), /^Line 2: no month of the period counts/);
+    await refused(second({ period_end: `${YEAR + 1}-01-31` }), `Line 2: the period must lie within ${YEAR}; its end is ${YEAR + 1}-01-31.`);
+    await refused(linesPayload(repeat(licenceLine(), 51)), 'A column holds at most 50 lines.');
+    await refused(linesPayload(null as any), 'Send the lines as a list.');
+    await refused(linesPayload([sfrLine(calendarId)], { measure: 'budget' }), /^Unknown amount 'budget'\./);
+    await refused(linesPayload([sfrLine(calendarId)], { year: YEAR + 1 }), `The year ${YEAR + 1} does not match this version's year ${YEAR}.`);
+    await refused(
+      linesPayload([sfrLine(calendarId, { period_start: `${YEAR}-01-01`, period_end: `${YEAR}-01-31` }), licenceLine({ quantity: '999999999', unit_price: '99999999999999' })]),
+      'Line 2: the computed amount is too large.',
+    );
+    // A calendar without the year of the version.
+    const later = await seedCalendar(runner, tenantId, { code: 'LATER', name: 'Later calendar', days_by_year: { [YEAR + 1]: FRANCE_218_2026 } });
+    await refused(second({ working_day_profile_id: later }), `Line 2: Later calendar has no working days for ${YEAR}. Add them on the Working-day calendars page.`);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('0.00', 12), `${kind}: nothing written`);
+    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: no record written`);
+    assert.equal(await countLines(runner, kind, tenantId), 0, `${kind}: no line written`);
+  });
+}
+
+/** A disabled calendar cannot be newly used; the columns whose lines use it keep working, with a warning. */
+async function testDisabledCalendar(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, tenantId, versionId, calendarId }) => {
+    const svc = amountsService(kind);
+    const retired = await seedCalendar(runner, tenantId, { code: 'OLD', name: 'Old calendar', days_by_year: { [YEAR]: FRANCE_218_2026 }, status: 'disabled' });
+    await assert.rejects(
+      () => svc.bulkUpsert(versionId, linesPayload([sfrLine(retired)]), null, { manager: runner.manager }),
+      (err: any) => err instanceof BadRequestException && err.message === 'Line 1: Old calendar is disabled. Pick an enabled calendar.',
+    );
+    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: nothing written`);
+
+    await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId)]), null, { manager: runner.manager });
+    await runner.query(`UPDATE working_day_profiles SET status = 'disabled', disabled_at = '2020-01-01T12:00:00Z' WHERE id = $1`, [calendarId]);
+    const kept = await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId, { quantity: '2' })]), null, { manager: runner.manager });
+    assert.deepEqual(kept.warnings, [DISABLED_CALENDAR_WARNING], `${kind}: the column that uses it computes, with a warning`);
+    assert.equal((await readMeasure(runner, kind, versionId, 'planned', YEAR))[1], '14400.00');
+    // Another column, alone or with the first, did not use it: refused.
+    for (const payload of [linesPayload([sfrLine(calendarId)], { measure: 'committed' }), linesPayload([sfrLine(calendarId)], { also_measures: ['committed'] })]) {
+      await assert.rejects(
+        () => svc.bulkUpsert(versionId, payload, null, { manager: runner.manager }),
+        (err: any) => err instanceof BadRequestException && err.message === 'Line 1: France 218 is disabled. Pick an enabled calendar.',
+      );
+    }
+  });
+}
+
+/** Tenant B cannot use tenant A's calendar, nor write into A's version; the composite keys refuse it in raw SQL too. */
+async function testOtherTenant(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantA = await seedTenant(runner, `${kind}-lines-a`);
+    const calendarA = await seedCalendar(runner, tenantA, { code: 'FR218', name: 'France 218', days_by_year: { [YEAR]: FRANCE_218_2026 } });
+    const lineA = await seedLine(runner, kind, tenantA, YEAR);
+    await amountsService(kind).bulkUpsert(lineA.versionId, linesPayload([sfrLine(calendarA)]), null, { manager: runner.manager });
+    const [roundA] = await runner.query(`SELECT id FROM ${TABLES[kind].rounds} WHERE version_id = $1`, [lineA.versionId]);
+
+    const tenantB = await seedTenant(runner, `${kind}-lines-b`);
+    await setTenant(runner, tenantB);
+    const { versionId } = await seedLine(runner, kind, tenantB, YEAR);
+    const svc = amountsService(kind);
+    await assert.rejects(
+      () => svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarA)]), null, { manager: runner.manager }),
+      (err: any) => err instanceof BadRequestException && err.message === 'Line 1: the calendar was not found.',
+    );
+    await assert.rejects(
+      () => svc.bulkUpsert(lineA.versionId, linesPayload([licenceLine()]), null, { manager: runner.manager }),
+      (err: any) => err instanceof NotFoundException,
+      `${kind}: A's version is not found for B`,
+    );
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('0.00', 12), `${kind}: no month written`);
+    assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: no record written`);
+    assert.equal(await countLines(runner, kind, tenantB), 0);
+
+    // Raw SQL from B's session: a line on A's round, or on B's round with A's calendar, fails the composite keys.
+    await svc.bulkUpsert(versionId, linesPayload([licenceLine()]), null, { manager: runner.manager });
+    const [roundB] = await runner.query(`SELECT id FROM ${TABLES[kind].rounds} WHERE version_id = $1`, [versionId]);
+    const insertLine = (roundId: string, calendarId: string | null) => runner.query(
+      `INSERT INTO ${TABLES[kind].lines}
+         (tenant_id, round_input_id, sort, quantity_unit, quantity, unit_price, price_basis, working_day_profile_id, period_start, period_end)
+       VALUES ($1, $2, 9, 'people', 1, 400, $3, $4, '${YEAR}-01-01', '${YEAR}-12-31')`,
+      [tenantB, roundId, calendarId ? 'per_day' : 'per_month', calendarId],
+    );
+    for (const [roundId, calendarId, constraint] of [
+      [roundA.id, null, 'round_input_fk'],
+      [roundB.id, calendarA, 'working_day_profile_fk'],
+    ] as const) {
+      await runner.query('SAVEPOINT raw');
+      await assert.rejects(() => insertLine(roundId, calendarId), new RegExp(`${TABLES[kind].lines}_${constraint}`));
+      await runner.query('ROLLBACK TO SAVEPOINT raw');
+    }
+    await setTenant(runner, tenantA);
+    assert.equal((await readLines(runner, kind, lineA.versionId, 'planned')).length, 1, `${kind}: A's lines as they were`);
+  });
+}
+
+/** A hand edit, a spread (yearly, quarterly, item CSV) keep the lines and the FTE; sending the lines again computes again. */
+async function testOtherWritesKeepLines(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, tenantId, versionId, calendarId }) => {
+    const svc = amountsService(kind);
+    await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId), licenceLine()]), null, { manager: runner.manager });
+    const computed = (await readRecords(runner, kind, versionId)).planned;
+    const linesOf = async () => (await readLines(runner, kind, versionId, 'planned')).map((l) => l.id);
+    const ids = await linesOf();
+
+    await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(3, YEAR), planned: 1 }] }, null, { manager: runner.manager });
+    const manual = (await readRecords(runner, kind, versionId)).planned;
+    assert.deepEqual([manual.method, manual.fte, manual.period_start, manual.period_end], ['manual', '0.75', computed.period_start, computed.period_end]);
+    assert.deepEqual(manual.last_calculation, computed.last_calculation, `${kind}: the explanation stays`);
+    assert.deepEqual(await linesOf(), ids, `${kind}: the lines stay after a hand edit`);
+
+    await svc.bulkUpsert(versionId, { kind: 'annual', year: YEAR, totals: { planned: 1200 }, period_start: `${YEAR}-01-01`, period_end: `${YEAR}-06-30` }, null, { manager: runner.manager });
+    const spread = (await readRecords(runner, kind, versionId)).planned;
+    assert.deepEqual([spread.method, spread.last_calculation.kind, spread.fte], ['spread', 'annual', '0.75']);
+    assert.deepEqual(await linesOf(), ids, `${kind}: the lines stay after a spread`);
+
+    await svc.bulkUpsert(versionId, { kind: 'quarterly', year: YEAR, measure: 'planned', Q1: 30 }, null, { manager: runner.manager });
+    await itemCsvImporter(kind).writeImportedTotals(runner.manager, { id: versionId, tenant_id: tenantId, budget_year: YEAR }, YEAR, { planned: 2400 });
+    const csv = (await readRecords(runner, kind, versionId)).planned;
+    assert.deepEqual([csv.method, csv.last_calculation.source, csv.fte], ['spread', 'item_csv', '0.75']);
+    assert.deepEqual(await linesOf(), ids, `${kind}: the lines stay after the item CSV`);
+    const listed = await svc.listByYear(versionId, YEAR, { manager: runner.manager });
+    assert.deepEqual(listed.round_inputs[0].lines.map((l: any) => l.label), ['Project manager', 'Licences'], `${kind}: returned as the reference`);
+
+    // "Use the lines again": the same lines, sent again, compute the column again.
+    await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId), licenceLine()]), null, { manager: runner.manager });
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), SFR_MONTHS.map((m) => (Number(m) + 2000).toFixed(2)));
+    const again = (await readRecords(runner, kind, versionId)).planned;
+    assert.deepEqual([again.method, again.last_calculation.kind], ['computed', 'computed']);
+    assert.deepEqual(await linesOf(), ids, `${kind}: the same lines are not rewritten`);
+  });
+}
+
+/** A copy carries the lines (periods shifted, 29 February to 28 February) and the FTE; a source without lines leaves none; clear deletes them. */
+async function testCopyAndClear(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-copy-lines`);
+    const days = { 2028: FRANCE_218_2026, 2029: FRANCE_218_2026 };
+    const calendarId = await seedCalendar(runner, tenantId, { code: 'FR218', name: 'France 218', days_by_year: days });
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, 2028);
+    const svc = amountsService(kind);
+    // 2028 is a leap year: a line ends on 29 February.
+    await svc.bulkUpsert(versionId, {
+      kind: 'lines', year: 2028, measure: 'planned',
+      lines: [
+        sfrLine(calendarId, { period_start: '2028-02-01', period_end: '2028-10-30' }),
+        licenceLine({ label: 'Winter licences', period_start: '2028-01-01', period_end: '2028-02-29' }),
+      ],
+    }, null, { manager: runner.manager });
+    const source = (await readRecords(runner, kind, versionId)).planned;
+    // The item ends mid-2029: the record's period is cut to the validity, the lines keep theirs.
+    await setItemDates(runner, kind, itemId, { disabledAt: '2029-06-30T12:00:00Z' });
+
+    await budgetOperations(kind).copyBudgetColumn(
+      { sourceYear: 2028, sourceColumn: 'budget', destinationYear: 2029, destinationColumn: 'budget', percentageIncrease: '5', overwrite: false, dryRun: false },
+      null,
+      { manager: runner.manager },
+    );
+    const destination = (await findVersion(runner, kind, itemId, 2029))!;
+    const copied = (await readRecords(runner, kind, destination.id)).planned;
+    assert.deepEqual(
+      [copied.method, copied.period_start, copied.period_end, copied.fte, copied.last_calculation.kind, copied.last_calculation.source_method],
+      ['copied', '2029-01-01', '2029-06-30', source.fte, 'copy', 'computed'],
+      `${kind}: copied, FTE carried`,
+    );
+    assert.deepEqual(
+      (await readLines(runner, kind, destination.id, 'planned')).map((l) => [l.label, l.quantity, l.unit_price, l.working_day_profile_id, l.period_start, l.period_end]),
+      [
+        ['Project manager', '1.000', '400.0000', calendarId, '2029-02-01', '2029-10-30'],
+        ['Winter licences', '10.000', '200.0000', null, '2029-01-01', '2029-02-28'],
+      ],
+      `${kind}: the lines shifted a year, quantity and price as they are, 29 February to 28 February`,
+    );
+
+    // A source without lines leaves the destination without lines and without FTE.
+    await svc.bulkUpsert(versionId, { kind: 'monthly', year: 2028, months: [{ period: period(1, 2028), committed: 5 }] }, null, { manager: runner.manager });
+    await budgetOperations(kind).copyBudgetColumn(
+      { sourceYear: 2028, sourceColumn: 'revision', destinationYear: 2029, destinationColumn: 'budget', percentageIncrease: 0, overwrite: true, dryRun: false },
+      null,
+      { manager: runner.manager },
+    );
+    const overwritten = (await readRecords(runner, kind, destination.id)).planned;
+    assert.deepEqual([overwritten.method, overwritten.fte, overwritten.last_calculation.source_method], ['copied', null, 'manual']);
+    assert.deepEqual(await readLines(runner, kind, destination.id, 'planned'), [], `${kind}: the destination loses its lines`);
+
+    // Clear deletes the record and its lines; the calendar is free again.
+    await budgetOperations(kind).clearBudgetColumn({ year: 2028, column: 'budget' }, null, { manager: runner.manager });
+    assert.equal((await readRecords(runner, kind, versionId)).planned, undefined, `${kind}: the record is deleted`);
+    assert.equal(await countLines(runner, kind, tenantId), 0, `${kind}: its lines with it`);
+    const [gone] = await runner.query(`DELETE FROM working_day_profiles WHERE tenant_id = $1 AND id = $2 RETURNING id`, [tenantId, calendarId]);
+    assert.equal(gone.length, 1);
+  });
+}
+
+/**
+ * The lines write takes its calendars FOR KEY SHARE when it reads them,
+ * before the months and the records, so a delete (FOR UPDATE) cannot count
+ * zero lines in between. The writer is held between the two (another
+ * transaction holds the line's months) while the delete's lock is tried.
+ */
+async function testLinesWriteLocksItsCalendar() {
   const seed = dataSource.createQueryRunner();
   await seed.connect();
   await seed.startTransaction();
-  const tenantId = await seedTenant(seed, 'cal-lock');
+  const tenantId = await seedTenant(seed, 'lines-lock');
   const calendarId = await seedCalendar(seed, tenantId, { code: 'FR218', name: 'France 218', days_by_year: { [YEAR]: FRANCE_218_2026 } });
-  const { itemId, versionId } = await seedLine(seed, 'opex', tenantId, YEAR, { committed: repeat('1', 12) });
+  const { versionId } = await seedLine(seed, 'opex', tenantId, YEAR, { committed: repeat('1', 12) });
   await seed.commitTransaction();
   await seed.release();
 
@@ -553,18 +564,16 @@ async function testComputedWriteLocksItsCalendar() {
   };
   let write: Promise<unknown> | null = null;
   try {
-    await amountsService('opex').computePreview(previewBody(itemId, sfrPayload(calendarId)), { manager: writer.manager });
-    assert.equal(await tryLock(), 'free', 'the preview takes no lock');
-
+    assert.equal(await tryLock(), 'free');
     await holder.query(`SELECT id FROM spend_amounts WHERE tenant_id = $1 AND version_id = $2 FOR UPDATE`, [tenantId, versionId]);
     const [{ pid }] = await writer.query(`SELECT pg_backend_pid() AS pid`);
-    write = amountsService('opex').bulkUpsert(versionId, sfrPayload(calendarId), null, { manager: writer.manager });
+    write = amountsService('opex').bulkUpsert(versionId, linesPayload([sfrLine(calendarId)]), null, { manager: writer.manager });
     write.catch(() => undefined);
     const deadline = Date.now() + 5000;
     for (;;) {
       const [row] = await dataSource.query(`SELECT wait_event_type FROM pg_stat_activity WHERE pid = $1`, [pid]);
       if (row?.wait_event_type === 'Lock') break;
-      if (Date.now() > deadline) throw new Error('the computed write never waited for the months');
+      if (Date.now() > deadline) throw new Error('the lines write never waited for the months');
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
     assert.equal(await tryLock(), 'held', 'read, not yet written: the calendar is already held');
@@ -589,35 +598,31 @@ async function testComputedWriteLocksItsCalendar() {
   }
 }
 
-/** Both preview routes need member on their item type, like bulk-upsert. */
-async function testPreviewRoutePermissions() {
-  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, SpendVersionsController.prototype.computePreview), { resource: 'opex', level: 'member' });
-  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, CapexVersionsController.prototype.computePreview), { resource: 'capex', level: 'member' });
-  assert.equal(Reflect.getMetadata('path', SpendVersionsController.prototype.computePreview), 'spend-versions/compute-preview');
-  assert.equal(Reflect.getMetadata('path', CapexVersionsController.prototype.computePreview), 'capex-versions/compute-preview');
-  // The version-scoped preview routes are gone: one preview route per item type.
+/** The lines go through bulk-upsert (member); no preview route is left. */
+async function testRoutes() {
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, SpendVersionsController.prototype.upsertAmounts), { resource: 'opex', level: 'member' });
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, CapexVersionsController.prototype.upsertAmounts), { resource: 'capex', level: 'member' });
   for (const controller of [SpendVersionsController, CapexVersionsController]) {
     const paths = Object.getOwnPropertyNames(controller.prototype).map((name) => Reflect.getMetadata('path', (controller.prototype as any)[name]));
-    assert.equal(paths.filter((path) => typeof path === 'string' && path.includes('compute-preview')).length, 1, `${controller.name}: one preview route`);
+    assert.equal(paths.some((path) => typeof path === 'string' && path.includes('preview')), false, `${controller.name}: no preview route`);
   }
 }
 
 void runSpecs('costing-round.integration.spec', [
-  ['testPreviewRoutePermissions', testPreviewRoutePermissions],
-  ['testComputedWriteLocksItsCalendar', testComputedWriteLocksItsCalendar],
+  ['testRoutes', testRoutes],
+  ['testLinesWriteLocksItsCalendar', testLinesWriteLocksItsCalendar],
   ...KINDS.flatMap((kind) => [
-    [`testComputedWrite(${kind})`, () => testComputedWrite(kind)],
-    [`testComputedActuals(${kind})`, () => testComputedActuals(kind)],
-    [`testComputedRespectsFreeze(${kind})`, () => testComputedRespectsFreeze(kind)],
-    [`testRecipeSurvivesOtherWrites(${kind})`, () => testRecipeSurvivesOtherWrites(kind)],
-    [`testNoOpAndRecipeOnlyChange(${kind})`, () => testNoOpAndRecipeOnlyChange(kind)],
-    [`testComputedRefusals(${kind})`, () => testComputedRefusals(kind)],
-    [`testPreviewAfterCalendarEdit(${kind})`, () => testPreviewAfterCalendarEdit(kind)],
-    [`testPreviewWithoutVersion(${kind})`, () => testPreviewWithoutVersion(kind)],
-    [`testPreviewForeignItem(${kind})`, () => testPreviewForeignItem(kind)],
+    [`testLinesWrite(${kind})`, () => testLinesWrite(kind)],
+    [`testDaysLine(${kind})`, () => testDaysLine(kind)],
+    [`testWholesaleReplacement(${kind})`, () => testWholesaleReplacement(kind)],
+    [`testAlsoMeasures(${kind})`, () => testAlsoMeasures(kind)],
+    [`testEmptyLines(${kind})`, () => testEmptyLines(kind)],
+    [`testLinesRespectFreeze(${kind})`, () => testLinesRespectFreeze(kind)],
+    [`testLinesRefusals(${kind})`, () => testLinesRefusals(kind)],
     [`testDisabledCalendar(${kind})`, () => testDisabledCalendar(kind)],
-    [`testForeignCalendar(${kind})`, () => testForeignCalendar(kind)],
-    [`testCopyCarriesTheRecipe(${kind})`, () => testCopyCarriesTheRecipe(kind)],
+    [`testOtherTenant(${kind})`, () => testOtherTenant(kind)],
+    [`testOtherWritesKeepLines(${kind})`, () => testOtherWritesKeepLines(kind)],
+    [`testCopyAndClear(${kind})`, () => testCopyAndClear(kind)],
   ] as Array<[string, () => Promise<void>]>),
 ]);
 

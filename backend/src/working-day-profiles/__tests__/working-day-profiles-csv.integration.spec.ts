@@ -17,8 +17,9 @@ function file(lines: string[], header = HEADER): Express.Multer.File {
   return { buffer: Buffer.from(`﻿${header}\n${lines.join('\n')}\n`, 'utf8'), originalname: 'working_day_calendars.csv' } as Express.Multer.File;
 }
 
-const row = (code: string, name: string, year: string, days: string[], rest: { description?: string; status?: string; disabledAt?: string } = {}) =>
-  [code, name, rest.description ?? '', rest.status ?? 'enabled', rest.disabledAt ?? '', year, ...days].join(';');
+type RowFields = { description?: string; country?: string; region?: string; status?: string; disabledAt?: string };
+const row = (code: string, name: string, year: string, days: string[], rest: RowFields = {}) =>
+  [code, name, rest.description ?? '', rest.country ?? '', rest.region ?? '', rest.status ?? 'enabled', rest.disabledAt ?? '', year, ...days].join(';');
 
 const noDays = Array.from({ length: 12 }, () => '');
 
@@ -68,13 +69,13 @@ async function testMultiYearRoundTrip() {
     assert.equal(exported.filename, 'working_day_calendars.csv');
     const exportedLines = exported.content.replace(/^﻿/, '').trim().split('\n');
     assert.equal(exportedLines[0], HEADER);
-    assert.deepEqual(exportedLines.slice(1).map((line) => line.split(';').slice(0, 6).join(';')), [
-      'DE-OFF;Germany office;;enabled;;2026',
-      'EMPTY;No years yet;;enabled;;',
-      'FR218;France 218;Office staff;enabled;;2026',
-      'FR218;France 218;Office staff;enabled;;2027',
+    assert.deepEqual(exportedLines.slice(1).map((line) => line.split(';').slice(0, 8).join(';')), [
+      'DE-OFF;Germany office;;;;enabled;;2026',
+      'EMPTY;No years yet;;;;enabled;;',
+      'FR218;France 218;Office staff;;;enabled;;2026',
+      'FR218;France 218;Office staff;;;enabled;;2027',
     ]);
-    assert.equal(exportedLines[3].split(';')[17], '19.083333');
+    assert.equal(exportedLines[3].split(';')[19], '19.083333');
 
     const again = await csv.importCsv({
       file: { buffer: Buffer.from(exported.content, 'utf8'), originalname: exported.filename } as Express.Multer.File,
@@ -180,7 +181,7 @@ async function testOptionalEndOfValidity() {
     const { tenantId, csv, ctx } = await seed(runner, 'optional');
     const header = WORKING_DAY_PROFILE_CSV_HEADERS.filter((name) => name !== 'disabled_at').join(';');
     const result = await csv.importCsv({
-      file: file([['FR218', 'France 218', '', 'enabled', '2026', ...FR218].join(';')], header),
+      file: file([['FR218', 'France 218', '', '', '', 'enabled', '2026', ...FR218].join(';')], header),
       dryRun: false,
     }, ctx);
     assert.equal(result.ok, true, JSON.stringify(result.errors));
@@ -197,6 +198,97 @@ async function testOptionalEndOfValidity() {
     assert.deepEqual(dated.errors, [{ row: 3, message: 'Rows of FR218 disagree on the end of validity.' }]);
     const [stored] = await runner.query(`SELECT disabled_at FROM working_day_profiles WHERE tenant_id = $1`, [tenantId]);
     assert.equal(stored.disabled_at, null);
+  });
+}
+
+/**
+ * Standard calendars in the file: the country and region are applied on
+ * creation, exported as codes with the edited years only, blank or unchanged
+ * on an existing calendar; year rows of a standard calendar are edited years.
+ */
+async function testStandardCalendars() {
+  await withRollback(async (runner) => {
+    const { tenantId, svc, csv, ctx } = await seed(runner, 'standard');
+    const lines = [
+      row('FR', 'France', '', noDays, { country: 'fr' }),
+      row('FR-57', 'France (Moselle)', '2026', FR218, { country: 'FR', region: '57' }),
+      row('DE-BY', 'Bavaria', '', noDays, { country: 'DE', region: 'by' }),
+    ];
+    const done = await csv.importCsv({ file: file(lines), dryRun: false }, ctx);
+    assert.equal(done.ok, true, JSON.stringify(done.errors));
+    assert.deepEqual([done.inserted, done.updated, done.unchanged], [3, 0, 0]);
+    const stored = await runner.query(
+      `SELECT code, country_iso, region_code, days_by_year FROM working_day_profiles WHERE tenant_id = $1 ORDER BY code`,
+      [tenantId],
+    );
+    assert.deepEqual(stored.map((entry: any) => [entry.code, entry.country_iso, entry.region_code, Object.keys(entry.days_by_year)]), [
+      ['DE-BY', 'DE', 'BY', []],
+      ['FR', 'FR', null, []],
+      ['FR-57', 'FR', '57', ['2026']],
+    ], 'codes as the rules know them; the year row is an edited year');
+
+    const exported = await csv.exportCsv('data', ctx);
+    const exportedLines = exported.content.replace(/^\uFEFF/, '').trim().split('\n');
+    assert.deepEqual(exportedLines.slice(1).map((line) => line.split(';').slice(0, 8).join(';')), [
+      'DE-BY;Bavaria;;DE;BY;enabled;;',
+      'FR;France;;FR;;enabled;;',
+      'FR-57;France (Moselle);;FR;57;enabled;;2026',
+    ], 'a standard calendar exports its edited years only');
+    const again = await csv.importCsv({
+      file: { buffer: Buffer.from(exported.content, 'utf8'), originalname: exported.filename } as Express.Multer.File,
+      dryRun: false,
+    }, ctx);
+    assert.deepEqual([again.ok, again.inserted, again.updated, again.unchanged], [true, 0, 0, 3], JSON.stringify(again.errors));
+
+    // Blank cells keep the source; a new year on a standard calendar is an edited year.
+    const custom = await svc.create({ code: 'CUSTOM', name: 'Custom days' }, ctx);
+    const added = await csv.importCsv({ file: file([row('FR', 'France', '2027', FR218)]), dryRun: false }, ctx);
+    assert.deepEqual([added.ok, added.inserted, added.updated], [true, 1, 0], JSON.stringify(added.errors));
+    const [france] = await runner.query(
+      `SELECT country_iso, region_code, days_by_year FROM working_day_profiles WHERE tenant_id = $1 AND code = 'FR'`,
+      [tenantId],
+    );
+    assert.deepEqual([france.country_iso, france.region_code, Object.keys(france.days_by_year)], ['FR', null, ['2027']]);
+
+    const refused = await csv.importCsv({
+      file: file([
+        row('ZZ1', 'Nowhere', '', noDays, { country: 'ZZ' }),
+        row('FR-BY', 'Wrong region', '', noDays, { country: 'FR', region: 'BY' }),
+        row('R57', 'Region only', '', noDays, { region: '57' }),
+        row('FR', 'France', '', noDays, { country: 'DE' }),
+        row('CUSTOM', 'Custom days', '', noDays, { country: 'FR' }),
+        row('FR-57', 'France (Moselle)', '', noDays, { country: 'FR', region: '67' }),
+        row('NEW', 'New calendar', '2026', FR218, { country: 'FR' }),
+        row('NEW', 'New calendar', '2027', FR218, { country: 'DE' }),
+      ]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(refused.ok, false);
+    assert.deepEqual(refused.errors, [
+      { row: 2, message: 'Country ZZ is not in the list.' },
+      { row: 3, message: 'BY is not a region of France.' },
+      { row: 4, message: 'Give the country of region 57.' },
+      { row: 5, message: 'The country of a calendar cannot be changed. Create another calendar.' },
+      { row: 6, message: 'The country of a calendar cannot be changed. Create another calendar.' },
+      { row: 7, message: 'The country of a calendar cannot be changed. Create another calendar.' },
+      { row: 9, message: 'Rows of NEW disagree on the country.' },
+    ]);
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM working_day_profiles WHERE tenant_id = $1`, [tenantId]);
+    assert.equal(n, 4, 'nothing is written when a row fails');
+    assert.equal((await svc.get(custom.id, ctx)).country_iso, null, 'a custom calendar stays custom');
+
+    // A file without the two columns keeps the source of the existing calendars.
+    const header = WORKING_DAY_PROFILE_CSV_HEADERS.filter((name) => name !== 'country' && name !== 'region').join(';');
+    const without = await csv.importCsv({
+      file: file([['FR-57', 'France (Moselle)', 'Metz office', 'enabled', '', '', ...noDays].join(';')], header),
+      dryRun: false,
+    }, ctx);
+    assert.deepEqual([without.ok, without.updated], [true, 1], JSON.stringify(without.errors));
+    const [moselle] = await runner.query(
+      `SELECT description, country_iso, region_code FROM working_day_profiles WHERE tenant_id = $1 AND code = 'FR-57'`,
+      [tenantId],
+    );
+    assert.deepEqual(moselle, { description: 'Metz office', country_iso: 'FR', region_code: '57' });
   });
 }
 
@@ -241,6 +333,7 @@ runSpecs('working-day-profiles-csv.integration.spec', [
   testAbsentYearsKept,
   testRowErrors,
   testOptionalEndOfValidity,
+  testStandardCalendars,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

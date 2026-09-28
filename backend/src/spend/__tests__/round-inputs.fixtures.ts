@@ -38,7 +38,6 @@ export function realFreeze() {
 
 export function amountsService(kind: Kind, audit: unknown = captureAudit(), freeze: unknown = noFreeze): {
   bulkUpsert: (...args: any[]) => Promise<any>;
-  computePreview: (payload: unknown, opts?: { manager?: any }) => Promise<any>;
   listByYear: (...args: any[]) => Promise<any>;
 } {
   return kind === 'opex'
@@ -77,8 +76,8 @@ export function itemCsvImporter(kind: Kind, audit: unknown = captureAudit()): { 
 }
 
 export const TABLES = {
-  opex: { items: 'spend_items', versions: 'spend_versions', amounts: 'spend_amounts', rounds: 'spend_round_inputs' },
-  capex: { items: 'capex_items', versions: 'capex_versions', amounts: 'capex_amounts', rounds: 'capex_round_inputs' },
+  opex: { items: 'spend_items', versions: 'spend_versions', amounts: 'spend_amounts', rounds: 'spend_round_inputs', lines: 'spend_round_input_lines' },
+  capex: { items: 'capex_items', versions: 'capex_versions', amounts: 'capex_amounts', rounds: 'capex_round_inputs', lines: 'capex_round_input_lines' },
 } as const;
 
 export function period(month: number, year: number) {
@@ -203,27 +202,50 @@ export type StoredRecord = {
   method: string;
   spread_profile_name: string | null;
   last_calculation: any;
-  pricing_basis: string | null;
-  quantity: string | null;
-  unit_price: string | null;
-  price_index_pct: string | null;
-  working_day_profile_id: string | null;
-  counts_as_fte: boolean;
+  /** As stored ('1.00'), or null. */
+  fte: string | null;
   updated_at: Date;
   updated_by: string | null;
 };
 
-/** The stored records of a version by measure; recipe decimals as stored ('1.000', '400.0000'). */
+/** The stored records of a version by measure. */
 export async function readRecords(runner: QueryRunner, kind: Kind, versionId: string): Promise<Record<string, StoredRecord>> {
   const rows: StoredRecord[] = await runner.query(
     `SELECT id, tenant_id, version_id, measure, to_char(period_start, 'YYYY-MM-DD') AS period_start,
             to_char(period_end, 'YYYY-MM-DD') AS period_end, method, spread_profile_name, last_calculation,
-            pricing_basis::text AS pricing_basis, quantity::text AS quantity, unit_price::text AS unit_price,
-            price_index_pct::text AS price_index_pct, working_day_profile_id, counts_as_fte, updated_at, updated_by
+            fte::text AS fte, updated_at, updated_by
      FROM ${TABLES[kind].rounds} WHERE version_id = $1`,
     [versionId],
   );
   return Object.fromEntries(rows.map((r) => [r.measure, r]));
+}
+
+export type StoredLine = {
+  id: string;
+  tenant_id: string;
+  sort: number;
+  label: string;
+  quantity_unit: string;
+  quantity: string;
+  unit_price: string;
+  price_basis: string;
+  working_day_profile_id: string | null;
+  period_start: string;
+  period_end: string;
+};
+
+/** The stored lines of one column of a version, in order; decimals as stored ('1.000', '400.0000'). */
+export async function readLines(runner: QueryRunner, kind: Kind, versionId: string, measure: Measure): Promise<StoredLine[]> {
+  return runner.query(
+    `SELECT l.id, l.tenant_id, l.sort, l.label, l.quantity_unit::text AS quantity_unit, l.quantity::text AS quantity,
+            l.unit_price::text AS unit_price, l.price_basis::text AS price_basis, l.working_day_profile_id,
+            to_char(l.period_start, 'YYYY-MM-DD') AS period_start, to_char(l.period_end, 'YYYY-MM-DD') AS period_end
+     FROM ${TABLES[kind].lines} l
+     JOIN ${TABLES[kind].rounds} r ON r.tenant_id = l.tenant_id AND r.id = l.round_input_id
+     WHERE r.version_id = $1 AND r.measure = $2
+     ORDER BY l.sort`,
+    [versionId, measure],
+  );
 }
 
 /** Working days of the France 218 calendar in 2026 (218 days); February to October is 163. */

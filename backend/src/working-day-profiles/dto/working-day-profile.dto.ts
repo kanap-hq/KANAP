@@ -17,6 +17,15 @@ export class WorkingDayProfileCreateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsObject()
   days_by_year?: Record<string, unknown>;
+
+  /** A standard calendar: its years follow this country's public holidays. Set at creation only. */
+  @IsOptional()
+  @IsString()
+  country_iso?: string | null;
+
+  @IsOptional()
+  @IsString()
+  region_code?: string | null;
 }
 
 export class WorkingDayProfileUpdateDto extends StatusLifecycleDto {
@@ -36,6 +45,15 @@ export class WorkingDayProfileUpdateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsObject()
   days_by_year?: Record<string, unknown>;
+
+  /** Accepted only equal to the stored values: the source of a calendar never changes. */
+  @IsOptional()
+  @IsString()
+  country_iso?: string | null;
+
+  @IsOptional()
+  @IsString()
+  region_code?: string | null;
 }
 
 export class WorkingDayProfileBulkDeleteDto {

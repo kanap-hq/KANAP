@@ -1,12 +1,14 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import {
+  calendarDaysFor,
   daysInMonth,
   isProfileActive,
   loadWorkingDayProfiles,
   loadWorkingDayProfilesByCode,
   mergeDaysByYear,
   normalizeDaysByYear,
+  WorkingDayProfileInfo,
 } from '../working-day-profiles.util';
 
 // Working-day calendar validation (decision D4): one helper for the API, the
@@ -146,6 +148,30 @@ function testIsProfileActive() {
   assert.equal(isProfileActive({ status: 'enabled', disabled_at: now }, now), false);
 }
 
+function testCalendarDaysFor() {
+  const FRANCE_2026 = ['21', '20', '22', '21', '17', '22', '22', '21', '22', '22', '20', '22'];
+  const calendar = (fields: Partial<WorkingDayProfileInfo>): WorkingDayProfileInfo => ({
+    id: '6f1c2b7e-0d4a-4c1e-9a55-2d3b8f1e7a90', code: 'C', name: 'Calendar', status: 'enabled', disabled_at: null,
+    days_by_year: {}, country_iso: null, region_code: null, ...fields,
+  });
+
+  // A custom calendar: its stored years, nothing else.
+  const custom = calendar({ days_by_year: { 2026: SFR_2026 } });
+  assert.deepEqual(calendarDaysFor(custom, 2026), SFR_2026);
+  assert.equal(calendarDaysFor(custom, 2027), null);
+
+  // A standard calendar: an edited year wins, any other year follows the public holidays.
+  const standard = calendar({ country_iso: 'FR', days_by_year: { 2027: SFR_2026 } });
+  assert.deepEqual(calendarDaysFor(standard, 2026), FRANCE_2026);
+  assert.deepEqual(calendarDaysFor(standard, 2027), SFR_2026);
+  assert.equal(calendarDaysFor(calendar({ country_iso: 'FR', region_code: '57' }), 2026)!.reduce((sum, value) => sum + Number(value), 0), 251);
+  // Outside the calendar years, or a source the rules do not know: no days (the computation then names the year).
+  assert.equal(calendarDaysFor(standard, 1999), null);
+  assert.equal(calendarDaysFor(standard, 2101), null);
+  assert.equal(calendarDaysFor(calendar({ country_iso: 'ZZ' }), 2026), null);
+  assert.equal(calendarDaysFor(calendar({ country_iso: 'FR', region_code: 'BY' }), 2026), null);
+}
+
 async function testLoaderLock() {
   // The SQL each loader sends, on a recording double (the lock itself is proven on the
   // database by the tenant-isolation spec).
@@ -163,6 +189,7 @@ async function testLoaderLock() {
   assert.equal(calls.length, 4);
   for (const call of calls) {
     assert.match(call.sql, /FROM working_day_profiles w WHERE w\.tenant_id = \$1 AND /, 'the tenant predicate stays');
+    assert.match(call.sql, /w\.country_iso, w\.region_code FROM/, 'the source of a standard calendar is loaded');
     assert.equal(call.params[0], 'tenant-a');
   }
   assert.deepEqual(calls.map((call) => call.params[1]), [[id], [id], ['fr218'], ['fr218']]);
@@ -182,6 +209,7 @@ async function main() {
   testShape();
   testPartialAndMerge();
   testIsProfileActive();
+  testCalendarDaysFor();
   await testLoaderLock();
   console.log('working-day-profiles.util.spec: ok');
 }

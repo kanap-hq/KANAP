@@ -59,6 +59,20 @@ export class WorkingDayProfilesController {
     return this.svc.list(query, context(ctx));
   }
 
+  // Before `:id`, which would read these words as an id.
+  @RequireAnyLevel(CALENDAR_READERS)
+  @Get('countries')
+  countries(@Query('lang') lang?: string) {
+    return this.svc.countries(lang);
+  }
+
+  // The page offers them to users who can create calendars.
+  @RequireLevel('working_day_profiles', 'member')
+  @Get('suggestions')
+  suggestions(@Query('lang') lang: string | undefined, @Tenant() ctx: TenantRequest) {
+    return this.svc.suggestions(context(ctx), lang);
+  }
+
   @RequireAnyLevel(CALENDAR_READERS)
   @Get('ids')
   listIds(@Query() query: any, @Tenant() ctx: TenantRequest) {
@@ -78,14 +92,25 @@ export class WorkingDayProfilesController {
 
   @RequireAnyLevel(CALENDAR_READERS)
   @Get(':id')
-  get(@Param('id', new ParseUUIDPipe()) id: string, @Tenant() ctx: TenantRequest) {
-    return this.svc.get(id, context(ctx));
+  get(@Param('id', new ParseUUIDPipe()) id: string, @Query('lang') lang: string | undefined, @Tenant() ctx: TenantRequest) {
+    return this.svc.get(id, context(ctx), lang);
+  }
+
+  @RequireAnyLevel(CALENDAR_READERS)
+  @Get(':id/years/:year')
+  year(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('year') year: string,
+    @Query('lang') lang: string | undefined,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.getYear(id, year, context(ctx), lang);
   }
 
   @RequireLevel('working_day_profiles', 'member')
   @Post()
-  create(@Body() body: WorkingDayProfileCreateDto, @Tenant() ctx: TenantRequest) {
-    return this.svc.create(body, context(ctx));
+  create(@Body() body: WorkingDayProfileCreateDto, @Query('lang') lang: string | undefined, @Tenant() ctx: TenantRequest) {
+    return this.svc.create(body, context(ctx), lang);
   }
 
   @RequireLevel('working_day_profiles', 'member')
@@ -93,9 +118,10 @@ export class WorkingDayProfilesController {
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: WorkingDayProfileUpdateDto,
+    @Query('lang') lang: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.update(id, body, context(ctx));
+    return this.svc.update(id, body, context(ctx), lang);
   }
 
   @RequireLevel('working_day_profiles', 'admin')

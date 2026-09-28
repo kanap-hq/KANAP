@@ -134,6 +134,7 @@ TENANT_TABLES=(
   capex_items
   capex_links
   capex_round_inputs
+  capex_round_input_lines
   capex_versions
   chart_of_accounts
   companies
@@ -239,6 +240,7 @@ TENANT_TABLES=(
   spend_items
   spend_links
   spend_round_inputs
+  spend_round_input_lines
   spend_tasks
   spend_versions
   subscriptions

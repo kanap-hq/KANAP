@@ -6,7 +6,8 @@ import { StatusState } from '../common/status';
  * days of the twelve months, as decimal strings. A price per day multiplies
  * them. Rounds that use a calendar reference it by `(tenant_id, id)` with
  * ON DELETE RESTRICT; the shape of `days_by_year` is checked by
- * `normalizeDaysByYear` (the database only checks that it is an object).
+ * `normalizeDaysByYear` (the database only checks that it is an object). On a
+ * standard calendar `days_by_year` holds the edited years only.
  */
 @Entity('working_day_profiles')
 export class WorkingDayProfile {
@@ -27,6 +28,14 @@ export class WorkingDayProfile {
 
   @Column('jsonb', { default: () => "'{}'::jsonb" })
   days_by_year!: Record<string, string[]>;
+
+  /** Set on a standard calendar (its years follow this country's public holidays), at creation only. */
+  @Column('text', { nullable: true })
+  country_iso!: string | null;
+
+  /** The public holiday package's code of a region of `country_iso`, when the calendar follows one. */
+  @Column('text', { nullable: true })
+  region_code!: string | null;
 
   @Column({
     type: 'enum',

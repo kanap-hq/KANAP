@@ -13,11 +13,12 @@ export class WorkingDayProfilesDeleteService {
   ) {}
 
   /**
-   * Deletes one calendar. A calendar used by a round is refused with a
-   * readable 409 naming the lines; disabling stays possible.
+   * Deletes one calendar. A calendar used by a quantity × price line is
+   * refused with a readable 409 naming the budget lines; disabling stays
+   * possible.
    */
   async delete(id: string, ctx: WorkingDayProfileContext): Promise<void> {
-    // The row lock comes before the count: a round naming the calendar
+    // The row lock comes before the count: a line naming the calendar
     // concurrently either committed first (and is counted) or waits for this
     // delete and then fails its key check.
     const [existing] = await this.calendars.lockByIds(ctx, [id]);

@@ -1,4 +1,4 @@
-import { BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { DeepPartial, EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
@@ -19,14 +19,15 @@ import {
 } from './amounts-write.util';
 import {
   centsToDecimal,
+  costLine,
   deleteRoundInput,
   listRoundInputs,
   RoundInput,
   RoundInputsContext,
-  roundRecipe,
   upsertRoundInput,
   wholeYear,
 } from './round-inputs.util';
+import { CostLine } from './costing.util';
 import { activeMonths } from './spread.util';
 
 /**
@@ -127,6 +128,22 @@ export function shiftPeriod(record: Pick<RoundInput, 'period_start' | 'period_en
   return { period_start: shift(record.period_start), period_end: shift(record.period_end) };
 }
 
+/**
+ * A column's lines copied to `year`: each period shifted like the record's
+ * (29 February becomes 28 February) and kept within that year; calendar,
+ * quantity and price as they are.
+ */
+export function shiftLines(record: Pick<RoundInput, 'lines'> | undefined, year: number): CostLine[] {
+  return (record?.lines ?? []).map((line) => {
+    const shifted = shiftPeriod(line, year - Number(line.period_start.slice(0, 4)));
+    return {
+      ...costLine(line),
+      period_start: shifted.period_start < `${year}-01-01` ? `${year}-01-01` : shifted.period_start,
+      period_end: shifted.period_end > `${year}-12-31` ? `${year}-12-31` : shifted.period_end,
+    };
+  });
+}
+
 /** The window of `year` in which an item is valid, and its months (1..12). */
 export type YearValidity = { start: string; end: string; months: number[] };
 
@@ -205,33 +222,6 @@ export async function loadVersions(
     if (!byItemYear.has(key)) byItemYear.set(key, { ...row, budget_year: Number(row.budget_year) });
   }
   return byItemYear;
-}
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * The item and year of a year-scoped request: the item resolved in the current
- * tenant (404 otherwise, another tenant's included) and the newest version of
- * that year, or null when the year has none yet. Creates nothing.
- */
-export async function resolveItemYear(
-  manager: EntityManager,
-  scope: AmountScope,
-  rawItemId: unknown,
-  rawYear: unknown,
-): Promise<{ tenantId: string; year: number; version: BudgetVersionRow | null }> {
-  const tenantId = await currentTenantId(manager);
-  const itemId = typeof rawItemId === 'string' ? rawItemId.trim() : '';
-  const items: Array<{ id: string }> = UUID.test(itemId)
-    ? await manager.query(`SELECT id FROM ${SCOPES[scope].items} WHERE tenant_id = $1 AND id = $2`, [tenantId, itemId])
-    : [];
-  if (items.length === 0) throw new NotFoundException('Item not found.');
-  const parsed = typeof rawYear === 'string' && /^\d{4}$/.test(rawYear.trim()) ? Number(rawYear) : rawYear;
-  if (typeof parsed !== 'number' || !Number.isInteger(parsed) || parsed < 1000 || parsed > 9999) {
-    throw new BadRequestException('A budget year is required.');
-  }
-  const version = (await loadVersions(manager, scope, tenantId, [items[0].id], [parsed])).get(`${items[0].id}:${parsed}`) ?? null;
-  return { tenantId, year: parsed, version };
 }
 
 /** Create the version of an item's year, with the item's tenant_id, and audit it. */
@@ -382,24 +372,30 @@ export async function copyBudgetColumn(
     const sourceRecord = records.get(sourceVersion.id)?.find((r) => r.measure === sourceMeasure);
     const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
     const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear);
-    // A copy replaces the whole destination column, recipe included: the
-    // source's recipe travels as it is (same calendar, quantity, price and
-    // index: never re-applied), and a source without one leaves none.
-    await upsertRoundInput(rctx, destinationMeasure, {
-      ...periodWithinValidity(copiedPeriod, item.validity),
-      method: 'copied',
-      spread_profile_name: sourceRecord?.spread_profile_name ?? null,
-      last_calculation: {
-        kind: 'copy',
-        source_year: sourceYear,
-        source_measure: sourceMeasure,
-        uplift_pct: pctText,
-        source_total: centsToDecimal(sourceTotal),
-        total: centsToDecimal(targetTotal),
-        source_method: sourceRecord?.method ?? null,
+    // A copy replaces the whole destination column, lines included: the
+    // source's lines travel with their FTE (same calendar, quantity and price:
+    // the uplift applies to the months only), and a source without lines
+    // leaves none.
+    await upsertRoundInput(
+      rctx,
+      destinationMeasure,
+      {
+        ...periodWithinValidity(copiedPeriod, item.validity),
+        method: 'copied',
+        spread_profile_name: sourceRecord?.spread_profile_name ?? null,
+        last_calculation: {
+          kind: 'copy',
+          source_year: sourceYear,
+          source_measure: sourceMeasure,
+          uplift_pct: pctText,
+          source_total: centsToDecimal(sourceTotal),
+          total: centsToDecimal(targetTotal),
+          source_method: sourceRecord?.method ?? null,
+        },
+        fte: sourceRecord?.lines.length ? sourceRecord.fte : null,
       },
-      recipe: roundRecipe(sourceRecord),
-    });
+      shiftLines(sourceRecord, destinationYear),
+    );
 
     await deps.audit.log(
       {
@@ -435,8 +431,8 @@ export async function copyBudgetColumn(
 /**
  * Clear one column of a year for every item, ended or not (amounts hidden
  * behind an end of validity are cleared too): its twelve months become zero
- * and its record (period, provenance) is deleted. A version whose column is
- * already all zero is skipped, but its record is deleted too.
+ * and its record (period, provenance, lines) is deleted. A version whose
+ * column is already all zero is skipped, but its record is deleted too.
  */
 export async function clearBudgetColumn(
   deps: BudgetOperationDeps,

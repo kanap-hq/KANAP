@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { isActiveAt, isDisabled } from '../common/status';
+import { generateWorkingDays, isKnownCountry, isKnownRegion } from './public-holidays';
 
 /**
  * Working-day calendars: the one validation of `days_by_year` shared by the
@@ -13,6 +14,12 @@ import { isActiveAt, isDisabled } from '../common/status';
 /** "2026" -> the twelve months' working days, normalised decimal strings. */
 export type CalendarDays = Record<string, string[]>;
 
+/**
+ * A standard calendar has a country (and maybe a region): its working days of
+ * a year follow the public holidays unless the year was edited, and
+ * `days_by_year` holds the edited years only. A custom calendar has neither
+ * and holds every year it has.
+ */
 export interface WorkingDayProfileInfo {
   id: string;
   code: string;
@@ -20,6 +27,8 @@ export interface WorkingDayProfileInfo {
   status: 'enabled' | 'disabled';
   disabled_at: string | null;
   days_by_year: CalendarDays;
+  country_iso: string | null;
+  region_code: string | null;
 }
 
 export const CALENDAR_YEAR_MIN = 2000;
@@ -147,15 +156,32 @@ function toInfo(row: any): WorkingDayProfileInfo {
     status: isDisabled(row.status) ? 'disabled' : 'enabled',
     disabled_at: disabledAt,
     days_by_year: isPlainObject(row.days_by_year) ? (row.days_by_year as CalendarDays) : {},
+    country_iso: row.country_iso ?? null,
+    region_code: row.region_code ?? null,
   };
 }
 
-const PROFILE_COLUMNS = 'w.id, w.code, w.name, w.status, w.disabled_at, w.days_by_year';
+const PROFILE_COLUMNS = 'w.id, w.code, w.name, w.status, w.disabled_at, w.days_by_year, w.country_iso, w.region_code';
 
 /**
- * `lock: 'key share'` for a caller about to write a round naming the
+ * The working days a computation reads for `year`: the stored year when there
+ * is one; otherwise, on a standard calendar, the standard values of its
+ * country (and region); otherwise null (the computation then refuses the
+ * year, naming it).
+ */
+export function calendarDaysFor(info: WorkingDayProfileInfo, year: number): string[] | null {
+  const stored = isPlainObject(info.days_by_year) ? info.days_by_year[String(year)] : undefined;
+  if (Array.isArray(stored)) return stored;
+  const country = info.country_iso;
+  if (!country || !Number.isInteger(year) || year < CALENDAR_YEAR_MIN || year > CALENDAR_YEAR_MAX) return null;
+  if (!isKnownCountry(country) || (info.region_code && !isKnownRegion(country, info.region_code))) return null;
+  return generateWorkingDays(country, info.region_code, year, 'en').days;
+}
+
+/**
+ * `lock: 'key share'` for a caller about to write lines naming the
  * calendar: the rows are read FOR KEY SHARE (in id order), so a concurrent
- * delete (FOR UPDATE) waits for this transaction and then finds the round,
+ * delete (FOR UPDATE) waits for this transaction and then finds the lines,
  * instead of this write failing on the key check after the delete commits.
  * Default: no lock.
  */

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { copiedMonths, periodWithinValidity, shiftPeriod, validityInYear } from '../budget-column-operations';
+import { copiedMonths, periodWithinValidity, shiftLines, shiftPeriod, validityInYear } from '../budget-column-operations';
 import { Decimal } from '../../common/decimal';
 import { upsertRoundInput } from '../round-inputs.util';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
@@ -63,7 +63,7 @@ async function spreadRecord(
   await upsertRoundInput(
     { manager: runner.manager, scope: kind, version: { id: versionId, tenant_id: tenantId, budget_year: year }, userId: null, audit: captureAudit() },
     measure,
-    { period_start: start, period_end: end, method: 'spread', spread_profile_name: '4-4-5', last_calculation: null, recipe: null },
+    { period_start: start, period_end: end, method: 'spread', spread_profile_name: '4-4-5', last_calculation: null, fte: null },
   );
 }
 
@@ -89,6 +89,21 @@ async function testCopyArithmetic() {
   assert.deepEqual(shiftPeriod({ period_start: '2032-02-29', period_end: '2032-12-31' }, 1), { period_start: '2033-02-28', period_end: '2033-12-31' });
   assert.deepEqual(shiftPeriod({ period_start: '2031-02-28', period_end: '2031-11-30' }, 1), { period_start: '2032-02-28', period_end: '2032-11-30' });
   assert.deepEqual(shiftPeriod({ period_start: '2031-04-01', period_end: '2031-12-31' }, -1), { period_start: '2030-04-01', period_end: '2030-12-31' });
+  // Lines: each period shifted to the destination year the same way; quantity, price and calendar kept.
+  const stored = (period_start: string, period_end: string) => ({
+    id: 'x', sort: 1, label: 'Licences', quantity_unit: 'units' as const, quantity: '10', unit_price: '200', price_basis: 'per_month' as const,
+    period_start, period_end, working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null,
+  });
+  const leap = { lines: [stored('2032-02-29', '2032-03-31'), stored('2032-01-01', '2032-02-29')] };
+  const periods = (year: number) => shiftLines(leap, year).map((l) => [l.period_start, l.period_end]);
+  assert.deepEqual(periods(2033), [['2033-02-28', '2033-03-31'], ['2033-01-01', '2033-02-28']], '29 February becomes 28 February');
+  assert.deepEqual(periods(2036), [['2036-02-29', '2036-03-31'], ['2036-01-01', '2036-02-29']], 'a leap year keeps it');
+  assert.deepEqual(periods(2030), [['2030-02-28', '2030-03-31'], ['2030-01-01', '2030-02-28']], 'backwards too');
+  assert.deepEqual(shiftLines(leap, 2033)[0], {
+    label: 'Licences', quantity_unit: 'units', quantity: '10', unit_price: '200', price_basis: 'per_month',
+    period_start: '2033-02-28', period_end: '2033-03-31', working_day_profile_id: null,
+  });
+  assert.deepEqual(shiftLines(undefined, 2033), [], 'no source record, no lines');
 }
 
 /** 0 %: every month copied to the cent, the period shifted, provenance recorded, the grain of the source kept. */

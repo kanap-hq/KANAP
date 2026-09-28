@@ -5,33 +5,36 @@ import { toCents } from '../common/amount';
 import {
   AMOUNT_MEASURES,
   AmountMeasure,
+  AmountRowInput,
   AmountScope,
   AmountsPayloadResult,
   AmountsWriteContext,
   AmountsWriteResult,
   AmountVersion,
+  assertMeasuresEditable,
   assertYearMatchesVersion,
   FLAT_PROFILE,
   isAmountMeasure,
-  PayloadPeriod,
-  parsePayloadPeriod,
+  lockYearMonths,
   PayloadSpread,
-  readVersionMonths,
   replaceAmounts,
   spreadAnnualRows,
   yearPeriods,
 } from './amounts-write.util';
 import { Decimal } from '../common/decimal';
 import {
-  computeCosting,
+  ColumnResult,
+  computeColumn,
   CostingInputError,
-  CostingRecipe,
-  CostingResult,
-  parseCostingRecipe,
-  PricingBasis,
-  sameRecipe,
+  CostLine,
+  LineCalendar,
+  parseCostLines,
+  PriceBasis,
+  QuantityUnit,
+  sameLines,
 } from './costing.util';
 import {
+  calendarDaysFor,
   isProfileActive,
   loadWorkingDayProfiles,
   WorkingDayProfileInfo,
@@ -39,10 +42,11 @@ import {
 
 /**
  * Round inputs: for each budget column of a version, the period its last
- * spread used and how the column was produced. Shared by OPEX
- * (`spend_round_inputs`) and CAPEX (`capex_round_inputs`); written in the
- * caller's transaction, next to the amounts, with one audit row per record
- * change.
+ * spread used, how the column was produced and, when it has some, the
+ * quantity × price lines it is computed from. Shared by OPEX
+ * (`spend_round_inputs`, `spend_round_input_lines`) and CAPEX
+ * (`capex_round_inputs`, `capex_round_input_lines`); written in the caller's
+ * transaction, next to the amounts, with one audit row per record change.
  *
  * The five columns are equal slots: a measure name is a storage key, never a
  * behaviour. What a column means comes from the tenant's settings.
@@ -52,6 +56,18 @@ import {
 export const ROUND_MEASURES: readonly AmountMeasure[] = AMOUNT_MEASURES;
 
 export type RoundMethod = 'spread' | 'copied' | 'manual' | 'computed';
+
+/** One line of a computation, as it was computed: what it used and what it gave. */
+export type LineCalculation = CostLine & {
+  working_day_profile_code: string | null;
+  working_day_profile_name: string | null;
+  active_months: number[];
+  day_counts: string[] | null;
+  total_days: string | null;
+  month_amounts: string[];
+  fte_months: string[];
+  total: string;
+};
 
 export type LastCalculation =
   | { kind: 'annual'; total: string; profile: string; active_months: number[]; weights: string[]; source?: 'item_csv' }
@@ -66,23 +82,33 @@ export type LastCalculation =
     source_method: RoundMethod | null;
   }
   | {
-    // What a computation used, frozen at compute time: a later calendar edit never changes it.
+    // What the lines gave, frozen at compute time: a later calendar edit never changes it.
     kind: 'computed';
-    pricing_basis: PricingBasis;
-    quantity: string;
-    unit_price: string;
-    price_index_pct: string;
-    working_day_profile_code: string | null;
-    working_day_profile_name: string | null;
-    active_months: number[];
-    day_counts: string[] | null;
-    total_days: string | null;
-    month_amounts: string[];
     total: string;
-    counts_as_fte: boolean;
+    fte: string;
+    month_amounts: string[];
+    fte_months: string[];
+    active_months: number[];
+    lines: LineCalculation[];
   };
 
-/** A record as the API returns it; recipe decimals are plain strings without trailing zeros. */
+/** A stored line as the API returns it; decimals are plain strings without trailing zeros. */
+export type RoundLine = {
+  id: string;
+  sort: number;
+  label: string;
+  quantity_unit: QuantityUnit;
+  quantity: string;
+  unit_price: string;
+  price_basis: PriceBasis;
+  period_start: string;
+  period_end: string;
+  working_day_profile_id: string | null;
+  working_day_profile_code: string | null;
+  working_day_profile_name: string | null;
+};
+
+/** A record as the API returns it, with the column's lines in order (none: `[]`, `fte` null). */
 export type RoundInput = {
   measure: AmountMeasure;
   period_start: string;
@@ -90,27 +116,20 @@ export type RoundInput = {
   method: RoundMethod;
   spread_profile_name: string | null;
   last_calculation: LastCalculation | null;
-  pricing_basis: PricingBasis | null;
-  quantity: string | null;
-  unit_price: string | null;
-  price_index_pct: string | null;
-  working_day_profile_id: string | null;
-  working_day_profile_code: string | null;
-  working_day_profile_name: string | null;
-  counts_as_fte: boolean;
+  fte: string | null;
+  lines: RoundLine[];
   updated_at: string;
   updated_by: string | null;
 };
 
 /**
- * The fields a write sets. `recipe` is required so every writer says what
- * happens to it: most keep the stored one (`roundRecipe(stored)`).
+ * The fields a write sets. `fte` is required so every writer says what
+ * happens to it: most keep the stored one; only a lines write, a copy and the
+ * removal of the lines change it.
  */
-export type RoundInputFields = Pick<RoundInput, 'period_start' | 'period_end' | 'method' | 'spread_profile_name' | 'last_calculation'> & {
-  recipe: CostingRecipe | null;
-};
+export type RoundInputFields = Pick<RoundInput, 'period_start' | 'period_end' | 'method' | 'spread_profile_name' | 'last_calculation' | 'fte'>;
 
-type StoredRoundInput = Omit<RoundInput, 'updated_at'> & {
+type StoredRoundInput = Omit<RoundInput, 'updated_at' | 'lines'> & {
   id: string;
   tenant_id: string;
   version_id: string;
@@ -118,24 +137,21 @@ type StoredRoundInput = Omit<RoundInput, 'updated_at'> & {
   updated_at: Date;
 };
 
+type StoredLine = Omit<RoundLine, 'sort'> & { round_input_id: string; sort: number | string };
+
 // Table names come only from here: never from the caller.
 const ROUND_TABLE: Record<AmountScope, 'spend_round_inputs' | 'capex_round_inputs'> = {
   opex: 'spend_round_inputs',
   capex: 'capex_round_inputs',
 };
+const LINE_TABLE: Record<AmountScope, 'spend_round_input_lines' | 'capex_round_input_lines'> = {
+  opex: 'spend_round_input_lines',
+  capex: 'capex_round_input_lines',
+};
 
-// The calendar's code and name come with the record (scalar subqueries, so the
-// same list serves SELECT … FOR UPDATE and INSERT … RETURNING); the composite
-// key keeps the calendar in the record's tenant.
-function columns(table: string): string {
-  const calendar = (field: 'code' | 'name') => `(SELECT w.${field} FROM working_day_profiles w
-     WHERE w.tenant_id = ${table}.tenant_id AND w.id = ${table}.working_day_profile_id) AS working_day_profile_${field}`;
-  return `id, tenant_id, version_id, measure,
+const COLUMNS = `id, tenant_id, version_id, measure,
   to_char(period_start, 'YYYY-MM-DD') AS period_start, to_char(period_end, 'YYYY-MM-DD') AS period_end,
-  method, spread_profile_name, last_calculation,
-  pricing_basis, quantity, unit_price, price_index_pct, working_day_profile_id, ${calendar('code')}, ${calendar('name')}, counts_as_fte,
-  created_at, updated_at, updated_by`;
-}
+  method, spread_profile_name, last_calculation, fte, created_at, updated_at, updated_by`;
 
 export type RoundInputsContext = {
   manager: EntityManager;
@@ -175,7 +191,24 @@ export function wholeYear(year: number): { period_start: string; period_end: str
 /** A numeric column as a plain decimal string without trailing zeros ('1.000' → '1'). */
 const plain = (value: string | null) => (value == null ? null : Decimal.from(value).toString());
 
-function toApi(row: StoredRoundInput): RoundInput {
+function toLine(row: StoredLine): RoundLine {
+  return {
+    id: row.id,
+    sort: Number(row.sort),
+    label: row.label,
+    quantity_unit: row.quantity_unit,
+    quantity: plain(row.quantity)!,
+    unit_price: plain(row.unit_price)!,
+    price_basis: row.price_basis,
+    period_start: row.period_start,
+    period_end: row.period_end,
+    working_day_profile_id: row.working_day_profile_id ?? null,
+    working_day_profile_code: row.working_day_profile_code ?? null,
+    working_day_profile_name: row.working_day_profile_name ?? null,
+  };
+}
+
+function toApi(row: StoredRoundInput, lines: RoundLine[]): RoundInput {
   return {
     measure: row.measure,
     period_start: row.period_start,
@@ -183,33 +216,28 @@ function toApi(row: StoredRoundInput): RoundInput {
     method: row.method,
     spread_profile_name: row.spread_profile_name,
     last_calculation: row.last_calculation,
-    pricing_basis: row.pricing_basis ?? null,
-    quantity: plain(row.quantity),
-    unit_price: plain(row.unit_price),
-    price_index_pct: plain(row.price_index_pct),
-    working_day_profile_id: row.working_day_profile_id ?? null,
-    working_day_profile_code: row.working_day_profile_code ?? null,
-    working_day_profile_name: row.working_day_profile_name ?? null,
-    counts_as_fte: row.counts_as_fte === true,
+    fte: plain(row.fte),
+    lines,
     updated_at: new Date(row.updated_at).toISOString(),
     updated_by: row.updated_by,
   };
 }
 
-/** The recipe a record carries, or null. */
-export function roundRecipe(record: RoundInput | null | undefined): CostingRecipe | null {
-  if (!record?.pricing_basis || record.quantity == null || record.unit_price == null) return null;
+/** A stored line as a line to write (what a copy or a comparison needs). */
+export function costLine(line: RoundLine): CostLine {
   return {
-    pricing_basis: record.pricing_basis,
-    quantity: record.quantity,
-    unit_price: record.unit_price,
-    price_index_pct: record.price_index_pct ?? '0',
-    working_day_profile_id: record.working_day_profile_id ?? null,
-    counts_as_fte: record.counts_as_fte === true,
+    label: line.label,
+    quantity_unit: line.quantity_unit,
+    quantity: line.quantity,
+    unit_price: line.unit_price,
+    price_basis: line.price_basis,
+    period_start: line.period_start,
+    period_end: line.period_end,
+    working_day_profile_id: line.working_day_profile_id,
   };
 }
 
-/** A record's fields as a write would set them, recipe included. */
+/** A record's fields as a write would set them. */
 export function roundFields(record: RoundInput): RoundInputFields {
   return {
     period_start: record.period_start,
@@ -217,13 +245,36 @@ export function roundFields(record: RoundInput): RoundInputFields {
     method: record.method,
     spread_profile_name: record.spread_profile_name,
     last_calculation: record.last_calculation,
-    recipe: roundRecipe(record),
+    fte: record.fte,
   };
 }
 
 const MEASURE_ORDER = new Map(ROUND_MEASURES.map((m, i) => [m as string, i]));
 
-/** The records of several versions in one query, keyed by version id, in column order. */
+/**
+ * The lines of several records in one query, keyed by record id, in `sort`
+ * order; each with its calendar's code and name (the composite key keeps the
+ * calendar in the line's tenant).
+ */
+async function readLines(manager: EntityManager, scope: AmountScope, tenantId: string, roundIds: string[]): Promise<Map<string, RoundLine[]>> {
+  const result = new Map<string, RoundLine[]>(roundIds.map((id) => [id, []]));
+  if (roundIds.length === 0) return result;
+  const rows: StoredLine[] = await manager.query(
+    `SELECT l.id, l.round_input_id, l.sort, l.label, l.quantity_unit::text AS quantity_unit,
+            l.quantity::text AS quantity, l.unit_price::text AS unit_price, l.price_basis::text AS price_basis,
+            to_char(l.period_start, 'YYYY-MM-DD') AS period_start, to_char(l.period_end, 'YYYY-MM-DD') AS period_end,
+            l.working_day_profile_id, w.code AS working_day_profile_code, w.name AS working_day_profile_name
+     FROM ${LINE_TABLE[scope]} l
+     LEFT JOIN working_day_profiles w ON w.tenant_id = $1 AND w.id = l.working_day_profile_id
+     WHERE l.tenant_id = $1 AND l.round_input_id = ANY($2::uuid[])
+     ORDER BY l.round_input_id, l.sort`,
+    [tenantId, roundIds],
+  );
+  for (const row of rows) result.get(row.round_input_id)?.push(toLine(row));
+  return result;
+}
+
+/** The records of several versions with their lines (two queries), keyed by version id, in column order. */
 export async function listRoundInputs(
   manager: EntityManager,
   scope: AmountScope,
@@ -233,11 +284,12 @@ export async function listRoundInputs(
   const result = new Map<string, RoundInput[]>(versionIds.map((id) => [id, []]));
   if (versionIds.length === 0) return result;
   const rows: StoredRoundInput[] = await manager.query(
-    `SELECT ${columns(ROUND_TABLE[scope])} FROM ${ROUND_TABLE[scope]} WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`,
+    `SELECT ${COLUMNS} FROM ${ROUND_TABLE[scope]} WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`,
     [tenantId, versionIds],
   );
   rows.sort((a, b) => (MEASURE_ORDER.get(a.measure) ?? 9) - (MEASURE_ORDER.get(b.measure) ?? 9));
-  for (const row of rows) result.get(row.version_id)?.push(toApi(row));
+  const lines = await readLines(manager, scope, tenantId, rows.map((row) => row.id));
+  for (const row of rows) result.get(row.version_id)?.push(toApi(row, lines.get(row.id) ?? []));
   return result;
 }
 
@@ -249,7 +301,7 @@ export async function versionRoundInputs(manager: EntityManager, scope: AmountSc
 
 async function readRecord(ctx: RoundInputsContext, measure: AmountMeasure): Promise<StoredRoundInput | null> {
   const rows: StoredRoundInput[] = await ctx.manager.query(
-    `SELECT ${columns(ROUND_TABLE[ctx.scope])} FROM ${ROUND_TABLE[ctx.scope]}
+    `SELECT ${COLUMNS} FROM ${ROUND_TABLE[ctx.scope]}
      WHERE tenant_id = $1 AND version_id = $2 AND measure = $3
      FOR UPDATE`,
     [ctx.version.tenant_id, ctx.version.id, measure],
@@ -266,13 +318,15 @@ function canonical(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
 
+const sameDecimal = (a: string | null, b: string | null) => (a == null || b == null ? a == null && b == null : Decimal.from(a).cmp(b) === 0);
+
 function sameFields(stored: RoundInput, next: RoundInputFields): boolean {
   return stored.period_start === next.period_start
     && stored.period_end === next.period_end
     && stored.method === next.method
     && (stored.spread_profile_name ?? null) === (next.spread_profile_name ?? null)
     && canonical(stored.last_calculation) === canonical(next.last_calculation)
-    && sameRecipe(roundRecipe(stored), next.recipe);
+    && sameDecimal(stored.fte, next.fte);
 }
 
 /** A 400 for an input the user must correct. */
@@ -293,49 +347,76 @@ function assertPeriodInVersionYear(version: AmountVersion, fields: RoundInputFie
   }
 }
 
+/** Replace a record's lines wholesale: delete them, insert the new ones in order (`sort` from 1). */
+async function replaceLines(ctx: RoundInputsContext, roundId: string, lines: readonly CostLine[]) {
+  const table = LINE_TABLE[ctx.scope];
+  await ctx.manager.query(`DELETE FROM ${table} WHERE tenant_id = $1 AND round_input_id = $2`, [ctx.version.tenant_id, roundId]);
+  if (lines.length === 0) return;
+  const params: unknown[] = [ctx.version.tenant_id, roundId];
+  const value = (v: unknown, cast: string) => `$${params.push(v)}::${cast}`;
+  const rows = lines.map((line, index) => `($1::uuid, $2::uuid, ${[
+    value(index + 1, 'int'),
+    value(line.label, 'text'),
+    value(line.quantity_unit, 'line_quantity_unit'),
+    value(line.quantity, 'numeric'),
+    value(line.unit_price, 'numeric'),
+    value(line.price_basis, 'line_price_basis'),
+    value(line.working_day_profile_id, 'uuid'),
+    value(line.period_start, 'date'),
+    value(line.period_end, 'date'),
+  ].join(', ')})`);
+  await ctx.manager.query(
+    `INSERT INTO ${table}
+       (tenant_id, round_input_id, sort, label, quantity_unit, quantity, unit_price, price_basis, working_day_profile_id, period_start, period_end)
+     VALUES ${rows.join(', ')}`,
+    params,
+  );
+}
+
 /**
  * Create, change or leave one record. `next` receives the stored record (or
- * null) and returns the fields to store, or null to leave it as it is. An
- * identical result writes nothing, so a no-op keeps the provenance and its
- * author. Returns the record as stored afterwards.
+ * null) and returns the fields to store, or null to leave it as it is. With
+ * `lines`, the record's lines are replaced by them (`[]` removes them);
+ * without, they are left as stored. An identical result writes nothing, so a
+ * no-op keeps the provenance and its author. Returns the record as stored
+ * afterwards.
  */
 export async function saveRoundInput(
   ctx: RoundInputsContext,
   rawMeasure: string,
   next: (stored: RoundInput | null) => RoundInputFields | null,
+  lines?: readonly CostLine[],
 ): Promise<RoundInput | null> {
   const measure = assertRoundMeasure(rawMeasure);
   assertTenant(ctx.version);
   const stored = await readRecord(ctx, measure);
-  const current = stored ? toApi(stored) : null;
+  const storedLines = stored ? (await readLines(ctx.manager, ctx.scope, ctx.version.tenant_id, [stored.id])).get(stored.id) ?? [] : [];
+  const current = stored ? toApi(stored, storedLines) : null;
   const fields = next(current);
-  if (!fields) return current;
-  if (current && sameFields(current, fields)) return current;
+  // Checked against the column limits again, whoever built them: numeric columns would round an excess decimal silently.
+  const newLines = lines === undefined ? undefined : asBadRequest(() => parseCostLines(lines, Number(ctx.version.budget_year)));
+  const linesChanged = newLines !== undefined && !sameLines(storedLines.map(costLine), newLines);
+  if (!fields) {
+    if (linesChanged) throw new InternalServerErrorException('Round lines are written with their record.');
+    return current;
+  }
+  if (current && sameFields(current, fields) && !linesChanged) return current;
   assertPeriodInVersionYear(ctx.version, fields);
-  // Checked against the column limits again: numeric columns would round an excess decimal silently.
-  const recipe = fields.recipe ? asBadRequest(() => parseCostingRecipe(fields.recipe as Record<string, unknown>)) : null;
   const table = ROUND_TABLE[ctx.scope];
   const [saved]: StoredRoundInput[] = await ctx.manager.query(
     `INSERT INTO ${table}
-       (tenant_id, version_id, measure, period_start, period_end, method, spread_profile_name, last_calculation,
-        pricing_basis, quantity, unit_price, price_index_pct, working_day_profile_id, counts_as_fte, updated_by)
-     VALUES ($1, $2, $3, $4::date, $5::date, $6, $7, $8::jsonb,
-             $9::pricing_basis, $10::numeric, $11::numeric, $12::numeric, $13::uuid, $14::boolean, $15::uuid)
+       (tenant_id, version_id, measure, period_start, period_end, method, spread_profile_name, last_calculation, fte, updated_by)
+     VALUES ($1, $2, $3, $4::date, $5::date, $6, $7, $8::jsonb, $9::numeric, $10::uuid)
      ON CONFLICT (tenant_id, version_id, measure) DO UPDATE
      SET period_start = EXCLUDED.period_start,
          period_end = EXCLUDED.period_end,
          method = EXCLUDED.method,
          spread_profile_name = EXCLUDED.spread_profile_name,
          last_calculation = EXCLUDED.last_calculation,
-         pricing_basis = EXCLUDED.pricing_basis,
-         quantity = EXCLUDED.quantity,
-         unit_price = EXCLUDED.unit_price,
-         price_index_pct = EXCLUDED.price_index_pct,
-         working_day_profile_id = EXCLUDED.working_day_profile_id,
-         counts_as_fte = EXCLUDED.counts_as_fte,
+         fte = EXCLUDED.fte,
          updated_at = now(),
          updated_by = EXCLUDED.updated_by
-     RETURNING ${columns(table)}`,
+     RETURNING ${COLUMNS}`,
     [
       ctx.version.tenant_id,
       ctx.version.id,
@@ -345,38 +426,40 @@ export async function saveRoundInput(
       fields.method,
       fields.spread_profile_name ?? null,
       fields.last_calculation == null ? null : JSON.stringify(fields.last_calculation),
-      recipe?.pricing_basis ?? null,
-      recipe?.quantity ?? null,
-      recipe?.unit_price ?? null,
-      recipe?.price_index_pct ?? null,
-      recipe?.working_day_profile_id ?? null,
-      recipe?.counts_as_fte ?? false,
+      fields.fte ?? null,
       ctx.userId || null,
     ],
   );
+  let savedLines = storedLines;
+  if (linesChanged) {
+    await replaceLines(ctx, saved.id, newLines!);
+    savedLines = (await readLines(ctx.manager, ctx.scope, ctx.version.tenant_id, [saved.id])).get(saved.id) ?? [];
+  }
   await ctx.audit.log(
     {
       table: ROUND_TABLE[ctx.scope],
       recordId: saved.id,
       action: stored ? 'update' : 'create',
-      before: stored,
-      after: saved,
+      // The lines ride along when they change: one audit row per column write.
+      before: stored && linesChanged ? { ...stored, lines: storedLines } : stored,
+      after: linesChanged ? { ...saved, lines: savedLines } : saved,
       userId: ctx.userId,
     },
     { manager: ctx.manager },
   );
-  return toApi(saved);
+  return toApi(saved, savedLines);
 }
 
-/** Store `fields` as the record of `measure`, whatever was there. */
-export function upsertRoundInput(ctx: RoundInputsContext, measure: string, fields: RoundInputFields) {
-  return saveRoundInput(ctx, measure, () => fields);
+/** Store `fields` as the record of `measure`, whatever was there; with `lines`, they replace the record's lines. */
+export function upsertRoundInput(ctx: RoundInputsContext, measure: string, fields: RoundInputFields, lines?: readonly CostLine[]) {
+  return saveRoundInput(ctx, measure, () => fields, lines);
 }
 
 /**
  * A hand edit of amounts: the record keeps its period, profile, last
- * calculation and recipe and becomes `manual`; a column without a record gets
- * a whole-year `manual` one. Already manual: nothing is written.
+ * calculation, lines and FTE and becomes `manual` (the lines stay as the
+ * reference the budget tab shows); a column without a record gets a
+ * whole-year `manual` one. Already manual: nothing is written.
  */
 export async function markRoundsManual(ctx: RoundInputsContext, measures: readonly string[]) {
   const year = Number(ctx.version.budget_year);
@@ -385,12 +468,12 @@ export async function markRoundsManual(ctx: RoundInputsContext, measures: readon
       if (stored?.method === 'manual') return null;
       return stored
         ? { ...roundFields(stored), method: 'manual' }
-        : { ...wholeYear(year), method: 'manual', spread_profile_name: null, last_calculation: null, recipe: null };
+        : { ...wholeYear(year), method: 'manual', spread_profile_name: null, last_calculation: null, fte: null };
     });
   }
 }
 
-/** Delete the record of one column, if any. */
+/** Delete the record of one column, if any; its lines go with it (ON DELETE CASCADE). */
 export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: string) {
   const measure = assertRoundMeasure(rawMeasure);
   assertTenant(ctx.version);
@@ -398,21 +481,28 @@ export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: stri
   // comes back from TypeORM as [rows, count] rather than rows.
   const stored = await readRecord(ctx, measure);
   if (!stored) return;
+  const lines = (await readLines(ctx.manager, ctx.scope, ctx.version.tenant_id, [stored.id])).get(stored.id) ?? [];
   await ctx.manager.query(
     `DELETE FROM ${ROUND_TABLE[ctx.scope]} WHERE tenant_id = $1 AND id = $2`,
     [ctx.version.tenant_id, stored.id],
   );
   await ctx.audit.log(
-    { table: ROUND_TABLE[ctx.scope], recordId: stored.id, action: 'delete', before: stored, after: null, userId: ctx.userId },
+    {
+      table: ROUND_TABLE[ctx.scope],
+      recordId: stored.id,
+      action: 'delete',
+      before: lines.length ? { ...stored, lines } : stored,
+      after: null,
+      userId: ctx.userId,
+    },
     { manager: ctx.manager },
   );
 }
 
 /**
  * The records a spread writes: one `spread` record per measure it replaced,
- * with the period, the profile and what was computed. A stored recipe is
- * kept: Recompute stays available and FTE follows the months that hold an
- * amount.
+ * with the period, the profile and what was computed. The lines and the FTE
+ * of a column stay as they were: the budget tab keeps them as a reference.
  */
 export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSpread, source?: 'item_csv') {
   const { period_start, period_end, active_months } = spread.period;
@@ -434,7 +524,7 @@ export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSprea
           weights: activeWeights,
           ...(source ? { source } : {}),
         },
-        recipe: roundRecipe(stored),
+        fte: stored?.fte ?? null,
       }));
     }
     return;
@@ -451,20 +541,20 @@ export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSprea
       distribution: spread.distribution,
       active_months,
     },
-    recipe: roundRecipe(stored),
+    fte: stored?.fte ?? null,
   }));
 }
 
 /**
- * Round inputs after an amounts payload: a spread records its period and
- * profile; a monthly patch marks `manual` each measure whose stored cents
- * actually changed (a month the patch created was zero before), so a no-op
- * resubmit leaves the provenance alone.
+ * Round inputs after an amounts payload: lines store their records and
+ * lines; a spread records its period and profile; a monthly patch marks
+ * `manual` each measure whose stored cents actually changed (a month the
+ * patch created was zero before), so a no-op resubmit leaves the provenance
+ * alone.
  */
-export async function recordPayloadRoundInputs(ctx: RoundInputsContext, result: AmountsPayloadResult | ComputedPayloadResult) {
-  if ('computed' in result) {
-    const plan = result.computed;
-    await upsertRoundInput(ctx, plan.measure, computedRound(plan.period, plan.recipe, plan.calendar, plan.result));
+export async function recordPayloadRoundInputs(ctx: RoundInputsContext, result: AmountsPayloadResult | LinesPayloadResult) {
+  if (isLinesResult(result)) {
+    await recordLines(ctx, result.lines);
     return;
   }
   if (result.spread) {
@@ -505,196 +595,198 @@ export async function writeItemCsvTotals(
   );
 }
 
-/* ── Computed rounds (quantity × price) ─────────────────────────────────── */
+/* ── Columns computed from quantity × price lines ─────────────────────────── */
 
-/** `bulk-upsert` and `compute-preview` body of a computed round (one column). */
-export type ComputedAmountsPayload = {
-  kind: 'computed';
+/** `bulk-upsert` body that computes a column (and, with `also_measures`, others) from its lines. */
+export type LinesAmountsPayload = {
+  kind: 'lines';
   year: number;
   measure: AmountMeasure;
-  period_start?: string; // with period_end, 'YYYY-MM-DD' in the year; both omitted = the whole year
-  period_end?: string;
-  pricing_basis: PricingBasis;
-  quantity: string | number;
-  unit_price: string | number;
-  price_index_pct?: string | number; // blank = 0
-  working_day_profile_id?: string | null; // per day only
-  counts_as_fte?: boolean;
+  /** The same lines written to these columns too. */
+  also_measures?: AmountMeasure[];
+  /** 0 to 50; `[]` removes the lines. */
+  lines: Array<{
+    label?: string;
+    quantity_unit: QuantityUnit;
+    quantity: string | number;
+    unit_price: string | number;
+    price_basis: PriceBasis;
+    period_start: string;
+    period_end: string;
+    working_day_profile_id?: string | null;
+  }>;
 };
 
-export function isComputedPayload(payload: unknown): payload is ComputedAmountsPayload {
-  return typeof payload === 'object' && payload !== null && (payload as { kind?: unknown }).kind === 'computed';
-}
-
-/** The record of a computed round: the recipe, and what the computation used and gave. */
-export function computedRound(
-  period: { period_start: string; period_end: string },
-  recipe: CostingRecipe,
-  calendar: { code: string; name: string } | null,
-  result: CostingResult,
-): RoundInputFields {
-  return {
-    period_start: period.period_start,
-    period_end: period.period_end,
-    method: 'computed',
-    spread_profile_name: null,
-    recipe,
-    last_calculation: {
-      kind: 'computed',
-      pricing_basis: recipe.pricing_basis,
-      quantity: recipe.quantity,
-      unit_price: recipe.unit_price,
-      price_index_pct: recipe.price_index_pct,
-      working_day_profile_code: calendar?.code ?? null,
-      working_day_profile_name: calendar?.name ?? null,
-      active_months: result.active_months,
-      day_counts: result.day_counts,
-      total_days: result.total_days,
-      month_amounts: result.month_cents.map(centsToDecimal),
-      total: centsToDecimal(result.total_cents),
-      counts_as_fte: recipe.counts_as_fte,
-    },
-  };
+export function isLinesPayload(payload: unknown): payload is LinesAmountsPayload {
+  return typeof payload === 'object' && payload !== null && (payload as { kind?: unknown }).kind === 'lines';
 }
 
 export const DISABLED_CALENDAR_WARNING = 'This calendar is disabled. The computation still uses it.';
 
-/**
- * The version a computation reads: a stored one, or, for a preview of a year
- * the item has no version for yet, none (`id: null`: nothing stored).
- */
-export type ComputeVersion = Omit<AmountVersion, 'id'> & { id: string | null };
-
-/** A computed round as requested: validated, calendar resolved, months computed. Nothing written. */
-export type ComputedRoundPlan = {
+/** A lines write, validated and computed. Nothing written yet. */
+export type LinesPlan = {
   year: number;
-  measure: AmountMeasure;
-  period: PayloadPeriod;
-  recipe: CostingRecipe;
-  calendar: WorkingDayProfileInfo | null;
-  result: CostingResult;
-  /** The column's record before the computation. */
-  stored: RoundInput | null;
+  /** The columns written, in column order. */
+  measures: AmountMeasure[];
+  lines: CostLine[];
+  calendars: Map<string, WorkingDayProfileInfo>;
+  /** Null when the lines are removed (`[]`). */
+  result: ColumnResult | null;
   warnings: string[];
 };
 
+export type LinesPayloadResult = AmountsWriteResult & { spread: null; lines: LinesPlan };
+
+export function isLinesResult(result: AmountsPayloadResult | LinesPayloadResult): result is LinesPayloadResult {
+  return 'lines' in result;
+}
+
+function unknownMeasure(value: unknown): BadRequestException {
+  return new BadRequestException(`Unknown amount '${String(value ?? '')}'. Use ${AMOUNT_MEASURES.join(', ')}.`);
+}
+
+/** `measure` and `also_measures`, once each, in column order. */
+function linesMeasures(payload: Record<string, unknown>): AmountMeasure[] {
+  if (!isAmountMeasure(payload.measure)) throw unknownMeasure(payload.measure);
+  const also = payload.also_measures ?? [];
+  if (!Array.isArray(also)) throw new BadRequestException('also_measures must be a list of columns.');
+  const unknown = also.find((m) => !isAmountMeasure(m));
+  if (unknown !== undefined) throw unknownMeasure(unknown);
+  const named = new Set<unknown>([payload.measure, ...also]);
+  return AMOUNT_MEASURES.filter((m) => named.has(m));
+}
+
 /**
- * Validate a computed payload and compute it: the version's year, one column,
- * the period (both bounds or neither), the recipe, and the calendar resolved
- * under the version's tenant (another tenant's id is not found). A disabled
- * calendar is refused unless it is the one the round already uses; then the
- * computation runs with a warning. `lockCalendar` (a caller about to write the
- * round) reads the calendar FOR KEY SHARE, so a concurrent delete waits and
- * then sees the round (its 409), or this computation finds no calendar.
+ * The calendars the lines name, resolved under the version's tenant (another
+ * tenant's id is not found) and held FOR KEY SHARE until the transaction
+ * ends, so a concurrent delete waits and then counts these lines. A disabled
+ * calendar is refused unless the stored lines of every column written
+ * already use it; then the write goes through with a warning.
  */
-export async function planComputedRound(
-  ctx: Pick<RoundInputsContext, 'manager' | 'scope'> & { version: ComputeVersion },
-  rawPayload: unknown,
-  opts: { lockCalendar?: boolean } = {},
-): Promise<ComputedRoundPlan> {
+async function resolveLineCalendars(
+  ctx: AmountsWriteContext,
+  lines: CostLine[],
+  measures: AmountMeasure[],
+  stored: RoundInput[],
+): Promise<{ calendars: Map<string, WorkingDayProfileInfo>; warnings: string[] }> {
+  const ids = [...new Set(lines.flatMap((line) => (line.working_day_profile_id ? [line.working_day_profile_id] : [])))];
+  const calendars = await loadWorkingDayProfiles(ctx.manager, ctx.version.tenant_id, ids, { lock: 'key share' });
+  const warnings: string[] = [];
+  lines.forEach((line, index) => {
+    const id = line.working_day_profile_id;
+    if (!id) return;
+    const calendar = calendars.get(id);
+    if (!calendar) throw new BadRequestException(`Line ${index + 1}: the calendar was not found.`);
+    if (isProfileActive(calendar)) return;
+    const usedBy = (measure: AmountMeasure) => stored.find((r) => r.measure === measure)?.lines.some((l) => l.working_day_profile_id === id) ?? false;
+    if (!measures.every(usedBy)) throw new BadRequestException(`Line ${index + 1}: ${calendar.name} is disabled. Pick an enabled calendar.`);
+    if (!warnings.includes(DISABLED_CALENDAR_WARNING)) warnings.push(DISABLED_CALENDAR_WARNING);
+  });
+  return { calendars, warnings };
+}
+
+/**
+ * `kind: 'lines'` of bulk-upsert: validates the lines (sentences naming the
+ * line), checks the freeze of every column written, resolves the calendars,
+ * computes, then replaces the twelve months of those columns (the others are
+ * untouched). `[]` writes no amount: the months stay, the lines go.
+ * `recordPayloadRoundInputs` then stores each column's record and lines.
+ */
+export async function writeLinesPayload(ctx: AmountsWriteContext, rawPayload: unknown): Promise<LinesPayloadResult> {
   if (!rawPayload || typeof rawPayload !== 'object' || Array.isArray(rawPayload)) {
     throw new BadRequestException('The amounts must be an object.');
   }
   assertTenant(ctx.version);
   const payload = rawPayload as Record<string, unknown>;
   const year = assertYearMatchesVersion(payload.year, ctx.version);
-  const measure = payload.measure;
-  if (!isAmountMeasure(measure)) {
-    throw new BadRequestException(`Unknown amount '${String(measure ?? '')}'. Use ${AMOUNT_MEASURES.join(', ')}.`);
-  }
-  const period = parsePayloadPeriod(payload, year);
-  const recipe = asBadRequest(() => parseCostingRecipe(payload));
-  const versionId = ctx.version.id;
-  const stored = versionId
-    ? (await listRoundInputs(ctx.manager, ctx.scope, ctx.version.tenant_id, [versionId])).get(versionId)?.find((r) => r.measure === measure) ?? null
-    : null;
+  const measures = linesMeasures(payload);
+  const lines = asBadRequest(() => parseCostLines(payload.lines, year));
+  // A frozen column refuses the whole write before anything is locked or written.
+  await assertMeasuresEditable(ctx, year, measures);
+  const stored = await versionRoundInputs(ctx.manager, ctx.scope, ctx.version);
+  const { calendars, warnings } = await resolveLineCalendars(ctx, lines, measures, stored);
+  const days = new Map<string, LineCalendar>(
+    [...calendars.values()].map((calendar) => [calendar.id, { name: calendar.name, days: calendarDaysFor(calendar, year) }]),
+  );
+  const result = lines.length > 0 ? asBadRequest(() => computeColumn(lines, year, days)) : null;
 
-  const warnings: string[] = [];
-  let calendar: WorkingDayProfileInfo | null = null;
-  if (recipe.working_day_profile_id) {
-    const id = recipe.working_day_profile_id;
-    const lock = opts.lockCalendar ? { lock: 'key share' as const } : {};
-    calendar = (await loadWorkingDayProfiles(ctx.manager, ctx.version.tenant_id, [id], lock)).get(id) ?? null;
-    if (!calendar) throw new BadRequestException('The calendar was not found.');
-    if (!isProfileActive(calendar)) {
-      if (stored?.working_day_profile_id !== calendar.id) {
-        throw new BadRequestException(`${calendar.name} is disabled. Pick an enabled calendar.`);
-      }
-      warnings.push(DISABLED_CALENDAR_WARNING);
-    }
+  let written: AmountsWriteResult = { periods: [], measures, before: [], after: [] };
+  if (result) {
+    const rows: AmountRowInput[] = yearPeriods(year).map((period, i) => {
+      const row: AmountRowInput = { period };
+      for (const measure of measures) row[measure] = result.month_cents[i];
+      return row;
+    });
+    written = await replaceAmounts(ctx, year, rows);
+  } else if (measures.some((measure) => changedByRemoval(stored.find((r) => r.measure === measure)))) {
+    // Records only: the months' lock first, as every writer takes it.
+    await lockYearMonths(ctx, year);
   }
-  const chosen = calendar;
-  const result = asBadRequest(() => computeCosting({
-    year,
-    period_start: period.period_start,
-    period_end: period.period_end,
-    recipe,
-    calendar: chosen && { code: chosen.code, name: chosen.name, days: chosen.days_by_year[String(year)] ?? null },
-  }));
-  return { year, measure, period, recipe, calendar, result, stored, warnings };
+  return { ...written, spread: null, lines: { year, measures, lines, calendars, result, warnings } };
 }
 
-export type ComputedPayloadResult = AmountsWriteResult & { spread: null; computed: ComputedRoundPlan };
-
-/**
- * `kind: 'computed'` of bulk-upsert: computes, then replaces the twelve months
- * of that one column (freeze checked in the transaction, other columns
- * untouched). `recordPayloadRoundInputs` then stores the record.
- */
-export async function writeComputedPayload(ctx: AmountsWriteContext, rawPayload: unknown): Promise<ComputedPayloadResult> {
-  const plan = await planComputedRound(ctx, rawPayload, { lockCalendar: true });
-  const rows = yearPeriods(plan.year).map((period, i) => ({ period, [plan.measure]: plan.result.month_cents[i] }));
-  const written = await replaceAmounts(ctx, plan.year, rows);
-  return { ...written, spread: null, computed: plan };
-}
-
-export type ComputePreview = {
-  active_months: number[];
-  day_counts: string[] | null;
-  total_days: string | null;
-  month_amounts: string[];
-  total: string;
-  fte: string | null;
-  calendar: { id: string; code: string; name: string; disabled: boolean } | null;
-  stored: { month_amounts: string[]; method: RoundMethod | null; last_calculation: LastCalculation | null };
-  /** Months (1..12) whose amount would change. */
-  changed_months: number[];
-  /** Active months whose calendar days differ from those of the last computation. */
-  calendar_changed_months: number[];
-  warnings: string[];
-};
-
-/**
- * What a computation would write and how it differs from what is stored.
- * Writes nothing, checks no freeze; without a version, nothing is stored.
- */
-export async function previewComputedRound(
-  ctx: Pick<RoundInputsContext, 'manager' | 'scope'> & { version: ComputeVersion },
-  rawPayload: unknown,
-): Promise<ComputePreview> {
-  const plan = await planComputedRound(ctx, rawPayload);
-  const { result, stored, calendar } = plan;
-  const versionId = ctx.version.id;
-  const months = versionId
-    ? (await readVersionMonths(ctx.manager, ctx.scope, ctx.version.tenant_id, [{ id: versionId, budget_year: ctx.version.budget_year }]))
-      .get(versionId)!.months[plan.measure]
-    : Array.from({ length: 12 }, () => 0n);
-  const last = stored?.last_calculation ?? null;
-  const previousDays = last?.kind === 'computed' ? last.day_counts : null;
-  const newDays = result.day_counts;
+/** The record of a column computed from its lines: their period, the FTE and what each line gave. */
+export function linesRound(
+  lines: readonly CostLine[],
+  calendars: ReadonlyMap<string, Pick<WorkingDayProfileInfo, 'code' | 'name'>>,
+  result: ColumnResult,
+): RoundInputFields {
   return {
-    active_months: result.active_months,
-    day_counts: result.day_counts,
-    total_days: result.total_days,
-    month_amounts: result.month_cents.map(centsToDecimal),
-    total: centsToDecimal(result.total_cents),
+    period_start: lines.map((line) => line.period_start).reduce((a, b) => (b < a ? b : a)),
+    period_end: lines.map((line) => line.period_end).reduce((a, b) => (b > a ? b : a)),
+    method: 'computed',
+    spread_profile_name: null,
     fte: result.fte,
-    calendar: calendar && { id: calendar.id, code: calendar.code, name: calendar.name, disabled: !isProfileActive(calendar) },
-    stored: { month_amounts: months.map(centsToDecimal), method: stored?.method ?? null, last_calculation: last },
-    changed_months: result.month_cents.flatMap((cents, i) => (cents !== months[i] ? [i + 1] : [])),
-    calendar_changed_months: previousDays && newDays
-      ? result.active_months.filter((m) => Decimal.from(previousDays[m - 1] ?? '0').cmp(newDays[m - 1]) !== 0)
-      : [],
-    warnings: plan.warnings,
+    last_calculation: {
+      kind: 'computed',
+      total: centsToDecimal(result.total_cents),
+      fte: result.fte,
+      month_amounts: result.month_cents.map(centsToDecimal),
+      fte_months: result.fte_months,
+      active_months: result.active_months,
+      lines: lines.map((line, index) => {
+        const computed = result.lines[index];
+        const calendar = line.working_day_profile_id ? calendars.get(line.working_day_profile_id) : undefined;
+        return {
+          ...line,
+          working_day_profile_code: calendar?.code ?? null,
+          working_day_profile_name: calendar?.name ?? null,
+          active_months: computed.active_months,
+          day_counts: computed.day_counts,
+          total_days: computed.total_days,
+          month_amounts: computed.month_cents.map(centsToDecimal),
+          fte_months: computed.fte_months,
+          total: centsToDecimal(computed.total_cents),
+        };
+      }),
+    },
   };
+}
+
+/**
+ * The record of a column whose lines are removed: amounts kept, FTE unknown.
+ * A column computed from them reads as edited by hand and loses their
+ * explanation; any other keeps how it was produced. No record: nothing.
+ */
+function withoutLines(stored: RoundInput | null): RoundInputFields | null {
+  if (!stored) return null;
+  return {
+    ...roundFields(stored),
+    method: stored.method === 'computed' ? 'manual' : stored.method,
+    last_calculation: stored.last_calculation?.kind === 'computed' ? null : stored.last_calculation,
+    fte: null,
+  };
+}
+
+/** Whether removing the lines changes this record at all (else `[]` writes nothing, not even the months' lock). */
+function changedByRemoval(stored: RoundInput | undefined): boolean {
+  return !!stored && (stored.lines.length > 0 || !sameFields(stored, withoutLines(stored)!));
+}
+
+/** Each column's record and lines, in column order (the records' lock order). */
+async function recordLines(ctx: RoundInputsContext, plan: LinesPlan) {
+  const { result, lines, calendars } = plan;
+  for (const measure of plan.measures) {
+    await saveRoundInput(ctx, measure, (stored) => (result ? linesRound(lines, calendars, result) : withoutLines(stored)), lines);
+  }
 }

@@ -63,8 +63,9 @@ export async function seedLine(runner: QueryRunner, kind: 'opex' | 'capex', tena
 }
 
 /**
- * A computed round priced per day with the calendar, in raw SQL (the round
- * writes are another module's). `measure` is any of the five columns.
+ * A column computed from one line priced per day with the calendar, in raw
+ * SQL (the round writes are another module's): its round and its line.
+ * `measure` is any of the five columns.
  */
 export async function seedCalendarRound(
   runner: QueryRunner,
@@ -75,13 +76,18 @@ export async function seedCalendarRound(
   measure: string,
   year = 2026,
 ) {
-  const table = kind === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
+  const rounds = kind === 'opex' ? 'spend_round_inputs' : 'capex_round_inputs';
+  const lines = kind === 'opex' ? 'spend_round_input_lines' : 'capex_round_input_lines';
+  const [round] = await runner.query(
+    `INSERT INTO ${rounds} (tenant_id, version_id, measure, period_start, period_end, method, fte)
+     VALUES ($1, $2, $3, $4, $5, 'computed', 1) RETURNING id`,
+    [tenantId, versionId, measure, `${year}-01-01`, `${year}-12-31`],
+  );
   await runner.query(
-    `INSERT INTO ${table}
-       (tenant_id, version_id, measure, period_start, period_end, method,
-        pricing_basis, quantity, unit_price, price_index_pct, working_day_profile_id, counts_as_fte)
-     VALUES ($1, $2, $3, $4, $5, 'computed', 'per_day', 1, 400, 0, $6, true)`,
-    [tenantId, versionId, measure, `${year}-01-01`, `${year}-12-31`, calendarId],
+    `INSERT INTO ${lines}
+       (tenant_id, round_input_id, sort, quantity_unit, quantity, unit_price, price_basis, working_day_profile_id, period_start, period_end)
+     VALUES ($1, $2, 1, 'people', 1, 400, 'per_day', $3, $4, $5)`,
+    [tenantId, round.id, calendarId, `${year}-01-01`, `${year}-12-31`],
   );
 }
 

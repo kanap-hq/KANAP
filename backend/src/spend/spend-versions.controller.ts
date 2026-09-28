@@ -55,14 +55,6 @@ export class SpendVersionsController {
     return this.amounts.bulkUpsert(versionId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
-  // One preview per item and year: it never needs (nor creates) the year's version.
-  @Post('spend-versions/compute-preview')
-  @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'member')
-  computePreview(@Body() body: any, @Req() req: any) {
-    return this.amounts.computePreview(body, { manager: req?.queryRunner?.manager });
-  }
-
   @Post('spend-versions/:id/allocations/bulk-upsert')
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')

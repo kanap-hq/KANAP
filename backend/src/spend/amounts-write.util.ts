@@ -204,7 +204,8 @@ function inspectRows(year: number, rows: AmountRowInput[]) {
   return { periods, measures: AMOUNT_MEASURES.filter((m) => measures.has(m)) };
 }
 
-async function assertMeasuresEditable(ctx: AmountsWriteContext, year: number, measures: AmountMeasure[]) {
+/** The freeze check of every amounts write, once per column and year in an operation (`checkedFreeze`). */
+export async function assertMeasuresEditable(ctx: AmountsWriteContext, year: number, measures: readonly AmountMeasure[]) {
   ctx.checkedFreeze ??= new Set<string>();
   for (const measure of measures) {
     const column = MEASURE_FREEZE_COLUMN[measure];
