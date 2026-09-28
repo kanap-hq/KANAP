@@ -179,7 +179,14 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
   const drain = useCallback(async (): Promise<void> => {
     // Coalesce concurrent drains onto a single in-flight promise.
     if (drainingRef.current) return drainingRef.current;
-    const run = (async () => {
+    // Nothing to run (e.g. the debounce fires after the running loop already
+    // picked the work up): that loop has set the terminal status itself.
+    if (!pendingRef.current) return;
+    let run: Promise<void> | null = null;
+    run = (async () => {
+      // Yield once so `drainingRef` is assigned before `finally` can clear it;
+      // a save that throws synchronously would otherwise strand a settled marker.
+      await Promise.resolve();
       try {
         while (pendingRef.current) {
           const fn = pendingRef.current;
@@ -204,7 +211,7 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
         onError?.(error);
         throw error;
       } finally {
-        drainingRef.current = null;
+        if (drainingRef.current === run) drainingRef.current = null;
       }
     })();
     drainingRef.current = run;

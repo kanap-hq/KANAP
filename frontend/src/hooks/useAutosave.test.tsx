@@ -156,6 +156,88 @@ describe('useAutosave', () => {
     expect(done).toBe(true);
   });
 
+  /**
+   * save1 in flight, save2 scheduled behind it (arming a new debounce), save1
+   * resolves and the loop runs save2 before that debounce fires on an empty queue.
+   */
+  async function runStrandingSequence(result: { current: ReturnType<typeof useAutosave> }) {
+    const first = deferred();
+    const save1 = vi.fn(() => first.promise);
+    const save2 = vi.fn(async () => {});
+    act(() => result.current.schedule(save1));
+    await advance(10);
+    expect(save1).toHaveBeenCalledTimes(1);
+    act(() => result.current.schedule(save2));
+    first.resolve();
+    await settle();
+    expect(save2).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe('saved');
+    // The debounce armed by schedule(save2) now fires on an empty queue.
+    await advance(10);
+  }
+
+  it('treats a debounce firing on an empty queue as a no-op', async () => {
+    const { result } = renderHook(() => useAutosave({ delay: 10, savedLingerMs: 100 }));
+    await runStrandingSequence(result);
+
+    expect(result.current.status).toBe('saved');
+    expect(result.current.isBusy()).toBe(false);
+    await advance(100);
+    expect(result.current.status).toBe('idle');
+  });
+
+  it('keeps saving after a debounce fired on an empty queue', async () => {
+    const { result } = renderHook(() => useAutosave({ delay: 10, savedLingerMs: 100 }));
+    await runStrandingSequence(result);
+
+    const save3 = vi.fn(async () => {});
+    act(() => result.current.schedule(save3));
+    expect(result.current.status).toBe('pending');
+    await advance(10);
+
+    expect(save3).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe('saved');
+    expect(result.current.isBusy()).toBe(false);
+    await advance(100);
+    expect(result.current.status).toBe('idle');
+  });
+
+  it('flush() still runs the save after a debounce fired on an empty queue', async () => {
+    const { result } = renderHook(() => useAutosave({ delay: 10 }));
+    await runStrandingSequence(result);
+
+    const save3 = vi.fn(async () => {});
+    act(() => result.current.schedule(save3));
+    let flushed: boolean | undefined;
+    await act(async () => {
+      flushed = await result.current.flush();
+    });
+
+    expect(save3).toHaveBeenCalledTimes(1);
+    expect(flushed).toBe(true);
+    expect(result.current.status).toBe('saved');
+    expect(result.current.isBusy()).toBe(false);
+  });
+
+  it('keeps saving after a save threw synchronously', async () => {
+    const { result } = renderHook(() => useAutosave({ delay: 10 }));
+    act(() => {
+      result.current.schedule((() => {
+        throw new Error('sync boom');
+      }) as unknown as () => Promise<void>);
+    });
+    await advance(10);
+    expect(result.current.status).toBe('error');
+    expect(result.current.isBusy()).toBe(false);
+
+    const next = vi.fn(async () => {});
+    act(() => result.current.schedule(next));
+    await advance(10);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe('saved');
+  });
+
   it('runs the pending save on an uncontrolled unmount instead of dropping it', async () => {
     const save = vi.fn(async () => {});
     const { result, unmount } = renderHook(() => useAutosave({ delay: 5_000 }));
