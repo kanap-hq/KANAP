@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, ILike, In, Repository } from 'typeorm';
 import { SpendItem } from './spend-item.entity';
-import { AnalyticsCategory } from '../analytics/analytics-category.entity';
 import { User } from '../users/user.entity';
 import { parsePagination, buildWhereFromAgFilters } from '../common/pagination';
 import { AuditService } from '../audit/audit.service';
@@ -32,6 +31,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItemNumberService } from '../common/item-number.service';
+import { resolveToUuid } from '../common/resolve-item-id';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import type { BudgetColumn } from './amounts-write.util';
 import { resolveItemWrite } from './item-write.util';
@@ -41,7 +41,6 @@ import { itemAnalyticsAuditFields, itemAnalyticsFields, loadItemAnalyticsValues,
 export class SpendItemsService {
   constructor(
     @InjectRepository(SpendItem) private readonly repo: Repository<SpendItem>,
-    @InjectRepository(AnalyticsCategory) private readonly analyticsCategories: Repository<AnalyticsCategory>,
     @InjectRepository(Application) private readonly applications: Repository<Application>,
     @InjectRepository(ApplicationSpendItemLink) private readonly appSpendLinks: Repository<ApplicationSpendItemLink>,
     private readonly audit: AuditService,
@@ -128,9 +127,10 @@ export class SpendItemsService {
     return { items, total, page, limit };
   }
 
-  /** The stored line (under RLS), without its analytics values. */
+  /** The stored line (under RLS, by id or OPX reference), without its analytics values. */
   private async findItem(id: string, mg: EntityManager): Promise<SpendItem> {
-    const found = await mg.getRepository(SpendItem).findOne({ where: { id } });
+    const itemId = await resolveToUuid(id, 'spend', mg);
+    const found = await mg.getRepository(SpendItem).findOne({ where: { id: itemId } });
     if (!found) throw new NotFoundException('Spend item not found');
     return found;
   }
@@ -305,7 +305,7 @@ export class SpendItemsService {
 
     // Sync contacts from supplier if supplier changed
     if (oldSupplierId !== newSupplierId) {
-      await this.itemContacts.syncFromSupplier(id, newSupplierId, userId ?? null, { manager: mg });
+      await this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg });
     }
 
     // Notify owners on status change
@@ -533,14 +533,15 @@ export class SpendItemsService {
   // Projects
   async listProjects(spendItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    await this.findItem(spendItemId, mg); // ensure item exists
+    const spend = await this.findItem(spendItemId, mg); // ensure item exists
+    const itemId = spend.id;
     const rows = await mg.query(
       `SELECT l.project_id as id, p.name
        FROM portfolio_project_opex l
        JOIN portfolio_projects p ON p.id = l.project_id
        WHERE l.opex_id = $1
        ORDER BY p.name ASC`,
-      [spendItemId],
+      [itemId],
     );
     return { items: rows };
   }
@@ -548,6 +549,7 @@ export class SpendItemsService {
   async bulkReplaceProjects(spendItemId: string, projectIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const spend = await this.findItem(spendItemId, mg);
+    const itemId = spend.id;
     const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
     if (cleanIds.length) {
       const projects = await mg.getRepository(PortfolioProject).find({ where: { id: In(cleanIds) } as any });
@@ -556,12 +558,12 @@ export class SpendItemsService {
       if (invalid) throw new BadRequestException('Project does not belong to tenant');
     }
     const repo = mg.getRepository(PortfolioProjectOpex);
-    const existing = await repo.find({ where: { opex_id: spendItemId } as any });
+    const existing = await repo.find({ where: { opex_id: itemId } as any });
     if (existing.length) await repo.delete({ id: In(existing.map((x) => x.id)) as any });
     if (cleanIds.length) {
-      const rows = cleanIds.map((projId) => repo.create({ tenant_id: (spend as any).tenant_id, project_id: projId, opex_id: spendItemId }));
+      const rows = cleanIds.map((projId) => repo.create({ tenant_id: (spend as any).tenant_id, project_id: projId, opex_id: itemId }));
       await repo.save(rows);
     }
-    return this.listProjects(spendItemId, { manager: mg });
+    return this.listProjects(itemId, { manager: mg });
   }
 }

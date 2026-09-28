@@ -10,7 +10,6 @@ import { SpendAmount } from './spend-amount.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { Account } from '../accounts/account.entity';
 import { Company } from '../companies/company.entity';
-import { AnalyticsCategory } from '../analytics/analytics-category.entity';
 import {
   csvAnalyticsBodyValues,
   CsvAnalyticsCell,
@@ -62,7 +61,6 @@ export class SpendItemsCsvService {
     @InjectRepository(SpendAmount) private readonly amounts: Repository<SpendAmount>,
     @InjectRepository(Supplier) private readonly suppliers: Repository<Supplier>,
     @InjectRepository(Account) private readonly accounts: Repository<Account>,
-    @InjectRepository(AnalyticsCategory) private readonly analyticsCategories: Repository<AnalyticsCategory>,
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly audit: AuditService,
     private readonly freeze: FreezeService,

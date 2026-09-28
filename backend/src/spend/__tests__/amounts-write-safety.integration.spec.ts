@@ -41,10 +41,10 @@ function importer(kind: Kind): {
   csvHeaders: () => string[];
 } {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 11 }, () => undefined);
-    args[7] = noAudit;
-    args[8] = noFreeze;
-    args[9] = { getSettings: async () => ({ allowedCurrencies: null }) };
+    const args: any[] = Array.from({ length: 10 }, () => undefined);
+    args[6] = noAudit;
+    args[7] = noFreeze;
+    args[8] = { getSettings: async () => ({ allowedCurrencies: null }) };
     return new (SpendItemsCsvService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);

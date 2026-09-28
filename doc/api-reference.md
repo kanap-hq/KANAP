@@ -737,6 +737,7 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Permissions: any authenticated member of the tenant for GET, `budget_ops:admin` for PATCH
 
 ## Spend Items & Versions (OPEX)
+- `:id` on every route under `/spend-items/:id` (GET, PATCH, DELETE, and the share, yearly-totals, versions, tasks, contracts, projects, applications, links, attachments and contacts routes) is a UUID or an `OPX-n` reference, as every route under `/capex-items/:id` takes `CPX-n`; a malformed id is a `400` "Invalid item reference: …", an unknown reference a `404`
 - POST `/spend-items` → create item
 - PATCH `/spend-items/:id` → update item (any subset of the writable fields)
 - GET `/spend-items/:id` → detail (every item column, `cost_center_id` and `run_build` included) plus the analytics values:

@@ -30,7 +30,6 @@ import { CompanyMetric } from '../companies/company-metric.entity';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { UsersModule } from '../users/users.module';
 import { forwardRef } from '@nestjs/common';
-import { AnalyticsCategory } from '../analytics/analytics-category.entity';
 import { FreezeModule } from '../freeze/freeze.module';
 import { ChargebackReportService } from './chargeback-report.service';
 import { ChargebackReportController } from './chargeback-report.controller';
@@ -59,7 +58,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SpendItem, SpendVersion, SpendAmount, SpendAllocation, SpreadProfile, Company, Department, DepartmentMetric, Supplier, Account, AllocationRule, CompanyMetric, AnalyticsCategory, SpendLink, SpendAttachment, Application, ApplicationSpendItemLink, SpendItemContactLink, ExternalContact, SupplierContactLink, PortfolioProjectOpex, PortfolioProject, CapexVersion]),
+    TypeOrmModule.forFeature([SpendItem, SpendVersion, SpendAmount, SpendAllocation, SpreadProfile, Company, Department, DepartmentMetric, Supplier, Account, AllocationRule, CompanyMetric, SpendLink, SpendAttachment, Application, ApplicationSpendItemLink, SpendItemContactLink, ExternalContact, SupplierContactLink, PortfolioProjectOpex, PortfolioProject, CapexVersion]),
     CommonModule,
     AuditModule,
     PermissionsModule,

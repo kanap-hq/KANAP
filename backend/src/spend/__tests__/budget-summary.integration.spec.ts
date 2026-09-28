@@ -40,9 +40,9 @@ const noAllocations = { computeForVersions: async () => new Map() };
 
 function itemService(kind: Kind): any {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 13 }, () => undefined);
-    args[5] = noAllocations;
-    args[8] = identityFx;
+    const args: any[] = Array.from({ length: 12 }, () => undefined);
+    args[4] = noAllocations;
+    args[7] = identityFx;
     return new (SpendItemsService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);

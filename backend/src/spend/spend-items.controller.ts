@@ -32,6 +32,11 @@ export class SpendItemsController {
     private readonly contactsSvc: SpendItemContactsService,
   ) {}
 
+  /** Every `:id` route takes a UUID or an OPX-N reference; a malformed id is a 400. */
+  private resolveId(id: string, manager: EntityManager): Promise<string> {
+    return resolveToUuid(id, 'spend', manager);
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
   @Get()
@@ -101,13 +106,11 @@ export class SpendItemsController {
   @RequireLevel('opex', 'reader')
   @Get(':id')
   async get(
-    @Param('id') id: string,
+    @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    // Accept either a UUID or an OPX-N business reference. Resolved here only;
-    // nested routes are always called with the resolved UUID by the frontend.
-    const uuid = await resolveToUuid(id, 'spend', ctx.manager as EntityManager);
-    return this.svc.get(uuid, { manager: ctx.manager });
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.svc.get(id, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
@@ -119,7 +122,7 @@ export class SpendItemsController {
     @Query('to') to: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    const id = await resolveToUuid(idOrRef, 'spend', ctx.manager as EntityManager);
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     const Y = new Date().getFullYear();
     const fromY = Number.parseInt(from, 10);
     const toY = Number.parseInt(to, 10);
@@ -139,7 +142,7 @@ export class SpendItemsController {
     @Body() body: ShareItemDto,
     @Tenant() ctx: TenantRequest,
   ) {
-    const id = await resolveToUuid(idOrRef, 'spend', ctx.manager as EntityManager);
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.share(id, body, ctx.tenantId, ctx.userId || '', { manager: ctx.manager });
   }
 
@@ -147,21 +150,23 @@ export class SpendItemsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
   @Get(':id/projects')
-  listProjects(
-    @Param('id') id: string,
+  async listProjects(
+    @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.listProjects(id, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
   @Post(':id/projects/bulk-replace')
-  bulkReplaceProjects(
-    @Param('id') id: string,
+  async bulkReplaceProjects(
+    @Param('id') idOrRef: string,
     @Body() body: { project_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], { manager: ctx.manager });
   }
 
@@ -169,21 +174,23 @@ export class SpendItemsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
   @Get(':id/applications')
-  listApplications(
-    @Param('id') id: string,
+  async listApplications(
+    @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.listApplications(id, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
   @Post(':id/applications/bulk-replace')
-  bulkReplaceApplications(
-    @Param('id') id: string,
+  async bulkReplaceApplications(
+    @Param('id') idOrRef: string,
     @Body() body: { application_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, { manager: ctx.manager });
   }
 
@@ -191,44 +198,48 @@ export class SpendItemsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
   @Get(':id/links')
-  listLinks(
-    @Param('id') id: string,
+  async listLinks(
+    @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.listLinks(id, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
   @Post(':id/links')
-  createLink(
-    @Param('id') id: string,
+  async createLink(
+    @Param('id') idOrRef: string,
     @Body() body: { description?: string; url: string },
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.createLink(id, body, ctx.userId || null, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
   @Patch(':id/links/:linkId')
-  updateLink(
-    @Param('id') id: string,
+  async updateLink(
+    @Param('id') idOrRef: string,
     @Param('linkId') linkId: string,
     @Body() body: { description?: string; url?: string },
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.updateLink(id, linkId, body, ctx.userId || null, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
   @Delete(':id/links/:linkId')
-  deleteLink(
-    @Param('id') id: string,
+  async deleteLink(
+    @Param('id') idOrRef: string,
     @Param('linkId') linkId: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.deleteLink(id, linkId, ctx.userId || null, { manager: ctx.manager });
   }
 
@@ -262,10 +273,11 @@ export class SpendItemsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
   @Get(':id/attachments')
-  listAttachments(
-    @Param('id') id: string,
+  async listAttachments(
+    @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.listAttachments(id, { manager: ctx.manager });
   }
 
@@ -273,11 +285,12 @@ export class SpendItemsController {
   @RequireLevel('opex', 'member')
   @Post(':id/attachments')
   @UseInterceptors(FileInterceptor('file', attachmentMulterOptions))
-  uploadAttachment(
-    @Param('id') id: string,
+  async uploadAttachment(
+    @Param('id') idOrRef: string,
     @UploadedFile() file: Express.Multer.File,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.uploadAttachment(id, file, ctx.userId || null, { manager: ctx.manager });
   }
 
@@ -285,42 +298,46 @@ export class SpendItemsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
   @Get(':id/contacts')
-  listContacts(
-    @Param('id') id: string,
+  async listContacts(
+    @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.contactsSvc.listForItem(id, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
   @Post(':id/contacts')
-  attachContact(
-    @Param('id') id: string,
+  async attachContact(
+    @Param('id') idOrRef: string,
     @Body() body: { contactId: string; role: SupplierContactRole },
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.contactsSvc.attachManual(id, body, ctx.userId || null, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
   @Delete(':id/contacts/:linkId')
-  detachContact(
-    @Param('id') id: string,
+  async detachContact(
+    @Param('id') idOrRef: string,
     @Param('linkId') linkId: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.contactsSvc.detach(id, linkId, ctx.userId || null, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
   @Post(':id/contacts/sync-from-supplier')
-  syncContactsFromSupplier(
-    @Param('id') id: string,
+  async syncContactsFromSupplier(
+    @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.contactsSvc.syncFromSupplierForItem(id, ctx.userId || null, { manager: ctx.manager });
   }
 
@@ -337,11 +354,12 @@ export class SpendItemsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
   @Patch(':id')
-  update(
-    @Param('id') id: string,
+  async update(
+    @Param('id') idOrRef: string,
     @Body() body: UpdateSpendItemInput,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.update(id, body as Record<string, unknown>, ctx.userId || undefined, { manager: ctx.manager });
   }
 
@@ -417,10 +435,11 @@ export class SpendItemsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'admin')
   @Delete(':id')
-  delete(
-    @Param('id') id: string,
+  async delete(
+    @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null });
   }
 }

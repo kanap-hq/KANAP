@@ -64,9 +64,9 @@ export function budgetOperations(kind: Kind, audit: unknown = captureAudit(), fr
 /** The legacy item CSV importer of each scope, on the real service class. */
 export function itemCsvImporter(kind: Kind, audit: unknown = captureAudit()): { writeImportedTotals: (...args: any[]) => Promise<void> } {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 11 }, () => undefined);
-    args[7] = audit;
-    args[8] = noFreeze;
+    const args: any[] = Array.from({ length: 10 }, () => undefined);
+    args[6] = audit;
+    args[7] = noFreeze;
     return new (SpendItemsCsvService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);

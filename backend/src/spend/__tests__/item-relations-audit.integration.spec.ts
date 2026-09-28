@@ -31,9 +31,9 @@ function contactsService(kind: Kind, audit: unknown): any {
 /** The item service of each scope on the real class; only the dependencies these paths use. */
 function itemService(kind: Kind, audit: unknown, contacts: unknown = contactsService(kind, audit)): any {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 13 }, () => undefined);
-    args[4] = audit;
-    args[10] = contacts;
+    const args: any[] = Array.from({ length: 12 }, () => undefined);
+    args[3] = audit;
+    args[9] = contacts;
     return new (SpendItemsService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);
