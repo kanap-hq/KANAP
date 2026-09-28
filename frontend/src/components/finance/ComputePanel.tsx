@@ -59,6 +59,25 @@ function formFor(record: RoundInput | undefined, period: Period | null, typed: F
   };
 }
 
+/**
+ * A field of the budget tab's panels, label above. It is `width` wide, wider when its label needs
+ * more: the label stays on one line, so a row of fields keeps one baseline in every language.
+ */
+export function PanelField({ label, width, children }: { label: string; width: number; children: React.ReactNode }) {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto', minWidth: width }}>
+      <FieldLabel sx={{ mb: '2px', whiteSpace: 'nowrap' }}>{label}</FieldLabel>
+      {/* No width of its own: the field fills what the label and `width` give. */}
+      <Box sx={{ width: 0, minWidth: '100%' }}>{children}</Box>
+    </Box>
+  );
+}
+
+/** From and To of a panel, kept together: a narrow row wraps the period as a whole. */
+export function PanelPeriod({ children }: { children: React.ReactNode }) {
+  return <Box sx={{ display: 'flex', alignItems: 'flex-end', columnGap: 1.5 }}>{children}</Box>;
+}
+
 /** The number field emits the typed decimal string (or ''); the request carries it as is. */
 const asText = (value: unknown): string => (value === '' || value == null ? '' : String(value));
 
@@ -174,10 +193,7 @@ export default function ComputePanel({
 
   const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
   const field = (label: string, width: number, control: React.ReactNode) => (
-    <Box sx={{ display: 'flex', flexDirection: 'column', width }}>
-      <FieldLabel sx={{ mb: '2px' }}>{label}</FieldLabel>
-      {control}
-    </Box>
+    <PanelField label={label} width={width}>{control}</PanelField>
   );
 
   return (
@@ -195,8 +211,10 @@ export default function ComputePanel({
             ))}
           </TextField>
         ))}
-        <DateEUField label={t('budgetTab.from')} valueYmd={form.start} onChangeYmd={(v) => set({ start: v })} size="small" sx={{ width: 150 }} />
-        <DateEUField label={t('budgetTab.to')} valueYmd={form.end} onChangeYmd={(v) => set({ end: v })} size="small" sx={{ width: 150 }} />
+        <PanelPeriod>
+          <DateEUField label={t('budgetTab.from')} valueYmd={form.start} onChangeYmd={(v) => set({ start: v })} size="small" sx={{ width: 150 }} />
+          <DateEUField label={t('budgetTab.to')} valueYmd={form.end} onChangeYmd={(v) => set({ end: v })} size="small" sx={{ width: 150 }} />
+        </PanelPeriod>
       </Box>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 1.5, rowGap: 1 }}>
         {field(t('budgetTab.compute.basis'), 170, (

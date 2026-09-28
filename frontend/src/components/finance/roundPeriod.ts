@@ -289,6 +289,26 @@ export function chipText(
 }
 
 /**
+ * The chip in the units a narrow header wraps whole: "Computed per day," then the calendar's name,
+ * so a line never ends in "France" with "218" alone below. One unit when there is no calendar.
+ */
+export function chipUnits(
+  t: TFunction,
+  locale: string,
+  record: RoundInput | null | undefined,
+  nameOf?: (measure: AmountMeasure) => string,
+): string[] {
+  const text = chipText(t, locale, record, nameOf);
+  const calc = record?.last_calculation;
+  const calendar = record?.method === 'computed'
+    ? record.working_day_profile_name ?? (calc?.kind === 'computed' ? calc.working_day_profile_name : null)
+    : null;
+  const at = calendar ? text.lastIndexOf(calendar) : -1;
+  if (!calendar || at <= 0) return text ? [text] : [];
+  return [text.slice(0, at).trimEnd(), text.slice(at)].filter(Boolean);
+}
+
+/**
  * A decimal string from the server (days, FTE, quantity, price) as the budget tab writes numbers:
  * space groups, dot decimals, no trailing zeros ("163", "171.75", "0.75"). Read from the string.
  */

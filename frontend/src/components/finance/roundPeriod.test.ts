@@ -8,6 +8,7 @@ import {
   activeMonths,
   centsToDecimal,
   chipText,
+  chipUnits,
   columnLabel,
   columnPeriod,
   computeChangeLines,
@@ -255,6 +256,11 @@ const preview = (over: Partial<ComputePreview> = {}): ComputePreview => ({
 describe('computed columns', () => {
   it('names the basis in the chip', () => {
     expect(chipText(en(), 'en', perDay())).toBe('Computed per day, France 218');
+    // A narrow header wraps the chip between the way and the calendar, never inside either.
+    expect(chipUnits(en(), 'en', perDay())).toEqual(['Computed per day,', 'France 218']);
+    expect(chipUnits(fr(), 'fr', perDay())).toEqual(['Calculé par jour,', 'France 218']);
+    expect(chipUnits(en(), 'en', perDay({ pricing_basis: 'per_month', working_day_profile_name: null }))).toEqual(['Computed per month']);
+    expect(chipUnits(en(), 'en', undefined)).toEqual([]);
     expect(chipText(en(), 'en', perDay({ pricing_basis: 'per_month', working_day_profile_name: null }))).toBe('Computed per month');
     expect(chipText(en(), 'en', perDay({ pricing_basis: 'per_period', working_day_profile_name: null }))).toBe('Computed for the whole period');
     expect(chipText(fr(), 'fr', perDay())).toBe('Calculé par jour, France 218');

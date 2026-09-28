@@ -286,6 +286,15 @@ describe('buildFteColumnDefs', () => {
     expect(shown(key)).toBe('1.38 · ops:shared.fteUnknownCount');
     expect(shown(none)).toBe('ops:shared.fteUnknownCount');
     expect(shown(known)).toBe('2.00');
+    // Too narrow a column (a long language, a resize) cuts the count with an ellipsis, never the total.
+    const { component } = (def(key).cellRendererSelector as (p: unknown) => { component: (p: unknown) => unknown })({ node: { rowPinned: 'bottom' } });
+    const { container } = render(component({ data: row, value: 1.38, valueFormatted: '1.38' }) as ReactElement);
+    const [total, count] = Array.from(container.firstElementChild!.children) as HTMLElement[];
+    expect(total).toHaveTextContent('1.38');
+    expect(total).toHaveStyle({ flexShrink: '0' });
+    expect(count).toHaveStyle({ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: '0' });
+    // Room for the sum and the count in every language.
+    expect(def(key).width).toBe(200);
     // Lines keep the list's own cell.
     expect((def(key).cellRendererSelector as (p: unknown) => { component: unknown })({ node: {} }).component).toBe(lineCell);
   });

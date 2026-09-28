@@ -377,11 +377,16 @@ export function buildFteColumnDefs<T>({
       const total = p.valueFormatted ?? '';
       if (!unknown) return total;
       const count = t('ops:shared.fteUnknownCount', { count: unknown });
+      // The total always shows whole; when the column is too narrow for the count after it (a long
+      // language, a resized column), the count ends in an ellipsis and the tooltip gives the sentence.
       return createElement(
         Box,
-        { component: 'span', sx: { display: 'block', textAlign: 'right' } },
-        total,
-        createElement(Box, { component: 'span', sx: { color: 'kanap.text.tertiary' } }, total ? ` · ${count}` : count),
+        { component: 'span', sx: { display: 'flex', justifyContent: 'flex-end', whiteSpace: 'pre' } },
+        total ? createElement(Box, { component: 'span', sx: { flexShrink: 0 } }, total) : null,
+        createElement(Box, {
+          component: 'span',
+          sx: { color: 'kanap.text.tertiary', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' },
+        }, total ? ` · ${count}` : count),
       );
     };
     return {
@@ -400,7 +405,8 @@ export function buildFteColumnDefs<T>({
         return unknown ? t('ops:shared.fteUnknownLines', { count: unknown }) : undefined;
       },
       type: 'rightAligned',
-      width: 160,
+      // Room for the totals row: the sum and "· 27 unknown", also in the longer languages.
+      width: 200,
       filter: 'agNumberColumnFilter',
       filterParams: FTE_FILTER_PARAMS,
       floatingFilterComponent: 'agNumberColumnFloatingFilter',

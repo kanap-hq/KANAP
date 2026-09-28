@@ -18,9 +18,8 @@ import YearTabs from '../navigation/YearTabs';
 import FormattedNumberField from '../inputs/FormattedNumberField';
 import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx } from '../../theme/formSx';
 import DateEUField from '../fields/DateEUField';
-import { FieldLabel } from '../design';
 import BudgetTrendChart from './BudgetTrendChart';
-import ComputePanel from './ComputePanel';
+import ComputePanel, { PanelField, PanelPeriod } from './ComputePanel';
 import { FinanceModuleConfig } from './config';
 import { patchYearlyTotalsCache } from './yearlyTotals';
 import { AMOUNT_COLUMNS } from './amountColumns';
@@ -34,6 +33,7 @@ import {
   activeMonths,
   centsToDecimal,
   chipText,
+  chipUnits,
   columnPeriod,
   joinList,
   periodForEdit,
@@ -570,6 +570,14 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
 
   const labelFor = (col: AmountCol) => budgetColumns.label(col);
   const chipOf = (record: RoundInput | null | undefined) => chipText(t, locale, record, labelFor);
+  // The chip as units that wrap whole ("Computed per day," then "France 218"); a unit longer than
+  // the line still wraps inside it.
+  const chipLine = (record: RoundInput | null | undefined) => chipUnits(t, locale, record, labelFor).map((unit, i) => (
+    <React.Fragment key={unit}>
+      {i > 0 && ' '}
+      <Box component="span" sx={{ display: 'inline-block', maxWidth: '100%' }}>{unit}</Box>
+    </React.Fragment>
+  ));
   const gridColumns = shown.map((c) => ({ col: c.measure, fr: frozen[c.freezeKey] }));
   const recordFor = (col: AmountCol) => roundInputs.find((r) => r.measure === col);
   const periodTextOf = (period: Period | null) => (period ? periodText(t, locale, activeMonths(year, period.start, period.end)) : '');
@@ -587,10 +595,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
 
   // Every control has its label above it, so the row sits on one baseline and wraps cleanly.
   const panelField = (label: string, width: number, control: React.ReactNode) => (
-    <Box sx={{ display: 'flex', flexDirection: 'column', width }}>
-      <FieldLabel sx={{ mb: '2px' }}>{label}</FieldLabel>
-      {control}
-    </Box>
+    <PanelField label={label} width={width}>{control}</PanelField>
   );
   // Built from the setting and the column names: nothing here knows what a column means.
   const outsideGroup = shown.filter((c) => !c.groupSpread);
@@ -637,8 +642,10 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
             <MenuItem value="4-4-5" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profile445`)}</MenuItem>
           </TextField>
         ))}
-        <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} size="small" sx={{ width: 150 }} />
-        <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} size="small" sx={{ width: 150 }} />
+        <PanelPeriod>
+          <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} size="small" sx={{ width: 150 }} />
+          <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} size="small" sx={{ width: 150 }} />
+        </PanelPeriod>
       </Box>
       {/* Only the lines that apply: a whole-year period shows none. */}
       {(spreadProblem || zeroedText || spreadBeyondItem || spreadFrozen) && (
@@ -739,7 +746,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
 
       {mode === 'flat' ? (
         <Stack spacing={2}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 2.5 }}>
+          {/* Wide enough for a column's caption to read as two short lines: how, then when. */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 2.5 }}>
             {shown.map((m) => {
               // Until this year's data is in, the previous year's periods would be read against this year.
               const loaded = loadedYear === year;
@@ -766,8 +774,14 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                   {loaded && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
                       <Tooltip title={recipeOf(m.measure)}>
-                        <Typography sx={captionSx} data-testid={`period-line-${m.measure}`}>
-                          {noMonth ? t('budgetTab.noMonthInItemDates', { year }) : [chip, text].filter(Boolean).join(' · ')}
+                        {/* How the column was produced, then its period: one line each, never run together. */}
+                        <Typography component="div" sx={{ ...captionSx, minWidth: 0 }} data-testid={`period-line-${m.measure}`}>
+                          {noMonth ? t('budgetTab.noMonthInItemDates', { year }) : (
+                            <>
+                              {chip && <Box component="span" sx={{ display: 'block' }}>{chipLine(recordFor(m.measure))}</Box>}
+                              {text && <Box component="span" sx={{ display: 'block' }}>{text}</Box>}
+                            </>
+                          )}
                         </Typography>
                       </Tooltip>
                       {!isFrozen && !loading && (
@@ -830,7 +844,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                       </Box>
                       {chip && record && (
                         <Tooltip title={[periodTextOf({ start: record.period_start, end: record.period_end }), recipeOf(col)].filter(Boolean).join(' · ')}>
-                          <Box sx={{ fontSize: 11, fontWeight: 400, color: 'kanap.text.tertiary', whiteSpace: 'normal', lineHeight: 1.3 }}>{chip}</Box>
+                          <Box sx={{ fontSize: 11, fontWeight: 400, color: 'kanap.text.tertiary', whiteSpace: 'normal', lineHeight: 1.3 }}>{chipLine(record)}</Box>
                         </Tooltip>
                       )}
                     </Box>

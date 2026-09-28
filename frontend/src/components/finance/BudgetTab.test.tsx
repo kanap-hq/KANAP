@@ -449,6 +449,8 @@ const record = (over: Partial<RoundInput>): RoundInput => ({
 });
 
 const periodLine = (measure: string) => screen.getByTestId(`period-line-${measure}`);
+// How the column was produced, then its period: one line each.
+const captionLines = (measure: string) => Array.from(periodLine(measure).children).map((line) => line.textContent);
 
 /** Wait until the amounts are loaded, without assuming the first field is editable. */
 async function waitForLoad() {
@@ -503,8 +505,8 @@ describe('BudgetTab periods', () => {
     const { ref } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
     await waitForAmounts();
 
-    expect(periodLine('planned')).toHaveTextContent('Copied from Budget 2025 +2% · 9 months, April to December');
-    expect(periodLine('committed')).toHaveTextContent('Edited by hand · 6 months, July to December');
+    expect(captionLines('planned')).toEqual(['Copied from Budget 2025 +2%', '9 months, April to December']);
+    expect(captionLines('committed')).toEqual(['Edited by hand', '6 months, July to December']);
     // No stored period on Landing: it holds amounts, so the whole year and no chip.
     expect(periodLine('expected_landing')).toHaveTextContent(/^12 months, January to December$/);
 
@@ -540,7 +542,7 @@ describe('BudgetTab periods', () => {
     fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: '12000' } });
     await flush(ref);
 
-    await waitFor(() => expect(periodLine('planned')).toHaveTextContent('Spread flat · 9 months, April to December'));
+    await waitFor(() => expect(captionLines('planned')).toEqual(['Spread flat', '9 months, April to December']));
   });
 
   it('the monthly grid shows how each column was produced', async () => {
@@ -660,7 +662,7 @@ describe('BudgetTab periods', () => {
     await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
     expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^July to December will be set to zero\.$/);
     // The column still shows its stored period, and opening the panel wrote nothing.
-    expect(periodLine('planned')).toHaveTextContent('Spread flat · 12 months, January to December');
+    expect(captionLines('planned')).toEqual(['Spread flat', '12 months, January to December']);
     expect(ref.current!.isDirty()).toBe(false);
     expect(bulkCalls()).toHaveLength(0);
     expect(mocked.patch).not.toHaveBeenCalled();
@@ -810,7 +812,7 @@ describe('BudgetTab periods', () => {
     renderTab(YEAR, { effectiveStart: '2026-04-01' });
     await waitForAmounts();
 
-    expect(periodLine('actual')).toHaveTextContent('Edited by hand · 6 months, July to December');
+    expect(captionLines('actual')).toEqual(['Edited by hand', '6 months, July to December']);
 
     // From Actuals, the switch spreads every column.
     fireEvent.click(within(periodLine('actual').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
@@ -1224,7 +1226,7 @@ describe('BudgetTab compute from quantity and price', () => {
     renderTab();
     await waitForAmounts();
 
-    expect(periodLine('planned')).toHaveTextContent('Computed per day, France 218 · 9 months, February to October');
+    expect(captionLines('planned')).toEqual(['Computed per day, France 218', '9 months, February to October']);
     fireEvent.mouseOver(periodLine('planned'));
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Per day · Quantity 1 · Unit price 400 · Calendar France 218 · Counts as FTE');
 
