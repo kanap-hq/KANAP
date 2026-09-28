@@ -21,13 +21,13 @@ const noNotifications = { notifyStatusChange: () => undefined, notifyShare: () =
 /** The item service of a type: create, update, summary and (CAPEX) CSV. */
 export function itemService(kind: Kind): any {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 13 }, () => undefined);
-    args[4] = captureAudit();
-    args[5] = noAllocations;
-    args[8] = identityFx;
-    args[10] = noContacts;
-    args[11] = noNotifications;
-    args[12] = new ItemNumberService();
+    const args: any[] = Array.from({ length: 12 }, () => undefined);
+    args[3] = captureAudit();
+    args[4] = noAllocations;
+    args[7] = identityFx;
+    args[9] = noContacts;
+    args[10] = noNotifications;
+    args[11] = new ItemNumberService();
     return new (SpendItemsService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);
@@ -44,11 +44,11 @@ export function itemService(kind: Kind): any {
 /** The CSV importer and exporter of a type. */
 export function csvService(kind: Kind): any {
   if (kind === 'capex') return itemService('capex');
-  const args: any[] = Array.from({ length: 11 }, () => undefined);
-  args[7] = captureAudit();
-  args[8] = noFreeze;
-  args[9] = { getSettings: async () => ({ allowedCurrencies: null }) };
-  args[10] = new ItemNumberService();
+  const args: any[] = Array.from({ length: 10 }, () => undefined);
+  args[6] = captureAudit();
+  args[7] = noFreeze;
+  args[8] = { getSettings: async () => ({ allowedCurrencies: null }) };
+  args[9] = new ItemNumberService();
   return new (SpendItemsCsvService as any)(...args);
 }
 

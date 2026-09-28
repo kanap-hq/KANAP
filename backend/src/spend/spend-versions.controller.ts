@@ -5,6 +5,8 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { SpendVersionsService } from './spend-versions.service';
 import { SpendAmountsService } from './spend-amounts.service';
 import { SpendAllocationsService } from './spend-allocations.service';
+import { resolveToUuid } from '../common/resolve-item-id';
+import { EntityManager } from 'typeorm';
 
 @UseGuards(JwtAuthGuard)
 @Controller()
@@ -15,25 +17,35 @@ export class SpendVersionsController {
     private readonly allocations: SpendAllocationsService,
   ) {}
 
+  private resolveItemId(id: string, manager: EntityManager): Promise<string> {
+    return resolveToUuid(id, 'spend', manager);
+  }
+
   @Get('spend-items/:id/versions')
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
-  listForItem(@Param('id') itemId: string, @Req() req: any) {
-    return this.versions.listForItem(itemId, { manager: req?.queryRunner?.manager });
+  async listForItem(@Param('id') idOrRef: string, @Req() req: any) {
+    const manager = req?.queryRunner?.manager as EntityManager;
+    const itemId = await this.resolveItemId(idOrRef, manager);
+    return this.versions.listForItem(itemId, { manager });
   }
 
   @Post('spend-items/:id/versions')
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
-  createForItem(@Param('id') itemId: string, @Body() body: any, @Req() req: any) {
-    return this.versions.createForItem(itemId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  async createForItem(@Param('id') idOrRef: string, @Body() body: any, @Req() req: any) {
+    const manager = req?.queryRunner?.manager as EntityManager;
+    const itemId = await this.resolveItemId(idOrRef, manager);
+    return this.versions.createForItem(itemId, body, req.user?.sub ?? null, { manager });
   }
 
   @Patch('spend-items/:id/versions')
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'member')
-  updateForItem(@Param('id') itemId: string, @Body() body: any, @Req() req: any) {
-    return this.versions.updateForItem(itemId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  async updateForItem(@Param('id') idOrRef: string, @Body() body: any, @Req() req: any) {
+    const manager = req?.queryRunner?.manager as EntityManager;
+    const itemId = await this.resolveItemId(idOrRef, manager);
+    return this.versions.updateForItem(itemId, body, req.user?.sub ?? null, { manager });
   }
 
   @Post('spend-versions/:id/amounts/bulk-upsert')

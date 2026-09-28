@@ -69,7 +69,10 @@ export const CreateCapexItemSchema = z.object({
   /** Business owner user ID (optional) */
   owner_business_id: z.string().uuid().nullable().optional(),
 
-  /** Analytics category ID (optional) */
+  /** Analytics values by dimension id: a value id, or null to clear; omitted dimensions are untouched */
+  analytics_values: z.record(z.string().uuid(), z.string().uuid().nullable()).optional(),
+
+  /** Legacy: the default dimension's value (refused when analytics_values names another one for it) */
   analytics_category_id: z.string().uuid().nullable().optional(),
 
   /** Cost center ID (a cost center, not a group); an empty paying company takes its company */

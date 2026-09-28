@@ -23,11 +23,11 @@ const COMPANY = 'New line test company';
 
 function importer(kind: Kind): { importCsv: (...args: any[]) => Promise<any>; csvHeaders: () => string[] } {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 11 }, () => undefined);
-    args[7] = noAudit;
-    args[8] = noFreeze;
-    args[9] = { getSettings: async () => ({ allowedCurrencies: null }) };
-    args[10] = new ItemNumberService();
+    const args: any[] = Array.from({ length: 10 }, () => undefined);
+    args[6] = noAudit;
+    args[7] = noFreeze;
+    args[8] = { getSettings: async () => ({ allowedCurrencies: null }) };
+    args[9] = new ItemNumberService();
     return new (SpendItemsCsvService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);

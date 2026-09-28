@@ -8,7 +8,6 @@ import { CapexAllocationCalculatorService } from './capex-allocation-calculator.
 import { Company } from '../companies/company.entity';
 import { Account } from '../accounts/account.entity';
 import { Supplier } from '../suppliers/supplier.entity';
-import { AnalyticsCategory } from '../analytics/analytics-category.entity';
 import { User } from '../users/user.entity';
 import { parsePagination, buildWhereFromAgFilters } from '../common/pagination';
 import { AuditService } from '../audit/audit.service';
@@ -58,6 +57,21 @@ import {
   resolveItemWrite,
 } from '../spend/item-write.util';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import {
+  csvAnalyticsBodyValues,
+  CsvAnalyticsCell,
+  csvAnalyticsDisabledErrors,
+  csvAnalyticsNamesDisabled,
+  isCsvAnalyticsHeader,
+  itemAnalyticsAuditFields,
+  itemAnalyticsFields,
+  ItemAnalyticsValue,
+  loadCsvAnalyticsExport,
+  loadItemAnalyticsValues,
+  readCsvAnalyticsCells,
+  readCsvAnalyticsColumns,
+  writeItemAnalyticsValues,
+} from '../spend/item-analytics.util';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
@@ -104,27 +118,26 @@ export class CapexItemsService {
     const supplierIds = Array.from(new Set(baseItems.map((i: any) => i.supplier_id).filter(Boolean)));
     const accountIds = Array.from(new Set(baseItems.map((i: any) => i.account_id).filter(Boolean)));
     const ownerIds = Array.from(new Set(baseItems.flatMap((i: any) => [i.owner_it_id, i.owner_business_id]).filter(Boolean))) as string[];
-    const categoryIds = Array.from(new Set(baseItems.map((i: any) => i.analytics_category_id).filter(Boolean)));
 
-    const [companies, suppliers, accounts, owners, categories] = await Promise.all([
+    const [companies, suppliers, accounts, owners, analyticsByItem] = await Promise.all([
       companyIds.length ? mg.getRepository(Company).find({ where: { id: In(companyIds) as any } as any }) : Promise.resolve([]),
       supplierIds.length ? mg.getRepository(Supplier).find({ where: { id: In(supplierIds) as any } as any }) : Promise.resolve([]),
       accountIds.length ? mg.getRepository(Account).find({ where: { id: In(accountIds) as any } as any }) : Promise.resolve([]),
       ownerIds.length ? mg.getRepository(User).find({ where: { id: In(ownerIds) as any } as any }) : Promise.resolve([]),
-      categoryIds.length ? mg.getRepository(AnalyticsCategory).find({ where: { id: In(categoryIds) as any } as any }) : Promise.resolve([]),
+      // The default dimension's value, read from the analytics links.
+      this.resolveTenantId(mg).then((tenantId) => loadItemAnalyticsValues(mg, 'capex', tenantId, baseItems.map((i) => i.id))),
     ]);
 
     const companyById = new Map(companies.map((c) => [c.id, c]));
     const supplierById = new Map(suppliers.map((s) => [s.id, s]));
     const accountById = new Map(accounts.map((a) => [a.id, a]));
     const ownerById = new Map(owners.map((u) => [u.id, u]));
-    const categoryById = new Map(categories.map((c) => [c.id, c]));
 
     return baseItems.map((item: any) => {
       const company = item.paying_company_id ? companyById.get(item.paying_company_id) : undefined;
       const supplier = item.supplier_id ? supplierById.get(item.supplier_id) : undefined;
       const account = item.account_id ? accountById.get(item.account_id) : undefined;
-      const category = item.analytics_category_id ? categoryById.get(item.analytics_category_id) : undefined;
+      const { analytics_category_id, analytics_category_name } = itemAnalyticsFields(analyticsByItem.get(item.id) ?? []);
       return {
         ...item,
         company_name: company ? (company as any).name ?? null : null,
@@ -137,7 +150,8 @@ export class CapexItemsService {
         account_display: account ? `${(account as any).account_number} - ${(account as any).account_name}` : undefined,
         owner_it_name: displayName(ownerById.get(item.owner_it_id) || null),
         owner_business_name: displayName(ownerById.get(item.owner_business_id) || null),
-        analytics_category_name: category ? (category as any).name : null,
+        analytics_category_id,
+        analytics_category_name,
       };
     });
   }
@@ -213,13 +227,27 @@ export class CapexItemsService {
     return { items, total, page, limit };
   }
 
-  async get(id: string, opts?: { manager?: EntityManager }) {
-    const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(CapexItem);
+  /** The stored line (under RLS, by id or CPX reference), without its analytics values. */
+  private async findItem(id: string, mg: EntityManager): Promise<CapexItem> {
     const itemId = await this.resolveItemId(id, mg);
-    const found = await repo.findOne({ where: { id: itemId } });
+    const found = await mg.getRepository(CapexItem).findOne({ where: { id: itemId } });
     if (!found) throw new NotFoundException('CAPEX item not found');
     return found;
+  }
+
+  /** The line with its analytics values (see `spend/item-analytics.util.ts`). */
+  private withAnalyticsValues(item: CapexItem, values: ItemAnalyticsValue[]) {
+    return { ...item, ...itemAnalyticsFields(values) };
+  }
+
+  private async loadAnalytics(mg: EntityManager, item: CapexItem): Promise<ItemAnalyticsValue[]> {
+    return (await loadItemAnalyticsValues(mg, 'capex', item.tenant_id, [item.id])).get(item.id) ?? [];
+  }
+
+  async get(id: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const found = await this.findItem(id, mg);
+    return this.withAnalyticsValues(found, await this.loadAnalytics(mg, found));
   }
 
   async yearlyTotals(capexItemId: string, from: number, to: number, opts?: { manager?: EntityManager }) {
@@ -312,7 +340,7 @@ export class CapexItemsService {
     const repo = mg.getRepository(CapexItem);
     // Writable columns only (company_id is the legacy alias of the paying company),
     // every id resolved in this tenant; see `spend/item-write.util.ts`.
-    const { values, lifecycle: input } = await resolveItemWrite(mg, 'capex', body, null);
+    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, 'capex', body, null);
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: disabled_at });
     const tenantId = await this.resolveTenantId(mg);
@@ -331,21 +359,27 @@ export class CapexItemsService {
       disabled_at: lifecycle.disabled_at,
     });
     const saved = await repo.save(entity);
-    const persisted = await repo.findOne({ where: { id: saved.id } });
-    await this.audit.log({ table: 'capex_items', recordId: saved.id, action: 'create', before: null, after: persisted ?? saved, userId }, { manager: mg });
-    return persisted ?? saved;
+    await writeItemAnalyticsValues(mg, 'capex', tenantId, saved.id, analytics);
+    const persisted = (await repo.findOne({ where: { id: saved.id } })) ?? saved;
+    const analyticsValues = analytics.length > 0 ? await this.loadAnalytics(mg, { ...persisted, tenant_id: tenantId }) : [];
+    await this.audit.log({
+      table: 'capex_items', recordId: saved.id, action: 'create', before: null,
+      after: { ...persisted, ...itemAnalyticsAuditFields(analyticsValues) }, userId,
+    }, { manager: mg });
+    return this.withAnalyticsValues(persisted, analyticsValues);
   }
 
   /** `statusEmail: false` skips the owners' status-change email (the CSV import sends none, like OPEX's). */
   async update(id: string, body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; statusEmail?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexItem);
-    const existing = await this.get(id, { manager: mg });
+    const existing = await this.findItem(id, mg);
     const itemId = existing.id;
     const before = { ...existing };
+    const analyticsBefore = await this.loadAnalytics(mg, existing);
     // Writable columns only, every id resolved in this tenant, and the chart of
     // accounts checked on the resulting company and account; see `spend/item-write.util.ts`.
-    const { values, lifecycle: input } = await resolveItemWrite(mg, 'capex', body, existing);
+    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, 'capex', body, existing);
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     Object.assign(existing, values);
     const lifecycle = resolveLifecycleState({
@@ -358,8 +392,15 @@ export class CapexItemsService {
     // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
     existing.updated_at = new Date();
     const saved = await repo.save(existing);
+    // A change of analytics values alone is an edit too (updated_at above, the audit below).
+    await writeItemAnalyticsValues(mg, 'capex', existing.tenant_id, itemId, analytics);
     const persisted = await repo.findOne({ where: { id: itemId } });
-    await this.audit.log({ table: 'capex_items', recordId: saved.id, action: 'update', before, after: persisted ?? saved, userId }, { manager: mg });
+    const analyticsAfter = analytics.length > 0 ? await this.loadAnalytics(mg, existing) : analyticsBefore;
+    await this.audit.log({
+      table: 'capex_items', recordId: saved.id, action: 'update',
+      before: { ...before, ...itemAnalyticsAuditFields(analyticsBefore) },
+      after: { ...(persisted ?? saved), ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
+    }, { manager: mg });
 
     // Detect supplier change for contact sync
     const oldSupplierId = (before as any).supplier_id ?? null;
@@ -373,7 +414,7 @@ export class CapexItemsService {
       await this.notifyOwnersOfStatusChange(mg, after, before.status, userId);
     }
 
-    return after;
+    return this.withAnalyticsValues(after, analyticsAfter);
   }
 
   private async notifyOwnersOfStatusChange(mg: EntityManager, item: CapexItem, oldStatus: string, userId?: string) {
@@ -447,22 +488,24 @@ export class CapexItemsService {
 
   async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }): Promise<{ filename: string; content: string }> {
     const delimiter = ';';
-    const headers = this.csvHeaders();
     const chunks: string[] = [];
+    const mgExport = opts?.manager ?? this.repo.manager;
+    const tenantId = await summaryTenantId(mgExport);
     if (scope === 'template') {
-      const headerRow = headers.join(delimiter);
+      // analytics_category, then one analytics:<code> column per enabled dimension besides the default one.
+      const headerRow = (await loadCsvAnalyticsExport(mgExport, 'capex', tenantId, [])).headers(this.csvHeaders()).join(delimiter);
       return { filename: 'capex_template.csv', content: '\ufeff' + headerRow + '\n' };
     }
 
     // Data export: every item whatever its end of validity, read without the list paging,
     // with what is stored, as the OPEX item export writes it (a masked 0 would clear that year on re-import).
-    const mgExport = opts?.manager ?? this.repo.manager;
-    const tenantId = await summaryTenantId(mgExport);
     const Y = new Date().getFullYear();
     const items = await mgExport.getRepository(CapexItem).find({
       where: { tenant_id: tenantId } as any,
       order: { created_at: 'DESC', id: 'DESC' } as any,
     });
+    const analyticsColumns = await loadCsvAnalyticsExport(mgExport, 'capex', tenantId, items.map((it) => it.id));
+    const headers = analyticsColumns.headers(this.csvHeaders());
     const stored = await loadVersionTotals(SUMMARY_SCOPES.capex, this.summaryDeps(), mgExport, tenantId, items, [Y - 1, Y, Y + 1, Y + 2], { reporting: false });
     const storedTotals = (itemId: string, year: number): Record<string, number> => {
       const version = stored.versionsByItemYear.get(itemId)?.get(year);
@@ -479,9 +522,6 @@ export class CapexItemsService {
     const ownerIds = Array.from(new Set(items.flatMap((it: any) => [it.owner_it_id, it.owner_business_id]).filter(Boolean))) as string[];
     const owners = ownerIds.length > 0 ? await mgExport.getRepository(User).find({ where: { tenant_id: tenantId, id: In(ownerIds) } as any }) : [];
     const ownerEmailById = new Map(owners.map((u) => [u.id, u.email]));
-    const categoryIds = Array.from(new Set(items.map((it: any) => it.analytics_category_id).filter(Boolean))) as string[];
-    const categories = categoryIds.length > 0 ? await mgExport.getRepository(AnalyticsCategory).find({ where: { tenant_id: tenantId, id: In(categoryIds) } as any }) : [];
-    const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
     const costCenterCodeById = await loadCostCenterCodes(mgExport, tenantId, items.map((it) => it.cost_center_id));
 
     const { format } = await import('@fast-csv/format');
@@ -521,7 +561,7 @@ export class CapexItemsService {
           company_name: (it as any).paying_company_id ? (companiesById.get((it as any).paying_company_id) ?? '') : '',
           owner_it_email: (it as any).owner_it_id ? (ownerEmailById.get((it as any).owner_it_id) ?? '') : '',
           owner_business_email: (it as any).owner_business_id ? (ownerEmailById.get((it as any).owner_business_id) ?? '') : '',
-          analytics_category: (it as any).analytics_category_id ? (categoryNameById.get((it as any).analytics_category_id) ?? '') : '',
+          ...analyticsColumns.cells(it.id),
           cost_center_code: it.cost_center_id ? (costCenterCodeById.get(it.cost_center_id) ?? '') : '',
           run_build: it.run_build ?? '',
           y_minus1_budget: tMinus1.budget,
@@ -563,7 +603,8 @@ export class CapexItemsService {
         .on('headers', (headers: string[]) => {
           fileHeaders = headers;
           const missing = requiredHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h) && !LEGACY_CSV_HEADERS.includes(h));
+          // analytics:<code> columns are checked against the tenant's dimensions below.
+          const extras = headers.filter((h) => !expectedHeaders.includes(h) && !LEGACY_CSV_HEADERS.includes(h) && !isCsvAnalyticsHeader(h));
           headerOk = missing.length === 0 && extras.length === 0;
           if (!headerOk) errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
         })
@@ -576,8 +617,14 @@ export class CapexItemsService {
     const hasCostCenter = fileHeaders.includes('cost_center_code');
     const hasRunBuild = fileHeaders.includes('run_build');
 
-    // The tenant's allowed currencies, as the OPEX import checks them (none configured: any code).
     const tenantId = await this.resolveTenantId(mg);
+    // One column per dimension (analytics_category is the default one); an unknown or disabled one refuses the file.
+    const analyticsColumns = await readCsvAnalyticsColumns(mg, tenantId, fileHeaders, { create: !dryRun });
+    if (analyticsColumns.errors.length > 0) {
+      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors: analyticsColumns.errors.map((message) => ({ row: 0, message })) };
+    }
+
+    // The tenant's allowed currencies, as the OPEX import checks them (none configured: any code).
     const { settings: currencySettings } = await this.fxRates.resolveRates(tenantId, [], { manager: mg });
     const allowedCurrencies = new Set(
       (currencySettings.allowedCurrencies ?? []).map((c) => String(c || '').trim().toUpperCase()).filter((c) => c.length === 3),
@@ -641,7 +688,7 @@ export class CapexItemsService {
       paying_company_id: string | null;
       owner_it_id: string | null;
       owner_business_id: string | null;
-      analytics_category_name: string | null;
+      analytics: CsvAnalyticsCell[];
       cost_center: CsvCostCenter | null;
       run_build: 'run' | 'build' | null;
       totals: { [year: number]: { planned?: number; actual?: number; expected_landing?: number; committed?: number } };
@@ -703,7 +750,8 @@ export class CapexItemsService {
       const ownerBizEmail = (r['owner_business_email'] ?? '').toString().trim();
       const owner_it_id = await resolveOwner(ownerItEmail, 'Owner IT', line);
       const owner_business_id = await resolveOwner(ownerBizEmail, 'Owner business', line);
-      const analytics_category_name = ((r['analytics_category'] ?? '').toString().trim()) || null;
+      const { cells: analytics, errors: analyticsErrors } = readCsvAnalyticsCells(analyticsColumns.columns, r);
+      for (const message of analyticsErrors) errors.push({ row: line, message });
       const costCenterCode = hasCostCenter ? (r['cost_center_code'] ?? '').toString().trim() : '';
       let cost_center: CsvCostCenter | null = null;
       if (costCenterCode) {
@@ -770,7 +818,7 @@ export class CapexItemsService {
         paying_company_id,
         owner_it_id,
         owner_business_id,
-        analytics_category_name,
+        analytics,
         cost_center,
         run_build: run_build ?? null,
         totals,
@@ -791,15 +839,21 @@ export class CapexItemsService {
 
     let inserted = 0; let updated = 0;
     const existingByItem = new Map<typeof normalized[number], CapexItem | null>();
+    for (const item of unique) existingByItem.set(item, await findExisting(item));
+    // A disabled analytics value is accepted only as the line's current one.
+    const currentAnalytics = await loadItemAnalyticsValues(mg, 'capex', tenantId, unique
+      .filter((item) => csvAnalyticsNamesDisabled(item.analytics))
+      .map((item) => existingByItem.get(item)?.id ?? ''));
     for (const item of unique) {
-      const exists = await findExisting(item);
-      existingByItem.set(item, exists);
+      const exists = existingByItem.get(item) ?? null;
       if (item.item_number != null && !exists) {
         errors.push({ row: item.line, message: `item_number '${item.item_number}' does not match any CAPEX item` });
         continue;
       }
       const disabledCostCenter = item.cost_center ? csvCostCenterDisabledError(item.cost_center, exists?.cost_center_id) : null;
       if (disabledCostCenter) errors.push({ row: item.line, message: disabledCostCenter });
+      const disabledValues = csvAnalyticsDisabledErrors(item.analytics, exists ? currentAnalytics.get(exists.id) : undefined);
+      for (const message of disabledValues) errors.push({ row: item.line, message });
       // A new line needs its paying company (or a cost center, whose company it takes) and its
       // currency (an update keeps the stored ones).
       const hasCompany = !!item.paying_company_id || !!item.cost_center;
@@ -809,7 +863,7 @@ export class CapexItemsService {
       if (!exists && !item.currency) {
         errors.push({ row: item.line, message: 'currency is required' });
       }
-      if (disabledCostCenter || (!exists && (!hasCompany || !item.currency))) continue;
+      if (disabledCostCenter || disabledValues.length > 0 || (!exists && (!hasCompany || !item.currency))) continue;
       if (exists) updated += 1; else inserted += 1;
     }
     // The file has no account column: a company change keeps the stored account, which must
@@ -846,30 +900,12 @@ export class CapexItemsService {
       return item.cost_center && item.cost_center.id !== exists?.cost_center_id ? item.cost_center.id : null;
     }));
 
-    const categoryCache = new Map<string, AnalyticsCategory | null>();
-    const ensureCategory = async (name: string | null): Promise<AnalyticsCategory | null> => {
-      if (!name) return null;
-      const key = name.toLowerCase();
-      if (categoryCache.has(key)) return categoryCache.get(key) ?? null;
-      const repo = mg.getRepository(AnalyticsCategory);
-      let category = await repo.createQueryBuilder('cat')
-        .where('cat.tenant_id = :tenantId', { tenantId })
-        .andWhere('LOWER(cat.name) = LOWER(:name)', { name })
-        .getOne();
-      if (!category) {
-        category = repo.create({ name, status: StatusState.ENABLED });
-        category = await repo.save(category);
-        await this.audit.log({ table: 'analytics_categories', recordId: category.id, action: 'create', before: null, after: category, userId }, { manager: mg });
-      }
-      categoryCache.set(key, category ?? null);
-      return category ?? null;
-    };
-
     let processed = 0;
     const checkedFreeze = new Set<string>();
     for (const item of unique) {
       const exists = await findExisting(item);
-      const analyticsCategory = await ensureCategory(item.analytics_category_name);
+      // A value the dimension does not have yet is created in it (enabled, audited).
+      const analyticsValues = await csvAnalyticsBodyValues(mg, tenantId, item.analytics, this.audit, userId);
       const payload = {
         description: item.description,
         ppe_type: item.ppe_type as any,
@@ -884,7 +920,7 @@ export class CapexItemsService {
         ...(item.paying_company_id ? { paying_company_id: item.paying_company_id } : {}),
         owner_it_id: item.owner_it_id,
         owner_business_id: item.owner_business_id,
-        analytics_category_id: analyticsCategory ? analyticsCategory.id : null,
+        ...(analyticsValues ? { analytics_values: analyticsValues } : {}),
         ...(hasCostCenter ? { cost_center_id: item.cost_center?.id ?? null } : {}),
         ...(hasRunBuild ? { run_build: item.run_build } : {}),
       };
@@ -1024,7 +1060,7 @@ export class CapexItemsService {
   // Projects
   async listProjects(capexItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const capex = await this.get(capexItemId, { manager: mg }); // ensure item exists
+    const capex = await this.findItem(capexItemId, mg); // ensure item exists
     const itemId = capex.id;
     const rows = await mg.query(
       `SELECT l.project_id as id, p.name
@@ -1039,7 +1075,7 @@ export class CapexItemsService {
 
   async bulkReplaceProjects(capexItemId: string, projectIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const capex = await this.get(capexItemId, { manager: mg });
+    const capex = await this.findItem(capexItemId, mg);
     const itemId = capex.id;
     const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
     if (cleanIds.length) {
@@ -1062,14 +1098,14 @@ export class CapexItemsService {
   /** Applications linked to the line; see `spend/item-applications.ts`. */
   async listApplications(capexItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const capex = await this.get(capexItemId, { manager: mg });
+    const capex = await this.findItem(capexItemId, mg);
     return listItemApplications(mg, 'capex', capex);
   }
 
   /** Replace the line's applications (audited when the set changes); see `spend/item-applications.ts`. */
   async bulkReplaceApplications(capexItemId: string, applicationIds: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const capex = await this.get(capexItemId, { manager: mg });
+    const capex = await this.findItem(capexItemId, mg);
     return replaceItemApplications({ manager: mg, audit: this.audit }, 'capex', capex, applicationIds, userId ?? null);
   }
 }

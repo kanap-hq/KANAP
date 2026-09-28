@@ -108,7 +108,7 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
       ai: 'analytics_category',
       grid: 'analytics_category_name',
       type: 'set',
-      description: 'Analytics category.',
+      description: 'Value of the line on the default analytics dimension. Other dimensions, when the tenant has any, are the analytics:<code> fields.',
       dynamic: true,
       discoverable: true,
       sortable: true,
@@ -288,9 +288,14 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
         expression: `COALESCE(NULLIF(TRIM(CONCAT(u_biz.first_name, ' ', u_biz.last_name)), ''), u_biz.email)`,
         joins: ['LEFT JOIN users u_biz ON u_biz.id = ci.owner_business_id AND u_biz.tenant_id = ci.tenant_id'],
       },
+      // The default dimension through its link (the legacy item column is no longer written).
       analytics_category: {
         expression: 'ac.name',
-        joins: ['LEFT JOIN analytics_categories ac ON ac.id = ci.analytics_category_id AND ac.tenant_id = ci.tenant_id'],
+        joins: [
+          `LEFT JOIN analytics_axes ax_def ON ax_def.tenant_id = ci.tenant_id AND ax_def.is_default`,
+          `LEFT JOIN capex_item_analytics_values av_def ON av_def.tenant_id = ci.tenant_id AND av_def.item_id = ci.id AND av_def.axis_id = ax_def.id`,
+          `LEFT JOIN analytics_categories ac ON ac.id = av_def.category_id AND ac.tenant_id = av_def.tenant_id`,
+        ],
       },
       cost_center: {
         expression: `CASE WHEN cc.id IS NULL THEN NULL ELSE CONCAT(cc.code, ' · ', cc.name) END`,

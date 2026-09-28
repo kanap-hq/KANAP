@@ -74,22 +74,34 @@ async function testDescribeEntityFiltersCarriesColumns() {
   const registry = new (AiToolRegistry as any)(...args);
   const describe = (registry as any).definitions.get('describe_entity_filters');
   const queries: unknown[][] = [];
+  const axisQueries: unknown[][] = [];
+  const nature = { id: '00000000-0000-4000-8000-000000000002', code: 'nature', name: 'Nature', is_default: false, status: 'enabled', disabled_at: null, sort_order: 1 };
   const context = {
     tenantId: 'tenant-1',
     userId: 'user-1',
-    manager: { query: async (...params: unknown[]) => { queries.push(params); return [{ value: { labels: { committed: 'A1' } } }]; } },
+    manager: {
+      query: async (...params: unknown[]) => {
+        // The tenant's analytics dimensions (the registry is resolved per tenant), then the budget column settings.
+        if (/analytics_axes/.test(String(params[0]))) { axisQueries.push(params); return [nature]; }
+        queries.push(params);
+        return [{ value: { labels: { committed: 'A1' } } }];
+      },
+    },
   };
 
   for (const entityType of ['spend_items', 'capex_items']) {
     const result = await describe.execute(context, { entity_type: entityType });
     assert.ok(result.fields.some((field: any) => field.field === 'y_plus1_review'), `${entityType}: fields kept`);
+    assert.ok(result.fields.some((field: any) => field.field === 'analytics:nature' && field.groupable), `${entityType}: the tenant's dimension listed`);
     assert.deepEqual(result.budget_columns[1], { column: 2, ai_field_suffix: 'review', measure: 'committed', name: 'A1', shown: true, default: false });
     assert.equal(result.budget_columns.length, 5);
   }
   assert.deepEqual(queries.map((q) => q[1]), [['tenant-1'], ['tenant-1']], 'settings read for the context tenant');
+  assert.deepEqual(axisQueries.map((q) => q[1]), [['tenant-1'], ['tenant-1']], 'dimensions read for the context tenant');
   const tasks = await describe.execute(context, { entity_type: 'tasks' });
   assert.equal(tasks.budget_columns, undefined, 'other entity types carry no columns');
   assert.equal(queries.length, 2);
+  assert.equal(axisQueries.length, 2, 'no dimension read for other entity types');
   assert.deepEqual(checked, ['spend_items', 'capex_items', 'tasks'], 'read access checked first');
 }
 

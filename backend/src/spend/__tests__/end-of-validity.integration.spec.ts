@@ -35,11 +35,11 @@ const PRE_L_HEADERS: Record<Kind, string[]> = {
 
 function csvImporter(kind: Kind): any {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 11 }, () => undefined);
-    args[7] = noAudit;
-    args[8] = noFreeze;
-    args[9] = { getSettings: async () => ({ allowedCurrencies: null }) };
-    args[10] = new ItemNumberService();
+    const args: any[] = Array.from({ length: 10 }, () => undefined);
+    args[6] = noAudit;
+    args[7] = noFreeze;
+    args[8] = { getSettings: async () => ({ allowedCurrencies: null }) };
+    args[9] = new ItemNumberService();
     return new (SpendItemsCsvService as any)(...args);
   }
   return itemService('capex');
@@ -54,13 +54,13 @@ const noAllocations = { computeForVersions: async () => new Map() };
 
 function itemService(kind: Kind): any {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 13 }, () => undefined);
-    args[4] = noAudit;
-    args[5] = noAllocations;
-    args[8] = identityFx;
-    args[10] = { syncFromSupplier: async () => undefined };
-    args[11] = { notifyStatusChange: () => undefined };
-    args[12] = new ItemNumberService();
+    const args: any[] = Array.from({ length: 12 }, () => undefined);
+    args[3] = noAudit;
+    args[4] = noAllocations;
+    args[7] = identityFx;
+    args[9] = { syncFromSupplier: async () => undefined };
+    args[10] = { notifyStatusChange: () => undefined };
+    args[11] = new ItemNumberService();
     return new (SpendItemsService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);

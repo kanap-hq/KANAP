@@ -9,6 +9,10 @@ export class AnalyticsCategory {
   @Column('uuid', { default: () => 'app_current_tenant()' })
   tenant_id!: string;
 
+  /** The dimension this value belongs to; set on create, never changed. */
+  @Column('uuid')
+  axis_id!: string;
+
   @Column('text')
   name!: string;
 

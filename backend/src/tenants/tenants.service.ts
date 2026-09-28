@@ -10,6 +10,7 @@ import { isReservedTenantSlug, normalizeTenantSlug } from './tenant-slug-policy'
 import { DEFAULT_TASK_TYPES } from '../portfolio/portfolio-task-type.entity';
 import { DEFAULT_EMPLOYMENT_TYPES } from '../portfolio/portfolio-employment-type.entity';
 import { seedManagedDocsKnowledgeAssets } from '../knowledge/integrated-document-seed';
+import { ensureDefaultAnalyticsAxis } from '../analytics/analytics-axes.util';
 
 // Built-in roles configuration for newly created tenants.
 const BUILT_IN_ROLES: Array<{
@@ -299,6 +300,7 @@ export class TenantsService {
     const existing = await repo.findOne({ where: { slug, deleted_at: IsNull() } });
     if (existing) {
       await this.ensureSystemRoles(manager, existing.id);
+      await ensureDefaultAnalyticsAxis(manager, existing.id);
       await this.seedDefaultTaskTypes(manager, existing.id);
       await this.seedDefaultEmploymentTypes(manager, existing.id);
       await this.seedDefaultDocumentLibraries(manager, existing.id);
@@ -307,6 +309,7 @@ export class TenantsService {
     const tenant = repo.create({ slug, name: params.name, status: TenantStatus.ACTIVE, metadata: { it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG) } });
     const saved = await repo.save(tenant);
     await this.ensureSystemRoles(manager, saved.id);
+    await ensureDefaultAnalyticsAxis(manager, saved.id);
     await this.seedDefaultTaskTypes(manager, saved.id);
     await this.seedDefaultEmploymentTypes(manager, saved.id);
     await this.seedDefaultDocumentLibraries(manager, saved.id);

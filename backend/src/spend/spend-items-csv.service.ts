@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
@@ -10,7 +10,19 @@ import { SpendAmount } from './spend-amount.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { Account } from '../accounts/account.entity';
 import { Company } from '../companies/company.entity';
-import { AnalyticsCategory } from '../analytics/analytics-category.entity';
+import {
+  csvAnalyticsBodyValues,
+  CsvAnalyticsCell,
+  csvAnalyticsDisabledErrors,
+  csvAnalyticsNamesDisabled,
+  isCsvAnalyticsHeader,
+  itemAnalyticsAuditFields,
+  loadCsvAnalyticsExport,
+  loadItemAnalyticsValues,
+  readCsvAnalyticsCells,
+  readCsvAnalyticsColumns,
+  writeItemAnalyticsValues,
+} from './item-analytics.util';
 import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
@@ -49,13 +61,19 @@ export class SpendItemsCsvService {
     @InjectRepository(SpendAmount) private readonly amounts: Repository<SpendAmount>,
     @InjectRepository(Supplier) private readonly suppliers: Repository<Supplier>,
     @InjectRepository(Account) private readonly accounts: Repository<Account>,
-    @InjectRepository(AnalyticsCategory) private readonly analyticsCategories: Repository<AnalyticsCategory>,
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly audit: AuditService,
     private readonly freeze: FreezeService,
     private readonly currencySettings: CurrencySettingsService,
     private readonly itemNumbers: ItemNumberService,
   ) {}
+
+  private async currentTenantId(mg: EntityManager): Promise<string> {
+    const [row] = await mg.query(`SELECT current_setting('app.current_tenant', true) AS tenant_id`);
+    const tenantId = row?.tenant_id as string | null | undefined;
+    if (!tenantId) throw new BadRequestException('Tenant context is required');
+    return tenantId;
+  }
 
   private csvHeaders(): string[] {
     return [
@@ -87,18 +105,23 @@ export class SpendItemsCsvService {
 
   async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }): Promise<{ filename: string; content: string }> {
     const mg = opts?.manager ?? this.spendItems.manager;
-    const headers = this.csvHeaders();
+    const tenantId = await this.currentTenantId(mg);
     const delimiter = ';';
     const chunks: string[] = [];
     if (scope === 'template') {
+      // analytics_category, then one analytics:<code> column per enabled dimension besides the default one.
+      const headers = (await loadCsvAnalyticsExport(mg, 'opex', tenantId, [])).headers(this.csvHeaders());
       return { filename: 'opex_template.csv', content: '\ufeff' + headers.join(delimiter) + '\n' };
     }
     const now = new Date();
     const Y = now.getFullYear();
-    const items = await mg.getRepository(SpendItem).find({ order: { created_at: 'DESC' as any } });
+    // Every read of the export carries the tenant predicate besides row level security.
+    const items = await mg.getRepository(SpendItem).find({ where: { tenant_id: tenantId } as any, order: { created_at: 'DESC' as any } });
     const itemIds = items.map((i) => i.id);
+    const analyticsColumns = await loadCsvAnalyticsExport(mg, 'opex', tenantId, itemIds);
+    const headers = analyticsColumns.headers(this.csvHeaders());
     const years = [Y - 1, Y, Y + 1];
-    const versions = await mg.getRepository(SpendVersion).find({ where: { spend_item_id: In(itemIds) as any, budget_year: In(years) as any } as any });
+    const versions = await mg.getRepository(SpendVersion).find({ where: { tenant_id: tenantId, spend_item_id: In(itemIds) as any, budget_year: In(years) as any } as any });
     const versionsByItemYear = new Map<string, Map<number, SpendVersion>>();
     const versionsById = new Map<string, SpendVersion>();
     for (const v of versions) {
@@ -108,7 +131,7 @@ export class SpendItemsCsvService {
       m.set((v as any).budget_year as number, v);
     }
     const versionIds = versions.map((v) => v.id);
-    const allAmounts = versionIds.length ? await mg.getRepository(SpendAmount).find({ where: { version_id: In(versionIds) as any } as any }) : [];
+    const allAmounts = versionIds.length ? await mg.getRepository(SpendAmount).find({ where: { tenant_id: tenantId, version_id: In(versionIds) as any } as any }) : [];
     const zeroTotals = () => ({ planned: 0n, actual: 0n, expected_landing: 0n, committed: 0n });
     const sums: Record<string, ReturnType<typeof zeroTotals>> = {};
     for (const a of allAmounts) {
@@ -122,20 +145,17 @@ export class SpendItemsCsvService {
     const supplierIds = Array.from(new Set(items.map((i) => (i as any).supplier_id).filter(Boolean)));
     const accountIds = Array.from(new Set(items.map((i) => (i as any).account_id).filter(Boolean)));
     const companyIds = Array.from(new Set(items.map((i) => (i as any).paying_company_id).filter(Boolean)));
-    const suppliers = supplierIds.length ? await mg.getRepository(Supplier).find({ where: { id: In(supplierIds) as any } as any }) : [];
-    const accounts = accountIds.length ? await mg.getRepository(Account).find({ where: { id: In(accountIds) as any } as any }) : [];
-    const companies = companyIds.length ? await mg.getRepository(Company).find({ where: { id: In(companyIds) as any } as any }) : [];
-    const categoryIds = Array.from(new Set(items.map((i) => (i as any).analytics_category_id).filter(Boolean)));
-    const categories = categoryIds.length ? await mg.getRepository(AnalyticsCategory).find({ where: { id: In(categoryIds) as any } as any }) : [];
+    const suppliers = supplierIds.length ? await mg.getRepository(Supplier).find({ where: { tenant_id: tenantId, id: In(supplierIds) as any } as any }) : [];
+    const accounts = accountIds.length ? await mg.getRepository(Account).find({ where: { tenant_id: tenantId, id: In(accountIds) as any } as any }) : [];
+    const companies = companyIds.length ? await mg.getRepository(Company).find({ where: { tenant_id: tenantId, id: In(companyIds) as any } as any }) : [];
     const ownerIds = Array.from(new Set(items.flatMap((it: any) => [it.owner_it_id, it.owner_business_id]).filter(Boolean))) as string[];
-    const owners = ownerIds.length ? await mg.getRepository(User).find({ where: { id: In(ownerIds) as any } as any }) : [];
+    const owners = ownerIds.length ? await mg.getRepository(User).find({ where: { tenant_id: tenantId, id: In(ownerIds) as any } as any }) : [];
     const supplierById = new Map(suppliers.map((s) => [s.id, s]));
     const accountById = new Map(accounts.map((a) => [a.id, a]));
     const companyById = new Map(companies.map((c) => [c.id, c]));
-    const categoryById = new Map(categories.map((c) => [c.id, c]));
     const ownerById = new Map(owners.map((u) => [u.id, u]));
     const costCenterCodeById = items.some((it) => it.cost_center_id)
-      ? await loadCostCenterCodes(mg, items[0].tenant_id, items.map((it) => it.cost_center_id))
+      ? await loadCostCenterCodes(mg, tenantId, items.map((it) => it.cost_center_id))
       : new Map<string, string>();
 
     function getTotals(v?: SpendVersion) {
@@ -162,8 +182,6 @@ export class SpendItemsCsvService {
         const supplier = (it as any).supplier_id ? supplierById.get((it as any).supplier_id) : undefined;
         const company = (it as any).paying_company_id ? companyById.get((it as any).paying_company_id) : undefined;
         const account = (it as any).account_id ? accountById.get((it as any).account_id) : undefined;
-        const analyticsCategoryId = (it as any).analytics_category_id as string | null;
-        const analyticsCategory = analyticsCategoryId ? categoryById.get(analyticsCategoryId) : undefined;
         const ownerIt = (it as any).owner_it_id ? ownerById.get((it as any).owner_it_id) : undefined;
         const ownerBiz = (it as any).owner_business_id ? ownerById.get((it as any).owner_business_id) : undefined;
 
@@ -179,7 +197,7 @@ export class SpendItemsCsvService {
           disabled_at: (it as any).disabled_at ? new Date((it as any).disabled_at).toISOString() : '',
           owner_it_email: ownerIt ? (ownerIt as any).email ?? '' : '',
           owner_business_email: ownerBiz ? (ownerBiz as any).email ?? '' : '',
-          analytics_category: analyticsCategory ? analyticsCategory.name : '',
+          ...analyticsColumns.cells(it.id),
           cost_center_code: it.cost_center_id ? (costCenterCodeById.get(it.cost_center_id) ?? '') : '',
           run_build: it.run_build ?? '',
           notes: (it as any).notes ?? '',
@@ -232,7 +250,8 @@ export class SpendItemsCsvService {
         .on('headers', (headers: string[]) => {
           fileHeaders = headers;
           const missing = requiredHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h) && !LEGACY_CSV_HEADERS.includes(h));
+          // analytics:<code> columns are checked against the tenant's dimensions below.
+          const extras = headers.filter((h) => !expectedHeaders.includes(h) && !LEGACY_CSV_HEADERS.includes(h) && !isCsvAnalyticsHeader(h));
           headerOk = missing.length === 0 && extras.length === 0;
           if (!headerOk) errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
         })
@@ -244,6 +263,13 @@ export class SpendItemsCsvService {
     // Absent optional columns leave the stored values as they are.
     const hasCostCenter = fileHeaders.includes('cost_center_code');
     const hasRunBuild = fileHeaders.includes('run_build');
+    // One column per dimension (analytics_category is the default one); an unknown or disabled one refuses the file.
+    const analyticsColumns = tenantId
+      ? await readCsvAnalyticsColumns(mg, tenantId, fileHeaders, { create: !dryRun })
+      : { columns: [], errors: [] };
+    if (analyticsColumns.errors.length > 0) {
+      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors: analyticsColumns.errors.map((message) => ({ row: 0, message })), allowedCurrencies: Array.from(allowedSet) };
+    }
 
     // A supplier name matches on the trimmed name; names are unique only case-sensitively,
     // so the exact name wins and a case-insensitive match is used only when there is none
@@ -298,24 +324,6 @@ export class SpendItemsCsvService {
       if (value === undefined) errors.push({ row: line, message: csvDateError(field) });
       return value ?? null;
     };
-    const categoryRepo = mg.getRepository(AnalyticsCategory);
-    const categoryCache = new Map<string, AnalyticsCategory | null>();
-    const ensureCategory = async (name: string | null, allowCreate: boolean): Promise<AnalyticsCategory | null> => {
-      if (!name) return null;
-      const key = name.toLowerCase();
-      if (categoryCache.has(key)) return categoryCache.get(key) ?? null;
-      let category = await categoryRepo.createQueryBuilder('cat')
-        .where('cat.tenant_id = :tenantId', { tenantId })
-        .andWhere('LOWER(cat.name) = LOWER(:name)', { name })
-        .getOne();
-      if (!category && allowCreate) {
-        category = categoryRepo.create({ name, status: StatusState.ENABLED });
-        category = await categoryRepo.save(category);
-        await this.audit.log({ table: 'analytics_categories', recordId: category.id, action: 'create', before: null, after: category, userId }, { manager: mg });
-      }
-      categoryCache.set(key, category ?? null);
-      return category ?? null;
-    };
     const userRepo = mg.getRepository(User);
     const userCache = new Map<string, User | null>();
     const findUserByEmail = async (email: string): Promise<User | null> => {
@@ -364,7 +372,7 @@ export class SpendItemsCsvService {
       disabled_at: string | null;
       notes: string | null;
       totals: { [year: number]: { planned?: number; actual?: number; expected_landing?: number; committed?: number } };
-      analytics_category_name: string | null;
+      analytics: CsvAnalyticsCell[];
       owner_it_id: string | null;
       owner_business_id: string | null;
       cost_center: CsvCostCenter | null;
@@ -472,7 +480,8 @@ export class SpendItemsCsvService {
       }
       const ownerItEmailRaw = (r['owner_it_email'] ?? '').toString().trim();
       const ownerBizEmailRaw = (r['owner_business_email'] ?? '').toString().trim();
-      const analyticsCategoryName = ((r['analytics_category'] ?? '').toString().trim()) || null;
+      const { cells: analytics, errors: analyticsErrors } = readCsvAnalyticsCells(analyticsColumns.columns, r);
+      for (const message of analyticsErrors) errors.push({ row: line, message });
       const notes = ((r['notes'] ?? '').toString().trim()) || null;
       if (!product_name) errors.push({ row: line, message: 'product_name is required' });
       if (currency && currency.length !== 3) errors.push({ row: line, message: 'currency must be 3 letters' });
@@ -520,7 +529,7 @@ export class SpendItemsCsvService {
         effective_start,
         status,
         disabled_at,
-        analytics_category_name: analyticsCategoryName,
+        analytics,
         owner_it_id,
         owner_business_id,
         cost_center,
@@ -540,13 +549,26 @@ export class SpendItemsCsvService {
     const existingByItem = new Map<typeof normalized[number], SpendItem | null>();
     let inserted = 0; let updated = 0;
     for (const item of unique) {
-      const exists = await mg.getRepository(SpendItem).findOne({
+      existingByItem.set(item, await mg.getRepository(SpendItem).findOne({
         where: { tenant_id: tenantId ?? undefined, product_name: item.product_name, supplier_id: item.supplier_id ?? IsNull() },
-      });
-      existingByItem.set(item, exists);
+      }));
+    }
+    // A disabled analytics value is accepted only as the line's current one.
+    const currentAnalytics = tenantId
+      ? await loadItemAnalyticsValues(mg, 'opex', tenantId, unique
+        .filter((item) => csvAnalyticsNamesDisabled(item.analytics))
+        .map((item) => existingByItem.get(item)?.id ?? ''))
+      : new Map();
+    for (const item of unique) {
+      const exists = existingByItem.get(item) ?? null;
       const disabledCostCenter = item.cost_center ? csvCostCenterDisabledError(item.cost_center, exists?.cost_center_id) : null;
       if (disabledCostCenter) {
         errors.push({ row: item.line, message: disabledCostCenter });
+        continue;
+      }
+      const disabledValues = csvAnalyticsDisabledErrors(item.analytics, exists ? currentAnalytics.get(exists.id) : undefined);
+      if (disabledValues.length > 0) {
+        for (const message of disabledValues) errors.push({ row: item.line, message });
         continue;
       }
       // A new line needs its currency; on an update a blank cell keeps the stored one.
@@ -572,7 +594,8 @@ export class SpendItemsCsvService {
     const checkedFreeze = new Set<string>();
     for (const item of unique) {
       const exists = existingByItem.get(item) ?? null;
-      const analyticsCategory = await ensureCategory(item.analytics_category_name ?? null, true);
+      // A value the dimension does not have yet is created in it (enabled, audited).
+      const analyticsValues = await csvAnalyticsBodyValues(mg, tenantId, item.analytics, this.audit, userId);
       const body = {
         product_name: item.product_name,
         description: item.description ?? null,
@@ -583,7 +606,7 @@ export class SpendItemsCsvService {
         ...(item.effective_start ? { effective_start: item.effective_start } : exists ? {} : { effective_start: defaultStart }),
         status: item.status,
         disabled_at: item.disabled_at,
-        analytics_category_id: analyticsCategory ? analyticsCategory.id : null,
+        ...(analyticsValues ? { analytics_values: analyticsValues } : {}),
         owner_it_id: item.owner_it_id,
         owner_business_id: item.owner_business_id,
         ...(hasCostCenter ? { cost_center_id: item.cost_center?.id ?? null } : {}),
@@ -651,7 +674,7 @@ export class SpendItemsCsvService {
   /** The CSV's own writes go through the same gate as the API (`item-write.util.ts`). */
   private async createSpendItem({ manager, body, userId, tenantId }: { manager: EntityManager; body: SpendItemUpsertDto; userId?: string | null; tenantId: string }) {
     const repo = manager.getRepository(SpendItem);
-    const { values, lifecycle: input } = await resolveItemWrite(manager, 'opex', body, null);
+    const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, 'opex', body, null);
     const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: input.disabled_at });
     // One OPX number per actual insert. Dry-run and skipped/invalid rows never reach here.
     const item_number = await this.itemNumbers.nextItemNumber('spend', tenantId, manager);
@@ -669,14 +692,20 @@ export class SpendItemsCsvService {
       disabled_at: lifecycle.disabled_at,
     });
     const saved = await repo.save(entity);
-    await this.audit.log({ table: 'spend_items', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager });
+    await writeItemAnalyticsValues(manager, 'opex', tenantId, saved.id, analytics);
+    const analyticsAfter = analytics.length > 0 ? (await loadItemAnalyticsValues(manager, 'opex', tenantId, [saved.id])).get(saved.id) ?? [] : [];
+    await this.audit.log({
+      table: 'spend_items', recordId: saved.id, action: 'create', before: null,
+      after: { ...saved, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
+    }, { manager });
     return saved;
   }
 
   private async updateSpendItem({ manager, existing, body, userId }: { manager: EntityManager; existing: SpendItem; body: SpendItemUpsertDto; userId?: string | null }) {
     const repo = manager.getRepository(SpendItem);
     const before = { ...existing };
-    const { values, lifecycle: input } = await resolveItemWrite(manager, 'opex', body, existing);
+    const analyticsBefore = (await loadItemAnalyticsValues(manager, 'opex', existing.tenant_id, [existing.id])).get(existing.id) ?? [];
+    const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, 'opex', body, existing);
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: existing.disabled_at,
       nextStatus: input.status,
@@ -687,7 +716,15 @@ export class SpendItemsCsvService {
     existing.disabled_at = lifecycle.disabled_at;
     existing.updated_at = new Date();
     const saved = await repo.save(existing);
-    await this.audit.log({ table: 'spend_items', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager });
+    await writeItemAnalyticsValues(manager, 'opex', existing.tenant_id, saved.id, analytics);
+    const analyticsAfter = analytics.length > 0
+      ? (await loadItemAnalyticsValues(manager, 'opex', existing.tenant_id, [saved.id])).get(saved.id) ?? []
+      : analyticsBefore;
+    await this.audit.log({
+      table: 'spend_items', recordId: saved.id, action: 'update',
+      before: { ...before, ...itemAnalyticsAuditFields(analyticsBefore) },
+      after: { ...saved, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
+    }, { manager });
     return saved;
   }
 }

@@ -93,6 +93,7 @@ TENANT_TABLES=(
   ai_conversations
   ai_messages
   ai_settings
+  analytics_axes
   analytics_categories
   app_asset_assignments
   app_instances
@@ -128,6 +129,7 @@ TENANT_TABLES=(
   capex_allocations
   capex_amounts
   capex_attachments
+  capex_item_analytics_values
   capex_item_contacts
   capex_items
   capex_links
@@ -231,6 +233,7 @@ TENANT_TABLES=(
   spend_allocations
   spend_amounts
   spend_attachments
+  spend_item_analytics_values
   spend_item_contacts
   spend_items
   spend_links
