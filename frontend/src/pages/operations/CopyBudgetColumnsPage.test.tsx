@@ -14,10 +14,12 @@ vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 // The grid lists its rows with the flag the page computed for each.
 vi.mock('ag-grid-react', () => ({
-  AgGridReact: ({ rowData }: { rowData: Array<{ id: string; product_name: string; willBeSkipped?: boolean; previewValue?: number }> }) => (
+  AgGridReact: ({ rowData }: { rowData: Array<{ id: string; product_name: string; willBeSkipped?: boolean; prorated?: boolean; previewValue?: number }> }) => (
     <ul>
       {rowData.map((r) => (
-        <li key={r.id} data-preview={r.previewValue ?? ''}>{`${r.product_name}${r.willBeSkipped ? ' (skipped)' : ''}`}</li>
+        <li key={r.id} data-preview={r.previewValue ?? ''} data-prorated={r.prorated ? 'true' : undefined}>
+          {`${r.product_name}${r.willBeSkipped ? ' (skipped)' : ''}`}
+        </li>
       ))}
     </ul>
   ),
@@ -78,7 +80,7 @@ vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
 });
 
 import api from '../../api';
-import CopyBudgetColumnsPage from './CopyBudgetColumnsPage';
+import CopyBudgetColumnsPage, { ItemNameCell } from './CopyBudgetColumnsPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
@@ -194,6 +196,34 @@ describe('CopyBudgetColumnsPage', () => {
     const hosting = await screen.findByText('Hosting (skipped)');
     expect(hosting).toHaveAttribute('data-preview', '700');
     expect(screen.getByText('Licences')).toHaveAttribute('data-preview', '12000');
+  });
+
+  it('a row the dry run prorates carries the flag to its item cell', async () => {
+    post.mockResolvedValueOnce({ data: {
+      success: true, dryRun: true, summary: { totalItems: 1, processed: 1, skipped: 0, errors: 0 },
+      results: [{ itemId: 'Licences-1', itemName: 'Licences', sourceValue: 12000, currentDestinationValue: 0, newValue: 6000, skipped: false, prorated: true }],
+    } });
+    renderPage();
+    expect(screen.getByText('Licences')).not.toHaveAttribute('data-prorated');
+    fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
+    await waitFor(() => expect(screen.getByText('Licences')).toHaveAttribute('data-prorated', 'true'));
+    expect(screen.getByText('Licences')).toHaveAttribute('data-preview', '6000');
+  });
+
+  it('the item cell says Prorated, explains it on hover, and says Skipped instead on a skipped row', async () => {
+    const cell = (props: { skipped?: boolean; prorated?: boolean }) => render(
+      <ThemeProvider theme={createAppTheme('light')}><ItemNameCell name="Licences" year={2027} {...props} /></ThemeProvider>,
+    );
+    const { unmount } = cell({ prorated: true });
+    const mark = screen.getByText('operations.copyBudgetColumns.prorated');
+    expect(screen.queryByText('operations.copyBudgetColumns.skipped')).not.toBeInTheDocument();
+    fireEvent.mouseOver(mark);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('operations.copyBudgetColumns.proratedHelp');
+    unmount();
+
+    cell({ skipped: true, prorated: true });
+    expect(screen.getByText('operations.copyBudgetColumns.skipped')).toBeInTheDocument();
+    expect(screen.queryByText('operations.copyBudgetColumns.prorated')).not.toBeInTheDocument();
   });
 
   it('copies from the default column of Y to the default column of Y+1', async () => {

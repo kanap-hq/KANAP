@@ -10,6 +10,7 @@ import {
   Switch,
   FormControlLabel,
   Alert,
+  Tooltip,
   useTheme,
 } from '@mui/material';
 import { AgGridReact } from 'ag-grid-react';
@@ -38,10 +39,29 @@ type ProcessedRow = {
   destinationValue: number;
   previewValue?: number;
   willBeSkipped?: boolean;
+  /** The item is valid for part of the destination year: only those months are copied. */
+  prorated?: boolean;
   /** Present once the dry run has answered for this item. */
   inPreview?: boolean;
 };
 
+const noteSx = { fontSize: 12, color: 'kanap.text.tertiary' } as const;
+
+/** The item name, with what the dry run says about it: skipped, or prorated to its validity. */
+export function ItemNameCell({ name, skipped, prorated, year }: { name: string; skipped?: boolean; prorated?: boolean; year: number }) {
+  const { t } = useTranslation(['ops']);
+  return (
+    <Box component="span" sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+      <span>{name}</span>
+      {skipped && <Box component="span" sx={noteSx}>{t('operations.copyBudgetColumns.skipped')}</Box>}
+      {!skipped && prorated && (
+        <Tooltip title={t('operations.copyBudgetColumns.proratedHelp', { year })}>
+          <Box component="span" sx={noteSx}>{t('operations.copyBudgetColumns.prorated')}</Box>
+        </Tooltip>
+      )}
+    </Box>
+  );
+}
 
 
 export default function CopyBudgetColumnsPage() {
@@ -147,6 +167,7 @@ export default function CopyBudgetColumnsPage() {
           destinationValue: matchingRow?.destinationValue || apiRow.currentDestinationValue, // Use frontend value
           previewValue: apiRow.newValue,
           willBeSkipped,
+          prorated: apiRow.prorated,
         };
       });
 
@@ -198,14 +219,12 @@ export default function CopyBudgetColumnsPage() {
         flex: 1,
         minWidth: 220,
         cellRenderer: (params: any) => (
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span>{params.value}</span>
-            {showPreview && params.data?.willBeSkipped && (
-              <span style={{ fontSize: 12, color: theme.palette.kanap.text.tertiary }}>
-                {t('operations.copyBudgetColumns.skipped')}
-              </span>
-            )}
-          </div>
+          <ItemNameCell
+            name={params.value}
+            skipped={showPreview && params.data?.willBeSkipped}
+            prorated={showPreview && params.data?.prorated}
+            year={destinationYear}
+          />
         ),
       },
       {
@@ -252,7 +271,7 @@ export default function CopyBudgetColumnsPage() {
     // Create a map of preview data by id for quick lookup
     const previewMap = new Map(previewData.map(p => [p.id, p]));
 
-    // The dry run answers only for enabled items with a source version; any
+    // The dry run answers only for items valid in the destination year; any
     // other item is left alone by the copy, so it shows as skipped and keeps
     // its current destination value.
     return processedData.map((row: ProcessedRow) => {
@@ -261,6 +280,7 @@ export default function CopyBudgetColumnsPage() {
         ...row,
         previewValue: preview ? preview.previewValue : row.destinationValue,
         willBeSkipped: preview ? preview.willBeSkipped : true,
+        prorated: preview?.prorated,
         inPreview: !!preview,
       };
     });

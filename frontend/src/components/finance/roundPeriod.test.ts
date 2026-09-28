@@ -8,6 +8,7 @@ import {
   centsToDecimal,
   chipText,
   columnLabel,
+  columnPeriod,
   formatUplift,
   joinList,
   periodForEdit,
@@ -97,14 +98,42 @@ describe('suggestedPeriod', () => {
   });
 });
 
-describe('periodForEdit', () => {
+describe('columnPeriod', () => {
   const suggestion = { start: '2026-04-01', end: '2026-12-31' };
   it('prefers the stored period, then the whole year for existing amounts, then the suggestion', () => {
+    expect(columnPeriod(2026, record({ period_start: '2026-01-01', period_end: '2026-12-31' }), true, suggestion))
+      .toEqual({ start: '2026-01-01', end: '2026-12-31' });
+    expect(columnPeriod(2026, undefined, true, suggestion)).toEqual({ start: '2026-01-01', end: '2026-12-31' });
+    expect(columnPeriod(2026, undefined, false, suggestion)).toEqual(suggestion);
+    expect(columnPeriod(2026, undefined, false, null)).toBeNull();
+  });
+});
+
+describe('periodForEdit', () => {
+  const suggestion = { start: '2026-04-01', end: '2026-12-31' };
+  it('keeps the column period within the item dates', () => {
     expect(periodForEdit(2026, record({ period_start: '2026-07-01', period_end: '2026-12-31' }), true, suggestion))
       .toEqual({ start: '2026-07-01', end: '2026-12-31' });
-    expect(periodForEdit(2026, undefined, true, suggestion)).toEqual({ start: '2026-01-01', end: '2026-12-31' });
-    expect(periodForEdit(2026, undefined, false, suggestion)).toEqual(suggestion);
+    expect(periodForEdit(2026, record({ period_start: '2026-01-01', period_end: '2026-12-31' }), true, suggestion))
+      .toEqual(suggestion);
+    expect(periodForEdit(2026, record({ period_start: '2026-02-01', period_end: '2026-09-30' }), true, { start: '2026-01-01', end: '2026-06-30' }))
+      .toEqual({ start: '2026-02-01', end: '2026-06-30' });
+  });
+  it('cuts the whole year of a column with amounts but no stored period', () => {
+    expect(periodForEdit(2026, undefined, true, suggestion)).toEqual(suggestion);
+    expect(periodForEdit(2026, undefined, true, { start: '2026-01-01', end: '2026-12-31' })).toEqual({ start: '2026-01-01', end: '2026-12-31' });
+  });
+  it('proposes the item dates when the column period shares no day with them', () => {
+    expect(periodForEdit(2026, record({ period_start: '2026-01-01', period_end: '2026-03-31' }), true, suggestion)).toEqual(suggestion);
+  });
+  it('without item dates in the year, keeps the column period', () => {
+    expect(periodForEdit(2026, record({ period_start: '2026-07-01', period_end: '2026-12-31' }), true, null))
+      .toEqual({ start: '2026-07-01', end: '2026-12-31' });
+    expect(periodForEdit(2026, undefined, true, null)).toEqual({ start: '2026-01-01', end: '2026-12-31' });
     expect(periodForEdit(2026, undefined, false, null)).toBeNull();
+  });
+  it('proposes the item dates for an empty column', () => {
+    expect(periodForEdit(2026, undefined, false, suggestion)).toEqual(suggestion);
   });
 });
 

@@ -99,14 +99,28 @@ export function suggestedPeriod(year: number, effectiveStart?: string | null, en
 }
 
 /**
- * The period a column is edited with: its stored period; the whole year when it
- * has no stored period but already holds amounts (existing data behaves as
- * before); otherwise the suggestion from the item's dates; null when none.
+ * A column's own period, as shown and as a typed yearly total is spread over:
+ * its stored period; the whole year when it has no stored period but already
+ * holds amounts (existing data behaves as before); otherwise the suggestion
+ * from the item's dates; null when none.
  */
-export function periodForEdit(year: number, record: RoundInput | null | undefined, hasAmounts: boolean, suggestion: Period | null): Period | null {
+export function columnPeriod(year: number, record: RoundInput | null | undefined, hasAmounts: boolean, suggestion: Period | null): Period | null {
   if (record) return { start: record.period_start, end: record.period_end };
   if (hasAmounts) return wholeYear(year);
   return suggestion;
+}
+
+/**
+ * The period the spread panel proposes: the column's own period within the
+ * item's dates (the suggestion). No suggestion: the column's period. When the
+ * two share no day: the suggestion. The user can still widen it.
+ */
+export function periodForEdit(year: number, record: RoundInput | null | undefined, hasAmounts: boolean, suggestion: Period | null): Period | null {
+  const period = columnPeriod(year, record, hasAmounts, suggestion);
+  if (!period || !suggestion) return period;
+  const start = period.start > suggestion.start ? period.start : suggestion.start;
+  const end = period.end < suggestion.end ? period.end : suggestion.end;
+  return start <= end ? { start, end } : suggestion;
 }
 
 export function monthName(locale: string, month: number): string {

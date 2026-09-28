@@ -625,7 +625,7 @@
     },
     "copyBudgetColumns": {
       "title": "Copier les colonnes budgétaires",
-      "subtitle": "Copier une colonne vers une autre année ou une autre colonne, en OPEX ou en CAPEX. Chaque mois garde son montant et le pourcentage s'applique à chaque mois.",
+      "subtitle": "Copier une colonne vers une autre année ou une autre colonne, en OPEX ou en CAPEX. Chaque mois garde son montant et le pourcentage s'applique à chaque mois. Les postes qui ne sont pas valides l'année de destination sont exclus. Un poste valide une partie de l'année ne reçoit que ces mois.",
       "sourceYear": "Année source",
       "sourceColumn": "Colonne source",
       "destinationYear": "Année de destination",
@@ -651,6 +651,8 @@
       "currentHeader": "{{column}} {{year}}, actuel",
       "previewHeader": "{{column}} {{year}}, aperçu",
       "skipped": "Ignoré",
+      "prorated": "Au prorata",
+      "proratedHelp": "Ce poste commence ou se termine en {{year}}. Seuls les mois de sa période de validité sont copiés.",
       "previewInfo_one": "{{count}} poste dans l'aperçu : {{toProcess}} à copier, {{skipped}} à ignorer. Les postes ignorés gardent leur valeur actuelle.",
       "previewInfo_other": "{{count}} postes dans l'aperçu : {{toProcess}} à copier, {{skipped}} à ignorer. Les postes ignorés gardent leur valeur actuelle.",
       "existingDataWarning_one": "{{count}} poste a déjà un montant dans la colonne de destination et sera ignoré. Activez « Écraser les données existantes » pour le remplacer.",

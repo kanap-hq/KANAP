@@ -589,10 +589,11 @@ describe('BudgetTab periods', () => {
     fireEvent.click(within(periodLine('committed').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
     const amount = await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
     expect(amount).toHaveValue('10 800');
-    // The five period lines (Forecast and Actuals included); the panel adds no period text.
-    // The whole year starts before the item (April 1), so the only line is that hint.
+    // The five period lines (Forecast and Actuals included) keep the stored whole year;
+    // the panel proposes it within the item's dates (from April 1), and saves nothing yet.
     expect(screen.getAllByText('12 months, January to December')).toHaveLength(5);
-    expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^The period goes beyond the item's dates\.$/);
+    expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^January to March will be set to zero\.$/);
+    expect(bulkCalls()).toHaveLength(0);
 
     const [from] = screen.getAllByPlaceholderText('labels.datePlaceholder');
     fireEvent.focus(from);
@@ -612,6 +613,37 @@ describe('BudgetTab periods', () => {
     await waitFor(() => expect(amountLoads()).toBe(2));
     expect(mocked.patch).not.toHaveBeenCalled();
     expect(screen.getByRole('tab', { name: 'opex.budget.flat' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('the panel proposes the stored period cut at the end of validity, without saving it on open', async () => {
+    setupApi({ grain: 'annual', roundInputs: [record({ period_start: '2026-01-01', period_end: '2026-12-31' })] });
+    const { ref } = renderTab(YEAR, { endOfValidity: '2026-06-30' });
+    await waitForAmounts();
+
+    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
+    await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
+    expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^July to December will be set to zero\.$/);
+    // The column still shows its stored period, and opening the panel wrote nothing.
+    expect(periodLine('planned')).toHaveTextContent('Spread flat · 12 months, January to December');
+    expect(ref.current!.isDirty()).toBe(false);
+    expect(bulkCalls()).toHaveLength(0);
+    expect(mocked.patch).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '12000.00' }, period_start: '2026-01-01', period_end: '2026-06-30' });
+  });
+
+  it('a typed yearly total keeps the stored period, even beyond the end of validity', async () => {
+    setupApi({ grain: 'annual', roundInputs: [record({ period_start: '2026-01-01', period_end: '2026-12-31' })] });
+    const { ref } = renderTab(YEAR, { endOfValidity: '2026-06-30' });
+    await waitForAmounts();
+
+    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: '6000' } });
+    await flush(ref);
+    expect(bulkCalls().map(([, body]) => body)).toEqual([
+      { kind: 'annual', year: YEAR, totals: { planned: 6000 }, period_start: '2026-01-01', period_end: '2026-12-31' },
+    ]);
   });
 
   it('Change period on a 4-4-5 column keeps 4-4-5', async () => {

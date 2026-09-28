@@ -95,7 +95,7 @@ The page opens on the default column of the current year as the source and the d
 
 1. Click **Dry run** to generate a preview without changing any data
 2. Review the preview grid, which shows:
-   - **Item** name (items marked **Skipped** keep their current value)
+   - **Item** name (items marked **Skipped** keep their current value; items marked **Prorated** start or end during the destination year and get only the months within their validity)
    - **Source value** (from the source year/column)
    - **Current destination value**
    - **Preview value** (what the destination will become after copy)
@@ -125,6 +125,8 @@ Below the grid, a stats bar shows:
 ### How amounts are copied
 
 - The copy keeps the monthly shape. Each of the twelve months is copied to the same month of the destination, so a column spread from April to December stays April to December
+- Only items valid in the destination year are copied. An item counts for the months whose 15th falls between its **Effective start** and its **End of validity**. An item without such a month is left out, as the Budget tab does not show it either
+- An item valid for part of the destination year gets only those months. The other months keep their amount, and the period is cut to the item's dates. For example, a twelve-month source copied to an item ending on June 30 gives January to June
 - Without a percentage, amounts are copied exactly, to the cent
 - With a percentage, each month is rounded to a whole amount. The yearly total is the source total with the percentage applied, rounded to a whole amount. The small difference lands on the last month that has an amount. For example, 12,000 spread from April to December (1,333.33 a month and 1,333.36 in December) copied with +2% gives 1,360 a month and 12,240 for the year
 - The column's period moves with the copy: April to December 2026 becomes April to December 2027. A period that ends on February 29 ends on February 28 in a year without one
@@ -143,7 +145,7 @@ If the destination column is frozen, both **Dry run** and **Copy data** are disa
 
 Copy allocation methods and percentages from one year to another. This saves you from re-entering chargeback configurations when setting up a new fiscal year.
 
-The **OPEX** / **CAPEX** switch at the top chooses which items are copied. The copy is all or nothing: if one item fails, nothing is copied.
+The **OPEX** / **CAPEX** switch at the top chooses which items are copied. Only items valid in the destination year are copied, with the same rule as **Copy budget columns**. The copy is all or nothing: if one item fails, nothing is copied.
 
 Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
 
@@ -187,7 +189,7 @@ After a dry run, a banner shows the count of items ready to copy, skipped, and e
 
 Clear all data from a specific budget column for a given year. This is a destructive operation: use it when you need to start fresh.
 
-The **OPEX** / **CAPEX** switch at the top chooses which items are cleared. The reset sets the twelve months of the column to zero and removes its period. In the Budget tab, the column then gets a new suggestion from the item's dates. The reset is all or nothing: if one item fails, nothing is cleared.
+The **OPEX** / **CAPEX** switch at the top chooses which items are cleared. The reset sets the twelve months of the column to zero and removes its period. In the Budget tab, the column then gets a new suggestion from the item's dates. The reset covers every item, including items whose end of validity has passed. The reset is all or nothing: if one item fails, nothing is cleared.
 
 Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
 
