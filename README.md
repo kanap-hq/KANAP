@@ -4,11 +4,15 @@
 [![Documentation](https://img.shields.io/badge/docs-doc.kanap.net-green)](https://doc.kanap.net)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--v3-blue.svg)](LICENSE)
 
-**The open source AI-native IT operating platform.**
+**The open source IT governance platform.**
 
-KANAP gives IT departments a governed system of record for budgets, assets,
-applications, interfaces, projects, tasks, and documentation, then makes that
-record operable in natural language through its native AI agent, **Plaid**.
+KANAP gives IT departments one governed record for their IT budget (OPEX and
+CAPEX), applications and interfaces, infrastructure, project portfolio, tasks,
+and documentation. Its built-in AI agent, **Plaid**, works on that same record
+in natural language, within the platform's permissions and audit trail.
+
+Built for IT departments of mid-sized companies and multi-entity groups:
+multi-company, multi-currency, chargeback.
 
 Self-host it for free, or let us run it for you.
 
@@ -62,8 +66,9 @@ automation systems; production external adapters beyond the current GLPI import
 path are the next step, not a claim about every external system being connected
 out of the box.
 
-> **Plaid demo placeholder:** add a GIF or screenshot here showing Plaid reading
-> KANAP context, preparing a write preview, and executing it after approval.
+![Plaid prepares a change as a preview and applies it only after approval](marketing/web/public/screenshots/ai-preview.png)
+
+*Plaid prepares a change as a preview. Nothing is applied until the user approves it.*
 
 For the technical architecture, see [doc/plaid-architecture.md](doc/plaid-architecture.md).
 

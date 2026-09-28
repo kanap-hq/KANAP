@@ -1,9 +1,9 @@
 site_name: KANAP
 site_url: https://doc.kanap.net
-site_description: User documentation for KANAP - IT portfolio and budget management platform
+site_description: Documentation for KANAP, the open source IT governance platform - IT budget, application landscape, project portfolio, documentation and the Plaid AI agent
 
-repo_url: https://github.com/your-org/kanap
-repo_name: kanap
+repo_url: https://github.com/kanap-it/KANAP
+repo_name: kanap-it/KANAP
 
 docs_dir: docs
 
