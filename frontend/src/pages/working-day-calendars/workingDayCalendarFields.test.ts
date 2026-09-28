@@ -2,12 +2,20 @@ import { describe, expect, it } from 'vitest';
 import type { TFunction } from 'i18next';
 import {
   calendarDeleteBlock,
+  calendarSourceLabel,
   calendarTabYears,
   calendarUsageLine,
+  calendarYearsText,
   checkYear,
   daysInMonth,
+  holidayRunDates,
+  holidayRuns,
+  joinNames,
   normalizeDays,
+  refusalField,
   roundDaysTotal,
+  standardCalendarCode,
+  standardTabYears,
   sumDays,
 } from './workingDayCalendarFields';
 
@@ -79,5 +87,83 @@ describe('working-day calendar fields', () => {
     );
     expect(calendarDeleteBlock(t, null)).toBeNull();
     expect(calendarDeleteBlock(t, 'Used by 1 CAPEX line.')).toBe('workingDayCalendars.deleteBlocked(usage=Used by 1 CAPEX line.)');
+  });
+
+  it('names the source of a standard calendar, region in parentheses', () => {
+    const moselle = { country_iso: 'FR', region_code: '57', country_name: 'France', region_name: 'Moselle' };
+    expect(calendarSourceLabel(moselle)).toBe('France (Moselle)');
+    expect(calendarSourceLabel({ ...moselle, region_code: null, region_name: null })).toBe('France');
+    // A name the server did not send falls back to the code.
+    expect(calendarSourceLabel({ country_iso: 'FR', region_code: '57', country_name: null, region_name: null })).toBe('FR (57)');
+    expect(calendarSourceLabel({ country_iso: null, region_code: null, country_name: null, region_name: null })).toBeNull();
+  });
+
+  it('gives a standard calendar its default code', () => {
+    expect(standardCalendarCode('FR', null)).toBe('FR');
+    expect(standardCalendarCode('FR', '57')).toBe('FR-57');
+  });
+
+  it('says "All years" for a standard calendar and lists the years of a custom one', () => {
+    expect(calendarYearsText(t, { country_iso: 'FR' }, [])).toBe('workingDayCalendars.yearsAll');
+    expect(calendarYearsText(t, { country_iso: 'FR' }, ['2026', '2027'])).toBe('workingDayCalendars.yearsAllEdited(years=2026, 2027)');
+    expect(calendarYearsText(t, { country_iso: null }, ['2026', '2027'])).toBe('2026, 2027');
+    expect(calendarYearsText(t, undefined, ['2026'])).toBe('2026');
+    expect(calendarYearsText(t, { country_iso: null }, [])).toBe('');
+  });
+
+  it('offers every year the server accepts on a standard calendar', () => {
+    const years = standardTabYears();
+    expect(years[0]).toBe(2000);
+    expect(years[years.length - 1]).toBe(2100);
+    expect(years).toHaveLength(101);
+  });
+
+  it('groups the consecutive days of one holiday, marked weekend only when every day is', () => {
+    // Bosnia and Herzegovina 2026: Kurban Bayram from Saturday 16 to Tuesday 19 May.
+    const runs = holidayRuns([
+      { date: '2026-05-01', name: 'Labour Day', weekend: false },
+      { date: '2026-05-02', name: 'Labour Day', weekend: true },
+      { date: '2026-05-16', name: 'Kurbanski bajram', weekend: true },
+      { date: '2026-05-17', name: 'Kurbanski bajram', weekend: true },
+      { date: '2026-05-18', name: 'Kurbanski bajram', weekend: false },
+      { date: '2026-05-19', name: 'Kurbanski bajram', weekend: false },
+      { date: '2026-05-21', name: 'Kurbanski bajram', weekend: false },
+      { date: '2026-12-31', name: 'Old Year', weekend: false },
+      { date: '2027-01-01', name: 'Old Year', weekend: false },
+    ]);
+    expect(runs).toEqual([
+      { start: '2026-05-01', end: '2026-05-02', name: 'Labour Day', weekend: false },
+      { start: '2026-05-16', end: '2026-05-19', name: 'Kurbanski bajram', weekend: false },
+      // Not the day after: a separate entry.
+      { start: '2026-05-21', end: '2026-05-21', name: 'Kurbanski bajram', weekend: false },
+      { start: '2026-12-31', end: '2027-01-01', name: 'Old Year', weekend: false },
+    ]);
+    expect(holidayRuns([
+      { date: '2026-08-15', name: 'Assumption', weekend: true },
+      { date: '2026-08-16', name: 'Other', weekend: true },
+    ])).toEqual([
+      { start: '2026-08-15', end: '2026-08-15', name: 'Assumption', weekend: true },
+      { start: '2026-08-16', end: '2026-08-16', name: 'Other', weekend: true },
+    ]);
+  });
+
+  it('writes the dates of a holiday day first, in the UI language, without the year', () => {
+    const run = (start: string, end: string) => ({ start, end, name: 'x', weekend: false });
+    expect(holidayRunDates(t, run('2026-04-06', '2026-04-06'), 'en')).toBe('6 Apr');
+    expect(holidayRunDates(t, run('2026-12-25', '2026-12-25'), 'de')).toMatch(/^25\.? Dez/);
+    expect(holidayRunDates(t, run('2026-05-16', '2026-05-19'), 'en')).toBe('workingDayCalendars.days.holidayRange(from=16,to=19 May)');
+    expect(holidayRunDates(t, run('2026-04-30', '2026-05-02'), 'en')).toBe('workingDayCalendars.days.holidayRange(from=30 Apr,to=2 May)');
+    expect(holidayRunDates(t, run('not a date', 'not a date'), 'en')).toBe('not a date');
+  });
+
+  it('joins country names the way the language does', () => {
+    expect(joinNames(['France', 'Netherlands', 'Italy'], 'en')).toBe('France, Netherlands, and Italy');
+    expect(joinNames(['France', 'Italie'], 'fr')).toBe('France et Italie');
+    expect(joinNames(['France'], 'en')).toBe('France');
+  });
+
+  it('puts a refused country or region under the field that names it', () => {
+    expect(refusalField({ response: { data: { field: 'country_iso' } } })).toBe('country_iso');
+    expect(refusalField({ response: { data: { field: 'region_code' } } })).toBe('region_code');
   });
 });

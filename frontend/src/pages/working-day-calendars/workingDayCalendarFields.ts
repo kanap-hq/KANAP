@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
-import type { CalendarDays } from '../../services/workingDayProfiles';
+import type { CalendarDays, HolidayDay } from '../../services/workingDayProfiles';
+import { formatShortDate } from '../../lib/dateFormat';
 
 export const WORKING_DAY_CALENDARS_PATH = '/master-data/working-day-calendars';
 
@@ -11,10 +12,11 @@ export const MIN_YEAR = 2000;
 export const MAX_YEAR = 2100;
 
 /** Fields a refusal can be attached to, so the error shows under the field that caused it. */
-export type WorkingDayCalendarField = 'code' | 'name' | 'description' | 'disabled_at' | 'days_by_year';
+export type WorkingDayCalendarField =
+  | 'code' | 'name' | 'description' | 'disabled_at' | 'days_by_year' | 'country_iso' | 'region_code';
 
 const REFUSAL_FIELDS: ReadonlySet<string> = new Set<WorkingDayCalendarField>([
-  'code', 'name', 'description', 'disabled_at', 'days_by_year',
+  'code', 'name', 'description', 'disabled_at', 'days_by_year', 'country_iso', 'region_code',
 ]);
 
 /**
@@ -149,4 +151,98 @@ export function roundDaysTotal(total: string): string {
   if (Number(fraction[2]) >= 5) cents += 1n;
   const rest = (cents % 100n).toString().padStart(2, '0').replace(/0+$/, '');
   return rest ? `${cents / 100n}.${rest}` : `${cents / 100n}`;
+}
+
+/**
+ * The years a standard calendar offers: every year the server accepts. The year tabs show five of
+ * them around the selected one (the current year's neighbours at first), and the arrows move one year.
+ */
+export function standardTabYears(): number[] {
+  const years: number[] = [];
+  for (let year = MIN_YEAR; year <= MAX_YEAR; year += 1) years.push(year);
+  return years;
+}
+
+/** "France (Moselle)", "France", or null on a custom calendar. */
+export function calendarSourceLabel(calendar: {
+  country_iso?: string | null;
+  region_code?: string | null;
+  country_name?: string | null;
+  region_name?: string | null;
+}): string | null {
+  if (!calendar.country_iso) return null;
+  const country = calendar.country_name || calendar.country_iso;
+  const region = calendar.region_code ? calendar.region_name || calendar.region_code : null;
+  return region ? `${country} (${region})` : country;
+}
+
+/** The code a standard calendar is given by default: "FR", "FR-57". */
+export function standardCalendarCode(country: string, region: string | null): string {
+  return region ? `${country}-${region}` : country;
+}
+
+/** "All years", "All years, 2026 edited" on a standard calendar; the stored years on a custom one. */
+export function calendarYearsText(
+  t: TFunction,
+  calendar: { country_iso?: string | null } | null | undefined,
+  years: string[] | null | undefined,
+): string {
+  const list = Array.isArray(years) ? years.join(', ') : '';
+  if (!calendar?.country_iso) return list;
+  return list
+    ? t('workingDayCalendars.yearsAllEdited', { years: list })
+    : t('workingDayCalendars.yearsAll');
+}
+
+/** Consecutive days of one public holiday (`start` and `end` are `YYYY-MM-DD`), or a single day. */
+export type HolidayRun = { start: string; end: string; name: string; weekend: boolean };
+
+function nextDay(date: string): string {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+}
+
+/**
+ * The holidays of a year with the consecutive days of one holiday grouped. A group is marked as on a
+ * weekend only when every one of its days is, since it then removes no working day.
+ */
+export function holidayRuns(holidays: HolidayDay[]): HolidayRun[] {
+  const runs: HolidayRun[] = [];
+  for (const day of holidays) {
+    const last = runs[runs.length - 1];
+    if (last && last.name === day.name && nextDay(last.end) === day.date) {
+      last.end = day.date;
+      last.weekend = last.weekend && day.weekend;
+    } else {
+      runs.push({ start: day.date, end: day.date, name: day.name, weekend: day.weekend });
+    }
+  }
+  return runs;
+}
+
+/**
+ * The dates of a holiday, day first like every short date in the app and without the year (the tab's):
+ * "6 Apr", "16 to 19 May", "30 Apr to 2 May".
+ */
+export function holidayRunDates(t: TFunction, run: HolidayRun, locale: string): string {
+  const end = formatShortDate(run.end, locale, { year: 'never', empty: run.end });
+  if (run.start === run.end) return end;
+  const start = run.start.slice(0, 7) === run.end.slice(0, 7)
+    ? String(Number(run.start.slice(8, 10)))
+    : formatShortDate(run.start, locale, { year: 'never', empty: run.start });
+  return t('workingDayCalendars.days.holidayRange', { from: start, to: end });
+}
+
+/** "France, Netherlands and Italy" in the UI language. */
+export function joinNames(names: string[], locale: string): string {
+  // Intl.ListFormat is ES2021, one step past the compiler's lib.
+  const ListFormat = (Intl as unknown as {
+    ListFormat?: new (locale: string, options: Record<string, string>) => { format: (list: string[]) => string };
+  }).ListFormat;
+  try {
+    if (ListFormat) return new ListFormat(locale, { style: 'long', type: 'conjunction' }).format(names);
+  } catch {
+    // An unknown locale falls through to the plain join.
+  }
+  return names.join(', ');
 }

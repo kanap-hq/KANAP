@@ -3,20 +3,26 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import enOps from '../../locales/en/ops.json';
 import frOps from '../../locales/fr/ops.json';
 import {
-  ComputePreview,
   RoundInput,
+  RoundLine,
   activeMonths,
+  basisForUnit,
   centsToDecimal,
+  changedDays,
   chipText,
   chipUnits,
   columnLabel,
   columnPeriod,
-  computeChangeLines,
-  computeLineText,
+  dayChangeText,
+  formatFteValue,
   formatMoney,
   formatUplift,
-  hasRecipe,
-  recipeText,
+  hasLines,
+  lineText,
+  linePayloadOf,
+  linesText,
+  sameLine,
+  trimDecimal,
   joinList,
   periodForEdit,
   periodProblem,
@@ -48,14 +54,8 @@ const record = (over: Partial<RoundInput>): RoundInput => ({
   last_calculation: null,
   updated_at: '2026-09-26T10:00:00Z',
   updated_by: null,
-  pricing_basis: null,
-  quantity: null,
-  unit_price: null,
-  price_index_pct: null,
-  working_day_profile_id: null,
-  working_day_profile_code: null,
-  working_day_profile_name: null,
-  counts_as_fte: false,
+  fte: null,
+  lines: [],
   ...over,
 });
 
@@ -221,97 +221,101 @@ describe('amount helpers', () => {
 });
 
 
-const SFR_DAYS = ['18', '18', '20', '20', '15', '20', '15', '16', '20', '19', '18', '19'];
-const SFR_MONTHS = ['0.00', '7200.00', '8000.00', '8000.00', '6000.00', '8000.00', '6000.00', '6400.00', '8000.00', '7600.00', '0.00', '0.00'];
-const FEB_TO_OCT = [2, 3, 4, 5, 6, 7, 8, 9, 10];
-
-const perDay = (over: Partial<RoundInput> = {}) => record({
-  method: 'computed',
-  pricing_basis: 'per_day',
-  quantity: '1',
-  unit_price: '400',
-  price_index_pct: '0',
+const line = (over: Partial<RoundLine> = {}): RoundLine => ({
+  id: 'l1',
+  sort: 0,
+  label: 'Project manager',
+  quantity_unit: 'days',
+  quantity: '20.000',
+  unit_price: '900.0000',
+  price_basis: 'per_day',
+  period_start: '2026-01-01',
+  period_end: '2026-06-30',
   working_day_profile_id: 'cal-1',
-  working_day_profile_code: 'FR218',
-  working_day_profile_name: 'France 218',
-  counts_as_fte: true,
+  working_day_profile_code: 'FR',
+  working_day_profile_name: 'France',
   ...over,
 });
 
-const preview = (over: Partial<ComputePreview> = {}): ComputePreview => ({
-  active_months: FEB_TO_OCT,
-  day_counts: SFR_DAYS,
-  total_days: '163',
-  month_amounts: SFR_MONTHS,
-  total: '65200.00',
-  fte: '0.75',
-  calendar: { id: 'cal-1', code: 'FR218', name: 'France 218', disabled: false },
-  stored: { month_amounts: Array.from({ length: 12 }, () => '0.00'), method: null, last_calculation: null },
-  changed_months: FEB_TO_OCT,
-  calendar_changed_months: [],
-  warnings: [],
-  ...over,
+const computed = (lines: RoundLine[], fte: string | null) => record({
+  method: 'computed',
+  spread_profile_name: null,
+  fte,
+  lines,
+  last_calculation: {
+    kind: 'computed', total: '18000.00', fte, month_amounts: [], fte_months: [], active_months: [1, 2, 3, 4, 5, 6], lines: [],
+  },
 });
 
-describe('computed columns', () => {
-  it('names the basis in the chip', () => {
-    expect(chipText(en(), 'en', perDay())).toBe('Computed per day, France 218');
-    // A narrow header wraps the chip between the way and the calendar, never inside either.
-    expect(chipUnits(en(), 'en', perDay())).toEqual(['Computed per day,', 'France 218']);
-    expect(chipUnits(fr(), 'fr', perDay())).toEqual(['Calculé par jour,', 'France 218']);
-    expect(chipUnits(en(), 'en', perDay({ pricing_basis: 'per_month', working_day_profile_name: null }))).toEqual(['Computed per month']);
+describe('columns built from lines', () => {
+  it('names the lines, their count and the FTE in the chip', () => {
+    const three = computed([line(), line({ id: 'l2', quantity_unit: 'people', price_basis: 'per_month' }), line({ id: 'l3', quantity_unit: 'units', price_basis: 'once' })], '1.5');
+    expect(chipText(en(), 'en', three)).toBe('Quantity and price · 3 lines · 1.50 FTE');
+    // A narrow header wraps between the way and the figures, never inside either.
+    expect(chipUnits(en(), 'en', three)).toEqual(['Quantity and price ·', '3 lines · 1.50 FTE']);
+    expect(chipText(fr(), 'fr', three)).toBe('Quantité et prix · 3 lignes · 1.50 ETP');
+    // Units only: no FTE to show.
+    expect(chipText(en(), 'en', computed([line({ quantity_unit: 'units', price_basis: 'per_month', working_day_profile_id: null })], '0.00'))).toBe('Quantity and price · 1 line');
     expect(chipUnits(en(), 'en', undefined)).toEqual([]);
-    expect(chipText(en(), 'en', perDay({ pricing_basis: 'per_month', working_day_profile_name: null }))).toBe('Computed per month');
-    expect(chipText(en(), 'en', perDay({ pricing_basis: 'per_period', working_day_profile_name: null }))).toBe('Computed for the whole period');
-    expect(chipText(fr(), 'fr', perDay())).toBe('Calculé par jour, France 218');
-    // A hand edit keeps the recipe but says so.
-    expect(chipText(en(), 'en', perDay({ method: 'manual' }))).toBe('Edited by hand');
+    // A hand edit or a spread keeps the lines as a reference, and its own chip.
+    expect(chipText(en(), 'en', record({ method: 'manual', lines: [line()], fte: '1.00' }))).toBe('Edited by hand');
+    expect(chipText(en(), 'en', record({ lines: [line()], fte: '1.00' }))).toBe('Spread flat');
+    expect(hasLines(record({}))).toBe(false);
+    expect(hasLines(record({ lines: [line()] }))).toBe(true);
   });
 
-  it('writes the recipe for the tooltip, only when there is one', () => {
-    expect(hasRecipe(record({}))).toBe(false);
-    expect(recipeText(en(), 'en', record({}))).toBe('');
-    expect(recipeText(en(), 'en', perDay())).toBe('Per day · Quantity 1 · Unit price 400 · Calendar France 218 · Counts as FTE');
-    expect(recipeText(en(), 'en', perDay({
-      method: 'spread', pricing_basis: 'per_month', quantity: '10', unit_price: '199.5', price_index_pct: '2',
-      working_day_profile_id: null, working_day_profile_name: null, counts_as_fte: false,
-    }))).toBe('Per month · Quantity 10 · Unit price 199.5 · Price index +2%');
+  it('lists the lines for the tooltip of a column computed from them', () => {
+    expect(lineText(en(), 'en', line())).toBe('Project manager: 20 days × 900 per day, Jan to Jun');
+    expect(lineText(en(), 'en', line({ label: '  ', quantity_unit: 'people', quantity: '1', price_basis: 'per_month', unit_price: '6000.5', period_start: '2026-03-01', period_end: '2026-03-31' })))
+      .toBe('1 person × 6 000.5 per month, Mar');
+    expect(lineText(en(), 'en', line({ label: 'Licences', quantity_unit: 'units', quantity: '12.5', price_basis: 'once', unit_price: '40' })))
+      .toBe('Licences: 12.5 units × 40 once, Jan to Jun');
+    expect(lineText(fr(), 'fr', line())).toMatch(/^Project manager : 20 jours × 900 par jour, janv\.? à juin$/);
+    const two = computed([line(), line({ id: 'l2', label: 'Licences', quantity_unit: 'units', quantity: '3', price_basis: 'per_month', unit_price: '10' })], '0.5');
+    expect(linesText(en(), 'en', two)).toBe('Project manager: 20 days × 900 per day, Jan to Jun\nLicences: 3 units × 10 per month, Jan to Jun');
+    // Only a column computed from its lines explains itself with them.
+    expect(linesText(en(), 'en', record({ method: 'manual', lines: [line()] }))).toBe('');
+    expect(linesText(en(), 'en', record({}))).toBe('');
   });
 
-  it('writes the live line from the server figures', () => {
-    expect(computeLineText(en(), 'en', preview())).toBe('9 months · 163 days · 65 200 · 0.75 FTE');
-    expect(computeLineText(fr(), 'fr', preview())).toBe('9 mois · 163 jours · 65 200 · 0.75 ETP');
-    // No days without a calendar, no FTE when the quantity is not people, cents when there are some.
-    expect(computeLineText(en(), 'en', preview({
-      active_months: [1], day_counts: null, total_days: null, total: '2000.5', fte: null,
-    }))).toBe('1 month · 2 000.50');
-    expect(computeLineText(en(), 'en', preview({ total_days: '171.75' }))).toBe('9 months · 171.75 days · 65 200 · 0.75 FTE');
+  it('compares lines by value and keeps the price allowed by the unit', () => {
+    expect(trimDecimal('20.000')).toBe('20');
+    expect(trimDecimal('900.5000')).toBe('900.5');
+    expect(trimDecimal('0.000')).toBe('0');
+    expect(trimDecimal('-1.250')).toBe('-1.25');
+    const stored = line();
+    expect(sameLine(linePayloadOf(stored), { ...linePayloadOf(stored), quantity: '20', unit_price: '900' })).toBe(true);
+    expect(sameLine(linePayloadOf(stored), { ...linePayloadOf(stored), quantity: '21' })).toBe(false);
+    // The calendar only matters for a price per day.
+    expect(linePayloadOf({ ...linePayloadOf(stored), price_basis: 'per_month' }).working_day_profile_id).toBeNull();
+    expect(basisForUnit('people', 'per_month')).toBe('per_month');
+    expect(basisForUnit('people', 'once')).toBe('per_day');
+    expect(basisForUnit('days', 'per_month')).toBe('per_day');
+    expect(basisForUnit('units', 'once')).toBe('once');
+    expect(basisForUnit('units', 'per_day')).toBe('per_month');
   });
 
-  it('lists the calendar days and the amounts a recompute changes', () => {
-    const days = [...SFR_DAYS]; days[2] = '19';
-    const months = [...SFR_MONTHS]; months[2] = '7600.00';
-    const stored = {
-      kind: 'computed' as const, pricing_basis: 'per_day' as const, quantity: '1', unit_price: '400', price_index_pct: '0',
-      working_day_profile_code: 'FR218', working_day_profile_name: 'France 218', active_months: FEB_TO_OCT,
-      day_counts: SFR_DAYS, total_days: '163', month_amounts: SFR_MONTHS, total: '65200.00', counts_as_fte: true,
-    };
-    const lines = computeChangeLines(en(), 'en', preview({
-      day_counts: days, month_amounts: months,
-      stored: { month_amounts: SFR_MONTHS, method: 'computed', last_calculation: stored },
-      changed_months: [3], calendar_changed_months: [3],
-    }));
-    expect(lines).toEqual({ days: ['March: 20 days, now 19'], amounts: ['March: 8 000, now 7 600'] });
-    // A round that was not computed has no day counts to compare.
-    expect(computeChangeLines(en(), 'en', preview({ changed_months: [], calendar_changed_months: [3] }))).toEqual({ days: [], amounts: [] });
+  it('finds the working days that changed since the last computation', () => {
+    const before = ['21', '20', '22', '21', '17', '22', '22', '21', '22', '22', '20', '22'];
+    const after = [...before]; after[2] = '21'; after[10] = '19.5';
+    expect(changedDays(before, after, [1, 2, 3, 4, 5, 6])).toEqual([{ month: 3, before: '22', after: '21' }]);
+    expect(changedDays(before, after, [11])).toEqual([{ month: 11, before: '20', after: '19.5' }]);
+    // Same values written differently are the same days.
+    expect(changedDays(['20.0', ...before.slice(1)], ['20', ...before.slice(1)], [1])).toEqual([]);
+    expect(changedDays(before, null, [1])).toEqual([]);
+    expect(dayChangeText(en(), 'en', { month: 3, before: '22', after: '21' })).toBe('March: 22 days, now 21');
+    expect(dayChangeText(en(), 'en', { month: 3, before: '1', after: '0.5' })).toBe('March: 1 day, now 0.5');
   });
 
-  it('formats money strings without a float', () => {
+  it('formats money and FTE strings without a float', () => {
     expect(formatMoney('65200.00')).toBe('65 200');
     expect(formatMoney('91599.96')).toBe('91 599.96');
     expect(formatMoney('-1234.5')).toBe('-1 234.50');
     expect(formatMoney('123456789012345678.01')).toBe('123 456 789 012 345 678.01');
     expect(formatMoney('0.00')).toBe('0');
     expect(formatMoney('-0.00')).toBe('0');
+    expect(formatFteValue('1')).toBe('1.00');
+    expect(formatFteValue('0.75')).toBe('0.75');
+    expect(formatFteValue('1234.5')).toBe('1 234.50');
   });
 });

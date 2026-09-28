@@ -75,7 +75,7 @@ vi.mock('../../auth/AuthContext', () => ({
 
 import api from '../../api';
 import BudgetTab, { BudgetTabHandle } from './BudgetTab';
-import type { ComputePreview, RoundInput } from './roundPeriod';
+import type { RoundInput, RoundLine } from './roundPeriod';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
 
 const ALL_SHOWN: BudgetColumnsSettings = {
@@ -183,7 +183,7 @@ function setupApi({ grain, frozen = [], empty = false, noVersion = false, roundI
   return state;
 }
 
-function renderTab(year = YEAR, dates: { effectiveStart?: string; endOfValidity?: string } = {}) {
+function renderTab(year = YEAR, dates: { effectiveStart?: string; endOfValidity?: string; payingCompanyCountry?: string } = {}) {
   const ref = React.createRef<BudgetTabHandle>();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui = (y: number) => (
@@ -192,7 +192,7 @@ function renderTab(year = YEAR, dates: { effectiveStart?: string; endOfValidity?
         <ThemeProvider theme={theme}>
           <BudgetTab
             ref={ref} id="item-1" year={y} currency="EUR" onYearChange={() => undefined} config={OPEX_FINANCE_CONFIG}
-            effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity}
+            effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity} payingCompanyCountry={dates.payingCompanyCountry}
           />
         </ThemeProvider>
       </QueryClientProvider>
@@ -223,6 +223,17 @@ function monthCells(container: HTMLElement) {
   return within(table as HTMLElement).getAllByRole('textbox') as HTMLInputElement[];
 }
 const cell = (cells: HTMLInputElement[], month: number, column: number, columns = 5) => cells[(month - 1) * columns + column];
+
+const amountField = () => screen.getByPlaceholderText('opex.budget.spreadPlaceholder');
+/** Types an amount in the spread panel and leaves the field, as a user does. */
+function typeAmount(value: string) {
+  fireEvent.change(amountField(), { target: { value } });
+  fireEvent.blur(amountField());
+}
+/** Lets queued writes and reloads run. */
+async function settle() {
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+}
 
 async function flush(ref: React.RefObject<BudgetTabHandle>) {
   let ok = true;
@@ -342,7 +353,7 @@ describe('BudgetTab write safety', () => {
     expect(ref.current?.isDirty()).toBe(false);
   });
 
-  it('spread Apply after a failed save keeps the edit and does not post the spread', async () => {
+  it('a spread after a failed save keeps the edit and does not post the spread', async () => {
     setupApi({ grain: 'monthly' });
     mocked.post.mockRejectedValue(new Error('network down'));
     const { ref, container } = renderTab();
@@ -352,9 +363,8 @@ describe('BudgetTab write safety', () => {
     expect(await flush(ref)).toBe(false);
     expect(ref.current?.isDirty()).toBe(true);
 
-    fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '24000' } });
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
-    // Apply first retries the unsaved edit; it fails again, so Apply stops there.
+    typeAmount('24000');
+    // The spread first retries the unsaved edit; it fails again, so the spread stops there.
     await waitFor(() => expect(bulkCalls()).toHaveLength(2));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
 
@@ -437,14 +447,8 @@ const record = (over: Partial<RoundInput>): RoundInput => ({
   last_calculation: null,
   updated_at: '2026-09-26T10:00:00Z',
   updated_by: null,
-  pricing_basis: null,
-  quantity: null,
-  unit_price: null,
-  price_index_pct: null,
-  working_day_profile_id: null,
-  working_day_profile_code: null,
-  working_day_profile_name: null,
-  counts_as_fte: false,
+  fte: null,
+  lines: [],
   ...over,
 });
 
@@ -586,37 +590,57 @@ describe('BudgetTab periods', () => {
     expect(await screen.findByText('January will be set to zero.')).toBeInTheDocument();
     expect(screen.getByText("The period goes beyond the item's dates.")).toBeInTheDocument();
 
-    // A period in which no month counts blocks Apply.
+    // An empty column: no amount, so the date changes wrote nothing.
+    expect(bulkCalls()).toHaveLength(0);
+    // A period in which no month counts writes nothing either.
     fireEvent.focus(from);
     fireEvent.change(from, { target: { value: '20/12/2026' } });
     fireEvent.blur(from);
-    fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '500' } });
+    typeAmount('500');
     expect(await screen.findByText('No month counts in this period.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'opex.budget.spreadApply' })).toBeDisabled();
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
   });
 
-  it('Apply sends the period and the distribution', async () => {
+  it('the amount writes on leaving the field, the distribution on change, each with the period', async () => {
     setupApi({ grain: 'monthly', empty: true });
     renderTab(YEAR, { effectiveStart: '2026-04-01' });
     await waitForAmounts();
 
-    fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '12000' } });
-    const [, distribution] = screen.getAllByRole('combobox');
-    fireEvent.mouseDown(distribution);
-    fireEvent.click(await screen.findByRole('option', { name: 'opex.budget.profile445' }));
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
-
+    typeAmount('12000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     // "Apply to all columns" is on by default: the empty columns get the same period.
     expect(bulkCalls()[0][1]).toEqual({
       kind: 'annual',
       year: YEAR,
       totals: { planned: '12000.00', committed: '0.00', forecast: '0.00', expected_landing: '0.00', actual: '0.00' },
-      spread_profile_name: '4-4-5',
+      spread_profile_name: 'flat',
       period_start: '2026-04-01',
       period_end: '2026-12-31',
     });
     await waitFor(() => expect(amountLoads()).toBe(2));
+
+    const [, distribution] = screen.getAllByRole('combobox');
+    fireEvent.mouseDown(distribution);
+    fireEvent.click(await screen.findByRole('option', { name: 'opex.budget.profile445' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1]).toMatchObject({ totals: { planned: '12000.00' }, spread_profile_name: '4-4-5', period_start: '2026-04-01' });
+    // Leaving the amount unchanged writes nothing more; the grid never turned read-only.
+    fireEvent.blur(amountField());
+    await settle();
+    expect(bulkCalls()).toHaveLength(2);
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('a blank or zero amount writes nothing', async () => {
+    setupApi({ grain: 'monthly' });
+    renderTab();
+    await waitForAmounts();
+
+    typeAmount('');
+    typeAmount('0');
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
   });
 
   it('Change period in the yearly view opens the panel on that column and stays in the yearly view', async () => {
@@ -637,8 +661,8 @@ describe('BudgetTab periods', () => {
     fireEvent.focus(from);
     fireEvent.change(from, { target: { value: '01/07/2026' } });
     fireEvent.blur(from);
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
 
+    // The date is written at once, with the column's total.
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkCalls()[0][1]).toEqual({
       kind: 'annual',
@@ -651,6 +675,8 @@ describe('BudgetTab periods', () => {
     await waitFor(() => expect(amountLoads()).toBe(2));
     expect(mocked.patch).not.toHaveBeenCalled();
     expect(screen.getByRole('tab', { name: 'opex.budget.flat' })).toHaveAttribute('aria-selected', 'true');
+    // The box stays open for the next change.
+    expect(amountField()).toBeInTheDocument();
   });
 
   it('the panel proposes the stored period cut at the end of validity, without saving it on open', async () => {
@@ -667,9 +693,9 @@ describe('BudgetTab periods', () => {
     expect(bulkCalls()).toHaveLength(0);
     expect(mocked.patch).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    typeAmount('6000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '12000.00' }, period_start: '2026-01-01', period_end: '2026-06-30' });
+    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '6000.00' }, period_start: '2026-01-01', period_end: '2026-06-30' });
   });
 
   it('a typed yearly total keeps the stored period, even beyond the end of validity', async () => {
@@ -697,7 +723,6 @@ describe('BudgetTab periods', () => {
     fireEvent.focus(from);
     fireEvent.change(from, { target: { value: '01/05/2026' } });
     fireEvent.blur(from);
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
 
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '12000.00' }, spread_profile_name: '4-4-5', period_start: '2026-05-01', period_end: '2026-12-31' });
@@ -719,31 +744,26 @@ describe('BudgetTab periods', () => {
     expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).not.toBeInTheDocument();
   });
 
-  it('Reset fills the whole year, flat, with the column total and writes nothing', async () => {
-    setupApi({
-      grain: 'annual',
-      roundInputs: [record({ spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '12000.00', profile: '4-4-5', active_months: [4, 5, 6, 7, 8, 9, 10, 11, 12], weights: [] } })],
-    });
-    renderTab(YEAR, { effectiveStart: '2026-04-01' });
+  it('the yearly box has no Spread, Reset or Cancel button, only its close control', async () => {
+    setupApi({ grain: 'annual' });
+    renderTab();
     await waitForAmounts();
 
     fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
-    const amount = await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
-    fireEvent.change(amount, { target: { value: '500' } });
-    expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('opex.budget.profile445');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
-    expect(amount).toHaveValue('12 000');
-    expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('opex.budget.profileFlat');
-    // The dates now cover the whole year: nothing is zeroed; only the item-dates hint remains.
-    expect(screen.getByTestId('spread-notes')).toHaveTextContent(/^The period goes beyond the item's dates\.$/);
+    await screen.findByPlaceholderText('opex.budget.spreadPlaceholder');
+    for (const name of ['Spread', 'Apply', 'Reset', 'common:buttons.cancel']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).not.toBeInTheDocument();
     expect(bulkCalls()).toHaveLength(0);
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
-    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({
-      totals: { planned: '12000.00' }, spread_profile_name: 'flat', period_start: '2026-01-01', period_end: '2026-12-31',
-    });
+  it('the monthly box has no close control', async () => {
+    setupApi({ grain: 'monthly' });
+    renderTab();
+    await waitForAmounts();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).not.toBeInTheDocument();
   });
 
   it('Apply to all columns sends every column total in exact cents, without a frozen column', async () => {
@@ -759,8 +779,7 @@ describe('BudgetTab periods', () => {
       'Budget, Revision, Forecast, Actuals and Expected landing follow the same period. Frozen columns never change.',
     );
 
-    fireEvent.change(screen.getByPlaceholderText('opex.budget.spreadPlaceholder'), { target: { value: '24000' } });
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    typeAmount('24000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkCalls()[0][1]).toEqual({
       kind: 'annual',
@@ -772,17 +791,32 @@ describe('BudgetTab periods', () => {
     });
   });
 
-  it('with Apply to all columns off, only the selected column is sent', async () => {
+  it('with Apply to all columns off, only the selected column is sent; turning it off writes nothing', async () => {
     setupApi({ grain: 'monthly' });
     renderTab();
     await waitForAmounts();
 
     fireEvent.click(screen.getByLabelText('Apply to all columns'));
     expect(screen.getByLabelText('Apply to all columns')).not.toBeChecked();
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+    typeAmount('13000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '12000.00' } });
+    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '13000.00' } });
     expect(Object.keys(bulkCalls()[0][1].totals)).toEqual(['planned']);
+  });
+
+  it('turning Apply to all columns on writes the spread to the group at once', async () => {
+    setupApi({ grain: 'monthly' });
+    renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(screen.getByLabelText('Apply to all columns'));
+    fireEvent.click(screen.getByLabelText('Apply to all columns'));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].totals).toEqual({
+      planned: '12000.00', committed: '10800.00', forecast: '7200.00', actual: '9600.00', expected_landing: '8400.00',
+    });
   });
 
   it('the monthly panel starts with the column total and follows the column select', async () => {
@@ -818,7 +852,9 @@ describe('BudgetTab periods', () => {
     fireEvent.click(within(periodLine('actual').parentElement as HTMLElement).getByRole('button', { name: 'Change period' }));
     expect(await screen.findByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('9 600');
     expect(screen.getByLabelText('Apply to all columns')).toBeChecked();
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    // Off then on: the spread goes to every column at once.
+    fireEvent.click(screen.getByLabelText('Apply to all columns'));
+    fireEvent.click(screen.getByLabelText('Apply to all columns'));
 
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkCalls()[0][1]).toEqual({
@@ -897,9 +933,9 @@ describe('BudgetTab columns from the setting', () => {
     expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Revision');
     expect(screen.getByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('10 800');
     fireEvent.click(screen.getByLabelText('Apply to all columns'));
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    typeAmount('5000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1].totals).toEqual({ committed: '10800.00' });
+    expect(bulkCalls()[0][1].totals).toEqual({ committed: '5000.00' });
   });
 
   it('by default every shown column follows, and a hidden column is never spread', async () => {
@@ -908,10 +944,10 @@ describe('BudgetTab columns from the setting', () => {
     renderTab();
     await waitForAmounts();
 
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    typeAmount('13000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(bulkCalls()[0][1].totals).toEqual({
-      planned: '12000.00', committed: '10800.00', actual: '9600.00', expected_landing: '8400.00',
+      planned: '13000.00', committed: '10800.00', actual: '9600.00', expected_landing: '8400.00',
     });
   });
 
@@ -925,7 +961,7 @@ describe('BudgetTab columns from the setting', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       'Budget, Revision, Forecast and Actuals follow the same period. Expected landing keeps its own period. Frozen columns never change.',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    typeAmount('13000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(Object.keys(bulkCalls()[0][1].totals)).toEqual(['planned', 'committed', 'forecast', 'actual']);
 
@@ -933,9 +969,9 @@ describe('BudgetTab columns from the setting', () => {
     fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
     fireEvent.click(await screen.findByRole('option', { name: 'Expected landing' }));
     await waitFor(() => expect(screen.queryByText('Apply to all columns')).not.toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'opex.budget.spreadApply' }));
+    typeAmount('9000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(2));
-    expect(bulkCalls()[1][1].totals).toEqual({ expected_landing: '8400.00' });
+    expect(bulkCalls()[1][1].totals).toEqual({ expected_landing: '9000.00' });
   });
 
   it('offers no switch when every other column of the group is frozen', async () => {
@@ -948,64 +984,48 @@ describe('BudgetTab columns from the setting', () => {
   });
 });
 
-// The SFR example: France 218, February 1 to October 30 2026, 1 person at 400 a day.
-const SFR_DAYS = ['18', '18', '20', '20', '15', '20', '15', '16', '20', '19', '18', '19'];
-const SFR_MONTHS = ['0.00', '7200.00', '8000.00', '8000.00', '6000.00', '8000.00', '6000.00', '6400.00', '8000.00', '7600.00', '0.00', '0.00'];
-const FEB_TO_OCT = [2, 3, 4, 5, 6, 7, 8, 9, 10];
-const ZERO_MONTHS = Array.from({ length: 12 }, () => '0.00');
-const FRANCE_218 = {
-  id: 'cal-1', code: 'FR218', name: 'France 218', description: null,
-  days_by_year: { 2026: SFR_DAYS }, status: 'enabled', disabled_at: null,
-};
-const PREVIEW = '/spend-versions/compute-preview';
 const VERSIONS = '/spend-items/item-1/versions';
+const calendar = (id: string, name: string, country: string | null) => ({
+  id, code: id.toUpperCase(), name, description: null, days_by_year: {}, status: 'enabled', disabled_at: null,
+  country_iso: country, region_code: null, country_name: null, region_name: null,
+});
+const FRANCE = calendar('cal-fr', 'France', 'FR');
+const UNITED_STATES = calendar('cal-us', 'United States', 'US');
+const MARCH_TO_DECEMBER = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-const sfrPreview = (over: Partial<ComputePreview> = {}): ComputePreview => ({
-  active_months: FEB_TO_OCT,
-  day_counts: SFR_DAYS,
-  total_days: '163',
-  month_amounts: SFR_MONTHS,
-  total: '65200.00',
-  fte: '0.75',
-  calendar: { id: 'cal-1', code: 'FR218', name: 'France 218', disabled: false },
-  stored: { month_amounts: ZERO_MONTHS, method: null, last_calculation: null },
-  changed_months: FEB_TO_OCT,
-  calendar_changed_months: [],
-  warnings: [],
+// fried's test line: 100 days at 600 per day, March to December.
+const storedLine = (over: Partial<RoundLine> = {}): RoundLine => ({
+  id: 'line-1',
+  sort: 0,
+  label: 'US Managed IT Services',
+  quantity_unit: 'days',
+  quantity: '100.000',
+  unit_price: '600.0000',
+  price_basis: 'per_day',
+  period_start: '2026-03-01',
+  period_end: '2026-12-31',
+  working_day_profile_id: 'cal-us',
+  working_day_profile_code: 'CAL-US',
+  working_day_profile_name: 'United States',
   ...over,
 });
 
-/** The preview route answers `preview` (or throws it); every other POST answers like bulk-upsert. */
-function routePosts(preview: ComputePreview | Error, bulk: Record<string, unknown> = { updated: 12 }) {
-  mocked.post.mockImplementation(async (url: string) => {
-    if (url === VERSIONS) return { data: { id: 'v1', input_grain: 'monthly', budget_year: YEAR } };
-    if (url === PREVIEW) {
-      if (preview instanceof Error) throw preview;
-      return { data: preview };
-    }
-    return { data: bulk };
-  });
-}
-const previewCalls = () => mocked.post.mock.calls.filter(([url]) => url === PREVIEW);
-const lastPreviewBody = () => { const calls = previewCalls(); return calls[calls.length - 1]?.[1]; };
-
-const computedRecord = (over: Partial<RoundInput> = {}): RoundInput => record({
+const linesRecord = (lines: RoundLine[] = [storedLine()], over: Partial<RoundInput> = {}): RoundInput => record({
   method: 'computed',
-  period_start: '2026-02-01',
-  period_end: '2026-10-30',
+  period_start: '2026-03-01',
+  period_end: '2026-12-31',
   spread_profile_name: null,
-  pricing_basis: 'per_day',
-  quantity: '1',
-  unit_price: '400',
-  price_index_pct: '0',
-  working_day_profile_id: 'cal-1',
-  working_day_profile_code: 'FR218',
-  working_day_profile_name: 'France 218',
-  counts_as_fte: true,
+  fte: '0.40',
+  lines,
   last_calculation: {
-    kind: 'computed', pricing_basis: 'per_day', quantity: '1', unit_price: '400', price_index_pct: '0',
-    working_day_profile_code: 'FR218', working_day_profile_name: 'France 218', active_months: FEB_TO_OCT,
-    day_counts: SFR_DAYS, total_days: '163', month_amounts: SFR_MONTHS, total: '65200.00', counts_as_fte: true,
+    kind: 'computed', total: '60000.00', fte: '0.40', month_amounts: [], fte_months: [], active_months: MARCH_TO_DECEMBER,
+    lines: lines.map((line) => ({
+      label: line.label, quantity_unit: line.quantity_unit, quantity: line.quantity, unit_price: line.unit_price,
+      price_basis: line.price_basis, period_start: line.period_start, period_end: line.period_end,
+      working_day_profile_id: line.working_day_profile_id, working_day_profile_code: line.working_day_profile_code,
+      working_day_profile_name: line.working_day_profile_name, active_months: MARCH_TO_DECEMBER,
+      day_counts: null, total_days: null, month_amounts: [], fte_months: [], total: '60000.00',
+    })),
   },
   ...over,
 });
@@ -1017,242 +1037,196 @@ function typeDate(input: HTMLElement, ddmmyyyy: string) {
   fireEvent.blur(input);
 }
 
-async function pick(combobox: HTMLElement, option: string) {
-  fireEvent.mouseDown(combobox);
-  fireEvent.click(await screen.findByRole('option', { name: option }));
+/** Every POST answers like bulk-upsert, except the version creation. */
+function routePosts(bulk: (body: Record<string, unknown>) => Promise<unknown> = async () => ({ updated: 12 })) {
+  mocked.post.mockImplementation(async (url: string, body: Record<string, unknown>) => {
+    if (url === VERSIONS) return { data: { id: 'v1', input_grain: 'annual', budget_year: YEAR } };
+    return { data: await bulk(body) };
+  });
 }
 
-describe('BudgetTab compute from quantity and price', () => {
+const openLines = () => fireEvent.click(screen.getByRole('tab', { name: 'Quantity and price' }));
+const leave = (input: HTMLElement, value: string) => {
+  fireEvent.change(input, { target: { value } });
+  fireEvent.blur(input);
+};
+
+describe('BudgetTab quantity and price', () => {
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.post.mockReset();
     mocked.patch.mockReset();
-    calendarsState.list = [FRANCE_218];
+    calendarsState.list = [FRANCE, UNITED_STATES];
   });
 
-  it('the panel box switches between spreading an amount and computing', async () => {
+  it('the panel box switches between spreading an amount and quantity and price', async () => {
     setupApi({ grain: 'monthly' });
     renderTab();
     await waitForAmounts();
 
     expect(screen.getByRole('tab', { name: 'Spread an amount' })).toHaveAttribute('aria-selected', 'true');
-    fireEvent.click(screen.getByRole('tab', { name: 'Compute from quantity and price' }));
+    openLines();
     expect(screen.queryByPlaceholderText('opex.budget.spreadPlaceholder')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Quantity')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Compute' })).toBeDisabled();
-    expect(screen.getByTestId('compute-notes')).toHaveTextContent('Enter a quantity and a unit price to see the result.');
+    expect(screen.getByRole('button', { name: 'Add a line' })).toBeInTheDocument();
+    // No button to compute or spread: every change is saved as it is made.
+    expect(screen.queryByRole('button', { name: /compute|spread/i })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Spread an amount' }));
-    expect(screen.getByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('12 000');
-    expect(screen.queryByLabelText('Quantity')).not.toBeInTheDocument();
+    expect(amountField()).toHaveValue('12 000');
+    expect(screen.queryByRole('button', { name: 'Add a line' })).not.toBeInTheDocument();
   });
 
-  it('shows the live line from the server and posts the computation', async () => {
+  it('a complete line is written as the column lines, on the paying company calendar, and the grid reloads', async () => {
     setupApi({ grain: 'monthly', empty: true });
-    routePosts(sfrPreview());
-    renderTab();
+    routePosts(async () => ({ updated: 12, round_inputs: [linesRecord([storedLine({ label: '', quantity_unit: 'people', quantity: '1.000', period_start: '2026-01-01' })])] }));
+    renderTab(YEAR, { payingCompanyCountry: 'US' });
     await waitForAmounts();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Compute from quantity and price' }));
-    // Column and basis; the calendar only comes with a price per day.
-    expect(screen.getAllByRole('combobox')).toHaveLength(2);
-    await pick(screen.getAllByRole('combobox')[1], 'Per day');
-    expect(screen.getAllByRole('combobox')).toHaveLength(3);
-    await pick(screen.getAllByRole('combobox')[2], 'France 218');
-    const [from, to] = screen.getAllByPlaceholderText('labels.datePlaceholder');
-    typeDate(from, '01/02/2026');
-    typeDate(to, '30/10/2026');
-    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText('Unit price'), { target: { value: '400' } });
-    fireEvent.click(screen.getByLabelText('Counts as FTE'));
+    openLines();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    leave(screen.getByLabelText('Unit price'), '600');
 
-    const expected = {
-      kind: 'computed', year: YEAR, measure: 'planned', period_start: '2026-02-01', period_end: '2026-10-30',
-      pricing_basis: 'per_day', quantity: '1', unit_price: '400', price_index_pct: '0',
-      working_day_profile_id: 'cal-1', counts_as_fte: true,
-    };
-    await waitFor(() => expect(lastPreviewBody()).toEqual({ ...expected, item_id: 'item-1' }));
-    await waitFor(() => expect(screen.getByTestId('compute-line')).toHaveTextContent(/^9 months · 163 days · 65 200 · 0\.75 FTE$/));
-    // The preview writes nothing.
-    expect(bulkCalls()).toHaveLength(0);
-
-    const compute = screen.getByRole('button', { name: 'Compute' });
-    await waitFor(() => expect(compute).not.toBeDisabled());
-    fireEvent.click(compute);
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toEqual(expected);
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'lines',
+      year: YEAR,
+      measure: 'planned',
+      lines: [{
+        label: '', quantity_unit: 'people', quantity: '1', unit_price: '600', price_basis: 'per_day',
+        period_start: '2026-01-01', period_end: '2026-12-31', working_day_profile_id: 'cal-us',
+      }],
+    });
     await waitFor(() => expect(amountLoads()).toBe(2));
+    // The box stays as it is, the view stays monthly, nothing else was written.
+    expect(screen.getByRole('button', { name: 'Add a line' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Unit price')).toHaveValue('600');
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(bulkCalls()).toHaveLength(1);
   });
 
-  it('previews a year without a version without creating one; Compute creates it', async () => {
+  it('from the yearly view the calculator opens the lines; a write creates the version, keeps the box open and the view yearly', async () => {
     setupApi({ grain: 'annual', empty: true, noVersion: true });
-    routePosts(sfrPreview({ day_counts: null, total_days: null, fte: null, calendar: null }));
+    routePosts();
     renderTab();
-    // No version: nothing to fetch but the version list.
     await waitFor(() => expect(periodLine('planned')).toHaveTextContent('12 months, January to December'));
     const versionPosts = () => mocked.post.mock.calls.filter(([url]) => url === VERSIONS);
 
-    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Compute from quantity and price' }));
-    fireEvent.change(await screen.findByLabelText('Quantity'), { target: { value: '10' } });
-    fireEvent.change(screen.getByLabelText('Unit price'), { target: { value: '200' } });
-    await screen.findByTestId('compute-line');
-    expect(lastPreviewBody()).toMatchObject({ item_id: 'item-1', year: YEAR, measure: 'planned', quantity: '10', unit_price: '200' });
+    // No company country: the first calendar by name.
+    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Quantity and price' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add a line' }));
+    // Adding a line writes nothing: it has no unit price yet.
     expect(versionPosts()).toHaveLength(0);
-    expect(mocked.patch).not.toHaveBeenCalled();
+    leave(screen.getByLabelText('Unit price'), '200');
 
-    const compute = screen.getByRole('button', { name: 'Compute' });
-    await waitFor(() => expect(compute).not.toBeDisabled());
-    fireEvent.click(compute);
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
     expect(versionPosts()).toHaveLength(1);
-    expect(bulkCalls()[0][1]).not.toHaveProperty('item_id');
+    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', measure: 'planned', lines: [expect.objectContaining({ unit_price: '200', price_basis: 'per_day', working_day_profile_id: 'cal-fr' })] });
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(screen.getByRole('tab', { name: 'opex.budget.flat' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Add a line' })).toBeInTheDocument();
   });
 
-  it('sends decimals typed key by key, as typed', async () => {
-    setupApi({ grain: 'monthly', empty: true });
-    routePosts(sfrPreview({ day_counts: null, total_days: null, fte: null, calendar: null }));
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Compute from quantity and price' }));
-    const typeKeys = (label: string, text: string) => {
-      const input = screen.getByLabelText(label);
-      for (let i = 1; i <= text.length; i++) fireEvent.change(input, { target: { value: text.slice(0, i) } });
-      expect(input).toHaveValue(text);
-    };
-    typeKeys('Quantity', '1.5');
-    typeKeys('Unit price', '400.25');
-    typeKeys('Price index (%)', '2.5');
-
-    await waitFor(() => expect(lastPreviewBody()).toMatchObject({ quantity: '1.5', unit_price: '400.25', price_index_pct: '2.5' }));
-    expect(previewCalls()).toHaveLength(1);
-  });
-
-  it('shows a refusal from the server in place of the line and blocks Compute', async () => {
-    setupApi({ grain: 'monthly', empty: true });
-    const refusal = 'France 218 has no working days for 2026. Add them on the Working-day calendars page.';
-    routePosts(Object.assign(new Error('Bad Request'), { response: { status: 400, data: { message: refusal } } }));
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Compute from quantity and price' }));
-    await pick(screen.getAllByRole('combobox')[1], 'Per day');
-    await pick(screen.getAllByRole('combobox')[2], 'France 218');
-    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText('Unit price'), { target: { value: '400' } });
-
-    expect(await screen.findByText(refusal)).toBeInTheDocument();
-    expect(screen.queryByTestId('compute-line')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Compute' })).toBeDisabled();
-  });
-
-  it('offers the calendar for a price per day only, and a link when the tenant has none', async () => {
-    calendarsState.list = [];
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Compute from quantity and price' }));
-    expect(screen.queryByText('Add a calendar')).not.toBeInTheDocument();
-    await pick(screen.getAllByRole('combobox')[1], 'Per day');
-    expect(screen.getByRole('link', { name: 'Add a calendar' })).toHaveAttribute('href', '/master-data/working-day-calendars');
-    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText('Unit price'), { target: { value: '400' } });
-    expect(screen.getByTestId('compute-notes')).toHaveTextContent('Choose a working-day calendar for a price per day.');
-
-    await pick(screen.getAllByRole('combobox')[1], 'For the whole period');
-    expect(screen.queryByText('Add a calendar')).not.toBeInTheDocument();
-  });
-
-  it('offers the link to the calendars page only to a member of the calendars', async () => {
-    calendarsState.list = [];
-    permissions.calendarsMember = false;
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Compute from quantity and price' }));
-    await pick(screen.getAllByRole('combobox')[1], 'Per day');
-    expect(screen.getByText('No working-day calendar yet.')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Add a calendar' })).not.toBeInTheDocument();
-  });
-
-  it('says so when the calendars cannot be loaded', async () => {
-    calendarsState.list = [];
-    calendarsState.failed = true;
-    setupApi({ grain: 'monthly' });
-    renderTab();
-    await waitForAmounts();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Compute from quantity and price' }));
-    await pick(screen.getAllByRole('combobox')[1], 'Per day');
-    expect(screen.getByText('The working-day calendars could not be loaded.')).toBeInTheDocument();
-    expect(screen.queryByText('No working-day calendar yet.')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Add a calendar' })).not.toBeInTheDocument();
-  });
-
-  it('a frozen column cannot be picked or computed', async () => {
-    setupApi({ grain: 'monthly', frozen: ['budget'] });
-    routePosts(sfrPreview({ day_counts: null, total_days: null, fte: null, calendar: null }));
+  it('Apply to all columns sends the same lines to the group columns too, never a frozen one', async () => {
+    setupApi({ grain: 'monthly', frozen: ['revision'], roundInputs: [linesRecord()] });
+    routePosts();
     renderTab();
     await waitForAmounts();
     await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Compute from quantity and price' }));
-    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
-    expect(await screen.findByRole('option', { name: 'Budget' })).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByRole('option', { name: 'Revision' })).not.toHaveAttribute('aria-disabled');
-    fireEvent.keyDown(screen.getByRole('listbox'), { key: 'Escape' });
+    openLines();
+    // Off by default: the other columns keep their amounts.
+    const toAll = await screen.findByLabelText('Apply to all columns');
+    expect(toAll).not.toBeChecked();
+    fireEvent.click(toAll);
 
-    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '10' } });
-    fireEvent.change(screen.getByLabelText('Unit price'), { target: { value: '200' } });
-    await screen.findByTestId('compute-line');
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
-    expect(screen.getByRole('button', { name: 'Compute' })).toBeDisabled();
-    expect(screen.getByTestId('compute-notes')).toHaveTextContent('opex.budget.someColumnsFrozen');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    const body = bulkCalls()[0][1];
+    expect(body).toMatchObject({ kind: 'lines', measure: 'planned', lines: [expect.objectContaining({ label: 'US Managed IT Services', quantity: '100' })] });
+    expect([...body.also_measures].sort()).toEqual(['actual', 'expected_landing', 'forecast']);
+
+    // It stays on for the next commits.
+    leave(screen.getByLabelText('Description'), 'Managed services');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1].also_measures).toHaveLength(3);
   });
 
-  it('a computed column says how, opens prefilled on Recompute and lists what changed', async () => {
-    calendarsState.list = [{ ...FRANCE_218, status: 'disabled', disabled_at: '2026-06-01T00:00:00Z' }];
-    setupApi({ grain: 'annual', roundInputs: [computedRecord()] });
-    const warning = 'This calendar is disabled. The computation still uses it.';
-    const days = [...SFR_DAYS]; days[2] = '19';
-    const months = [...SFR_MONTHS]; months[2] = '7600.00';
-    routePosts(sfrPreview({
-      day_counts: days, total_days: '162', month_amounts: months, total: '64800.00',
-      stored: { month_amounts: SFR_MONTHS, method: 'computed', last_calculation: computedRecord().last_calculation },
-      changed_months: [3], calendar_changed_months: [3], warnings: [warning],
-    }));
+  it('writes run one after the other, and the hint says so meanwhile', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord([storedLine(), storedLine({ id: 'line-2', sort: 1, label: 'Second' })])] });
+    let release: () => void = () => undefined;
+    let first = true;
+    routePosts(() => {
+      if (!first) return Promise.resolve({ updated: 12 });
+      first = false;
+      return new Promise((resolve) => { release = () => resolve({ updated: 12 }); });
+    });
     renderTab();
     await waitForAmounts();
 
-    expect(captionLines('planned')).toEqual(['Computed per day, France 218', '9 months, February to October']);
-    fireEvent.mouseOver(periodLine('planned'));
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Per day · Quantity 1 · Unit price 400 · Calendar France 218 · Counts as FTE');
-
-    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Compute from quantity and price' }));
-    expect(await screen.findByLabelText('Quantity')).toHaveValue('1');
-    expect(screen.getByLabelText('Unit price')).toHaveValue('400');
-    // The column's own calendar was disabled since: still offered, and marked.
-    expect(screen.getAllByRole('combobox')[2]).toHaveTextContent('France 218 (disabled)');
-    expect(screen.getByLabelText('Counts as FTE')).toBeChecked();
-
-    await waitFor(() => expect(screen.getByTestId('compute-notes')).toHaveTextContent('March: 20 days, now 19'));
-    const notes = screen.getByTestId('compute-notes');
-    expect(notes).toHaveTextContent('Working days changed since the last computation: March: 20 days, now 19');
-    expect(notes).toHaveTextContent('Amounts that would change: March: 8 000, now 7 600');
-    expect(notes).toHaveTextContent(warning);
-    expect(screen.getByTestId('compute-line')).toHaveTextContent(/^9 months · 162 days · 64 800 · 0\.75 FTE$/);
-    expect(lastPreviewBody()).toMatchObject({
-      period_start: '2026-02-01', period_end: '2026-10-30', working_day_profile_id: 'cal-1', counts_as_fte: true,
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Recompute' }));
+    openLines();
+    leave(screen.getAllByLabelText('Description')[0], 'First');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
-    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'computed', measure: 'planned', pricing_basis: 'per_day', quantity: '1', unit_price: '400' });
-    // From the yearly view the box closes and the view stays yearly.
-    await waitFor(() => expect(screen.queryByLabelText('Quantity')).not.toBeInTheDocument());
-    expect(screen.getByRole('tab', { name: 'opex.budget.flat' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('common:status.saving')).toBeInTheDocument();
+    leave(screen.getAllByLabelText('Description')[1], 'Second, renamed');
+    await settle();
+    // Nothing is disabled while saving, and the second write waits for the first.
+    expect(screen.getAllByLabelText('Description')[1]).not.toBeDisabled();
+    expect(bulkCalls()).toHaveLength(1);
+
+    await act(async () => { release(); });
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1].lines.map((line: { label: string }) => line.label)).toEqual(['First', 'Second, renamed']);
+    await waitFor(() => expect(screen.queryByText('common:status.saving')).not.toBeInTheDocument());
+  });
+
+  it('a refusal from the server shows under the table and keeps the lines', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    const refusal = 'Line 1: United States has no working days for 2026.';
+    mocked.post.mockRejectedValue(Object.assign(new Error('Bad Request'), { response: { status: 400, data: { message: refusal } } }));
+    renderTab();
+    await waitForAmounts();
+
+    openLines();
+    leave(screen.getByLabelText('Unit price'), '650');
+    await waitFor(() => expect(screen.getByTestId('lines-notes')).toHaveTextContent(refusal));
+    expect(screen.getByLabelText('Unit price')).toHaveValue('650');
+  });
+
+  it('opens on the stored lines with their amount, the total and the FTE', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    renderTab();
+    await waitForAmounts();
+
+    openLines();
+    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
+    expect(screen.getByLabelText('Quantity')).toHaveValue('100');
+    expect(screen.getByTestId('line-amount')).toHaveTextContent('60 000');
+    expect(screen.getByTestId('lines-total')).toHaveTextContent('= 60 000 · 0.40 FTE');
+    expect(screen.getByTestId('lines-status')).toHaveTextContent('Amounts are computed from these lines.');
+  });
+
+  it('a column edited by hand keeps its lines and offers to use them again', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { method: 'manual', last_calculation: null })] });
+    routePosts();
+    const { container } = renderTab();
+    await waitForAmounts();
+
+    const header = container.querySelector('thead') as HTMLElement;
+    expect(within(header).getByText('Edited by hand')).toBeInTheDocument();
+    openLines();
+    expect(screen.getByTestId('lines-status')).toHaveTextContent('Amounts were entered by hand. Use the lines again.');
+    fireEvent.click(screen.getByRole('button', { name: 'Use the lines again.' }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', lines: [expect.objectContaining({ quantity: '100', unit_price: '600' })] });
+  });
+
+  it('a column computed from lines says so, with its lines in the tooltip', async () => {
+    setupApi({ grain: 'annual', roundInputs: [linesRecord()] });
+    renderTab();
+    await waitForAmounts();
+
+    expect(captionLines('planned')).toEqual(['Quantity and price · 1 line · 0.40 FTE', '10 months, March to December']);
+    fireEvent.mouseOver(periodLine('planned'));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('US Managed IT Services: 100 days × 600 per day, Mar to Dec');
   });
 
   it('names the four ways a column is produced', async () => {
@@ -1262,7 +1236,7 @@ describe('BudgetTab compute from quantity and price', () => {
         record({ period_start: '2026-01-01' }),
         record({ measure: 'committed', method: 'copied', period_start: '2026-01-01', last_calculation: { kind: 'copy', source_year: 2025, source_measure: 'planned', uplift_pct: '0', source_total: '1.00', total: '1.00', source_method: 'computed' } }),
         record({ measure: 'forecast', method: 'manual', period_start: '2026-01-01' }),
-        computedRecord({ measure: 'actual', pricing_basis: 'per_month', working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null, last_calculation: null }),
+        linesRecord(undefined, { measure: 'actual' }),
       ],
     });
     const { container } = renderTab();
@@ -1272,6 +1246,233 @@ describe('BudgetTab compute from quantity and price', () => {
     expect(within(header).getByText('Spread flat')).toBeInTheDocument();
     expect(within(header).getByText('Copied from Budget 2025')).toBeInTheDocument();
     expect(within(header).getByText('Edited by hand')).toBeInTheDocument();
-    expect(within(header).getByText('Computed per month')).toBeInTheDocument();
+    expect(within(header).getByText('Quantity and price ·')).toBeInTheDocument();
+    expect(within(header).getByText('1 line · 0.40 FTE')).toBeInTheDocument();
+  });
+
+  it('a date typed in a line is written at once', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+
+    openLines();
+    const [from] = within(screen.getByTestId('lines-table')).getAllByPlaceholderText('labels.datePlaceholder');
+    typeDate(from, '01/04/2026');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].lines[0]).toMatchObject({ period_start: '2026-04-01', period_end: '2026-12-31' });
+  });
+});
+
+/** The monthly grid's inputs (the lines table sits above it when the lines tab is open). */
+function gridCells(container: HTMLElement) {
+  const tables = Array.from(container.querySelectorAll('table')).filter((table) => table.getAttribute('data-testid') !== 'lines-table');
+  return within(tables[tables.length - 1] as HTMLElement).getAllByRole('textbox') as HTMLInputElement[];
+}
+
+/** Bulk writes that answer at once, except the first one, held until `release()`. */
+function holdFirstWrite() {
+  const held = { release: () => undefined as void };
+  let first = true;
+  routePosts(() => {
+    if (!first) return Promise.resolve({ updated: 12 });
+    first = false;
+    return new Promise((resolve) => { held.release = () => resolve({ updated: 12 }); });
+  });
+  return held;
+}
+
+/** From now on the server holds `planned` in every month of Budget (the lines write changed it). */
+function budgetBecomes(planned: string) {
+  const base = mocked.get.getMockImplementation()!;
+  mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+    const res = await base(url, config);
+    if (url !== '/spend-versions/v1/amounts') return res;
+    return {
+      data: {
+        ...res.data,
+        items: res.data.items.map((item: Record<string, string>) => ({ ...item, planned })),
+        totals: { ...res.data.totals, planned: Number(planned) * 12 },
+      },
+    };
+  });
+}
+
+describe('BudgetTab edits while a panel write runs', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+    calendarsState.list = [FRANCE, UNITED_STATES];
+  });
+
+  it('a month typed while a lines write runs is kept by the reload, then saved', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    const held = holdFirstWrite();
+    const { container, ref } = renderTab();
+    await waitForAmounts();
+    openLines();
+    leave(screen.getByLabelText('Description'), 'First');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    const loadsBefore = amountLoads();
+
+    // March, Revision: typed while the write runs (nothing is read-only meanwhile).
+    fireEvent.change(cell(gridCells(container), 3, 1), { target: { value: '450' } });
+    budgetBecomes('600');
+    await act(async () => { held.release(); });
+    await waitFor(() => expect(amountLoads()).toBe(loadsBefore + 1));
+    await settle();
+
+    // The reload shows what the server holds, except the cell typed since.
+    expect(cell(gridCells(container), 3, 0)).toHaveValue('600');
+    expect(cell(gridCells(container), 3, 1)).toHaveValue('450');
+    expect(cell(gridCells(container), 4, 1)).toHaveValue('900');
+    expect(ref.current?.isDirty()).toBe(true);
+
+    await flush(ref);
+    const monthly = bulkCalls().filter(([, body]) => body?.kind === 'monthly');
+    expect(monthly).toHaveLength(1);
+    expect(monthly[0][1]).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
+    expect(cell(gridCells(container), 3, 1)).toHaveValue('450');
+    expect(ref.current?.isDirty()).toBe(false);
+  });
+
+  it('a yearly total typed while a lines write runs is kept by the reload, then saved', async () => {
+    setupApi({ grain: 'annual', roundInputs: [linesRecord()] });
+    const held = holdFirstWrite();
+    const { ref } = renderTab();
+    await waitForAmounts();
+    fireEvent.click(within(periodLine('planned').parentElement as HTMLElement).getByRole('button', { name: 'Quantity and price' }));
+    leave(await screen.findByLabelText('Description'), 'First');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    const loadsBefore = amountLoads();
+
+    // The yearly totals come first, in the fixed order: Budget, then Revision.
+    const total = (index: number) => screen.getAllByRole('textbox')[index];
+    fireEvent.change(total(1), { target: { value: '500' } });
+    budgetBecomes('50');
+    await act(async () => { held.release(); });
+    await waitFor(() => expect(amountLoads()).toBe(loadsBefore + 1));
+    await settle();
+
+    expect(total(0)).toHaveValue('600');
+    expect(total(1)).toHaveValue('500');
+
+    await flush(ref);
+    const annual = bulkCalls().filter(([, body]) => body?.kind === 'annual');
+    expect(annual).toHaveLength(1);
+    expect(annual[0][1]).toMatchObject({ kind: 'annual', year: YEAR, totals: { committed: 500 } });
+    expect(Object.keys(annual[0][1].totals)).toEqual(['committed']);
+    expect(total(1)).toHaveValue('500');
+  });
+
+  it('turning Apply to all columns on in an empty lines tab writes nothing, so the other columns keep their lines', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord([storedLine()], { measure: 'forecast' })] });
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
+
+    openLines();
+    // Budget has no line; Forecast has one.
+    expect(screen.getByText('No line yet. A line is a quantity times a unit price.')).toBeInTheDocument();
+    const toAll = await screen.findByLabelText('Apply to all columns');
+    fireEvent.click(toAll);
+    expect(toAll).toBeChecked();
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+
+    // The first complete line goes to the group's columns.
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    leave(screen.getByLabelText('Unit price'), '600');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', measure: 'planned', lines: [expect.objectContaining({ unit_price: '600' })] });
+    expect(bulkCalls()[0][1].also_measures).toContain('forecast');
+  });
+
+  it('after a hand edit of its column the spread field shows the new total, and Enter spreads it again', async () => {
+    setupApi({ grain: 'monthly' });
+    routePosts();
+    const { container, ref } = renderTab();
+    await waitForAmounts();
+    expect(amountField()).toHaveValue('12 000');
+
+    // March of Budget by hand: 12 500 in all.
+    fireEvent.change(cell(gridCells(container), 3, 0), { target: { value: '1500' } });
+    await flush(ref);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(amountField()).toHaveValue('12 500');
+    // Another column's hand edit leaves the field as it is.
+    fireEvent.change(cell(gridCells(container), 3, 1), { target: { value: '100' } });
+    await flush(ref);
+    expect(bulkCalls()).toHaveLength(2);
+    expect(amountField()).toHaveValue('12 500');
+
+    // Leaving the field unchanged writes nothing; Enter writes the spread of the amount shown.
+    fireEvent.blur(amountField());
+    await settle();
+    expect(bulkCalls()).toHaveLength(2);
+    fireEvent.keyDown(amountField(), { key: 'Enter' });
+    await waitFor(() => expect(bulkCalls()).toHaveLength(3));
+    expect(bulkCalls()[2][1]).toMatchObject({ kind: 'annual', totals: { planned: '12500.00' }, spread_profile_name: 'flat' });
+  });
+
+  it('a spread typed right after a hand edit keeps its amount in the field', async () => {
+    setupApi({ grain: 'monthly' });
+    routePosts();
+    const { container } = renderTab();
+    await waitForAmounts();
+
+    // The spread saves the hand edit first, then spreads 20 000 over the column.
+    fireEvent.change(cell(gridCells(container), 3, 0), { target: { value: '1500' } });
+    typeAmount('20000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'monthly' });
+    expect(bulkCalls()[1][1]).toMatchObject({ kind: 'annual', totals: { planned: '20000.00' } });
+    await settle();
+    expect(amountField()).toHaveValue('20 000');
+  });
+
+  it('an amount being typed in the spread field is not replaced by a grid save', async () => {
+    setupApi({ grain: 'monthly' });
+    routePosts();
+    const { container, ref } = renderTab();
+    await waitForAmounts();
+
+    fireEvent.change(amountField(), { target: { value: '9000' } });
+    fireEvent.change(cell(gridCells(container), 3, 0), { target: { value: '1500' } });
+    await flush(ref);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(amountField()).toHaveValue('9 000');
+  });
+
+  it('the working-days note follows a calendar edited since the tab loaded it', async () => {
+    const US_DAYS = ['20', '19', '22', '22', '20', '21', '22', '21', '21', '21', '19', '22'];
+    const rec = linesRecord();
+    (rec.last_calculation as { lines: Array<{ day_counts: string[] | null }> }).lines[0].day_counts = US_DAYS;
+    setupApi({ grain: 'monthly', roundInputs: [rec] });
+    const base = mocked.get.getMockImplementation()!;
+    let days = US_DAYS;
+    let yearLoads = 0;
+    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === '/working-day-profiles/cal-us/years/2026') {
+        yearLoads += 1;
+        return { data: { year: 2026, source: 'edited', days, standard_days: US_DAYS, holidays: [] } };
+      }
+      return base(url, config);
+    });
+    renderTab();
+    await waitForAmounts();
+    openLines();
+    await waitFor(() => expect(yearLoads).toBe(1));
+    expect(screen.queryByTestId('lines-days-changed')).not.toBeInTheDocument();
+
+    // The calendar page changes March (22 to 21), then the user comes back to the lines.
+    days = [...US_DAYS];
+    days[2] = '21';
+    fireEvent.click(screen.getByRole('tab', { name: 'Spread an amount' }));
+    openLines();
+    await waitFor(() => expect(yearLoads).toBe(2));
+    expect(await screen.findByTestId('lines-days-changed')).toHaveTextContent('March: 22 days, now 21.');
   });
 });

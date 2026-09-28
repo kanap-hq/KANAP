@@ -35,6 +35,8 @@ vi.mock('../../api', () => ({ default: { get: vi.fn(async () => ({ data: { items
 vi.mock('../../services/workingDayProfiles', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../services/workingDayProfiles')>()),
   getWorkingDayProfile: vi.fn(),
+  getWorkingDayProfileYear: vi.fn(),
+  listCountries: vi.fn(),
   createWorkingDayProfile: vi.fn(),
   updateWorkingDayProfile: vi.fn(),
   deleteWorkingDayProfile: vi.fn(),
@@ -48,6 +50,8 @@ import WorkingDayCalendarWorkspacePage from './WorkingDayCalendarWorkspacePage';
 
 const mocked = service as unknown as {
   getWorkingDayProfile: ReturnType<typeof vi.fn>;
+  getWorkingDayProfileYear: ReturnType<typeof vi.fn>;
+  listCountries: ReturnType<typeof vi.fn>;
   createWorkingDayProfile: ReturnType<typeof vi.fn>;
   updateWorkingDayProfile: ReturnType<typeof vi.fn>;
   deleteWorkingDayProfile: ReturnType<typeof vi.fn>;
@@ -66,6 +70,10 @@ const CALENDAR: WorkingDayProfileDetail = {
   days_by_year: { [String(Y)]: DAYS },
   status: 'enabled',
   disabled_at: null,
+  country_iso: null,
+  region_code: null,
+  country_name: null,
+  region_name: null,
   opex_count: 3,
   capex_count: 1,
 };
@@ -89,19 +97,49 @@ function monthInput(month: number, year: number): HTMLInputElement {
   return screen.getByLabelText(`workingDayCalendars.days.monthField month=${MONTHS[month - 1]} year=${year}`) as HTMLInputElement;
 }
 
+// A standard calendar's values for any year: 21 days every month, New Year's Day on a weekday.
+const STANDARD = Array.from({ length: 12 }, () => '21');
+const MOSELLE: WorkingDayProfileDetail = {
+  ...CALENDAR,
+  id: 'wd-57',
+  code: 'FR-57',
+  name: 'France (Moselle)',
+  days_by_year: {},
+  country_iso: 'FR',
+  region_code: '57',
+  country_name: 'France',
+  region_name: 'Moselle',
+  opex_count: 0,
+  capex_count: 0,
+};
+
+const COUNTRIES = [
+  { code: 'FR', name: 'France', regions: [{ code: '57', name: 'Moselle' }, { code: '67', name: 'Bas-Rhin' }] },
+  { code: 'NL', name: 'Netherlands', regions: [] },
+];
+
 describe('WorkingDayCalendarWorkspacePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     levels.value = 'admin';
     mocked.getWorkingDayProfile.mockResolvedValue(CALENDAR);
+    mocked.listCountries.mockResolvedValue(COUNTRIES);
+    mocked.getWorkingDayProfileYear.mockImplementation(async (_id: string, year: number) => ({
+      year,
+      source: 'standard',
+      days: STANDARD,
+      standard_days: STANDARD,
+      holidays: [{ date: `${year}-01-01`, name: "New Year's Day", weekend: false }],
+    }));
     mocked.updateWorkingDayProfile.mockImplementation(async (_id: string, patch: Record<string, unknown>) => {
+      const loaded = (await mocked.getWorkingDayProfile.mock.results[0]?.value) as WorkingDayProfileDetail ?? CALENDAR;
       const days = patch.days_by_year as Record<string, string[] | null> | undefined;
-      const merged = { ...CALENDAR.days_by_year };
+      const merged = { ...loaded.days_by_year };
       for (const [year, values] of Object.entries(days ?? {})) {
         if (values) merged[year] = values;
         else delete merged[year];
       }
-      return { ...CALENDAR, ...patch, days_by_year: merged };
+      return { ...loaded, ...patch, days_by_year: merged };
     });
   });
 
@@ -115,6 +153,58 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({ code: 'CAL-02', name: 'Contractors', description: null }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview?sort=name%3AASC'));
+  });
+
+  it('reads the calendar with its names in the UI language, and no year route for a custom calendar', async () => {
+    renderAt('/master-data/working-day-calendars/wd-1/overview');
+    await screen.findByLabelText('workingDayCalendars.fields.code');
+    expect(mocked.getWorkingDayProfile).toHaveBeenCalledWith('wd-1', 'en');
+    expect(mocked.getWorkingDayProfileYear).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('working-day-calendar-source')).toBeNull();
+    expect(screen.queryByTestId('working-days-holidays')).toBeNull();
+  });
+
+  it('prefills code and name from a country and its region, and creates a standard calendar', async () => {
+    mocked.createWorkingDayProfile.mockResolvedValue({ ...MOSELLE, id: 'wd-new' });
+    renderAt('/master-data/working-day-calendars/new/overview');
+    const country = screen.getByRole('combobox', { name: 'workingDayCalendars.fields.country' });
+    await waitFor(() => expect(mocked.listCountries).toHaveBeenCalledWith('en'));
+    fireEvent.change(country, { target: { value: 'fra' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'France' }));
+    expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR');
+    expect(screen.getByLabelText('workingDayCalendars.fields.name')).toHaveValue('France');
+    expect(screen.getByTestId('working-day-calendar-create-hint')).toHaveTextContent('workingDayCalendars.createHintStandard source=France');
+
+    const region = screen.getByRole('combobox', { name: 'workingDayCalendars.fields.region' });
+    expect(region).toHaveTextContent('workingDayCalendars.wholeCountry');
+    fireEvent.mouseDown(region);
+    fireEvent.click(await screen.findByRole('option', { name: 'Moselle' }));
+    expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR-57');
+    expect(screen.getByLabelText('workingDayCalendars.fields.name')).toHaveValue('France (Moselle)');
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({
+      code: 'FR-57',
+      name: 'France (Moselle)',
+      description: null,
+      country_iso: 'FR',
+      region_code: '57',
+    }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview'));
+  });
+
+  it('keeps a code or name typed by the user when the country changes, and offers no region when there is none', async () => {
+    renderAt('/master-data/working-day-calendars/new/overview');
+    const country = screen.getByRole('combobox', { name: 'workingDayCalendars.fields.country' });
+    await waitFor(() => expect(mocked.listCountries).toHaveBeenCalled());
+    fireEvent.change(country, { target: { value: 'Fr' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'France' }));
+    fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.name'), { target: { value: 'Paris staff' } });
+    fireEvent.change(country, { target: { value: 'NL' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Netherlands' }));
+    expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('NL');
+    expect(screen.getByLabelText('workingDayCalendars.fields.name')).toHaveValue('Paris staff');
+    expect(screen.queryByRole('combobox', { name: 'workingDayCalendars.fields.region' })).toBeNull();
   });
 
   it('asks for the code and the name before creating', async () => {
@@ -133,7 +223,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.change(code, { target: { value: 'CAL-10' } });
     expect(mocked.updateWorkingDayProfile).not.toHaveBeenCalled();
     fireEvent.blur(code);
-    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledWith('wd-1', { code: 'CAL-10' }));
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledWith('wd-1', { code: 'CAL-10' }, 'en'));
   });
 
   it('saves a changed month as that year only', async () => {
@@ -145,7 +235,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.blur(march);
     const expected = [...DAYS];
     expected[2] = '21';
-    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledWith('wd-1', { days_by_year: { [String(Y)]: expected } }));
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledWith('wd-1', { days_by_year: { [String(Y)]: expected } }, 'en'));
     await waitFor(() => expect(screen.getByTestId('working-days-total')).toHaveTextContent(`total=219 year=${Y}`));
   });
 
@@ -160,7 +250,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     expect(screen.getByTestId('working-days-status')).toHaveTextContent(`workingDayCalendars.days.fillToSave year=${Y + 1}`);
     fireEvent.change(january, { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: `workingDayCalendars.days.copyFrom year=${Y}` }));
-    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledWith('wd-1', { days_by_year: { [String(Y + 1)]: DAYS } }));
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledWith('wd-1', { days_by_year: { [String(Y + 1)]: DAYS } }, 'en'));
   });
 
   it('shows a refused year under the months', async () => {
@@ -202,5 +292,58 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     renderAt('/master-data/working-day-calendars/wd-1/overview');
     expect(await screen.findByLabelText('workingDayCalendars.fields.code')).toBeDisabled();
     expect(monthInput(1, Y)).toBeDisabled();
+  });
+
+  it('shows a standard calendar from its country: standard values, public holidays and the source', async () => {
+    mocked.getWorkingDayProfile.mockResolvedValue(MOSELLE);
+    renderAt('/master-data/working-day-calendars/wd-57/overview');
+    expect(await screen.findByTestId('working-day-calendar-source')).toHaveTextContent('France (Moselle)');
+    await waitFor(() => expect(mocked.getWorkingDayProfileYear).toHaveBeenCalledWith('wd-57', Y, 'en'));
+    await waitFor(() => expect(monthInput(1, Y)).toHaveValue('21'));
+    expect(screen.getByTestId('working-days-total')).toHaveTextContent(`total=252 year=${Y}`);
+    expect(screen.getByTestId('working-days-holidays')).toHaveTextContent("1 Jan New Year's Day");
+    expect(screen.queryByRole('button', { name: /copyFrom|removeYear|resetToStandard/ })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: String(Y + 1) }));
+    await waitFor(() => expect(mocked.getWorkingDayProfileYear).toHaveBeenCalledWith('wd-57', Y + 1, 'en'));
+    await waitFor(() => expect(monthInput(1, Y + 1)).toHaveValue('21'));
+  });
+
+  it('stores the twelve values of a standard year once a month changes, then resets it to the standard values', async () => {
+    mocked.getWorkingDayProfile.mockResolvedValue(MOSELLE);
+    renderAt('/master-data/working-day-calendars/wd-57/overview');
+    await waitFor(() => expect(monthInput(3, Y)).toHaveValue('21'));
+    const march = monthInput(3, Y);
+    fireEvent.change(march, { target: { value: '19' } });
+    fireEvent.blur(march);
+    const expected = [...STANDARD];
+    expected[2] = '19';
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledWith('wd-57', { days_by_year: { [String(Y)]: expected } }, 'en'));
+    expect(await screen.findByTestId('working-days-standard')).toHaveTextContent('workingDayCalendars.days.standardTotal count=252 total=252');
+    fireEvent.click(screen.getByRole('button', { name: 'workingDayCalendars.days.resetToStandard' }));
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenLastCalledWith('wd-57', { days_by_year: { [String(Y)]: null } }, 'en'));
+    await waitFor(() => expect(screen.queryByTestId('working-days-standard')).toBeNull());
+    expect(monthInput(3, Y)).toHaveValue('21');
+  });
+
+  it('loads the year again after a days write, not after another field, so the budget tab sees the new days', async () => {
+    mocked.getWorkingDayProfile.mockResolvedValue(MOSELLE);
+    renderAt('/master-data/working-day-calendars/wd-57/overview');
+    await waitFor(() => expect(monthInput(3, Y)).toHaveValue('21'));
+    const yearLoads = () => mocked.getWorkingDayProfileYear.mock.calls.filter(([id, year]) => id === 'wd-57' && year === Y).length;
+    expect(yearLoads()).toBe(1);
+
+    const code = screen.getByLabelText('workingDayCalendars.fields.code');
+    fireEvent.change(code, { target: { value: 'FR-57B' } });
+    fireEvent.blur(code);
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(yearLoads()).toBe(1);
+
+    const march = monthInput(3, Y);
+    fireEvent.change(march, { target: { value: '19' } });
+    fireEvent.blur(march);
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(yearLoads()).toBe(2));
+    expect(monthInput(3, Y)).toHaveValue('19');
   });
 });

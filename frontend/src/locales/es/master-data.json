@@ -236,9 +236,14 @@
     "previous": "Calendario anterior",
     "next": "Calendario siguiente",
     "createHint": "Una vez creado el calendario, introduzca los días laborables de cada año.",
+    "createHintStandard": "Los días laborables de cada año siguen los festivos de {{source}}. Después puede cambiar cualquier mes.",
+    "wholeCountry": "Todo el país",
+    "yearsAll": "Todos los años",
+    "yearsAllEdited": "Todos los años, {{years}} modificado(s)",
     "columns": {
       "code": "Código",
       "name": "Nombre",
+      "country": "País",
       "years": "Años",
       "status": "Estado",
       "updated": "Actualizado"
@@ -247,12 +252,18 @@
       "code": "Código",
       "name": "Nombre",
       "description": "Descripción",
-      "lifecycle": "Ciclo de vida"
+      "lifecycle": "Ciclo de vida",
+      "country": "País",
+      "region": "Región",
+      "source": "Origen"
     },
     "hints": {
-      "code": "Un código corto que su equipo reconoce. Los archivos de importación lo usan para encontrar el calendario."
+      "code": "Un código corto que su equipo reconoce. Los archivos de importación lo usan para encontrar el calendario.",
+      "country": "Opcional. Con un país, los días laborables de cada año siguen sus festivos.",
+      "source": "Los valores estándar siguen estos festivos. El país de un calendario no se puede cambiar."
     },
     "placeholders": {
+      "country": "p. ej., Francia",
       "code": "p. ej., CAL-01",
       "name": "p. ej., Personal de la sede",
       "description": "p. ej., Días laborables del personal asalariado, sin festivos",
@@ -267,6 +278,12 @@
       "both": "Usado por {{opex}} y {{capex}}."
     },
     "deleteBlocked": "{{usage}} Desactívelo en su lugar.",
+    "suggestions": {
+      "line_one": "Sus empresas están en {{countries}}. Cree su calendario estándar.",
+      "line_other": "Sus empresas están en {{countries}}. Cree sus calendarios estándar.",
+      "create_one": "Crear el calendario",
+      "create_other": "Crear {{count}} calendarios"
+    },
     "days": {
       "title": "Días laborables",
       "hint": "Los días laborables de cada mes. Un precio por día se multiplica por ellos.",
@@ -277,14 +294,23 @@
       "removeYear": "Quitar {{year}}",
       "removeDialog": {
         "title": "¿Quitar los días laborables de {{year}}?",
-        "body": "{{usage}} Sus importes y explicaciones se mantienen. Hasta que se vuelvan a introducir los días de {{year}}, ninguna de estas líneas podrá recalcularse para {{year}} y el archivo de filas presupuestarias no podrá calcularlas.",
+        "body": "{{usage}} Sus importes y explicaciones se mantienen. Hasta que se vuelvan a introducir los días de {{year}}, las líneas con precio por día en este calendario no podrán guardarse para {{year}}.",
         "confirm": "Quitar de todos modos"
       },
       "fillToSave": "Complete los doce meses para guardar {{year}}.",
       "incomplete": "Introduzca los días laborables de los doce meses de {{year}}.",
       "tooMany": "{{month}} de {{year}} tiene {{max}} días: introduzca {{max}} o menos.",
       "negative": "Introduzca 0 días o más para {{month}} de {{year}}.",
-      "decimals": "Use 6 decimales como máximo."
+      "decimals": "Use 6 decimales como máximo.",
+      "standardHint": "Los días laborables de cada mes siguen los festivos de {{source}}. Cambie un mes para ajustar ese año; los demás años mantienen los valores estándar.",
+      "standardTotal_one": "Valores estándar: {{total}} día",
+      "standardTotal_other": "Valores estándar: {{total}} días",
+      "resetToStandard": "Volver a los valores estándar",
+      "holidays": "Festivos: {{list}}",
+      "holidayRange": "{{from}} al {{to}}",
+      "weekend": "(fin de semana)",
+      "noHolidays": "Ningún festivo en {{year}}.",
+      "standardFailed": "No se pudieron cargar los valores estándar de {{year}}."
     },
     "messages": {
       "loadFailed": "Error al cargar el calendario.",

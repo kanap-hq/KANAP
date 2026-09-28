@@ -7,10 +7,26 @@ import type { WorkingDayProfile } from '../services/workingDayProfiles';
 const api = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('../api', () => ({ default: api }));
 
-import { buildWorkingDayProfiles, useWorkingDayProfiles } from './useWorkingDayProfiles';
+import {
+  buildWorkingDayProfiles,
+  useCalendarCountries,
+  useCalendarSuggestions,
+  useWorkingDayProfileYear,
+  useWorkingDayProfiles,
+} from './useWorkingDayProfiles';
 
 function profile(partial: Partial<WorkingDayProfile> & Pick<WorkingDayProfile, 'id' | 'code' | 'name'>): WorkingDayProfile {
-  return { description: null, days_by_year: {}, status: 'enabled', disabled_at: null, ...partial };
+  return {
+    description: null,
+    days_by_year: {},
+    status: 'enabled',
+    disabled_at: null,
+    country_iso: null,
+    region_code: null,
+    country_name: null,
+    region_name: null,
+    ...partial,
+  };
 }
 
 const STAFF = profile({ id: 'p-staff', code: 'STAFF', name: 'Staff' });
@@ -49,7 +65,7 @@ describe('useWorkingDayProfiles', () => {
     const { result } = renderHook(() => useWorkingDayProfiles(), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(api.get).toHaveBeenCalledWith('/working-day-profiles', {
-      params: { page: 1, limit: 1000, sort: 'name:ASC', includeDisabled: true },
+      params: { page: 1, limit: 1000, sort: 'name:ASC', includeDisabled: true, lang: 'en' },
     });
     expect(result.current.profiles.map((p) => p.id)).toEqual(['p-old', 'p-staff']);
     expect(result.current.enabled.map((p) => p.id)).toEqual(['p-staff']);
@@ -60,5 +76,49 @@ describe('useWorkingDayProfiles', () => {
     const { result } = renderHook(() => useWorkingDayProfiles({ enabled: false }), { wrapper });
     expect(result.current.ready).toBe(false);
     expect(api.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('calendar country hooks', () => {
+  function wrapper({ children }: { children: React.ReactNode }) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  }
+
+  it('reads the countries and the suggestions in the UI language', async () => {
+    api.get.mockReset();
+    api.get.mockImplementation(async (url: string) => ({
+      data: {
+        items: url.endsWith('/countries')
+          ? [{ code: 'FR', name: 'France', regions: [] }]
+          : [{ country_iso: 'NL', country_name: 'Netherlands', companies: ['Sales office'] }],
+      },
+    }));
+    const countries = renderHook(() => useCalendarCountries(), { wrapper });
+    await waitFor(() => expect(countries.result.current.ready).toBe(true));
+    expect(countries.result.current.countries.map((c) => c.code)).toEqual(['FR']);
+    expect(api.get).toHaveBeenCalledWith('/working-day-profiles/countries', { params: { lang: 'en' } });
+
+    const suggestions = renderHook(() => useCalendarSuggestions(), { wrapper });
+    await waitFor(() => expect(suggestions.result.current).toHaveLength(1));
+    expect(api.get).toHaveBeenCalledWith('/working-day-profiles/suggestions', { params: { lang: 'en' } });
+  });
+
+  it('asks nothing while disabled', () => {
+    api.get.mockReset();
+    renderHook(() => useCalendarSuggestions({ enabled: false }), { wrapper });
+    renderHook(() => useCalendarCountries({ enabled: false }), { wrapper });
+    const year = renderHook(() => useWorkingDayProfileYear('p1', 2026, { enabled: false }), { wrapper });
+    expect(year.result.current.data).toBeUndefined();
+    expect(api.get).not.toHaveBeenCalled();
+  });
+
+  it('reads one year of a standard calendar', async () => {
+    api.get.mockReset();
+    const info = { year: 2027, source: 'standard', days: [], standard_days: [], holidays: [] };
+    api.get.mockResolvedValue({ data: info });
+    const { result } = renderHook(() => useWorkingDayProfileYear('p1', 2027), { wrapper });
+    await waitFor(() => expect(result.current.data).toEqual(info));
+    expect(api.get).toHaveBeenCalledWith('/working-day-profiles/p1/years/2027', { params: { lang: 'en' } });
   });
 });

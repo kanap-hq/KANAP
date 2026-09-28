@@ -5,7 +5,7 @@ import { PropertyGroup, PropertyRow } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import type { WorkingDayProfileDetail } from '../../services/workingDayProfiles';
-import type { WorkingDayCalendarField } from './workingDayCalendarFields';
+import { calendarSourceLabel, type WorkingDayCalendarField } from './workingDayCalendarFields';
 
 type Props = {
   calendar: WorkingDayProfileDetail;
@@ -24,6 +24,7 @@ export default function WorkingDayCalendarPropertiesDrawer({
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const [code, setCode] = React.useState(calendar.code);
+  const source = calendarSourceLabel(calendar);
 
   // A refused code stays in the field so it can be corrected; a stored change replaces it.
   React.useEffect(() => { setCode(calendar.code); }, [calendar.code]);
@@ -57,6 +58,14 @@ export default function WorkingDayCalendarPropertiesDrawer({
             inputProps={{ 'aria-label': t('workingDayCalendars.fields.code'), autoComplete: 'off', spellCheck: false }}
           />
         </PropertyRow>
+        {source && (
+          // Set at creation and never changed: plain text, not a field.
+          <PropertyRow label={t('workingDayCalendars.fields.source')} helperText={t('workingDayCalendars.hints.source')}>
+            <Typography data-testid="working-day-calendar-source" sx={{ fontSize: 13, lineHeight: 1.4, color: 'kanap.text.primary' }}>
+              {source}
+            </Typography>
+          </PropertyRow>
+        )}
       </PropertyGroup>
 
       <PropertyGroup>

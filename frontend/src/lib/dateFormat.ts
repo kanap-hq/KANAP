@@ -9,8 +9,11 @@
  */
 
 export type FormatShortDateOptions = {
-  /** 'auto' (default) omits the year when it matches the current year. */
-  year?: 'auto' | 'always';
+  /**
+   * 'auto' (default) omits the year when it matches the current year; 'never' omits it always, for a
+   * date whose year the screen already shows (a year tab).
+   */
+  year?: 'auto' | 'always' | 'never';
   /** Returned for null/undefined/empty/unparsable values. Defaults to ''. */
   empty?: string;
 };
@@ -46,7 +49,7 @@ export function formatShortDate(
   const date = toDate(value);
   if (!date) return empty;
 
-  const showYear = yearMode === 'always' || date.getFullYear() !== new Date().getFullYear();
+  const showYear = yearMode === 'always' || (yearMode === 'auto' && date.getFullYear() !== new Date().getFullYear());
   const parts = new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'short',

@@ -309,8 +309,8 @@ export function formatFte(value: unknown, locale: string): string {
 }
 
 /**
- * Like the amounts, plus blank / not blank: a line without costing inputs has no FTE (blank), which
- * is not the same as zero people.
+ * Like the amounts, plus blank / not blank: a line whose column has no quantity × price lines has no
+ * FTE (blank), which is not the same as zero people.
  */
 export const FTE_FILTER_PARAMS = {
   ...AMOUNT_FILTER_PARAMS,

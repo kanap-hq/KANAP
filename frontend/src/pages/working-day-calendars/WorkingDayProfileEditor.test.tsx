@@ -196,3 +196,162 @@ describe('WorkingDayProfileEditor', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('March 2026 has 31 days: enter 31 or less.');
   });
 });
+
+describe('WorkingDayProfileEditor on a standard calendar', () => {
+  // France 2026: Monday to Friday minus the public holidays that fall on a weekday, 252 days.
+  const FRANCE_2026 = ['21', '20', '22', '21', '17', '22', '22', '21', '22', '22', '20', '22'];
+  const HOLIDAYS_2026 = [
+    { date: '2026-01-01', name: "New Year's Day", weekend: false },
+    { date: '2026-04-06', name: 'Easter Monday', weekend: false },
+    { date: '2026-08-15', name: 'Assumption', weekend: true },
+    { date: '2026-11-01', name: "All Saints' Day", weekend: true },
+  ];
+  const onYearChange = vi.fn();
+
+  function yearInfo(year: number, standardDays: string[] = FRANCE_2026, holidays = HOLIDAYS_2026) {
+    return { year, source: 'standard' as const, days: standardDays, standard_days: standardDays, holidays };
+  }
+
+  function renderStandard(
+    daysByYear: CalendarDays,
+    info: ReturnType<typeof yearInfo> | null = yearInfo(2026),
+    options: { year?: number; disabled?: boolean; failed?: boolean } = {},
+  ) {
+    const element = (next: CalendarDays, nextInfo: ReturnType<typeof yearInfo> | null) => (
+      <ThemeProvider theme={createAppTheme('light')}>
+        <WorkingDayProfileEditor
+          daysByYear={next}
+          disabled={options.disabled ?? false}
+          onSaveYear={onSaveYear}
+          initialYear={options.year ?? 2026}
+          standard={{ source: 'France', year: nextInfo, failed: options.failed }}
+          onYearChange={onYearChange}
+        />
+      </ThemeProvider>
+    );
+    const view = render(element(daysByYear, info));
+    return { ...view, update: (next: CalendarDays, nextInfo = info) => view.rerender(element(next, nextInfo)) };
+  }
+
+  beforeEach(() => {
+    onSaveYear.mockClear();
+    onYearChange.mockClear();
+  });
+
+  it('shows the standard values of a year the calendar does not hold, and nothing more than the total', () => {
+    renderStandard({});
+    expect(monthInput(1, 2026)).toHaveValue('21');
+    expect(monthInput(5, 2026)).toHaveValue('17');
+    expect(screen.getByTestId('working-days-total')).toHaveTextContent('workingDayCalendars.days.total count=252 total=252 year=2026');
+    expect(screen.queryByTestId('working-days-standard')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'workingDayCalendars.days.resetToStandard' })).toBeNull();
+    expect(screen.getByText('workingDayCalendars.days.standardHint source=France')).toBeInTheDocument();
+  });
+
+  it('never offers the copy from the year before nor the removal of a year', () => {
+    renderStandard({ '2025': DAYS_2026, '2026': DAYS_2026 });
+    expect(screen.queryByRole('button', { name: /copyFrom|removeYear/ })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: '2027' }));
+    expect(screen.queryByRole('button', { name: /copyFrom|removeYear/ })).toBeNull();
+  });
+
+  it('saves nothing while the standard values are kept, and the twelve values once a month changes', async () => {
+    renderStandard({});
+    fireEvent.blur(monthInput(3, 2026));
+    expect(onSaveYear).not.toHaveBeenCalled();
+    type(3, 2026, '20');
+    const expected = [...FRANCE_2026];
+    expected[2] = '20';
+    await waitFor(() => expect(onSaveYear).toHaveBeenCalledWith(2026, expected));
+    expect(onSaveYear).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an edited year with its standard total and a reset link that removes the edit', async () => {
+    renderStandard({ '2026': DAYS_2026 });
+    expect(monthInput(1, 2026)).toHaveValue('18');
+    expect(screen.getByTestId('working-days-total')).toHaveTextContent('count=218 total=218 year=2026');
+    expect(screen.getByTestId('working-days-standard')).toHaveTextContent('workingDayCalendars.days.standardTotal count=252 total=252');
+    fireEvent.click(screen.getByRole('button', { name: 'workingDayCalendars.days.resetToStandard' }));
+    // No dialog: the standard values are one click away again.
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(onSaveYear).toHaveBeenCalledWith(2026, null));
+  });
+
+  it('shows the standard values again once the edit is removed', () => {
+    const view = renderStandard({ '2026': DAYS_2026 });
+    view.update({});
+    expect(monthInput(1, 2026)).toHaveValue('21');
+    expect(screen.getByTestId('working-days-total')).toHaveTextContent('count=252 total=252 year=2026');
+    expect(screen.queryByTestId('working-days-standard')).toBeNull();
+  });
+
+  it('lists the public holidays of the year, those on a weekend marked', () => {
+    renderStandard({});
+    expect(screen.getByTestId('working-days-holidays')).toHaveTextContent(
+      "workingDayCalendars.days.holidays list=1 Jan New Year's Day, 6 Apr Easter Monday, 15 Aug Assumption workingDayCalendars.days.weekend, 1 Nov All Saints' Day workingDayCalendars.days.weekend",
+    );
+  });
+
+  it('names a holiday of several days once, with its first and last day', () => {
+    renderStandard({}, yearInfo(2026, FRANCE_2026, [
+      { date: '2026-05-16', name: 'Kurbanski bajram', weekend: true },
+      { date: '2026-05-17', name: 'Kurbanski bajram', weekend: true },
+      { date: '2026-05-18', name: 'Kurbanski bajram', weekend: false },
+      { date: '2026-05-19', name: 'Kurbanski bajram', weekend: false },
+    ]));
+    expect(screen.getByTestId('working-days-holidays')).toHaveTextContent(
+      'workingDayCalendars.days.holidays list=workingDayCalendars.days.holidayRange from=16 to=19 May Kurbanski bajram',
+    );
+  });
+
+  it('says so when a year has no public holiday', () => {
+    renderStandard({}, yearInfo(2026, FRANCE_2026, []));
+    expect(screen.getByTestId('working-days-holidays')).toHaveTextContent('workingDayCalendars.days.noHolidays year=2026');
+  });
+
+  it('waits for the year: blank and locked fields, no holidays line, until its values arrive', () => {
+    const view = renderStandard({}, null);
+    expect(monthInput(1, 2026)).toHaveValue('');
+    expect(monthInput(1, 2026)).toBeDisabled();
+    expect(screen.queryByTestId('working-days-holidays')).toBeNull();
+    // Another year's values are not this year's.
+    view.update({}, yearInfo(2025));
+    expect(monthInput(1, 2026)).toBeDisabled();
+    view.update({}, yearInfo(2026));
+    expect(monthInput(1, 2026)).not.toBeDisabled();
+    expect(monthInput(1, 2026)).toHaveValue('21');
+  });
+
+  it('says when the standard values could not be loaded', () => {
+    renderStandard({}, null, { failed: true });
+    expect(screen.getByRole('alert')).toHaveTextContent('workingDayCalendars.days.standardFailed year=2026');
+  });
+
+  it('offers five years around the current one and moves one year at a time, telling the caller', () => {
+    renderStandard({}, yearInfo(2026), { year: 2026 });
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['2024', '2025', '2026', '2027', '2028']);
+    expect(onYearChange).toHaveBeenLastCalledWith(2026);
+    fireEvent.click(screen.getByRole('button', { name: 'yearTabs.previous' }));
+    expect(onYearChange).toHaveBeenLastCalledWith(2025);
+    fireEvent.click(screen.getByRole('button', { name: 'yearTabs.previous' }));
+    fireEvent.click(screen.getByRole('button', { name: 'yearTabs.previous' }));
+    expect(onYearChange).toHaveBeenLastCalledWith(2023);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['2021', '2022', '2023', '2024', '2025']);
+  });
+
+  it('stops at 2000 and 2100', () => {
+    const first = renderStandard({}, yearInfo(2100), { year: 2100 });
+    expect(screen.getByRole('button', { name: 'yearTabs.next' })).toBeDisabled();
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['2096', '2097', '2098', '2099', '2100']);
+    first.unmount();
+    renderStandard({}, yearInfo(2000), { year: 2000 });
+    expect(screen.getByRole('button', { name: 'yearTabs.previous' })).toBeDisabled();
+  });
+
+  it('is read only without edit rights: no reset link', () => {
+    renderStandard({ '2026': DAYS_2026 }, yearInfo(2026), { disabled: true });
+    expect(monthInput(1, 2026)).toBeDisabled();
+    expect(screen.getByTestId('working-days-standard')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'workingDayCalendars.days.resetToStandard' })).toBeNull();
+  });
+});

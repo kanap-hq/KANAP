@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/PageHeader';
@@ -15,9 +15,19 @@ import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { STATUS_VALUES } from '../constants/status';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
-import { useWorkingDayProfiles } from '../hooks/useWorkingDayProfiles';
-import { WORKING_DAY_PROFILES_ENDPOINT, type WorkingDayProfileListRow } from '../services/workingDayProfiles';
-import { WORKING_DAY_CALENDARS_PATH } from './working-day-calendars/workingDayCalendarFields';
+import { useCalendarSuggestions, useWorkingDayProfiles } from '../hooks/useWorkingDayProfiles';
+import {
+  WORKING_DAY_PROFILES_ENDPOINT,
+  createWorkingDayProfile,
+  type WorkingDayProfileListRow,
+} from '../services/workingDayProfiles';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
+import {
+  WORKING_DAY_CALENDARS_PATH,
+  calendarSourceLabel,
+  calendarYearsText,
+  joinNames,
+} from './working-day-calendars/workingDayCalendarFields';
 import ForbiddenPage from './ForbiddenPage';
 
 const DEFAULT_SORT = 'name:ASC';
@@ -42,6 +52,11 @@ function WorkingDayCalendarsList() {
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const calendars = useWorkingDayProfiles();
+  const canCreate = hasLevel('working_day_profiles', 'member');
+  const canAdmin = hasLevel('working_day_profiles', 'admin');
+  const suggestions = useCalendarSuggestions({ enabled: canCreate });
+  const [creatingSuggested, setCreatingSuggested] = useState(false);
+  const [suggestedError, setSuggestedError] = useState<string | null>(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
@@ -49,9 +64,6 @@ function WorkingDayCalendarsList() {
   const [selectedRows, setSelectedRows] = useState<WorkingDayProfileListRow[]>([]);
   const gridApiRef = useRef<any>(null);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
-
-  const canCreate = hasLevel('working_day_profiles', 'member');
-  const canAdmin = hasLevel('working_day_profiles', 'admin');
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -73,6 +85,9 @@ function WorkingDayCalendarsList() {
     (row: WorkingDayProfileListRow) => (row?.id ? `${WORKING_DAY_CALENDARS_PATH}/${row.id}/overview?${buildWorkspaceSearch().toString()}` : null),
     [buildWorkspaceSearch],
   );
+
+  // Country names come back in the UI language.
+  const gridParams = useMemo(() => ({ lang: locale }), [locale]);
 
   const columns: EnhancedColDef<WorkingDayProfileListRow>[] = useMemo(() => {
     const link = (params: any) => (
@@ -104,12 +119,21 @@ function WorkingDayCalendarsList() {
         cellRenderer: link,
       },
       {
+        // The server sorts and filters `country` on this same text, "France (Moselle)".
+        colId: 'country',
+        headerName: t('workingDayCalendars.columns.country'),
+        width: 200,
+        filter: 'agTextColumnFilter',
+        valueGetter: (p: any) => (p.data ? calendarSourceLabel(p.data) ?? '' : ''),
+        cellRenderer: link,
+      },
+      {
         field: 'years',
         headerName: t('workingDayCalendars.columns.years'),
         width: 220,
         sortable: false,
         filter: false,
-        valueFormatter: (p: any) => (Array.isArray(p.value) ? p.value.join(', ') : ''),
+        valueFormatter: (p: any) => calendarYearsText(t, p.data, Array.isArray(p.value) ? p.value : []),
         cellRenderer: link,
       },
       {
@@ -137,6 +161,30 @@ function WorkingDayCalendarsList() {
       },
     ];
   }, [getWorkspaceHref, locale, navigate, t]);
+
+  // One calendar per country of the tenant's companies, code = the country code, name in the UI language.
+  const createSuggested = async () => {
+    if (creatingSuggested) return;
+    setCreatingSuggested(true);
+    setSuggestedError(null);
+    const failures: string[] = [];
+    for (const suggestion of suggestions) {
+      try {
+        await createWorkingDayProfile({
+          code: suggestion.country_iso,
+          name: suggestion.country_name,
+          country_iso: suggestion.country_iso,
+        });
+      } catch (e) {
+        failures.push(getApiErrorMessage(e, t, t('workingDayCalendars.messages.createFailed')));
+      }
+    }
+    setCreatingSuggested(false);
+    if (failures.length > 0) setSuggestedError(failures.join(' '));
+    refresh();
+  };
+
+  const showSuggestions = canCreate && suggestions.length > 0;
 
   const actions = (
     <Stack direction="row" spacing={1}>
@@ -166,7 +214,25 @@ function WorkingDayCalendarsList() {
   return (
     <>
       <PageHeader title={t('workingDayCalendars.title')} actions={actions} />
-      {calendars.ready && !calendars.isError && calendars.profiles.length === 0 && (
+      {showSuggestions && (
+        <Box data-testid="working-day-calendars-suggestions" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.5, mt: -1, mb: 1.5 }}>
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {t('workingDayCalendars.suggestions.line', {
+              count: suggestions.length,
+              countries: joinNames(suggestions.map((suggestion) => suggestion.country_name), locale),
+            })}
+          </Typography>
+          <Button variant="action" size="small" onClick={() => void createSuggested()} disabled={creatingSuggested}>
+            {t('workingDayCalendars.suggestions.create', { count: suggestions.length })}
+          </Button>
+        </Box>
+      )}
+      {suggestedError && (
+        <Typography role="alert" sx={{ fontSize: 12, color: 'error.main', mt: -1, mb: 1.5 }}>
+          {suggestedError}
+        </Typography>
+      )}
+      {!showSuggestions && calendars.ready && !calendars.isError && calendars.profiles.length === 0 && (
         <Typography data-testid="working-day-calendars-empty" sx={{ fontSize: 13, color: 'kanap.text.tertiary', mt: -1, mb: 1.5 }}>
           {t('workingDayCalendars.emptyExplainer')}
         </Typography>
@@ -175,6 +241,7 @@ function WorkingDayCalendarsList() {
         columns={columns}
         endpoint={WORKING_DAY_PROFILES_ENDPOINT}
         queryKey="working-day-profiles"
+        extraParams={gridParams}
         getRowId={(r) => r.id}
         enableSearch
         defaultSort={{ field: 'name', direction: 'ASC' }}

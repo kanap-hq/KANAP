@@ -236,9 +236,14 @@
     "previous": "Previous calendar",
     "next": "Next calendar",
     "createHint": "Once the calendar is created, enter the working days of each year.",
+    "createHintStandard": "The working days of every year follow the public holidays of {{source}}. You can change any month afterwards.",
+    "wholeCountry": "Whole country",
+    "yearsAll": "All years",
+    "yearsAllEdited": "All years, {{years}} edited",
     "columns": {
       "code": "Code",
       "name": "Name",
+      "country": "Country",
       "years": "Years",
       "status": "Status",
       "updated": "Updated"
@@ -247,12 +252,18 @@
       "code": "Code",
       "name": "Name",
       "description": "Description",
-      "lifecycle": "Lifecycle"
+      "lifecycle": "Lifecycle",
+      "country": "Country",
+      "region": "Region",
+      "source": "Source"
     },
     "hints": {
-      "code": "A short code your team recognizes. Import files use it to find the calendar."
+      "code": "A short code your team recognizes. Import files use it to find the calendar.",
+      "country": "Optional. With a country, the working days of every year follow its public holidays.",
+      "source": "The standard values follow these public holidays. The country of a calendar cannot be changed."
     },
     "placeholders": {
+      "country": "e.g., France",
       "code": "e.g., CAL-01",
       "name": "e.g., Head office staff",
       "description": "e.g., Working days of salaried staff, public holidays excluded",
@@ -267,6 +278,12 @@
       "both": "Used by {{opex}} and {{capex}}."
     },
     "deleteBlocked": "{{usage}} Disable it instead.",
+    "suggestions": {
+      "line_one": "Your companies are in {{countries}}. Create its standard calendar.",
+      "line_other": "Your companies are in {{countries}}. Create their standard calendars.",
+      "create_one": "Create the calendar",
+      "create_other": "Create {{count}} calendars"
+    },
     "days": {
       "title": "Working days",
       "hint": "The working days of each month. A price per day is multiplied by them.",
@@ -277,14 +294,23 @@
       "removeYear": "Remove {{year}}",
       "removeDialog": {
         "title": "Remove the working days of {{year}}?",
-        "body": "{{usage}} Their amounts and explanations stay as they are. Until the days of {{year}} are entered again, none of these lines can be recomputed for {{year}}, and the budget rows file cannot compute them.",
+        "body": "{{usage}} Their amounts and explanations stay as they are. Until the days of {{year}} are entered again, lines priced per day on this calendar cannot be saved for {{year}}.",
         "confirm": "Remove anyway"
       },
       "fillToSave": "Fill the twelve months to save {{year}}.",
       "incomplete": "Enter the working days of all twelve months of {{year}}.",
       "tooMany": "{{month}} {{year}} has {{max}} days: enter {{max}} or less.",
       "negative": "Enter 0 or more days for {{month}} {{year}}.",
-      "decimals": "Use at most 6 decimals."
+      "decimals": "Use at most 6 decimals.",
+      "standardHint": "The working days of each month follow the public holidays of {{source}}. Change a month to adjust that year; the other years keep the standard values.",
+      "standardTotal_one": "Standard values: {{total}} day",
+      "standardTotal_other": "Standard values: {{total}} days",
+      "resetToStandard": "Reset to standard",
+      "holidays": "Public holidays: {{list}}",
+      "holidayRange": "{{from}} to {{to}}",
+      "weekend": "(weekend)",
+      "noHolidays": "No public holidays in {{year}}.",
+      "standardFailed": "Failed to load the standard values of {{year}}."
     },
     "messages": {
       "loadFailed": "Failed to load the calendar.",

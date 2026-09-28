@@ -6,30 +6,35 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
-import { PropertyRow } from '../../components/design';
-import { WORKING_DAY_PROFILES_QUERY_KEY } from '../../hooks/useWorkingDayProfiles';
+import {
+  WORKING_DAY_PROFILES_QUERY_KEY,
+  useWorkingDayProfileYear,
+  workingDayProfileDetailKey,
+  workingDayProfileYearsKey,
+} from '../../hooks/useWorkingDayProfiles';
+import { useLocale } from '../../i18n/useLocale';
 import { useWorkingDayCalendarNav } from '../../hooks/useWorkingDayCalendarNav';
 import {
-  createWorkingDayProfile,
   deleteWorkingDayProfile,
   getWorkingDayProfile,
+  isStandardCalendar,
   updateWorkingDayProfile,
   type WorkingDayProfilePatch,
 } from '../../services/workingDayProfiles';
 import { deriveStatusFromDisabledAt } from '../../constants/status';
-import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
+import { longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import WorkingDayCalendarPropertiesDrawer from './WorkingDayCalendarPropertiesDrawer';
 import WorkingDayProfileEditor from './WorkingDayProfileEditor';
+import WorkingDayCalendarCreate from './WorkingDayCalendarCreate';
 import {
   WORKING_DAY_CALENDARS_PATH,
   calendarDeleteBlock,
+  calendarSourceLabel,
   calendarUsageLine,
   refusalField,
   type WorkingDayCalendarField,
 } from './workingDayCalendarFields';
-
-const CREATE_FIELDS: ReadonlySet<WorkingDayCalendarField> = new Set<WorkingDayCalendarField>(['code', 'name', 'description']);
 
 type FieldErrors = Partial<Record<WorkingDayCalendarField, string>>;
 
@@ -40,6 +45,7 @@ export default function WorkingDayCalendarWorkspacePage() {
   const params = useParams();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const lang = useLocale();
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
@@ -47,10 +53,15 @@ export default function WorkingDayCalendarWorkspacePage() {
   const canDelete = hasLevel('working_day_profiles', 'admin');
 
   const { data, error: loadError } = useQuery({
-    queryKey: ['working-day-profiles', 'detail', id],
-    queryFn: () => getWorkingDayProfile(id),
+    queryKey: workingDayProfileDetailKey(id, lang),
+    queryFn: () => getWorkingDayProfile(id, lang),
     enabled: !isCreate && !!id,
   });
+
+  // A standard calendar loads the shown year's standard values and public holidays.
+  const standard = isStandardCalendar(data);
+  const [shownYear, setShownYear] = React.useState(() => new Date().getFullYear());
+  const yearQuery = useWorkingDayProfileYear(data?.id ?? null, shownYear, { enabled: standard });
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
@@ -96,8 +107,8 @@ export default function WorkingDayCalendarWorkspacePage() {
   }, [listContext, navigate]);
 
   const afterWrite = React.useCallback(() => {
-    // The pickers' list only: the detail was just replaced by the response.
-    void queryClient.invalidateQueries({ queryKey: WORKING_DAY_PROFILES_QUERY_KEY, exact: true });
+    // The lists only: the detail was just replaced by the response.
+    void queryClient.invalidateQueries({ queryKey: WORKING_DAY_PROFILES_QUERY_KEY });
     void queryClient.invalidateQueries({ queryKey: ['working-day-profiles-ids'] });
   }, [queryClient]);
 
@@ -108,9 +119,11 @@ export default function WorkingDayCalendarWorkspacePage() {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       const run = async (): Promise<boolean> => {
         try {
-          const saved = await updateWorkingDayProfile(recordId, body);
-          queryClient.setQueryData(['working-day-profiles', 'detail', recordId], saved);
+          const saved = await updateWorkingDayProfile(recordId, body, lang);
+          queryClient.setQueryData(workingDayProfileDetailKey(recordId, lang), saved);
           afterWrite();
+          // The days in effect changed: the year shown here and the budget tab's working-days note follow.
+          if (body.days_by_year) void queryClient.invalidateQueries({ queryKey: workingDayProfileYearsKey(recordId) });
           return true;
         } catch (e) {
           if (currentIdRef.current !== recordId) return false;
@@ -125,7 +138,7 @@ export default function WorkingDayCalendarWorkspacePage() {
       chainRef.current = result.catch(() => undefined);
       return result;
     },
-    [afterWrite, canEdit, data?.id, queryClient, t],
+    [afterWrite, canEdit, data?.id, lang, queryClient, t],
   );
 
   const saveYear = React.useCallback(
@@ -239,6 +252,12 @@ export default function WorkingDayCalendarWorkspacePage() {
               error={errors.days_by_year}
               usage={usage}
               onSaveYear={saveYear}
+              standard={standard ? {
+                source: calendarSourceLabel(data) ?? '',
+                year: yearQuery.data,
+                failed: yearQuery.isError,
+              } : null}
+              onYearChange={setShownYear}
             />
           </Stack>
         )}
@@ -283,122 +302,6 @@ function DescriptionField({
         sx={longFormSurfaceFieldSx}
         inputProps={{ 'aria-label': t('workingDayCalendars.fields.description') }}
       />
-    </Box>
-  );
-}
-
-type CreateForm = { code: string; name: string; description: string };
-
-const EMPTY_FORM: CreateForm = { code: '', name: '', description: '' };
-
-function WorkingDayCalendarCreate({
-  canCreate,
-  onClose,
-  onCreated,
-}: {
-  canCreate: boolean;
-  onClose: () => void;
-  onCreated: (id: string) => void;
-}) {
-  const { t } = useTranslation(['master-data', 'common']);
-  const queryClient = useQueryClient();
-  const [form, setForm] = React.useState<CreateForm>(EMPTY_FORM);
-  const [errors, setErrors] = React.useState<FieldErrors>({});
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
-
-  const update = (next: Partial<CreateForm>) => setForm((prev) => ({ ...prev, ...next }));
-
-  const handleCreate = async () => {
-    if (!canCreate || submitting) return;
-    const code = form.code.trim();
-    const name = form.name.trim();
-    const nextErrors: FieldErrors = {};
-    if (!code) nextErrors.code = t('workingDayCalendars.messages.codeRequired');
-    if (!name) nextErrors.name = t('workingDayCalendars.messages.nameRequired');
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-    setSubmitting(true);
-    setServerError(null);
-    try {
-      const saved = await createWorkingDayProfile({ code, name, description: form.description.trim() || null });
-      void queryClient.invalidateQueries({ queryKey: ['working-day-profiles'] });
-      void queryClient.invalidateQueries({ queryKey: ['working-day-profiles-ids'] });
-      onCreated(saved.id);
-    } catch (e) {
-      const message = getApiErrorMessage(e, t, t('workingDayCalendars.messages.createFailed'));
-      const field = refusalField(e);
-      // A refusal goes under the field it names when the form shows that field.
-      if (field && CREATE_FIELDS.has(field)) setErrors({ [field]: message });
-      else setServerError(message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[{ key: 'overview', label: t('shared.labels.overview') }]}
-        onTabChange={() => undefined}
-        drawerStorageKey="kanap.workingDayCalendars.drawerOpen"
-        backLabel={t('workingDayCalendars.title')}
-        onBack={onClose}
-        title={form.name}
-        titleFallback={t('workingDayCalendars.newCalendar')}
-        isCreate
-        actions={(
-          <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canCreate || submitting}>
-            {t('common:buttons.create')}
-          </Button>
-        )}
-      >
-        <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-          <PropertyRow label={t('workingDayCalendars.fields.code')} required helperText={t('workingDayCalendars.hints.code')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.code}
-              onChange={(e) => update({ code: e.target.value })}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('workingDayCalendars.placeholders.code')}
-              error={!!errors.code}
-              helperText={errors.code}
-              inputProps={{ 'aria-label': t('workingDayCalendars.fields.code'), autoComplete: 'off', spellCheck: false }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('workingDayCalendars.fields.name')} required valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.name}
-              onChange={(e) => update({ name: e.target.value })}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('workingDayCalendars.placeholders.name')}
-              error={!!errors.name}
-              helperText={errors.name}
-              inputProps={{ 'aria-label': t('workingDayCalendars.fields.name'), autoComplete: 'off' }}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('workingDayCalendars.fields.description')} valueSx={{ maxWidth: 520 }}>
-            <TextField
-              value={form.description}
-              onChange={(e) => update({ description: e.target.value })}
-              multiline
-              minRows={2}
-              variant="standard"
-              sx={drawerFieldValueSx}
-              placeholder={t('workingDayCalendars.placeholders.description')}
-              error={!!errors.description}
-              helperText={errors.description}
-              inputProps={{ 'aria-label': t('workingDayCalendars.fields.description') }}
-            />
-          </PropertyRow>
-          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
-            {t('workingDayCalendars.createHint')}
-          </Typography>
-          {serverError && <Alert severity="error">{serverError}</Alert>}
-        </Stack>
-      </PortfolioDetailWorkspaceShell>
     </Box>
   );
 }

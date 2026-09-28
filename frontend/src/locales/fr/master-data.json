@@ -236,9 +236,14 @@
     "previous": "Calendrier précédent",
     "next": "Calendrier suivant",
     "createHint": "Une fois le calendrier créé, saisissez les jours ouvrés de chaque année.",
+    "createHintStandard": "Les jours ouvrés de chaque année suivent les jours fériés de {{source}}. Vous pourrez ensuite modifier n'importe quel mois.",
+    "wholeCountry": "Tout le pays",
+    "yearsAll": "Toutes les années",
+    "yearsAllEdited": "Toutes les années, {{years}} modifiée(s)",
     "columns": {
       "code": "Code",
       "name": "Nom",
+      "country": "Pays",
       "years": "Années",
       "status": "Statut",
       "updated": "Mis à jour"
@@ -247,12 +252,18 @@
       "code": "Code",
       "name": "Nom",
       "description": "Description",
-      "lifecycle": "Cycle de vie"
+      "lifecycle": "Cycle de vie",
+      "country": "Pays",
+      "region": "Région",
+      "source": "Source"
     },
     "hints": {
-      "code": "Un code court que votre équipe reconnaît. Les fichiers d'import l'utilisent pour trouver le calendrier."
+      "code": "Un code court que votre équipe reconnaît. Les fichiers d'import l'utilisent pour trouver le calendrier.",
+      "country": "Facultatif. Avec un pays, les jours ouvrés de chaque année suivent ses jours fériés.",
+      "source": "Les valeurs standard suivent ces jours fériés. Le pays d'un calendrier ne peut pas être modifié."
     },
     "placeholders": {
+      "country": "ex. France",
       "code": "ex. CAL-01",
       "name": "ex. Personnel du siège",
       "description": "ex. Jours ouvrés des salariés, jours fériés exclus",
@@ -267,6 +278,12 @@
       "both": "Utilisé par {{opex}} et {{capex}}."
     },
     "deleteBlocked": "{{usage}} Désactivez-le plutôt.",
+    "suggestions": {
+      "line_one": "Pays de vos sociétés : {{countries}}. Créez son calendrier standard.",
+      "line_other": "Pays de vos sociétés : {{countries}}. Créez leurs calendriers standard.",
+      "create_one": "Créer le calendrier",
+      "create_other": "Créer {{count}} calendriers"
+    },
     "days": {
       "title": "Jours ouvrés",
       "hint": "Les jours ouvrés de chaque mois. Un prix par jour est multiplié par ces valeurs.",
@@ -277,14 +294,23 @@
       "removeYear": "Retirer {{year}}",
       "removeDialog": {
         "title": "Retirer les jours ouvrés de {{year}} ?",
-        "body": "{{usage}} Leurs montants et leurs explications restent tels quels. Tant que les jours de {{year}} ne sont pas saisis à nouveau, aucune de ces lignes ne peut être recalculée pour {{year}}, et le fichier des lignes budgétaires ne peut pas les calculer.",
+        "body": "{{usage}} Leurs montants et leurs explications restent tels quels. Tant que les jours de {{year}} ne sont pas saisis à nouveau, les lignes au prix par jour sur ce calendrier ne peuvent pas être enregistrées pour {{year}}.",
         "confirm": "Retirer quand même"
       },
       "fillToSave": "Renseignez les douze mois pour enregistrer {{year}}.",
       "incomplete": "Saisissez les jours ouvrés des douze mois de {{year}}.",
       "tooMany": "{{month}} {{year}} compte {{max}} jours : saisissez {{max}} ou moins.",
       "negative": "Saisissez 0 jour ou plus pour {{month}} {{year}}.",
-      "decimals": "Utilisez 6 décimales au plus."
+      "decimals": "Utilisez 6 décimales au plus.",
+      "standardHint": "Les jours ouvrés de chaque mois suivent les jours fériés de {{source}}. Modifiez un mois pour ajuster cette année ; les autres années gardent les valeurs standard.",
+      "standardTotal_one": "Valeurs standard : {{total}} jour",
+      "standardTotal_other": "Valeurs standard : {{total}} jours",
+      "resetToStandard": "Revenir aux valeurs standard",
+      "holidays": "Jours fériés : {{list}}",
+      "holidayRange": "{{from}} au {{to}}",
+      "weekend": "(week-end)",
+      "noHolidays": "Aucun jour férié en {{year}}.",
+      "standardFailed": "Impossible de charger les valeurs standard de {{year}}."
     },
     "messages": {
       "loadFailed": "Échec du chargement du calendrier.",

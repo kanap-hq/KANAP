@@ -13,24 +13,71 @@ export type AmountMeasure = 'planned' | 'committed' | 'forecast' | 'actual' | 'e
 
 export type RoundMethod = 'spread' | 'copied' | 'manual' | 'computed';
 
-export type PricingBasis = 'per_day' | 'per_month' | 'per_period';
-export const PRICING_BASES: PricingBasis[] = ['per_day', 'per_month', 'per_period'];
+/** What a line's quantity counts: it decides how the line is priced and whether it gives FTE. */
+export type QuantityUnit = 'people' | 'days' | 'units';
+export const QUANTITY_UNITS: QuantityUnit[] = ['people', 'days', 'units'];
 
-/** The explanation of a computation. Decimals are plain strings; months are 1..12, arrays hold twelve values. */
-export type ComputedCalculation = {
-  kind: 'computed';
-  pricing_basis: PricingBasis;
+/** What the unit price is for. */
+export type PriceBasis = 'per_day' | 'per_month' | 'once';
+
+/** The prices each unit allows, the first one being the default. */
+export const BASES_BY_UNIT: Record<QuantityUnit, PriceBasis[]> = {
+  people: ['per_day', 'per_month'],
+  days: ['per_day'],
+  units: ['per_month', 'once'],
+};
+
+/** The price a line keeps when its unit changes: the same when the unit allows it, else the unit's default. */
+export function basisForUnit(unit: QuantityUnit, basis: PriceBasis): PriceBasis {
+  const allowed = BASES_BY_UNIT[unit];
+  return allowed.includes(basis) ? basis : allowed[0];
+}
+
+/** A stored line of a column, in `sort` order. Decimals are plain strings. */
+export type RoundLine = {
+  id: string;
+  sort: number;
+  label: string;
+  quantity_unit: QuantityUnit;
   quantity: string;
   unit_price: string;
-  price_index_pct: string;
+  price_basis: PriceBasis;
+  period_start: string;
+  period_end: string;
+  working_day_profile_id: string | null;
+  working_day_profile_code: string | null;
+  working_day_profile_name: string | null;
+};
+
+/** One line of the explanation of a computation: what it was computed with, and its result. */
+export type LineCalculation = {
+  label: string;
+  quantity_unit: QuantityUnit;
+  quantity: string;
+  unit_price: string;
+  price_basis: PriceBasis;
+  period_start: string;
+  period_end: string;
+  working_day_profile_id: string | null;
   working_day_profile_code: string | null;
   working_day_profile_name: string | null;
   active_months: number[];
   day_counts: string[] | null;
   total_days: string | null;
   month_amounts: string[];
+  fte_months: string[];
   total: string;
-  counts_as_fte: boolean;
+};
+
+/** The explanation of a column computed from its lines. Months are 1..12, arrays hold twelve values. */
+export type LinesCalculation = {
+  kind: 'computed';
+  total: string;
+  fte: string | null;
+  month_amounts: string[];
+  fte_months: string[];
+  active_months: number[];
+  lines: LineCalculation[];
 };
 
 export type LastCalculation =
@@ -45,7 +92,7 @@ export type LastCalculation =
     total: string;
     source_method: RoundMethod | null;
   }
-  | ComputedCalculation;
+  | LinesCalculation;
 
 export type RoundInput = {
   measure: AmountMeasure;
@@ -56,50 +103,67 @@ export type RoundInput = {
   last_calculation: LastCalculation | null;
   updated_at: string;
   updated_by: string | null;
-  /** The recipe: all null (and `counts_as_fte` false) when the column has none. */
-  pricing_basis: PricingBasis | null;
-  quantity: string | null;
-  unit_price: string | null;
-  price_index_pct: string | null;
-  working_day_profile_id: string | null;
-  working_day_profile_code: string | null;
-  working_day_profile_name: string | null;
-  counts_as_fte: boolean;
+  /** The column's yearly FTE from its lines; null without lines. */
+  fte: string | null;
+  /** The column's lines, kept as a reference after a hand edit or a spread; empty without lines. */
+  lines: RoundLine[];
 };
 
-/** Body of `bulk-upsert` with `kind: 'computed'` and of `compute-preview`. */
-export type ComputeRequest = {
-  kind: 'computed';
-  year: number;
-  measure: AmountMeasure;
-  period_start: string;
-  period_end: string;
-  pricing_basis: PricingBasis;
+/** A line as `bulk-upsert` `kind: 'lines'` takes it. */
+export type LinePayload = {
+  label: string;
+  quantity_unit: QuantityUnit;
   quantity: string;
   unit_price: string;
-  price_index_pct: string;
+  price_basis: PriceBasis;
+  period_start: string;
+  period_end: string;
   working_day_profile_id: string | null;
-  counts_as_fte: boolean;
 };
 
-/** What `compute-preview` answers: the computation and how it differs from what is stored. Writes nothing. */
-export type ComputePreview = {
-  active_months: number[];
-  day_counts: string[] | null;
-  total_days: string | null;
-  month_amounts: string[];
-  total: string;
-  fte: string | null;
-  calendar: { id: string; code: string; name: string; disabled: boolean } | null;
-  stored: { month_amounts: string[]; method: RoundMethod | null; last_calculation: LastCalculation | null };
-  changed_months: number[];
-  calendar_changed_months: number[];
-  warnings: string[];
+/** Body of `bulk-upsert` with `kind: 'lines'`: the column's lines, replaced wholesale ([] removes them). */
+export type LinesRequest = {
+  kind: 'lines';
+  year: number;
+  measure: AmountMeasure;
+  also_measures?: AmountMeasure[];
+  lines: LinePayload[];
 };
 
-/** True when the column keeps a recipe (a computation, or a file that gave one), so it can be recomputed. */
-export function hasRecipe(record: RoundInput | null | undefined): record is RoundInput & { pricing_basis: PricingBasis } {
-  return !!record?.pricing_basis;
+/** True when the column keeps lines, computed from them or kept as a reference. */
+export function hasLines(record: RoundInput | null | undefined): record is RoundInput {
+  return (record?.lines?.length ?? 0) > 0;
+}
+
+/** A decimal string without trailing zeros ("1.000" is "1", "400.5000" is "400.5"), so lines compare by value. */
+export function trimDecimal(value: string | number | null | undefined): string {
+  const text = String(value ?? '').trim();
+  const match = /^(-?)(\d+)(?:\.(\d*))?$/.exec(text);
+  if (!match) return text;
+  const [, sign, int, frac = ''] = match;
+  const digits = int.replace(/^0+(?=\d)/, '');
+  const decimals = frac.replace(/0+$/, '');
+  if (digits === '0' && !decimals) return '0';
+  return `${sign}${digits}${decimals ? `.${decimals}` : ''}`;
+}
+
+/** A stored line (or a line of the explanation) as it would be sent again. */
+export function linePayloadOf(line: LinePayload): LinePayload {
+  return {
+    label: line.label.trim(),
+    quantity_unit: line.quantity_unit,
+    quantity: trimDecimal(line.quantity),
+    unit_price: trimDecimal(line.unit_price),
+    price_basis: line.price_basis,
+    period_start: line.period_start,
+    period_end: line.period_end,
+    working_day_profile_id: line.price_basis === 'per_day' ? line.working_day_profile_id : null,
+  };
+}
+
+/** True when two lines ask for the same computation. */
+export function sameLine(a: LinePayload, b: LinePayload): boolean {
+  return JSON.stringify(linePayloadOf(a)) === JSON.stringify(linePayloadOf(b));
 }
 
 export type Period = { start: string; end: string };
@@ -250,69 +314,10 @@ export function formatUplift(locale: string, pct: string | number | null | undef
 }
 
 /**
- * How the column was produced: "Spread flat", "Copied from Budget 2025 +2 %", "Edited by hand",
- * "Computed per day, France 218".
- * `nameOf` names the source column of a copy (the tenant's names; the product names by default).
- */
-export function chipText(
-  t: TFunction,
-  locale: string,
-  record: RoundInput | null | undefined,
-  nameOf: (measure: AmountMeasure) => string = (measure) => columnLabel(t, measure),
-): string {
-  if (!record) return '';
-  const calc = record.last_calculation;
-  if (record.method === 'manual') return t('budgetTab.chip.manual');
-  if (record.method === 'computed') {
-    const basis = calc?.kind === 'computed' ? calc.pricing_basis : record.pricing_basis;
-    if (basis === 'per_day') {
-      const calendar = record.working_day_profile_name ?? (calc?.kind === 'computed' ? calc.working_day_profile_name : null);
-      return calendar ? t('budgetTab.chip.computedPerDay', { calendar }) : t('budgetTab.chip.computedPerDayPlain');
-    }
-    if (basis === 'per_month') return t('budgetTab.chip.computedPerMonth');
-    if (basis === 'per_period') return t('budgetTab.chip.computedPerPeriod');
-    return t('budgetTab.chip.computed');
-  }
-  if (record.method === 'copied') {
-    if (calc?.kind !== 'copy') return t('budgetTab.chip.copiedPlain');
-    const column = nameOf(calc.source_measure);
-    const uplift = formatUplift(locale, calc.uplift_pct);
-    return uplift
-      ? t('budgetTab.chip.copiedUplift', { column, year: calc.source_year, uplift })
-      : t('budgetTab.chip.copied', { column, year: calc.source_year });
-  }
-  if (calc?.kind === 'quarterly') return t('budgetTab.chip.spreadQuarterly');
-  const profile = calc?.kind === 'annual' ? calc.profile : record.spread_profile_name;
-  if (profile === '4-4-5') return t('budgetTab.chip.spread445');
-  if (profile === 'flat' || profile == null) return t('budgetTab.chip.spreadFlat');
-  return t('budgetTab.chip.spread');
-}
-
-/**
- * The chip in the units a narrow header wraps whole: "Computed per day," then the calendar's name,
- * so a line never ends in "France" with "218" alone below. One unit when there is no calendar.
- */
-export function chipUnits(
-  t: TFunction,
-  locale: string,
-  record: RoundInput | null | undefined,
-  nameOf?: (measure: AmountMeasure) => string,
-): string[] {
-  const text = chipText(t, locale, record, nameOf);
-  const calc = record?.last_calculation;
-  const calendar = record?.method === 'computed'
-    ? record.working_day_profile_name ?? (calc?.kind === 'computed' ? calc.working_day_profile_name : null)
-    : null;
-  const at = calendar ? text.lastIndexOf(calendar) : -1;
-  if (!calendar || at <= 0) return text ? [text] : [];
-  return [text.slice(0, at).trimEnd(), text.slice(at)].filter(Boolean);
-}
-
-/**
  * A decimal string from the server (days, FTE, quantity, price) as the budget tab writes numbers:
  * space groups, dot decimals, no trailing zeros ("163", "171.75", "0.75"). Read from the string.
  */
-function formatDecimal(value: string | null | undefined): string {
+export function formatDecimal(value: string | null | undefined): string {
   const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value ?? '').trim());
   if (!match) return String(value ?? '');
   const [, sign, int, frac = ''] = match;
@@ -320,6 +325,15 @@ function formatDecimal(value: string | null | undefined): string {
   const grouped = int.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   if (grouped === '0' && !decimals) return '0';
   return `${sign}${grouped}${decimals ? `.${decimals}` : ''}`;
+}
+
+/** FTE as the server rounds it, always two decimals ("1.00", "0.75"). Read from the string. */
+export function formatFteValue(value: string | null | undefined): string {
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value ?? '').trim());
+  if (!match) return String(value ?? '');
+  const [, sign, int, frac = ''] = match;
+  const grouped = int.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${sign}${grouped}.${frac.padEnd(2, '0').slice(0, 2)}`;
 }
 
 /**
@@ -336,55 +350,129 @@ export function formatMoney(value: string | null | undefined): string {
   return `${sign}${grouped}${cents === '00' ? '' : `.${cents}`}`;
 }
 
-/** The recipe in one line, for a tooltip: "Per day · Quantity 1 · Unit price 400 · Calendar France 218 · Counts as FTE". */
-export function recipeText(t: TFunction, locale: string, record: RoundInput | null | undefined): string {
-  if (!hasRecipe(record)) return '';
-  const index = Number(record.price_index_pct);
-  const calendar = record.working_day_profile_name
-    ?? (record.last_calculation?.kind === 'computed' ? record.last_calculation.working_day_profile_name : null);
-  return [
-    t(`budgetTab.basis.${record.pricing_basis}`),
-    t('budgetTab.recipe.quantity', { value: formatDecimal(record.quantity) }),
-    t('budgetTab.recipe.unitPrice', { value: formatDecimal(record.unit_price) }),
-    Number.isFinite(index) && index !== 0 ? t('budgetTab.recipe.index', { value: formatUplift(locale, record.price_index_pct) }) : '',
-    record.pricing_basis === 'per_day' && calendar ? t('budgetTab.recipe.calendar', { name: calendar }) : '',
-    record.counts_as_fte ? t('budgetTab.recipe.countsAsFte') : '',
-  ].filter(Boolean).join(' · ');
-}
-
-/** The live line of the compute panel: "9 months · 163 days · 65 200 · 0.75 FTE" (days per day only, FTE when counted). */
-export function computeLineText(t: TFunction, locale: string, preview: ComputePreview): string {
-  const days = preview.total_days == null ? null : Number(preview.total_days);
-  return [
-    t('budgetTab.compute.months', { count: preview.active_months.length }),
-    days == null ? '' : t('budgetTab.compute.days', { count: days, days: formatDecimal(preview.total_days) }),
-    formatMoney(preview.total),
-    preview.fte == null ? '' : t('budgetTab.compute.fte', { value: formatDecimal(preview.fte) }),
-  ].filter(Boolean).join(' · ');
+/** True when the column's FTE means something: a line counts people or days. */
+function linesGiveFte(record: RoundInput): boolean {
+  return record.fte != null && (record.lines ?? []).some((line) => line.quantity_unit !== 'units');
 }
 
 /**
- * What a recompute would change, one line per month: the calendar days that changed since the
- * last computation ("March: 20 days, now 19"), then the amounts that would change ("March: 8 000, now 7 600").
+ * How the column was produced, in parts that a narrow header wraps whole: "Spread flat", "Copied
+ * from Budget 2025 +2 %", "Edited by hand", or "Quantity and price" then "3 lines · 1.00 FTE".
  */
-export function computeChangeLines(t: TFunction, locale: string, preview: ComputePreview): { days: string[]; amounts: string[] } {
-  const calc = preview.stored.last_calculation;
-  const storedDays = calc?.kind === 'computed' ? calc.day_counts : null;
-  const month = (m: number) => capitalize(monthName(locale, m), locale);
-  const days = storedDays && preview.day_counts
-    ? preview.calendar_changed_months.map((m) => t('budgetTab.compute.dayChange', {
-      count: Number(storedDays[m - 1]),
-      month: month(m),
-      before: formatDecimal(storedDays[m - 1]),
-      after: formatDecimal(preview.day_counts![m - 1]),
-    }))
-    : [];
-  const amounts = preview.changed_months.map((m) => t('budgetTab.compute.amountChange', {
-    month: month(m),
-    before: formatMoney(preview.stored.month_amounts[m - 1] ?? '0'),
-    after: formatMoney(preview.month_amounts[m - 1] ?? '0'),
-  }));
-  return { days, amounts };
+function chipParts(
+  t: TFunction,
+  locale: string,
+  record: RoundInput | null | undefined,
+  nameOf: (measure: AmountMeasure) => string,
+): string[] {
+  if (!record) return [];
+  const calc = record.last_calculation;
+  if (record.method === 'manual') return [t('budgetTab.chip.manual')];
+  if (record.method === 'computed') {
+    const count = record.lines?.length ?? 0;
+    if (count === 0) return [t('budgetTab.chip.lines')];
+    const detail = [
+      t('budgetTab.chip.lineCount', { count }),
+      linesGiveFte(record) ? t('budgetTab.chip.fte', { value: formatFteValue(record.fte) }) : '',
+    ].filter(Boolean).join(' · ');
+    return [t('budgetTab.chip.lines'), detail];
+  }
+  if (record.method === 'copied') {
+    if (calc?.kind !== 'copy') return [t('budgetTab.chip.copiedPlain')];
+    const column = nameOf(calc.source_measure);
+    const uplift = formatUplift(locale, calc.uplift_pct);
+    return [uplift
+      ? t('budgetTab.chip.copiedUplift', { column, year: calc.source_year, uplift })
+      : t('budgetTab.chip.copied', { column, year: calc.source_year })];
+  }
+  if (calc?.kind === 'quarterly') return [t('budgetTab.chip.spreadQuarterly')];
+  const profile = calc?.kind === 'annual' ? calc.profile : record.spread_profile_name;
+  if (profile === '4-4-5') return [t('budgetTab.chip.spread445')];
+  if (profile === 'flat' || profile == null) return [t('budgetTab.chip.spreadFlat')];
+  return [t('budgetTab.chip.spread')];
+}
+
+/**
+ * How the column was produced: "Spread flat", "Copied from Budget 2025 +2 %", "Edited by hand",
+ * "Quantity and price · 3 lines · 1.00 FTE".
+ * `nameOf` names the source column of a copy (the tenant's names; the product names by default).
+ */
+export function chipText(
+  t: TFunction,
+  locale: string,
+  record: RoundInput | null | undefined,
+  nameOf: (measure: AmountMeasure) => string = (measure) => columnLabel(t, measure),
+): string {
+  return chipParts(t, locale, record, nameOf).join(' · ');
+}
+
+/**
+ * The chip in the units a narrow header wraps whole: "Quantity and price ·" then "3 lines · 1.00 FTE",
+ * so the count never ends a line alone. Joined with spaces, the units read as `chipText`.
+ */
+export function chipUnits(
+  t: TFunction,
+  locale: string,
+  record: RoundInput | null | undefined,
+  nameOf: (measure: AmountMeasure) => string = (measure) => columnLabel(t, measure),
+): string[] {
+  const parts = chipParts(t, locale, record, nameOf);
+  return parts.map((part, i) => (i < parts.length - 1 ? `${part} ·` : part));
+}
+
+function shortMonth(locale: string, month: number): string {
+  return new Date(2000, month - 1, 1).toLocaleString(locale, { month: 'short' });
+}
+
+/** One line in words: "Project manager: 20 days × 900 per day, Jan to Jun". */
+export function lineText(
+  t: TFunction,
+  locale: string,
+  line: Pick<RoundLine, 'label' | 'quantity_unit' | 'quantity' | 'unit_price' | 'price_basis' | 'period_start' | 'period_end'>,
+): string {
+  const months = activeMonths(Number(line.period_start.slice(0, 4)), line.period_start, line.period_end);
+  const when = months.length === 0 ? ''
+    : months.length === 1 ? shortMonth(locale, months[0])
+      : t('budgetTab.monthRange', { from: shortMonth(locale, months[0]), to: shortMonth(locale, months[months.length - 1]) });
+  const text = t('budgetTab.lines.lineText', {
+    quantity: t(`budgetTab.lines.count.${line.quantity_unit}`, { count: Number(line.quantity), value: formatDecimal(line.quantity) }),
+    price: formatDecimal(line.unit_price),
+    per: t(`budgetTab.lines.basis.${line.price_basis}`),
+    months: when,
+  });
+  const label = line.label.trim();
+  return label ? t('budgetTab.lines.labeled', { label, text }) : text;
+}
+
+/** The lines of a column computed from them, one per text line, for a tooltip; empty otherwise. */
+export function linesText(t: TFunction, locale: string, record: RoundInput | null | undefined): string {
+  if (record?.method !== 'computed' || !hasLines(record)) return '';
+  return record.lines.map((line) => lineText(t, locale, line)).join('\n');
+}
+
+/**
+ * The active months whose working days differ between the last computation (`before`) and the
+ * calendar now (`after`), compared by value.
+ */
+export function changedDays(
+  before: string[] | null | undefined,
+  after: string[] | null | undefined,
+  months: number[],
+): Array<{ month: number; before: string; after: string }> {
+  if (!before || !after) return [];
+  return months
+    .filter((m) => before[m - 1] != null && after[m - 1] != null && Number(before[m - 1]) !== Number(after[m - 1]))
+    .map((m) => ({ month: m, before: before[m - 1], after: after[m - 1] }));
+}
+
+/** "March: 20 days, now 19". */
+export function dayChangeText(t: TFunction, locale: string, change: { month: number; before: string; after: string }): string {
+  return t('budgetTab.lines.dayChange', {
+    count: Number(change.before),
+    month: capitalize(monthName(locale, change.month), locale),
+    before: formatDecimal(change.before),
+    after: formatDecimal(change.after),
+  });
 }
 
 /** "A", "A and B", "A, B and C" in the viewer's language. */
