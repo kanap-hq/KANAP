@@ -18,11 +18,11 @@ const content: LegalContent = {
     },
     body: `
 <h2>Preamble</h2>
-<p>KANAP (hereinafter "KANAP"), a SARL registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, attaches the highest importance to the protection of your personal data. This privacy policy (hereinafter the "Policy") aims to inform you in a clear and transparent manner about the processing of personal data implemented by KANAP in connection with the use of the online IT management platform "KANAP" (hereinafter "the Platform").</p>
+<p>KANAP (hereinafter "KANAP"), an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, attaches the highest importance to the protection of your personal data. This privacy policy (hereinafter the "Policy") aims to inform you in a clear and transparent manner about the processing of personal data implemented by KANAP in connection with the use of the online IT management platform "KANAP" (hereinafter "the Platform").</p>
 <p>KANAP undertakes to comply with the General Data Protection Regulation (GDPR) and French Law No. 78-17 of January 6, 1978 relating to data processing, files, and freedoms, as amended.</p>
 
 <h2>1. Data controller</h2>
-<p>The data controller for personal data collected via the Platform is KANAP, a SARL registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France.</p>
+<p>The data controller for personal data collected via the Platform is KANAP, an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France.</p>
 <p>For data entered by customers into the Platform (budget data, financial information, user data within tenants), the customer organization acts as the data controller, and KANAP acts as the data processor.</p>
 
 <h2>2. Personal data collected</h2>
@@ -120,7 +120,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Preamble</h2>
-<p>These Terms of Use govern the access and use of the online IT management platform "KANAP" (hereinafter "the Platform" or "the Service") published by KANAP, a SARL registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France. Use of the Platform implies full acceptance of these Terms of Use.</p>
+<p>These Terms of Use govern the access and use of the online IT management platform "KANAP" (hereinafter "the Platform" or "the Service") published by KANAP, an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France. Use of the Platform implies full acceptance of these Terms of Use.</p>
 
 <h2>Article 1. Access to the platform and account creation</h2>
 <p>1.1. Access to the Platform is reserved for users who have subscribed to a valid subscription, in accordance with the General Terms and Conditions of Sale (GTC) of KANAP.</p>
@@ -185,7 +185,7 @@ const content: LegalContent = {
     },
     body: `
 <h2>Article 1. Purpose</h2>
-<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), a SARL registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "KANAP".</p>
+<p>These General Terms and Conditions of Sale (GTC) govern the sale by KANAP (hereinafter "the Vendor"), an EURL (single-member limited liability company) registered with the RCS Saverne under number 939 098 190, whose registered office is located at 2, rue du Finhay, 67210 Obernai, France, of subscriptions to the online IT management platform "KANAP".</p>
 
 <h2>Article 2. Acceptance of the GTC</h2>
 <p>Acceptance of these GTC is mandatory before any subscription and implies full acceptance by the Customer of these conditions.</p>
@@ -249,7 +249,7 @@ const content: LegalContent = {
     body: `
 <h2>Site publisher</h2>
 <p><strong>KANAP</strong><br/>
-SARL registered with the RCS Saverne under number 939 098 190<br/>
+EURL registered with the RCS Saverne under number 939 098 190<br/>
 Share capital: €1,000<br/>
 Registered office: 2, rue du Finhay – 67210 Obernai – France</p>
 
