@@ -59,6 +59,12 @@ Today, Plaid can:
 - import a GLPI ticket into a KANAP task after user confirmation
 - expose read-only MCP tools so external AI clients can query governed KANAP data
 
+Alongside Plaid, the **helpdesk agent** watches your connected service desk
+(GLPI today), reads each ticket against your applications and documentation,
+and proposes a reply to the requester, an internal note or a ticket update.
+Every action type starts under approval; you switch it to automatic once its
+track record justifies it.
+
 The agentic control plane also tracks runs, tool executions, evidence, action
 requests, approvals, policy decisions, and live-readiness checks. Provider
 contracts exist for monitoring, ticketing, virtualization, directory, and
