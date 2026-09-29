@@ -718,17 +718,17 @@
       "column": "Column",
       "name": "Name",
       "shown": "Shown",
-      "follows": "Follows \"Apply to all columns\"",
+      "follows": "Follows the spread and the lines",
       "default": "Default",
       "nameOf": "Name of column {{position}}",
       "shownOf": "Show {{column}}",
-      "followsOf": "{{column}} follows \"Apply to all columns\"",
+      "followsOf": "{{column}} follows the spread and the lines",
       "defaultOf": "Make {{column}} the default column",
       "inFiles": "In files: {{name}}",
       "nameHint": "Leave a name empty to use the standard name.",
       "helpHidden": "Hidden columns keep their amounts and still accept imports and freezes.",
       "helpDefault": "The default column is preselected in reports and sorts the lists and the dashboard. Freezing it fixes the year's exchange rates.",
-      "helpFollows": "Columns that follow \"Apply to all columns\" take the same period when a spread is applied to all columns.",
+      "helpFollows": "The column takes what is applied to all columns on the budget tab: the distribution and period of a spread, and the quantity and price lines. A column that does not follow keeps its own.",
       "errors": {
         "allHidden": "At least one column must stay shown.",
         "defaultHidden": "The default column must be shown: choose another default column first.",
@@ -1111,27 +1111,46 @@
       "quantity": "Quantity",
       "unit": "Unit",
       "unitPrice": "Unit price",
-      "per": "Per",
+      "priceFor": "Price per",
+      "howOften": "How often",
+      "date": "Date",
       "calendar": "Calendar",
-      "units": {
+      "unitNames": {
         "people": "people",
         "days": "days",
-        "units": "units"
+        "pieces": "pieces"
       },
       "basis": {
         "per_day": "per day",
         "per_month": "per month",
+        "per_piece": "per piece"
+      },
+      "frequency": {
+        "per_month": "per month",
         "once": "once"
       },
+      "overThePeriod": "over the period",
+      "fullTime": "Full time",
+      "daysPerMonth": "days per month",
+      "daysPerMonthPlaceholder": "e.g., 5",
+      "daysPerMonthCount_one": "{{value}} day per month",
+      "daysPerMonthCount_other": "{{value}} days per month",
       "count": {
         "people_one": "{{value}} person",
         "people_other": "{{value}} people",
         "days_one": "{{value}} day",
         "days_other": "{{value}} days",
-        "units_one": "{{value}} unit",
-        "units_other": "{{value}} units"
+        "pieces_one": "{{value}} piece",
+        "pieces_other": "{{value}} pieces"
       },
-      "lineText": "{{quantity}} × {{price}} {{per}}, {{months}}",
+      "lineText": {
+        "people_full_time": "{{quantity}} × {{price}} per day, full time, {{months}}",
+        "people_days": "{{quantity}} × {{price}} per day, {{days}}, {{months}}",
+        "people_per_month": "{{quantity}} × {{price}} per month, {{months}}",
+        "days": "{{quantity}} × {{price}} per day over the period, {{months}}",
+        "pieces_per_month": "{{quantity}} × {{price}} per piece per month, {{months}}",
+        "pieces_once": "{{quantity}} × {{price}} once, {{months}}"
+      },
       "labeled": "{{label}}: {{text}}",
       "descriptionPlaceholder": "e.g., Project manager",
       "quantityPlaceholder": "e.g., 1",
@@ -1140,12 +1159,17 @@
       "remove": "Remove the line",
       "empty": "No line yet. A line is a quantity times a unit price.",
       "incomplete": "Enter a quantity and a unit price to save this line.",
+      "chooseDays": "Enter the days per month, or tick Full time.",
       "chooseCalendar": "Choose a calendar for a price per day.",
       "lineNote": "Line {{line}}: {{note}}",
-      "total": "= {{total}}",
-      "totalFte": "= {{total}} · {{fte}} FTE",
+      "problem": {
+        "dateMissing": "Choose a date.",
+        "dateInvalid": "Enter a valid date.",
+        "dateOutsideYear": "Choose a date in {{year}}."
+      },
+      "fte": "FTE over the period {{fte_period}} · Full-year average {{fte}}",
+      "applyToAll": "Apply these lines to all columns",
       "status": {
-        "computed": "Amounts are computed from these lines.",
         "manual": "Amounts were entered by hand.",
         "spread": "Amounts come from a spread.",
         "copied": "Amounts were copied from {{source}}.",
@@ -1164,7 +1188,7 @@
     },
     "listAnd": "{{first}} and {{last}}",
     "amount": "Amount",
-    "applyToAll": "Apply to all columns",
+    "applyDistributionToAll": "Apply the distribution to all columns",
     "applyToAllFollow": "{{columns}} follow the same period.",
     "applyToAllOthers_one": "{{columns}} keeps its own period.",
     "applyToAllOthers_other": "{{columns}} keep their own period.",

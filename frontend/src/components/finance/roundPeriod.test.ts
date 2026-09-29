@@ -7,6 +7,8 @@ import {
   RoundLine,
   activeMonths,
   basisForUnit,
+  dateProblem,
+  isDateLine,
   centsToDecimal,
   changedDays,
   chipText,
@@ -229,6 +231,8 @@ const line = (over: Partial<RoundLine> = {}): RoundLine => ({
   quantity: '20.000',
   unit_price: '900.0000',
   price_basis: 'per_day',
+  frequency: 'once',
+  days_per_month: null,
   period_start: '2026-01-01',
   period_end: '2026-06-30',
   working_day_profile_id: 'cal-1',
@@ -243,19 +247,24 @@ const computed = (lines: RoundLine[], fte: string | null) => record({
   fte,
   lines,
   last_calculation: {
-    kind: 'computed', total: '18000.00', fte, month_amounts: [], fte_months: [], active_months: [1, 2, 3, 4, 5, 6], lines: [],
+    kind: 'computed', total: '18000.00', fte, fte_period: fte, month_amounts: [], fte_months: [], active_months: [1, 2, 3, 4, 5, 6], lines: [],
   },
 });
 
 describe('columns built from lines', () => {
   it('names the lines, their count and the FTE in the chip', () => {
-    const three = computed([line(), line({ id: 'l2', quantity_unit: 'people', price_basis: 'per_month' }), line({ id: 'l3', quantity_unit: 'units', price_basis: 'once' })], '1.5');
-    expect(chipText(en(), 'en', three)).toBe('Quantity and price · 3 lines · 1.50 FTE');
+    const three = computed([
+      line(),
+      line({ id: 'l2', quantity_unit: 'people', price_basis: 'per_month', frequency: 'per_month', working_day_profile_id: null }),
+      line({ id: 'l3', quantity_unit: 'pieces', price_basis: 'per_piece', frequency: 'once', working_day_profile_id: null }),
+    ], '0.12');
+    // The FTE of the chip is the full-year average, as the lists show it.
+    expect(chipText(en(), 'en', three)).toBe('Quantity and price · 3 lines · 0.12 FTE');
     // A narrow header wraps between the way and the figures, never inside either.
-    expect(chipUnits(en(), 'en', three)).toEqual(['Quantity and price ·', '3 lines · 1.50 FTE']);
-    expect(chipText(fr(), 'fr', three)).toBe('Quantité et prix · 3 lignes · 1.50 ETP');
-    // Units only: no FTE to show.
-    expect(chipText(en(), 'en', computed([line({ quantity_unit: 'units', price_basis: 'per_month', working_day_profile_id: null })], '0.00'))).toBe('Quantity and price · 1 line');
+    expect(chipUnits(en(), 'en', three)).toEqual(['Quantity and price ·', '3 lines · 0.12 FTE']);
+    expect(chipText(fr(), 'fr', three)).toBe('Quantité et prix · 3 lignes · 0.12 ETP');
+    // Pieces only: no FTE to show.
+    expect(chipText(en(), 'en', computed([line({ quantity_unit: 'pieces', price_basis: 'per_piece', frequency: 'per_month', working_day_profile_id: null })], '0.00'))).toBe('Quantity and price · 1 line');
     expect(chipUnits(en(), 'en', undefined)).toEqual([]);
     // A hand edit or a spread keeps the lines as a reference, and its own chip.
     expect(chipText(en(), 'en', record({ method: 'manual', lines: [line()], fte: '1.00' }))).toBe('Edited by hand');
@@ -265,14 +274,30 @@ describe('columns built from lines', () => {
   });
 
   it('lists the lines for the tooltip of a column computed from them', () => {
-    expect(lineText(en(), 'en', line())).toBe('Project manager: 20 days × 900 per day, Jan to Jun');
-    expect(lineText(en(), 'en', line({ label: '  ', quantity_unit: 'people', quantity: '1', price_basis: 'per_month', unit_price: '6000.5', period_start: '2026-03-01', period_end: '2026-03-31' })))
-      .toBe('1 person × 6 000.5 per month, Mar');
-    expect(lineText(en(), 'en', line({ label: 'Licences', quantity_unit: 'units', quantity: '12.5', price_basis: 'once', unit_price: '40' })))
-      .toBe('Licences: 12.5 units × 40 once, Jan to Jun');
-    expect(lineText(fr(), 'fr', line())).toMatch(/^Project manager : 20 jours × 900 par jour, janv\.? à juin$/);
-    const two = computed([line(), line({ id: 'l2', label: 'Licences', quantity_unit: 'units', quantity: '3', price_basis: 'per_month', unit_price: '10' })], '0.5');
-    expect(linesText(en(), 'en', two)).toBe('Project manager: 20 days × 900 per day, Jan to Jun\nLicences: 3 units × 10 per month, Jan to Jun');
+    const person = { quantity_unit: 'people', quantity: '1', price_basis: 'per_day', frequency: 'per_month' } as const;
+    expect(lineText(en(), 'en', line({ ...person, unit_price: '1200', days_per_month: '5.000', period_start: '2026-02-01', period_end: '2026-07-31' })))
+      .toBe('Project manager: 1 person × 1 200 per day, 5 days per month, Feb to Jul');
+    expect(lineText(en(), 'en', line({ ...person, label: 'Consultant', unit_price: '400', days_per_month: null, period_start: '2026-02-01', period_end: '2026-10-31' })))
+      .toBe('Consultant: 1 person × 400 per day, full time, Feb to Oct');
+    expect(lineText(en(), 'en', line({ ...person, label: '', unit_price: '400', days_per_month: '1' })))
+      .toBe('1 person × 400 per day, 1 day per month, Jan to Jun');
+    expect(lineText(en(), 'en', line({ ...person, label: '  ', price_basis: 'per_month', unit_price: '8000', period_start: '2026-03-01', period_end: '2026-03-31' })))
+      .toBe('1 person × 8 000 per month, Mar');
+    // One date lands in its month, whatever its day.
+    expect(lineText(en(), 'en', line({ label: 'Laptop', quantity_unit: 'pieces', quantity: '1', price_basis: 'per_piece', unit_price: '2000', period_start: '2026-03-01', period_end: '2026-03-01' })))
+      .toBe('Laptop: 1 piece × 2 000 once, Mar');
+    expect(lineText(en(), 'en', line({ label: 'Laptop', quantity_unit: 'pieces', quantity: '1', price_basis: 'per_piece', unit_price: '2000', period_start: '2026-03-20', period_end: '2026-03-20' })))
+      .toBe('Laptop: 1 piece × 2 000 once, Mar');
+    // Days on one date, as the API accepts them, land there too.
+    expect(lineText(en(), 'en', line({ label: 'Audit', quantity: '3', unit_price: '1200', period_start: '2026-03-20', period_end: '2026-03-20' })))
+      .toBe('Audit: 3 days × 1 200 per day over the period, Mar');
+    expect(lineText(en(), 'en', line({ label: 'Licences', quantity_unit: 'pieces', quantity: '50', price_basis: 'per_piece', frequency: 'per_month', unit_price: '12', period_start: '2026-01-01', period_end: '2026-12-31' })))
+      .toBe('Licences: 50 pieces × 12 per piece per month, Jan to Dec');
+    expect(lineText(en(), 'en', line({ label: 'Bundle', quantity: '30', unit_price: '1200', period_start: '2026-02-01', period_end: '2026-07-31' })))
+      .toBe('Bundle: 30 days × 1 200 per day over the period, Feb to Jul');
+    expect(lineText(fr(), 'fr', line())).toMatch(/^Project manager : 20 jours × 900 par jour sur la période, janv\.? à juin$/);
+    const two = computed([line(), line({ id: 'l2', label: 'Licences', quantity_unit: 'pieces', quantity: '3', price_basis: 'per_piece', frequency: 'per_month', unit_price: '10' })], '0.5');
+    expect(linesText(en(), 'en', two)).toBe('Project manager: 20 days × 900 per day over the period, Jan to Jun\nLicences: 3 pieces × 10 per piece per month, Jan to Jun');
     // Only a column computed from its lines explains itself with them.
     expect(linesText(en(), 'en', record({ method: 'manual', lines: [line()] }))).toBe('');
     expect(linesText(en(), 'en', record({}))).toBe('');
@@ -286,13 +311,31 @@ describe('columns built from lines', () => {
     const stored = line();
     expect(sameLine(linePayloadOf(stored), { ...linePayloadOf(stored), quantity: '20', unit_price: '900' })).toBe(true);
     expect(sameLine(linePayloadOf(stored), { ...linePayloadOf(stored), quantity: '21' })).toBe(false);
+    expect(sameLine(linePayloadOf(stored), { ...linePayloadOf(stored), frequency: 'per_month' })).toBe(false);
     // The calendar only matters for a price per day.
     expect(linePayloadOf({ ...linePayloadOf(stored), price_basis: 'per_month' }).working_day_profile_id).toBeNull();
+    // Days per month only for people priced per day, compared by value.
+    const person = linePayloadOf({ ...linePayloadOf(stored), quantity_unit: 'people', frequency: 'per_month', days_per_month: '5.000' });
+    expect(person.days_per_month).toBe('5');
+    expect(linePayloadOf({ ...person, price_basis: 'per_month' }).days_per_month).toBeNull();
+    expect(linePayloadOf({ ...linePayloadOf(stored), days_per_month: '5' }).days_per_month).toBeNull();
     expect(basisForUnit('people', 'per_month')).toBe('per_month');
-    expect(basisForUnit('people', 'once')).toBe('per_day');
+    expect(basisForUnit('people', 'per_piece')).toBe('per_day');
     expect(basisForUnit('days', 'per_month')).toBe('per_day');
-    expect(basisForUnit('units', 'once')).toBe('once');
-    expect(basisForUnit('units', 'per_day')).toBe('per_month');
+    expect(basisForUnit('pieces', 'per_day')).toBe('per_piece');
+  });
+
+  it('takes one date for pieces bought once, any real date of the year', () => {
+    const laptop = { quantity_unit: 'pieces', frequency: 'once', period_start: '2026-03-15', period_end: '2026-03-15' } as const;
+    expect(isDateLine(laptop)).toBe(true);
+    // A range sent by another client stays a range; pieces each month take From and To.
+    expect(isDateLine({ ...laptop, period_end: '2026-04-15' })).toBe(false);
+    expect(isDateLine({ ...laptop, frequency: 'per_month' })).toBe(false);
+    expect(isDateLine({ ...laptop, quantity_unit: 'days' })).toBe(false);
+    expect(dateProblem(2026, '2026-03-01')).toBeNull();
+    expect(dateProblem(2026, '')).toBe('dateMissing');
+    expect(dateProblem(2026, '2026-02-30')).toBe('dateInvalid');
+    expect(dateProblem(2026, '2027-01-01')).toBe('dateOutsideYear');
   });
 
   it('finds the working days that changed since the last computation', () => {

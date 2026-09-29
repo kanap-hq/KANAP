@@ -22,10 +22,10 @@ vi.mock('react-i18next', async () => {
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 
 // The tenant's calendars, set per test.
-const calendarsState = vi.hoisted(() => ({ list: [] as unknown[] }));
+const calendarsState = vi.hoisted(() => ({ list: [] as unknown[], ready: true }));
 vi.mock('../../hooks/useWorkingDayProfiles', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../../hooks/useWorkingDayProfiles')>();
-  return { ...mod, useWorkingDayProfiles: () => mod.buildWorkingDayProfiles(calendarsState.list as never) };
+  return { ...mod, useWorkingDayProfiles: () => mod.buildWorkingDayProfiles(calendarsState.list as never, calendarsState.ready) };
 });
 
 // The working days of a calendar's year, now.
@@ -59,14 +59,18 @@ const CUSTOM = calendar('cu', 'Agency', null);
 
 const DAYS_2026 = ['21', '20', '22', '21', '17', '22', '22', '21', '22', '22', '20', '22'];
 
+const PIECES = { quantity_unit: 'pieces', price_basis: 'per_piece', days_per_month: null, working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null } as const;
+
 const storedLine = (over: Partial<RoundLine> = {}): RoundLine => ({
   id: 'l1',
   sort: 0,
   label: 'Project manager',
-  quantity_unit: 'days',
-  quantity: '20.000',
+  quantity_unit: 'people',
+  quantity: '1.000',
   unit_price: '900.0000',
   price_basis: 'per_day',
+  frequency: 'per_month',
+  days_per_month: '5.000',
   period_start: '2026-01-01',
   period_end: '2026-06-30',
   working_day_profile_id: 'fr',
@@ -81,6 +85,8 @@ const explained = (line: RoundLine, over: Partial<LineCalculation> = {}): LineCa
   quantity: line.quantity,
   unit_price: line.unit_price,
   price_basis: line.price_basis,
+  frequency: line.frequency,
+  days_per_month: line.days_per_month,
   period_start: line.period_start,
   period_end: line.period_end,
   working_day_profile_id: line.working_day_profile_id,
@@ -91,7 +97,9 @@ const explained = (line: RoundLine, over: Partial<LineCalculation> = {}): LineCa
   total_days: null,
   month_amounts: [],
   fte_months: [],
-  total: '18000.00',
+  fte: '0.12',
+  fte_period: '0.24',
+  total: '27000.00',
   ...over,
 });
 
@@ -103,10 +111,10 @@ const roundWith = (lines: RoundLine[], over: Partial<RoundInput> = {}, calcLines
   spread_profile_name: null,
   updated_at: '2026-09-28T10:00:00Z',
   updated_by: null,
-  fte: '0.08',
+  fte: '0.12',
   lines,
   last_calculation: {
-    kind: 'computed', total: '18000.00', fte: '0.08', month_amounts: [], fte_months: [], active_months: [1, 2, 3, 4, 5, 6],
+    kind: 'computed', total: '27000.00', fte: '0.12', fte_period: '0.24', month_amounts: [], fte_months: [], active_months: [1, 2, 3, 4, 5, 6],
     lines: calcLines ?? lines.map((line) => explained(line)),
   },
   ...over,
@@ -145,8 +153,12 @@ function renderPanel(options: Options = {}) {
 }
 
 const rows = () => screen.getAllByTestId('line-row');
-/** Unit, Per and (per day only) Calendar of a line. */
-const combos = (row: number) => within(rows()[row]).getAllByRole('combobox');
+/** A select of a line by its name: Unit, Price per (people), How often (pieces), Calendar (per day). */
+const combo = (row: number, name: string) => within(rows()[row]).getByRole('combobox', { name });
+const noCombo = (row: number, name: string) => within(rows()[row]).queryByRole('combobox', { name });
+/** The date fields of a line: From and To, or the one Date of pieces bought once. */
+const dates = (row: number) => within(rows()[row]).queryAllByPlaceholderText('labels.datePlaceholder');
+const heads = () => within(screen.getByTestId('lines-table')).getAllByRole('columnheader').map((th) => th.textContent);
 async function pick(combobox: HTMLElement, option: string) {
   fireEvent.mouseDown(combobox);
   fireEvent.click(await screen.findByRole('option', { name: option }));
@@ -156,9 +168,19 @@ const typeAndLeave = (input: HTMLElement, value: string) => {
   fireEvent.blur(input);
 };
 const notes = () => screen.getByTestId('lines-notes');
+/** Types a date in a DateEUField the way a user does. */
+function typeDate(input: HTMLElement, ddmmyyyy: string) {
+  fireEvent.focus(input);
+  fireEvent.change(input, { target: { value: ddmmyyyy } });
+  fireEvent.blur(input);
+}
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+const options = async () => (await screen.findAllByRole('option')).map((o) => o.textContent);
 
 beforeEach(() => {
   calendarsState.list = [FRANCE, MOSELLE, US, CUSTOM];
+  calendarsState.ready = true;
   yearDays.byId = {};
 });
 
@@ -166,26 +188,30 @@ describe('LinesPanel', () => {
   it('keeps every column at its least width: a narrow panel scrolls the table instead of squeezing the fields', () => {
     renderPanel();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    expect(LINES_TABLE_MIN_WIDTH).toBe(1113);
+    expect(LINES_TABLE_MIN_WIDTH).toBe(1378);
     const table = screen.getByTestId('lines-table');
-    expect(table).toHaveStyle({ tableLayout: 'fixed', minWidth: '1113px' });
-    const heads = within(table).getAllByRole('columnheader');
+    expect(table).toHaveStyle({ tableLayout: 'fixed', minWidth: '1378px' });
+    const ths = within(table).getAllByRole('columnheader');
     const { description, ...fixed } = LINE_COLUMN_WIDTHS;
-    expect(heads[0]).toHaveStyle({ minWidth: `${description}px` });
-    Object.values(fixed).forEach((width, i) => expect(heads[i + 1]).toHaveStyle({ width: `${width}px` }));
+    expect(ths[0]).toHaveStyle({ minWidth: `${description}px` });
+    Object.values(fixed).forEach((width, i) => expect(ths[i + 1]).toHaveStyle({ width: `${width}px` }));
+    expect(heads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', 'Amount', '']);
   });
 
-  it('a new line starts as 1 people per day on the paying company calendar, over the column period, and stays here', async () => {
+  it('a new line is one person per day on the paying company calendar, over the column period, and waits for its days', async () => {
     const { onSave } = renderPanel({ payingCompanyCountry: 'us' });
     expect(screen.getByText('No line yet. A line is a quantity times a unit price.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    const [unit, per, cal] = combos(0);
-    expect(unit).toHaveTextContent('people');
-    expect(per).toHaveTextContent('per day');
-    expect(cal).toHaveTextContent('United States');
+    expect(combo(0, 'Unit')).toHaveTextContent('people');
+    expect(combo(0, 'Price per')).toHaveTextContent('per day');
+    expect(combo(0, 'Calendar')).toHaveTextContent('United States');
     expect(screen.getByLabelText('Quantity')).toHaveValue('1');
-    const [from, to] = within(rows()[0]).getAllByPlaceholderText('labels.datePlaceholder');
+    expect(screen.getByRole('checkbox', { name: 'Full time' })).not.toBeChecked();
+    const days = screen.getByLabelText('days per month');
+    expect(days).toHaveValue('');
+    expect(days).toHaveAttribute('placeholder', 'e.g., 5');
+    const [from, to] = dates(0);
     fireEvent.focus(from);
     expect(from).toHaveValue('01/04/2026');
     fireEvent.blur(from);
@@ -196,14 +222,70 @@ describe('LinesPanel', () => {
     // No unit price yet: the line is kept here, with the reason.
     fireEvent.blur(screen.getByLabelText('Unit price'));
     expect(notes()).toHaveTextContent('Enter a quantity and a unit price to save this line.');
+    // A price, but neither days nor Full time.
+    typeAndLeave(screen.getByLabelText('Unit price'), '1200');
+    expect(notes()).toHaveTextContent('Enter the days per month, or tick Full time.');
     expect(onSave).not.toHaveBeenCalled();
 
-    typeAndLeave(screen.getByLabelText('Unit price'), '600');
+    typeAndLeave(days, '5');
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith([{
-      label: '', quantity_unit: 'people', quantity: '1', unit_price: '600', price_basis: 'per_day',
-      period_start: '2026-04-01', period_end: '2026-12-31', working_day_profile_id: 'us',
+      label: '', quantity_unit: 'people', quantity: '1', unit_price: '1200', price_basis: 'per_day', frequency: 'per_month',
+      days_per_month: '5', period_start: '2026-04-01', period_end: '2026-12-31', working_day_profile_id: 'us',
     }], false);
+  });
+
+  it('without an enabled calendar, a new line is one person per month and saves with its price alone', async () => {
+    calendarsState.list = [calendar('old', 'Old', 'FR', null, 'disabled')];
+    const { onSave } = renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    expect(combo(0, 'Unit')).toHaveTextContent('people');
+    expect(combo(0, 'Price per')).toHaveTextContent('per month');
+    expect(within(rows()[0]).getByTestId('line-frequency')).toHaveTextContent('per month');
+    expect(screen.queryByRole('checkbox', { name: 'Full time' })).not.toBeInTheDocument();
+    expect(noCombo(0, 'Calendar')).not.toBeInTheDocument();
+
+    typeAndLeave(screen.getByLabelText('Unit price'), '8000');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith([{
+      label: '', quantity_unit: 'people', quantity: '1', unit_price: '8000', price_basis: 'per_month', frequency: 'per_month',
+      days_per_month: null, period_start: '2026-04-01', period_end: '2026-12-31', working_day_profile_id: null,
+    }], false);
+  });
+
+  it('while the calendars are loading, a new line keeps the price per day', () => {
+    calendarsState.list = [];
+    calendarsState.ready = false;
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    expect(combo(0, 'Price per')).toHaveTextContent('per day');
+    expect(screen.getByRole('checkbox', { name: 'Full time' })).not.toBeChecked();
+  });
+
+  it('Full time needs no days: the line is sent without them, and unticked it asks for them again', async () => {
+    const { onSave } = renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    typeAndLeave(screen.getByLabelText('Unit price'), '400');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0][0]).toMatchObject({ quantity_unit: 'people', price_basis: 'per_day', frequency: 'per_month', days_per_month: null });
+    expect(screen.queryByLabelText('days per month')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
+    expect(screen.getByLabelText('days per month')).toHaveValue('');
+    expect(notes()).toHaveTextContent('Enter the days per month, or tick Full time.');
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('a stored line opens ticked when full time, with its days otherwise', () => {
+    renderPanel({ record: roundWith([storedLine({ days_per_month: null }), storedLine({ id: 'l2', sort: 1, label: 'Second' })]) });
+    const boxes = screen.getAllByRole('checkbox', { name: 'Full time' });
+    expect(boxes[0]).toBeChecked();
+    expect(boxes[1]).not.toBeChecked();
+    expect(screen.getAllByLabelText('days per month')).toHaveLength(1);
+    expect(screen.getByLabelText('days per month')).toHaveValue('5');
   });
 
   it('picks the standard calendar of the country, else the first enabled one, else none', () => {
@@ -216,41 +298,99 @@ describe('LinesPanel', () => {
     expect(defaultCalendarId([], 'FR')).toBe('');
   });
 
-  it('without any calendar a new line is priced per month', () => {
-    calendarsState.list = [];
-    renderPanel({ payingCompanyCountry: 'FR' });
-    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    const [, per, ...rest] = combos(0);
-    expect(per).toHaveTextContent('per month');
-    expect(rest).toHaveLength(0);
+  it('people are priced per day or per month in the price cell; per month counts every month without a calendar', async () => {
+    const { onSave } = renderPanel({ record: roundWith([storedLine()]) });
+
+    fireEvent.mouseDown(combo(0, 'Price per'));
+    expect(await options()).toEqual(['per day', 'per month']);
+    fireEvent.click(screen.getByRole('option', { name: 'per month' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0][0]).toMatchObject({
+      quantity_unit: 'people', price_basis: 'per_month', frequency: 'per_month', days_per_month: null, working_day_profile_id: null,
+    });
+    expect(within(rows()[0]).getByTestId('line-frequency')).toHaveTextContent('per month');
+    expect(noCombo(0, 'Calendar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Full time' })).not.toBeInTheDocument();
+
+    // Back to per day: the days typed before and the calendar come back.
+    await pick(combo(0, 'Price per'), 'per day');
+    expect(screen.getByLabelText('days per month')).toHaveValue('5');
+    expect(combo(0, 'Calendar')).toHaveTextContent('France');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave.mock.calls[1][0][0]).toMatchObject({ price_basis: 'per_day', days_per_month: '5', working_day_profile_id: 'fr' });
   });
 
-  it('a unit change keeps a price it allows, else takes its default, and saves', async () => {
-    const line = storedLine({ quantity_unit: 'people', quantity: '2.000', price_basis: 'per_month', working_day_profile_id: null, working_day_profile_name: null, working_day_profile_code: null });
-    const { onSave } = renderPanel({ record: roundWith([line]), payingCompanyCountry: 'FR' });
+  it('a unit change sets its price and how often: days over the period, pieces once on the column start', async () => {
+    const person = storedLine({ price_basis: 'per_month', days_per_month: null, working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null });
+    const { onSave } = renderPanel({ record: roundWith([person]), payingCompanyCountry: 'FR' });
 
-    await pick(combos(0)[0], 'units');
-    expect(combos(0)[1]).toHaveTextContent('per month');
+    fireEvent.mouseDown(combo(0, 'Unit'));
+    expect(await options()).toEqual(['people', 'days', 'pieces']);
+    fireEvent.click(screen.getByRole('option', { name: 'days' }));
+    expect(within(rows()[0]).getByTestId('line-basis')).toHaveTextContent('per day');
+    expect(within(rows()[0]).getByTestId('line-frequency')).toHaveTextContent('over the period');
+    expect(combo(0, 'Calendar')).toHaveTextContent('France');
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][0][0]).toMatchObject({ quantity_unit: 'units', price_basis: 'per_month', working_day_profile_id: null });
+    expect(onSave.mock.calls[0][0][0]).toMatchObject({
+      quantity_unit: 'days', price_basis: 'per_day', frequency: 'once', days_per_month: null, working_day_profile_id: 'fr',
+      period_start: '2026-01-01', period_end: '2026-06-30',
+    });
 
-    // Units are priced per month or once, never per day.
-    fireEvent.mouseDown(combos(0)[1]);
-    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['per month', 'once']);
-    fireEvent.click(screen.getByRole('option', { name: 'once' }));
+    // Pieces: per piece, once, on one date: the column's period start.
+    await pick(combo(0, 'Unit'), 'pieces');
+    expect(within(rows()[0]).getByTestId('line-basis')).toHaveTextContent('per piece');
+    expect(combo(0, 'How often')).toHaveTextContent('once');
+    expect(noCombo(0, 'Calendar')).not.toBeInTheDocument();
+    expect(dates(0)).toHaveLength(1);
+    expect(heads().slice(5, 7)).toEqual(['Date', '']);
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave.mock.calls[1][0][0]).toMatchObject({
+      quantity_unit: 'pieces', price_basis: 'per_piece', frequency: 'once', working_day_profile_id: null,
+      period_start: '2026-04-01', period_end: '2026-04-01',
+    });
 
-    // Days are priced per day, on the default calendar.
-    await pick(combos(0)[0], 'days');
-    expect(combos(0)[1]).toHaveTextContent('per day');
-    expect(combos(0)[2]).toHaveTextContent('France');
+    // Pieces each month take From and To again, over the column's period.
+    fireEvent.mouseDown(combo(0, 'How often'));
+    expect(await options()).toEqual(['per month', 'once']);
+    fireEvent.click(screen.getByRole('option', { name: 'per month' }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(3));
-    expect(onSave.mock.calls[2][0][0]).toMatchObject({ quantity_unit: 'days', price_basis: 'per_day', working_day_profile_id: 'fr' });
+    expect(onSave.mock.calls[2][0][0]).toMatchObject({ frequency: 'per_month', period_start: '2026-04-01', period_end: '2026-12-31' });
+    expect(dates(0)).toHaveLength(2);
+    expect(heads().slice(5, 7)).toEqual(['From', 'To']);
+
+    // Back to people: per day each month, and the days are asked for.
+    await pick(combo(0, 'Unit'), 'people');
+    expect(combo(0, 'Price per')).toHaveTextContent('per day');
+    expect(combo(0, 'Calendar')).toHaveTextContent('France');
+    expect(notes()).toHaveTextContent('Enter the days per month, or tick Full time.');
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(3);
+  });
+
+  it('pieces bought once take one date, written as both From and To', async () => {
+    const laptop = storedLine({ ...PIECES, label: 'Laptop', unit_price: '2000.0000', frequency: 'once', period_start: '2026-03-15', period_end: '2026-03-15' });
+    const { onSave } = renderPanel({ record: roundWith([laptop]) });
+    expect(heads().slice(5, 7)).toEqual(['Date', '']);
+    expect(dates(0)).toHaveLength(1);
+    const [date] = dates(0);
+    fireEvent.focus(date);
+    expect(date).toHaveValue('15/03/2026');
+    fireEvent.blur(date);
+
+    typeDate(dates(0)[0], '20/05/2026');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0][0]).toMatchObject({ frequency: 'once', period_start: '2026-05-20', period_end: '2026-05-20' });
+
+    // A date of another year stays here, with the reason.
+    typeDate(dates(0)[0], '20/05/2027');
+    expect(notes()).toHaveTextContent('Choose a date in 2026.');
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
   it('every commit sends all complete lines; an incomplete one stays here', async () => {
     const first = storedLine();
-    const second = storedLine({ id: 'l2', sort: 1, label: 'Licences', quantity_unit: 'units', quantity: '3.000', unit_price: '10.0000', price_basis: 'per_month', working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null });
+    const second = storedLine({ ...PIECES, id: 'l2', sort: 1, label: 'Licences', quantity: '3.000', unit_price: '10.0000' });
     const { onSave } = renderPanel({ record: roundWith([first, second]) });
 
     // Leaving a field without a change writes nothing.
@@ -260,8 +400,14 @@ describe('LinesPanel', () => {
     typeAndLeave(screen.getAllByLabelText('Description')[1], 'Licences, yearly');
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][0]).toEqual([
-      { label: 'Project manager', quantity_unit: 'days', quantity: '20', unit_price: '900', price_basis: 'per_day', period_start: '2026-01-01', period_end: '2026-06-30', working_day_profile_id: 'fr' },
-      { label: 'Licences, yearly', quantity_unit: 'units', quantity: '3', unit_price: '10', price_basis: 'per_month', period_start: '2026-01-01', period_end: '2026-06-30', working_day_profile_id: null },
+      {
+        label: 'Project manager', quantity_unit: 'people', quantity: '1', unit_price: '900', price_basis: 'per_day', frequency: 'per_month',
+        days_per_month: '5', period_start: '2026-01-01', period_end: '2026-06-30', working_day_profile_id: 'fr',
+      },
+      {
+        label: 'Licences, yearly', quantity_unit: 'pieces', quantity: '3', unit_price: '10', price_basis: 'per_piece', frequency: 'per_month',
+        days_per_month: null, period_start: '2026-01-01', period_end: '2026-06-30', working_day_profile_id: null,
+      },
     ]);
 
     // Line 1 loses its quantity: the other line is sent alone, line 1 stays here with the reason.
@@ -284,7 +430,9 @@ describe('LinesPanel', () => {
     calendarsState.list = [];
     const { onSave } = renderPanel();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    await pick(combos(0)[1], 'per day');
+    // No calendar: the line starts per month; priced per day by hand, it needs one.
+    await pick(combo(0, 'Price per'), 'per day');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
     typeAndLeave(screen.getByLabelText('Unit price'), '400');
     expect(notes()).toHaveTextContent('Choose a calendar for a price per day.');
     expect(notes()).toHaveTextContent('No working-day calendar yet.');
@@ -307,15 +455,23 @@ describe('LinesPanel', () => {
     expect(screen.queryAllByTestId('line-row')).toHaveLength(0);
   });
 
-  it('shows each line amount, the total and the FTE of a column computed from its lines', () => {
-    const people = storedLine({ id: 'l2', sort: 1, label: 'Analyst', quantity_unit: 'people', quantity: '1.000', unit_price: '5000.0000', price_basis: 'per_month', working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null });
+  it('shows each line amount and, under the table, the FTE over the period and the full-year average, no total', () => {
+    const analyst = storedLine({ id: 'l2', sort: 1, label: 'Analyst', unit_price: '8000.0000', price_basis: 'per_month', days_per_month: null, working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null });
     const first = storedLine();
-    renderPanel({
-      record: roundWith([first, people], { fte: '1.08' }, [explained(first), explained(people, { total: '30000.00' })]),
-    });
-    expect(screen.getAllByTestId('line-amount').map((cell) => cell.textContent)).toEqual(['18 000', '30 000']);
-    expect(screen.getByTestId('lines-total')).toHaveTextContent('= 18 000 · 0.08 FTE');
-    expect(screen.getByTestId('lines-status')).toHaveTextContent(/^Amounts are computed from these lines\.$/);
+    renderPanel({ record: roundWith([first, analyst], {}, [explained(first), explained(analyst, { total: '48000.00' })]) });
+    expect(screen.getAllByTestId('line-amount').map((cell) => cell.textContent)).toEqual(['27 000', '48 000']);
+    expect(screen.getByTestId('lines-fte')).toHaveTextContent(/^FTE over the period 0\.24 · Full-year average 0\.12$/);
+    // The column shows the total, and its amounts say they come from the lines.
+    expect(screen.queryByTestId('lines-status')).not.toBeInTheDocument();
+    expect(notes()).not.toHaveTextContent('Amounts are computed');
+    expect(notes()).not.toHaveTextContent('75 000');
+  });
+
+  it('shows no FTE line when every line counts pieces', () => {
+    const laptop = storedLine({ ...PIECES, frequency: 'once', period_start: '2026-03-15', period_end: '2026-03-15' });
+    renderPanel({ record: roundWith([laptop], { fte: '0.00' }) });
+    expect(screen.getByTestId('line-amount')).toHaveTextContent('27 000');
+    expect(screen.queryByTestId('lines-fte')).not.toBeInTheDocument();
   });
 
   it('a changed line shows no amount until it is saved again', () => {
@@ -337,11 +493,12 @@ describe('LinesPanel', () => {
     for (const [over, text] of cases) {
       const { onSave, unmount } = renderPanel({ record: roundWith([line], over) });
       expect(screen.getByTestId('lines-status')).toHaveTextContent(`${text} Use the lines again.`);
-      // The lines have no explanation of their own here: no amount per line.
+      // The lines have no explanation of their own here: no amount per line, no FTE line.
       expect(screen.getByTestId('line-amount')).toHaveTextContent(/^$/);
+      expect(screen.queryByTestId('lines-fte')).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Use the lines again.' }));
       await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-      expect(onSave.mock.calls[0][0]).toEqual([expect.objectContaining({ label: 'Project manager', quantity: '20' })]);
+      expect(onSave.mock.calls[0][0]).toEqual([expect.objectContaining({ label: 'Project manager', quantity: '1', days_per_month: '5' })]);
       unmount();
     }
   });
@@ -361,24 +518,24 @@ describe('LinesPanel', () => {
   it('says nothing when the working days are unchanged', async () => {
     yearDays.byId = { fr: DAYS_2026 };
     renderPanel({ record: roundWith([storedLine()]) });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle();
     expect(screen.queryByTestId('lines-days-changed')).not.toBeInTheDocument();
   });
 
   it('keeps a disabled calendar a stored line uses, and says so', () => {
     calendarsState.list = [{ ...FRANCE, status: 'disabled', disabled_at: '2026-06-01T00:00:00Z' }, US];
     renderPanel({ record: roundWith([storedLine()]) });
-    expect(combos(0)[2]).toHaveTextContent('France (disabled)');
+    expect(combo(0, 'Calendar')).toHaveTextContent('France (disabled)');
     expect(notes()).toHaveTextContent('France is disabled. The lines still use it.');
   });
 
-  it('turning Apply to all columns on writes the lines at once', async () => {
+  it('turning Apply these lines to all columns on writes the lines at once', async () => {
     const onChange = vi.fn();
     const { onSave } = renderPanel({
       record: roundWith([storedLine()]),
       applyToAll: { offered: true, on: false, hint: 'hint', onChange },
     });
-    fireEvent.click(screen.getByLabelText('Apply to all columns'));
+    fireEvent.click(screen.getByLabelText('Apply these lines to all columns'));
     expect(onChange).toHaveBeenCalledWith(true);
     // The same lines as stored: sent anyway, to the group's columns too.
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
@@ -386,44 +543,44 @@ describe('LinesPanel', () => {
     expect(onSave.mock.calls[0][0]).toHaveLength(1);
   });
 
-  it('turning Apply to all columns on without a complete line writes nothing', async () => {
+  it('turning Apply these lines to all columns on without a complete line writes nothing', async () => {
     const onChange = vi.fn();
     const { onSave } = renderPanel({ applyToAll: { offered: true, on: false, hint: 'hint', onChange } });
     // No line at all: sending none would clear the lines of the group's other columns.
-    fireEvent.click(screen.getByLabelText('Apply to all columns'));
+    fireEvent.click(screen.getByLabelText('Apply these lines to all columns'));
     expect(onChange).toHaveBeenCalledWith(true);
     // A line without its unit price is not complete either.
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    fireEvent.click(screen.getByLabelText('Apply to all columns'));
+    fireEvent.click(screen.getByLabelText('Apply these lines to all columns'));
     expect(onChange).toHaveBeenCalledTimes(2);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle();
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it('turning Apply to all columns off writes nothing', async () => {
+  it('turning Apply these lines to all columns off writes nothing', async () => {
     const onChange = vi.fn();
     const { onSave } = renderPanel({
       record: roundWith([storedLine()]),
       applyToAll: { offered: true, on: true, hint: 'hint', onChange },
     });
-    fireEvent.click(screen.getByLabelText('Apply to all columns'));
+    fireEvent.click(screen.getByLabelText('Apply these lines to all columns'));
     expect(onChange).toHaveBeenCalledWith(false);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle();
     expect(onSave).not.toHaveBeenCalled();
   });
 
   it('a refusal shows under the table and keeps what was typed; the next commit sends again', async () => {
-    const refusal = 'Line 1: choose a calendar for a price per day.';
+    const refusal = 'Line 1: days per month must be between 0 and 31.';
     const onSave = vi.fn()
       .mockResolvedValueOnce({ ok: false, error: refusal })
       .mockResolvedValue({ ok: true });
     renderPanel({ record: roundWith([storedLine()]), onSave });
 
-    typeAndLeave(screen.getByLabelText('Unit price'), '950');
+    typeAndLeave(screen.getByLabelText('days per month'), '40');
     expect(await screen.findByText(refusal)).toBeInTheDocument();
-    expect(screen.getByLabelText('Unit price')).toHaveValue('950');
+    expect(screen.getByLabelText('days per month')).toHaveValue('40');
 
-    fireEvent.blur(screen.getByLabelText('Unit price'));
+    fireEvent.blur(screen.getByLabelText('days per month'));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByText(refusal)).not.toBeInTheDocument());
   });
@@ -467,6 +624,8 @@ describe('LinesPanel', () => {
   it('a frozen column is read-only and never sent', async () => {
     const { onSave } = renderPanel({ record: roundWith([storedLine()]), frozen: true });
     expect(screen.getByLabelText('Unit price')).toBeDisabled();
+    expect(screen.getByLabelText('days per month')).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Full time' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Add a line' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Remove the line' })).not.toBeInTheDocument();
     expect(notes()).toHaveTextContent('frozen');

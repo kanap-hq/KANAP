@@ -517,9 +517,10 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spreadMeasure]);
 
-  // "Apply to all columns" is offered when the selected column belongs to the group
-  // (shown columns that follow it, from the setting) and another group column is not
-  // frozen: those are written too. A column outside the group is written alone.
+  // "Apply the distribution to all columns" (spread) and "Apply these lines to all columns" are
+  // offered when the selected column belongs to the group (shown columns that follow it, from the
+  // setting) and another group column is not frozen: those are written too. A column outside the
+  // group is written alone.
   const groupOthers = group.some((c) => c.measure === spreadMeasure)
     ? group.filter((c) => c.measure !== spreadMeasure && !frozen[c.freezeKey])
     : [];
@@ -764,7 +765,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
             control={<Switch size="small" checked={spreadAllColumns} onChange={(e) => onSpreadAllColumnsChange(e.target.checked)} />}
             label={(
               <Tooltip title={applyToAllHint}>
-                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyToAll')}</Typography>
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyDistributionToAll')}</Typography>
               </Tooltip>
             )}
             sx={{ ml: 0 }}

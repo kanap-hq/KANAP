@@ -44,7 +44,7 @@ describe('resolveBudgetColumns', () => {
       group_spread: { ...DEFAULT_BUDGET_COLUMNS.group_spread, actual: false },
     });
     expect(columns.shown.map((c) => c.position)).toEqual([1, 3, 4, 5]);
-    // Shown and following "Apply to all columns": a hidden column is never in the group.
+    // Shown and following the spread and the lines: a hidden column is never in the group.
     expect(columns.group.map((c) => c.measure)).toEqual(['planned', 'forecast', 'expected_landing']);
   });
 

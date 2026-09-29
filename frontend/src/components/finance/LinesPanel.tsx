@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, FormControlLabel, IconButton, Link, MenuItem, Switch, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Checkbox, FormControlLabel, IconButton, Link, MenuItem, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
@@ -12,10 +12,14 @@ import { useAuth } from '../../auth/AuthContext';
 import FormattedNumberField from '../inputs/FormattedNumberField';
 import DateEUField from '../fields/DateEUField';
 import { FieldLabel } from '../design';
-import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx, tableCellTextFieldSx } from '../../theme/formSx';
+import { drawerMenuItemSx, drawerSelectSx, inlineControlSx, tableCellFieldSx, tableCellTextFieldSx } from '../../theme/formSx';
 import {
   AmountMeasure,
   BASES_BY_UNIT,
+  DEFAULT_FREQUENCY,
+  DateProblem,
+  FREQUENCIES_BY_UNIT,
+  Frequency,
   LinePayload,
   LinesCalculation,
   Period,
@@ -27,13 +31,17 @@ import {
   RoundLine,
   basisForUnit,
   changedDays,
+  countsFte,
+  dateProblem,
   dayChangeText,
   formatFteValue,
   formatMoney,
   hasLines,
+  isDateLine,
   linePayloadOf,
   periodProblem,
   sameLine,
+  takesDaysPerMonth,
   trimDecimal,
   wholeYear,
 } from './roundPeriod';
@@ -42,15 +50,15 @@ const CALENDARS_PATH = '/master-data/working-day-calendars';
 
 /**
  * The least width of each column of the lines table, in px: what a field needs to read whole
- * ("31 Dec 2026", "United States"). The description takes what is left, at least its own; a
- * narrower panel scrolls the table sideways instead of squeezing the fields.
+ * ("31 Dec 2026", "United States", a price with "per month" after it). The description takes what
+ * is left, at least its own; a narrower panel scrolls the table sideways instead of squeezing the fields.
  */
 export const LINE_COLUMN_WIDTHS = {
   description: 150,
   quantity: 80,
   unit: 100,
-  unitPrice: 100,
-  per: 115,
+  unitPrice: 190,
+  often: 290,
   from: 150,
   to: 150,
   calendar: 150,
@@ -86,6 +94,11 @@ export type LineDraft = {
   quantity: string;
   unitPrice: string;
   basis: PriceBasis;
+  frequency: Frequency;
+  /** People priced per day: full time (the calendar's working days), or the days typed here each month. */
+  fullTime: boolean;
+  daysPerMonth: string;
+  /** From and To; one date (pieces bought once) is both. */
   start: string;
   end: string;
   /** Kept when the price is no longer per day, so switching back finds it again. */
@@ -103,18 +116,32 @@ function draftOf(line: RoundLine): LineDraft {
     quantity: trimDecimal(line.quantity),
     unitPrice: trimDecimal(line.unit_price),
     basis: line.price_basis,
+    frequency: line.frequency ?? DEFAULT_FREQUENCY[line.quantity_unit],
+    fullTime: takesDaysPerMonth(line) && line.days_per_month == null,
+    daysPerMonth: line.days_per_month != null ? trimDecimal(line.days_per_month) : '',
     start: line.period_start,
     end: line.period_end,
     calendarId: line.working_day_profile_id ?? '',
   };
 }
 
-export type LineProblem = PeriodProblem | 'incomplete' | 'chooseCalendar';
+/** True when the line takes one date instead of From and To: pieces bought once. */
+export function isDateDraft(draft: Pick<LineDraft, 'unit' | 'frequency' | 'start' | 'end'>): boolean {
+  return isDateLine({ quantity_unit: draft.unit, frequency: draft.frequency, period_start: draft.start, period_end: draft.end });
+}
+
+/** True when the line asks for days per month or Full time: people priced per day. */
+function asksDays(draft: Pick<LineDraft, 'unit' | 'basis'>): boolean {
+  return takesDaysPerMonth({ quantity_unit: draft.unit, price_basis: draft.basis });
+}
+
+export type LineProblem = PeriodProblem | DateProblem | 'incomplete' | 'chooseDays' | 'chooseCalendar';
 
 /** Why a line cannot be saved yet, or null when it is complete. */
 export function lineProblem(year: number, draft: LineDraft): LineProblem | null {
   if (draft.quantity === '' || draft.unitPrice === '') return 'incomplete';
-  const period = periodProblem(year, draft.start, draft.end);
+  if (asksDays(draft) && !draft.fullTime && draft.daysPerMonth === '') return 'chooseDays';
+  const period = isDateDraft(draft) ? dateProblem(year, draft.start) : periodProblem(year, draft.start, draft.end);
   if (period) return period;
   if (draft.basis === 'per_day' && !draft.calendarId) return 'chooseCalendar';
   return null;
@@ -127,6 +154,8 @@ function payloadOf(draft: LineDraft): LinePayload {
     quantity: draft.quantity,
     unit_price: draft.unitPrice,
     price_basis: draft.basis,
+    frequency: draft.frequency,
+    days_per_month: asksDays(draft) && !draft.fullTime ? draft.daysPerMonth : null,
     period_start: draft.start,
     period_end: draft.end,
     working_day_profile_id: draft.calendarId || null,
@@ -176,7 +205,7 @@ export type LinesPanelProps = {
   payingCompanyCountry?: string | null;
   /** The tenant's name of a column, for "copied from". */
   columnName: (measure: AmountMeasure) => string;
-  /** "Apply to all columns": offered when the group has other columns that are not frozen. */
+  /** "Apply these lines to all columns": offered when the group has other columns that are not frozen. */
   applyToAll: { offered: boolean; on: boolean; hint: string; onChange: (on: boolean) => void };
   /** Writes every complete line of the column (and of the group when `applyToAll`), then reloads. */
   onSave: (lines: LinePayload[], applyToAll: boolean) => Promise<LinesSaveResult>;
@@ -239,24 +268,50 @@ export default function LinesPanel({
   const patchAndCommit = (key: string, patch: Partial<LineDraft>) => send(patchLine(key, patch));
 
   const fallbackCalendar = defaultCalendarId(calendars.enabled, payingCompanyCountry);
+  // The period a line starts with, and goes back to when it no longer takes one date.
+  const linePeriod = period ?? wholeYear(year);
   // A price per day needs a calendar: the default one when the line has none yet.
   const withCalendar = (draft: LineDraft, basis: PriceBasis): Partial<LineDraft> => (
     basis === 'per_day' && !draft.calendarId ? { basis, calendarId: fallbackCalendar } : { basis }
   );
+  // Pieces bought once take one date (`date`, both bounds); a line leaving that takes the column's period.
+  const withDates = (draft: LineDraft, unit: QuantityUnit, frequency: Frequency, date: string): Partial<LineDraft> => {
+    const once = unit === 'pieces' && frequency === 'once';
+    if (once && !(draft.unit === 'pieces' && draft.frequency === 'once')) return { start: date, end: date };
+    if (!once && isDateDraft(draft)) return { start: linePeriod.start, end: linePeriod.end };
+    return {};
+  };
+  // A new unit takes its price basis (people keep per month when chosen) and its frequency.
   const changeUnit = (draft: LineDraft, unit: QuantityUnit) => {
-    patchAndCommit(draft.key, { unit, ...withCalendar(draft, basisForUnit(unit, draft.basis)) });
+    if (unit === draft.unit) return;
+    const frequency = DEFAULT_FREQUENCY[unit];
+    patchAndCommit(draft.key, {
+      unit,
+      frequency,
+      ...withCalendar(draft, basisForUnit(unit, draft.basis)),
+      ...withDates(draft, unit, frequency, linePeriod.start),
+    });
   };
   const changeBasis = (draft: LineDraft, basis: PriceBasis) => patchAndCommit(draft.key, withCalendar(draft, basis));
+  const changeFrequency = (draft: LineDraft, frequency: Frequency) => {
+    patchAndCommit(draft.key, { frequency, ...withDates(draft, draft.unit, frequency, draft.start || linePeriod.start) });
+  };
 
+  // The most common line: one person priced per day (a project manager, 5 days a month or full
+  // time), on the default calendar. With the calendars loaded and none enabled, a price per day
+  // could not be saved: the person starts priced per month.
   const addLine = () => {
-    const linePeriod = period ?? wholeYear(year);
+    const noCalendar = calendars.ready && calendars.enabled.length === 0;
     update((prev) => [...prev, {
       key: newDraftKey(),
       label: '',
       unit: 'people',
       quantity: '1',
       unitPrice: '',
-      basis: fallbackCalendar ? 'per_day' : 'per_month',
+      basis: noCalendar ? 'per_month' : 'per_day',
+      frequency: 'per_month',
+      fullTime: false,
+      daysPerMonth: '',
       start: linePeriod.start,
       end: linePeriod.end,
       calendarId: fallbackCalendar,
@@ -349,11 +404,11 @@ export default function LinesPanel({
   const copySource = stored?.last_calculation?.kind === 'copy'
     ? `${columnName(stored.last_calculation.source_measure)} ${stored.last_calculation.source_year}`
     : null;
-  const status = !stored ? null
-    : stored.method === 'computed' ? t('budgetTab.lines.status.computed')
-      : stored.method === 'manual' ? t('budgetTab.lines.status.manual')
-        : stored.method === 'spread' ? t('budgetTab.lines.status.spread')
-          : copySource ? t('budgetTab.lines.status.copied', { source: copySource }) : t('budgetTab.lines.status.copiedPlain');
+  // A column computed from its lines needs no sentence: its amounts and FTE say it.
+  const status = !stored || stored.method === 'computed' ? null
+    : stored.method === 'manual' ? t('budgetTab.lines.status.manual')
+      : stored.method === 'spread' ? t('budgetTab.lines.status.spread')
+        : copySource ? t('budgetTab.lines.status.copied', { source: copySource }) : t('budgetTab.lines.status.copiedPlain');
   const offerAgain = !frozen && drafts.length > 0 && problems.some((p) => !p);
   const againLink = (
     <Link component="button" type="button" onClick={sendLinesAgain} sx={{ fontSize: 12, verticalAlign: 'baseline' }}>
@@ -361,39 +416,45 @@ export default function LinesPanel({
     </Link>
   );
 
-  const showFte = !!calc && calc.fte != null && calc.lines.some((line) => line.quantity_unit !== 'units');
-  const totalText = calc && drafts.length > 0
-    ? showFte
-      ? t('budgetTab.lines.totalFte', { total: formatMoney(calc.total), fte: formatFteValue(calc.fte) })
-      : t('budgetTab.lines.total', { total: formatMoney(calc.total) })
+  // The column shows the total; under the table only the FTE, when a line counts days or people.
+  const fteText = calc && drafts.length > 0 && countsFte(calc.lines) && calc.fte != null && calc.fte_period != null
+    ? t('budgetTab.lines.fte', { fte_period: formatFteValue(calc.fte_period), fte: formatFteValue(calc.fte) })
     : '';
 
   const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
   const headSx = { fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'left', px: 0.5, py: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
   const cellSx = { px: 0.5, py: '2px', verticalAlign: 'middle' } as const;
+  // What the unit price is for, after the price: plain words, or a select without a box (people).
+  const suffixSx = { fontSize: 12, color: 'kanap.text.secondary', whiteSpace: 'nowrap', flex: '0 0 auto' } as const;
+  const suffixSelectSx = { ...inlineControlSx, flex: '0 0 auto', '& .MuiInputBase-input': { fontSize: '12px !important', color: 'kanap.text.secondary' } } as const;
   const lineNote = (index: number, note: string) => (drafts.length > 1 ? t('budgetTab.lines.lineNote', { line: index + 1, note }) : note);
   const problemText = (problem: LineProblem) => (
     problem === 'incomplete' ? t('budgetTab.lines.incomplete')
+      : problem === 'chooseDays' ? t('budgetTab.lines.chooseDays')
       : problem === 'chooseCalendar' ? t('budgetTab.lines.chooseCalendar')
-        : t(`budgetTab.problem.${problem}`, { year })
+        : problem.startsWith('date') ? t(`budgetTab.lines.problem.${problem}`, { year })
+          : t(`budgetTab.problem.${problem}`, { year })
   );
   const select = (
     label: string,
     value: string,
     options: Array<{ value: string; label: string }>,
     onChange: (value: string) => void,
+    sx: object = tableCellTextFieldSx,
   ) => (
     <TextField
-      select size="small" variant="standard" fullWidth value={value}
+      select size="small" variant="standard" fullWidth={sx === tableCellTextFieldSx} value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={frozen}
       inputProps={{ 'aria-label': label }}
-      sx={tableCellTextFieldSx}
+      sx={sx}
     >
       {options.map((o) => <MenuItem key={o.value} value={o.value} sx={drawerMenuItemSx}>{o.label}</MenuItem>)}
     </TextField>
   );
   const onEnter = (e: React.KeyboardEvent) => { if (e.key === 'Enter') commit(); };
+  // Every row takes one date: the header says Date over the first date column.
+  const allDates = drafts.length > 0 && drafts.every(isDateDraft);
 
   return (
     <>
@@ -435,9 +496,9 @@ export default function LinesPanel({
                   <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.quantity, textAlign: 'right' }}>{t('budgetTab.lines.quantity')}</Box>
                   <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unit }}>{t('budgetTab.lines.unit')}</Box>
                   <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unitPrice, textAlign: 'right' }}>{t('budgetTab.lines.unitPrice')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.per }}>{t('budgetTab.lines.per')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.from }}>{t('budgetTab.from')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.to }}>{t('budgetTab.to')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.often }}>{t('budgetTab.lines.howOften')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.from }}>{allDates ? t('budgetTab.lines.date') : t('budgetTab.from')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.to }}>{allDates ? '' : t('budgetTab.to')}</Box>
                   <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.calendar }}>{t('budgetTab.lines.calendar')}</Box>
                   <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.amount, textAlign: 'right' }}>{t('budgetTab.amount')}</Box>
                   <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.remove }} />
@@ -473,46 +534,112 @@ export default function LinesPanel({
                       {select(
                         t('budgetTab.lines.unit'),
                         draft.unit,
-                        QUANTITY_UNITS.map((unit) => ({ value: unit, label: t(`budgetTab.lines.units.${unit}`) })),
+                        QUANTITY_UNITS.map((unit) => ({ value: unit, label: t(`budgetTab.lines.unitNames.${unit}`) })),
                         (value) => changeUnit(draft, value as QuantityUnit),
                       )}
                     </Box>
                     <Box component="td" sx={cellSx}>
-                      <FormattedNumberField
-                        value={draft.unitPrice} decimals={4} emit="string"
-                        onChange={(e) => patchLine(draft.key, { unitPrice: String(e.target.value ?? '') })}
-                        onBlur={commit} onKeyDown={onEnter}
-                        disabled={frozen}
-                        variant="standard" size="small" fullWidth
-                        placeholder={t('budgetTab.lines.unitPricePlaceholder')}
-                        inputProps={{ 'aria-label': t('budgetTab.lines.unitPrice') }}
-                        sx={tableCellFieldSx}
-                      />
+                      {/* The price, then what it is for: a select for people only, the words otherwise. */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
+                          <FormattedNumberField
+                            value={draft.unitPrice} decimals={4} emit="string"
+                            onChange={(e) => patchLine(draft.key, { unitPrice: String(e.target.value ?? '') })}
+                            onBlur={commit} onKeyDown={onEnter}
+                            disabled={frozen}
+                            variant="standard" size="small" fullWidth
+                            placeholder={t('budgetTab.lines.unitPricePlaceholder')}
+                            inputProps={{ 'aria-label': t('budgetTab.lines.unitPrice') }}
+                            sx={tableCellFieldSx}
+                          />
+                        </Box>
+                        {BASES_BY_UNIT[draft.unit].length > 1 ? select(
+                          t('budgetTab.lines.priceFor'),
+                          draft.basis,
+                          BASES_BY_UNIT[draft.unit].map((basis) => ({ value: basis, label: t(`budgetTab.lines.basis.${basis}`) })),
+                          (value) => changeBasis(draft, value as PriceBasis),
+                          suffixSelectSx,
+                        ) : (
+                          <Typography data-testid="line-basis" sx={suffixSx}>{t(`budgetTab.lines.basis.${draft.basis}`)}</Typography>
+                        )}
+                      </Box>
                     </Box>
                     <Box component="td" sx={cellSx}>
-                      {select(
-                        t('budgetTab.lines.per'),
-                        draft.basis,
-                        BASES_BY_UNIT[draft.unit].map((basis) => ({ value: basis, label: t(`budgetTab.lines.basis.${basis}`) })),
-                        (value) => changeBasis(draft, value as PriceBasis),
+                      {asksDays(draft) ? (
+                        // People priced per day: full time, or the days they work each month.
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                          <FormControlLabel
+                            control={(
+                              <Checkbox
+                                size="small" checked={draft.fullTime} disabled={frozen}
+                                onChange={(e) => patchAndCommit(draft.key, { fullTime: e.target.checked })}
+                                sx={{ p: '2px', mr: 0.5 }}
+                              />
+                            )}
+                            label={t('budgetTab.lines.fullTime')}
+                            sx={{ m: 0, flex: '0 0 auto', '& .MuiFormControlLabel-label': { fontSize: 13, color: 'kanap.text.primary', whiteSpace: 'nowrap' } }}
+                          />
+                          {!draft.fullTime && (
+                            <>
+                              <Box sx={{ flex: '0 0 60px' }}>
+                                <FormattedNumberField
+                                  value={draft.daysPerMonth} decimals={3} emit="string"
+                                  onChange={(e) => patchLine(draft.key, { daysPerMonth: String(e.target.value ?? '') })}
+                                  onBlur={commit} onKeyDown={onEnter}
+                                  disabled={frozen}
+                                  variant="standard" size="small" fullWidth
+                                  placeholder={t('budgetTab.lines.daysPerMonthPlaceholder')}
+                                  inputProps={{ 'aria-label': t('budgetTab.lines.daysPerMonth') }}
+                                  sx={tableCellFieldSx}
+                                />
+                              </Box>
+                              <Typography sx={suffixSx}>{t('budgetTab.lines.daysPerMonth')}</Typography>
+                            </>
+                          )}
+                        </Box>
+                      ) : FREQUENCIES_BY_UNIT[draft.unit].length > 1 ? select(
+                        t('budgetTab.lines.howOften'),
+                        draft.frequency,
+                        FREQUENCIES_BY_UNIT[draft.unit].map((frequency) => ({ value: frequency, label: t(`budgetTab.lines.frequency.${frequency}`) })),
+                        (value) => changeFrequency(draft, value as Frequency),
+                      ) : (
+                        <Typography data-testid="line-frequency" sx={{ fontSize: 13, color: 'kanap.text.primary', px: '6px', whiteSpace: 'nowrap' }}>
+                          {draft.unit === 'days' ? t('budgetTab.lines.overThePeriod') : t(`budgetTab.lines.frequency.${draft.frequency}`)}
+                        </Typography>
                       )}
                     </Box>
-                    <Box component="td" sx={cellSx}>
-                      <DateEUField
-                        label={t('budgetTab.from')} hideLabel size="small" disabled={frozen}
-                        valueYmd={draft.start}
-                        onChangeYmd={(value) => patchAndCommit(draft.key, { start: value })}
-                        textFieldSx={tableCellTextFieldSx}
-                      />
-                    </Box>
-                    <Box component="td" sx={cellSx}>
-                      <DateEUField
-                        label={t('budgetTab.to')} hideLabel size="small" disabled={frozen}
-                        valueYmd={draft.end}
-                        onChangeYmd={(value) => patchAndCommit(draft.key, { end: value })}
-                        textFieldSx={tableCellTextFieldSx}
-                      />
-                    </Box>
+                    {isDateDraft(draft) ? (
+                      <>
+                        <Box component="td" sx={cellSx}>
+                          <DateEUField
+                            label={t('budgetTab.lines.date')} hideLabel size="small" disabled={frozen}
+                            valueYmd={draft.start}
+                            onChangeYmd={(value) => patchAndCommit(draft.key, { start: value, end: value })}
+                            textFieldSx={tableCellTextFieldSx}
+                          />
+                        </Box>
+                        <Box component="td" sx={cellSx} />
+                      </>
+                    ) : (
+                      <>
+                        <Box component="td" sx={cellSx}>
+                          <DateEUField
+                            label={t('budgetTab.from')} hideLabel size="small" disabled={frozen}
+                            valueYmd={draft.start}
+                            onChangeYmd={(value) => patchAndCommit(draft.key, { start: value })}
+                            textFieldSx={tableCellTextFieldSx}
+                          />
+                        </Box>
+                        <Box component="td" sx={cellSx}>
+                          <DateEUField
+                            label={t('budgetTab.to')} hideLabel size="small" disabled={frozen}
+                            valueYmd={draft.end}
+                            onChangeYmd={(value) => patchAndCommit(draft.key, { end: value })}
+                            textFieldSx={tableCellTextFieldSx}
+                          />
+                        </Box>
+                      </>
+                    )}
                     <Box component="td" sx={cellSx}>
                       {draft.basis === 'per_day' && select(
                         t('budgetTab.lines.calendar'),
@@ -556,20 +683,20 @@ export default function LinesPanel({
       )}
 
       <Box data-testid="lines-notes" aria-live="polite">
-        {totalText && (
-          <Typography data-testid="lines-total" sx={{ fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums' }}>
-            {totalText}
+        {fteText && (
+          <Typography data-testid="lines-fte" sx={{ fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums' }}>
+            {fteText}
           </Typography>
         )}
         {status && (
           <Typography data-testid="lines-status" sx={captionSx}>
             {status}
-            {stored?.method !== 'computed' && offerAgain && <> {againLink}</>}
+            {offerAgain && <> {againLink}</>}
           </Typography>
         )}
         {error && <Typography sx={{ ...captionSx, color: 'error.main' }}>{error}</Typography>}
         {problems.map((problem, index) => problem && (
-          <Typography key={drafts[index].key} sx={{ ...captionSx, color: problem === 'incomplete' || problem === 'chooseCalendar' ? 'kanap.text.tertiary' : 'error.main' }}>
+          <Typography key={drafts[index].key} sx={{ ...captionSx, color: problem === 'incomplete' || problem === 'chooseDays' || problem === 'chooseCalendar' ? 'kanap.text.tertiary' : 'error.main' }}>
             {lineNote(index, problemText(problem))}
           </Typography>
         ))}
@@ -600,7 +727,7 @@ export default function LinesPanel({
             control={<Switch size="small" checked={applyToAll.on} disabled={frozen} onChange={(e) => toggleApplyToAll(e.target.checked)} />}
             label={(
               <Tooltip title={applyToAll.hint}>
-                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyToAll')}</Typography>
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.lines.applyToAll')}</Typography>
               </Tooltip>
             )}
             sx={{ ml: 0 }}

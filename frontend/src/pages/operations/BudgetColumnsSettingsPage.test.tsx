@@ -85,9 +85,9 @@ describe('BudgetColumnsSettingsPage', () => {
     expect(placeholders).toEqual(['Budget', 'Revision', 'Forecast', 'Actuals', 'Expected landing']);
     expect(row(1).getByText('In files: planned')).toBeInTheDocument();
     expect(row(5).getByText('In files: expected_landing')).toBeInTheDocument();
-    // Forecast is hidden by default; every column follows "Apply to all columns"; Budget is the default.
+    // Forecast is hidden by default; every column follows the spread and the lines; Budget is the default.
     expect(row(3).getByRole('checkbox', { name: 'Show Forecast' })).not.toBeChecked();
-    expect(row(4).getByRole('checkbox', { name: 'Actuals follows "Apply to all columns"' })).toBeChecked();
+    expect(row(4).getByRole('checkbox', { name: 'Actuals follows the spread and the lines' })).toBeChecked();
     expect(row(1).getByRole('radio')).toBeChecked();
     expect(save()).toBeDisabled();
   });
@@ -97,7 +97,7 @@ describe('BudgetColumnsSettingsPage', () => {
     await waitForSetting();
 
     const defaultHelp = "The default column is preselected in reports and sorts the lists and the dashboard. Freezing it fixes the year's exchange rates.";
-    const followsHelp = 'Columns that follow "Apply to all columns" take the same period when a spread is applied to all columns.';
+    const followsHelp = 'The column takes what is applied to all columns on the budget tab: the distribution and period of a spread, and the quantity and price lines. A column that does not follow keeps its own.';
     expect(screen.queryByText(defaultHelp)).not.toBeInTheDocument();
     expect(screen.queryByText(followsHelp)).not.toBeInTheDocument();
 
@@ -116,7 +116,7 @@ describe('BudgetColumnsSettingsPage', () => {
 
     fireEvent.change(row(3).getByRole('textbox'), { target: { value: '  A2  ' } });
     fireEvent.click(row(3).getByRole('checkbox', { name: 'Show A2' }));
-    fireEvent.click(row(5).getByRole('checkbox', { name: 'Expected landing follows "Apply to all columns"' }));
+    fireEvent.click(row(5).getByRole('checkbox', { name: 'Expected landing follows the spread and the lines' }));
     fireEvent.click(row(3).getByRole('radio'));
     fireEvent.click(save());
 

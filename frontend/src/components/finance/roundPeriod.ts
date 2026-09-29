@@ -14,23 +14,53 @@ export type AmountMeasure = 'planned' | 'committed' | 'forecast' | 'actual' | 'e
 export type RoundMethod = 'spread' | 'copied' | 'manual' | 'computed';
 
 /** What a line's quantity counts: it decides how the line is priced and whether it gives FTE. */
-export type QuantityUnit = 'people' | 'days' | 'units';
-export const QUANTITY_UNITS: QuantityUnit[] = ['people', 'days', 'units'];
+export type QuantityUnit = 'people' | 'days' | 'pieces';
+export const QUANTITY_UNITS: QuantityUnit[] = ['people', 'days', 'pieces'];
 
 /** What the unit price is for. */
-export type PriceBasis = 'per_day' | 'per_month' | 'once';
+export type PriceBasis = 'per_day' | 'per_month' | 'per_piece';
+
+/** How often the quantity counts: every month of the period (people), once over it (days), or either (pieces). */
+export type Frequency = 'per_month' | 'once';
 
 /** The prices each unit allows, the first one being the default. */
 export const BASES_BY_UNIT: Record<QuantityUnit, PriceBasis[]> = {
   people: ['per_day', 'per_month'],
   days: ['per_day'],
-  units: ['per_month', 'once'],
+  pieces: ['per_piece'],
 };
+
+/** How often each unit may count: people every month, days once over their period (a bundle), pieces either. */
+export const FREQUENCIES_BY_UNIT: Record<QuantityUnit, Frequency[]> = {
+  people: ['per_month'],
+  days: ['once'],
+  pieces: ['per_month', 'once'],
+};
+
+/** How often a line counts when it takes a unit. */
+export const DEFAULT_FREQUENCY: Record<QuantityUnit, Frequency> = {
+  people: 'per_month',
+  days: 'once',
+  pieces: 'once',
+};
+
+/** True when the line says how many days a month its people work: people priced per day. */
+export function takesDaysPerMonth(line: { quantity_unit: QuantityUnit; price_basis: PriceBasis }): boolean {
+  return line.quantity_unit === 'people' && line.price_basis === 'per_day';
+}
 
 /** The price a line keeps when its unit changes: the same when the unit allows it, else the unit's default. */
 export function basisForUnit(unit: QuantityUnit, basis: PriceBasis): PriceBasis {
   const allowed = BASES_BY_UNIT[unit];
   return allowed.includes(basis) ? basis : allowed[0];
+}
+
+/**
+ * A line counted once, on one date: pieces bought once. It is stored from = to = that date, so it
+ * lands in the date's month. A range sent by another client stays a range.
+ */
+export function isDateLine(line: { quantity_unit: QuantityUnit; frequency: Frequency; period_start: string; period_end: string }): boolean {
+  return line.quantity_unit === 'pieces' && line.frequency === 'once' && line.period_start === line.period_end;
 }
 
 /** A stored line of a column, in `sort` order. Decimals are plain strings. */
@@ -42,6 +72,9 @@ export type RoundLine = {
   quantity: string;
   unit_price: string;
   price_basis: PriceBasis;
+  frequency: Frequency;
+  /** People priced per day: the days they work each month; null is full time (the calendar's working days). */
+  days_per_month: string | null;
   period_start: string;
   period_end: string;
   working_day_profile_id: string | null;
@@ -56,6 +89,9 @@ export type LineCalculation = {
   quantity: string;
   unit_price: string;
   price_basis: PriceBasis;
+  frequency: Frequency;
+  /** People priced per day: the days they work each month; null is full time (the calendar's working days). */
+  days_per_month: string | null;
   period_start: string;
   period_end: string;
   working_day_profile_id: string | null;
@@ -66,6 +102,9 @@ export type LineCalculation = {
   total_days: string | null;
   month_amounts: string[];
   fte_months: string[];
+  /** The line's FTE: the full-year average, and the average over its active months. */
+  fte: string | null;
+  fte_period: string | null;
   total: string;
 };
 
@@ -73,7 +112,9 @@ export type LineCalculation = {
 export type LinesCalculation = {
   kind: 'computed';
   total: string;
+  /** The column's FTE: the full-year average (as stored and listed), and the average over its active months. */
   fte: string | null;
+  fte_period: string | null;
   month_amounts: string[];
   fte_months: string[];
   active_months: number[];
@@ -116,6 +157,9 @@ export type LinePayload = {
   quantity: string;
   unit_price: string;
   price_basis: PriceBasis;
+  frequency: Frequency;
+  /** People priced per day: the days they work each month; null is full time (the calendar's working days). */
+  days_per_month: string | null;
   period_start: string;
   period_end: string;
   working_day_profile_id: string | null;
@@ -155,6 +199,8 @@ export function linePayloadOf(line: LinePayload): LinePayload {
     quantity: trimDecimal(line.quantity),
     unit_price: trimDecimal(line.unit_price),
     price_basis: line.price_basis,
+    frequency: line.frequency,
+    days_per_month: takesDaysPerMonth(line) && line.days_per_month != null ? trimDecimal(line.days_per_month) : null,
     period_start: line.period_start,
     period_end: line.period_end,
     working_day_profile_id: line.price_basis === 'per_day' ? line.working_day_profile_id : null,
@@ -206,6 +252,15 @@ export function activeMonths(year: number, start: string | null | undefined, end
 }
 
 export type PeriodProblem = 'missing' | 'invalid' | 'outsideYear' | 'startAfterEnd' | 'noMonth';
+
+export type DateProblem = 'dateMissing' | 'dateInvalid' | 'dateOutsideYear';
+
+/** Why the one date of a line cannot be saved, or null when it can: any real date in `year`. */
+export function dateProblem(year: number, date: string): DateProblem | null {
+  if (!date) return 'dateMissing';
+  if (!isYmd(date)) return 'dateInvalid';
+  return date.slice(0, 4) === String(year) ? null : 'dateOutsideYear';
+}
 
 /** Why a period typed in the spread panel cannot be applied, or null when it can. */
 export function periodProblem(year: number, start: string, end: string): PeriodProblem | null {
@@ -350,9 +405,14 @@ export function formatMoney(value: string | null | undefined): string {
   return `${sign}${grouped}${cents === '00' ? '' : `.${cents}`}`;
 }
 
-/** True when the column's FTE means something: a line counts people or days. */
+/** True when a line counts days or people: pieces give no FTE. */
+export function countsFte(lines: Array<{ quantity_unit: QuantityUnit }> | null | undefined): boolean {
+  return (lines ?? []).some((line) => line.quantity_unit !== 'pieces');
+}
+
+/** True when the column's FTE means something: a line counts days or people. */
 function linesGiveFte(record: RoundInput): boolean {
-  return record.fte != null && (record.lines ?? []).some((line) => line.quantity_unit !== 'units');
+  return record.fte != null && countsFte(record.lines);
 }
 
 /**
@@ -424,20 +484,36 @@ function shortMonth(locale: string, month: number): string {
   return new Date(2000, month - 1, 1).toLocaleString(locale, { month: 'short' });
 }
 
-/** One line in words: "Project manager: 20 days × 900 per day, Jan to Jun". */
+/** The sentence of a line, by what it counts ("1 person × 1 200 per day, 5 days per month"). */
+function lineSentenceKey(line: Pick<RoundLine, 'quantity_unit' | 'price_basis' | 'frequency' | 'days_per_month'>): string {
+  if (line.quantity_unit === 'people') {
+    if (line.price_basis === 'per_month') return 'people_per_month';
+    return line.days_per_month == null ? 'people_full_time' : 'people_days';
+  }
+  if (line.quantity_unit === 'days') return 'days';
+  return line.frequency === 'once' ? 'pieces_once' : 'pieces_per_month';
+}
+
+/** One line in words: "Project manager: 1 person × 1 200 per day, 5 days per month, Feb to Jul". */
 export function lineText(
   t: TFunction,
   locale: string,
-  line: Pick<RoundLine, 'label' | 'quantity_unit' | 'quantity' | 'unit_price' | 'price_basis' | 'period_start' | 'period_end'>,
+  line: Pick<RoundLine, 'label' | 'quantity_unit' | 'quantity' | 'unit_price' | 'price_basis' | 'frequency' | 'days_per_month' | 'period_start' | 'period_end'>,
 ): string {
-  const months = activeMonths(Number(line.period_start.slice(0, 4)), line.period_start, line.period_end);
+  const year = Number(line.period_start.slice(0, 4));
+  // A line bought once on one date (pieces, or days written by the API) lands in that date's month.
+  const months = line.frequency === 'once' && line.period_start === line.period_end && isYmd(line.period_start)
+    ? [Number(line.period_start.slice(5, 7))]
+    : activeMonths(year, line.period_start, line.period_end);
   const when = months.length === 0 ? ''
     : months.length === 1 ? shortMonth(locale, months[0])
       : t('budgetTab.monthRange', { from: shortMonth(locale, months[0]), to: shortMonth(locale, months[months.length - 1]) });
-  const text = t('budgetTab.lines.lineText', {
+  const days = line.days_per_month == null ? ''
+    : t('budgetTab.lines.daysPerMonthCount', { count: Number(line.days_per_month), value: formatDecimal(line.days_per_month) });
+  const text = t(`budgetTab.lines.lineText.${lineSentenceKey(line)}`, {
     quantity: t(`budgetTab.lines.count.${line.quantity_unit}`, { count: Number(line.quantity), value: formatDecimal(line.quantity) }),
     price: formatDecimal(line.unit_price),
-    per: t(`budgetTab.lines.basis.${line.price_basis}`),
+    days,
     months: when,
   });
   const label = line.label.trim();

@@ -718,17 +718,17 @@
       "column": "Colonne",
       "name": "Nom",
       "shown": "Affichée",
-      "follows": "Suit « Appliquer à toutes les colonnes »",
+      "follows": "Suit la répartition et les lignes",
       "default": "Par défaut",
       "nameOf": "Nom de la colonne {{position}}",
       "shownOf": "Afficher {{column}}",
-      "followsOf": "{{column}} suit « Appliquer à toutes les colonnes »",
+      "followsOf": "{{column}} suit la répartition et les lignes",
       "defaultOf": "Faire de {{column}} la colonne par défaut",
       "inFiles": "Dans les fichiers : {{name}}",
       "nameHint": "Laissez un nom vide pour utiliser le nom standard.",
       "helpHidden": "Les colonnes masquées gardent leurs montants et acceptent toujours les imports et les gels.",
       "helpDefault": "La colonne par défaut est présélectionnée dans les rapports et trie les listes et le tableau de bord. La geler fige les taux de change de l'année.",
-      "helpFollows": "Les colonnes qui suivent « Appliquer à toutes les colonnes » prennent la même période quand une répartition est appliquée à toutes les colonnes.",
+      "helpFollows": "La colonne reprend ce qui est appliqué à toutes les colonnes dans l'onglet Budget : la répartition et la période d'un montant réparti, et les lignes quantité et prix. Une colonne qui ne suit pas garde les siens.",
       "errors": {
         "allHidden": "Au moins une colonne doit rester affichée.",
         "defaultHidden": "La colonne par défaut doit être affichée : choisissez d'abord une autre colonne par défaut.",
@@ -1111,27 +1111,46 @@
       "quantity": "Quantité",
       "unit": "Unité",
       "unitPrice": "Prix unitaire",
-      "per": "Par",
+      "priceFor": "Prix par",
+      "howOften": "Fréquence",
+      "date": "Date",
       "calendar": "Calendrier",
-      "units": {
+      "unitNames": {
         "people": "personnes",
         "days": "jours",
-        "units": "unités"
+        "pieces": "pièces"
       },
       "basis": {
         "per_day": "par jour",
         "per_month": "par mois",
+        "per_piece": "par pièce"
+      },
+      "frequency": {
+        "per_month": "par mois",
         "once": "une fois"
       },
+      "overThePeriod": "sur la période",
+      "fullTime": "Temps plein",
+      "daysPerMonth": "jours par mois",
+      "daysPerMonthPlaceholder": "ex. 5",
+      "daysPerMonthCount_one": "{{value}} jour par mois",
+      "daysPerMonthCount_other": "{{value}} jours par mois",
       "count": {
         "people_one": "{{value}} personne",
         "people_other": "{{value}} personnes",
         "days_one": "{{value}} jour",
         "days_other": "{{value}} jours",
-        "units_one": "{{value}} unité",
-        "units_other": "{{value}} unités"
+        "pieces_one": "{{value}} pièce",
+        "pieces_other": "{{value}} pièces"
       },
-      "lineText": "{{quantity}} × {{price}} {{per}}, {{months}}",
+      "lineText": {
+        "people_full_time": "{{quantity}} × {{price}} par jour, temps plein, {{months}}",
+        "people_days": "{{quantity}} × {{price}} par jour, {{days}}, {{months}}",
+        "people_per_month": "{{quantity}} × {{price}} par mois, {{months}}",
+        "days": "{{quantity}} × {{price}} par jour sur la période, {{months}}",
+        "pieces_per_month": "{{quantity}} × {{price}} par pièce par mois, {{months}}",
+        "pieces_once": "{{quantity}} × {{price}} une fois, {{months}}"
+      },
       "labeled": "{{label}} : {{text}}",
       "descriptionPlaceholder": "ex. Chef de projet",
       "quantityPlaceholder": "ex. 1",
@@ -1140,12 +1159,17 @@
       "remove": "Supprimer la ligne",
       "empty": "Aucune ligne pour l'instant. Une ligne est une quantité multipliée par un prix unitaire.",
       "incomplete": "Saisissez une quantité et un prix unitaire pour enregistrer cette ligne.",
+      "chooseDays": "Saisissez les jours par mois, ou cochez Temps plein.",
       "chooseCalendar": "Choisissez un calendrier pour un prix par jour.",
       "lineNote": "Ligne {{line}} : {{note}}",
-      "total": "= {{total}}",
-      "totalFte": "= {{total}} · {{fte}} ETP",
+      "problem": {
+        "dateMissing": "Choisissez une date.",
+        "dateInvalid": "Saisissez une date valide.",
+        "dateOutsideYear": "Choisissez une date en {{year}}."
+      },
+      "fte": "ETP sur la période {{fte_period}} · Moyenne sur l'année {{fte}}",
+      "applyToAll": "Appliquer ces lignes à toutes les colonnes",
       "status": {
-        "computed": "Les montants sont calculés à partir de ces lignes.",
         "manual": "Les montants ont été saisis à la main.",
         "spread": "Les montants viennent d'une répartition.",
         "copied": "Les montants ont été copiés depuis {{source}}.",
@@ -1164,7 +1188,7 @@
     },
     "listAnd": "{{first}} et {{last}}",
     "amount": "Montant",
-    "applyToAll": "Appliquer à toutes les colonnes",
+    "applyDistributionToAll": "Appliquer la répartition à toutes les colonnes",
     "applyToAllFollow": "{{columns}} suivent la même période.",
     "applyToAllOthers_one": "{{columns}} garde sa propre période.",
     "applyToAllOthers_other": "{{columns}} gardent leur propre période.",
