@@ -747,15 +747,29 @@ export async function writeLinesPayload(ctx: AmountsWriteContext, rawPayload: un
   return { ...written, spread: null, lines: { year, measures, lines, calendars, result, warnings } };
 }
 
-/** The record of a column computed from its lines: their period, the FTE and what each line gave. */
+/**
+ * The whole months a computed column covers: from the first day of its
+ * earliest active month to the last day of its latest, so the 15th rule
+ * (`activeMonths`) finds every one of them again. A one-date line keeps its
+ * date; the record covers its month.
+ */
+function activeMonthsPeriod(year: number, activeMonths: readonly number[]): { period_start: string; period_end: string } {
+  if (activeMonths.length === 0) throw new InternalServerErrorException('A computed column has no active month.');
+  const first = Math.min(...activeMonths);
+  const last = Math.max(...activeMonths);
+  const mm = (month: number) => String(month).padStart(2, '0');
+  const lastDay = new Date(Date.UTC(year, last, 0)).getUTCDate();
+  return { period_start: `${year}-${mm(first)}-01`, period_end: `${year}-${mm(last)}-${lastDay}` };
+}
+
+/** The record of a column computed from its lines: the whole months they cover, the FTE and what each line gave. */
 export function linesRound(
   lines: readonly CostLine[],
   calendars: ReadonlyMap<string, Pick<WorkingDayProfileInfo, 'code' | 'name'>>,
   result: ColumnResult,
 ): RoundInputFields {
   return {
-    period_start: lines.map((line) => line.period_start).reduce((a, b) => (b < a ? b : a)),
-    period_end: lines.map((line) => line.period_end).reduce((a, b) => (b > a ? b : a)),
+    ...activeMonthsPeriod(Number(lines[0].period_start.slice(0, 4)), result.active_months),
     method: 'computed',
     spread_profile_name: null,
     fte: result.fte,

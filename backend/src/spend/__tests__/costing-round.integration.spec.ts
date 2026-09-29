@@ -6,6 +6,7 @@ import dataSource from '../../data-source';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { SpendVersionsController } from '../spend-versions.controller';
 import { CapexVersionsController } from '../../capex/capex-versions.controller';
+import { BudgetRowsCsvService } from '../budget-rows-csv.service';
 import { DISABLED_CALENDAR_WARNING } from '../round-inputs.util';
 import {
   amountsService,
@@ -18,6 +19,7 @@ import {
   inRolledBackTransaction,
   itemCsvImporter,
   Kind,
+  noFreeze,
   period,
   readLines,
   readMeasure,
@@ -243,6 +245,7 @@ async function testFriedLines(kind: Kind) {
       `${kind}: 5 × 1 200 each month, the laptop in March although the 20th is past the 15th`,
     );
     const [record] = budget.round_inputs;
+    assert.deepEqual([record.period_start, record.period_end], [`${YEAR}-02-01`, `${YEAR}-07-31`], `${kind}: the record covers February to July`);
     const calculation = record.last_calculation;
     assert.deepEqual(
       [record.fte, calculation.fte, calculation.fte_period, calculation.active_months, calculation.total],
@@ -409,7 +412,7 @@ async function testEmptyLines(kind: Kind) {
     assert.equal(audit.entries.filter((e) => e.table === amountsTable(kind)).length, amountAudits, `${kind}: no amounts audit`);
     const { planned, forecast } = await readRecords(runner, kind, versionId);
     assert.deepEqual([planned.method, planned.fte, planned.last_calculation], ['manual', null, null], `${kind}: computed becomes manual`);
-    assert.deepEqual([planned.period_start, planned.period_end], [`${YEAR}-02-01`, `${YEAR}-10-30`], `${kind}: the period stays`);
+    assert.deepEqual([planned.period_start, planned.period_end], [`${YEAR}-02-01`, `${YEAR}-10-31`], `${kind}: the period stays, the whole months of the lines`);
     assert.deepEqual([forecast.method, forecast.fte, forecast.last_calculation.kind], ['spread', null, 'annual'], `${kind}: a spread stays a spread`);
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), SFR_MONTHS, `${kind}: the amounts stay`);
     assert.equal(await countLines(runner, kind, tenantId), 0, `${kind}: the lines are gone`);
@@ -673,6 +676,67 @@ async function testCopyAndClear(kind: Kind) {
 }
 
 /**
+ * A piece bought once on a date before the 15th (Budget) or after it
+ * (Revision): the line keeps its date, the record covers the whole month, so
+ * the budget rows file re-imports it unchanged and a copy shifts it a year.
+ */
+async function testOneDateLineCoversItsMonth(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, tenantId, versionId, itemId }) => {
+    const svc = amountsService(kind);
+    const piece = (date: string) => licenceLine({ label: 'Laptop', quantity: 1, unit_price: '2000', frequency: 'once', period_start: date, period_end: date });
+    for (const [measure, date] of [['planned', `${YEAR}-03-01`], ['forecast', `${YEAR}-03-20`]] as const) {
+      await svc.bulkUpsert(versionId, linesPayload([piece(date)], { measure }), null, { manager: runner.manager });
+      const record = (await readRecords(runner, kind, versionId))[measure];
+      assert.deepEqual(
+        [record.method, record.period_start, record.period_end, record.last_calculation.active_months],
+        ['computed', `${YEAR}-03-01`, `${YEAR}-03-31`, [3]],
+        `${kind} ${measure}: the record covers March`,
+      );
+      assert.deepEqual(
+        (await readLines(runner, kind, versionId, measure)).map((l) => [l.period_start, l.period_end]),
+        [[date, date]],
+        `${kind} ${measure}: the line keeps its date`,
+      );
+    }
+    const before = await readRecords(runner, kind, versionId);
+
+    const rows = new BudgetRowsCsvService(captureAudit() as any, noFreeze as any);
+    const access = { isAdmin: true, permissions: {} };
+    const { content } = await rows.exportCsv({ scope: 'data', year: String(YEAR), access }, { manager: runner.manager, tenantId });
+    const exported = content.replace(/^\ufeff/, '').split('\n').filter((l) => l.includes(';planned;') || l.includes(';forecast;'));
+    assert.equal(exported.length, 2, `${kind}: both columns exported`);
+    for (const row of exported) assert.ok(row.includes(`;${YEAR}-03-01;${YEAR}-03-31;`), `${kind}: exported with March as its period: ${row}`);
+    const reimport = await rows.importCsv(
+      { file: { buffer: Buffer.from(content, 'utf8') } as any, dryRun: false, userId: null, access },
+      { manager: runner.manager, tenantId },
+    );
+    assert.deepEqual([reimport.ok, reimport.errors, reimport.updated, reimport.inserted], [true, [], 0, 0], `${kind}: the export re-imports unchanged`);
+    const after = await readRecords(runner, kind, versionId);
+    for (const measure of ['planned', 'forecast'] as const) {
+      assert.equal(after[measure].updated_at.getTime(), before[measure].updated_at.getTime(), `${kind} ${measure}: record untouched`);
+    }
+
+    await budgetOperations(kind).copyBudgetColumn(
+      { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0, overwrite: false, dryRun: false },
+      null,
+      { manager: runner.manager },
+    );
+    const destination = (await findVersion(runner, kind, itemId, YEAR + 1))!;
+    const copied = (await readRecords(runner, kind, destination.id)).planned;
+    assert.deepEqual(
+      [copied.method, copied.period_start, copied.period_end],
+      ['copied', `${YEAR + 1}-03-01`, `${YEAR + 1}-03-31`],
+      `${kind}: the copy shifts the month a year`,
+    );
+    assert.deepEqual(
+      (await readLines(runner, kind, destination.id, 'planned')).map((l) => [l.period_start, l.period_end]),
+      [[`${YEAR + 1}-03-01`, `${YEAR + 1}-03-01`]],
+      `${kind}: the copied line keeps one date`,
+    );
+  });
+}
+
+/**
  * The lines write takes its calendars FOR KEY SHARE when it reads them,
  * before the months and the records, so a delete (FOR UPDATE) cannot count
  * zero lines in between. The writer is held between the two (another
@@ -773,6 +837,7 @@ void runSpecs('costing-round.integration.spec', [
     [`testOtherTenant(${kind})`, () => testOtherTenant(kind)],
     [`testOtherWritesKeepLines(${kind})`, () => testOtherWritesKeepLines(kind)],
     [`testCopyAndClear(${kind})`, () => testCopyAndClear(kind)],
+    [`testOneDateLineCoversItsMonth(${kind})`, () => testOneDateLineCoversItsMonth(kind)],
   ] as Array<[string, () => Promise<void>]>),
 ]);
 
