@@ -54,9 +54,7 @@ const LINE_TABLES: Record<(typeof ROUND_TABLES)[number], string> = {
  *
  * down() refuses while any tenant has a calendar, a line or a computed round:
  * reverting would lose them. Otherwise it drops everything up() added and
- * restores the three-value method check. It also reverts the first shape of
- * this migration, which kept one recipe on the round itself (six columns and
- * the `pricing_basis` type) and ran on development databases only.
+ * restores the three-value method check.
  */
 export class WorkingDayCalendars1853670000000 implements MigrationInterface {
   name = 'WorkingDayCalendars1853670000000';
@@ -200,40 +198,25 @@ export class WorkingDayCalendars1853670000000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const window = ['working_day_profiles', ...ROUND_TABLES, ...ROUND_TABLES.map((table) => LINE_TABLES[table])];
-    // IF EXISTS: the first shape of this migration had no line tables.
     for (const table of window) {
-      await queryRunner.query(`ALTER TABLE IF EXISTS ${table} DISABLE ROW LEVEL SECURITY`);
+      await queryRunner.query(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);
     }
     // The transaction rolls back on this exception: RLS and data stay as they were.
-    // The sources are built from what exists, so the guard holds on either shape.
     await queryRunner.query(`
       DO $do$
       DECLARE
-        sources text := 'SELECT tenant_id FROM working_day_profiles';
         offenders text;
-        tbl text;
       BEGIN
-        FOREACH tbl IN ARRAY ARRAY['spend_round_inputs', 'capex_round_inputs'] LOOP
-          sources := sources || format(' UNION SELECT tenant_id FROM %I WHERE method = %L', tbl, 'computed');
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns
-             WHERE table_schema = current_schema() AND table_name = tbl AND column_name = 'pricing_basis'
-          ) THEN
-            sources := sources || format(' UNION SELECT tenant_id FROM %I WHERE pricing_basis IS NOT NULL', tbl);
-          END IF;
-        END LOOP;
-        FOREACH tbl IN ARRAY ARRAY['spend_round_input_lines', 'capex_round_input_lines'] LOOP
-          IF to_regclass(tbl) IS NOT NULL THEN
-            sources := sources || format(' UNION SELECT tenant_id FROM %I', tbl);
-          END IF;
-        END LOOP;
-        EXECUTE format(
-          'SELECT string_agg(label, '', '' ORDER BY label) FROM (
-             SELECT DISTINCT COALESCE(t.slug, s.tenant_id::text) AS label
-               FROM (%s) s LEFT JOIN tenants t ON t.id = s.tenant_id
-           ) o',
-          sources
-        ) INTO offenders;
+        SELECT string_agg(label, ', ' ORDER BY label) INTO offenders FROM (
+          SELECT DISTINCT COALESCE(t.slug, s.tenant_id::text) AS label
+            FROM (
+              SELECT tenant_id FROM working_day_profiles
+              UNION SELECT tenant_id FROM spend_round_inputs WHERE method = 'computed'
+              UNION SELECT tenant_id FROM capex_round_inputs WHERE method = 'computed'
+              UNION SELECT tenant_id FROM spend_round_input_lines
+              UNION SELECT tenant_id FROM capex_round_input_lines
+            ) s LEFT JOIN tenants t ON t.id = s.tenant_id
+        ) o;
         IF offenders IS NOT NULL THEN
           RAISE EXCEPTION 'Cannot revert the working-day calendars: tenant(s) % still have calendars or budget columns computed from quantity and price. Delete those calendars and clear those columns first.', offenders;
         END IF;
@@ -241,8 +224,7 @@ export class WorkingDayCalendars1853670000000 implements MigrationInterface {
       $do$
     `);
     for (const table of window) {
-      await queryRunner.query(`ALTER TABLE IF EXISTS ${table} ENABLE ROW LEVEL SECURITY`);
-      await queryRunner.query(`ALTER TABLE IF EXISTS ${table} FORCE ROW LEVEL SECURITY`);
+      await enableRls(queryRunner, table);
     }
 
     await queryRunner.query(`ALTER TABLE roles DISABLE ROW LEVEL SECURITY`);
@@ -254,12 +236,6 @@ export class WorkingDayCalendars1853670000000 implements MigrationInterface {
     for (const table of [...ROUND_TABLES].reverse()) {
       // Its policy, keys and index go with it.
       await queryRunner.query(`DROP TABLE IF EXISTS ${LINE_TABLES[table]}`);
-      // The first shape's recipe checks, key and index.
-      for (const check of ['computed_check', 'costing_values_check', 'costing_calendar_check', 'costing_check']) {
-        await queryRunner.query(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_${check}`);
-      }
-      await queryRunner.query(`DROP INDEX IF EXISTS idx_${table}_tenant_working_day_profile`);
-      await queryRunner.query(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_working_day_profile_fk`);
       await queryRunner.query(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_tenant_id_id_key`);
       await queryRunner.query(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_fte_check`);
       await queryRunner.query(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_method_check`);
@@ -267,20 +243,10 @@ export class WorkingDayCalendars1853670000000 implements MigrationInterface {
         ALTER TABLE ${table}
         ADD CONSTRAINT ${table}_method_check CHECK (method IN ('spread', 'copied', 'manual'))
       `);
-      await queryRunner.query(`
-        ALTER TABLE ${table}
-          DROP COLUMN IF EXISTS fte,
-          DROP COLUMN IF EXISTS counts_as_fte,
-          DROP COLUMN IF EXISTS working_day_profile_id,
-          DROP COLUMN IF EXISTS price_index_pct,
-          DROP COLUMN IF EXISTS unit_price,
-          DROP COLUMN IF EXISTS quantity,
-          DROP COLUMN IF EXISTS pricing_basis
-      `);
+      await queryRunner.query(`ALTER TABLE ${table} DROP COLUMN IF EXISTS fte`);
     }
     await queryRunner.query(`DROP TYPE IF EXISTS line_price_basis`);
     await queryRunner.query(`DROP TYPE IF EXISTS line_quantity_unit`);
-    await queryRunner.query(`DROP TYPE IF EXISTS pricing_basis`);
 
     await queryRunner.query(`DROP POLICY IF EXISTS working_day_profiles_tenant_isolation ON working_day_profiles`);
     await queryRunner.query(`DROP TABLE IF EXISTS working_day_profiles`);
