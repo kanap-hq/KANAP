@@ -54,7 +54,7 @@ const content: OfferContent = {
           'Installation and upgrade assistance',
           'Direct line to the team for production issues',
           '60-min kickoff call with a KANAP expert',
-          '20% consulting discount',
+          'Consulting at €900 a day instead of €1,150',
         ],
         ctaLabel: 'Subscribe',
         ctaHref: '#support-invoice',
@@ -93,7 +93,7 @@ const content: OfferContent = {
           'Agents included, with your own LLM key',
           '60-min kickoff call with a KANAP expert',
           'Priority email support',
-          '20% consulting discount',
+          'Consulting at €900 a day instead of €1,150',
         ],
         ctaLabel: 'Start free trial',
         ctaHref: '/trial/start',
@@ -123,7 +123,7 @@ const content: OfferContent = {
 
   services: {
     title: 'Expert help, when you want it',
-    intro: 'KANAP is built for self-service adoption. If you want to go faster, paid plans include priority support and 20% off consulting.',
+    intro: 'KANAP is built for self-service adoption. If you want to go faster, paid plans include priority support and a reduced consulting rate.',
     support: {
       title: 'Priority support',
       subtitle: 'Included with any paid plan',
@@ -137,8 +137,8 @@ const content: OfferContent = {
     },
     consulting: {
       title: 'Consulting',
-      subtitle: 'Paid · subscribers get 20% off',
-      body: 'Optional help to get more value from KANAP: scheduled calls, deeper work, advisory. Rates: €190 an hour, €690 a half day, €1,250 a day, VAT excluded.',
+      subtitle: 'Paid · billed by the day',
+      body: 'Optional help to get more value from KANAP: scheduled calls, deeper work, advisory. Rate: €1,150 a day, €900 for customers with a support or hosting plan, VAT excluded.',
       items: [
         'Setup, configuration, onboarding, training',
         'Workflow design and best practices',

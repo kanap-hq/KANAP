@@ -54,7 +54,7 @@ const content: OfferContent = {
           'Asistencia de instalación y actualización',
           'Línea directa con el equipo para problemas de producción',
           'Sesión inicial de 60 min con un experto de KANAP',
-          '20 % de descuento en consultoría',
+          'Consultoría a 900 € al día en lugar de 1 150 €',
         ],
         ctaLabel: 'Suscribirse',
         ctaHref: '#support-invoice',
@@ -93,7 +93,7 @@ const content: OfferContent = {
           'Agentes incluidos, con su propia clave LLM',
           'Sesión inicial de 60 min con un experto de KANAP',
           'Soporte por email prioritario',
-          '20 % de descuento en consultoría',
+          'Consultoría a 900 € al día en lugar de 1 150 €',
         ],
         ctaLabel: 'Empezar prueba gratuita',
         ctaHref: '/trial/start',
@@ -123,7 +123,7 @@ const content: OfferContent = {
 
   services: {
     title: 'Ayuda experta, cuando la quiera',
-    intro: 'KANAP está diseñado para una adopción autoservicio. Si quiere ir más rápido, los planes de pago incluyen soporte prioritario y un 20 % de descuento en consultoría.',
+    intro: 'KANAP está diseñado para una adopción autoservicio. Si quiere ir más rápido, los planes de pago incluyen soporte prioritario y una tarifa de consultoría reducida.',
     support: {
       title: 'Soporte prioritario',
       subtitle: 'Incluido con cualquier plan de pago',
@@ -137,8 +137,8 @@ const content: OfferContent = {
     },
     consulting: {
       title: 'Consultoría',
-      subtitle: 'De pago · los suscriptores obtienen un 20 % de descuento',
-      body: 'Ayuda opcional para sacar más valor de KANAP: llamadas programadas, trabajo más profundo, asesoramiento. Tarifas: 190 € la hora, 690 € la media jornada, 1 250 € la jornada, sin IVA.',
+      subtitle: 'De pago · facturada por jornada',
+      body: 'Ayuda opcional para sacar más valor de KANAP: llamadas programadas, trabajo más profundo, asesoramiento. Tarifa: 1 150 € la jornada, 900 € para clientes con contrato de soporte o alojamiento, sin IVA.',
       items: [
         'Instalación, configuración, onboarding, formación',
         'Diseño de flujos de trabajo y buenas prácticas',
