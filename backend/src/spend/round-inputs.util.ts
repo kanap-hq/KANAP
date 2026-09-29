@@ -27,6 +27,7 @@ import {
   computeColumn,
   CostingInputError,
   CostLine,
+  Frequency,
   LineCalendar,
   parseCostLines,
   PriceBasis,
@@ -66,6 +67,10 @@ export type LineCalculation = CostLine & {
   total_days: string | null;
   month_amounts: string[];
   fte_months: string[];
+  /** The line's full-year average FTE (its twelve FTE months ÷ 12). */
+  fte: string;
+  /** The line's FTE over its own active months (their FTE ÷ their number). */
+  fte_period: string;
   total: string;
 };
 
@@ -85,7 +90,10 @@ export type LastCalculation =
     // What the lines gave, frozen at compute time: a later calendar edit never changes it.
     kind: 'computed';
     total: string;
+    /** The full-year average, as stored on the round. */
     fte: string;
+    /** The average over the months where a people or days line is active (pieces do not count). */
+    fte_period: string;
     month_amounts: string[];
     fte_months: string[];
     active_months: number[];
@@ -101,6 +109,9 @@ export type RoundLine = {
   quantity: string;
   unit_price: string;
   price_basis: PriceBasis;
+  frequency: Frequency;
+  /** People priced per day: the days worked each month; null is full time. */
+  days_per_month: string | null;
   period_start: string;
   period_end: string;
   working_day_profile_id: string | null;
@@ -200,6 +211,8 @@ function toLine(row: StoredLine): RoundLine {
     quantity: plain(row.quantity)!,
     unit_price: plain(row.unit_price)!,
     price_basis: row.price_basis,
+    frequency: row.frequency,
+    days_per_month: plain(row.days_per_month),
     period_start: row.period_start,
     period_end: row.period_end,
     working_day_profile_id: row.working_day_profile_id ?? null,
@@ -231,6 +244,8 @@ export function costLine(line: RoundLine): CostLine {
     quantity: line.quantity,
     unit_price: line.unit_price,
     price_basis: line.price_basis,
+    frequency: line.frequency,
+    days_per_month: line.days_per_month,
     period_start: line.period_start,
     period_end: line.period_end,
     working_day_profile_id: line.working_day_profile_id,
@@ -262,6 +277,7 @@ async function readLines(manager: EntityManager, scope: AmountScope, tenantId: s
   const rows: StoredLine[] = await manager.query(
     `SELECT l.id, l.round_input_id, l.sort, l.label, l.quantity_unit::text AS quantity_unit,
             l.quantity::text AS quantity, l.unit_price::text AS unit_price, l.price_basis::text AS price_basis,
+            l.frequency::text AS frequency, l.days_per_month::text AS days_per_month,
             to_char(l.period_start, 'YYYY-MM-DD') AS period_start, to_char(l.period_end, 'YYYY-MM-DD') AS period_end,
             l.working_day_profile_id, w.code AS working_day_profile_code, w.name AS working_day_profile_name
      FROM ${LINE_TABLE[scope]} l
@@ -361,13 +377,15 @@ async function replaceLines(ctx: RoundInputsContext, roundId: string, lines: rea
     value(line.quantity, 'numeric'),
     value(line.unit_price, 'numeric'),
     value(line.price_basis, 'line_price_basis'),
+    value(line.frequency, 'line_frequency'),
+    value(line.days_per_month, 'numeric'),
     value(line.working_day_profile_id, 'uuid'),
     value(line.period_start, 'date'),
     value(line.period_end, 'date'),
   ].join(', ')})`);
   await ctx.manager.query(
     `INSERT INTO ${table}
-       (tenant_id, round_input_id, sort, label, quantity_unit, quantity, unit_price, price_basis, working_day_profile_id, period_start, period_end)
+       (tenant_id, round_input_id, sort, label, quantity_unit, quantity, unit_price, price_basis, frequency, days_per_month, working_day_profile_id, period_start, period_end)
      VALUES ${rows.join(', ')}`,
     params,
   );
@@ -611,6 +629,10 @@ export type LinesAmountsPayload = {
     quantity: string | number;
     unit_price: string | number;
     price_basis: PriceBasis;
+    /** People: per_month; days: once; pieces: either (a unit with one choice takes it when none is sent). */
+    frequency?: Frequency;
+    /** People priced per day: the days worked each month; null or absent is full time. Refused on any other line. */
+    days_per_month?: string | number | null;
     period_start: string;
     period_end: string;
     working_day_profile_id?: string | null;
@@ -741,6 +763,7 @@ export function linesRound(
       kind: 'computed',
       total: centsToDecimal(result.total_cents),
       fte: result.fte,
+      fte_period: result.fte_period,
       month_amounts: result.month_cents.map(centsToDecimal),
       fte_months: result.fte_months,
       active_months: result.active_months,
@@ -756,6 +779,8 @@ export function linesRound(
           total_days: computed.total_days,
           month_amounts: computed.month_cents.map(centsToDecimal),
           fte_months: computed.fte_months,
+          fte: computed.fte,
+          fte_period: computed.fte_period,
           total: centsToDecimal(computed.total_cents),
         };
       }),

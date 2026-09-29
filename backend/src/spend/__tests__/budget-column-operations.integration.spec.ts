@@ -89,9 +89,10 @@ async function testCopyArithmetic() {
   assert.deepEqual(shiftPeriod({ period_start: '2032-02-29', period_end: '2032-12-31' }, 1), { period_start: '2033-02-28', period_end: '2033-12-31' });
   assert.deepEqual(shiftPeriod({ period_start: '2031-02-28', period_end: '2031-11-30' }, 1), { period_start: '2032-02-28', period_end: '2032-11-30' });
   assert.deepEqual(shiftPeriod({ period_start: '2031-04-01', period_end: '2031-12-31' }, -1), { period_start: '2030-04-01', period_end: '2030-12-31' });
-  // Lines: each period shifted to the destination year the same way; quantity, price and calendar kept.
+  // Lines: each period shifted to the destination year the same way; quantity, price, how often, days per month and calendar kept.
   const stored = (period_start: string, period_end: string) => ({
-    id: 'x', sort: 1, label: 'Licences', quantity_unit: 'units' as const, quantity: '10', unit_price: '200', price_basis: 'per_month' as const,
+    id: 'x', sort: 1, label: 'Licences', quantity_unit: 'pieces' as const, quantity: '10', unit_price: '200', price_basis: 'per_piece' as const,
+    frequency: 'per_month' as const, days_per_month: null,
     period_start, period_end, working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null,
   });
   const leap = { lines: [stored('2032-02-29', '2032-03-31'), stored('2032-01-01', '2032-02-29')] };
@@ -100,9 +101,19 @@ async function testCopyArithmetic() {
   assert.deepEqual(periods(2036), [['2036-02-29', '2036-03-31'], ['2036-01-01', '2036-02-29']], 'a leap year keeps it');
   assert.deepEqual(periods(2030), [['2030-02-28', '2030-03-31'], ['2030-01-01', '2030-02-28']], 'backwards too');
   assert.deepEqual(shiftLines(leap, 2033)[0], {
-    label: 'Licences', quantity_unit: 'units', quantity: '10', unit_price: '200', price_basis: 'per_month',
-    period_start: '2033-02-28', period_end: '2033-03-31', working_day_profile_id: null,
+    label: 'Licences', quantity_unit: 'pieces', quantity: '10', unit_price: '200', price_basis: 'per_piece', frequency: 'per_month',
+    days_per_month: null, period_start: '2033-02-28', period_end: '2033-03-31', working_day_profile_id: null,
   });
+  // A person 5 days a month and a laptop on one date: how often and the days per month travel; one date stays one date.
+  const person = {
+    ...stored('2032-02-01', '2032-07-31'), label: 'Project manager', quantity_unit: 'people' as const, quantity: '1', unit_price: '1200',
+    price_basis: 'per_day' as const, days_per_month: '5', working_day_profile_id: 'cal', working_day_profile_code: 'FR', working_day_profile_name: 'France',
+  };
+  const laptop = { ...stored('2032-02-29', '2032-02-29'), label: 'Laptop', quantity: '1', unit_price: '2000', frequency: 'once' as const };
+  assert.deepEqual(shiftLines({ lines: [person, laptop] }, 2033).map((l) => [l.label, l.frequency, l.days_per_month, l.period_start, l.period_end]), [
+    ['Project manager', 'per_month', '5', '2033-02-01', '2033-07-31'],
+    ['Laptop', 'once', null, '2033-02-28', '2033-02-28'],
+  ]);
   assert.deepEqual(shiftLines(undefined, 2033), [], 'no source record, no lines');
 }
 

@@ -64,11 +64,11 @@ function insertRound(runner: QueryRunner, table: string, tenantId: string, versi
   });
 }
 
-/** A line of a round in raw SQL: one person per month over 2026 unless `values` says otherwise. */
+/** A line of a round in raw SQL: one person priced per month over 2026 unless `values` says otherwise. */
 function insertLine(runner: QueryRunner, table: string, tenantId: string, roundId: string, sort: number, values: Record<string, unknown> = {}) {
   return insertRow(runner, table, {
     tenant_id: tenantId, round_input_id: roundId, sort, quantity_unit: 'people', quantity: '1', unit_price: '400', price_basis: 'per_month',
-    period_start: '2026-01-01', period_end: '2026-12-31', ...values,
+    frequency: 'per_month', period_start: '2026-01-01', period_end: '2026-12-31', ...values,
   });
 }
 
@@ -431,20 +431,36 @@ async function testLineChecks() {
         () => insertLine(runner, lines, tenant, roundId, 9, values),
       );
 
+      const days = { quantity_unit: 'days', ...perDay, frequency: 'once' };
+      const pieces = { quantity_unit: 'pieces', price_basis: 'per_piece' };
       // A unit and its price basis go together.
-      await refused('basis_check', { price_basis: 'once' });
-      await refused('basis_check', { quantity_unit: 'days', price_basis: 'per_month' });
-      await refused('basis_check', { quantity_unit: 'units', ...perDay });
+      await refused('basis_check', { price_basis: 'per_piece' });
+      await refused('basis_check', { ...days, price_basis: 'per_month', working_day_profile_id: null });
+      await refused('basis_check', { ...pieces, price_basis: 'per_month' });
+      await refused('basis_check', { ...pieces, ...perDay });
+      // People are counted per month, days once, pieces either.
+      await refused('frequency_check', { frequency: 'once' });
+      await refused('frequency_check', { ...perDay, frequency: 'once' });
+      await refused('frequency_check', { ...days, frequency: 'per_month' });
+      // Days per month: people priced per day only, above 0, at most 31.
+      await refused('days_per_month_check', { days_per_month: '5' });
+      await refused('days_per_month_check', { ...days, days_per_month: '5' });
+      await refused('days_per_month_check', { ...pieces, days_per_month: '5' });
+      await refused('days_per_month_check', { ...perDay, days_per_month: '0' });
+      await refused('days_per_month_check', { ...perDay, days_per_month: '31.001' });
       // A calendar exactly for a price per day.
       await refused('calendar_check', { price_basis: 'per_day' });
       await refused('calendar_check', { working_day_profile_id: calendar });
+      await refused('calendar_check', { ...pieces, working_day_profile_id: calendar });
       // Values, period, description.
       await refused('quantity_check', { quantity: '-0.001' });
       await refused('period_check', { period_start: '2026-06-01', period_end: '2026-05-31' });
       await refused('period_check', { period_start: '2026-06-01', period_end: '2027-01-31' });
       await refused('label_check', { label: 'x'.repeat(201) });
-      await refused(/invalid input value for enum line_quantity_unit/, { quantity_unit: 'weeks' });
-      await refused(/invalid input value for enum line_price_basis/, { price_basis: 'per_period' });
+      await refused(/invalid input value for enum line_quantity_unit/, { quantity_unit: 'units' });
+      await refused(/invalid input value for enum line_price_basis/, { price_basis: 'once' });
+      await refused(/invalid input value for enum line_frequency/, { frequency: 'weekly' });
+      await refused(/null value in column "frequency"/, { frequency: null });
       // One line per place in its round.
       await insertLine(runner, lines, tenant, roundId, 1, { label: 'Kept' });
       await expectRefused(runner, new RegExp(`${lines}_round_sort_key`), () => insertLine(runner, lines, tenant, roundId, 1));
@@ -452,22 +468,26 @@ async function testLineChecks() {
       await expectRefused(runner, new RegExp(`${rounds}_method_check`), () => insertRound(runner, rounds, tenant, versionId, 'forecast', { method: 'estimated' }));
       await expectRefused(runner, new RegExp(`${rounds}_fte_check`), () => insertRound(runner, rounds, tenant, versionId, 'forecast', { fte: '-1' }));
 
-      // Accepted: the five combinations, credits, a description of 200 characters.
+      // Accepted: the six combinations, credits, a description of 200 characters.
       await insertLine(runner, lines, tenant, roundId, 2, { ...perDay, unit_price: '-400' });
-      await insertLine(runner, lines, tenant, roundId, 3, { quantity_unit: 'days', ...perDay, label: 'y'.repeat(200) });
-      await insertLine(runner, lines, tenant, roundId, 4, { quantity_unit: 'units', price_basis: 'per_month' });
-      await insertLine(runner, lines, tenant, roundId, 5, { quantity_unit: 'units', price_basis: 'once', quantity: '0' });
+      await insertLine(runner, lines, tenant, roundId, 3, { ...perDay, days_per_month: '31' });
+      await insertLine(runner, lines, tenant, roundId, 4, { ...days, label: 'y'.repeat(200) });
+      await insertLine(runner, lines, tenant, roundId, 5, { ...pieces });
+      await insertLine(runner, lines, tenant, roundId, 6, { ...pieces, frequency: 'once', quantity: '0', period_end: '2026-01-01' });
       const stored = await runner.query(
-        `SELECT sort, quantity_unit::text, price_basis::text, quantity::text, unit_price::text, working_day_profile_id
+        `SELECT sort, quantity_unit::text, price_basis::text, frequency::text, days_per_month::text, quantity::text, unit_price::text, working_day_profile_id
          FROM ${lines} WHERE tenant_id = $1 AND round_input_id = $2 ORDER BY sort`,
         [tenant, roundId],
       );
-      assert.deepEqual(stored.map((r: any) => [r.sort, r.quantity_unit, r.price_basis, r.quantity, r.unit_price, r.working_day_profile_id]), [
-        [1, 'people', 'per_month', '1.000', '400.0000', null],
-        [2, 'people', 'per_day', '1.000', '-400.0000', calendar],
-        [3, 'days', 'per_day', '1.000', '400.0000', calendar],
-        [4, 'units', 'per_month', '1.000', '400.0000', null],
-        [5, 'units', 'once', '0.000', '400.0000', null],
+      assert.deepEqual(stored.map((r: any) => [
+        r.sort, r.quantity_unit, r.price_basis, r.frequency, r.days_per_month, r.quantity, r.unit_price, r.working_day_profile_id,
+      ]), [
+        [1, 'people', 'per_month', 'per_month', null, '1.000', '400.0000', null],
+        [2, 'people', 'per_day', 'per_month', null, '1.000', '-400.0000', calendar],
+        [3, 'people', 'per_day', 'per_month', '31.000', '1.000', '400.0000', calendar],
+        [4, 'days', 'per_day', 'once', null, '1.000', '400.0000', calendar],
+        [5, 'pieces', 'per_piece', 'per_month', null, '1.000', '400.0000', null],
+        [6, 'pieces', 'per_piece', 'once', null, '0.000', '400.0000', null],
       ]);
     }
 

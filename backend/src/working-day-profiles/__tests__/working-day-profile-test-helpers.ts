@@ -85,8 +85,8 @@ export async function seedCalendarRound(
   );
   await runner.query(
     `INSERT INTO ${lines}
-       (tenant_id, round_input_id, sort, quantity_unit, quantity, unit_price, price_basis, working_day_profile_id, period_start, period_end)
-     VALUES ($1, $2, 1, 'people', 1, 400, 'per_day', $3, $4, $5)`,
+       (tenant_id, round_input_id, sort, quantity_unit, quantity, unit_price, price_basis, frequency, working_day_profile_id, period_start, period_end)
+     VALUES ($1, $2, 1, 'people', 1, 400, 'per_day', 'per_month', $3, $4, $5)`,
     [tenantId, round.id, calendarId, `${year}-01-01`, `${year}-12-31`],
   );
 }

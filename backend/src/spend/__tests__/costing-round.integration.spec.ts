@@ -35,11 +35,12 @@ import {
 
 // Columns computed from quantity × price lines through the amounts services
 // (bulk-upsert `kind: 'lines'`), on OPEX and CAPEX, against the database
-// behind `dataSource`: what is written (months, record, lines, the
-// explanation, the response), wholesale replacement, `also_measures`, `[]`,
-// the freeze, calendars (disabled, another tenant's, the key-share lock),
-// another tenant's version, the lines kept by hand edits, spreads and the
-// item CSV, copy and clear.
+// behind `dataSource`: what is written (months, record, lines with how often
+// and the days per month, the explanation with both FTE figures, the
+// response), fried's lines on a standard calendar, wholesale replacement,
+// `also_measures`, `[]`, the freeze, calendars (disabled, another tenant's,
+// the key-share lock), another tenant's version, the lines kept by hand
+// edits, spreads and the item CSV, copy and clear.
 
 const YEAR = 2026;
 const KINDS: Kind[] = ['opex', 'capex'];
@@ -58,14 +59,16 @@ async function withCalendarLine(kind: Kind, fn: (ctx: Ctx) => Promise<void>, val
   });
 }
 
-/** The SFR row as a line: a project manager, February to October, 400 a day on France 218. */
+/** The SFR row as a line: a consultant full time, February to October, 400 a day on France 218. */
 function sfrLine(calendarId: string, overrides: Record<string, unknown> = {}) {
   return {
-    label: 'Project manager',
+    label: 'Consultant',
     quantity_unit: 'people',
     quantity: '1',
     unit_price: '400',
     price_basis: 'per_day',
+    frequency: 'per_month',
+    days_per_month: null,
     period_start: `${YEAR}-02-01`,
     period_end: `${YEAR}-10-30`,
     working_day_profile_id: calendarId,
@@ -73,14 +76,16 @@ function sfrLine(calendarId: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** Ten licences at 200 a month, over the year. */
+/** Ten licences at 200 a piece each month, over the year. */
 function licenceLine(overrides: Record<string, unknown> = {}) {
   return {
     label: 'Licences',
-    quantity_unit: 'units',
+    quantity_unit: 'pieces',
     quantity: 10,
     unit_price: '200',
-    price_basis: 'per_month',
+    price_basis: 'per_piece',
+    frequency: 'per_month',
+    days_per_month: null,
     period_start: `${YEAR}-01-01`,
     period_end: `${YEAR}-12-31`,
     working_day_profile_id: null,
@@ -88,13 +93,18 @@ function licenceLine(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** The standard France calendar's working days of 2026 (public holidays). */
+const FRANCE_2026 = ['21', '20', '22', '21', '17', '22', '22', '21', '22', '22', '20', '22'];
+
 function linesPayload(lines: unknown[], overrides: Record<string, unknown> = {}) {
   return { kind: 'lines', year: YEAR, measure: 'planned', lines, ...overrides };
 }
 
 const roundAudits = (audit: ReturnType<typeof captureAudit>) => audit.entries.filter((e) => e.table.endsWith('_round_inputs'));
 const amountsTable = (kind: Kind) => TABLES[kind].amounts;
-const shape = (lines: Array<Record<string, any>>) => lines.map((l) => [l.sort, l.label, l.quantity_unit, l.quantity, l.unit_price, l.price_basis, l.period_start, l.period_end]);
+const shape = (lines: Array<Record<string, any>>) => lines.map((l) => [
+  l.sort, l.label, l.quantity_unit, l.quantity, l.unit_price, l.price_basis, l.frequency, l.days_per_month, l.period_start, l.period_end,
+]);
 
 async function countLines(runner: QueryRunner, kind: Kind, tenantId: string): Promise<number> {
   const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM ${TABLES[kind].lines} WHERE tenant_id = $1`, [tenantId]);
@@ -123,33 +133,38 @@ async function testLinesWrite(kind: Kind) {
       kind: 'computed',
       total: '89200.00',
       fte: '0.75',
+      // The period counts the consultant's nine months only: the licences do not dilute it.
+      fte_period: '1',
       month_amounts: columnMonths,
       fte_months: ['0', ...repeat('1', 9), '0', '0'],
       active_months: MONTHS,
       lines: [
         {
-          label: 'Project manager', quantity_unit: 'people', quantity: '1', unit_price: '400', price_basis: 'per_day',
-          period_start: `${YEAR}-02-01`, period_end: `${YEAR}-10-30`,
+          label: 'Consultant', quantity_unit: 'people', quantity: '1', unit_price: '400', price_basis: 'per_day',
+          frequency: 'per_month', days_per_month: null, period_start: `${YEAR}-02-01`, period_end: `${YEAR}-10-30`,
           working_day_profile_id: calendarId, working_day_profile_code: 'FR218', working_day_profile_name: 'France 218',
           active_months: [2, 3, 4, 5, 6, 7, 8, 9, 10], day_counts: FRANCE_218_2026, total_days: '163',
-          month_amounts: SFR_MONTHS, fte_months: ['0', ...repeat('1', 9), '0', '0'], total: '65200.00',
+          month_amounts: SFR_MONTHS, fte_months: ['0', ...repeat('1', 9), '0', '0'], fte: '0.75', fte_period: '1', total: '65200.00',
         },
         {
-          label: 'Licences', quantity_unit: 'units', quantity: '10', unit_price: '200', price_basis: 'per_month',
-          period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`,
+          label: 'Licences', quantity_unit: 'pieces', quantity: '10', unit_price: '200', price_basis: 'per_piece',
+          frequency: 'per_month', days_per_month: null, period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`,
           working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null,
           active_months: MONTHS, day_counts: null, total_days: null,
-          month_amounts: repeat('2000.00', 12), fte_months: repeat('0', 12), total: '24000.00',
+          month_amounts: repeat('2000.00', 12), fte_months: repeat('0', 12), fte: '0', fte_period: '0', total: '24000.00',
         },
       ],
-    }, `${kind}: the explanation carries each line and the day counts used`);
+    }, `${kind}: the explanation carries each line, the day counts used and both FTE figures`);
 
     const stored = await readLines(runner, kind, versionId, 'planned');
     assert.deepEqual(
-      stored.map((l) => [l.sort, l.label, l.quantity_unit, l.quantity, l.unit_price, l.price_basis, l.working_day_profile_id, l.period_start, l.period_end]),
+      stored.map((l) => [
+        l.sort, l.label, l.quantity_unit, l.quantity, l.unit_price, l.price_basis, l.frequency, l.days_per_month, l.working_day_profile_id,
+        l.period_start, l.period_end,
+      ]),
       [
-        [1, 'Project manager', 'people', '1.000', '400.0000', 'per_day', calendarId, `${YEAR}-02-01`, `${YEAR}-10-30`],
-        [2, 'Licences', 'units', '10.000', '200.0000', 'per_month', null, `${YEAR}-01-01`, `${YEAR}-12-31`],
+        [1, 'Consultant', 'people', '1.000', '400.0000', 'per_day', 'per_month', null, calendarId, `${YEAR}-02-01`, `${YEAR}-10-30`],
+        [2, 'Licences', 'pieces', '10.000', '200.0000', 'per_piece', 'per_month', null, null, `${YEAR}-01-01`, `${YEAR}-12-31`],
       ],
       `${kind}: the lines in their table, in order`,
     );
@@ -165,13 +180,13 @@ async function testLinesWrite(kind: Kind) {
       fte: '0.75',
       lines: [
         {
-          id: stored[0].id, sort: 1, label: 'Project manager', quantity_unit: 'people', quantity: '1', unit_price: '400', price_basis: 'per_day',
-          period_start: `${YEAR}-02-01`, period_end: `${YEAR}-10-30`,
+          id: stored[0].id, sort: 1, label: 'Consultant', quantity_unit: 'people', quantity: '1', unit_price: '400', price_basis: 'per_day',
+          frequency: 'per_month', days_per_month: null, period_start: `${YEAR}-02-01`, period_end: `${YEAR}-10-30`,
           working_day_profile_id: calendarId, working_day_profile_code: 'FR218', working_day_profile_name: 'France 218',
         },
         {
-          id: stored[1].id, sort: 2, label: 'Licences', quantity_unit: 'units', quantity: '10', unit_price: '200', price_basis: 'per_month',
-          period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`,
+          id: stored[1].id, sort: 2, label: 'Licences', quantity_unit: 'pieces', quantity: '10', unit_price: '200', price_basis: 'per_piece',
+          frequency: 'per_month', days_per_month: null, period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`,
           working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null,
         },
       ],
@@ -187,15 +202,108 @@ async function testLinesWrite(kind: Kind) {
   }, { committed: repeat('6', 12) });
 }
 
-/** Days × per day: fried's line, 100 days at 600 a day from March, with a calendar for the FTE. */
+/** Days are a bundle over their period: fried's first line, 100 days at 600 a day from March, with a calendar for the FTE. */
 async function testDaysLine(kind: Kind) {
   await withCalendarLine(kind, async ({ runner, versionId, calendarId }) => {
-    const line = sfrLine(calendarId, { label: 'Managed services', quantity_unit: 'days', quantity: '100', unit_price: '600', period_start: `${YEAR}-03-01`, period_end: `${YEAR}-12-31` });
+    const line = sfrLine(calendarId, {
+      label: 'Managed services', quantity_unit: 'days', quantity: '100', unit_price: '600', frequency: 'once',
+      period_start: `${YEAR}-03-01`, period_end: `${YEAR}-12-31`,
+    });
     await amountsService(kind).bulkUpsert(versionId, linesPayload([line], { measure: 'actual' }), null, { manager: runner.manager });
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'actual', YEAR), ['0.00', '0.00', ...repeat('6000.00', 10)], `${kind}: 6 000 a month`);
     const { actual } = await readRecords(runner, kind, versionId);
     assert.deepEqual([actual.method, actual.fte, actual.last_calculation.lines[0].fte_months[4]], ['computed', '0.46', '0.666667'],
       `${kind}: 10 days ÷ the working days of each month; any column, Actuals included`);
+    assert.deepEqual([actual.last_calculation.fte_period, (await readLines(runner, kind, versionId, 'actual'))[0].frequency], ['0.56', 'once']);
+  });
+}
+
+/**
+ * fried's lines (2026-09-29) on a standard France calendar. Budget: a project
+ * manager 5 days per month at 1 200 a day, February to July, and a laptop
+ * bought once on a date. Revision: a person at 8 000 per month (sent without
+ * how often nor days per month, as an API caller may), a bundle of 30 days,
+ * 50 pieces each month.
+ */
+async function testFriedLines(kind: Kind) {
+  await withCalendarLine(kind, async ({ runner, tenantId, versionId }) => {
+    const [{ id: france }] = await runner.query(
+      `INSERT INTO working_day_profiles (tenant_id, code, name, country_iso) VALUES ($1, 'FR', 'France', 'FR') RETURNING id`,
+      [tenantId],
+    );
+    const svc = amountsService(kind);
+    const projectManager = sfrLine(france, {
+      label: 'Project manager', unit_price: '1200', days_per_month: 5, period_start: `${YEAR}-02-01`, period_end: `${YEAR}-07-31`,
+    });
+    const laptop = licenceLine({ label: 'Laptop', quantity: 1, unit_price: '2000', frequency: 'once', period_start: `${YEAR}-03-20`, period_end: `${YEAR}-03-20` });
+    const budget = await svc.bulkUpsert(versionId, linesPayload([projectManager, laptop]), null, { manager: runner.manager });
+    assert.deepEqual(
+      await readMeasure(runner, kind, versionId, 'planned', YEAR),
+      ['0.00', '6000.00', '8000.00', ...repeat('6000.00', 4), ...repeat('0.00', 5)],
+      `${kind}: 5 × 1 200 each month, the laptop in March although the 20th is past the 15th`,
+    );
+    const [record] = budget.round_inputs;
+    const calculation = record.last_calculation;
+    assert.deepEqual(
+      [record.fte, calculation.fte, calculation.fte_period, calculation.active_months, calculation.total],
+      ['0.12', '0.12', '0.24', [2, 3, 4, 5, 6, 7], '38000.00'],
+      `${kind}: the full-year average stored, the average over February to July beside it`,
+    );
+    assert.deepEqual(
+      calculation.lines.map((l: any) => [l.label, l.frequency, l.days_per_month, l.active_months, l.fte, l.fte_period, l.total]),
+      [
+        ['Project manager', 'per_month', '5', [2, 3, 4, 5, 6, 7], '0.12', '0.24', '36000.00'],
+        ['Laptop', 'once', null, [3], '0', '0', '2000.00'],
+      ],
+    );
+    assert.deepEqual(calculation.lines[0].fte_months, ['0', '0.25', '0.227273', '0.238095', '0.294118', '0.227273', '0.227273', ...repeat('0', 5)]);
+    assert.deepEqual([calculation.lines[0].day_counts, calculation.lines[0].total_days], [FRANCE_2026, '124'], `${kind}: the standard calendar's days`);
+    assert.deepEqual(
+      record.lines.map((l: any) => [l.label, l.quantity_unit, l.price_basis, l.frequency, l.days_per_month, l.period_start, l.period_end, l.working_day_profile_code]),
+      [
+        ['Project manager', 'people', 'per_day', 'per_month', '5', `${YEAR}-02-01`, `${YEAR}-07-31`, 'FR'],
+        ['Laptop', 'pieces', 'per_piece', 'once', null, `${YEAR}-03-20`, `${YEAR}-03-20`, null],
+      ],
+      `${kind}: the API lines`,
+    );
+    assert.deepEqual(
+      (await readLines(runner, kind, versionId, 'planned')).map((l) => [l.frequency, l.days_per_month]),
+      [['per_month', '5.000'], ['once', null]],
+      `${kind}: stored`,
+    );
+
+    const person: Record<string, unknown> = {
+      label: 'Person', quantity_unit: 'people', quantity: '1', unit_price: '8000', price_basis: 'per_month',
+      period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`, working_day_profile_id: null,
+    };
+    const bundle = sfrLine(france, { label: 'Bundle', quantity_unit: 'days', quantity: '30', unit_price: '1200', frequency: 'once', period_start: `${YEAR}-02-01`, period_end: `${YEAR}-07-31` });
+    const revision = await svc.bulkUpsert(
+      versionId,
+      linesPayload([person, bundle, licenceLine({ quantity: 50, unit_price: '12' })], { measure: 'forecast' }),
+      null,
+      { manager: runner.manager },
+    );
+    assert.deepEqual(
+      await readMeasure(runner, kind, versionId, 'forecast', YEAR),
+      ['8600.00', ...repeat('14600.00', 6), ...repeat('8600.00', 5)],
+      `${kind}: 8 000 + 6 000 of the bundle + 600 of the pieces`,
+    );
+    const forecast = revision.round_inputs.find((r: any) => r.measure === 'forecast');
+    assert.deepEqual(
+      [forecast.fte, forecast.last_calculation.fte, forecast.last_calculation.fte_period],
+      ['1.12', '1.12', '1.12'],
+      `${kind}: (12 + 1.464032) ÷ 12, the column covers the year`,
+    );
+    assert.deepEqual(
+      forecast.last_calculation.lines.map((l: any) => [l.label, l.frequency, l.days_per_month, l.fte, l.fte_period, l.total]),
+      [
+        ['Person', 'per_month', null, '1', '1', '96000.00'],
+        ['Bundle', 'once', null, '0.12', '0.24', '36000.00'],
+        ['Licences', 'per_month', null, '0', '0', '7200.00'],
+      ],
+      `${kind}: a person per month counts 1 each month; how often filled in for people`,
+    );
+    assert.deepEqual(forecast.last_calculation.lines[1].month_amounts, ['0.00', ...repeat('6000.00', 6), ...repeat('0.00', 5)]);
   });
 }
 
@@ -209,11 +317,11 @@ async function testWholesaleReplacement(kind: Kind) {
 
     const reply = await svc.bulkUpsert(versionId, linesPayload([licenceLine({ quantity: '5', label: 'Fewer licences' })]), null, { manager: runner.manager });
     const lines = await readLines(runner, kind, versionId, 'planned');
-    assert.deepEqual(shape(lines), [[1, 'Fewer licences', 'units', '5.000', '200.0000', 'per_month', `${YEAR}-01-01`, `${YEAR}-12-31`]]);
+    assert.deepEqual(shape(lines), [[1, 'Fewer licences', 'pieces', '5.000', '200.0000', 'per_piece', 'per_month', null, `${YEAR}-01-01`, `${YEAR}-12-31`]]);
     assert.notEqual(lines[0].id, first.id, `${kind}: new rows`);
     assert.deepEqual(reply.round_inputs[0].lines.map((l: any) => l.id), [lines[0].id], `${kind}: the response carries the new ids`);
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('1000.00', 12), `${kind}: months recomputed`);
-    assert.equal((await readRecords(runner, kind, versionId)).planned.fte, '0.00', `${kind}: units give no FTE`);
+    assert.equal((await readRecords(runner, kind, versionId)).planned.fte, '0.00', `${kind}: pieces give no FTE`);
 
     const before = (await readRecords(runner, kind, versionId)).planned;
     const audits = roundAudits(audit).length;
@@ -223,10 +331,31 @@ async function testWholesaleReplacement(kind: Kind) {
     assert.equal(roundAudits(audit).length, audits, `${kind}: and audit none`);
     assert.equal((await readLines(runner, kind, versionId, 'planned'))[0].id, lines[0].id, `${kind}: nor lines`);
 
+    // Days per month compare by value: 5, "5" and "5.000" on an unchanged line write nothing.
+    await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId, { days_per_month: 5 })]), null, { manager: runner.manager });
+    const [fiveDays] = await readLines(runner, kind, versionId, 'planned');
+    assert.equal(fiveDays.days_per_month, '5.000', `${kind}: days per month stored`);
+    const fiveBefore = (await readRecords(runner, kind, versionId)).planned;
+    const fiveAudits = roundAudits(audit).length;
+    for (const days of [5, '5', '5.000']) {
+      await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId, { days_per_month: days })]), null, { manager: runner.manager });
+      const fiveAfter = (await readRecords(runner, kind, versionId)).planned;
+      assert.equal(fiveAfter.updated_at.getTime(), fiveBefore.updated_at.getTime(), `${kind}: days per month ${JSON.stringify(days)} writes no record`);
+      assert.equal((await readLines(runner, kind, versionId, 'planned'))[0].id, fiveDays.id, `${kind}: nor lines (${JSON.stringify(days)})`);
+    }
+    assert.equal(roundAudits(audit).length, fiveAudits, `${kind}: and audit none`);
+    await svc.bulkUpsert(versionId, linesPayload([licenceLine({ quantity: '5', label: 'Fewer licences' })]), null, { manager: runner.manager });
+
+    // How often is part of the line: once instead of each month rewrites it.
+    await svc.bulkUpsert(versionId, linesPayload([licenceLine({ quantity: '5', label: 'Fewer licences', frequency: 'once' })]), null, { manager: runner.manager });
+    const once = await readLines(runner, kind, versionId, 'planned');
+    assert.deepEqual([once[0].frequency, once[0].id === lines[0].id], ['once', false], `${kind}: rewritten`);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), [...repeat('83.33', 11), '83.37'], `${kind}: 1 000 once, split`);
+
     // The order is part of the lines: swapping two lines rewrites them.
     await svc.bulkUpsert(versionId, linesPayload([licenceLine(), sfrLine(calendarId)]), null, { manager: runner.manager });
     await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId), licenceLine()]), null, { manager: runner.manager });
-    assert.deepEqual((await readLines(runner, kind, versionId, 'planned')).map((l) => l.label), ['Project manager', 'Licences']);
+    assert.deepEqual((await readLines(runner, kind, versionId, 'planned')).map((l) => l.label), ['Consultant', 'Licences']);
   });
 }
 
@@ -242,7 +371,7 @@ async function testAlsoMeasures(kind: Kind) {
     );
     for (const measure of ['planned', 'forecast', 'expected_landing'] as const) {
       assert.deepEqual(await readMeasure(runner, kind, versionId, measure, YEAR), SFR_MONTHS, `${kind}: ${measure} written`);
-      assert.deepEqual(shape(await readLines(runner, kind, versionId, measure)).map((l) => l[1]), ['Project manager'], `${kind}: ${measure} lines`);
+      assert.deepEqual(shape(await readLines(runner, kind, versionId, measure)).map((l) => l[1]), ['Consultant'], `${kind}: ${measure} lines`);
     }
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'actual', YEAR), repeat('0.00', 12), `${kind}: the others untouched`);
     assert.deepEqual(response.round_inputs.map((r: any) => [r.measure, r.method, r.fte]), [
@@ -329,7 +458,18 @@ async function testLinesRefusals(kind: Kind) {
     await refused(second({ unit_price: '400.00001' }), 'Line 2: unit price accepts at most 4 decimals.');
     await refused(second({ working_day_profile_id: null }), 'Line 2: choose a calendar for a price per day.');
     await refused(second({ price_basis: 'per_month' }), 'Line 2: a calendar is used only with a price per day.');
-    await refused(second({ price_basis: 'once', working_day_profile_id: null }), 'Line 2: a price for people is per day or per month.');
+    await refused(second({ price_basis: 'per_piece', working_day_profile_id: null }), 'Line 2: a price for people is per day or per month.');
+    await refused(second({ price_basis: 'once', working_day_profile_id: null }), "Line 2: unknown price basis 'once'. Use per_day, per_month or per_piece.");
+    await refused(second({ quantity_unit: 'units' }), "Line 2: unknown unit 'units'. Use days, people or pieces.");
+    await refused(second({ quantity_unit: 'days' }), 'Line 2: days are counted once over their period.');
+    await refused(second({ frequency: 'once' }), 'Line 2: people are counted per month.');
+    await refused(second({ price_basis: 'per_month', frequency: 'once', working_day_profile_id: null }), 'Line 2: a price per month applies per month.');
+    await refused(linesPayload([sfrLine(calendarId), licenceLine({ frequency: null })]), 'Line 2: choose how often: per month or once.');
+    await refused(linesPayload([sfrLine(calendarId), licenceLine({ price_basis: 'per_month' })]), 'Line 2: a price for pieces is per piece.');
+    await refused(second({ days_per_month: '' }), 'Line 2: enter the days per month, or tick Full time.');
+    await refused(second({ days_per_month: '32' }), 'Line 2: days per month must be more than 0 and at most 31.');
+    await refused(second({ days_per_month: '4.0005' }), 'Line 2: days per month accepts at most 3 decimals.');
+    await refused(linesPayload([sfrLine(calendarId), licenceLine({ days_per_month: 5 })]), 'Line 2: days per month apply to people priced per day.');
     await refused(second({ working_day_profile_id: '6f1c1b1e-0000-4000-8000-000000000000' }), 'Line 2: the calendar was not found.');
     await refused(second({ working_day_profile_id: 'not-a-uuid' }), 'Line 2: the calendar was not found.');
     await refused(second({ period_start: `${YEAR}-02-16`, period_end: `${YEAR}-03-14` }), /^Line 2: no month of the period counts/);
@@ -408,8 +548,8 @@ async function testOtherTenant(kind: Kind) {
     const [roundB] = await runner.query(`SELECT id FROM ${TABLES[kind].rounds} WHERE version_id = $1`, [versionId]);
     const insertLine = (roundId: string, calendarId: string | null) => runner.query(
       `INSERT INTO ${TABLES[kind].lines}
-         (tenant_id, round_input_id, sort, quantity_unit, quantity, unit_price, price_basis, working_day_profile_id, period_start, period_end)
-       VALUES ($1, $2, 9, 'people', 1, 400, $3, $4, '${YEAR}-01-01', '${YEAR}-12-31')`,
+         (tenant_id, round_input_id, sort, quantity_unit, quantity, unit_price, price_basis, frequency, working_day_profile_id, period_start, period_end)
+       VALUES ($1, $2, 9, 'people', 1, 400, $3, 'per_month', $4, '${YEAR}-01-01', '${YEAR}-12-31')`,
       [tenantB, roundId, calendarId ? 'per_day' : 'per_month', calendarId],
     );
     for (const [roundId, calendarId, constraint] of [
@@ -451,7 +591,7 @@ async function testOtherWritesKeepLines(kind: Kind) {
     assert.deepEqual([csv.method, csv.last_calculation.source, csv.fte], ['spread', 'item_csv', '0.75']);
     assert.deepEqual(await linesOf(), ids, `${kind}: the lines stay after the item CSV`);
     const listed = await svc.listByYear(versionId, YEAR, { manager: runner.manager });
-    assert.deepEqual(listed.round_inputs[0].lines.map((l: any) => l.label), ['Project manager', 'Licences'], `${kind}: returned as the reference`);
+    assert.deepEqual(listed.round_inputs[0].lines.map((l: any) => l.label), ['Consultant', 'Licences'], `${kind}: returned as the reference`);
 
     // "Use the lines again": the same lines, sent again, compute the column again.
     await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId), licenceLine()]), null, { manager: runner.manager });
@@ -462,7 +602,11 @@ async function testOtherWritesKeepLines(kind: Kind) {
   });
 }
 
-/** A copy carries the lines (periods shifted, 29 February to 28 February) and the FTE; a source without lines leaves none; clear deletes them. */
+/**
+ * A copy carries the lines (periods shifted, 29 February to 28 February, how
+ * often and the days per month kept) and the FTE; a source without lines
+ * leaves none; clear deletes them.
+ */
 async function testCopyAndClear(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, `${kind}-copy-lines`);
@@ -470,12 +614,13 @@ async function testCopyAndClear(kind: Kind) {
     const calendarId = await seedCalendar(runner, tenantId, { code: 'FR218', name: 'France 218', days_by_year: days });
     const { itemId, versionId } = await seedLine(runner, kind, tenantId, 2028);
     const svc = amountsService(kind);
-    // 2028 is a leap year: a line ends on 29 February.
+    // 2028 is a leap year: a line ends on 29 February, a laptop is bought on it.
     await svc.bulkUpsert(versionId, {
       kind: 'lines', year: 2028, measure: 'planned',
       lines: [
-        sfrLine(calendarId, { period_start: '2028-02-01', period_end: '2028-10-30' }),
+        sfrLine(calendarId, { days_per_month: '5', period_start: '2028-02-01', period_end: '2028-10-30' }),
         licenceLine({ label: 'Winter licences', period_start: '2028-01-01', period_end: '2028-02-29' }),
+        licenceLine({ label: 'Laptop', quantity: 1, unit_price: '2000', frequency: 'once', period_start: '2028-02-29', period_end: '2028-02-29' }),
       ],
     }, null, { manager: runner.manager });
     const source = (await readRecords(runner, kind, versionId)).planned;
@@ -494,13 +639,17 @@ async function testCopyAndClear(kind: Kind) {
       ['copied', '2029-01-01', '2029-06-30', source.fte, 'copy', 'computed'],
       `${kind}: copied, FTE carried`,
     );
+    assert.equal(source.fte, '0.21', `${kind}: 5 days a month ÷ France 218, February to October, ÷ 12`);
     assert.deepEqual(
-      (await readLines(runner, kind, destination.id, 'planned')).map((l) => [l.label, l.quantity, l.unit_price, l.working_day_profile_id, l.period_start, l.period_end]),
+      (await readLines(runner, kind, destination.id, 'planned')).map((l) => [
+        l.label, l.quantity, l.unit_price, l.frequency, l.days_per_month, l.working_day_profile_id, l.period_start, l.period_end,
+      ]),
       [
-        ['Project manager', '1.000', '400.0000', calendarId, '2029-02-01', '2029-10-30'],
-        ['Winter licences', '10.000', '200.0000', null, '2029-01-01', '2029-02-28'],
+        ['Consultant', '1.000', '400.0000', 'per_month', '5.000', calendarId, '2029-02-01', '2029-10-30'],
+        ['Winter licences', '10.000', '200.0000', 'per_month', null, null, '2029-01-01', '2029-02-28'],
+        ['Laptop', '1.000', '2000.0000', 'once', null, null, '2029-02-28', '2029-02-28'],
       ],
-      `${kind}: the lines shifted a year, quantity and price as they are, 29 February to 28 February`,
+      `${kind}: the lines shifted a year, quantity, price, how often and days per month as they are, 29 February to 28 February`,
     );
 
     // A source without lines leaves the destination without lines and without FTE.
@@ -614,6 +763,7 @@ void runSpecs('costing-round.integration.spec', [
   ...KINDS.flatMap((kind) => [
     [`testLinesWrite(${kind})`, () => testLinesWrite(kind)],
     [`testDaysLine(${kind})`, () => testDaysLine(kind)],
+    [`testFriedLines(${kind})`, () => testFriedLines(kind)],
     [`testWholesaleReplacement(${kind})`, () => testWholesaleReplacement(kind)],
     [`testAlsoMeasures(${kind})`, () => testAlsoMeasures(kind)],
     [`testEmptyLines(${kind})`, () => testEmptyLines(kind)],

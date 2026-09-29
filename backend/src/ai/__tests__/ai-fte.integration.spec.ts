@@ -67,7 +67,7 @@ type Seed = { tenantId: string; items: Record<'alpha' | 'bravo' | 'charlie' | 'd
 /**
  * Four lines with a Budget of Y, the FTE as a lines write stores it on the
  * round: Alpha 0.1 (1.2 people in March), Bravo 0.2 (2.4 in March), Charlie
- * has a round without lines (unknown), Delta's lines are units only (0).
+ * has a round without lines (unknown), Delta's lines are pieces only (0).
  */
 async function seedFte(runner: QueryRunner, kind: Kind): Promise<Seed> {
   const [budget] = SUMMARY_COLUMNS;

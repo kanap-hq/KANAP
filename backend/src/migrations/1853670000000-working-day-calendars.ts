@@ -21,20 +21,23 @@ const LINE_TABLES: Record<(typeof ROUND_TABLES)[number], string> = {
  *   holidays and `days_by_year` holds the edited years only. Both are set at
  *   creation and never change; a custom calendar has neither.
  * - spend_round_input_lines / capex_round_input_lines: the lines a budget
- *   column is computed from, each a quantity (people, days or units) times a
- *   unit price (per day, per month or once) over its own period, in `sort`
- *   order. They belong to the column's round and survive the writes that
- *   replace its explanation (a hand edit, a spread): the lines stay as the
- *   reference the budget tab shows.
+ *   column is computed from, each a quantity (people, days or pieces) times a
+ *   unit price (per day, per month or per piece), counted each month or once
+ *   (`frequency`), over its own period, in `sort` order; a person priced per
+ *   day works `days_per_month` days a month, or full time when it is NULL.
+ *   They belong to the column's round and survive the writes that replace its
+ *   explanation (a hand edit, a spread): the lines stay as the reference the
+ *   budget tab shows.
  * - spend_round_inputs / capex_round_inputs gain `fte` (the column's yearly
  *   FTE from its lines, null without lines), `method` gains `computed`, and
  *   UNIQUE (tenant_id, id) backs the lines' composite key.
  *
- * The line CHECKs make a bad line unstorable, raw SQL included: a unit and
- * its price basis go together (people per day or per month, days per day,
- * units per month or once), a calendar exactly for a price per day, a
- * quantity of 0 or more, a period inside one year, a description of 200
- * characters at most.
+ * The line CHECKs make a bad line unstorable, raw SQL included: a unit, its
+ * price basis and how often go together (people per day or per month, per
+ * month; days per day, once; pieces per piece, per month or once), days per
+ * month only on people priced per day (above 0, at most 31), a calendar
+ * exactly for a price per day, a quantity of 0 or more, a period inside one
+ * year, a description of 200 characters at most.
  *
  * Foreign-key checks bypass RLS, so a line references its round by
  * (tenant_id, round_input_id) and its calendar by (tenant_id,
@@ -102,10 +105,13 @@ export class WorkingDayCalendars1853670000000 implements MigrationInterface {
       DO $$
       BEGIN
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'line_quantity_unit') THEN
-          CREATE TYPE line_quantity_unit AS ENUM ('people', 'days', 'units');
+          CREATE TYPE line_quantity_unit AS ENUM ('people', 'days', 'pieces');
         END IF;
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'line_price_basis') THEN
-          CREATE TYPE line_price_basis AS ENUM ('per_day', 'per_month', 'once');
+          CREATE TYPE line_price_basis AS ENUM ('per_day', 'per_month', 'per_piece');
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'line_frequency') THEN
+          CREATE TYPE line_frequency AS ENUM ('per_month', 'once');
         END IF;
       END
       $$;
@@ -133,6 +139,8 @@ export class WorkingDayCalendars1853670000000 implements MigrationInterface {
           quantity numeric(12,3) NOT NULL,
           unit_price numeric(18,4) NOT NULL,
           price_basis line_price_basis NOT NULL,
+          frequency line_frequency NOT NULL,
+          days_per_month numeric(6,3) NULL,
           working_day_profile_id uuid NULL,
           period_start date NOT NULL,
           period_end date NOT NULL,
@@ -150,7 +158,15 @@ export class WorkingDayCalendars1853670000000 implements MigrationInterface {
           CONSTRAINT ${lines}_basis_check CHECK (
             (quantity_unit = 'people' AND price_basis IN ('per_day', 'per_month'))
             OR (quantity_unit = 'days' AND price_basis = 'per_day')
-            OR (quantity_unit = 'units' AND price_basis IN ('per_month', 'once'))
+            OR (quantity_unit = 'pieces' AND price_basis = 'per_piece')
+          ),
+          CONSTRAINT ${lines}_frequency_check CHECK (
+            (quantity_unit <> 'people' OR frequency = 'per_month')
+            AND (quantity_unit <> 'days' OR frequency = 'once')
+          ),
+          CONSTRAINT ${lines}_days_per_month_check CHECK (
+            days_per_month IS NULL
+            OR (quantity_unit = 'people' AND price_basis = 'per_day' AND days_per_month > 0 AND days_per_month <= 31)
           ),
           CONSTRAINT ${lines}_calendar_check CHECK ((price_basis = 'per_day') = (working_day_profile_id IS NOT NULL))
         )
@@ -245,6 +261,7 @@ export class WorkingDayCalendars1853670000000 implements MigrationInterface {
       `);
       await queryRunner.query(`ALTER TABLE ${table} DROP COLUMN IF EXISTS fte`);
     }
+    await queryRunner.query(`DROP TYPE IF EXISTS line_frequency`);
     await queryRunner.query(`DROP TYPE IF EXISTS line_price_basis`);
     await queryRunner.query(`DROP TYPE IF EXISTS line_quantity_unit`);
 

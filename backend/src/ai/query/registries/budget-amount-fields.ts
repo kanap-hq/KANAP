@@ -48,9 +48,11 @@ export function budgetFteFields(): Record<string, AiFilterFieldDef> {
         grid: fteFieldKey(`${slot.key}${column.suffix}`),
         type: 'number',
         description: `FTE (full-time equivalents) of column ${index + 1} (named ${column.label} by default) for ${slot.offset === 0 ? 'Y, the current year' : slot.label}, `
-          + 'from the quantity × price lines the column is computed from: each month, the quantity of the people lines plus, for the days lines, '
-          + "the month's days divided by the calendar's working days of that month; the twelve months summed and divided by 12 (2 decimals). "
-          + '0 when the lines count neither people nor days (units only); null (unknown) when the column has no lines for that year.',
+          + 'from the quantity × price lines the column is computed from. Each month: people lines count their quantity (full time or priced per month), '
+          + "or quantity × days per month ÷ the calendar's working days of that month; days lines (a bundle of days over a period) count the month's share "
+          + "of the days ÷ the calendar's working days of that month; pieces lines count nothing. The twelve months summed and divided by 12 (2 decimals): "
+          + 'the full-year average, not the average over the months the lines cover. '
+          + '0 when the lines count neither people nor days (pieces only); null (unknown) when the column has no lines for that year.',
         sortable: true,
         groupable: false,
         aggregable: true,

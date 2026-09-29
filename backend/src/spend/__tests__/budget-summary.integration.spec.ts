@@ -743,7 +743,7 @@ async function testAnalyticsDimensions(kind: Kind) {
 
 /**
  * FTE on the fixture, as a lines write stores it on the round: Alpha's Budget
- * of Y 1.5, Bravo's 0 (units only), Charlie's round has no lines (unknown),
+ * of Y 1.5, Bravo's 0 (pieces only), Charlie's round has no lines (unknown),
  * Echo holds lines of Y after its end of validity, Alpha's Forecast of Y+3
  * 0.75.
  */

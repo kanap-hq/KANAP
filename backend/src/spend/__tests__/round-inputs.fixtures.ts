@@ -229,6 +229,8 @@ export type StoredLine = {
   quantity: string;
   unit_price: string;
   price_basis: string;
+  frequency: string;
+  days_per_month: string | null;
   working_day_profile_id: string | null;
   period_start: string;
   period_end: string;
@@ -238,7 +240,8 @@ export type StoredLine = {
 export async function readLines(runner: QueryRunner, kind: Kind, versionId: string, measure: Measure): Promise<StoredLine[]> {
   return runner.query(
     `SELECT l.id, l.tenant_id, l.sort, l.label, l.quantity_unit::text AS quantity_unit, l.quantity::text AS quantity,
-            l.unit_price::text AS unit_price, l.price_basis::text AS price_basis, l.working_day_profile_id,
+            l.unit_price::text AS unit_price, l.price_basis::text AS price_basis, l.frequency::text AS frequency,
+            l.days_per_month::text AS days_per_month, l.working_day_profile_id,
             to_char(l.period_start, 'YYYY-MM-DD') AS period_start, to_char(l.period_end, 'YYYY-MM-DD') AS period_end
      FROM ${TABLES[kind].lines} l
      JOIN ${TABLES[kind].rounds} r ON r.tenant_id = l.tenant_id AND r.id = l.round_input_id

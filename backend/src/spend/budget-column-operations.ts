@@ -131,7 +131,8 @@ export function shiftPeriod(record: Pick<RoundInput, 'period_start' | 'period_en
 /**
  * A column's lines copied to `year`: each period shifted like the record's
  * (29 February becomes 28 February) and kept within that year; calendar,
- * quantity and price as they are.
+ * quantity, price, how often and days per month as they are (a one-date line
+ * stays on one date).
  */
 export function shiftLines(record: Pick<RoundInput, 'lines'> | undefined, year: number): CostLine[] {
   return (record?.lines ?? []).map((line) => {
