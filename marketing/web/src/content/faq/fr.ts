@@ -56,7 +56,7 @@ const content: FaqContent = {
       items: [
         {
           q: 'Qu\'est-ce que le Support auto-hébergé ?',
-          a: 'Le Support auto-hébergé est un module de support professionnel pour les installations auto-hébergées. Il inclut le support email prioritaire, l\'aide au diagnostic pour l\'installation et les mises à niveau, et 20 % de remise sur les services de conseil. Tarifé à 2 490 €/an.',
+          a: 'Le Support auto-hébergé est un module de support professionnel pour les installations auto-hébergées. Il inclut le support email prioritaire, l\'aide au diagnostic pour l\'installation et les mises à niveau, et un tarif de conseil réduit (900 € la journée au lieu de 1 150 €). Tarifé à 2 490 €/an.',
         },
         {
           q: 'Comment fonctionne le support prioritaire ?',

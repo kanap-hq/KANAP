@@ -56,7 +56,7 @@ const content: FaqContent = {
       items: [
         {
           q: 'Was ist Self-Hosted Support?',
-          a: 'Self-Hosted Support ist ein professionelles Support-Add-on für selbstgehostete Installationen. Es enthält prioritären E-Mail-Support, Installations- und Upgrade-Troubleshooting sowie 20 % Rabatt auf Beratungsleistungen. Preis: 2.490 €/Jahr.',
+          a: 'Self-Hosted Support ist ein professionelles Support-Add-on für selbstgehostete Installationen. Es enthält prioritären E-Mail-Support, Installations- und Upgrade-Troubleshooting sowie einen reduzierten Beratungstarif (900 € pro Tag statt 1.150 €). Preis: 2.490 €/Jahr.',
         },
         {
           q: 'Wie funktioniert der prioritäre Support?',

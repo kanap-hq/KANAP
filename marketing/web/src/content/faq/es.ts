@@ -56,7 +56,7 @@ const content: FaqContent = {
       items: [
         {
           q: '¿Qué es el Soporte autoalojado?',
-          a: 'El Soporte autoalojado es un complemento de soporte profesional para instalaciones autoalojadas. Incluye soporte por email prioritario, ayuda con la instalación y las actualizaciones, y un 20 % de descuento en servicios de consultoría. Precio: 2 490 €/año.',
+          a: 'El Soporte autoalojado es un complemento de soporte profesional para instalaciones autoalojadas. Incluye soporte por email prioritario, ayuda con la instalación y las actualizaciones, y una tarifa de consultoría reducida (900 € al día en lugar de 1 150 €). Precio: 2 490 €/año.',
         },
         {
           q: '¿Cómo funciona el soporte prioritario?',

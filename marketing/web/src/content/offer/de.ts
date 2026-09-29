@@ -53,7 +53,7 @@ const content: OfferContent = {
           'Unterstützung bei Installation und Upgrades',
           'Direkte Linie zum Team für Produktionsprobleme',
           '60-min Kickoff-Call mit einem KANAP-Experten',
-          '20 % Rabatt auf Beratung',
+          'Beratung für 900 € pro Tag statt 1.150 €',
         ],
         ctaLabel: 'Abonnieren',
         ctaHref: '#support-invoice',
@@ -91,7 +91,7 @@ const content: OfferContent = {
           'Agenten enthalten, mit Ihrem eigenen LLM-Schlüssel',
           '60-min Kickoff-Call mit einem KANAP-Experten',
           'Prioritärer E-Mail-Support',
-          '20 % Rabatt auf Beratung',
+          'Beratung für 900 € pro Tag statt 1.150 €',
         ],
         ctaLabel: 'Testversion starten',
         ctaHref: '/trial/start',
@@ -121,7 +121,7 @@ const content: OfferContent = {
 
   services: {
     title: 'Expertenhilfe, wenn Sie sie wollen',
-    intro: 'KANAP ist für selbstständige Einführung gebaut. Wenn Sie schneller vorankommen möchten, enthalten bezahlte Angebote prioritären Support und 20 % Rabatt auf Beratung.',
+    intro: 'KANAP ist für selbstständige Einführung gebaut. Wenn Sie schneller vorankommen möchten, enthalten bezahlte Angebote prioritären Support und einen reduzierten Beratungstarif.',
     support: {
       title: 'Prioritärer Support',
       subtitle: 'In jedem kostenpflichtigen Plan enthalten',
@@ -135,8 +135,8 @@ const content: OfferContent = {
     },
     consulting: {
       title: 'Beratung',
-      subtitle: 'Kostenpflichtig · 20 % Rabatt für Abonnenten',
-      body: 'Optionale Hilfe, um mehr Wert aus KANAP zu ziehen: geplante Calls, tiefergehende Arbeit, Advisory. Tarife: 190 € pro Stunde, 690 € pro halbem Tag, 1.250 € pro Tag, zzgl. MwSt.',
+      subtitle: 'Kostenpflichtig · Abrechnung pro Tag',
+      body: 'Optionale Hilfe, um mehr Wert aus KANAP zu ziehen: geplante Calls, tiefergehende Arbeit, Advisory. Tarif: 1.150 € pro Tag, 900 € für Kunden mit Support- oder Hosting-Vertrag, zzgl. MwSt.',
       items: [
         'Einrichtung, Konfiguration, Onboarding, Schulung',
         'Workflow-Design und Best Practices',

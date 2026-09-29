@@ -53,7 +53,7 @@ const content: OfferContent = {
           'Assistance installation et mises à jour',
           'Ligne directe avec l\'équipe pour les incidents de production',
           'Session de cadrage 60 min avec un expert KANAP',
-          '20 % de remise sur le conseil',
+          'Conseil à 900 € la journée au lieu de 1 150 €',
         ],
         ctaLabel: 'Souscrire',
         ctaHref: '#support-invoice',
@@ -91,7 +91,7 @@ const content: OfferContent = {
           'Agents inclus, avec votre propre clé LLM',
           'Session de cadrage 60 min avec un expert KANAP',
           'Support email prioritaire',
-          '20 % de remise sur le conseil',
+          'Conseil à 900 € la journée au lieu de 1 150 €',
         ],
         ctaLabel: 'Essai gratuit',
         ctaHref: '/trial/start',
@@ -121,7 +121,7 @@ const content: OfferContent = {
 
   services: {
     title: 'Aide experte, quand vous en voulez',
-    intro: 'KANAP est conçu pour une adoption autonome. Si vous voulez aller plus vite, les offres payantes incluent le support prioritaire et 20 % de remise sur le conseil.',
+    intro: 'KANAP est conçu pour une adoption autonome. Si vous voulez aller plus vite, les offres payantes incluent le support prioritaire et un tarif de conseil réduit.',
     support: {
       title: 'Support prioritaire',
       subtitle: 'Inclus avec tout plan payant',
@@ -135,8 +135,8 @@ const content: OfferContent = {
     },
     consulting: {
       title: 'Conseil',
-      subtitle: 'Payant · 20 % de remise pour les abonnés',
-      body: 'Aide optionnelle pour tirer plus de valeur de KANAP : appels programmés, travail approfondi, advisory. Tarifs : 190 € l\'heure, 690 € la demi-journée, 1 250 € la journée, hors TVA.',
+      subtitle: 'Payant · facturé à la journée',
+      body: 'Aide optionnelle pour tirer plus de valeur de KANAP : appels programmés, travail approfondi, advisory. Tarif : 1 150 € la journée, 900 € pour les clients sous contrat de support ou d\'hébergement, hors TVA.',
       items: [
         'Installation, configuration, onboarding, formation',
         'Conception de workflows et bonnes pratiques',

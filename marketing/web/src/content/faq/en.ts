@@ -54,7 +54,7 @@ const content: FaqContent = {
       items: [
         {
           q: 'What is Self-Hosted Support?',
-          a: 'Self-Hosted Support is a professional support add-on for self-hosted installations. It includes priority email support, install and upgrade troubleshooting, and a 20% discount on consulting services. Priced at €2,490/yr.',
+          a: 'Self-Hosted Support is a professional support add-on for self-hosted installations. It includes priority email support, install and upgrade troubleshooting, and a reduced consulting rate (€900 a day instead of €1,150). Priced at €2,490/yr.',
         },
         {
           q: 'How does priority support work?',
