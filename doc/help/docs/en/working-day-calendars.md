@@ -1,13 +1,13 @@
 # Working-day calendars
 
-A working-day calendar holds the number of working days of each month, year by year. It is what a budget line priced per day is multiplied by. For example, a consultant at 400 a day on a calendar with 20 working days in March costs 8,000 in March.
+A working-day calendar holds the number of working days of each month, year by year. Budget lines priced per day use it: a person full time works every working day of the month, and days and days per month turn into FTE against it. For example, a consultant full time at 400 a day on a calendar with 20 working days in March costs 8,000 in March.
 
 A calendar is one of two kinds:
 
 - **Standard**: created from a country, and a region when the country has them. The working days of any year are the weekdays of each month minus the country's public holidays. There is nothing to type, and you can still change any month of any year
 - **Custom**: you enter the working days of each year yourself, for example for a working time agreement with its own days off
 
-On the budget tab of an OPEX or CAPEX item, every line priced per day uses one calendar. Lines priced per month or once need none. See [Quantity and price](opex.md#quantity-and-price).
+On the budget tab of an OPEX or CAPEX item, every line priced per day uses one calendar. Lines priced per month or per piece need none. See [Quantity and price](opex.md#quantity-and-price).
 
 ---
 

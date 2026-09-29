@@ -1,13 +1,13 @@
 # Calendriers de jours ouvrés
 
-Un calendrier de jours ouvrés indique le nombre de jours ouvrés de chaque mois, année par année. C'est ce qui multiplie le prix d'une ligne budgétaire au prix par jour. Par exemple, un consultant à 400 par jour sur un calendrier qui compte 20 jours ouvrés en mars coûte 8 000 en mars.
+Un calendrier de jours ouvrés indique le nombre de jours ouvrés de chaque mois, année par année. Les lignes budgétaires au prix par jour l'utilisent : une personne à temps plein travaille chaque jour ouvré du mois, et les jours et les jours par mois se convertissent en ETP sur cette base. Par exemple, un consultant à temps plein à 400 par jour sur un calendrier qui compte 20 jours ouvrés en mars coûte 8 000 en mars.
 
 Un calendrier est de l'un de deux types :
 
 - **Standard** : créé à partir d'un pays, et d'une région lorsque le pays en a. Les jours ouvrés de chaque année sont les jours de semaine de chaque mois, moins les jours fériés du pays. Il n'y a rien à saisir, et vous pouvez tout de même modifier n'importe quel mois de n'importe quelle année
 - **Personnalisé** : vous saisissez vous-même les jours ouvrés de chaque année, par exemple pour un accord sur le temps de travail qui a ses propres jours de repos
 
-Dans l'onglet Budget d'un poste OPEX ou CAPEX, chaque ligne au prix par jour utilise un calendrier. Les lignes au prix par mois ou payées une fois n'en ont pas besoin. Voir [Quantité et prix](opex.md#quantite-et-prix).
+Dans l'onglet Budget d'un poste OPEX ou CAPEX, chaque ligne au prix par jour utilise un calendrier. Les lignes au prix par mois ou par pièce n'en ont pas besoin. Voir [Quantité et prix](opex.md#quantite-et-prix).
 
 ---
 

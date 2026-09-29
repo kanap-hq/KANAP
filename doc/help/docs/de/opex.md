@@ -208,8 +208,8 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
   - Wählen Sie eine **Spalte** unter den angezeigten Spalten, prüfen Sie den **Betrag**, wählen Sie eine **Verteilung** (**Gleichmäßig** oder **4-4-5**) und legen Sie die Daten **Von** und **Bis** fest. Die Daten gehen vom aktuellen Zeitraum der Spalte aus, die Verteilung von der bisherigen Verteilung der Spalte
   - Das Feld öffnet sich mit der Standardspalte. Der Betrag übernimmt die aktuelle Summe der Spalte, in beiden Tabs, und passt sich an, wenn Sie eine andere Spalte wählen. Er bleibt leer, wenn die Spalte keinen Betrag hat
   - **Jede Änderung wird sofort gespeichert**: der Betrag, wenn Sie das Feld verlassen oder Enter drücken, die Verteilung und die Daten, sobald Sie sie ändern. Es gibt keine Schaltfläche zum Klicken. Ein leerer Betrag oder null speichert nichts
-  - **Auf alle Spalten anwenden** ist ein Schalter, standardmäßig eingeschaltet: Jede Spalte, die ihm folgt, erhält denselben Zeitraum und dieselbe Verteilung, jeweils mit ihrer eigenen aktuellen Summe. Das Einschalten verteilt diese Spalten sofort, und der Schalter bleibt für Ihre nächsten Änderungen eingeschaltet. Das Ausschalten allein ändert nichts: Die nächsten Änderungen gelten nur für die gewählte Spalte. Standardmäßig folgt jede Spalte. Ein Budgetadministrator legt unter [Budgetspalten](budget-operations.md#budgetspalten) fest, welche folgen. Eingefrorene Spalten ändern sich nie. Fahren Sie mit der Maus über den Schalter, um zu sehen, welche Spalten folgen und welche ihren eigenen Zeitraum behalten
-  - Eine Spalte, die „Auf alle Spalten anwenden“ nicht folgt, wird allein verteilt: Der Schalter erscheint nicht, wenn Sie sie verteilen. Der Schalter ist auch ausgeblendet, wenn sich keine andere folgende Spalte ändern kann
+  - **Die Verteilung auf alle Spalten anwenden** ist ein Schalter, standardmäßig eingeschaltet: Jede Spalte, die ihm folgt, erhält dieselbe Verteilung und denselben Zeitraum, und jede behält ihre eigene aktuelle Summe. Das Einschalten verteilt diese Spalten sofort, und der Schalter bleibt für Ihre nächsten Änderungen eingeschaltet. Das Ausschalten allein ändert nichts: Die nächsten Änderungen gelten nur für die gewählte Spalte. Standardmäßig folgt jede Spalte. Ein Budgetadministrator legt unter [Budgetspalten](budget-operations.md#budgetspalten) fest, welche folgen. Eingefrorene Spalten ändern sich nie. Fahren Sie mit der Maus über den Schalter, um zu sehen, welche Spalten folgen und welche ihren eigenen Zeitraum behalten
+  - Eine Spalte, die dem Schalter nicht folgt, wird allein verteilt: Der Schalter erscheint nicht, wenn Sie sie verteilen. Der Schalter ist auch ausgeblendet, wenn sich keine andere folgende Spalte ändern kann
   - Um eine Spalte auf eine gleichmäßige Verteilung über zwölf Monate zurückzusetzen, wählen Sie **Gleichmäßig** und setzen Sie die Daten auf den 1. Januar und den 31. Dezember
   - Summen, die Sie im Tab **Jährlich** eingeben, gelten weiterhin nur für ihre eigene Spalte
   - Die Felder **Von** und **Bis** zeigen den Zeitraum. Fallen Monate heraus, nennt das Feld die Monate, die auf null gesetzt werden („Januar bis März werden auf null gesetzt.“). Ein Zeitraum über das ganze Jahr zeigt keine Zeile. Fahren Sie mit der Maus über das Info-Symbol neben dem Titel des Felds, um die Regel zum 15. zu sehen
@@ -222,7 +222,7 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
   - Eine kurze Kennzeichnung zeigt, woher die Beträge einer Spalte stammen. Im Tab **Monatlich** steht sie unter der Spaltenüberschrift (fahren Sie mit der Maus darüber, um den Zeitraum zu sehen). Im Tab **Jährlich** steht sie neben dem Zeitraum
   - **Gleichmäßig verteilt**, **Nach 4-4-5 verteilt** oder **Nach Quartal verteilt**: Die Beträge stammen aus einer Verteilung
   - **Kopiert aus Budget 2025 +2 %**: Die Beträge stammen aus **Budgetspalten kopieren** in der Budgetadministration, mit dem Prozentsatz, falls einer angewendet wurde
-  - **Menge und Preis · 3 Zeilen · 1.00 VZÄ**: Die Beträge stammen aus Zeilen, mit ihrer Anzahl und, wenn die Zeilen Personen oder Tage zählen, den VZÄ der Spalte. Fahren Sie mit der Maus über die Kennzeichnung, um die Zeilen zu sehen, zum Beispiel „Projektleitung: 20 Tage × 900 pro Tag, Jan. bis Juni“
+  - **Menge und Preis · 3 Zeilen · 1.00 VZÄ**: Die Beträge stammen aus Zeilen, mit ihrer Anzahl und, wenn die Zeilen Personen oder Tage zählen, den VZÄ der Spalte. Die VZÄ sind der Jahresdurchschnitt. Fahren Sie mit der Maus über die Kennzeichnung, um die Zeilen zu sehen, zum Beispiel „Projektleitung: 1 Person × 1.200 pro Tag, 5 Tage pro Monat, Feb. bis Juli“
   - **Von Hand geändert**: Ein Monat wurde im Raster oder durch einen Import der Datei der Budgetzeilen geändert
   - Eine Spalte ohne Kennzeichnung hat die Daten behalten, die sie vor der Einführung der Zeiträume hatte
 
@@ -242,7 +242,7 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
 
 #### Menge und Preis
 
-Bauen Sie eine Spalte aus Zeilen auf, statt ihre Beträge einzugeben. Jede Zeile ist eine Menge mal ein Stückpreis, zum Beispiel ein Berater zu 400 pro Tag von Februar bis Oktober und 50 Lizenzen zu 12 pro Monat. Die Monate der Spalte sind die Summe ihrer Zeilen.
+Bauen Sie eine Spalte aus Zeilen auf, statt ihre Beträge einzugeben. Jede Zeile liest sich wie ein Satz: eine Menge, eine Einheit, ein Stückpreis, wie oft, wann und nach welchem Kalender. Zum Beispiel eine Projektleitung mit 5 Tagen pro Monat zu 1.200 pro Tag von Februar bis Juli und 50 Lizenzen zu 12 pro Stück pro Monat. Die Monate der Spalte sind die Summe ihrer Zeilen.
 
 **Den Tab öffnen**:
   - Tab **Jährlich**: Klicken Sie auf das Rechnersymbol neben dem Zeitraum unter einer Summe. Das Feld öffnet sich auf **Menge und Preis** für diese Spalte
@@ -255,44 +255,46 @@ Bauen Sie eine Spalte aus Zeilen auf, statt ihre Beträge einzugeben. Jede Zeile
 |---|---|
 | **Beschreibung** | Wofür die Zeile bezahlt, zum Beispiel „Projektleitung“. Optional, bis zu 200 Zeichen |
 | **Menge** | Wie viele, in der Einheit der Zeile. Null oder mehr, bis zu 3 Dezimalstellen |
-| **Einheit** | **Personen**, **Tage** oder **Einheiten**. Die Einheit bestimmt die angebotenen Preise, wie der Betrag auf die Monate verteilt wird und die VZÄ |
-| **Stückpreis** | Der Preis einer Einheit, in der Währung der Position. Bis zu 4 Dezimalstellen. Ein negativer Preis wird akzeptiert, für eine Gutschrift |
-| **Pro** | Wofür der Stückpreis gilt: **pro Tag**, **pro Monat** oder **einmalig**. Die Auswahl richtet sich nach der Einheit, siehe die Tabelle unten |
-| **Von** / **Bis** | Der Zeitraum der Zeile, innerhalb des Jahres. Ein Monat zählt, wenn der Zeitraum seinen 15. Tag abdeckt, wie bei einer Verteilung |
-| **Kalender** | Nur bei einem Preis pro Tag sichtbar. Der Arbeitstagekalender, dessen Tage zählen. Die Liste bietet die aktivierten Kalender an, dazu den Kalender, den eine Zeile bereits verwendet, falls er inzwischen deaktiviert wurde, mit dem Zusatz „(deaktiviert)“. Gibt es noch keinen Kalender, zeigt der Tab „Noch kein Arbeitstagekalender vorhanden.“, mit einem Link **Kalender hinzufügen** für alle, die Kalender anlegen dürfen. Siehe [Arbeitstagekalender](working-day-calendars.md) |
+| **Einheit** | **Personen**, **Tage** oder **Stück**. Die Einheit bestimmt, wofür der Preis gilt, wie oft er zählt, wie der Betrag auf die Monate verteilt wird und die VZÄ |
+| **Stückpreis** | Der Preis einer Einheit, in der Währung der Position. Bis zu 4 Dezimalstellen. Ein negativer Preis wird akzeptiert, für eine Gutschrift. Wofür der Preis gilt, steht direkt dahinter: **pro Tag** bei Tagen, **pro Stück** bei Stück und bei Personen eine kleine Liste zur Wahl zwischen **pro Tag** und **pro Monat** |
+| **Wie oft** | Richtet sich nach der Einheit. Personen mit Preis pro Tag: ein Kontrollkästchen **Vollzeit** und, wenn es nicht angehakt ist, die **Tage pro Monat**, die sie an der Position arbeiten (mehr als 0, bis 31, mit bis zu 3 Dezimalstellen). Personen mit Preis pro Monat: „pro Monat“. Tage: „über den Zeitraum“. Stück: eine Liste zur Wahl zwischen **pro Monat** und **einmalig** |
+| **Von** / **Bis** | Der Zeitraum der Zeile, innerhalb des Jahres. Ein Monat zählt, wenn der Zeitraum seinen 15. Tag abdeckt, wie bei einer Verteilung. Einmalig gekaufte Stücke erhalten stattdessen ein einzelnes **Datum** und fallen in dessen Monat. Wenn jede Zeile ein Datum hat, lautet die Überschrift **Datum** |
+| **Kalender** | Nur bei einem Preis pro Tag sichtbar: bei Personen mit Preis pro Tag und bei Tagen. Der Arbeitstagekalender, dessen Tage zählen. Die Liste bietet die aktivierten Kalender an, dazu den Kalender, den eine Zeile bereits verwendet, falls er inzwischen deaktiviert wurde, mit dem Zusatz „(deaktiviert)“. Gibt es noch keinen Kalender, zeigt der Tab „Noch kein Arbeitstagekalender vorhanden.“, mit einem Link **Kalender hinzufügen** für alle, die Kalender anlegen dürfen. Siehe [Arbeitstagekalender](working-day-calendars.md) |
 | **Betrag** | Die Summe der Zeile, sobald sie gespeichert ist. Schreibgeschützt |
 
 Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzufügen, und auf das Kreuz am Ende einer Zeile, um sie zu entfernen. Eine Spalte enthält bis zu 50 Zeilen.
 
-**Einheiten und Preise**:
+**Einheit und Preis**:
 
-| Einheit | Pro | Betrag jedes Monats des Zeitraums | VZÄ jedes Monats |
-|---|---|---|---|
-| **Personen** | **pro Tag** | Die Arbeitstage des Monats im Kalender × Menge × Stückpreis | Die Menge |
-| **Personen** | **pro Monat** | Menge × Stückpreis | Die Menge |
-| **Tage** | **pro Tag** | Menge × Stückpreis, gleichmäßig auf die Monate des Zeitraums verteilt | Der Anteil des Monats an den Tagen ÷ die Arbeitstage des Monats im Kalender |
-| **Einheiten** | **pro Monat** | Menge × Stückpreis | Keine |
-| **Einheiten** | **einmalig** | Menge × Stückpreis, gleichmäßig auf die Monate des Zeitraums verteilt | Keine |
+| Einheit | Preis | Wie oft | Betrag jedes Monats des Zeitraums | VZÄ jedes Monats |
+|---|---|---|---|---|
+| **Personen** | **pro Tag** | **Vollzeit** | Die Arbeitstage des Monats im Kalender × Menge × Stückpreis | Die Menge |
+| **Personen** | **pro Tag** | **5 Tage pro Monat** | 5 × Menge × Stückpreis | Menge × 5 ÷ die Arbeitstage des Monats im Kalender |
+| **Personen** | **pro Monat** | pro Monat | Menge × Stückpreis | Die Menge |
+| **Tage** | **pro Tag** | über den Zeitraum | Menge × Stückpreis, einmal gezählt und gleichmäßig auf die Monate des Zeitraums verteilt | Der Anteil des Monats an den Tagen ÷ die Arbeitstage des Monats im Kalender |
+| **Stück** | **pro Stück** | **pro Monat** | Menge × Stückpreis | Keine |
+| **Stück** | **pro Stück** | **einmalig** | Menge × Stückpreis, im Monat des Datums | Keine |
 
-  - Verwenden Sie **Personen** für Mitarbeitende, die pro Tag oder pro Monat bezahlt werden. Zum Beispiel kosten 2 Personen zu 400 pro Tag auf einem Kalender mit 20 Arbeitstagen im März 16.000 im März und zählen in diesem Monat 2 VZÄ
-  - Verwenden Sie **Tage** für eine Anzahl von Tagen, die für den Zeitraum eingekauft wird. Zum Beispiel ergeben 100 Tage zu 600 pro Tag von März bis Dezember 60.000, also 6.000 pro Monat. Jeder Monat enthält 10 Tage: In einem Monat mit 20 Arbeitstagen zählt die Zeile 0,5 VZÄ
-  - Verwenden Sie **Einheiten** für Lizenzen, Geräte oder Abonnements: mit Preis pro Monat oder einmalig für einen Kauf. Einheiten zählen nie als VZÄ
+  - Verwenden Sie **Personen** für Mitarbeitende, die Monat für Monat an der Position arbeiten. Geben Sie bei einem Preis pro Tag an, wie viel sie arbeiten: Haken Sie **Vollzeit** an, um jeden Arbeitstag des Kalenders vom Beginn bis zum Ende der Zeile zu zählen, oder geben Sie die Tage pro Monat ein. Zum Beispiel kostet eine Projektleitung mit 5 Tagen pro Monat zu 1.200 pro Tag von Februar bis Juli 6.000 pro Monat. Auf einem Kalender mit 21 Arbeitstagen im März zählt dieser Monat 5 ÷ 21, etwa 0,24 VZÄ. Ein Berater in Vollzeit zu 400 pro Tag kostet jeden Monat die Arbeitstage des Monats × 400 und zählt 1 VZÄ
+  - Mit Preis pro Monat kosten Personen jeden Monat Menge × Stückpreis, zum Beispiel 1 Person zu 8.000 pro Monat
+  - Verwenden Sie **Tage** für eine Anzahl von Tagen, die als ein Paket für den Zeitraum eingekauft wird. Zum Beispiel ergeben 30 Tage zu 1.200 pro Tag von Februar bis Juli 36.000, also 6.000 pro Monat. Jeder Monat enthält 5 Tage: In einem Monat mit 20 Arbeitstagen zählt die Zeile 0,25 VZÄ
+  - Verwenden Sie **Stück** für Lizenzen, Geräte oder Abonnements. Pro Monat zählen sie in jedem Monat des Zeitraums: 50 Lizenzen zu 12 pro Stück ergeben 600 pro Monat. Einmalig erhalten sie ein Datum und fallen in dessen Monat: Ein Laptop zu 2.000 am 15. März fällt in den März. Stücke zählen nie als VZÄ
   - Jeder Monat wird auf den Cent gerundet. Wird ein Betrag über den Zeitraum verteilt, fällt die Rundungsdifferenz auf den letzten Monat. Die Monate außerhalb des Zeitraums einer Zeile erhalten nichts von ihr
-  - Beim Wechsel der Einheit bleibt der Wert **Pro** erhalten, wenn er noch passt. Andernfalls wird er **pro Tag** für Personen und Tage und **pro Monat** für Einheiten
+  - Beim Wechsel der Einheit passt sich der Rest der Zeile an. Personen behalten einen Preis pro Monat, wenn Sie ihn gewählt haben, und erhalten sonst einen Preis pro Tag. Tage erhalten einen Preis pro Tag, über den Zeitraum. Stücke erhalten einen Preis pro Stück und werden einmalig gekauft, mit dem Beginn des Zeitraums der Spalte als Datum. Wechseln Stücke von einmalig zu pro Monat, erhalten sie wieder den Zeitraum der Spalte
 
-**Eine neue Zeile** beginnt mit der Einheit **Personen**, einer Menge von 1, dem Zeitraum der Spalte (dem ganzen Jahr, wenn die Spalte keinen hat) und einem Preis pro Tag auf dem Standardkalender. Der Standardkalender ist der Standardkalender des Landes des zahlenden Unternehmens, sonst der erste aktivierte Kalender. Ohne jeden Kalender beginnt eine neue Zeile mit einem Preis pro Monat.
+**Eine neue Zeile** beginnt mit der Einheit **Personen**, einer Menge von 1, einem Preis pro Tag, **Vollzeit** nicht angehakt mit den noch einzugebenden Tagen pro Monat, dem Zeitraum der Spalte (dem ganzen Jahr, wenn die Spalte keinen hat) und dem Standardkalender. Der Standardkalender ist der Standardkalender des Landes des zahlenden Unternehmens, sonst der erste aktivierte Kalender. Geben Sie den Stückpreis und die Tage pro Monat ein oder haken Sie **Vollzeit** an, und die Zeile wird gespeichert. Ohne aktivierten Kalender beginnt eine neue Zeile mit einem Preis pro Monat.
 
 **Speichern**: Jedes Feld wird gespeichert, wenn Sie es verlassen, Enter drücken oder einen Wert oder ein Datum wählen. Es gibt keine Schaltfläche zum Klicken. Jede Speicherung sendet alle vollständigen Zeilen der Spalte, und die Monate der Spalte folgen sofort. Währenddessen erscheint neben den Jahres-Tabs der Hinweis **Wird gespeichert...**.
-  - Eine Zeile ist vollständig, wenn sie eine Menge, einen Stückpreis, einen gültigen Zeitraum und, bei einem Preis pro Tag, einen Kalender hat. Bis dahin bleibt sie mit einem Hinweis auf dem Bildschirm, zum Beispiel „Geben Sie Menge und Stückpreis ein, um diese Zeile zu speichern.“ oder „Wählen Sie für einen Preis pro Tag einen Kalender.“, und die gespeicherten Zeilen ändern sich nicht
+  - Eine Zeile ist vollständig, wenn sie eine Menge, einen Stückpreis, einen gültigen Zeitraum oder ein gültiges Datum, bei Personen mit Preis pro Tag die Tage pro Monat oder **Vollzeit** und bei einem Preis pro Tag einen Kalender hat. Bis dahin bleibt sie mit einem Hinweis auf dem Bildschirm, zum Beispiel „Geben Sie Menge und Stückpreis ein, um diese Zeile zu speichern.“, „Geben Sie die Tage pro Monat ein oder wählen Sie Vollzeit.“ oder „Wählen Sie für einen Preis pro Tag einen Kalender.“, und die gespeicherten Zeilen ändern sich nicht
   - Das Entfernen der letzten Zeile entfernt die Zeilen der Spalte, und ihre Beträge bleiben unverändert. Eine aus ihren Zeilen berechnete Spalte gilt dann als von Hand eingegeben. Eine verteilte oder kopierte Spalte behält ihre Verteilung oder Kopie
   - Wird eine Speicherung abgelehnt, erscheint der Grund rot unter der Tabelle, und Ihre Eingabe bleibt stehen. Zum Beispiel „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“, wenn ein individueller Kalender das Jahr noch nicht enthält
   - Bei einer eingefrorenen Spalte sind die Zeilen schreibgeschützt
 
 **Unter der Tabelle**:
-  - Die Summe der Spalte, mit ihren VZÄ, wenn eine Zeile Personen oder Tage zählt, zum Beispiel „= 87 200 · 1.00 VZÄ“
-  - Eine Zeile, die sagt, woher die Beträge stammen: „Die Beträge werden aus diesen Zeilen berechnet.“ oder einer der Sätze im nächsten Teil
+  - Die VZÄ der Zeilen, wenn eine Zeile Personen oder Tage zählt, zum Beispiel „VZÄ im Zeitraum 0.24 · Jahresdurchschnitt 0.12“. Siehe [VZÄ](#vza). Die Summe der Spalte steht in der Spalte selbst
+  - Woher die Beträge stammen, wenn sie nicht mehr aus den Zeilen stammen: einer der Sätze im nächsten Teil
   - Hinweise, wenn sie zutreffen: „Der Zeitraum reicht über die Daten der Position hinaus.“, ein inzwischen deaktivierter Kalender, zum Beispiel „Mitarbeitende am Hauptsitz ist deaktiviert. Die Zeilen verwenden ihn weiterhin.“, und seit der letzten Speicherung der Zeilen geänderte Arbeitstage
-  - **Auf alle Spalten anwenden**: derselbe Schalter wie im Tab für die Verteilung, für dieselben Spalten, hier standardmäßig ausgeschaltet. Das Einschalten schreibt die Zeilen sofort in jede folgende Spalte, und der Schalter bleibt eingeschaltet: Jede spätere Speicherung schreibt die Zeilen auch in diese Spalten. Das Ausschalten allein ändert nichts
+  - **Diese Zeilen auf alle Spalten anwenden**: ein Schalter für dieselben Spalten wie der Schalter im Tab für die Verteilung, hier standardmäßig ausgeschaltet. Das Einschalten schreibt die Zeilen sofort in jede folgende Spalte, und der Schalter bleibt eingeschaltet: Jede spätere Speicherung schreibt die Zeilen auch in diese Spalten. Das Ausschalten allein ändert nichts
 
 **Wenn sich die Beträge auf anderem Weg ändern**: Die Zeilen bleiben als Referenz bei der Spalte, und der Tab nennt, woher die Beträge jetzt stammen, gefolgt vom Link **Die Zeilen wieder verwenden**. Der Link speichert die Zeilen, wie sie sind, und berechnet die Spalte erneut aus ihnen.
   - Ein im Tab **Monatlich** eingegebener Monat: „Die Beträge wurden von Hand eingegeben. Die Zeilen wieder verwenden.“
@@ -304,15 +306,16 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
 
 #### VZÄ
 
-VZÄ (Vollzeitäquivalente) geben an, für wie viele Personen eine Spalte über das Jahr bezahlt. Sie ergeben sich aus den Zeilen: Jeder Monat addiert die VZÄ seiner Zeilen (siehe die Tabelle oben), und das Jahr ist die Summe der zwölf Monate geteilt durch 12, auf 2 Dezimalstellen gerundet.
+VZÄ (Vollzeitäquivalente) geben an, für wie viele Personen eine Spalte bezahlt. Sie ergeben sich aus den Zeilen: Jeder Monat addiert die VZÄ seiner Zeilen (siehe die Tabelle oben). Daraus folgen zwei Werte, jeweils auf 2 Dezimalstellen gerundet:
+  - **Jahresdurchschnitt**: die Summe der zwölf Monate geteilt durch 12. Das sind die VZÄ der Spalte, angezeigt in der Kennzeichnung der Spalte und in den VZÄ-Spalten der OPEX-Liste
+  - **VZÄ im Zeitraum**: die Summe der Monate mit Personen oder Tagen, geteilt durch die Anzahl dieser Monate. Stücke zählen nicht mit, daher senken Lizenzen oder ein Laptop diesen Wert nie. Er erscheint unter den Zeilen, solange die Beträge aus ihnen stammen. Nach einer Änderung von Hand, einer Verteilung oder einer Kopie wird er erst wieder angezeigt, wenn Sie die Zeilen wieder verwenden
 
-Zum Beispiel 1 Person mit Preis pro Tag von Februar bis Oktober: 9 Monate × 1 ÷ 12 = 0,75 VZÄ.
+Zum Beispiel zählt ein Berater in Vollzeit von Februar bis Oktober in jedem dieser 9 Monate 1 VZÄ: 1,00 im Zeitraum und 9 × 1 ÷ 12 = 0,75 für das ganze Jahr. Eine Projektleitung mit 5 Tagen pro Monat von Februar bis Juli zählt etwa 0,24 im Zeitraum und 0,12 für das ganze Jahr. Lizenzen über das ganze Jahr oder ein Laptop im Dezember in derselben Spalte lassen beide Werte unverändert.
 
   - **Gezählt**: eine Spalte mit Zeilen in Personen oder Tagen
-  - **Null**: eine Spalte, deren Zeilen alle in Einheiten sind. Ihre VZÄ sind 0
+  - **Null**: eine Spalte, deren Zeilen alle in Stück sind. Ihre VZÄ sind 0
   - **Leer**: eine Spalte ohne Zeilen, eine Position ohne Version für dieses Jahr oder ein Jahr nach dem Ende der Gültigkeit der Position. Ihre VZÄ-Zelle bleibt leer, weil KANAP nicht sagen kann, für wie viele Personen sie bezahlt
   - Die VZÄ bleiben bei den Zeilen. Nach einer Änderung von Hand, einer Verteilung oder einer Kopie behält die Spalte die VZÄ ihrer Zeilen. Eine Kopie überträgt die VZÄ der Quellspalte
-  - Die VZÄ erscheinen unter den Zeilen, in der Kennzeichnung der Spalte und in den VZÄ-Spalten der OPEX-Liste
 
 ---
 

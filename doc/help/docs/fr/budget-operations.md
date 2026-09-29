@@ -139,7 +139,7 @@ Sous la grille, une barre de statistiques affiche :
 
 Une colonne peut être construite à partir de lignes, chacune étant une quantité multipliée par un prix unitaire. Voir [Quantité et prix](opex.md#quantite-et-prix).
 
-- La copie reporte les lignes de la colonne source sur la destination, avec leur description, leur quantité, leur unité, leur prix unitaire et leur calendrier. Leurs périodes passent à l'année de destination, comme la période de la colonne : mars à décembre 2026 devient mars à décembre 2027, et une ligne qui se termine le 29 février se termine le 28 février dans une année qui n'en a pas
+- La copie reporte les lignes de la colonne source sur la destination, avec leur description, leur quantité, leur unité, leur prix unitaire, leur fréquence (temps plein ou jours par mois pour les personnes, par mois ou une fois pour les pièces) et leur calendrier. Leurs périodes passent à l'année de destination, comme la période de la colonne : mars à décembre 2026 devient mars à décembre 2027, et une ligne qui se termine le 29 février se termine le 28 février dans une année qui n'en a pas. Une pièce achetée une fois le 15 mars 2026 est achetée le 15 mars 2027
 - La copie reporte aussi l'ETP de la colonne source
 - Les mois sont copiés comme pour toute autre colonne. Le pourcentage d'augmentation s'applique uniquement aux montants copiés. Les lignes gardent leurs prix unitaires
 - Une copie depuis une colonne sans ligne laisse la destination sans ligne, et son ETP devient vide
@@ -377,18 +377,18 @@ Une ligne par colonne, toujours dans le même ordre, de la colonne 1 à la colon
 | **Nom** | Le nom que tout le monde voit dans les listes, l'onglet Budget, les rapports, la vue d'ensemble et l'administration budgétaire. Laissez-le vide pour utiliser le nom standard, affiché en indication. 40 caractères au plus, sans caractère de contrôle ni caractère invisible. Chaque nom doit différer de ceux des autres colonnes, y compris du nom standard d'une colonne que vous n'avez pas renommée, majuscules comprises |
 | **Dans les fichiers** | La ligne sous chaque nom. Elle donne le nom technique de la colonne dans le fichier des lignes budgétaires et ses imports, par exemple `planned` pour la colonne 1. Il ne change jamais quand vous renommez une colonne |
 | **Affichée** | Indique si la colonne apparaît à l'écran. Au moins une colonne doit rester affichée |
-| **Suit « Appliquer à toutes les colonnes »** | Indique si la colonne prend la même période quand une répartition de l'onglet Budget est appliquée à toutes les colonnes. Une colonne qui ne suit pas garde sa propre période, et quand vous la répartissez, elle est répartie seule |
+| **Suit la répartition et les lignes** | Indique si la colonne reprend ce qui est appliqué à toutes les colonnes dans l'onglet Budget : la répartition et la période d'un montant réparti (**Appliquer la répartition à toutes les colonnes**), et les lignes quantité et prix (**Appliquer ces lignes à toutes les colonnes**). Une colonne qui ne suit pas garde les siens : quand vous la répartissez ou modifiez ses lignes, elle change seule |
 | **Par défaut** | La colonne que les rapports présélectionnent et qui trie les listes et la vue d'ensemble. La geler fige les taux de change de l'année. La colonne par défaut doit être affichée |
 
-Les en-têtes **Suit « Appliquer à toutes les colonnes »** et **Par défaut** portent une icône d'information. Survolez-la, ou placez-y le focus du clavier, pour lire la même explication sur la page.
+Les en-têtes **Suit la répartition et les lignes** et **Par défaut** portent une icône d'information. Survolez-la, ou placez-y le focus du clavier, pour lire la même explication sur la page.
 
-Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées et Prévision est masquée, toutes les colonnes suivent « Appliquer à toutes les colonnes », et Budget est la colonne par défaut.
+Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées et Prévision est masquée, toutes les colonnes suivent les interrupteurs de l'onglet Budget, et Budget est la colonne par défaut.
 
 ### Ce que changent les réglages
 
 - **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de réinitialisation et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier des lignes budgétaires, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : geler une année les gèle donc avec les autres
 - **La colonne par défaut** est présélectionnée dans chaque rapport. Elle trie les listes OPEX et CAPEX, leur navigation précédent et suivant, et les tuiles **Top postes** et **Plus fortes hausses** de la vue d'ensemble. Les listes l'affichent pour l'année en cours, à côté de la dernière colonne affichée. C'est aussi le montant de référence de l'onglet Ventilations et la colonne sur laquelle s'ouvre le panneau de répartition. La geler pour une année fige les taux de change de cette année (voir [Geler la colonne par défaut fige les taux de change](#geler-la-colonne-par-defaut-fige-les-taux-de-change))
-- **Suit « Appliquer à toutes les colonnes »** décide quelles colonnes bougent ensemble quand une répartition est appliquée à toutes les colonnes. Les colonnes gelées ne changent jamais, quel que soit ce réglage
+- **Suit la répartition et les lignes** décide quelles colonnes bougent ensemble quand une répartition est appliquée à toutes les colonnes, et quelles colonnes reçoivent les lignes quand **Appliquer ces lignes à toutes les colonnes** est activé. Les colonnes gelées ne changent jamais, quel que soit ce réglage
 
 ### Enregistrement
 

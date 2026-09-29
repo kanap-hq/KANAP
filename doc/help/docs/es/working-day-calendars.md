@@ -1,13 +1,13 @@
 # Calendarios laborales
 
-Un calendario laboral indica el número de días laborables de cada mes, año por año. Es la cifra por la que se multiplica una línea de presupuesto con precio por día. Por ejemplo, un consultor a 400 por día en un calendario con 20 días laborables en marzo cuesta 8.000 en marzo.
+Un calendario laboral indica el número de días laborables de cada mes, año por año. Las líneas de presupuesto con precio por día lo usan: una persona a tiempo completo trabaja todos los días laborables del mes, y los días y los días por mes se convierten en ETC en relación con él. Por ejemplo, un consultor a tiempo completo a 400 por día en un calendario con 20 días laborables en marzo cuesta 8.000 en marzo.
 
 Un calendario es de uno de estos dos tipos:
 
 - **Estándar**: creado a partir de un país, y de una región cuando el país las tiene. Los días laborables de cualquier año son los días de lunes a viernes de cada mes menos los festivos del país. No hay nada que escribir, y aun así puede cambiar cualquier mes de cualquier año
 - **Personalizado**: usted introduce los días laborables de cada año, por ejemplo para un convenio de jornada con sus propios días libres
 
-En la pestaña Presupuesto de una partida OPEX o CAPEX, cada línea con precio por día usa un calendario. Las líneas con precio por mes o una vez no necesitan ninguno. Consulte [Cantidad y precio](opex.md#cantidad-y-precio).
+En la pestaña Presupuesto de una partida OPEX o CAPEX, cada línea con precio por día usa un calendario. Las líneas con precio por mes o por pieza no necesitan ninguno. Consulte [Cantidad y precio](opex.md#cantidad-y-precio).
 
 ---
 

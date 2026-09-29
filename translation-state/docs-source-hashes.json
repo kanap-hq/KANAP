@@ -14,9 +14,9 @@
     "applications.md": "7ce3c64340079438c3a1bdd87f98cce4",
     "assets.md": "8e77fc10282aec40a92cab9dd0f2a1dd",
     "branding.md": "cf408195e3f5ee413f3c86bc9cccbc0e",
-    "budget-operations.md": "068f16e16b9a9580ee1e18d2a59932d5",
+    "budget-operations.md": "c8800c53fdd37cf3fcc7f4744c8173ba",
     "business-processes.md": "71c2fb579c691c2579975b0b61c5064e",
-    "capex.md": "a81d23bafe4b93bb3feda78cf47e3d43",
+    "capex.md": "1110211b10f3c79e59f51bb834e1d046",
     "chart-of-accounts.md": "1435e9d777e3cbb3f98d2097efc770f2",
     "companies.md": "7139c0895ce9901adf9a18fd177e03c4",
     "connection-map.md": "414a6eb72d51725f780134263d775afd",
@@ -49,7 +49,7 @@
     "on-premise/operations.md": "ba26f5c7262aaafedbd764b94d202118",
     "on-premise/sso-entra.md": "3e756086410cd9efc7e78025cfd3d291",
     "operations-dashboard.md": "f2141d4a9c46b90529a5eb9a197ea84e",
-    "opex.md": "036f5a2ef5053fb050cac3c51514169e",
+    "opex.md": "5763f27fbdfd8017b7b5cca6e652e849",
     "portfolio-planning.md": "90a8528b994c5c562148b8f069a0701e",
     "portfolio-projects.md": "09edbb86533fddfd3098301db23ced9d",
     "portfolio-reporting.md": "9af8265c555b5dc2cb479cf00591bb90",
@@ -60,7 +60,7 @@
     "scheduled-tasks.md": "e72da539219d2c403fa7af6b2af003f7",
     "suppliers.md": "314a344bad49914542d63ff860053b3d",
     "tasks.md": "2c322538f508cec71a27e8861d0d4ad6",
-    "working-day-calendars.md": "6c043aa1d8808f797870b5b5a7fb03f7"
+    "working-day-calendars.md": "c74de01f74123f24aac8c9e122e2944f"
   },
   "glossary_hash": "981506c36ae03055093db384b046315e",
   "nav_hashes": {

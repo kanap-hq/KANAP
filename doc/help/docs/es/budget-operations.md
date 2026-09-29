@@ -139,7 +139,7 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 
 Una columna puede construirse a partir de líneas, cada una una cantidad por un precio unitario. Consulte [Cantidad y precio](opex.md#cantidad-y-precio).
 
-- La copia lleva las líneas de la columna de origen al destino, con su descripción, cantidad, unidad, precio unitario y calendario. Sus periodos pasan al año de destino, igual que el periodo de la columna: de marzo a diciembre de 2026 pasa a ser de marzo a diciembre de 2027, y una línea que termina el 29 de febrero termina el 28 de febrero en un año que no lo tiene
+- La copia lleva las líneas de la columna de origen al destino, con su descripción, cantidad, unidad, precio unitario, frecuencia (tiempo completo o días por mes para las personas, por mes o una vez para las piezas) y calendario. Sus periodos pasan al año de destino, igual que el periodo de la columna: de marzo a diciembre de 2026 pasa a ser de marzo a diciembre de 2027, y una línea que termina el 29 de febrero termina el 28 de febrero en un año que no lo tiene. Una pieza comprada una vez el 15 de marzo de 2026 se compra el 15 de marzo de 2027
 - La copia lleva también el ETC de la columna de origen
 - Los meses se copian como en cualquier otra columna. El porcentaje de incremento solo se aplica a los importes copiados. Las líneas conservan sus precios unitarios
 - Una copia desde una columna sin líneas deja el destino sin líneas, y su ETC queda vacío
@@ -377,18 +377,18 @@ Una fila por columna, siempre en el mismo orden, de la columna 1 a la columna 5.
 | **Nombre** | El nombre que todos ven en las listas, la pestaña Presupuesto, los informes, el panel y la Administración presupuestaria. Déjelo vacío para usar el nombre estándar, que aparece como marcador. Como máximo 40 caracteres, sin caracteres de control ni invisibles. Cada nombre debe ser distinto de los nombres de las demás columnas, incluido el nombre estándar de una columna que no ha renombrado, sin importar las mayúsculas |
 | **En los archivos** | La línea bajo cada nombre. Indica el nombre técnico de la columna en el archivo de filas presupuestarias y sus importaciones, por ejemplo `planned` para la columna 1. Nunca cambia cuando renombra una columna |
 | **Visible** | Si la columna aparece en pantalla. Al menos una columna debe seguir visible |
-| **Sigue «Aplicar a todas las columnas»** | Si la columna toma el mismo periodo cuando un reparto de la pestaña Presupuesto se aplica a todas las columnas. Una columna que no lo sigue conserva su propio periodo y, cuando la reparte, se reparte sola |
+| **Sigue el reparto y las líneas** | Si la columna toma lo que se aplica a todas las columnas en la pestaña Presupuesto: la distribución y el periodo de un reparto (**Aplicar el reparto a todas las columnas**), y las líneas de cantidad y precio (**Aplicar estas líneas a todas las columnas**). Una columna que no los sigue conserva los suyos: cuando la reparte o edita sus líneas, cambia sola |
 | **Por defecto** | La columna que preseleccionan los informes y que ordena las listas y el panel. Congelarla fija los tipos de cambio del año. La columna por defecto debe estar visible |
 
-Los encabezados **Sigue «Aplicar a todas las columnas»** y **Por defecto** llevan un icono de información. Pase el ratón por encima, o lleve el foco del teclado hasta él, para leer la misma explicación en la página.
+Los encabezados **Sigue el reparto y las líneas** y **Por defecto** llevan un icono de información. Pase el ratón por encima, o lleve el foco del teclado hasta él, para leer la misma explicación en la página.
 
-Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visibles y Previsión está oculta, todas las columnas siguen «Aplicar a todas las columnas» y Presupuesto es la columna por defecto.
+Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visibles y Previsión está oculta, todas las columnas siguen los interruptores de la pestaña Presupuesto y Presupuesto es la columna por defecto.
 
 ### Qué cambia la configuración
 
 - **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de filas presupuestarias, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, así que congelar un año las congela junto con las demás
 - **La columna por defecto** está preseleccionada en todos los informes. Ordena las listas OPEX y CAPEX, su navegación anterior y siguiente, y los mosaicos **Top partidas** y **Mayores incrementos** del panel. Las listas la muestran para el año actual, junto a la última columna visible. También es el importe de referencia de la pestaña Asignaciones y la columna en la que se abre el panel de reparto. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
-- **Sigue «Aplicar a todas las columnas»** decide qué columnas se mueven juntas cuando un reparto se aplica a todas las columnas. Las columnas congeladas nunca cambian, diga lo que diga esta configuración
+- **Sigue el reparto y las líneas** decide qué columnas se mueven juntas cuando un reparto se aplica a todas las columnas, y qué columnas reciben las líneas cuando **Aplicar estas líneas a todas las columnas** está activado. Las columnas congeladas nunca cambian, diga lo que diga esta configuración
 
 ### Guardar
 

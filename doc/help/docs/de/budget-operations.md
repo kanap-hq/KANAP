@@ -139,7 +139,7 @@ Unterhalb des Grids zeigt eine Statistikleiste:
 
 Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis. Siehe [Menge und Preis](opex.md#menge-und-preis).
 
-- Die Kopie überträgt die Zeilen der Quellspalte auf das Ziel, mit Beschreibung, Menge, Einheit, Stückpreis und Kalender. Ihre Zeiträume wandern ins Zieljahr, wie der Zeitraum der Spalte: März bis Dezember 2026 wird zu März bis Dezember 2027, und eine Zeile, die am 29. Februar endet, endet in einem Jahr ohne diesen Tag am 28. Februar
+- Die Kopie überträgt die Zeilen der Quellspalte auf das Ziel, mit Beschreibung, Menge, Einheit, Stückpreis, Häufigkeit (Vollzeit oder Tage pro Monat bei Personen, pro Monat oder einmalig bei Stück) und Kalender. Ihre Zeiträume wandern ins Zieljahr, wie der Zeitraum der Spalte: März bis Dezember 2026 wird zu März bis Dezember 2027, und eine Zeile, die am 29. Februar endet, endet in einem Jahr ohne diesen Tag am 28. Februar. Ein am 15. März 2026 einmalig gekauftes Stück wird am 15. März 2027 gekauft
 - Die Kopie überträgt auch die VZÄ der Quellspalte
 - Die Monate werden wie bei jeder anderen Spalte kopiert. Die prozentuale Erhöhung gilt nur für die kopierten Beträge. Die Zeilen behalten ihre Stückpreise
 - Eine Kopie aus einer Spalte ohne Zeilen lässt das Ziel ohne Zeilen, und seine VZÄ bleiben leer
@@ -377,18 +377,18 @@ Eine Zeile pro Spalte, immer in derselben Reihenfolge, von Spalte 1 bis Spalte 5
 | **Name** | Der Name, den alle in Listen, im Budget-Tab, in Berichten, in der Übersicht und in der Budget-Administration sehen. Lassen Sie ihn leer, um den Standardnamen zu verwenden, der als Platzhalter erscheint. Höchstens 40 Zeichen, ohne Steuerzeichen oder unsichtbare Zeichen. Jeder Name muss sich von den Namen der anderen Spalten unterscheiden, auch vom Standardnamen einer Spalte, die Sie nicht umbenannt haben, unabhängig von der Groß- und Kleinschreibung |
 | **In Dateien** | Die Zeile unter jedem Namen. Sie nennt den technischen Namen der Spalte in der Datei der Budgetzeilen und ihren Importen, zum Beispiel `planned` für Spalte 1. Sie ändert sich nie, wenn Sie eine Spalte umbenennen |
 | **Angezeigt** | Ob die Spalte auf dem Bildschirm erscheint. Mindestens eine Spalte muss angezeigt bleiben |
-| **Folgt „Auf alle Spalten anwenden“** | Ob die Spalte denselben Zeitraum übernimmt, wenn eine Verteilung im Budget-Tab auf alle Spalten angewendet wird. Eine Spalte, die nicht folgt, behält ihren eigenen Zeitraum. Wenn Sie sie verteilen, wird sie allein verteilt |
+| **Folgt Verteilung und Zeilen** | Ob die Spalte übernimmt, was im Budget-Tab auf alle Spalten angewendet wird: Verteilung und Zeitraum eines verteilten Betrags (**Die Verteilung auf alle Spalten anwenden**) sowie die Zeilen mit Menge und Preis (**Diese Zeilen auf alle Spalten anwenden**). Eine Spalte, die nicht folgt, behält ihre eigenen: Wenn Sie sie verteilen oder ihre Zeilen bearbeiten, ändert sie sich allein |
 | **Standard** | Die Spalte, die Berichte vorauswählen und nach der die Listen und die Übersicht sortiert werden. Ihr Einfrieren schreibt die Wechselkurse des Jahres fest. Die Standardspalte muss angezeigt werden |
 
-Die Überschriften **Folgt „Auf alle Spalten anwenden“** und **Standard** tragen ein Infosymbol. Fahren Sie mit der Maus darüber oder setzen Sie den Tastaturfokus darauf, um dieselbe Erklärung auf der Seite zu lesen.
+Die Überschriften **Folgt Verteilung und Zeilen** und **Standard** tragen ein Infosymbol. Fahren Sie mit der Maus darüber oder setzen Sie den Tastaturfokus darauf, um dieselbe Erklärung auf der Seite zu lesen.
 
-Standardmäßig sind Budget, Revision, Ist-Werte und Erwarteter Endwert angezeigt und Prognose ist ausgeblendet. Jede Spalte folgt „Auf alle Spalten anwenden“, und Budget ist die Standardspalte.
+Standardmäßig sind Budget, Revision, Ist-Werte und Erwarteter Endwert angezeigt und Prognose ist ausgeblendet. Jede Spalte folgt den Schaltern des Budget-Tabs, und Budget ist die Standardspalte.
 
 ### Was die Einstellungen ändern
 
 - **Ausgeblendete Spalten** verschwinden aus den Listen, der Spaltenauswahl, dem Budget-Tab, den Auswahlfeldern der Berichte, den Seiten zum Kopieren und Zurücksetzen und der Übersicht. Sie behalten ihre Beträge: Das Ausblenden einer Spalte löscht nie Daten, und wenn Sie sie wieder anzeigen, sind die Beträge wieder da. Ausgeblendete Spalten nehmen weiterhin Importe über die Datei der Budgetzeilen an, und Einfrierungen gelten weiterhin für sie. Die Seite zum Einfrieren listet ausgeblendete Spalten ebenfalls auf, mit **Ausgeblendet** gekennzeichnet. Das Einfrieren eines Jahres friert sie also mit den anderen ein
 - **Die Standardspalte** ist in jedem Bericht vorausgewählt. Nach ihr werden die OPEX- und CAPEX-Listen, ihre Navigation mit Zurück und Weiter sowie die Kacheln **Top-Positionen** und **Stärkste Zuwächse** der Übersicht sortiert. Die Listen zeigen sie für das aktuelle Jahr, neben der letzten angezeigten Spalte. Sie ist auch der Referenzbetrag des Zuordnungen-Tabs und die Spalte, mit der sich das Verteilungsfeld öffnet. Ihr Einfrieren für ein Jahr schreibt die Wechselkurse dieses Jahres fest (siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest))
-- **Folgt „Auf alle Spalten anwenden“** legt fest, welche Spalten sich gemeinsam ändern, wenn eine Verteilung auf alle Spalten angewendet wird. Eingefrorene Spalten ändern sich nie, unabhängig von dieser Einstellung
+- **Folgt Verteilung und Zeilen** legt fest, welche Spalten sich gemeinsam ändern, wenn eine Verteilung auf alle Spalten angewendet wird, und welche Spalten die Zeilen übernehmen, wenn **Diese Zeilen auf alle Spalten anwenden** eingeschaltet ist. Eingefrorene Spalten ändern sich nie, unabhängig von dieser Einstellung
 
 ### Speichern
 
