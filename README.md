@@ -160,4 +160,4 @@ If you find a security issue, please follow [SECURITY.md](SECURITY.md).
 
 [AGPL v3](LICENSE). You are free to use, modify, and distribute KANAP. The AGPL copyleft clause ensures that anyone running a modified version as a network service must share their changes, keeping the project genuinely open.
 
-Copyright 2025-2026, Kanap SARL.
+Copyright 2025-2026, KANAP EURL.
