@@ -188,9 +188,9 @@ describe('LinesPanel', () => {
   it('keeps every column at its least width: a narrow panel scrolls the table instead of squeezing the fields', () => {
     renderPanel();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    expect(LINES_TABLE_MIN_WIDTH).toBe(1378);
+    expect(LINES_TABLE_MIN_WIDTH).toBe(1403);
     const table = screen.getByTestId('lines-table');
-    expect(table).toHaveStyle({ tableLayout: 'fixed', minWidth: '1378px' });
+    expect(table).toHaveStyle({ tableLayout: 'fixed', minWidth: '1403px' });
     const ths = within(table).getAllByRole('columnheader');
     const { description, ...fixed } = LINE_COLUMN_WIDTHS;
     expect(ths[0]).toHaveStyle({ minWidth: `${description}px` });

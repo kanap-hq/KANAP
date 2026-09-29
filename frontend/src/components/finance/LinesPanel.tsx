@@ -56,7 +56,7 @@ const CALENDARS_PATH = '/master-data/working-day-calendars';
 export const LINE_COLUMN_WIDTHS = {
   description: 150,
   quantity: 80,
-  unit: 100,
+  unit: 125,
   unitPrice: 190,
   often: 290,
   from: 150,
