@@ -122,7 +122,7 @@ function WorkingDayCalendarsList() {
         // The server sorts and filters `country` on this same text, "France (Moselle)".
         colId: 'country',
         headerName: t('workingDayCalendars.columns.country'),
-        width: 200,
+        width: 240,
         filter: 'agTextColumnFilter',
         valueGetter: (p: any) => (p.data ? calendarSourceLabel(p.data) ?? '' : ''),
         cellRenderer: link,

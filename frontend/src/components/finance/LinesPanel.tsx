@@ -41,6 +41,25 @@ import {
 const CALENDARS_PATH = '/master-data/working-day-calendars';
 
 /**
+ * The least width of each column of the lines table, in px: what a field needs to read whole
+ * ("31 Dec 2026", "United States"). The description takes what is left, at least its own; a
+ * narrower panel scrolls the table sideways instead of squeezing the fields.
+ */
+export const LINE_COLUMN_WIDTHS = {
+  description: 150,
+  quantity: 80,
+  unit: 100,
+  unitPrice: 100,
+  per: 105,
+  from: 120,
+  to: 120,
+  calendar: 150,
+  amount: 90,
+  remove: 28,
+} as const;
+export const LINES_TABLE_MIN_WIDTH = Object.values(LINE_COLUMN_WIDTHS).reduce((sum, width) => sum + width, 0);
+
+/**
  * A field of the budget tab's panels, label above. It is `width` wide, wider when its label needs
  * more: the label stays on one line, so a row of fields keeps one baseline in every language.
  */
@@ -350,7 +369,7 @@ export default function LinesPanel({
     : '';
 
   const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
-  const headSx = { fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'left', px: 0.5, py: 0.5, whiteSpace: 'nowrap' } as const;
+  const headSx = { fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'left', px: 0.5, py: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
   const cellSx = { px: 0.5, py: '2px', verticalAlign: 'middle' } as const;
   const lineNote = (index: number, note: string) => (drafts.length > 1 ? t('budgetTab.lines.lineNote', { line: index + 1, note }) : note);
   const problemText = (problem: LineProblem) => (
@@ -408,20 +427,20 @@ export default function LinesPanel({
             <Box
               component="table"
               data-testid="lines-table"
-              sx={{ width: '100%', borderCollapse: 'collapse', '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' }, '& td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}
+              sx={{ width: '100%', minWidth: LINES_TABLE_MIN_WIDTH, tableLayout: 'fixed', borderCollapse: 'collapse', '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' }, '& td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}
             >
               <Box component="thead">
                 <Box component="tr">
-                  <Box component="th" sx={{ ...headSx, minWidth: 160 }}>{t('budgetTab.lines.description')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: 90, textAlign: 'right' }}>{t('budgetTab.lines.quantity')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: 100 }}>{t('budgetTab.lines.unit')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: 110, textAlign: 'right' }}>{t('budgetTab.lines.unitPrice')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: 100 }}>{t('budgetTab.lines.per')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: 130 }}>{t('budgetTab.from')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: 130 }}>{t('budgetTab.to')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: 160 }}>{t('budgetTab.lines.calendar')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: 100, textAlign: 'right' }}>{t('budgetTab.amount')}</Box>
-                  <Box component="th" sx={{ ...headSx, width: 28 }} />
+                  <Box component="th" sx={{ ...headSx, minWidth: LINE_COLUMN_WIDTHS.description }}>{t('budgetTab.lines.description')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.quantity, textAlign: 'right' }}>{t('budgetTab.lines.quantity')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unit }}>{t('budgetTab.lines.unit')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unitPrice, textAlign: 'right' }}>{t('budgetTab.lines.unitPrice')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.per }}>{t('budgetTab.lines.per')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.from }}>{t('budgetTab.from')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.to }}>{t('budgetTab.to')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.calendar }}>{t('budgetTab.lines.calendar')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.amount, textAlign: 'right' }}>{t('budgetTab.amount')}</Box>
+                  <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.remove }} />
                 </Box>
               </Box>
               <Box component="tbody">
@@ -438,7 +457,7 @@ export default function LinesPanel({
                         sx={tableCellTextFieldSx}
                       />
                     </Box>
-                    <Box component="td" sx={{ ...cellSx, width: 90 }}>
+                    <Box component="td" sx={cellSx}>
                       <FormattedNumberField
                         value={draft.quantity} decimals={3} emit="string"
                         onChange={(e) => patchLine(draft.key, { quantity: String(e.target.value ?? '') })}
@@ -450,7 +469,7 @@ export default function LinesPanel({
                         sx={tableCellFieldSx}
                       />
                     </Box>
-                    <Box component="td" sx={{ ...cellSx, width: 100 }}>
+                    <Box component="td" sx={cellSx}>
                       {select(
                         t('budgetTab.lines.unit'),
                         draft.unit,
@@ -458,7 +477,7 @@ export default function LinesPanel({
                         (value) => changeUnit(draft, value as QuantityUnit),
                       )}
                     </Box>
-                    <Box component="td" sx={{ ...cellSx, width: 110 }}>
+                    <Box component="td" sx={cellSx}>
                       <FormattedNumberField
                         value={draft.unitPrice} decimals={4} emit="string"
                         onChange={(e) => patchLine(draft.key, { unitPrice: String(e.target.value ?? '') })}
@@ -470,7 +489,7 @@ export default function LinesPanel({
                         sx={tableCellFieldSx}
                       />
                     </Box>
-                    <Box component="td" sx={{ ...cellSx, width: 100 }}>
+                    <Box component="td" sx={cellSx}>
                       {select(
                         t('budgetTab.lines.per'),
                         draft.basis,
@@ -478,7 +497,7 @@ export default function LinesPanel({
                         (value) => changeBasis(draft, value as PriceBasis),
                       )}
                     </Box>
-                    <Box component="td" sx={{ ...cellSx, width: 130 }}>
+                    <Box component="td" sx={cellSx}>
                       <DateEUField
                         label={t('budgetTab.from')} hideLabel size="small" disabled={frozen}
                         valueYmd={draft.start}
@@ -486,7 +505,7 @@ export default function LinesPanel({
                         textFieldSx={tableCellTextFieldSx}
                       />
                     </Box>
-                    <Box component="td" sx={{ ...cellSx, width: 130 }}>
+                    <Box component="td" sx={cellSx}>
                       <DateEUField
                         label={t('budgetTab.to')} hideLabel size="small" disabled={frozen}
                         valueYmd={draft.end}
@@ -494,7 +513,7 @@ export default function LinesPanel({
                         textFieldSx={tableCellTextFieldSx}
                       />
                     </Box>
-                    <Box component="td" sx={{ ...cellSx, width: 160 }}>
+                    <Box component="td" sx={cellSx}>
                       {draft.basis === 'per_day' && select(
                         t('budgetTab.lines.calendar'),
                         calendarOptions.some((o) => o.id === draft.calendarId) ? draft.calendarId : '',
@@ -505,11 +524,11 @@ export default function LinesPanel({
                     <Box
                       component="td"
                       data-testid="line-amount"
-                      sx={{ ...cellSx, width: 100, textAlign: 'right', fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+                      sx={{ ...cellSx, textAlign: 'right', fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
                     >
                       {amounts[index]}
                     </Box>
-                    <Box component="td" sx={{ ...cellSx, width: 28 }}>
+                    <Box component="td" sx={cellSx}>
                       {!frozen && (
                         <Tooltip title={t('budgetTab.lines.remove')}>
                           <IconButton

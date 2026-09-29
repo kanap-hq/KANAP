@@ -42,7 +42,7 @@ vi.mock('../../services/workingDayProfiles', async (importOriginal) => {
 
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 
-import LinesPanel, { LinesPanelProps, defaultCalendarId, tableLineMessage } from './LinesPanel';
+import LinesPanel, { LINE_COLUMN_WIDTHS, LINES_TABLE_MIN_WIDTH, LinesPanelProps, defaultCalendarId, tableLineMessage } from './LinesPanel';
 import type { LineCalculation, RoundInput, RoundLine } from './roundPeriod';
 import { buildWorkingDayProfiles } from '../../hooks/useWorkingDayProfiles';
 
@@ -163,6 +163,18 @@ beforeEach(() => {
 });
 
 describe('LinesPanel', () => {
+  it('keeps every column at its least width: a narrow panel scrolls the table instead of squeezing the fields', () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    expect(LINES_TABLE_MIN_WIDTH).toBe(1043);
+    const table = screen.getByTestId('lines-table');
+    expect(table).toHaveStyle({ tableLayout: 'fixed', minWidth: '1043px' });
+    const heads = within(table).getAllByRole('columnheader');
+    const { description, ...fixed } = LINE_COLUMN_WIDTHS;
+    expect(heads[0]).toHaveStyle({ minWidth: `${description}px` });
+    Object.values(fixed).forEach((width, i) => expect(heads[i + 1]).toHaveStyle({ width: `${width}px` }));
+  });
+
   it('a new line starts as 1 people per day on the paying company calendar, over the column period, and stays here', async () => {
     const { onSave } = renderPanel({ payingCompanyCountry: 'us' });
     expect(screen.getByText('No line yet. A line is a quantity times a unit price.')).toBeInTheDocument();
