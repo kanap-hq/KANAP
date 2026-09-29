@@ -54,6 +54,17 @@ if (!EMAIL || !PASSWORD) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const PAGES = {
+  dashboard: {
+    path: '/',
+    waitFor: 'main',
+    async prepare(page) {
+      // Widgets load independently; wait until the last skeleton is gone.
+      await page
+        .waitForFunction(() => !document.querySelector('.MuiSkeleton-root'), { timeout: 45000 })
+        .catch(() => {});
+    },
+  },
+  plaid: { path: '/ai', waitFor: 'main' },
   'chargeback-global': { path: '/ops/reports/chargeback/global', waitFor: 'main' },
   'chargeback-company': {
     path: '/ops/reports/chargeback/company',
@@ -129,14 +140,35 @@ const selected = has('all') || positional.length === 0
 
 mkdirSync(OUT_DIR, { recursive: true });
 
+// Behind an outbound proxy (CI, sandboxes), chromium needs it passed explicitly.
+// Credentials embedded in the URL go through page.authenticate(), which chromium
+// does not read from --proxy-server. A MITM proxy also means its CA is unknown
+// to chromium, hence --ignore-certificate-errors (screenshots only).
+const PROXY_URL = (() => {
+  const raw = process.env.HTTPS_PROXY || process.env.https_proxy || '';
+  try { return raw ? new URL(raw) : null; } catch { return null; }
+})();
 const browser = await puppeteer.launch({
   executablePath: CHROME_PATH,
   headless: 'new',
-  args: ['--no-sandbox', '--disable-dev-shm-usage', '--hide-scrollbars'],
+  args: [
+    '--no-sandbox',
+    '--disable-dev-shm-usage',
+    '--hide-scrollbars',
+    ...(PROXY_URL
+      ? [`--proxy-server=${PROXY_URL.protocol}//${PROXY_URL.host}`, '--ignore-certificate-errors']
+      : []),
+  ],
 });
 
 try {
   const page = await browser.newPage();
+  if (PROXY_URL?.username) {
+    await page.authenticate({
+      username: decodeURIComponent(PROXY_URL.username),
+      password: decodeURIComponent(PROXY_URL.password),
+    });
+  }
   await page.setViewport({ width: WIDTH, height: HEIGHT, deviceScaleFactor: 2 });
 
   if (has('inspect-fixed')) {
