@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
@@ -42,7 +42,9 @@ vi.mock('../../services/workingDayProfiles', async (importOriginal) => {
 
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 
-import LinesPanel, { LINE_COLUMN_WIDTHS, LINES_TABLE_MIN_WIDTH, LinesPanelProps, defaultCalendarId, tableLineMessage } from './LinesPanel';
+import LinesPanel, {
+  LINE_COLUMN_WIDTHS, LINES_SECOND_ROW_INDENT, LINES_TABLE_MIN_WIDTH, LINES_TWO_ROWS_MIN_WIDTH, LinesPanelProps, defaultCalendarId, tableLineMessage,
+} from './LinesPanel';
 import type { LineCalculation, RoundInput, RoundLine } from './roundPeriod';
 import { buildWorkingDayProfiles } from '../../hooks/useWorkingDayProfiles';
 
@@ -159,6 +161,12 @@ const noCombo = (row: number, name: string) => within(rows()[row]).queryByRole('
 /** The date fields of a line: From and To, or the one Date of pieces bought once. */
 const dates = (row: number) => within(rows()[row]).queryAllByPlaceholderText('labels.datePlaceholder');
 const heads = () => within(screen.getByTestId('lines-table')).getAllByRole('columnheader').map((th) => th.textContent);
+/** Two rows per line: the first, what is priced; the second, when and how. */
+const priced = (row: number) => within(within(rows()[row]).getByTestId('line-priced'));
+const timing = (row: number) => within(within(rows()[row]).getByTestId('line-timing'));
+/** The labels of the two header rows. */
+const pricedHeads = () => within(screen.getByTestId('lines-head-priced')).getAllByRole('columnheader').map((th) => th.textContent);
+const timingHeads = () => Array.from(screen.getByTestId('lines-head-timing').querySelectorAll('th > div > div')).map((label) => label.textContent);
 async function pick(combobox: HTMLElement, option: string) {
   fireEvent.mouseDown(combobox);
   fireEvent.click(await screen.findByRole('option', { name: option }));
@@ -631,5 +639,120 @@ describe('LinesPanel', () => {
     expect(notes()).toHaveTextContent('frozen');
     fireEvent.blur(screen.getByLabelText('Unit price'));
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  describe('two rows per line, when the panel is narrower than the whole table', () => {
+    it('puts what is priced on the first row, when and how on the second, under two header rows', () => {
+      const second = storedLine({ id: 'l2', sort: 1, label: 'Second' });
+      renderPanel({ record: roundWith([storedLine(), second]), layout: 'narrow' });
+
+      expect(LINES_TWO_ROWS_MIN_WIDTH).toBe(764);
+      expect(screen.getByTestId('lines-table')).toHaveStyle({ tableLayout: 'fixed', minWidth: '764px' });
+      expect(pricedHeads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'Amount', '']);
+      expect(timingHeads()).toEqual(['How often', 'From', 'To', 'Calendar']);
+      const [description, ...fixed] = within(screen.getByTestId('lines-head-priced')).getAllByRole('columnheader');
+      expect(description).toHaveStyle({ minWidth: `${LINE_COLUMN_WIDTHS.description}px` });
+      const { quantity, unit, unitPrice, amount, remove } = LINE_COLUMN_WIDTHS;
+      [quantity, unit, unitPrice, amount, remove].forEach((width, i) => expect(fixed[i]).toHaveStyle({ width: `${width}px` }));
+
+      // One body per line, two rows each: the numbering and the notes count lines.
+      expect(rows()).toHaveLength(2);
+      rows().forEach((line) => expect(within(line).getAllByRole('row')).toHaveLength(2));
+
+      const first = priced(0);
+      expect(first.getByLabelText('Description')).toHaveValue('Project manager');
+      expect(first.getByLabelText('Quantity')).toHaveValue('1');
+      expect(first.getByRole('combobox', { name: 'Unit' })).toHaveTextContent('people');
+      expect(first.getByLabelText('Unit price')).toBeInTheDocument();
+      expect(first.getByRole('combobox', { name: 'Price per' })).toHaveTextContent('per day');
+      expect(first.getByTestId('line-amount')).toHaveTextContent('27 000');
+      expect(first.getByRole('button', { name: 'Remove the line' })).toBeInTheDocument();
+      expect(first.queryByRole('checkbox', { name: 'Full time' })).not.toBeInTheDocument();
+      expect(first.queryAllByPlaceholderText('labels.datePlaceholder')).toHaveLength(0);
+      expect(first.queryByRole('combobox', { name: 'Calendar' })).not.toBeInTheDocument();
+
+      const then = timing(0);
+      expect(then.getByRole('checkbox', { name: 'Full time' })).not.toBeChecked();
+      expect(then.getByLabelText('days per month')).toHaveValue('5');
+      expect(then.getAllByPlaceholderText('labels.datePlaceholder')).toHaveLength(2);
+      expect(then.getByRole('combobox', { name: 'Calendar' })).toHaveTextContent('France');
+      expect(then.queryByLabelText('Unit price')).not.toBeInTheDocument();
+      expect(then.queryByTestId('line-amount')).not.toBeInTheDocument();
+      // Indented under the description, the header's second row too.
+      expect(within(rows()[0]).getByTestId('line-timing').firstElementChild).toHaveStyle({ paddingLeft: `${LINES_SECOND_ROW_INDENT}px` });
+      expect(screen.getByTestId('lines-head-timing').firstElementChild).toHaveStyle({ paddingLeft: `${LINES_SECOND_ROW_INDENT}px` });
+
+      typeAndLeave(priced(1).getByLabelText('Quantity'), '');
+      expect(notes()).toHaveTextContent('Line 2: Enter a quantity and a unit price to save this line.');
+    });
+
+    it('a commit from the second row saves what the one-row table saves', async () => {
+      const run = async (layout: 'wide' | 'narrow') => {
+        const { onSave, unmount } = renderPanel({ record: roundWith([storedLine()]), layout });
+        expect(screen.queryAllByTestId('line-timing')).toHaveLength(layout === 'narrow' ? 1 : 0);
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
+        await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+        typeDate(dates(0)[1], '31/05/2026');
+        await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+        await pick(combo(0, 'Calendar'), 'United States');
+        await waitFor(() => expect(onSave).toHaveBeenCalledTimes(3));
+        const calls = onSave.mock.calls;
+        unmount();
+        return calls;
+      };
+      const wide = await run('wide');
+      const narrow = await run('narrow');
+      expect(narrow).toEqual(wide);
+      expect(narrow[0][0][0]).toMatchObject({ days_per_month: null, period_end: '2026-06-30', working_day_profile_id: 'fr' });
+      expect(narrow[1][0][0]).toMatchObject({ days_per_month: null, period_end: '2026-05-31', working_day_profile_id: 'fr' });
+      expect(narrow[2][0][0]).toMatchObject({ days_per_month: null, period_end: '2026-05-31', working_day_profile_id: 'us' });
+    });
+
+    it('the Date of a piece bought once sits on the second row, To left empty', async () => {
+      const laptop = storedLine({ ...PIECES, label: 'Laptop', unit_price: '2000.0000', frequency: 'once', period_start: '2026-03-15', period_end: '2026-03-15' });
+      const { onSave } = renderPanel({ record: roundWith([laptop]), layout: 'narrow' });
+      expect(timingHeads()).toEqual(['How often', 'Date', '', 'Calendar']);
+      expect(priced(0).queryAllByPlaceholderText('labels.datePlaceholder')).toHaveLength(0);
+      expect(priced(0).getByTestId('line-basis')).toHaveTextContent('per piece');
+      expect(timing(0).getByRole('combobox', { name: 'How often' })).toHaveTextContent('once');
+      expect(timing(0).queryByRole('combobox', { name: 'Calendar' })).not.toBeInTheDocument();
+      const [date, ...rest] = timing(0).getAllByPlaceholderText('labels.datePlaceholder');
+      expect(rest).toHaveLength(0);
+
+      typeDate(date, '20/05/2026');
+      await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+      expect(onSave.mock.calls[0][0][0]).toMatchObject({ frequency: 'once', period_start: '2026-05-20', period_end: '2026-05-20' });
+    });
+
+    it('follows the width of the panel: two rows below the whole table, one again once it fits', () => {
+      let width = 1300;
+      const resized: Array<() => void> = [];
+      vi.stubGlobal('ResizeObserver', class {
+        constructor(callback: () => void) { resized.push(callback); }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      });
+      // One measure per frame; the frame comes at once here.
+      vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callback(0); return 1; });
+      vi.stubGlobal('cancelAnimationFrame', () => undefined);
+      const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => width);
+      try {
+        renderPanel({ record: roundWith([storedLine()]) });
+        expect(screen.getByTestId('line-timing')).toBeInTheDocument();
+
+        width = LINES_TABLE_MIN_WIDTH;
+        act(() => resized.forEach((callback) => callback()));
+        expect(screen.queryByTestId('line-timing')).not.toBeInTheDocument();
+        expect(heads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', 'Amount', '']);
+
+        width = LINES_TABLE_MIN_WIDTH - 1;
+        act(() => resized.forEach((callback) => callback()));
+        expect(screen.getByTestId('line-timing')).toBeInTheDocument();
+      } finally {
+        clientWidth.mockRestore();
+        vi.unstubAllGlobals();
+      }
+    });
   });
 });
