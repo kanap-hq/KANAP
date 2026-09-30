@@ -52,19 +52,22 @@ const CALENDARS_PATH = '/master-data/working-day-calendars';
  * The least width of each column of the lines table, in px: what a field needs to read whole
  * ("31 Dec 2026", "United States", a price with "per month" after it). The description takes what
  * is left, at least its own; a narrower panel scrolls the table sideways instead of squeezing the fields.
+ * The unit price is its number field (`UNIT_PRICE_NUMBER_WIDTH`), then what the price is for: the
+ * people select needs 83 px for its longest word ("per month", "pro Monat") and its arrow.
  */
 export const LINE_COLUMN_WIDTHS = {
   description: 150,
   quantity: 80,
   unit: 125,
-  unitPrice: 190,
+  unitPrice: 177,
   often: 290,
   from: 150,
   to: 150,
-  calendar: 150,
+  calendar: 135,
   amount: 90,
   remove: 28,
 } as const;
+export const UNIT_PRICE_NUMBER_WIDTH = 80;
 export const LINES_TABLE_MIN_WIDTH = Object.values(LINE_COLUMN_WIDTHS).reduce((sum, width) => sum + width, 0);
 
 /**
@@ -540,7 +543,7 @@ export default function LinesPanel({
   // The price, then what it is for: a select for people only, the words otherwise.
   const priceField = (draft: LineDraft) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-      <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
+      <Box sx={{ flex: `0 0 ${UNIT_PRICE_NUMBER_WIDTH}px`, minWidth: 0 }}>
         <FormattedNumberField
           value={draft.unitPrice} decimals={4} emit="string"
           onChange={(e) => patchLine(draft.key, { unitPrice: String(e.target.value ?? '') })}
@@ -665,6 +668,14 @@ export default function LinesPanel({
   } as const;
   const secondRowCellSx = { p: 0, pl: `${LINES_SECOND_ROW_INDENT}px` } as const;
   const gridCellSx = { px: 0.5, py: '2px', minWidth: 0 } as const;
+  // Split like its cells: the label right-aligned over the number field, nothing over what the price is for.
+  const unitPriceHead = (
+    <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unitPrice }}>
+      <Box data-testid="lines-head-unit-price" sx={{ width: UNIT_PRICE_NUMBER_WIDTH, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {t('budgetTab.lines.unitPrice')}
+      </Box>
+    </Box>
+  );
   const fromHead = allDates ? t('budgetTab.lines.date') : t('budgetTab.from');
   const toHead = allDates ? '' : t('budgetTab.to');
 
@@ -679,7 +690,7 @@ export default function LinesPanel({
           <Box component="th" sx={{ ...headSx, minWidth: LINE_COLUMN_WIDTHS.description }}>{t('budgetTab.lines.description')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.quantity, textAlign: 'right' }}>{t('budgetTab.lines.quantity')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unit }}>{t('budgetTab.lines.unit')}</Box>
-          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unitPrice, textAlign: 'right' }}>{t('budgetTab.lines.unitPrice')}</Box>
+          {unitPriceHead}
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.often }}>{t('budgetTab.lines.howOften')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.from }}>{fromHead}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.to }}>{toHead}</Box>
@@ -722,7 +733,7 @@ export default function LinesPanel({
           <Box component="th" sx={{ ...headSx, minWidth: LINE_COLUMN_WIDTHS.description }}>{t('budgetTab.lines.description')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.quantity, textAlign: 'right' }}>{t('budgetTab.lines.quantity')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unit }}>{t('budgetTab.lines.unit')}</Box>
-          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unitPrice, textAlign: 'right' }}>{t('budgetTab.lines.unitPrice')}</Box>
+          {unitPriceHead}
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.amount, textAlign: 'right' }}>{t('budgetTab.amount')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.remove }} />
         </Box>

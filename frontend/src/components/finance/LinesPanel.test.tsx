@@ -43,7 +43,7 @@ vi.mock('../../services/workingDayProfiles', async (importOriginal) => {
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 
 import LinesPanel, {
-  LINE_COLUMN_WIDTHS, LINES_SECOND_ROW_INDENT, LINES_TABLE_MIN_WIDTH, LINES_TWO_ROWS_MIN_WIDTH, LinesPanelProps, defaultCalendarId, tableLineMessage,
+  LINE_COLUMN_WIDTHS, LINES_SECOND_ROW_INDENT, LINES_TABLE_MIN_WIDTH, LINES_TWO_ROWS_MIN_WIDTH, LinesPanelProps, UNIT_PRICE_NUMBER_WIDTH, defaultCalendarId, tableLineMessage,
 } from './LinesPanel';
 import type { LineCalculation, RoundInput, RoundLine } from './roundPeriod';
 import { buildWorkingDayProfiles } from '../../hooks/useWorkingDayProfiles';
@@ -196,14 +196,16 @@ describe('LinesPanel', () => {
   it('keeps every column at its least width: a narrow panel scrolls the table instead of squeezing the fields', () => {
     renderPanel();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    expect(LINES_TABLE_MIN_WIDTH).toBe(1403);
+    expect(LINES_TABLE_MIN_WIDTH).toBe(1375);
     const table = screen.getByTestId('lines-table');
-    expect(table).toHaveStyle({ tableLayout: 'fixed', minWidth: '1403px' });
+    expect(table).toHaveStyle({ tableLayout: 'fixed', minWidth: '1375px' });
     const ths = within(table).getAllByRole('columnheader');
     const { description, ...fixed } = LINE_COLUMN_WIDTHS;
     expect(ths[0]).toHaveStyle({ minWidth: `${description}px` });
     Object.values(fixed).forEach((width, i) => expect(ths[i + 1]).toHaveStyle({ width: `${width}px` }));
     expect(heads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', 'Amount', '']);
+    // Unit price sits over the number field, right-aligned, not over what the price is for.
+    expect(screen.getByTestId('lines-head-unit-price')).toHaveStyle({ width: `${UNIT_PRICE_NUMBER_WIDTH}px`, textAlign: 'right' });
   });
 
   it('a new line is one person per day on the paying company calendar, over the column period, and waits for its days', async () => {
@@ -646,14 +648,15 @@ describe('LinesPanel', () => {
       const second = storedLine({ id: 'l2', sort: 1, label: 'Second' });
       renderPanel({ record: roundWith([storedLine(), second]), layout: 'narrow' });
 
-      expect(LINES_TWO_ROWS_MIN_WIDTH).toBe(764);
-      expect(screen.getByTestId('lines-table')).toHaveStyle({ tableLayout: 'fixed', minWidth: '764px' });
+      expect(LINES_TWO_ROWS_MIN_WIDTH).toBe(749);
+      expect(screen.getByTestId('lines-table')).toHaveStyle({ tableLayout: 'fixed', minWidth: '749px' });
       expect(pricedHeads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'Amount', '']);
       expect(timingHeads()).toEqual(['How often', 'From', 'To', 'Calendar']);
       const [description, ...fixed] = within(screen.getByTestId('lines-head-priced')).getAllByRole('columnheader');
       expect(description).toHaveStyle({ minWidth: `${LINE_COLUMN_WIDTHS.description}px` });
       const { quantity, unit, unitPrice, amount, remove } = LINE_COLUMN_WIDTHS;
       [quantity, unit, unitPrice, amount, remove].forEach((width, i) => expect(fixed[i]).toHaveStyle({ width: `${width}px` }));
+      expect(screen.getByTestId('lines-head-unit-price')).toHaveStyle({ width: `${UNIT_PRICE_NUMBER_WIDTH}px`, textAlign: 'right' });
 
       // One body per line, two rows each: the numbering and the notes count lines.
       expect(rows()).toHaveLength(2);
