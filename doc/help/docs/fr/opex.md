@@ -262,6 +262,8 @@ Construisez une colonne à partir de lignes au lieu de saisir ses montants. Chaq
 | **Calendrier** | Affiché pour un prix par jour uniquement : les personnes au prix par jour, et les jours. Le calendrier de jours ouvrés dont les jours comptent. La liste propose les calendriers activés, plus le calendrier qu'une ligne utilise déjà s'il a été désactivé depuis, marqué « (désactivé) ». Lorsqu'il n'existe encore aucun calendrier, l'onglet indique « Aucun calendrier de jours ouvrés pour l'instant. », avec un lien **Ajouter un calendrier** pour les personnes qui peuvent créer des calendriers. Voir [Calendriers de jours ouvrés](working-day-calendars.md) |
 | **Montant** | Le total de la ligne, une fois enregistrée. En lecture seule |
 
+Lorsque l'onglet est assez large, chaque ligne tient sur une rangée. Sur un écran plus étroit, ou avec le panneau **Propriétés** ouvert sur un écran 1080p, chaque ligne occupe deux rangées alignées, avec **Description**, **Quantité**, **Unité**, **Prix unitaire** et **Montant** sur la première, et **Fréquence**, **Du** et **Au** (ou **Date**) et **Calendrier** sur la seconde ; fermez le panneau **Propriétés** pour revenir à une rangée par ligne.
+
 Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur la croix au bout d'une ligne pour la supprimer. Une colonne contient jusqu'à 50 lignes.
 
 **Unités et prix** :

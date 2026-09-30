@@ -262,6 +262,8 @@ Bauen Sie eine Spalte aus Zeilen auf, statt ihre Beträge einzugeben. Jede Zeile
 | **Kalender** | Nur bei einem Preis pro Tag sichtbar: bei Personen mit Preis pro Tag und bei Tagen. Der Arbeitstagekalender, dessen Tage zählen. Die Liste bietet die aktivierten Kalender an, dazu den Kalender, den eine Zeile bereits verwendet, falls er inzwischen deaktiviert wurde, mit dem Zusatz „(deaktiviert)“. Gibt es noch keinen Kalender, zeigt der Tab „Noch kein Arbeitstagekalender vorhanden.“, mit einem Link **Kalender hinzufügen** für alle, die Kalender anlegen dürfen. Siehe [Arbeitstagekalender](working-day-calendars.md) |
 | **Betrag** | Die Summe der Zeile, sobald sie gespeichert ist. Schreibgeschützt |
 
+Ist der Tab breit genug, steht jede Zeile in einer Reihe. Auf einem schmaleren Bildschirm oder bei geöffnetem Bereich **Eigenschaften** auf einem 1080p-Bildschirm belegt jede Zeile zwei ausgerichtete Reihen, mit **Beschreibung**, **Menge**, **Einheit**, **Stückpreis** und **Betrag** in der ersten und **Wie oft**, **Von** und **Bis** (oder **Datum**) und **Kalender** in der zweiten; schließen Sie den Bereich **Eigenschaften**, um wieder eine Reihe pro Zeile zu erhalten.
+
 Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzufügen, und auf das Kreuz am Ende einer Zeile, um sie zu entfernen. Eine Spalte enthält bis zu 50 Zeilen.
 
 **Einheit und Preis**:

@@ -262,6 +262,8 @@ Build a column from lines instead of typing its amounts. Each line reads as a se
 | **Calendar** | Shown for a price per day only: people priced per day, and days. The working-day calendar whose days count. The list offers the enabled calendars, plus the calendar a line already uses if it was disabled since, marked "(disabled)". When there is no calendar yet, the tab reads "No working-day calendar yet.", with an **Add a calendar** link for those who can create calendars. See [Working-day calendars](working-day-calendars.md) |
 | **Amount** | The total of the line, once it is saved. Read only |
 
+When the tab is wide enough, each line fits on one row. On a narrower screen, or with the **Properties** panel open on a 1080p screen, each line takes two aligned rows, with **Description**, **Quantity**, **Unit**, **Unit price** and **Amount** on the first, and **How often**, **From** and **To** (or **Date**) and **Calendar** on the second; close the **Properties** panel to bring back one row per line.
+
 Click **Add a line** under the table to add a line, and the cross at the end of a line to remove it. A column holds up to 50 lines.
 
 **Units and prices**:

@@ -329,6 +329,8 @@ Construya una columna a partir de líneas en lugar de escribir sus importes. Cad
 | **Calendario** | Solo se muestra para un precio por día: personas con precio por día, y días. El calendario laboral cuyos días cuentan. La lista ofrece los calendarios activados, más el calendario que ya usa una línea si se desactivó después, marcado «(desactivado)». Cuando aún no hay ningún calendario, la pestaña indica «Aún no hay ningún calendario laboral.», con un enlace **Añadir un calendario** para quienes pueden crear calendarios. Consulte [Calendarios laborales](working-day-calendars.md) |
 | **Importe** | El total de la línea, una vez guardada. Solo lectura |
 
+Cuando la pestaña es lo bastante ancha, cada línea ocupa una sola fila. En una pantalla más estrecha, o con el panel **Propiedades** abierto en una pantalla 1080p, cada línea ocupa dos filas alineadas, con **Descripción**, **Cantidad**, **Unidad**, **Precio unitario** e **Importe** en la primera, y **Frecuencia**, **Desde** y **Hasta** (o **Fecha**) y **Calendario** en la segunda; cierre el panel **Propiedades** para volver a una fila por línea.
+
 Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en la cruz al final de una línea para quitarla. Una columna admite hasta 50 líneas.
 
 **Unidades y precios**:
