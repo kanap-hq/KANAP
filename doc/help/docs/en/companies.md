@@ -143,6 +143,7 @@ Use the **End of validity** to control when a company stops being active.
 
 - Companies are **Enabled** by default. Leave the **End of validity** blank to keep the company active indefinitely, or schedule a future date.
 - Switching the company to **Disabled** without a date sets its end of validity to today.
+- When the end of validity passes, the status switches to **Disabled** on its own within the hour.
 - After the end of validity:
     - The company no longer appears in selection lists for new allocations and is excluded from reports for strictly later years.
     - Historical data remains intact; the company still appears in reports covering years when it was active.
@@ -181,8 +182,10 @@ Keep large sets in sync with your source systems using CSV (semicolon `;` separa
 - Start with **Preflight** (validates headers, encoding, required fields, duplicates, and metrics)
 - If Preflight is OK, **Load** will apply inserts and updates
 - Matching is by company **name** (within your workspace). Duplicates in the file are deduplicated by name (first occurrence wins)
-- **Required fields**: Name, Country (2 letters), Base Currency (3 letters), City
+- **Required fields**: Name, Country (2 letters) and Base Currency (3 letters). City is optional in the file
 - **Optional field**: `coa_code` (references a Chart of Accounts; if omitted, the default CoA for the country is used)
+- **Status and end of validity**: `status` is `enabled` or `disabled`, and `disabled_at` is the end of validity, a date (`2026-12-31`) or a full date and time. The export writes the status read from the end of validity. A new company is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the company today
+- A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 - **Metrics**: if you provide any metrics for a year, Headcount is required for that year; IT Users and Turnover are optional. Turnover accepts up to 3 decimals and must be expressed in millions of the company's base currency
 
 **Notes**:

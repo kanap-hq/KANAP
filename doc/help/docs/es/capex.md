@@ -541,7 +541,7 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
    - Los responsables son usuarios activos
    - Un `item_number` corresponde a una partida CAPEX existente
    - Las fechas son válidas y no hay dos filas que describan la misma partida
-4. Revise el informe de verificación previa (muestra conteos y hasta 5 errores de ejemplo). Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa
+4. Revise el informe de verificación previa (muestra conteos y hasta 5 errores de ejemplo). Cada error indica su fila con el número de línea del archivo tal como lo muestra un editor de texto, incluidas las líneas vacías y las celdas que ocupan varias líneas. Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa
 5. Si es correcto, haga clic en **Cargar** para importar
 
 **Notas importantes**:
@@ -592,7 +592,7 @@ Cada partida CAPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin d
 **Cómo funciona**:
 
 - **Habilitado**: La partida está activa y aparece en todas partes (listas, informes, asignaciones)
-- **Fin de validez**: La fecha en que la partida termina. Déjelo en blanco si no hay fin
+- **Fin de validez**: La fecha en que la partida termina. Déjelo en blanco si no hay fin. Cuando pasa el fin de validez, el estado cambia a **Desactivado** por sí solo en el plazo de una hora
 - Después del fin de validez:
   - La partida ya no aparece en listas de selección para nuevos contratos o asignaciones
   - Se excluye de informes para años estrictamente posteriores al fin de validez

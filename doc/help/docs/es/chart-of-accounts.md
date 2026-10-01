@@ -386,6 +386,7 @@ Las cuentas utilizan la misma gestión de ciclo de vida que otros datos maestros
   - **Activadas** por defecto
   - Establezca un **Fin de validez** para dejar de usar una cuenta a partir de una fecha específica. Déjelo en blanco para que la cuenta permanezca activa indefinidamente
   - Si cambia la cuenta a **Desactivado** sin fecha, el fin de validez se fija en hoy
+  - Cuando pasa el fin de validez, el estado cambia a **Desactivado** por sí solo en el plazo de una hora
   - Después del fin de validez:
       - La cuenta ya no aparece en los desplegables de selección para nuevos elementos
       - Los datos históricos permanecen intactos; los elementos existentes conservan sus asignaciones de cuenta

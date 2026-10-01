@@ -143,6 +143,7 @@ Verwenden Sie das **Ende der Gültigkeit**, um zu steuern, wann ein Unternehmen 
 
 - Unternehmen sind standardmäßig **aktiviert**. Lassen Sie das **Ende der Gültigkeit** leer, damit das Unternehmen unbegrenzt aktiv bleibt, oder planen Sie ein zukünftiges Datum.
 - Wenn Sie das Unternehmen ohne Datum auf **Deaktiviert** setzen, wird das Ende der Gültigkeit auf heute gesetzt.
+- Sobald das Ende der Gültigkeit vorbei ist, wechselt der Status innerhalb einer Stunde von selbst auf **Deaktiviert**.
 - Nach dem Ende der Gültigkeit:
     - Das Unternehmen erscheint nicht mehr in Auswahllisten für neue Zuordnungen und wird aus Berichten für strikt spätere Jahre ausgeschlossen.
     - Historische Daten bleiben erhalten; das Unternehmen erscheint weiterhin in Berichten, die Jahre abdecken, in denen es aktiv war.
@@ -181,8 +182,10 @@ Halten Sie große Datensätze mit Ihren Quellsystemen per CSV synchron (Semikolo
 - Beginnen Sie mit der **Vorprüfung** (validiert Kopfzeilen, Kodierung, Pflichtfelder, Duplikate und Kennzahlen)
 - Wenn die Vorprüfung OK ist, wendet **Laden** Neuanlagen und Aktualisierungen an
 - Zuordnung erfolgt über den **Namen** des Unternehmens (innerhalb Ihres Arbeitsbereichs). Duplikate in der Datei werden nach Name dedupliziert (erstes Vorkommen gewinnt)
-- **Pflichtfelder**: Name, Land (2 Buchstaben), Basiswährung (3 Buchstaben), Stadt
+- **Pflichtfelder**: Name, Land (2 Buchstaben) und Basiswährung (3 Buchstaben). Die Stadt ist in der Datei optional
 - **Optionales Feld**: `coa_code` (referenziert einen Kontenplan; wenn weggelassen, wird der Standard-Kontenplan des Landes verwendet)
+- **Status und Ende der Gültigkeit**: `status` ist `enabled` oder `disabled`, und `disabled_at` ist das Ende der Gültigkeit, ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Ein neues Unternehmen ist aktiviert, sofern die Zeile nicht `disabled` angibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet das Unternehmen sonst heute
+- Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“
 - **Kennzahlen**: Wenn Sie Kennzahlen für ein Jahr angeben, ist die Mitarbeiterzahl für dieses Jahr Pflicht; IT-Benutzer und Umsatz sind optional. Umsatz akzeptiert bis zu 3 Dezimalstellen und muss in Millionen der Basiswährung des Unternehmens angegeben werden
 
 **Hinweise**:

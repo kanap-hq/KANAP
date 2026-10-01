@@ -143,6 +143,7 @@ Utilice el **Fin de validez** para controlar cuándo una empresa deja de estar a
 
 - Las empresas están **Activadas** por defecto. Deje el **Fin de validez** en blanco para que la empresa permanezca activa indefinidamente, o programe una fecha futura.
 - Si cambia la empresa a **Desactivado** sin fecha, el fin de validez se fija en hoy.
+- Cuando pasa el fin de validez, el estado cambia a **Desactivado** por sí solo en el plazo de una hora.
 - Después del fin de validez:
     - La empresa ya no aparece en las listas de selección para nuevas asignaciones y se excluye de los informes de años estrictamente posteriores.
     - Los datos históricos permanecen intactos; la empresa sigue apareciendo en informes que cubren años en los que estaba activa.
@@ -181,8 +182,10 @@ Mantenga grandes conjuntos sincronizados con sus sistemas de origen usando CSV (
 - Comience con **Verificación previa** (valida encabezados, codificación, campos obligatorios, duplicados y métricas)
 - Si la verificación previa es correcta, **Cargar** aplicará inserciones y actualizaciones
 - La coincidencia es por **nombre** de empresa (dentro de su espacio de trabajo). Los duplicados en el archivo se deduplicar por nombre (gana la primera ocurrencia)
-- **Campos obligatorios**: Nombre, País (2 letras), Moneda base (3 letras), Ciudad
+- **Campos obligatorios**: Nombre, País (2 letras) y Moneda base (3 letras). La ciudad es opcional en el archivo
 - **Campo opcional**: `coa_code` (referencia un plan de cuentas; si se omite, se usa el CoA predeterminado para el país)
+- **Estado y fin de validez**: `status` es `enabled` o `disabled`, y `disabled_at` es el fin de validez, una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe el estado deducido del fin de validez. Una empresa nueva queda activada salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina la empresa hoy
+- Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." o "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 - **Métricas**: si proporciona alguna métrica para un año, Plantilla es obligatoria para ese año; Usuarios IT y Facturación son opcionales. La facturación admite hasta 3 decimales y debe expresarse en millones de la moneda base de la empresa
 
 **Notas**:

@@ -186,8 +186,8 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 | `company_name` | Pflicht für ein `cost_center`, leer für eine `group`. Über den Unternehmensnamen zugeordnet, unabhängig von Groß- und Kleinschreibung |
 | `owner_email` | Die E-Mail-Adresse des Budgetverantwortlichen, eines aktiven Benutzers. Leer für keinen Budgetverantwortlichen |
 | `description` | Freitext |
-| `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` |
-| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt |
+| `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Knoten und behält bei einer Aktualisierung den gespeicherten Status |
+| `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Knoten sonst heute |
 
 **Import**:
 
@@ -199,7 +199,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 **So funktioniert der Import**:
 
 - **Zeilen in beliebiger Reihenfolge**: Ein untergeordnetes Element kann vor seiner übergeordneten Gruppe stehen. Übergeordnete Elemente werden anhand der gesamten Datei und der bereits in KANAP vorhandenen Elemente aufgelöst.
-- **Die gesamte Datei wird geprüft, bevor etwas geschrieben wird**: jede Zeile, dann die übergeordneten Elemente, dann die Regeln des Baums (eine Kostenstelle hat ein Unternehmen, eine Gruppe keines, nur Gruppen sind übergeordnet, keine Schleifen, eine von Zeilen verwendete Kostenstelle bleibt eine Kostenstelle). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus.
+- **Die gesamte Datei wird geprüft, bevor etwas geschrieben wird**: jede Zeile, dann die übergeordneten Elemente, dann die Regeln des Baums (eine Kostenstelle hat ein Unternehmen, eine Gruppe keines, nur Gruppen sind übergeordnet, keine Schleifen, eine von Zeilen verwendete Kostenstelle bleibt eine Kostenstelle). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus. Jeder Fehler nennt seine Zeile mit der Zeilennummer der Datei, wie ein Texteditor sie anzeigt, einschließlich Leerzeilen und Zellen über mehrere Zeilen.
 - **Zuordnung über den Code**: Eine Zeile, deren Code existiert, aktualisiert dieses Element; jede andere Zeile erstellt eines. Jede Zelle ersetzt den gespeicherten Wert, sodass ein leeres `owner_email` oder `description` ihn löscht.
 - **Unveränderte Zeilen**: Eine Zeile, die dem gespeicherten Element entspricht, ändert nichts. Wenn Sie dieselbe Datei exportieren und importieren, werden alle Zeilen als unverändert gemeldet.
 - **In der Datei fehlende Elemente** bleiben unverändert. Der Import löscht nie.
@@ -211,6 +211,8 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 - **„Unknown budget holder email '...'.“** oder **„Budget holder '...' is not an active user.“**: Die Zelle `owner_email` benennt den Budgetverantwortlichen. Verwenden Sie die E-Mail-Adresse eines aktiven Benutzers oder lassen Sie die Zelle leer.
 - **„Code ... is already used on row N.“**: Zwei Zeilen tragen denselben Code. Behalten Sie eine.
 - **„Type must be 'group' or 'cost_center'.“**: Korrigieren Sie die Zelle `kind`.
+- **„Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“**: Die Zeile ist aktiviert, aber ihr Datum ist bereits vorbei. Eine vor diesem Datum exportierte Datei enthält noch `enabled`: Exportieren Sie erneut oder korrigieren Sie die Zelle.
+- **„Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“**: Die Zeile ist deaktiviert, aber ihr Datum liegt noch in der Zukunft. Korrigieren Sie die Zelle `status` oder `disabled_at`.
 - **„Header mismatch“**: Laden Sie eine neue Vorlage herunter.
 
 ---

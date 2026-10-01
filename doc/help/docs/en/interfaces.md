@@ -48,6 +48,10 @@ The Interfaces grid shows your integration registry at a glance.
 - Column filters on the text columns
 - **Lifecycle**, **Criticality**, **Business process**, **Data category** and **Contains PII** use checkbox filters, so you can pick several values at once. The **Criticality** filter also offers **(Blank)** for interfaces without a criticality
 
+**Sorting**:
+
+- **Criticality** sorts by severity, in the order of the levels in [Classifications and continuity](it-ops-settings.md#classifications-and-continuity). Interfaces without a value come last
+
 **Actions**:
 
 - **Add interface**: Create a new interface (requires `applications:manager`)

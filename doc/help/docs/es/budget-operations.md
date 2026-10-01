@@ -342,13 +342,13 @@ El archivo usa el punto y coma `;` como separador y la codificación UTF-8.
 1. Haga clic en **Importar**, elija el archivo y ejecute la **Verificación previa**
 2. Revise el informe y luego haga clic en **Cargar**
 
-- Todo el archivo se verifica antes de guardar nada. Si una fila tiene un error, no se guarda nada y el informe lista los errores por número de línea
+- Todo el archivo se verifica antes de guardar nada. Si una fila tiene un error, no se guarda nada y el informe lista los errores por número de línea. El número es la línea del archivo tal como la muestra un editor de texto, incluidas las líneas vacías y las celdas que ocupan varias líneas
 - Cada fila reemplaza los doce meses de su partida, año y columna. Las partidas, años y columnas que no están en el archivo no se modifican
 - Los doce meses son obligatorios. Escriba `0` para un mes sin importe
 - Una fila idéntica a lo guardado no se modifica, incluida la forma en que se produjo la columna. Volver a importar una exportación no cambia nada
 - Una fila cuyos importes cambian marca la columna como **Editado a mano**, con el periodo del archivo. Una columna construida a partir de cantidad y precio conserva sus líneas, y su pestaña Presupuesto ofrece usarlas de nuevo. Consulte [Cantidad y precio](opex.md#cantidad-y-precio)
 - El archivo solo contiene importes. Las líneas de una columna se gestionan en la pestaña Presupuesto
-- Una fila que solo cambia el periodo actualiza el periodo y conserva el resto
+- Una fila que solo cambia el periodo actualiza el periodo y conserva el resto. En una columna construida a partir de cantidad y precio, también marca la columna como **Editado a mano** y conserva sus líneas, como una fila cuyos importes cambian
 - Las filas de Realizado siguen las mismas reglas, lo que permite importar el realizado mensual
 - Una fila modificada en una columna congelada se rechaza. Una fila idéntica en una columna congelada se acepta
 - Las filas de una columna oculta se importan como cualquier otra fila. Ocultar una columna nunca bloquea sus importaciones, y una columna oculta congelada sigue rechazando las filas modificadas

@@ -438,7 +438,7 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
      - Dates are valid, and no two rows describe the same item
      - Currencies are allowed in your workspace currency settings
      - Owners are active users
-  4. Review the preflight report (shows counts and up to 5 sample errors). A file with any error loads nothing: fix the rows and run the preflight again
+  4. Review the preflight report (shows counts and up to 5 sample errors). Each error names its row by the line of the file as a text editor shows it, blank lines and cells that span several lines included. A file with any error loads nothing: fix the rows and run the preflight again
   5. If OK, click **Load** to import
 
 **Important notes**:
@@ -483,7 +483,7 @@ Every OPEX item has a **status** (Enabled or Disabled) and an optional **End of 
 
 **How it works**:
   - **Enabled**: The item is active and appears everywhere (lists, reports, allocations)
-  - **End of validity**: The date the item stops. Leave it blank if there is no end
+  - **End of validity**: The date the item stops. Leave it blank if there is no end. When the end of validity passes, the status switches to **Disabled** on its own within the hour
   - After the end of validity:
     - The item no longer appears in selection lists for new contracts or allocations
     - It is excluded from reports for years strictly after the end of validity

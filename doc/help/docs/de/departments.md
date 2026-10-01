@@ -96,20 +96,25 @@ Der Details-Tab verwaltet jahresbezogene Mitarbeiterzahl-Kennzahlen.
 Halten Sie Abteilungen mit Ihrem HR-System per CSV synchron.
 
 **Export**:
-- Lädt alle Abteilungen mit Kennzahlen des aktuellen Jahres herunter
+- Lädt alle Abteilungen mit Unternehmen, Name, Beschreibung, Status und Ende der Gültigkeit herunter
+- Spalten: `company_name;name;description;status;disabled_at`
 
 **Import**:
 - Verwenden Sie die **Vorprüfung** zum Validieren vor dem Anwenden
 - Zuordnung über Abteilungsname + Unternehmensname
 - Kann neue Abteilungen erstellen oder bestehende aktualisieren
 
-**Pflichtfelder**: Name, Unternehmen
+**Pflichtfelder**: `name` und `company_name` (ein vorhandenes Unternehmen)
 
-**Optionale Felder**: Mitarbeiterzahl, Status
+**Optionale Felder**: `description`, `status`, `disabled_at`
+
+**Lebenszyklus-Spalten**:
+- `status` ist `enabled` oder `disabled`, und `disabled_at` ist das Ende der Gültigkeit, ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Eine neue Abteilung ist aktiviert, sofern die Zeile nicht `disabled` angibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet die Abteilung sonst heute
+- Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“
 
 **Hinweise**:
 - Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen
-- Mitarbeiterzahl-Werte sind jahresspezifisch -- importierte Werte gelten für das aktuelle Jahr
+- Die Mitarbeiterzahl ist nicht in der Datei enthalten. Erfassen Sie sie pro Jahr im Tab **Details** der Abteilung
 
 ---
 

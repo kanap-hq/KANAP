@@ -515,7 +515,7 @@ Steuern Sie, welche E-Mail-Benachrichtigungen Sie erhalten.
 | **Aufgaben** | Zuweisung (als Beauftragter, Antragsteller oder Betrachter), Statusänderungen, Kommentare |
 | **Budget** | Ablaufwarnungen, Statusänderungen, Kommentare |
 
-**Ablaufwarnungen** senden den Verantwortlichen eines Vertrags, einer OPEX-Position oder einer CAPEX-Position 30, 14, 7 und 1 Tag(e) vor deren Terminen eine E-Mail: Kündigungsfrist und Enddatum eines Vertrags, Ende der Gültigkeit einer OPEX- oder CAPEX-Position. Nur Verantwortliche, die die Budget-Benachrichtigungen und die **Ablaufwarnungen** eingeschaltet haben, erhalten sie. Die Prüfung läuft jeden Tag um 08:00 UTC.
+**Ablaufwarnungen** senden den Verantwortlichen eines Vertrags, einer OPEX-Position oder einer CAPEX-Position 30, 14, 7 und 1 Tag(e) vor deren Terminen eine E-Mail: Kündigungsfrist und Enddatum eines Vertrags, Ende der Gültigkeit einer OPEX- oder CAPEX-Position. Nur Verantwortliche, die die Budget-Benachrichtigungen und die **Ablaufwarnungen** eingeschaltet haben, erhalten sie. Die Prüfung läuft jeden Tag um 08:00 UTC. Jede Erinnerung geht pro Tag nur einmal an jeden Empfänger, auch wenn die Prüfung an diesem Tag erneut läuft, etwa nach einem Neustart.
 
 **Wöchentliche Zusammenfassungs-E-Mail**: Erhalten Sie eine regelmäßige Zusammenfassung Ihrer Aktivitäten und anstehenden Termine. Konfigurieren Sie:
 - **Wochentag** (z. B. Montag)

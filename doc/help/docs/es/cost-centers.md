@@ -186,8 +186,8 @@ Cargue o actualice todo el árbol desde un archivo.
 | `company_name` | Obligatoria para un `cost_center`, vacía para un `group`. Se empareja por nombre de empresa, sin distinguir mayúsculas y minúsculas |
 | `owner_email` | El correo electrónico del responsable del presupuesto, un usuario activo. Vacía para ningún responsable del presupuesto |
 | `description` | Texto libre |
-| `status` | `enabled` o `disabled`. Vacía significa `enabled` |
-| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. Vacía si no hay fin |
+| `status` | `enabled` o `disabled`. Vacía significa `enabled` para un nodo nuevo y conserva el estado guardado en una actualización |
+| `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. Vacía si no hay fin. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el nodo hoy |
 
 **Importar**:
 
@@ -199,7 +199,7 @@ Cargue o actualice todo el árbol desde un archivo.
 **Cómo funciona la importación**:
 
 - **Filas en cualquier orden**: un elemento hijo puede aparecer antes que su grupo superior. Los superiores se resuelven con todo el archivo y con los elementos ya existentes en KANAP.
-- **Todo el archivo se comprueba antes de escribir nada**: cada fila, después los superiores y después las reglas del árbol (un centro de coste tiene empresa, un grupo no, solo los grupos son superiores, sin bucles, un centro de coste usado por líneas sigue siendo centro de coste). Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa.
+- **Todo el archivo se comprueba antes de escribir nada**: cada fila, después los superiores y después las reglas del árbol (un centro de coste tiene empresa, un grupo no, solo los grupos son superiores, sin bucles, un centro de coste usado por líneas sigue siendo centro de coste). Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa. Cada error indica su fila con el número de línea del archivo tal como lo muestra un editor de texto, incluidas las líneas vacías y las celdas que ocupan varias líneas.
 - **Emparejamiento por código**: una fila cuyo código existe actualiza ese elemento; cualquier otra fila crea uno. Cada celda sustituye el valor almacenado, de modo que un `owner_email` o una `description` vacíos lo borran.
 - **Filas sin cambios**: una fila idéntica al elemento almacenado no cambia nada. Exportar e importar el mismo archivo indica todas las filas como sin cambios.
 - **Los elementos que faltan en el archivo** se dejan como están. La importación nunca elimina.
@@ -211,6 +211,8 @@ Cargue o actualice todo el árbol desde un archivo.
 - **"Unknown budget holder email '...'."** o **"Budget holder '...' is not an active user."**: la celda `owner_email` designa al responsable del presupuesto. Use el correo electrónico de un usuario activo o deje la celda vacía.
 - **"Code ... is already used on row N."**: dos filas llevan el mismo código. Conserve una.
 - **"Type must be 'group' or 'cost_center'."**: corrija la celda `kind`.
+- **"Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again."**: la fila está activada con una fecha ya pasada. Un archivo exportado antes de esa fecha todavía indica `enabled`: vuelva a exportar o corrija la celda.
+- **"Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."**: la fila está desactivada con una fecha aún por llegar. Corrija la celda `status` o `disabled_at`.
 - **"Header mismatch"**: descargue una plantilla nueva.
 
 ---

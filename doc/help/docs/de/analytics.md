@@ -158,6 +158,7 @@ Dimensionen und Werte haben jeweils einen Status (**Aktiviert** oder **Deaktivie
 
 - **Ende der Gültigkeit**: das Datum, an dem die Dimension oder der Wert endet. Lassen Sie es leer, damit sie aktiv bleiben. Sie können auch ein zukünftiges Datum planen.
 - Ein Wechsel auf **Deaktiviert** ohne Datum setzt das Ende der Gültigkeit auf heute. Ein Wechsel zurück auf **Aktiviert** löscht das Datum.
+- Sobald das Ende der Gültigkeit vorbei ist, wechselt der Status innerhalb einer Stunde von selbst auf **Deaktiviert**.
 
 **Ein deaktivierter Wert**:
 
@@ -231,8 +232,8 @@ Um Werte auf Budgetzeilen aus einer Datei zu setzen, verwenden Sie die OPEX- und
 | `axis_code` | Der Code der Dimension des Werts, unabhängig von Groß- und Kleinschreibung. Leer bedeutet die Standarddimension |
 | `name` | Pflicht. Der Name des Werts |
 | `description` | Freitext |
-| `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` |
-| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt |
+| `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Wert und behält bei einer Aktualisierung den gespeicherten Status |
+| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Wert sonst heute |
 
 Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status` oder `disabled_at`, behalten bestehende Werte, was dafür gespeichert ist, und neue Werte sind aktiviert und ohne Beschreibung. Eine Datei ohne `axis_code` legt jede Zeile in die Standarddimension.
 
@@ -245,7 +246,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status` oder
 
 **So funktioniert der Import**:
 
-- **Die gesamte Datei wird geprüft, bevor etwas geschrieben wird.** Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus.
+- **Die gesamte Datei wird geprüft, bevor etwas geschrieben wird.** Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus. Jeder Fehler nennt seine Zeile mit der Zeilennummer der Datei, wie ein Texteditor sie anzeigt, einschließlich Leerzeilen und Zellen über mehrere Zeilen.
 - **Zuordnung über Dimension und Name**: Eine Zeile, deren Name in ihrer Dimension existiert, aktualisiert diesen Wert; jede andere Zeile erstellt einen. Jede Zelle ersetzt den gespeicherten Inhalt, sodass eine leere `description` ihn löscht. Ein Name in anderer Groß- und Kleinschreibung findet den gespeicherten Wert und benennt ihn nicht um. Um einen Wert umzubenennen, benennen Sie ihn auf der Seite um.
 - **Unveränderte Zeilen**: Eine Zeile, die dem gespeicherten Wert entspricht, ändert nichts. Wenn Sie dieselbe Datei exportieren und importieren, werden alle Zeilen als unverändert gemeldet.
 - **Deaktivierte Dimensionen**: Eine Zeile einer deaktivierten Dimension wird akzeptiert, wenn sie nichts ändert, sodass eine exportierte Datei unverändert importiert wird. Eine Zeile, die dort einen Wert erstellen oder ändern würde, wird abgelehnt.
@@ -257,6 +258,8 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status` oder
 - **„The ... dimension is disabled. Enable it or leave it out.“**: Eine Zeile erstellt oder ändert einen Wert in einer deaktivierten Dimension. Aktivieren Sie die Dimension, oder entfernen Sie die Zeile.
 - **„... is already on row N.“**: Zwei Zeilen tragen denselben Namen für dieselbe Dimension. Behalten Sie eine.
 - **„Invalid status '...'. Use 'enabled' or 'disabled'.“**: Korrigieren Sie die Zelle `status`.
+- **„Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“**: Die Zeile ist aktiviert, aber ihr Datum ist bereits vorbei. Eine vor diesem Datum exportierte Datei enthält noch `enabled`: Exportieren Sie erneut oder korrigieren Sie die Zelle.
+- **„Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“**: Die Zeile ist deaktiviert, aber ihr Datum liegt noch in der Zukunft. Korrigieren Sie die Zelle `status` oder `disabled_at`.
 - **„Header mismatch“**: Laden Sie eine neue Vorlage herunter.
 
 ---

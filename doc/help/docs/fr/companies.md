@@ -143,6 +143,7 @@ Utilisez la **Fin de validité** pour contrôler quand une société cesse d'êt
 
 - Les sociétés sont **Activées** par défaut. Laissez la **Fin de validité** vide pour que la société reste active indéfiniment, ou programmez une date future.
 - Passer la société à **Désactivé** sans date fixe sa fin de validité à aujourd'hui.
+- Une fois la fin de validité passée, le statut passe à **Désactivé** de lui-même dans l'heure.
 - Après la fin de validité :
     - La société n'apparaît plus dans les listes de sélection pour les nouvelles ventilations et est exclue des rapports pour les années strictement postérieures.
     - Les données historiques restent intactes ; la société apparaît toujours dans les rapports couvrant les années où elle était active.
@@ -181,8 +182,10 @@ Maintenez de grands ensembles synchronisés avec vos systèmes sources en utilis
 - Commencez par la **Vérification préalable** (valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques)
 - Si la vérification est OK, **Charger** applique les insertions et mises à jour
 - La correspondance se fait par **nom** de société (dans votre espace de travail). Les doublons dans le fichier sont dédupliqués par nom (la première occurrence l'emporte)
-- **Champs obligatoires** : Nom, Pays (2 lettres), Devise de base (3 lettres), Ville
+- **Champs obligatoires** : Nom, Pays (2 lettres) et Devise de base (3 lettres). La ville est facultative dans le fichier
 - **Champ optionnel** : `coa_code` (référence un plan comptable ; si omis, le CoA par défaut pour le pays est utilisé)
+- **Statut et fin de validité** : `status` vaut `enabled` ou `disabled`, et `disabled_at` est la fin de validité, une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit le statut déduit de la fin de validité. Une nouvelle société est activée sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la société aujourd'hui
+- Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
 - **Métriques** : si vous fournissez des métriques pour une année, l'Effectif est obligatoire pour cette année ; Utilisateurs IT et Chiffre d'affaires sont optionnels. Le Chiffre d'affaires accepte jusqu'à 3 décimales et doit être exprimé en millions de la devise de base de la société
 
 **Notes** :

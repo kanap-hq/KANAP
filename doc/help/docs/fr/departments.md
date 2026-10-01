@@ -96,20 +96,25 @@ L'onglet Détails gère les métriques d'effectif année par année.
 Maintenez les départements synchronisés avec votre système RH via CSV.
 
 **Export** :
-- Télécharge tous les départements avec les métriques de l'année en cours
+- Télécharge tous les départements avec leur société, leur nom, leur description, leur statut et leur fin de validité
+- Colonnes : `company_name;name;description;status;disabled_at`
 
 **Import** :
 - Utilisez le **Contrôle préalable** pour valider avant d'appliquer
 - Correspondance par nom de département + nom de société
 - Peut créer de nouveaux départements ou mettre à jour les existants
 
-**Champs obligatoires** : Nom, Société
+**Champs obligatoires** : `name` et `company_name` (une société existante)
 
-**Champs optionnels** : Effectif, Statut
+**Champs optionnels** : `description`, `status`, `disabled_at`
+
+**Colonnes de cycle de vie** :
+- `status` vaut `enabled` ou `disabled`, et `disabled_at` est la fin de validité, une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit le statut déduit de la fin de validité. Un nouveau département est activé sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le département aujourd'hui
+- Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
 
 **Notes** :
 - Utilisez l'**encodage UTF-8** et les **points-virgules** comme séparateurs
-- Les valeurs d'effectif sont spécifiques à l'année — les valeurs importées s'appliquent à l'année en cours
+- L'effectif ne figure pas dans le fichier. Saisissez-le par année dans l'onglet **Détails** du département
 
 ---
 

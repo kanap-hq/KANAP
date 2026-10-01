@@ -131,7 +131,7 @@ El encabezado contiene:
   - **Indicador de posición**: Su posición en la lista filtrada (p. ej., "3 de 12") con flechas **Anterior** / **Siguiente**
   - **Enviar enlace**: Enviar por correo electrónico un enlace a la tarea
   - **Convertir en solicitud**: Promover la tarea a una solicitud del portafolio
-  - **Eliminar**: Eliminar la tarea (requiere `tasks:admin`)
+  - **Eliminar**: Eliminar la tarea, con sus comentarios y su historial (requiere `tasks:admin`). Primero se pide confirmación, y la eliminación no se puede deshacer
   - **Cerrar**: Volver a la lista de tareas
 
 Debajo de la barra de herramientas, el bloque de título muestra:

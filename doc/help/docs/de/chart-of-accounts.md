@@ -386,6 +386,7 @@ Konten verwenden das gleiche Lebenszyklusmanagement wie andere Stammdaten:
   - Standardmäßig **aktiviert**
   - Setzen Sie ein **Ende der Gültigkeit**, um ein Konto ab einem bestimmten Datum nicht mehr zu verwenden. Lassen Sie es leer, damit das Konto unbegrenzt aktiv bleibt
   - Wenn Sie das Konto ohne Datum auf **Deaktiviert** setzen, wird das Ende der Gültigkeit auf heute gesetzt
+  - Sobald das Ende der Gültigkeit vorbei ist, wechselt der Status innerhalb einer Stunde von selbst auf **Deaktiviert**
   - Nach dem Ende der Gültigkeit:
       - Das Konto erscheint nicht mehr in Auswahl-Dropdowns für neue Positionen
       - Historische Daten bleiben erhalten; bestehende Positionen behalten ihre Kontozuweisungen

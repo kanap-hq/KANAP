@@ -131,7 +131,7 @@ Die Kopfzeile enthält:
   - **Positionsindikator**: Ihre Position in der gefilterten Liste (z. B. „3 von 12") mit **Vorherige** / **Nächste**-Pfeilen
   - **Link senden**: Eine Link zur Aufgabe per E-Mail senden
   - **In Anfrage umwandeln**: Die Aufgabe zu einer Portfolio-Anfrage befördern
-  - **Löschen**: Die Aufgabe entfernen (erfordert `tasks:admin`)
+  - **Löschen**: Die Aufgabe mit ihren Kommentaren und ihrem Verlauf entfernen (erfordert `tasks:admin`). Sie bestätigen zuerst, und das Löschen lässt sich nicht rückgängig machen
   - **Schließen**: Zur Aufgabenliste zurückkehren
 
 Unter der Symbolleiste zeigt der Titelblock:

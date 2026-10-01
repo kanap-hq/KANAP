@@ -438,7 +438,7 @@ Vous pouvez charger en masse les postes OPEX via CSV pour accélérer la configu
      - Les dates sont valides, et deux lignes ne décrivent pas le même poste
      - Les devises sont autorisées dans les paramètres de devise de votre espace de travail
      - Les responsables sont des utilisateurs actifs
-  4. Examinez le rapport de vérification (il affiche les totaux et jusqu'à 5 exemples d'erreurs). Un fichier qui contient une erreur ne charge rien : corrigez les lignes et relancez la vérification
+  4. Examinez le rapport de vérification (il affiche les totaux et jusqu'à 5 exemples d'erreurs). Chaque erreur désigne sa ligne par le numéro de ligne du fichier tel qu'un éditeur de texte l'affiche, lignes vides et cellules sur plusieurs lignes comprises. Un fichier qui contient une erreur ne charge rien : corrigez les lignes et relancez la vérification
   5. Si tout est correct, cliquez sur **Charger** pour importer
 
 **Remarques importantes** :
@@ -483,7 +483,7 @@ Chaque poste OPEX a un **statut** (Activé ou Désactivé) et une **Fin de valid
 
 **Fonctionnement** :
   - **Activé** : Le poste est actif et apparaît partout (listes, rapports, ventilations)
-  - **Fin de validité** : La date à laquelle le poste s'arrête. Laissez-la vide s'il n'y a pas de fin
+  - **Fin de validité** : La date à laquelle le poste s'arrête. Laissez-la vide s'il n'y a pas de fin. Une fois la fin de validité passée, le statut passe à **Désactivé** de lui-même dans l'heure
   - Après la fin de validité :
     - Le poste n'apparaît plus dans les listes de sélection pour de nouveaux contrats ou ventilations
     - Il est exclu des rapports pour les années strictement postérieures à la fin de validité

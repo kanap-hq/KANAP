@@ -342,13 +342,13 @@ Die Datei verwendet das Semikolon `;` als Trennzeichen und die Kodierung UTF-8.
 1. Klicken Sie auf **Importieren**, wählen Sie die Datei und starten Sie die **Vorabprüfung**
 2. Prüfen Sie den Bericht und klicken Sie dann auf **Laden**
 
-- Die gesamte Datei wird geprüft, bevor etwas gespeichert wird. Enthält eine Zeile einen Fehler, wird nichts gespeichert, und der Bericht listet die Fehler nach Zeilennummer auf
+- Die gesamte Datei wird geprüft, bevor etwas gespeichert wird. Enthält eine Zeile einen Fehler, wird nichts gespeichert, und der Bericht listet die Fehler nach Zeilennummer auf. Die Nummer ist die Zeile der Datei, wie ein Texteditor sie anzeigt, einschließlich Leerzeilen und Zellen über mehrere Zeilen
 - Jede Zeile ersetzt die zwölf Monate ihrer Position, ihres Jahres und ihrer Spalte. Positionen, Jahre und Spalten, die nicht in der Datei stehen, bleiben unverändert
 - Alle zwölf Monate sind Pflicht. Tragen Sie `0` für einen Monat ohne Betrag ein
 - Eine Zeile, die dem gespeicherten Stand entspricht, bleibt unverändert, einschließlich der Angabe, wie die Spalte entstanden ist. Ein erneuter Import eines Exports ändert nichts
 - Eine Zeile mit geänderten Beträgen kennzeichnet die Spalte als **Von Hand geändert**, mit dem Zeitraum aus der Datei. Eine aus Menge und Preis aufgebaute Spalte behält ihre Zeilen, und ihr Budget-Tab bietet an, sie wieder zu verwenden. Siehe [Menge und Preis](opex.md#menge-und-preis)
 - Die Datei enthält nur Beträge. Die Zeilen einer Spalte werden im Budget-Tab verwaltet
-- Eine Zeile, die nur den Zeitraum ändert, aktualisiert den Zeitraum und behält den Rest bei
+- Eine Zeile, die nur den Zeitraum ändert, aktualisiert den Zeitraum und behält den Rest bei. Bei einer aus Menge und Preis aufgebauten Spalte kennzeichnet sie die Spalte außerdem als **Von Hand geändert** und behält ihre Zeilen, wie eine Zeile mit geänderten Beträgen
 - Ist-Werte-Zeilen folgen denselben Regeln, sodass Sie monatliche Ist-Werte importieren können
 - Eine geänderte Zeile in einer eingefrorenen Spalte wird abgelehnt. Eine unveränderte Zeile in einer eingefrorenen Spalte wird akzeptiert
 - Zeilen für eine ausgeblendete Spalte werden wie jede andere Zeile importiert. Das Ausblenden einer Spalte blockiert nie ihre Importe, und eine ausgeblendete eingefrorene Spalte lehnt geänderte Zeilen weiterhin ab
