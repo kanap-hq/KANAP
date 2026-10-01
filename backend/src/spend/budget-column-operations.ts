@@ -11,6 +11,7 @@ import {
   BUDGET_COLUMN_MEASURE,
   BudgetColumn,
   MEASURE_FREEZE_COLUMN,
+  lockYearMonths,
   readVersionMonths,
   replaceAmounts,
   yearPeriods,
@@ -204,7 +205,11 @@ export function validityInYear(year: number, item: Pick<ItemRow, 'effective_star
   return months.length > 0 ? { start, end, months } : null;
 }
 
-/** Every item of the tenant, ended or not. Dates are read as text so no time zone shifts them. */
+/**
+ * Every item of the tenant, ended or not. Dates are read as text so no time
+ * zone shifts them. The id breaks ties: the lines of one import share their
+ * created_at, and the order must not change from one run to the next.
+ */
 async function loadItems(manager: EntityManager, scope: AmountScope, tenantId: string): Promise<ItemRow[]> {
   const t = SCOPES[scope];
   return manager.query(
@@ -213,7 +218,7 @@ async function loadItems(manager: EntityManager, scope: AmountScope, tenantId: s
             to_char(disabled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS end_of_validity
      FROM ${t.items}
      WHERE tenant_id = $1
-     ORDER BY created_at DESC`,
+     ORDER BY created_at DESC, id DESC`,
     [tenantId],
   );
 }
@@ -269,14 +274,16 @@ export async function loadVersions(
 /**
  * The version of an item's year, created (and audited) when it has none, with
  * the item's tenant_id. Get-or-create: a version a concurrent request created
- * meanwhile is used as it is (see `budget-version-ensure.ts`).
+ * meanwhile is used as it is (see `budget-version-ensure.ts`); `created` says
+ * which, so a caller that decided on a snapshot without that version can
+ * check it again (a budget tab may have typed months into it).
  */
 export async function createBudgetVersion(
   deps: Pick<BudgetOperationDeps, 'manager' | 'audit'>,
   scope: AmountScope,
   params: { itemId: string; tenantId: string; year: number; name: string; inputGrain: 'annual' | 'quarterly' | 'monthly' },
   userId: string | null,
-): Promise<BudgetVersionRow> {
+): Promise<{ version: BudgetVersionRow; created: boolean }> {
   const ensured = await ensureBudgetVersion(deps.manager, scope, {
     tenantId: params.tenantId,
     itemId: params.itemId,
@@ -296,7 +303,10 @@ export async function createBudgetVersion(
       { manager: deps.manager },
     );
   }
-  return { id: version.id, tenant_id: params.tenantId, budget_year: params.year, item_id: params.itemId, input_grain: version.input_grain };
+  return {
+    version: { id: version.id, tenant_id: params.tenantId, budget_year: params.year, item_id: params.itemId, input_grain: version.input_grain },
+    created,
+  };
 }
 
 export type CopyColumnOperation = {
@@ -399,12 +409,26 @@ export async function copyBudgetColumn(
     }
 
     if (!destinationVersion) {
-      destinationVersion = await createBudgetVersion(
+      const ensured = await createBudgetVersion(
         deps,
         scope,
         { itemId: item.id, tenantId: item.tenant_id, year: destinationYear, name: `Y${destinationYear}`, inputGrain: sourceVersion.input_grain ?? 'annual' },
         userId,
       );
+      destinationVersion = ensured.version;
+      if (!ensured.created && !overwrite) {
+        // The year had no version in the snapshot, and one exists now: a budget
+        // tab created it meanwhile and may have typed months into it. Decide
+        // again on its months, read under the lock every amounts write takes
+        // (a save in flight is waited for): a column with amounts is kept, as
+        // for a destination that had them from the start.
+        await lockYearMonths({ manager: mg, scope, version: destinationVersion }, destinationYear);
+        const locked = (await readVersionMonths(mg, scope, tenantId, [destinationVersion])).get(destinationVersion.id)!;
+        if (locked.months[destinationMeasure].some((v) => v !== 0n)) {
+          skipped++;
+          continue;
+        }
+      }
     }
 
     // Replace the destination measure only; the other measures keep their months.

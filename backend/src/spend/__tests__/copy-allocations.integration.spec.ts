@@ -140,6 +140,39 @@ async function testManualCopy(kind: Kind) {
   });
 }
 
+/**
+ * A destination still holding rows an older automatic method stored
+ * (is_system_generated) takes a manual split: every row of the version is
+ * replaced, so a system row for a company of the split does not hit the
+ * unique key (version, company, department) of migration 1853730000000.
+ */
+async function testManualCopyOverSystemRows(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-alloc-system`);
+    const north = await seedCompany(runner, tenantId, 'North');
+    const south = await seedCompany(runner, tenantId, 'South');
+    const itemId = await seedItem(runner, kind, tenantId, 1, 'Legacy rows');
+    await seedAllocatedVersion(runner, kind, tenantId, itemId, YEAR, 'manual_pct', [[north, 60], [south, 40]]);
+    const destination = await seedAllocatedVersion(runner, kind, tenantId, itemId, YEAR + 1, 'headcount', []);
+    for (const [companyId, pct] of [[north, 70], [south, 30]] as Array<[string, number]>) {
+      await runner.query(
+        `INSERT INTO ${T[kind].allocations} (tenant_id, version_id, company_id, allocation_pct, is_system_generated) VALUES ($1, $2, $3, $4, true)`,
+        [tenantId, destination, companyId, pct],
+      );
+    }
+
+    const done = await copyAllocations(kind, runner, { sourceYear: YEAR, destinationYear: YEAR + 1 });
+    assert.deepEqual(done.summary, { totalItems: 1, processed: 1, skipped: 0, errors: 0 }, `${kind}: copied (system rows are no manual split)`);
+    const next = await readVersion(runner, kind, itemId, YEAR + 1);
+    assert.deepEqual([next!.allocation_method, next!.rows], ['manual_pct', [[north, 60], [south, 40]]], `${kind}: the manual split replaces the system rows`);
+    const [{ n }] = await runner.query(
+      `SELECT count(*)::int AS n FROM ${T[kind].allocations} WHERE version_id = $1 AND is_system_generated`,
+      [destination],
+    );
+    assert.equal(n, 0, `${kind}: no system row left`);
+  });
+}
+
 /** An automatic method is taken by the destination; its shares come from the metrics, no row is stored. */
 async function testAutomaticMethod(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
@@ -254,6 +287,7 @@ async function testAllOrNothing(kind: Kind) {
 
 void runSpecs('copy-allocations.integration.spec', KINDS.flatMap((kind) => [
   [`testManualCopy(${kind})`, () => testManualCopy(kind)],
+  [`testManualCopyOverSystemRows(${kind})`, () => testManualCopyOverSystemRows(kind)],
   [`testAutomaticMethod(${kind})`, () => testAutomaticMethod(kind)],
   [`testRefusedLine(${kind})`, () => testRefusedLine(kind)],
   [`testAllOrNothing(${kind})`, () => testAllOrNothing(kind)],

@@ -16,8 +16,10 @@ import { Kind, seedItem, seedVersion } from './round-inputs.fixtures';
 //   their percentages added, department NULL counting as one value; up() logs
 //   what it deleted, creates the unique index, and leaves row level security
 //   as it found it;
-// - a clean database, and a second run: nothing deleted, nothing logged, the
-//   index kept;
+// - rows without duplicates, and a second run: nothing deleted, nothing logged,
+//   the index kept;
+// The assertions read this test's own rows (its tenant and versions), never
+// table-wide counts: the database may hold other tenants' rows.
 // - the index refuses a second row for the same key, NULL department included.
 
 const migration = new Migration();
@@ -129,14 +131,17 @@ async function testDuplicatesThenIndex() {
       const def = await indexDef(runner, kind);
       assert.match(String(def), /CREATE UNIQUE INDEX .* \(version_id, company_id, (department_id\) NULLS NOT DISTINCT|COALESCE\(department_id)/, `${kind}: the unique index`);
       assert.deepEqual(await rowSecurity(runner, kind), { enabled: true, forced: true }, `${kind}: row level security as found`);
+      // The summary counts the whole table (other tenants' duplicates too): it must at least cover these.
       const summary = lines.find((l) => l.startsWith(`${LOG_PREFIX} ${TABLES[kind].table}:`));
-      assert.ok(
-        summary?.includes('4 duplicate row(s) deleted on 1 version(s): 3 of an earlier save') && summary.includes('1 merged'),
-        `${kind}: the counts are logged (${summary})`,
-      );
+      const counted = Number(/: (\d+) duplicate row\(s\) deleted/.exec(summary ?? '')?.[1] ?? 0);
+      assert.ok(counted >= 4, `${kind}: the deletions are logged (${summary})`);
     }
-    assert.equal(lines.filter((l) => l.includes('  deleted ') && l.includes('(older save;')).length, 6, 'each row of an earlier save is named');
-    assert.equal(lines.filter((l) => l.includes('  deleted ') && l.includes('(merged;')).length, 2, 'each merged row is named');
+    // Each row deleted here is named, with its reason (only this test's tenant is counted).
+    const named = (reason: string) => lines.filter((l) => l.includes('  deleted ') && l.includes(`(${reason}; tenant ${s.tenantId},`)).length;
+    if (!lines.some((l) => l.includes('  ... and '))) {
+      assert.equal(named('older save'), 6, 'each row of an earlier save is named');
+      assert.equal(named('merged'), 2, 'each merged row is named');
+    }
 
     // The index refuses a second row of a key, NULL department included.
     for (const kind of ['opex', 'capex'] as Kind[]) {
@@ -153,7 +158,7 @@ async function testDuplicatesThenIndex() {
   });
 }
 
-/** A clean database, and a second run: nothing deleted, nothing logged, the index kept. */
+/** Rows without duplicates, and a second run: nothing deleted, nothing logged, the index kept. */
 async function testCleanAndRerun() {
   await inRolledBackTransaction(async (runner) => {
     await migration.down(runner);
@@ -164,7 +169,7 @@ async function testCleanAndRerun() {
       await insertRow(runner, kind, s, s.c2, null, 25, '2026-01-01T10:00:00Z');
     }
     const first = await captureLog(() => migration.up(runner));
-    assert.deepEqual(first.lines.filter((l) => l.startsWith(LOG_PREFIX)), [], 'a clean database logs nothing');
+    assert.deepEqual(first.lines.filter((l) => l.includes(`tenant ${s.tenantId},`)), [], 'rows without duplicates are neither deleted nor named');
     const defs = { opex: await indexDef(runner, 'opex'), capex: await indexDef(runner, 'capex') };
     const second = await captureLog(() => migration.up(runner));
     assert.deepEqual(second.lines, [], 'a second run logs nothing');

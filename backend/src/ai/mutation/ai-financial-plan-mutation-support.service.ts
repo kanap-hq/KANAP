@@ -1033,10 +1033,12 @@ export class AiFinancialPlanMutationSupportService {
     itemId: string,
     fields: Record<string, unknown>,
   ): Promise<unknown> {
+    // A version created since the preview (a budget tab, an import) is refused,
+    // not returned as if this action had created it (and audited as such).
     if (entityType === 'spend_items') {
-      return this.spendVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager });
+      return this.spendVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true });
     }
-    return this.capexVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager });
+    return this.capexVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true });
   }
 
   private updateVersion(

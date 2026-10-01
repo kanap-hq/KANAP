@@ -82,17 +82,32 @@ export class AllocationsUniqueKey1853730000000 implements MigrationInterface {
   }
 }
 
-/** Runs `fn` with row level security off on the table, then restores what was found. */
+/**
+ * Runs `fn` with row level security off on the table, then restores what was
+ * found, also when `fn` fails. After a failed statement the transaction is
+ * aborted and refuses the restore: its rollback restores the state then, and
+ * the error of `fn` is the one reported.
+ */
 async function withoutRowSecurity<T>(queryRunner: QueryRunner, table: string, fn: () => Promise<T>): Promise<T> {
   const [state] = await queryRunner.query(
     `SELECT relrowsecurity AS enabled, relforcerowsecurity AS forced FROM pg_class WHERE oid = $1::regclass`,
     [table],
   );
   if (state?.enabled) await queryRunner.query(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);
-  const result = await fn();
-  if (state?.enabled) await queryRunner.query(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
-  if (state?.forced) await queryRunner.query(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`);
-  return result;
+  let failed = false;
+  try {
+    return await fn();
+  } catch (error) {
+    failed = true;
+    throw error;
+  } finally {
+    try {
+      if (state?.enabled) await queryRunner.query(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
+      if (state?.forced) await queryRunner.query(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`);
+    } catch (restoreError) {
+      if (!failed) throw restoreError;
+    }
+  }
 }
 
 /**

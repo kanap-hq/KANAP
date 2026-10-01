@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { SpendVersion } from './spend-version.entity';
@@ -34,8 +34,11 @@ export class SpendVersionsService {
    * is, also when a concurrent request created it a moment ago (see
    * `budget-version-ensure.ts`). A name already used by another year of the
    * item is refused (400).
+   * With `refuseExisting`, an existing version of the year is refused (409)
+   * instead of returned: for a caller that asked to create one and would
+   * otherwise report a creation that did not happen (the AI action).
    */
-  async createForItem(itemId: string, body: Partial<SpendVersion>, userId?: string, opts?: { manager?: EntityManager }) {
+  async createForItem(itemId: string, body: Partial<SpendVersion>, userId?: string, opts?: { manager?: EntityManager; refuseExisting?: boolean }) {
     if (!body.version_name) throw new BadRequestException('version_name required');
     const asOf = body.as_of_date ?? new Date().toISOString().slice(0, 10);
     const yr = typeof (body as any).budget_year === 'number' ? (body as any).budget_year : new Date(asOf).getFullYear();
@@ -62,6 +65,9 @@ export class SpendVersionsService {
       reportingCurrency: settings.reportingCurrency,
     });
     if (!ensured) throw new BadRequestException('version_name must be unique per item');
+    if (!ensured.created && opts?.refuseExisting) {
+      throw new ConflictException(`This line already has a budget version for ${yr}.`);
+    }
     if (ensured.created) {
       await this.audit.log({ table: 'spend_versions', recordId: ensured.version.id, action: 'create', before: null, after: ensured.version, userId }, { manager: mg });
     }

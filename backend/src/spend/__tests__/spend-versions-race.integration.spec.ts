@@ -2,7 +2,7 @@ import { CapexVersionsService } from '../../capex/capex-versions.service';
 import { BUDGET_ROWS_HEADERS, BudgetRowsCsvService } from '../budget-rows-csv.service';
 import { SpendVersionsService } from '../spend-versions.service';
 import { captureAudit, Kind, noFreeze, seedItem } from './round-inputs.fixtures';
-import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
+import { assert, assertSucceeded, httpStatus, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
 // Races of the budget version create (plan planning/perf-scale, step 0.3,
 // Annexe A #13), fixed by lot 3A.
@@ -60,6 +60,36 @@ async function twoTabsCreateTheYear(kind: Kind) {
   });
 }
 
+/**
+ * The AI's create_version (`refuseExisting`) meets a budget tab creating the
+ * same year: the tab gets its version, the AI's action is refused (409)
+ * instead of reporting, and auditing, a creation that did not happen.
+ */
+async function aiCreateVersusTab(kind: Kind) {
+  await withRace(`${kind}-version-ai`, async (race) => {
+    const itemId = await race.seedWith((runner) => seedItem(runner, kind, race.tenantId, 1));
+    const ai = await race.open('AI create_version');
+    const tab = await race.open('budget tab');
+    const aiAudit = captureAudit();
+    const aiService: { createForItem: (...args: any[]) => Promise<unknown> } = kind === 'opex'
+      ? new SpendVersionsService(undefined as any, undefined as any, aiAudit as any, currencySettings as any)
+      : new CapexVersionsService(undefined as any, undefined as any, aiAudit as any, currencySettings as any);
+
+    const aiInsert = race.gate(ai, { label: 'insert the version', when: 'before', match: sql.insertInto(VERSIONS[kind]) });
+    const aiWork = race.start(ai, (manager) => aiService.createForItem(itemId, { ...uiVersion } as any, undefined, { manager, refuseExisting: true }));
+    assert.equal(await progress(aiWork, { party: ai, gate: aiInsert }), 'gated', 'harness: the AI must pause before inserting the version');
+    const tabWork = race.start(tab, (manager) => versionsService(kind).createForItem(itemId, { ...uiVersion }, undefined, { manager }));
+    await progress(tabWork, { party: tab });
+    aiInsert.release();
+    const [aiDone, tabDone] = await Promise.all([settle(aiWork), settle(tabWork)]);
+    assertSucceeded(tabDone, 'the budget tab');
+    assert.ok(!aiDone.ok && httpStatus(aiDone.error) === 409, `the AI's create must be refused with 409; it ${aiDone.ok ? 'succeeded' : `failed: ${(aiDone.error as Error)?.message}`}`);
+    assert.match((aiDone as any).error.message, new RegExp(`already has a budget version for ${YEAR}`));
+    assert.deepEqual(aiAudit.entries, [], 'no creation audited for the AI');
+    assert.equal((await versionsOf(race, kind, itemId)).length, 1, 'one version for the item and year');
+  });
+}
+
 /** A budget rows import writes a year without version while the budget tab creates it: the import goes through. */
 async function importVersusTab() {
   await withRace('opex-version-csv', async (race) => {
@@ -96,4 +126,6 @@ void runRaceSpecs('Budget version races', [
   ['Annexe A #13: two budget tabs create the same OPEX year, both get the version (3A)', () => twoTabsCreateTheYear('opex')],
   ['Annexe A #13: two budget tabs create the same CAPEX year, both get the version (3A)', () => twoTabsCreateTheYear('capex')],
   ['Annexe A #13: a budget rows import and a budget tab create the same year, the import goes through (3A)', importVersusTab],
+  ['Annexe A #13: the AI creates an OPEX year a budget tab creates meanwhile, the AI is refused, not credited (3A)', () => aiCreateVersusTab('opex')],
+  ['Annexe A #13: the AI creates a CAPEX year a budget tab creates meanwhile, the AI is refused, not credited (3A)', () => aiCreateVersusTab('capex')],
 ]);

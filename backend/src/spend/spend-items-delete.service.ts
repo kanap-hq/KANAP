@@ -72,6 +72,13 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
     const versions = await versionRepo.find({ where: { tenant_id: tenantId, spend_item_id: itemId } });
     const versionIds = versions.map(v => v.id);
     if (versionIds.length > 0) {
+      // Lock order (plan planning/perf-scale, lot 3B): this removes the
+      // allocation rows before the version, while an allocation save locks the
+      // version first (lockAllocationVersion), then replaces its rows. A save
+      // of one of these versions running at the same moment can deadlock with
+      // this delete; PostgreSQL then aborts one of them (40P01, answered 409
+      // `retry`). Lot 3B makes every writer, deletes included, lock the line
+      // and its versions first.
       await allocationRepo.delete({ tenant_id: tenantId, version_id: In(versionIds) });
       await amountRepo.delete({ tenant_id: tenantId, version_id: In(versionIds) });
       await versionRepo.delete({ tenant_id: tenantId, spend_item_id: itemId });

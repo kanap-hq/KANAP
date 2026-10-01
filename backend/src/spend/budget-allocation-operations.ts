@@ -273,7 +273,8 @@ export async function copyAllocations(
       skipped++;
       continue;
     }
-    if (locked.allocation_method !== sourceMethod) {
+    // Compared like `methodOf`: a method read as NULL is the default one (no change, no write, no audit row).
+    if ((locked.allocation_method ?? 'default') !== sourceMethod) {
       const beforeMethod = locked.allocation_method;
       await versionRepo.update({ id: destinationVersion.id, tenant_id: tenantId } as any, { allocation_method: sourceMethod } as any);
       await deps.audit.log({
@@ -287,7 +288,10 @@ export async function copyAllocations(
     }
     destinationVersion.allocation_method = sourceMethod as AllocationVersion['allocation_method'];
 
-    if (lockedManual > 0) {
+    // A manual split replaces every row of the version, system rows included:
+    // a row left by an older automatic method for the same company and
+    // department would hit the unique key (version, company, department).
+    if (lockedManual > 0 || isManual) {
       await allocationRepo.delete({ tenant_id: tenantId, version_id: destinationVersion.id } as any);
     }
     if (isManual) {
@@ -340,8 +344,8 @@ export async function lockAllocationVersion(
   scope: AmountScope,
   tenantId: string,
   versionId: string,
-): Promise<{ allocation_method: string } | null> {
-  const rows: Array<{ allocation_method: string }> = await manager.query(
+): Promise<{ allocation_method: string | null } | null> {
+  const rows: Array<{ allocation_method: string | null }> = await manager.query(
     `SELECT allocation_method FROM ${SCOPES[scope].versions} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
     [tenantId, versionId],
   );

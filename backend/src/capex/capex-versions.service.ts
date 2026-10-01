@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { CapexVersion } from './capex-version.entity';
@@ -27,8 +27,11 @@ export class CapexVersionsService {
    * also when a concurrent request created it a moment ago (see
    * `spend/budget-version-ensure.ts`). A name already used by another year of
    * the item is refused (400).
+   * With `refuseExisting`, an existing version of the year is refused (409)
+   * instead of returned: for a caller that asked to create one and would
+   * otherwise report a creation that did not happen (the AI action).
    */
-  async createForItem(itemId: string, body: Partial<CapexVersion>, userId?: string | null, opts?: { manager?: EntityManager }) {
+  async createForItem(itemId: string, body: Partial<CapexVersion>, userId?: string | null, opts?: { manager?: EntityManager; refuseExisting?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
     if (!body.version_name) throw new BadRequestException('version_name required');
     const budgetYear = body.budget_year != null ? Number(body.budget_year) : new Date().getFullYear();
@@ -59,6 +62,9 @@ export class CapexVersionsService {
       reportingCurrency: settings.reportingCurrency,
     });
     if (!ensured) throw new BadRequestException('Version name already exists for this item');
+    if (!ensured.created && opts?.refuseExisting) {
+      throw new ConflictException(`This line already has a budget version for ${budgetYear}.`);
+    }
     if (ensured.created) {
       await this.audit.log({ table: 'capex_versions', recordId: ensured.version.id, action: 'create', before: null, after: ensured.version, userId }, { manager: mg });
     }
