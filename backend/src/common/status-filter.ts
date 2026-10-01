@@ -136,9 +136,11 @@ export function extractStatusFilterFromAgModel(filters: any): {
   }
   if (Array.isArray(model.values)) {
     const rawValues: unknown[] = model.values;
-    const parsed = rawValues
+    let parsed = rawValues
       .map((value) => parseStatusValue(value))
       .filter((val): val is StatusState => val !== undefined);
+    // Exclude mode (the user unticked values from "all"): the statuses kept are the others.
+    if (model.mode === 'exclude') parsed = [StatusState.ENABLED, StatusState.DISABLED].filter((state) => !parsed.includes(state));
     if (parsed.length === 0) {
       return { matchNone: true, sanitizedFilters: rest as Record<string, any> | undefined };
     }

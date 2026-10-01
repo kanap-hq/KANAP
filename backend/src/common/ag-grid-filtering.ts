@@ -48,6 +48,17 @@ const numericComparableTypes = new Set([
   'inRange',
 ]);
 
+/**
+ * A set model in exclude mode (`mode: 'exclude'`): the user started from
+ * "all" and unticked `values`, so the list keeps every other value, including
+ * values created later. It matches exactly the rows the include model of the
+ * same values does not match (a row whose include condition is NULL counts as
+ * not matched).
+ */
+export function isExcludeSetModel(model: any): boolean {
+  return !!model && typeof model === 'object' && model.mode === 'exclude' && model.filterType === 'set' && Array.isArray(model.values);
+}
+
 export function compileAgFilterCondition(
   rawModel: any,
   target: FilterTargetConfig,
@@ -55,6 +66,11 @@ export function compileAgFilterCondition(
 ): CompiledCondition | null {
   const model = normalizeAgFilterModel(rawModel);
   if (!model || typeof model !== 'object') return null;
+  if (isExcludeSetModel(model)) {
+    const { mode: _mode, ...include } = model;
+    const compiled = compileAgFilterCondition(include, target, nextParam);
+    return compiled ? { sql: `NOT COALESCE((${compiled.sql}), FALSE)`, params: compiled.params } : null;
+  }
 
   const dataType: FilterDataType = target.dataType ?? 'string';
   const filterCategory = String(model.filterType ?? (dataType === 'number' ? 'number' : 'text'));
