@@ -84,15 +84,22 @@ function budgetYear(value: unknown, label: string): number {
   return year;
 }
 
-/** The uplift percentage, parsed exactly (a number or a decimal string); blank is 0. */
+/**
+ * The uplift percentage, parsed exactly (a number or a decimal string); blank
+ * is 0. It must stay above −100 %: −100 % would copy zeros and below it every
+ * month would change sign.
+ */
 function upliftPct(value: unknown): Decimal {
   if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) return Decimal.ZERO;
   if (typeof value !== 'number' && typeof value !== 'string') throw new BadRequestException('percentageIncrease must be a number.');
+  let pct: Decimal;
   try {
-    return Decimal.from(value);
+    pct = Decimal.from(value);
   } catch {
     throw new BadRequestException('percentageIncrease must be a number.');
   }
+  if (pct.cmp(-100) <= 0) throw new BadRequestException('The percentage must be above -100 %, or the copied amounts would be zero or change sign.');
+  return pct;
 }
 
 const sum = (values: readonly bigint[]) => values.reduce((acc, v) => acc + v, 0n);
@@ -100,21 +107,56 @@ const toNumber = (cents: bigint) => Number(formatCents(cents));
 
 /**
  * The twelve copied months. Without an uplift they are the source months to
- * the cent. With one, each month is rounded half away from zero to a whole
- * unit of the item's currency, the yearly total is the rounded uplifted
- * source total, and the difference lands on the last month whose source value
- * is not zero. Exact integer arithmetic throughout.
+ * the cent. With one, they are whole units of the item's currency:
+ * - the yearly total is the uplifted source total rounded half away from zero;
+ * - each month is its uplifted source value truncated toward zero;
+ * - the units still missing go one by one to the months with the largest
+ *   dropped fraction, the latest month first on a tie.
+ * A year that mixes signs (a credit month among positive months) is shared
+ * per sign group: the positive months share their own uplifted total rounded
+ * half away from zero, the negative months theirs. The two group totals are
+ * at most one unit away from the yearly total; when they are, the group whose
+ * total was rounded away from zero gives that unit back. A unit only ever
+ * goes to a month with a dropped fraction of its own sign, so no month
+ * changes sign (the uplift is above −100 %, so each month keeps the sign of
+ * its source month) and a zero month stays zero. Exact integer arithmetic
+ * throughout.
  */
 export function copiedMonths(source: readonly bigint[], pct: Decimal): bigint[] {
   if (pct.units === 0n) return [...source];
   const scale = 10n ** BigInt(DECIMAL_SCALE_DIGITS);
-  // cents × (100 + pct) / 100, then cents → whole units (÷ 100).
+  // A month in whole units is cents × (100 + pct) / 100 / 100: `exact[i]` over `unit`.
   const factor = 100n * scale + pct.units;
-  const wholeUnits = (cents: bigint) => divRoundHalfAway(cents * factor, 100n * scale * 100n) * 100n;
-  const months = source.map(wholeUnits);
-  const last = source.reduce((found, value, index) => (value !== 0n ? index : found), -1);
-  if (last >= 0) months[last] += wholeUnits(sum(source)) - sum(months);
-  return months;
+  const unit = 100n * scale * 100n;
+  const exact = source.map((cents) => cents * factor);
+  // Bigint division truncates toward zero; `dropped` keeps the sign of its month.
+  const months = exact.map((value) => value / unit);
+  const dropped = exact.map((value, i) => value - months[i] * unit);
+  const indexes = exact.map((_, i) => i);
+  const positive = indexes.filter((i) => exact[i] > 0n);
+  const negative = indexes.filter((i) => exact[i] < 0n);
+  const groupTotal = (group: number[]) => divRoundHalfAway(sum(group.map((i) => exact[i])), unit);
+  let positiveTotal = groupTotal(positive);
+  let negativeTotal = groupTotal(negative);
+  const gap = divRoundHalfAway(sum(exact), unit) - positiveTotal - negativeTotal;
+  if (gap < 0n) positiveTotal -= 1n;
+  if (gap > 0n) negativeTotal += 1n;
+  const share = (group: number[], total: bigint, step: 1n | -1n) => {
+    const missing = (total - sum(group.map((i) => months[i]))) * step;
+    const order = group
+      .filter((i) => dropped[i] !== 0n)
+      .sort((a, b) => {
+        const larger = (dropped[b] - dropped[a]) * step;
+        return larger > 0n ? 1 : larger < 0n ? -1 : b - a;
+      });
+    if (missing < 0n || missing > BigInt(order.length)) {
+      throw new InternalServerErrorException('A copied column could not be rounded to whole units.');
+    }
+    order.slice(0, Number(missing)).forEach((i) => { months[i] += step; });
+  };
+  share(positive, positiveTotal, 1n);
+  share(negative, negativeTotal, -1n);
+  return months.map((units) => units * 100n);
 }
 
 /** The same calendar dates `delta` years later; 29 February becomes 28 February outside leap years. */
@@ -273,10 +315,10 @@ export type CopyColumnOperation = {
  * says where the column was copied from. Every column is treated alike.
  *
  * An item valid for part of the destination year is prorated: the source
- * months outside its validity become zero before the uplift, so the rounding
- * remainder lands on the last month kept. The other months keep their amount
- * (an annual fee billed in January stays whole), and the period is cut to the
- * validity window.
+ * months outside its validity become zero before the uplift, so they stay
+ * zero and the rounding only moves the months kept. The other months keep
+ * their amount (an annual fee billed in January stays whole), and the period
+ * is cut to the validity window.
  */
 export async function copyBudgetColumn(
   deps: BudgetOperationDeps,

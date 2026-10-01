@@ -8,7 +8,8 @@ import { CapexVersionsService } from '../../capex/capex-versions.service';
 import { SpendAllocationsService } from '../../spend/spend-allocations.service';
 import { SpendAmountsService } from '../../spend/spend-amounts.service';
 import { SpendVersionsService } from '../../spend/spend-versions.service';
-import { AMOUNT_MEASURES, AmountMeasure } from '../../spend/amounts-write.util';
+import { AMOUNT_MEASURES, AmountMeasure, assertSpreadProfile, validateAmountValue } from '../../spend/amounts-write.util';
+import { formatAmount, formatCents } from '../../common/amount';
 import { budgetColumnName, BudgetColumnsSettings, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
@@ -61,21 +62,22 @@ type NormalizedVersionFields = {
   fieldLabels: Record<string, string>;
 };
 
+// Amounts are decimal strings ('1200', '99999999999999.99'): money never goes through a JS number here.
 type AmountPayload =
   | {
     kind: 'annual';
     year: number;
-    totals: Partial<Record<AmountMeasure, number>>;
+    totals: Partial<Record<AmountMeasure, string>>;
     spread_profile_name?: string;
   }
   | {
     kind: 'quarterly';
     year: number;
     measure: AmountMeasure;
-    Q1?: number;
-    Q2?: number;
-    Q3?: number;
-    Q4?: number;
+    Q1?: string;
+    Q2?: string;
+    Q3?: string;
+    Q4?: string;
     spread_profile_name?: string;
   }
   | {
@@ -83,11 +85,11 @@ type AmountPayload =
     year: number;
     months: Array<{
       period: string;
-      planned?: number;
-      forecast?: number;
-      committed?: number;
-      actual?: number;
-      expected_landing?: number;
+      planned?: string;
+      forecast?: string;
+      committed?: string;
+      actual?: string;
+      expected_landing?: string;
     }>;
   };
 
@@ -190,10 +192,9 @@ function formatValue(value: unknown): string | null {
   return String(value);
 }
 
-function normalizeNumber(value: unknown, label: string): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) throw new BadRequestException(`${label} must be a number.`);
-  return parsed;
+/** An amount read exactly (a number in its shortest form, or a decimal string), as a decimal string to the cent. */
+function normalizeAmount(value: unknown, label: string): string {
+  return formatCents(validateAmountValue(value, label));
 }
 
 function normalizeYear(value: unknown, label = 'year'): number {
@@ -253,11 +254,11 @@ function makeMonthlyPayloadFromRows(rows: unknown[], fallbackYear: number): Amou
   const months = (rows as any[])
     .map((row) => ({
       period: String(row.period || ''),
-      planned: Number(row.planned ?? 0),
-      forecast: Number(row.forecast ?? 0),
-      committed: Number(row.committed ?? 0),
-      actual: Number(row.actual ?? 0),
-      expected_landing: Number(row.expected_landing ?? 0),
+      planned: formatAmount(row.planned ?? 0),
+      forecast: formatAmount(row.forecast ?? 0),
+      committed: formatAmount(row.committed ?? 0),
+      actual: formatAmount(row.actual ?? 0),
+      expected_landing: formatAmount(row.expected_landing ?? 0),
     }))
     .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.period))
     .sort((a, b) => a.period.localeCompare(b.period));
@@ -358,6 +359,8 @@ export class AiFinancialPlanMutationSupportService {
     if (action === 'upsert_amounts') {
       const amounts = this.normalizeAmountPayload(input.amounts);
       this.assertAmountsYearMatchesVersion(amounts, version);
+      // An unknown spread profile is refused now, with the message the write would give.
+      await assertSpreadProfile(context.manager, amounts.kind, 'spread_profile_name' in amounts ? amounts.spread_profile_name : undefined);
       const before = await this.listAmounts(context, entityType, version.id, amounts.year);
       const columns = await readBudgetColumns(context.manager, context.tenantId);
       const beforeItems = Array.isArray(before.items) ? before.items : [];
@@ -748,10 +751,10 @@ export class AiFinancialPlanMutationSupportService {
     const year = normalizeYear(input.year, 'amounts.year');
     if (kind === 'annual') {
       const totalsInput = objectValue(input.totals, 'amounts.totals');
-      const totals: Partial<Record<AmountMeasure, number>> = {};
+      const totals: Partial<Record<AmountMeasure, string>> = {};
       for (const measure of AMOUNT_MEASURES) {
         if (!Object.prototype.hasOwnProperty.call(totalsInput, measure) || totalsInput[measure] == null) continue;
-        totals[measure] = normalizeNumber(totalsInput[measure], `amounts.totals.${measure}`);
+        totals[measure] = normalizeAmount(totalsInput[measure], `amounts.totals.${measure}`);
       }
       if (Object.keys(totals).length === 0) throw new BadRequestException('amounts.totals must include at least one amount measure.');
       const payload: AmountPayload = { kind: 'annual', year, totals };
@@ -767,7 +770,7 @@ export class AiFinancialPlanMutationSupportService {
       let quarterCount = 0;
       for (const quarter of ['Q1', 'Q2', 'Q3', 'Q4'] as const) {
         if (!Object.prototype.hasOwnProperty.call(input, quarter) || input[quarter] == null) continue;
-        payload[quarter] = normalizeNumber(input[quarter], `amounts.${quarter}`);
+        payload[quarter] = normalizeAmount(input[quarter], `amounts.${quarter}`);
         quarterCount += 1;
       }
       if (quarterCount === 0) throw new BadRequestException('Quarterly amounts must include at least one quarter value.');
@@ -789,16 +792,16 @@ export class AiFinancialPlanMutationSupportService {
         if (rowYear !== year) throw new BadRequestException(`amounts.months[${index}].period must be in ${year}.`);
         const normalized: {
           period: string;
-          planned?: number;
-          forecast?: number;
-          committed?: number;
-          actual?: number;
-          expected_landing?: number;
+          planned?: string;
+          forecast?: string;
+          committed?: string;
+          actual?: string;
+          expected_landing?: string;
         } = { period };
         let amountCount = 0;
         for (const measure of AMOUNT_MEASURES) {
           if (!Object.prototype.hasOwnProperty.call(row, measure) || row[measure] == null) continue;
-          normalized[measure] = normalizeNumber(row[measure], `amounts.months[${index}].${measure}`);
+          normalized[measure] = normalizeAmount(row[measure], `amounts.months[${index}].${measure}`);
           amountCount += 1;
         }
         if (amountCount === 0) throw new BadRequestException(`amounts.months[${index}] must include at least one amount measure.`);
@@ -1069,9 +1072,9 @@ export class AiFinancialPlanMutationSupportService {
     allocations: AllocationInput[],
   ): Promise<unknown> {
     if (entityType === 'spend_items') {
-      return this.spendAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager });
+      return this.spendAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId });
     }
-    return this.capexAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager });
+    return this.capexAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId });
   }
 
   private listAmounts(
@@ -1092,9 +1095,9 @@ export class AiFinancialPlanMutationSupportService {
     versionId: string,
   ): Promise<Record<string, unknown>> {
     if (entityType === 'spend_items') {
-      return this.spendAllocations.listForVersion(versionId, { manager: context.manager }) as any;
+      return this.spendAllocations.listForVersion(versionId, { manager: context.manager, tenantId: context.tenantId }) as any;
     }
-    return this.capexAllocations.listForVersion(versionId, { manager: context.manager }) as any;
+    return this.capexAllocations.listForVersion(versionId, { manager: context.manager, tenantId: context.tenantId }) as any;
   }
 
   private async logAiAudit(

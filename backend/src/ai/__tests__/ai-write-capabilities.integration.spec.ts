@@ -804,6 +804,27 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
       /The amounts are for 2027, but financial version ".*" is for 2026/,
     );
 
+    // An unknown spread profile is refused at the preview, with the message the write gives.
+    const profilePreview = (amounts: Record<string, unknown>) => executeToolPreview(harness, financialCtx, 'write_financial_plan', {
+      entity_type: 'spend_items',
+      ref: createdSpendId,
+      action: 'upsert_amounts',
+      version_ref: versionRow.id,
+      amounts,
+    });
+    await assert.rejects(
+      () => profilePreview({ kind: 'annual', year: 2026, totals: { planned: 1200 }, spread_profile_name: 'bogus' }),
+      /Unknown spread profile 'bogus'\. Use flat, 4-4-5\./,
+    );
+    await assert.rejects(
+      () => profilePreview({ kind: 'quarterly', year: 2026, measure: 'planned', Q1: 300, spread_profile_name: 'bogus' }),
+      /Unknown spread profile 'bogus' for quarters\. Use equal, flat or 4-4-5\./,
+    );
+    const known = await profilePreview({ kind: 'annual', year: 2026, totals: { planned: 1200 }, spread_profile_name: '4-4-5' }) as any;
+    assert.ok(known.preview_id, 'a known profile gets a preview');
+    const knownQuarterly = await profilePreview({ kind: 'quarterly', year: 2026, measure: 'planned', Q1: 300, spread_profile_name: '4-4-5' }) as any;
+    assert.ok(knownQuarterly.preview_id, 'a known quarterly profile gets a preview');
+
     const amountPreview = await executeToolPreview(harness, financialCtx, 'write_financial_plan', {
       entity_type: 'spend_items',
       ref: createdSpendId,
@@ -849,6 +870,34 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
     assert.equal(amountTotals.committed, 0);
     assert.equal(amountTotals.actual, 0);
     assert.equal(amountTotals.expected_landing, 0);
+
+    // Amounts stay decimal strings on the server: the largest amount survives preview, apply and undo to the cent.
+    const january = async () => (await runner.query(
+      `SELECT planned::text AS planned FROM spend_amounts WHERE tenant_id = $1 AND version_id = $2 AND period = '2026-01-01'`,
+      [seed.tenantId, versionRow.id],
+    ))[0]?.planned;
+    const januaryPreview = (planned: unknown) => executeToolPreview(harness, financialCtx, 'write_financial_plan', {
+      entity_type: 'spend_items',
+      ref: createdSpendId,
+      action: 'upsert_amounts',
+      version_ref: versionRow.id,
+      amounts: { kind: 'monthly', year: 2026, months: [{ period: '2026-01-01', planned }] },
+    });
+    const largestPreview = await januaryPreview('99999999999999.99');
+    const [largestInput] = await runner.query(`SELECT mutation_input FROM ai_mutation_previews WHERE id = $1`, [largestPreview.preview_id]);
+    assert.equal(largestInput.mutation_input.amounts.months[0].planned, '99999999999999.99', 'the preview keeps the amount to the cent');
+    await approvePreview(harness, financialCtx, largestPreview);
+    assert.equal(await january(), '99999999999999.99', 'the apply writes it to the cent');
+    const smallerPreview = await januaryPreview(0.01);
+    await approvePreview(harness, financialCtx, smallerPreview);
+    assert.equal(await january(), '0.01');
+    const smallerUndo = await harness.tools.execute(financialCtx, 'undo_preview', { preview_id: smallerPreview.preview_id }) as any;
+    await approvePreview(harness, financialCtx, smallerUndo);
+    assert.equal(await january(), '99999999999999.99', 'the undo restores it to the cent');
+    await assert.rejects(() => januaryPreview('100000000000000000'), /amounts\.months\[0\]\.planned is too large\./);
+    await assert.rejects(() => januaryPreview('ten'), /amounts\.months\[0\]\.planned must be a number\./);
+    await approvePreview(harness, financialCtx, await januaryPreview(0));
+    assert.equal(await january(), '0.00');
 
     const allocationPreview = await executeToolPreview(harness, financialCtx, 'write_financial_plan', {
       entity_type: 'spend_items',

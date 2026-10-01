@@ -272,15 +272,29 @@ function assertVersionTenant(version: AmountVersion) {
   }
 }
 
+/** Whether every value the rows carry is already stored, to the cent (a NULL cell is not a zero here). */
+function sameAsStored(stored: StoredAmountRow[], rows: AmountRowInput[], periods: string[]): boolean {
+  const byPeriod = new Map(stored.map((row) => [row.period, row]));
+  return rows.every((row, index) => {
+    const current = byPeriod.get(periods[index]);
+    return !!current && AMOUNT_MEASURES.every((m) => row[m] === undefined || (current[m] !== null && toCents(current[m]) === row[m]));
+  });
+}
+
 async function write(ctx: AmountsWriteContext, year: number, rows: AmountRowInput[], periods: string[], measures: AmountMeasure[]) {
   assertVersionTenant(ctx.version);
   await assertMeasuresEditable(ctx, year, measures);
   // Concurrent writes on the same line must queue up, never deadlock: every
   // month is first created and then locked in period order, whatever order
-  // or measure sets the rows come in. The rows read here only feed the audit
-  // log; months this write created had no "before".
+  // or measure sets the rows come in. The rows read here feed the no-op
+  // check and the audit log; months this write created had no "before".
   const created = await createMissingMonths(ctx, periods);
   const before = (await readRows(ctx, periods, true)).filter((row) => !created.has(row.period));
+  // A write that changes no stored value (a spread or a recompute giving the
+  // months already there) writes nothing and returns no rows, so its caller
+  // audits nothing. The freeze check above still applies; the comparison runs
+  // under the months' lock.
+  if (created.size === 0 && sameAsStored(before, rows, periods)) return { periods, measures, before: [], after: [] };
   // Rows of a patch may name different measures; group them so each
   // statement lists its own target columns (at most one per measure set).
   const groups = new Map<string, { measures: AmountMeasure[]; rows: AmountRowInput[] }>();
@@ -377,7 +391,7 @@ export async function resolveSpreadProfile(manager: EntityManager, raw: unknown)
   const rows: Array<{ name: string; weights_json: unknown }> = typeof raw === 'string'
     ? await manager.query(`SELECT name, weights_json FROM spread_profiles WHERE name = $1`, [raw])
     : [];
-  const weights = rows.length ? profileWeights(rows[0].weights_json) : null;
+  const weights = rows.length ? asBadRequest(() => profileWeights(rows[0].weights_json)) : null;
   if (!weights) {
     const names: Array<{ name: string }> = await manager.query(`SELECT name FROM spread_profiles ORDER BY name`);
     const accepted = Array.from(new Set(['flat', ...names.map((n) => n.name)]));
@@ -387,6 +401,27 @@ export async function resolveSpreadProfile(manager: EntityManager, raw: unknown)
 }
 
 const QUARTERLY_DISTRIBUTIONS = new Map<unknown, 'equal' | '445'>([['equal', 'equal'], ['flat', 'equal'], ['4-4-5', '445']]);
+
+/** How a quarter is spread over its months: unset, 'equal' or 'flat' is equal thirds, '4-4-5' is 4-4-5; anything else is refused. */
+function quarterlyDistribution(raw: unknown): 'equal' | '445' {
+  const distribution = raw === undefined || raw === null || raw === '' ? 'equal' : QUARTERLY_DISTRIBUTIONS.get(raw);
+  if (!distribution) {
+    throw new BadRequestException(`Unknown spread profile '${String(raw)}' for quarters. Use equal, flat or 4-4-5.`);
+  }
+  return distribution;
+}
+
+/**
+ * Refuse a spread profile that an amounts payload of `kind` could not use,
+ * with the message the write itself gives: a yearly spread takes flat or a
+ * stored profile, a quarterly one equal, flat or 4-4-5. Monthly amounts take
+ * no profile, so nothing is checked. Lets a preview refuse what the write
+ * would refuse.
+ */
+export async function assertSpreadProfile(manager: EntityManager, kind: unknown, name: unknown): Promise<void> {
+  if (kind === 'annual') await resolveSpreadProfile(manager, name);
+  if (kind === 'quarterly') quarterlyDistribution(name);
+}
 
 /** Period of a spread payload: both bounds or neither (the whole year), at least one active month. */
 export type PayloadPeriod = { period_start: string; period_end: string; active_months: number[] };
@@ -472,12 +507,7 @@ async function writePayload(ctx: AmountsWriteContext, rawPayload: unknown): Prom
       if (!Object.prototype.hasOwnProperty.call(payload, quarter)) continue;
       quarters[quarter] = validateAmountValue(payload[quarter], { measure, where: ` ${quarter}` });
     }
-    const distribution = profileName === undefined || profileName === null || profileName === ''
-      ? 'equal'
-      : QUARTERLY_DISTRIBUTIONS.get(profileName);
-    if (!distribution) {
-      throw new BadRequestException(`Unknown spread profile '${String(profileName)}' for quarters. Use equal, flat or 4-4-5.`);
-    }
+    const distribution = quarterlyDistribution(profileName);
     const period = parsePayloadPeriod(payload, year);
     const window = { start: period.period_start, end: period.period_end };
     const rows = asBadRequest(() => spreadQuarterlyToMonths(year, measure, quarters, distribution, window));

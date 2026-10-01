@@ -5,11 +5,13 @@ import {
   profileWeights,
   SpreadInputError,
   spreadAnnualToMonths,
+  splitTowardZero,
   spreadQuarterlyToMonths,
 } from '../spread.util';
 
-// Spreads in integer cents: each month is round-half-away-from-zero of its
-// exact share, the remainder goes to the last month (of the year or quarter).
+// Spreads in integer cents: each month is its exact share rounded toward
+// zero, what is left goes to the last month with a weight (of the year or
+// quarter). Every month has the sign of the total or is zero.
 
 const YEAR = 2031;
 
@@ -22,14 +24,30 @@ function planned(total: bigint, weights: readonly bigint[] = FLAT_WEIGHTS) {
 const elevenThen = (month: bigint, last: bigint) => [...Array.from({ length: 11 }, () => month), last];
 
 function testFlatSpread() {
-  // 558 / 12 = 46.5 → 47; 558 − 11 × 47 = 41.
-  assert.deepEqual(planned(558n), elevenThen(47n, 41n));
+  // 558 / 12 = 46.5 → 46; 558 − 11 × 46 = 52.
+  assert.deepEqual(planned(558n), elevenThen(46n, 52n));
   assert.deepEqual(planned(1_200_000n), Array.from({ length: 12 }, () => 100_000n));
   assert.deepEqual(planned(10_000n), elevenThen(833n, 837n));
-  assert.deepEqual(planned(-558n), elevenThen(-47n, -41n));
-  // 30 / 12 = 2.5 → 3 each; the remainder (−6) makes December −3.
-  assert.deepEqual(planned(30n), elevenThen(3n, -3n));
+  assert.deepEqual(planned(-558n), elevenThen(-46n, -52n));
+  // 30 / 12 = 2.5 → 2 each; December takes the 8 left, never a negative month.
+  assert.deepEqual(planned(30n), elevenThen(2n, 8n));
   assert.deepEqual(planned(0n), Array.from({ length: 12 }, () => 0n));
+  // A few cents: all of them in December, with their sign (a credit note mirrors a charge).
+  assert.deepEqual(planned(7n), elevenThen(0n, 7n));
+  assert.deepEqual(planned(-7n), elevenThen(0n, -7n));
+  assert.deepEqual(planned(6n), elevenThen(0n, 6n));
+}
+
+/** The split itself: toward zero, the rest on the last share with a weight; zero weights get zero. */
+function testSplitTowardZero() {
+  assert.deepEqual(splitTowardZero(100n, [1n, 1n, 1n]), [33n, 33n, 34n]);
+  assert.deepEqual(splitTowardZero(-100n, [1n, 1n, 1n]), [-33n, -33n, -34n]);
+  // A zero-weight last month gets nothing: the rest lands on the last month with a weight.
+  assert.deepEqual(splitTowardZero(100n, [1n, 1n, 1n, 0n]), [33n, 33n, 34n, 0n]);
+  const novemberLast = [...Array.from({ length: 11 }, () => 1n), 0n];
+  assert.deepEqual(planned(100n, novemberLast), [...Array.from({ length: 10 }, () => 9n), 10n, 0n], '100 over eleven months, December weighs 0');
+  assert.deepEqual(planned(-100n, novemberLast), [...Array.from({ length: 10 }, () => -9n), -10n, 0n]);
+  assert.throws(() => splitTowardZero(100n, [1n, -1n, 1n]), /cannot be negative/);
 }
 
 function testRowsCarryOnlyTheMeasuresGiven() {
@@ -52,6 +70,12 @@ function testQuarterlySpread() {
   // −1.00 in thirds: −33, −33, −34.
   const negative = spreadQuarterlyToMonths(YEAR, 'actual', { Q4: -100n }, 'equal');
   assert.deepEqual(negative.slice(9).map((r) => r.actual), [-33n, -33n, -34n]);
+
+  // 0.02 in a 4-4-5 quarter: 0.006 and 0.008 round to 0, the last month takes both cents.
+  const twoCents = spreadQuarterlyToMonths(YEAR, 'planned', { Q1: 2n }, '445');
+  assert.deepEqual(twoCents.slice(0, 3).map((r) => r.planned), [0n, 0n, 2n]);
+  const minusTwoCents = spreadQuarterlyToMonths(YEAR, 'planned', { Q1: -2n }, '445');
+  assert.deepEqual(minusTwoCents.slice(0, 3).map((r) => r.planned), [0n, 0n, -2n]);
 }
 
 function testNamedProfile() {
@@ -71,11 +95,60 @@ function testNamedProfile() {
   assert.equal(profileWeights(Array.from({ length: 12 }, () => 0)), null);
   // A value that is not a number counts as zero.
   assert.deepEqual(profileWeights([1, null, 'x', 1, 1, 1, 1, 1, 1, 1, 1, 1]), [1n, 0n, 0n, 1n, 1n, 1n, 1n, 1n, 1n, 1n, 1n, 1n]);
+  // A negative weight is refused with a sentence, even when the sum stays above zero.
+  refused(() => profileWeights([2, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]), /^A spread profile cannot give a month a negative weight\.$/);
+  refused(() => profileWeights(['0.1', '-0.05', ...Array.from({ length: 10 }, () => '0.1')]), /negative weight/);
 }
 
 function testRefusesUnusableWeights() {
   assert.throws(() => spreadAnnualToMonths(YEAR, { planned: 100n }, [1n, 1n]), /twelve weights/);
   assert.throws(() => spreadAnnualToMonths(YEAR, { planned: 100n }, Array.from({ length: 12 }, () => 0n)), /more than zero/);
+  assert.throws(() => spreadAnnualToMonths(YEAR, { planned: 100n }, [2n, -1n, ...Array.from({ length: 10 }, () => 1n)]), /cannot be negative/);
+}
+
+/**
+ * The rule on every small total, both signs: flat, 4-4-5 and a profile whose
+ * December weighs 0, over the year, a window, one month and by quarter. Every
+ * month has the sign of the total or is zero, months outside the window (or
+ * without weight) are zero, the sum is exact, and the cents left over land on
+ * the last month with a weight: every other month is exactly
+ * trunc(total × weight / Σweights).
+ */
+function testSignAndSumProperty() {
+  const fourFourFive = Array.from({ length: 12 }, (_, i) => ((i + 1) % 3 === 0 ? 5n : 4n));
+  const zeroDecember = [...Array.from({ length: 11 }, () => 1n), 0n];
+  const windows = [undefined, { start: `${YEAR}-04-01`, end: `${YEAR}-12-31` }, { start: `${YEAR}-02-01`, end: `${YEAR}-04-30` }, { start: `${YEAR}-06-15`, end: `${YEAR}-06-15` }];
+  /** `months` against the rule, for `total` over the months (1..12) `counted` weighted by `weights` (indexed by month − 1). */
+  const check = (months: bigint[], total: bigint, counted: number[], weights: readonly bigint[], label: string) => {
+    assert.equal(months.reduce((sum, m) => sum + m, 0n), total, `${label}: the months add up to the total`);
+    for (const m of months) assert.ok(m === 0n || (m > 0n) === (total > 0n), `${label}: every month has the sign of the total or is zero`);
+    const sum = counted.reduce((acc, m) => acc + weights[m - 1], 0n);
+    const lastWeighted = Math.max(...counted.filter((m) => weights[m - 1] > 0n));
+    months.forEach((value, i) => {
+      const month = i + 1;
+      if (month === lastWeighted) return;
+      const expected = counted.includes(month) ? (total * weights[i]) / sum : 0n;
+      assert.equal(value, expected, `${label}: month ${month} is its share rounded toward zero, the rest goes to month ${lastWeighted}`);
+    });
+  };
+  let cases = 0;
+  for (let total = -500n; total <= 500n; total += 1n) {
+    for (const [name, weights] of [['flat', FLAT_WEIGHTS], ['4-4-5', fourFourFive], ['zero December', zeroDecember]] as const) {
+      for (const window of windows) {
+        const label = `${total} ${name} ${window ? `${window.start}..${window.end}` : 'year'}`;
+        const counted = window ? activeMonths(YEAR, window.start, window.end) : months(1, 12);
+        const rows = spreadAnnualToMonths(YEAR, { planned: total }, weights, window);
+        check(rows.map((r) => r.planned as bigint), total, counted, weights, label);
+        cases++;
+      }
+    }
+    for (const [distribution, weights] of [['equal', FLAT_WEIGHTS], ['445', fourFourFive]] as const) {
+      const quarters = spreadQuarterlyToMonths(YEAR, 'planned', { Q2: total }, distribution).map((r) => r.planned as bigint);
+      check(quarters, total, months(4, 6), weights, `${total} quarterly ${distribution}`);
+      cases++;
+    }
+  }
+  assert.equal(cases, 1001 * 14);
 }
 
 // ── Periods ───────────────────────────────────────────────────────────────
@@ -152,9 +225,10 @@ function testAnnualWindow() {
     windowed(3_900_000n, `${YEAR}-04-01`, `${YEAR}-12-31`, fourFourFive),
     [0n, 0n, 0n, 400_000n, 400_000n, 500_000n, 400_000n, 400_000n, 500_000n, 400_000n, 400_000n, 500_000n],
   );
-  // The stored 4-4-5 profile (decimal weights) gives the same months.
-  const stored445 = profileWeights(Array.from({ length: 12 }, (_, i) => ((i + 1) % 3 === 0 ? 0.0961538462 : 0.0769230769)))!;
+  // The stored 4-4-5 profile (exact weights since 1853680000000) gives the same months.
+  const stored445 = profileWeights([4, 4, 5, 4, 4, 5, 4, 4, 5, 4, 4, 5])!;
   assert.deepEqual(windowed(3_900_000n, `${YEAR}-04-01`, `${YEAR}-12-31`, stored445), windowed(3_900_000n, `${YEAR}-04-01`, `${YEAR}-12-31`, fourFourFive));
+  assert.deepEqual(planned(5_200_000n, stored445), Array.from({ length: 12 }, (_, i) => ((i + 1) % 3 === 0 ? 500_000n : 400_000n)), '52 000: 4 000 and 5 000 exactly');
 }
 
 function testAnnualWindowRefusals() {
@@ -190,10 +264,12 @@ function testQuarterlyWindow() {
 
 function main() {
   testFlatSpread();
+  testSplitTowardZero();
   testRowsCarryOnlyTheMeasuresGiven();
   testQuarterlySpread();
   testNamedProfile();
   testRefusesUnusableWeights();
+  testSignAndSumProperty();
   testActiveMonthBoundaries();
   testMissingBounds();
   testInvalidPeriods();

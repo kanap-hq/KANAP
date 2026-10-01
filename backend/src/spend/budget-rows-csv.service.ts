@@ -314,7 +314,10 @@ export class BudgetRowsCsvService {
           return row;
         });
         const { before, after } = await replaceAmounts({ manager, freeze: this.freeze, scope, version, checkedFreeze }, year, rows);
-        await this.audit.log({ table: AMOUNT_AUDIT_TABLE[scope], recordId: null, action: 'update', before, after, userId }, { manager });
+        // Months already as the file has them (a concurrent write got there first) write nothing: nothing to audit.
+        if (after.length > 0) {
+          await this.audit.log({ table: AMOUNT_AUDIT_TABLE[scope], recordId: null, action: 'update', before, after, userId }, { manager });
+        }
       }
       // Months before records, records in column order: the lock order of every amounts writer.
       if (changed.length === 0) await lockYearMonths({ manager, scope, version }, year);
