@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { Brackets } from 'typeorm';
-import { buildStatusWhereFragment, applyStatusFilter } from '../status-filter';
-import { StatusState } from '../status';
+import { buildStatusWhereFragment, applyStatusFilter, extractStatusFilterFromAgModel } from '../status-filter';
+import { resolveLifecycleState, StatusState } from '../status';
 
 async function testExplicitStatusFragment() {
   const fragment = buildStatusWhereFragment({
@@ -106,7 +106,40 @@ async function testExplicitStatusAppliesWithIncludeDisabled() {
   assert.equal(buildStatusWhereFragment({ alias: 'c', explicitStatus: null, includeDisabled: true }), null);
 }
 
+async function testEmptySetMatchesNothing() {
+  // The checklist's Clear sends an empty set: nothing matches, as in the generic filter engine.
+  const cleared = extractStatusFilterFromAgModel({ status: { filterType: 'set', values: [] }, name: { filter: 'x' } });
+  assert.deepEqual(cleared, { matchNone: true, sanitizedFilters: { name: { filter: 'x' } } });
+  // A set holding no status value matches nothing too.
+  assert.equal(extractStatusFilterFromAgModel({ status: { filterType: 'set', values: ['archived'] } }).matchNone, true);
+  // One status, or both (no constraint), never match nothing.
+  assert.deepEqual(extractStatusFilterFromAgModel({ status: { filterType: 'set', values: ['disabled'] } }), { status: StatusState.DISABLED, sanitizedFilters: {} });
+  assert.deepEqual(extractStatusFilterFromAgModel({ status: { filterType: 'set', values: ['enabled', 'disabled'] } }), { sanitizedFilters: {} });
+  assert.deepEqual(extractStatusFilterFromAgModel({ name: { filter: 'x' } }), { sanitizedFilters: { name: { filter: 'x' } } });
+
+  // The fragment is `1 = 0` whatever the scope or an explicit status.
+  for (const opts of [{}, { includeDisabled: true }, { explicitStatus: StatusState.ENABLED }, { period: { start: '2026-01-01' } }]) {
+    assert.deepEqual(buildStatusWhereFragment({ alias: 'c', matchNone: true, ...opts }), { sql: '1 = 0', params: {} });
+  }
+}
+
+async function testDisabledWithoutADate() {
+  // "Disabled" without a date: a date already passed stays, otherwise the end of validity is now.
+  const now = new Date('2026-10-01T10:00:00Z');
+  const nowFactory = () => now;
+  const past = new Date('2025-03-31T12:00:00Z');
+  const future = new Date('2031-06-30T12:00:00Z');
+  assert.deepEqual(resolveLifecycleState({ currentDisabledAt: past, nextStatus: 'disabled', nowFactory }), { status: StatusState.DISABLED, disabled_at: past });
+  assert.deepEqual(resolveLifecycleState({ currentDisabledAt: future, nextStatus: 'disabled', nowFactory }), { status: StatusState.DISABLED, disabled_at: now });
+  assert.deepEqual(resolveLifecycleState({ currentDisabledAt: null, nextStatus: 'disabled', nowFactory }), { status: StatusState.DISABLED, disabled_at: now });
+  // A date given wins; enabled clears the date.
+  assert.deepEqual(resolveLifecycleState({ currentDisabledAt: past, nextStatus: 'disabled', nextDisabledAt: future, nowFactory }), { status: StatusState.ENABLED, disabled_at: future });
+  assert.deepEqual(resolveLifecycleState({ currentDisabledAt: future, nextStatus: 'enabled', nowFactory }), { status: StatusState.ENABLED, disabled_at: null });
+}
+
 (async () => {
+  await testEmptySetMatchesNothing();
+  await testDisabledWithoutADate();
   await testExplicitStatusFragment();
   await testExplicitStatusAppliesWithIncludeDisabled();
   await testDefaultActiveFragment();

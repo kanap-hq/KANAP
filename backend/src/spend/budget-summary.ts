@@ -79,6 +79,8 @@ interface SummaryContext {
   q?: string;
   filters: Record<string, any>;
   explicitStatus?: StatusState;
+  /** The status column filter ticks no value: every query selects no line. */
+  matchNone: boolean;
   includeDisabled: boolean;
   sqlFilters: Record<string, any>;
   memoryFilters: Record<string, any>;
@@ -111,7 +113,7 @@ async function summaryContext(config: SummaryScopeConfig, query: any, manager: E
   const tenantId = await summaryTenantId(manager);
   const currentYear = new Date().getFullYear();
   const { page, limit, skip, sort, status, q, filters } = parsePagination(query ?? {});
-  const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+  const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
   const cleanFilters: Record<string, any> = (sanitizedFilters ?? filters ?? {}) as Record<string, any>;
   const requestedYears = parseSummaryYears(query?.years);
   const namedYears = yearsNamedByFields([sort.field, ...Object.keys(cleanFilters)]);
@@ -135,14 +137,16 @@ async function summaryContext(config: SummaryScopeConfig, query: any, manager: E
     q: q?.trim() || undefined,
     filters: cleanFilters,
     explicitStatus: status ?? statusFromAg,
+    matchNone: matchNone === true,
     includeDisabled: ['1', 'true'].includes(String(query?.includeDisabled ?? '').toLowerCase()),
     sqlFilters,
     memoryFilters,
   };
 }
 
-/** An explicit status (query or status filter) wins over "all"; otherwise "all" or the endpoint's default. */
+/** No ticked status selects nothing; an explicit status (query or status filter) wins over "all"; otherwise "all" or the endpoint's default. */
 function lifecycleScope(ctx: SummaryContext, fallback: LifecycleScope): LifecycleScope {
+  if (ctx.matchNone) return 'none';
   if (ctx.explicitStatus === StatusState.DISABLED) return 'inactive';
   if (ctx.explicitStatus === StatusState.ENABLED) return 'active';
   return ctx.includeDisabled ? null : fallback;

@@ -25,7 +25,7 @@ import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { formatCents, toCents } from '../common/amount';
 import { FreezeService } from '../freeze/freeze.service';
 import { FxRateService } from '../currency/fx-rate.service';
-import { applyDisabledAtWhere, LifecycleScope, parseEndOfValidityInput, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
+import { applyDisabledAtWhere, deriveStatusFromDisabledAt, LifecycleScope, parseEndOfValidityInput, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { loadVersionTotals, SUMMARY_COLUMNS, SUMMARY_SCOPES, SummaryDeps, summaryTenantId } from '../spend/spend-summary.builder';
 import * as budgetSummary from '../spend/budget-summary';
@@ -48,6 +48,8 @@ import {
   CSV_COMPANY_REQUIRED_ERROR,
   CSV_RUN_BUILD_ERROR,
   CsvCostCenter,
+  csvItemLifecycle,
+  csvLifecycleConflict,
   ITEM_CSV_OPTIONAL_HEADERS,
   loadCostCenterCodes,
   loadCostCentersByCode,
@@ -206,7 +208,7 @@ export class CapexItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexItem);
     const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const allowedFields = [...SUMMARY_SCOPES.capex.columns];
     const where: any = {};
@@ -218,7 +220,7 @@ export class CapexItemsService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const scope: LifecycleScope = includeDisabled ? null : lifecycleStatus === StatusState.DISABLED ? 'inactive' : 'active';
+    const scope: LifecycleScope = matchNone ? 'none' : includeDisabled ? null : lifecycleStatus === StatusState.DISABLED ? 'inactive' : 'active';
     applyDisabledAtWhere(where, scope, filtersToApply);
     if (q) where.description = ILike(`%${q}%`);
     // Set after the grid filters, so none of them can replace it.
@@ -559,7 +561,8 @@ export class CapexItemsService {
           priority: (it as any).priority ?? '',
           currency: (it as any).currency ?? '',
           effective_start: toIsoDate((it as any).effective_start),
-          status: (it as any).status ?? 'enabled',
+          // Read from the end of validity: the stored status is not updated when the date passes.
+          status: deriveStatusFromDisabledAt((it as any).disabled_at),
           disabled_at: (it as any).disabled_at ? toIsoDate((it as any).disabled_at) : '',
           notes: (it as any).notes ?? '',
           company_name: (it as any).paying_company_id ? (companiesById.get((it as any).paying_company_id) ?? '') : '',
@@ -688,7 +691,7 @@ export class CapexItemsService {
     const normalized: Array<{
       line: number;
       item_number: number | null;
-      description: string; ppe_type: string; investment_type: string; priority: string; currency: string; effective_start: string | null; status: StatusState; disabled_at: Date | null; notes: string | null;
+      description: string; ppe_type: string; investment_type: string; priority: string; currency: string; effective_start: string | null; status: StatusState | null; disabled_at: Date | null; notes: string | null;
       paying_company_id: string | null;
       owner_it_id: string | null;
       owner_business_id: string | null;
@@ -708,11 +711,12 @@ export class CapexItemsService {
       const currency = (r['currency'] ?? '').toString().trim().toUpperCase();
       // Blank: 1 January of this year for a new line, the stored date on an update.
       const effective_start = readDate(r['effective_start'], 'effective_start', line);
-      const statusRaw = (r['status'] ?? 'enabled').toString().trim().toLowerCase();
+      // Blank: enabled for a new line, the stored status on an update (`csvItemLifecycle`).
+      const statusRaw = (r['status'] ?? '').toString().trim().toLowerCase();
       if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
       }
-      const status = statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED;
+      const status = statusRaw === 'disabled' ? StatusState.DISABLED : statusRaw === 'enabled' ? StatusState.ENABLED : null;
       const disabledAtRaw = (r['disabled_at'] ?? '').toString().trim();
       let disabled_at: Date | null = null;
       try {
@@ -720,6 +724,9 @@ export class CapexItemsService {
       } catch {
         errors.push({ row: line, message: `Invalid disabled_at '${disabledAtRaw}'. Use ISO date format.` });
       }
+      // The status cell must agree with the date cell (not with a legacy effective_end below).
+      const lifecycleConflict = csvLifecycleConflict(status, disabled_at);
+      if (lifecycleConflict) errors.push({ row: line, message: lifecycleConflict });
       // Files from before the single end date carry effective_end: it fills an empty end of validity.
       if (!disabledAtRaw) {
         const legacyEnd = readDate(r['effective_end'], 'effective_end', line);
@@ -917,8 +924,7 @@ export class CapexItemsService {
         priority: item.priority as any,
         ...(item.currency ? { currency: item.currency } : {}),
         ...(item.effective_start ? { effective_start: item.effective_start } : exists ? {} : { effective_start: `${Y}-01-01` }),
-        status: item.status,
-        disabled_at: item.disabled_at,
+        ...csvItemLifecycle(item.status, item.disabled_at, !!exists),
         notes: item.notes ?? null,
         // A blank company keeps the stored one (a new line takes its cost center's).
         ...(item.paying_company_id ? { paying_company_id: item.paying_company_id } : {}),

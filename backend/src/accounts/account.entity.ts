@@ -12,8 +12,9 @@ export class Account {
   @Column('uuid', { nullable: true })
   coa_id!: string | null;
 
-  // DB type is text; keep string for compatibility
-  @Column('text')
+  // The DB column is integer (pg returns a number). Writes and the DTO still pass strings,
+  // so the property stays typed string; raw SQL must cast it (`account_number::text = $n::text`).
+  @Column('integer')
   account_number!: string;
 
   @Column('text')

@@ -119,7 +119,7 @@
     "confirmPrompt": "Möchten Sie wirklich fortfahren?",
     "successAll": "{{count}} Element(e) erfolgreich gelöscht",
     "failedAll": "Löschen fehlgeschlagen: {{reasons}}",
-    "partial": "{{deleted}} Element(e) gelöscht. {{failed}} Element(e) konnten nicht gelöscht werden.",
+    "partial": "{{deleted}} Element(e) gelöscht. {{failed}} Element(e) konnten nicht gelöscht werden: {{reasons}}",
     "failedGeneric": "Elemente konnten nicht gelöscht werden"
   },
   "messages": {

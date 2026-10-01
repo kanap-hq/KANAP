@@ -31,7 +31,7 @@ import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { addCents, formatCents, toCents } from '../common/amount';
 import { AmountMeasure } from './amounts-write.util';
 import { writeItemCsvTotals } from './round-inputs.util';
-import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { deriveStatusFromDisabledAt, parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
 import { SpendItemUpsertDto } from './dto/spend-item.dto';
 import { ItemNumberService } from '../common/item-number.service';
 import { csvDateError, parseCsvDate } from './csv-date';
@@ -41,6 +41,8 @@ import {
   CSV_COMPANY_REQUIRED_ERROR,
   CSV_RUN_BUILD_ERROR,
   CsvCostCenter,
+  csvItemLifecycle,
+  csvLifecycleConflict,
   ITEM_CSV_OPTIONAL_HEADERS,
   loadCostCenterCodes,
   loadCostCentersByCode,
@@ -193,7 +195,8 @@ export class SpendItemsCsvService {
           account_number: account ? (account as any).account_number : '',
           currency: (it as any).currency ?? '',
           effective_start: (it as any).effective_start ?? '',
-          status: (it as any).status ?? 'enabled',
+          // Read from the end of validity: the stored status is not updated when the date passes.
+          status: deriveStatusFromDisabledAt((it as any).disabled_at),
           disabled_at: (it as any).disabled_at ? new Date((it as any).disabled_at).toISOString() : '',
           owner_it_email: ownerIt ? (ownerIt as any).email ?? '' : '',
           owner_business_email: ownerBiz ? (ownerBiz as any).email ?? '' : '',
@@ -368,7 +371,7 @@ export class SpendItemsCsvService {
       account_id: string | null;
       currency: string;
       effective_start: string | null;
-      status: StatusState;
+      status: StatusState | null;
       disabled_at: string | null;
       notes: string | null;
       totals: { [year: number]: { planned?: number; actual?: number; expected_landing?: number; committed?: number } };
@@ -461,11 +464,12 @@ export class SpendItemsCsvService {
       const currency = (r['currency'] ?? '').toString().trim().toUpperCase();
       // Blank: 1 January of this year for a new line, the stored date on an update.
       const effective_start = readDate(r['effective_start'], 'effective_start', line);
-      const statusRaw = (r['status'] ?? 'enabled').toString().trim().toLowerCase();
+      // Blank: enabled for a new line, the stored status on an update (`csvItemLifecycle`).
+      const statusRaw = (r['status'] ?? '').toString().trim().toLowerCase();
       if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
       }
-      const status = statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED;
+      const status = statusRaw === 'disabled' ? StatusState.DISABLED : statusRaw === 'enabled' ? StatusState.ENABLED : null;
       const disabledAtRaw = (r['disabled_at'] ?? '').toString().trim();
       let disabled_at: string | null = null;
       try {
@@ -473,6 +477,9 @@ export class SpendItemsCsvService {
       } catch {
         errors.push({ row: line, message: `Invalid disabled_at '${disabledAtRaw}'. Use ISO date format.` });
       }
+      // The status cell must agree with the date cell (not with a legacy effective_end below).
+      const lifecycleConflict = csvLifecycleConflict(status, disabled_at);
+      if (lifecycleConflict) errors.push({ row: line, message: lifecycleConflict });
       // Files from before the single end date carry effective_end: it fills an empty end of validity.
       if (!disabledAtRaw) {
         const legacyEnd = readDate(r['effective_end'], 'effective_end', line);
@@ -604,8 +611,7 @@ export class SpendItemsCsvService {
         account_id: item.account_id,
         ...(item.currency ? { currency: item.currency } : {}),
         ...(item.effective_start ? { effective_start: item.effective_start } : exists ? {} : { effective_start: defaultStart }),
-        status: item.status,
-        disabled_at: item.disabled_at,
+        ...csvItemLifecycle(item.status, item.disabled_at, !!exists),
         ...(analyticsValues ? { analytics_values: analyticsValues } : {}),
         owner_it_id: item.owner_it_id,
         owner_business_id: item.owner_business_id,

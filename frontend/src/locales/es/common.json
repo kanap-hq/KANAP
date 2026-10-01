@@ -119,7 +119,7 @@
     "confirmPrompt": "¿Está seguro de que desea continuar?",
     "successAll": "{{count}} elemento(s) eliminado(s) correctamente",
     "failedAll": "Error al eliminar: {{reasons}}",
-    "partial": "{{deleted}} elemento(s) eliminado(s). Error en {{failed}} elemento(s).",
+    "partial": "{{deleted}} elemento(s) eliminado(s). Error en {{failed}} elemento(s): {{reasons}}",
     "failedGeneric": "Error al eliminar los elementos"
   },
   "messages": {

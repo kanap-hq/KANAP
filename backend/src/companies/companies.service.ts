@@ -58,7 +58,7 @@ export class CompaniesService {
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query)
       : parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;
     const includeDisabled =
@@ -182,9 +182,9 @@ export class CompaniesService {
         }
       : undefined;
     if (effectiveStatus) {
-      applyStatusFilter(qbBase, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled });
+      applyStatusFilter(qbBase, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
-      applyStatusFilter(qbBase, { alias: 'c', period, includeDisabled });
+      applyStatusFilter(qbBase, { alias: 'c', period, includeDisabled, matchNone });
     }
     if (year) {
       qbBase.leftJoin(
@@ -199,9 +199,9 @@ export class CompaniesService {
 
     const qb = repo.createQueryBuilder('c');
     if (effectiveStatus) {
-      applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
-      applyStatusFilter(qb, { alias: 'c', period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'c', period, includeDisabled, matchNone });
     }
     if (year) {
       qb.leftJoin(
@@ -310,7 +310,7 @@ export class CompaniesService {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;
     const includeDisabled =
@@ -434,9 +434,9 @@ export class CompaniesService {
         }
       : undefined;
     if (effectiveStatus) {
-      applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
-      applyStatusFilter(qb, { alias: 'c', period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'c', period, includeDisabled, matchNone });
     }
     if (year) {
       qb.leftJoin(
@@ -528,7 +528,7 @@ export class CompaniesService {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: 10000 });
     const { status, q, filters } = parsed;
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg ?? null;
     const includeDisabled =
@@ -626,9 +626,9 @@ export class CompaniesService {
       end: new Date(`${year}-12-31T23:59:59.999Z`),
     };
     if (effectiveStatus) {
-      applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
-      applyStatusFilter(qb, { alias: 'c', period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'c', period, includeDisabled, matchNone });
     }
 
     // Join metrics for the selected fiscal year

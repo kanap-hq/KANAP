@@ -167,6 +167,128 @@ async function testCsvLegacyEndDate(kind: Kind) {
   });
 }
 
+/**
+ * An update through the CSV keeps what a blank cell does not say: both blank
+ * keep the status and the date; enabled with a blank date clears it. Disabled
+ * with a blank date keeps a date already passed, otherwise the end of validity
+ * is now (a stored future date included). A new line with a blank status is
+ * enabled; a new disabled line with no date ends now.
+ */
+async function testCsvBlankLifecycleCells(kind: Kind) {
+  await withTenant(`${kind}-csv-blank`, async (runner) => {
+    const svc = csvImporter(kind);
+    const opts = { manager: runner.manager };
+    const headers: string[] = svc.csvHeaders.call(svc);
+    const seeded = await svc.importCsv({
+      file: csvFile(headers, [
+        csvRow(kind, 'Both blank', { status: 'disabled', disabled_at: '2020-03-31' }),
+        csvRow(kind, 'Disabled keeps', { status: 'disabled', disabled_at: '2021-05-31' }),
+        csvRow(kind, 'Disabled now', {}),
+        csvRow(kind, 'Enabled clears', { disabled_at: '2031-06-30' }),
+        csvRow(kind, 'Future disabled', { disabled_at: '2031-06-30' }),
+      ]),
+      dryRun: false,
+      userId: null,
+    }, opts);
+    assert.equal(seeded.ok, true, `${kind} blank cells seed: accepted (${JSON.stringify(seeded.errors)})`);
+    assert.deepEqual(await readItem(runner, kind, 'Both blank'), { disabled_at: '2020-03-31T12:00:00.000Z', status: 'disabled' });
+
+    const before = Date.now();
+    const updated = await svc.importCsv({
+      file: csvFile(headers, [
+        csvRow(kind, 'Both blank', { status: '', disabled_at: '' }),
+        csvRow(kind, 'Disabled keeps', { status: 'disabled', disabled_at: '' }),
+        csvRow(kind, 'Disabled now', { status: 'disabled', disabled_at: '' }),
+        csvRow(kind, 'Enabled clears', { status: 'enabled', disabled_at: '' }),
+        csvRow(kind, 'New blank', { status: '', disabled_at: '' }),
+        csvRow(kind, 'Future disabled', { status: 'disabled', disabled_at: '' }),
+        csvRow(kind, 'New disabled', { status: 'disabled', disabled_at: '' }),
+      ]),
+      dryRun: false,
+      userId: null,
+    }, opts);
+    const after = Date.now();
+    assert.equal(updated.ok, true, `${kind} blank cells update: accepted (${JSON.stringify(updated.errors)})`);
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM ${table(kind)} WHERE tenant_id = current_setting('app.current_tenant')::uuid`);
+    assert.equal(n, 7, `${kind} blank cells: five lines updated, two created`);
+
+    assert.deepEqual(await readItem(runner, kind, 'Both blank'), { disabled_at: '2020-03-31T12:00:00.000Z', status: 'disabled' }, `${kind} CSV: blank status and date keep a disabled line disabled with its date`);
+    assert.deepEqual(await readItem(runner, kind, 'Disabled keeps'), { disabled_at: '2021-05-31T12:00:00.000Z', status: 'disabled' }, `${kind} CSV: disabled with a blank date keeps the stored date`);
+    for (const [name, what] of [
+      ['Disabled now', 'disabled with a blank date and none stored'],
+      ['Future disabled', 'disabled with a blank date and a future one stored'],
+      ['New disabled', 'a new disabled line with a blank date'],
+    ]) {
+      const now = await readItem(runner, kind, name);
+      assert.equal(now.status, 'disabled', `${kind} CSV: ${what} disables the line`);
+      const at = Date.parse(now.disabled_at ?? '');
+      assert.ok(at >= before - 1000 && at <= after + 1000, `${kind} CSV: ${what} ends now (${now.disabled_at})`);
+    }
+    assert.deepEqual(await readItem(runner, kind, 'Enabled clears'), { disabled_at: null, status: 'enabled' }, `${kind} CSV: enabled with a blank date clears the date`);
+    assert.deepEqual(await readItem(runner, kind, 'New blank'), { disabled_at: null, status: 'enabled' }, `${kind} CSV: a new line with a blank status is enabled`);
+  });
+}
+
+/**
+ * The export writes the status read from the end of validity, so a fresh
+ * export re-imports with no change, a stale stored status included. A row
+ * whose status contradicts its date is a row error.
+ */
+async function testCsvExportRoundTripAndConflicts(kind: Kind) {
+  await withTenant(`${kind}-csv-conflict`, async (runner) => {
+    const svc = csvImporter(kind);
+    const opts = { manager: runner.manager };
+    const headers: string[] = svc.csvHeaders.call(svc);
+    const seeded = await svc.importCsv({
+      file: csvFile(headers, [
+        csvRow(kind, 'Open line', {}),
+        csvRow(kind, 'Future end', { disabled_at: '2031-06-30' }),
+        csvRow(kind, 'Past end', { status: 'disabled', disabled_at: '2021-06-30' }),
+        csvRow(kind, 'Stale line', { disabled_at: '2031-06-30' }),
+      ]),
+      dryRun: false,
+      userId: null,
+    }, opts);
+    assert.equal(seeded.ok, true, `${kind} round trip seed: accepted (${JSON.stringify(seeded.errors)})`);
+    // A future end date that has since passed: the stored status is still enabled.
+    const nameColumn = kind === 'opex' ? 'product_name' : 'description';
+    await runner.query(`UPDATE ${table(kind)} SET disabled_at = '2022-03-31T12:00:00Z' WHERE ${nameColumn} = 'Stale line'`);
+    const names = ['Open line', 'Future end', 'Past end', 'Stale line'];
+    const read = () => Promise.all(names.map(async (name) => (await readItem(runner, kind, name)).disabled_at));
+    const before = await read();
+
+    const exported = await svc.exportCsv('data', opts);
+    const lines: string[] = exported.content.replace(/^\uFEFF/, '').trim().split('\n');
+    const statusIndex = lines[0].split(';').indexOf('status');
+    const nameIndex = lines[0].split(';').indexOf(nameColumn);
+    const staleRow = lines.find((line) => line.split(';')[nameIndex] === 'Stale line')!;
+    assert.equal(staleRow.split(';')[statusIndex], 'disabled', `${kind} export: the status is read from the end of validity`);
+
+    const reimported = await svc.importCsv({ file: { buffer: Buffer.from(exported.content, 'utf8') }, dryRun: false, userId: null }, opts);
+    assert.equal(reimported.ok, true, `${kind} round trip: accepted (${JSON.stringify(reimported.errors)})`);
+    assert.deepEqual(await read(), before, `${kind} round trip: no end of validity changes`);
+    assert.deepEqual(
+      (await Promise.all(names.map((name) => readItem(runner, kind, name)))).map((item) => item.status),
+      ['enabled', 'enabled', 'disabled', 'disabled'],
+      `${kind} round trip: the status follows the dates`,
+    );
+
+    const conflict = await svc.importCsv({
+      file: csvFile(headers, [
+        csvRow(kind, 'Open line', { status: 'enabled', disabled_at: '2021-06-30' }),
+        csvRow(kind, 'Future end', { status: 'disabled', disabled_at: '2031-06-30' }),
+      ]),
+      dryRun: true,
+      userId: null,
+    }, opts);
+    assert.equal(conflict.ok, false, `${kind} CSV: a status contradicting its date is refused`);
+    assert.deepEqual(conflict.errors, [
+      { row: 2, message: 'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled.' },
+      { row: 3, message: 'Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.' },
+    ]);
+  });
+}
+
 async function testCsvExportHasNoEffectiveEnd(kind: Kind) {
   await withTenant(`${kind}-export`, async (runner) => {
     const svc = csvImporter(kind);
@@ -429,6 +551,8 @@ async function main() {
     for (const kind of ['opex', 'capex'] as Kind[]) {
       for (const test of [
         testCsvLegacyEndDate,
+        testCsvBlankLifecycleCells,
+        testCsvExportRoundTripAndConflicts,
         testCsvExportHasNoEffectiveEnd,
         testCapexExportImportRoundTrip,
         testPreLExportImports,

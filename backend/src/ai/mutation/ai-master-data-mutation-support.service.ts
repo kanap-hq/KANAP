@@ -844,7 +844,7 @@ export class AiMasterDataMutationSupportService {
           LEFT JOIN chart_of_accounts coa ON coa.id = a.coa_id AND coa.tenant_id = a.tenant_id
           WHERE a.tenant_id = $1
             AND (
-              a.account_number = $2::text
+              a.account_number::text = $2::text
               OR LOWER(a.account_name) = LOWER($2::text)
               OR LOWER(CONCAT(a.account_number, ' - ', a.account_name)) = LOWER($2::text)
             )

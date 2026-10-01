@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
-import { isActiveAt } from '../common/status';
+import { deriveStatusFromDisabledAt, isActiveAt, StatusState } from '../common/status';
 import { ItemAnalyticsChange, resolveItemAnalyticsChanges } from './item-analytics.util';
 
 /**
@@ -244,6 +244,41 @@ export function resolveCsvCostCenter(byCode: Map<string, CsvCostCenter>, code: s
 export function csvCostCenterDisabledError(node: CsvCostCenter, currentCostCenterId: string | null | undefined): string | null {
   if (isActiveAt(node.disabled_at) || node.id === (currentCostCenterId ?? null)) return null;
   return `Cost center ${node.code} is disabled.`;
+}
+
+/**
+ * The status and end of validity an item CSV row writes (`status` null when
+ * the cell is blank); a blank date cell is left out. A new line is enabled
+ * unless the row says disabled. On an update a blank cell keeps the stored
+ * value: both blank keep both; enabled with a blank date clears the date.
+ * Disabled with a blank date keeps a date already passed, otherwise the end
+ * of validity is now, on a new line too. A date given always wins
+ * (`resolveLifecycleState`).
+ */
+export function csvItemLifecycle<D>(
+  status: StatusState | null,
+  disabledAt: D | null,
+  isUpdate: boolean,
+): { status?: StatusState; disabled_at?: D } {
+  const date = disabledAt != null ? { disabled_at: disabledAt } : {};
+  if (!isUpdate) return { status: status ?? StatusState.ENABLED, ...date };
+  return { ...(status ? { status } : {}), ...date };
+}
+
+/**
+ * The row error of an item CSV row whose status cell contradicts its end of
+ * validity, or null. The exports write the status read from the date, so a
+ * fresh export never contradicts itself. A disabled line dated today is not a
+ * contradiction: the CAPEX export writes the day only, read back at noon.
+ */
+export function csvLifecycleConflict(status: StatusState | null, disabledAt: Date | string | null, now = new Date()): string | null {
+  if (!status || disabledAt == null) return null;
+  if (deriveStatusFromDisabledAt(disabledAt, now) === status) return null;
+  const day = (date: Date) => date.toISOString().slice(0, 10);
+  if (status === StatusState.DISABLED && day(new Date(disabledAt)) === day(now)) return null;
+  return status === StatusState.ENABLED
+    ? 'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled.'
+    : 'Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.';
 }
 
 export const CSV_RUN_BUILD_ERROR = 'Run or build must be run, build or blank.';

@@ -381,7 +381,7 @@ export class AnalyticsCategoriesService {
   /** The list query: tenant, dimension, lifecycle scope, quick search and grid filters. */
   private buildQuery(ctx: AnalyticsContext, query: any) {
     const { status, q, filters } = parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const effectiveStatus = status ?? statusFromAg;
     const includeDisabled = ['1', 'true'].includes(String(query?.includeDisabled ?? '').toLowerCase());
 
@@ -396,8 +396,8 @@ export class AnalyticsCategoriesService {
       if (isUUID(axisId)) qb.andWhere('cat.axis_id = :axisId', { axisId });
       else qb.andWhere('1 = 0');
     }
-    if (effectiveStatus) applyStatusFilter(qb, { alias: 'cat', explicitStatus: effectiveStatus as StatusState, includeDisabled });
-    else applyStatusFilter(qb, { alias: 'cat', includeDisabled });
+    if (effectiveStatus) applyStatusFilter(qb, { alias: 'cat', explicitStatus: effectiveStatus as StatusState, includeDisabled, matchNone });
+    else applyStatusFilter(qb, { alias: 'cat', includeDisabled, matchNone });
     if (q) {
       qb.andWhere('(cat.name ILIKE :term OR cat.description ILIKE :term)', { term: `%${q}%` });
     }
