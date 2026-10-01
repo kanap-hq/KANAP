@@ -18,6 +18,15 @@
     overflow: visible !important;
   }
 
+  /* On screen the app shell is one viewport tall and the page scrolls inside it (Layout).
+     On paper the shell goes back to document flow, so the report runs over as many pages
+     as it needs instead of one screen, whatever the on-screen scroll position. */
+  .kanap-app-main,
+  .kanap-app-scroll {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   /* Hide everything by default, then show only the report frame */
   body * {
     visibility: hidden !important;

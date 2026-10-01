@@ -900,7 +900,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const showAuxHorizontalScrollbar = showTopScroll && !enablePagination;
 
   return (
-    <Box sx={{ width: '100%', height: '100%', minWidth: 0, overflowX: 'hidden' }}>
+    // No percentage height: list pages render the grid as a direct child of the bounded page
+    // scroller, where `height: 100%` would add the page header on top of a full viewport and
+    // scroll the page. The grid div below sizes itself to the viewport instead.
+    <Box sx={{ width: '100%', minWidth: 0, overflowX: 'hidden' }}>
       <Stack spacing={1} sx={{ mb: 1 }}>
         <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
           {enableSearch && (
