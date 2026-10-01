@@ -135,6 +135,17 @@ Below the grid, a stats bar shows:
 - Copying a column onto itself (same year and same column) is refused
 - The copy is all or nothing: if one item fails, nothing is saved
 
+### Copying a computed column
+
+A column can be built from lines, each a quantity times a unit price. See [Quantity and price](opex.md#quantity-and-price).
+
+- The copy brings the source column's lines to the destination, with their description, quantity, unit, unit price, how often (full time or days per month for people, per month or once for pieces) and calendar. Their periods move to the destination year, like the column's period: March to December 2026 becomes March to December 2027, and a line that ends on February 29 ends on February 28 in a year without one. A piece bought once on March 15, 2026 is bought on March 15, 2027
+- The copy brings the source column's FTE too
+- The months are copied like any other column. The percentage increase applies to the copied amounts only. The lines keep their unit prices
+- A copy from a column without lines leaves the destination without lines, and its FTE becomes blank
+- In the Budget tab, the destination column shows "Copied from Budget 2026", and its **Quantity and price** tab says "Amounts were copied from Budget 2026. Use the lines again."
+- To plan the destination year at its own prices, open the item's Budget tab and change the unit prices on the **Quantity and price** tab: each change computes the column from the lines again. To keep the prices, click **Use the lines again**. A line priced per day needs a calendar that holds the destination year: a standard calendar always does, and a custom one may not, for example "Head office staff has no working days for 2027. Add them on the Working-day calendars page."
+
 ### Frozen column protection
 
 If the destination column is frozen, both **Dry run** and **Copy data** are disabled. An error banner tells you to unfreeze first.
@@ -189,7 +200,7 @@ After a dry run, a banner shows the count of items ready to copy, skipped, and e
 
 Clear all data from a specific budget column for a given year. This is a destructive operation: use it when you need to start fresh.
 
-The **OPEX** / **CAPEX** switch at the top chooses which items are cleared. The reset sets the twelve months of the column to zero and removes its period. In the Budget tab, the column then gets a new suggestion from the item's dates. The reset covers every item, including items whose end of validity has passed. The reset is all or nothing: if one item fails, nothing is cleared.
+The **OPEX** / **CAPEX** switch at the top chooses which items are cleared. The reset sets the twelve months of the column to zero and removes its period, and its lines when the column was built from quantity and price. In the Budget tab, the column then gets a new suggestion from the item's dates. The reset covers every item, including items whose end of validity has passed. The reset is all or nothing: if one item fails, nothing is cleared.
 
 Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
 
@@ -324,7 +335,7 @@ The file uses a semicolon `;` as separator and UTF-8 encoding.
 | `measure` | The column, by its technical name, whatever your organisation calls it: `planned` (column 1, standard name Budget), `committed` (column 2, Revision), `forecast` (column 3, Forecast), `actual` (column 4, Actuals), `expected_landing` (column 5, Expected landing). On import, `budget`, `revision`, `follow_up` and `landing` also work |
 | `period_start`, `period_end` | The column's period as `YYYY-MM-DD`, inside the row's year. On import, both empty means the whole year |
 | `jan` to `dec` | The twelve monthly amounts, with a dot as decimal separator. On import, a comma and spaces are accepted too |
-| `method` | How the column was produced: `spread`, `copied` or `manual`. For information only, ignored on import |
+| `method` | How the column was produced: `spread`, `copied`, `manual` or `computed` (built from quantity and price). For information only, ignored on import |
 
 ### Import rules
 
@@ -335,7 +346,8 @@ The file uses a semicolon `;` as separator and UTF-8 encoding.
 - Each row replaces the twelve months of its line, year and column. Lines, years and columns that are not in the file stay untouched
 - All twelve months are required. Write `0` for a month without an amount
 - A row identical to what is stored is left untouched, including how the column was produced. Re-importing an export changes nothing
-- A row whose amounts change marks the column as **Edited by hand**, with the period from the file
+- A row whose amounts change marks the column as **Edited by hand**, with the period from the file. A column built from quantity and price keeps its lines, and its Budget tab offers to use them again. See [Quantity and price](opex.md#quantity-and-price)
+- The file holds amounts only. The lines of a column are managed in the Budget tab
 - A row that only changes the period updates the period and keeps the rest
 - Actuals rows follow the same rules, which lets you import monthly actuals
 - A changed row on a frozen column is refused. An identical row on a frozen column is accepted
@@ -365,18 +377,18 @@ One row per column, always in the same order, from column 1 to column 5. The sta
 | **Name** | The name everyone sees in lists, the Budget tab, reports, the overview and Budget administration. Leave it empty to use the standard name, shown as a placeholder. At most 40 characters, with no control or invisible characters. Each name must differ from the other columns' names, including the standard name of a column you have not renamed, whatever the capitals |
 | **In files** | The line under each name. It gives the technical name of the column in the budget rows file and its imports, for example `planned` for column 1. It never changes when you rename a column |
 | **Shown** | Whether the column appears on screen. At least one column must stay shown |
-| **Follows "Apply to all columns"** | Whether the column takes the same period when a spread in the Budget tab is applied to all columns. A column that does not follow keeps its own period, and when you spread it, it spreads alone |
+| **Follows the spread and the lines** | Whether the column takes what is applied to all columns on the Budget tab: the distribution and period of a spread (**Apply the distribution to all columns**), and the quantity and price lines (**Apply these lines to all columns**). A column that does not follow keeps its own: when you spread it or edit its lines, it changes alone |
 | **Default** | The column that reports preselect and that sorts the lists and the overview. Freezing it fixes the year's exchange rates. The default column must be shown |
 
-The **Follows "Apply to all columns"** and **Default** headers carry an info icon. Hover over it, or move the keyboard focus to it, to read the same explanation on the page.
+The **Follows the spread and the lines** and **Default** headers carry an info icon. Hover over it, or move the keyboard focus to it, to read the same explanation on the page.
 
-By default, Budget, Revision, Actuals and Expected landing are shown and Forecast is hidden, every column follows "Apply to all columns", and Budget is the default column.
+By default, Budget, Revision, Actuals and Expected landing are shown and Forecast is hidden, every column follows the switches of the Budget tab, and Budget is the default column.
 
 ### What the settings change
 
 - **Hidden columns** leave the lists, the column chooser, the Budget tab, the report pickers, the copy and reset pages and the overview. They keep their amounts: hiding a column never clears data, and showing it again brings the amounts back. Hidden columns still accept imports through the budget rows file, and freezes still apply to them. The freeze page lists hidden columns too, marked **Hidden**, so freezing a year freezes them along with the others
 - **The default column** is preselected in every report. It sorts the OPEX and CAPEX lists, their previous and next navigation, and the **Top items** and **Top increases** tiles of the overview. The lists show it for the current year, next to the last shown column. It is also the reference amount of the Allocations tab and the column the spread panel opens on. Freezing it for a year fixes that year's exchange rates (see [Freezing the default column fixes the exchange rates](#freezing-the-default-column-fixes-the-exchange-rates))
-- **Follows "Apply to all columns"** decides which columns move together when a spread is applied to all columns. Frozen columns never change, whatever this setting says
+- **Follows the spread and the lines** decides which columns move together when a spread is applied to all columns, and which columns take the lines when **Apply these lines to all columns** is on. Frozen columns never change, whatever this setting says
 
 ### Saving
 

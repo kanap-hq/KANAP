@@ -53,8 +53,9 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { analyticsAxisFields, resolveAiEntityRegistry } from './registries';
+import { budgetFteFields } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
-import { FIXED_SLOTS, FixedSlot, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
+import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -140,7 +141,22 @@ function budgetSlotValue(slot: any, metric: SlotMetric): number | null {
   return numericScalar(slot.totals?.[metric]);
 }
 
-/** Every column of every fixed year under its registry key (`y_plus1_forecast`), and the same per year. */
+/**
+ * The FTE of a fixed slot and column: the slot's engine key, else its year's,
+ * else the AI key of a detail row already converted by `withDetailAiKeys`; null is unknown.
+ */
+function budgetFteValue(row: any, slot: FixedSlot, column: (typeof SUMMARY_COLUMNS)[number], anchorYear: number): number | null {
+  return numericScalar(
+    row?.[fteFieldKey(`${slot.key}${column.suffix}`)]
+      ?? row?.[fteFieldKey(`y${anchorYear + slot.offset}${column.suffix}`)]
+      ?? row?.[`${slot.ai}_${column.ai}_fte`],
+  );
+}
+
+/**
+ * Every column of every fixed year under its registry key (`y_plus1_forecast`),
+ * and the same per year; the FTE of each under `<slot>_<column>_fte`.
+ */
 function budgetAmountMetadata(row: any, anchorYear: number): AiEntityMetadata {
   const metadata: AiEntityMetadata = {};
   const yearlyTotals: Array<Record<string, string | number | null>> = [];
@@ -155,13 +171,16 @@ function budgetAmountMetadata(row: any, anchorYear: number): AiEntityMetadata {
     yearlyTotals.push(year);
   }
   metadata.yearly_totals = yearlyTotals;
+  for (const slot of FIXED_SLOTS) {
+    for (const column of SUMMARY_COLUMNS) metadata[`${slot.ai}_${column.ai}_fte`] = budgetFteValue(row, slot, column, anchorYear);
+  }
   return metadata;
 }
 
 /**
  * The value of each enabled non-default analytics dimension under its AI key
  * (`analytics:<code>`): read from the engine's key, or from the AI key on a
- * detail row already converted by `withAnalyticsAiKeys`.
+ * detail row already converted by `withDetailAiKeys`.
  */
 function analyticsAxisMetadata(row: any, registry: AiEntityFilterRegistry): AiEntityMetadata {
   return Object.fromEntries(analyticsAxisFields(registry).map(({ key, grid }) => [key, scalar(row?.[grid] ?? row?.[key])]));
@@ -169,16 +188,18 @@ function analyticsAxisMetadata(row: any, registry: AiEntityFilterRegistry): AiEn
 
 /**
  * A summary row as the AI detail shows it: the dimension values under their AI
- * keys (`analytics:<code>`), without the engine's per-id keys.
+ * keys (`analytics:<code>`) and the FTE under theirs (`y_budget_fte`), without
+ * the engine's per-id and `fte_<slot><Suffix>` keys.
  */
-function withAnalyticsAiKeys(row: Record<string, any> | undefined, registry: AiEntityFilterRegistry): Record<string, any> | undefined {
+function withDetailAiKeys(row: Record<string, any> | undefined, registry: AiEntityFilterRegistry): Record<string, any> | undefined {
   if (!row) return row;
   const output: Record<string, any> = {};
   for (const [key, value] of Object.entries(row)) {
-    if (key === 'analytics_value_ids' || parseAnalyticsFieldKey(key)) continue;
+    if (key === 'analytics_value_ids' || parseAnalyticsFieldKey(key) || resolveFteField(key)) continue;
     output[key] = value;
   }
   for (const { key, grid } of analyticsAxisFields(registry)) output[key] = row[grid] ?? null;
+  for (const field of Object.values(budgetFteFields())) output[field.ai] = numericScalar(row[field.grid]);
   return output;
 }
 
@@ -1770,7 +1791,7 @@ export class AiQueryExecutor {
       },
       { manager: context.manager },
     );
-    const summary = withAnalyticsAiKeys(row, registry);
+    const summary = withDetailAiKeys(row, registry);
 
     const [
       financialVersions,
@@ -1846,7 +1867,7 @@ export class AiQueryExecutor {
       this.capexItems.listProjects(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
       this.contracts.listContractsForCapexItem(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
     ]);
-    const summary = withAnalyticsAiKeys(row, registry);
+    const summary = withDetailAiKeys(row, registry);
 
     return {
       ...(summary ?? {}),

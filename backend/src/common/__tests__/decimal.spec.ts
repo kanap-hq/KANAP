@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { Decimal, DECIMAL_SCALE_DIGITS } from '../decimal';
+import { Decimal, DECIMAL_SCALE_DIGITS, DecimalLimitError, DecimalLimits, parseLimitedDecimal } from '../decimal';
 
 // Scaled-integer arithmetic: exact products, one rounding to cents at the end.
 
@@ -90,6 +90,64 @@ function testRefusals() {
   assert.throws(() => Decimal.from(Number.POSITIVE_INFINITY), /Invalid amount/);
 }
 
+function testCompareAndDivide() {
+  assert.equal(Decimal.from('1.10').cmp('1.1'), 0);
+  assert.equal(Decimal.from('-0.01').cmp(0), -1);
+  assert.equal(Decimal.from('100').cmp('99.9999'), 1);
+  // Yearly FTE: 9 / 12 = 0.75; 13.5 / 12 = 1.125 → 1.13 (half away from zero); 1 / 12 = 0.0833… → 0.08.
+  assert.equal(Decimal.from(9).divRound(12, 2).toString(), '0.75');
+  assert.equal(Decimal.from('13.5').divRound(12, 2).toString(), '1.13');
+  assert.equal(Decimal.from('-13.5').divRound(12, 2).toString(), '-1.13');
+  assert.equal(Decimal.from(1).divRound(12, 2).toString(), '0.08');
+  assert.equal(Decimal.from(12).divRound(12n, 2).toString(), '1');
+  assert.throws(() => Decimal.from(1).divRound(0, 2), /Invalid division/);
+}
+
+const QUANTITY: DecimalLimits = { label: 'Quantity', decimals: 3, min: '0', minMessage: 'Quantity cannot be negative.', maxAbs: '1000000000' };
+const PRICE: DecimalLimits = { label: 'Unit price', decimals: 4, maxAbs: '100000000000000' };
+const INDEX: DecimalLimits = { label: 'Price index', decimals: 4, min: '-100', minMessage: 'The price index cannot be below -100%.', maxAbs: '1000' };
+
+function refusedWith(value: unknown, limits: DecimalLimits, message: string) {
+  assert.throws(() => parseLimitedDecimal(value, limits), (err: unknown) => err instanceof DecimalLimitError && err.message === message, `${String(value)} → ${message}`);
+}
+
+function testLimitedParser() {
+  // Exact values, trailing zeros ignored, numbers read in their shortest form, a comma as the decimal point.
+  assert.equal(parseLimitedDecimal('1.500', QUANTITY).toString(), '1.5');
+  assert.equal(parseLimitedDecimal('0.001', QUANTITY).toString(), '0.001');
+  assert.equal(parseLimitedDecimal('1.2000000', QUANTITY).toString(), '1.2');
+  assert.equal(parseLimitedDecimal(0.1, QUANTITY).toString(), '0.1');
+  assert.equal(parseLimitedDecimal('1,25', QUANTITY).toString(), '1.25');
+  assert.equal(parseLimitedDecimal('999999999.999', QUANTITY).toString(), '999999999.999');
+  assert.equal(parseLimitedDecimal('-99999999999999.9999', PRICE).toString(), '-99999999999999.9999');
+  assert.equal(parseLimitedDecimal('1e3', PRICE).toString(), '1000');
+  assert.equal(parseLimitedDecimal('-100', INDEX).toString(), '-100');
+  assert.equal(parseLimitedDecimal('999.9999', INDEX).toString(), '999.9999');
+  assert.equal(parseLimitedDecimal('-0', QUANTITY).toString(), '0');
+
+  // Refusals are sentences naming the field; nothing is rounded.
+  refusedWith('1.0005', QUANTITY, 'Quantity accepts at most 3 decimals.');
+  refusedWith(0.0001, QUANTITY, 'Quantity accepts at most 3 decimals.');
+  refusedWith('400.00001', PRICE, 'Unit price accepts at most 4 decimals.');
+  refusedWith('2.12345', INDEX, 'Price index accepts at most 4 decimals.');
+  refusedWith('-0.001', QUANTITY, 'Quantity cannot be negative.');
+  refusedWith('-100.0001', INDEX, 'The price index cannot be below -100%.');
+  refusedWith('1000000000', QUANTITY, 'Quantity is too large.');
+  refusedWith('1e9', QUANTITY, 'Quantity is too large.');
+  refusedWith('-100000000000000', PRICE, 'Unit price is too large.');
+  refusedWith('1000', INDEX, 'Price index is too large.');
+  refusedWith('abc', QUANTITY, 'Quantity must be a number.');
+  refusedWith(Number.NaN, QUANTITY, 'Quantity must be a number.');
+  refusedWith(true, QUANTITY, 'Quantity must be a number.');
+  refusedWith({}, QUANTITY, 'Quantity must be a number.');
+  refusedWith('', QUANTITY, 'Quantity is required.');
+  refusedWith(null, QUANTITY, 'Quantity is required.');
+  refusedWith(undefined, PRICE, 'Unit price is required.');
+  // Without a custom message the minimum is named.
+  refusedWith('-1', { label: 'Days', decimals: 6, min: '0', maxAbs: '32' }, 'Days cannot be below 0.');
+  refusedWith('1.25', { label: 'Share', decimals: 1, maxAbs: '10' }, 'Share accepts at most 1 decimal.');
+}
+
 function main() {
   testProducts();
   testIndex();
@@ -99,6 +157,8 @@ function main() {
   testRescaleBeyondTheScaleIsHalfAwayFromZero();
   testParsing();
   testRefusals();
+  testCompareAndDivide();
+  testLimitedParser();
   console.log('decimal.spec: ok');
 }
 

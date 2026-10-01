@@ -4,6 +4,7 @@ import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { applyDisabledAtWhere, LifecycleScope, StatusState } from '../common/status';
 import { compileAgFilterCondition, createParamNameGenerator, normalizeAgFilterModel } from '../common/ag-grid-filtering';
 import { formatCents } from '../common/amount';
+import { Decimal } from '../common/decimal';
 import { parseAnalyticsFieldKey } from '../analytics/analytics-axes.util';
 import {
   applyAgFiltersInMemory,
@@ -14,12 +15,14 @@ import {
   loadVersionTotals,
   parseSummaryYears,
   quickSearchSummaryRows,
+  resolveFteField,
   sortSummaryRows,
   SUMMARY_COLUMNS,
   SummaryDeps,
   summaryFieldValues,
   SummaryScopeConfig,
   summaryTenantId,
+  versionFte,
   versionWithinValidity,
   yearsNamedByFields,
 } from './spend-summary.builder';
@@ -343,17 +346,41 @@ export async function summaryFilterValues(
 }
 
 /**
+ * The FTE sum of one key over the listed lines, and how many lines have no FTE
+ * (unknown). `total` is null when no line has an FTE: unknown is never 0.
+ */
+export type FteTotal = { total: number | null; unknown: number };
+
+/** The amount keys and `reportingCurrency`; `fte` only when the call asks for FTE keys. */
+export type SummaryTotals = Record<string, number | string> & { fte?: Record<string, FteTotal> };
+
+/** `fte=fte_yBudget,fte_y2028Revision` (or an array): the valid FTE keys, each with its year and column. */
+function parseFteKeys(raw: unknown, currentYear: number): Array<{ key: string; year: number; measure: string }> {
+  const parts = Array.isArray(raw) ? raw.flatMap((part) => String(part).split(',')) : typeof raw === 'string' ? raw.split(',') : [];
+  const keys = new Map<string, { key: string; year: number; measure: string }>();
+  for (const key of parts.map((part) => String(part).trim())) {
+    const resolved = resolveFteField(key);
+    if (!resolved) continue;
+    const year = resolved.year ?? currentYear + FIXED_SLOTS.find((slot) => slot.key === resolved.slot)!.offset;
+    keys.set(key, { key, year, measure: resolved.column.measure });
+  }
+  return Array.from(keys.values());
+}
+
+/**
  * The footer totals of what the summary lists: every `<slot><Suffix>` of the
  * fixed slots and of the requested years, in the reporting currency, masked
  * after each item's end of validity. Each version is converted once and the
- * sums are kept in cents.
+ * sums are kept in cents. With `fte=<keys>`, `fte` sums each FTE key over the
+ * lines (their rounded values, exactly) and counts the lines whose FTE is
+ * unknown; without it the key set is unchanged.
  */
 export async function summaryTotals(
   config: SummaryScopeConfig,
   deps: SummaryDeps,
   query: any,
   manager: EntityManager,
-): Promise<Record<string, number | string>> {
+): Promise<SummaryTotals> {
   const { ids } = await summaryIds(config, deps, query, manager);
   const tenantId = await summaryTenantId(manager);
   const currentYear = new Date().getFullYear();
@@ -361,11 +388,13 @@ export async function summaryTotals(
     ...FIXED_SLOTS.map((slot) => ({ key: slot.key as string, year: currentYear + slot.offset })),
     ...parseSummaryYears(query?.years).map((year) => ({ key: `y${year}`, year })),
   ];
+  const fteKeys = parseFteKeys(query?.fte, currentYear);
   const sums = new Map<string, bigint>();
   for (const slot of slots) for (const column of SUMMARY_COLUMNS) sums.set(`${slot.key}${column.suffix}`, 0n);
 
   const items = await itemsByIds(config, manager, tenantId, ids);
-  const totals = await loadVersionTotals(config, deps, manager, tenantId, items, slots.map((slot) => slot.year), { reporting: true });
+  const years = Array.from(new Set([...slots.map((slot) => slot.year), ...fteKeys.map((fte) => fte.year)]));
+  const totals = await loadVersionTotals(config, deps, manager, tenantId, items, years, { reporting: true, fte: fteKeys.length > 0 });
   for (const item of items) {
     const perYear = totals.versionsByItemYear.get(item.id);
     for (const slot of slots) {
@@ -378,10 +407,24 @@ export async function summaryTotals(
       }
     }
   }
-  return {
+  const amounts: Record<string, number | string> = {
     ...Object.fromEntries(Array.from(sums.entries()).map(([key, cents]) => [key, Number(formatCents(cents))])),
     reportingCurrency: totals.reportingCurrency,
   };
+  if (!fteKeys.length) return amounts;
+
+  const fte: Record<string, FteTotal> = {};
+  for (const { key, year, measure } of fteKeys) {
+    let sum = Decimal.ZERO;
+    let unknown = 0;
+    for (const item of items) {
+      const value = versionFte(totals, versionWithinValidity(totals.versionsByItemYear.get(item.id), year, item.disabled_at), measure);
+      if (value == null) unknown += 1;
+      else sum = sum.add(value);
+    }
+    fte[key] = { total: unknown < items.length ? Number(sum.toString()) : null, unknown };
+  }
+  return Object.assign(amounts, { fte });
 }
 
 /** Summary rows of the given items, in the order given (no lifecycle scope, no cap). */

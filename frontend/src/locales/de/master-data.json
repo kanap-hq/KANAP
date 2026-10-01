@@ -15,6 +15,8 @@
       "coaDescription": "Verwalten Sie Kontenpläne und Konten",
       "currencyTitle": "Währung",
       "currencyDescription": "Konfigurieren Sie Berichts- und Standardwährungen",
+      "workingDayCalendarsTitle": "Arbeitstagekalender",
+      "workingDayCalendarsDescription": "Legen Sie die Arbeitstage jedes Monats für Zeilen mit Preis pro Tag fest",
       "businessProcessesTitle": "Geschäftsprozesse",
       "businessProcessesDescription": "Verwalten Sie ISO 9001-konforme Geschäftsprozesse",
       "analyticsDimensionsTitle": "Analysedimensionen",
@@ -222,6 +224,101 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "companyRequired": "Wählen Sie ein Unternehmen.",
       "chooseCompany": "Wählen Sie das Unternehmen, um diese Gruppe in eine Kostenstelle umzuwandeln."
+    }
+  },
+  "workingDayCalendars": {
+    "title": "Arbeitstagekalender",
+    "newCalendar": "Neuer Kalender",
+    "fallback": "Kalender",
+    "emptyExplainer": "Ein Kalender enthält die Arbeitstage jedes Monats, für Zeilen mit Preis pro Tag. Legen Sie einen an oder importieren Sie eine Datei.",
+    "export": "Kalender exportieren",
+    "import": "Kalender importieren",
+    "previous": "Vorheriger Kalender",
+    "next": "Nächster Kalender",
+    "createHint": "Sobald der Kalender angelegt ist, geben Sie die Arbeitstage jedes Jahres ein.",
+    "createHintStandard": "Die Arbeitstage jedes Jahres folgen den Feiertagen von {{source}}. Sie können danach jeden Monat ändern.",
+    "wholeCountry": "Ganzes Land",
+    "yearsAll": "Alle Jahre",
+    "yearsAllEdited": "Alle Jahre, {{years}} geändert",
+    "columns": {
+      "code": "Code",
+      "name": "Name",
+      "country": "Land",
+      "years": "Jahre",
+      "status": "Status",
+      "updated": "Aktualisiert"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Name",
+      "description": "Beschreibung",
+      "lifecycle": "Lebenszyklus",
+      "country": "Land",
+      "region": "Region",
+      "source": "Quelle"
+    },
+    "hints": {
+      "code": "Ein kurzer Code, den Ihr Team kennt. Importdateien finden den Kalender über diesen Code.",
+      "country": "Optional. Mit einem Land folgen die Arbeitstage jedes Jahres dessen Feiertagen.",
+      "source": "Die Standardwerte folgen diesen Feiertagen. Das Land eines Kalenders kann nicht geändert werden."
+    },
+    "placeholders": {
+      "country": "z. B. Frankreich",
+      "code": "z. B. CAL-01",
+      "name": "z. B. Mitarbeitende am Hauptsitz",
+      "description": "z. B. Arbeitstage der Angestellten, ohne Feiertage",
+      "days": "z. B. 20"
+    },
+    "usage": {
+      "opex_one": "{{count}} OPEX-Zeile",
+      "opex_other": "{{count}} OPEX-Zeilen",
+      "capex_one": "{{count}} CAPEX-Zeile",
+      "capex_other": "{{count}} CAPEX-Zeilen",
+      "one": "Verwendet von {{lines}}.",
+      "both": "Verwendet von {{opex}} und {{capex}}."
+    },
+    "deleteBlocked": "{{usage}} Deaktivieren Sie ihn stattdessen.",
+    "suggestions": {
+      "line_one": "Land Ihrer Unternehmen: {{countries}}. Legen Sie seinen Standardkalender an.",
+      "line_other": "Länder Ihrer Unternehmen: {{countries}}. Legen Sie ihre Standardkalender an.",
+      "create_one": "Kalender anlegen",
+      "create_other": "{{count}} Kalender anlegen"
+    },
+    "days": {
+      "title": "Arbeitstage",
+      "hint": "Die Arbeitstage jedes Monats. Ein Preis pro Tag wird mit ihnen multipliziert.",
+      "monthField": "{{month}} {{year}}",
+      "total_one": "{{total}} Tag in {{year}}",
+      "total_other": "{{total}} Tage in {{year}}",
+      "copyFrom": "Aus {{year}} übernehmen",
+      "removeYear": "{{year}} entfernen",
+      "removeDialog": {
+        "title": "Arbeitstage von {{year}} entfernen?",
+        "body": "{{usage}} Ihre Beträge und Erläuterungen bleiben unverändert. Solange die Tage von {{year}} nicht erneut eingegeben sind, können Zeilen mit einem Preis pro Tag auf diesem Kalender für {{year}} nicht gespeichert werden.",
+        "confirm": "Trotzdem entfernen"
+      },
+      "fillToSave": "Füllen Sie alle zwölf Monate aus, um {{year}} zu speichern.",
+      "incomplete": "Geben Sie die Arbeitstage aller zwölf Monate von {{year}} ein.",
+      "tooMany": "{{month}} {{year}} hat {{max}} Tage: Geben Sie höchstens {{max}} ein.",
+      "negative": "Geben Sie für {{month}} {{year}} 0 oder mehr Tage ein.",
+      "decimals": "Verwenden Sie höchstens 6 Dezimalstellen.",
+      "standardHint": "Die Arbeitstage jedes Monats folgen den Feiertagen von {{source}}. Ändern Sie einen Monat, um dieses Jahr anzupassen; die anderen Jahre behalten die Standardwerte.",
+      "standardTotal_one": "Standardwerte: {{total}} Tag",
+      "standardTotal_other": "Standardwerte: {{total}} Tage",
+      "resetToStandard": "Auf Standardwerte zurücksetzen",
+      "holidays": "Feiertage: {{list}}",
+      "holidayRange": "{{from}} bis {{to}}",
+      "weekend": "(Wochenende)",
+      "noHolidays": "Keine Feiertage in {{year}}.",
+      "standardFailed": "Die Standardwerte von {{year}} konnten nicht geladen werden."
+    },
+    "messages": {
+      "loadFailed": "Der Kalender konnte nicht geladen werden.",
+      "saveFailed": "Der Kalender konnte nicht gespeichert werden.",
+      "createFailed": "Der Kalender konnte nicht erstellt werden.",
+      "deleteFailed": "Der Kalender konnte nicht gelöscht werden.",
+      "codeRequired": "Geben Sie einen Code ein.",
+      "nameRequired": "Geben Sie einen Namen ein."
     }
   },
   "suppliers": {

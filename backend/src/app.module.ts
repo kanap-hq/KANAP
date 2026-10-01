@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { CompaniesModule } from './companies/companies.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { CostCentersModule } from './cost-centers/cost-centers.module';
+import { WorkingDayProfilesModule } from './working-day-profiles/working-day-profiles.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
@@ -101,6 +102,7 @@ import { NetboxModule } from './netbox/netbox.module';
     CompaniesModule,
     DepartmentsModule,
     CostCentersModule,
+    WorkingDayProfilesModule,
     SuppliersModule,
     AccountsModule,
     SpendModule,

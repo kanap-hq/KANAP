@@ -259,6 +259,7 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 | `companies` | Données de référence des sociétés |
 | `departments` | Données de référence des départements |
 | `cost_centers` | Centres de coûts et leurs groupes |
+| `working_day_profiles` | Calendriers de jours ouvrés, pour les lignes au prix par jour |
 | `suppliers` | Données de référence des fournisseurs |
 | `contacts` | Répertoire des contacts |
 | `accounts` | Plan comptable |

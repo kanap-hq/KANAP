@@ -88,6 +88,7 @@ These columns are hidden by default. Show them from the column chooser (hamburge
 | Column | What it shows |
 |---|---|
 | **Amount columns** | Every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Amounts are in the reporting currency. Hidden columns are not offered |
+| **FTE columns** | The FTE of every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organization chose, right after the amount columns in the column chooser. The header gives the column and the calendar year, for example **Budget FTE (2026)**. An item's FTE is the sum of the FTE of its lines in that column. See [FTE](#fte). The cell is empty when the column has no lines |
 | **Currency** | Item-level currency code |
 | **Effective start** | Start date |
 | **End of validity** | Date the item stops (blank means no end) |
@@ -111,24 +112,28 @@ Each filterable column header has a filter icon. **Supplier**, **Paying company*
 
 Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts.
 
+Every FTE column has a number filter with the same conditions, plus blank and not blank. **Blank** keeps the items whose column has no lines.
+
 **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank.
 
 Text columns use text filters. On **Ref**, type the number or the full reference, for example `12` or `CPX-12`.
 
 ### Sorting
 
-Click a column header to sort ascending or descending. Every column sorts, including every amount column. The default sort is the default column of the current year, highest first (**Budget Y** with the standard settings). **Prev** and **Next** in the workspace follow the same order. The list remembers your last sort when you return.
+Click a column header to sort ascending or descending. Every column sorts, including every amount and FTE column. Items without an FTE come last in ascending order. The default sort is the default column of the current year, highest first (**Budget Y** with the standard settings). **Prev** and **Next** in the workspace follow the same order. The list remembers your last sort when you return.
 
 ### Totals row
 
 The pinned row at the bottom shows the total of every amount column. Totals respect your current filters and search. All amounts are converted to your reporting currency, shown in the page title.
+
+Each shown FTE column shows the sum of the items' FTE. When some items have no FTE, the count follows the total, for example "3.50 · 12 unknown". Hover it for the full sentence: "Unknown for 12 lines". When no item has an FTE, the total is blank and only the count shows.
 
 ### Deep linking
 
 Click any cell in a row to open the workspace on the tab most relevant to that column:
 
 - **Description**, **Supplier**, **Paying company**, **PP&E type**, **Investment type**, **Priority** and the other general columns: Opens **Overview**
-- **Amount columns** (Budget Y, Expected landing Y, Revision Y+1, etc.): Opens the **Budget** tab for the column's year
+- **Amount columns** (Budget Y, Expected landing Y, Revision Y+1, etc.) and **FTE columns**: Opens the **Budget** tab for the column's year
 - **Allocation**: Opens the **Allocations** tab for the current year
 - **Task**: Opens the **Overview** tab, where the Tasks panel sits
 - **Contract**: Opens the linked contract directly
@@ -244,6 +249,7 @@ A budget administrator can rename the columns, hide some and choose the default 
 
 - **Flat**: Enter one total per column. The total is spread evenly over the months of the column's period, and the months outside it are set to zero. The period shows under each total before you type, for example "9 months, April to December". Only the total you edit is saved. The other columns keep their monthly amounts.
 - Click the pencil icon next to the period under a total (**Change period**) to open the spread panel on that column, with its current total. If the item's dates leave no month in the year, the total is disabled and reads "No month of 2026 is within the item's dates." Click the pencil icon next to it (**Choose the period**) to set one yourself.
+- Click the calculator icon next to the pencil (**Quantity and price**) to open the same box on the lines of that column. See [Quantity and price](#quantity-and-price).
 - **Monthly**: Enter amounts per month (Jan through Dec) for each shown column, for granular project spend tracking. Quarter subtotals and a yearly total are shown. Only the months you change are saved.
 - Both tabs show the same columns: Forecast appears in **Flat** too when it is shown.
 - Switch between modes with the **Flat** and **Monthly** tabs
@@ -257,24 +263,27 @@ A budget administrator can rename the columns, hide some and choose the default 
 
 **Spreading an amount**:
 
-- The spread panel is always visible in the **Monthly** tab. In the **Flat** tab it opens from the pencil icon under a total
+- The panel box has two tabs: **Spread an amount** and **Quantity and price**. This part covers the first one
+- The spread panel is always visible in the **Monthly** tab. In the **Flat** tab it opens from the pencil icon under a total, and its close button closes it
 - Choose a **Column** among the shown columns, check the **Amount**, pick a **Distribution** (**Flat** or **4-4-5**), and set the **From** and **To** dates. The dates start from the column's current period, and the distribution from the column's own
 - The panel opens on the default column. The amount starts with the column's current total, in both tabs, and follows when you choose another column. It is empty when the column has no amount
-- **Apply to all columns** is on by default: every column that follows it gets the same period and distribution, each with its own current total. By default every column follows. A budget administrator chooses which ones in [Budget columns](budget-operations.md#budget-columns). Frozen columns never change. Hover the switch to see which columns follow and which keep their own period. Turn the switch off to spread only the selected column
-- A column that does not follow "Apply to all columns" spreads alone: the switch does not appear when you spread it. The switch is also hidden when no other following column can change
-- **Reset** fills the panel with the column's current total, **Flat** and the whole year. It saves nothing: click **Apply** to use it. With **Apply to all columns** on, **Reset** then **Apply** brings every following column back to a flat spread over twelve months
+- **Every change saves at once**: the amount when you leave the field or press Enter, the distribution and the dates as soon as you change them. There is no button to click. A blank or zero amount saves nothing
+- **Apply the distribution to all columns** is a switch, on by default: every column that follows it gets the same distribution and period, and each keeps its own current total. Turning it on spreads those columns at once, and it stays on for your next changes. Turning it off changes nothing by itself: the next changes apply to the selected column only. By default every column follows. A budget administrator chooses which ones in [Budget columns](budget-operations.md#budget-columns). Frozen columns never change. Hover the switch to see which columns follow and which keep their own period
+- A column that does not follow the switch spreads alone: the switch does not appear when you spread it. The switch is also hidden when no other following column can change
+- To bring a column back to a flat spread over twelve months, choose **Flat** and set the dates to January 1 and December 31
 - Totals typed in the **Flat** tab still apply to their own column only
 - The **From** and **To** dates show the period. When some months fall outside it, the panel says which ones will be set to zero ("January to March will be set to zero."). A whole-year period shows no line. Hover the info icon next to the panel title to see the 15th rule
 - With **4-4-5**, the weights of the months that count are scaled up so the whole amount lands on them
-- A soft warning appears when the period goes beyond the item's dates. You can still apply
-- **Apply** stays disabled while a date is missing or no month counts. Nothing is saved before you click **Apply**
-- From the **Monthly** tab, Apply fills the grid. From the **Flat** tab, you stay in the Flat view
+- A soft warning appears when the period goes beyond the item's dates. The spread is still saved
+- While a date is missing or no month counts, the panel says why and saves nothing
+- A spread over a column built from lines keeps its lines. See [Quantity and price](#quantity-and-price)
 
 **How each column was produced**:
 
 - A short label tells you where the amounts of a column come from. In the **Monthly** tab it sits under the column header (hover it to see the period). In the **Flat** tab it sits next to the period
 - **Spread flat**, **Spread 4-4-5** or **Spread by quarter**: the amounts come from a spread
 - **Copied from Budget 2025 +2%**: the amounts come from **Copy budget columns** in Budget Administration, with the percentage shown when there is one
+- **Quantity and price · 3 lines · 1.00 FTE**: the amounts come from lines, with their number and, when the lines count people or days, the column's FTE. The FTE is the full-year average. Hover the label to see the lines, for example "Project manager: 1 person × 1,200 per day, 5 days per month, Feb to Jul"
 - **Edited by hand**: a month was changed in the grid or by a budget rows import
 - A column with no label kept the data it had before periods existed
 
@@ -296,6 +305,90 @@ A budget administrator can rename the columns, hide some and choose the default 
 4. Your changes save automatically; a **Saving...** / **Saved** hint shows next to the year tabs
 
 **Tip**: For most items, Flat mode is faster. Use Monthly mode when you need to track project spend timing or phased rollouts.
+
+#### Quantity and price
+
+Build a column from lines instead of typing its amounts. Each line reads as a sentence: a quantity, a unit, a unit price, how often, when, and on which calendar. For example, one contractor on a build project full time at 400 a day from February to October, and 20 laptops at 1,200 per piece, bought once on March 15. The months of the column are the sum of its lines.
+
+**Opening the tab**:
+
+- **Flat** tab: click the calculator icon next to the period under a total. The box opens on **Quantity and price** for that column
+- **Monthly** tab: click **Quantity and price** at the top of the panel box
+- Choose the **Column** at the top of the tab. Frozen columns cannot be picked
+
+**The lines**:
+
+| Column | What to enter |
+|---|---|
+| **Description** | What the line pays for, for example "Project manager". Optional, up to 200 characters |
+| **Quantity** | How many, in the unit of the line. Zero or more, up to 3 decimals |
+| **Unit** | **people**, **days** or **pieces**. The unit decides what the price is for, how often it counts, how the amount lands on the months, and the FTE |
+| **Unit price** | The price of one unit, in the item's currency. Up to 4 decimals. A negative price is accepted, for a credit. What the price is for shows right after it: **per day** for days, **per piece** for pieces, and for people a small list to choose **per day** or **per month** |
+| **How often** | It follows the unit. People priced per day: a **Full time** checkbox and, when it is not ticked, the **days per month** they work on the item (more than 0, up to 31, with up to 3 decimals). People priced per month: "per month". Days: "over the period". Pieces: a list to choose **per month** or **once** |
+| **From** / **To** | The period of the line, inside the year. A month counts when the period covers its 15th, as for a spread. Pieces bought once take a single **Date** instead and land in its month. When every line takes a date, the header reads **Date** |
+| **Calendar** | Shown for a price per day only: people priced per day, and days. The working-day calendar whose days count. The list offers the enabled calendars, plus the calendar a line already uses if it was disabled since, marked "(disabled)". When there is no calendar yet, the tab reads "No working-day calendar yet.", with an **Add a calendar** link for those who can create calendars. See [Working-day calendars](working-day-calendars.md) |
+| **Amount** | The total of the line, once it is saved. Read only |
+
+When the tab is wide enough, each line fits on one row. On a narrower screen, or with the **Properties** panel open on a 1080p screen, each line takes two aligned rows, with **Description**, **Quantity**, **Unit**, **Unit price** and **Amount** on the first, and **How often**, **From** and **To** (or **Date**) and **Calendar** on the second; close the **Properties** panel to bring back one row per line.
+
+Click **Add a line** under the table to add a line, and the cross at the end of a line to remove it. A column holds up to 50 lines.
+
+**Units and prices**:
+
+| Unit | Price | How often | Amount of each month of the period | FTE of each month |
+|---|---|---|---|---|
+| **people** | **per day** | **Full time** | The month's working days in the calendar × quantity × unit price | The quantity |
+| **people** | **per day** | **5 days per month** | 5 × quantity × unit price | Quantity × 5 ÷ the month's working days in the calendar |
+| **people** | **per month** | per month | Quantity × unit price | The quantity |
+| **days** | **per day** | over the period | Quantity × unit price, counted once and split evenly over the months of the period | The month's share of the days ÷ the month's working days in the calendar |
+| **pieces** | **per piece** | **per month** | Quantity × unit price | None |
+| **pieces** | **per piece** | **once** | Quantity × unit price, in the month of the date | None |
+
+- Use **people** for staff who work on the item month after month. Priced per day, say how much they work: tick **Full time** to count every working day of the calendar from the start to the end of the line, or enter the days per month. For example, a project manager 5 days per month at 1,200 a day from February to July costs 6,000 a month. On a calendar with 21 working days in March, that month counts 5 ÷ 21, about 0.24 FTE. A consultant full time at 400 a day costs the month's working days × 400 each month, and counts 1 FTE
+- Priced per month, people cost the quantity × the unit price each month, for example 1 person at 8,000 per month
+- Use **days** for a number of days bought for the period, as one bundle. For example, 30 days at 1,200 a day from February to July give 36,000, that is 6,000 a month. Each month holds 5 days: in a month with 20 working days, the line counts 0.25 FTE
+- Use **pieces** for licences, devices or subscriptions. Per month, they count in every month of the period: 50 licences at 12 per piece give 600 a month. Once, they take one date and land in its month: a laptop at 2,000 on March 15 lands in March. Pieces never count as FTE
+- Each month is rounded to the cent. When an amount is split over the period, the rounding difference lands on the last month. The months outside a line's period get nothing from it
+- Changing the unit adapts the rest of the line. People keep a price per month when you chose it, and are priced per day otherwise. Days are priced per day, over the period. Pieces are priced per piece and bought once, dated the start of the column's period. Switching pieces from once to per month gives them the column's period again
+
+**A new line** starts with the unit **people**, a quantity of 1, a price per day, **Full time** unticked with the days per month to enter, the period of the column (the whole year when the column has none) and the default calendar. The default calendar is the standard calendar of the paying company's country, else the first enabled calendar. Enter the unit price and the days per month, or tick **Full time**, and the line saves. Without an enabled calendar, a new line starts with a price per month.
+
+**Saving**: every field saves as you leave it, press Enter, or pick a value or a date. There is no button to click. Each save sends every complete line of the column, and the months of the column follow at once. The **Saving...** hint next to the year tabs shows while it works.
+
+- A line is complete when it has a quantity, a unit price, a valid period or date, the days per month or **Full time** for people priced per day, and a calendar for a price per day. Until then it stays on screen with a hint, for example "Enter a quantity and a unit price to save this line.", "Enter the days per month, or tick Full time." or "Choose a calendar for a price per day.", and the saved lines do not change
+- Removing the last line removes the lines of the column, and its amounts stay as they are. A column computed from its lines then counts as amounts entered by hand. A spread or copied column keeps its spread or copy
+- When a save is refused, the reason shows under the table in red, and what you typed stays in place. For example, "Head office staff has no working days for 2027. Add them on the Working-day calendars page." when a custom calendar does not hold the year yet
+- On a frozen column, the lines are read only
+
+**Under the table**:
+
+- The FTE of the lines, when a line counts people or days, for example "FTE over the period 0.24 · Full-year average 0.12". See [FTE](#fte). The total of the column shows in the column itself
+- Where the amounts come from, when they no longer come from the lines: one of the sentences in the next part
+- Notes when they apply: "The period goes beyond the item's dates.", a calendar disabled since, for example "Head office staff is disabled. The lines still use it.", and working days changed since the last save of the lines
+- **Apply these lines to all columns**: a switch for the same columns as the spread tab's switch, off by default here. Turning it on writes the lines to every column that follows at once, and it stays on: each later save writes the lines to those columns too. Turning it off changes nothing by itself
+
+**When the amounts change another way**: the lines stay with the column as a reference, and the tab says where the amounts come from now, followed by a **Use the lines again** link. The link saves the lines as they are and computes the column from them again.
+
+- A month typed in the **Monthly** tab: "Amounts were entered by hand. Use the lines again."
+- A spread: "Amounts come from a spread. Use the lines again."
+- **Copy budget columns** in Budget Administration: "Amounts were copied from Budget 2025. Use the lines again." The copy brings the source column's lines with the amounts. See [Copying a computed column](budget-operations.md#copying-a-computed-column)
+- A calendar's working days changed: "Working days changed since the last computation: March: 20 days, now 19." Nothing changes on the column until you click **Use the lines again**
+- **Reset budget column** in Budget Administration removes the lines with the amounts. See [Reset budget column](budget-operations.md#reset-budget-column)
+- A budget rows file changes the months only, and the lines stay. See [Budget rows file](budget-operations.md#budget-rows-file)
+
+#### FTE
+
+FTE (full-time equivalent) says how many people a column pays for. It comes from the lines: each month adds up the FTE of its lines (see the table above). Two figures follow, each rounded to 2 decimals:
+
+- **Full-year average**: the sum of the twelve months divided by 12. It is the column's FTE, shown in the label of the column and in the FTE columns of the CAPEX list
+- **FTE over the period**: the sum of the months with people or days, divided by the number of those months. Pieces do not count, so licences or a laptop never lower it. It shows under the lines while the amounts come from them. After an edit by hand, a spread or a copy, it is not shown until you use the lines again
+
+For example, a consultant full time from February to October counts 1 FTE in each of those 9 months: 1.00 over the period, and 9 × 1 ÷ 12 = 0.75 for the full year. A project manager 5 days per month from February to July counts about 0.24 over the period, and 0.12 for the full year. Licences over the whole year or a laptop in December on the same column leave both figures as they are.
+
+- **Counted**: a column with lines in people or days
+- **Zero**: a column whose lines are all in pieces. Its FTE is 0
+- **Blank**: a column without lines, an item without a version for that year, or a year after the item's end of validity. Its FTE cell stays empty, because KANAP cannot tell how many people it pays for
+- The FTE stays with the lines. After an edit by hand, a spread or a copy, the column keeps the FTE of its lines. A copy brings the FTE of the source column
 
 ---
 

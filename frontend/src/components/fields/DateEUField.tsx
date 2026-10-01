@@ -90,9 +90,12 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
   return (
     <Box sx={{ position: 'relative', ...sx }}>
       {!naked && <FieldLabel required={required} sx={{ mb: '2px' }}>{label}</FieldLabel>}
+      {/* Only the calendar button opens it: out of the tab order, so Tab goes from one date field to the next. */}
       <input
         ref={nativeRef}
         type="date"
+        tabIndex={-1}
+        aria-hidden
         style={{
           position: 'absolute',
           right: 8,

@@ -79,6 +79,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 
 - [Chart of Accounts](chart-of-accounts.md) - Configure financial accounts
 - [Currencies](currencies.md) - Configure currency settings
+- [Working-day calendars](working-day-calendars.md) - Working days of each month, from a country's public holidays or entered by hand, for lines priced per day
 
 **Classification**
 

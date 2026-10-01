@@ -64,7 +64,8 @@ export class TenantInterceptor implements NestInterceptor {
       }
     };
 
-    let failed = false;
+    // Set once the commit or the rollback path has started: a runner is finished once.
+    let finished = false;
     return from((async () => {
       if (!existing) {
         await runner.connect();
@@ -79,20 +80,66 @@ export class TenantInterceptor implements NestInterceptor {
       // roll back and release before the error reaches the exception filter,
       // whose own rollback then finds nothing left to do.
       catchError((error) => {
-        failed = true;
+        finished = true;
         return from(finish('rollback')).pipe(mergeMap(() => throwError(() => error)));
       }),
-      // Success path: commit once the response stream completes. A failed
-      // handler never commits, even if its rollback or release did not go through.
+      // Success path: commit, then let the value through, so the response never
+      // leaves before COMMIT returns. After catchError on purpose: a failed commit
+      // is already rolled back and released, its error goes to the exception filter.
+      // A handler that already answered itself (@Res() download) keeps its answer;
+      // the commit error is logged.
+      commitBeforeValue(async () => {
+        finished = true;
+        try {
+          await finish('commit');
+        } catch (error) {
+          if (!http.getResponse()?.headersSent) throw error;
+        }
+      }),
+      // Safety net, unsubscribed before completion: neither path ran, commit as
+      // before. A failed handler never commits, even if its rollback or release
+      // did not go through. A commit error here is already logged.
       finalize(() => {
-        if (!failed) void finish('commit');
+        if (!finished) void finish('commit').catch(() => undefined);
       }),
     );
   }
 }
 
+/**
+ * Holds the source's last value, runs `commit` once the source completes, then
+ * emits that value (if any) and completes; a commit error is emitted as the
+ * error. Nest reads a non-SSE handler with lastValueFrom (one value, the last
+ * wins), so nothing is lost. An SSE route would only get its events at the end:
+ * it must use @SkipTenantTransaction().
+ */
+function commitBeforeValue<T>(commit: () => Promise<void>) {
+  return (source: Observable<T>) => new Observable<T>((subscriber) => {
+    let hasValue = false;
+    let lastValue: T;
+    return source.subscribe({
+      next: (value) => {
+        hasValue = true;
+        lastValue = value;
+      },
+      error: (error) => subscriber.error(error),
+      complete: () => {
+        commit().then(
+          () => {
+            if (hasValue) subscriber.next(lastValue);
+            subscriber.complete();
+          },
+          (error) => subscriber.error(error),
+        );
+      },
+    });
+  });
+}
+
 type RunnerLabels = { commit: string; rollback: string; release: string };
 
+// A commit error is rethrown once the runner is rolled back and released, so the
+// request answers 500. Rollback and release errors are only logged.
 async function finishRunner(req: any, candidate: QueryRunner | undefined, outcome: 'commit' | 'rollback', labels: RunnerLabels) {
   if (!candidate || candidate.isReleased) {
     return;
@@ -112,6 +159,7 @@ async function finishRunner(req: any, candidate: QueryRunner | undefined, outcom
           } catch (rollbackError) {
             console.error(labels.rollback, rollbackError);
           }
+          throw commitError;
         }
       } else {
         try {

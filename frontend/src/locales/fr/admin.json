@@ -763,7 +763,8 @@
       "settings": "Paramètres",
       "suppliers": "Fournisseurs",
       "tasks": "Tâches",
-      "users": "Utilisateurs"
+      "users": "Utilisateurs",
+      "working_day_profiles": "Calendriers de jours ouvrés"
     },
     "sections": {
       "roles": "Rôles"

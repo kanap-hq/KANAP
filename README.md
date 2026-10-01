@@ -166,4 +166,6 @@ If you find a security issue, please follow [SECURITY.md](SECURITY.md).
 
 [AGPL v3](LICENSE). You are free to use, modify, and distribute KANAP. The AGPL copyleft clause ensures that anyone running a modified version as a network service must share their changes, keeping the project genuinely open.
 
+The public holiday rules behind the standard working-day calendars come from the [date-holidays](https://github.com/commenthol/date-holidays) package: its code is under the ISC license and its holiday data under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), with the attributions listed in the package's LICENSE file. KANAP ships that data unchanged and works offline with it.
+
 Copyright 2025-2026, KANAP EURL.

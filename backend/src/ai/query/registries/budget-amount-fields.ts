@@ -1,4 +1,4 @@
-import { FIXED_SLOTS, SUMMARY_COLUMNS } from '../../../spend/spend-summary.builder';
+import { FIXED_SLOTS, fteFieldKey, SUMMARY_COLUMNS } from '../../../spend/spend-summary.builder';
 import { AiFilterFieldDef } from '../ai-filter.types';
 
 /**
@@ -30,4 +30,39 @@ export function budgetAmountFields(): Record<string, AiFilterFieldDef> {
 /** Sort keys of the amount fields, `<slot>_<column>` to `<slot><Suffix>`. */
 export function budgetAmountSortFields(): Record<string, string> {
   return Object.fromEntries(Object.values(budgetAmountFields()).map((field) => [field.ai, field.grid]));
+}
+
+/**
+ * The FTE fields of both budget item registries: every column of every fixed
+ * year, `<slot>_<column>_fte` (`y_budget_fte`), read from the summary field
+ * `fte_<slot><Suffix>` (`fte_yBudget`). The year and the column are in the
+ * key: fields take no parameters.
+ */
+export function budgetFteFields(): Record<string, AiFilterFieldDef> {
+  const fields: Record<string, AiFilterFieldDef> = {};
+  for (const slot of FIXED_SLOTS) {
+    SUMMARY_COLUMNS.forEach((column, index) => {
+      const ai = `${slot.ai}_${column.ai}_fte`;
+      fields[ai] = {
+        ai,
+        grid: fteFieldKey(`${slot.key}${column.suffix}`),
+        type: 'number',
+        description: `FTE (full-time equivalents) of column ${index + 1} (named ${column.label} by default) for ${slot.offset === 0 ? 'Y, the current year' : slot.label}, `
+          + 'from the quantity × price lines the column is computed from. Each month: people lines count their quantity (full time or priced per month), '
+          + "or quantity × days per month ÷ the calendar's working days of that month; days lines (a bundle of days over a period) count the month's share "
+          + "of the days ÷ the calendar's working days of that month; pieces lines count nothing. The twelve months summed and divided by 12 (2 decimals): "
+          + 'the full-year average, not the average over the months the lines cover. '
+          + '0 when the lines count neither people nor days (pieces only); null (unknown) when the column has no lines for that year.',
+        sortable: true,
+        groupable: false,
+        aggregable: true,
+      };
+    });
+  }
+  return fields;
+}
+
+/** Sort keys of the FTE fields, `<slot>_<column>_fte` to `fte_<slot><Suffix>`. */
+export function budgetFteSortFields(): Record<string, string> {
+  return Object.fromEntries(Object.values(budgetFteFields()).map((field) => [field.ai, field.grid]));
 }

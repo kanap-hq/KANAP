@@ -104,6 +104,11 @@
     "datePlaceholder": "jj/mm/aaaa",
     "requiredTag": "(obligatoire)"
   },
+  "yearTabs": {
+    "single": "Année : {{year}}",
+    "previous": "Année précédente",
+    "next": "Année suivante"
+  },
   "delete": {
     "confirmTitle": "Confirmer la suppression",
     "deleteSelectedTitle": "Supprimer les éléments sélectionnés",

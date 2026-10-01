@@ -44,4 +44,23 @@ describe('PortfolioDetailWorkspaceShell', () => {
     expect(screen.queryByRole('complementary')).toBeNull();
     expect(screen.getByText('content')).toBeInTheDocument();
   });
+
+  // The drawer and its tab rise beside the tab row; with a single tab there is no tab row and they
+  // would cover the title row and its actions (the Delete button).
+  it('lifts the drawer and its tab beside the tab row when there is one', () => {
+    renderShell({
+      tabs: [{ key: 'overview', label: 'Overview' }, { key: 'budget', label: 'Budget' }],
+      properties: <div>drawer fields</div>,
+    });
+    expect(screen.getByRole('tab', { name: 'Budget' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary')).toHaveStyle({ marginTop: '-48px', height: 'calc(100% + 48px)' });
+    expect(screen.getByRole('button', { name: 'workspace.closeProperties' })).toHaveStyle({ top: '-48px' });
+  });
+
+  it('starts the drawer and its tab at the content top without a tab row', () => {
+    renderShell({ properties: <div>drawer fields</div>, actions: <button type="button">Delete</button> });
+    expect(screen.queryByRole('tab')).toBeNull();
+    expect(screen.getByRole('complementary')).toHaveStyle({ marginTop: '0px', height: 'calc(100% + 0px)' });
+    expect(screen.getByRole('button', { name: 'workspace.closeProperties' })).toHaveStyle({ top: '0px' });
+  });
 });

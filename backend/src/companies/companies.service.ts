@@ -20,6 +20,7 @@ import {
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { StatusState, STATUS_STATES, resolveLifecycleState } from '../common/status';
 import { CompanyUpsertDto } from './dto/company.dto';
+import { createCompanyStandardCalendar } from '../working-day-profiles/company-standard-calendar';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
@@ -712,6 +713,14 @@ export class CompaniesService {
       },
       { manager: opts?.manager ?? repo.manager },
     );
+    // The standard working-day calendar of the company's country, when the tenant has none yet. Never throws.
+    await createCompanyStandardCalendar({
+      manager: opts?.manager ?? repo.manager,
+      company: saved,
+      userId: userId ?? null,
+      audit: this.audit,
+      auditSource: opts?.audit,
+    });
     return saved;
   }
 

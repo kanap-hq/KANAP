@@ -47,6 +47,7 @@
       "contacts": "Contacts",
       "chartsOfAccounts": "Charts of accounts",
       "currency": "Currency",
+      "workingDayCalendars": "Working-day calendars",
       "businessProcesses": "Business processes",
       "analyticsDimensions": "Analytics dimensions",
       "administration": "Administration"
@@ -127,6 +128,7 @@
     "companies": "Companies",
     "departments": "Departments",
     "costCenters": "Cost centers",
+    "workingDayCalendars": "Working-day calendars",
     "suppliers": "Suppliers",
     "accounts": "Accounts",
     "coa": "Charts of accounts",

@@ -11,6 +11,7 @@ const CARD_ROUTES = [
   { key: 'suppliers', to: '/master-data/suppliers' },
   { key: 'coa', to: '/master-data/coa' },
   { key: 'currency', to: '/master-data/currency' },
+  { key: 'workingDayCalendars', to: '/master-data/working-day-calendars' },
   { key: 'businessProcesses', to: '/master-data/business-processes' },
   { key: 'analyticsDimensions', to: '/master-data/analytics' },
   { key: 'administration', to: '/master-data/operations' },

@@ -18,12 +18,15 @@ import { formatItemRef } from '../utils/item-ref';
 import {
   amountColumnYear,
   buildAmountColumnDefs,
+  buildFteColumnDefs,
   dimensionFieldPredicate,
   filtersOnShownColumns,
   settleListSearch,
   explicitSort,
+  fteTotalsToRow,
   SummaryVersions,
   totalsToVersions,
+  visibleFteFields,
 } from '../components/finance/amountColumns';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
@@ -217,23 +220,39 @@ export default function OpexListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gridCanMount]);
   const [pinnedTotals, setPinnedTotals] = useState<any[]>([]);
+  // The FTE columns the grid shows: the footer asks for their sums only.
+  const fteFieldsRef = useRef<string[]>([]);
+  // Only the latest totals request fills the footer, so a slower earlier one cannot overwrite it.
+  const totalsRequestRef = useRef(0);
 
   const updateTotals = useCallback(async ({ q, filterModel, statusScope }: { q: string; filterModel: any; statusScope?: StatusScope }) => {
+    const request = ++totalsRequestRef.current;
     try {
       const params: Record<string, any> = {};
       if (q) params.q = q;
       if (filterModel && Object.keys(filterModel).length > 0) params.filters = JSON.stringify(filterModel);
       Object.assign(params, statusScopeParams(statusScope));
+      if (fteFieldsRef.current.length > 0) params.fte = fteFieldsRef.current.join(',');
       const res = await api.get('/spend-items/summary/totals', { params });
+      if (request !== totalsRequestRef.current) return;
       const pinned = {
         id: '__opex_totals__',
         product_name: t('shared.total'),
         versions: totalsToVersions(res.data),
+        ...fteTotalsToRow(res.data?.fte),
       };
       setPinnedTotals([pinned]);
     } catch (err) {
-      setPinnedTotals([]);
+      if (request === totalsRequestRef.current) setPinnedTotals([]);
     }
+  }, []);
+
+  // Showing or hiding an FTE column refetches the footer with the FTE columns now shown.
+  const followFteColumns = useCallback((state: Parameters<typeof visibleFteFields>[0]) => {
+    const fields = visibleFteFields(state);
+    if (fields.join(',') === fteFieldsRef.current.join(',')) return false;
+    fteFieldsRef.current = fields;
+    return true;
   }, []);
 
   useEffect(() => {
@@ -506,6 +525,20 @@ export default function OpexListPage() {
     ...buildAmountColumnDefs<SummaryRow>({
       t,
       currentYear: Y,
+      columns: budgetColumns,
+      cellRenderer: (colId) => (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getOpexHref(row, colId)}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    }),
+    ...buildFteColumnDefs<SummaryRow>({
+      t,
+      currentYear: Y,
+      locale,
       columns: budgetColumns,
       cellRenderer: (colId) => (params: any) => (
         <LinkCellRenderer
@@ -835,7 +868,15 @@ export default function OpexListPage() {
         columnPreferencesKey="opex-summary"
         initialState={initialGridState}
         refreshKey={refreshKey}
-        onGridApiReady={(gridApi) => { gridApiRef.current = gridApi; }}
+        onGridApiReady={(gridApi) => {
+          gridApiRef.current = gridApi;
+          // The saved layout is applied by now; the first totals request follows the query state.
+          followFteColumns(gridApi?.getColumnState?.());
+        }}
+        onColumnStateChange={(state) => {
+          const last = lastQueryRef.current;
+          if (followFteColumns(state) && last) updateTotals({ q: last.q, filterModel: last.filters, statusScope: last.statusScope });
+        }}
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};
