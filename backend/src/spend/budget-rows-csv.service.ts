@@ -8,6 +8,7 @@ import { FreezeService } from '../freeze/freeze.service';
 import { formatCents } from '../common/amount';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
 import {
   AMOUNT_MEASURES,
   AmountMeasure,
@@ -36,12 +37,13 @@ import { BudgetVersionRow, createBudgetVersion, loadVersions } from './budget-co
  * is stored is left alone (no write, no freeze check, provenance kept); a row
  * whose months change marks the column as edited by hand; a row whose only
  * change is the period updates the period and keeps how the column was
- * produced. The whole file is checked before anything is written.
+ * produced (a computed column aside, below). The whole file is checked before
+ * anything is written.
  *
  * The file carries months, not quantity × price lines: a row's `method` is
- * never read, so a `computed` column is treated like any other. Its months
- * changed by a file make it `manual`; its lines and FTE stay, as after a hand
- * edit in the budget tab.
+ * never read. A `computed` column whose months or period a file changes
+ * becomes `manual` (its period comes from its lines, so a new one no longer
+ * matches them); its lines and FTE stay, as after a hand edit in the budget tab.
  */
 
 const MONTH_COLUMNS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const;
@@ -185,7 +187,7 @@ export class BudgetRowsCsvService {
       ok: false, dryRun, total, inserted: 0, updated: 0, unchanged: 0, errors: errors.sort((a, b) => a.row - b.row),
     });
 
-    const { headers, rows } = await this.readFile(params.file);
+    const { headers, rows, lines } = await this.readFile(params.file);
     const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
     const extras = headers.filter((h) => !(BUDGET_ROWS_HEADERS as readonly string[]).includes(h));
     if (missing.length || extras.length) {
@@ -196,7 +198,7 @@ export class BudgetRowsCsvService {
     const errors: ErrorEntry[] = [];
     const parsed: ParsedRow[] = [];
     rows.forEach((raw, index) => {
-      const row = this.parseRow(raw, index + 2, errors);
+      const row = this.parseRow(raw, rowLine(lines, index), errors);
       if (row) parsed.push(row);
     });
 
@@ -326,7 +328,9 @@ export class BudgetRowsCsvService {
         const period = row.period;
         await saveRoundInput({ manager, scope, version, userId, audit: this.audit }, row.measure, (stored: RoundInput | null) => ({
           ...period,
-          method: row.monthsChanged ? 'manual' : stored?.method ?? 'manual',
+          // A computed column's period comes from its lines: a period the file
+          // changes no longer matches them, so it reads as edited by hand, like changed months.
+          method: row.monthsChanged || stored?.method === 'computed' ? 'manual' : stored?.method ?? 'manual',
           spread_profile_name: stored?.spread_profile_name ?? null,
           last_calculation: stored?.last_calculation ?? null,
           fte: stored?.fte ?? null,
@@ -410,7 +414,7 @@ export class BudgetRowsCsvService {
     return { line, scope, itemNumber, year, measure, period, months };
   }
 
-  private async readFile(file: Express.Multer.File | undefined): Promise<{ headers: string[]; rows: Array<Record<string, string>> }> {
+  private async readFile(file: Express.Multer.File | undefined): Promise<{ headers: string[]; rows: Array<Record<string, string>>; lines: number[] }> {
     if (!file) throw new BadRequestException('No file uploaded.');
     const buffer = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
     if (!buffer) throw new BadRequestException('The uploaded file is empty.');
@@ -429,6 +433,7 @@ export class BudgetRowsCsvService {
         .on('data', (row: Record<string, string>) => rows.push(denormalizeCsvRow(row)))
         .on('end', () => resolve());
     });
-    return { headers, rows };
+    // Errors name the file's own line, blank lines included.
+    return { headers, rows, lines: await csvDataRowLines(content, ';') };
   }
 }

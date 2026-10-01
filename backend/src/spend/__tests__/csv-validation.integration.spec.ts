@@ -177,6 +177,31 @@ async function testBlankCurrency(kind: Kind) {
   });
 }
 
+/**
+ * Row errors name the file's own line: blank lines (empty or only separators)
+ * and a quoted cell spanning two lines still count.
+ */
+async function testErrorLinesAfterBlankLines(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `csv-lines-${kind}`);
+    await seedCompany(runner, tenantId);
+    const svc = importer(kind);
+    const headers: string[] = svc.csvHeaders();
+    const cells = (values: Record<string, string>) => headers.map((h) => values[h] ?? '').join(';');
+    const multiline = cells(row(kind, 'Two-line notes', { notes: '@NOTES@' })).replace('@NOTES@', '"first\nsecond"');
+    const content = [
+      headers.join(';'),                                        // 1
+      multiline,                                                // 2-3
+      '',                                                       // 4
+      headers.map(() => '').join(';'),                          // 5
+      cells(row(kind, 'New line without currency', { currency: '' })), // 6
+    ].join('\n');
+    const result = await svc.importCsv({ file: { buffer: Buffer.from(`${content}\n`, 'utf8') }, dryRun: true, userId: null }, { manager: runner.manager });
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.errors, [{ row: 6, message: 'currency is required' }], `${kind}: the physical line, not the row index`);
+  });
+}
+
 async function testCapexCurrencyCompanyAndItemNumber() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'csv-capex');
@@ -475,6 +500,7 @@ void runSpecs('csv-validation.integration.spec', [
     [`testBlankCurrency(${kind})`, () => testBlankCurrency(kind)],
     [`testEffectiveStartFormat(${kind})`, () => testEffectiveStartFormat(kind)],
     [`testBlankEffectiveStart(${kind})`, () => testBlankEffectiveStart(kind)],
+    [`testErrorLinesAfterBlankLines(${kind})`, () => testErrorLinesAfterBlankLines(kind)],
   ] as Array<[string, () => Promise<void>]>),
   ['testCapexCurrencyCompanyAndItemNumber', testCapexCurrencyCompanyAndItemNumber],
   ['testOpexUnknownSupplierAndAccount', testOpexUnknownSupplierAndAccount],

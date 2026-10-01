@@ -283,7 +283,7 @@ async function testCsvExportRoundTripAndConflicts(kind: Kind) {
     }, opts);
     assert.equal(conflict.ok, false, `${kind} CSV: a status contradicting its date is refused`);
     assert.deepEqual(conflict.errors, [
-      { row: 2, message: 'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled.' },
+      { row: 2, message: 'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.' },
       { row: 3, message: 'Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.' },
     ]);
   });

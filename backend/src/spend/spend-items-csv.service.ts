@@ -36,6 +36,7 @@ import { SpendItemUpsertDto } from './dto/spend-item.dto';
 import { ItemNumberService } from '../common/item-number.service';
 import { csvDateError, parseCsvDate } from './csv-date';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
 import {
   csvCostCenterDisabledError,
   CSV_COMPANY_REQUIRED_ERROR,
@@ -239,10 +240,10 @@ export class SpendItemsCsvService {
     const errors: { row: number; message: string }[] = [];
     let headerOk = false;
     let fileHeaders: string[] = [];
+    let content = '';
     await new Promise<void>((resolve, reject) => {
       const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
       if (!buf) { reject(new Error('Empty upload')); return; }
-      let content: string;
       try {
         content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
       } catch {
@@ -263,6 +264,8 @@ export class SpendItemsCsvService {
         .on('end', () => resolve());
     });
     if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors, allowedCurrencies: Array.from(allowedSet) };
+    // Errors name the file's own line, blank lines included.
+    const rowLines = await csvDataRowLines(content, delimiter);
     // Absent optional columns leave the stored values as they are.
     const hasCostCenter = fileHeaders.includes('cost_center_code');
     const hasRunBuild = fileHeaders.includes('run_build');
@@ -403,7 +406,7 @@ export class SpendItemsCsvService {
     const rowByLine = new Map<string, number>();
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const line = i + 2;
+      const line = rowLine(rowLines, i);
       const product_name = (r['product_name'] ?? '').toString().trim();
       const supplier_name = ((r['supplier_name'] ?? '').toString().trim()) || null;
       const company_name = ((r['company_name'] ?? '').toString().trim()) || null;

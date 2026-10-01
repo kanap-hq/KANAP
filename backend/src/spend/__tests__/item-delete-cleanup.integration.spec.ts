@@ -152,6 +152,12 @@ async function testDeleteCleansUp(kind: Kind) {
     );
     const convertedRequest = await seedRequest(runner, tenantId, 1, deletedTask);
     const otherRequest = await seedRequest(runner, tenantId, 2, keptTask);
+    for (const taskId of [deletedTask, deletedTask, keptTask]) {
+      await runner.query(
+        `INSERT INTO portfolio_activities (tenant_id, task_id, type, content) VALUES ($1, $2, 'comment', 'Task history')`,
+        [tenantId, taskId],
+      );
+    }
 
     const audit = auditDouble();
     const storage = fakeStorage();
@@ -164,6 +170,8 @@ async function testDeleteCleansUp(kind: Kind) {
     assert.equal(await count(runner, T[kind].items, 'id', deleted), 0, `${kind}: the item is deleted`);
     assert.equal(await count(runner, 'tasks', 'id', deletedTask), 0, `${kind}: its task is deleted`);
     assert.equal(await count(runner, 'tasks', 'id', keptTask), 1, `${kind}: the other item's task stays`);
+    assert.equal(await count(runner, 'portfolio_activities', 'task_id', deletedTask), 0, `${kind}: its task's history is deleted`);
+    assert.equal(await count(runner, 'portfolio_activities', 'task_id', keptTask), 1, `${kind}: the other task's history stays`);
 
     assert.deepEqual(storage.deleted, [ownPath], `${kind}: only the unshared file is deleted`);
 
@@ -189,7 +197,7 @@ async function testDeleteCleansUp(kind: Kind) {
     assert.deepEqual(audit.entries.map((e) => `${e.table}:${e.action}`), ['portfolio_requests:update', `${T[kind].items}:delete`]);
     // The request's history names the task it no longer links to (the task row is gone).
     const activities = await runner.query(
-      `SELECT request_id, author_id, type, changed_fields FROM portfolio_activities WHERE tenant_id = $1 ORDER BY created_at`,
+      `SELECT request_id, author_id, type, changed_fields FROM portfolio_activities WHERE tenant_id = $1 AND task_id IS NULL ORDER BY created_at`,
       [tenantId],
     );
     assert.deepEqual(activities, [{

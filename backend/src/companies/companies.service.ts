@@ -18,10 +18,12 @@ import {
   CompiledCondition,
 } from '../common/ag-grid-filtering';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
-import { StatusState, STATUS_STATES, resolveLifecycleState } from '../common/status';
+import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
+import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CompanyUpsertDto } from './dto/company.dto';
 import { createCompanyStandardCalendar } from '../working-day-profiles/company-standard-calendar';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
 type CompanyLookupItem = { id: string; name: string };
@@ -836,7 +838,8 @@ export class CompaniesService {
           reg_number: c.reg_number ?? '',
           vat_number: c.vat_number ?? '',
           base_currency: c.base_currency ?? '',
-          status: c.status ?? 'enabled',
+          // Read from the end of validity: a stored status left stale by a passed date never contradicts its own row.
+          status: deriveStatusFromDisabledAt(c.disabled_at),
           disabled_at: c.disabled_at ? new Date(c.disabled_at).toISOString() : '',
           notes: c.notes ?? '',
         };
@@ -882,13 +885,13 @@ export class CompaniesService {
     const rows: Row[] = [];
     const errors: { row: number; message: string }[] = [];
     let headerOk = false;
+    let content = '';
     await new Promise<void>((resolve, reject) => {
       const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
       if (!buf) {
         reject(new BadRequestException('Empty upload'));
         return;
       }
-      let content: string;
       try {
         content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
       } catch {
@@ -911,10 +914,13 @@ export class CompaniesService {
     if (!headerOk) {
       return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
     }
+    // Errors name the file's own line, blank lines included.
+    const rowLines = await csvDataRowLines(content, delimiter);
     // Validate and normalize
-    const normalized: { company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: number | null }> }[] = [];
+    type CsvLifecycle = { status: StatusState | null; disabled_at: string | null };
+    const normalized: { company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: number | null }>; lifecycle: CsvLifecycle }[] = [];
     rows.forEach((r, idx) => {
-      const line = idx + 2;
+      const line = rowLine(rowLines, idx);
       const name = (r['name'] ?? '').toString().trim();
       const country_iso = (r['country_iso'] ?? '').toString().trim();
       const address1 = (r['address1'] ?? '').toString().trim();
@@ -922,21 +928,21 @@ export class CompaniesService {
       const postal_code = (r['postal_code'] ?? '').toString().trim();
       const city = (r['city'] ?? '').toString().trim();
       const state = (r['state'] ?? '').toString().trim();
+      // Blank: enabled for a new company, the stored status on an update (`csvItemLifecycle`).
       const statusRaw = (r['status'] ?? '').toString().trim().toLowerCase();
-      const statusNormalized = statusRaw
+      const statusValue: StatusState | null = statusRaw
         ? (STATUS_STATES.find((s) => s === statusRaw) ?? null)
-        : StatusState.ENABLED;
+        : null;
       const disabledAtRaw = (r['disabled_at'] ?? '').toString().trim();
       let disabled_at_iso: string | null = null;
       if (!name) errors.push({ row: line, message: 'name is required' });
       if (!country_iso || country_iso.length !== 2) errors.push({ row: line, message: 'country_iso is required and must be 2 letters' });
       const base_currency = (r['base_currency'] ?? '').toString().trim();
       if (!base_currency || base_currency.length !== 3) errors.push({ row: line, message: 'base_currency is required and must be 3 letters' });
-      if (!statusNormalized) {
+      if (statusRaw && !statusValue) {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
         return;
       }
-      const statusValue = statusNormalized as StatusState;
       if (disabledAtRaw) {
         const parsedDisabledAt = new Date(disabledAtRaw);
         if (Number.isNaN(parsedDisabledAt.getTime())) {
@@ -944,6 +950,11 @@ export class CompaniesService {
           return;
         }
         disabled_at_iso = parsedDisabledAt.toISOString();
+      }
+      const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
+      if (lifecycleConflict) {
+        errors.push({ row: line, message: lifecycleConflict });
+        return;
       }
       const metrics = new Map<number, { headcount: number; it_users: number | null; turnover: number | null }>();
       for (const fy of metricYears) {
@@ -1002,18 +1013,17 @@ export class CompaniesService {
           reg_number: ((r['reg_number'] ?? '').toString().trim()) || null,
           vat_number: ((r['vat_number'] ?? '').toString().trim()) || null,
           base_currency: base_currency.toUpperCase(),
-          status: statusValue,
-          disabled_at: disabled_at_iso,
           notes: ((r['notes'] ?? '').toString().trim()) || null,
         },
         metrics,
+        lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
       });
     });
     if (errors.length > 0) {
       return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
     }
     // Deduplicate by company name: keep first occurrence
-    const uniqueByName = new Map<string, { company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: number | null }> }>();
+    const uniqueByName = new Map<string, (typeof normalized)[number]>();
     for (const item of normalized) {
       const key = (item.company.name as string).toLowerCase();
       if (!uniqueByName.has(key)) uniqueByName.set(key, item);
@@ -1035,10 +1045,12 @@ export class CompaniesService {
     for (const item of unique) {
       const existing = await repo.findOne({ where: { name: item.company.name as string } });
       let saved: Company | null = null;
+      // A blank status or date keeps the stored value on an update; `update`/`create` resolve the rest.
+      const body = { ...item.company, ...csvItemLifecycle(item.lifecycle.status, item.lifecycle.disabled_at, !!existing) };
       if (existing) {
-        saved = await this.update(existing.id, item.company as any, userId ?? undefined, { manager: opts?.manager });
+        saved = await this.update(existing.id, body as any, userId ?? undefined, { manager: opts?.manager });
       } else {
-        saved = await this.create(item.company as any, userId ?? undefined, { manager: opts?.manager });
+        saved = await this.create(body as any, userId ?? undefined, { manager: opts?.manager });
       }
       if (saved) {
         processed += 1;

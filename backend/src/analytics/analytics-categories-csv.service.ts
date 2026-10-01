@@ -4,7 +4,9 @@ import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
 import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { AnalyticsContext, normalizeAnalyticsDescription, normalizeAnalyticsName } from './analytics-context';
 import { analyticsAxisSubject, isAxisActive, loadAnalyticsAxes, resolveDefaultAxisId } from './analytics-axes.util';
 import {
@@ -105,7 +107,7 @@ export class AnalyticsCategoriesCsvService {
     });
     const parsed = await this.parseFile(file);
     if ('headerError' in parsed) return failed([{ row: 0, message: parsed.headerError }]);
-    const { rows, headers } = parsed;
+    const { rows, headers, lines } = parsed;
     const has = (header: string) => headers.includes(header);
 
     // Blank dimension codes need the default; a file with none leaves a tenant without dimensions untouched.
@@ -126,7 +128,7 @@ export class AnalyticsCategoriesCsvService {
     const parsedRows: ParsedRow[] = [];
     const lineByKey = new Map<string, number>();
     rows.forEach((raw, index) => {
-      const line = index + 2;
+      const line = rowLine(lines, index);
       const rowErrors: string[] = [];
       const attempt = <T>(fn: () => T): T | undefined => {
         try {
@@ -170,23 +172,24 @@ export class AnalyticsCategoriesCsvService {
       if (statusRaw && statusRaw !== StatusState.ENABLED && statusRaw !== StatusState.DISABLED) {
         rowErrors.push(`Invalid status '${cell(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
       }
+      const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
       const disabledAtRaw = has('disabled_at') ? cell(raw, 'disabled_at') : '';
-      let disabledAt: Date | null | undefined;
-      if (disabledAtRaw) disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? undefined;
+      let disabledAt: Date | null = null;
+      if (disabledAtRaw) disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? null;
+      const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
+      if (lifecycleConflict) rowErrors.push(lifecycleConflict);
 
       if (rowErrors.length > 0 || !name) {
         for (const message of rowErrors) errors.push({ row: line, message });
         return;
       }
-      // Absent columns keep the stored lifecycle; present ones follow the departments rule (blank status = enabled).
-      const lifecycleGiven = has('status') || has('disabled_at');
-      const lifecycle = lifecycleGiven
-        ? resolveLifecycleState({
-          currentDisabledAt: existing?.disabled_at ?? null,
-          nextStatus: has('status') ? statusRaw || StatusState.ENABLED : undefined,
-          nextDisabledAt: disabledAt,
-        })
-        : resolveLifecycleState({ currentDisabledAt: existing?.disabled_at ?? null });
+      // A blank or absent status or date: enabled for a new value, the stored one on an update (`csvItemLifecycle`).
+      const next = csvItemLifecycle(status, disabledAt, !!existing);
+      const lifecycle = resolveLifecycleState({
+        currentDisabledAt: existing?.disabled_at ?? null,
+        nextStatus: next.status,
+        nextDisabledAt: next.disabled_at,
+      });
       const values: AnalyticsCategoryValues = {
         axis_id: axisId ?? '',
         // The name is the match key: a different case in the file refers to the stored value, it does not rename it.
@@ -226,7 +229,7 @@ export class AnalyticsCategoriesCsvService {
     return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [] };
   }
 
-  private async parseFile(file: Express.Multer.File): Promise<{ rows: Array<Record<string, string>>; headers: string[] } | { headerError: string }> {
+  private async parseFile(file: Express.Multer.File): Promise<{ rows: Array<Record<string, string>>; headers: string[]; lines: number[] } | { headerError: string }> {
     if (!file) throw new BadRequestException('No file uploaded');
     const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
     if (!buf) throw new BadRequestException('Empty upload');
@@ -251,6 +254,7 @@ export class AnalyticsCategoriesCsvService {
     if (missing.length > 0 || extras.length > 0) {
       return { headerError: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` };
     }
-    return { rows, headers };
+    // Errors name the file's own line, blank lines included.
+    return { rows, headers, lines: await csvDataRowLines(content, DELIMITER) };
   }
 }
