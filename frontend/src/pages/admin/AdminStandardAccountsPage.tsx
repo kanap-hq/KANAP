@@ -8,6 +8,7 @@ import CsvExportDialog from '../../components/csv/CsvExportDialog';
 import CsvImportDialog from '../../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../../components/grid/renderers';
+import { statusColumnProps } from '../../components/grid/statusColumn';
 import api from '../../api';
 
 type Template = { id: string; country_iso: string | null; template_code: string; template_name: string; version: string; is_global?: boolean };
@@ -122,6 +123,7 @@ export default function AdminStandardAccountsPage() {
       field: 'status',
       headerName: t('standardAccounts.columns.status'),
       width: 140,
+      valueFormatter: statusColumnProps(t).valueFormatter,
       cellRenderer: (params: any) => (
         <LinkCellRenderer {...params} linkType="internal" getHref={getStandardAccountHref} onNavigate={(href) => navigate(href)} />
       ),

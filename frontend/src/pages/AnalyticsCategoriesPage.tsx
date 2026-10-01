@@ -5,12 +5,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
-import CheckboxSetFilter from '../components/CheckboxSetFilter';
-import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
-import { STATUS_VALUES } from '../constants/status';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
@@ -20,6 +17,7 @@ import { ANALYTICS_VALUES_ENDPOINT, isAnalyticsActive, type AnalyticsValue } fro
 import AnalyticsDimensionChipBar from './analytics/AnalyticsDimensionChipBar';
 import { ANALYTICS_DIMENSIONS_PATH, ANALYTICS_LIST_PATH } from './analytics/analyticsFields';
 import ForbiddenPage from './ForbiddenPage';
+import { statusColumnProps } from '../components/grid/statusColumn';
 
 const DEFAULT_SORT = 'name:ASC';
 
@@ -120,13 +118,7 @@ function AnalyticsValuesList() {
         field: 'status',
         headerName: t('shared.columns.status'),
         width: 140,
-        filter: CheckboxSetFilter,
-        floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: {
-          values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
-          searchable: false,
-        },
-        valueFormatter: (p: any) => (p.value ? t(`common:statuses.${p.value}`) : ''),
+        ...statusColumnProps(t),
         cellRenderer: link,
       },
       {

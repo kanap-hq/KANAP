@@ -22,6 +22,8 @@ import { ICellRendererParams } from 'ag-grid-community';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
+import CheckboxSetFilter, { type CheckboxSetFilterOption } from '../../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
 import { StatusDot } from '../../components/design';
@@ -61,11 +63,10 @@ export default function InterfacesPage() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { hasLevel } = useAuth();
-  const { labelFor } = useItOpsEnumOptions();
+  const { labelFor, byField } = useItOpsEnumOptions();
   const gridApiRef = useRef<any>(null);
   const [selectedRows, setSelectedRows] = useState<InterfaceRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [filterParams, setFilterParams] = useState<Record<string, any>>({});
   const [duplicating, setDuplicating] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [copyBindings, setCopyBindings] = useState(false);
@@ -87,9 +88,17 @@ export default function InterfacesPage() {
     );
   }, []);
 
+  // The grid's sort, search and filters, so prev/next in the workspace walks the filtered set.
+  const lastQueryRef = useRef<{ sort: string; q: string; filters: any } | null>(null);
   const getInterfaceHref = useCallback((row: InterfaceRow | null | undefined) => {
     if (!row?.id) return undefined;
-    return `/it/interfaces/${row.interface_reference || row.id}/overview`;
+    const sp = new URLSearchParams();
+    const state = lastQueryRef.current;
+    if (state?.sort) sp.set('sort', state.sort);
+    if (state?.q) sp.set('q', state.q);
+    if (state?.filters && Object.keys(state.filters).length > 0) sp.set('filters', JSON.stringify(state.filters));
+    const qs = sp.toString();
+    return `/it/interfaces/${row.interface_reference || row.id}/overview${qs ? `?${qs}` : ''}`;
   }, []);
 
   const handleInternalNavigate = useCallback((event: React.MouseEvent, href: string | undefined) => {
@@ -199,9 +208,26 @@ export default function InterfacesPage() {
     return Cell;
   }, [getInterfaceHref, handleInternalNavigate, theme.palette.mode]);
 
+  // Business processes the interfaces use, read through the interfaces permission.
+  const getBusinessProcessValues = useCallback(async (): Promise<CheckboxSetFilterOption[]> => {
+    const res = await api.get<Array<{ value: string | null; label: string | null }>>('/interfaces/filter-values/business-processes');
+    return (res.data || []).map((option) => ({ value: option.value, label: option.label ?? undefined }));
+  }, []);
+
   if (!hasLevel('applications', 'reader')) {
     return <ForbiddenPage />;
   }
+
+  // Set filters send codes; the options show the same labels as the cells.
+  const setFilter = (values: CheckboxSetFilterOption[]) => ({
+    filter: CheckboxSetFilter,
+    floatingFilterComponent: CheckboxSetFloatingFilter,
+    filterParams: { values, searchable: false },
+  });
+  const yesNoValues: CheckboxSetFilterOption[] = [
+    { value: 'true', label: t('enums.yesNo.yes') },
+    { value: 'false', label: t('enums.yesNo.no') },
+  ];
 
   const columns: EnhancedColDef<InterfaceRow>[] = [
     {
@@ -243,7 +269,8 @@ export default function InterfacesPage() {
       headerName: t('common.lifecycle'),
       field: 'lifecycle',
       width: 140,
-       valueFormatter: (p) => labelFor('lifecycleStatus', p.value) || p.value || '',
+      valueFormatter: (p) => labelFor('lifecycleStatus', p.value) || p.value || '',
+      ...setFilter(byField.lifecycleStatus.map((opt) => ({ value: opt.code, label: labelFor('lifecycleStatus', opt.code) }))),
       cellRenderer: ClickToWorkspace,
     },
     {
@@ -251,6 +278,10 @@ export default function InterfacesPage() {
       field: 'criticality',
       valueFormatter: (p) => `${businessLabel(p.value)}${p.data?.classification_incomplete ? ` (${classificationText('Incomplete inheritance')})` : ''}`,
       width: 140,
+      ...setFilter([
+        ...(classificationCatalog?.businessCriticalityLevels ?? []).map((level) => ({ value: level.code, label: level.label })),
+        { value: null },
+      ]),
       cellRenderer: ClickToWorkspace,
     },
     { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, cellRenderer: ClickToWorkspace },
@@ -259,8 +290,9 @@ export default function InterfacesPage() {
       field: 'business_process_id',
       width: 200,
       valueFormatter: (p) => p.data?.business_process_name || '',
-      // No filter until the interfaces list reads set models: it compares one raw value against the stored code.
-      filter: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: getBusinessProcessValues },
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,
     },
@@ -268,8 +300,7 @@ export default function InterfacesPage() {
       headerName: t('pages.interfaces.columns.dataCategory'),
       field: 'data_category',
       width: 120,
-      // No filter until the interfaces list reads set models: it compares one raw value against the stored code.
-      filter: false,
+      ...setFilter(byField.interfaceDataCategory.map((opt) => ({ value: opt.code, label: labelFor('interfaceDataCategory', opt.code) }))),
       valueFormatter: (p) => labelFor('interfaceDataCategory', p.value) || p.value || '',
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,
@@ -278,8 +309,7 @@ export default function InterfacesPage() {
       headerName: t('pages.interfaces.columns.containsPii'),
       field: 'contains_pii',
       width: 130,
-      // No filter until the interfaces list reads set models: it compares one raw value against the stored code.
-      filter: false,
+      ...setFilter(yesNoValues),
       valueFormatter: (p) => (p.value ? t('enums.yesNo.yes') : t('enums.yesNo.no')),
       cellRenderer: ClickToWorkspace,
       defaultHidden: true,
@@ -353,7 +383,6 @@ export default function InterfacesPage() {
         endpoint="/interfaces"
         showRowCount
         queryKey="interfaces"
-        extraParams={filterParams}
         enableColumnChooser
         enableSearch
         defaultSort={{ field: 'interface_reference', direction: 'ASC' }}
@@ -365,48 +394,7 @@ export default function InterfacesPage() {
           gridApiRef.current = api;
         }}
         onQueryStateChange={(state) => {
-          const fm = state.filterModel || {};
-          const extractFilterValue = (model: any): string | null => {
-            if (!model) return null;
-            if (Array.isArray(model.conditions) && model.conditions.length > 0) {
-              return extractFilterValue(model.conditions[0]);
-            }
-            if (model.filter != null) return String(model.filter);
-            if (Array.isArray(model.values) && model.values.length > 0) {
-              return String(model.values[0]);
-            }
-            if (model.value != null) return String(model.value);
-            return null;
-          };
-
-          const next: Record<string, any> = {};
-
-          const lifecycleVal = extractFilterValue(fm.lifecycle);
-          if (lifecycleVal) next.lifecycle = lifecycleVal;
-
-          const criticalityVal = extractFilterValue(fm.criticality);
-          if (criticalityVal) next.criticality = criticalityVal;
-
-          const dataCategoryVal = extractFilterValue(fm.data_category);
-          if (dataCategoryVal) next.data_category = dataCategoryVal;
-
-          const dataClassVal = extractFilterValue(fm.data_class);
-          if (dataClassVal) next.data_class = dataClassVal;
-
-          const routeVal = extractFilterValue(fm.integration_route_type);
-          if (routeVal) next.integration_route_type = routeVal;
-
-          const bpVal = extractFilterValue(fm.business_process_id);
-          if (bpVal) next.business_process_id = bpVal;
-
-          const piiVal = extractFilterValue(fm.contains_pii);
-          if (piiVal != null) next.contains_pii = piiVal;
-
-          const prevKey = JSON.stringify(filterParams || {});
-          const nextKey = JSON.stringify(next);
-          if (prevKey !== nextKey) {
-            setFilterParams(next);
-          }
+          lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}
       />
       <Snackbar

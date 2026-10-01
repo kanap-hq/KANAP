@@ -10,9 +10,6 @@ import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../components/grid/renderers';
-import CheckboxSetFilter from '../components/CheckboxSetFilter';
-import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
-import { STATUS_VALUES } from '../constants/status';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import { useCalendarSuggestions, useWorkingDayProfiles } from '../hooks/useWorkingDayProfiles';
@@ -29,6 +26,7 @@ import {
   joinNames,
 } from './working-day-calendars/workingDayCalendarFields';
 import ForbiddenPage from './ForbiddenPage';
+import { statusColumnProps } from '../components/grid/statusColumn';
 
 const DEFAULT_SORT = 'name:ASC';
 
@@ -140,13 +138,7 @@ function WorkingDayCalendarsList() {
         field: 'status',
         headerName: t('workingDayCalendars.columns.status'),
         width: 140,
-        filter: CheckboxSetFilter,
-        floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: {
-          values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
-          searchable: false,
-        },
-        valueFormatter: (p: any) => (p.value ? t(`common:statuses.${p.value}`) : ''),
+        ...statusColumnProps(t),
         // The default scope lists enabled calendars only, so the column would repeat "Enabled".
         defaultHidden: true,
         cellRenderer: link,

@@ -86,6 +86,15 @@ export class InterfacesController {
     return this.svc.listIds(query, { manager: ctx.manager });
   }
 
+  // Declared before ':id', which would otherwise take 'filter-values' for an id.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'reader')
+  @Get('filter-values/business-processes')
+  async businessProcessFilterValues(@Tenant() ctx: TenantRequest) {
+    await this.assertUnrestrictedApplicationReader(ctx);
+    return this.svc.businessProcessFilterValues({ manager: ctx.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'reader')
   @Get('map')

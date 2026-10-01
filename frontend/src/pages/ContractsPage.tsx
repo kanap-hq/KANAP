@@ -1,13 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef } from '../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, StatusScope } from '../components/ServerDataGrid';
 import { Button, Stack } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
+import { statusColumnProps } from '../components/grid/statusColumn';
 import ForbiddenPage from './ForbiddenPage';
 
 type ContractRow = {
@@ -43,25 +44,28 @@ export default function ContractsPage() {
   const { hasLevel } = useAuth();
   const { t } = useTranslation(['ops', 'common']);
 
-  if (!hasLevel('contracts', 'reader')) {
-    return <ForbiddenPage />;
-  }
-
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
 
   const handleNew = () => {
     const sp = new URLSearchParams(searchParams);
     navigate(`/ops/contracts/new/overview?${sp.toString()}`);
   };
 
-  const getContractHref = (row: ContractRow) => {
+  // The grid's sort, search, filters and status scope, so prev/next in the workspace walks the same set.
+  const getContractHref = useCallback((row: ContractRow) => {
     const sp = new URLSearchParams(searchParams);
+    const state = lastQueryRef.current;
+    if (state?.sort) sp.set('sort', state.sort);
+    if (state?.q) sp.set('q', state.q);
+    if (state?.filters && Object.keys(state.filters).length > 0) sp.set('filters', JSON.stringify(state.filters));
+    if (state?.statusScope) sp.set('scope', state.statusScope);
     return `/ops/contracts/${row.id}/overview?${sp.toString()}`;
-  };
+  }, [searchParams]);
 
   const columns: EnhancedColDef<ContractRow>[] = useMemo(() => [
     {
@@ -130,10 +134,29 @@ export default function ContractsPage() {
         />
       ),
     },
+    {
+      field: 'status',
+      headerName: t('master-data:shared.columns.status'),
+      width: 140,
+      ...statusColumnProps(t),
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={getContractHref}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
     { colId: 'latest_task_text', headerName: t('contracts.columns.task'), flex: 1, minWidth: 200, defaultHidden: true, valueGetter: (p) => {
       const t = p.data?.latest_task; if (!t) return ''; const s = t.status || ''; const d = (t.description || '').toString(); const short = d.length > 40 ? `${d.slice(0,40)}…` : d; return s ? `${s}: ${short}` : short;
     } },
-  ], [navigate, searchParams]);
+  ], [getContractHref, navigate, t]);
+
+  // After every hook, so the hook order never depends on the permission.
+  if (!hasLevel('contracts', 'reader')) {
+    return <ForbiddenPage />;
+  }
 
   const canCreate = hasLevel('contracts','manager');
   const canAdmin = hasLevel('contracts','admin');
@@ -157,6 +180,16 @@ export default function ContractsPage() {
         defaultSort={{ field: 'cancellation_deadline', direction: 'ASC' }}
         refreshKey={refreshKey}
         columnPreferencesKey="contracts-grid"
+        // Lists active contracts by default; "All" or "Disabled" reaches those past their end of validity.
+        statusScopeConfig={{ defaultScope: 'enabled' }}
+        onQueryStateChange={(state) => {
+          lastQueryRef.current = {
+            sort: state.sort,
+            q: state.q || '',
+            filters: state.filterModel || {},
+            statusScope: state.statusScope ?? 'enabled',
+          };
+        }}
       />
 
       <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/contracts" title={t("contracts.exportTitle")} />

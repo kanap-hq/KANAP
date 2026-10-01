@@ -55,6 +55,9 @@ import { getSpendSummaryFieldValue, resolveFteField } from '../../spend/spend-su
 import { formatCents, toCents } from '../../common/amount';
 import { Decimal, divRoundHalfAway } from '../../common/decimal';
 
+/** Connection fields grouped on their effective values (see aggregateConnectionsByEffectiveRisk). */
+const CONNECTION_EFFECTIVE_RISK_GROUPS = new Set(['criticality', 'data_class', 'contains_pii']);
+
 type DocumentSearchState = { term: string; itemNumber: number | null };
 type AiAggregateFunction = 'count' | 'sum' | 'avg' | 'min' | 'max';
 type DocumentLinkedEntityField =
@@ -1187,6 +1190,44 @@ export class AiAggregateExecutor {
     }));
   }
 
+  /**
+   * Connections by criticality, data class or PII: the effective values the list shows and
+   * filters on (a derived connection takes them from its linked interfaces), read through the
+   * connections service rather than the stored columns. Counts only: connections have no metric.
+   */
+  private async aggregateConnectionsByEffectiveRisk(
+    context: AiExecutionContextWithManager,
+    groupBy: string,
+    ids: string[],
+    fn: AiAggregateFunction,
+    metric: { key: string; def: AiAggregateMetricDef } | null,
+  ): Promise<Array<{ key: string | null; count: number }>> {
+    if (metric || fn !== 'count') {
+      throw new BadRequestException('Connections grouped by a risk field support count only.');
+    }
+    const risks = await this.connections.effectiveRiskByIds(context.tenantId, ids, { manager: context.manager });
+    const counts = new Map<string, { key: string | null; count: number }>();
+    for (const risk of risks.values()) {
+      const raw = groupBy === 'criticality'
+        ? risk.effective_criticality
+        : groupBy === 'data_class'
+          ? risk.effective_data_class
+          : String(risk.effective_contains_pii);
+      const key = raw == null || raw === '' ? null : String(raw);
+      const bucketKey = key ?? '__NULL__';
+      const current = counts.get(bucketKey) ?? { key, count: 0 };
+      current.count += 1;
+      counts.set(bucketKey, current);
+    }
+    // Same order as the SQL path: count descending, then key with null last.
+    return Array.from(counts.values()).sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      if (a.key == null) return b.key == null ? 0 : 1;
+      if (b.key == null) return -1;
+      return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+    });
+  }
+
   /** OPEX and CAPEX: rows of every id (no page cap), grouped and measured with the list engine's field values. */
   private async aggregateBudgetSummaryByIds(
     context: AiExecutionContextWithManager,
@@ -1451,7 +1492,9 @@ export class AiAggregateExecutor {
 
     const groups = input.entity_type === 'spend_items' || input.entity_type === 'capex_items'
       ? await this.aggregateBudgetSummaryByIds(context, input.entity_type, registry, input.group_by, ids, fn, metric)
-      : await this.aggregateByIds(context, registry, input.group_by, ids, fn, metric);
+      : input.entity_type === 'connections' && CONNECTION_EFFECTIVE_RISK_GROUPS.has(input.group_by)
+        ? await this.aggregateConnectionsByEffectiveRisk(context, input.group_by, ids, fn, metric)
+        : await this.aggregateByIds(context, registry, input.group_by, ids, fn, metric);
     return {
       group_by: input.group_by,
       metric: metric?.key ?? null,

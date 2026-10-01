@@ -41,8 +41,9 @@ export default function ContractWorkspacePage() {
   const sort = searchParams.get('sort');
   const q = searchParams.get('q');
   const filters = searchParams.get('filters');
+  const statusScope = searchParams.get('scope');
 
-  const nav = useContractNav({ id, sort, q, filters });
+  const nav = useContractNav({ id, sort, q, filters, statusScope });
   const { total, index, hasPrev, hasNext, prevId, nextId } = isCreate
     ? { total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }
     : nav;
@@ -137,8 +138,9 @@ export default function ContractWorkspacePage() {
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
     if (filters) sp.set('filters', filters);
+    if (statusScope) sp.set('scope', statusScope);
     return sp;
-  }, [filters, q, sort]);
+  }, [filters, q, sort, statusScope]);
 
   return (
     <Box sx={{ p: 2 }}>

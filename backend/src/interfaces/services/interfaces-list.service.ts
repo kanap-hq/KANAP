@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, In, Repository } from 'typeorm';
+import { Brackets, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { InterfaceEntity } from '../interface.entity';
 import { InterfaceLeg } from '../interface-leg.entity';
 import { InterfaceMiddlewareApplication } from '../interface-middleware-application.entity';
@@ -8,12 +8,36 @@ import { InterfaceBinding } from '../../interface-bindings/interface-binding.ent
 import { Application } from '../../applications/application.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { parsePagination } from '../../common/pagination';
+import { compileAgFilterCondition, createParamNameGenerator, FilterTargetConfig } from '../../common/ag-grid-filtering';
 import { normalizeBindingLifecycle } from '../../interface-bindings/interface-bindings.service';
 import {
   InterfacesBaseService,
   ServiceOpts,
   RouteType,
 } from './interfaces-base.service';
+
+/** Grid columns the interfaces list filters on, by the SQL each one reads. */
+const INTERFACE_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
+  interface_reference: { expression: 'i.interface_reference' },
+  interface_id: { expression: 'i.interface_id' },
+  name: { expression: 'i.name' },
+  source_application_name: { expression: 'sa.name' },
+  target_application_name: { expression: 'ta.name' },
+  business_process_id: { expression: 'i.business_process_id', textExpression: 'CAST(i.business_process_id AS TEXT)' },
+  business_process_name: { expression: 'bp.name' },
+  lifecycle: { expression: 'i.lifecycle' },
+  criticality: { expression: 'i.criticality' },
+  data_category: { expression: 'i.data_category' },
+  data_class: { expression: 'i.data_class' },
+  integration_route_type: { expression: 'i.integration_route_type' },
+  contains_pii: { expression: 'i.contains_pii', dataType: 'boolean' },
+  created_at: { expression: 'i.created_at', textExpression: 'CAST(i.created_at AS TEXT)' },
+};
+
+/** Columns filtering on the environments of the interface's bindings. */
+const ENVIRONMENT_FILTER_FIELDS = new Set(['environment', 'binding_environments']);
+
+const INTERFACE_SORT_FIELDS = ['interface_reference', 'interface_id', 'name', 'lifecycle', 'criticality', 'created_at', 'updated_at'];
 
 /**
  * Service for listing, filtering, and querying interfaces.
@@ -32,18 +56,15 @@ export class InterfacesListService extends InterfacesBaseService {
   }
 
   /**
-   * List interfaces with filtering, sorting, and pagination.
+   * The interfaces of the current tenant matching the quick search and the grid's filter model.
+   * `list` and `listIds` both start from it, so the rows and the prev/next ids always agree.
    */
-  async list(query: any, opts?: ServiceOpts) {
-    const repo = this.getRepo(opts?.manager);
-    const { page, limit, skip, sort, q, filters } = parsePagination(query);
+  private buildFilteredQuery(repo: Repository<InterfaceEntity>, q: string | undefined, filters: any): SelectQueryBuilder<InterfaceEntity> {
     const qb = repo.createQueryBuilder('i');
-    qb.leftJoin('applications', 'sa', 'sa.id = i.source_application_id');
-    qb.leftJoin('applications', 'ta', 'ta.id = i.target_application_id');
-    qb.leftJoin('business_processes', 'bp', 'bp.id = i.business_process_id');
-    qb.addSelect('sa.name', 'source_name');
-    qb.addSelect('ta.name', 'target_name');
-    qb.addSelect('bp.name', 'business_process_name');
+    qb.leftJoin('applications', 'sa', 'sa.id = i.source_application_id AND sa.tenant_id = i.tenant_id');
+    qb.leftJoin('applications', 'ta', 'ta.id = i.target_application_id AND ta.tenant_id = i.tenant_id');
+    qb.leftJoin('business_processes', 'bp', 'bp.id = i.business_process_id AND bp.tenant_id = i.tenant_id');
+    qb.where('i.tenant_id = app_current_tenant()');
 
     if (q) {
       qb.andWhere(
@@ -55,82 +76,54 @@ export class InterfacesListService extends InterfacesBaseService {
       );
     }
 
-    const interfaceReferenceFilter = this.resolveFilterInput(query.interface_reference, filters?.interface_reference);
-    if (interfaceReferenceFilter) {
-      qb.andWhere('i.interface_reference ILIKE :interfaceReferenceFilter', {
-        interfaceReferenceFilter: `%${interfaceReferenceFilter}%`,
-      });
+    if (!filters || typeof filters !== 'object') return qb;
+    const nextParam = createParamNameGenerator('ifl');
+    for (const [field, model] of Object.entries(filters)) {
+      if (ENVIRONMENT_FILTER_FIELDS.has(field)) {
+        // An interface matches when one of its bindings matches.
+        const condition = compileAgFilterCondition(model, { expression: 'b.environment' }, nextParam);
+        if (condition) {
+          qb.andWhere(
+            `EXISTS (
+              SELECT 1
+              FROM interface_bindings b
+              WHERE b.tenant_id = i.tenant_id
+                AND b.interface_id = i.id
+                AND (${condition.sql})
+            )`,
+            condition.params,
+          );
+        }
+        continue;
+      }
+      const target = INTERFACE_FILTER_TARGETS[field];
+      if (!target) continue;
+      const condition = compileAgFilterCondition(model, target, nextParam);
+      // Parenthesized, so no condition can widen the tenant predicate above.
+      if (condition) qb.andWhere(`(${condition.sql})`, condition.params);
     }
+    return qb;
+  }
 
-    const interfaceIdFilter = this.resolveFilterInput(query.interface_id, filters?.interface_id);
-    if (interfaceIdFilter) {
-      qb.andWhere('i.interface_id ILIKE :interfaceIdFilter', { interfaceIdFilter: `%${interfaceIdFilter}%` });
-    }
+  private resolveSort(sort: { field: string; direction: string }): { field: string; direction: 'ASC' | 'DESC' } {
+    const field = INTERFACE_SORT_FIELDS.includes(sort.field) ? sort.field : 'interface_reference';
+    return { field, direction: sort.direction === 'ASC' ? 'ASC' : 'DESC' };
+  }
 
-    const nameFilter = this.resolveFilterInput(query.name, filters?.name);
-    if (nameFilter) {
-      qb.andWhere('i.name ILIKE :nameFilter', { nameFilter: `%${nameFilter}%` });
-    }
+  /**
+   * List interfaces with filtering, sorting, and pagination.
+   */
+  async list(query: any, opts?: ServiceOpts) {
+    const repo = this.getRepo(opts?.manager);
+    const { page, limit, skip, sort, q, filters } = parsePagination(query);
+    const qb = this.buildFilteredQuery(repo, q, filters);
+    qb.addSelect('sa.name', 'source_name');
+    qb.addSelect('ta.name', 'target_name');
+    qb.addSelect('bp.name', 'business_process_name');
 
-    const sourceAppFilter = this.resolveFilterInput(query.source_application_name, filters?.source_application_name);
-    if (sourceAppFilter) {
-      qb.andWhere('sa.name ILIKE :sourceAppFilter', { sourceAppFilter: `%${sourceAppFilter}%` });
-    }
-
-    const targetAppFilter = this.resolveFilterInput(query.target_application_name, filters?.target_application_name);
-    if (targetAppFilter) {
-      qb.andWhere('ta.name ILIKE :targetAppFilter', { targetAppFilter: `%${targetAppFilter}%` });
-    }
-
-    const lifecycleFilter = this.resolveFilterInput(query.lifecycle, filters?.lifecycle);
-    if (lifecycleFilter) {
-      qb.andWhere('i.lifecycle ILIKE :lifecycle', { lifecycle: `%${lifecycleFilter}%` });
-    }
-
-    const criticalityFilter = this.resolveFilterInput(query.criticality, filters?.criticality);
-    if (criticalityFilter) {
-      qb.andWhere('i.criticality ILIKE :criticality', { criticality: `%${criticalityFilter}%` });
-    }
-
-    const dataCategoryFilter = this.resolveFilterInput(query.data_category, filters?.data_category);
-    if (dataCategoryFilter) qb.andWhere('i.data_category = :dataCategory', { dataCategory: dataCategoryFilter });
-
-    const dataClassFilter = this.resolveFilterInput(query.data_class, filters?.data_class);
-    if (dataClassFilter) qb.andWhere('i.data_class = :dataClass', { dataClass: dataClassFilter });
-
-    const routeFilter = this.resolveFilterInput(query.integration_route_type, filters?.integration_route_type);
-    if (routeFilter) qb.andWhere('i.integration_route_type = :route', { route: routeFilter });
-
-    const businessProcessFilter = this.resolveFilterInput(query.business_process_id, filters?.business_process_id);
-    if (businessProcessFilter) qb.andWhere('i.business_process_id = :bpId', { bpId: businessProcessFilter });
-
-    const containsPiiFilter =
-      query.contains_pii !== undefined ? this.parseBoolean(query.contains_pii) : this.extractBooleanFilter(filters?.contains_pii);
-    if (containsPiiFilter !== null && containsPiiFilter !== undefined) {
-      qb.andWhere('i.contains_pii = :pii', { pii: containsPiiFilter });
-    }
-
-    const envFilterModel = filters?.environment ?? filters?.binding_environments;
-    const envFilterRaw = this.extractFilterValue(envFilterModel);
-    if (envFilterRaw) {
-      const envFilterLike = `%${String(envFilterRaw).toLowerCase()}%`;
-      qb.andWhere(
-        `EXISTS (
-          SELECT 1
-          FROM interface_bindings b
-          WHERE b.interface_id = i.id
-            AND LOWER(b.environment) LIKE :envFilterLike
-        )`,
-        { envFilterLike },
-      );
-    }
-
-    const allowedSort = ['interface_reference', 'interface_id', 'name', 'lifecycle', 'criticality', 'created_at', 'updated_at'];
-    const sortField = allowedSort.includes(sort.field) ? sort.field : 'interface_reference';
-    const sortDirection = sort.direction === 'ASC' ? 'ASC' : 'DESC';
-    const qbCount = qb.clone();
-    const total = await qbCount.getCount();
-    qb.orderBy(`i.${sortField}`, sortDirection as any).skip(skip).take(limit);
+    const order = this.resolveSort(sort);
+    const total = await qb.clone().getCount();
+    qb.orderBy(`i.${order.field}`, order.direction).addOrderBy('i.id', 'ASC').skip(skip).take(limit);
 
     const { raw, entities } = await qb.getRawAndEntities();
     const pageIds = entities.map((e) => e.id);
@@ -143,7 +136,8 @@ export class InterfacesListService extends InterfacesBaseService {
                   COUNT(DISTINCT b.environment)::text as environments,
                   STRING_AGG(DISTINCT b.environment, ',') as envs
            FROM interface_bindings b
-           WHERE b.interface_id = ANY($1)
+           WHERE b.tenant_id = app_current_tenant()
+             AND b.interface_id = ANY($1)
            GROUP BY b.interface_id`,
           [pageIds],
         );
@@ -185,101 +179,38 @@ export class InterfacesListService extends InterfacesBaseService {
   async listIds(query: any, opts?: ServiceOpts): Promise<{ ids: string[]; refs: string[]; total: number }> {
     const repo = this.getRepo(opts?.manager);
     const { sort, q, filters } = parsePagination(query);
-    const qb = repo.createQueryBuilder('i').select('i.id', 'id').addSelect('i.interface_reference', 'ref');
-    qb.leftJoin('applications', 'sa', 'sa.id = i.source_application_id');
-    qb.leftJoin('applications', 'ta', 'ta.id = i.target_application_id');
-    qb.leftJoin('business_processes', 'bp', 'bp.id = i.business_process_id');
-
-    if (q) {
-      qb.andWhere(
-        new Brackets((expr) => {
-          expr.where('i.name ILIKE :q OR i.interface_reference ILIKE :q OR i.interface_id ILIKE :q OR i.business_purpose ILIKE :q', {
-            q: `%${q}%`,
-          });
-        }),
-      );
-    }
-
-    const interfaceReferenceFilter = this.resolveFilterInput(query.interface_reference, filters?.interface_reference);
-    if (interfaceReferenceFilter) {
-      qb.andWhere('i.interface_reference ILIKE :interfaceReferenceFilter', {
-        interfaceReferenceFilter: `%${interfaceReferenceFilter}%`,
-      });
-    }
-
-    const interfaceIdFilter = this.resolveFilterInput(query.interface_id, filters?.interface_id);
-    if (interfaceIdFilter) {
-      qb.andWhere('i.interface_id ILIKE :interfaceIdFilter', { interfaceIdFilter: `%${interfaceIdFilter}%` });
-    }
-
-    const nameFilter = this.resolveFilterInput(query.name, filters?.name);
-    if (nameFilter) {
-      qb.andWhere('i.name ILIKE :nameFilter', { nameFilter: `%${nameFilter}%` });
-    }
-
-    const sourceAppFilter = this.resolveFilterInput(query.source_application_name, filters?.source_application_name);
-    if (sourceAppFilter) {
-      qb.andWhere('sa.name ILIKE :sourceAppFilter', { sourceAppFilter: `%${sourceAppFilter}%` });
-    }
-
-    const targetAppFilter = this.resolveFilterInput(query.target_application_name, filters?.target_application_name);
-    if (targetAppFilter) {
-      qb.andWhere('ta.name ILIKE :targetAppFilter', { targetAppFilter: `%${targetAppFilter}%` });
-    }
-
-    const lifecycleFilter = this.resolveFilterInput(query.lifecycle, filters?.lifecycle);
-    if (lifecycleFilter) {
-      qb.andWhere('i.lifecycle ILIKE :lifecycle', { lifecycle: `%${lifecycleFilter}%` });
-    }
-
-    const criticalityFilter = this.resolveFilterInput(query.criticality, filters?.criticality);
-    if (criticalityFilter) {
-      qb.andWhere('i.criticality ILIKE :criticality', { criticality: `%${criticalityFilter}%` });
-    }
-
-    const dataCategoryFilter = this.resolveFilterInput(query.data_category, filters?.data_category);
-    if (dataCategoryFilter) qb.andWhere('i.data_category = :dataCategory', { dataCategory: dataCategoryFilter });
-
-    const dataClassFilter = this.resolveFilterInput(query.data_class, filters?.data_class);
-    if (dataClassFilter) qb.andWhere('i.data_class = :dataClass', { dataClass: dataClassFilter });
-
-    const routeFilter = this.resolveFilterInput(query.integration_route_type, filters?.integration_route_type);
-    if (routeFilter) qb.andWhere('i.integration_route_type = :route', { route: routeFilter });
-
-    const businessProcessFilter = this.resolveFilterInput(query.business_process_id, filters?.business_process_id);
-    if (businessProcessFilter) qb.andWhere('i.business_process_id = :bpId', { bpId: businessProcessFilter });
-
-    const containsPiiFilter =
-      query.contains_pii !== undefined ? this.parseBoolean(query.contains_pii) : this.extractBooleanFilter(filters?.contains_pii);
-    if (containsPiiFilter !== null && containsPiiFilter !== undefined) {
-      qb.andWhere('i.contains_pii = :pii', { pii: containsPiiFilter });
-    }
-
-    const envFilterModel = filters?.environment ?? filters?.binding_environments;
-    const envFilterRaw = this.extractFilterValue(envFilterModel);
-    if (envFilterRaw) {
-      const envFilterLike = `%${String(envFilterRaw).toLowerCase()}%`;
-      qb.andWhere(
-        `EXISTS (
-          SELECT 1
-          FROM interface_bindings b
-          WHERE b.interface_id = i.id
-            AND LOWER(b.environment) LIKE :envFilterLike
-        )`,
-        { envFilterLike },
-      );
-    }
-
-    const allowedSort = ['interface_reference', 'interface_id', 'name', 'lifecycle', 'criticality', 'created_at', 'updated_at'];
-    const sortField = allowedSort.includes(sort.field) ? sort.field : 'interface_reference';
-    const sortDirection = sort.direction === 'ASC' ? 'ASC' : 'DESC';
+    const qb = this.buildFilteredQuery(repo, q, filters).select('i.id', 'id').addSelect('i.interface_reference', 'ref');
+    const order = this.resolveSort(sort);
     const total = await qb.clone().getCount();
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
-    const rows = await qb.orderBy(`i.${sortField}`, sortDirection as any).take(limit).getRawMany<{ id: string; ref: string | null }>();
+    const rows = await qb
+      .orderBy(`i.${order.field}`, order.direction)
+      .addOrderBy('i.id', 'ASC')
+      // limit, not take: with joins TypeORM only applies take through its entity paging.
+      .limit(limit)
+      .getRawMany<{ id: string; ref: string | null }>();
     const navRows = rows.filter((row) => Boolean(row.id));
     const ids = navRows.map((row) => row.id);
     const refs = navRows.map((row) => row.ref || row.id);
     return { ids, refs, total };
+  }
+
+  /**
+   * Values of the business process filter: the processes the tenant's interfaces use, by name,
+   * and null when some interface has none. Read with the interfaces permission, so a reader
+   * of interfaces needs no access to the business processes list.
+   */
+  async businessProcessFilterValues(opts?: ServiceOpts): Promise<Array<{ value: string | null; label: string | null }>> {
+    const mg = opts?.manager ?? this.repo.manager;
+    const rows: Array<{ id: string | null; name: string | null }> = await mg.query(
+      `SELECT DISTINCT i.business_process_id AS id, bp.name
+       FROM interfaces i
+       LEFT JOIN business_processes bp ON bp.id = i.business_process_id AND bp.tenant_id = i.tenant_id
+       WHERE i.tenant_id = app_current_tenant()
+         AND (i.business_process_id IS NULL OR bp.id IS NOT NULL)
+       ORDER BY bp.name NULLS FIRST`,
+    );
+    return rows.map((row) => ({ value: row.id, label: row.id ? row.name : null }));
   }
 
   /**

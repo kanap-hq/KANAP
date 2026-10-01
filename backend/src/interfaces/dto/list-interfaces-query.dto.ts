@@ -1,54 +1,14 @@
 import { z } from 'zod';
 import { ListQuerySchema, ListQuery } from '../../common/dto/list-query.dto';
-import { IntegrationRouteTypes } from './create-interface.dto';
 
 /**
- * Extended query schema for listing interfaces.
- * Extends the common ListQuerySchema with interface-specific filters.
+ * Query for listing interfaces: the common list query plus `filters`, the grid's filter model
+ * as a JSON string. InterfacesListService compiles it column by column; there are no
+ * per-column query parameters.
  */
 export const ListInterfacesQuerySchema = ListQuerySchema.extend({
-  /** Filter by source application ID */
-  source_application_id: z.string().uuid().optional(),
-
-  /** Filter by target application ID */
-  target_application_id: z.string().uuid().optional(),
-
-  /** Filter by business process ID */
-  business_process_id: z.string().uuid().optional(),
-
-  /** Filter by system reference */
-  interface_reference: z.string().optional(),
-
-  /** Filter by integration route type */
-  integration_route_type: z.enum(IntegrationRouteTypes).optional(),
-
-  /** Filter by lifecycle (comma-separated for multiple) */
-  lifecycle: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (!val) return undefined;
-      return val
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }),
-
-  /** Filter by criticality */
-  criticality: z.string().trim().min(1).optional(),
-
-  /** Filter by data classification */
-  data_class: z.string().optional(),
-
-  /** Filter by contains PII */
-  contains_pii: z
-    .union([z.string(), z.boolean()])
-    .optional()
-    .transform((val) => {
-      if (val === undefined || val === null || val === '') return undefined;
-      if (typeof val === 'boolean') return val;
-      return val.toLowerCase() === 'true';
-    }),
+  /** Grid filter model (JSON), keyed by column. */
+  filters: z.string().optional(),
 });
 
 export type ListInterfacesQueryInput = z.input<typeof ListInterfacesQuerySchema>;
@@ -72,15 +32,7 @@ export class ListInterfacesQueryDto implements ListInterfacesQuery {
   include!: string[];
   q?: string;
   status?: 'enabled' | 'disabled';
-  source_application_id?: string;
-  target_application_id?: string;
-  business_process_id?: string;
-  interface_reference?: string;
-  integration_route_type?: (typeof IntegrationRouteTypes)[number];
-  lifecycle?: string[];
-  criticality?: string;
-  data_class?: string;
-  contains_pii?: boolean;
+  filters?: string;
 
   static parse(input: unknown): ListInterfacesQuery {
     return ListInterfacesQuerySchema.parse(input);

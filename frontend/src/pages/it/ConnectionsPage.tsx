@@ -235,8 +235,16 @@ export default function ConnectionsPage() {
           </Box>
         );
       },
-      // No filter until the list filters the effective values: derived rows show effective_* but the filter tests stored ones.
-      filter: false,
+      // The list filters, sorts and pages on the effective value the cell shows.
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: [
+          ...(classificationCatalog?.businessCriticalityLevels ?? []).map((level) => ({ value: level.code, label: level.label })),
+          { value: null },
+        ],
+        searchable: false,
+      },
     },
     {
       headerName: 'Data class',
@@ -244,12 +252,20 @@ export default function ConnectionsPage() {
       width: 130,
       valueFormatter: (p) => {
         const row = p.data as ConnectionRow | undefined;
-        const value = row?.effective_data_class || p.value;
+        // A derived connection shows its effective value, unknown (not set) when no interface is linked.
+        const value = row?.risk_mode === 'derived' ? row.effective_data_class : p.value;
         return classificationCatalog?.dataClasses.find((item) => item.code === value)?.label || (value || 'Not set');
       },
       cellRenderer: ClickToWorkspace,
-      // No filter until the list filters the effective values: derived rows show effective_* but the filter tests stored ones.
-      filter: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: [
+          ...(classificationCatalog?.dataClasses ?? []).map((level) => ({ value: level.code, label: level.label })),
+          { value: null },
+        ],
+        searchable: false,
+      },
     },
     {
       headerName: 'PII',
@@ -258,11 +274,18 @@ export default function ConnectionsPage() {
       valueFormatter: (p) => {
         const row = p.data as ConnectionRow | undefined;
         const value = typeof row?.effective_contains_pii === 'boolean' ? row.effective_contains_pii : p.value;
-        return value ? 'Yes' : 'No';
+        return value ? t('enums.yesNo.yes') : t('enums.yesNo.no');
       },
       cellRenderer: ClickToWorkspace,
-      // No filter until the list filters the effective values: derived rows show effective_* but the filter tests stored ones.
-      filter: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: [
+          { value: 'true', label: t('enums.yesNo.yes') },
+          { value: 'false', label: t('enums.yesNo.no') },
+        ],
+        searchable: false,
+      },
     },
     {
       headerName: 'Lifecycle',

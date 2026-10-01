@@ -33,10 +33,10 @@ import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
 import { analyticsFieldKey } from '../services/analytics';
 import { readStoredOpexListContext, writeStoredOpexListContext } from './opex/listContextStorage';
 import { statusScopeParams } from '../utils/statusScopeParams';
-import { STATUS_VALUES } from '../constants/status';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
+import { statusColumnProps } from '../components/grid/statusColumn';
 
 type SummaryRow = {
   id: string;
@@ -569,12 +569,7 @@ export default function OpexListPage() {
       field: 'status',
       headerName: t('opex.columns.enabled'),
       width: 140,
-      filter: CheckboxSetFilter,
-      floatingFilterComponent: CheckboxSetFloatingFilter,
-      filterParams: {
-        values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
-        searchable: false,
-      },
+      ...statusColumnProps(t),
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}

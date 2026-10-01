@@ -300,33 +300,6 @@ export abstract class InterfacesBaseService {
     return new Set(includeRaw.split(',').map((s) => s.trim()).filter(Boolean));
   }
 
-  protected extractFilterValue(model: any): string | null {
-    if (!model) return null;
-    if (Array.isArray(model.conditions) && model.conditions.length > 0) {
-      return this.extractFilterValue(model.conditions[0]);
-    }
-    if (model.filter != null) return String(model.filter);
-    if (Array.isArray(model.values) && model.values.length > 0) {
-      return String(model.values[0]);
-    }
-    if (model.value != null) return String(model.value);
-    return null;
-  }
-
-  protected extractBooleanFilter(model: any): boolean | null {
-    const val = this.extractFilterValue(model);
-    if (val == null) return null;
-    const normalized = val.toLowerCase();
-    if (['true', '1', 'yes'].includes(normalized)) return true;
-    if (['false', '0', 'no'].includes(normalized)) return false;
-    return null;
-  }
-
-  protected resolveFilterInput(queryValue: any, filterModel: any): string | null {
-    if (queryValue != null && queryValue !== '') return String(queryValue);
-    return this.extractFilterValue(filterModel);
-  }
-
   protected async createDefaultLegs(intf: InterfaceEntity, tenantId: string, manager?: EntityManager) {
     const legRepo = this.getLegRepo(manager);
     // Clear any existing legs for safety

@@ -34,6 +34,14 @@ export class ConnectionsService {
     return this.listService.listIds(tenantId, query, opts);
   }
 
+  effectiveRiskByIds(tenantId: string, ids: string[], opts?: ServiceOpts) {
+    return this.listService.effectiveRiskByIds(tenantId, ids, opts);
+  }
+
+  listFilterValues(tenantId: string, query: { fields?: string }, opts?: ServiceOpts) {
+    return this.listService.listFilterValues(tenantId, query, opts);
+  }
+
   listByAsset(assetId: string, tenantId: string, opts?: ServiceOpts) {
     return this.listService.listByAsset(assetId, tenantId, opts);
   }
