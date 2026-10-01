@@ -94,6 +94,8 @@ export class AllocationCalculatorService {
     // compute it once per key instead of once per version (lists and reports run hundreds).
     // The promise is cached so a rejected selection surfaces the same error on each version.
     const manualDefaultShares = new Map<string, Promise<Map<string, number>>>();
+    // Same for the versions in manual company mode, keyed by year, driver and their companies.
+    const manualCompanyShares = new Map<string, Promise<Map<string, number>>>();
     if (years.length > 0) {
       // Global defaults (no tenant) and this tenant's overrides.
       const scope: any[] = [
@@ -187,13 +189,16 @@ export class AllocationCalculatorService {
               continue;
             }
 
-            const distribution = await computeCompanyShares({
-              manager,
-              tenantId,
-              fiscalYear: version.budget_year,
-              companyIds,
-              driver: ((version as any).allocation_driver ?? 'headcount') as AllocationDriver,
-            });
+            // The shares depend on the year, the driver and the companies only: computed once per call for
+            // each combination (a list page holds many versions with the same selection).
+            const driver = ((version as any).allocation_driver ?? 'headcount') as AllocationDriver;
+            const sharesKey = `${version.budget_year}:${driver}:${companyIds.join(',')}`;
+            let pendingShares = manualCompanyShares.get(sharesKey);
+            if (!pendingShares) {
+              pendingShares = computeCompanyShares({ manager, tenantId, fiscalYear: version.budget_year, companyIds, driver });
+              manualCompanyShares.set(sharesKey, pendingShares);
+            }
+            const distribution = await pendingShares;
 
             const shares = rows.map((row) => ({
               allocation_id: row.id,

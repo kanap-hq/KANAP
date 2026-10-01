@@ -141,13 +141,15 @@ export async function budgetListPageIds(
   deps: SummaryDeps,
   query: any,
   manager: EntityManager,
-  opts: { allocationLabels?: boolean; fxRates?: RequestFxRates } = {},
+  opts: { allocationLabels?: boolean; fxRates?: RequestFxRates; rowsFollow?: boolean } = {},
 ): Promise<{ ids: string[]; total: number; labels: Map<string, string>; req: BudgetRequest; fxRates: RequestFxRates }> {
   const req = await readRequest(query, manager);
   const fxRates = opts.fxRates ?? new RequestFxRates(deps.fxRates);
   const state = stateOf(req, windowScope(req));
   const needs = budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q);
   if (opts.allocationLabels) needs.ruleYears = [...(needs.ruleYears ?? []), req.currentYear];
+  // The row builder converts every year it reads: resolve those rates once, here, for both.
+  if (opts.rowsFollow) needs.fxYears = Array.from(new Set([...(needs.fxYears ?? []), ...req.years]));
   const rt = await runtimeFor(scope, fxRates, manager, req, needs);
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
@@ -172,7 +174,7 @@ export async function budgetListSummary(
   options: BudgetListRowOptions = {},
 ): Promise<{ items: BudgetSummaryRow[]; total: number; page: number; limit: number }> {
   const grid = String(query?.shape ?? '') === 'grid';
-  const page = await budgetListPageIds(scope, deps, query, manager, { allocationLabels: grid });
+  const page = await budgetListPageIds(scope, deps, query, manager, { allocationLabels: grid, rowsFollow: true });
   const { req } = page;
   const items = await itemsInOrder(scope, manager, req.tenantId, page.ids);
   const rows = await buildBudgetSummaryRows(scope, { ...deps, fxRates: page.fxRates }, manager, req.tenantId, items, {
