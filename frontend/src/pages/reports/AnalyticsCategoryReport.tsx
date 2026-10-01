@@ -329,92 +329,114 @@ export default function AnalyticsCategoryReport() {
             </ReportFilter>
           )}
           <BudgetReportFilters filters={reportFilters} rows={allRows} />
-          <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
-            const v = parseInt(e.target.value, 10);
-            setStartYear(v);
-            if (v > endYear) setEndYear(v);
-          }} InputLabelProps={{ shrink: true }}>
-            {allowedYears.map((yr) => (<MenuItem key={yr} value={yr}>{yr}</MenuItem>))}
-          </TextField>
-          <TextField select size="small" label={t("reports.filters.endYear")} value={endYear} onChange={(e) => {
-            const v = parseInt(e.target.value, 10);
-            setEndYear(v);
-            if (v < startYear) setStartYear(v);
-          }} InputLabelProps={{ shrink: true }}>
-            {allowedYears.map((yr) => (<MenuItem key={yr} value={yr}>{yr}</MenuItem>))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label={t("reports.filters.metric")}
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as MetricKey)}
-            sx={{ minWidth: 200 }}
-            InputLabelProps={{ shrink: true }}
-          >
-            {budgetColumns.shown.map((column) => (
-              <MenuItem key={column.key} value={column.key}>{column.label}</MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label={t("reports.filters.chartType")}
-            value={chartType}
-            onChange={(e) => setChartType(e.target.value as 'pie' | 'bar')}
-            disabled={!singleYear}
-            InputLabelProps={{ shrink: true }}
-          >
-            <MenuItem value="pie">{t("reports.filters.pieChart")}</MenuItem>
-            <MenuItem value="bar">{t("reports.filters.horizontalBarChart")}</MenuItem>
-          </TextField>
-          <Autocomplete
-            multiple
-            size="small"
-            disableCloseOnSelect
-            options={categoryOptions}
-            value={selectedOptions}
-            onChange={(_, next) => {
-              setExcludedCategories(next.map((option) => option.id));
-            }}
-            getOptionLabel={(option) => option.label}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderOption={(props, option, { selected }) => (
-              <li {...props}>
-                <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
-                <ListItemText primary={option.label} />
-              </li>
-            )}
-            renderTags={() => []}
-            renderInput={(params) => {
-              const count = excludedCategories.length;
-              return (
-                <TextField
-                  {...params}
-                  label={t("reports.filters.excludeCategories")}
-                  placeholder={count === 0 ? t('reports.filters.excludeCategoriesPlaceholder') : ''}
-                  InputLabelProps={{ shrink: true }}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: count > 0 ? (
-                      <>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ ml: 0.5, mr: 1, whiteSpace: 'nowrap' }}
-                        >
-                          {t('reports.filters.categorySelected', { count })}
-                        </Typography>
-                        {params.InputProps.startAdornment}
-                      </>
-                    ) : params.InputProps.startAdornment,
-                  }}
-                />
-              );
-            }}
-            sx={{ minWidth: 280 }}
-            noOptionsText={t("reports.filters.noMatchingCategories")}
-          />
+          <ReportFilter label={t('reports.filters.startYear')} width={100}>
+            <TextField
+              select
+              size="small"
+              value={startYear}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                setStartYear(v);
+                if (v > endYear) setEndYear(v);
+              }}
+              SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('reports.filters.startYear') } }}
+              sx={reportFilterSelectSx}
+            >
+              {allowedYears.map((yr) => (<MenuItem key={yr} value={yr} sx={drawerMenuItemSx}>{yr}</MenuItem>))}
+            </TextField>
+          </ReportFilter>
+          <ReportFilter label={t('reports.filters.endYear')} width={100}>
+            <TextField
+              select
+              size="small"
+              value={endYear}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                setEndYear(v);
+                if (v < startYear) setStartYear(v);
+              }}
+              SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('reports.filters.endYear') } }}
+              sx={reportFilterSelectSx}
+            >
+              {allowedYears.map((yr) => (<MenuItem key={yr} value={yr} sx={drawerMenuItemSx}>{yr}</MenuItem>))}
+            </TextField>
+          </ReportFilter>
+          <ReportFilter label={t('reports.filters.metric')} width={200}>
+            <TextField
+              select
+              size="small"
+              value={metric}
+              onChange={(e) => setMetric(e.target.value as MetricKey)}
+              SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('reports.filters.metric') } }}
+              sx={reportFilterSelectSx}
+            >
+              {budgetColumns.shown.map((column) => (
+                <MenuItem key={column.key} value={column.key} sx={drawerMenuItemSx}>{column.label}</MenuItem>
+              ))}
+            </TextField>
+          </ReportFilter>
+          <ReportFilter label={t('reports.filters.chartType')} width={180}>
+            <TextField
+              select
+              size="small"
+              value={chartType}
+              onChange={(e) => setChartType(e.target.value as 'pie' | 'bar')}
+              disabled={!singleYear}
+              SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('reports.filters.chartType') } }}
+              sx={reportFilterSelectSx}
+            >
+              <MenuItem value="pie" sx={drawerMenuItemSx}>{t('reports.filters.pieChart')}</MenuItem>
+              <MenuItem value="bar" sx={drawerMenuItemSx}>{t('reports.filters.horizontalBarChart')}</MenuItem>
+            </TextField>
+          </ReportFilter>
+          <ReportFilter label={t('reports.filters.excludeCategories')} width={280}>
+            <Autocomplete
+              multiple
+              size="small"
+              disableCloseOnSelect
+              options={categoryOptions}
+              value={selectedOptions}
+              onChange={(_, next) => {
+                setExcludedCategories(next.map((option) => option.id));
+              }}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderOption={(props, option, { selected }) => (
+                <li {...props}>
+                  <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
+                  <ListItemText primary={option.label} primaryTypographyProps={{ fontSize: 13 }} />
+                </li>
+              )}
+              renderTags={() => []}
+              renderInput={(params) => {
+                const count = excludedCategories.length;
+                return (
+                  <TextField
+                    {...params}
+                    placeholder={count === 0 ? t('reports.filters.excludeCategoriesPlaceholder') : ''}
+                    inputProps={{ ...params.inputProps, 'aria-label': t('reports.filters.excludeCategories') }}
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: count > 0 ? (
+                        <>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ ml: 0.5, mr: 1, whiteSpace: 'nowrap', fontSize: 13 }}
+                          >
+                            {t('reports.filters.categorySelected', { count })}
+                          </Typography>
+                          {params.InputProps.startAdornment}
+                        </>
+                      ) : params.InputProps.startAdornment,
+                    }}
+                  />
+                );
+              }}
+              sx={{ width: '100%' }}
+              noOptionsText={t("reports.filters.noMatchingCategories")}
+            />
+          </ReportFilter>
         </>
       )}
       onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
@@ -425,7 +447,7 @@ export default function AnalyticsCategoryReport() {
           <ChartCard ref={chartRef} title={t('reports.shared.chart')} options={chartOptions} height={520} />
         </Box>
         <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>{t("reports.shared.summaryTable")}</Typography>
+          <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>{t("reports.shared.summaryTable")}</Typography>
           <ReportGrid
             wrapperSx={{ height: 520 }}
             rowData={tableRows}

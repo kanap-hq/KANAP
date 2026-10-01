@@ -615,9 +615,9 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
     <Stack spacing={2}>
       {error && <Alert severity="error">{error}</Alert>}
 
-      <SectionTitle>Asset relations</SectionTitle>
+      <SectionTitle>{t('workspace.asset.relations.assetRelations')}</SectionTitle>
       <Box sx={relationGridSx}>
-        <PropertyRow label="Depends on">
+        <PropertyRow label={t('workspace.asset.relations.dependsOn')}>
           <Autocomplete
             multiple
             options={allDependsOnOptions}
@@ -637,7 +637,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder="Search dependent assets"
+                placeholder={t('workspace.asset.relations.searchDependsOn')}
                 variant="standard"
                 InputProps={{
                   ...params.InputProps,
@@ -659,7 +659,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
           />
         </PropertyRow>
 
-        <PropertyRow label="Contains">
+        <PropertyRow label={t('workspace.asset.relations.contains')}>
           <Autocomplete
             multiple
             options={allContainsOptions}
@@ -679,7 +679,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder="Search contained assets"
+                placeholder={t('workspace.asset.relations.searchContains')}
                 variant="standard"
                 InputProps={{
                   ...params.InputProps,
@@ -706,9 +706,9 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       {(containedBy.length > 0 || dependedOnBy.length > 0) && (
         <Box sx={relationGridSx}>
           {containedBy.length > 0 && (
-            <PropertyRow label="Contained by">
+            <PropertyRow label={t('workspace.asset.relations.containedBy')}>
               <TableContainer component={Paper} variant="outlined" sx={compactRelationTableSx}>
-                <Table size="small" aria-label="Contained by assets">
+                <Table size="small" aria-label={t('workspace.asset.relations.containedByAssets')}>
                   <TableBody>
                     {containedBy.map((r) => (
                       <TableRow key={r.id} hover sx={{ cursor: 'pointer' }} onClick={() => window.open(`/it/assets/${r.id}/relations`, '_self')}>
@@ -722,9 +722,9 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
           )}
 
           {dependedOnBy.length > 0 && (
-            <PropertyRow label="Depended on by">
+            <PropertyRow label={t('workspace.asset.relations.dependedOnBy')}>
               <TableContainer component={Paper} variant="outlined" sx={compactRelationTableSx}>
-                <Table size="small" aria-label="Depended on by assets">
+                <Table size="small" aria-label={t('workspace.asset.relations.dependedOnByAssets')}>
                   <TableBody>
                     {dependedOnBy.map((r) => (
                       <TableRow key={r.id} hover sx={{ cursor: 'pointer' }} onClick={() => window.open(`/it/assets/${r.id}/relations`, '_self')}>
@@ -740,8 +740,8 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       )}
 
       {/* Relations */}
-      <SectionTitle>Relations</SectionTitle>
-      <PropertyRow label="OPEX items" valueSx={relationControlSx}>
+      <SectionTitle>{t('workspace.asset.tabs.relations')}</SectionTitle>
+      <PropertyRow label={t('workspace.asset.relations.opexItems')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={opexOptions}
@@ -758,7 +758,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Search OPEX items"
+              placeholder={t('workspace.asset.relations.searchOpexItems')}
               variant="standard"
               sx={drawerFieldValueSx}
             />
@@ -771,7 +771,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
         />
       </PropertyRow>
 
-      <PropertyRow label="CAPEX items" valueSx={relationControlSx}>
+      <PropertyRow label={t('workspace.asset.relations.capexItems')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={capexOptions}
@@ -788,7 +788,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Search CAPEX items"
+              placeholder={t('workspace.asset.relations.searchCapexItems')}
               variant="standard"
               sx={drawerFieldValueSx}
             />
@@ -801,7 +801,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
         />
       </PropertyRow>
 
-      <PropertyRow label="Contracts" valueSx={relationControlSx}>
+      <PropertyRow label={t('workspace.asset.relations.contracts')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={contractOptions}
@@ -818,7 +818,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Search contracts"
+              placeholder={t('workspace.asset.relations.searchContracts')}
               variant="standard"
               sx={drawerFieldValueSx}
             />
@@ -831,7 +831,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
         />
       </PropertyRow>
 
-      <PropertyRow label="Projects" valueSx={relationControlSx}>
+      <PropertyRow label={t('workspace.asset.relations.projects')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={projectOptions}
@@ -848,7 +848,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Search projects"
+              placeholder={t('workspace.asset.relations.searchProjects')}
               variant="standard"
               sx={drawerFieldValueSx}
             />
@@ -861,7 +861,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
         />
       </PropertyRow>
 
-      <PropertyRow label="Tasks" valueSx={relationControlSx}>
+      <PropertyRow label={t('workspace.asset.relations.tasks')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={allTaskOptions}
@@ -881,7 +881,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Search tasks"
+              placeholder={t('workspace.asset.relations.searchTasks')}
               variant="standard"
               InputProps={{
                 ...params.InputProps,
@@ -905,10 +905,10 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
 
       {/* URLs */}
       <Stack direction="row" alignItems="center" spacing={1} sx={relationWideControlSx}>
-        <SectionTitle>Relevant websites</SectionTitle>
+        <SectionTitle>{t('workspace.asset.relations.relevantWebsites')}</SectionTitle>
         {!readOnly && (
           <Button size="small" variant="action" onClick={openAddLinkDialog}>
-            Add URL
+            {t('workspace.asset.relations.addUrl')}
           </Button>
         )}
       </Stack>
@@ -930,7 +930,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
       </Stack>
 
       {/* Attachments */}
-      <SectionTitle>Attachments</SectionTitle>
+      <SectionTitle>{t('workspace.asset.relations.attachments')}</SectionTitle>
       <Stack spacing={1} sx={relationWideControlSx}>
         <Box
           onDragOver={(e) => { e.preventDefault(); setHover(true); }}
@@ -958,7 +958,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
           }}
           sx={{ border: '2px dashed', borderColor: hover ? 'primary.main' : 'divider', borderRadius: 1, p: 2, textAlign: 'center', cursor: 'pointer' }}
         >
-          <Typography variant="body2" color="text.secondary">Drag & drop files here, or use the button to select</Typography>
+          <Typography variant="body2" color="text.secondary">{t('workspace.asset.relations.dropHint')}</Typography>
           <Box sx={{ mt: 1 }}>
             <Button
               component="label"
@@ -966,7 +966,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
               variant="outlined"
               disabled={uploading || readOnly}
             >
-              Select files
+              {t('workspace.asset.relations.selectFiles')}
               <input
                 type="file"
                 hidden
@@ -999,7 +999,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
         {uploading && <LinearProgress sx={{ mt: 1 }} />}
         {uploading && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            Uploading {uploadCount} file{uploadCount === 1 ? '' : 's'}...
+            {t('workspace.asset.relations.uploading', { count: uploadCount })}
           </Typography>
         )}
         <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
@@ -1008,7 +1008,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
             const onDelete = async () => {
               if (!canDelete) return;
               const ok = await dialogs.confirm({
-                message: `Delete attachment "${a.original_filename}"?`,
+                message: t('workspace.asset.relations.deleteAttachmentConfirm', { name: a.original_filename }),
                 confirmLabel: t('common:buttons.delete'),
                 intent: 'danger',
               });
@@ -1046,19 +1046,19 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
 
     <KanapDialog
       open={linkDialogOpen}
-      title={editingLinkIndex === null ? 'New URL' : 'Edit URL'}
+      title={editingLinkIndex === null ? t('workspace.asset.relations.newUrl') : t('workspace.asset.relations.editUrl')}
       onClose={closeLinkDialog}
       onSave={saveLinkDraft}
-      saveLabel={editingLinkIndex === null ? 'Add' : 'Save'}
+      saveLabel={editingLinkIndex === null ? t('common:buttons.add') : t('common:buttons.save')}
       saveDisabled={!String(linkDraft.url || '').trim()}
       saveLoading={saving}
     >
       <Stack spacing={1.25}>
-        <PropertyRow label="Name">
+        <PropertyRow label={t('common.name')}>
           <TextField
             value={linkDraft.description}
             onChange={(event) => setLinkDraft((prev) => ({ ...prev, description: event.target.value }))}
-            placeholder="Website name"
+            placeholder={t('workspace.asset.relations.websiteNamePlaceholder')}
             autoFocus
             inputRef={linkNameInputRef}
             variant="standard"
@@ -1066,7 +1066,7 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
             sx={drawerFieldValueSx}
           />
         </PropertyRow>
-        <PropertyRow label="URL" required>
+        <PropertyRow label={t('workspace.asset.relations.url')} required>
           <TextField
             value={linkDraft.url}
             onChange={(event) => setLinkDraft((prev) => ({ ...prev, url: event.target.value }))}

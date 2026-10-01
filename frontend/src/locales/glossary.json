@@ -62,7 +62,9 @@
     "revision": { "fr": "révision", "de": "Revision", "es": "revisión", "note": "Revised budget column" },
     "freeze": { "fr": "gel", "de": "Einfrieren", "es": "congelación", "note": "Lock data for a period" },
     "headcount": { "fr": "effectif", "de": "Mitarbeiterzahl", "es": "plantilla", "note": "Employee count metric" },
-    "consolidation account": { "fr": "compte de consolidation", "de": "Konsolidierungskonto", "es": "cuenta de consolidación", "note": "GL consolidation account" }
+    "consolidation account": { "fr": "compte de consolidation", "de": "Konsolidierungskonto", "es": "cuenta de consolidación", "note": "GL consolidation account" },
+    "run": { "fr": "Run", "de": "Run", "es": "Run", "note": "Spend that keeps existing services running. IT management term kept as-is in every language, as in the manuals and the task types fast track" },
+    "build": { "fr": "Build", "de": "Build", "es": "Build", "note": "Spend that creates or changes services. IT management term kept as-is in every language, as in the manuals and the task types fast track" }
   },
 
   "portfolio_concepts": {

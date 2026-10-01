@@ -6,6 +6,7 @@ import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material'
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useDepartmentNav } from '../../hooks/useDepartmentNav';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PropertyGroup, PropertyRow } from '../../components/design';
 import CompanySelect from '../../components/fields/CompanySelect';
@@ -254,8 +255,7 @@ function DescriptionField({
   onCommit: (next: string | null) => void;
 }) {
   const { t } = useTranslation(['master-data']);
-  const [draft, setDraft] = React.useState(value);
-  React.useEffect(() => { setDraft(value); }, [value]);
+  const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
     <Box sx={{ maxWidth: 900 }}>
       <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1 }}>
@@ -264,7 +264,9 @@ function DescriptionField({
       <TextField
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
+        onFocus={onFocus}
         onBlur={() => {
+          onBlur();
           const next = draft.trim();
           if (next !== value.trim()) onCommit(next || null);
         }}

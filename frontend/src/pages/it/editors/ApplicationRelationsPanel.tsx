@@ -1,4 +1,6 @@
 import useApplicationClassificationCatalog from '../../../hooks/useApplicationClassificationCatalog';
+import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import { classificationText } from '../../../utils/applicationClassification';
 import React, { forwardRef, useImperativeHandle } from 'react';
 import { Alert, Autocomplete, Box, Button, Chip, CircularProgress, LinearProgress, Stack, TextField, Typography, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, Paper } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -37,7 +39,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export default forwardRef<ApplicationRelationsPanelHandle, Props>(function ApplicationRelationsPanel({ id, isSuite = false, onDirtyChange, onRelationsChange }, ref) {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
-  const businessLabel = (code?: string | null) => classificationCatalog?.businessCriticalityLevels.find((item) => item.code === code)?.label || code || 'Not set';
+  const businessLabel = (code?: string | null) => classificationCatalog?.businessCriticalityLevels.find((item) => item.code === code)?.label || code || classificationText('Not set');
+  const { labelFor } = useItOpsEnumOptions();
   const { t } = useTranslation(['it', 'common']);
   const dialogs = useKanapDialogs();
   const { hasLevel } = useAuth();
@@ -458,24 +461,24 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
 
       {isSuite && (
         <>
-          <SectionTitle>Components</SectionTitle>
+          <SectionTitle>{t('pages.applications.columns.components')}</SectionTitle>
           {components.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">No child applications linked yet.</Typography>
+            <Typography variant="body2" color="text.secondary">{t('workspace.application.relations.noChildApps')}</Typography>
           ) : (
             <TableContainer component={Paper} variant="outlined">
               <Table size="small" sx={{ '& tbody td': { py: 0.75 } }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Application</TableCell>
-                    <TableCell>Lifecycle</TableCell>
-                    <TableCell>Criticality</TableCell>
+                    <TableCell>{t('common:selects.application')}</TableCell>
+                    <TableCell>{t('common.lifecycle')}</TableCell>
+                    <TableCell>{t('workspace.application.overview.criticality')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {components.map((c) => (
                     <TableRow key={c.id} hover sx={{ cursor: 'pointer' }} onClick={() => window.open(`/it/applications/${c.id}/overview`, '_self')}>
                       <TableCell>{c.name}</TableCell>
-                      <TableCell>{(() => { switch (String(c.lifecycle || '')) { case 'proposed': return 'Proposed'; case 'active': return 'Active'; case 'deprecated': return 'Deprecated'; case 'retired': return 'Retired'; default: return String(c.lifecycle || ''); } })()}</TableCell>
+                      <TableCell>{labelFor('lifecycleStatus', c.lifecycle)}</TableCell>
                       <TableCell>{businessLabel(c.criticality)}</TableCell>
                     </TableRow>
                   ))}
@@ -486,9 +489,9 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
         </>
       )}
 
-      <SectionTitle>Relations</SectionTitle>
+      <SectionTitle>{t('workspace.application.tabs.relations')}</SectionTitle>
 
-      <PropertyRow label="OPEX items" valueSx={relationControlSx}>
+      <PropertyRow label={t('pages.applications.columns.opexItems')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={opexOptions}
@@ -506,7 +509,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Select OPEX items"
+              placeholder={t('workspace.application.relations.selectOpexItems')}
               variant="standard"
               sx={drawerFieldValueSx}
             />
@@ -520,7 +523,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
         />
       </PropertyRow>
 
-      <PropertyRow label="CAPEX items" valueSx={relationControlSx}>
+      <PropertyRow label={t('pages.applications.columns.capexItems')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={capexOptions}
@@ -538,7 +541,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Select CAPEX items"
+              placeholder={t('workspace.application.relations.selectCapexItems')}
               variant="standard"
               sx={drawerFieldValueSx}
             />
@@ -552,7 +555,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
         />
       </PropertyRow>
 
-      <PropertyRow label="Contracts" valueSx={relationControlSx}>
+      <PropertyRow label={t('pages.applications.columns.contracts')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={contractOptions}
@@ -570,7 +573,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Select contracts"
+              placeholder={t('workspace.application.relations.selectContracts')}
               variant="standard"
               sx={drawerFieldValueSx}
             />
@@ -584,7 +587,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
         />
       </PropertyRow>
 
-      <PropertyRow label="Projects" valueSx={relationControlSx}>
+      <PropertyRow label={t('workspace.application.relations.projects')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={projectOptions}
@@ -602,7 +605,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Select projects"
+              placeholder={t('workspace.application.relations.selectProjects')}
               variant="standard"
               sx={drawerFieldValueSx}
             />
@@ -616,7 +619,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
         />
       </PropertyRow>
 
-      <PropertyRow label="Tasks" valueSx={relationControlSx}>
+      <PropertyRow label={t('workspace.application.relations.tasks')} valueSx={relationControlSx}>
         <Autocomplete
           multiple
           options={allTaskOptions}
@@ -637,7 +640,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
           renderInput={(params) => (
             <TextField
               {...params}
-              placeholder="Search tasks"
+              placeholder={t('workspace.application.relations.searchTasks')}
               variant="standard"
               InputProps={{
                 ...params.InputProps,
@@ -661,10 +664,10 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
       </PropertyRow>
 
         <Stack direction="row" alignItems="center" spacing={1} sx={relationWideControlSx}>
-          <SectionTitle>Relevant websites</SectionTitle>
+          <SectionTitle>{t('workspace.application.relations.relevantWebsites')}</SectionTitle>
           {!readOnly && (
             <Button variant="action" size="small" onClick={openAddLinkDialog}>
-              Add URL
+              {t('workspace.application.relations.addUrl')}
             </Button>
           )}
         </Stack>
@@ -675,6 +678,9 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
               name: String(link.description || '').trim() || link.url,
               url: link.url,
             }))}
+            nameHeader={t('common.name')}
+            emptyLabel={t('workspace.application.relations.noUrls')}
+            deleteLabel={t('workspace.application.relations.deleteUrl')}
             canEdit={!readOnly}
             canDelete={!readOnly}
             onEdit={openEditLinkDialog}
@@ -686,7 +692,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
           />
         </Stack>
 
-      <SectionTitle>Attachments</SectionTitle>
+      <SectionTitle>{t('workspace.application.relations.attachments')}</SectionTitle>
       <Stack spacing={1} sx={relationWideControlSx}>
         <Box
           onDragOver={(e) => { e.preventDefault(); setHover(true); }}
@@ -705,10 +711,10 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
           }}
           sx={{ border: '2px dashed', borderColor: hover ? 'primary.main' : 'divider', borderRadius: 1, p: 2, textAlign: 'center', cursor: 'pointer' }}
         >
-          <Typography variant="body2" color="text.secondary">Drag & drop files here, or use the button to select</Typography>
+          <Typography variant="body2" color="text.secondary">{t('workspace.application.relations.dragDrop')}</Typography>
           <Box sx={{ mt: 1 }}>
             <Button component="label" size="small" variant="outlined" disabled={uploading || readOnly}>
-              Select files
+              {t('workspace.application.relations.selectFiles')}
               <input type="file" hidden multiple onChange={async (e) => {
                 const input = e.currentTarget as HTMLInputElement | null;
                 const files = Array.from((e.target as HTMLInputElement)?.files || []);
@@ -727,7 +733,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
         {uploading && <LinearProgress sx={{ mt: 1 }} />}
         {uploading && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            Uploading {uploadCount} file{uploadCount === 1 ? '' : 's'}…
+            {t('workspace.application.relations.uploadingFiles', { count: uploadCount })}
           </Typography>
         )}
         <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
@@ -736,7 +742,7 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
             const onDelete = async () => {
               if (!canDelete) return;
               const ok = await dialogs.confirm({
-                message: `Delete attachment "${a.original_filename}"?`,
+                message: t('workspace.application.relations.deleteAttachment', { name: a.original_filename }),
                 confirmLabel: t('common:buttons.delete'),
                 intent: 'danger',
               });
@@ -766,15 +772,15 @@ export default forwardRef<ApplicationRelationsPanelHandle, Props>(function Appli
 
       <KanapDialog
         open={linkDialogOpen}
-        title={editingLinkIndex === null ? 'New URL' : 'Edit URL'}
+        title={editingLinkIndex === null ? t('workspace.application.relations.newUrl') : t('workspace.application.relations.editUrl')}
         onClose={closeLinkDialog}
         onSave={saveLinkDraft}
-        saveLabel={editingLinkIndex === null ? 'Add' : 'Save'}
+        saveLabel={editingLinkIndex === null ? t('common:buttons.add') : t('common:buttons.save')}
         saveDisabled={!String(linkDraft.url || '').trim()}
         saveLoading={saving}
       >
         <Stack spacing={1.25}>
-          <PropertyRow label="Name">
+          <PropertyRow label={t('common.name')}>
             <TextField
               value={linkDraft.description}
               onChange={(event) => setLinkDraft((prev) => ({ ...prev, description: event.target.value }))}

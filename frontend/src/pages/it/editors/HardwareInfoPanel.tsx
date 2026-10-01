@@ -180,12 +180,12 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
         </Typography>
       ) : null}
 
-      <PropertyRow label="Serial number">
+      <PropertyRow label={t('workspace.asset.hardware.serialNumber')}>
         <TextField
           value={serialNumber}
           onChange={(e) => setSerialNumber(e.target.value)}
           disabled={saving || readOnly || netboxOwns('serial_number')}
-          placeholder="Serial number"
+          placeholder={t('workspace.asset.hardware.serialNumberPlaceholder')}
           size="small"
           variant="standard"
           sx={drawerFieldValueSx}
@@ -193,12 +193,12 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
         />
       </PropertyRow>
 
-      <PropertyRow label="Manufacturer">
+      <PropertyRow label={t('workspace.asset.hardware.manufacturer')}>
         <TextField
           value={manufacturer}
           onChange={(e) => setManufacturer(e.target.value)}
           disabled={saving || readOnly || netboxOwns('manufacturer')}
-          placeholder="Manufacturer"
+          placeholder={t('workspace.asset.hardware.manufacturerPlaceholder')}
           size="small"
           variant="standard"
           sx={drawerFieldValueSx}
@@ -206,12 +206,12 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
         />
       </PropertyRow>
 
-      <PropertyRow label="Model">
+      <PropertyRow label={t('workspace.asset.hardware.model')}>
         <TextField
           value={model}
           onChange={(e) => setModel(e.target.value)}
           disabled={saving || readOnly || netboxOwns('model')}
-          placeholder="Model"
+          placeholder={t('workspace.asset.hardware.modelPlaceholder')}
           size="small"
           variant="standard"
           sx={drawerFieldValueSx}
@@ -219,7 +219,7 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
         />
       </PropertyRow>
 
-      <PropertyRow label="Purchase date" valueSx={{ maxWidth: 180 }}>
+      <PropertyRow label={t('workspace.asset.hardware.purchaseDate')} valueSx={{ maxWidth: 180 }}>
         <DateEUField
           label=""
           hideLabel
@@ -231,12 +231,12 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
         />
       </PropertyRow>
 
-      <PropertyRow label="Rack location">
+      <PropertyRow label={t('workspace.asset.hardware.rackLocation')}>
         <TextField
           value={rackLocation}
           onChange={(e) => setRackLocation(e.target.value)}
           disabled={saving || readOnly || netboxOwns('rack_location')}
-          placeholder="Rack location"
+          placeholder={t('workspace.asset.hardware.rackLocationPlaceholder')}
           size="small"
           variant="standard"
           sx={drawerFieldValueSx}
@@ -244,12 +244,12 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
         />
       </PropertyRow>
 
-      <PropertyRow label="Rack unit">
+      <PropertyRow label={t('workspace.asset.hardware.rackUnit')}>
         <TextField
           value={rackUnit}
           onChange={(e) => setRackUnit(e.target.value)}
           disabled={saving || readOnly || netboxOwns('rack_unit')}
-          placeholder="Rack unit"
+          placeholder={t('workspace.asset.hardware.rackUnitPlaceholder')}
           size="small"
           variant="standard"
           sx={drawerFieldValueSx}
@@ -257,7 +257,7 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
         />
       </PropertyRow>
 
-      <PropertyRow label="Notes" valueSx={{ width: '100%' }}>
+      <PropertyRow label={t('common.notes')} valueSx={{ width: '100%' }}>
         <TextField
           id="asset-hardware-notes"
           value={notes}
@@ -266,7 +266,7 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
           multiline
           minRows={4}
           maxRows={12}
-          placeholder="Hardware notes"
+          placeholder={t('workspace.asset.hardware.notesPlaceholder')}
           variant="standard"
           sx={longFormSurfaceFieldSx}
           fullWidth

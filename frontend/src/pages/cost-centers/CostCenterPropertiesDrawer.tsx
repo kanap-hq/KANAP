@@ -6,6 +6,7 @@ import CostCenterSelect from '../../components/fields/CostCenterSelect';
 import CompanySelect from '../../components/fields/CompanySelect';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import MetadataUserPicker from '../../components/workspace/MetadataUserPicker';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import type { CostCenterDetail, CostCenterKind } from '../../services/costCenters';
 import { COST_CENTER_KINDS, type CostCenterField } from './costCenterFields';
@@ -52,12 +53,12 @@ export default function CostCenterPropertiesDrawer({
   onDisabledAtChange,
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
-  const [code, setCode] = React.useState(node.code);
-
-  // A refused code stays in the field so it can be corrected; a stored change replaces it.
-  React.useEffect(() => { setCode(node.code); }, [node.code]);
+  // A refused code stays in the field so it can be corrected; a stored change replaces it,
+  // except while the user is typing in the field.
+  const { draft: code, setDraft: setCode, onFocus: onCodeFocus, onBlur: onCodeBlur } = useFieldDraft(node.code);
 
   const commitCode = () => {
+    onCodeBlur();
     const trimmed = code.trim();
     if (!trimmed) {
       setCode(node.code);
@@ -73,6 +74,7 @@ export default function CostCenterPropertiesDrawer({
           <TextField
             value={code}
             onChange={(event) => setCode(event.target.value)}
+            onFocus={onCodeFocus}
             onBlur={commitCode}
             onKeyDown={(event) => {
               if (event.key === 'Enter') (event.target as HTMLInputElement).blur();

@@ -14,6 +14,7 @@ import {
 } from '../../hooks/useWorkingDayProfiles';
 import { useLocale } from '../../i18n/useLocale';
 import { useWorkingDayCalendarNav } from '../../hooks/useWorkingDayCalendarNav';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
 import {
   deleteWorkingDayProfile,
   getWorkingDayProfile,
@@ -220,6 +221,7 @@ export default function WorkingDayCalendarWorkspacePage() {
         actions={actions}
         properties={data ? (
           <WorkingDayCalendarPropertiesDrawer
+            key={data.id}
             calendar={data}
             disabled={disabled}
             errors={errors}
@@ -278,8 +280,7 @@ function DescriptionField({
   onCommit: (next: string | null) => void;
 }) {
   const { t } = useTranslation(['master-data']);
-  const [draft, setDraft] = React.useState(value);
-  React.useEffect(() => { setDraft(value); }, [value]);
+  const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
     <Box>
       <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1 }}>
@@ -288,7 +289,9 @@ function DescriptionField({
       <TextField
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
+        onFocus={onFocus}
         onBlur={() => {
+          onBlur();
           const next = draft.trim();
           if (next !== value.trim()) onCommit(next || null);
         }}

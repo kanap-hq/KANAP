@@ -17,14 +17,31 @@ vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
 const grid = vi.fn();
 // The list URL at the time the grid renders, recorded by a probe rendered just before the page.
 const seen = vi.hoisted(() => ({ search: '', searches: [] as string[] }));
-vi.mock('../components/ServerDataGrid', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../components/ServerDataGrid')>()),
-  default: (props: unknown) => {
-    grid(props);
-    seen.searches.push(seen.search);
-    return null;
-  },
-}));
+vi.mock('../components/ServerDataGrid', async (importOriginal) => {
+  const { useEffect } = await import('react');
+  const { useLocation } = await import('react-router-dom');
+  return {
+    ...(await importOriginal<typeof import('../components/ServerDataGrid')>()),
+    default: function GridMock(props: any) {
+      grid(props);
+      seen.searches.push(seen.search);
+      const search = useLocation().search;
+      // Like the real grid once it is ready: it hands its API over, then reports the query it starts with.
+      useEffect(() => {
+        const { field, direction } = props.defaultSort;
+        props.onGridApiReady?.({ getColumnState: () => [] });
+        props.onQueryStateChange?.({
+          sort: new URLSearchParams(search).get('sort') || `${field}:${direction}`,
+          filterModel: props.initialState?.filter?.filterModel ?? {},
+          q: '',
+          statusScope: 'enabled',
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+      return null;
+    },
+  };
+});
 // The tenant's column settings, set per test.
 const columnsSetting = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {

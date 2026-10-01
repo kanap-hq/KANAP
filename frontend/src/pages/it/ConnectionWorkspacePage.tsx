@@ -806,7 +806,7 @@ export default function ConnectionWorkspacePage() {
         tabs={workspaceTabs}
         onTabChange={handleTabChange}
         drawerStorageKey="kanap.connections.drawerOpen"
-        backLabel="Connections"
+        backLabel={t('pages.connections.title')}
         onBack={handleClose}
         itemReference={!isCreate ? data?.connection_reference || null : null}
         onCopyReference={

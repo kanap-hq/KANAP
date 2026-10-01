@@ -46,3 +46,16 @@ describe('PageHeader breadcrumb title placement', () => {
     expect(crumbLabels()).toEqual(['breadcrumbs.ops', 'breadcrumbs.reports', 'Quarterly view']);
   });
 });
+
+describe('PageHeader IT landscape crumbs', () => {
+  it.each([
+    ['assets', 'breadcrumbs.assets'],
+    ['locations', 'breadcrumbs.locations'],
+    ['interfaces', 'breadcrumbs.interfaces'],
+    ['connections', 'breadcrumbs.connections'],
+    ['incidents', 'breadcrumbs.incidents'],
+  ])('labels /it/%s from the nav keys', (segment, key) => {
+    renderAt(`/it/${segment}`);
+    expect(crumbLabels()).toEqual(['breadcrumbs.it', key]);
+  });
+});

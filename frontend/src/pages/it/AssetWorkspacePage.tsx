@@ -339,14 +339,14 @@ export default function AssetWorkspacePage() {
     if (v === 'server_to_server') return t('enums.topology.serverToServer');
     if (v === 'multi_server') return t('enums.topology.multiServer');
     return v || '';
-  }, []);
+  }, [t]);
   const serverRoleOptions = React.useMemo(
     () => (byField.serverRole || []).map((o) => ({
       value: o.code,
-      label: o.deprecated ? `${o.label} (deprecated)` : o.label,
+      label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
       deprecated: !!o.deprecated,
     })),
-    [byField.serverRole],
+    [byField.serverRole, t],
   );
 
   const load = React.useCallback(async () => {
@@ -513,24 +513,24 @@ export default function AssetWorkspacePage() {
     const current = status;
     const opts = list.map((item) => ({
       value: item.code,
-      label: item.deprecated ? `${item.label} (deprecated)` : item.label,
+      label: item.deprecated ? t('common.deprecatedOption', { label: item.label }) : item.label,
       deprecated: !!item.deprecated,
     }));
     if (current && !opts.some((opt) => opt.value === current)) {
       opts.push({ value: current, label: current, deprecated: false });
     }
     return opts.filter((opt) => !opt.deprecated || opt.value === current);
-  }, [byField.lifecycleStatus, status]);
+  }, [byField.lifecycleStatus, status, t]);
 
   const kindOptions = React.useMemo(
     () => (byField.serverKind || [])
       .map((o) => ({
         value: o.code,
-        label: o.deprecated ? `${o.label} (deprecated)` : o.label,
+        label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
         deprecated: !!o.deprecated,
       }))
       .sort((a, b) => a.label.localeCompare(b.label)),
-    [byField.serverKind],
+    [byField.serverKind, t],
   );
 
   // Determine if the current asset type is physical (shows Hardware/Support tabs)
@@ -566,22 +566,22 @@ export default function AssetWorkspacePage() {
   const operatingSystemOptions = React.useMemo(
     () => (settings?.operatingSystems || []).map((o) => ({
       value: o.code,
-      label: o.deprecated ? `${o.label} (deprecated)` : o.label,
+      label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
       standardSupportEnd: o.standardSupportEnd,
       extendedSupportEnd: o.extendedSupportEnd,
     })),
-    [settings?.operatingSystems],
+    [settings?.operatingSystems, t],
   );
 
   const domainOptions = React.useMemo(
     () => (settings?.domains || []).map((d) => ({
       value: d.code,
-      label: d.deprecated ? `${d.label} (deprecated)` : d.label,
+      label: d.deprecated ? t('common.deprecatedOption', { label: d.label }) : d.label,
       dns_suffix: d.dns_suffix,
       system: d.system,
       deprecated: !!d.deprecated,
     })),
-    [settings?.domains],
+    [settings?.domains, t],
   );
 
   // Compute FQDN from hostname and domain
@@ -616,10 +616,10 @@ export default function AssetWorkspacePage() {
   const networkSegmentOptions = React.useMemo(
     () => (byField.networkSegment || []).map((o) => ({
       value: o.code,
-      label: o.deprecated ? `${o.label} (deprecated)` : o.label,
+      label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
       deprecated: !!o.deprecated,
     })),
-    [byField.networkSegment],
+    [byField.networkSegment, t],
   );
 
   const subnetOptions = React.useMemo(
@@ -809,15 +809,15 @@ export default function AssetWorkspacePage() {
 
   const handleSave = async () => {
     if (!locationId) {
-      setError('Location is required.');
+      setError(t('messages.locationRequired'));
       return;
     }
     if (!kind) {
-      setError('Asset type is required.');
+      setError(t('messages.assetTypeRequired'));
       return;
     }
     if (!provider) {
-      setError('Provider is required.');
+      setError(t('messages.providerRequired'));
       return;
     }
     if (hostnameMalformed) {
@@ -1186,7 +1186,7 @@ export default function AssetWorkspacePage() {
 
   const updateLocation = (nextValue: string | null) => {
     if (!nextValue && !isCreate) {
-      setError('Location is required.');
+      setError(t('messages.locationRequired'));
       return;
     }
     if (nextValue !== locationId) {
@@ -1632,13 +1632,13 @@ export default function AssetWorkspacePage() {
               {isCreate ? (
                 <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
                   <Box>
-                    <SectionLabel>Basics</SectionLabel>
+                    <SectionLabel>{t('workspace.asset.overview.basics')}</SectionLabel>
                   </Box>
-                  <PropertyRow label="Name" required valueSx={{ maxWidth: 520 }}>
+                  <PropertyRow label={t('workspace.asset.overview.name')} required valueSx={{ maxWidth: 520 }}>
                     <TextField
                       value={name}
                       onChange={(e) => { setName(e.target.value); setDirty(true); }}
-                      placeholder="Asset name"
+                      placeholder={t('workspace.asset.overview.namePlaceholder')}
                       required
                       size="small"
                       variant="standard"
@@ -1653,11 +1653,11 @@ export default function AssetWorkspacePage() {
                     isOptionEqualToValue={(opt, val) => opt.value === val.value}
                     openOnFocus
                     renderInput={(params) => (
-                      <PropertyRow label="Asset type" required valueSx={{ maxWidth: 520 }}>
+                      <PropertyRow label={t('workspace.asset.overview.assetType')} required valueSx={{ maxWidth: 520 }}>
                         <TextField
                           {...params}
                           required
-                          placeholder="Search asset types"
+                          placeholder={t('workspace.asset.overview.searchAssetTypes')}
                           size="small"
                           variant="standard"
                           sx={contentFieldSx}
@@ -1665,18 +1665,18 @@ export default function AssetWorkspacePage() {
                       </PropertyRow>
                     )}
                   />
-                  <PropertyRow label="Location" required valueSx={{ maxWidth: 520 }}>
+                  <PropertyRow label={t('workspace.asset.overview.location')} required valueSx={{ maxWidth: 520 }}>
                     <LocationSelect
                       value={locationId}
                       onChange={updateLocation}
-                      label="Location"
+                      label={t('workspace.asset.overview.location')}
                       required
                       size="small"
                       hideLabel
                       textFieldSx={contentFieldSx}
                     />
                   </PropertyRow>
-                  <PropertyRow label="Environment" valueSx={{ maxWidth: 260 }}>
+                  <PropertyRow label={t('workspace.asset.technical.environment')} valueSx={{ maxWidth: 260 }}>
                     <TextField
                       select
                       value={environment}
@@ -1692,13 +1692,13 @@ export default function AssetWorkspacePage() {
               ) : null}
               <Box>
                 <Box sx={{ mb: 1 }}>
-                  <SectionLabel>Description</SectionLabel>
+                  <SectionLabel>{t('workspace.asset.overview.description')}</SectionLabel>
                 </Box>
                 <React.Suspense fallback={<Box sx={(muiTheme) => ({ minHeight: 154, maxWidth: 900, border: `1px solid ${muiTheme.palette.kanap.border.default}`, borderRadius: '8px', bgcolor: muiTheme.palette.kanap.bg.composer })} />}>
                   <MarkdownEditor
                     value={notes}
                     onChange={handleNotesChange}
-                    placeholder="Describe the asset"
+                    placeholder={t('workspace.asset.overview.descriptionPlaceholder')}
                     minRows={4}
                     maxRows={12}
                     disabled={!canManage}
@@ -1714,11 +1714,11 @@ export default function AssetWorkspacePage() {
                     {assignMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAssignMessage(null)}>{assignMessage}</Alert>}
                     {isCluster && (
                       <Alert severity="info" sx={{ mb: 2 }}>
-                        Cluster servers cannot host application assignments. Assign member hosts instead.
+                        {t('workspace.asset.assignments.clusterCannotHost')}
                       </Alert>
                     )}
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                      <SectionLabel>Assignments</SectionLabel>
+                      <SectionLabel>{t('workspace.asset.assignments.title')}</SectionLabel>
                       <Button
                         variant="action"
                         size="small"
@@ -1726,25 +1726,25 @@ export default function AssetWorkspacePage() {
                         onClick={openAssignDialog}
                         disabled={serverRoleOptions.length === 0 || isCluster}
                       >
-                        Add assignment
+                        {t('workspace.asset.assignments.addAssignment')}
                       </Button>
                     </Stack>
                     <Table size="small" sx={denseTableSx}>
                       <TableHead>
                         <TableRow>
-                          <TableCell>Application</TableCell>
-                          <TableCell>Environment</TableCell>
-                          <TableCell>Role</TableCell>
-                          <TableCell>Since</TableCell>
-                          <TableCell>Notes</TableCell>
-                          <TableCell align="right">Actions</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.application')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.environment')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.role')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.since')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.notes')}</TableCell>
+                          <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {assignments.length === 0 && (
                           <TableRow>
                             <TableCell colSpan={6}>
-                              <Typography variant="body2" color="text.secondary">No assignments yet.</Typography>
+                              <Typography variant="body2" color="text.secondary">{t('workspace.asset.assignments.noAssignments')}</Typography>
                             </TableCell>
                           </TableRow>
                         )}
@@ -1760,7 +1760,7 @@ export default function AssetWorkspacePage() {
                             <TableCell>{assignment.since_date ? ymdToEu(assignment.since_date) : '-'}</TableCell>
                             <TableCell>{assignment.notes || '-'}</TableCell>
                             <TableCell align="right">
-                              <Tooltip title="Edit assignment">
+                              <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
                                 <span>
                                   <IconButton
                                     size="small"
@@ -1770,7 +1770,7 @@ export default function AssetWorkspacePage() {
                                   </IconButton>
                                 </span>
                               </Tooltip>
-                              <Tooltip title="Remove assignment">
+                              <Tooltip title={t('workspace.asset.assignments.removeAssignment')}>
                                 <span>
                                   <IconButton
                                     size="small"
@@ -1790,23 +1790,23 @@ export default function AssetWorkspacePage() {
 
                   <Box>
                     <Box sx={{ mb: 1 }}>
-                      <SectionLabel>Connections</SectionLabel>
+                      <SectionLabel>{t('workspace.asset.connections.title')}</SectionLabel>
                     </Box>
                     {connectionsError && <Alert severity="error" sx={{ mb: 2 }}>{connectionsError}</Alert>}
                     {!connectionsLoading && (
                       connections.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">No connections found.</Typography>
+                        <Typography variant="body2" color="text.secondary">{t('workspace.asset.connections.noConnections')}</Typography>
                       ) : (
                         <Table size="small" sx={denseTableSx}>
                           <TableHead>
                             <TableRow>
-                              <TableCell>Connection id</TableCell>
-                              <TableCell>Name</TableCell>
-                              <TableCell>Topology</TableCell>
-                              <TableCell>Protocols</TableCell>
-                              <TableCell>Source</TableCell>
-                              <TableCell>Destination</TableCell>
-                              <TableCell>Lifecycle</TableCell>
+                              <TableCell>{t('workspace.asset.connections.connectionId')}</TableCell>
+                              <TableCell>{t('workspace.asset.connections.name')}</TableCell>
+                              <TableCell>{t('workspace.asset.connections.topology')}</TableCell>
+                              <TableCell>{t('workspace.asset.connections.protocols')}</TableCell>
+                              <TableCell>{t('workspace.asset.connections.source')}</TableCell>
+                              <TableCell>{t('workspace.asset.connections.destination')}</TableCell>
+                              <TableCell>{t('workspace.asset.connections.lifecycle')}</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -1857,7 +1857,7 @@ export default function AssetWorkspacePage() {
             <Stack spacing={3.5} sx={{ maxWidth: 900 }}>
               <Box>
                 <Box sx={{ mb: 1 }}>
-                  <SectionLabel>Cluster management</SectionLabel>
+                  <SectionLabel>{t('workspace.asset.technical.clusterManagement')}</SectionLabel>
                 </Box>
                 <Stack spacing={1.25} sx={{ maxWidth: 560 }}>
                   <Box
@@ -1872,7 +1872,7 @@ export default function AssetWorkspacePage() {
                       lineHeight: 1.4,
                     })}
                   >
-                    Cluster
+                    {t('workspace.asset.meta.cluster')}
                     <Switch
                       checked={isCluster}
                       onChange={(e) => {
@@ -1885,12 +1885,12 @@ export default function AssetWorkspacePage() {
                       disabled={!canManage || saving}
                       color="primary"
                       size="small"
-                      inputProps={{ 'aria-label': 'Cluster' }}
+                      inputProps={{ 'aria-label': t('workspace.asset.meta.cluster') }}
                     />
                   </Box>
                   {isCluster && (
                     <Alert severity="info">
-                      Cluster servers can be endpoints in connections. Assign application instances to member hosts, not to the cluster itself.
+                      {t('workspace.asset.overview.clusterInfo')}
                     </Alert>
                   )}
                 </Stack>
@@ -1899,31 +1899,31 @@ export default function AssetWorkspacePage() {
               {isCluster && (
                 <Box>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                    <SectionLabel>Members</SectionLabel>
+                    <SectionLabel>{t('workspace.asset.technical.members')}</SectionLabel>
                     <Button
                       variant="action"
                       size="small"
                       onClick={openMemberDialog}
                       disabled={isCreate}
                     >
-                      Edit members
+                      {t('workspace.asset.technical.editMembers')}
                     </Button>
                   </Stack>
                   {isCreate && (
-                    <Alert severity="info">Save this cluster before managing members.</Alert>
+                    <Alert severity="info">{t('workspace.asset.technical.saveClusterFirst')}</Alert>
                   )}
                   {!isCreate && clusterError && <Alert severity="error" sx={{ mb: 1 }}>{clusterError}</Alert>}
                   {!isCreate && !clusterLoading && clusterMembers.length === 0 && (
-                    <Typography variant="body2" color="text.secondary">No members added yet.</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.noMembers')}</Typography>
                   )}
                   {!isCreate && !clusterLoading && clusterMembers.length > 0 && (
                     <Table size="small" sx={denseTableSx}>
                       <TableHead>
                         <TableRow>
-                          <TableCell>Name</TableCell>
-                          <TableCell>Environment</TableCell>
-                          <TableCell>Status</TableCell>
-                          <TableCell>Operating system</TableCell>
+                          <TableCell>{t('workspace.asset.technical.clusterTableHeaders.name')}</TableCell>
+                          <TableCell>{t('workspace.asset.technical.clusterTableHeaders.environment')}</TableCell>
+                          <TableCell>{t('workspace.asset.technical.clusterTableHeaders.status')}</TableCell>
+                          <TableCell>{t('workspace.asset.technical.clusterTableHeaders.operatingSystem')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1951,12 +1951,12 @@ export default function AssetWorkspacePage() {
               {!isCluster && !isCreate && (
                 <Box>
                   <Box sx={{ mb: 1 }}>
-                    <SectionLabel>Cluster membership</SectionLabel>
+                    <SectionLabel>{t('workspace.asset.technical.clusterMembership')}</SectionLabel>
                   </Box>
                   {clustersError && <Alert severity="error" sx={{ mb: 1 }}>{clustersError}</Alert>}
                   {!clustersLoading && (
                     clustersForServer.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">Not part of any cluster.</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.notInCluster')}</Typography>
                     ) : (
                       <Stack spacing={0.75} sx={{ mt: 0.5 }}>
                         {clustersForServer.map((c) => (
@@ -1967,7 +1967,7 @@ export default function AssetWorkspacePage() {
                                 {environmentLabel(c.environment)} / {labelFor('lifecycleStatus', c.status) || c.status}
                               </Typography>
                             </Box>
-                            <Typography variant="body2" color="text.secondary">Cluster</Typography>
+                            <Typography variant="body2" color="text.secondary">{t('workspace.asset.meta.cluster')}</Typography>
                           </Stack>
                         ))}
                       </Stack>
@@ -1979,7 +1979,7 @@ export default function AssetWorkspacePage() {
               {/* IDENTITY SECTION */}
               <Box>
                 <Box sx={{ mb: 1.5 }}>
-                  <SectionLabel>Identity</SectionLabel>
+                  <SectionLabel>{t('workspace.asset.technical.identity')}</SectionLabel>
                 </Box>
                 {netboxManaged ? (
                   <Typography variant="caption" sx={{ display: 'block', color: 'kanap.text.tertiary', mb: 1 }}>
@@ -1987,7 +1987,7 @@ export default function AssetWorkspacePage() {
                   </Typography>
                 ) : null}
                 <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-                  <PropertyRow label="Hostname" valueSx={{ maxWidth: 520 }}>
+                  <PropertyRow label={t('workspace.asset.technical.hostname')} valueSx={{ maxWidth: 520 }}>
                     <TextField
                       value={hostname}
                       onChange={(e) => { setHostname(e.target.value); setHostnameManuallyEdited(true); if (isCreate) setDirty(true); }}
@@ -2012,14 +2012,14 @@ export default function AssetWorkspacePage() {
                             ? t('workspace.asset.technical.hostnameInvalid')
                             : undefined
                       }
-                      placeholder="e.g., server1"
+                      placeholder={t('workspace.asset.technical.hostnamePlaceholder')}
                       size="small"
                       variant="standard"
                       sx={contentFieldSx}
                       disabled={!canEditNetboxField('hostname')}
                     />
                   </PropertyRow>
-                  <PropertyRow label="Domain" valueSx={{ maxWidth: 520 }}>
+                  <PropertyRow label={t('workspace.asset.technical.domain')} valueSx={{ maxWidth: 520 }}>
                     <TextField
                       select
                       value={domain}
@@ -2034,7 +2034,7 @@ export default function AssetWorkspacePage() {
                       sx={contentFieldSx}
                       disabled={!canEditNetboxField('domain')}
                     >
-                      <MenuItem value="" sx={drawerMenuItemSx}>None</MenuItem>
+                      <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
                       {domainOptions
                         .filter((opt) => !opt.deprecated || opt.value === domain)
                         .map((opt) => (
@@ -2042,7 +2042,7 @@ export default function AssetWorkspacePage() {
                         ))}
                     </TextField>
                   </PropertyRow>
-                  <PropertyRow label="FQDN" valueSx={{ maxWidth: 520 }}>
+                  <PropertyRow label={t('workspace.asset.technical.fqdn')} valueSx={{ maxWidth: 520 }}>
                     <TextField
                       value={computedFqdn}
                       InputProps={{
@@ -2071,10 +2071,10 @@ export default function AssetWorkspacePage() {
                       ))
                     }
                     renderInput={(params) => (
-                      <PropertyRow label="Aliases" valueSx={{ maxWidth: 520 }}>
+                      <PropertyRow label={t('workspace.asset.technical.aliases')} valueSx={{ maxWidth: 520 }}>
                         <TextField
                           {...params}
-                          placeholder={aliases.length === 0 ? 'e.g., server1, srv1' : ''}
+                          placeholder={aliases.length === 0 ? t('workspace.asset.technical.aliasesExamplePlaceholder') : ''}
                           size="small"
                           variant="standard"
                           sx={contentFieldSx}
@@ -2083,7 +2083,7 @@ export default function AssetWorkspacePage() {
                     )}
                     disabled={!canManage}
                   />
-                  <PropertyRow label="Operating system" valueSx={{ maxWidth: 520 }}>
+                  <PropertyRow label={t('workspace.asset.technical.operatingSystem')} valueSx={{ maxWidth: 520 }}>
                     <TextField
                       select
                       value={operatingSystem}
@@ -2095,18 +2095,18 @@ export default function AssetWorkspacePage() {
                       }}
                       disabled={isCluster || !canEditNetboxField('operating_system')}
                       helperText={(() => {
-                        if (isCluster) return 'Operating system is defined by cluster member assets.';
+                        if (isCluster) return t('workspace.asset.technical.osClusterHint');
                         const sel = operatingSystemOptions.find((opt) => opt.value === operatingSystem);
-                        if (!sel) return 'Choose from the operating systems list in settings.';
-                        const ss = sel.standardSupportEnd ? `Standard support ends ${ymdToEu(sel.standardSupportEnd)}` : '';
-                        const es = sel.extendedSupportEnd ? `Extended support ends ${ymdToEu(sel.extendedSupportEnd)}` : '';
+                        if (!sel) return t('workspace.asset.technical.osChooseHint');
+                        const ss = sel.standardSupportEnd ? t('workspace.asset.technical.standardSupportEnds', { date: ymdToEu(sel.standardSupportEnd) }) : '';
+                        const es = sel.extendedSupportEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: ymdToEu(sel.extendedSupportEnd) }) : '';
                         return [ss, es].filter(Boolean).join(' / ');
                       })()}
                       size="small"
                       variant="standard"
                       sx={contentFieldSx}
                     >
-                      <MenuItem value="" sx={drawerMenuItemSx}>None</MenuItem>
+                      <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
                       {operatingSystemOptions.map((opt) => (
                         <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
                       ))}
@@ -2118,7 +2118,7 @@ export default function AssetWorkspacePage() {
               {/* NETWORK INFORMATION SECTION */}
               <Box>
                 <Box sx={{ mb: 1.5 }}>
-                  <SectionLabel>IP addresses</SectionLabel>
+                  <SectionLabel>{t('workspace.asset.technical.ipAddresses')}</SectionLabel>
                 </Box>
                 {netboxManaged ? (
                   <Typography variant="caption" sx={{ display: 'block', color: 'kanap.text.tertiary', mb: 1 }}>
@@ -2139,11 +2139,11 @@ export default function AssetWorkspacePage() {
                     disabled={!canEditNetboxField('ip_addresses')}
                     sx={{ alignSelf: 'flex-start' }}
                   >
-                    Add IP address
+                    {t('workspace.asset.technical.addIpAddress')}
                   </Button>
                   {ipAddresses.length === 0 && (
                     <Typography variant="body2" color="text.secondary">
-                      No IP addresses configured.
+                      {t('workspace.asset.technical.noIpAddresses')}
                     </Typography>
                   )}
                   {ipAddresses.map((entry, idx) => {
@@ -2160,7 +2160,7 @@ export default function AssetWorkspacePage() {
                         })}
                       >
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems={{ xs: 'stretch', sm: 'flex-end' }} sx={{ mb: 1.5 }}>
-                          <PropertyRow label="Type" valueSx={{ minWidth: { xs: '100%', sm: 130 } }}>
+                          <PropertyRow label={t('workspace.asset.technical.type')} valueSx={{ minWidth: { xs: '100%', sm: 130 } }}>
                             <TextField
                               select
                               value={entry.type}
@@ -2179,7 +2179,7 @@ export default function AssetWorkspacePage() {
                               ))}
                             </TextField>
                           </PropertyRow>
-                          <PropertyRow label="IP address" valueSx={{ flex: 1, minWidth: { xs: '100%', sm: 220 } }}>
+                          <PropertyRow label={t('workspace.asset.technical.ipAddress')} valueSx={{ flex: 1, minWidth: { xs: '100%', sm: 220 } }}>
                             <TextField
                               value={entry.ip}
                               onChange={(e) => {
@@ -2192,7 +2192,7 @@ export default function AssetWorkspacePage() {
                                 setIpAddresses(next);
                                 persistIpAddresses(next);
                               }}
-                              placeholder="e.g., 10.12.34.56"
+                              placeholder={t('workspace.asset.technical.ipAddressPlaceholder')}
                               fullWidth
                               size="small"
                               variant="standard"
@@ -2201,7 +2201,7 @@ export default function AssetWorkspacePage() {
                             />
                           </PropertyRow>
                           <IconButton
-                            aria-label="Remove IP address"
+                            aria-label={t('workspace.asset.technical.removeIpAddress')}
                             onClick={() => {
                               const next = ipAddresses.filter((_, i) => i !== idx);
                               setIpAddresses(next);
@@ -2214,7 +2214,7 @@ export default function AssetWorkspacePage() {
                           </IconButton>
                         </Stack>
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
-                          <PropertyRow label="Subnet" valueSx={{ minWidth: { xs: '100%', sm: 220 } }}>
+                          <PropertyRow label={t('workspace.asset.technical.subnet')} valueSx={{ minWidth: { xs: '100%', sm: 220 } }}>
                             <TextField
                               select
                               value={entry.subnet_cidr || ''}
@@ -2226,10 +2226,10 @@ export default function AssetWorkspacePage() {
                               size="small"
                               variant="standard"
                               sx={contentFieldSx}
-                              helperText={subnetOptions.length === 0 ? 'Define subnets in settings.' : undefined}
+                              helperText={subnetOptions.length === 0 ? t('workspace.asset.technical.defineSubnets') : undefined}
                               disabled={!canEditNetboxField('ip_addresses')}
                             >
-                              <MenuItem value="" sx={drawerMenuItemSx}>None</MenuItem>
+                              <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
                               {subnetOptions.map((opt) => (
                                 <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>
                                   {opt.label}
@@ -2238,7 +2238,7 @@ export default function AssetWorkspacePage() {
                               ))}
                             </TextField>
                           </PropertyRow>
-                          <PropertyRow label="Network zone" valueSx={{ minWidth: { xs: '100%', sm: 150 } }}>
+                          <PropertyRow label={t('workspace.asset.technical.networkZone')} valueSx={{ minWidth: { xs: '100%', sm: 150 } }}>
                             <TextField
                               value={selectedSubnet ? (labelFor('networkSegment', selectedSubnet.network_zone) || selectedSubnet.network_zone || '-') : '-'}
                               size="small"
@@ -2247,7 +2247,7 @@ export default function AssetWorkspacePage() {
                               InputProps={{ readOnly: true }}
                             />
                           </PropertyRow>
-                          <PropertyRow label="VLAN" valueSx={{ minWidth: { xs: '100%', sm: 90 } }}>
+                          <PropertyRow label={t('workspace.asset.technical.vlan')} valueSx={{ minWidth: { xs: '100%', sm: 90 } }}>
                             <TextField
                               value={selectedSubnet?.vlan_number ?? '-'}
                               size="small"

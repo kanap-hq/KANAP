@@ -100,131 +100,132 @@ tr:nth-child(even) td { background: #f5f7fa; }
 # ── IT OPS ──
 itops = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style></head><body>
 
-<h1>🖥️ IT Ops — From Application to Server</h1>
-<p class="sub">KANAP Cheat Sheet</p>
-<div class="chain">Application → Environment (Instance) → Server (Asset)</div>
+<h1>🖥️ IT ops: from application to server</h1>
+<p class="sub">KANAP cheat sheet</p>
+<div class="chain">Application → Deployment (environment) → Server (asset)</div>
 
 <div class="cols">
 
 <div class="nb">
-<h2>① Create Your Application</h2>
-<p><b>IT Landscape → Applications → + New</b></p>
+<h2>① Create your application</h2>
+<p><b>IT landscape → Applications → New app / service</b></p>
 <table>
 <tr><th>Field</th><th>What to enter</th><th>Example</th></tr>
 <tr><td>Name</td><td>Clear, recognizable name</td><td>Salesforce CRM</td></tr>
 <tr><td>Category</td><td>Primary purpose</td><td>Line-of-business</td></tr>
-<tr><td>Vendor</td><td>Supplier (from master data)</td><td>Salesforce Inc</td></tr>
-<tr><td>Criticality</td><td>Business importance</td><td>Business critical</td></tr>
+<tr><td>Supplier</td><td>Supplier (from master data)</td><td>Salesforce Inc</td></tr>
+<tr><td>Business criticality</td><td>A level your organization defined</td><td>Critical</td></tr>
 <tr><td>Lifecycle</td><td>Current status</td><td>Active</td></tr>
 </table>
-<div class="box box-tip">💡 Description, version, publisher, licensing — all useful but optional at this stage. You can always enrich later. Get the app in the system first.</div>
+<div class="box box-tip">💡 Description, version, publisher, licensing: all useful, all optional at this stage. Get the app in first. You can add the rest later.</div>
 </div>
 
 <div class="nb">
-<h2>② Add Environments (Instances)</h2>
-<p>Open your app → <b>Instances</b> tab → Add</p>
+<h2>② Add deployments (environments)</h2>
+<p>Open your app → <b>Deployments</b> tab → <b>Add deployment</b></p>
 <ul>
-<li>Choose environment type: <b>Prod</b>, Pre-prod, QA, Test, Dev, Sandbox</li>
-<li>Set Base URL, SSO enabled, MFA supported, Lifecycle</li>
+<li>Choose the environment: <b>Prod</b>, Pre-prod, QA, Test, Dev, Sandbox</li>
+<li>Set lifecycle, base URL, SSO enabled, MFA supported</li>
 <li>Add notes for context (e.g. "Primary EU instance")</li>
 </ul>
-<div class="box box-tip">💡 Use <b>Copy from Prod</b> to quickly scaffold QA, Dev, and other environments with similar settings. Changes save immediately.</div>
+<div class="box box-tip">💡 Each environment can be added once per app. Repeat <b>Add deployment</b> for QA, Dev and the others.</div>
 </div>
 
 <div class="nb">
-<h2>③ Assign Owners</h2>
-<p>Open app → <b>Ownership & Audience</b> tab</p>
+<h2>③ Assign owners</h2>
+<p>Open app → <b>Properties</b> panel (right side)</p>
 <ul>
-<li><b>Business Owners</b> — stakeholders accountable for the application</li>
-<li><b>IT Owners</b> — technical team responsible for operations & support</li>
-<li><b>Audience</b> — select companies & departments that use the app. KANAP auto-calculates user count from master data.</li>
+<li><b>Business owners</b>: stakeholders accountable for the application</li>
+<li><b>IT owners</b>: the technical team in charge of operations and support</li>
+<li><b>Audience</b>: the companies and departments that use the app. KANAP derives the user count from master data.</li>
 </ul>
-<div class="box box-warn">⚠️ <b>Owners = communication.</b> Planned maintenance, service disruptions, upgrade decisions, license renewals — you need to reach the right people fast. Ownership also drives "My Apps" and "My Team's Apps" scope filters. No owner = nobody feels responsible.</div>
+<div class="box box-warn">⚠️ <b>Owners = communication.</b> Planned maintenance, outages, upgrades, license renewals: you need to reach the right people fast. Owners also drive the "My apps" and "My team's apps" filters. No owner means nobody feels responsible.</div>
 </div>
 
 <div class="nb">
-<h2>④ Access Methods & Compliance</h2>
-<p><b>Technical & Support tab</b></p>
+<h2>④ Operations and compliance</h2>
+<p><b>Operations</b> tab</p>
 <ul>
-<li>Access methods: 🌐 Web · 💻 Desktop · 📱 Mobile · 🖥️ VDI · ⌨️ CLI · 🏭 HMI · 🖧 Kiosk</li>
-<li>External facing? Data Integration / ETL?</li>
+<li>Access methods: 🌐 Web · 💻 Locally installed · 📱 Mobile · 🖥️ VDI / Remote desktop · ⌨️ Terminal / CLI · 🏭 HMI · 🖧 Kiosk</li>
+<li>External facing? Data integration / ETL?</li>
+<li>Support contacts and support notes</li>
 </ul>
-<p><b>Compliance tab</b></p>
+<p><b>Compliance</b> tab</p>
 <table>
 <tr><th>Field</th><th>Example</th></tr>
-<tr><td>Data Class</td><td>Confidential</td></tr>
-<tr><td>Contains PII</td><td>Yes</td></tr>
-<tr><td>Data Residency</td><td>France, Germany</td></tr>
-<tr><td>Last DR Test</td><td>2025-11-15</td></tr>
+<tr><td>Data confidentiality</td><td>Confidential</td></tr>
+<tr><td>Contains personal data</td><td>Yes</td></tr>
+<tr><td>Data residency</td><td>France, Germany</td></tr>
+<tr><td>Last recovery test</td><td>2026-05-15</td></tr>
 </table>
-<div class="box">ℹ️ Data Classes (Public, Internal, Confidential, Restricted) are configurable in <b>IT Landscape → Settings</b>.</div>
+<div class="box">ℹ️ Confidentiality levels, criticality levels and access methods are set in <b>IT landscape settings</b> (IT landscape → Settings).</div>
 </div>
 
 <div class="nb">
-<h2>⑤ Link Relations</h2>
-<p>Open app → <b>Relations</b> tab — connect to the rest of your IT management data:</p>
+<h2>⑤ Link relations</h2>
+<p>Open app → <b>Relations</b> tab. Connect the app to the rest of your IT data:</p>
 <table>
-<tr><th>Link type</th><th>Why</th></tr>
-<tr><td>OPEX Items</td><td>Recurring costs (licenses, SaaS fees)</td></tr>
-<tr><td>CAPEX Items</td><td>Capital expenditure / investment tracking</td></tr>
-<tr><td>Contracts</td><td>Vendor agreements, renewal dates</td></tr>
-<tr><td>URLs</td><td>Documentation, wikis, runbooks</td></tr>
+<tr><th>Link</th><th>Why</th></tr>
+<tr><td>OPEX items</td><td>Recurring costs (licenses, SaaS fees)</td></tr>
+<tr><td>CAPEX items</td><td>Investment tracking</td></tr>
+<tr><td>Contracts</td><td>Supplier agreements, renewal dates</td></tr>
+<tr><td>Relevant websites</td><td>Documentation, wikis, runbooks</td></tr>
 </table>
-<div class="box box-tip">💡 Relations are powerful but not blocking. Create them when you have the data — the app works fine without them.</div>
+<div class="box box-tip">💡 Relations help, but nothing depends on them. Add them when you have the data.</div>
 </div>
 
 <div class="nb">
-<h2>⑥ Create Your Server (Asset)</h2>
-<p><b>IT Landscape → Assets → Add Asset</b></p>
+<h2>⑥ Create your server (asset)</h2>
+<p><b>IT landscape → Assets → Add asset</b></p>
 <table>
 <tr><th>Field</th><th>What to enter</th><th>Example</th></tr>
 <tr><td>Name</td><td>Hostname or identifier</td><td>PROD-WEB-01</td></tr>
-<tr><td>Asset Type</td><td>Server type</td><td>Virtual Machine</td></tr>
-<tr><td>Location</td><td>Where it's hosted</td><td>Paris Datacenter</td></tr>
+<tr><td>Asset type</td><td>Server type</td><td>Virtual Machine</td></tr>
+<tr><td>Location</td><td>Where it is hosted</td><td>Paris datacenter</td></tr>
 <tr><td>Lifecycle</td><td>Current status</td><td>Active</td></tr>
 </table>
-<div class="box">ℹ️ <b>Location is the key.</b> Hosting type, provider, country, and city are all derived automatically. Set up Locations once in IT Landscape → Locations.</div>
-<p><b>Technical tab — Identity:</b> Hostname, Domain, FQDN (auto-computed), Aliases, OS.</p>
-<p><b>Technical tab — IP Addresses:</b> Add as many entries as needed (management, production VLAN, backup network…). Each can have its own type and subnet. Network Zone & VLAN are derived from Subnet automatically.</p>
+<div class="box">ℹ️ <b>Location is the key.</b> Hosting type, provider, country and city come from it. Set up locations once in IT landscape → Locations.</div>
+<p><b>Technical tab, Identity:</b> Hostname, Domain, FQDN (computed), Aliases, Operating system.</p>
+<p><b>Technical tab, IP addresses:</b> use <b>Add IP address</b> for each one (host, management, backup network…). Each has its own type and subnet. Network zone and VLAN come from the subnet.</p>
 </div>
 
 <div class="nb">
-<h2>⑦ Link Server ↔ Application</h2>
-<p><b>From App:</b> Open app → Servers tab → select environment → Add Server → choose asset → set Role (Web, Database, Application…).</p>
-<p><b>From Asset:</b> Open asset → Assignments tab → Add Assignment → select App, Environment, Role, Since date.</p>
-<div class="chain" style="font-size:9pt; margin: 4pt 0;">Salesforce CRM → Production → PROD-WEB-01 ✅</div>
+<h2>⑦ Link server ↔ application</h2>
+<p><b>From the app:</b> Deployments tab → <b>Add server</b> on the deployment card → choose the asset → set the role (e.g. Web server).</p>
+<p><b>From the asset:</b> Overview tab → <b>Assignments</b> section → <b>Add assignment</b> → choose application, environment, role and since date.</p>
+<div class="chain" style="font-size:9pt; margin: 4pt 0;">Salesforce CRM → Prod → PROD-WEB-01 ✅</div>
 </div>
 
 <div class="nb">
-<h2>The Bigger Picture</h2>
-<p><b>Application Landscape</b> — Live registry of every app with environments, criticality, hosting, and ownership. Filterable by any attribute.</p>
-<p><b>Infrastructure Mapping</b> — Which servers support this critical app? What gets affected if a server goes down? How many apps per datacenter?</p>
-<p><b>Connection Map</b> — Visualize network flows and dependencies between infrastructure assets.</p>
-<p><b>Interfaces & Interface Maps</b> — Document data flows between applications (protocols, direction, integration points) and visualize the full application architecture.</p>
-<p><b>Compliance Reporting</b> — Data classification, PII, and residency flow into traceable compliance views. Ready for the auditor.</p>
+<h2>The bigger picture</h2>
+<p><b>Application landscape</b>: a live register of every app with its deployments, criticality, hosting and owners. Filter on any attribute.</p>
+<p><b>Infrastructure mapping</b>: which servers support this critical app? What is affected if a server goes down? How many apps run in each datacenter?</p>
+<p><b>Connection map</b>: see network flows and dependencies between servers.</p>
+<p><b>Interfaces and interface map</b>: document data flows between applications (protocols, direction, middleware) and see the full application architecture.</p>
+<p><b>Compliance</b>: data confidentiality, personal data and residency are recorded per app and can be reviewed. Ready for the auditor.</p>
 </div>
 
 <div class="nb">
-<h2>Quick Reference</h2>
+<h2>Quick reference</h2>
 <table>
 <tr><th>I want to…</th><th>Go to…</th></tr>
-<tr><td>Create an application</td><td>IT Ops → Applications → + New</td></tr>
-<tr><td>Add environments</td><td>App → Instances tab</td></tr>
-<tr><td>Assign owners</td><td>App → Ownership & Audience tab</td></tr>
-<tr><td>Set access methods</td><td>App → Technical & Support tab</td></tr>
+<tr><td>Create an application</td><td>IT landscape → Applications → New app / service</td></tr>
+<tr><td>Add environments</td><td>App → Deployments tab → Add deployment</td></tr>
+<tr><td>Assign owners</td><td>App → Properties panel</td></tr>
+<tr><td>Set access methods</td><td>App → Operations tab</td></tr>
 <tr><td>Link budgets / contracts</td><td>App → Relations tab</td></tr>
 <tr><td>Add compliance info</td><td>App → Compliance tab</td></tr>
-<tr><td>Create a server</td><td>IT Ops → Assets → Add Asset</td></tr>
-<tr><td>Link server ↔ app</td><td>App → Servers tab <i>or</i> Asset → Assignments</td></tr>
-<tr><td>View connection map</td><td>IT Ops → Connection Map</td></tr>
-<tr><td>View interface map</td><td>IT Ops → Interface Map</td></tr>
-<tr><td>Configure dropdowns</td><td>IT Ops → Settings</td></tr>
+<tr><td>Create a server</td><td>IT landscape → Assets → Add asset</td></tr>
+<tr><td>Link server ↔ app</td><td>Deployment card → Add server <i>or</i> Asset → Overview → Assignments</td></tr>
+<tr><td>View the connection map</td><td>IT landscape → Connection map</td></tr>
+<tr><td>View the interface map</td><td>IT landscape → Interface map</td></tr>
+<tr><td>Configure dropdowns</td><td>IT landscape → Settings</td></tr>
 </table>
 </div>
 
 </div>
 
-<div class="foot">KANAP — IT Department Management &nbsp;|&nbsp; <a href="https://kanap.net">kanap.net</a> &nbsp;|&nbsp; <a href="https://doc.kanap.net">doc.kanap.net</a></div>
+<div class="foot">KANAP &nbsp;|&nbsp; IT department management &nbsp;|&nbsp; <a href="https://kanap.net">kanap.net</a> &nbsp;|&nbsp; <a href="https://doc.kanap.net">doc.kanap.net</a></div>
 </body></html>"""
 
 # ── PORTFOLIO ──

@@ -1,17 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-function createAxiosMock() {
-  const requestHandlers: Array<(config: any) => any> = [];
+function createAxiosInstance() {
   const responseErrorHandlers: Array<(error: any) => Promise<unknown>> = [];
-
-  const apiInstance = {
+  const instance = {
     interceptors: {
-      request: {
-        use: vi.fn((handler: (config: any) => any) => {
-          requestHandlers.push(handler);
-          return 0;
-        }),
-      },
+      request: { use: vi.fn(() => 0) },
       response: {
         use: vi.fn((_success: (value: any) => any, error: (value: any) => Promise<unknown>) => {
           responseErrorHandlers.push(error);
@@ -21,14 +14,34 @@ function createAxiosMock() {
     },
     request: vi.fn(),
   };
+  return { instance, onError: (error: any) => responseErrorHandlers[0](error) };
+}
 
+// Each axios.create() call returns its own instance: [0] is api.ts, [1] is api/client.ts.
+function createAxiosMock() {
+  const instances: Array<ReturnType<typeof createAxiosInstance>> = [];
   const axiosMock = {
-    create: vi.fn(() => apiInstance),
+    create: vi.fn(() => {
+      const created = createAxiosInstance();
+      instances.push(created);
+      return created.instance;
+    }),
     post: vi.fn(),
   };
-
-  return { axiosMock, apiInstance, requestHandlers, responseErrorHandlers };
+  return { axiosMock, instances };
 }
+
+function httpError(status: number) {
+  return Object.assign(new Error(`Request failed with status code ${status}`), { response: { status } });
+}
+
+function unauthorized(url: string) {
+  return { response: { status: 401 }, config: { url, headers: {} } };
+}
+
+const freshTokens = {
+  data: { access_token: 'fresh-access-token', expires_in: 900, refresh_expires_in: 14_400 },
+};
 
 function createStorageMock(initial: Record<string, string> = {}) {
   const store = new Map(Object.entries(initial));
@@ -61,43 +74,34 @@ describe('api auth recovery', () => {
     vi.unstubAllGlobals();
   });
 
-  it('refreshes and retries protected requests after a 401 response', async () => {
-    const { axiosMock, apiInstance, responseErrorHandlers } = createAxiosMock();
-
-    vi.doMock('axios', () => ({
-      __esModule: true,
-      default: axiosMock,
-    }));
-
-    const { getAccessToken, setAccessToken } = await import('./auth/accessTokenStore');
+  async function loadClients() {
+    const { axiosMock, instances } = createAxiosMock();
+    vi.doMock('axios', () => ({ __esModule: true, default: axiosMock }));
+    const tokens = await import('./auth/accessTokenStore');
+    const session = await import('./auth/sessionStorage');
     const { api } = await import('./api');
+    tokens.setAccessToken('stale-access-token', Date.now() + 1_000);
+    session.touchLastActivity();
+    session.setRefreshTtlMs(4 * 60 * 60 * 1000);
+    return { axiosMock, instances, api, ...tokens, ...session };
+  }
 
-    setAccessToken('stale-access-token', Date.now() + 1_000);
+  it('refreshes and retries protected requests after a 401 response', async () => {
+    const { axiosMock, instances, api, getAccessToken } = await loadClients();
+    const main = instances[0];
 
-    axiosMock.post.mockResolvedValue({
-      data: {
-        access_token: 'fresh-access-token',
-        expires_in: 900,
-        refresh_expires_in: 14_400,
-      },
-    });
-    apiInstance.request.mockResolvedValue({ data: { ok: true } });
+    axiosMock.post.mockResolvedValue(freshTokens);
+    main.instance.request.mockResolvedValue({ data: { ok: true } });
 
-    const result = await responseErrorHandlers[0]({
-      response: { status: 401 },
-      config: {
-        url: '/master-data/companies',
-        headers: {},
-      },
-    });
+    const result = await main.onError(unauthorized('/master-data/companies'));
 
-    expect(api).toBe(apiInstance);
+    expect(api).toBe(main.instance);
     expect(axiosMock.post).toHaveBeenCalledWith(
       'http://localhost:8080/auth/refresh',
       {},
       { withCredentials: true },
     );
-    expect(apiInstance.request).toHaveBeenCalledWith(
+    expect(main.instance.request).toHaveBeenCalledWith(
       expect.objectContaining({
         url: '/master-data/companies',
         _retry: true,
@@ -108,5 +112,151 @@ describe('api auth recovery', () => {
     );
     expect(getAccessToken()).toBe('fresh-access-token');
     expect(result).toEqual({ data: { ok: true } });
+  });
+
+  describe('when the refresh call fails', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('keeps the session and retries with backoff on a 502, then fails the request with its original error', async () => {
+      const { axiosMock, instances, getAccessToken, getLastActivityAt } = await loadClients();
+      const main = instances[0];
+      axiosMock.post.mockRejectedValue(httpError(502));
+
+      const original = unauthorized('/master-data/companies');
+      const pending = main.onError(original);
+      const settled = pending.catch((error) => error);
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(axiosMock.post).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(axiosMock.post).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(axiosMock.post).toHaveBeenCalledTimes(3);
+      await vi.advanceTimersByTimeAsync(8_000);
+      expect(axiosMock.post).toHaveBeenCalledTimes(4);
+
+      expect(await settled).toBe(original);
+      expect(main.instance.request).not.toHaveBeenCalled();
+      expect(getAccessToken()).toBe('stale-access-token');
+      expect(getLastActivityAt()).not.toBeNull();
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(axiosMock.post).toHaveBeenCalledTimes(4);
+    });
+
+    it('also retries on a network error and reports the server as unavailable', async () => {
+      const { axiosMock, getAccessToken } = await loadClients();
+      const { requestTokenRefreshOutcome } = await import('./api');
+      axiosMock.post.mockRejectedValue(new Error('Network Error'));
+
+      const outcome = requestTokenRefreshOutcome();
+      await vi.advanceTimersByTimeAsync(12_000);
+
+      await expect(outcome).resolves.toEqual({ status: 'unavailable' });
+      expect(axiosMock.post).toHaveBeenCalledTimes(4);
+      expect(getAccessToken()).toBe('stale-access-token');
+    });
+
+    it('ends the session at once when the refresh is refused with a 401', async () => {
+      const { axiosMock, instances, getAccessToken, getLastActivityAt } = await loadClients();
+      const main = instances[0];
+      axiosMock.post.mockRejectedValue(httpError(401));
+
+      const original = unauthorized('/master-data/companies');
+      await expect(main.onError(original)).rejects.toBe(original);
+
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(axiosMock.post).toHaveBeenCalledTimes(1);
+      expect(getAccessToken()).toBeNull();
+      expect(getLastActivityAt()).toBeNull();
+    });
+
+    it('keeps the session and takes the new token when a 429 is followed by a success', async () => {
+      const { axiosMock, instances, getAccessToken, getLastActivityAt } = await loadClients();
+      const main = instances[0];
+      axiosMock.post.mockRejectedValueOnce(httpError(429)).mockResolvedValueOnce(freshTokens);
+      main.instance.request.mockResolvedValue({ data: { ok: true } });
+
+      const pending = main.onError(unauthorized('/master-data/companies'));
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      await expect(pending).resolves.toEqual({ data: { ok: true } });
+      expect(axiosMock.post).toHaveBeenCalledTimes(2);
+      expect(getAccessToken()).toBe('fresh-access-token');
+      expect(getLastActivityAt()).not.toBeNull();
+    });
+  });
+
+  describe('second client (api/client.ts)', () => {
+    it('shares one refresh call with the main client for concurrent 401s', async () => {
+      const { axiosMock, instances } = await loadClients();
+      await import('./api/client');
+      const [main, secondary] = instances;
+      expect(secondary).toBeDefined();
+
+      let resolveRefresh!: (value: unknown) => void;
+      axiosMock.post.mockReturnValue(new Promise((resolve) => { resolveRefresh = resolve; }));
+      main.instance.request.mockResolvedValue({ data: 'main' });
+      secondary.instance.request.mockResolvedValue({ data: 'secondary' });
+
+      const results = Promise.all([
+        main.onError(unauthorized('/master-data/companies')),
+        secondary.onError(unauthorized('/assets')),
+        secondary.onError(unauthorized('/interfaces')),
+      ]);
+      resolveRefresh(freshTokens);
+
+      await expect(results).resolves.toEqual([{ data: 'main' }, { data: 'secondary' }, { data: 'secondary' }]);
+      expect(axiosMock.post).toHaveBeenCalledTimes(1);
+      expect(secondary.instance.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: '/assets',
+          headers: expect.objectContaining({ Authorization: 'Bearer fresh-access-token' }),
+        }),
+      );
+    });
+
+    it('no longer redirects to login when the refresh is refused; the session ends through the shared path', async () => {
+      const location = { pathname: '/it/assets', href: 'http://acme.lvh.me/it/assets' };
+      vi.stubGlobal('location', location);
+      expect(window.location).toBe(location);
+
+      const { axiosMock, instances, getAccessToken } = await loadClients();
+      await import('./api/client');
+      const secondary = instances[1];
+      axiosMock.post.mockRejectedValue(httpError(401));
+
+      const original = unauthorized('/assets');
+      await expect(secondary.onError(original)).rejects.toBe(original);
+
+      expect(location.href).toBe('http://acme.lvh.me/it/assets');
+      expect(getAccessToken()).toBeNull();
+    });
+
+    it('keeps the session when the server is unreachable', async () => {
+      vi.useFakeTimers();
+      try {
+        const { axiosMock, instances, getAccessToken } = await loadClients();
+        await import('./api/client');
+        const secondary = instances[1];
+        axiosMock.post.mockRejectedValue(httpError(503));
+
+        const original = unauthorized('/assets');
+        const settled = secondary.onError(original).catch((error) => error);
+        await vi.advanceTimersByTimeAsync(12_000);
+
+        expect(await settled).toBe(original);
+        expect(axiosMock.post).toHaveBeenCalledTimes(4);
+        expect(getAccessToken()).toBe('stale-access-token');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });
