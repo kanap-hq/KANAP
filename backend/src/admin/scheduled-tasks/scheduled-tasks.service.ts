@@ -11,6 +11,8 @@ export interface TaskRegistration {
   description: string;
   defaultCron: string;
   handler: () => Promise<Record<string, any>>;
+  /** Also run once when the API server starts (`runStartupTasks`, after `listen`), if the task is enabled. */
+  runOnStartup?: boolean;
 }
 
 @Injectable()
@@ -18,6 +20,7 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
   private readonly logger = new Logger(ScheduledTasksService.name);
   private readonly handlers = new Map<string, () => Promise<Record<string, any>>>();
   private readonly registrations: TaskRegistration[] = [];
+  private startupTaskNames: string[] = [];
 
   constructor(
     @InjectRepository(ScheduledTask)
@@ -34,6 +37,7 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap() {
+    const startupRuns: string[] = [];
     for (const reg of this.registrations) {
       // Upsert: preserve user-customized cron/enabled
       const existing = await this.taskRepo.findOne({ where: { name: reg.name } });
@@ -54,10 +58,27 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       const task = await this.taskRepo.findOneBy({ name: reg.name });
       if (task && task.enabled) {
         this.createCronJob(task.name, task.cron_expression);
+        if (reg.runOnStartup) startupRuns.push(task.name);
       }
     }
 
+    this.startupTaskNames = startupRuns;
     this.logger.log(`Registered ${this.registrations.length} scheduled tasks`);
+  }
+
+  /**
+   * Starts the enabled `runOnStartup` tasks once. Called by `main.ts` after
+   * `listen`, so other AppModule contexts (scripts, specs) never run them. Not
+   * awaited: the API serves while they run.
+   */
+  runStartupTasks(): void {
+    const names = this.startupTaskNames;
+    this.startupTaskNames = [];
+    for (const name of names) {
+      this.executeTask(name).catch((err) => {
+        this.logger.error(`[${name}] Startup run failed: ${err.message}`);
+      });
+    }
   }
 
   private createCronJob(name: string, cronExpression: string) {
@@ -103,83 +124,91 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       [name],
     );
 
-    // Try advisory lock (session-level so it spans the full execution)
-    const lockResult = await this.dataSource.query(
-      `SELECT pg_try_advisory_lock(hashtext($1)) as acquired`,
-      [name],
-    );
-    if (!lockResult[0]?.acquired) {
-      this.logger.debug(`[${name}] Skipped: another instance holds the lock`);
-      return;
+    // Session-level advisory lock, taken and released on one dedicated connection:
+    // an unlock sent on another pool connection fails silently and leaves the
+    // lock held. A run that finds the lock taken (another run of the same task,
+    // in this process or another) is skipped.
+    const lockRunner = this.dataSource.createQueryRunner();
+    await lockRunner.connect();
+    try {
+      const lockResult = await lockRunner.query(
+        `SELECT pg_try_advisory_lock(hashtext($1)) as acquired`,
+        [name],
+      );
+      if (!lockResult[0]?.acquired) {
+        this.logger.debug(`[${name}] Skipped: another run holds the lock`);
+        return;
+      }
+      try {
+        await this.runLocked(name, handler, startedAt);
+      } finally {
+        await lockRunner.query(`SELECT pg_advisory_unlock(hashtext($1))`, [name]).catch(() => {});
+      }
+    } finally {
+      await lockRunner.release();
     }
+  }
+
+  private async runLocked(name: string, handler: () => Promise<Record<string, any>>, startedAt: Date): Promise<void> {
+    // Insert run row
+    const run = this.runRepo.create({
+      task_name: name,
+      status: 'running',
+      started_at: startedAt,
+    });
+    await this.runRepo.save(run);
+
+    // Update task status
+    await this.taskRepo.update({ name }, {
+      last_run_at: startedAt,
+      last_status: 'running',
+      updated_at: new Date(),
+    });
 
     try {
-      // Insert run row
-      const run = this.runRepo.create({
-        task_name: name,
-        status: 'running',
-        started_at: startedAt,
-      });
-      await this.runRepo.save(run);
+      const summary = await handler();
+      const finishedAt = new Date();
+      const durationMs = finishedAt.getTime() - startedAt.getTime();
 
-      // Update task status
+      await this.runRepo.update({ id: run.id }, {
+        status: 'success',
+        finished_at: finishedAt,
+        duration_ms: durationMs,
+        summary: summary ?? null,
+      });
+
       await this.taskRepo.update({ name }, {
-        last_run_at: startedAt,
-        last_status: 'running',
+        last_status: 'success',
+        last_duration_ms: durationMs,
         updated_at: new Date(),
       });
 
-      try {
-        const summary = await handler();
-        const finishedAt = new Date();
-        const durationMs = finishedAt.getTime() - startedAt.getTime();
+      this.logger.log(`[${name}] Completed in ${durationMs}ms`);
+    } catch (err: any) {
+      const finishedAt = new Date();
+      const durationMs = finishedAt.getTime() - startedAt.getTime();
 
-        await this.runRepo.update({ id: run.id }, {
-          status: 'success',
-          finished_at: finishedAt,
-          duration_ms: durationMs,
-          summary: summary ?? null,
-        });
+      await this.runRepo.update({ id: run.id }, {
+        status: 'failure',
+        finished_at: finishedAt,
+        duration_ms: durationMs,
+        error: err.message || String(err),
+      });
 
-        await this.taskRepo.update({ name }, {
-          last_status: 'success',
-          last_duration_ms: durationMs,
-          updated_at: new Date(),
-        });
+      await this.taskRepo.update({ name }, {
+        last_status: 'failure',
+        last_duration_ms: durationMs,
+        updated_at: new Date(),
+      });
 
-        this.logger.log(`[${name}] Completed in ${durationMs}ms`);
-      } catch (err: any) {
-        const finishedAt = new Date();
-        const durationMs = finishedAt.getTime() - startedAt.getTime();
-
-        await this.runRepo.update({ id: run.id }, {
-          status: 'failure',
-          finished_at: finishedAt,
-          duration_ms: durationMs,
-          error: err.message || String(err),
-        });
-
-        await this.taskRepo.update({ name }, {
-          last_status: 'failure',
-          last_duration_ms: durationMs,
-          updated_at: new Date(),
-        });
-
-        this.logger.error(`[${name}] Failed after ${durationMs}ms: ${err.message}`);
-      }
-
-      // Auto-prune old runs
-      await this.dataSource.query(
-        `DELETE FROM scheduled_task_runs WHERE task_name = $1 AND started_at < now() - interval '90 days'`,
-        [name],
-      );
-    } finally {
-      // Release session-level advisory lock
-      await this.dataSource.query(
-        `SELECT pg_advisory_unlock(hashtext($1))`,
-        [name],
-      ).catch(() => {});
+      this.logger.error(`[${name}] Failed after ${durationMs}ms: ${err.message}`);
     }
+
+    // Auto-prune old runs
+    await this.dataSource.query(
+      `DELETE FROM scheduled_task_runs WHERE task_name = $1 AND started_at < now() - interval '90 days'`,
+      [name],
+    );
   }
 
   // ========== CRUD ==========

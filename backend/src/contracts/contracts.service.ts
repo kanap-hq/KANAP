@@ -388,11 +388,16 @@ export class ContractsService {
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     Object.assign(existing, rest);
+    const now = new Date();
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: before.disabled_at,
       nextStatus: statusInput,
       nextDisabledAt: disabled_at,
+      nowFactory: () => now,
     });
+    // The status before this edit, from the stored end of validity: the stored
+    // status lags until the hourly sync once that date passes.
+    const statusBefore = deriveStatusFromDisabledAt(before.disabled_at, now);
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
 
@@ -409,7 +414,7 @@ export class ContractsService {
     }
 
     // Notify owner on status change
-    if (before.status !== saved.status && saved.owner_user_id) {
+    if (statusBefore !== saved.status && saved.owner_user_id) {
       const tenantId = saved.tenant_id;
       const user = await mg.query('SELECT id, email, locale FROM users WHERE tenant_id = $1 AND id = $2 AND status = \'enabled\'', [tenantId, saved.owner_user_id]);
       if (user.length > 0) {
@@ -417,7 +422,7 @@ export class ContractsService {
           itemType: 'contract',
           itemId: saved.id,
           itemName: saved.name,
-          oldStatus: before.status,
+          oldStatus: statusBefore,
           newStatus: saved.status,
           recipients: [{ userId: user[0].id, email: user[0].email, locale: user[0].locale }],
           tenantId,

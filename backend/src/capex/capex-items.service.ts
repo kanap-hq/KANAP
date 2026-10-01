@@ -59,6 +59,7 @@ import {
   resolveItemWrite,
 } from '../spend/item-write.util';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
 import {
   csvAnalyticsBodyValues,
   CsvAnalyticsCell,
@@ -388,11 +389,16 @@ export class CapexItemsService {
     const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, 'capex', body, existing);
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     Object.assign(existing, values);
+    const now = new Date();
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: before.disabled_at,
       nextStatus: input.status,
       nextDisabledAt: disabled_at,
+      nowFactory: () => now,
     });
+    // The status before this edit, from the stored end of validity: the stored
+    // status lags until the hourly sync once that date passes.
+    const statusBefore = deriveStatusFromDisabledAt(before.disabled_at, now);
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
     // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
@@ -416,8 +422,8 @@ export class CapexItemsService {
     }
 
     const after = persisted ?? saved;
-    if (before.status !== after.status && opts?.statusEmail !== false) {
-      await this.notifyOwnersOfStatusChange(mg, after, before.status, userId);
+    if (statusBefore !== after.status && opts?.statusEmail !== false) {
+      await this.notifyOwnersOfStatusChange(mg, after, statusBefore, userId);
     }
 
     return this.withAnalyticsValues(after, analyticsAfter);
@@ -599,11 +605,11 @@ export class CapexItemsService {
     const errors: { row: number; message: string }[] = [];
     let headerOk = false;
     let fileHeaders: string[] = [];
+    let content = '';
 
     await new Promise<void>((resolve, reject) => {
       const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
       if (!buf) { reject(new Error('Empty upload')); return; }
-      let content: string;
       try { content = decodeCsvBufferUtf8OrThrow(buf as Buffer); }
       catch { reject(new Error('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.')); return; }
       parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
@@ -620,6 +626,8 @@ export class CapexItemsService {
         .on('end', () => resolve());
     });
     if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
+    // Errors name the file's own line, blank lines included.
+    const rowLines = await csvDataRowLines(content, delimiter);
     // Absent optional columns leave the stored values as they are.
     const hasCostCenter = fileHeaders.includes('cost_center_code');
     const hasRunBuild = fileHeaders.includes('run_build');
@@ -703,7 +711,7 @@ export class CapexItemsService {
 
     const rowByLine = new Map<string, number>();
     for (let i = 0; i < rows.length; i++) {
-      const r = rows[i]; const line = i + 2;
+      const r = rows[i]; const line = rowLine(rowLines, i);
       const description = (r['description'] ?? '').toString().trim();
       const ppe_type = (r['ppe_type'] ?? '').toString().trim().toLowerCase();
       const investment_type = (r['investment_type'] ?? '').toString().trim().toLowerCase();
