@@ -247,8 +247,9 @@ async function testBulkDeleteIsolatesAFailingItem(kind: Kind) {
       assert.equal(await count(runner, T[kind].links, T[kind].column, id), expected, `${kind}: links of item ${i + 1}`);
       assert.equal(await count(runner, T[kind].attachments, T[kind].column, id), expected, `${kind}: attachments of item ${i + 1}`);
     }
-    assert.deepEqual(storage.deleted, [paths[0], paths[2]], `${kind}: the failed item keeps its file`);
-    assert.deepEqual(audit.entries.map((e) => e.recordId), [ids[0], ids[2]]);
+    // The lines are deleted in id order (lock order, `budget-locks.ts`): their files too.
+    assert.deepEqual([...storage.deleted].sort(), [paths[0], paths[2]].sort(), `${kind}: the failed item keeps its file`);
+    assert.deepEqual(audit.entries.map((e) => e.recordId).sort(), [ids[0], ids[2]].sort());
   });
 }
 
@@ -377,7 +378,7 @@ async function testBulkDeleteReferenceCheckFailsItsItemOnly(kind: Kind) {
       assert.equal(await count(runner, T[kind].links, T[kind].column, id), expected, `${kind}: links of item ${i + 1}`);
       assert.equal(await count(runner, T[kind].attachments, T[kind].column, id), expected, `${kind}: attachments of item ${i + 1}`);
     }
-    assert.deepEqual(storage.deleted, [paths[0], paths[2]], `${kind}: the middle item's file is untouched`);
+    assert.deepEqual([...storage.deleted].sort(), [paths[0], paths[2]].sort(), `${kind}: the middle item's file is untouched`);
   });
 }
 

@@ -3,8 +3,9 @@ import { copyBudgetColumn } from '../budget-column-operations';
 import { captureAudit, noFreeze, repeat, seedLine } from './round-inputs.fixtures';
 import { assert, assertClean, Outcome, pgCode, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known race (plan planning/perf-scale, step 0.3, Annexe A #16), failing
-// until lot 3F lands.
+// Race of two bulk budget operations (plan planning/perf-scale, step 0.3,
+// Annexe A #16), fixed in lot 3B (the tenant lock and the id-order pre-lock,
+// moved there from 3F).
 //
 // Two operations over several lines lock the months of each line in their
 // own order: the column copy (and the clear) by line creation date, newest
@@ -13,15 +14,14 @@ import { assert, assertClean, Outcome, pgCode, progress, runRaceSpecs, settle, s
 // oldest line's months each wait for the other: PostgreSQL aborts one with a
 // deadlock (40P01) after `deadlock_timeout`, a 500 and the whole operation
 // rolled back.
-// Target: no deadlock. Lot 3F serialises the tenant's mass operations with a
-// transaction advisory lock (the second one gets a 409 "already running")
-// and locks the target lines in id order before deciding.
+// Fixed: the tenant's bulk operations take one transaction advisory lock (the
+// second one gets a 409 "already running", `budget-locks.ts`) and lock their
+// target lines in id order before deciding.
 //
-// Not reproduced on its own: the clear's record-before-months order
-// (`budget-column-operations.ts:475-476`). A clear and any other writer that
-// visit the lines in the same order cannot close a cycle on it (the clear
-// never comes back to a line it passed); with different orders the cycle
-// above already exists without it. It stays a rule violation for 3B to fix.
+// Not reproduced on its own: the clear's record-before-months order (a
+// column without amounts lost its record before any month was locked). A
+// clear and any other writer that visit the lines in the same order cannot
+// close a cycle on it; lot 3B fixed the order anyway (`lockStoredMonths`).
 
 const YEAR = 2026;
 

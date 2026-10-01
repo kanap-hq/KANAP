@@ -1,4 +1,5 @@
 import { EntityManager } from 'typeorm';
+import { lockBudgetLine as lockLine } from '../spend/budget-locks';
 
 /**
  * Links between projects and OPEX / CAPEX lines (portfolio_project_opex,
@@ -12,19 +13,15 @@ import { EntityManager } from 'typeorm';
  * planning/perf-scale, lot 3A, Annexe A #15).
  */
 const TABLES = {
-  opex: { table: 'portfolio_project_opex', itemFk: 'opex_id', items: 'spend_items' },
-  capex: { table: 'portfolio_project_capex', itemFk: 'capex_id', items: 'capex_items' },
+  opex: { table: 'portfolio_project_opex', itemFk: 'opex_id' },
+  capex: { table: 'portfolio_project_capex', itemFk: 'capex_id' },
 } as const;
 
 export type ProjectBudgetLinkKind = keyof typeof TABLES;
 
-/** Locks the line (FOR NO KEY UPDATE); false when it is gone. */
-export async function lockBudgetLine(manager: EntityManager, kind: ProjectBudgetLinkKind, tenantId: string, itemId: string): Promise<boolean> {
-  const rows = await manager.query(
-    `SELECT 1 FROM ${TABLES[kind].items} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
-    [tenantId, itemId],
-  );
-  return rows.length > 0;
+/** Locks the line (FOR NO KEY UPDATE); false when it is gone. The budget lock order: `spend/budget-locks.ts`. */
+export function lockBudgetLine(manager: EntityManager, kind: ProjectBudgetLinkKind, tenantId: string, itemId: string): Promise<boolean> {
+  return lockLine(manager, kind, tenantId, itemId);
 }
 
 /** Locks the project (FOR NO KEY UPDATE); false when it is gone. */

@@ -6,6 +6,7 @@ import { CapexAllocationsService } from '../../capex/capex-allocations.service';
 import { CapexAmountsService } from '../../capex/capex-amounts.service';
 import { CapexVersionsService } from '../../capex/capex-versions.service';
 import { SpendAllocationsService } from '../../spend/spend-allocations.service';
+import { lockBudgetLine, lockBudgetVersions } from '../../spend/budget-locks';
 import { SpendAmountsService } from '../../spend/spend-amounts.service';
 import { SpendVersionsService } from '../../spend/spend-versions.service';
 import { AMOUNT_MEASURES, AmountMeasure, assertSpreadProfile, validateAmountValue } from '../../spend/amounts-write.util';
@@ -553,6 +554,12 @@ export class AiFinancialPlanMutationSupportService {
     const itemId = textOrNull(mutation.item_id) || preview.target_entity_id;
     if (!itemId) throw new BadRequestException('Preview is missing the financial item.');
     const item = await this.resolveItemById(context, entityType, itemId);
+    // Lock order (`spend/budget-locks.ts`): the line, then the version, before what the preview
+    // saw is compared with what is stored, so nothing changes between the check and the write.
+    const scope = entityType === 'spend_items' ? 'opex' : 'capex';
+    if (!(await lockBudgetLine(context.manager, scope, context.tenantId, item.id))) {
+      throw new NotFoundException(`${this.itemLabelSingular(entityType)} not found.`);
+    }
 
     if (action === 'create_version') {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
@@ -570,6 +577,7 @@ export class AiFinancialPlanMutationSupportService {
 
     const versionId = textOrNull(mutation.version_id);
     if (!versionId) throw new BadRequestException('Preview is missing the financial version.');
+    await lockBudgetVersions(context.manager, scope, context.tenantId, [versionId]);
     const version = await this.resolveVersionById(context, entityType, item.id, versionId);
 
     if (action === 'update_version') {

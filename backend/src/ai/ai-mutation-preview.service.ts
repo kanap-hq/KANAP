@@ -688,6 +688,26 @@ export class AiMutationPreviewService {
     return preview;
   }
 
+  /**
+   * The preview, read again under its row lock (FOR UPDATE) after a first
+   * read that checks it is the user's: two approvals of one preview, or an
+   * approval and a rejection, take turns, and the second finds it no longer
+   * pending, so it never executes twice (plan planning/perf-scale, lot 3B,
+   * Annexe A #24). The lock is taken before the execution's own locks (a
+   * budget line, then its version) and held until the request ends.
+   */
+  private async lockPreviewForUser(
+    context: AiExecutionContextWithManager,
+    previewId: string,
+  ): Promise<AiMutationPreview> {
+    const preview = await this.getPreviewForUser(context, previewId);
+    await context.manager.query(
+      'SELECT id FROM ai_mutation_previews WHERE tenant_id = $1 AND id = $2 FOR UPDATE',
+      [context.tenantId, preview.id],
+    );
+    return this.getPreviewForUser(context, previewId);
+  }
+
   private async markPlanStepsFromExecutedPreview(
     context: AiExecutionContextWithManager,
     preview: AiMutationPreview,
@@ -918,7 +938,7 @@ export class AiMutationPreviewService {
     context: AiExecutionContextWithManager,
     previewId: string,
   ): Promise<AiMutationPreviewDto> {
-    const preview = await this.getPreviewForUser(context, previewId);
+    const preview = await this.lockPreviewForUser(context, previewId);
     const operation = this.operations.getOperation(preview.tool_name);
     await this.policy.assertWriteAccess(
       context,
@@ -973,7 +993,7 @@ export class AiMutationPreviewService {
     const results: AiMutationPreviewDto[] = [];
     const followUpPreviews: AiMutationPreviewDto[] = [];
     for (const previewId of this.normalizePreviewIds(previewIds)) {
-      const preview = await this.getPreviewForUser(context, previewId);
+      const preview = await this.lockPreviewForUser(context, previewId);
       const operation = this.operations.getOperation(preview.tool_name);
       await this.policy.assertWriteAccess(
         context,
@@ -1006,7 +1026,7 @@ export class AiMutationPreviewService {
     previewId: string,
   ): Promise<AiMutationPreviewDto> {
     const repo = this.getRepo(context.manager);
-    const preview = await this.getPreviewForUser(context, previewId);
+    const preview = await this.lockPreviewForUser(context, previewId);
     const operation = this.operations.getOperation(preview.tool_name);
     await this.policy.assertWriteAccess(
       context,

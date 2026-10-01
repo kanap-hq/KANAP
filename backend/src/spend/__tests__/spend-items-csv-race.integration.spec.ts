@@ -1,16 +1,18 @@
 import { csvService, itemService, lineBody, seedCompany } from './cost-center.fixtures';
 import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known race (plan planning/perf-scale, step 0.3, Annexe A #3), failing until
-// lots 3B and 3F land.
+// Race of the OPEX line import (plan planning/perf-scale, step 0.3, Annexe
+// A #3), fixed in lot 3B.
 //
 // The OPEX line import reads every existing line first
 // (`spend-items-csv.service.ts:551-555`), then writes each one by merging the
 // file's row into the line it read and calling TypeORM `save()`
 // (`:595-618`, `:704-718`). A column the file does not carry, changed by a
 // user meanwhile, is put back to the value read at the start of the import.
-// Target: the import writes only the columns present in the file (3F), on the
-// line read under its lock (3B); the user's change stays.
+// Fixed: the import locks the lines it names before deciding, and writes only
+// the columns present in the file, under the line's lock
+// (`item-locked-update.ts`); the user's change stays. The new CSV engine adds
+// the freshness check of the export (decision D6).
 
 async function importVersusEdit() {
   await withRace('opex-csv', async (race) => {

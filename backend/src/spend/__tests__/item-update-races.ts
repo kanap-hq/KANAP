@@ -6,17 +6,16 @@ import { assert, assertClean, assertSucceeded, progress, settle, sql, withRace }
 // Races of the line update (`SpendItemsService.update`, `CapexItemsService.update`),
 // shared by the OPEX and CAPEX race specs (not a spec itself).
 //
-// Today an update reads the line without a lock, merges the body into it and
-// calls TypeORM `save()`, which reloads the row and writes back every column
+// An update used to read the line without a lock, merge the body into it and
+// call TypeORM `save()`, which reloads the row and writes back every column
 // that differs from that reload. A column another request committed between
-// the read and the save is therefore put back to the value read first
-// (Annexe A #2; plan section 3.4, rows 2 and 3), and a change committed
-// between the reload and the UPDATE escapes the chart-of-accounts check
-// (Annexe A #12).
+// the read and the save was put back to the value read first (Annexe A #2;
+// plan section 3.4, rows 2 and 3), and a change committed between the reload
+// and the UPDATE escaped the chart-of-accounts check (Annexe A #12).
 //
-// Target (lot 3B): the line is read `FOR NO KEY UPDATE`, re-read under the
-// lock, and only the columns received are updated; `resolveItemWrite` checks
-// the locked row. Each test below must then pass unchanged.
+// Fixed in lot 3B (`item-locked-update.ts`): the line is locked
+// `FOR NO KEY UPDATE`, read again under the lock, and only the columns
+// received are updated; `resolveItemWrite` checks the locked row.
 
 const TABLE: Record<Kind, string> = { opex: 'spend_items', capex: 'capex_items' };
 

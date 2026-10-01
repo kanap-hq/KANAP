@@ -53,9 +53,29 @@ import {
   resolveItemWrite,
 } from './item-write.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
+import { lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
+import { updateItemUnderLock } from './item-locked-update';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
+
+/**
+ * Locks, in id order, every line a row of the file names (same product name,
+ * same supplier or none): the lines it may update, held before the import
+ * looks them up and decides.
+ */
+async function lockCsvLines(mg: EntityManager, tenantId: string, rows: Array<{ product_name: string; supplier_id: string | null }>) {
+  if (rows.length === 0) return;
+  await mg.query(
+    `SELECT i.id FROM spend_items i
+       JOIN unnest($2::text[], $3::uuid[]) AS k(product_name, supplier_id)
+         ON i.product_name = k.product_name AND i.supplier_id IS NOT DISTINCT FROM k.supplier_id
+      WHERE i.tenant_id = $1
+      ORDER BY i.id
+        FOR NO KEY UPDATE OF i`,
+    [tenantId, rows.map((row) => row.product_name), rows.map((row) => row.supplier_id)],
+  );
+}
 
 @Injectable()
 export class SpendItemsCsvService {
@@ -559,6 +579,13 @@ export class SpendItemsCsvService {
     // (a null in a TypeORM `where` is dropped, so it would match any supplier).
     const existingByItem = new Map<typeof normalized[number], SpendItem | null>();
     let inserted = 0; let updated = 0;
+    if (!dryRun && tenantId) {
+      // One bulk budget operation at a time per tenant (a second one gets a 409), then the
+      // lines the file names, locked in id order before anything is decided: the lookups
+      // below and every check after them read the locked lines (lock order: `budget-locks.ts`).
+      await lockTenantBudgetOperations(mg, tenantId);
+      await lockCsvLines(mg, tenantId, unique);
+    }
     for (const item of unique) {
       existingByItem.set(item, await mg.getRepository(SpendItem).findOne({
         where: { tenant_id: tenantId ?? undefined, product_name: item.product_name, supplier_id: item.supplier_id ?? IsNull() },
@@ -651,6 +678,8 @@ export class SpendItemsCsvService {
             await this.audit.log({ table: 'spend_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
           }
         }
+        // Lock order: the line (locked above, or created here), then its version, then the months.
+        await lockBudgetVersions(mg, 'opex', tenantId, [version.id]);
         await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze, userId ?? null);
       }
       processed += 1;
@@ -716,30 +745,20 @@ export class SpendItemsCsvService {
     return saved;
   }
 
+  /**
+   * The line as the file has it: only the columns of the body, which carries
+   * only the columns present in the file (an optional column left out is never
+   * written), under the line's row lock; see `item-locked-update.ts`.
+   */
   private async updateSpendItem({ manager, existing, body, userId }: { manager: EntityManager; existing: SpendItem; body: SpendItemUpsertDto; userId?: string | null }) {
-    const repo = manager.getRepository(SpendItem);
-    const before = { ...existing };
-    const analyticsBefore = (await loadItemAnalyticsValues(manager, 'opex', existing.tenant_id, [existing.id])).get(existing.id) ?? [];
-    const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, 'opex', body, existing);
-    const lifecycle = resolveLifecycleState({
-      currentDisabledAt: existing.disabled_at,
-      nextStatus: input.status,
-      nextDisabledAt: input.disabled_at,
-    });
-    Object.assign(existing, values);
-    existing.status = lifecycle.status;
-    existing.disabled_at = lifecycle.disabled_at;
-    existing.updated_at = new Date();
-    const saved = await repo.save(existing);
-    await writeItemAnalyticsValues(manager, 'opex', existing.tenant_id, saved.id, analytics);
-    const analyticsAfter = analytics.length > 0
-      ? (await loadItemAnalyticsValues(manager, 'opex', existing.tenant_id, [saved.id])).get(saved.id) ?? []
-      : analyticsBefore;
+    const result = await updateItemUnderLock(manager, 'opex', existing.tenant_id, existing.id, body);
+    if (!result) throw new BadRequestException(`The line "${existing.product_name}" was deleted during the import. Import the file again.`);
+    const { before, after, analyticsBefore, analyticsAfter } = result;
     await this.audit.log({
-      table: 'spend_items', recordId: saved.id, action: 'update',
+      table: 'spend_items', recordId: after.id, action: 'update',
       before: { ...before, ...itemAnalyticsAuditFields(analyticsBefore) },
-      after: { ...saved, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
+      after: { ...after, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
     }, { manager });
-    return saved;
+    return after;
   }
 }

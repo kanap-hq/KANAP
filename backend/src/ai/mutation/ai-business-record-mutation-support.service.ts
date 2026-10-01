@@ -17,6 +17,7 @@ import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { SpendItemsService } from '../../spend/spend-items.service';
+import { lockBudgetLine } from '../../spend/budget-locks';
 import { itemAnalyticsFields, ItemAnalyticsScope, loadItemAnalyticsValues } from '../../spend/item-analytics.util';
 import { isActiveAt, parseEndOfValidityInput } from '../../common/status';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
@@ -1255,6 +1256,11 @@ export class AiBusinessRecordMutationSupportService {
     if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the target record.');
 
     const expectedValues = coerceRecord(preview.current_values?.values, 'current_values.values');
+    // An OPEX or CAPEX line is locked before what the preview saw is compared with what is
+    // stored (lock order, `spend/budget-locks.ts`): nothing changes between the check and the write.
+    if (entityType === 'spend_items' || entityType === 'capex_items') {
+      await lockBudgetLine(context.manager, entityType === 'spend_items' ? 'opex' : 'capex', context.tenantId, preview.target_entity_id);
+    }
     const live = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
     for (const [fieldName, expectedValue] of Object.entries(expectedValues)) {
       if (!sameValue(live[fieldName], expectedValue)) {

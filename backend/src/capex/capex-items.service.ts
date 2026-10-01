@@ -78,6 +78,8 @@ import {
 import { ensureBudgetVersion } from '../spend/budget-version-ensure';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
+import { updateItemUnderLock } from '../spend/item-locked-update';
+import { lockBudgetVersions, lockTenantBudgetOperations } from '../spend/budget-locks';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
@@ -382,50 +384,27 @@ export class CapexItemsService {
   /** `statusEmail: false` skips the owners' status-change email (the CSV import sends none, like OPEX's). */
   async update(id: string, body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; statusEmail?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(CapexItem);
-    const existing = await this.findItem(id, mg);
-    const itemId = existing.id;
-    const before = { ...existing };
-    const analyticsBefore = await this.loadAnalytics(mg, existing);
-    // Writable columns only, every id resolved in this tenant, and the chart of
-    // accounts checked on the resulting company and account; see `spend/item-write.util.ts`.
-    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, 'capex', body, existing);
-    const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
-    Object.assign(existing, values);
-    const now = new Date();
-    const lifecycle = resolveLifecycleState({
-      currentDisabledAt: before.disabled_at,
-      nextStatus: input.status,
-      nextDisabledAt: disabled_at,
-      nowFactory: () => now,
-    });
-    // The status before this edit, from the stored end of validity: the stored
-    // status lags until the hourly sync once that date passes.
-    const statusBefore = deriveStatusFromDisabledAt(before.disabled_at, now);
-    existing.status = lifecycle.status;
-    existing.disabled_at = lifecycle.disabled_at;
-    // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
-    existing.updated_at = new Date();
-    const saved = await repo.save(existing);
-    // A change of analytics values alone is an edit too (updated_at above, the audit below).
-    await writeItemAnalyticsValues(mg, 'capex', existing.tenant_id, itemId, analytics);
-    const persisted = await repo.findOne({ where: { id: itemId, tenant_id: existing.tenant_id } });
-    const analyticsAfter = analytics.length > 0 ? await this.loadAnalytics(mg, existing) : analyticsBefore;
+    const itemId = await this.resolveItemId(id, mg);
+    const tenantId = await this.resolveTenantId(mg);
+    // Only the columns the body supplied, written under the line's row lock, the chart of accounts
+    // checked on the locked row; see `spend/item-locked-update.ts`.
+    const result = await updateItemUnderLock(mg, 'capex', tenantId, itemId, body);
+    if (!result) throw new NotFoundException('CAPEX item not found');
+    const { before, after, analyticsBefore, analyticsAfter, statusBefore } = result;
     await this.audit.log({
-      table: 'capex_items', recordId: saved.id, action: 'update',
+      table: 'capex_items', recordId: itemId, action: 'update',
       before: { ...before, ...itemAnalyticsAuditFields(analyticsBefore) },
-      after: { ...(persisted ?? saved), ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
+      after: { ...after, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
     }, { manager: mg });
 
     // Detect supplier change for contact sync
-    const oldSupplierId = (before as any).supplier_id ?? null;
-    const newSupplierId = (persisted as any)?.supplier_id ?? (saved as any).supplier_id ?? null;
+    const oldSupplierId = before.supplier_id ?? null;
+    const newSupplierId = after.supplier_id ?? null;
     if (oldSupplierId !== newSupplierId) {
       await syncSupplierContactsWithinUpdate(mg, `CAPEX line ${itemId}`, () =>
-        this.itemContacts.syncFromSupplier(itemId, newSupplierId, userId ?? null, { manager: mg, tenantId: existing.tenant_id }));
+        this.itemContacts.syncFromSupplier(itemId, newSupplierId, userId ?? null, { manager: mg, tenantId }));
     }
 
-    const after = persisted ?? saved;
     if (statusBefore !== after.status && opts?.statusEmail !== false) {
       await this.notifyOwnersOfStatusChange(mg, after, statusBefore, userId);
     }
@@ -861,6 +840,23 @@ export class CapexItemsService {
     };
 
     let inserted = 0; let updated = 0;
+    if (!dryRun) {
+      // One bulk budget operation at a time per tenant (a second one gets a 409), then the
+      // lines the file names, locked in id order before anything is decided: the lookups
+      // below and every check after them read the locked lines (lock order: `spend/budget-locks.ts`).
+      await lockTenantBudgetOperations(mg, tenantId);
+      await mg.query(
+        `SELECT id FROM capex_items
+          WHERE tenant_id = $1 AND (item_number = ANY($2::int[]) OR description = ANY($3::text[]))
+          ORDER BY id
+            FOR NO KEY UPDATE`,
+        [
+          tenantId,
+          unique.flatMap((item) => (item.item_number != null ? [item.item_number] : [])),
+          unique.flatMap((item) => (item.item_number == null ? [item.description] : [])),
+        ],
+      );
+    }
     const existingByItem = new Map<typeof normalized[number], CapexItem | null>();
     for (const item of unique) existingByItem.set(item, await findExisting(item));
     // A disabled analytics value is accepted only as the line's current one.
@@ -975,6 +971,8 @@ export class CapexItemsService {
             await this.audit.log({ table: 'capex_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
           }
         }
+        // Lock order: the line (locked above, or created here), then its version, then the months.
+        await lockBudgetVersions(mg, 'capex', tenantId, [version.id]);
         await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze, userId ?? null);
       }
       processed += 1;
@@ -1003,12 +1001,21 @@ export class CapexItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexLink);
     const tenantId = await this.resolveTenantId(mg);
-    const existing = await repo.findOne({ where: { id: linkId, capex_item_id: capexItemId, tenant_id: tenantId } as any });
-    if (!existing) throw new NotFoundException('Link not found');
-    const before = { ...existing } as any;
-    (existing as any).description = (body?.description ?? null) as any;
-    (existing as any).url = String(body?.url || '').trim();
-    const saved = await repo.save(existing);
+    // Lock order (`spend/budget-locks.ts`): the line, then its link, read again under the lock.
+    await lockBudgetLine(mg, 'capex', tenantId, capexItemId);
+    const where = { id: linkId, capex_item_id: capexItemId, tenant_id: tenantId } as any;
+    const locked = await mg.query(
+      `SELECT id FROM capex_links WHERE tenant_id = $1 AND id = $2 AND capex_item_id = $3 FOR NO KEY UPDATE`,
+      [tenantId, linkId, capexItemId],
+    );
+    const before = locked.length > 0 ? await repo.findOne({ where }) : null;
+    if (!before) throw new NotFoundException('Link not found');
+    // Only the fields the body supplies (a description sent empty clears it).
+    const set: Partial<CapexLink> = {};
+    if (body?.description !== undefined) set.description = body.description ?? null;
+    if (body?.url !== undefined) set.url = String(body.url || '').trim();
+    if (Object.keys(set).length > 0) await repo.update(where, set);
+    const saved = (await repo.findOne({ where })) ?? before;
     await this.audit.log({ table: 'capex_links', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
     return saved;
   }

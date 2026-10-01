@@ -7,6 +7,8 @@ import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
 import { writeAmountsPayload } from '../spend/amounts-write.util';
+import { lockVersionWithLine } from '../spend/budget-locks';
+import { currentTenantId } from '../spend/budget-column-operations';
 import {
   isLinesPayload,
   isLinesResult,
@@ -64,7 +66,10 @@ export class CapexAmountsService {
     opts?: { manager?: EntityManager },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
-    const version = await mg.getRepository(CapexVersion).findOne({ where: { id: versionId } });
+    // Lock order (`budget-locks.ts`): the line, then the version, before any month; read again under the locks.
+    const tenantId = await currentTenantId(mg);
+    if (!(await lockVersionWithLine(mg, 'capex', tenantId, versionId))) throw new NotFoundException('Version not found');
+    const version = await mg.getRepository(CapexVersion).findOne({ where: { id: versionId, tenant_id: tenantId } });
     if (!version) throw new NotFoundException('Version not found');
 
     // Spread profiles resolve as on OPEX (flat, or a named SpreadProfile); an unknown one is a 400.

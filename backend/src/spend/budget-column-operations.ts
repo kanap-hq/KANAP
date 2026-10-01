@@ -11,6 +11,7 @@ import {
   BUDGET_COLUMN_MEASURE,
   BudgetColumn,
   MEASURE_FREEZE_COLUMN,
+  lockStoredMonths,
   lockYearMonths,
   readVersionMonths,
   replaceAmounts,
@@ -29,6 +30,7 @@ import {
 import { CostLine } from './costing.util';
 import { activeMonths } from './spread.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
+import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
 
 /**
  * Budget column operations (copy a column to another year or column, clear a
@@ -360,8 +362,19 @@ export async function copyBudgetColumn(
   const checkedFreeze = new Set<string>();
 
   const tenantId = await currentTenantId(mg);
-  const items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
-  const versions = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
+  // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
+  if (!dryRun) await lockTenantBudgetOperations(mg, tenantId);
+  let items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
+  let versions = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
+  if (!dryRun) {
+    // Lock order: the lines with a source version, in id order, then their destination versions,
+    // before anything is decided. Lines, validity, versions, months and records are read again
+    // under the locks; a line without a source version in the first read stays skipped.
+    const locked = await lockBudgetLines(mg, scope, tenantId, items.filter((i) => versions.has(`${i.id}:${sourceYear}`)).map((i) => i.id));
+    items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
+    versions = await loadVersions(mg, scope, tenantId, items.filter((i) => locked.has(i.id)).map((i) => i.id), [sourceYear, destinationYear]);
+    await lockBudgetVersions(mg, scope, tenantId, Array.from(versions.values()).filter((v) => v.budget_year === destinationYear).map((v) => v.id));
+  }
   const allVersions = Array.from(versions.values());
   const months = await readVersionMonths(mg, scope, tenantId, allVersions);
   const records = await listRoundInputs(mg, scope, tenantId, allVersions.map((v) => v.id));
@@ -522,8 +535,15 @@ export async function clearBudgetColumn(
   const checkedFreeze = new Set<string>();
 
   const tenantId = await currentTenantId(mg);
+  // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
+  await lockTenantBudgetOperations(mg, tenantId);
   const items = await loadItems(mg, scope, tenantId);
-  const versions = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [year]);
+  // Lock order: the lines with a version of the year, in id order, then those versions, before
+  // anything is decided; versions, months and records are read again under the locks.
+  const first = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [year]);
+  const locked = await lockBudgetLines(mg, scope, tenantId, items.filter((i) => first.has(`${i.id}:${year}`)).map((i) => i.id));
+  const versions = await loadVersions(mg, scope, tenantId, items.filter((i) => locked.has(i.id)).map((i) => i.id), [year]);
+  await lockBudgetVersions(mg, scope, tenantId, Array.from(versions.values()).map((v) => v.id));
   const allVersions = Array.from(versions.values());
   const months = await readVersionMonths(mg, scope, tenantId, allVersions);
   const records = await listRoundInputs(mg, scope, tenantId, allVersions.map((v) => v.id));
@@ -541,7 +561,11 @@ export async function clearBudgetColumn(
     const hasRecord = records.get(version.id)?.some((r) => r.measure === measure) ?? false;
     const current = months.get(version.id)!.months[measure];
     if (!current.some((v) => v !== 0n)) {
-      if (hasRecord) await deleteRoundInput(rctx, measure);
+      // Months before records (lock order, `budget-locks.ts`), even when only the record goes.
+      if (hasRecord) {
+        await lockStoredMonths({ manager: mg, scope, version }, year);
+        await deleteRoundInput(rctx, measure);
+      }
       skipped++;
       continue;
     }

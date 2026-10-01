@@ -1,4 +1,4 @@
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { FreezeColumn, FreezeService } from '../freeze/freeze.service';
 import { CENTS_LIMIT, formatCents, toCents } from '../common/amount';
@@ -13,6 +13,7 @@ import {
   spreadAnnualToMonths,
   spreadQuarterlyToMonths,
 } from './spread.util';
+import { lockBudgetVersions } from './budget-locks';
 
 /**
  * The one way amounts are written, for OPEX (`spend_amounts`) and CAPEX
@@ -24,7 +25,9 @@ import {
  * <target measures>`, never a read-merge-write of whole rows, so two people
  * editing different measures of the same month cannot overwrite each other.
  * Year, periods and values are validated and every target measure is checked
- * against the freeze inside the caller's transaction.
+ * against the freeze inside the caller's transaction. Locks: the caller holds
+ * the line; a write locks the version, then the months in period order (the
+ * one lock order of the budget, `budget-locks.ts`).
  */
 
 export type AmountMeasure = 'planned' | 'committed' | 'forecast' | 'actual' | 'expected_landing';
@@ -281,9 +284,21 @@ function sameAsStored(stored: StoredAmountRow[], rows: AmountRowInput[], periods
   });
 }
 
+/**
+ * The version, locked before its months (lock order, `budget-locks.ts`: the
+ * caller holds the line already). Its `budget_rev` is bumped by the amounts
+ * trigger after the months: the lock is held by then, so that update waits
+ * for nobody. A version gone meanwhile is a 404.
+ */
+async function lockVersion(ctx: MonthsContext): Promise<void> {
+  const locked = await lockBudgetVersions(ctx.manager, ctx.scope, ctx.version.tenant_id, [ctx.version.id]);
+  if (!locked.has(ctx.version.id)) throw new NotFoundException('Version not found');
+}
+
 async function write(ctx: AmountsWriteContext, year: number, rows: AmountRowInput[], periods: string[], measures: AmountMeasure[]) {
   assertVersionTenant(ctx.version);
   await assertMeasuresEditable(ctx, year, measures);
+  await lockVersion(ctx);
   // Concurrent writes on the same line must queue up, never deadlock: every
   // month is first created and then locked in period order, whatever order
   // or measure sets the rows come in. The rows read here feed the no-op
@@ -319,9 +334,23 @@ async function write(ctx: AmountsWriteContext, year: number, rows: AmountRowInpu
 export async function lockYearMonths(ctx: MonthsContext, year: number): Promise<void> {
   assertVersionTenant(ctx.version);
   assertYearMatchesVersion(year, ctx.version);
+  await lockVersion(ctx);
   const periods = yearPeriods(year);
   await createMissingMonths(ctx, periods);
   await readRows(ctx, periods, true);
+}
+
+/**
+ * The same lock without creating a month: the version, then the months of
+ * `year` already stored, in period order. For a caller that changes only a
+ * record and holds the line (no concurrent writer can add a month meanwhile),
+ * so a version without months gets none.
+ */
+export async function lockStoredMonths(ctx: MonthsContext, year: number): Promise<void> {
+  assertVersionTenant(ctx.version);
+  assertYearMatchesVersion(year, ctx.version);
+  await lockVersion(ctx);
+  await readRows(ctx, yearPeriods(year), true);
 }
 
 /**

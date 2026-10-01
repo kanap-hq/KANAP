@@ -49,4 +49,12 @@ export class SpendVersion {
 
   @Column('timestamptz', { default: () => 'now()' })
   updated_at!: Date;
+
+  /**
+   * Freshness counter of the version's budget, kept by the database (migration
+   * 1853740000000): one more on each change of its amounts, round inputs,
+   * costed lines, allocations or columns (input_grain aside). Read-only here.
+   */
+  @Column({ type: 'int', default: 1, insert: false, update: false })
+  budget_rev!: number;
 }
