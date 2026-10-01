@@ -451,7 +451,7 @@ export default function AdminBrandingPage() {
                       helperText={lightValidation.error || t('branding.colors.lightHelper')}
                       disabled={saving || deletingLogo || resetting}
                     />
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, position: 'relative' }}>
                       <Typography variant="caption" color="text.secondary">{t('branding.colors.swatch')}</Typography>
                       <Box
                         sx={{
@@ -525,7 +525,7 @@ export default function AdminBrandingPage() {
                       helperText={darkValidation.error || t('branding.colors.darkHelper')}
                       disabled={saving || deletingLogo || resetting}
                     />
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, position: 'relative' }}>
                       <Typography variant="caption" color="text.secondary">{t('branding.colors.swatch')}</Typography>
                       <Box
                         sx={{

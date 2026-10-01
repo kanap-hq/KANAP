@@ -130,7 +130,9 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   };
 
   return (
-    <Stack spacing={1.5} alignItems="flex-start">
+    // Positioned so the hidden date input below stays inside this field when a properties
+    // drawer scrolls; showPicker() anchors the native calendar on that input's box.
+    <Stack spacing={1.5} alignItems="flex-start" sx={{ position: 'relative' }}>
       <StatusSwitch
         label={onLabel}
         offLabel={offLabel}

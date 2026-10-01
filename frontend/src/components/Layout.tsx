@@ -53,6 +53,7 @@ import { useFeatures } from '../config/FeaturesContext';
 import { useThemeMode } from '../config/ThemeContext';
 import { getDocUrl } from '../utils/docUrls';
 import SubscriptionBanner from './SubscriptionBanner';
+import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { aiAgentControlApi } from '../ai/aiApi';
 import { useTranslation } from 'react-i18next';
@@ -331,10 +332,21 @@ export default function Layout() {
   // after all hooks to satisfy Rules of Hooks (early return must not skip
   // useState/useCallback/useMemo/useEffect calls above).
   const aiGatingNeeded = config.features.aiChat || config.features.aiSettings;
-  if (
-    aiGatingNeeded &&
-    (aiCapabilities.isLoading || (!aiCapabilities.data && aiCapabilities.isFetching))
-  ) {
+  const waitingForAiGating = aiGatingNeeded
+    && (aiCapabilities.isLoading || (!aiCapabilities.data && aiCapabilities.isFetching));
+  const shellReady = !waitingForAiGating && !applicationVisibility.isLoading;
+
+  // Each navigation starts at the top of the page and hands keyboard focus to the page's
+  // scroller (see appScroll.ts), so PageDown / Space / arrows work without a click first.
+  const pageScrollerRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    const scroller = pageScrollerRef.current;
+    if (!shellReady || !scroller) return undefined;
+    scroller.scrollTop = 0;
+    return focusPageScroller(scroller);
+  }, [location.pathname, shellReady]);
+
+  if (waitingForAiGating) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
         <CircularProgress />
@@ -614,15 +626,21 @@ export default function Layout() {
         <Toolbar sx={{ flexShrink: 0 }} />
         {config.features.billing && <SubscriptionBanner />}
         <Box
+          ref={pageScrollerRef}
           className="kanap-app-scroll"
+          tabIndex={-1}
           sx={{
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
+            outline: 'none',
             p: 2,
             display: 'flex',
             flexDirection: 'column',
-            '& > *': { flexShrink: 0 },
+            // Zero specificity (`:where`), so a page root that sets its own `flex` (the map
+            // pages' `flex: 1, minHeight: 0`) always wins, whatever the order in which emotion
+            // inserted the two rules.
+            ':where(&) > *': { flexShrink: 0 },
           }}
         >
           {/* Pages are code-split: this keeps the nav shell on screen while a route chunk

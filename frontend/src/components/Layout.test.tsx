@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import Layout from './Layout';
@@ -64,7 +64,11 @@ function renderShell() {
       <MemoryRouter initialEntries={['/ops/opex']}>
         <Routes>
           <Route element={<Layout />}>
-            <Route path="/ops/opex" element={<div data-testid="page">page</div>} />
+            <Route path="/ops/opex" element={<div data-testid="page"><Link to="/ops/opex/1">open item</Link></div>} />
+            <Route
+              path="/ops/opex/:id"
+              element={<div><div data-testid="column" data-primary-scroll="" tabIndex={-1}>content</div></div>}
+            />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -109,5 +113,21 @@ describe('Layout page scroller', () => {
   it('never shrinks a page below its content, so ordinary pages scroll instead of clipping', () => {
     renderShell();
     expect(getComputedStyle(screen.getByTestId('page')).flexShrink).toBe('0');
+  });
+
+  it('after a navigation, starts at the top and focuses the workspace content column', () => {
+    const { container } = renderShell();
+    const scroller = container.querySelector('.kanap-app-scroll') as HTMLElement;
+    expect(scroller).toHaveAttribute('tabindex', '-1');
+    // A plain page: the app scroller takes keyboard focus.
+    expect(document.activeElement).toBe(scroller);
+
+    scroller.scrollTop = 300;
+    const link = screen.getByRole('link', { name: 'open item' });
+    link.focus();
+    fireEvent.click(link);
+
+    expect(scroller.scrollTop).toBe(0);
+    expect(document.activeElement).toBe(screen.getByTestId('column'));
   });
 });

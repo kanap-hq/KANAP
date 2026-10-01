@@ -1593,13 +1593,14 @@ export default function TaskWorkspacePage() {
           </Alert>
         )}
 
-        {/* Main Content */}
+        {/* Main Content. Below md the sidebar stacks above the editor: natural height, and the
+            app scroller scrolls the page (a bounded box would clip the sidebar and the editor). */}
         <Box
           sx={{
-            flex: 1,
+            flex: isMobile ? '1 0 auto' : 1,
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
-            overflow: 'hidden',
+            overflow: isMobile ? 'visible' : 'hidden',
           }}
         >
           {/* Sidebar */}
@@ -1671,7 +1672,12 @@ export default function TaskWorkspacePage() {
           </Box>
 
           {/* Main content area */}
-          <Box sx={{ flex: 1, overflow: 'auto', p: 3 }} onScroll={handleMainContentScroll}>
+          <Box
+            data-primary-scroll={isMobile ? undefined : ''}
+            tabIndex={isMobile ? undefined : -1}
+            sx={{ flex: isMobile ? 'none' : 1, overflow: isMobile ? 'visible' : 'auto', outline: 'none', p: 3 }}
+            onScroll={handleMainContentScroll}
+          >
             {/* Description */}
             <Box sx={{ mb: contentSpacing.sectionLarge }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
@@ -1802,19 +1808,25 @@ export default function TaskWorkspacePage() {
         </Alert>
       )}
 
-      {/* Work Area: Content + Tab-anchor + Drawer */}
+      {/* Work Area: Content + Tab-anchor + Drawer. Below md the drawer stacks under the content:
+          natural height, the app scroller scrolls the page (as PortfolioDetailWorkspaceShell). */}
       <Box
         sx={{
-          flex: 1,
+          flex: isMobile ? '1 0 auto' : 1,
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          overflow: isMobile ? 'hidden' : 'visible',
+          overflow: 'visible',
           position: 'relative',
           minHeight: 380,
         }}
       >
         {/* Content column — 26px right gutter for the tab to sit in */}
-        <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', pt: '8px', pl: 3, pr: isMobile ? 3 : '29px', pb: 3 }} onScroll={handleMainContentScroll}>
+        <Box
+          data-primary-scroll={isMobile ? undefined : ''}
+          tabIndex={isMobile ? undefined : -1}
+          sx={{ flex: isMobile ? 'none' : 1, minWidth: 0, overflow: isMobile ? 'visible' : 'auto', outline: 'none', pt: '8px', pl: 3, pr: isMobile ? 3 : '29px', pb: 3 }}
+          onScroll={handleMainContentScroll}
+        >
           {/* Description */}
           <Box sx={{ mb: contentSpacing.sectionLarge }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>

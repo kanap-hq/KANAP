@@ -517,6 +517,16 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const searchRef = useRef(debouncedSearch);
   useEffect(() => { searchRef.current = debouncedSearch; }, [debouncedSearch]);
 
+  // The Show scope changes the rows, so the parent hears about it like a sort, filter or
+  // search change (the OPEX/CAPEX footers key their totals on it).
+  const handleStatusScopeChange = useCallback((next: StatusScope) => {
+    statusScopeRef.current = next;
+    setStatusScope(next);
+    try {
+      onQueryStateChange?.({ sort: sortParamRef.current, filterModel: filterModelRef.current, q: searchRef.current, statusScope: next });
+    } catch {}
+  }, [onQueryStateChange]);
+
   const extraParamsRef = useRef(extraParams);
   const extraParamsKey = useMemo(() => JSON.stringify(extraParams ?? {}), [extraParams]);
   useEffect(() => { extraParamsRef.current = extraParams; }, [extraParamsKey]);
@@ -932,7 +942,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
               <RadioGroup
                 row
                 value={statusScope}
-                onChange={(event) => setStatusScope(event.target.value as StatusScope)}
+                onChange={(event) => handleStatusScopeChange(event.target.value as StatusScope)}
                 sx={{ '& .MuiFormControlLabel-root': { mr: 1 } }}
               >
                 {(statusScopeConfig.scopes ?? ['all', 'enabled', 'disabled']).map((scope) => (
