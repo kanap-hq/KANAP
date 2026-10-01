@@ -106,13 +106,12 @@ export class AdminTenantsService {
       return this.getTenantDetail(tenantId);
     }
     const before = this.serializeTenant(tenant);
-    tenant.status = TenantStatus.FROZEN;
-    tenant.frozen_at = new Date();
-    tenant.frozen_by = actorId ?? null;
-    if (body?.reason) {
-      tenant.notes = body.reason;
-    }
-    await this.tenants.save(tenant);
+    await this.writeTenantColumns(tenant, {
+      status: TenantStatus.FROZEN,
+      frozen_at: new Date(),
+      frozen_by: actorId ?? null,
+      ...(body?.reason ? { notes: body.reason } : {}),
+    });
     await this.logTenantAction(tenantId, actorId, 'freeze', before, this.serializeTenant(tenant));
     return this.getTenantDetail(tenantId);
   }
@@ -124,10 +123,7 @@ export class AdminTenantsService {
       return this.getTenantDetail(tenantId);
     }
     const before = this.serializeTenant(tenant);
-    tenant.status = TenantStatus.ACTIVE;
-    tenant.frozen_at = null;
-    tenant.frozen_by = null;
-    await this.tenants.save(tenant);
+    await this.writeTenantColumns(tenant, { status: TenantStatus.ACTIVE, frozen_at: null, frozen_by: null });
     await this.logTenantAction(tenantId, actorId, 'unfreeze', before, this.serializeTenant(tenant));
     return this.getTenantDetail(tenantId);
   }
@@ -163,6 +159,16 @@ export class AdminTenantsService {
       base.metadata = tenant.metadata ?? {};
     }
     return base;
+  }
+
+  /**
+   * Write these columns only, and mirror them on the loaded copy for the audit
+   * snapshot. Saving the copy would write back its jsonb columns (metadata,
+   * branding, entra_metadata) as they were when it was read.
+   */
+  private async writeTenantColumns(tenant: Tenant, columns: Partial<Tenant>) {
+    await this.tenants.update({ id: tenant.id }, columns);
+    Object.assign(tenant, columns);
   }
 
   private async findTenantOrFail(id: string): Promise<Tenant> {
@@ -309,11 +315,12 @@ export class AdminTenantsService {
 
     const reason = dto.reason?.trim() || null;
     const beforeRequest = this.serializeTenant(tenant);
-    tenant.status = TenantStatus.DELETING;
-    tenant.deletion_requested_at = new Date();
-    tenant.deletion_requested_by = actorId ?? null;
-    tenant.deletion_reason = reason;
-    await this.tenants.save(tenant);
+    await this.writeTenantColumns(tenant, {
+      status: TenantStatus.DELETING,
+      deletion_requested_at: new Date(),
+      deletion_requested_by: actorId ?? null,
+      deletion_reason: reason,
+    });
     await this.logTenantAction(tenantId, actorId, 'delete-request', beforeRequest, this.serializeTenant(tenant));
 
     let purgeReport: Array<{ table: string; deleted: number }> = [];
@@ -321,23 +328,23 @@ export class AdminTenantsService {
       purgeReport = await this.purgeTenantData(tenantId, tenant.branding);
     } catch (error) {
       const beforeFail = this.serializeTenant(tenant);
-      tenant.status = TenantStatus.FROZEN;
-      await this.tenants.save(tenant);
+      await this.writeTenantColumns(tenant, { status: TenantStatus.FROZEN });
       await this.logTenantAction(tenantId, actorId, 'delete-failed', beforeFail, this.serializeTenant(tenant));
       throw error;
     }
 
     const beforeComplete = this.serializeTenant(tenant);
     const completedAt = new Date();
-    tenant.status = TenantStatus.DELETED;
-    tenant.deletion_confirmed_at = completedAt;
-    tenant.deleted_at = completedAt;
-    tenant.frozen_at = null;
-    tenant.frozen_by = null;
-    tenant.notes = null;
-    // Clear slug to free reuse and avoid ambiguity for deleted tenants
-    tenant.slug = `deleted-${tenant.slug}-${completedAt.getTime()}`;
-    await this.tenants.save(tenant);
+    await this.writeTenantColumns(tenant, {
+      status: TenantStatus.DELETED,
+      deletion_confirmed_at: completedAt,
+      deleted_at: completedAt,
+      frozen_at: null,
+      frozen_by: null,
+      notes: null,
+      // Clear slug to free reuse and avoid ambiguity for deleted tenants
+      slug: `deleted-${tenant.slug}-${completedAt.getTime()}`,
+    });
     await this.logTenantAction(tenantId, actorId, 'delete-complete', beforeComplete, this.serializeTenant(tenant));
 
     // Clean up any trial signup for the original slug to allow clean re-signup

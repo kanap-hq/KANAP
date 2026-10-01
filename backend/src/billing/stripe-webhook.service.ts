@@ -386,8 +386,7 @@ export class StripeWebhookService implements OnModuleInit {
     const tenant = await tenantRepo.findOne({ where: { id: tenantId } });
     if (!tenant) return;
     if (tenant.stripe_customer_id === customerId) return;
-    tenant.stripe_customer_id = customerId;
-    await tenantRepo.save(tenant);
+    await tenantRepo.update({ id: tenantId }, { stripe_customer_id: customerId });
   }
 
   private resolveSubscriptionType(price: any): SubscriptionType {

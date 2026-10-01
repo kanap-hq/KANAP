@@ -1,8 +1,8 @@
 import { catalogToMetadata, DEFAULT_CLASSIFICATION_CATALOG } from '../it-ops-settings/classification-catalog';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, IsNull, Repository } from 'typeorm';
-import { Tenant, TenantStatus } from './tenant.entity';
+import { Tenant, TenantBranding, TenantStatus } from './tenant.entity';
 import { RolesService } from '../roles/roles.service';
 import { Role } from '../roles/role.entity';
 import { PermissionsService, PermissionLevel } from '../permissions/permissions.service';
@@ -279,8 +279,91 @@ export class TenantsService {
         throw new BadRequestException('System tenants cannot be modified');
       }
     }
-    const next = Object.assign(existing, patch);
-    return repo.save(next);
+    // Only the patch's columns are written: saving the whole entity would write
+    // back every jsonb column (metadata, branding, entra_metadata) as it was
+    // loaded, erasing keys another request saved in between. A key that is not
+    // a tenant column is refused with a 400 (TypeORM's update would throw a 500,
+    // and dropping it silently would hide a typo).
+    const columns: Partial<Tenant> = {};
+    for (const [key, value] of Object.entries(patch)) {
+      if (key === 'id' || value === undefined) continue;
+      if (!repo.metadata.findColumnWithPropertyName(key)) {
+        throw new BadRequestException(`Unknown tenant field: ${key}`);
+      }
+      (columns as any)[key] = value;
+    }
+    if (Object.keys(columns).length > 0) {
+      await repo.update({ id }, columns);
+    }
+    const fresh = await repo.findOne({ where: { id } });
+    if (!fresh) throw new Error('Tenant not found');
+    return fresh;
+  }
+
+  /**
+   * Merge keys into `branding` in one statement, from the stored value:
+   * `set` keys are written, `unset` keys removed, and `bumpLogoVersion`
+   * increments the stored `logo_version`, read like `Number()` in the
+   * controller: any finite number >= 0 (decimals floored) or a digit string;
+   * a missing, negative, non-numeric or out-of-range (>= 1e15) one counts as 0.
+   * Returns the stored branding.
+   */
+  async mergeBranding(
+    id: string,
+    change: { set?: Partial<TenantBranding>; unset?: Array<keyof TenantBranding>; bumpLogoVersion?: boolean },
+    opts?: { manager?: EntityManager },
+  ): Promise<TenantBranding> {
+    const repo = this.getRepo(opts?.manager);
+    // The expressions read `branding` from the row being updated, so a write
+    // that waited on a concurrent one merges onto its result. The numeric cast
+    // sits in a nested CASE so it only runs on a JSON number.
+    const rows: Array<{ branding: TenantBranding }> = await repo.query(
+      `WITH updated AS (
+         UPDATE tenants
+         SET branding = (CASE WHEN jsonb_typeof(branding) = 'object' THEN branding ELSE '{}'::jsonb END - $2::text[])
+           || $3::jsonb
+           || CASE WHEN $4::boolean THEN jsonb_build_object(
+                'logo_version',
+                CASE
+                  WHEN jsonb_typeof(branding->'logo_version') = 'number' THEN
+                    CASE WHEN (branding->>'logo_version')::numeric >= 0 AND (branding->>'logo_version')::numeric < 1e15
+                      THEN floor((branding->>'logo_version')::numeric)::bigint ELSE 0 END
+                  WHEN branding->>'logo_version' ~ '^[0-9]{1,15}$' THEN (branding->>'logo_version')::bigint
+                  ELSE 0
+                END + 1
+              ) ELSE '{}'::jsonb END
+         WHERE id = $1
+         RETURNING branding
+       )
+       SELECT branding FROM updated`,
+      [id, change.unset ?? [], JSON.stringify(change.set ?? {}), !!change.bumpLogoVersion],
+    );
+    if (!rows[0]) throw new NotFoundException('Tenant not found');
+    return rows[0].branding;
+  }
+
+  /**
+   * Write one top-level key of `entra_metadata`, leaving the other keys as stored.
+   * With `whenEntraTenantId`, the key is written only while SSO is still Entra on
+   * that directory: a sync that started before a disconnect or a reconnect to
+   * another directory writes nothing.
+   */
+  async setEntraMetadataKey(
+    id: string,
+    key: string,
+    value: unknown,
+    opts?: { manager?: EntityManager; whenEntraTenantId?: string | null },
+  ) {
+    const guard = !!opts && 'whenEntraTenantId' in opts;
+    await this.getRepo(opts?.manager).query(
+      `UPDATE tenants
+       SET entra_metadata = jsonb_set(
+         CASE WHEN jsonb_typeof(entra_metadata) = 'object' THEN entra_metadata ELSE '{}'::jsonb END,
+         ARRAY[$2::text], $3::jsonb, true)
+       WHERE id = $1
+         AND (NOT $4::boolean OR (sso_provider = 'entra' AND entra_tenant_id = $5::text))`,
+      [id, key, JSON.stringify(value ?? null), guard, opts?.whenEntraTenantId ?? null],
+    );
   }
 
   async createTenant(params: { slug: string; name: string }, opts?: { manager?: EntityManager }) {
