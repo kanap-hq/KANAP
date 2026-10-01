@@ -73,21 +73,12 @@ export default function DeleteSelectedButton<T>({
           message: t('delete.successAll', { count: deleted.length }),
           severity: 'success',
         });
-      } else if (deleted.length === 0) {
-        // All failed
-        const reasons = failed.map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${f.reason}`).join('; ');
-        setSnackbar({
-          open: true,
-          message: t('delete.failedAll', { reasons }),
-          severity: 'error',
-        });
       } else {
-        // Partial success
-        setSnackbar({
-          open: true,
-          message: t('delete.partial', { deleted: deleted.length, failed: failed.length }),
-          severity: 'warning',
-        });
+        // Each failed item with its reason (for example a frozen budget column), all failed or not.
+        const reasons = failed.map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${f.reason}`).join('; ');
+        setSnackbar(deleted.length === 0
+          ? { open: true, message: t('delete.failedAll', { reasons }), severity: 'error' }
+          : { open: true, message: t('delete.partial', { deleted: deleted.length, failed: failed.length, reasons }), severity: 'warning' });
       }
 
       setConfirmOpen(false);

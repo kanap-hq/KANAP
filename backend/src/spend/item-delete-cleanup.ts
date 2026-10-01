@@ -1,6 +1,8 @@
-import { HttpException, Logger } from '@nestjs/common';
+import { ForbiddenException, HttpException, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { budgetColumnName, readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { AmountMeasure, AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN } from './amounts-write.util';
 import { withSavepoint } from '../common/savepoint.util';
 import { ATTACHMENT_TABLES } from '../common/storage-path-refs';
 import { StorageService } from '../common/storage/storage.service';
@@ -15,6 +17,8 @@ export type ItemDeleteScope = 'opex' | 'capex';
 const SCOPES = {
   opex: {
     itemColumn: 'spend_item_id',
+    versions: 'spend_versions',
+    amounts: 'spend_amounts',
     links: 'spend_links',
     attachments: 'spend_attachments',
     contractLinks: 'contract_spend_items',
@@ -22,12 +26,50 @@ const SCOPES = {
   },
   capex: {
     itemColumn: 'capex_item_id',
+    versions: 'capex_versions',
+    amounts: 'capex_amounts',
     links: 'capex_links',
     attachments: 'capex_attachments',
     contractLinks: 'contract_capex_items',
     taskObjectType: 'capex_item',
   },
 } as const;
+
+/**
+ * An item with a non-zero amount in a frozen (year, column) cannot be deleted:
+ * the delete would change that frozen column. One query per item finds the
+ * first such (year, column), joining the freezes. Runs in the delete's
+ * transaction, before anything is removed.
+ */
+export async function assertNoFrozenAmounts(
+  manager: EntityManager,
+  scope: ItemDeleteScope,
+  tenantId: string,
+  itemId: string,
+): Promise<void> {
+  const s = SCOPES[scope];
+  const measures = AMOUNT_MEASURES
+    .map((measure) => `('${measure}', '${MEASURE_FREEZE_COLUMN[measure]}', a.${measure})`)
+    .join(', ');
+  const [frozen]: Array<{ budget_year: number | string; measure: AmountMeasure }> = await manager.query(
+    `SELECT v.budget_year, m.measure
+       FROM ${s.versions} v
+       JOIN ${s.amounts} a ON a.tenant_id = v.tenant_id AND a.version_id = v.id
+       CROSS JOIN LATERAL (VALUES ${measures}) AS m(measure, column_key, amount)
+       JOIN freeze_states f
+         ON f.tenant_id = v.tenant_id AND f.budget_year = v.budget_year
+        AND f.scope = $3 AND f.column_key = m.column_key AND f.is_frozen
+      WHERE v.tenant_id = $1 AND v.${s.itemColumn} = $2 AND m.amount <> 0
+      ORDER BY v.budget_year, m.measure
+      LIMIT 1`,
+    [tenantId, itemId, scope],
+  );
+  if (!frozen) return;
+  const label = budgetColumnName(await readBudgetColumns(manager, tenantId), frozen.measure);
+  throw new ForbiddenException(
+    `This line has amounts in ${label} ${Number(frozen.budget_year)}, a frozen budget column. Unfreeze the column first, or set an end of validity date instead of deleting the line.`,
+  );
+}
 
 export type ItemDependentsDeps = {
   audit: AuditService;
@@ -66,9 +108,11 @@ export async function deleteItemDependents(
 
 /**
  * A task turned into a request is the request's `origin_task_id` (RESTRICT):
- * the request keeps its own copy of the task, so only the link is cleared.
- * Task attachment blobs stay: a converted request shares their paths, and the
- * weekly ghost sweep removes the unshared ones.
+ * the request keeps its own copy of the task, so only the link is cleared, and
+ * the request's history says which task it was ("T-n: title", read before the
+ * delete, like the conversion's own entry). Task attachment blobs stay: a
+ * converted request shares their paths, and the weekly ghost sweep removes the
+ * unshared ones.
  */
 async function deleteItemTasks(
   manager: EntityManager,
@@ -77,8 +121,8 @@ async function deleteItemTasks(
   itemId: string,
   deps: ItemDependentsDeps,
 ): Promise<void> {
-  const tasks: Array<{ id: string }> = await manager.query(
-    `SELECT id FROM tasks WHERE tenant_id = $1 AND related_object_type = $2 AND related_object_id = $3`,
+  const tasks: Array<{ id: string; item_number: number; title: string }> = await manager.query(
+    `SELECT id, item_number, title FROM tasks WHERE tenant_id = $1 AND related_object_type = $2 AND related_object_id = $3`,
     [tenantId, taskObjectType, itemId],
   );
   if (tasks.length === 0) return;
@@ -100,14 +144,26 @@ async function deleteItemTasks(
       `UPDATE portfolio_requests SET origin_task_id = NULL WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [tenantId, requests.map((r) => r.id)],
     );
+    // `tasks.item_number` and `tasks.title` are NOT NULL; every request comes from `taskIds`.
+    const taskLabels = new Map(tasks.map((t) => [t.id, `T-${t.item_number}: ${t.title}`]));
+    const labelOf = (request: { origin_task_id: string }) => taskLabels.get(request.origin_task_id)!;
+    // Keyed by the column, like the other request changes, so the history labels it.
+    await manager.query(
+      `INSERT INTO portfolio_activities (tenant_id, request_id, author_id, type, changed_fields)
+       SELECT $1::uuid, r.request_id, $2::uuid, 'change', jsonb_build_object('origin_task_id', jsonb_build_array(r.label, NULL))
+         FROM unnest($3::uuid[], $4::text[]) AS r(request_id, label)`,
+      [tenantId, deps.userId, requests.map((r) => r.id), requests.map(labelOf)],
+    );
     for (const request of requests) {
+      // The task row goes with this delete: the period review reads its label (`origin_task`);
+      // the id stays under a technical key the review skips.
       await deps.audit.log(
         {
           table: 'portfolio_requests',
           recordId: request.id,
           action: 'update',
-          before: { origin_task_id: request.origin_task_id },
-          after: { origin_task_id: null },
+          before: { origin_task: labelOf(request), __origin_task_id: request.origin_task_id },
+          after: { origin_task: null, __origin_task_id: null },
           userId: deps.userId,
         },
         { manager },

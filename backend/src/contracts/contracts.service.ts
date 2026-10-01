@@ -12,8 +12,8 @@ import { parseString } from '@fast-csv/parse';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import * as path from 'path';
 import * as fs from 'fs';
-import { StatusState, resolveLifecycleState } from '../common/status';
-import { extractStatusFilterFromAgModel } from '../common/status-filter';
+import { deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
+import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { ContractUpsertDto } from './dto/contract.dto';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { ContractCapexItem } from './contract-capex-item.entity';
@@ -146,7 +146,7 @@ export class ContractsService {
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query, { field: 'created_at', direction: 'DESC' })
       : parsePagination(query, { field: 'created_at', direction: 'DESC' });
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const filterTargets = this.contractFilterTargets();
     const nextParam = createParamNameGenerator('c');
@@ -166,7 +166,6 @@ export class ContractsService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const lifecycleStatus = status ?? statusFromAg ?? StatusState.ENABLED;
 
     const applyCompiledFilters = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
       // Parenthesized, so no condition can widen the tenant predicate above.
@@ -189,15 +188,8 @@ export class ContractsService {
       .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
       .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
       .where('c.tenant_id = app_current_tenant()');
-    if (!includeDisabled) {
-      if (lifecycleStatus === StatusState.DISABLED) {
-        qbBase.andWhere('c.disabled_at IS NOT NULL AND c.disabled_at <= NOW()');
-      } else {
-        qbBase.andWhere('(c.disabled_at IS NULL OR c.disabled_at > NOW())');
-      }
-    } else if (status || statusFromAg) {
-      qbBase.andWhere('c.status = :contractStatus', { contractStatus: lifecycleStatus });
-    }
+    // The status is read from the end of validity (the stored one is not updated when the date passes).
+    applyStatusFilter(qbBase, { alias: 'c', explicitStatus: status ?? statusFromAg ?? null, includeDisabled, matchNone });
     applyCompiledFilters(qbBase);
     applyQuickSearch(qbBase);
 
@@ -264,6 +256,8 @@ export class ContractsService {
       const cancel = this.computeCancellationDeadline(end, i.notice_period_months || 0);
       return {
         ...i,
+        // From the end of validity, like the filter: the stored status stays enabled once the date passes.
+        status: deriveStatusFromDisabledAt(i.disabled_at),
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
         company: i.company_id ? { id: i.company_id, name: cById.get(i.company_id)?.name ?? '' } : null,
         end_date: end,
@@ -547,7 +541,7 @@ export class ContractsService {
     // Not the parsed limit: parsePagination defaults to a page of 20, and the prev/next
     // navigation that calls this sends no limit, so it only ever knew 20 contracts.
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const filterTargets = this.contractFilterTargets();
     const nextParam = createParamNameGenerator('c');
@@ -567,7 +561,6 @@ export class ContractsService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const lifecycleStatus = status ?? statusFromAg ?? StatusState.ENABLED;
 
     const qb = repo
       .createQueryBuilder('c')
@@ -575,15 +568,8 @@ export class ContractsService {
       .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
       .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
       .where('c.tenant_id = app_current_tenant()');
-    if (!includeDisabled) {
-      if (lifecycleStatus === StatusState.DISABLED) {
-        qb.andWhere('c.disabled_at IS NOT NULL AND c.disabled_at <= NOW()');
-      } else {
-        qb.andWhere('(c.disabled_at IS NULL OR c.disabled_at > NOW())');
-      }
-    } else if (status || statusFromAg) {
-      qb.andWhere('c.status = :contractStatus', { contractStatus: lifecycleStatus });
-    }
+    // The status is read from the end of validity (the stored one is not updated when the date passes).
+    applyStatusFilter(qb, { alias: 'c', explicitStatus: status ?? statusFromAg ?? null, includeDisabled, matchNone });
     // Parenthesized, so no condition can widen the tenant predicate above.
     compiledFilters.forEach((cond) => qb.andWhere(`(${cond.sql})`, cond.params));
     if (quickSearchConditions.length > 0) {
@@ -790,7 +776,8 @@ export class ContractsService {
             yearly_amount_at_signature: it.yearly_amount_at_signature ?? 0,
             currency: it.currency,
             billing_frequency: it.billing_frequency,
-            status: it.status,
+            // Read from the end of validity: the stored status is not updated when the date passes.
+            status: deriveStatusFromDisabledAt(it.disabled_at),
             owner_email: it.owner_user_id ? (uMap.get(it.owner_user_id)?.email ?? '') : '',
             notes: it.notes ?? '',
           });
@@ -867,7 +854,9 @@ export class ContractsService {
       const yearly_amount_at_signature = Number((r['yearly_amount_at_signature'] ?? '0').toString().replace(/\s/g, '').replace(',', '.')) || 0;
       const currency = ((r['currency'] ?? 'EUR').toString().trim() || 'EUR').toUpperCase();
       const billing_frequency = (r['billing_frequency'] ?? 'annual').toString().trim();
-      const status = ((r['status'] ?? 'enabled').toString().trim().toLowerCase() === 'disabled') ? 'disabled' : 'enabled';
+      // Blank: enabled for a new contract, the current status on an update.
+      const statusRaw = (r['status'] ?? '').toString().trim().toLowerCase();
+      const status = statusRaw === 'disabled' ? 'disabled' : statusRaw ? 'enabled' : null;
       const owner_email = ((r['owner_email'] ?? '').toString().trim()) || null;
       const notes = ((r['notes'] ?? '').toString().trim()) || null;
       if (!name) errors.push({ row: line, message: 'name is required' });
@@ -909,6 +898,11 @@ export class ContractsService {
       const owner = item.owner_email ? uByEmail.get(item.owner_email.toLowerCase()) : null;
       if (!company || !supplier) continue; // skip unresolved refs silently
       const exists = await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: supplier.id as any } });
+      // The file has no end of validity: a status equal to the current one (read from the date)
+      // or blank keeps the stored date; a new contract is enabled unless the row says disabled.
+      const status = exists
+        ? (item.status && item.status !== deriveStatusFromDisabledAt(exists.disabled_at) ? item.status : undefined)
+        : (item.status ?? 'enabled');
       const payload: ContractUpsertDto = {
         name: item.name as any,
         company_id: company.id,
@@ -921,7 +915,7 @@ export class ContractsService {
         yearly_amount_at_signature: item.yearly_amount_at_signature as any,
         currency: item.currency as any,
         billing_frequency: item.billing_frequency as any,
-        status: item.status as any,
+        ...(status ? { status: status as any } : {}),
         notes: (item.notes as any) ?? null,
       };
       if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg }); processed += 1; }

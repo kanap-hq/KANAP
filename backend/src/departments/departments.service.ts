@@ -43,7 +43,7 @@ export class DepartmentsService {
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query)
       : parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;
     const includeDisabled =
@@ -133,9 +133,9 @@ export class DepartmentsService {
         }
       : undefined;
     if (effectiveStatus) {
-      applyStatusFilter(qbBase, { alias: 'd', explicitStatus: effectiveStatus, period, includeDisabled });
+      applyStatusFilter(qbBase, { alias: 'd', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
-      applyStatusFilter(qbBase, { alias: 'd', period, includeDisabled });
+      applyStatusFilter(qbBase, { alias: 'd', period, includeDisabled, matchNone });
     }
     qbBase.leftJoin(Company, 'c', 'c.id = d.company_id');
     if (year) {
@@ -151,9 +151,9 @@ export class DepartmentsService {
 
     const qb = repo.createQueryBuilder('d');
     if (effectiveStatus) {
-      applyStatusFilter(qb, { alias: 'd', explicitStatus: effectiveStatus, period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'd', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
-      applyStatusFilter(qb, { alias: 'd', period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'd', period, includeDisabled, matchNone });
     }
     qb.leftJoin(Company, 'c', 'c.id = d.company_id');
     qb.addSelect('c.name', 'company_name');
@@ -364,7 +364,7 @@ export class DepartmentsService {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;
     const includeDisabled =
@@ -439,9 +439,9 @@ export class DepartmentsService {
         }
       : undefined;
     if (effectiveStatus) {
-      applyStatusFilter(qb, { alias: 'd', explicitStatus: effectiveStatus, period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'd', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
-      applyStatusFilter(qb, { alias: 'd', period, includeDisabled });
+      applyStatusFilter(qb, { alias: 'd', period, includeDisabled, matchNone });
     }
     if (year) {
       qb.leftJoin(

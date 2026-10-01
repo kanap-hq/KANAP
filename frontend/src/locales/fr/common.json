@@ -119,7 +119,7 @@
     "confirmPrompt": "Êtes-vous sûr de vouloir continuer ?",
     "successAll": "{{count}} élément(s) supprimé(s) avec succès",
     "failedAll": "Échec de la suppression : {{reasons}}",
-    "partial": "{{deleted}} élément(s) supprimé(s). Échec pour {{failed}} élément(s).",
+    "partial": "{{deleted}} élément(s) supprimé(s). Échec pour {{failed}} élément(s) : {{reasons}}",
     "failedGeneric": "Échec de la suppression des éléments"
   },
   "messages": {

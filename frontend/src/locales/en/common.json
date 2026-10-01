@@ -119,7 +119,7 @@
     "confirmPrompt": "Are you sure you want to proceed?",
     "successAll": "Successfully deleted {{count}} item(s)",
     "failedAll": "Failed to delete items: {{reasons}}",
-    "partial": "Deleted {{deleted}} item(s). Failed to delete {{failed}} item(s).",
+    "partial": "Deleted {{deleted}} item(s). Failed to delete {{failed}} item(s): {{reasons}}",
     "failedGeneric": "Failed to delete items"
   },
   "messages": {

@@ -95,7 +95,7 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendItem);
     const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     // Only allow filtering/sorting by real columns on SpendItem
     const allowedFields = [
@@ -110,7 +110,7 @@ export class SpendItemsService {
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
     const lifecycleStatus = status ?? statusFromAg ?? StatusState.ENABLED;
-    const scope: LifecycleScope = includeDisabled ? null : lifecycleStatus === StatusState.DISABLED ? 'inactive' : 'active';
+    const scope: LifecycleScope = matchNone ? 'none' : includeDisabled ? null : lifecycleStatus === StatusState.DISABLED ? 'inactive' : 'active';
     applyDisabledAtWhere(where, scope, filtersToApply);
     if (q) where.product_name = ILike(`%${q}%`);
     // Not a filterable field, so no grid filter can replace it.

@@ -6,16 +6,19 @@ import { SpendItemsDeleteService } from '../spend-items-delete.service';
 import { CapexItem } from '../../capex/capex-item.entity';
 import { CapexItemsDeleteService } from '../../capex/capex-items-delete.service';
 import { UserTimeAggregateService } from '../../portfolio/services/user-time-aggregate.service';
-import { assert, AuditEntry, inRolledBackTransaction, Kind, runSpecs, seedItem, seedTenant } from './round-inputs.fixtures';
+import {
+  assert, AuditEntry, freezeColumn, inRolledBackTransaction, Kind, runSpecs, seedItem, seedMonths, seedTenant, seedVersion, setBudgetColumns,
+} from './round-inputs.fixtures';
 
 // Deleting an item of either type removes the rows that have no foreign key to
 // it (links, attachments, contract links) and its tasks; a task turned into a
-// request keeps the request; time aggregates follow; unshared files go. A bulk
-// delete undoes a failing item alone.
+// request keeps the request, whose history names the task; time aggregates
+// follow; unshared files go. A bulk delete undoes a failing item alone. A line
+// with amounts in a frozen column cannot be deleted.
 
 const T = {
-  opex: { items: 'spend_items', column: 'spend_item_id', links: 'spend_links', attachments: 'spend_attachments', contracts: 'contract_spend_items', taskType: 'spend_item' },
-  capex: { items: 'capex_items', column: 'capex_item_id', links: 'capex_links', attachments: 'capex_attachments', contracts: 'contract_capex_items', taskType: 'capex_item' },
+  opex: { items: 'spend_items', column: 'spend_item_id', links: 'spend_links', attachments: 'spend_attachments', contracts: 'contract_spend_items', taskType: 'spend_item', amounts: 'spend_amounts' },
+  capex: { items: 'capex_items', column: 'capex_item_id', links: 'capex_links', attachments: 'capex_attachments', contracts: 'contract_capex_items', taskType: 'capex_item', amounts: 'capex_amounts' },
 } as const;
 
 function fakeStorage() {
@@ -178,11 +181,23 @@ async function testDeleteCleansUp(kind: Kind) {
       table: 'portfolio_requests',
       recordId: convertedRequest,
       action: 'update',
-      before: { origin_task_id: deletedTask },
-      after: { origin_task_id: null },
+      // The period review reads the label: the task row is gone with this delete.
+      before: { origin_task: 'T-1: Task 1', __origin_task_id: deletedTask },
+      after: { origin_task: null, __origin_task_id: null },
       userId,
     }], `${kind}: one audit row for the request`);
     assert.deepEqual(audit.entries.map((e) => `${e.table}:${e.action}`), ['portfolio_requests:update', `${T[kind].items}:delete`]);
+    // The request's history names the task it no longer links to (the task row is gone).
+    const activities = await runner.query(
+      `SELECT request_id, author_id, type, changed_fields FROM portfolio_activities WHERE tenant_id = $1 ORDER BY created_at`,
+      [tenantId],
+    );
+    assert.deepEqual(activities, [{
+      request_id: convertedRequest,
+      author_id: userId,
+      type: 'change',
+      changed_fields: { origin_task_id: ['T-1: Task 1', null] },
+    }], `${kind}: one request activity names the task`);
 
     const [aggregate] = await runner.query(
       `SELECT total_hours::float AS total, other_hours::float AS other FROM user_time_monthly_aggregates
@@ -226,6 +241,81 @@ async function testBulkDeleteIsolatesAFailingItem(kind: Kind) {
     }
     assert.deepEqual(storage.deleted, [paths[0], paths[2]], `${kind}: the failed item keeps its file`);
     assert.deepEqual(audit.entries.map((e) => e.recordId), [ids[0], ids[2]]);
+  });
+}
+
+const FROZEN_MESSAGE = 'This line has amounts in Plan initial 2026, a frozen budget column. '
+  + 'Unfreeze the column first, or set an end of validity date instead of deleting the line.';
+
+/** Freezes the Budget column of 2026 (named "Plan initial" by the tenant); returns the line's 2026 version. */
+async function seedFrozenBudget(runner: QueryRunner, kind: Kind, tenantId: string, itemId: string, planned: number) {
+  await setBudgetColumns(runner, tenantId, { labels: { planned: 'Plan initial' } });
+  await freezeColumn(runner, kind, tenantId, 2026, 'budget');
+  const versionId = await seedVersion(runner, kind, tenantId, itemId, 2026);
+  // Forecast 2026 is not frozen: its amounts never block the delete.
+  await seedMonths(runner, kind, tenantId, versionId, 2026, { planned: Array(12).fill(planned), forecast: Array(12).fill(7) });
+  return versionId;
+}
+
+async function testDeleteRefusedWithFrozenAmounts(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-del-frozen`);
+    const itemId = await seedItem(runner, kind, tenantId, 1, 'Frozen line');
+    const versionId = await seedFrozenBudget(runner, kind, tenantId, itemId, 10);
+    await seedLink(runner, kind, tenantId, itemId);
+    const audit = auditDouble();
+
+    await runner.query('SAVEPOINT frozen_delete');
+    await assert.rejects(
+      deleteService(kind, runner, audit, fakeStorage()).delete(itemId, { manager: runner.manager, userId: null }),
+      (err: any) => err?.status === 403 && err.message === FROZEN_MESSAGE,
+      `${kind}: the delete is refused, naming the column and the year`,
+    );
+    await runner.query('ROLLBACK TO SAVEPOINT frozen_delete');
+    assert.equal(await count(runner, T[kind].items, 'id', itemId), 1, `${kind}: the line stays`);
+    assert.equal(await count(runner, T[kind].links, T[kind].column, itemId), 1, `${kind}: its links stay`);
+    assert.equal(await count(runner, T[kind].amounts, 'version_id', versionId), 12, `${kind}: its amounts stay`);
+    assert.deepEqual(audit.entries, [], `${kind}: nothing audited`);
+  });
+}
+
+async function testBulkDeleteReportsTheFrozenItem(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-del-frozen-bulk`);
+    const ids = [
+      await seedItem(runner, kind, tenantId, 1, 'First'),
+      await seedItem(runner, kind, tenantId, 2, 'Frozen'),
+      await seedItem(runner, kind, tenantId, 3, 'Third'),
+    ];
+    await seedFrozenBudget(runner, kind, tenantId, ids[1], 10);
+    // The others have amounts only in columns or years that are not frozen.
+    const other = await seedVersion(runner, kind, tenantId, ids[0], 2025);
+    await seedMonths(runner, kind, tenantId, other, 2025, { planned: Array(12).fill(5) });
+
+    const result = await deleteService(kind, runner, auditDouble(), fakeStorage()).bulkDelete(ids, null, { manager: runner.manager });
+    assert.deepEqual(result.deleted, [ids[0], ids[2]], `${kind}: the other lines are deleted`);
+    assert.deepEqual(
+      result.failed.map((f) => [f.id, f.name, f.reason]),
+      [[ids[1], 'Frozen', FROZEN_MESSAGE]],
+      `${kind}: the frozen line is reported with the reason`,
+    );
+    assert.ok(runner.isTransactionActive, `${kind}: the request transaction is still open`);
+    assert.deepEqual(
+      await Promise.all(ids.map((id) => count(runner, T[kind].items, 'id', id))),
+      [0, 1, 0],
+      `${kind}: only the frozen line stays`,
+    );
+  });
+}
+
+async function testDeleteAllowedWhenTheFrozenYearIsZero(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-del-frozen-zero`);
+    const itemId = await seedItem(runner, kind, tenantId, 1, 'Zero line');
+    const versionId = await seedFrozenBudget(runner, kind, tenantId, itemId, 0);
+    await deleteService(kind, runner, auditDouble(), fakeStorage()).delete(itemId, { manager: runner.manager, userId: null });
+    assert.equal(await count(runner, T[kind].items, 'id', itemId), 0, `${kind}: the line is deleted`);
+    assert.equal(await count(runner, T[kind].amounts, 'version_id', versionId), 0, `${kind}: with its amounts`);
   });
 }
 
@@ -290,6 +380,12 @@ void runSpecs('item-delete-cleanup.integration.spec', [
   ['testBulkDeleteIsolatesAFailingItem capex', () => testBulkDeleteIsolatesAFailingItem('capex')],
   ['testBulkDeleteReferenceCheckFailsItsItemOnly opex', () => testBulkDeleteReferenceCheckFailsItsItemOnly('opex')],
   ['testBulkDeleteReferenceCheckFailsItsItemOnly capex', () => testBulkDeleteReferenceCheckFailsItsItemOnly('capex')],
+  ['testDeleteRefusedWithFrozenAmounts opex', () => testDeleteRefusedWithFrozenAmounts('opex')],
+  ['testDeleteRefusedWithFrozenAmounts capex', () => testDeleteRefusedWithFrozenAmounts('capex')],
+  ['testBulkDeleteReportsTheFrozenItem opex', () => testBulkDeleteReportsTheFrozenItem('opex')],
+  ['testBulkDeleteReportsTheFrozenItem capex', () => testBulkDeleteReportsTheFrozenItem('capex')],
+  ['testDeleteAllowedWhenTheFrozenYearIsZero opex', () => testDeleteAllowedWhenTheFrozenYearIsZero('opex')],
+  ['testDeleteAllowedWhenTheFrozenYearIsZero capex', () => testDeleteAllowedWhenTheFrozenYearIsZero('capex')],
 ]);
 
 // `dataSource` is imported so the CI runner schedules this spec on the database lane.

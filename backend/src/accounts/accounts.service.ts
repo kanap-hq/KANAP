@@ -4,6 +4,7 @@ import { DeepPartial, EntityManager, ILike, IsNull, Raw, Repository } from 'type
 import { Account } from './account.entity';
 import { Company } from '../companies/company.entity';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
+import { compileAgFilterCondition, createParamNameGenerator } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
@@ -13,6 +14,33 @@ import { resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AccountUpsertDto } from './dto/account.dto';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+
+const ACCOUNT_NUMBER_TOKEN = '__account_number__';
+const INT4_MAX = 2147483647;
+
+/**
+ * `where.account_number` for a grid filter on it: the column is an integer, so
+ * a text filter ("contains 60") compares its text, as the grid shows it (an
+ * ILIKE on the integer would fail in SQL). A combined model applies each condition.
+ */
+function accountNumberWhere(rawModel: any) {
+  const combined = rawModel && Array.isArray(rawModel.conditions) && rawModel.conditions.length > 0
+    && (rawModel.operator === 'AND' || rawModel.operator === 'OR');
+  const nextParam = createParamNameGenerator('account_number_');
+  const parts = ((combined ? rawModel.conditions : [rawModel]) as any[])
+    .map((model) => compileAgFilterCondition(model, { expression: `CAST(${ACCOUNT_NUMBER_TOKEN} AS text)` }, nextParam))
+    .filter((part): part is NonNullable<typeof part> => !!part);
+  if (parts.length === 0) return undefined;
+  const sql = parts.map((part) => `(${part.sql})`).join(combined && rawModel.operator === 'OR' ? ' OR ' : ' AND ');
+  const params = Object.assign({}, ...parts.map((part) => part.params));
+  return Raw((alias) => sql.split(ACCOUNT_NUMBER_TOKEN).join(alias), params);
+}
+
+/** A quick search that can be an account number: an integer within the column's range. */
+function accountNumberQuery(q: string): number | null {
+  const value = Number(q);
+  return Number.isInteger(value) && Math.abs(value) <= INT4_MAX ? value : null;
+}
 
 @Injectable()
 export class AccountsService {
@@ -28,13 +56,15 @@ export class AccountsService {
   async list(query: any, opts?: { manager?: EntityManager }) {
     const repo = this.getRepo(opts?.manager);
     const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;
     const where: any = {};
     let whereArr: any[] | undefined;
     if (filtersToApply && Object.keys(filtersToApply).length > 0) {
       const mappedFilters = { ...filtersToApply };
+      const accountNumberFilter = mappedFilters.account_number;
+      delete mappedFilters.account_number;
 
       // Special handling for coa_code: look up CoA IDs by code pattern
       if ('coa_code' in mappedFilters) {
@@ -85,13 +115,17 @@ export class AccountsService {
       }
 
       Object.assign(where, buildWhereFromAgFilters(mappedFilters));
+      const accountNumberCondition = accountNumberFilter ? accountNumberWhere(accountNumberFilter) : undefined;
+      if (accountNumberCondition) where.account_number = accountNumberCondition;
     }
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
     const lifecycleStatus = effectiveStatus ?? StatusState.ENABLED;
     // "All" lifts only the default scope: an explicit status (query or status column filter) still applies.
-    if (!includeDisabled || effectiveStatus) {
+    if (matchNone) {
+      where.disabled_at = Raw(() => '1 = 0');
+    } else if (!includeDisabled || effectiveStatus) {
       if (lifecycleStatus === StatusState.DISABLED) {
         where.disabled_at = Raw((alias) => `${alias} IS NOT NULL AND ${alias} <= NOW()`);
       } else {
@@ -127,7 +161,7 @@ export class AccountsService {
     // Quick search across multiple fields; combine with filters via OR array
     if (q) {
       const like = ILike(`%${q}%`);
-      const numQ = !isNaN(Number(q)) ? Number(q) : null;
+      const numQ = accountNumberQuery(q);
       whereArr = [
         { ...where, account_name: like },
         { ...where, description: like },
@@ -172,13 +206,15 @@ export class AccountsService {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;
 
     const where: any = {};
     if (filtersToApply && Object.keys(filtersToApply).length > 0) {
       const mappedFilters = { ...filtersToApply };
+      const accountNumberFilter = mappedFilters.account_number;
+      delete mappedFilters.account_number;
 
       // Special handling for coa_code: look up CoA IDs by code pattern
       if ('coa_code' in mappedFilters) {
@@ -229,13 +265,17 @@ export class AccountsService {
       }
 
       Object.assign(where, buildWhereFromAgFilters(mappedFilters));
+      const accountNumberCondition = accountNumberFilter ? accountNumberWhere(accountNumberFilter) : undefined;
+      if (accountNumberCondition) where.account_number = accountNumberCondition;
     }
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
     const lifecycleStatus = effectiveStatus ?? StatusState.ENABLED;
     // "All" lifts only the default scope: an explicit status (query or status column filter) still applies.
-    if (!includeDisabled || effectiveStatus) {
+    if (matchNone) {
+      where.disabled_at = Raw(() => '1 = 0');
+    } else if (!includeDisabled || effectiveStatus) {
       if (lifecycleStatus === StatusState.DISABLED) {
         where.disabled_at = Raw((alias) => `${alias} IS NOT NULL AND ${alias} <= NOW()`);
       } else {
@@ -269,7 +309,7 @@ export class AccountsService {
     let whereArr: any[] | undefined;
     if (q) {
       const like = ILike(`%${q}%`);
-      const numQ = !isNaN(Number(q)) ? Number(q) : null;
+      const numQ = accountNumberQuery(q);
       whereArr = [
         { ...where, account_name: like },
         { ...where, description: like },

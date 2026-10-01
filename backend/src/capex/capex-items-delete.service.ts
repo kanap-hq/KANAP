@@ -11,6 +11,7 @@ import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { StorageService } from '../common/storage/storage.service';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 import {
+  assertNoFrozenAmounts,
   bulkDeleteFailureReason,
   currentTenantId,
   deleteBlobs,
@@ -58,6 +59,9 @@ export class CapexItemsDeleteService extends BaseDeleteService<CapexItem> {
     if (!item) {
       throw new NotFoundException('Item not found');
     }
+
+    // Refused before anything is removed (a bulk delete reports it for this item).
+    await assertNoFrozenAmounts(manager, 'capex', tenantId, itemId);
 
     const paths = await deleteItemDependents(manager, 'capex', tenantId, itemId, {
       audit: this.audit,

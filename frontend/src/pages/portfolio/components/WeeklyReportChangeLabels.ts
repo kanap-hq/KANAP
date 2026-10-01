@@ -22,6 +22,8 @@ const PORTFOLIO_FIELD_KEYS: Record<string, string> = {
   requestor_id: 'requestor',
   target_delivery_date: 'targetDeliveryDate',
   origin_task_id: 'originTask',
+  // The task a request came from, by its label once the task is deleted with its budget line.
+  origin_task: 'originTask',
   company_id: 'company',
   department_id: 'department',
   business_sponsor_id: 'businessSponsor',

@@ -377,6 +377,7 @@ const PORTFOLIO_CHANGE_LABELS: Record<string, string> = {
   requestor_id: 'Requestor',
   target_delivery_date: 'Target delivery date',
   origin_task_id: 'Origin task',
+  origin_task: 'Origin task',
   company_id: 'Company',
   department_id: 'Department',
   business_sponsor_id: 'Business sponsor',

@@ -47,7 +47,7 @@ export class BusinessProcessesService {
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query, { field: 'name', direction: 'ASC' })
       : parsePagination(query, { field: 'name', direction: 'ASC' });
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const effectiveStatus = status ?? statusFromAg ?? null;
     const filtersToApply = sanitizedFilters ?? filters;
     const includeDisabled =
@@ -57,9 +57,9 @@ export class BusinessProcessesService {
     const qb = repo.createQueryBuilder('bp');
 
     if (effectiveStatus) {
-      applyStatusFilter(qb, { alias: 'bp', explicitStatus: effectiveStatus as StatusState, includeDisabled });
+      applyStatusFilter(qb, { alias: 'bp', explicitStatus: effectiveStatus as StatusState, includeDisabled, matchNone });
     } else {
-      applyStatusFilter(qb, { alias: 'bp', includeDisabled });
+      applyStatusFilter(qb, { alias: 'bp', includeDisabled, matchNone });
     }
 
     if (q) {
@@ -121,7 +121,7 @@ export class BusinessProcessesService {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 }, { field: 'name', direction: 'ASC' });
     const { sort, status, q, filters } = parsed;
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const effectiveStatus = status ?? statusFromAg ?? null;
     const filtersToApply = sanitizedFilters ?? filters;
     const includeDisabled =
@@ -131,9 +131,9 @@ export class BusinessProcessesService {
     const qb = repo.createQueryBuilder('bp').select('bp.id', 'id');
 
     if (effectiveStatus) {
-      applyStatusFilter(qb, { alias: 'bp', explicitStatus: effectiveStatus as StatusState, includeDisabled });
+      applyStatusFilter(qb, { alias: 'bp', explicitStatus: effectiveStatus as StatusState, includeDisabled, matchNone });
     } else {
-      applyStatusFilter(qb, { alias: 'bp', includeDisabled });
+      applyStatusFilter(qb, { alias: 'bp', includeDisabled, matchNone });
     }
 
     if (q) {

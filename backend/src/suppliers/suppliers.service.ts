@@ -31,7 +31,7 @@ export class SuppliersService {
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query)
       : parsePagination(query);
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const where: any = {};
     if (filtersToApply && Object.keys(filtersToApply).length > 0) {
@@ -42,7 +42,9 @@ export class SuppliersService {
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
     const lifecycleStatus = status ?? statusFromAg ?? StatusState.ENABLED;
     // "All" lifts only the default scope: an explicit status (query or status column filter) still applies.
-    if (!includeDisabled || (status ?? statusFromAg)) {
+    if (matchNone) {
+      where.disabled_at = Raw(() => '1 = 0');
+    } else if (!includeDisabled || (status ?? statusFromAg)) {
       if (lifecycleStatus === StatusState.DISABLED) {
         where.disabled_at = Raw((alias) => `${alias} IS NOT NULL AND ${alias} <= NOW()`);
       } else {
@@ -81,7 +83,7 @@ export class SuppliersService {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
-    const { status: statusFromAg, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const where: any = {};
     if (filtersToApply && Object.keys(filtersToApply).length > 0) {
@@ -92,7 +94,9 @@ export class SuppliersService {
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
     const lifecycleStatus = status ?? statusFromAg ?? StatusState.ENABLED;
     // "All" lifts only the default scope: an explicit status (query or status column filter) still applies.
-    if (!includeDisabled || (status ?? statusFromAg)) {
+    if (matchNone) {
+      where.disabled_at = Raw(() => '1 = 0');
+    } else if (!includeDisabled || (status ?? statusFromAg)) {
       if (lifecycleStatus === StatusState.DISABLED) {
         where.disabled_at = Raw((alias) => `${alias} IS NOT NULL AND ${alias} <= NOW()`);
       } else {

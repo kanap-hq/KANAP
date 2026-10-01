@@ -170,7 +170,41 @@ async function run() {
   assert.ok(line!.includes('Labels: 0 items → 2 items'));
   assert.ok(line!.includes('Task type: unknown → Bug'));
 
+  await runOriginTask();
   console.log('portfolio-weekly-report-changes.spec.ts: ok');
+}
+
+/**
+ * A request whose origin task went with a deleted budget line: the audit row carries the
+ * task's label under `origin_task` (the id under a technical `__` key the SQL drops), so the
+ * line names the task instead of "unknown".
+ */
+async function runOriginTask() {
+  const requestRow = taskRow({
+    record_id: 'r1',
+    name: 'Cellar probes request',
+    item_number: 12,
+    status: 'pending_review',
+    field_changes: [{ key: 'origin_task', before: 'T-12: Tune the cellar probes', after: null }],
+  });
+  delete (requestRow as any).priority;
+  delete (requestRow as any).task_type_id;
+  delete (requestRow as any).task_type_name;
+  const requestStub = () => {
+    const manager: any = {
+      query: async (sql: string) => (sql.includes('JOIN portfolio_requests r ON r.id = a.record_id') ? [requestRow] : []),
+    };
+    return manager;
+  };
+  const requestQuery = { ...query, entities: ['request' as const] };
+  const svc = new PortfolioWeeklyReportService();
+  const result = await svc.list(requestQuery, { manager: requestStub() });
+  assert.deepEqual(result.requests.modified[0].changes?.fields, [
+    { key: 'origin_task', before: 'T-12: Tune the cellar probes', after: null, kind: 'text' },
+  ]);
+  const csv = await svc.exportCsv(requestQuery, { manager: requestStub() });
+  const line = csv.content.split('\n').find((entry) => entry.startsWith('REQ-12;'));
+  assert.ok(line?.includes('Origin task: T-12: Tune the cellar probes → empty'), line);
 }
 
 run().catch((error) => {

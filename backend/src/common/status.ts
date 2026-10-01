@@ -113,7 +113,8 @@ export function resolveEndOfValidityAlias(disabledAt: DisabledAtInput, effective
   return parseNamedEndOfValidity('effective_end', effectiveEnd);
 }
 
-export type LifecycleScope = 'active' | 'inactive' | { activeSince: Date } | null;
+/** `none`: the status column filter ticks no value, so the list holds no line. */
+export type LifecycleScope = 'active' | 'inactive' | 'none' | { activeSince: Date } | null;
 
 const ALIAS_TOKEN = '__disabled_at__';
 
@@ -129,6 +130,8 @@ export function disabledAtWhere(scope: LifecycleScope, gridFilter?: unknown): Fi
     parts.push(`${ALIAS_TOKEN} IS NULL OR ${ALIAS_TOKEN} > NOW()`);
   } else if (scope === 'inactive') {
     parts.push(`${ALIAS_TOKEN} IS NOT NULL AND ${ALIAS_TOKEN} <= NOW()`);
+  } else if (scope === 'none') {
+    parts.push('1 = 0');
   } else if (scope && scope.activeSince) {
     parts.push(`${ALIAS_TOKEN} IS NULL OR ${ALIAS_TOKEN} >= :period_start`);
     params.period_start = scope.activeSince;
@@ -180,7 +183,10 @@ export function resolveLifecycleState({
     if (normalizedStatus === StatusState.ENABLED) {
       disabledAt = null;
     } else {
-      disabledAt = currentDisabledAt ?? now;
+      // Disabled without a date: a date already passed stays, otherwise the end of validity is now
+      // (a future date would leave the record enabled).
+      const current = currentDisabledAt ? new Date(currentDisabledAt) : null;
+      disabledAt = current && current.getTime() <= now.getTime() ? current : now;
     }
   } else {
     disabledAt = currentDisabledAt ? new Date(currentDisabledAt) : null;

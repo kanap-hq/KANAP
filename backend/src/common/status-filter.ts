@@ -20,6 +20,8 @@ export type StatusFilterOptions =
       includeDisabled?: boolean;
       asOf?: DateInput;
       period?: StatusFilterPeriod;
+      /** The status column filter ticks no value: nothing matches (see `extractStatusFilterFromAgModel`). */
+      matchNone?: boolean;
     }
   | {
       alias: string;
@@ -29,6 +31,7 @@ export type StatusFilterOptions =
       includeDisabled?: boolean;
       asOf?: DateInput;
       period?: StatusFilterPeriod;
+      matchNone?: boolean;
     };
 
 export interface StatusWhereFragment {
@@ -48,6 +51,9 @@ function buildParamBase(alias: string): string {
 }
 
 export function buildStatusWhereFragment(opts: StatusFilterOptions): StatusWhereFragment | null {
+  if (opts.matchNone) {
+    return { sql: '1 = 0', params: {} };
+  }
   const disabledColumn = `${opts.alias}.${opts.disabledAtColumn ?? DEFAULT_DISABLED_AT_COLUMN}`;
   const paramBase = buildParamBase(opts.alias);
 
@@ -105,8 +111,16 @@ function parseStatusValue(value: unknown): StatusState | undefined {
   return undefined;
 }
 
+/**
+ * Reads the grid's status column filter out of the filter model. A set filter
+ * whose values hold no status (the checklist's Clear sends `values: []`)
+ * matches nothing, like any other empty set filter (`1=0` in the generic
+ * engine): `matchNone` is then true and the caller must return no row (list,
+ * ids, totals and filter values alike).
+ */
 export function extractStatusFilterFromAgModel(filters: any): {
   status?: StatusState;
+  matchNone?: true;
   sanitizedFilters: Record<string, any> | undefined;
 } {
   if (!filters || typeof filters !== 'object') {
@@ -120,17 +134,18 @@ export function extractStatusFilterFromAgModel(filters: any): {
   if (!model || typeof model !== 'object') {
     return { sanitizedFilters: rest };
   }
-  if (Array.isArray(model.values) && model.values.length > 0) {
+  if (Array.isArray(model.values)) {
     const rawValues: unknown[] = model.values;
     const parsed = rawValues
       .map((value) => parseStatusValue(value))
       .filter((val): val is StatusState => val !== undefined);
-    if (parsed.length > 0) {
-      const first: StatusState = parsed[0];
-      const allSame = parsed.every((v) => v === first);
-      if (allSame) {
-        return { status: first, sanitizedFilters: rest as Record<string, any> | undefined };
-      }
+    if (parsed.length === 0) {
+      return { matchNone: true, sanitizedFilters: rest as Record<string, any> | undefined };
+    }
+    const first: StatusState = parsed[0];
+    const allSame = parsed.every((v) => v === first);
+    if (allSame) {
+      return { status: first, sanitizedFilters: rest as Record<string, any> | undefined };
     }
     return { sanitizedFilters: rest as Record<string, any> | undefined };
   }
