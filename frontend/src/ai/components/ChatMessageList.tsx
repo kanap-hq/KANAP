@@ -826,12 +826,6 @@ export default function ChatMessageList({
   onRegenerate,
   editingMessageId,
 }: ChatMessageListProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView?.({ behavior: 'smooth' });
-  }, [messages]);
-
   if (!messages.length) return null;
 
   const rows: React.ReactNode[] = [];
@@ -879,7 +873,6 @@ export default function ChatMessageList({
   return (
     <Stack spacing={3} sx={{ py: 3, pb: 4 }}>
       {rows}
-      <div ref={bottomRef} />
     </Stack>
   );
 }
