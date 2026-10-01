@@ -3,6 +3,52 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
 /**
+ * What a failed save means for the autosave, from the API's answer (the
+ * backend's database error codes, plan planning/perf-scale lot 1D):
+ * - `transient`: 409 `retry` (another write at the same moment) or 503 `busy`
+ *   (the data is held by a long operation, or the server is saturated). The
+ *   save is retried by itself, a few times, after a short wait (the server's
+ *   Retry-After when it sends one);
+ * - `conflict`: 409 `duplicate`, `parent_gone` or `in_use`. Retrying the same
+ *   save cannot help: the error is reported, the save is kept for one more
+ *   attempt (the next edit or flush) instead of being dropped silently;
+ * - `fatal`: anything else. Reported and dropped, as before.
+ */
+export type SaveFailure = { kind: 'transient' | 'conflict' | 'fatal'; retryAfterMs?: number };
+
+/**
+ * Whether the autosave keeps a save that failed this way (transient or
+ * conflict). A save that takes its payload out of a ref before sending puts it
+ * back then (under any edit typed since), so the kept save, run again, still
+ * carries it; a payload refused for another reason is dropped as before.
+ */
+export function keepsFailedSave(error: unknown): boolean {
+  return classifySaveFailure(error).kind !== 'fatal';
+}
+
+/** Waits before each automatic retry of a transient failure (bounded: three retries). */
+export const AUTOSAVE_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000];
+/** Ceiling for a wait the server asks for in Retry-After. */
+const MAX_RETRY_AFTER_MS = 10_000;
+
+const CONFLICT_CODES = new Set(['duplicate', 'parent_gone', 'in_use']);
+
+export function classifySaveFailure(error: unknown): SaveFailure {
+  const response = (error as { response?: { status?: number; data?: { code?: unknown }; headers?: Record<string, unknown> } } | null)?.response;
+  const status = response?.status;
+  const code = typeof response?.data?.code === 'string' ? response.data.code : undefined;
+  if ((status === 409 && code === 'retry') || (status === 503 && code === 'busy')) {
+    const seconds = Number(String(response?.headers?.['retry-after'] ?? '').trim() || NaN);
+    return {
+      kind: 'transient',
+      retryAfterMs: Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, MAX_RETRY_AFTER_MS) : undefined,
+    };
+  }
+  if (status === 409 && code && CONFLICT_CODES.has(code)) return { kind: 'conflict' };
+  return { kind: 'fatal' };
+}
+
+/**
  * Serializes the save tasks of several autosave controllers that write to the
  * SAME entity. Endpoints that replace a JSON column wholesale (agent policy
  * JSON) lose updates when two PATCHes overlap: the second one was computed from
@@ -146,6 +192,13 @@ export interface AutosaveController {
  * the bounded-flush note in the OPEX revamp plan. Reliable persistence is only
  * guaranteed on controlled transitions that call `flush()` (see
  * {@link useAutosaveRegistry} for flushing a whole screen at once).
+ *
+ * A failed save is classified by {@link classifySaveFailure}: a transient one
+ * is retried in place (status stays `saving`), a conflict or a transient one
+ * that kept failing is reported and kept pending (`isBusy()` stays true, the
+ * next flush or schedule sends it again), anything else is reported and
+ * dropped. A kept save must be safe to run again: a caller that takes its
+ * payload out of a ref before sending puts it back when the request fails.
  */
 export default function useAutosave(options?: UseAutosaveOptions): AutosaveController {
   const delay = options?.delay ?? 700;
@@ -158,6 +211,8 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
   const timerRef = useRef<number | null>(null);
   const savedTimerRef = useRef<number | null>(null);
   const pendingRef = useRef<null | (() => Promise<void>)>(null);
+  // The pending save is one kept after a failure (not a new edit): a conflict on it again drops it.
+  const keptRef = useRef(false);
   const drainingRef = useRef<Promise<void> | null>(null);
   // Read at execution time so a queue/handler swap never strands a running drain.
   const queueRef = useRef(options?.queue);
@@ -187,15 +242,46 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
       // Yield once so `drainingRef` is assigned before `finally` can clear it;
       // a save that throws synchronously would otherwise strand a settled marker.
       await Promise.resolve();
+      // Automatic retries of the current transient failure.
+      let retries = 0;
       try {
         while (pendingRef.current) {
           const fn = pendingRef.current;
+          const wasKept = keptRef.current;
           pendingRef.current = null;
+          keptRef.current = false;
           setStatus('saving');
           const queue = queueRef.current;
-          // Serialized with the sibling controllers when a queue is shared, so
-          // two sections never PATCH the same entity concurrently.
-          await (queue ? queue.run(fn) : fn());
+          try {
+            // Serialized with the sibling controllers when a queue is shared, so
+            // two sections never PATCH the same entity concurrently.
+            await (queue ? queue.run(fn) : fn());
+            retries = 0;
+          } catch (error) {
+            const failure = classifySaveFailure(error);
+            if (failure.kind === 'transient' && retries < AUTOSAVE_RETRY_DELAYS_MS.length) {
+              // Try again shortly. A save scheduled meanwhile carries this one's
+              // changes too (callers put a failed payload back), so it goes instead.
+              if (!pendingRef.current) pendingRef.current = fn;
+              const wait = failure.retryAfterMs ?? AUTOSAVE_RETRY_DELAYS_MS[retries];
+              retries += 1;
+              await new Promise((resolve) => window.setTimeout(resolve, wait));
+              continue;
+            }
+            const keep = failure.kind === 'transient' || (failure.kind === 'conflict' && !wasKept);
+            if (keep) {
+              // Kept for the next flush or schedule: the change is not lost silently.
+              if (!pendingRef.current) {
+                pendingRef.current = fn;
+                keptRef.current = true;
+              }
+            } else {
+              // Drop the pending payload so a failing endpoint is not hammered; the
+              // caller can reschedule. Status stays 'error' until the next schedule.
+              pendingRef.current = null;
+            }
+            throw error;
+          }
         }
         setStatus('saved');
         clearSavedTimer();
@@ -204,9 +290,6 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
           setStatus('idle');
         }, savedLingerMs);
       } catch (error) {
-        // Drop the pending payload so a failing endpoint is not hammered; the
-        // caller can reschedule. Status stays 'error' until the next schedule.
-        pendingRef.current = null;
         setStatus('error');
         onError?.(error);
         throw error;
@@ -220,6 +303,7 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
 
   const schedule = useCallback((save: () => Promise<void>) => {
     pendingRef.current = save;
+    keptRef.current = false;
     clearTimer();
     clearSavedTimer();
     setStatus('pending');
@@ -233,6 +317,7 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
         // drain() is async and should never throw synchronously; if it ever
         // does, the controller must still land in a terminal state.
         pendingRef.current = null;
+        keptRef.current = false;
         setStatus('error');
         onError?.(error);
       }

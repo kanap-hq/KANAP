@@ -7,7 +7,7 @@ import ChartCard from '../../components/reports/ChartCard';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useLocale } from '../../i18n/useLocale';
-import useAutosave from '../../hooks/useAutosave';
+import useAutosave, { keepsFailedSave } from '../../hooks/useAutosave';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { drawerMenuItemSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { useKanapDialogs } from '../../components/design';
@@ -308,10 +308,13 @@ export default function ContributorWorkspacePage() {
   const deletedRef = useRef(false);
 
   const handleAutosaveError = useCallback((e: unknown) => {
+    setError(getApiErrorMessage(e, t, t('portfolio:workspace.contributor.messages.saveFailed')));
+    // Busy or conflicting: the autosave keeps the edit (and retried a busy one a few
+    // times already); the screen keeps showing it, the next save sends it again.
+    if (keepsFailedSave(e)) return;
     // Drop the buffer and roll the cache back to the server state; the user
     // sees the error and re-applies the edit. No silent retry storm.
     pendingPatchRef.current = {};
-    setError(getApiErrorMessage(e, t, t('portfolio:workspace.contributor.messages.saveFailed')));
     const target = saveTargetRef.current;
     if (target) void queryClient.invalidateQueries({ queryKey: target.queryKey });
   }, [queryClient, t]);
@@ -325,7 +328,14 @@ export default function ContributorWorkspacePage() {
     pendingPatchRef.current = {};
     const target = saveTargetRef.current;
     if (deletedRef.current || !target || Object.keys(patch).length === 0) return;
-    const res = await api.patch(target.endpoint, patch);
+    let res;
+    try {
+      res = await api.patch(target.endpoint, patch);
+    } catch (e) {
+      // The autosave keeps this save (busy, conflict): the change goes back, under any edit typed since.
+      if (keepsFailedSave(e)) pendingPatchRef.current = { ...patch, ...pendingPatchRef.current };
+      throw e;
+    }
     const savedId: string | undefined = res.data?.id;
     // The job title is a `users` column the signed-in profile carries too, so
     // a change to one's own must reach the header and Settings > Profile.

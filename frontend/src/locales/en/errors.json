@@ -21,5 +21,10 @@
   "APP_CRASH_RELOAD": "Reload",
   "APP_CRASH_DETAILS": "Technical details",
   "APP_UPDATE_AVAILABLE": "A new version is available.",
-  "list_context_not_found": "The saved filters of this list are no longer available. Set the filters again."
+  "list_context_not_found": "The saved filters of this list are no longer available. Set the filters again.",
+  "duplicate": "This record already exists. Reload the page to see the current data.",
+  "parent_gone": "Something this change depends on was deleted in the meantime. Reload the page to see the current data.",
+  "in_use": "This record is still used elsewhere, so it cannot be deleted.",
+  "retry": "Someone else saved a change at the same moment. Please try again.",
+  "busy": "This data is busy with another operation. Please try again in a few seconds."
 }

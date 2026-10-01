@@ -21,5 +21,10 @@
   "APP_CRASH_RELOAD": "Recargar",
   "APP_CRASH_DETAILS": "Detalles técnicos",
   "APP_UPDATE_AVAILABLE": "Hay una nueva versión disponible.",
-  "list_context_not_found": "Los filtros guardados de esta lista ya no están disponibles. Vuelva a definir los filtros."
+  "list_context_not_found": "Los filtros guardados de esta lista ya no están disponibles. Vuelva a definir los filtros.",
+  "duplicate": "Este registro ya existe. Vuelva a cargar la página para ver los datos actuales.",
+  "parent_gone": "Algo de lo que depende este cambio se eliminó mientras tanto. Vuelva a cargar la página para ver los datos actuales.",
+  "in_use": "Este registro todavía se usa en otro lugar, por lo que no se puede eliminar.",
+  "retry": "Otra persona guardó un cambio en el mismo momento. Vuelva a intentarlo.",
+  "busy": "Estos datos están ocupados por otra operación. Vuelva a intentarlo en unos segundos."
 }

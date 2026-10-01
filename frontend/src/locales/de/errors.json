@@ -21,5 +21,10 @@
   "APP_CRASH_RELOAD": "Neu laden",
   "APP_CRASH_DETAILS": "Technische Details",
   "APP_UPDATE_AVAILABLE": "Eine neue Version ist verfügbar.",
-  "list_context_not_found": "Die gespeicherten Filter dieser Liste sind nicht mehr verfügbar. Legen Sie die Filter erneut fest."
+  "list_context_not_found": "Die gespeicherten Filter dieser Liste sind nicht mehr verfügbar. Legen Sie die Filter erneut fest.",
+  "duplicate": "Dieser Eintrag existiert bereits. Laden Sie die Seite neu, um die aktuellen Daten zu sehen.",
+  "parent_gone": "Etwas, von dem diese Änderung abhängt, wurde inzwischen gelöscht. Laden Sie die Seite neu, um die aktuellen Daten zu sehen.",
+  "in_use": "Dieser Eintrag wird noch an anderer Stelle verwendet und kann daher nicht gelöscht werden.",
+  "retry": "Jemand hat im selben Moment eine Änderung gespeichert. Bitte versuchen Sie es erneut.",
+  "busy": "Diese Daten sind gerade durch einen anderen Vorgang belegt. Bitte versuchen Sie es in einigen Sekunden erneut."
 }

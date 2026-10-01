@@ -13,7 +13,7 @@ import { compactListSearchCached } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
-import useAutosave, { useAutosaveRegistry } from '../../hooks/useAutosave';
+import useAutosave, { keepsFailedSave, useAutosaveRegistry } from '../../hooks/useAutosave';
 import { formatItemRef } from '../../utils/item-ref';
 import {
   StatusValue,
@@ -368,9 +368,16 @@ export default function CapexItemPage() {
     if (!uuid) return;
     const keys = Object.keys(pendingPatchRef.current);
     if (keys.length === 0) return;
-    const patch = normalizePatch({ ...pendingPatchRef.current });
+    const taken = pendingPatchRef.current;
+    const patch = normalizePatch({ ...taken });
     pendingPatchRef.current = {};
-    await api.patch(`/capex-items/${uuid}`, patch);
+    try {
+      await api.patch(`/capex-items/${uuid}`, patch);
+    } catch (e) {
+      // The autosave keeps this save (busy, conflict): the change goes back, under any edit typed since.
+      if (keepsFailedSave(e)) pendingPatchRef.current = mergePatch(taken, pendingPatchRef.current);
+      throw e;
+    }
     await queryClient.invalidateQueries({ queryKey: ['capex', idParam] });
     queryClient.invalidateQueries({ queryKey: ['capex-summary'] });
   }, [uuid, idParam, queryClient]);

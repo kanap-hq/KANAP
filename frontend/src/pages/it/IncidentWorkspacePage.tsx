@@ -19,7 +19,7 @@ import type {
   IntegratedDocumentEditorHandle,
   IntegratedDocumentSaveStatus,
 } from '../../components/IntegratedDocumentEditor';
-import useAutosave from '../../hooks/useAutosave';
+import useAutosave, { keepsFailedSave } from '../../hooks/useAutosave';
 import { useIncidentItemNav } from '../../hooks/useModuleItemNav';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
@@ -205,6 +205,8 @@ export function IncidentWorkspacePage() {
   if (data && !stale) incidentIdRef.current = data.id;
   const handleAutosaveError = React.useCallback((e: unknown) => {
     setError(getApiErrorMessage(e, t, t('workspace.incident.messages.saveFailed')));
+    // Busy or conflicting: the autosave keeps the edit, the screen keeps showing it.
+    if (keepsFailedSave(e)) return;
     void queryClient.invalidateQueries({ queryKey });
   }, [queryClient, queryKey, t]);
   const { schedule: scheduleSave, flush: flushSave, status: autosaveStatus } = useAutosave({
@@ -216,7 +218,14 @@ export function IncidentWorkspacePage() {
     pendingPatchRef.current = {};
     const incidentId = incidentIdRef.current;
     if (!incidentId || Object.keys(patch).length === 0) return;
-    const saved = await incidentsApi.update(incidentId, patch);
+    let saved;
+    try {
+      saved = await incidentsApi.update(incidentId, patch);
+    } catch (e) {
+      // The autosave keeps this save (busy, conflict): the change goes back, under any edit typed since.
+      if (keepsFailedSave(e)) pendingPatchRef.current = { ...patch, ...pendingPatchRef.current };
+      throw e;
+    }
     setIncidentCache((current) => ({ ...current, ...patch, updated_at: saved.updated_at }));
   }, [setIncidentCache]);
 

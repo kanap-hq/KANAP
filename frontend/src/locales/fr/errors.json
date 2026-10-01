@@ -21,5 +21,10 @@
   "APP_CRASH_RELOAD": "Recharger",
   "APP_CRASH_DETAILS": "Détails techniques",
   "APP_UPDATE_AVAILABLE": "Une nouvelle version est disponible.",
-  "list_context_not_found": "Les filtres enregistrés de cette liste ne sont plus disponibles. Définissez à nouveau les filtres."
+  "list_context_not_found": "Les filtres enregistrés de cette liste ne sont plus disponibles. Définissez à nouveau les filtres.",
+  "duplicate": "Cet élément existe déjà. Rechargez la page pour voir les données à jour.",
+  "parent_gone": "Un élément dont dépend cette modification a été supprimé entre-temps. Rechargez la page pour voir les données à jour.",
+  "in_use": "Cet élément est encore utilisé ailleurs, il ne peut donc pas être supprimé.",
+  "retry": "Quelqu'un a enregistré une modification au même moment. Réessayez.",
+  "busy": "Ces données sont occupées par une autre opération. Réessayez dans quelques secondes."
 }
