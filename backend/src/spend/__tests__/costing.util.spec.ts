@@ -15,7 +15,8 @@ import { generateWorkingDays } from '../../working-day-profiles/public-holidays'
 // (full time, days per month, per month), days (a bundle over a period),
 // pieces (per month, once on a date), the column's FTE over the year and
 // over its months, limits and every refusal. Expected values were checked
-// with an independent decimal calculation (half away from zero).
+// with an independent decimal calculation (half away from zero; the equal
+// splits of a line bought once round each share toward zero).
 
 const YEAR = 2026;
 /** The standard France calendar of 2026 (public holidays), as a standard calendar computes it. */
@@ -153,10 +154,19 @@ function testBundle() {
     YEAR,
     CALENDARS.get(FLAT20)!,
   );
-  assert.deepEqual(amounts(split.month_cents).slice(0, 4), ['333.37', '333.37', '333.36', '0.00'], 'the remainder on the last month');
+  // 333.366… rounds toward zero to 333.36; the last month takes the 0.02 left.
+  assert.deepEqual(amounts(split.month_cents).slice(0, 4), ['333.36', '333.36', '333.38', '0.00'], 'the remainder on the last month');
   assert.equal(split.total_cents, 100_010n);
   // 3.333333, 3.333333 and 3.333334 days (the sum is exact), each ÷ 20.
   assert.deepEqual(split.fte_months.slice(0, 4), ['0.166667', '0.166667', '0.166667', '0']);
+  // 20 days over three months: 6.666666 twice (toward zero) and 6.666668, each ÷ 20.
+  const twenty = computeLine(
+    bundle({ quantity: '20', unit_price: '100', period_end: `${YEAR}-03-31`, working_day_profile_id: FLAT20 }),
+    YEAR,
+    CALENDARS.get(FLAT20)!,
+  );
+  assert.deepEqual(twenty.fte_months.slice(0, 4), ['0.333333', '0.333333', '0.333333', '0'], '6.666666 ÷ 20 and 6.666668 ÷ 20');
+  assert.deepEqual(amounts(twenty.month_cents).slice(0, 4), ['666.66', '666.66', '666.68', '0.00']);
 
   // A month with no working day in the calendar has an FTE of 0; the money still lands there.
   const shutdown = computeLine(
@@ -183,6 +193,12 @@ function testPieces() {
   assert.deepEqual([late.active_months, amounts(late.month_cents)[2]], [[3], '2000.00']);
   const range = computeLine(pieces({ unit_price: '100', period_end: `${YEAR}-03-31` }), YEAR, null);
   assert.deepEqual(amounts(range.month_cents).slice(0, 4), ['33.33', '33.33', '33.34', '0.00'], 'rounded once, remainder on the last month');
+  // A credit bought once mirrors a charge: −0.07 over the year is 0 eleven times and −0.07 in December, never a positive month.
+  const credit = computeLine(pieces({ unit_price: '-0.07' }), YEAR, null);
+  assert.deepEqual(amounts(credit.month_cents), [...repeat('0.00', 11), '-0.07']);
+  assert.equal(credit.total_cents, -7n);
+  const charge = computeLine(pieces({ unit_price: '0.07' }), YEAR, null);
+  assert.deepEqual(amounts(charge.month_cents), [...repeat('0.00', 11), '0.07']);
 }
 
 /**

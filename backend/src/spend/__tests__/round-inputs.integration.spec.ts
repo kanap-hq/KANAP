@@ -7,6 +7,7 @@ import {
   amountsService,
   assert,
   captureAudit,
+  freezeColumn,
   inRolledBackTransaction,
   itemCsvImporter,
   Kind,
@@ -248,13 +249,14 @@ async function testRefusalsAndProfiles(kind: Kind) {
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), repeat('0.00', 12), `${kind}: nothing written`);
     assert.deepEqual(Object.keys(await readRecords(runner, kind, versionId)), [], `${kind}: no record written`);
 
-    // The stored 4-4-5 profile applies on both scopes (CAPEX used to spread flat whatever the name).
+    // The stored 4-4-5 profile applies on both scopes (CAPEX used to spread flat whatever the name);
+    // its exact weights (1853680000000) give whole amounts.
     await svc.bulkUpsert(versionId, { ...annual, year: YEAR, totals: { planned: 13000 }, spread_profile_name: '4-4-5' }, null, { manager: runner.manager });
     const months = await readMeasure(runner, kind, versionId, 'planned', YEAR);
-    assert.deepEqual(months.slice(0, 3), ['1000.00', '1000.00', '1250.00'], `${kind}: 4-4-5 over the year`);
+    assert.deepEqual(months, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (m % 3 === 0 ? '1250.00' : '1000.00')), `${kind}: 4-4-5 over the year`);
     const { planned } = await readRecords(runner, kind, versionId);
     assert.equal(planned.spread_profile_name, '4-4-5');
-    assert.deepEqual(planned.last_calculation.weights.slice(0, 3), ['0.0769230769', '0.0769230769', '0.0961538462']);
+    assert.deepEqual(planned.last_calculation.weights.slice(0, 3), ['4', '4', '5']);
   });
 }
 
@@ -325,6 +327,61 @@ async function testCrossTenantIsolation(kind: Kind) {
   });
 }
 
+/**
+ * A spread that gives the months already stored writes no amount row and no
+ * amounts audit row; a new calculation of the same months still saves and
+ * audits its record. A frozen column refuses the same spread all the same.
+ */
+async function testIdenticalSpreadWritesNoAmounts(kind: Kind) {
+  await withLine(kind, async ({ runner, versionId, tenantId }) => {
+    const audit = captureAudit();
+    const svc = amountsService(kind, audit);
+    const audits = () => [TABLES[kind].amounts, TABLES[kind].rounds].map((table) => audit.entries.filter((e) => e.table === table).length);
+    // An UPDATE writes a new row version (ctid) even when the values are the same.
+    const rowVersions = async () => (await runner.query(
+      `SELECT ctid::text AS ctid FROM ${TABLES[kind].amounts} WHERE version_id = $1 ORDER BY period`,
+      [versionId],
+    )).map((row: { ctid: string }) => row.ctid);
+    const spread = { kind: 'annual', year: YEAR, totals: { planned: 1800 }, period_start: `${YEAR}-04-01`, period_end: `${YEAR}-12-31` };
+
+    const first = await svc.bulkUpsert(versionId, spread, null, { manager: runner.manager });
+    assert.equal(first.updated, 12, `${kind}: the first spread writes the year`);
+    assert.deepEqual(audits(), [1, 1], `${kind}: and audits the amounts and the record`);
+    const stored = await rowVersions();
+
+    const again = await svc.bulkUpsert(versionId, spread, null, { manager: runner.manager });
+    assert.equal(again.updated, 0, `${kind}: the same spread writes no month`);
+    assert.deepEqual(await rowVersions(), stored, `${kind}: no amount row rewritten`);
+    assert.deepEqual(audits(), [1, 1], `${kind}: and no audit row`);
+    assert.deepEqual(again.round_inputs.map((r: any) => [r.measure, r.method]), [['planned', 'spread']]);
+
+    // The same months by quarters (200 a month, Q2 to Q4 at 600): the record changes and is audited, the months are not written.
+    const quarters = await svc.bulkUpsert(
+      versionId,
+      { kind: 'quarterly', year: YEAR, measure: 'planned', Q2: 600, Q3: 600, Q4: 600, period_start: `${YEAR}-04-01`, period_end: `${YEAR}-12-31` },
+      null,
+      { manager: runner.manager },
+    );
+    assert.equal(quarters.updated, 0, `${kind}: same months by quarters`);
+    assert.deepEqual(await rowVersions(), stored);
+    assert.deepEqual(audits(), [1, 2], `${kind}: only the record's new calculation is audited`);
+    assert.equal((await readRecords(runner, kind, versionId)).planned.last_calculation.kind, 'quarterly');
+
+    // A real change writes and audits as before.
+    await svc.bulkUpsert(versionId, { ...spread, totals: { planned: 2400 } }, null, { manager: runner.manager });
+    assert.deepEqual(audits(), [2, 3], `${kind}: a new total is written and audited`);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), [...repeat('0.00', 3), ...repeat('266.66', 8), '266.72']);
+
+    // The freeze check comes before the comparison: a frozen column refuses even the same spread.
+    await freezeColumn(runner, kind, tenantId, YEAR, 'budget');
+    await assert.rejects(
+      () => amountsService(kind, audit, realFreeze()).bulkUpsert(versionId, { ...spread, totals: { planned: 2400 } }, null, { manager: runner.manager }),
+      ForbiddenException,
+      `${kind}: frozen, unchanged or not`,
+    );
+  });
+}
+
 /** A frozen column refuses a spread before any record is written. */
 async function testFrozenSpreadWritesNoRecord(kind: Kind) {
   await withLine(kind, async ({ runner, versionId, tenantId }) => {
@@ -356,6 +413,7 @@ void runSpecs(
     [`testItemCsvRecords(${kind})`, () => testItemCsvRecords(kind)],
     [`testCrossTenantIsolation(${kind})`, () => testCrossTenantIsolation(kind)],
     [`testFrozenSpreadWritesNoRecord(${kind})`, () => testFrozenSpreadWritesNoRecord(kind)],
+    [`testIdenticalSpreadWritesNoAmounts(${kind})`, () => testIdenticalSpreadWritesNoAmounts(kind)],
   ] as Array<[string, () => Promise<void>]>),
 );
 

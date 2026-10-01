@@ -12,6 +12,6 @@ export class SpreadProfile {
   type!: string;
 
   @Column('jsonb')
-  weights_json!: number[]; // 12 weights summing to 1.0
+  weights_json!: number[]; // 12 weights, none negative; a spread divides by their sum (flat: twelve 1s, 4-4-5: 4, 4, 5 per quarter)
 }
 

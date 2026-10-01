@@ -31,10 +31,11 @@ import {
 } from './round-inputs.fixtures';
 
 // Copy and clear of a budget column on OPEX and CAPEX: the monthly shape is
-// kept, an uplift rounds to whole units with the remainder on the last month
-// that has an amount, the period follows the copy, and both operations are
-// all or nothing. A copy writes only the lines valid in the destination
-// year, prorated to the months of their validity; a clear runs on every line.
+// kept, an uplift rounds to whole units (truncated toward zero, the units
+// left to the largest dropped fractions, no month changes sign), the period
+// follows the copy, and both operations are all or nothing. A copy writes
+// only the lines valid in the destination year, prorated to the months of
+// their validity; a clear runs on every line.
 
 const YEAR = 2031;
 const KINDS: Kind[] = ['opex', 'capex'];
@@ -79,12 +80,29 @@ async function testCopyArithmetic() {
   // 12 000 over April to December, +2 % → 1 360 × 9 = 12 240.
   const milestone = [0n, 0n, 0n, ...repeat(133_333n, 8), 133_336n];
   assert.deepEqual(units(copiedMonths(milestone, Decimal.from(2))), [0, 0, 0, ...repeat(1360, 9)]);
-  // 100.40 × 12, +2.5 % → 103 × 11 and 102 (round(1 234.92) = 1 235).
-  assert.deepEqual(units(copiedMonths(repeat(10_040n, 12), Decimal.from('2.5'))), [...repeat(103, 11), 102]);
-  // −3 % on January to June: 97 × 5 and June 99 (round(584.328) = 584); July to December stay zero.
-  assert.deepEqual(units(copiedMonths([...repeat(10_040n, 6), ...repeat(0n, 6)], Decimal.from(-3))), [...repeat(97, 5), 99, ...repeat(0, 6)]);
-  // Half away from zero on a whole unit: 1.00 +50 % is 1.50, so 2; −1.00 +50 % is −2.
+  // 100.40 × 12, +2.5 %: 102.91 each → 102, round(1 234.92) = 1 235 leaves 11 units, ties go to the latest months.
+  assert.deepEqual(units(copiedMonths(repeat(10_040n, 12), Decimal.from('2.5'))), [102, ...repeat(103, 11)]);
+  // −3 % on January to June: 97.388 → 97, round(584.328) = 584 leaves 2 units for May and June; July to December stay zero.
+  assert.deepEqual(units(copiedMonths([...repeat(10_040n, 6), ...repeat(0n, 6)], Decimal.from(-3))), [...repeat(97, 4), 98, 98, ...repeat(0, 6)]);
+  // Half away from zero on a whole unit: 1.00 +50 % is 1.50, so 2; −1.00 +50 % is −2; each sign group rounds its own total.
+  assert.deepEqual(units(copiedMonths([100n], Decimal.from(50))), [2]);
+  assert.deepEqual(units(copiedMonths([-100n], Decimal.from(50))), [-2]);
   assert.deepEqual(units(copiedMonths([100n, -100n], Decimal.from(50))), [2, -2]);
+  // 0.60 × 12, +0.1 %: 0.6006 each → 0, round(7.2072) = 7 units for the seven latest months, never a negative month.
+  assert.deepEqual(units(copiedMonths(repeat(60n, 12), Decimal.from('0.1'))), [...repeat(0, 5), ...repeat(1, 7)]);
+  // 0.50 × 12, +1 %: 0.505 each → 0, round(6.06) = 6 units for the six latest months.
+  assert.deepEqual(units(copiedMonths(repeat(50n, 12), Decimal.from(1))), [...repeat(0, 6), ...repeat(1, 6)]);
+  // A credit note mirrors it: −0.60 × 12 gives −1 to the seven latest months.
+  assert.deepEqual(units(copiedMonths(repeat(-60n, 12), Decimal.from('0.1'))), [...repeat(0, 5), ...repeat(-1, 7)]);
+  // Mixed signs, 100.40 × 11 and a credit of −50.40 in December, +2.5 %: the positive months share
+  // round(1 132.01) = 1 132 (102 in January, 103 after), the credit round(−51.66) = −52; 1 080 for the year.
+  const mixed = copiedMonths([...repeat(10_040n, 11), -5_040n], Decimal.from('2.5'));
+  assert.deepEqual(units(mixed), [102, ...repeat(103, 10), -52]);
+  assert.equal(mixed.reduce((a, b) => a + b, 0n), 108_000n);
+  // Mixed signs where the groups overshoot: 0.60 × 11 and −0.40, +0.1 %. The positive months would take
+  // round(6.6066) = 7 and the credit round(−0.4004) = 0, but the year is round(6.2062) = 6: the positive
+  // group, rounded away from zero, gives one unit back. The credit month becomes 0, never positive.
+  assert.deepEqual(units(copiedMonths([...repeat(60n, 11), -40n], Decimal.from('0.1'))), [...repeat(0, 5), ...repeat(1, 6), 0]);
   // Periods: shifted by the year delta, 29 February clamps to 28, 28 February stays 28.
   assert.deepEqual(shiftPeriod({ period_start: '2032-02-29', period_end: '2032-12-31' }, 1), { period_start: '2033-02-28', period_end: '2033-12-31' });
   assert.deepEqual(shiftPeriod({ period_start: '2031-02-28', period_end: '2031-11-30' }, 1), { period_start: '2032-02-28', period_end: '2032-11-30' });
@@ -179,7 +197,7 @@ async function testCopyWithUplift(kind: Kind) {
 
     await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'revision', destinationYear: YEAR + 2, destinationColumn: 'revision', percentageIncrease: '2.5' });
     const secondDestination = await findVersion(runner, kind, second.itemId, YEAR + 2);
-    assert.deepEqual(await readMeasure(runner, kind, secondDestination!.id, 'committed', YEAR + 2), [...repeat('103.00', 11), '102.00']);
+    assert.deepEqual(await readMeasure(runner, kind, secondDestination!.id, 'committed', YEAR + 2), ['102.00', ...repeat('103.00', 11)]);
     const { committed } = await readRecords(runner, kind, secondDestination!.id);
     assert.deepEqual(
       [committed.period_start, committed.period_end, committed.last_calculation.total, committed.last_calculation.source_method],
@@ -187,12 +205,12 @@ async function testCopyWithUplift(kind: Kind) {
       `${kind}: a source without a record copies to the whole year`,
     );
 
-    // A negative uplift: whole units, the remainder on the last month with an amount (June).
+    // A negative uplift: whole units, the two units left on the latest months with an amount (May and June).
     const third = await seedLine(runner, kind, tenantId, YEAR, { expected_landing: [...repeat('100.40', 6), ...repeat('0', 6)] }, 3);
     await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'landing', destinationYear: YEAR, destinationColumn: 'budget', percentageIncrease: '-3', overwrite: true });
     assert.deepEqual(
       await readMeasure(runner, kind, third.versionId, 'planned', YEAR),
-      [...repeat('97.00', 5), '99.00', ...repeat('0.00', 6)],
+      [...repeat('97.00', 4), '98.00', '98.00', ...repeat('0.00', 6)],
     );
   });
 }
@@ -264,6 +282,16 @@ async function testCopySkipsAndRefusals(kind: Kind) {
       BadRequestException,
       `${kind}: percentage that is not a number`,
     );
+    // −100 % or less would copy zeros or turn every month's sign: refused, dry run included; just above is fine.
+    for (const percentageIncrease of [-100, '-100.00', -150, '-1000']) {
+      await assert.rejects(
+        () => copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease, overwrite: true, dryRun: true }),
+        (err: any) => err instanceof BadRequestException && err.message === 'The percentage must be above -100 %, or the copied amounts would be zero or change sign.',
+        `${kind}: ${percentageIncrease} % refused`,
+      );
+    }
+    const almostAll = await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: '-99.9', overwrite: true, dryRun: true });
+    assert.deepEqual(almostAll.results.map((r: any) => r.newValue), [0], `${kind}: -99.9 % of 120 rounds to 0`);
     const noOverwrite = await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0 });
     assert.deepEqual([noOverwrite.summary.processed, noOverwrite.summary.skipped], [0, 1], `${kind}: destination has amounts, no overwrite`);
     const zeroSource = await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'revision', destinationYear: YEAR + 1, destinationColumn: 'revision', percentageIncrease: 0 });
@@ -469,7 +497,7 @@ async function testEndedLineIsNotCopied(kind: Kind) {
   });
 }
 
-/** Lines ending mid destination year get only their months; the uplift remainder lands on the last month kept. */
+/** Lines ending mid destination year get only their months; the uplift's units left go to the latest months kept. */
 async function testCopyProratesTheEnd(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, `${kind}-prorata-end`);
@@ -492,7 +520,7 @@ async function testCopyProratesTheEnd(kind: Kind) {
     const audit = captureAudit();
     await copy(kind, runner, op, audit);
     const june30Next = await findVersion(runner, kind, june30.itemId, YEAR + 1);
-    assert.deepEqual(await readMeasure(runner, kind, june30Next!.id, 'planned', YEAR + 1), [...repeat('103.00', 5), '102.00', ...repeat('0.00', 6)]);
+    assert.deepEqual(await readMeasure(runner, kind, june30Next!.id, 'planned', YEAR + 1), ['102.00', ...repeat('103.00', 5), ...repeat('0.00', 6)]);
     let { planned } = await readRecords(runner, kind, june30Next!.id);
     assert.deepEqual([planned.period_start, planned.period_end, planned.last_calculation.total], [`${YEAR + 1}-01-01`, `${YEAR + 1}-06-30`, '617.00']);
 

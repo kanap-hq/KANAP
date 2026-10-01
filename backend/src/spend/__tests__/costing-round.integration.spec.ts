@@ -328,10 +328,13 @@ async function testWholesaleReplacement(kind: Kind) {
 
     const before = (await readRecords(runner, kind, versionId)).planned;
     const audits = roundAudits(audit).length;
-    await svc.bulkUpsert(versionId, linesPayload([licenceLine({ quantity: '5.000', unit_price: 200, label: ' Fewer licences ' })]), null, { manager: runner.manager });
+    const amountAudits = audit.entries.filter((e) => e.table === amountsTable(kind)).length;
+    const same = await svc.bulkUpsert(versionId, linesPayload([licenceLine({ quantity: '5.000', unit_price: 200, label: ' Fewer licences ' })]), null, { manager: runner.manager });
     const after = (await readRecords(runner, kind, versionId)).planned;
     assert.equal(after.updated_at.getTime(), before.updated_at.getTime(), `${kind}: the same lines write no record`);
     assert.equal(roundAudits(audit).length, audits, `${kind}: and audit none`);
+    assert.equal(same.updated, 0, `${kind}: the recompute gives the stored months: no month written`);
+    assert.equal(audit.entries.filter((e) => e.table === amountsTable(kind)).length, amountAudits, `${kind}: and no amounts audit`);
     assert.equal((await readLines(runner, kind, versionId, 'planned'))[0].id, lines[0].id, `${kind}: nor lines`);
 
     // Days per month compare by value: 5, "5" and "5.000" on an unchanged line write nothing.

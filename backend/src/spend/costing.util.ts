@@ -1,6 +1,6 @@
-import { Decimal, DecimalLimitError, DecimalLimits, divRoundHalfAway, parseDecimalLiteral, parseLimitedDecimal } from '../common/decimal';
+import { Decimal, DECIMAL_SCALE_DIGITS, DecimalLimitError, DecimalLimits, divRoundHalfAway, parseDecimalLiteral, parseLimitedDecimal } from '../common/decimal';
 import { CENTS_LIMIT } from '../common/amount';
-import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, SpreadInputError } from './spread.util';
+import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, splitTowardZero, SpreadInputError } from './spread.util';
 
 /**
  * Quantity × price lines: the months of one budget column computed from its
@@ -17,18 +17,20 @@ import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, SpreadInputError } from './sprea
  *   month (6 decimals, 0 when the calendar has none that month);
  * - people, per month: quantity × unit price per month; FTE = the quantity;
  * - days (a bundle, per day, once): quantity × unit price rounded to cents
- *   once, split equally over the active months (remainder on the last); the
- *   days split the same way (6 decimals), and the FTE of a month is its share
- *   ÷ the calendar's working days of that month;
+ *   once, split equally over the active months (`splitTowardZero`: each
+ *   share rounded toward zero, what is left on the last month); the days
+ *   split the same way (6 decimals), and the FTE of a month is its share ÷
+ *   the calendar's working days of that month;
  * - pieces, per piece, per month: quantity × unit price per month; FTE 0;
  * - pieces, per piece, once: quantity × unit price rounded once, split
- *   equally (one date: all of it in that date's month); FTE 0.
+ *   equally the same way (one date: all of it in that date's month); FTE 0.
  *
  * People are counted per month (`frequency` per_month), days once over their
  * period, pieces either. Everything is exact (`common/decimal.ts`) and
- * rounded half away from zero where said. A month counts for a line when the
- * line's period covers its 15th (`activeMonths`); a line bought once on one
- * date (start = end) counts that date's month. Its other months are zero.
+ * rounded half away from zero where said, except the equal splits above. A
+ * month counts for a line when the line's period covers its 15th
+ * (`activeMonths`); a line bought once on one date (start = end) counts that
+ * date's month. Its other months are zero.
  */
 
 export type QuantityUnit = 'days' | 'people' | 'pieces';
@@ -293,21 +295,21 @@ function divide(a: Decimal, b: Decimal, decimals: number): Decimal {
 
 const zeros = <T>(value: T): T[] => Array.from({ length: 12 }, () => value);
 
-/** `total` split equally over `months`, the rounding remainder on the last. */
+/** `total` cents split equally over `months` (see `splitTowardZero`); the other months are zero. */
 function splitCents(total: bigint, months: number[]): bigint[] {
   const cents = zeros(0n);
-  const share = divRoundHalfAway(total, BigInt(months.length));
-  for (const m of months) cents[m - 1] = share;
-  cents[months[months.length - 1] - 1] += total - share * BigInt(months.length);
+  splitTowardZero(total, months.map(() => 1n)).forEach((share, i) => { cents[months[i] - 1] = share; });
   return cents;
 }
 
-/** The days of a line bought once, split like its price: equal shares (6 decimals), the remainder on the last month. */
+const DAY_SCALE = 10n ** BigInt(DECIMAL_SCALE_DIGITS - 6);
+
+/** The days of a line bought once, split like its price: equal shares in millionths of a day (6 decimals), the rest on the last month. */
 function splitDays(quantity: Decimal, months: number[]): Decimal[] {
   const days = zeros(Decimal.ZERO);
-  const share = quantity.divRound(months.length, 6);
-  for (const m of months) days[m - 1] = share;
-  days[months[months.length - 1] - 1] = quantity.sub(share.mul(months.length - 1));
+  // A quantity has at most 3 decimals: in millionths of a day it is exact.
+  const millionths = quantity.divRound(1, 6).units / DAY_SCALE;
+  splitTowardZero(millionths, months.map(() => 1n)).forEach((share, i) => { days[months[i] - 1] = Decimal.from(`${share}e-6`); });
   return days;
 }
 
@@ -349,7 +351,7 @@ export function computeLine(line: CostLine, year: number, calendar: LineCalendar
   const presence = line.days_per_month == null ? null : Decimal.from(line.days_per_month);
   let month_cents = zeros(0n);
   if (line.frequency === 'once') {
-    // Bought once: the price rounded once, split equally, the remainder on the last month.
+    // Bought once: the price rounded once, split equally (toward zero), the rest on the last month.
     month_cents = splitCents(inLimit(perUnit.toCents()), months);
   } else {
     for (const m of months) {
