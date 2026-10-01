@@ -300,12 +300,20 @@ export function fteColumnHeader(t: TFunction, slot: YearSlot, columnName: string
   return t('ops:shared.fteColumnHeader', { column: columnName, year: slotYear(slot, currentYear) });
 }
 
+// One formatter per locale, shared by every cell: building one is far slower than formatting.
+const fteFormatters = new Map<string, Intl.NumberFormat>();
+
 /** FTE with two decimals, as the server rounds it; blank when unknown. */
 export function formatFte(value: unknown, locale: string): string {
   if (value == null || value === '') return '';
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
-  return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  let formatter = fteFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    fteFormatters.set(locale, formatter);
+  }
+  return formatter.format(n);
 }
 
 /**

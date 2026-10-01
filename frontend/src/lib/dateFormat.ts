@@ -18,6 +18,24 @@ export type FormatShortDateOptions = {
   empty?: string;
 };
 
+// One formatter per locale, shared by every call: list cells format a date each, and building a
+// formatter is far slower than formatting.
+const dayMonthYearFormatters = new Map<string, Intl.DateTimeFormat>();
+const timeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function cachedFormatter(
+  cache: Map<string, Intl.DateTimeFormat>,
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  let formatter = cache.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    cache.set(locale, formatter);
+  }
+  return formatter;
+}
+
 function getDatePart(value: string): string {
   return value.includes('T') ? value.split('T')[0] : value;
 }
@@ -50,7 +68,7 @@ export function formatShortDate(
   if (!date) return empty;
 
   const showYear = yearMode === 'always' || (yearMode === 'auto' && date.getFullYear() !== new Date().getFullYear());
-  const parts = new Intl.DateTimeFormat(locale, {
+  const parts = cachedFormatter(dayMonthYearFormatters, locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -73,7 +91,7 @@ export function formatShortDateTime(
   if (Number.isNaN(date.getTime())) return empty;
 
   const datePart = formatShortDate(date, locale, { year: 'always' });
-  const timePart = new Intl.DateTimeFormat(locale, {
+  const timePart = cachedFormatter(timeFormatters, locale, {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);

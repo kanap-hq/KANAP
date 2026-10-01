@@ -2,7 +2,8 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
-import ServerDataGrid, { DATE_COLUMN_FILTER, StatusScope } from '../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, StatusScope, gridSortModel } from '../components/ServerDataGrid';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
@@ -82,7 +83,10 @@ type SummaryRow = {
   allocation_warning?: string | null;
 };
 
-// modal-specific option lists removed
+/** The query the footer totals follow: the list state without the sort, plus the FTE columns shown. */
+type TotalsQuery = { q: string; filters: string; statusScope: StatusScope; fte: string };
+
+const TOTALS_QUERY_KEY = 'capex-summary-totals';
 
 export default function CapexPage() {
   const { hasLevel } = useAuth();
@@ -90,10 +94,7 @@ export default function CapexPage() {
   const locale = useLocale();
   const budgetColumns = useBudgetColumns();
   const analyticsAxes = useAnalyticsAxes();
-
-  if (!hasLevel('capex', 'reader')) {
-    return <ForbiddenPage />;
-  }
+  const queryClient = useQueryClient();
 
   const Y = new Date().getFullYear();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -102,8 +103,6 @@ export default function CapexPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<SummaryRow[]>([]);
-  const [pinnedTotals, setPinnedTotals] = useState<any[]>([]);
-  const [reportingCurrency, setReportingCurrency] = useState('EUR');
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; filtersString: string; statusScope?: StatusScope } | null>(null);
   const gridApiRef = useRef<any>(null);
   const storedContextRef = useRef(readStoredCapexListContext());
@@ -219,71 +218,58 @@ export default function CapexPage() {
     build: t('capex.runBuild.build'),
   }), [t]);
 
-  // The FTE columns the grid shows: the footer asks for their sums only.
-  const fteFieldsRef = useRef<string[]>([]);
-  // Only the latest totals request fills the footer, so a slower earlier one cannot overwrite it.
-  const totalsRequestRef = useRef(0);
-  // The parameters of the footer's last request: the grid reports the same query several times
-  // while it starts (URL sync, initial sort, grid ready), and only a different query asks again.
-  const totalsKeyRef = useRef<string | null>(null);
-
-  const updateTotals = useCallback(async (
-    { q, filterModel, statusScope }: { q: string; filterModel: any; statusScope?: StatusScope },
-    force = false,
-  ) => {
-    const params: Record<string, any> = {};
-    if (q) params.q = q;
-    if (filterModel && Object.keys(filterModel).length > 0) params.filters = JSON.stringify(filterModel);
-    Object.assign(params, statusScopeParams(statusScope));
-    if (fteFieldsRef.current.length > 0) params.fte = fteFieldsRef.current.join(',');
-    const key = JSON.stringify(params);
-    if (!force && key === totalsKeyRef.current) return;
-    totalsKeyRef.current = key;
-    const request = ++totalsRequestRef.current;
-    try {
-      const res = await api.get('/capex-items/summary/totals', { params });
-      if (request !== totalsRequestRef.current) return;
-      const totals = res.data || {};
-      const rc = typeof totals.reportingCurrency === 'string' ? totals.reportingCurrency : 'EUR';
-      setReportingCurrency(rc);
-      const pinned = {
-        id: '__capex_totals__',
-        description: t('shared.total'),
-        versions: totalsToVersions(totals),
-        ...fteTotalsToRow(totals.fte),
-      };
-      setPinnedTotals([pinned]);
-    } catch (err) {
-      if (request === totalsRequestRef.current) {
-        setPinnedTotals([]);
-        totalsKeyRef.current = null;
-      }
-    }
+  // The footer follows the query the grid reports once it is ready (see onQueryStateChange), and
+  // the FTE columns it shows: one request per distinct query, none on a sort (the key leaves it
+  // out). The grid reports the same query several times while it starts (URL sync, initial sort,
+  // grid ready); the key stays the same. A superseded request is cancelled through its signal.
+  const [totalsQuery, setTotalsQuery] = useState<Omit<TotalsQuery, 'fte'> | null>(null);
+  const [fteFields, setFteFields] = useState('');
+  const followTotalsQuery = useCallback((next: Omit<TotalsQuery, 'fte'>) => {
+    setTotalsQuery((prev) => (prev && prev.q === next.q && prev.filters === next.filters && prev.statusScope === next.statusScope ? prev : next));
   }, []);
-
   // Showing or hiding an FTE column refetches the footer with the FTE columns now shown.
   const followFteColumns = useCallback((state: Parameters<typeof visibleFteFields>[0]) => {
-    const fields = visibleFteFields(state);
-    if (fields.join(',') === fteFieldsRef.current.join(',')) return false;
-    fteFieldsRef.current = fields;
-    return true;
+    setFteFields(visibleFteFields(state).join(','));
   }, []);
+  const totals = useQuery({
+    queryKey: [TOTALS_QUERY_KEY, totalsQuery ? { ...totalsQuery, fte: fteFields } : null],
+    queryFn: async ({ signal }) => {
+      const params: Record<string, any> = {};
+      if (totalsQuery!.q) params.q = totalsQuery!.q;
+      if (totalsQuery!.filters) params.filters = totalsQuery!.filters;
+      Object.assign(params, statusScopeParams(totalsQuery!.statusScope));
+      if (fteFields) params.fte = fteFields;
+      const res = await api.get('/capex-items/summary/totals', { params, signal });
+      return res.data || {};
+    },
+    enabled: totalsQuery != null,
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    retry: false,
+  });
+  const pinnedTotals = useMemo(() => {
+    if (!totals.data || totals.isError) return [];
+    return [{
+      id: '__capex_totals__',
+      description: t('shared.total'),
+      versions: totalsToVersions(totals.data),
+      ...fteTotalsToRow(totals.data.fte),
+    }];
+  }, [totals.data, totals.isError, t]);
+  const reportingCurrency = typeof totals.data?.reportingCurrency === 'string' ? totals.data.reportingCurrency : 'EUR';
 
-  // The footer follows the query the grid reports once it is ready (see onQueryStateChange). A delete
-  // or an import changes the lines without changing the query: ask again for the same one.
+  // A delete or an import changes the lines without changing the query: ask again for the same one.
   useEffect(() => {
-    const last = lastQueryRef.current;
-    if (!refreshKey || !last) return;
-    updateTotals({ q: last.q, filterModel: last.filters, statusScope: last.statusScope }, true);
-  }, [refreshKey, updateTotals]);
+    if (!refreshKey) return;
+    queryClient.invalidateQueries({ queryKey: [TOTALS_QUERY_KEY] });
+  }, [refreshKey, queryClient]);
 
   const buildGridSearch = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const stored = storedContextRef.current || readStoredCapexListContext();
     if (stored && !storedContextRef.current) storedContextRef.current = stored;
     const fallbackSort = listSort(lastQueryRef.current?.sort || urlParams.get('sort') || stored?.sort);
-    const sortModel = gridApiRef.current?.getSortModel?.() as Array<{ colId?: string; sort?: 'asc' | 'desc' | undefined }> | undefined;
-    const primarySort = Array.isArray(sortModel) && sortModel.length > 0 ? sortModel[0] : undefined;
+    const primarySort = gridApiRef.current ? gridSortModel(gridApiRef.current)[0] : undefined;
     let sort = fallbackSort;
     if (primarySort?.colId) {
       const direction = primarySort.sort === 'asc' ? 'ASC' : 'DESC';
@@ -301,6 +287,18 @@ export default function CapexPage() {
     return sp;
   }, []);
 
+  // The list part of the cell links, built once per list state (each grid report replaces
+  // lastQueryRef.current) rather than once per cell.
+  const gridSearchCacheRef = useRef<{ state: unknown; search: string } | null>(null);
+  const gridSearch = useCallback(() => {
+    const state = lastQueryRef.current;
+    const cached = gridSearchCacheRef.current;
+    if (state && cached && cached.state === state) return cached.search;
+    const search = buildGridSearch().toString();
+    if (state) gridSearchCacheRef.current = { state, search };
+    return search;
+  }, [buildGridSearch]);
+
   const getCapexHref = useCallback((row: unknown, colId?: string) => {
     const item = row as SummaryRow | null | undefined;
     if (!item?.id) return null;
@@ -311,8 +309,7 @@ export default function CapexPage() {
     if (colId === 'cost_center_label') {
       return item.cost_center_id ? `/master-data/cost-centers/${item.cost_center_id}/overview` : null;
     }
-    const sp = buildGridSearch();
-    const next = new URLSearchParams(sp);
+    const next = new URLSearchParams(gridSearch());
     let tab = 'overview';
     const amountYear = amountColumnYear(colId, Y);
     if (colId === 'allocation_label') {
@@ -326,7 +323,7 @@ export default function CapexPage() {
     }
     const ref = item.item_number != null ? formatItemRef('capex', item.item_number) : item.id;
     return `/ops/capex/${ref}/${tab}?${next.toString()}`;
-  }, [Y, buildGridSearch]);
+  }, [Y, gridSearch]);
 
   const defaultAnalyticsLabel = analyticsAxes.label(analyticsAxes.defaultAxis ?? { name: null });
 
@@ -641,6 +638,10 @@ export default function CapexPage() {
     </Stack>
   );
 
+  if (!hasLevel('capex', 'reader')) {
+    return <ForbiddenPage />;
+  }
+
   return (
     <>
       <PageHeader title={t('capex.titleWithCurrency', { currency: reportingCurrency })} actions={actions} />
@@ -657,7 +658,6 @@ export default function CapexPage() {
         enableSearch
         pinnedBottomRowData={pinnedTotals}
         defaultSort={gridDefaultSort}
-        extraParams={{ years: [Y - 1, Y, Y + 1, Y + 2].join(',') }}
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="capex-summary"
         initialState={initialGridState}
@@ -667,12 +667,9 @@ export default function CapexPage() {
           // The saved layout is applied by now; the first totals request follows the query state.
           followFteColumns(gridApi?.getColumnState?.());
         }}
-        onColumnStateChange={(state) => {
-          const last = lastQueryRef.current;
-          // A saved layout applied before the grid is ready only records the FTE columns: the first
-          // totals request comes with the query state, carrying the initial filter.
-          if (followFteColumns(state) && gridApiRef.current && last) updateTotals({ q: last.q, filterModel: last.filters, statusScope: last.statusScope });
-        }}
+        // A saved layout applied before the grid is ready only records the FTE columns: the first
+        // totals request comes with the query state, carrying the initial filter.
+        onColumnStateChange={followFteColumns}
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};
@@ -683,7 +680,7 @@ export default function CapexPage() {
           storedContextRef.current = snapshot;
           writeStoredCapexListContext(snapshot);
           // Before the grid is ready it reports its URL sync without the initial filter yet.
-          if (gridApiRef.current) updateTotals({ q: state.q || '', filterModel: filtersObject, statusScope: scope });
+          if (gridApiRef.current) followTotalsQuery({ q: state.q || '', filters: filtersString, statusScope: scope });
         }}
         enableRowSelection={canAdmin}
         onSelectionChanged={setSelectedRows}

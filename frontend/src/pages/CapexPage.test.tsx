@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, render, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => {
@@ -137,10 +138,12 @@ const DEFAULT_DIMENSION = dimension('default', null, 0, { is_default: true });
 /** Renders the page and waits for the totals footer, the last state update of the first load. */
 async function renderPage(url = '/ops/capex') {
   render(
-    <MemoryRouter initialEntries={[url]}>
-      <LocationProbe />
-      <CapexPage />
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter initialEntries={[url]}>
+        <LocationProbe />
+        <CapexPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
   await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
 }
@@ -426,10 +429,12 @@ describe('CapexPage', () => {
     dimensions.ready = false;
     dimensions.list = [];
     render(
-      <MemoryRouter initialEntries={['/ops/capex']}>
-        <LocationProbe />
-        <CapexPage />
-      </MemoryRouter>,
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/ops/capex']}>
+          <LocationProbe />
+          <CapexPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
     // The budget columns setting is known from the start (mocked); the grid and the footer totals still wait.
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
