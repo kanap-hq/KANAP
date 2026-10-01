@@ -33,12 +33,12 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
 
 const ENV_OPTIONS = [
-  { value: 'prod', label: 'PROD' },
-  { value: 'pre_prod', label: 'PRE-PROD' },
-  { value: 'qa', label: 'QA' },
-  { value: 'test', label: 'TEST' },
-  { value: 'dev', label: 'DEV' },
-  { value: 'sandbox', label: 'SANDBOX' },
+  { value: 'prod', labelKey: 'enums.environment.prod' },
+  { value: 'pre_prod', labelKey: 'enums.environment.preProd' },
+  { value: 'qa', labelKey: 'enums.environment.qa' },
+  { value: 'test', labelKey: 'enums.environment.test' },
+  { value: 'dev', labelKey: 'enums.environment.dev' },
+  { value: 'sandbox', labelKey: 'enums.environment.sandbox' },
 ] as const;
 
 export type DeploymentRecord = {
@@ -95,10 +95,6 @@ type DeploymentsEditorProps = {
   readOnly?: boolean;
 };
 
-function envLabel(value: string) {
-  return ENV_OPTIONS.find((item) => item.value === value)?.label || value.toUpperCase();
-}
-
 function formatDate(value: string | null | undefined, locale: string) {
   if (!value) return '—';
   const date = new Date(String(value).includes('T') ? String(value) : `${value}T00:00:00`);
@@ -129,6 +125,10 @@ export default function DeploymentsEditor({
   const locale = useLocale();
   const dialogs = useKanapDialogs();
   const { byField, labelFor } = useItOpsEnumOptions();
+  const envLabel = React.useCallback((value: string) => {
+    const option = ENV_OPTIONS.find((item) => item.value === value);
+    return option ? t(option.labelKey) : value;
+  }, [t]);
   const [assignments, setAssignments] = React.useState<Record<string, Assignment[]>>({});
   const [deploymentDialogOpen, setDeploymentDialogOpen] = React.useState(false);
   const [deploymentDraft, setDeploymentDraft] = React.useState<DeploymentDraft>(() => createDeploymentDraft());
@@ -246,7 +246,7 @@ export default function DeploymentsEditor({
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.removeFailed')));
     }
-  }, [dialogs, onRefresh, t]);
+  }, [dialogs, envLabel, onRefresh, t]);
 
   const openAssignmentDialog = React.useCallback((deploymentId: string, assignment?: Assignment) => {
     setAssignmentDraft({
@@ -471,7 +471,7 @@ export default function DeploymentsEditor({
             >
               {ENV_OPTIONS.map((option) => (
                 <MenuItem key={option.value} value={option.value} disabled={!deploymentDraft.id && usedEnvironments.has(option.value)} sx={drawerMenuItemSx}>
-                  {option.label}
+                  {t(option.labelKey)}
                 </MenuItem>
               ))}
             </Select>

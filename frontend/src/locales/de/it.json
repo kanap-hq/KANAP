@@ -801,7 +801,8 @@
         "connectedTo": "Verbunden mit",
         "receivesFrom": "Empfängt von",
         "sendsTo": "Sendet an",
-        "moreInInterfaces": "+ {{count}} weitere unter Schnittstellen"
+        "moreInInterfaces_one": "+ {{count}} weitere unter Schnittstellen",
+        "moreInInterfaces_other": "+ {{count}} weitere unter Schnittstellen"
       },
       "ownership": {
         "businessOwners": "Fachverantwortliche",
@@ -842,7 +843,6 @@
         "role": "Rolle",
         "supportNotes": "Support-Notizen",
         "sectionTitle": "Technik",
-        "notAssigned": "Nicht zugewiesen",
         "support": "Support",
         "noSupportContacts": "Keine Support-Kontakte.",
         "unnamedContact": "Unbenannter Kontakt",
@@ -946,7 +946,7 @@
         "assetType": "Asset-Typ",
         "startTyping": "Tippen Sie, um zu suchen",
         "isCluster": "Dieser Server stellt einen Cluster dar",
-        "clusterInfo": "Cluster-Server können Endpunkte in Verbindungen sein. Weisen Sie Anwendungsinstanzen den Mitglieds-Hosts zu, nicht dem Cluster selbst.",
+        "clusterInfo": "Cluster-Assets können Endpunkte in Verbindungen sein. Weisen Sie Anwendungsinstanzen den Mitglieds-Hosts zu.",
         "location": "Standort",
         "subLocation": "Unterstandort",
         "selectSubLocation": "Unterstandort auswählen",
@@ -1015,7 +1015,7 @@
       "assignments": {
         "title": "Zuordnungen",
         "addAssignment": "Zuordnung hinzufügen",
-        "clusterCannotHost": "Cluster-Server können keine Anwendungszuordnungen hosten. Weisen Sie stattdessen die Mitglieds-Hosts zu.",
+        "clusterCannotHost": "Cluster-Assets können keine Anwendungszuordnungen hosten. Weisen Sie die Mitglieds-Hosts zu.",
         "noAssignments": "Noch keine Zuordnungen.",
         "assignmentAdded": "Zuordnung hinzugefügt",
         "application": "Anwendung",
@@ -1085,8 +1085,8 @@
       "support": {
         "vendor": "Lieferant",
         "searchVendors": "Lieferanten suchen",
-        "supportContract": "Supportvertrag",
-        "searchSupportContracts": "Supportverträge suchen",
+        "supportContract": "Support-Vertrag",
+        "searchSupportContracts": "Support-Verträge suchen",
         "supportTier": "Support-Stufe",
         "supportTierPlaceholder": "z. B. Nächster Werktag",
         "supportExpiry": "Ablauf des Supports",
@@ -1122,12 +1122,12 @@
         "attachments": "Anhänge",
         "dropHint": "Dateien hierher ziehen oder über die Schaltfläche auswählen",
         "selectFiles": "Dateien auswählen",
-        "uploading_one": "{{count}} Datei wird hochgeladen...",
-        "uploading_other": "{{count}} Dateien werden hochgeladen...",
+        "uploading_one": "{{count}} Datei wird hochgeladen…",
+        "uploading_other": "{{count}} Dateien werden hochgeladen…",
         "deleteAttachmentConfirm": "Anhang „{{name}}“ löschen?",
         "newUrl": "Neue URL",
         "editUrl": "URL bearbeiten",
-        "websiteNamePlaceholder": "z. B. Supportportal",
+        "websiteNamePlaceholder": "z. B. Support-Portal",
         "url": "URL"
       }
     },
@@ -1138,7 +1138,8 @@
         "overview": "Übersicht",
         "layers": "Schichten",
         "compliance": "Kritikalität und Compliance",
-        "interfaces": "Zugehörige Schnittstellen"
+        "interfaces": "Zugehörige Schnittstellen",
+        "path": "Pfad"
       },
       "createFromBinding": "Erstellung aus Schnittstellen-Bindungskontext",
       "overview": {
@@ -1209,6 +1210,46 @@
         "actions": "Aktionen",
         "goToInterface": "Zur Schnittstelle",
         "leg": "Abschnitt: {{type}}"
+      },
+      "untitled": "Unbenannte Verbindung",
+      "previous": "Vorherige Verbindung",
+      "next": "Nächste Verbindung",
+      "viewInMap": "In Karte anzeigen",
+      "server": "Server",
+      "noServers": "Keine Server",
+      "serverCount_one": "{{count}} Server",
+      "serverCount_other": "{{count}} Server",
+      "multiServerCount_one": "{{count}} Server (Multi-Server)",
+      "multiServerCount_other": "{{count}} Server (Multi-Server)",
+      "endpointsMissing": "Endpunkte fehlen",
+      "sourceMissing": "Quelle fehlt",
+      "destinationMissing": "Ziel fehlt",
+      "create": {
+        "title": "Verbindung erstellen",
+        "namePlaceholder": "z. B. App-Schicht zu DB-Schicht",
+        "endpoints": "Endpunkte",
+        "serversPlaceholder": "z. B. server1",
+        "protocolsPlaceholder": "z. B. HTTPS",
+        "description": "Beschreibung",
+        "descriptionPlaceholder": "z. B. Nächtlicher Export von der App-Schicht zur DB-Schicht",
+        "pathAfterCreate": "Erstellen Sie zuerst die Verbindung, um Hops zum Netzwerkpfad hinzuzufügen.",
+        "afterCreation": "Nach dem Erstellen",
+        "protocolRequired": "Wählen Sie mindestens ein Protokoll aus.",
+        "sourceRequired": "Wählen Sie ein Quell-Asset oder eine Quellentität aus.",
+        "destinationRequired": "Wählen Sie ein Ziel-Asset oder eine Zielentität aus."
+      },
+      "deleteDialog": {
+        "title": "Verbindung löschen?",
+        "message": "Diese Verbindung wird dauerhaft gelöscht.",
+        "messageWithBindings_one": "Diese Verbindung wird dauerhaft gelöscht und von {{count}} Schnittstellen-Bindung getrennt. Die Schnittstellen selbst werden nicht gelöscht.",
+        "messageWithBindings_other": "Diese Verbindung wird dauerhaft gelöscht und von {{count}} Schnittstellen-Bindungen getrennt. Die Schnittstellen selbst werden nicht gelöscht."
+      },
+      "topologyDialog": {
+        "title": "Topologie ändern?",
+        "toMultiServer": "Beim Wechsel zu Multi-Server werden die Quell- und Zielendpunkte gelöscht.",
+        "toServerToServer": "Beim Wechsel zu Server zu Server wird die Multi-Server-Liste gelöscht.",
+        "layersKept_one": "{{count}} vorhandene Schicht bleibt erhalten; prüfen Sie ihre Endpunkte nach der Änderung.",
+        "layersKept_other": "{{count}} vorhandene Schichten bleiben erhalten; prüfen Sie ihre Endpunkte nach der Änderung."
       }
     },
     "interface": {
@@ -1219,10 +1260,29 @@
         "ownership": "Verantwortung und Kritikalität",
         "functional": "Fachliche Definition",
         "technical": "Technische Definition",
-        "environments": "Bindungen und Verbindungen",
-        "compliance": "Daten und Compliance"
+        "environments": "Umgebungen",
+        "compliance": "Daten und Compliance",
+        "flow": "Fluss",
+        "dataMapping": "Datenzuordnung",
+        "relations": "Beziehungen"
       },
-      "selectSourceTarget": "Wählen Sie Quell- und Zielanwendungen, um Bindungen zu verwalten."
+      "selectSourceTarget": "Wählen Sie Quell- und Zielanwendungen, um Bindungen zu verwalten.",
+      "untitled": "Unbenannte Schnittstelle",
+      "previous": "Vorherige Schnittstelle",
+      "next": "Nächste Schnittstelle",
+      "viewInMap": "In Karte anzeigen",
+      "loading": "Schnittstelle wird geladen…",
+      "environmentsAfterCreate": "Erstellen Sie zuerst die Schnittstelle, um Umgebungsbindungen zu verwalten.",
+      "unsavedMappingHint": "Drücken Sie Strg+S, um ungespeicherte Zuordnungsänderungen zu speichern.",
+      "discardDialog": {
+        "title": "Schnittstellenentwurf verwerfen",
+        "message": "Diese Schnittstelle wurde noch nicht erstellt. Beim Schließen des Arbeitsbereichs wird der Entwurf verworfen."
+      },
+      "create": {
+        "applicationsRequired": "Wählen Sie Quell- und Zielanwendung aus.",
+        "dataCategoryRequired": "Wählen Sie eine Datenkategorie aus.",
+        "noIdentifier": "Die Schnittstelle wurde erstellt, aber es wurde keine Kennung zurückgegeben."
+      }
     },
     "location": {
       "title": "Standort",
@@ -1334,37 +1394,41 @@
       "applicationName": "Anwendungsname",
       "version": "Version",
       "versionPlaceholder": "z. B. 2.0, 2024, Q1 2025",
-      "goLiveDate": "Inbetriebnahmedatum",
+      "goLiveDate": "Inbetriebnahme",
       "endOfSupportDate": "Ende des Supports",
       "selectWhatToCopy": "Wählen Sie, was aus der Quellanwendung kopiert werden soll:",
       "copyOwners": "Verantwortliche (Fach und IT)",
       "copyCompanies": "Unternehmen (Zielgruppe)",
       "copyDepartments": "Abteilungen",
       "copyDataResidency": "Datenresidenz",
-      "copyLinks": "Links (Dokumentation)",
+      "copyLinks": "Links",
       "copySupportContacts": "Support-Kontakte",
-      "copyOpexCapex": "OPEX/CAPEX-Positionen",
+      "copyBudgetItems": "Budgetposten",
       "copyContracts": "Verträge",
-      "copyInstances": "Instanzen (Umgebungen)",
-      "copyBindings": "Bindungen (Umgebungsverbindungen)",
-      "bindingsHint": "Bindungen verbinden Schnittstellenabschnitte mit Anwendungsinstanzen. Umgebungsspezifische Details (Endpoints, Authentifizierung, Job-Namen) werden gelöscht.",
+      "copyInstances": "Bereitstellungen",
+      "copyBindings": "Bereitstellungsbindungen",
+      "bindingsHint": "Bindungen verbinden Schnittstellenabschnitte mit Bereitstellungen. Umgebungsspezifische Details werden gelöscht.",
       "suitesNotCopied": "Hinweis: Suites und Anhänge werden nicht kopiert.",
       "selectInterfaces": "Wählen Sie Schnittstellen zur Migration in die neue Version. Ausgewählte Schnittstellen werden dupliziert und mit der neuen Version verknüpft.",
       "loadingInterfaces": "Schnittstellen werden geladen...",
       "noInterfaces": "Keine Schnittstellen für diese Anwendung gefunden.",
       "selectAll": "Alle auswählen",
       "deselectAll": "Alle abwählen",
-      "selectedOf": "{{selected}} von {{total}} ausgewählt",
+      "selectedOf_one": "{{count}} von {{total}} ausgewählt",
+      "selectedOf_other": "{{count}} von {{total}} ausgewählt",
       "viaMiddleware": "über Middleware",
       "sourceTarget": "Quelle und Ziel",
+      "roleSource": "Quelle",
+      "roleTarget": "Ziel",
       "flowsThrough": "fließt durch diesen ETL",
       "flowsThroughAs": "{{source}} → {{target}} (fließt durch diesen ETL)",
       "asRole": "{{source}} → {{target}} (als {{role}})",
-      "middlewareHint": "Schnittstellen mit der Markierung \"fließt durch diesen ETL\" verwenden diese Anwendung als Middleware. Das Kopieren erstellt neue Schnittstellendefinitionen für den aktualisierten ETL.",
+      "middlewareHint": "Schnittstellen mit der Markierung „fließt durch diesen ETL“ verwenden diese Anwendung als Middleware. Das Kopieren erstellt neue Schnittstellendefinitionen für den aktualisierten ETL.",
       "back": "Zurück",
       "next": "Weiter",
       "createVersion": "Version erstellen",
-      "nameRequired": "Anwendungsname ist erforderlich"
+      "nameRequired": "Anwendungsname ist erforderlich",
+      "defaultName": "{{name}} - neue Version"
     },
     "versionTimeline": {
       "title": "Versionsverlauf"

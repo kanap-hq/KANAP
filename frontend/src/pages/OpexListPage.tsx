@@ -867,7 +867,9 @@ export default function OpexListPage() {
         }}
         onColumnStateChange={(state) => {
           const last = lastQueryRef.current;
-          if (followFteColumns(state) && last) updateTotals({ q: last.q, filterModel: last.filters, statusScope: last.statusScope });
+          // A saved layout applied before the grid is ready only records the FTE columns: the first
+          // totals request comes with the query state, carrying the initial filter.
+          if (followFteColumns(state) && gridApiRef.current && last) updateTotals({ q: last.q, filterModel: last.filters, statusScope: last.statusScope });
         }}
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);

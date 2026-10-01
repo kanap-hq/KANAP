@@ -35,6 +35,10 @@ function httpError(status: number) {
   return Object.assign(new Error(`Request failed with status code ${status}`), { response: { status } });
 }
 
+function rateLimited(retryAfter: string) {
+  return Object.assign(httpError(429), { response: { status: 429, headers: { 'retry-after': retryAfter } } });
+}
+
 function unauthorized(url: string) {
   return { response: { status: 401 }, config: { url, headers: {} } };
 }
@@ -79,11 +83,11 @@ describe('api auth recovery', () => {
     vi.doMock('axios', () => ({ __esModule: true, default: axiosMock }));
     const tokens = await import('./auth/accessTokenStore');
     const session = await import('./auth/sessionStorage');
-    const { api } = await import('./api');
+    const apiModule = await import('./api');
     tokens.setAccessToken('stale-access-token', Date.now() + 1_000);
     session.touchLastActivity();
     session.setRefreshTtlMs(4 * 60 * 60 * 1000);
-    return { axiosMock, instances, api, ...tokens, ...session };
+    return { axiosMock, instances, ...apiModule, ...tokens, ...session };
   }
 
   it('refreshes and retries protected requests after a 401 response', async () => {
@@ -99,7 +103,7 @@ describe('api auth recovery', () => {
     expect(axiosMock.post).toHaveBeenCalledWith(
       'http://localhost:8080/auth/refresh',
       {},
-      { withCredentials: true },
+      { withCredentials: true, timeout: 10_000 },
     );
     expect(main.instance.request).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -191,6 +195,139 @@ describe('api auth recovery', () => {
       expect(getAccessToken()).toBe('fresh-access-token');
       expect(getLastActivityAt()).not.toBeNull();
     });
+
+    it('retries a 408 and ends the session on any other 4xx, such as a 404', async () => {
+      const { axiosMock, getAccessToken, requestTokenRefreshOutcome } = await loadClients();
+      axiosMock.post.mockRejectedValueOnce(httpError(408)).mockRejectedValueOnce(httpError(404));
+
+      const outcome = requestTokenRefreshOutcome();
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      await expect(outcome).resolves.toEqual({ status: 'ended' });
+      expect(axiosMock.post).toHaveBeenCalledTimes(2);
+      expect(getAccessToken()).toBeNull();
+    });
+
+    it('bounds each attempt with a 10 s timeout and retries after a timeout', async () => {
+      const { axiosMock, getAccessToken, requestTokenRefreshOutcome } = await loadClients();
+      const timeout = Object.assign(new Error('timeout of 10000ms exceeded'), { code: 'ECONNABORTED' });
+      axiosMock.post.mockRejectedValueOnce(timeout).mockResolvedValueOnce(freshTokens);
+
+      const outcome = requestTokenRefreshOutcome();
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      await expect(outcome).resolves.toMatchObject({ status: 'refreshed' });
+      expect(axiosMock.post).toHaveBeenCalledTimes(2);
+      expect(axiosMock.post).toHaveBeenLastCalledWith(
+        'http://localhost:8080/auth/refresh',
+        {},
+        { withCredentials: true, timeout: 10_000 },
+      );
+      expect(getAccessToken()).toBe('fresh-access-token');
+    });
+
+    it('waits as long as Retry-After asks on a 429, in seconds or as a date, capped at 60 s', async () => {
+      vi.setSystemTime(new Date('2026-10-01T10:00:00Z'));
+      const { axiosMock, getAccessToken, requestTokenRefreshOutcome } = await loadClients();
+      axiosMock.post
+        .mockRejectedValueOnce(rateLimited('5'))
+        .mockRejectedValueOnce(rateLimited(new Date('2026-10-01T10:00:25Z').toUTCString()))
+        .mockRejectedValueOnce(rateLimited('600'))
+        .mockResolvedValueOnce(freshTokens);
+
+      const outcome = requestTokenRefreshOutcome();
+      await vi.advanceTimersByTimeAsync(4_999);
+      expect(axiosMock.post).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(axiosMock.post).toHaveBeenCalledTimes(2);
+
+      // The date asks to wait until 10:00:25, 20 s after the second attempt.
+      await vi.advanceTimersByTimeAsync(19_999);
+      expect(axiosMock.post).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(axiosMock.post).toHaveBeenCalledTimes(3);
+
+      // 600 s is capped at 60 s.
+      await vi.advanceTimersByTimeAsync(59_999);
+      expect(axiosMock.post).toHaveBeenCalledTimes(3);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(axiosMock.post).toHaveBeenCalledTimes(4);
+
+      await expect(outcome).resolves.toMatchObject({ status: 'refreshed' });
+      expect(getAccessToken()).toBe('fresh-access-token');
+    });
+  });
+
+  describe('when the session is cleared while a refresh is in flight', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('stops retrying after a logout during the backoff, even once the server answers again', async () => {
+      const { axiosMock, getAccessToken, setAccessToken, requestTokenRefreshOutcome, bumpSessionGeneration } =
+        await loadClients();
+      axiosMock.post.mockRejectedValueOnce(httpError(502)).mockResolvedValue(freshTokens);
+
+      const outcome = requestTokenRefreshOutcome();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(axiosMock.post).toHaveBeenCalledTimes(1);
+
+      // Logout while the flight waits for its next attempt; the server is back with a 200.
+      bumpSessionGeneration();
+      setAccessToken(null);
+      await vi.advanceTimersByTimeAsync(20_000);
+
+      await expect(outcome).resolves.toEqual({ status: 'superseded' });
+      expect(axiosMock.post).toHaveBeenCalledTimes(1);
+      expect(getAccessToken()).toBeNull();
+    });
+
+    it('drops a success that arrives after the session was cleared', async () => {
+      const {
+        axiosMock,
+        getAccessToken,
+        getRefreshTtlMs,
+        setAccessToken,
+        clearSessionActivity,
+        requestTokenRefreshOutcome,
+        bumpSessionGeneration,
+      } = await loadClients();
+      let answer!: (value: unknown) => void;
+      axiosMock.post.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+
+      const outcome = requestTokenRefreshOutcome();
+      bumpSessionGeneration();
+      setAccessToken(null);
+      clearSessionActivity();
+      answer(freshTokens);
+
+      await expect(outcome).resolves.toEqual({ status: 'superseded' });
+      expect(getAccessToken()).toBeNull();
+      expect(getRefreshTtlMs()).toBeNull();
+    });
+
+    it('starts a new refresh for the next session instead of joining the leftover flight', async () => {
+      const { axiosMock, getAccessToken, requestTokenRefreshOutcome, bumpSessionGeneration } = await loadClients();
+      axiosMock.post.mockRejectedValueOnce(httpError(502)).mockResolvedValue(freshTokens);
+
+      const leftover = requestTokenRefreshOutcome();
+      await vi.advanceTimersByTimeAsync(0);
+      // Signed out and in again while the first flight waits.
+      bumpSessionGeneration();
+      const current = requestTokenRefreshOutcome();
+      await vi.advanceTimersByTimeAsync(0);
+
+      await expect(current).resolves.toMatchObject({ status: 'refreshed' });
+      expect(getAccessToken()).toBe('fresh-access-token');
+
+      await vi.advanceTimersByTimeAsync(1_000);
+      await expect(leftover).resolves.toEqual({ status: 'superseded' });
+      expect(axiosMock.post).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('second client (api/client.ts)', () => {
@@ -237,6 +374,26 @@ describe('api auth recovery', () => {
 
       expect(location.href).toBe('http://acme.lvh.me/it/assets');
       expect(getAccessToken()).toBeNull();
+    });
+
+    it('tells the session-ended listeners when a refused refresh ends a live session, from either client', async () => {
+      const { axiosMock, instances, setAccessToken, subscribeSessionEnded } = await loadClients();
+      await import('./api/client');
+      const [main, secondary] = instances;
+      const ended = vi.fn();
+      subscribeSessionEnded(ended);
+      axiosMock.post.mockRejectedValue(httpError(401));
+
+      await expect(secondary.onError(unauthorized('/assets'))).rejects.toBeDefined();
+      expect(ended).toHaveBeenCalledTimes(1);
+
+      // No session left to end: no second notice.
+      await expect(main.onError(unauthorized('/master-data/companies'))).rejects.toBeDefined();
+      expect(ended).toHaveBeenCalledTimes(1);
+
+      setAccessToken('next-access-token', Date.now() + 60_000);
+      await expect(main.onError(unauthorized('/master-data/companies'))).rejects.toBeDefined();
+      expect(ended).toHaveBeenCalledTimes(2);
     });
 
     it('keeps the session when the server is unreachable', async () => {

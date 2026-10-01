@@ -54,14 +54,14 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     const list = byField.lifecycleStatus || [];
     const options = list.map((item) => ({
       value: item.code,
-      label: item.deprecated ? `${item.label} (deprecated)` : item.label,
+      label: item.deprecated ? t('common.deprecatedOption', { label: item.label }) : item.label,
       deprecated: !!item.deprecated,
     }));
     if (lifecycle && !options.some((opt) => opt.value === lifecycle)) {
       options.push({ value: lifecycle, label: lifecycle, deprecated: false });
     }
     return options.filter((opt) => !opt.deprecated || opt.value === lifecycle);
-  }, [byField.lifecycleStatus, lifecycle]);
+  }, [byField.lifecycleStatus, lifecycle, t]);
 
   React.useEffect(() => {
     if (!category && defaultCategory) {
@@ -98,7 +98,7 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     setSaving(true); setServerError(null);
     try {
       if (!String(name || '').trim()) {
-        setServerError('Name is required');
+        setServerError(t('validation.nameRequired'));
         return null;
       }
       const payload = {
@@ -134,25 +134,25 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     } finally {
       setSaving(false);
     }
-  }, [saving, name, supplierId, description, category, editor, retiredDate, lifecycle, criticality, cyberCriticality, recoveryWave, dataClass, version, goLiveDate, endOfSupportDate, isSuite]);
+  }, [saving, name, supplierId, description, category, editor, retiredDate, lifecycle, criticality, cyberCriticality, recoveryWave, dataClass, version, goLiveDate, endOfSupportDate, isSuite, t]);
 
   useImperativeHandle(ref, () => ({ isDirty: () => dirty, save, reset }), [dirty, save, reset]);
 
   return (
     <Stack spacing={2}>
       {!!serverError && <Alert severity="error">{serverError}</Alert>}
-      <PropertyRow label="Name" required>
+      <PropertyRow label={t('common.name')} required>
         <TextField value={name} onChange={(e) => { setName(e.target.value); markDirty(); }} required fullWidth variant="standard" sx={drawerFieldValueSx} />
       </PropertyRow>
-      <PropertyRow label="Description">
+      <PropertyRow label={t('workspace.application.overview.description')}>
         <TextField value={description} onChange={(e) => { setDescription(e.target.value); markDirty(); }} fullWidth variant="standard" sx={drawerFieldValueSx} />
       </PropertyRow>
-      <PropertyRow label="Supplier">
+      <PropertyRow label={t('workspace.application.overview.supplier')}>
         <SupplierSelect value={supplierId} onChange={(v) => { setSupplierId(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
       </PropertyRow>
-      <PropertyRow label="Category" required>
+      <PropertyRow label={t('workspace.application.overview.category')} required>
         <EnumAutocomplete
-          label="Category"
+          label={t('workspace.application.overview.category')}
           value={category}
           onChange={(v) => { setCategory(v); markDirty(); }}
           options={categoryOptions}
@@ -161,7 +161,7 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
           textFieldSx={drawerFieldValueSx}
         />
       </PropertyRow>
-      <PropertyRow label="Publisher">
+      <PropertyRow label={t('workspace.application.overview.publisher')}>
         <TextField value={editor} onChange={(e) => { setEditor(e.target.value); markDirty(); }} fullWidth variant="standard" sx={drawerFieldValueSx} />
       </PropertyRow>
       <PropertyRow label={classificationText("Business criticality")}>
@@ -176,12 +176,12 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
       <PropertyRow label={classificationText("Recovery wave")}>
         <EnumAutocomplete label={classificationText("Recovery wave")} value={recoveryWave || ''} onChange={(v) => { setRecoveryWave(v || null); markDirty(); }} options={(classificationCatalog?.recoveryWaves || []).filter((item) => !item.deprecated).sort((a, b) => a.order - b.order).map((item) => ({ label: item.label, value: item.code }))} hideLabel textFieldSx={drawerFieldValueSx} />
       </PropertyRow>
-      <PropertyRow label="Lifecycle" required>
-        <EnumAutocomplete label="Lifecycle" value={lifecycle} onChange={(v) => { setLifecycle(v as any); markDirty(); }} options={lifecycleOptions} required hideLabel textFieldSx={drawerFieldValueSx} />
+      <PropertyRow label={t('workspace.application.overview.lifecycle')} required>
+        <EnumAutocomplete label={t('workspace.application.overview.lifecycle')} value={lifecycle} onChange={(v) => { setLifecycle(v as any); markDirty(); }} options={lifecycleOptions} required hideLabel textFieldSx={drawerFieldValueSx} />
       </PropertyRow>
       <Box component="label" sx={(theme) => ({ display: 'flex', gap: '8px', alignItems: 'center', fontSize: 13, color: theme.palette.kanap.text.primary })}>
         <input type="checkbox" checked={isSuite} onChange={(e) => { setIsSuite(e.target.checked); markDirty(); }} style={{ accentColor: 'var(--kanap-teal)' }} />
-        Can have child apps
+        {t('workspace.application.overview.canHaveChildApps')}
       </Box>
       <Divider sx={{ my: 1 }} />
       <Typography
@@ -194,26 +194,26 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
           color: theme.palette.kanap.text.primary,
         })}
       >
-        Version information
+        {t('workspace.application.overview.versionInfo')}
       </Typography>
-      <PropertyRow label="Version">
+      <PropertyRow label={t('workspace.application.overview.version')}>
         <TextField
           value={version}
           onChange={(e) => { setVersion(e.target.value); markDirty(); }}
           fullWidth
-          placeholder="e.g., 4.2.1, 2023, Q1 2024"
+          placeholder={t('workspace.application.overview.versionPlaceholder')}
           size="small"
           variant="standard"
           sx={drawerFieldValueSx}
         />
       </PropertyRow>
-      <PropertyRow label="Go live">
+      <PropertyRow label={t('workspace.application.meta.goLive')}>
         <DateEUField label="" valueYmd={goLiveDate} onChangeYmd={(v) => { setGoLiveDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
       </PropertyRow>
-      <PropertyRow label="End of support">
+      <PropertyRow label={t('workspace.application.overview.endOfSupport')}>
         <DateEUField label="" valueYmd={endOfSupportDate} onChangeYmd={(v) => { setEndOfSupportDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
       </PropertyRow>
-      <PropertyRow label="Retired date">
+      <PropertyRow label={t('workspace.application.overview.retiredDate')}>
         <DateEUField label="" valueYmd={retiredDate} onChangeYmd={(v) => { setRetiredDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
       </PropertyRow>
     </Stack>

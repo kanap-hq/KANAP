@@ -1,7 +1,20 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import api, { requestTokenRefreshOutcome, type RefreshOutcome } from '../api';
-import { clearSessionActivity, isIdleExpired, setRefreshTtlMs, touchLastActivity } from './sessionStorage';
+import api, {
+  bumpSessionGeneration,
+  getSessionGeneration,
+  requestTokenRefreshOutcome,
+  subscribeSessionEnded,
+  type RefreshOutcome,
+} from '../api';
+import {
+  clearSessionActivity,
+  getLastActivityAt,
+  getRefreshTtlMs,
+  isIdleExpired,
+  setRefreshTtlMs,
+  touchLastActivity,
+} from './sessionStorage';
 import { getAccessToken, getAccessTokenExpiresAt, setAccessToken, subscribeAccessToken } from './accessTokenStore';
 import i18n, { detectBrowserLocale, LANGUAGE_OVERRIDE_STORAGE_KEY, SupportedLocale } from '../i18n';
 
@@ -91,6 +104,10 @@ type AuthContextType = {
   token: string | null;
   tokenExpiresAt: number | null;
   isAuthenticating: boolean;
+  /** At load the server could not be reached while this browser holds a session: retrying. */
+  serverUnavailable: boolean;
+  /** The server ended the session (refused refresh, idle deadline): the login page says so. */
+  sessionExpired: boolean;
   profile: Profile | null;
   claims: Claims | null;
   subscription: Subscription | null;
@@ -98,7 +115,10 @@ type AuthContextType = {
   login: (response: LoginResponse) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
-  /** 'ended' clears the session; 'unavailable' keeps it (server unreachable, retried later). */
+  /**
+   * 'ended' clears the session; 'unavailable' keeps it (server unreachable, retried later);
+   * 'superseded' means the session was cleared meanwhile and nothing was applied.
+   */
   refreshAccessToken: () => Promise<RefreshStatus>;
   hasLevel: (resource: string, level: PermissionLevel) => boolean;
   hasAnyAccess: boolean;
@@ -116,17 +136,28 @@ function isLoginCallbackPath(pathname: string): boolean {
   return pathname === '/login/callback' || pathname.startsWith('/login/callback/');
 }
 
+// The activity markers survive a reload: this browser was signed in.
+function hasStoredSession(): boolean {
+  return getLastActivityAt() !== null || getRefreshTtlMs() !== null;
+}
+
+// Pause between two refresh rounds (each with its own backoff) while the server is unreachable at load.
+const SERVER_RETRY_PAUSE_MS = 5_000;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(() => getAccessToken());
   const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(() => getAccessTokenExpiresAt());
   const [isAuthenticating, setIsAuthenticating] = useState(true);
+  const [serverUnavailable, setServerUnavailable] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [claims, setClaims] = useState<Claims | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [tenantAuth, setTenantAuth] = useState<TenantAuth | null>(null);
 
   const clearAuthState = useCallback((opts?: { clearActivity?: boolean }) => {
+    bumpSessionGeneration();
     queryClient.removeQueries({ queryKey: ['ai-capabilities'] });
     clearLegacyTokenStorage();
     if (opts?.clearActivity) {
@@ -153,6 +184,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    // A refresh still retrying must not sign the user back in once the server answers.
+    bumpSessionGeneration();
     try {
       await api.post('/auth/logout', {});
     } catch {
@@ -181,15 +214,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearAuthState({ clearActivity: true });
       return 'ended';
     }
+    const generation = getSessionGeneration();
     try {
       const payload = legacyRefreshToken ? { refresh_token: legacyRefreshToken } : undefined;
       const outcome = await requestTokenRefreshOutcome(payload);
-      // Server unreachable: keep the session; the expiry timer and the 401 interceptor retry later.
-      if (outcome.status === 'unavailable') return 'unavailable';
+      // Unavailable: keep the session; the expiry timer and the 401 interceptor retry later.
+      // Superseded: the session was cleared meanwhile; nothing to apply or clear.
+      if (outcome.status === 'unavailable' || outcome.status === 'superseded') return outcome.status;
       if (outcome.status === 'ended' || isIdleExpired()) {
         clearAuthState({ clearActivity: true });
         return 'ended';
       }
+      // Logout or idle expiry while the answer was on its way back: do not apply it.
+      if (getSessionGeneration() !== generation) return 'superseded';
       applyAccessToken(outcome.data.access_token, outcome.data.expires_in, outcome.data.refresh_expires_in);
       return 'refreshed';
     } catch {
@@ -203,7 +240,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearAuthState({ clearActivity: true });
       return;
     }
+    // A new session: a refresh started before it answers for the previous one.
+    bumpSessionGeneration();
     queryClient.removeQueries({ queryKey: ['ai-capabilities'] });
+    setSessionExpired(false);
     setProfile(null);
     setClaims(null);
     setSubscription(null);
@@ -224,6 +264,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // A refresh ended the session, possibly from a request interceptor: drop the identity and
+  // let the login page say the session expired.
+  useEffect(() => {
+    return subscribeSessionEnded(() => {
+      clearAuthState({ clearActivity: true });
+      setSessionExpired(true);
+    });
+  }, [clearAuthState]);
+
   useEffect(() => {
     let cancelled = false;
     const bootstrap = async () => {
@@ -240,8 +289,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled) setIsAuthenticating(false);
         return;
       }
-      await refreshAccessTokenInternal(legacyRefreshToken);
-      if (!cancelled) setIsAuthenticating(false);
+      let status = await refreshAccessTokenInternal(legacyRefreshToken);
+      // Server unreachable (api restarting during a reload) while this browser holds a session:
+      // keep trying instead of showing a login form that could not sign in either.
+      while (status === 'unavailable' && hasStoredSession() && !cancelled) {
+        setServerUnavailable(true);
+        await new Promise((resolve) => setTimeout(resolve, SERVER_RETRY_PAUSE_MS));
+        if (cancelled) return;
+        status = await refreshAccessTokenInternal(legacyRefreshToken);
+      }
+      if (!cancelled) {
+        setServerUnavailable(false);
+        setIsAuthenticating(false);
+      }
     };
     void bootstrap();
     return () => {
@@ -294,8 +354,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     : !!(claims.isGlobalAdmin || claims.isPlatformAdmin || Object.keys(claims.permissions || {}).length > 0);
 
   const value = useMemo(
-    () => ({ token, tokenExpiresAt, isAuthenticating, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess }),
-    [token, tokenExpiresAt, isAuthenticating, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess]
+    () => ({ token, tokenExpiresAt, isAuthenticating, serverUnavailable, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess }),
+    [token, tokenExpiresAt, isAuthenticating, serverUnavailable, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess]
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

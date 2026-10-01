@@ -74,6 +74,7 @@ describe.each([
   { name: 'CAPEX list', Page: CapexPage, totals: '/capex-items/summary/totals', rows: '/capex-items/summary', col: 'description', search: '' },
   { name: 'CAPEX list with a filter in the URL', Page: CapexPage, totals: '/capex-items/summary/totals', rows: '/capex-items/summary', col: 'description', search: '?filters=' + encodeURIComponent(JSON.stringify(textFilter('description', 'cloud'))) },
 ])('$name footer totals', ({ Page, totals, rows, col, search }) => {
+  let stored = new Map<string, string>();
   beforeEach(() => {
     grid.api = null;
     get.mockReset();
@@ -81,7 +82,7 @@ describe.each([
     // jsdom has no ResizeObserver (the grid only uses it to size itself) and no localStorage
     // (the grid keeps the column layout there).
     vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
-    const stored = new Map<string, string>();
+    stored = new Map<string, string>();
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => stored.get(key) ?? null,
       setItem: (key: string, value: string) => { stored.set(key, value); },
@@ -102,7 +103,7 @@ describe.each([
     return raw ? JSON.parse(raw) : {};
   };
 
-  it('asks the totals once per distinct query: once on load, once more on a filter change, none on a sort', async () => {
+  const renderPage = () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={queryClient}>
@@ -111,6 +112,22 @@ describe.each([
         </MemoryRouter>
       </QueryClientProvider>,
     );
+  };
+
+  it('asks once on load when the saved layout shows an FTE column, with the filter and the FTE column', async () => {
+    const key = Page === OpexListPage ? 'opex-summary' : 'capex-summary';
+    stored.set(`grid-columns:test:u-1:${key}`, JSON.stringify([{ colId: 'fte_yBudget', hide: false }]));
+    renderPage();
+    await waitFor(() => expect(grid.api).not.toBeNull());
+    await waitFor(() => expect(get.mock.calls.some(([url]) => url === rows)).toBe(true));
+    await settle();
+    expect(totalsCalls()).toHaveLength(1);
+    expect(filtersOf(totalsCalls()[0])).toEqual(search ? textFilter(col, 'cloud') : {});
+    expect((totalsCalls()[0][1] as { params: { fte?: string } }).params.fte).toBe('fte_yBudget');
+  }, 20_000);
+
+  it('asks the totals once per distinct query: once on load, once more on a filter change, none on a sort', async () => {
+    renderPage();
     await waitFor(() => expect(grid.api).not.toBeNull());
     await waitFor(() => expect(get.mock.calls.some(([url]) => url === rows)).toBe(true));
     await settle();

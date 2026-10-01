@@ -31,7 +31,7 @@
     },
     "applications": {
       "title": "Aplicaciones",
-      "newAppService": "Nueva aplicación / Servicio",
+      "newAppService": "Nueva aplicación / servicio",
       "appService": "Aplicación / Servicio",
       "importCsv": "Importar CSV",
       "exportCsv": "Exportar CSV",
@@ -762,7 +762,7 @@
     },
     "application": {
       "title": "Aplicación / Servicio",
-      "newTitle": "Nueva aplicación / Servicio",
+      "newTitle": "Nueva aplicación / servicio",
       "indexOfTotal": "({{index}} de {{total}})",
       "tabs": {
         "overview": "Vista general",
@@ -790,7 +790,7 @@
         "suiteDisabledHint": "Esta configuración está deshabilitada porque la aplicación pertenece a una suite. Elimine la suite principal en la pestaña Relaciones para reactivarla.",
         "versionInfo": "Información de versión",
         "version": "Versión",
-        "versionPlaceholder": "ej.: 4.2.1, 2023, T1 2024",
+        "versionPlaceholder": "p. ej., 4.2.1, 2023, T1 2024",
         "goLiveDate": "Fecha de puesta en marcha",
         "endOfSupport": "Fin de soporte",
         "retiredDate": "Fecha de retiro",
@@ -801,7 +801,8 @@
         "connectedTo": "Conectada con",
         "receivesFrom": "Recibe de",
         "sendsTo": "Envía a",
-        "moreInInterfaces": "+ {{count}} más en Interfaces"
+        "moreInInterfaces_one": "+ {{count}} más en Interfaces",
+        "moreInInterfaces_other": "+ {{count}} más en Interfaces"
       },
       "ownership": {
         "businessOwners": "Responsables de negocio",
@@ -842,7 +843,6 @@
         "role": "Rol",
         "supportNotes": "Notas de soporte",
         "sectionTitle": "Técnico",
-        "notAssigned": "Sin asignar",
         "support": "Soporte",
         "noSupportContacts": "No hay contactos de soporte.",
         "unnamedContact": "Contacto sin nombre",
@@ -896,7 +896,7 @@
         "removeAssignmentFailed": "Error al quitar la asignación de servidor"
       },
       "relations": {
-        "noChildApps": "Todavía no hay aplicaciones hijas vinculadas.",
+        "noChildApps": "Todavía no hay aplicaciones secundarias vinculadas.",
         "projects": "Proyectos",
         "tasks": "Tareas",
         "selectOpexItems": "Seleccione partidas OPEX",
@@ -915,7 +915,7 @@
         "selectFiles": "Seleccionar archivos",
         "uploadingFiles_one": "Subiendo {{count}} archivo…",
         "uploadingFiles_other": "Subiendo {{count}} archivos…",
-        "deleteAttachment": "¿Eliminar el adjunto \"{{name}}\"?"
+        "deleteAttachment": "¿Eliminar el adjunto «{{name}}»?"
       },
       "untitled": "Aplicación sin nombre",
       "previous": "Aplicación anterior",
@@ -946,7 +946,7 @@
         "assetType": "Tipo de activo",
         "startTyping": "Comience a escribir para buscar",
         "isCluster": "Este servidor representa un clúster",
-        "clusterInfo": "Los servidores de clúster pueden ser endpoints en conexiones. Asigne las instancias de aplicación a los hosts miembros, no al clúster en sí.",
+        "clusterInfo": "Los activos de clúster pueden ser endpoints en conexiones. Asigne las instancias de aplicación a los hosts miembros.",
         "location": "Ubicación",
         "subLocation": "Sub-ubicación",
         "selectSubLocation": "Seleccione sub-ubicación",
@@ -1015,7 +1015,7 @@
       "assignments": {
         "title": "Asignaciones",
         "addAssignment": "Agregar asignación",
-        "clusterCannotHost": "Los servidores de clúster no pueden alojar asignaciones de aplicaciones. Asigne los hosts miembros en su lugar.",
+        "clusterCannotHost": "Los activos de clúster no pueden alojar asignaciones de aplicaciones. Asigne los hosts miembros.",
         "noAssignments": "Aún no hay asignaciones.",
         "assignmentAdded": "Asignación agregada",
         "application": "Aplicación",
@@ -1122,8 +1122,8 @@
         "attachments": "Adjuntos",
         "dropHint": "Arrastre y suelte archivos aquí, o use el botón para seleccionar",
         "selectFiles": "Seleccionar archivos",
-        "uploading_one": "Subiendo {{count}} archivo...",
-        "uploading_other": "Subiendo {{count}} archivos...",
+        "uploading_one": "Subiendo {{count}} archivo…",
+        "uploading_other": "Subiendo {{count}} archivos…",
         "deleteAttachmentConfirm": "¿Eliminar el adjunto «{{name}}»?",
         "newUrl": "Nueva URL",
         "editUrl": "Editar URL",
@@ -1138,7 +1138,8 @@
         "overview": "Vista general",
         "layers": "Capas",
         "compliance": "Criticidad y conformidad",
-        "interfaces": "Interfaces relacionadas"
+        "interfaces": "Interfaces relacionadas",
+        "path": "Ruta"
       },
       "createFromBinding": "Creación desde el contexto de enlace de interfaz",
       "overview": {
@@ -1209,6 +1210,46 @@
         "actions": "Acciones",
         "goToInterface": "Ir a la interfaz",
         "leg": "Segmento: {{type}}"
+      },
+      "untitled": "Conexión sin nombre",
+      "previous": "Conexión anterior",
+      "next": "Conexión siguiente",
+      "viewInMap": "Ver en el mapa",
+      "server": "Servidor",
+      "noServers": "Sin servidores",
+      "serverCount_one": "{{count}} servidor",
+      "serverCount_other": "{{count}} servidores",
+      "multiServerCount_one": "{{count}} servidor (multi-servidor)",
+      "multiServerCount_other": "{{count}} servidores (multi-servidor)",
+      "endpointsMissing": "Faltan endpoints",
+      "sourceMissing": "Falta el origen",
+      "destinationMissing": "Falta el destino",
+      "create": {
+        "title": "Crear conexión",
+        "namePlaceholder": "p. ej., Capa de aplicación a capa de base de datos",
+        "endpoints": "Endpoints",
+        "serversPlaceholder": "p. ej., server1",
+        "protocolsPlaceholder": "p. ej., HTTPS",
+        "description": "Descripción",
+        "descriptionPlaceholder": "p. ej., Exportación nocturna de la capa de aplicación a la capa de base de datos",
+        "pathAfterCreate": "Cree primero la conexión para añadir saltos a la ruta de red.",
+        "afterCreation": "Tras la creación",
+        "protocolRequired": "Seleccione al menos un protocolo.",
+        "sourceRequired": "Seleccione un activo o una entidad de origen.",
+        "destinationRequired": "Seleccione un activo o una entidad de destino."
+      },
+      "deleteDialog": {
+        "title": "¿Eliminar la conexión?",
+        "message": "Esta conexión se eliminará de forma permanente.",
+        "messageWithBindings_one": "Esta conexión se eliminará de forma permanente y se desvinculará de {{count}} enlace de interfaz. Las interfaces en sí no se eliminan.",
+        "messageWithBindings_other": "Esta conexión se eliminará de forma permanente y se desvinculará de {{count}} enlaces de interfaz. Las interfaces en sí no se eliminan."
+      },
+      "topologyDialog": {
+        "title": "¿Cambiar la topología?",
+        "toMultiServer": "Al cambiar a multi-servidor se borrarán los endpoints de origen y destino.",
+        "toServerToServer": "Al cambiar a servidor a servidor se borrará la lista multi-servidor.",
+        "layersKept_one": "Se conserva {{count}} capa existente; revise sus endpoints después del cambio.",
+        "layersKept_other": "Se conservan {{count}} capas existentes; revise sus endpoints después del cambio."
       }
     },
     "interface": {
@@ -1219,10 +1260,29 @@
         "ownership": "Responsabilidad y criticidad",
         "functional": "Definición funcional",
         "technical": "Definición técnica",
-        "environments": "Enlaces y conexiones",
-        "compliance": "Datos y conformidad"
+        "environments": "Entornos",
+        "compliance": "Datos y conformidad",
+        "flow": "Flujo",
+        "dataMapping": "Mapeo de datos",
+        "relations": "Relaciones"
       },
-      "selectSourceTarget": "Seleccione las aplicaciones de origen y destino para gestionar los enlaces."
+      "selectSourceTarget": "Seleccione las aplicaciones de origen y destino para gestionar los enlaces.",
+      "untitled": "Interfaz sin nombre",
+      "previous": "Interfaz anterior",
+      "next": "Interfaz siguiente",
+      "viewInMap": "Ver en el mapa",
+      "loading": "Cargando interfaz…",
+      "environmentsAfterCreate": "Cree primero la interfaz para gestionar los enlaces de entorno.",
+      "unsavedMappingHint": "Pulse Ctrl+S para guardar los cambios de mapeo pendientes.",
+      "discardDialog": {
+        "title": "Descartar el borrador de interfaz",
+        "message": "Esta interfaz aún no se ha creado. Al cerrar el espacio de trabajo se descartará el borrador."
+      },
+      "create": {
+        "applicationsRequired": "Seleccione las aplicaciones de origen y destino.",
+        "dataCategoryRequired": "Seleccione una categoría de datos.",
+        "noIdentifier": "La interfaz se creó, pero no se devolvió ningún identificador."
+      }
     },
     "location": {
       "title": "Ubicación",
@@ -1333,38 +1393,42 @@
       "creatingVersionOf": "Creando una nueva versión de:",
       "applicationName": "Nombre de la aplicación",
       "version": "Versión",
-      "versionPlaceholder": "ej.: 2.0, 2024, T1 2025",
-      "goLiveDate": "Fecha de puesta en marcha",
-      "endOfSupportDate": "Fecha de fin de soporte",
+      "versionPlaceholder": "p. ej., 2.0, 2024, T1 2025",
+      "goLiveDate": "Puesta en marcha",
+      "endOfSupportDate": "Fin de soporte",
       "selectWhatToCopy": "Seleccione qué copiar de la aplicación origen:",
       "copyOwners": "Responsables (negocio e IT)",
       "copyCompanies": "Empresas (audiencia)",
       "copyDepartments": "Departamentos",
       "copyDataResidency": "Residencia de datos",
-      "copyLinks": "Enlaces (documentación)",
+      "copyLinks": "Vínculos",
       "copySupportContacts": "Contactos de soporte",
-      "copyOpexCapex": "Partidas OPEX/CAPEX",
+      "copyBudgetItems": "Partidas presupuestarias",
       "copyContracts": "Contratos",
-      "copyInstances": "Instancias (entornos)",
-      "copyBindings": "Enlaces (conexiones de entorno)",
-      "bindingsHint": "Los enlaces conectan los segmentos de interfaz con las instancias de aplicación. Los detalles específicos del entorno (endpoints, autenticación, nombres de jobs) se borrarán.",
+      "copyInstances": "Despliegues",
+      "copyBindings": "Enlaces de despliegue",
+      "bindingsHint": "Los enlaces conectan los segmentos de interfaz con los despliegues. Los detalles específicos del entorno se borrarán.",
       "suitesNotCopied": "Nota: las suites y los archivos adjuntos no se copian.",
       "selectInterfaces": "Seleccione las interfaces a migrar a la nueva versión. Las interfaces seleccionadas se duplicarán y vincularán a la nueva versión.",
       "loadingInterfaces": "Cargando interfaces...",
       "noInterfaces": "No se encontraron interfaces para esta aplicación.",
       "selectAll": "Seleccionar todo",
       "deselectAll": "Deseleccionar todo",
-      "selectedOf": "{{selected}} de {{total}} seleccionados",
+      "selectedOf_one": "{{count}} de {{total}} seleccionada",
+      "selectedOf_other": "{{count}} de {{total}} seleccionadas",
       "viaMiddleware": "vía middleware",
       "sourceTarget": "origen y destino",
+      "roleSource": "origen",
+      "roleTarget": "destino",
       "flowsThrough": "fluye a través de este ETL",
       "flowsThroughAs": "{{source}} → {{target}} (fluye a través de este ETL)",
       "asRole": "{{source}} → {{target}} (como {{role}})",
-      "middlewareHint": "Las interfaces marcadas como \"fluye a través de este ETL\" utilizan esta aplicación como middleware. Copiarlas crea nuevas definiciones de interfaz para el ETL actualizado.",
+      "middlewareHint": "Las interfaces marcadas como «fluye a través de este ETL» utilizan esta aplicación como middleware. Copiarlas crea nuevas definiciones de interfaz para el ETL actualizado.",
       "back": "Atrás",
       "next": "Siguiente",
       "createVersion": "Crear versión",
-      "nameRequired": "El nombre de la aplicación es obligatorio"
+      "nameRequired": "El nombre de la aplicación es obligatorio",
+      "defaultName": "{{name}} - nueva versión"
     },
     "versionTimeline": {
       "title": "Historial de versiones"

@@ -8,7 +8,7 @@ const navigateMock = vi.fn();
 const authState = {
   token: 'access-token',
   tokenExpiresAt: Date.now() + 60_000,
-  refreshAccessToken: vi.fn<() => Promise<'refreshed' | 'ended' | 'unavailable'>>(),
+  refreshAccessToken: vi.fn<() => Promise<'refreshed' | 'ended' | 'unavailable' | 'superseded'>>(),
   logout: vi.fn<() => Promise<void>>(),
 };
 
@@ -178,6 +178,27 @@ describe('SessionManager', () => {
     expect(authState.refreshAccessToken).toHaveBeenCalledTimes(1);
     expect(authState.logout).toHaveBeenCalledTimes(1);
     expect(navigateMock).toHaveBeenCalledWith('/login?sessionExpired=true', { replace: true });
+  });
+
+  it('leaves a session cleared during the refresh alone (no second logout, no expired notice)', async () => {
+    authState.tokenExpiresAt = Date.now() + 1_000;
+    authState.refreshAccessToken.mockResolvedValue('superseded');
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <SessionManager>
+          <div>Child</div>
+        </SessionManager>
+      </MemoryRouter>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_001);
+    });
+
+    expect(authState.refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(authState.logout).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 
   it('redirects to login without remembering the current route after idle expiration', async () => {

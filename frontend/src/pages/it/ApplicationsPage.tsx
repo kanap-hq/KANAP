@@ -23,6 +23,7 @@ import useApplicationClassificationCatalog from '../../hooks/useApplicationClass
 import { formatDuration } from './components/DurationEditor';
 
 import { useTranslation } from 'react-i18next';
+import { useLocale } from '../../i18n/useLocale';
 const ENV_SUMMARY = [
   { value: 'prod', labelKey: 'enums.environment.production', short: 'Prod' },
   { value: 'pre_prod', labelKey: 'enums.environment.preProd', short: 'Pre' },
@@ -104,6 +105,7 @@ export function catalogRankComparator(levels: Array<{ code: string; rank?: numbe
 
 export default function ApplicationsPage() {
   const { t } = useTranslation(['it', 'common']);
+  const locale = useLocale();
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -314,16 +316,9 @@ export default function ApplicationsPage() {
     }
   }, []);
   const environmentLabel = useCallback((v?: string) => {
-    switch (String(v || '')) {
-      case 'prod': return 'Prod';
-      case 'pre_prod': return 'Pre-prod';
-      case 'qa': return 'QA';
-      case 'test': return 'Test';
-      case 'dev': return 'Dev';
-      case 'sandbox': return 'Sandbox';
-      default: return String(v || '');
-    }
-  }, []);
+    const env = ENV_SUMMARY.find((item) => item.value === v);
+    return env ? t(env.labelKey) : String(v || '');
+  }, [t]);
   const dataClassLabel = useCallback((v?: string) => {
     return classificationCatalog?.dataClasses.find((item) => item.code === v)?.label || v || classificationText('Not set');
   }, [classificationCatalog?.dataClasses]);
@@ -332,7 +327,7 @@ export default function ApplicationsPage() {
     field: string,
     opts?: { labelFormatter?: (value: any) => string; emptyLabel?: string; coerceBoolean?: boolean },
   ) => {
-    const emptyLabel = opts?.emptyLabel ?? t('pages.assets.filters.blank');
+    const emptyLabel = opts?.emptyLabel ?? t('common:filters.blank');
     const labelFormatter = opts?.labelFormatter;
     const coerceBoolean = opts?.coerceBoolean ?? false;
     return async ({ context }: any) => {
@@ -658,7 +653,7 @@ export default function ApplicationsPage() {
     { headerName: 'RTO', field: 'rto_minutes', width: 110, defaultHidden: true, filter: 'agNumberColumnFilter', valueFormatter: (p: any) => formatDuration(p.value, ''), cellRenderer: ClickToCompliance },
     { headerName: 'RPO', field: 'rpo_minutes', width: 110, defaultHidden: true, filter: 'agNumberColumnFilter', valueFormatter: (p: any) => formatDuration(p.value, ''), cellRenderer: ClickToCompliance },
     { headerName: classificationText("Classification review"), field: 'classification_review_state', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: getAppFilterValues('classification_review_state', { labelFormatter: (value: string) => ({ incomplete: classificationText('To complete'), stale: classificationText('Review needed'), reviewed: classificationText('Reviewed') }[value] || value) }) }, width: 170, defaultHidden: true, valueFormatter: (p: any) => ({ incomplete: classificationText("To complete"), stale: classificationText("Review needed"), reviewed: classificationText("Reviewed") }[String(p.value)] || classificationText("To complete")), cellRenderer: ClickToCompliance },
-    { headerName: classificationText("Classification reviewed"), field: 'classification_reviewed_at', filter: 'agDateColumnFilter', width: 180, defaultHidden: true, valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString() : classificationText('Not set'), cellRenderer: ClickToCompliance },
+    { headerName: classificationText("Classification reviewed"), field: 'classification_reviewed_at', filter: 'agDateColumnFilter', width: 180, defaultHidden: true, valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString(locale) : classificationText('Not set'), cellRenderer: ClickToCompliance },
     { headerName: t('pages.applications.columns.publisher'), field: 'editor', width: 160, cellRenderer: ClickToOverview },
     { headerName: t('pages.applications.columns.derivedUsers'), field: 'derived_total_users', width: 170, cellRenderer: ClickToOwnership },
     { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, cellRenderer: ClickToOverview },
@@ -762,7 +757,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('data_class', { labelFormatter: dataClassLabel, emptyLabel: '(Blank)' }),
+        getValues: getAppFilterValues('data_class', { labelFormatter: dataClassLabel }),
         sortComparator: catalogRankComparator(classificationCatalog?.dataClasses),
         searchable: false,
       },
@@ -807,6 +802,8 @@ export default function ApplicationsPage() {
     getAppFilterValues,
     labelFor,
     lifecycleLabel,
+    locale,
+    t,
   ]);
 
   const initialState = useMemo(() => {

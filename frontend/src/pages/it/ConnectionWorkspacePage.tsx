@@ -5,6 +5,7 @@ import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Stack, Switch, TextFi
 import DeleteIcon from '@mui/icons-material/Delete';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell, {
@@ -133,22 +134,22 @@ function hasEndpoint(value: EndpointValue): boolean {
   return !!value.asset_id || !!value.entity_code;
 }
 
-function getCreateValidationMessage(form: CreateConnectionForm): string | null {
-  if (!form.name.trim()) return 'Name is required.';
-  if (form.protocolCodes.length === 0) return 'Select at least one protocol.';
+function getCreateValidationMessage(form: CreateConnectionForm, t: TFunction): string | null {
+  if (!form.name.trim()) return t('messages.nameRequired');
+  if (form.protocolCodes.length === 0) return t('workspace.connection.create.protocolRequired');
   if (form.topology === 'server_to_server') {
-    if (!hasEndpoint(form.source)) return 'Select a source asset or entity.';
-    if (!hasEndpoint(form.destination)) return 'Select a destination asset or entity.';
+    if (!hasEndpoint(form.source)) return t('workspace.connection.create.sourceRequired');
+    if (!hasEndpoint(form.destination)) return t('workspace.connection.create.destinationRequired');
     return null;
   }
-  if (form.servers.length < 2) return 'Select at least two servers.';
+  if (form.servers.length < 2) return t('workspace.connection.overview.selectTwoServers');
   return null;
 }
 
 export default function ConnectionWorkspacePage() {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
-  const CRITICALITIES = [{ code: '', label: 'Not set' }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { t } = useTranslation(['it', 'common']);
+  const CRITICALITIES = [{ code: '', label: t('common:selects.notSet') }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { hasLevel } = useAuth();
   const navigate = useNavigate();
   const params = useParams();
@@ -278,7 +279,7 @@ export default function ConnectionWorkspacePage() {
       setData(res.data);
       setLegs(res.data.legs || []);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.loadConnectionFailed') || 'Failed to load connection'));
+      setError(getApiErrorMessage(e, t, t('messages.loadConnectionFailed')));
     } finally {
       setLoading(false);
     }
@@ -303,7 +304,7 @@ export default function ConnectionWorkspacePage() {
       setLinkedInterfaces(res.data.items || []);
     } catch (e: any) {
       setLinkedInterfacesError(
-        getApiErrorMessage(e, t, t('messages.loadLinkedInterfacesFailed') || 'Failed to load linked interfaces'),
+        getApiErrorMessage(e, t, t('messages.loadLinkedInterfacesFailed')),
       );
       setLinkedInterfaces([]);
     } finally {
@@ -333,7 +334,7 @@ export default function ConnectionWorkspacePage() {
         setData((prev) => (prev ? { ...prev, ...res.data } : res.data));
         setError(null);
       } catch (e: any) {
-        setError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed') || 'Failed to save connection'));
+        setError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
         await load();
       } finally {
         setSaving(false);
@@ -497,7 +498,7 @@ export default function ConnectionWorkspacePage() {
 
   const handleCreate = async () => {
     if (!canManage) return;
-    const validationMessage = getCreateValidationMessage(createForm);
+    const validationMessage = getCreateValidationMessage(createForm, t);
     if (validationMessage) {
       setCreateError(validationMessage);
       return;
@@ -530,7 +531,7 @@ export default function ConnectionWorkspacePage() {
       const targetTab = validTab === 'path' ? 'path' : 'overview';
       navigate(`/it/connections/${saved.connection_reference || saved.id}/${targetTab}`, { replace: true });
     } catch (e: any) {
-      setCreateError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed') || 'Failed to create connection'));
+      setCreateError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
     } finally {
       setCreateSubmitting(false);
     }
@@ -543,7 +544,7 @@ export default function ConnectionWorkspacePage() {
       await api.delete(`/connections/${connectionId}`);
       handleClose();
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.deleteConnectionFailed') || 'Failed to delete connection'));
+      setError(getApiErrorMessage(e, t, t('messages.deleteConnectionFailed')));
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
@@ -573,8 +574,8 @@ export default function ConnectionWorkspacePage() {
   );
 
   const workspaceTabs: PortfolioDetailWorkspaceTab[] = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'path', label: 'Path', badge: legs.length || undefined },
+    { key: 'overview', label: t('workspace.connection.tabs.overview') },
+    { key: 'path', label: t('workspace.connection.tabs.path'), badge: legs.length || undefined },
   ];
 
   const title = isCreate ? createForm.name : data?.name || '';
@@ -589,11 +590,11 @@ export default function ConnectionWorkspacePage() {
   }, [data]);
 
   const endpointsLabel = (() => {
-    if (!data) return 'Endpoints missing';
+    if (!data) return t('workspace.connection.endpointsMissing');
     if (data.topology === 'server_to_server') {
       const fmt = (assetId: string | null, entityCode: string | null, asset: AssetSummary | null) => {
         if (assetId && asset) return asset.asset_reference || asset.name;
-        if (assetId) return 'Server';
+        if (assetId) return t('workspace.connection.server');
         if (entityCode) return `entity:${entityCode}`;
         return '?';
       };
@@ -602,7 +603,7 @@ export default function ConnectionWorkspacePage() {
       return `${src} → ${dst}`;
     }
     const count = (data.servers || []).length;
-    return count > 0 ? `${count} servers` : 'No servers';
+    return count > 0 ? t('workspace.connection.serverCount', { count }) : t('workspace.connection.noServers');
   })();
 
   const selectedCreateProtocols = React.useMemo(
@@ -615,7 +616,7 @@ export default function ConnectionWorkspacePage() {
   const createDrawerProperties = isCreate ? (
     <>
       <PropertyGroup>
-        <PropertyRow label="Lifecycle">
+        <PropertyRow label={t('workspace.connection.overview.lifecycle')}>
           <TextField
             select
             value={createForm.lifecycle || ''}
@@ -631,12 +632,12 @@ export default function ConnectionWorkspacePage() {
             )}
             {lifecycleOptions.map((opt) => (
               <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                {opt.deprecated ? `${opt.label} (deprecated)` : opt.label}
+                {opt.deprecated ? t('common.deprecatedOption', { label: opt.label }) : opt.label}
               </MenuItem>
             ))}
           </TextField>
         </PropertyRow>
-        <PropertyRow label="Topology">
+        <PropertyRow label={t('pages.connections.columns.topology')}>
           <TextField
             select
             value={createForm.topology}
@@ -645,17 +646,17 @@ export default function ConnectionWorkspacePage() {
             sx={drawerSelectSx}
             disabled={!canManage || createSubmitting}
           >
-            <MenuItem value="server_to_server" sx={drawerMenuItemSx}>Server to server</MenuItem>
-            <MenuItem value="multi_server" sx={drawerMenuItemSx}>Multi-server</MenuItem>
+            <MenuItem value="server_to_server" sx={drawerMenuItemSx}>{t('enums.topology.serverToServer')}</MenuItem>
+            <MenuItem value="multi_server" sx={drawerMenuItemSx}>{t('enums.topology.multiServer')}</MenuItem>
           </TextField>
         </PropertyRow>
       </PropertyGroup>
 
       <PropertyGroup>
-        <PropertyRow label="Risk mode">
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>Manual</Typography>
+        <PropertyRow label={t('workspace.connection.compliance.riskMode')}>
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('enums.riskMode.manual')}</Typography>
         </PropertyRow>
-        <PropertyRow label="Criticality">
+        <PropertyRow label={t('workspace.connection.compliance.criticality')}>
           <TextField
             select
             value={createForm.criticality}
@@ -669,7 +670,7 @@ export default function ConnectionWorkspacePage() {
             ))}
           </TextField>
         </PropertyRow>
-        <PropertyRow label="Data class">
+        <PropertyRow label={t('workspace.connection.compliance.dataClass')}>
           <TextField
             select
             value={createForm.dataClass || ''}
@@ -688,7 +689,7 @@ export default function ConnectionWorkspacePage() {
             ))}
           </TextField>
         </PropertyRow>
-        <PropertyRow label="Contains PII">
+        <PropertyRow label={t('workspace.connection.compliance.containsPii')}>
           <Switch
             size="small"
             checked={createForm.containsPii}
@@ -699,8 +700,8 @@ export default function ConnectionWorkspacePage() {
       </PropertyGroup>
 
       <PropertyGroup>
-        <PropertyRow label="Created">
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>After creation</Typography>
+        <PropertyRow label={t('pages.connections.columns.created')}>
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('workspace.connection.create.afterCreation')}</Typography>
         </PropertyRow>
       </PropertyGroup>
     </>
@@ -763,7 +764,7 @@ export default function ConnectionWorkspacePage() {
           disabled={createSubmitting || !canManage}
           size="small"
         >
-          Create
+          {t('common:buttons.create')}
         </Button>
       )}
       {!isCreate && data && (
@@ -774,13 +775,13 @@ export default function ConnectionWorkspacePage() {
             size="small"
             onClick={() => navigate(`/it/connection-map?focusConnectionId=${data.id}`)}
           >
-            View in map
+            {t('workspace.connection.viewInMap')}
           </Button>
           <SendLinkButton
             itemType={'connection' as any}
             itemId={data.id}
             itemRef={data.connection_reference || null}
-            itemName={data.name || 'Untitled connection'}
+            itemName={data.name || t('workspace.connection.untitled')}
           />
         </>
       )}
@@ -792,7 +793,7 @@ export default function ConnectionWorkspacePage() {
           onClick={() => setDeleteDialogOpen(true)}
           disabled={deleting}
         >
-          Delete
+          {t('common:buttons.delete')}
         </Button>
       )}
     </>
@@ -815,7 +816,7 @@ export default function ConnectionWorkspacePage() {
             : undefined
         }
         title={title}
-        titleFallback={isCreate ? 'New connection' : 'Untitled connection'}
+        titleFallback={isCreate ? t('workspace.connection.newTitle') : t('workspace.connection.untitled')}
         canEditTitle={canManage}
         onTitleSave={handleTitleSave}
         isCreate={isCreate}
@@ -826,8 +827,8 @@ export default function ConnectionWorkspacePage() {
           hasNext,
           onPrev: () => goToConnection(prevId),
           onNext: () => goToConnection(nextId),
-          previousLabel: 'Previous connection',
-          nextLabel: 'Next connection',
+          previousLabel: t('workspace.connection.previous'),
+          nextLabel: t('workspace.connection.next'),
         } : undefined}
         metadata={metadata}
         actions={actions}
@@ -835,22 +836,22 @@ export default function ConnectionWorkspacePage() {
       >
         {isCreate && validTab === 'path' ? (
           <Box sx={{ maxWidth: 760 }}>
-            <SectionHeader>Path</SectionHeader>
+            <SectionHeader>{t('workspace.connection.tabs.path')}</SectionHeader>
             <Alert severity="info" sx={{ fontSize: 13 }}>
-              Create the connection first to add network path hops.
+              {t('workspace.connection.create.pathAfterCreate')}
             </Alert>
             {createError && <Alert severity="error" sx={{ mt: 1.5, fontSize: 13 }}>{createError}</Alert>}
           </Box>
         ) : isCreate ? (
           <Box sx={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Box>
-              <SectionHeader>Create connection</SectionHeader>
+              <SectionHeader>{t('workspace.connection.create.title')}</SectionHeader>
               <Stack spacing={1.25}>
-                <PropertyRow label="Name" required valueSx={{ maxWidth: 560 }}>
+                <PropertyRow label={t('workspace.connection.overview.name')} required valueSx={{ maxWidth: 560 }}>
                   <TextField
                     value={createForm.name}
                     onChange={(e) => patchCreateForm({ name: e.target.value })}
-                    placeholder="e.g., App tier to DB tier"
+                    placeholder={t('workspace.connection.create.namePlaceholder')}
                     required
                     size="small"
                     variant="standard"
@@ -858,7 +859,7 @@ export default function ConnectionWorkspacePage() {
                     disabled={!canManage || createSubmitting}
                   />
                 </PropertyRow>
-                <PropertyRow label="Topology" required valueSx={{ maxWidth: 360 }}>
+                <PropertyRow label={t('pages.connections.columns.topology')} required valueSx={{ maxWidth: 360 }}>
                   <TextField
                     select
                     value={createForm.topology}
@@ -868,25 +869,25 @@ export default function ConnectionWorkspacePage() {
                     sx={drawerSelectSx}
                     disabled={!canManage || createSubmitting}
                   >
-                    <MenuItem value="server_to_server" sx={drawerMenuItemSx}>Server to server</MenuItem>
-                    <MenuItem value="multi_server" sx={drawerMenuItemSx}>Multi-server</MenuItem>
+                    <MenuItem value="server_to_server" sx={drawerMenuItemSx}>{t('enums.topology.serverToServer')}</MenuItem>
+                    <MenuItem value="multi_server" sx={drawerMenuItemSx}>{t('enums.topology.multiServer')}</MenuItem>
                   </TextField>
                 </PropertyRow>
               </Stack>
             </Box>
 
             <Box>
-              <SectionHeader>Endpoints</SectionHeader>
+              <SectionHeader>{t('workspace.connection.create.endpoints')}</SectionHeader>
               {createForm.topology === 'server_to_server' ? (
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 2.5 }}>
                   <ConnectionEndpointPicker
-                    label="Source"
+                    label={t('workspace.connection.layers.source')}
                     value={createForm.source}
                     disabled={!canManage || createSubmitting}
                     onChange={(next) => patchCreateForm({ source: next })}
                   />
                   <ConnectionEndpointPicker
-                    label="Destination"
+                    label={t('workspace.connection.layers.destination')}
                     value={createForm.destination}
                     disabled={!canManage || createSubmitting}
                     onChange={(next) => patchCreateForm({ destination: next })}
@@ -895,9 +896,9 @@ export default function ConnectionWorkspacePage() {
               ) : (
                 <Box sx={{ maxWidth: 640 }}>
                   <PropertyRow
-                    label="Servers"
+                    label={t('pages.connections.columns.servers')}
                     required
-                    helperText={createForm.servers.length < 2 ? 'Select at least two servers.' : undefined}
+                    helperText={createForm.servers.length < 2 ? t('workspace.connection.overview.selectTwoServers') : undefined}
                     valueSx={{ maxWidth: 640 }}
                   >
                     <Autocomplete
@@ -927,7 +928,7 @@ export default function ConnectionWorkspacePage() {
                         <TextField
                           {...params}
                           variant="standard"
-                          placeholder="Add a server"
+                          placeholder={t('workspace.connection.create.serversPlaceholder')}
                           sx={drawerFieldValueSx}
                         />
                       )}
@@ -938,8 +939,8 @@ export default function ConnectionWorkspacePage() {
             </Box>
 
             <Box>
-              <SectionHeader>Protocols</SectionHeader>
-              <PropertyRow label="Protocols" required valueSx={{ maxWidth: 640 }}>
+              <SectionHeader>{t('workspace.connection.overview.protocols')}</SectionHeader>
+              <PropertyRow label={t('workspace.connection.overview.protocols')} required valueSx={{ maxWidth: 640 }}>
                 <Autocomplete
                   size="small"
                   multiple
@@ -958,7 +959,7 @@ export default function ConnectionWorkspacePage() {
                     <TextField
                       {...params}
                       variant="standard"
-                      placeholder="Add a protocol"
+                      placeholder={t('workspace.connection.create.protocolsPlaceholder')}
                       sx={drawerFieldValueSx}
                     />
                   )}
@@ -967,11 +968,11 @@ export default function ConnectionWorkspacePage() {
             </Box>
 
             <Box>
-              <SectionHeader>Description</SectionHeader>
+              <SectionHeader>{t('workspace.connection.create.description')}</SectionHeader>
               <TextField
                 value={createForm.description}
                 onChange={(e) => patchCreateForm({ description: e.target.value })}
-                placeholder="What this connection does, why it exists, special considerations..."
+                placeholder={t('workspace.connection.create.descriptionPlaceholder')}
                 variant="standard"
                 multiline
                 minRows={4}
@@ -998,14 +999,14 @@ export default function ConnectionWorkspacePage() {
             sourceLabel={(() => {
               if (data.source_asset_id && data.source_server) return data.source_server.asset_reference ? `${data.source_server.asset_reference} · ${data.source_server.name}` : data.source_server.name;
               if (data.source_entity_code) return `entity:${data.source_entity_code}`;
-              if (data.topology === 'multi_server') return `${(data.servers || []).length} servers (multi-server)`;
-              return 'Source missing';
+              if (data.topology === 'multi_server') return t('workspace.connection.multiServerCount', { count: (data.servers || []).length });
+              return t('workspace.connection.sourceMissing');
             })()}
             destinationLabel={(() => {
               if (data.destination_asset_id && data.destination_server) return data.destination_server.asset_reference ? `${data.destination_server.asset_reference} · ${data.destination_server.name}` : data.destination_server.name;
               if (data.destination_entity_code) return `entity:${data.destination_entity_code}`;
-              if (data.topology === 'multi_server') return `${(data.servers || []).length} servers (multi-server)`;
-              return 'Destination missing';
+              if (data.topology === 'multi_server') return t('workspace.connection.multiServerCount', { count: (data.servers || []).length });
+              return t('workspace.connection.destinationMissing');
             })()}
             onChange={setLegs}
           />
@@ -1038,40 +1039,40 @@ export default function ConnectionWorkspacePage() {
 
       <KanapDialog
         open={deleteDialogOpen}
-        title="Delete connection?"
+        title={t('workspace.connection.deleteDialog.title')}
         onClose={() => !deleting && setDeleteDialogOpen(false)}
         onSave={handleDelete}
-        saveLabel="Delete"
+        saveLabel={t('common:buttons.delete')}
         saveDisabled={deleting}
         saveLoading={deleting}
       >
         <Stack spacing={1}>
           <Box sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
             {linkedInterfaces.length > 0
-              ? `This will permanently delete this connection and unlink it from ${linkedInterfaces.length} interface ${linkedInterfaces.length === 1 ? 'binding' : 'bindings'}. The interfaces themselves are not deleted.`
-              : 'This will permanently delete this connection.'}
+              ? t('workspace.connection.deleteDialog.messageWithBindings', { count: linkedInterfaces.length })
+              : t('workspace.connection.deleteDialog.message')}
           </Box>
         </Stack>
       </KanapDialog>
 
       <KanapDialog
         open={!!pendingTopology}
-        title="Change topology?"
+        title={t('workspace.connection.topologyDialog.title')}
         onClose={() => setPendingTopology(null)}
         onSave={handleConfirmTopology}
-        saveLabel="Continue"
+        saveLabel={t('common:buttons.continue')}
         saveDisabled={saving}
         saveLoading={saving}
       >
         <Stack spacing={1}>
           <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
             {pendingTopology === 'multi_server'
-              ? 'Switching to multi-server will clear the source and destination endpoints.'
-              : 'Switching to server-to-server will clear the multi-server list.'}
+              ? t('workspace.connection.topologyDialog.toMultiServer')
+              : t('workspace.connection.topologyDialog.toServerToServer')}
           </Typography>
           {legs.length > 0 && (
             <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
-              Existing layers ({legs.length}) are kept; review their endpoints after the change.
+              {t('workspace.connection.topologyDialog.layersKept', { count: legs.length })}
             </Typography>
           )}
         </Stack>

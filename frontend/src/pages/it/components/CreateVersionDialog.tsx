@@ -48,10 +48,13 @@ interface CreateVersionDialogProps {
   onSuccess: (newApp: any) => void;
 }
 
-const STEPS = ['Version details', 'Copy options', 'Interfaces'];
-
 export default function CreateVersionDialog({ open, onClose, sourceApp, onSuccess }: CreateVersionDialogProps) {
   const { t } = useTranslation(['it', 'common']);
+  const steps = [
+    t('components.createVersion.steps.versionDetails'),
+    t('components.createVersion.steps.copyOptions'),
+    t('components.createVersion.steps.interfaces'),
+  ];
   const [step, setStep] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -87,7 +90,7 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
     if (open) {
       setStep(0);
       setError(null);
-      setName(`${sourceApp.name} - New Version`);
+      setName(t('components.createVersion.defaultName', { name: sourceApp.name }));
       setVersion('');
       setGoLiveDate('');
       setEndOfSupportDate('');
@@ -107,7 +110,7 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
       setSelectedInterfaceIds([]);
       setInterfaces([]);
     }
-  }, [open, sourceApp.name]);
+  }, [open, sourceApp.name, t]);
 
   // Load interfaces when reaching step 3
   React.useEffect(() => {
@@ -122,7 +125,7 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      setError('Application name is required');
+      setError(t('components.createVersion.nameRequired'));
       return;
     }
 
@@ -167,35 +170,35 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
     indent?: boolean;
     onChange?: (checked: boolean) => void;
   }> = [
-    { key: 'copyOwners', label: 'Owners (business and IT)' },
-    { key: 'copyCompanies', label: 'Companies (audience)' },
-    { key: 'copyDepartments', label: 'Departments' },
-    { key: 'copyDataResidency', label: 'Data residency' },
-    { key: 'copyLinks', label: 'Links' },
-    { key: 'copySupportContacts', label: 'Support contacts' },
+    { key: 'copyOwners', label: t('components.createVersion.copyOwners') },
+    { key: 'copyCompanies', label: t('components.createVersion.copyCompanies') },
+    { key: 'copyDepartments', label: t('components.createVersion.copyDepartments') },
+    { key: 'copyDataResidency', label: t('components.createVersion.copyDataResidency') },
+    { key: 'copyLinks', label: t('components.createVersion.copyLinks') },
+    { key: 'copySupportContacts', label: t('components.createVersion.copySupportContacts') },
     {
       key: 'copySpendItems',
-      label: 'Budget items',
+      label: t('components.createVersion.copyBudgetItems'),
       onChange: (checked) => setCopyOptions({ ...copyOptions, copySpendItems: checked, copyCapexItems: checked }),
     },
-    { key: 'copyContracts', label: 'Contracts' },
+    { key: 'copyContracts', label: t('components.createVersion.copyContracts') },
     {
       key: 'copyInstances',
-      label: 'Deployments',
+      label: t('components.createVersion.copyInstances'),
       onChange: (checked) => setCopyOptions({
         ...copyOptions,
         copyInstances: checked,
         copyBindings: checked ? copyOptions.copyBindings : false,
       }),
     },
-    { key: 'copyBindings', label: 'Deployment bindings', disabled: !copyOptions.copyInstances, indent: true },
+    { key: 'copyBindings', label: t('components.createVersion.copyBindings'), disabled: !copyOptions.copyInstances, indent: true },
   ];
 
   return (
     <KanapDialog
       open={open}
       onClose={onClose}
-      title="Create new version"
+      title={t('components.createVersion.dialogTitle')}
       onSave={() => {
         if (step < 2) {
           setStep(step + 1);
@@ -203,13 +206,13 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
         }
         void handleCreate();
       }}
-      saveLabel={step < 2 ? 'Next' : 'Create version'}
+      saveLabel={step < 2 ? t('components.createVersion.next') : t('components.createVersion.createVersion')}
       saveDisabled={step === 2 && !name.trim()}
       saveLoading={step === 2 && loading}
       sx={{ maxWidth: 720 }}
       footerLeft={step > 0 ? (
         <Button variant="action" onClick={() => setStep(step - 1)} disabled={loading}>
-          Back
+          {t('components.createVersion.back')}
         </Button>
       ) : null}
     >
@@ -232,7 +235,7 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
             },
           })}
         >
-          {STEPS.map(label => (
+          {steps.map(label => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
             </Step>
@@ -244,10 +247,10 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
         {step === 0 && (
           <Stack spacing={1.35}>
             <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary, mb: 0.5 })}>
-              Creating a new version of: <Box component="span" sx={(theme) => ({ fontWeight: 500, color: theme.palette.kanap.text.primary })}>{sourceApp.name}</Box>
+              {t('components.createVersion.creatingVersionOf')} <Box component="span" sx={(theme) => ({ fontWeight: 500, color: theme.palette.kanap.text.primary })}>{sourceApp.name}</Box>
               {sourceApp.version && ` (${sourceApp.version})`}
             </Typography>
-            <PropertyRow label="Application name" required>
+            <PropertyRow label={t('components.createVersion.applicationName')} required>
               <TextField
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -257,17 +260,17 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
                 sx={drawerFieldValueSx}
               />
             </PropertyRow>
-            <PropertyRow label="Version">
+            <PropertyRow label={t('components.createVersion.version')}>
               <TextField
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
-                placeholder="e.g., 2.0, 2024, Q1 2025"
+                placeholder={t('components.createVersion.versionPlaceholder')}
                 fullWidth
                 variant="standard"
                 sx={drawerFieldValueSx}
               />
             </PropertyRow>
-            <PropertyRow label="Go live">
+            <PropertyRow label={t('components.createVersion.goLiveDate')}>
               <DateEUField
                 label=""
                 valueYmd={goLiveDate}
@@ -276,7 +279,7 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
                 textFieldSx={drawerFieldValueSx}
               />
             </PropertyRow>
-            <PropertyRow label="End of support">
+            <PropertyRow label={t('components.createVersion.endOfSupportDate')}>
               <DateEUField
                 label=""
                 valueYmd={endOfSupportDate}
@@ -291,7 +294,7 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
         {step === 1 && (
           <Stack spacing={1}>
             <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary, mb: 0.5 })}>
-              Select what to copy from the source application:
+              {t('components.createVersion.selectWhatToCopy')}
             </Typography>
             {copyOptionRows.map((row) => (
               <Box
@@ -324,11 +327,11 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
             ))}
             {copyOptions.copyBindings && (
               <Typography sx={(theme) => ({ ml: 3, fontSize: 12, color: theme.palette.kanap.text.secondary })}>
-                Bindings connect interface legs to deployments. Environment-specific details will be cleared.
+                {t('components.createVersion.bindingsHint')}
               </Typography>
             )}
             <Typography sx={(theme) => ({ mt: 1, fontSize: 12, color: theme.palette.kanap.text.secondary })}>
-              Note: Suites and attachments are not copied.
+              {t('components.createVersion.suitesNotCopied')}
             </Typography>
           </Stack>
         )}
@@ -336,38 +339,38 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
         {step === 2 && (
           <Stack spacing={2}>
             <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary })}>
-              Select interfaces to migrate to the new version.
-              Selected interfaces will be duplicated and linked to the new version.
+              {t('components.createVersion.selectInterfaces')}
             </Typography>
 
             {interfacesLoading ? (
               <Stack alignItems="center" py={4}>
                 <CircularProgress size={24} />
                 <Typography sx={(theme) => ({ mt: 1, fontSize: 13, color: theme.palette.kanap.text.secondary })}>
-                  Loading interfaces...
+                  {t('components.createVersion.loadingInterfaces')}
                 </Typography>
               </Stack>
             ) : interfaces.length === 0 ? (
               <Typography sx={(theme) => ({ py: 2, fontSize: 13, color: theme.palette.kanap.text.secondary })}>
-                No interfaces found for this application.
+                {t('components.createVersion.noInterfaces')}
               </Typography>
             ) : (
               <>
                 <Stack direction="row" spacing={1}>
-                  <Button variant="action" size="small" onClick={selectAllInterfaces}>Select all</Button>
-                  <Button variant="action" size="small" onClick={deselectAllInterfaces}>Deselect all</Button>
+                  <Button variant="action" size="small" onClick={selectAllInterfaces}>{t('components.createVersion.selectAll')}</Button>
+                  <Button variant="action" size="small" onClick={deselectAllInterfaces}>{t('components.createVersion.deselectAll')}</Button>
                   <Typography sx={(theme) => ({ ml: 'auto', alignSelf: 'center', fontSize: 12, color: theme.palette.kanap.text.secondary })}>
-                    {selectedInterfaceIds.length} of {interfaces.length} selected
+                    {t('components.createVersion.selectedOf', { count: selectedInterfaceIds.length, total: interfaces.length })}
                   </Typography>
                 </Stack>
                 <List dense sx={(theme) => ({ maxHeight: 300, overflow: 'auto', border: `1px solid ${theme.palette.kanap.border.soft}`, borderRadius: '6px' })}>
                   {interfaces.map(iface => {
                     const isMiddleware = iface.app_role === 'via_middleware';
-                    const roleLabel = isMiddleware
-                      ? 'via middleware'
-                      : iface.app_role === 'both'
-                        ? 'source & target'
-                        : iface.app_role;
+                    const roleLabel = iface.app_role === 'both'
+                      ? t('components.createVersion.sourceTarget')
+                      : iface.app_role === 'target'
+                        ? t('components.createVersion.roleTarget')
+                        : t('components.createVersion.roleSource');
+                    const route = { source: iface.source_app_name || '?', target: iface.target_app_name || '?' };
                     return (
                       <ListItem key={iface.id} disablePadding>
                         <ListItemButton onClick={() => toggleInterface(iface.id)}>
@@ -383,8 +386,8 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
                             primary={iface.name || iface.interface_reference || iface.interface_id}
                             secondary={
                               isMiddleware
-                                ? `${iface.source_app_name || '?'} → ${iface.target_app_name || '?'} (flows through this ETL)`
-                                : `${iface.source_app_name || '?'} → ${iface.target_app_name || '?'} (as ${roleLabel})`
+                                ? t('components.createVersion.flowsThroughAs', route)
+                                : t('components.createVersion.asRole', { ...route, role: roleLabel })
                             }
                           />
                         </ListItemButton>
@@ -394,8 +397,7 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
                 </List>
                 {interfaces.some(i => i.app_role === 'via_middleware') && (
                   <Typography sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.secondary })}>
-                    Interfaces marked "flows through this ETL" use this application as middleware.
-                    Copying them creates new interface definitions for the upgraded ETL.
+                    {t('components.createVersion.middlewareHint')}
                   </Typography>
                 )}
               </>

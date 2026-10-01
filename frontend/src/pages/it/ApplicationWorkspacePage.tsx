@@ -979,7 +979,7 @@ function OperationsTab({
                 <TextField
                   {...params}
                   variant="standard"
-                  placeholder={(app.access_methods || []).length === 0 ? t('workspace.application.technical.notAssigned') : undefined}
+                  placeholder={(app.access_methods || []).length === 0 ? t('common:selects.notSet') : undefined}
                   sx={drawerFieldValueSx}
                 />
               )}

@@ -13,6 +13,10 @@ vi.mock('../api', () => ({
     post: vi.fn(),
     get: vi.fn(),
   },
+  requestTokenRefreshOutcome: vi.fn(),
+  getSessionGeneration: () => 0,
+  bumpSessionGeneration: vi.fn(),
+  subscribeSessionEnded: () => () => {},
 }));
 
 vi.mock('../tenant/TenantContext', () => ({
@@ -51,7 +55,7 @@ vi.mock('../ai/useAiCapabilities', () => ({
   }),
 }));
 
-import api from '../api';
+import api, { requestTokenRefreshOutcome } from '../api';
 
 function createStorageMock(initial: Record<string, string> = {}) {
   const store = new Map(Object.entries(initial));
@@ -162,6 +166,9 @@ describe('Entra callback auth bootstrap race', () => {
       },
     });
 
+    // As with BrowserRouter, the window is on the callback route, so the bootstrap refresh is skipped.
+    window.history.replaceState(null, '', '/login/callback');
+
     vi.mocked(api.post).mockResolvedValue({
       data: {
         access_token: 'redeemed-token',
@@ -220,5 +227,6 @@ describe('Entra callback auth bootstrap race', () => {
     await waitFor(() => {
       expect(screen.getByText('Home Page')).toBeInTheDocument();
     });
+    expect(requestTokenRefreshOutcome).not.toHaveBeenCalled();
   });
 });
