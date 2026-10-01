@@ -13,7 +13,9 @@ import { compactListSearchCached } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
-import useAutosave, { keepsFailedSave, useAutosaveRegistry } from '../../hooks/useAutosave';
+import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../hooks/useAutosave';
+import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
+import { useKanapDialogs } from '../../components/design';
 import { formatItemRef } from '../../utils/item-ref';
 import {
   StatusValue,
@@ -343,44 +345,67 @@ export default function CapexItemPage() {
     setSearchParams(next, { replace: true });
   };
 
+  const dialogs = useKanapDialogs();
   const autosaveRegistry = useAutosaveRegistry();
   const autosave = useAutosave({
-    onError: (e) => setSaveError(getApiErrorMessage(e, t, t('capex.editor.failedToSave'))),
+    onError: (e) => setSaveError(autosaveErrorMessage(e, t, t('capex.editor.failedToSave'))),
     registry: autosaveRegistry,
   });
-  // Resync the form on every refetch. While autosave is busy the local text is newer than the
-  // server's; once idle, every debounced edit has been saved and refetched, so the server copy wins.
-  const { isBusy: isAutosaveBusy } = autosave;
+  // Fields typed and not saved yet, each with the line it was typed on (the page
+  // stays mounted from one line to the next): a field only ever goes to its own line.
+  const patchBuffer = usePatchBuffer<Partial<CapexForm>>(mergePatch);
+  const uuidRef = React.useRef(uuid);
+  uuidRef.current = uuid;
+  const dataRef = React.useRef(data);
+  dataRef.current = data;
+  // Resync the form on every refetch. A field typed and not saved yet (buffered,
+  // or being sent) keeps the local text, newer than the server's; every other
+  // field takes the server copy.
   React.useEffect(() => {
     if (!data || isCreate) return;
     // The fields typed through patchDebounced.
     const DEBOUNCED_FIELDS: ReadonlyArray<keyof CapexForm> = ['notes'];
     setForm((prev) => {
       const next = toForm(data);
-      if (prev.id !== next.id || !isAutosaveBusy()) return next;
-      const kept = Object.fromEntries(DEBOUNCED_FIELDS.map((field) => [field, prev[field]]));
+      if (prev.id !== next.id || !next.id) return next;
+      const kept = Object.fromEntries(
+        DEBOUNCED_FIELDS.filter((field) => patchBuffer.holds(next.id as string, field)).map((field) => [field, prev[field]]),
+      );
       return { ...next, ...kept };
     });
-  }, [data, isCreate, isAutosaveBusy]);
-  const pendingPatchRef = React.useRef<Record<string, any>>({});
+  }, [data, isCreate, patchBuffer]);
 
-  const flushPending = React.useCallback(async () => {
-    if (!uuid) return;
-    const keys = Object.keys(pendingPatchRef.current);
-    if (keys.length === 0) return;
-    const taken = pendingPatchRef.current;
-    const patch = normalizePatch({ ...taken });
-    pendingPatchRef.current = {};
-    try {
-      await api.patch(`/capex-items/${uuid}`, patch);
-    } catch (e) {
-      // The autosave keeps this save (busy, conflict): the change goes back, under any edit typed since.
-      if (keepsFailedSave(e)) pendingPatchRef.current = mergePatch(taken, pendingPatchRef.current);
-      throw e;
-    }
-    await queryClient.invalidateQueries({ queryKey: ['capex', idParam] });
-    queryClient.invalidateQueries({ queryKey: ['capex-summary'] });
-  }, [uuid, idParam, queryClient]);
+  const flushPending = React.useCallback(() => sendPatchBuffer(
+    patchBuffer,
+    async (lineId, patch) => {
+      await api.patch(`/capex-items/${lineId}`, normalizePatch({ ...patch }));
+    },
+    {
+      onSaved: async (lineId) => {
+        await queryClient.invalidateQueries({ queryKey: ['capex'], predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId });
+        queryClient.invalidateQueries({ queryKey: ['capex-summary'] });
+      },
+      // Refused for good: the screen shows the line's stored values again for those fields.
+      onRefused: (lineId, patch) => {
+        const stored = dataRef.current;
+        if (lineId === uuidRef.current && stored) {
+          setForm((prev) => {
+            if (prev.id !== lineId) return prev;
+            const server = toForm(stored);
+            const fields = (Object.keys(patch) as Array<keyof CapexForm>).filter((field) => !patchBuffer.holds(lineId, field));
+            return fields.length ? { ...prev, ...Object.fromEntries(fields.map((field) => [field, server[field]])) } : prev;
+          });
+        }
+        void queryClient.invalidateQueries({ queryKey: ['capex'], predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId });
+      },
+    },
+  ), [patchBuffer, queryClient]);
+
+  // An edit still pending for the previous line (prev/next, back button) goes to that line now.
+  const { flush: flushAutosave } = autosave;
+  React.useEffect(() => {
+    if (uuid && patchBuffer.holdsOtherThan(uuid)) void flushAutosave();
+  }, [uuid, patchBuffer, flushAutosave]);
 
   const patchNow = React.useCallback(async (patch: Partial<CapexForm>) => {
     if (isCreate || !uuid || stale) return;
@@ -421,9 +446,9 @@ export default function CapexItemPage() {
   const patchDebounced = React.useCallback((patch: Partial<CapexForm>) => {
     if (isCreate || !uuid || stale) return;
     setForm((prev) => mergePatch(prev, patch));
-    pendingPatchRef.current = mergePatch(pendingPatchRef.current, patch);
+    patchBuffer.add(uuid, patch);
     autosave.schedule(flushPending);
-  }, [isCreate, uuid, stale, autosave, flushPending]);
+  }, [isCreate, uuid, stale, autosave, flushPending, patchBuffer]);
 
   const budgetRef = React.useRef<BudgetTabHandle>(null);
   const allocRef = React.useRef<AllocationsTabHandle>(null);
@@ -455,26 +480,50 @@ export default function CapexItemPage() {
     return true;
   }, [autosave, activeRefEditor, routeTab]);
 
+  // A save that still fails once flushed (the server stays busy, a tab keeps its edits) must not
+  // trap the user on the line: leaving is offered, and drops what could not be saved.
+  const flushOrLeave = React.useCallback(async (): Promise<boolean> => {
+    if (await flushAll()) return true;
+    const unsaved = autosaveRegistry.isBusy()
+      || (routeTab === 'budget' && !!budgetRef.current?.isDirty())
+      || (routeTab === 'allocations' && !!allocRef.current?.isDirty())
+      || !!activeRefEditor()?.isDirty?.();
+    // Nothing left unsaved (the save was refused and the screen reloaded): stay, the message shows why.
+    if (!unsaved) return false;
+    const leave = await dialogs.confirm({
+      title: t('common:autosave.leaveTitle'),
+      message: t('common:autosave.leaveMessage'),
+      confirmLabel: t('common:autosave.leaveConfirm'),
+      intent: 'danger',
+    });
+    if (!leave) return false;
+    autosaveRegistry.discardAll();
+    patchBuffer.discard();
+    setSaveError(null);
+    if (dataRef.current) setForm(toForm(dataRef.current));
+    return true;
+  }, [flushAll, autosaveRegistry, routeTab, activeRefEditor, dialogs, t, patchBuffer]);
+
   const goToTab = React.useCallback(async (nextTab: TabKey) => {
     if (isCreate && nextTab !== 'overview') return;
-    if (!(await flushAll())) return;
+    if (!(await flushOrLeave())) return;
     const sp = buildListContextParams();
     navigate(`/ops/capex/${idParam}/${nextTab}?${sp.toString()}`);
-  }, [isCreate, flushAll, buildListContextParams, navigate, idParam]);
+  }, [isCreate, flushOrLeave, buildListContextParams, navigate, idParam]);
 
   const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
     if (!targetId) return;
-    if (!(await flushAll())) return;
+    if (!(await flushOrLeave())) return;
     const sp = buildListContextParams();
     navigate(`/ops/capex/${targetId}/${routeTab}?${sp.toString()}`);
-  }, [flushAll, buildListContextParams, navigate, routeTab]);
+  }, [flushOrLeave, buildListContextParams, navigate, routeTab]);
 
   const closeWorkspace = React.useCallback(async () => {
-    if (!(await flushAll())) return;
+    if (!(await flushOrLeave())) return;
     const sp = buildListContextParams();
     const qs = sp.toString();
     navigate(`/ops/capex${qs ? `?${qs}` : ''}`);
-  }, [flushAll, buildListContextParams, navigate]);
+  }, [flushOrLeave, buildListContextParams, navigate]);
 
   const handleCreate = React.useCallback(async () => {
     if (createSubmitting) return; // Ctrl+S bypasses the disabled button — guard double-submit

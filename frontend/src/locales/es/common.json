@@ -622,5 +622,10 @@
   "lifecycleField": {
     "endOfValidity": "Fin de validez",
     "endOfValidityHint": "Dejar en blanco para permanecer activo indefinidamente."
+  },
+  "autosave": {
+    "leaveTitle": "Cambios sin guardar",
+    "leaveMessage": "Algunos de sus cambios no se han podido guardar. Salga de todos modos y piérdalos, o quédese en esta página y vuelva a intentarlo.",
+    "leaveConfirm": "Salir sin guardar"
   }
 }

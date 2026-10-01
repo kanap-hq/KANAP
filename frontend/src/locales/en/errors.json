@@ -24,7 +24,8 @@
   "list_context_not_found": "The saved filters of this list are no longer available. Set the filters again.",
   "duplicate": "This record already exists. Reload the page to see the current data.",
   "parent_gone": "Something this change depends on was deleted in the meantime. Reload the page to see the current data.",
-  "in_use": "This record is still used elsewhere, so it cannot be deleted.",
-  "retry": "Someone else saved a change at the same moment. Please try again.",
-  "busy": "This data is busy with another operation. Please try again in a few seconds."
+  "in_use": "This change would remove something that is still used elsewhere, so it was not saved.",
+  "retry": "Another change to the same data was saved at the same moment, so this one did not go through. Please try again.",
+  "busy": "This data is busy with another operation. Please try again in a few seconds.",
+  "notSavedYet": "Your last change is not saved yet because the server is busy. It stays on this page and is sent again with your next change."
 }

@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
@@ -435,5 +435,56 @@ describe('ContributorWorkspacePage manager and employment type', () => {
     await waitFor(() => notesField());
     expect(screen.queryByText('portfolio:workspace.contributor.fields.manager')).toBeNull();
     expect(screen.queryByText('portfolio:workspace.contributor.fields.employmentType')).toBeNull();
+  });
+});
+
+/** An API error as axios rejects it. */
+function apiError(status: number, code: string) {
+  return Object.assign(new Error(`HTTP ${status}`), { response: { status, data: { code, message: code }, headers: {} } });
+}
+
+describe('ContributorWorkspacePage autosave on refused and busy saves', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('a conflict is not kept: the stored notes come back and leaving is free', async () => {
+    vi.mocked(api.patch).mockRejectedValue(apiError(409, 'parent_gone'));
+    renderAt(`/portfolio/contributors/${CONTRIBUTOR_REF}`);
+    const field = await waitFor(() => notesField());
+    fireEvent.change(field, { target: { value: 'refused' } });
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(await screen.findByText('errors:parent_gone')).toBeInTheDocument();
+    await waitFor(() => expect(notesField().value).toBe('Initial notes'));
+
+    // Nothing kept: the tab change goes through without sending it again.
+    fireEvent.click(screen.getByRole('tab', { name: 'portfolio:workspace.contributor.tabs.skills' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(`/portfolio/contributors/${CONTRIBUTOR_REF}/skills`));
+    expect(api.patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('a busy save is kept, leaving asks first, and leaving drops it and shows the stored notes again', async () => {
+    vi.mocked(api.patch).mockRejectedValue(apiError(503, 'busy'));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderAt(`/portfolio/contributors/${CONTRIBUTOR_REF}`);
+    const field = await waitFor(() => notesField());
+    fireEvent.change(field, { target: { value: 'kept while busy' } });
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+    expect(api.patch).toHaveBeenCalledTimes(4);
+    expect(await screen.findByText('errors:notSavedYet')).toBeInTheDocument();
+    expect(notesField().value).toBe('kept while busy');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'portfolio:workspace.contributor.tabs.skills' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:autosave.leaveMessage')).toBeInTheDocument();
+    expect(api.patch).toHaveBeenCalledTimes(5);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:autosave.leaveConfirm' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(`/portfolio/contributors/${CONTRIBUTOR_REF}/skills`));
+
+    fireEvent.click(screen.getByRole('tab', { name: 'portfolio:workspace.contributor.tabs.general' }));
+    await waitFor(() => expect(notesField().value).toBe('Initial notes'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    expect(api.patch).toHaveBeenCalledTimes(5);
   });
 });

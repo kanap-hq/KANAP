@@ -24,7 +24,8 @@
   "list_context_not_found": "Les filtres enregistrés de cette liste ne sont plus disponibles. Définissez à nouveau les filtres.",
   "duplicate": "Cet élément existe déjà. Rechargez la page pour voir les données à jour.",
   "parent_gone": "Un élément dont dépend cette modification a été supprimé entre-temps. Rechargez la page pour voir les données à jour.",
-  "in_use": "Cet élément est encore utilisé ailleurs, il ne peut donc pas être supprimé.",
-  "retry": "Quelqu'un a enregistré une modification au même moment. Réessayez.",
-  "busy": "Ces données sont occupées par une autre opération. Réessayez dans quelques secondes."
+  "in_use": "Cette modification supprimerait un élément encore utilisé ailleurs, elle n'a donc pas été enregistrée.",
+  "retry": "Une autre modification des mêmes données a été enregistrée au même moment, celle-ci n'est donc pas passée. Réessayez.",
+  "busy": "Ces données sont occupées par une autre opération. Réessayez dans quelques secondes.",
+  "notSavedYet": "Votre dernière modification n'est pas encore enregistrée, car le serveur est occupé. Elle reste sur cette page et sera renvoyée avec votre prochaine modification."
 }

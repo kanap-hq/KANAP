@@ -397,8 +397,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const scheduleSave = React.useCallback(() => { autosave.schedule(persist); }, [autosave, persist]);
 
   const hasUnsavedEdits = () => dirtyTotalsRef.current.size > 0 || dirtyCellsRef.current.size > 0;
-  // Save every unsaved edit now, including one whose earlier save failed
-  // (autosave drops a failed save). False if the save fails.
+  // Save every unsaved edit now. A save the autosave dropped (refused) left its
+  // edits dirty here, so it is scheduled again; a busy save the autosave still
+  // keeps (isBusy) goes again within the flush. False if the save fails.
   const flushEdits = React.useCallback(async () => {
     if (hasUnsavedEdits() && !autosave.isBusy()) autosave.schedule(persist);
     return autosave.flush();

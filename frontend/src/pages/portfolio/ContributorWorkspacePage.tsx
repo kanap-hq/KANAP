@@ -7,7 +7,8 @@ import ChartCard from '../../components/reports/ChartCard';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useLocale } from '../../i18n/useLocale';
-import useAutosave, { keepsFailedSave } from '../../hooks/useAutosave';
+import useAutosave, { autosaveErrorMessage } from '../../hooks/useAutosave';
+import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { drawerMenuItemSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { useKanapDialogs } from '../../components/design';
@@ -154,6 +155,9 @@ const formatMonth = (yearMonth: string, locale: string) => {
   return date.toLocaleString(locale, { month: 'short', year: 'numeric', timeZone: 'UTC' });
 };
 
+/** Where a buffered edit goes, and the cache entry it updates. */
+type SaveTarget = { endpoint: string; queryKey: readonly unknown[]; isSelf: boolean; userId: string | null };
+
 export default function ContributorWorkspacePage() {
   const { t } = useTranslation(['portfolio', 'common', 'nav', 'errors']);
   const dialogs = useKanapDialogs();
@@ -295,70 +299,69 @@ export default function ContributorWorkspacePage() {
 
   // ---- Autosave -------------------------------------------------------------
   // The contributor query cache is the single source of truth: every edit is
-  // written to it optimistically, buffered in `pendingPatchRef`, and flushed
-  // by one debounced controller so PATCHes never overlap.
+  // written to it optimistically, buffered with the contributor it was typed
+  // on (the page stays mounted from one contributor to the next, so a field
+  // only ever goes to its own contributor), and flushed by one debounced
+  // controller so PATCHes never overlap.
 
-  const pendingPatchRef = useRef<ContributorPatch>({});
-  const saveTargetRef = useRef<{
-    endpoint: string;
-    queryKey: readonly unknown[];
-    isSelf: boolean;
-    userId: string | null;
-  } | null>(null);
+  const patchBuffer = usePatchBuffer<ContributorPatch>();
+  const saveTargetsRef = useRef(new Map<string, SaveTarget>());
   const deletedRef = useRef(false);
 
-  const handleAutosaveError = useCallback((e: unknown) => {
-    setError(getApiErrorMessage(e, t, t('portfolio:workspace.contributor.messages.saveFailed')));
-    // Busy or conflicting: the autosave keeps the edit (and retried a busy one a few
-    // times already); the screen keeps showing it, the next save sends it again.
-    if (keepsFailedSave(e)) return;
-    // Drop the buffer and roll the cache back to the server state; the user
-    // sees the error and re-applies the edit. No silent retry storm.
-    pendingPatchRef.current = {};
-    const target = saveTargetRef.current;
-    if (target) void queryClient.invalidateQueries({ queryKey: target.queryKey });
-  }, [queryClient, t]);
+  /** The contributor as stored, with the fields still typed and not saved shown over it. */
+  const reloadTarget = useCallback(async (target: SaveTarget) => {
+    await queryClient.invalidateQueries({ queryKey: target.queryKey });
+    const held = patchBuffer.held(target.endpoint);
+    if (held) queryClient.setQueryData<ContributorConfig | null>(target.queryKey, (previous) => (previous ? { ...previous, ...held } : previous));
+  }, [patchBuffer, queryClient]);
 
-  const { schedule: scheduleSave, flush: flushSave, status: autosaveStatus } = useAutosave({
+  const handleAutosaveError = useCallback((e: unknown) => {
+    // A busy save is still kept (the message says it is not saved yet); a refused one was
+    // dropped and the contributor reloaded (onRefused below): the user re-applies the edit.
+    setError(autosaveErrorMessage(e, t, t('portfolio:workspace.contributor.messages.saveFailed')));
+  }, [t]);
+
+  const { schedule: scheduleSave, flush: flushSave, status: autosaveStatus, isBusy: isSaveBusy, discard: discardSave } = useAutosave({
     onError: handleAutosaveError,
   });
 
-  const flushPending = useCallback(async () => {
-    const patch = pendingPatchRef.current;
-    pendingPatchRef.current = {};
-    const target = saveTargetRef.current;
-    if (deletedRef.current || !target || Object.keys(patch).length === 0) return;
-    let res;
-    try {
-      res = await api.patch(target.endpoint, patch);
-    } catch (e) {
-      // The autosave keeps this save (busy, conflict): the change goes back, under any edit typed since.
-      if (keepsFailedSave(e)) pendingPatchRef.current = { ...patch, ...pendingPatchRef.current };
-      throw e;
-    }
-    const savedId: string | undefined = res.data?.id;
-    // The job title is a `users` column the signed-in profile carries too, so
-    // a change to one's own must reach the header and Settings > Profile.
-    if ('job_title' in patch && target.userId === profile?.id) {
-      void refreshMe();
-    }
-    // Keep the optimistic values (an edit made during the request must win);
-    // only the id is taken from the response, which matters for the first
-    // self-service save that creates the config.
-    if (savedId) {
-      queryClient.setQueryData<ContributorConfig | null>(target.queryKey, (previous) => (
-        previous && !previous.id ? { ...previous, id: savedId } : previous
-      ));
-    }
-    if (!target.isSelf) {
-      void queryClient.invalidateQueries({ queryKey: ['portfolio-contributors'] });
-      void queryClient.invalidateQueries({ queryKey: ['portfolio-teams'] });
-    }
-    void queryClient.invalidateQueries({ queryKey: ['portfolio-contributor', 'me'], exact: true, refetchType: 'none' });
-    if (profile?.id) {
-      void queryClient.invalidateQueries({ queryKey: ['classification-defaults', profile.id] });
-    }
-  }, [profile?.id, queryClient, refreshMe]);
+  const flushPending = useCallback(() => sendPatchBuffer(
+    patchBuffer,
+    async (endpoint, patch) => {
+      const target = saveTargetsRef.current.get(endpoint);
+      if (deletedRef.current || !target) return;
+      const res = await api.patch(target.endpoint, patch);
+      const savedId: string | undefined = res.data?.id;
+      // The job title is a `users` column the signed-in profile carries too, so
+      // a change to one's own must reach the header and Settings > Profile.
+      if ('job_title' in patch && target.userId === profile?.id) {
+        void refreshMe();
+      }
+      // Keep the optimistic values (an edit made during the request must win);
+      // only the id is taken from the response, which matters for the first
+      // self-service save that creates the config.
+      if (savedId) {
+        queryClient.setQueryData<ContributorConfig | null>(target.queryKey, (previous) => (
+          previous && !previous.id ? { ...previous, id: savedId } : previous
+        ));
+      }
+      if (!target.isSelf) {
+        void queryClient.invalidateQueries({ queryKey: ['portfolio-contributors'] });
+        void queryClient.invalidateQueries({ queryKey: ['portfolio-teams'] });
+      }
+      void queryClient.invalidateQueries({ queryKey: ['portfolio-contributor', 'me'], exact: true, refetchType: 'none' });
+      if (profile?.id) {
+        void queryClient.invalidateQueries({ queryKey: ['classification-defaults', profile.id] });
+      }
+    },
+    {
+      // Refused for good: the contributor's stored values come back on screen.
+      onRefused: (endpoint) => {
+        const target = saveTargetsRef.current.get(endpoint);
+        if (target) void reloadTarget(target);
+      },
+    },
+  ), [patchBuffer, profile?.id, queryClient, refreshMe, reloadTarget]);
 
   const patch = useCallback((partial: ContributorPatch) => {
     if (!canEdit) return;
@@ -366,29 +369,63 @@ export default function ContributorWorkspacePage() {
       ...(previous ?? selfPlaceholder()),
       ...partial,
     }));
-    pendingPatchRef.current = { ...pendingPatchRef.current, ...partial };
-    saveTargetRef.current = {
+    saveTargetsRef.current.set(endpoint, {
       endpoint,
       queryKey,
       isSelf: isSelfRoute,
       userId: member?.user_id || profile?.id || null,
-    };
+    });
+    patchBuffer.add(endpoint, partial);
     scheduleSave(flushPending);
-  }, [canEdit, endpoint, flushPending, isSelfRoute, member?.user_id, profile?.id, queryClient, queryKey, scheduleSave, selfPlaceholder]);
+  }, [canEdit, endpoint, flushPending, isSelfRoute, member?.user_id, patchBuffer, profile?.id, queryClient, queryKey, scheduleSave, selfPlaceholder]);
+
+  // An edit still pending for the previous contributor (prev/next, back button) goes to that contributor now.
+  useEffect(() => {
+    if (patchBuffer.holdsOtherThan(endpoint)) void flushSave();
+  }, [endpoint, flushSave, patchBuffer]);
+
+  /** Drops every edit not saved yet and shows the stored values again (the user chose to leave without them). */
+  const discardUnsaved = useCallback(() => {
+    const targets = patchBuffer.targets();
+    discardSave();
+    patchBuffer.discard();
+    for (const key of targets) {
+      const target = saveTargetsRef.current.get(key);
+      if (target) void reloadTarget(target);
+    }
+  }, [discardSave, patchBuffer, reloadTarget]);
+
+  // A save that still fails once flushed (the server stays busy) must not trap the user on
+  // the contributor: leaving is offered, and drops what could not be saved.
+  const flushOrLeave = useCallback(async (): Promise<boolean> => {
+    if (await flushSave()) return true;
+    // Refused and reloaded: nothing left to lose, the message says why.
+    if (!isSaveBusy()) return false;
+    const leave = await dialogs.confirm({
+      title: t('common:autosave.leaveTitle'),
+      message: t('common:autosave.leaveMessage'),
+      confirmLabel: t('common:autosave.leaveConfirm'),
+      intent: 'danger',
+    });
+    if (!leave) return false;
+    discardUnsaved();
+    setError(null);
+    return true;
+  }, [dialogs, discardUnsaved, flushSave, isSaveBusy, t]);
 
   // ---- Navigation (all controlled transitions drain the autosave first) -----
 
   const handleTabChange = useCallback(async (nextTab: string) => {
     if (nextTab === activeTab) return;
-    if (!(await flushSave())) return;
+    if (!(await flushOrLeave())) return;
     navigate(nextTab === 'general' ? basePath : `${basePath}/${nextTab}`);
-  }, [activeTab, basePath, flushSave, navigate]);
+  }, [activeTab, basePath, flushOrLeave, navigate]);
 
   const backPath = isSelfRoute ? '/settings/profile' : '/portfolio/contributors';
   const handleBack = useCallback(async () => {
-    if (!(await flushSave())) return;
+    if (!(await flushOrLeave())) return;
     navigate(backPath);
-  }, [backPath, flushSave, navigate]);
+  }, [backPath, flushOrLeave, navigate]);
 
   const orderedRefs = useMemo(() => (
     contributorsList
@@ -399,10 +436,10 @@ export default function ContributorWorkspacePage() {
   ), [contributorsList, t, teams]);
   const navIndex = reference ? orderedRefs.indexOf(reference) : -1;
   const goToContributor = useCallback(async (targetRef: string | undefined) => {
-    if (!targetRef || !(await flushSave())) return;
+    if (!targetRef || !(await flushOrLeave())) return;
     const path = buildItemPath('contributor', targetRef);
     navigate(activeTab === 'general' ? path : `${path}/${activeTab}`);
-  }, [activeTab, flushSave, navigate]);
+  }, [activeTab, flushOrLeave, navigate]);
   const nav = navIndex >= 0 ? {
     currentIndex: navIndex + 1,
     totalCount: orderedRefs.length,
@@ -424,7 +461,8 @@ export default function ContributorWorkspacePage() {
       intent: 'danger',
     }))) return;
     // Nothing pending may reach the server after the row is gone.
-    pendingPatchRef.current = {};
+    discardSave();
+    patchBuffer.discard();
     await flushSave();
     try {
       await api.delete(`/portfolio/team-members/${contributorId}`);
@@ -435,7 +473,7 @@ export default function ContributorWorkspacePage() {
     } catch (e: any) {
       setError(getApiErrorMessage(e, t, t('portfolio:workspace.contributor.messages.deleteFailed')));
     }
-  }, [contributorId, dialogs, flushSave, isSelfRoute, navigate, queryClient, queryKey, t]);
+  }, [contributorId, dialogs, discardSave, flushSave, isSelfRoute, navigate, patchBuffer, queryClient, queryKey, t]);
 
   // ---- Skills handlers ------------------------------------------------------
 

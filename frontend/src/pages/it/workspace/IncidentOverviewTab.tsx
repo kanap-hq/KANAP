@@ -19,6 +19,12 @@ type Props = {
   reviewEditorRef: React.RefObject<IntegratedDocumentEditorHandle>;
   onReviewSaveStateChange: (status: IntegratedDocumentSaveStatus, error: string | null) => void;
   onPatchDebounced: (patch: Partial<Incident>) => void;
+  /**
+   * Bumped by the page when it reloaded the incident after a refused save or a
+   * discard: the description shows the incident's value again (the stored one,
+   * or the text still waiting to be saved).
+   */
+  descriptionResync?: number;
 };
 
 function SectionLabel({ label, hint }: { label: string; hint: string | null }) {
@@ -39,9 +45,16 @@ export default function IncidentOverviewTab({
   reviewEditorRef,
   onReviewSaveStateChange,
   onPatchDebounced,
+  descriptionResync = 0,
 }: Props) {
   const { t } = useTranslation('it');
   const [description, setDescription] = React.useState(incident.description || '');
+  const incidentDescription = incident.description || '';
+  React.useEffect(() => {
+    if (descriptionResync) setDescription(incidentDescription);
+    // Only on a resync request: the field keeps what the user types otherwise.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [descriptionResync]);
 
   const handleDescriptionChange = (value: string) => {
     setDescription(value);

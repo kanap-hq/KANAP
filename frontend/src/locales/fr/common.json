@@ -622,5 +622,10 @@
   "lifecycleField": {
     "endOfValidity": "Fin de validité",
     "endOfValidityHint": "Laisser vide pour rester actif indéfiniment."
+  },
+  "autosave": {
+    "leaveTitle": "Modifications non enregistrées",
+    "leaveMessage": "Certaines de vos modifications n'ont pas pu être enregistrées. Quittez quand même et perdez-les, ou restez sur cette page et réessayez.",
+    "leaveConfirm": "Quitter sans enregistrer"
   }
 }
