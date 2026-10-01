@@ -7,7 +7,7 @@ import { compileAgFilterCondition, createParamNameGenerator } from '../common/ag
 import { BulkDeleteResult } from '../common/delete.types';
 import { parsePagination } from '../common/pagination';
 import { withSavepoint } from '../common/savepoint.util';
-import { StatusState } from '../common/status';
+import { deriveStatusFromDisabledAt, StatusState } from '../common/status';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AnalyticsCategory } from './analytics-category.entity';
 import { analyticsAxisInSentence, analyticsAxisSubject, isAxisActive, resolveDefaultAxisId } from './analytics-axes.util';
@@ -85,7 +85,8 @@ export function categoryValuesEqual(stored: StoredAnalyticsCategory, next: Analy
   return stored.axis_id === next.axis_id
     && stored.name === next.name
     && (stored.description ?? null) === next.description
-    && stored.status === next.status
+    // From the stored end of validity: the stored status lags until the hourly sync once that date passes.
+    && deriveStatusFromDisabledAt(stored.disabled_at) === next.status
     && sameInstant(stored.disabled_at, next.disabled_at);
 }
 

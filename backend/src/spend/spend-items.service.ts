@@ -12,7 +12,7 @@ import { SpendItemsCsvService } from './spend-items-csv.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
 import { FxRateService } from '../currency/fx-rate.service';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
-import { applyDisabledAtWhere, LifecycleScope, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
+import { applyDisabledAtWhere, deriveStatusFromDisabledAt, LifecycleScope, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { SpendItemUpsertDto } from './dto/spend-item.dto';
 import { SpendLink } from './spend-link.entity';
 import { SpendAttachment } from './spend-attachment.entity';
@@ -282,11 +282,16 @@ export class SpendItemsService {
     const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, 'opex', body, existing);
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     Object.assign(existing, values);
+    const now = new Date();
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: before.disabled_at,
       nextStatus: input.status,
       nextDisabledAt: disabled_at,
+      nowFactory: () => now,
     });
+    // The status before this edit, from the stored end of validity: the stored
+    // status lags until the hourly sync once that date passes.
+    const statusBefore = deriveStatusFromDisabledAt(before.disabled_at, now);
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
     // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
@@ -312,7 +317,7 @@ export class SpendItemsService {
     }
 
     // Notify owners on status change
-    if (before.status !== saved.status) {
+    if (statusBefore !== saved.status) {
       const tenantId = saved.tenant_id;
       // IT owner first, then the business owner, read in one query.
       const ownerIds = Array.from(new Set([saved.owner_it_id, saved.owner_business_id].filter((v): v is string => !!v)));
@@ -332,7 +337,7 @@ export class SpendItemsService {
           itemType: 'opex',
           itemId: saved.id,
           itemName: saved.product_name,
-          oldStatus: before.status,
+          oldStatus: statusBefore,
           newStatus: saved.status,
           recipients,
           tenantId,

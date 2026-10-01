@@ -4,6 +4,7 @@ import { ScheduledTasksModule } from '../admin/scheduled-tasks/scheduled-tasks.m
 import { StorageModule } from '../common/storage/storage.module';
 import { AiConversationRetentionService } from './ai-conversation-retention.service';
 import { AiMutationPreviewExpirationService } from './ai-mutation-preview-expiration.service';
+import { LifecycleStatusSyncService } from './lifecycle-status-sync.service';
 import { OrphanedAttachmentCleanupService } from './orphaned-attachment-cleanup.service';
 import { SearchIndexReindexService } from './search-index-reindex.service';
 
@@ -14,6 +15,7 @@ import { SearchIndexReindexService } from './search-index-reindex.service';
     AiConversationRetentionService,
     AiMutationPreviewExpirationService,
     SearchIndexReindexService,
+    LifecycleStatusSyncService,
   ],
 })
 export class CleanupModule {}

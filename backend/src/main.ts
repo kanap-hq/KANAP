@@ -27,6 +27,7 @@ import { Features } from './config/features';
 import { TenantsService } from './tenants/tenants.service';
 import { OpsMetricsStore } from './admin/ops/ops-metrics.store';
 import { createRequestMetricsMiddleware } from './admin/ops/request-metrics.middleware';
+import { ScheduledTasksService } from './admin/scheduled-tasks/scheduled-tasks.service';
 import { assertSafeDatabaseRole } from './common/database-role-safety';
 
 function validateStartupEnv() {
@@ -509,6 +510,9 @@ async function bootstrap() {
 
   const port = process.env.PORT || 8080;
   await app.listen(port as number);
+
+  // Only the served API runs the startup tasks, never another AppModule context (scripts, specs).
+  app.get(ScheduledTasksService).runStartupTasks();
 }
 
 bootstrap();

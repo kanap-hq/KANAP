@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
-import { StatusState } from '../common/status';
+import { deriveStatusFromDisabledAt, StatusState } from '../common/status';
 import {
   AnalyticsContext,
   analyticsRefusal,
@@ -96,7 +96,8 @@ function valuesEqual(stored: StoredAnalyticsAxis, next: AnalyticsAxisValues): bo
     && (stored.name ?? null) === next.name
     && (stored.description ?? null) === next.description
     && Number(stored.sort_order) === next.sort_order
-    && stored.status === next.status
+    // From the stored end of validity: the stored status lags until the hourly sync once that date passes.
+    && deriveStatusFromDisabledAt(stored.disabled_at) === next.status
     && sameInstant(stored.disabled_at, next.disabled_at);
 }
 
