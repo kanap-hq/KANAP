@@ -183,6 +183,8 @@ export const TENANT_PURGE_TABLES = [
   'portfolio_task_types',
   // Per-tenant item numbering for tasks, requests, projects, and documents
   'item_sequences',
+  // Derived totals before their amounts: the amounts' delete trigger would otherwise update them first
+  'spend_version_totals',
   'spend_amounts',
   'spend_allocations',
   // A line references its round (ON DELETE CASCADE) and its calendar (RESTRICT): before both
@@ -203,6 +205,7 @@ export const TENANT_PURGE_TABLES = [
   'analytics_categories',
   // After the values (a value references its dimension ON DELETE RESTRICT)
   'analytics_axes',
+  'capex_version_totals',
   'capex_amounts',
   'capex_allocations',
   'capex_round_input_lines',

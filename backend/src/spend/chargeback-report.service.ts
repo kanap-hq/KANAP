@@ -628,16 +628,13 @@ export class ChargebackReportService {
       };
     };
 
-    const amountsRepo = manager.getRepository(SpendAmount);
-    const totalsRaw = await amountsRepo
-      .createQueryBuilder('amount')
-      .select('amount.version_id', 'version_id')
-      .addSelect(`SUM(COALESCE(amount.${metricColumn}, 0))`, 'total')
-      .where('amount.tenant_id = :tenantId', { tenantId })
-      .andWhere('amount.version_id IN (:...ids)', { ids: versionIds })
-      .andWhere('EXTRACT(YEAR FROM amount.period) = :year', { year: yr })
-      .groupBy('amount.version_id')
-      .getRawMany<{ version_id: string; total: string }>();
+    // The stored sums of each version's months of its year, the report year (migration 1853720000000).
+    const totalsRaw: Array<{ version_id: string; total: string }> = await manager.query(
+      `SELECT t.version_id, t.${metricColumn}::text AS total
+       FROM spend_version_totals t
+       WHERE t.tenant_id = $1 AND t.version_id = ANY($2::uuid[])`,
+      [tenantId, versionIds],
+    );
 
     const totalsByVersion = new Map<string, number>();
     for (const row of totalsRaw) {

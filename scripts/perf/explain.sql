@@ -5,7 +5,8 @@
 --   PGPASSWORD=app psql -h 127.0.0.1 -U app -d appdb_perf -v tenant=perf -f scripts/perf/explain.sql
 --
 -- Sources: backend/src/spend/spend-summary.builder.ts (loadVersionTotals: versions read, amounts
--- aggregate per version), backend/src/spend/chargeback-report.service.ts (totals per version).
+-- aggregate per version until lot 2A, stored totals since), backend/src/spend/chargeback-report.service.ts
+-- (totals per version). Sections 2b and 2c need migration 1853720000000.
 
 \set ON_ERROR_STOP on
 \pset pager off
@@ -39,6 +40,22 @@ WHERE a.tenant_id = :'tenant_id'::uuid
   AND a.version_id = ANY(:'version_ids'::uuid[])
   AND EXTRACT(YEAR FROM a.period) = v.budget_year
 GROUP BY a.version_id;
+
+\echo '=== 2b. Totals read per version since lot 2A (loadVersionTotals reads the stored totals, migration 1853720000000)'
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT t.version_id, t.planned::text AS planned, t.committed::text AS committed, t.forecast::text AS forecast,
+       t.actual::text AS actual, t.expected_landing::text AS expected_landing
+FROM spend_version_totals t
+WHERE t.tenant_id = :'tenant_id'::uuid
+  AND t.version_id = ANY(:'version_ids'::uuid[]);
+
+\echo '=== 2c. Versions of one year joined to their totals (the join lot 2B builds on)'
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*), sum(t.planned), sum(t.forecast)
+FROM spend_versions v
+LEFT JOIN spend_version_totals t ON t.tenant_id = v.tenant_id AND t.version_id = v.id
+WHERE v.tenant_id = :'tenant_id'::uuid
+  AND v.budget_year = 2026;
 
 \echo '=== 3. Chargeback amounts per version (no explicit tenant_id: RLS only)'
 EXPLAIN (ANALYZE, BUFFERS)
