@@ -79,6 +79,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 
 - [Plan comptable](chart-of-accounts.md) - Configurez les comptes financiers
 - [Devises](currencies.md) - Configurez les paramètres de devise
+- [Calendriers de jours ouvrés](working-day-calendars.md) - Jours ouvrés de chaque mois, à partir des jours fériés d'un pays ou saisis à la main, pour les lignes au prix par jour
 
 **Classification**
 

@@ -88,6 +88,7 @@ Estas columnas están ocultas por defecto. Muéstrelas desde el selector de colu
 | Columna | Qué muestra |
 |---------|-------------|
 | **Columnas de importes** | Cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Los importes están en la moneda de reporte. Las columnas ocultas no se ofrecen |
+| **Columnas de ETC** | El ETC de cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización, justo después de las columnas de importes en el selector de columnas. El encabezado indica la columna y el año natural, por ejemplo **ETC Presupuesto (2026)**. El ETC de una partida es la suma del ETC de sus líneas en esa columna. Consulte [ETC](#etc). La celda queda vacía cuando la columna no tiene líneas |
 | **Moneda** | Código de moneda de la partida |
 | **Inicio efectivo** | Fecha de inicio |
 | **Fin de validez** | Fecha en que la partida termina (en blanco significa sin fin) |
@@ -111,24 +112,28 @@ Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **
 
 Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes.
 
+Cada columna de ETC tiene un filtro numérico con las mismas condiciones, más vacío y no vacío. **Vacío** conserva las partidas cuya columna no tiene líneas.
+
 **Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío.
 
 Las columnas de texto usan filtros de texto. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` o `CPX-12`.
 
 ### Ordenación
 
-Haga clic en un encabezado de columna para ordenar ascendente o descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe. La ordenación predeterminada es la columna por defecto del año actual, de mayor a menor (**Presupuesto A** con la configuración estándar). **Anterior** y **Siguiente** en el espacio de trabajo siguen el mismo orden. La lista recuerda su última ordenación cuando regresa.
+Haga clic en un encabezado de columna para ordenar ascendente o descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe y de ETC. Las partidas sin ETC van al final en orden ascendente. La ordenación predeterminada es la columna por defecto del año actual, de mayor a menor (**Presupuesto A** con la configuración estándar). **Anterior** y **Siguiente** en el espacio de trabajo siguen el mismo orden. La lista recuerda su última ordenación cuando regresa.
 
 ### Fila de totales
 
 La fila fijada en la parte inferior muestra el total de cada columna de importe. Los totales respetan sus filtros y búsqueda actuales. Todos los importes se convierten a su moneda de reporte, mostrada en el título de la página.
+
+Cada columna de ETC visible muestra la suma del ETC de las partidas. Cuando algunas partidas no tienen ETC, el recuento sigue al total, por ejemplo «3.50 · 12 desconocidas». Pase el cursor por encima para ver la frase completa: «Desconocido para 12 líneas». Cuando ninguna partida tiene ETC, el total queda vacío y solo se muestra el recuento.
 
 ### Enlace directo
 
 Haga clic en cualquier celda de una fila para abrir el espacio de trabajo en la pestaña más relevante para esa columna:
 
 - **Descripción**, **Proveedor**, **Empresa pagadora**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad** y las demás columnas generales: Abre **Vista general**
-- **Columnas de importes** (Presupuesto A, Aterrizaje previsto A, Revisión A+1, etc.): Abre la pestaña **Presupuesto** en el año de la columna
+- **Columnas de importes** (Presupuesto A, Aterrizaje previsto A, Revisión A+1, etc.) y **Columnas de ETC**: Abre la pestaña **Presupuesto** en el año de la columna
 - **Asignación**: Abre la pestaña **Asignaciones** para el año actual
 - **Tarea**: Abre la pestaña **Vista general**, donde está el panel de tareas
 - **Contrato**: Abre directamente el contrato vinculado
@@ -244,6 +249,7 @@ Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y 
 
 - **Anual**: Introduzca un total por columna. El total se reparte uniformemente entre los meses del periodo de la columna, y los meses fuera de él se ponen a cero. El periodo aparece bajo cada total antes de escribir, por ejemplo «9 meses, de abril a diciembre». Solo se guarda el total que usted modifica. Las demás columnas conservan sus importes mensuales.
 - Haga clic en el icono de lápiz junto al periodo bajo un total (**Cambiar el periodo**) para abrir el panel de reparto en esa columna, con su total actual. Si las fechas de la partida no dejan ningún mes en el año, el total se deshabilita y muestra «Ningún mes de 2026 está dentro de las fechas de la partida.» Haga clic en el icono de lápiz junto a ese texto (**Elegir el periodo**) para definirlo usted mismo.
+- Haga clic en el icono de calculadora junto al lápiz (**Cantidad y precio**) para abrir el mismo cuadro en las líneas de esa columna. Consulte [Cantidad y precio](#cantidad-y-precio).
 - **Mensual**: Introduzca importes por mes (enero a diciembre) para cada columna visible, para un seguimiento detallado del gasto del proyecto. Se muestran subtotales trimestrales y un total anual. Solo se guardan los meses que usted modifica.
 - Ambas pestañas muestran las mismas columnas: Previsión también aparece en **Anual** cuando se muestra.
 - Cambie de modo con las pestañas **Anual** y **Mensual**
@@ -257,24 +263,27 @@ Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y 
 
 **Repartir un importe**:
 
-- El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde el icono de lápiz bajo un total
+- El cuadro del panel tiene dos pestañas: **Repartir un importe** y **Cantidad y precio**. Esta parte trata de la primera
+- El panel de reparto siempre está visible en la pestaña **Mensual**. En la pestaña **Anual** se abre desde el icono de lápiz bajo un total, y su botón de cierre lo cierra
 - Elija una **Columna** entre las columnas visibles, compruebe el **Importe**, elija una **Distribución** (**Uniforme** o **4-4-5**) y defina las fechas **Desde** y **Hasta**. Las fechas parten del periodo actual de la columna, y la distribución de la que ya tiene la columna
 - El panel se abre en la columna por defecto. El importe parte del total actual de la columna, en ambas pestañas, y se actualiza cuando elige otra columna. Queda vacío cuando la columna no tiene importe
-- **Aplicar a todas las columnas** está activado por defecto: cada columna que lo sigue recibe el mismo periodo y la misma distribución, cada una con su propio total actual. Por defecto, todas las columnas lo siguen. Un administrador de presupuesto elige cuáles en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Las columnas congeladas nunca cambian. Pase el cursor sobre el interruptor para ver qué columnas siguen y cuáles conservan su propio periodo. Desactive el interruptor para repartir solo la columna seleccionada
-- Una columna que no sigue «Aplicar a todas las columnas» se reparte sola: el interruptor no aparece cuando la reparte. El interruptor también se oculta cuando ninguna otra columna que lo sigue puede cambiar
-- **Restablecer** rellena el panel con el total actual de la columna, **Uniforme** y el año completo. No guarda nada: haga clic en **Aplicar** para usarlo. Con **Aplicar a todas las columnas** activado, **Restablecer** y luego **Aplicar** devuelven cada columna que lo sigue a un reparto uniforme en doce meses
+- **Cada cambio se guarda de inmediato**: el importe al salir del campo o al pulsar Intro, la distribución y las fechas en cuanto las cambia. No hay ningún botón que pulsar. Un importe vacío o igual a cero no guarda nada
+- **Aplicar el reparto a todas las columnas** es un interruptor, activado por defecto: cada columna que lo sigue recibe la misma distribución y el mismo periodo, y cada una conserva su propio total actual. Activarlo reparte esas columnas de inmediato, y queda activado para sus cambios siguientes. Desactivarlo no cambia nada por sí solo: los cambios siguientes se aplican solo a la columna seleccionada. Por defecto, todas las columnas lo siguen. Un administrador de presupuesto elige cuáles en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Las columnas congeladas nunca cambian. Pase el cursor sobre el interruptor para ver qué columnas siguen y cuáles conservan su propio periodo
+- Una columna que no sigue el interruptor se reparte sola: el interruptor no aparece cuando la reparte. El interruptor también se oculta cuando ninguna otra columna que lo sigue puede cambiar
+- Para devolver una columna a un reparto uniforme en doce meses, elija **Uniforme** y defina las fechas del 1 de enero al 31 de diciembre
 - Los totales introducidos en la pestaña **Anual** siguen aplicándose solo a su propia columna
 - Las fechas **Desde** y **Hasta** muestran el periodo. Cuando algunos meses quedan fuera, el panel indica cuáles se pondrán a cero («De enero a marzo se pondrán a cero.»). Un periodo de todo el año no muestra ninguna línea. Pase el cursor sobre el icono de información junto al título del panel para ver la regla del día 15
 - Con **4-4-5**, los pesos de los meses que cuentan se amplían para que todo el importe recaiga en ellos
-- Aparece un aviso no bloqueante cuando el periodo va más allá de las fechas de la partida. Aun así puede aplicar
-- **Aplicar** permanece deshabilitado mientras falte una fecha o ningún mes cuente. No se guarda nada hasta que haga clic en **Aplicar**
-- Desde la pestaña **Mensual**, Aplicar rellena la cuadrícula. Desde la pestaña **Anual**, permanece en la vista Anual
+- Aparece un aviso no bloqueante cuando el periodo va más allá de las fechas de la partida. El reparto se guarda de todos modos
+- Mientras falte una fecha o ningún mes cuente, el panel indica el motivo y no guarda nada
+- Un reparto sobre una columna construida a partir de líneas conserva sus líneas. Consulte [Cantidad y precio](#cantidad-y-precio)
 
 **Cómo se produjo cada columna**:
 
 - Una etiqueta breve indica de dónde vienen los importes de una columna. En la pestaña **Mensual** aparece bajo el encabezado de la columna (pase el cursor por encima para ver el periodo). En la pestaña **Anual** aparece junto al periodo
 - **Reparto uniforme**, **Reparto 4-4-5** o **Reparto por trimestre**: los importes proceden de un reparto
 - **Copiado de Presupuesto 2025 +2 %**: los importes proceden de **Copiar columnas presupuestarias** en la Administración presupuestaria, con el porcentaje visible cuando lo hay
+- **Cantidad y precio · 3 líneas · 1.00 ETC**: los importes proceden de líneas, con su número y, cuando las líneas cuentan personas o días, el ETC de la columna. El ETC es la media anual. Pase el cursor sobre la etiqueta para ver las líneas, por ejemplo «Jefe de proyecto: 1 persona × 1.200 por día, 5 días por mes, de feb a jul»
 - **Editado a mano**: se modificó un mes en la cuadrícula o mediante una importación del archivo de filas presupuestarias
 - Una columna sin etiqueta conserva los datos que tenía antes de que existieran los periodos
 
@@ -296,6 +305,90 @@ Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y 
 4. Sus cambios se guardan automáticamente; junto a las pestañas de año aparece la indicación **Guardando...** / **Guardado**
 
 **Consejo**: Para la mayoría de partidas, el modo Anual es más rápido. Utilice el modo Mensual cuando necesite hacer seguimiento del ritmo del gasto de proyectos o despliegues por fases.
+
+#### Cantidad y precio
+
+Construya una columna a partir de líneas en lugar de escribir sus importes. Cada línea se lee como una frase: una cantidad, una unidad, un precio unitario, una frecuencia, cuándo y con qué calendario. Por ejemplo, un contratista en un proyecto de build a tiempo completo a 400 por día de febrero a octubre, y 20 portátiles a 1.200 por pieza, comprados una vez el 15 de marzo. Los meses de la columna son la suma de sus líneas.
+
+**Abrir la pestaña**:
+
+- Pestaña **Anual**: haga clic en el icono de calculadora junto al periodo bajo un total. El cuadro se abre en **Cantidad y precio** para esa columna
+- Pestaña **Mensual**: haga clic en **Cantidad y precio** en la parte superior del cuadro del panel
+- Elija la **Columna** en la parte superior de la pestaña. Las columnas congeladas no se pueden elegir
+
+**Las líneas**:
+
+| Columna | Qué introducir |
+|---|---|
+| **Descripción** | Lo que paga la línea, por ejemplo «Jefe de proyecto». Opcional, hasta 200 caracteres |
+| **Cantidad** | Cuántas, en la unidad de la línea. Cero o más, hasta 3 decimales |
+| **Unidad** | **personas**, **días** o **piezas**. La unidad decide a qué corresponde el precio, con qué frecuencia cuenta, cómo se reparte el importe entre los meses y el ETC |
+| **Precio unitario** | El precio de una unidad, en la moneda de la partida. Hasta 4 decimales. Se acepta un precio negativo, para un abono. A qué corresponde el precio aparece justo después: **por día** para los días, **por pieza** para las piezas y, para las personas, una pequeña lista para elegir **por día** o **por mes** |
+| **Frecuencia** | Depende de la unidad. Personas con precio por día: una casilla **Tiempo completo** y, cuando no está marcada, los **días por mes** que trabajan en la partida (más de 0, hasta 31, con hasta 3 decimales). Personas con precio por mes: «por mes». Días: «en el periodo». Piezas: una lista para elegir **por mes** o **una vez** |
+| **Desde** / **Hasta** | El periodo de la línea, dentro del año. Un mes cuenta cuando el periodo cubre su día 15, como en un reparto. Las piezas compradas una vez llevan en su lugar una sola **Fecha** y recaen en su mes. Cuando todas las líneas llevan una fecha, el encabezado indica **Fecha** |
+| **Calendario** | Solo se muestra para un precio por día: personas con precio por día, y días. El calendario laboral cuyos días cuentan. La lista ofrece los calendarios activados, más el calendario que ya usa una línea si se desactivó después, marcado «(desactivado)». Cuando aún no hay ningún calendario, la pestaña indica «Aún no hay ningún calendario laboral.», con un enlace **Añadir un calendario** para quienes pueden crear calendarios. Consulte [Calendarios laborales](working-day-calendars.md) |
+| **Importe** | El total de la línea, una vez guardada. Solo lectura |
+
+Cuando la pestaña es lo bastante ancha, cada línea ocupa una sola fila. En una pantalla más estrecha, o con el panel **Propiedades** abierto en una pantalla 1080p, cada línea ocupa dos filas alineadas, con **Descripción**, **Cantidad**, **Unidad**, **Precio unitario** e **Importe** en la primera, y **Frecuencia**, **Desde** y **Hasta** (o **Fecha**) y **Calendario** en la segunda; cierre el panel **Propiedades** para volver a una fila por línea.
+
+Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en la cruz al final de una línea para quitarla. Una columna admite hasta 50 líneas.
+
+**Unidades y precios**:
+
+| Unidad | Precio | Frecuencia | Importe de cada mes del periodo | ETC de cada mes |
+|---|---|---|---|---|
+| **personas** | **por día** | **Tiempo completo** | Los días laborables del mes en el calendario × cantidad × precio unitario | La cantidad |
+| **personas** | **por día** | **5 días por mes** | 5 × cantidad × precio unitario | Cantidad × 5 ÷ los días laborables del mes en el calendario |
+| **personas** | **por mes** | por mes | Cantidad × precio unitario | La cantidad |
+| **días** | **por día** | en el periodo | Cantidad × precio unitario, contado una vez y repartido uniformemente entre los meses del periodo | La parte de los días que corresponde al mes ÷ los días laborables del mes en el calendario |
+| **piezas** | **por pieza** | **por mes** | Cantidad × precio unitario | Ninguno |
+| **piezas** | **por pieza** | **una vez** | Cantidad × precio unitario, en el mes de la fecha | Ninguno |
+
+- Use **personas** para el personal que trabaja en la partida mes tras mes. Con precio por día, indique cuánto trabajan: marque **Tiempo completo** para contar todos los días laborables del calendario desde el inicio hasta el fin de la línea, o introduzca los días por mes. Por ejemplo, un jefe de proyecto 5 días por mes a 1.200 por día de febrero a julio cuesta 6.000 al mes. En un calendario con 21 días laborables en marzo, ese mes cuenta 5 ÷ 21, unos 0.24 ETC. Un consultor a tiempo completo a 400 por día cuesta cada mes los días laborables del mes × 400, y cuenta 1 ETC
+- Con precio por mes, las personas cuestan cada mes la cantidad × el precio unitario, por ejemplo 1 persona a 8.000 por mes
+- Use **días** para un número de días contratados para el periodo, como un solo paquete. Por ejemplo, 30 días a 1.200 por día de febrero a julio dan 36.000, es decir 6.000 al mes. Cada mes tiene 5 días: en un mes con 20 días laborables, la línea cuenta 0.25 ETC
+- Use **piezas** para licencias, equipos o suscripciones. Por mes, cuentan en cada mes del periodo: 50 licencias a 12 por pieza dan 600 al mes. Una vez, llevan una fecha y recaen en su mes: un portátil a 2.000 el 15 de marzo recae en marzo. Las piezas nunca cuentan como ETC
+- Cada mes se redondea al céntimo. Cuando un importe se reparte a lo largo del periodo, la diferencia de redondeo recae en el último mes. Los meses fuera del periodo de una línea no reciben nada de ella
+- Al cambiar la unidad, el resto de la línea se adapta. Las personas conservan un precio por mes cuando lo eligió, y si no tienen un precio por día. Los días tienen un precio por día, en el periodo. Las piezas tienen un precio por pieza y se compran una vez, con la fecha de inicio del periodo de la columna. Pasar unas piezas de una vez a por mes les devuelve el periodo de la columna
+
+**Una línea nueva** empieza con la unidad **personas**, una cantidad de 1, un precio por día, **Tiempo completo** sin marcar con los días por mes por introducir, el periodo de la columna (el año completo cuando la columna no tiene ninguno) y el calendario por defecto. El calendario por defecto es el calendario estándar del país de la empresa pagadora o, si no existe, el primer calendario activado. Introduzca el precio unitario y los días por mes, o marque **Tiempo completo**, y la línea se guarda. Sin un calendario activado, una línea nueva empieza con un precio por mes.
+
+**Guardado**: cada campo se guarda al salir de él, al pulsar Intro o al elegir un valor o una fecha. No hay ningún botón que pulsar. Cada guardado envía todas las líneas completas de la columna, y los meses de la columna se actualizan de inmediato. La indicación **Guardando...** junto a las pestañas de año aparece mientras tanto.
+
+- Una línea está completa cuando tiene una cantidad, un precio unitario, un periodo o una fecha válidos, los días por mes o **Tiempo completo** para las personas con precio por día, y un calendario para un precio por día. Hasta entonces permanece en pantalla con una indicación, por ejemplo «Introduzca una cantidad y un precio unitario para guardar esta línea.», «Introduzca los días por mes o marque Tiempo completo.» o «Elija un calendario para un precio por día.», y las líneas guardadas no cambian
+- Quitar la última línea quita las líneas de la columna, y sus importes se mantienen. Una columna calculada a partir de sus líneas cuenta entonces como importes introducidos a mano. Una columna repartida o copiada conserva su reparto o su copia
+- Cuando se rechaza un guardado, el motivo aparece en rojo bajo la tabla, y lo que escribió se mantiene. Por ejemplo, «Personal de la sede has no working days for 2027. Add them on the Working-day calendars page.» cuando un calendario personalizado aún no contiene el año
+- En una columna congelada, las líneas son de solo lectura
+
+**Bajo la tabla**:
+
+- El ETC de las líneas, cuando una línea cuenta personas o días, por ejemplo «ETC en el periodo 0.24 · Media anual 0.12». Consulte [ETC](#etc). El total de la columna aparece en la propia columna
+- De dónde vienen los importes, cuando ya no vienen de las líneas: una de las frases del apartado siguiente
+- Notas cuando corresponde: «El periodo va más allá de las fechas de la partida.», un calendario desactivado después, por ejemplo «Personal de la sede está desactivado. Las líneas aún lo usan.», y días laborables modificados desde el último guardado de las líneas
+- **Aplicar estas líneas a todas las columnas**: un interruptor para las mismas columnas que el interruptor de la pestaña de reparto, desactivado por defecto aquí. Activarlo escribe las líneas en cada columna que lo sigue de inmediato, y queda activado: cada guardado posterior escribe también las líneas en esas columnas. Desactivarlo no cambia nada por sí solo
+
+**Cuando los importes cambian de otra forma**: las líneas se quedan en la columna como referencia, y la pestaña indica de dónde vienen ahora los importes, seguido de un enlace **Usar de nuevo las líneas**. El enlace guarda las líneas tal como están y vuelve a calcular la columna a partir de ellas.
+
+- Un mes introducido en la pestaña **Mensual**: «Los importes se introdujeron a mano. Usar de nuevo las líneas.»
+- Un reparto: «Los importes vienen de un reparto. Usar de nuevo las líneas.»
+- **Copiar columnas presupuestarias** en la Administración presupuestaria: «Los importes se copiaron de Presupuesto 2025. Usar de nuevo las líneas.» La copia lleva las líneas de la columna de origen junto con los importes. Consulte [Copiar una columna calculada](budget-operations.md#copiar-una-columna-calculada)
+- Los días laborables de un calendario cambiaron: «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.» Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**
+- **Restablecer columna presupuestaria** en la Administración presupuestaria quita las líneas junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
+- Un archivo de filas presupuestarias solo cambia los meses, y las líneas se mantienen. Consulte [Archivo de filas presupuestarias](budget-operations.md#archivo-de-filas-presupuestarias)
+
+#### ETC
+
+El ETC (equivalente a tiempo completo) indica cuántas personas paga una columna. Procede de las líneas: cada mes suma el ETC de sus líneas (consulte la tabla anterior). De ahí salen dos cifras, cada una redondeada a 2 decimales:
+
+- **Media anual**: la suma de los doce meses dividida entre 12. Es el ETC de la columna, visible en la etiqueta de la columna y en las columnas de ETC de la lista CAPEX
+- **ETC en el periodo**: la suma de los meses con personas o días, dividida entre el número de esos meses. Las piezas no cuentan, así que las licencias o un portátil nunca lo reducen. Aparece bajo las líneas mientras los importes vienen de ellas. Tras una edición a mano, un reparto o una copia, no se muestra hasta que use de nuevo las líneas
+
+Por ejemplo, un consultor a tiempo completo de febrero a octubre cuenta 1 ETC en cada uno de esos 9 meses: 1.00 en el periodo, y 9 × 1 ÷ 12 = 0.75 para el año completo. Un jefe de proyecto 5 días por mes de febrero a julio cuenta unos 0.24 en el periodo, y 0.12 para el año completo. Unas licencias durante todo el año o un portátil en diciembre en la misma columna dejan ambas cifras como están.
+
+- **Contado**: una columna con líneas en personas o días
+- **Cero**: una columna cuyas líneas están todas en piezas. Su ETC es 0
+- **Vacío**: una columna sin líneas, una partida sin versión para ese año o un año posterior al fin de validez de la partida. Su celda de ETC queda vacía, porque KANAP no puede saber cuántas personas paga
+- El ETC se queda con las líneas. Tras una edición a mano, un reparto o una copia, la columna conserva el ETC de sus líneas. Una copia lleva el ETC de la columna de origen
 
 ---
 

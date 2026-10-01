@@ -88,6 +88,7 @@ Ces colonnes sont masquées par défaut. Affichez-les depuis le sélecteur de co
 | Colonne | Ce qu'elle affiche |
 |---|---|
 | **Colonnes de montants** | Chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation. L'en-tête indique la colonne, l'année par rapport à aujourd'hui et l'année civile, par exemple **Révision A+1 (2027)**. Les montants sont dans la devise de reporting. Les colonnes masquées ne sont pas proposées |
+| **Colonnes ETP** | L'ETP de chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation, juste après les colonnes de montants dans le sélecteur de colonnes. L'en-tête indique la colonne et l'année civile, par exemple **ETP Budget (2026)**. L'ETP d'un poste est la somme des ETP de ses lignes dans cette colonne. Voir [ETP](#etp). La cellule est vide lorsque la colonne n'a aucune ligne |
 | **Devise** | Code de devise du poste |
 | **Début effectif** | Date de début |
 | **Fin de validité** | Date à laquelle le poste s'arrête (vide signifie sans fin) |
@@ -111,24 +112,28 @@ Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **
 
 Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants.
 
+Chaque colonne ETP a un filtre numérique avec les mêmes conditions, plus vide et non vide. **Vide** garde les postes dont la colonne n'a aucune ligne.
+
 **Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide.
 
 Les colonnes texte utilisent des filtres texte. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `CPX-12`.
 
 ### Tri
 
-Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant. Le tri par défaut suit la colonne par défaut de l'année en cours, du plus élevé au plus faible (**Budget A** avec les réglages standard). **Préc.** et **Suiv.** dans l'espace de travail suivent le même ordre. La liste mémorise votre dernier tri quand vous revenez.
+Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant et chaque colonne ETP. Les postes sans ETP viennent en dernier dans l'ordre croissant. Le tri par défaut suit la colonne par défaut de l'année en cours, du plus élevé au plus faible (**Budget A** avec les réglages standard). **Préc.** et **Suiv.** dans l'espace de travail suivent le même ordre. La liste mémorise votre dernier tri quand vous revenez.
 
 ### Ligne de totaux
 
 La ligne épinglée en bas affiche le total de chaque colonne de montant. Les totaux respectent vos filtres et recherche actuels. Tous les montants sont convertis dans votre devise de reporting, affichée dans le titre de la page.
+
+Chaque colonne ETP affichée montre la somme des ETP des postes. Lorsque certains postes n'ont pas d'ETP, leur nombre suit le total, par exemple « 3.50 · 12 inconnues ». Survolez-le pour lire la phrase complète : « Inconnu pour 12 lignes ». Lorsqu'aucun poste n'a d'ETP, le total est vide et seul le nombre s'affiche.
 
 ### Liens profonds
 
 Cliquez sur n'importe quelle cellule d'une ligne pour ouvrir l'espace de travail sur l'onglet le plus pertinent pour cette colonne :
 
 - **Description**, **Fournisseur**, **Société payeuse**, **Type d'immobilisation**, **Type d'investissement**, **Priorité** et les autres colonnes générales : Ouvre la **Vue d'ensemble**
-- **Colonnes de montants** (Budget A, Atterrissage prévu A, Révision A+1, etc.) : Ouvre l'onglet **Budget** sur l'année de la colonne
+- **Colonnes de montants** (Budget A, Atterrissage prévu A, Révision A+1, etc.) et **Colonnes ETP** : Ouvre l'onglet **Budget** sur l'année de la colonne
 - **Ventilation** : Ouvre l'onglet **Ventilations** pour l'année en cours
 - **Tâche** : Ouvre l'onglet **Vue d'ensemble**, où se trouve le panneau des tâches
 - **Contrat** : Ouvre directement le contrat lié
@@ -244,6 +249,7 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 
 - **Annuel** : Saisissez un total par colonne. Le total est réparti uniformément sur les mois de la période de la colonne, et les mois hors de cette période sont mis à zéro. La période s'affiche sous chaque total avant la saisie, par exemple « 9 mois, avril à décembre ». Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
 - Cliquez sur l'icône crayon à côté de la période sous un total (**Modifier la période**) pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates du poste ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates du poste. » Cliquez sur l'icône crayon à côté (**Choisir la période**) pour la définir vous-même.
+- Cliquez sur l'icône calculatrice à côté du crayon (**Quantité et prix**) pour ouvrir le même encadré sur les lignes de cette colonne. Voir [Quantité et prix](#quantite-et-prix).
 - **Mensuel** : Saisissez les montants par mois (Jan à Déc) pour chaque colonne affichée, pour un suivi fin des dépenses projet. Des sous-totaux par trimestre et un total annuel sont affichés. Seuls les mois que vous modifiez sont enregistrés.
 - Les deux onglets montrent les mêmes colonnes : Prévision apparaît aussi dans **Annuel** quand elle est affichée.
 - Passez d'un mode à l'autre avec les onglets **Annuel** et **Mensuel**
@@ -257,24 +263,27 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 
 **Répartir un montant** :
 
-- Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis l'icône crayon sous un total
+- L'encadré du panneau a deux onglets : **Répartir un montant** et **Quantité et prix**. Cette partie couvre le premier
+- Le panneau de répartition est toujours visible dans l'onglet **Mensuel**. Dans l'onglet **Annuel**, il s'ouvre depuis l'icône crayon sous un total, et son bouton de fermeture le ferme
 - Choisissez une **Colonne** parmi les colonnes affichées, vérifiez le **Montant**, choisissez une **Répartition** (**Linéaire** ou **4-4-5**), puis définissez les dates **Du** et **Au**. Les dates partent de la période actuelle de la colonne, et la répartition de celle de la colonne
 - Le panneau s'ouvre sur la colonne par défaut. Le montant reprend le total actuel de la colonne, dans les deux onglets, et suit lorsque vous choisissez une autre colonne. Il reste vide lorsque la colonne n'a aucun montant
-- **Appliquer à toutes les colonnes** est activé par défaut : chaque colonne qui le suit reçoit la même période et la même répartition, chacune avec son propre total actuel. Par défaut, toutes les colonnes le suivent. Un administrateur budgétaire choisit lesquelles dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les colonnes gelées ne changent jamais. Survolez l'interrupteur pour voir les colonnes qui suivent et celles qui gardent leur propre période. Désactivez l'interrupteur pour ne répartir que la colonne choisie
-- Une colonne qui ne suit pas « Appliquer à toutes les colonnes » est répartie seule : l'interrupteur n'apparaît pas quand vous la répartissez. L'interrupteur est aussi masqué quand aucune autre colonne qui suit ne peut changer
-- **Réinitialiser** remplit le panneau avec le total actuel de la colonne, **Linéaire** et l'année entière. Rien n'est enregistré : cliquez sur **Appliquer** pour l'utiliser. Avec **Appliquer à toutes les colonnes** activé, **Réinitialiser** puis **Appliquer** remet chaque colonne qui suit en répartition linéaire sur douze mois
+- **Chaque modification s'enregistre aussitôt** : le montant quand vous quittez le champ ou appuyez sur Entrée, la répartition et les dates dès que vous les modifiez. Il n'y a aucun bouton à cliquer. Un montant vide ou nul n'enregistre rien
+- **Appliquer la répartition à toutes les colonnes** est un interrupteur, activé par défaut : chaque colonne qui le suit reçoit la même répartition et la même période, et chacune garde son propre total actuel. L'activer répartit aussitôt ces colonnes, et il reste activé pour vos modifications suivantes. Le désactiver ne change rien en soi : les modifications suivantes s'appliquent à la seule colonne choisie. Par défaut, toutes les colonnes le suivent. Un administrateur budgétaire choisit lesquelles dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les colonnes gelées ne changent jamais. Survolez l'interrupteur pour voir les colonnes qui suivent et celles qui gardent leur propre période
+- Une colonne qui ne suit pas l'interrupteur est répartie seule : l'interrupteur n'apparaît pas quand vous la répartissez. L'interrupteur est aussi masqué quand aucune autre colonne qui suit ne peut changer
+- Pour remettre une colonne en répartition linéaire sur douze mois, choisissez **Linéaire** et réglez les dates sur le 1er janvier et le 31 décembre
 - Les totaux saisis dans l'onglet **Annuel** s'appliquent toujours à leur seule colonne
 - Les dates **Du** et **Au** affichent la période. Quand des mois tombent en dehors, le panneau indique lesquels seront mis à zéro (« Janvier à mars seront mis à zéro. »). Une période sur l'année entière n'affiche aucune ligne. Survolez l'icône d'information à côté du titre du panneau pour voir la règle du 15
 - Avec **4-4-5**, les poids des mois qui comptent sont augmentés pour que tout le montant se répartisse sur eux
-- Un avertissement non bloquant apparaît lorsque la période dépasse les dates du poste. Vous pouvez tout de même appliquer
-- **Appliquer** reste désactivé tant qu'une date manque ou qu'aucun mois ne compte. Rien n'est enregistré avant que vous cliquiez sur **Appliquer**
-- Depuis l'onglet **Mensuel**, Appliquer remplit la grille. Depuis l'onglet **Annuel**, vous restez dans la vue Annuel
+- Un avertissement non bloquant apparaît lorsque la période dépasse les dates du poste. La répartition est tout de même enregistrée
+- Tant qu'une date manque ou qu'aucun mois ne compte, le panneau en indique la raison et n'enregistre rien
+- Une répartition sur une colonne construite à partir de lignes garde ses lignes. Voir [Quantité et prix](#quantite-et-prix)
 
 **Origine de chaque colonne** :
 
 - Un court libellé indique d'où viennent les montants d'une colonne. Dans l'onglet **Mensuel**, il se trouve sous l'en-tête de colonne (survolez-le pour voir la période). Dans l'onglet **Annuel**, il se trouve à côté de la période
 - **Répartition linéaire**, **Répartition 4-4-5** ou **Répartition par trimestre** : les montants proviennent d'une répartition
 - **Copié depuis Budget 2025 +2 %** : les montants proviennent de **Copier les colonnes budgétaires** dans l'Administration budgétaire, avec le pourcentage affiché lorsqu'il y en a un
+- **Quantité et prix · 3 lignes · 1.00 ETP** : les montants proviennent de lignes, avec leur nombre et, lorsque les lignes comptent des personnes ou des jours, l'ETP de la colonne. Cet ETP est la moyenne sur l'année. Survolez le libellé pour voir les lignes, par exemple « Chef de projet : 1 personne × 1 200 par jour, 5 jours par mois, févr. à juil. »
 - **Modifié à la main** : un mois a été modifié dans la grille ou par un import du fichier des lignes budgétaires
 - Une colonne sans libellé a conservé les données qu'elle avait avant l'arrivée des périodes
 
@@ -296,6 +305,90 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 4. Vos modifications s'enregistrent automatiquement ; l'indication **Enregistrement...** / **Enregistré** apparaît à côté des onglets d'année
 
 **Conseil** : Pour la plupart des postes, le mode Annuel est plus rapide. Utilisez le mode Mensuel lorsque vous devez suivre le calendrier des dépenses d'un projet ou un déploiement par phases.
+
+#### Quantité et prix
+
+Construisez une colonne à partir de lignes au lieu de saisir ses montants. Chaque ligne se lit comme une phrase : une quantité, une unité, un prix unitaire, une fréquence, une période, et un calendrier. Par exemple, un prestataire sur un projet de build à temps plein à 400 par jour de février à octobre, et 20 ordinateurs portables à 1 200 par pièce, achetés une fois le 15 mars. Les mois de la colonne sont la somme de ses lignes.
+
+**Ouvrir l'onglet** :
+
+- Onglet **Annuel** : cliquez sur l'icône calculatrice à côté de la période sous un total. L'encadré s'ouvre sur **Quantité et prix** pour cette colonne
+- Onglet **Mensuel** : cliquez sur **Quantité et prix** en haut de l'encadré du panneau
+- Choisissez la **Colonne** en haut de l'onglet. Les colonnes gelées ne peuvent pas être choisies
+
+**Les lignes** :
+
+| Colonne | Ce qu'il faut saisir |
+|---|---|
+| **Description** | Ce que la ligne paie, par exemple « Chef de projet ». Facultative, jusqu'à 200 caractères |
+| **Quantité** | Combien, dans l'unité de la ligne. Zéro ou plus, jusqu'à 3 décimales |
+| **Unité** | **personnes**, **jours** ou **pièces**. L'unité détermine ce que paie le prix, sa fréquence, la façon dont le montant se répartit sur les mois, et l'ETP |
+| **Prix unitaire** | Le prix d'une unité, dans la devise du poste. Jusqu'à 4 décimales. Un prix négatif est accepté, pour un avoir. Ce que paie le prix s'affiche juste après : **par jour** pour les jours, **par pièce** pour les pièces, et pour les personnes une petite liste pour choisir **par jour** ou **par mois** |
+| **Fréquence** | Elle suit l'unité. Personnes au prix par jour : une case **Temps plein** et, lorsqu'elle n'est pas cochée, les **jours par mois** qu'elles consacrent au poste (plus de 0, jusqu'à 31, avec jusqu'à 3 décimales). Personnes au prix par mois : « par mois ». Jours : « sur la période ». Pièces : une liste pour choisir **par mois** ou **une fois** |
+| **Du** / **Au** | La période de la ligne, à l'intérieur de l'année. Un mois compte lorsque la période couvre son 15, comme pour une répartition. Les pièces achetées une fois prennent une seule **Date** à la place et tombent dans son mois. Lorsque toutes les lignes prennent une date, l'en-tête indique **Date** |
+| **Calendrier** | Affiché pour un prix par jour uniquement : les personnes au prix par jour, et les jours. Le calendrier de jours ouvrés dont les jours comptent. La liste propose les calendriers activés, plus le calendrier qu'une ligne utilise déjà s'il a été désactivé depuis, marqué « (désactivé) ». Lorsqu'il n'existe encore aucun calendrier, l'onglet indique « Aucun calendrier de jours ouvrés pour l'instant. », avec un lien **Ajouter un calendrier** pour les personnes qui peuvent créer des calendriers. Voir [Calendriers de jours ouvrés](working-day-calendars.md) |
+| **Montant** | Le total de la ligne, une fois enregistrée. En lecture seule |
+
+Lorsque l'onglet est assez large, chaque ligne tient sur une rangée. Sur un écran plus étroit, ou avec le panneau **Propriétés** ouvert sur un écran 1080p, chaque ligne occupe deux rangées alignées, avec **Description**, **Quantité**, **Unité**, **Prix unitaire** et **Montant** sur la première, et **Fréquence**, **Du** et **Au** (ou **Date**) et **Calendrier** sur la seconde ; fermez le panneau **Propriétés** pour revenir à une rangée par ligne.
+
+Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur la croix au bout d'une ligne pour la supprimer. Une colonne contient jusqu'à 50 lignes.
+
+**Unités et prix** :
+
+| Unité | Prix | Fréquence | Montant de chaque mois de la période | ETP de chaque mois |
+|---|---|---|---|---|
+| **personnes** | **par jour** | **Temps plein** | Les jours ouvrés du mois dans le calendrier × quantité × prix unitaire | La quantité |
+| **personnes** | **par jour** | **5 jours par mois** | 5 × quantité × prix unitaire | Quantité × 5 ÷ les jours ouvrés du mois dans le calendrier |
+| **personnes** | **par mois** | par mois | Quantité × prix unitaire | La quantité |
+| **jours** | **par jour** | sur la période | Quantité × prix unitaire, compté une fois et réparti uniformément sur les mois de la période | La part des jours du mois ÷ les jours ouvrés du mois dans le calendrier |
+| **pièces** | **par pièce** | **par mois** | Quantité × prix unitaire | Aucun |
+| **pièces** | **par pièce** | **une fois** | Quantité × prix unitaire, dans le mois de la date | Aucun |
+
+- Utilisez **personnes** pour du personnel qui travaille sur le poste mois après mois. Au prix par jour, indiquez combien il travaille : cochez **Temps plein** pour compter chaque jour ouvré du calendrier du début à la fin de la ligne, ou saisissez les jours par mois. Par exemple, un chef de projet 5 jours par mois à 1 200 par jour de février à juillet coûte 6 000 par mois. Sur un calendrier qui compte 21 jours ouvrés en mars, ce mois compte 5 ÷ 21, soit environ 0.24 ETP. Un consultant à temps plein à 400 par jour coûte chaque mois les jours ouvrés du mois × 400, et compte 1 ETP
+- Au prix par mois, les personnes coûtent chaque mois la quantité × le prix unitaire, par exemple 1 personne à 8 000 par mois
+- Utilisez **jours** pour un nombre de jours achetés pour la période, en un seul lot. Par exemple, 30 jours à 1 200 par jour de février à juillet donnent 36 000, soit 6 000 par mois. Chaque mois porte 5 jours : dans un mois de 20 jours ouvrés, la ligne compte 0.25 ETP
+- Utilisez **pièces** pour des licences, des équipements ou des abonnements. Par mois, elles comptent dans chaque mois de la période : 50 licences à 12 par pièce donnent 600 par mois. Une fois, elles prennent une seule date et tombent dans son mois : un ordinateur portable à 2 000 le 15 mars tombe en mars. Les pièces ne comptent jamais en ETP
+- Chaque mois est arrondi au centime. Lorsqu'un montant est réparti sur la période, l'écart d'arrondi est reporté sur le dernier mois. Les mois hors de la période d'une ligne n'en reçoivent rien
+- Changer d'unité adapte le reste de la ligne. Les personnes gardent un prix par mois lorsque vous l'avez choisi, et sont au prix par jour sinon. Les jours sont au prix par jour, sur la période. Les pièces sont au prix par pièce et achetées une fois, à la date de début de la période de la colonne. Passer des pièces de une fois à par mois leur redonne la période de la colonne
+
+**Une nouvelle ligne** commence avec l'unité **personnes**, une quantité de 1, un prix par jour, **Temps plein** non coché avec les jours par mois à saisir, la période de la colonne (l'année entière lorsque la colonne n'en a pas) et le calendrier par défaut. Le calendrier par défaut est le calendrier standard du pays de la société payeuse, sinon le premier calendrier activé. Saisissez le prix unitaire et les jours par mois, ou cochez **Temps plein**, et la ligne s'enregistre. Sans calendrier activé, une nouvelle ligne commence avec un prix par mois.
+
+**Enregistrement** : chaque champ s'enregistre quand vous le quittez, appuyez sur Entrée, ou choisissez une valeur ou une date. Il n'y a aucun bouton à cliquer. Chaque enregistrement envoie toutes les lignes complètes de la colonne, et les mois de la colonne suivent aussitôt. L'indication **Enregistrement...** à côté des onglets d'année s'affiche pendant ce temps.
+
+- Une ligne est complète lorsqu'elle a une quantité, un prix unitaire, une période ou une date valide, les jours par mois ou **Temps plein** pour les personnes au prix par jour, et un calendrier pour un prix par jour. Jusque-là, elle reste à l'écran avec une indication, par exemple « Saisissez une quantité et un prix unitaire pour enregistrer cette ligne. », « Saisissez les jours par mois, ou cochez Temps plein. » ou « Choisissez un calendrier pour un prix par jour. », et les lignes enregistrées ne changent pas
+- Supprimer la dernière ligne retire les lignes de la colonne, et ses montants restent tels quels. Une colonne calculée à partir de ses lignes compte alors comme des montants saisis à la main. Une colonne répartie ou copiée garde sa répartition ou sa copie
+- Lorsqu'un enregistrement est refusé, la raison s'affiche en rouge sous le tableau, et ce que vous avez saisi reste en place. Par exemple, « Personnel du siège has no working days for 2027. Add them on the Working-day calendars page. » lorsqu'un calendrier personnalisé ne contient pas encore l'année
+- Sur une colonne gelée, les lignes sont en lecture seule
+
+**Sous le tableau** :
+
+- L'ETP des lignes, lorsqu'une ligne compte des personnes ou des jours, par exemple « ETP sur la période 0.24 · Moyenne sur l'année 0.12 ». Voir [ETP](#etp). Le total de la colonne s'affiche dans la colonne elle-même
+- D'où viennent les montants, lorsqu'ils ne viennent plus des lignes : l'une des phrases de la partie suivante
+- Des remarques lorsqu'elles s'appliquent : « La période dépasse les dates du poste. », un calendrier désactivé depuis, par exemple « Personnel du siège est désactivé. Les lignes l'utilisent encore. », et les jours ouvrés modifiés depuis le dernier enregistrement des lignes
+- **Appliquer ces lignes à toutes les colonnes** : un interrupteur pour les mêmes colonnes que celui de l'onglet de répartition, désactivé par défaut ici. L'activer écrit aussitôt les lignes dans chaque colonne qui suit, et il reste activé : chaque enregistrement suivant écrit aussi les lignes dans ces colonnes. Le désactiver ne change rien en soi
+
+**Lorsque les montants changent autrement** : les lignes restent sur la colonne comme référence, et l'onglet indique d'où viennent désormais les montants, suivi d'un lien **Utiliser à nouveau les lignes**. Le lien enregistre les lignes telles quelles et recalcule la colonne à partir d'elles.
+
+- Un mois saisi dans l'onglet **Mensuel** : « Les montants ont été saisis à la main. Utiliser à nouveau les lignes. »
+- Une répartition : « Les montants viennent d'une répartition. Utiliser à nouveau les lignes. »
+- **Copier les colonnes budgétaires** dans l'Administration budgétaire : « Les montants ont été copiés depuis Budget 2025. Utiliser à nouveau les lignes. » La copie reporte les lignes de la colonne source avec les montants. Voir [Copier une colonne calculée](budget-operations.md#copier-une-colonne-calculee)
+- Les jours ouvrés d'un calendrier ont changé : « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. » Rien ne change sur la colonne tant que vous ne cliquez pas sur **Utiliser à nouveau les lignes**
+- **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire retire les lignes avec les montants. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
+- Un fichier des lignes budgétaires ne change que les mois, et les lignes restent. Voir [Fichier des lignes budgétaires](budget-operations.md#fichier-des-lignes-budgetaires)
+
+#### ETP
+
+L'ETP (équivalent temps plein) indique pour combien de personnes une colonne paie. Il provient des lignes : chaque mois additionne l'ETP de ses lignes (voir le tableau ci-dessus). Deux chiffres en découlent, chacun arrondi à 2 décimales :
+
+- **Moyenne sur l'année** : la somme des douze mois divisée par 12. C'est l'ETP de la colonne, affiché dans le libellé de la colonne et dans les colonnes ETP de la liste CAPEX
+- **ETP sur la période** : la somme des mois qui comptent des personnes ou des jours, divisée par le nombre de ces mois. Les pièces ne comptent pas, si bien que des licences ou un ordinateur portable ne le font jamais baisser. Il s'affiche sous les lignes tant que les montants en viennent. Après une modification à la main, une répartition ou une copie, il n'est plus affiché jusqu'à ce que vous utilisiez à nouveau les lignes
+
+Par exemple, un consultant à temps plein de février à octobre compte 1 ETP dans chacun de ces 9 mois : 1.00 sur la période, et 9 × 1 ÷ 12 = 0.75 sur l'année. Un chef de projet 5 jours par mois de février à juillet compte environ 0.24 sur la période, et 0.12 sur l'année. Des licences sur toute l'année ou un ordinateur portable en décembre sur la même colonne ne changent aucun des deux chiffres.
+
+- **Compté** : une colonne avec des lignes en personnes ou en jours
+- **Zéro** : une colonne dont toutes les lignes sont en pièces. Son ETP vaut 0
+- **Vide** : une colonne sans ligne, un poste sans version pour cette année, ou une année postérieure à la fin de validité du poste. Sa cellule ETP reste vide, car KANAP ne peut pas savoir pour combien de personnes il paie
+- L'ETP reste avec les lignes. Après une modification à la main, une répartition ou une copie, la colonne garde l'ETP de ses lignes. Une copie reporte l'ETP de la colonne source
 
 ---
 
