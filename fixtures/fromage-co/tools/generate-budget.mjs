@@ -36,6 +36,9 @@ const round = (v, step = 1) => Math.round(v / step) * step;
 
 // ── Calendars ───────────────────────────────────────────────────────────────
 const YEARS = [2025, 2026, 2027];
+// The story is told at the end of September 2026: an item whose end of validity is before this date imports as disabled.
+const STORY_DATE = '2026-10-01';
+const statusFor = (end) => (end && end < STORY_DATE ? 'disabled' : 'enabled');
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 function easter(y) {
@@ -219,7 +222,7 @@ for (const [name, cc, runBuild, nature, recurrence, reference] of EXISTING) {
   const ratio = EXISTING_LANDING[name] ?? between(0.98, 1.03);
   const landing = round(budget * ratio, 500);
   const revision = rnd() < 0.5 ? round(budget * between(0.98, 1.02), 500) : '';
-  opexRows.push([r.product_name, r.description, r.supplier_name, r.company_name, r.account_number, r.currency, r.effective_start, r.status, r.disabled_at,
+  opexRows.push([r.product_name, r.description, r.supplier_name, r.company_name, r.account_number, r.currency, r.effective_start, statusFor(r.disabled_at), r.disabled_at,
     r.owner_it_email, r.owner_business_email, r.analytics_category, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE[recurrence], cc, runBuild, r.notes,
     r.y_minus1_budget, r.y_minus1_landing, budget, '', landing, revision, '', '']);
   const endMonth = r.disabled_at?.startsWith('2026-') ? Number(r.disabled_at.slice(5, 7)) : 12;
@@ -301,7 +304,7 @@ for (const [name, description, supplier, cc, accountKey, domaine, nature, runBui
   const landing2025 = budget2025 === '' ? '' : round(budget2025 * between(0.97, 1.04), 500);
   const landing = round(budget * landingRatio, 500);
   const revision = rnd() < 0.5 ? round(budget * between(0.98, 1.03), 500) : '';
-  opexRows.push([name, description, supplier, company, ACCOUNT[company][accountKey], CURRENCY[company], start, 'enabled', end,
+  opexRows.push([name, description, supplier, company, ACCOUNT[company][accountKey], CURRENCY[company], start, statusFor(end), end,
     OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domaine, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE[recurrence], cc, runBuild,
     end ? `Fin de validité ${end}` : '', budget2025, landing2025, budget, '', landing, revision, '', '']);
   const endMonth = end?.startsWith('2026-') ? Number(end.slice(5, 7)) : 12;
@@ -403,7 +406,7 @@ for (const [description, cc, nature, reference, ratio] of EXISTING_CAPEX) {
   if (!r) throw new Error(`Existing CAPEX line not found: ${description}`);
   const budget = Number(r.y_budget);
   const landing = round(budget * ratio, 1000);
-  capexRows.push(['', r.description, r.ppe_type, r.investment_type, r.priority, r.currency, r.effective_start, r.status, r.disabled_at, r.notes,
+  capexRows.push(['', r.description, r.ppe_type, r.investment_type, r.priority, r.currency, r.effective_start, statusFor(r.disabled_at), r.disabled_at, r.notes,
     r.company_name, OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], r.analytics_category, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, 'build',
     r.y_minus1_budget, r.y_minus1_landing, budget, '', landing, round(budget * between(0.98, 1.05), 1000), '', '', '']);
   const endMonth = r.disabled_at?.startsWith('2026-') ? Number(r.disabled_at.slice(5, 7)) : 12;
@@ -445,7 +448,7 @@ for (const [description, ppe, inv, prio, cc, domaine, nature, reference, budgetR
     const endMonth = end?.startsWith('2026-') ? Number(end.slice(5, 7)) : 12;
     pushActuals('capex', description, flat(landing, 1, endMonth));
   }
-  capexRows.push(['', description, ppe, inv, prio, CURRENCY[company], start, 'enabled', end, '',
+  capexRows.push(['', description, ppe, inv, prio, CURRENCY[company], start, statusFor(end), end, '',
     company, OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domaine, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, 'build',
     '', '', budget, '', landing, rnd() < 0.5 ? round(budget * between(0.98, 1.05), 1000) : '', '', '', '']);
 }
