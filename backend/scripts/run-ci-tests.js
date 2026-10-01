@@ -57,8 +57,11 @@ const ENV = {
   'src/ai/__tests__/glpi.service.spec.ts': { DEPLOYMENT_MODE: 'single-tenant' },
 };
 
-// A spec that matches one of these opens a real database connection.
-const DB_PATTERN = /NestFactory\.create|createTestingModule|TypeOrmModule|\.initialize\(\)|data-source/;
+// A spec that matches one of these opens a real database connection. A spec
+// that opens it only through a shared helper (`runSpecs`, `runRaceSpecs`)
+// carries an explicit `// @database-spec` marker, rather than relying on a
+// word its comments happen to contain.
+const DB_PATTERN = /NestFactory\.create|createTestingModule|TypeOrmModule|\.initialize\(\)|data-source|@database-spec\b/;
 
 const root = path.resolve(__dirname, '..');
 

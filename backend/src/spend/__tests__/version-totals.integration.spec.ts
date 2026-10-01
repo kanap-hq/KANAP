@@ -25,9 +25,11 @@ import {
 // 1853720000000), against the database: every way months are written,
 // moved and deleted (cascades included) leaves `*_version_totals` equal to
 // the sums the list engine used to aggregate (months of the version's own
-// year, NULL as zero); the summary reads the same cents as the old aggregate;
-// the rebuild and a rerun of the migration repair a damaged tenant.
-// runSpecs opens the data-source, so test:ci runs this file in its database lane.
+// year, NULL as zero; a version whose months were all deleted keeps a row of
+// zeros); the summary reads the same cents as the old aggregate; the rebuild
+// and a rerun of the migration repair a damaged tenant; a TRUNCATE and a
+// change of budget year cannot leave the totals behind.
+// @database-spec: run-ci-tests.js runs this file in its serial database lane.
 
 const KINDS: Kind[] = ['opex', 'capex'];
 const YEAR = 2034;
@@ -64,9 +66,16 @@ async function stored(runner: QueryRunner, kind: Kind, tenantId: string): Promis
 
 const sorted = <T>(map: Map<string, T>) => new Map([...map.entries()].sort(([a], [b]) => a.localeCompare(b)));
 
-/** The stored totals are exactly the recomputed sums: no missing row, no extra row, no different value. */
+/**
+ * The stored totals are exactly the recomputed sums: no missing row, no
+ * different value, and a row of a version without any month in its year
+ * holds zeros (the triggers never delete a row).
+ */
 async function assertTotalsMatch(runner: QueryRunner, kind: Kind, tenantId: string, label: string) {
-  assert.deepEqual(sorted(await stored(runner, kind, tenantId)), sorted(await recomputed(runner, kind, tenantId)), `${kind}: ${label}`);
+  const expected = await recomputed(runner, kind, tenantId);
+  const actual = await stored(runner, kind, tenantId);
+  for (const versionId of actual.keys()) if (!expected.has(versionId)) expected.set(versionId, zeros);
+  assert.deepEqual(sorted(actual), sorted(expected), `${kind}: ${label}`);
 }
 
 /** The stored row of one version (the five sums as 2-decimal text, and its ctid), or undefined. */
@@ -82,8 +91,11 @@ const zeros = Object.fromEntries(MEASURES.map((m) => [m, '0.00']));
  * The summary's version totals (cents and reporting) of every line of the
  * tenant, against the aggregate the builder ran before the totals tables:
  * same versions, same cents, a reporting entry exactly for those versions.
+ * The one difference: a version whose months were all deleted keeps a row of
+ * zeros, so the summary reports it with zeros where the aggregate had no row
+ * (`emptied` lists the versions expected so).
  */
-async function assertSummaryMatchesAggregate(runner: QueryRunner, kind: Kind, tenantId: string, years: number[], label: string) {
+async function assertSummaryMatchesAggregate(runner: QueryRunner, kind: Kind, tenantId: string, years: number[], label: string, emptied: string[] = []) {
   const config = SUMMARY_SCOPES[kind];
   const items = await runner.query(`SELECT * FROM ${TABLES[kind].items} WHERE tenant_id = $1`, [tenantId]);
   const totals = await loadVersionTotals(config, { fxRates: identityFx as any }, runner.manager, tenantId, items, years, { reporting: true });
@@ -100,6 +112,10 @@ async function assertSummaryMatchesAggregate(runner: QueryRunner, kind: Kind, te
     : [];
   const expected = new Map(rows.map((row) => [row.version_id, Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, toCents(row[c.measure])]))]));
   assert.ok(expected.size > 0, `${kind}: ${label}: the comparison covers versions with months`);
+  for (const versionId of emptied) {
+    assert.ok(!expected.has(versionId), `${kind}: ${label}: an emptied version has no month in its year`);
+    expected.set(versionId, Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, 0n])));
+  }
   assert.deepEqual(sorted(totals.cents), sorted(expected), `${kind}: ${label}: summary cents equal the old aggregate`);
   assert.deepEqual([...totals.reporting.keys()].sort(), [...expected.keys()].sort(), `${kind}: ${label}: reported versions`);
 }
@@ -198,11 +214,12 @@ async function testUpdatesAndDeletes(kind: Kind) {
     const after = await totalsRow(runner, kind, versionId);
     assert.deepEqual([after?.planned, after?.forecast], ['101.00', '10.00'], `${kind}: deleted months are subtracted`);
 
-    // The last months of the year go: the row goes; a new month brings it back with its own value only.
+    // The last months of the year go: the row stays, at zero (the triggers never delete a row); a new month adds its own value.
     await runner.query(`DELETE FROM ${amounts} WHERE version_id = $1`, [versionId]);
-    assert.equal(await totalsRow(runner, kind, versionId), undefined, `${kind}: no month left, no row`);
+    assert.deepEqual(values(await totalsRow(runner, kind, versionId)), zeros, `${kind}: no month left, a row of zeros`);
+    await assertTotalsMatch(runner, kind, tenantId, 'a version without months');
     await insertMonth(runner, kind, tenantId, versionId, period(7, YEAR), { planned: '42' });
-    assert.equal((await totalsRow(runner, kind, versionId))?.planned, '42.00', `${kind}: the row comes back with the new month`);
+    assert.equal((await totalsRow(runner, kind, versionId))?.planned, '42.00', `${kind}: the new month on the same row`);
 
     await assertTotalsMatch(runner, kind, tenantId, 'after updates and deletes');
     await assertSummaryMatchesAggregate(runner, kind, tenantId, [YEAR], 'after updates and deletes');
@@ -258,13 +275,13 @@ async function testMovedMonths(kind: Kind) {
     await runner.query(`UPDATE ${amounts} SET period = $2 WHERE version_id = $1 AND period = $3`, [versionId, period(4, YEAR), period(4, YEAR + 1)]);
     assert.equal((await totalsRow(runner, kind, versionId))?.planned, '90.00', `${kind}: and back into it`);
 
-    // Back to the first version: the target has no month left and loses its row.
+    // Back to the first version: the target has no month left and keeps a row of zeros.
     await runner.query(`UPDATE ${amounts} SET version_id = $1 WHERE version_id = $2`, [versionId, sameYear]);
-    assert.equal(await totalsRow(runner, kind, sameYear), undefined, `${kind}: an emptied version loses its row`);
+    assert.deepEqual(values(await totalsRow(runner, kind, sameYear)), zeros, `${kind}: an emptied version keeps a row of zeros`);
     assert.equal((await totalsRow(runner, kind, versionId))?.planned, '110.00', `${kind}: the first version gets them back`);
 
     await assertTotalsMatch(runner, kind, tenantId, 'after the moves');
-    await assertSummaryMatchesAggregate(runner, kind, tenantId, [YEAR, YEAR + 1], 'after the moves');
+    await assertSummaryMatchesAggregate(runner, kind, tenantId, [YEAR, YEAR + 1], 'after the moves', [sameYear]);
   });
 }
 
@@ -289,10 +306,11 @@ async function testCascades(kind: Kind) {
     await runner.query(`DELETE FROM ${t.items} WHERE id = $1`, [b.itemId]);
     assert.equal(await totalsRow(runner, kind, b.versionId), undefined, `${kind}: a deleted line takes its versions' rows`);
 
-    // The delete services' order: the months, then the versions, then the line.
+    // The delete services' order: the months (their rows drop to zero), then the versions (the rows go), then the line.
     await runner.query(`DELETE FROM ${t.amounts} WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`, [tenantId, [c.versionId, cNext]]);
-    assert.equal(await totalsRow(runner, kind, cNext), undefined, `${kind}: deleted months take their version's row`);
+    assert.deepEqual(values(await totalsRow(runner, kind, cNext)), zeros, `${kind}: deleted months leave their version's row at zero`);
     await runner.query(`DELETE FROM ${t.versions} WHERE tenant_id = $1 AND ${itemFk} = $2`, [tenantId, c.itemId]);
+    assert.equal(await totalsRow(runner, kind, cNext), undefined, `${kind}: the deleted versions take their rows`);
     await runner.query(`DELETE FROM ${t.items} WHERE id = $1`, [c.itemId]);
     assert.equal(await count(), 1, `${kind}: only the untouched line keeps its row`);
 
@@ -328,13 +346,14 @@ async function testTenantIsolation(kind: Kind) {
 
 /**
  * The backfill: months loaded while the triggers are off (data from before
- * the migration, a tenant import), a wrong value and a row without months are
- * repaired by the rebuild function, then by a rerun of the migration itself.
+ * the migration, a tenant import), a wrong value and a non-zero row without
+ * months are repaired by the rebuild function, then by a rerun of the
+ * migration itself. A row of zeros without months is valid and kept.
  */
 async function testRebuildAndMigrationRerun() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'vt-rebuild');
-    const lines = {} as Record<Kind, { versionId: string; loaded: string }>;
+    const lines = {} as Record<Kind, { versionId: string; loaded: string; empty: string }>;
     for (const kind of KINDS) {
       const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('7', 12) });
       // Months loaded with the triggers off, NULL included.
@@ -348,29 +367,35 @@ async function testRebuildAndMigrationRerun() {
       const empty = await seedVersion(runner, kind, tenantId, itemId, YEAR + 2);
       await runner.query(`INSERT INTO ${TOTALS[kind]} (tenant_id, version_id, planned) VALUES ($1, $2, 5)`, [tenantId, empty]);
       assert.notDeepEqual(sorted(await stored(runner, kind, tenantId)), sorted(await recomputed(runner, kind, tenantId)), `${kind}: damaged`);
-      lines[kind] = { versionId, loaded };
+      lines[kind] = { versionId, loaded, empty };
     }
 
     // The rebuild function, under RLS with the tenant set.
     const report = await runner.query(
-      `SELECT scope, tenant_id::text AS tenant_id, inserted::int, corrected::int, removed::int FROM budget_version_totals_rebuild($1) ORDER BY scope`,
+      `SELECT scope, tenant_id::text AS tenant_id, inserted::int, corrected::int FROM budget_version_totals_rebuild($1) ORDER BY scope`,
       [tenantId],
     );
     assert.deepEqual(report, [
-      { scope: 'CAPEX', tenant_id: tenantId, inserted: 1, corrected: 1, removed: 1 },
-      { scope: 'OPEX', tenant_id: tenantId, inserted: 1, corrected: 1, removed: 1 },
+      { scope: 'CAPEX', tenant_id: tenantId, inserted: 1, corrected: 2 },
+      { scope: 'OPEX', tenant_id: tenantId, inserted: 1, corrected: 2 },
     ], 'the rebuild reports what it repaired');
     for (const kind of KINDS) {
       await assertTotalsMatch(runner, kind, tenantId, 'after the rebuild');
       assert.deepEqual(values(await totalsRow(runner, kind, lines[kind].loaded)), { ...zeros, forecast: '24.00', actual: '11.00' }, `${kind}: the loaded months, NULL as 0`);
+      assert.deepEqual(values(await totalsRow(runner, kind, lines[kind].empty)), zeros, `${kind}: a row without months is set back to zeros, not deleted`);
     }
     assert.deepEqual(await runner.query(`SELECT * FROM budget_version_totals_rebuild($1)`, [tenantId]), [], 'a second rebuild has nothing to do');
+    for (const kind of KINDS) {
+      assert.deepEqual(values(await totalsRow(runner, kind, lines[kind].empty)), zeros, `${kind}: the rebuild keeps a row of zeros without months`);
+    }
 
     // The migration itself, rerun on a migrated database with new damage: it repairs and stays idempotent.
     for (const kind of KINDS) {
       await runner.query(`UPDATE ${TOTALS[kind]} SET forecast = 0 WHERE version_id = $1`, [lines[kind].loaded]);
       await runner.query(`DELETE FROM ${TOTALS[kind]} WHERE version_id = $1`, [lines[kind].versionId]);
     }
+    // RLS goes back as it was found: a table found without FORCE stays so.
+    await runner.query(`ALTER TABLE capex_versions NO FORCE ROW LEVEL SECURITY`);
     const logged: string[] = [];
     const log = console.log;
     console.log = (...args: unknown[]) => { logged.push(args.join(' ')); };
@@ -383,14 +408,97 @@ async function testRebuildAndMigrationRerun() {
     for (const kind of KINDS) await assertTotalsMatch(runner, kind, tenantId, 'after the migration rerun');
     const [{ slug }] = await runner.query(`SELECT slug FROM tenants WHERE id = $1`, [tenantId]);
     assert.deepEqual(logged.filter((line) => line.includes(tenantId)), [
-      `[Migration] VersionTotals: tenant ${slug} (${tenantId}) OPEX: 1 row(s) inserted, 1 corrected, 0 removed`,
-      `[Migration] VersionTotals: tenant ${slug} (${tenantId}) CAPEX: 1 row(s) inserted, 1 corrected, 0 removed`,
+      `[Migration] VersionTotals: tenant ${slug} (${tenantId}) OPEX: 1 row(s) inserted, 1 corrected`,
+      `[Migration] VersionTotals: tenant ${slug} (${tenantId}) CAPEX: 1 row(s) inserted, 1 corrected`,
     ], 'the migration logs the tenant repairs');
-    const [rls] = await runner.query(
-      `SELECT bool_and(relrowsecurity AND relforcerowsecurity) AS ok, count(*)::int AS tables FROM pg_class
-       WHERE relname IN ('spend_amounts', 'capex_amounts', 'spend_versions', 'capex_versions', 'spend_version_totals', 'capex_version_totals')`,
+    assert.deepEqual(await rlsState(runner), {
+      capex_amounts: 'enabled+forced', capex_version_totals: 'enabled+forced', capex_versions: 'enabled',
+      spend_amounts: 'enabled+forced', spend_version_totals: 'enabled+forced', spend_versions: 'enabled+forced',
+    }, 'RLS is back as found after the backfill');
+  });
+}
+
+const BUDGET_TABLES = ['spend_amounts', 'capex_amounts', 'spend_versions', 'capex_versions', 'spend_version_totals', 'capex_version_totals'];
+
+async function rlsState(runner: QueryRunner): Promise<Record<string, string>> {
+  const rows: Array<{ name: string; enabled: boolean; forced: boolean }> = await runner.query(
+    `SELECT relname::text AS name, relrowsecurity AS enabled, relforcerowsecurity AS forced FROM pg_class
+     WHERE relname = ANY($1::text[]) AND relkind = 'r' ORDER BY relname`,
+    [BUDGET_TABLES],
+  );
+  return Object.fromEntries(rows.map((row) => [row.name, `${row.enabled ? 'enabled' : 'disabled'}${row.forced ? '+forced' : ''}`]));
+}
+
+/**
+ * A backfill that fails inside the migration transaction surfaces its own
+ * error, not the 25P02 of a statement run after it; the rollback puts RLS
+ * back. The failure is forced by a check constraint the rebuild violates.
+ */
+async function testMigrationFailureKeepsItsError() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'vt-migration-error');
+    const { versionId } = await seedLine(runner, 'opex', tenantId, YEAR, { planned: repeat('100000', 12) });
+    await runner.query(`ALTER TABLE spend_version_totals ADD CONSTRAINT spec_planned_below_million CHECK (planned < 1000000) NOT VALID`);
+    await runner.query(`UPDATE spend_version_totals SET planned = 0 WHERE version_id = $1`, [versionId]);
+    await runner.query('SAVEPOINT vt_migration');
+    await assert.rejects(
+      new VersionTotals1853720000000().up(runner),
+      (error: any) => error?.driverError?.code === '23514' && /spec_planned_below_million/.test(String(error?.message)),
+      'the check violation of the rebuild, not 25P02',
     );
-    assert.deepEqual(rls, { ok: true, tables: 6 }, 'RLS is enabled and forced again after the backfill');
+    await runner.query('ROLLBACK TO SAVEPOINT vt_migration');
+    assert.deepEqual(Object.values(await rlsState(runner)), Array(6).fill('enabled+forced'), 'RLS is back after the rollback');
+  });
+}
+
+/** TRUNCATE of an amounts table bypasses the statement triggers: it truncates the totals too. */
+async function testTruncate(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `vt-truncate-${kind}`);
+    const { versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('3', 12) });
+    assert.equal((await totalsRow(runner, kind, versionId))?.planned, '36.00');
+    await runner.query(`TRUNCATE ${TABLES[kind].amounts}`);
+    assert.equal(await totalsRow(runner, kind, versionId), undefined, `${kind}: no month left anywhere, no totals row`);
+    await insertMonth(runner, kind, tenantId, versionId, period(2, YEAR), { planned: '5' });
+    assert.equal((await totalsRow(runner, kind, versionId))?.planned, '5.00', `${kind}: the next month starts a new row`);
+    await assertTotalsMatch(runner, kind, tenantId, 'after a truncate');
+  });
+}
+
+/**
+ * The triggers count a month by its version's budget year: the year cannot
+ * change once the version has months, nor where RLS hides them; it can while
+ * the version has none.
+ */
+async function testBudgetYearGuard(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `vt-year-${kind}`);
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('1', 12) });
+    const versions = TABLES[kind].versions;
+    const changeYear = (id: string, year: number) => runner.query(`UPDATE ${versions} SET budget_year = $2 WHERE id = $1`, [id, year]);
+
+    await runner.query('SAVEPOINT vt_year');
+    await assert.rejects(changeYear(versionId, YEAR + 5), (error: any) => error?.driverError?.code === '23514' && /has months/.test(String(error?.message)), `${kind}: refused with months`);
+    await runner.query('ROLLBACK TO SAVEPOINT vt_year');
+
+    // Months of another year count too: they would enter the new year.
+    const offYear = await seedVersion(runner, kind, tenantId, itemId, YEAR + 1);
+    await insertMonth(runner, kind, tenantId, offYear, period(1, YEAR + 2), { planned: '9' });
+    await assert.rejects(changeYear(offYear, YEAR + 2), /has months/, `${kind}: refused with months of another year`);
+    await runner.query('ROLLBACK TO SAVEPOINT vt_year');
+
+    const empty = await seedVersion(runner, kind, tenantId, itemId, YEAR + 3);
+    await changeYear(empty, YEAR + 4);
+    assert.equal(Number((await runner.query(`SELECT budget_year FROM ${versions} WHERE id = $1`, [empty]))[0].budget_year), YEAR + 4, `${kind}: allowed without months`);
+    await runner.query('RELEASE SAVEPOINT vt_year');
+
+    // RLS off on the versions only, no tenant (a migration): the months are hidden, so the change is refused.
+    await runner.query('SAVEPOINT vt_year_rls');
+    await runner.query(`ALTER TABLE ${versions} DISABLE ROW LEVEL SECURITY`);
+    await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
+    await assert.rejects(changeYear(empty, YEAR + 6), /hidden by row level security/, `${kind}: refused when RLS hides the months`);
+    await runner.query('ROLLBACK TO SAVEPOINT vt_year_rls');
+    await setTenant(runner, tenantId);
   });
 }
 
@@ -403,6 +511,9 @@ void runSpecs('version-totals.integration.spec', [
     [`${kind}: months moved to another version or year`, () => testMovedMonths(kind)],
     [`${kind}: cascades`, () => testCascades(kind)],
     [`${kind}: tenant isolation`, () => testTenantIsolation(kind)],
+    [`${kind}: truncate`, () => testTruncate(kind)],
+    [`${kind}: budget year guard`, () => testBudgetYearGuard(kind)],
   ]),
   ['rebuild and migration rerun', testRebuildAndMigrationRerun],
+  ['a failed backfill keeps its error', testMigrationFailureKeepsItsError],
 ]);

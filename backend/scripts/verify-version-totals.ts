@@ -8,23 +8,38 @@ import { DataSource, QueryRunner } from 'typeorm';
  * Per tenant and item type it recomputes, from the amounts, the sums of the
  * five columns of each version over the months of its own budget year (NULL
  * as 0), as the list engine aggregated them, and compares them with the
- * stored rows, both ways:
+ * stored rows, both ways. The invariant: a version with months in its year
+ * has a row holding their sums; a version without such a month has no row or
+ * a row of zeros (the triggers never delete a row: its months were deleted
+ * after the row was created). Reported:
  *   - missing: the version has months in its year and no totals row;
- *   - extra: a totals row for a version without any month in its year;
- *   - different: a stored sum differs from the recomputed one (numerically).
- * It also checks that the three triggers of each amounts table exist and are
- * enabled. Each tenant prints its counts and `match` or `mismatch` with the
- * first mismatches (line reference, year, column, stored and expected).
+ *   - different: a stored sum differs from the recomputed one (numerically),
+ *     zero for a version without any month in its year;
+ * and, for information, `zero_rows`: the all-zero rows of versions without
+ * months, which match. It also checks that the triggers exist and fire on the
+ * app's writes (enabled in origin mode, `tgenabled` O or A: D is disabled, R
+ * fires in replica sessions only): insert, update, delete and truncate on
+ * each amounts table, and the budget year guard on each versions table. Each
+ * tenant prints its counts and `match` or `mismatch` with the first
+ * mismatches (line reference, year, column, stored and expected).
  *
  * Every tenant is read in its own READ ONLY transaction with a local
  * `app.current_tenant` (FORCE RLS) and explicit tenant_id predicates. The
  * comparison reads one snapshot, so writes running meanwhile cannot show as
- * mismatches. Exit 1 on any mismatch.
+ * mismatches. Exit 1 on any mismatch, on a missing or disabled trigger, when
+ * the migration has not run, and on any error.
  *
  * A mismatch is repaired by recomputing the tenant's totals (the same function
- * the migration and the tenant import use), in a transaction with the tenant set:
+ * the migration and the tenant import use), in a transaction with the tenant
+ * set. The rebuild takes a SHARE lock on both amounts tables: it waits for
+ * the budget writes already running, and every budget write that comes after
+ * waits behind it. Bound that wait with a lock_timeout, and retry when it
+ * expires.
+ *   BEGIN;
+ *   SET LOCAL lock_timeout = '5s';
  *   SELECT set_config('app.current_tenant', '<tenant id>', true);
  *   SELECT * FROM budget_version_totals_rebuild('<tenant id>');
+ *   COMMIT;
  *
  * Usage:
  *   npx ts-node scripts/verify-version-totals.ts
@@ -47,6 +62,9 @@ const KINDS: Kind[] = [
 
 const SHOWN_PER_KIND = 20;
 
+/** `tgenabled` of a trigger that fires on the app's writes: O (origin and local sessions) or A (always). */
+const FIRING = new Set(['O', 'A']);
+
 type TenantRow = { id: string; slug: string };
 
 type MismatchRow = {
@@ -55,7 +73,6 @@ type MismatchRow = {
   budget_year: number | null;
   months: number | null;
   missing: boolean;
-  extra: boolean;
 } & Record<string, string | number | boolean | null>;
 
 async function resolveTenants(runner: QueryRunner): Promise<TenantRow[]> {
@@ -73,19 +90,21 @@ async function migrated(runner: QueryRunner): Promise<boolean> {
   return row?.present === true;
 }
 
-/** Triggers of the amounts tables that are missing or disabled (`tgenabled = 'D'`). */
+/** The triggers the totals rely on that are missing or do not fire on the app's writes (`tgenabled` D or R). */
 async function inspectTriggers(runner: QueryRunner): Promise<string[]> {
+  const expected = KINDS.flatMap((kind) => [
+    ...['insert', 'update', 'delete', 'truncate'].map((event) => ({ table: kind.amounts, name: `${kind.amounts}_version_totals_${event}` })),
+    { table: kind.versions, name: `${kind.versions}_budget_year_guard` },
+  ]);
   const problems: string[] = [];
-  for (const kind of KINDS) {
-    for (const event of ['insert', 'update', 'delete']) {
-      const name = `${kind.amounts}_version_totals_${event}`;
-      const [row] = await runner.query(
-        `SELECT tgenabled::text AS enabled FROM pg_trigger WHERE tgrelid = $1::regclass AND tgname = $2`,
-        [kind.amounts, name],
-      );
-      if (!row) problems.push(`trigger ${name} is missing`);
-      else if (row.enabled === 'D') problems.push(`trigger ${name} is disabled`);
-    }
+  for (const { table, name } of expected) {
+    const [row] = await runner.query(
+      `SELECT tgenabled::text AS enabled FROM pg_trigger WHERE tgrelid = $1::regclass AND tgname = $2`,
+      [table, name],
+    );
+    if (!row) problems.push(`trigger ${name} on ${table} is missing`);
+    else if (row.enabled === 'D') problems.push(`trigger ${name} on ${table} is disabled`);
+    else if (!FIRING.has(row.enabled)) problems.push(`trigger ${name} on ${table} fires in replica sessions only (tgenabled ${row.enabled})`);
   }
   return problems;
 }
@@ -103,14 +122,16 @@ async function inTenant<T>(runner: QueryRunner, tenantId: string, fn: () => Prom
 /** One item type of one tenant: counts and mismatches. Returns the number of mismatches. */
 async function inspectKind(runner: QueryRunner, tenantId: string, kind: Kind): Promise<number> {
   const sums = MEASURES.map((m) => `sum(coalesce(a.${m}, 0)) AS ${m}`).join(', ');
-  const compared = (alias: string) => `(${MEASURES.map((m) => `${alias}.${m}`).join(', ')})`;
+  // A version without months in its year expects zeros: its row, if any, must hold zeros.
+  const expectedOrZero = `(${MEASURES.map((m) => `coalesce(e.${m}, 0)`).join(', ')})`;
+  const storedValues = `(${MEASURES.map((m) => `s.${m}`).join(', ')})`;
   const rows: MismatchRow[] = await runner.query(
     `WITH expected AS (
        SELECT a.version_id, count(*)::int AS months, ${sums}
          FROM ${kind.amounts} a
          JOIN ${kind.versions} v ON v.id = a.version_id AND v.tenant_id = a.tenant_id
         WHERE a.tenant_id = $1
-          AND a.period >= make_date(v.budget_year, 1, 1) AND a.period < make_date(v.budget_year + 1, 1, 1)
+          AND EXTRACT(YEAR FROM a.period) = v.budget_year
         GROUP BY a.version_id
      ),
      stored AS (
@@ -120,47 +141,51 @@ async function inspectKind(runner: QueryRunner, tenantId: string, kind: Kind): P
      )
      SELECT '${kind.prefix}-' || i.item_number AS ref,
             coalesce(e.version_id, s.version_id) AS version_id, v.budget_year,
-            e.months, (s.version_id IS NULL) AS missing, (e.version_id IS NULL) AS extra,
-            ${MEASURES.map((m) => `e.${m}::text AS expected_${m}, s.${m}::text AS stored_${m}`).join(', ')}
+            coalesce(e.months, 0) AS months, (s.version_id IS NULL) AS missing,
+            ${MEASURES.map((m) => `coalesce(e.${m}, 0)::text AS expected_${m}, s.${m}::text AS stored_${m}`).join(', ')}
        FROM expected e
        FULL JOIN stored s ON s.version_id = e.version_id
        LEFT JOIN ${kind.versions} v ON v.tenant_id = $1 AND v.id = coalesce(e.version_id, s.version_id)
        LEFT JOIN ${kind.items} i ON i.tenant_id = $1 AND i.id = v.${kind.itemFk}
-      WHERE e.version_id IS NULL OR s.version_id IS NULL OR ${compared('e')} IS DISTINCT FROM ${compared('s')}
+      WHERE s.version_id IS NULL OR ${expectedOrZero} IS DISTINCT FROM ${storedValues}
       ORDER BY i.item_number NULLS LAST, v.budget_year, 2`,
     [tenantId],
   );
   const [counts] = await runner.query(
     `SELECT (SELECT count(*)::int FROM ${kind.versions} WHERE tenant_id = $1) AS versions,
             (SELECT count(*)::int FROM ${kind.amounts} WHERE tenant_id = $1) AS months,
-            (SELECT count(*)::int FROM ${kind.totals} WHERE tenant_id = $1) AS totals`,
+            (SELECT count(*)::int FROM ${kind.totals} WHERE tenant_id = $1) AS totals,
+            (SELECT count(*)::int FROM ${kind.totals} t
+              WHERE t.tenant_id = $1 AND (${MEASURES.map((m) => `t.${m}`).join(', ')}) = (${MEASURES.map(() => '0').join(', ')})
+                AND NOT EXISTS (
+                  SELECT 1 FROM ${kind.amounts} a JOIN ${kind.versions} v ON v.id = a.version_id AND v.tenant_id = a.tenant_id
+                   WHERE a.tenant_id = $1 AND a.version_id = t.version_id AND EXTRACT(YEAR FROM a.period) = v.budget_year
+                )) AS zero_rows`,
     [tenantId],
   );
   const missing = rows.filter((row) => row.missing).length;
-  const extra = rows.filter((row) => row.extra).length;
-  const different = rows.length - missing - extra;
+  const different = rows.length - missing;
   console.log(
     `  ${kind.label}: versions=${counts.versions} months=${counts.months} totals_rows=${counts.totals}`
-    + ` missing=${missing} extra=${extra} different=${different}`,
+    + ` zero_rows=${counts.zero_rows} missing=${missing} different=${different}`,
   );
   for (const row of rows.slice(0, SHOWN_PER_KIND)) {
     const where = `${row.ref ?? `version ${row.version_id}`} ${row.budget_year ?? '(no version)'}`;
     if (row.missing) {
       console.log(`    [missing] ${where}: ${row.months} month(s), no totals row`);
-    } else if (row.extra) {
-      console.log(`    [extra] ${where}: totals row without any month in the version's year`);
     } else {
       const columns = MEASURES
         .filter((m) => row[`expected_${m}`] !== row[`stored_${m}`] && Number(row[`expected_${m}`]) !== Number(row[`stored_${m}`]))
         .map((m) => `${m} stored ${row[`stored_${m}`]}, expected ${row[`expected_${m}`]}`);
-      console.log(`    [different] ${where}: ${columns.join('; ')}`);
+      console.log(`    [different] ${where} (${row.months} month(s) in its year): ${columns.join('; ')}`);
     }
   }
   if (rows.length > SHOWN_PER_KIND) console.log(`    … ${rows.length - SHOWN_PER_KIND} more`);
   return rows.length;
 }
 
-async function main() {
+/** True when every tenant matches and every trigger fires; false on any mismatch or when the migration has not run. */
+async function main(): Promise<boolean> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error('DATABASE_URL is required');
 
@@ -168,12 +193,10 @@ async function main() {
   await ds.initialize();
   const runner = ds.createQueryRunner();
   await runner.connect();
-  let failed = false;
   try {
     if (!(await migrated(runner))) {
       console.log('verify-version-totals: migration 1853720000000 has not run on this database (no totals tables).');
-      failed = true;
-      return;
+      return false;
     }
     const tenants = await resolveTenants(runner);
     console.log(`verify-version-totals: ${tenants.length} tenant(s), now=${new Date().toISOString()}`);
@@ -191,15 +214,17 @@ async function main() {
       if (problems > 0) mismatches += 1;
     }
     console.log(`\nTotals: tenants=${tenants.length} mismatch=${mismatches} triggers=${triggerProblems.length ? 'mismatch' : 'match'}`);
-    failed = mismatches > 0 || triggerProblems.length > 0;
+    return mismatches === 0 && triggerProblems.length === 0;
   } finally {
     await runner.release();
     await ds.destroy();
   }
-  if (failed) process.exit(1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main().then(
+  (ok) => process.exit(ok ? 0 : 1),
+  (err) => {
+    console.error(err);
+    process.exit(1);
+  },
+);

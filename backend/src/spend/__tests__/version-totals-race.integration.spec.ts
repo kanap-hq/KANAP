@@ -7,22 +7,28 @@ import { assert, assertSucceeded, databaseName, Party, progress, Race, runRaceSp
 //
 // Two request transactions write the same version at once, forced into the
 // overlapping order by the harness gates. The trigger applies each
-// statement's change as a delta on the version's totals row, and the second
-// writer's delta lands on the first one's committed total, so the stored
-// totals equal the sums of the months whatever the order. A recompute by SUM
-// in READ COMMITTED would miss the other writer's uncommitted months and lose
-// them on commit.
+// statement's change as an increment on the version's totals row: a writer
+// that finds the row changed by a running transaction waits for it, then adds
+// to the row as that transaction left it, so once both have committed the
+// stored totals equal the sums of the committed months, whichever commits
+// first. A recompute by SUM in READ COMMITTED would miss the other writer's
+// uncommitted months and lose them on commit.
+//
+// The same blindness is why the trigger never deletes a totals row when a
+// version's last month goes: in each delete race below, the deleting
+// transaction cannot see a month another one is writing. A version left
+// without months keeps a row of zeros.
 //
 // The spread race (creationWhileAMonthIsHeld) guards the lock order:
 // creating the zero months of a write never locks the totals row, so a writer
 // that creates months while waiting for a month held by another one does not
 // deadlock with it.
 //
-// runRaceSpecs opens the data-source, so test:ci runs this file in its
-// database lane (the gates must not see another spec's locks). Like every
-// race spec it commits throwaway tenants, so it never runs on a developer's
-// `appdb`: there it reports itself skipped (CI's `appdb` is a throwaway
-// container and runs it).
+// @database-spec: run-ci-tests.js runs this file in its serial database lane
+// (the gates must not see another spec's locks). Like every race spec it
+// commits throwaway tenants, so it never runs on a developer's `appdb`: there
+// it reports itself skipped (CI's `appdb` is a throwaway container and runs
+// it).
 
 const YEAR = 2035;
 
@@ -32,6 +38,27 @@ const cell = (month: number, values: Record<string, number>) => ({ period: perio
 
 function save(kind: Kind, race: Race, party: Party, versionId: string, payload: Record<string, unknown>) {
   return race.start(party, (manager) => amountsService(kind, captureAudit(), noFreeze).bulkUpsert(versionId, { year: YEAR, ...payload }, null, { manager }));
+}
+
+/** Raw statements of one request of the party, in order (the triggers do the rest). */
+function statements(race: Race, party: Party, list: Array<[string, unknown[]]>) {
+  return race.start(party, async (manager) => {
+    for (const [text, params] of list) await manager.query(text, params);
+  });
+}
+
+/** A committed version of the race tenant with the given planned months (month number → value, null for an omitted column). */
+async function seedPlannedMonths(race: Race, kind: Kind, months: Record<number, number | null>): Promise<string> {
+  return race.seedWith(async (runner) => {
+    const id = await seedVersion(runner, kind, race.tenantId, await seedItem(runner, kind, race.tenantId), YEAR);
+    for (const [month, planned] of Object.entries(months)) {
+      await runner.query(
+        `INSERT INTO ${TABLES[kind].amounts} (tenant_id, version_id, period, planned) VALUES ($1, $2, $3, $4)`,
+        [race.tenantId, id, period(Number(month), YEAR), planned],
+      );
+    }
+    return id;
+  });
 }
 
 /** The stored totals of the version and the sums of its months of its year, as 2-decimal text. */
@@ -154,6 +181,90 @@ async function firstWrites(kind: Kind) {
   });
 }
 
+/**
+ * B creates a zero February (the first step of a budget
+ * write: no totals lock) and pauses; A deletes January, the version's only
+ * valued month, and commits; B writes 5 in February. February was invisible
+ * to A: had A dropped the row as the version's last month went, B's 5 would
+ * find no row to add to and the list would read 0.
+ */
+async function lastValuedMonthDeletedWhileAMonthIsCreated(kind: Kind) {
+  await withRace(`totals-delete-create-${kind}`, async (race) => {
+    const amounts = TABLES[kind].amounts;
+    const versionId = await seedPlannedMonths(race, kind, { 1: 10 });
+    const a = await race.open('A (deletes January)');
+    const b = await race.open('B (creates February, then writes it)');
+    const bCreated = race.gate(b, { label: 'create a zero February', when: 'after', match: sql.insertInto(amounts) });
+    const bWork = statements(race, b, [
+      [`INSERT INTO ${amounts} (tenant_id, version_id, period) VALUES ($1, $2, $3) ON CONFLICT (version_id, period) DO NOTHING`, [race.tenantId, versionId, period(2, YEAR)]],
+      [`INSERT INTO ${amounts} (tenant_id, version_id, period, planned) VALUES ($1, $2, $3, 5)
+        ON CONFLICT (version_id, period) DO UPDATE SET planned = EXCLUDED.planned`, [race.tenantId, versionId, period(2, YEAR)]],
+    ]);
+    assert.equal(await progress(bWork, { party: b, gate: bCreated }), 'gated', 'harness: B must pause after creating February');
+    const aWork = statements(race, a, [[`DELETE FROM ${amounts} WHERE version_id = $1 AND period = $2`, [versionId, period(1, YEAR)]]]);
+    await progress(aWork, { party: a });
+    bCreated.release();
+    const [aDone, bDone] = await Promise.all([settle(aWork), settle(bWork)]);
+    assertSucceeded(aDone, 'A');
+    assertSucceeded(bDone, 'B');
+    await assertTotals(race, kind, versionId, { planned: '5.00' }, 'a value written after the last valued month went');
+  });
+}
+
+/**
+ * B inserts 5 in February (its increment holds the totals
+ * row) and pauses; A deletes January, a zero month. A changes no amount, so
+ * it neither waits for B nor touches the row; it used to wait, then drop the
+ * row on a check that could not see B's February.
+ */
+async function zeroMonthDeletedWhileAMonthIsWritten(kind: Kind) {
+  await withRace(`totals-delete-zero-${kind}`, async (race) => {
+    const amounts = TABLES[kind].amounts;
+    const versionId = await seedPlannedMonths(race, kind, { 1: 0 });
+    const a = await race.open('A (deletes the zero January)');
+    const b = await race.open('B (writes February)');
+    const bWrote = race.gate(b, { label: 'write February', when: 'after', match: sql.insertInto(amounts) });
+    const bWork = statements(race, b, [[`INSERT INTO ${amounts} (tenant_id, version_id, period, planned) VALUES ($1, $2, $3, 5)`, [race.tenantId, versionId, period(2, YEAR)]]]);
+    assert.equal(await progress(bWork, { party: b, gate: bWrote }), 'gated', 'harness: B must pause after writing February');
+    const aWork = statements(race, a, [[`DELETE FROM ${amounts} WHERE version_id = $1 AND period = $2`, [versionId, period(1, YEAR)]]]);
+    assert.equal(await progress(aWork, { party: a }), 'settled', 'A deletes a zero month without waiting for the totals row');
+    bWrote.release();
+    const [aDone, bDone] = await Promise.all([settle(aWork), settle(bWork)]);
+    assertSucceeded(aDone, 'A');
+    assertSucceeded(bDone, 'B');
+    await assertTotals(race, kind, versionId, { planned: '5.00' }, 'a zero month deleted while another is written');
+  });
+}
+
+/**
+ * A and B delete the two zero months of a version at once; each still sees
+ * the other's month. The version ends without months and keeps its row of
+ * zeros; the next month written adds to that row.
+ */
+async function bothZeroMonthsDeleted(kind: Kind) {
+  await withRace(`totals-delete-both-${kind}`, async (race) => {
+    const amounts = TABLES[kind].amounts;
+    const versionId = await seedPlannedMonths(race, kind, { 1: 0, 2: null });
+    const a = await race.open('A (deletes January)');
+    const b = await race.open('B (deletes February)');
+    const aDeleted = race.gate(a, { label: 'delete January', when: 'after', match: sql.deleteFrom(amounts) });
+    const aWork = statements(race, a, [[`DELETE FROM ${amounts} WHERE version_id = $1 AND period = $2`, [versionId, period(1, YEAR)]]]);
+    assert.equal(await progress(aWork, { party: a, gate: aDeleted }), 'gated', 'harness: A must pause after deleting January');
+    const bWork = statements(race, b, [[`DELETE FROM ${amounts} WHERE version_id = $1 AND period = $2`, [versionId, period(2, YEAR)]]]);
+    assert.equal(await progress(bWork, { party: b }), 'settled', 'B deletes a zero month without waiting');
+    aDeleted.release();
+    const [aDone, bDone] = await Promise.all([settle(aWork), settle(bWork)]);
+    assertSucceeded(aDone, 'A');
+    assertSucceeded(bDone, 'B');
+    const { stored } = await totalsAndSums(race, kind, versionId);
+    assert.ok(stored, `${kind}: the version keeps its totals row`);
+    await assertTotals(race, kind, versionId, { planned: '0.00', forecast: '0.00' }, 'both months deleted at once');
+    const c = await race.open('C (writes March)');
+    assertSucceeded(await settle(statements(race, c, [[`INSERT INTO ${amounts} (tenant_id, version_id, period, planned) VALUES ($1, $2, $3, 7)`, [race.tenantId, versionId, period(3, YEAR)]]])), 'C');
+    await assertTotals(race, kind, versionId, { planned: '7.00' }, 'a month written afterwards');
+  });
+}
+
 const races: Array<[string, () => Promise<void>]> = [
   ['two months of one OPEX version saved at once', () => differentMonths('opex')],
   ['two months of one CAPEX version saved at once', () => differentMonths('capex')],
@@ -162,6 +273,12 @@ const races: Array<[string, () => Promise<void>]> = [
   ['an OPEX spread creating months while another save holds a month (no deadlock)', () => creationWhileAMonthIsHeld('opex')],
   ['a CAPEX spread creating months while another save holds a month (no deadlock)', () => creationWhileAMonthIsHeld('capex')],
   ['the first two writes of an OPEX version', () => firstWrites('opex')],
+  ['an OPEX version\'s last valued month deleted while another save creates a month', () => lastValuedMonthDeletedWhileAMonthIsCreated('opex')],
+  ['a CAPEX version\'s last valued month deleted while another save creates a month', () => lastValuedMonthDeletedWhileAMonthIsCreated('capex')],
+  ['an OPEX zero month deleted while another save writes a month', () => zeroMonthDeletedWhileAMonthIsWritten('opex')],
+  ['a CAPEX zero month deleted while another save writes a month', () => zeroMonthDeletedWhileAMonthIsWritten('capex')],
+  ['the two zero months of an OPEX version deleted at once', () => bothZeroMonthsDeleted('opex')],
+  ['the two zero months of a CAPEX version deleted at once', () => bothZeroMonthsDeleted('capex')],
 ];
 
 if (databaseName() === 'appdb' && process.env.GITHUB_ACTIONS !== 'true') {

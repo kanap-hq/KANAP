@@ -14,7 +14,7 @@ import { csvService, disableCostCenter, ITEM_TABLE, seedCompany, seedCostCenter 
 // - a file without the two columns imports and leaves the stored values; a
 //   present blank cell clears them;
 // - export then import of the same file changes nothing.
-// runSpecs opens the data-source, so test:ci runs this file in its database lane.
+// @database-spec: runSpecs opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const KINDS: Kind[] = ['opex', 'capex'];
 const COMPANY = 'Csv cost center company';
