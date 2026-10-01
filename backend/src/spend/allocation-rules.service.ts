@@ -181,23 +181,28 @@ export class AllocationRulesService {
 
     const repo = manager.getRepository(AllocationRule);
     const existing = await repo.findOne({ where: { tenant_id: tenantId, fiscal_year: year } as any });
-    const values = { mode, method: input.method, company_ids: companyIds, status: 'active' as const };
 
     const previous = existing
       ? { mode: existing.mode, method: existing.method, company_ids: existing.company_ids, status: existing.status }
       : null;
-    // Two admins creating the same year at once: the loser hits UNIQUE(tenant_id, fiscal_year).
-    // The request transaction is already aborted at that point, so no in-transaction retry
-    // can succeed; the error is left to surface and the second save simply has to be redone.
-    const saved = existing
-      ? await repo.save({ ...existing, ...values } as AllocationRule)
-      : await repo.save(repo.create({ tenant_id: tenantId, fiscal_year: year, ...values }));
+    // One statement, an upsert on UNIQUE(tenant_id, fiscal_year): two admins setting a year
+    // without rule at once both succeed (the second waits for the first, then updates its
+    // row), and the year keeps the rule saved last.
+    const [saved]: Array<Pick<AllocationRule, 'id' | 'mode' | 'method' | 'company_ids' | 'status'> & { inserted: boolean }> = await manager.query(
+      `INSERT INTO allocation_rules (tenant_id, fiscal_year, mode, method, company_ids, status)
+       VALUES ($1, $2, $3, $4, $5::uuid[], 'active')
+       ON CONFLICT (tenant_id, fiscal_year) DO UPDATE
+         SET mode = EXCLUDED.mode, method = EXCLUDED.method, company_ids = EXCLUDED.company_ids,
+             status = EXCLUDED.status, updated_at = now()
+       RETURNING id, mode, method, company_ids, status, (xmax = 0) AS inserted`,
+      [tenantId, year, mode, input.method, companyIds],
+    );
 
     await this.audit.log(
       {
         table: 'allocation_rules',
         recordId: saved.id,
-        action: previous ? 'update' : 'create',
+        action: saved.inserted ? 'create' : 'update',
         before: previous ? { fiscal_year: year, ...previous } : null,
         after: {
           fiscal_year: year,

@@ -1,24 +1,24 @@
 import { CapexVersionsService } from '../../capex/capex-versions.service';
 import { BUDGET_ROWS_HEADERS, BudgetRowsCsvService } from '../budget-rows-csv.service';
 import { SpendVersionsService } from '../spend-versions.service';
-import { captureAudit, Kind, noFreeze, seedItem, seedVersion } from './round-inputs.fixtures';
+import { captureAudit, Kind, noFreeze, seedItem } from './round-inputs.fixtures';
 import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known races of the budget versions (plan planning/perf-scale, step 0.3).
+// Races of the budget version create (plan planning/perf-scale, step 0.3,
+// Annexe A #13), fixed by lot 3A.
 //
-// Annexe A #13, failing until lot 3A lands: a version is created after a
-// check without lock (`spend-versions.service.ts:30-66`, the CAPEX twin, and
-// `createBudgetVersion` used by the copy and both CSV imports). Two callers
-// that both see no version for the year both insert; the second hits the
-// unique index (23505): a 500 for the budget tab's get-or-create, the whole
-// import rolled back for a CSV. CAPEX turns the year index violation into a
-// 400, still an error for the second user.
-// Target: one shared get-or-create (`INSERT … ON CONFLICT (item, year) DO
-// NOTHING`, then read): both callers end with the same version, no error.
+// A version used to be created after a check without lock
+// (`spend-versions.service.ts`, the CAPEX twin, and `createBudgetVersion` used
+// by the copy and both CSV imports). Two callers that both saw no version for
+// the year both inserted; the second hit the unique index (23505): a 500 for
+// the budget tab's get-or-create, the whole import rolled back for a CSV.
+// CAPEX turned the year index violation into a 400, still an error for the
+// second user. Now one shared get-or-create (`budget-version-ensure.ts`:
+// `INSERT … ON CONFLICT DO NOTHING`, then read): both callers end with the
+// same version, no error.
 //
-// Annexe A #2 on versions, failing until lot 3B lands: `updateForItem` merges
-// the body into the version it read and `save()`s it, so a concurrent change
-// of another field is put back. Target: targeted UPDATE under the version lock.
+// The version update race (Annexe A #2 on versions, lot 3B) is in
+// spend-version-update-race.integration.spec.ts.
 
 const YEAR = 2027;
 const currencySettings = { getSettings: async () => ({ reportingCurrency: 'EUR' }) };
@@ -92,43 +92,8 @@ async function importVersusTab() {
   });
 }
 
-/**
- * The allocations tab changes the method while the budget tab changes the
- * view (both PATCH the version): the view change must not put the old method
- * back.
- */
-async function methodVersusView() {
-  await withRace('opex-version-update', async (race) => {
-    const { itemId, versionId } = await race.seedWith(async (runner) => {
-      const itemId = await seedItem(runner, 'opex', race.tenantId, 1);
-      return { itemId, versionId: await seedVersion(runner, 'opex', race.tenantId, itemId, YEAR, 'annual') };
-    });
-    const allocationsTab = await race.open('allocations tab (method)');
-    const budgetTab = await race.open('budget tab (view)');
-
-    const viewRead = race.gate(budgetTab, { label: 'read the version', when: 'after', match: sql.select('spend_versions') });
-    const viewWork = race.start(budgetTab, (manager) => versionsService('opex').updateForItem(itemId, { id: versionId, input_grain: 'monthly' } as any, undefined, { manager }));
-    assert.equal(await progress(viewWork, { party: budgetTab, gate: viewRead }), 'gated', 'harness: the view change must pause after reading the version');
-
-    const methodWork = race.start(allocationsTab, (manager) => versionsService('opex').updateForItem(itemId, { id: versionId, allocation_method: 'manual_pct' } as any, undefined, { manager }));
-    await progress(methodWork, { party: allocationsTab });
-    viewRead.release();
-    const [methodDone, viewDone] = await Promise.all([settle(methodWork), settle(viewWork)]);
-    assertSucceeded(methodDone, 'the method change');
-    assertSucceeded(viewDone, 'the view change');
-
-    const row = await race.readOne(`SELECT input_grain::text AS input_grain, allocation_method FROM spend_versions WHERE id = $1`, [versionId]);
-    assert.equal(row?.input_grain, 'monthly', 'the view change is saved');
-    assert.equal(
-      row?.allocation_method, 'manual_pct',
-      `the view change put the allocation method back to "${row?.allocation_method}" over the "manual_pct" committed meanwhile`,
-    );
-  });
-}
-
 void runRaceSpecs('Budget version races', [
   ['Annexe A #13: two budget tabs create the same OPEX year, both get the version (3A)', () => twoTabsCreateTheYear('opex')],
   ['Annexe A #13: two budget tabs create the same CAPEX year, both get the version (3A)', () => twoTabsCreateTheYear('capex')],
   ['Annexe A #13: a budget rows import and a budget tab create the same year, the import goes through (3A)', importVersusTab],
-  ['Annexe A #2 on versions: a view change keeps the allocation method committed meanwhile (3B)', methodVersusView],
 ]);

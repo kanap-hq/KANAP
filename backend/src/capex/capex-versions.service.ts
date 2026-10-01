@@ -1,12 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, EntityManager, Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { CapexVersion } from './capex-version.entity';
 import { AuditService } from '../audit/audit.service';
 import { CapexItem } from './capex-item.entity';
 import { CurrencySettingsService } from '../currency/currency-settings.service';
-
-const DUPLICATE_YEAR_MESSAGE = 'A version for this budget year already exists';
+import { ensureBudgetVersion } from '../spend/budget-version-ensure';
 
 @Injectable()
 export class CapexVersionsService {
@@ -22,16 +21,17 @@ export class CapexVersionsService {
     return mg.getRepository(CapexVersion).find({ where: { capex_item_id: itemId } as any, order: { created_at: 'DESC' as any } });
   }
 
+  /**
+   * Get-or-create of the item's version of a year (`budget_year`, else the
+   * current year): an existing version of that year is returned as it is,
+   * also when a concurrent request created it a moment ago (see
+   * `spend/budget-version-ensure.ts`). A name already used by another year of
+   * the item is refused (400).
+   */
   async createForItem(itemId: string, body: Partial<CapexVersion>, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(CapexVersion);
     if (!body.version_name) throw new BadRequestException('version_name required');
-    const dup = await repo.findOne({ where: { capex_item_id: itemId, version_name: String(body.version_name) } as any });
-    if (dup) throw new BadRequestException('Version name already exists for this item');
-
     const budgetYear = body.budget_year != null ? Number(body.budget_year) : new Date().getFullYear();
-    const dupYear = await repo.findOne({ where: { capex_item_id: itemId, budget_year: budgetYear } as any });
-    if (dupYear) throw new BadRequestException(DUPLICATE_YEAR_MESSAGE);
 
     const allocationMethod = (body as any).allocation_method ?? 'default';
     const allocationDriver =
@@ -46,32 +46,23 @@ export class CapexVersionsService {
     if (!item) throw new NotFoundException('CAPEX item not found');
     const settings = await this.currencySettings.getSettings(item.tenant_id, { manager: mg });
 
-    const toCreate: DeepPartial<CapexVersion> = {
-      capex_item_id: itemId,
-      version_name: body.version_name,
-      input_grain: (body as any).input_grain ?? 'annual',
-      is_approved: false,
-      as_of_date: body.as_of_date ?? new Date().toISOString().slice(0, 10),
-      budget_year: budgetYear,
-      allocation_method: allocationMethod,
-      allocation_driver: allocationDriver,
+    const ensured = await ensureBudgetVersion(mg, 'capex', {
+      tenantId: item.tenant_id,
+      itemId,
+      year: budgetYear,
+      versionName: String(body.version_name),
+      inputGrain: (body as any).input_grain ?? 'annual',
+      asOfDate: body.as_of_date ?? new Date().toISOString().slice(0, 10),
+      allocationMethod,
+      allocationDriver,
       notes: body.notes ?? null,
-      reporting_currency: settings.reportingCurrency,
-    };
-    let saved: CapexVersion;
-    try {
-      saved = await repo.save(repo.create(toCreate));
-    } catch (err) {
-      // Two concurrent creates of the same year both pass the check above;
-      // the loser hits the unique index.
-      const { code, constraint } = (err ?? {}) as { code?: string; constraint?: string };
-      if (code === '23505' && constraint === 'uniq_capex_item_budget_year') {
-        throw new BadRequestException(DUPLICATE_YEAR_MESSAGE);
-      }
-      throw err;
+      reportingCurrency: settings.reportingCurrency,
+    });
+    if (!ensured) throw new BadRequestException('Version name already exists for this item');
+    if (ensured.created) {
+      await this.audit.log({ table: 'capex_versions', recordId: ensured.version.id, action: 'create', before: null, after: ensured.version, userId }, { manager: mg });
     }
-    await this.audit.log({ table: 'capex_versions', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
-    return saved;
+    return ensured.version;
   }
 
   async updateForItem(itemId: string, body: Partial<CapexVersion> & { id: string }, userId?: string | null, opts?: { manager?: EntityManager }) {

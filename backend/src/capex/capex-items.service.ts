@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, EntityManager, ILike, In, Repository } from 'typeorm';
+import { EntityManager, ILike, In, Repository } from 'typeorm';
 import { CapexItem } from './capex-item.entity';
 import { CapexVersion } from './capex-version.entity';
 import { CapexAmount } from './capex-amount.entity';
@@ -75,6 +75,9 @@ import {
   readCsvAnalyticsColumns,
   writeItemAnalyticsValues,
 } from '../spend/item-analytics.util';
+import { ensureBudgetVersion } from '../spend/budget-version-ensure';
+import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
+import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
@@ -418,7 +421,8 @@ export class CapexItemsService {
     const oldSupplierId = (before as any).supplier_id ?? null;
     const newSupplierId = (persisted as any)?.supplier_id ?? (saved as any).supplier_id ?? null;
     if (oldSupplierId !== newSupplierId) {
-      await this.itemContacts.syncFromSupplier(itemId, newSupplierId, userId ?? null, { manager: mg, tenantId: existing.tenant_id });
+      await syncSupplierContactsWithinUpdate(mg, `CAPEX line ${itemId}`, () =>
+        this.itemContacts.syncFromSupplier(itemId, newSupplierId, userId ?? null, { manager: mg, tenantId: existing.tenant_id }));
     }
 
     const after = persisted ?? saved;
@@ -953,19 +957,23 @@ export class CapexItemsService {
         if (!hasAny) continue;
         let version = await mg.getRepository(CapexVersion).findOne({ where: { tenant_id: tenantId, capex_item_id: target.id, budget_year: yr as any } as any });
         if (!version) {
-          const versionPartial: DeepPartial<CapexVersion> = {
-            capex_item_id: target.id,
-            budget_year: yr as any,
-            version_name: `Auto ${yr}`,
-            input_grain: 'annual' as any,
-            is_approved: false,
-            as_of_date: `${yr}-01-01`,
-            tenant_id: target.tenant_id,
-            allocation_method: 'default' as any,
-          };
-          version = mg.getRepository(CapexVersion).create(versionPartial);
-          version = await mg.getRepository(CapexVersion).save(version);
-          await this.audit.log({ table: 'capex_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
+          // Get-or-create: the budget tab may create the year at the same moment.
+          const ensured = await ensureBudgetVersion(mg, 'capex', {
+            tenantId: target.tenant_id,
+            itemId: target.id,
+            year: yr,
+            versionName: `Auto ${yr}`,
+            inputGrain: 'annual',
+            asOfDate: `${yr}-01-01`,
+            allocationMethod: 'default',
+          });
+          if (!ensured) {
+            throw new BadRequestException(`Another year of "${target.description}" already has a version named "Auto ${yr}": rename it, then import again.`);
+          }
+          version = ensured.version;
+          if (ensured.created) {
+            await this.audit.log({ table: 'capex_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
+          }
         }
         await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze, userId ?? null);
       }
@@ -1110,13 +1118,11 @@ export class CapexItemsService {
       const projects = await mg.getRepository(PortfolioProject).find({ where: { tenant_id: tenantId, id: In(cleanIds) } as any });
       if (projects.length !== cleanIds.length) throw new BadRequestException('One or more projects not found');
     }
-    const repo = mg.getRepository(PortfolioProjectCapex);
-    const existing = await repo.find({ where: { tenant_id: tenantId, capex_id: itemId } as any });
-    if (existing.length) await repo.delete({ tenant_id: tenantId, id: In(existing.map((x) => x.id)) } as any);
-    if (cleanIds.length) {
-      const rows = cleanIds.map((projId) => repo.create({ tenant_id: tenantId, project_id: projId, capex_id: itemId }));
-      await repo.save(rows);
-    }
+    // Two saves of the line's projects take turns (the last one wins); a link the project
+    // side stored meanwhile is kept, never a unique violation. See project-budget-links.util.ts.
+    if (!(await lockBudgetLine(mg, 'capex', tenantId, itemId))) throw new NotFoundException('CAPEX item not found');
+    await mg.getRepository(PortfolioProjectCapex).delete({ tenant_id: tenantId, capex_id: itemId } as any);
+    await insertProjectBudgetLinks(mg, 'capex', tenantId, cleanIds.map((projectId) => ({ projectId, itemId })));
     return this.listProjects(itemId, { manager: mg });
   }
 

@@ -23,6 +23,7 @@ import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../.
 import { normalizeMarkdownRichText } from '../../common/markdown-rich-text';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
+import { insertProjectBudgetLinks, lockProject } from '../project-budget-links.util';
 
 /**
  * Service for core CRUD operations on portfolio projects.
@@ -895,24 +896,20 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const actorId = this.requireActivityAuthor(opts?.userId);
 
     const unique = Array.from(new Set((capexIds || []).filter(Boolean)));
+    const project = await this.ensureProject(projectId, mg);
+    // Two saves of the project's lines take turns (the last one wins) and the set is read
+    // under the lock; a link the line side stored meanwhile is kept, never a unique
+    // violation. See project-budget-links.util.ts.
+    if (!(await lockProject(mg, project.tenant_id, projectId))) throw new NotFoundException('Project not found');
     const existing = await repo.find({ where: { project_id: projectId } });
     const beforeIds = Array.from(new Set(existing.map((e) => e.capex_id)));
 
     const toDelete = existing.filter((e) => !unique.includes(e.capex_id));
     const existingSet = new Set(existing.map((e) => e.capex_id));
-
-    const project = await this.ensureProject(projectId, mg);
-
-    const toInsert = unique
-      .filter((id) => !existingSet.has(id))
-      .map((id) => repo.create({
-        tenant_id: project.tenant_id,
-        project_id: projectId,
-        capex_id: id,
-      }));
+    const toInsert = unique.filter((id) => !existingSet.has(id));
 
     if (toDelete.length > 0) await repo.remove(toDelete);
-    if (toInsert.length > 0) await repo.save(toInsert);
+    await insertProjectBudgetLinks(mg, 'capex', project.tenant_id, toInsert.map((itemId) => ({ projectId, itemId })));
 
     const afterIds = Array.from(new Set(unique));
     const beforeSorted = [...beforeIds].sort();
@@ -947,24 +944,20 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const actorId = this.requireActivityAuthor(opts?.userId);
 
     const unique = Array.from(new Set((opexIds || []).filter(Boolean)));
+    const project = await this.ensureProject(projectId, mg);
+    // Two saves of the project's lines take turns (the last one wins) and the set is read
+    // under the lock; a link the line side stored meanwhile is kept, never a unique
+    // violation. See project-budget-links.util.ts.
+    if (!(await lockProject(mg, project.tenant_id, projectId))) throw new NotFoundException('Project not found');
     const existing = await repo.find({ where: { project_id: projectId } });
     const beforeIds = Array.from(new Set(existing.map((e) => e.opex_id)));
 
     const toDelete = existing.filter((e) => !unique.includes(e.opex_id));
     const existingSet = new Set(existing.map((e) => e.opex_id));
-
-    const project = await this.ensureProject(projectId, mg);
-
-    const toInsert = unique
-      .filter((id) => !existingSet.has(id))
-      .map((id) => repo.create({
-        tenant_id: project.tenant_id,
-        project_id: projectId,
-        opex_id: id,
-      }));
+    const toInsert = unique.filter((id) => !existingSet.has(id));
 
     if (toDelete.length > 0) await repo.remove(toDelete);
-    if (toInsert.length > 0) await repo.save(toInsert);
+    await insertProjectBudgetLinks(mg, 'opex', project.tenant_id, toInsert.map((itemId) => ({ projectId, itemId })));
 
     const afterIds = Array.from(new Set(unique));
     const beforeSorted = [...beforeIds].sort();

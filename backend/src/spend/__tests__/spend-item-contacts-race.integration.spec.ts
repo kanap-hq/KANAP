@@ -3,16 +3,15 @@ import { SpendItemContactsService } from '../spend-item-contacts.service';
 import { captureAudit, seedItem } from './round-inputs.fixtures';
 import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known race (plan planning/perf-scale, step 0.3, Annexe A #14), failing
-// until lot 3A lands.
+// Race (plan planning/perf-scale, step 0.3, Annexe A #14), fixed by lot 3A:
+// `attachManual` inserts through `contacts/contact-link-attach.util.ts`. Runs in CI.
 //
-// `SpendItemContactsService.attachManual` checks for an existing (item,
-// contact, role) link and then inserts, without `ON CONFLICT`
-// (`spend-item-contacts.service.ts:45-87`). Two callers that both pass the
-// check: the second insert hits `uniq_spend_item_contact_role` (23505), a 500.
-// The sync from the supplier inserts `ON CONFLICT DO NOTHING` since b12477e0
-// (`:126-135`), so its scenario passes; the spec stays excluded until the
-// manual attach does the same.
+// Before lot 3A, `SpendItemContactsService.attachManual` checked for an
+// existing (item, contact, role) link and then inserted, without
+// `ON CONFLICT`. Two callers that both passed the check: the second insert hit
+// `uniq_spend_item_contact_role` (23505), a 500. The sync from the supplier
+// inserts `ON CONFLICT DO NOTHING` since b12477e0, so its scenario passed
+// already.
 // Target: the insert is `ON CONFLICT DO NOTHING`; both callers succeed and
 // the item has one link.
 

@@ -117,7 +117,14 @@ async function testManualPctBulkUpsert() {
       return ids.filter((id) => id.startsWith('company-')).length;
     },
   };
+  // The save locks the version before it reads or replaces the rows (two saves take turns).
+  const locks: unknown[][] = [];
   const manager = {
+    query: async (sql: string, params: unknown[]) => {
+      if (!/FROM capex_versions WHERE tenant_id = \$1 AND id = \$2 FOR NO KEY UPDATE/.test(sql)) throw new Error(`unexpected query: ${sql}`);
+      locks.push(params);
+      return [{ allocation_method: 'manual_pct' }];
+    },
     getRepository: (entity: unknown) => {
       if (entity === CapexAllocation) return allocationRepo;
       if (entity === CapexVersion) return versionRepo;
@@ -148,6 +155,22 @@ async function testManualPctBulkUpsert() {
   assert.deepEqual(savedRows.map((row) => row.allocation_pct), [60, 40]);
   assert.equal(auditCalls.length, 1);
   assert.equal(companyCounts[0].tenant_id, 'tenant-1', 'companies are resolved in the version\'s tenant');
+  assert.deepEqual(locks[0], ['tenant-1', 'version-1'], 'the version is locked in its tenant');
+
+  // A company picked on two lines is one row (unique key per version, company and department), percentages added.
+  savedRows.length = 0;
+  const merged = await service.bulkUpsert(
+    'version-1',
+    [
+      { company_id: 'company-a', department_id: null, allocation_pct: 30 },
+      { company_id: 'company-b', department_id: null, allocation_pct: 40 },
+      { company_id: 'company-a', department_id: null, allocation_pct: 30 },
+    ],
+    'user-1',
+    { manager: manager as any, tenantId: 'tenant-1' },
+  );
+  assert.equal(merged.updated, 2);
+  assert.deepEqual(savedRows.map((row) => [row.company_id, row.allocation_pct]), [['company-a', 60], ['company-b', 40]]);
 
   await assert.rejects(
     () => service.bulkUpsert(

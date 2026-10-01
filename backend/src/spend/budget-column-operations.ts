@@ -1,11 +1,9 @@
 import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
-import { DeepPartial, EntityManager } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { formatCents } from '../common/amount';
 import { Decimal, DECIMAL_SCALE_DIGITS, divRoundHalfAway } from '../common/decimal';
-import { SpendVersion } from './spend-version.entity';
-import { CapexVersion } from '../capex/capex-version.entity';
 import {
   AmountMeasure,
   AmountScope,
@@ -29,6 +27,7 @@ import {
 } from './round-inputs.util';
 import { CostLine } from './costing.util';
 import { activeMonths } from './spread.util';
+import { ensureBudgetVersion } from './budget-version-ensure';
 
 /**
  * Budget column operations (copy a column to another year or column, clear a
@@ -267,34 +266,37 @@ export async function loadVersions(
   return byItemYear;
 }
 
-/** Create the version of an item's year, with the item's tenant_id, and audit it. */
+/**
+ * The version of an item's year, created (and audited) when it has none, with
+ * the item's tenant_id. Get-or-create: a version a concurrent request created
+ * meanwhile is used as it is (see `budget-version-ensure.ts`).
+ */
 export async function createBudgetVersion(
   deps: Pick<BudgetOperationDeps, 'manager' | 'audit'>,
   scope: AmountScope,
   params: { itemId: string; tenantId: string; year: number; name: string; inputGrain: 'annual' | 'quarterly' | 'monthly' },
   userId: string | null,
 ): Promise<BudgetVersionRow> {
-  const common = {
-    budget_year: params.year,
-    version_name: params.name,
-    input_grain: params.inputGrain,
-    is_approved: false,
-    as_of_date: `${params.year}-01-01`,
-    allocation_method: 'default' as const,
-    tenant_id: params.tenantId,
-  };
-  const saved = scope === 'opex'
-    ? await deps.manager.getRepository(SpendVersion).save(
-      deps.manager.getRepository(SpendVersion).create({ ...common, spend_item_id: params.itemId } as DeepPartial<SpendVersion>),
-    )
-    : await deps.manager.getRepository(CapexVersion).save(
-      deps.manager.getRepository(CapexVersion).create({ ...common, capex_item_id: params.itemId } as DeepPartial<CapexVersion>),
+  const ensured = await ensureBudgetVersion(deps.manager, scope, {
+    tenantId: params.tenantId,
+    itemId: params.itemId,
+    year: params.year,
+    versionName: params.name,
+    inputGrain: params.inputGrain,
+    asOfDate: `${params.year}-01-01`,
+    allocationMethod: 'default',
+  });
+  if (!ensured) {
+    throw new BadRequestException(`Another year of a line already has a version named "${params.name}": rename it, then try again.`);
+  }
+  const { version, created } = ensured;
+  if (created) {
+    await deps.audit.log(
+      { table: SCOPES[scope].versions, recordId: version.id, action: 'create', before: null, after: version, userId },
+      { manager: deps.manager },
     );
-  await deps.audit.log(
-    { table: SCOPES[scope].versions, recordId: saved.id, action: 'create', before: null, after: saved, userId },
-    { manager: deps.manager },
-  );
-  return { id: saved.id, tenant_id: params.tenantId, budget_year: params.year, item_id: params.itemId, input_grain: params.inputGrain };
+  }
+  return { id: version.id, tenant_id: params.tenantId, budget_year: params.year, item_id: params.itemId, input_grain: version.input_grain };
 }
 
 export type CopyColumnOperation = {
