@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { longFormSurfaceFieldSx } from '../../theme/formSx';
-import { useFieldDraft } from './useFieldDraft';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
 
 /** The workspace description of a dimension or a value, saved when the field loses focus. */
 export default function AnalyticsDescriptionField({

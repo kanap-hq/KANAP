@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import api, { requestTokenRefresh } from '../api';
+import api, { requestTokenRefreshOutcome, type RefreshOutcome } from '../api';
 import { clearSessionActivity, isIdleExpired, setRefreshTtlMs, touchLastActivity } from './sessionStorage';
 import { getAccessToken, getAccessTokenExpiresAt, setAccessToken, subscribeAccessToken } from './accessTokenStore';
 import i18n, { detectBrowserLocale, LANGUAGE_OVERRIDE_STORAGE_KEY, SupportedLocale } from '../i18n';
@@ -85,6 +85,8 @@ type LoginResponse = {
   refresh_expires_in?: number;
 };
 
+type RefreshStatus = RefreshOutcome['status'];
+
 type AuthContextType = {
   token: string | null;
   tokenExpiresAt: number | null;
@@ -96,7 +98,8 @@ type AuthContextType = {
   login: (response: LoginResponse) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
-  refreshAccessToken: () => Promise<boolean>;
+  /** 'ended' clears the session; 'unavailable' keeps it (server unreachable, retried later). */
+  refreshAccessToken: () => Promise<RefreshStatus>;
   hasLevel: (resource: string, level: PermissionLevel) => boolean;
   hasAnyAccess: boolean;
 };
@@ -167,32 +170,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSubscription(res.data?.subscription ?? null);
       setTenantAuth(res.data?.tenantAuth ?? null);
     } catch (e: any) {
-      // If unauthorized, logout
-      if (e?.response?.status === 401) logout();
+      // Log out only when the refresh behind this 401 ended the session (token cleared); an
+      // unreachable server keeps it.
+      if (e?.response?.status === 401 && !getAccessToken()) logout();
     }
   }, [token, logout]);
 
-  const refreshAccessTokenInternal = useCallback(async (legacyRefreshToken?: string): Promise<boolean> => {
+  const refreshAccessTokenInternal = useCallback(async (legacyRefreshToken?: string): Promise<RefreshStatus> => {
     if (isIdleExpired()) {
       clearAuthState({ clearActivity: true });
-      return false;
+      return 'ended';
     }
     try {
       const payload = legacyRefreshToken ? { refresh_token: legacyRefreshToken } : undefined;
-      const refreshed = await requestTokenRefresh(payload);
-      if (!refreshed) {
+      const outcome = await requestTokenRefreshOutcome(payload);
+      // Server unreachable: keep the session; the expiry timer and the 401 interceptor retry later.
+      if (outcome.status === 'unavailable') return 'unavailable';
+      if (outcome.status === 'ended' || isIdleExpired()) {
         clearAuthState({ clearActivity: true });
-        return false;
+        return 'ended';
       }
-      if (isIdleExpired()) {
-        clearAuthState({ clearActivity: true });
-        return false;
-      }
-      applyAccessToken(refreshed.access_token, refreshed.expires_in, refreshed.refresh_expires_in);
-      return true;
+      applyAccessToken(outcome.data.access_token, outcome.data.expires_in, outcome.data.refresh_expires_in);
+      return 'refreshed';
     } catch {
       clearAuthState({ clearActivity: true });
-      return false;
+      return 'ended';
     }
   }, [applyAccessToken, clearAuthState]);
 
@@ -211,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // refreshMe will be called by useEffect when token changes
   }, [applyAccessToken, clearAuthState, queryClient]);
 
-  const refreshAccessToken = useCallback(async (): Promise<boolean> => {
+  const refreshAccessToken = useCallback(async (): Promise<RefreshStatus> => {
     return refreshAccessTokenInternal();
   }, [refreshAccessTokenInternal]);
 

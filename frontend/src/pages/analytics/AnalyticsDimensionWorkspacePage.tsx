@@ -33,7 +33,7 @@ import {
   type AnalyticsField,
 } from './analyticsFields';
 import AnalyticsDescriptionField from './AnalyticsDescriptionField';
-import { useFieldDraft } from './useFieldDraft';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
 
 type FieldErrors = Partial<Record<AnalyticsField, string>>;
 /** `title` is the click-to-edit name in the header: its refusals show above the workspace. */

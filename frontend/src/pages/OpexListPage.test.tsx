@@ -16,13 +16,30 @@ vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
 const grid = vi.fn();
-vi.mock('../components/ServerDataGrid', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../components/ServerDataGrid')>()),
-  default: (props: unknown) => {
-    grid(props);
-    return null;
-  },
-}));
+vi.mock('../components/ServerDataGrid', async (importOriginal) => {
+  const { useEffect } = await import('react');
+  const { useLocation } = await import('react-router-dom');
+  return {
+    ...(await importOriginal<typeof import('../components/ServerDataGrid')>()),
+    default: function GridMock(props: any) {
+      grid(props);
+      const search = useLocation().search;
+      // Like the real grid once it is ready: it hands its API over, then reports the query it starts with.
+      useEffect(() => {
+        const { field, direction } = props.defaultSort;
+        props.onGridApiReady?.({ getColumnState: () => [] });
+        props.onQueryStateChange?.({
+          sort: new URLSearchParams(search).get('sort') || `${field}:${direction}`,
+          filterModel: props.initialState?.filter?.filterModel ?? {},
+          q: '',
+          statusScope: 'enabled',
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+      return null;
+    },
+  };
+});
 
 // The tenant's dimensions, set per test; the hook's own core orders them and names the default.
 // A small store, so a test can let the dimensions arrive after the first render.

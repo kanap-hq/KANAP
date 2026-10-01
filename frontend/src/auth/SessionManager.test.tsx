@@ -8,7 +8,7 @@ const navigateMock = vi.fn();
 const authState = {
   token: 'access-token',
   tokenExpiresAt: Date.now() + 60_000,
-  refreshAccessToken: vi.fn<() => Promise<boolean>>(),
+  refreshAccessToken: vi.fn<() => Promise<'refreshed' | 'ended' | 'unavailable'>>(),
   logout: vi.fn<() => Promise<void>>(),
 };
 
@@ -58,7 +58,7 @@ describe('SessionManager', () => {
 
     authState.token = 'access-token';
     authState.tokenExpiresAt = Date.now() + 60_000;
-    authState.refreshAccessToken.mockResolvedValue(true);
+    authState.refreshAccessToken.mockResolvedValue('refreshed');
     authState.logout.mockResolvedValue();
 
     const storage = createStorageMock({
@@ -97,7 +97,7 @@ describe('SessionManager', () => {
   });
 
   it('does not log out while a refresh started by the warning timer is still in flight', async () => {
-    const pendingRefresh = deferred<boolean>();
+    const pendingRefresh = deferred<'refreshed'>();
     authState.tokenExpiresAt = Date.now() + 61_000;
     authState.refreshAccessToken.mockImplementation(() => pendingRefresh.promise);
 
@@ -124,12 +124,60 @@ describe('SessionManager', () => {
     expect(navigateMock).not.toHaveBeenCalled();
 
     await act(async () => {
-      pendingRefresh.resolve(true);
+      pendingRefresh.resolve('refreshed');
       await pendingRefresh.promise;
     });
 
     expect(authState.logout).not.toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the session when the refresh server is unreachable and tries again at expiry', async () => {
+    authState.tokenExpiresAt = Date.now() + 61_000;
+    authState.refreshAccessToken.mockResolvedValue('unavailable');
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <SessionManager>
+          <div>Child</div>
+        </SessionManager>
+      </MemoryRouter>,
+    );
+
+    // Warning timer (1 min before expiry).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(authState.refreshAccessToken).toHaveBeenCalledTimes(1);
+
+    // Expiry timer tries again.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(authState.refreshAccessToken).toHaveBeenCalledTimes(2);
+    expect(authState.logout).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('logs out and redirects to login when the refresh ends the session', async () => {
+    authState.tokenExpiresAt = Date.now() + 1_000;
+    authState.refreshAccessToken.mockResolvedValue('ended');
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <SessionManager>
+          <div>Child</div>
+        </SessionManager>
+      </MemoryRouter>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_001);
+    });
+
+    expect(authState.refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(authState.logout).toHaveBeenCalledTimes(1);
+    expect(navigateMock).toHaveBeenCalledWith('/login?sessionExpired=true', { replace: true });
   });
 
   it('redirects to login without remembering the current route after idle expiration', async () => {

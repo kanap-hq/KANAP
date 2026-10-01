@@ -310,7 +310,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
       {error && <Alert severity="error">{error}</Alert>}
 
       <Stack spacing={2} maxWidth={520}>
-        <PropertyRow label="Vendor">
+        <PropertyRow label={t('workspace.asset.support.vendor')}>
           <Autocomplete
             options={vendorOptions}
             value={selectedVendor}
@@ -326,7 +326,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder="Search vendors"
+                placeholder={t('workspace.asset.support.searchVendors')}
                 variant="standard"
                 InputProps={{
                   ...params.InputProps,
@@ -345,7 +345,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
           />
         </PropertyRow>
 
-        <PropertyRow label="Support contract">
+        <PropertyRow label={t('workspace.asset.support.supportContract')}>
           <Autocomplete
             options={contractOptions}
             value={selectedContract}
@@ -361,7 +361,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder="Search support contracts"
+                placeholder={t('workspace.asset.support.searchSupportContracts')}
                 variant="standard"
                 InputProps={{
                   ...params.InputProps,
@@ -380,12 +380,12 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
           />
         </PropertyRow>
 
-        <PropertyRow label="Support tier">
+        <PropertyRow label={t('workspace.asset.support.supportTier')}>
           <TextField
             value={supportTier}
             onChange={(e) => setSupportTier(e.target.value)}
             disabled={saving || readOnly}
-            placeholder="Support tier"
+            placeholder={t('workspace.asset.support.supportTierPlaceholder')}
             size="small"
             variant="standard"
             sx={drawerFieldValueSx}
@@ -393,7 +393,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
           />
         </PropertyRow>
 
-        <PropertyRow label="Support expiry" valueSx={{ maxWidth: 180 }}>
+        <PropertyRow label={t('workspace.asset.support.supportExpiry')} valueSx={{ maxWidth: 180 }}>
           <DateEUField
             label=""
             hideLabel
@@ -405,7 +405,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
           />
         </PropertyRow>
 
-        <PropertyRow label="Notes" valueSx={{ width: '100%' }}>
+        <PropertyRow label={t('common.notes')} valueSx={{ width: '100%' }}>
           <TextField
             id="asset-support-notes"
             value={notes}
@@ -414,7 +414,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
             multiline
             minRows={4}
             maxRows={12}
-            placeholder="Support notes"
+            placeholder={t('workspace.asset.support.notesPlaceholder')}
             variant="standard"
             sx={longFormSurfaceFieldSx}
             fullWidth
@@ -425,21 +425,21 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
       {/* Support contacts table */}
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>Support contacts</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>{t('workspace.asset.support.contactsTitle')}</Typography>
           {!readOnly && (
             <Button startIcon={<AddIcon />} onClick={addContactRow} size="small">
-              Add contact
+              {t('workspace.asset.support.addContact')}
             </Button>
           )}
         </Box>
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Contact</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>Mobile</TableCell>
-              <TableCell>Role</TableCell>
+              <TableCell>{t('common:selects.contact')}</TableCell>
+              <TableCell>{t('common:labels.email')}</TableCell>
+              <TableCell>{t('workspace.asset.support.phone')}</TableCell>
+              <TableCell>{t('common:contacts.mobile')}</TableCell>
+              <TableCell>{t('common.role')}</TableCell>
               <TableCell />
             </TableRow>
           </TableHead>
@@ -447,7 +447,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
             {supportContacts.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6}>
-                  <Typography variant="body2" color="text.secondary">No support contacts yet.</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('workspace.asset.support.noContacts')}</Typography>
                 </TableCell>
               </TableRow>
             )}
@@ -471,7 +471,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
                     value={row.role}
                     onChange={(e) => setContactRowRole(idx, e.target.value)}
                     size="small"
-                    placeholder="Contact role"
+                    placeholder={t('workspace.asset.support.contactRolePlaceholder')}
                     variant="standard"
                     sx={drawerFieldValueSx}
                     fullWidth

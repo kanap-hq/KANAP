@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { classificationText } from '../../utils/applicationClassification';
 import React from 'react';
 import {
@@ -193,10 +194,10 @@ function humanize(value: string | null | undefined, emptyLabel: string) {
   return text.replace(/_/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-function contactName(row: SupportContactRow) {
+function contactName(row: SupportContactRow, unnamedLabel: string) {
   const contact = row.contact || {};
   const name = [contact.first_name, contact.last_name].filter(Boolean).join(' ').trim();
-  return name || contact.email || 'Unnamed contact';
+  return name || contact.email || unnamedLabel;
 }
 
 function contactPhone(row: SupportContactRow) {
@@ -282,6 +283,7 @@ function ApplicationProperties({
   onLocalUpdate: (updater: (prev: ApplicationDetail) => ApplicationDetail) => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
+  const locale = useLocale();
   const { byField } = useItOpsEnumOptions();
   const categoryOptions = byField.applicationCategory || [];
   const categorySelectOptions = React.useMemo(() => {
@@ -573,7 +575,7 @@ function ApplicationProperties({
           )}
         </Stack>
         <Box sx={(theme) => ({ mt: 1, fontSize: 12, color: theme.palette.kanap.text.secondary, lineHeight: 1.5 })}>
-          {t('workspace.application.ownership.usersValue', { value: app.users_mode === 'manual' ? Number(app.users_override || 0).toLocaleString() : Number(app.derived_total_users || 0).toLocaleString() })}
+          {t('workspace.application.ownership.usersValue', { value: app.users_mode === 'manual' ? Number(app.users_override || 0).toLocaleString(locale) : Number(app.derived_total_users || 0).toLocaleString(locale) })}
         </Box>
         <PropertyRow label={t('workspace.application.ownership.calculationMethod')}>
           <Select
@@ -623,6 +625,7 @@ function OverviewTab({
   onOpenApplication: (appId: string) => void;
   onShowInterfaces: () => void;
 }) {
+  const { t } = useTranslation(['it', 'common']);
   const renderConnectionRow = (label: string, items: Array<{ id: string; name: string }>) => {
     if (items.length === 0) return null;
     const visible = items.slice(0, 8);
@@ -670,7 +673,7 @@ function OverviewTab({
                 cursor: 'pointer',
               })}
             >
-              + {overflow} more in Interfaces
+              {t('workspace.application.overview.moreInInterfaces', { count: overflow })}
             </Box>
           )}
         </Box>
@@ -682,16 +685,16 @@ function OverviewTab({
     <Stack spacing={3.5}>
       <Box>
         <Box sx={{ mb: 1 }}>
-          <SectionLabel>Description</SectionLabel>
+          <SectionLabel>{t('workspace.application.overview.description')}</SectionLabel>
         </Box>
         <IntegratedDocumentEditor
           ref={editorRef as React.Ref<IntegratedDocumentEditorHandle>}
           entityType="applications"
           entityId={app.id}
           slotKey="overview"
-          label="Description"
+          label={t('workspace.application.overview.description')}
           hideHeaderLabel
-          placeholder="Add a description for this application..."
+          placeholder={t('workspace.application.overview.descriptionPlaceholder')}
           minRows={10}
           maxRows={24}
           disabled={!canEditManagedDocs}
@@ -705,15 +708,15 @@ function OverviewTab({
       {connections.type !== 'none' && (
         <Box>
           <Box sx={{ mb: 1 }}>
-            <SectionLabel>Connections</SectionLabel>
+            <SectionLabel>{t('workspace.application.overview.connections')}</SectionLabel>
           </Box>
           <Stack spacing={0.75}>
             {connections.type === 'undirected'
-              ? renderConnectionRow('Connected to', connections.connected)
+              ? renderConnectionRow(t('workspace.application.overview.connectedTo'), connections.connected)
               : (
                 <>
-                  {renderConnectionRow('Receives from', connections.receivesFrom)}
-                  {renderConnectionRow('Sends to', connections.sendsTo)}
+                  {renderConnectionRow(t('workspace.application.overview.receivesFrom'), connections.receivesFrom)}
+                  {renderConnectionRow(t('workspace.application.overview.sendsTo'), connections.sendsTo)}
                 </>
               )}
           </Stack>
@@ -726,10 +729,12 @@ function OverviewTab({
   );
 }
 
-function viaMiddlewareLabel(row: InterfaceMiniRow) {
+function viaMiddlewareLabel(row: InterfaceMiniRow, t: TFunction) {
   if (!row.via_middleware) return '—';
   const names = (row.middleware_application_names || []).filter(Boolean);
-  return names.length > 0 ? `via ${names.join(', ')}` : 'via middleware';
+  return names.length > 0
+    ? t('workspace.application.interfaces.viaNames', { names: names.join(', ') })
+    : t('components.createVersion.viaMiddleware');
 }
 
 function InterfaceRowsTable({
@@ -746,7 +751,12 @@ function InterfaceRowsTable({
   onOpenApplication: (id: string) => void;
 }) {
   const theme = useTheme();
-  const counterpartHeader = direction === 'inbound' ? 'Source' : direction === 'outbound' ? 'Target' : 'Endpoints';
+  const { t } = useTranslation(['it', 'common']);
+  const counterpartHeader = direction === 'inbound'
+    ? t('workspace.application.interfaces.source')
+    : direction === 'outbound'
+      ? t('workspace.application.interfaces.target')
+      : t('workspace.application.interfaces.endpoints');
 
   return (
     <Table
@@ -771,16 +781,16 @@ function InterfaceRowsTable({
     >
       <TableHead>
         <TableRow>
-          <TableCell>Interface name</TableCell>
+          <TableCell>{t('workspace.application.interfaces.interfaceName')}</TableCell>
           <TableCell sx={{ width: direction === 'routed' ? 260 : 180 }}>{counterpartHeader}</TableCell>
-          <TableCell sx={{ width: 190 }}>Via middleware</TableCell>
+          <TableCell sx={{ width: 190 }}>{t('workspace.application.interfaces.viaMiddleware')}</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {rows.length === 0 && (
           <TableRow>
             <TableCell colSpan={3} sx={(theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important`, cursor: 'default' })}>
-              No interfaces.
+              {t('workspace.application.interfaces.noRows')}
             </TableCell>
           </TableRow>
         )}
@@ -816,7 +826,7 @@ function InterfaceRowsTable({
                 {row.via_middleware ? (
                   <Box sx={(theme) => ({ display: 'inline-flex', alignItems: 'center', gap: '6px', color: theme.palette.kanap.text.primary })}>
                     <StatusDot color={theme.palette.kanap.text.secondary} />
-                    {viaMiddlewareLabel(row)}
+                    {viaMiddlewareLabel(row, t)}
                   </Box>
                 ) : '—'}
               </TableCell>
@@ -841,6 +851,7 @@ function InterfacesTab({
   onOpenInterface: (id: string) => void;
   onOpenApplication: (id: string) => void;
 }) {
+  const { t } = useTranslation(['it', 'common']);
   const grouped = React.useMemo(() => {
     const map = new Map<string, { inbound: InterfaceMiniRow[]; outbound: InterfaceMiniRow[]; routed: InterfaceMiniRow[] }>();
     rows.forEach((row) => {
@@ -858,7 +869,7 @@ function InterfacesTab({
   if (rows.length === 0) {
     return (
       <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.tertiary })}>
-        No interfaces found for this application.
+        {t('workspace.application.interfaces.noInterfaces')}
       </Typography>
     );
   }
@@ -876,7 +887,7 @@ function InterfacesTab({
             {groups.inbound.length > 0 && (
               <Box>
                 <Box sx={{ mb: 0.75 }}>
-                  <SectionLabel>Inbound ({groups.inbound.length})</SectionLabel>
+                  <SectionLabel>{t('workspace.application.interfaces.inbound', { count: groups.inbound.length })}</SectionLabel>
                 </Box>
                 <InterfaceRowsTable app={app} rows={groups.inbound} direction="inbound" onOpenInterface={onOpenInterface} onOpenApplication={onOpenApplication} />
               </Box>
@@ -884,7 +895,7 @@ function InterfacesTab({
             {groups.outbound.length > 0 && (
               <Box>
                 <Box sx={{ mb: 0.75 }}>
-                  <SectionLabel>Outbound ({groups.outbound.length})</SectionLabel>
+                  <SectionLabel>{t('workspace.application.interfaces.outbound', { count: groups.outbound.length })}</SectionLabel>
                 </Box>
                 <InterfaceRowsTable app={app} rows={groups.outbound} direction="outbound" onOpenInterface={onOpenInterface} onOpenApplication={onOpenApplication} />
               </Box>
@@ -892,7 +903,7 @@ function InterfacesTab({
             {groups.routed.length > 0 && (
               <Box>
                 <Box sx={{ mb: 0.75 }}>
-                  <SectionLabel>Routed ({groups.routed.length})</SectionLabel>
+                  <SectionLabel>{t('workspace.application.interfaces.routed', { count: groups.routed.length })}</SectionLabel>
                 </Box>
                 <InterfaceRowsTable app={app} rows={groups.routed} direction="routed" onOpenInterface={onOpenInterface} onOpenApplication={onOpenApplication} />
               </Box>
@@ -915,7 +926,9 @@ function OperationsTab({
   onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
   onRefresh: () => Promise<void>;
 }) {
+  const { t } = useTranslation(['it', 'common']);
   const { byField, labelFor } = useItOpsEnumOptions();
+  const unnamedContact = t('workspace.application.technical.unnamedContact');
   const [contactDialogOpen, setContactDialogOpen] = React.useState(false);
   const [contactDraft, setContactDraft] = React.useState<{ contact_id: string | null; role: string }>({ contact_id: null, role: '' });
   const [savingContact, setSavingContact] = React.useState(false);
@@ -952,9 +965,9 @@ function OperationsTab({
   return (
     <Stack spacing={3.75}>
       <Box>
-        <SectionLabel>Technical</SectionLabel>
+        <SectionLabel>{t('workspace.application.technical.sectionTitle')}</SectionLabel>
         <Stack spacing={1.5} sx={{ mt: 1.25 }}>
-          <PropertyRow label="Access methods" sx={horizontalRowSx} labelSx={horizontalLabelSx} valueSx={{ maxWidth: 360 }}>
+          <PropertyRow label={t('workspace.application.technical.accessMethods')} sx={horizontalRowSx} labelSx={horizontalLabelSx} valueSx={{ maxWidth: 360 }}>
             <Autocomplete
               multiple
               options={accessOptions}
@@ -966,7 +979,7 @@ function OperationsTab({
                 <TextField
                   {...params}
                   variant="standard"
-                  placeholder={(app.access_methods || []).length === 0 ? 'Not assigned' : undefined}
+                  placeholder={(app.access_methods || []).length === 0 ? t('workspace.application.technical.notAssigned') : undefined}
                   sx={drawerFieldValueSx}
                 />
               )}
@@ -977,9 +990,9 @@ function OperationsTab({
 
           <Stack spacing={0.9} sx={{ pt: 0.5 }}>
             {[
-              ['external_facing', 'External facing'],
-              ['etl_enabled', 'Data integration / ETL'],
-              ['is_suite', 'Can have child apps'],
+              ['external_facing', t('workspace.application.technical.externalFacing')],
+              ['etl_enabled', t('workspace.application.technical.dataIntegrationEtl')],
+              ['is_suite', t('workspace.application.overview.canHaveChildApps')],
             ].map(([field, label]) => (
               <Box component="label" key={field} sx={(theme) => ({ display: 'flex', gap: '8px', alignItems: 'center', fontSize: 13, color: theme.palette.kanap.text.primary })}>
                 <input
@@ -998,11 +1011,11 @@ function OperationsTab({
 
       <Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <SectionLabel>Support</SectionLabel>
+          <SectionLabel>{t('workspace.application.technical.support')}</SectionLabel>
           <Box sx={{ flex: 1 }} />
           {canManage && (
             <Button variant="action" size="small" onClick={() => setContactDialogOpen(true)}>
-              Add contact
+              {t('workspace.application.technical.addContact')}
             </Button>
           )}
         </Box>
@@ -1015,10 +1028,10 @@ function OperationsTab({
         })}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: 140 }}>Contact</TableCell>
-              <TableCell sx={{ width: 180 }}>Email</TableCell>
-              <TableCell sx={{ width: 130 }}>Phone</TableCell>
-              <TableCell>Role</TableCell>
+              <TableCell sx={{ width: 140 }}>{t('workspace.application.technical.contact')}</TableCell>
+              <TableCell sx={{ width: 180 }}>{t('workspace.application.technical.email')}</TableCell>
+              <TableCell sx={{ width: 130 }}>{t('workspace.application.technical.phone')}</TableCell>
+              <TableCell>{t('workspace.application.technical.role')}</TableCell>
               {canManage && <TableCell align="right" sx={{ width: 52 }} />}
             </TableRow>
           </TableHead>
@@ -1026,20 +1039,20 @@ function OperationsTab({
             {contacts.length === 0 && (
               <TableRow>
                 <TableCell colSpan={canManage ? 5 : 4} sx={(theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important` })}>
-                  No support contacts.
+                  {t('workspace.application.technical.noSupportContacts')}
                 </TableCell>
               </TableRow>
             )}
             {contacts.map((row, index) => (
               <TableRow key={row.id || `${row.contact_id}:${index}`}>
-                <TableCell>{contactName(row)}</TableCell>
+                <TableCell>{contactName(row, unnamedContact)}</TableCell>
                 <TableCell>{row.contact?.email || '—'}</TableCell>
                 <TableCell sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important' }}>{contactPhone(row) || '—'}</TableCell>
                 <TableCell sx={!row.role ? (theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important` }) : undefined}>{row.role || '—'}</TableCell>
                 {canManage && (
                   <TableCell align="right">
                     <Box className="hover-actions">
-                      <IconButton aria-label={`Remove ${contactName(row)}`} size="small" onClick={() => { void removeContact(row); }}>
+                      <IconButton aria-label={t('workspace.application.technical.removeContact', { name: contactName(row, unnamedContact) })} size="small" onClick={() => { void removeContact(row); }}>
                         <DeleteIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Box>
@@ -1051,7 +1064,7 @@ function OperationsTab({
         </Table>
 
         <Box sx={{ mt: 2.25 }}>
-          <SectionLabel>Support notes</SectionLabel>
+          <SectionLabel>{t('workspace.application.technical.supportNotes')}</SectionLabel>
           <TextField
             value={app.support_notes || ''}
             onChange={(event) => { void onPatch({ support_notes: event.target.value || null }); }}
@@ -1060,7 +1073,7 @@ function OperationsTab({
             multiline
             minRows={5}
             disabled={!canManage}
-            placeholder="Add support notes..."
+            placeholder={t('workspace.application.technical.supportNotesPlaceholder')}
             sx={(theme) => ({
               ...drawerFieldValueSx,
               mt: 1,
@@ -1076,14 +1089,15 @@ function OperationsTab({
 
       <KanapDialog
         open={contactDialogOpen}
-        title="New support contact"
+        title={t('workspace.application.technical.newSupportContact')}
         onClose={() => setContactDialogOpen(false)}
         onSave={addContact}
+        saveLabel={t('common:buttons.save')}
         saveDisabled={!contactDraft.contact_id}
         saveLoading={savingContact}
       >
         <Stack spacing={1.25}>
-          <PropertyRow label="Contact" required>
+          <PropertyRow label={t('workspace.application.technical.contact')} required>
             <ContactSelect
               value={contactDraft.contact_id}
               onChange={(value) => setContactDraft((prev) => ({ ...prev, contact_id: value }))}
@@ -1097,7 +1111,7 @@ function OperationsTab({
               textFieldSx={drawerFieldValueSx}
             />
           </PropertyRow>
-          <PropertyRow label="Role">
+          <PropertyRow label={t('workspace.application.technical.role')}>
             <TextField
               value={contactDraft.role}
               onChange={(event) => setContactDraft((prev) => ({ ...prev, role: event.target.value }))}
@@ -1131,6 +1145,7 @@ function ComplianceTab({
   saving: boolean;
   error: string | null;
 }) {
+  const { t } = useTranslation(['it', 'common']);
   const { byField } = useItOpsEnumOptions();
   // Interfaces to applications restored later: the key carries the wave so a change refetches; a 403 (restricted reader) shows nothing.
   const dependenciesQuery = useQuery({
@@ -1173,7 +1188,7 @@ function ComplianceTab({
               <TextField
                 {...params}
                 variant="standard"
-                placeholder={selectedCountries.length === 0 ? 'Not set' : undefined}
+                placeholder={selectedCountries.length === 0 ? t('common:selects.notSet') : undefined}
                 sx={drawerFieldValueSx}
               />
             )}

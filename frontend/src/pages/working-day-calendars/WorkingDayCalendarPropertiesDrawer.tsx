@@ -3,6 +3,7 @@ import { Box, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { PropertyGroup, PropertyRow } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import type { WorkingDayProfileDetail } from '../../services/workingDayProfiles';
 import { calendarSourceLabel, type WorkingDayCalendarField } from './workingDayCalendarFields';
@@ -23,13 +24,14 @@ export default function WorkingDayCalendarPropertiesDrawer({
   onDisabledAtChange,
 }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
-  const [code, setCode] = React.useState(calendar.code);
   const source = calendarSourceLabel(calendar);
 
-  // A refused code stays in the field so it can be corrected; a stored change replaces it.
-  React.useEffect(() => { setCode(calendar.code); }, [calendar.code]);
+  // A refused code stays in the field so it can be corrected; a stored change replaces it,
+  // except while the user is typing in the field.
+  const { draft: code, setDraft: setCode, onFocus: onCodeFocus, onBlur: onCodeBlur } = useFieldDraft(calendar.code);
 
   const commitCode = () => {
+    onCodeBlur();
     const trimmed = code.trim();
     if (!trimmed) {
       setCode(calendar.code);
@@ -45,6 +47,7 @@ export default function WorkingDayCalendarPropertiesDrawer({
           <TextField
             value={code}
             onChange={(event) => setCode(event.target.value)}
+            onFocus={onCodeFocus}
             onBlur={commitCode}
             onKeyDown={(event) => {
               if (event.key === 'Enter') (event.target as HTMLInputElement).blur();

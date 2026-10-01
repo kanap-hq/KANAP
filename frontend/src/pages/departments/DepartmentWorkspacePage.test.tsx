@@ -199,4 +199,45 @@ describe('DepartmentWorkspacePage', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.queryByText('Description refused.')).toBeNull();
   });
+
+  it('keeps the description the user types while an earlier save lands', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    mocked.patch.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    renderAt('/master-data/departments/dep-1/overview');
+    const description = await screen.findByLabelText('departments.fields.description');
+    fireEvent.focus(description);
+    fireEvent.change(description, { target: { value: 'Accounting and' } });
+    fireEvent.blur(description);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/departments/dep-1', { description: 'Accounting and' }));
+    fireEvent.focus(description);
+    fireEvent.change(description, { target: { value: 'Accounting and payroll' } });
+    finish({ data: { ...DEPARTMENT, description: 'Accounting and' } });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(description).toHaveValue('Accounting and payroll');
+    fireEvent.blur(description);
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/departments/dep-1', { description: 'Accounting and payroll' }));
+  });
+
+  it('keeps the headcount the user types while an earlier save lands', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    mocked.patch.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    renderAt(`/master-data/departments/dep-1/details?year=${Y}`);
+    const headcount = await screen.findByLabelText('departments.fields.headcount');
+    await waitFor(() => expect(headcount).toHaveValue(5));
+    fireEvent.focus(headcount);
+    fireEvent.change(headcount, { target: { value: '1' } });
+    fireEvent.blur(headcount);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(
+      '/department-metrics/dep-1', { headcount: 1 }, { params: { year: Y } },
+    ));
+    fireEvent.focus(headcount);
+    fireEvent.change(headcount, { target: { value: '12' } });
+    finish({ data: { headcount: 1 } });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(headcount).toHaveValue(12);
+    fireEvent.blur(headcount);
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith(
+      '/department-metrics/dep-1', { headcount: 12 }, { params: { year: Y } },
+    ));
+  });
 });

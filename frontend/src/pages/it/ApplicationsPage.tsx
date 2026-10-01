@@ -24,12 +24,12 @@ import { formatDuration } from './components/DurationEditor';
 
 import { useTranslation } from 'react-i18next';
 const ENV_SUMMARY = [
-  { value: 'prod', label: 'Production', short: 'Prod' },
-  { value: 'pre_prod', label: 'Pre-prod', short: 'Pre' },
-  { value: 'qa', label: 'QA', short: 'QA' },
-  { value: 'test', label: 'Test', short: 'Test' },
-  { value: 'dev', label: 'Dev', short: 'Dev' },
-  { value: 'sandbox', label: 'Sandbox', short: 'Sb' },
+  { value: 'prod', labelKey: 'enums.environment.production', short: 'Prod' },
+  { value: 'pre_prod', labelKey: 'enums.environment.preProd', short: 'Pre' },
+  { value: 'qa', labelKey: 'enums.environment.qa', short: 'QA' },
+  { value: 'test', labelKey: 'enums.environment.test', short: 'Test' },
+  { value: 'dev', labelKey: 'enums.environment.dev', short: 'Dev' },
+  { value: 'sandbox', labelKey: 'enums.environment.sandbox', short: 'Sb' },
 ] as const;
 
 type AppInstanceSummary = {
@@ -213,25 +213,25 @@ export default function ApplicationsPage() {
 
   const appScopeToolbar = (
     <Stack direction="row" spacing={0.5} alignItems="center">
-      <Typography variant="body2">Show:</Typography>
+      <Typography variant="body2">{t('pages.applications.scope.show')}</Typography>
       <RadioGroup
         row
         value={appScope}
         onChange={(e) => setAppScope(e.target.value as 'my' | 'team' | 'all')}
         sx={{ '& .MuiFormControlLabel-root': { mr: 1 } }}
       >
-        <FormControlLabel value="my" control={<Radio size="small" />} label="My apps" />
-        <Tooltip title={hasTeam ? '' : 'You are not assigned to a team'}>
+        <FormControlLabel value="my" control={<Radio size="small" />} label={t('pages.applications.scope.myApps')} />
+        <Tooltip title={hasTeam ? '' : t('pages.applications.scope.notAssignedToTeam')}>
           <span>
             <FormControlLabel
               value="team"
               control={<Radio size="small" />}
-              label="My team's apps"
+              label={t('pages.applications.scope.myTeamApps')}
               disabled={!hasTeam}
             />
           </span>
         </Tooltip>
-        <FormControlLabel value="all" control={<Radio size="small" />} label="All apps" />
+        <FormControlLabel value="all" control={<Radio size="small" />} label={t('pages.applications.scope.allApps')} />
       </RadioGroup>
     </Stack>
   );
@@ -516,14 +516,14 @@ export default function ApplicationsPage() {
                 handleInternalNavigate(e, buildAppHref(data as AppRow, 'relations'));
               }}
             >
-              Included in: {firstSuite}{extra}
+              {t('pages.applications.includedIn')} {firstSuite}{extra}
             </Box>
           )}
         </Stack>
       );
     };
     return Cell;
-  }, [buildAppHref, categoryLabel, handleInternalNavigate, suitesColVisible]);
+  }, [buildAppHref, categoryLabel, handleInternalNavigate, suitesColVisible, t]);
 
   const EnvironmentCell = useMemo(() => {
     const mode = theme.palette.mode;
@@ -537,7 +537,7 @@ export default function ApplicationsPage() {
       if (activeEnvs.length === 0) {
         return (
           <Typography variant="body2" color="text.secondary">
-            No active environments
+            {t('pages.applications.noActiveEnvironments')}
           </Typography>
         );
       }
@@ -554,7 +554,7 @@ export default function ApplicationsPage() {
         >
           {activeEnvs.map(({ env, match }) => {
             const lifecycleText = match.lifecycle ? ` · ${lifecycleLabel(match.lifecycle)}` : '';
-            const tooltip = `${env.label}${match.base_url ? ` · ${match.base_url}` : ''}${lifecycleText}`;
+            const tooltip = `${t(env.labelKey)}${match.base_url ? ` · ${match.base_url}` : ''}${lifecycleText}`;
             return (
               <Tooltip key={`${params.data?.id}-${env.value}`} title={tooltip}>
                 <Box
@@ -586,7 +586,7 @@ export default function ApplicationsPage() {
       );
     };
     return Cell;
-  }, [buildAppHref, handleInternalNavigate, isInstanceActive, lifecycleLabel, theme.palette.mode]);
+  }, [buildAppHref, handleInternalNavigate, isInstanceActive, lifecycleLabel, t, theme.palette.mode]);
 
   const SuitesSummaryCell = useMemo(() => StructureSummaryCell('suites'), [StructureSummaryCell]);
   const ComponentsSummaryCell = useMemo(() => StructureSummaryCell('components'), [StructureSummaryCell]);
@@ -905,7 +905,7 @@ export default function ApplicationsPage() {
             navigate(`/it/applications/new/overview?${sp.toString()}`);
           }}
         >
-          New App / Service
+          {t('pages.applications.newAppService')}
         </Button>
       )}
       {canAdmin && <Button onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}

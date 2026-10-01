@@ -39,25 +39,13 @@ type AssetRow = {
   created_at: string;
 };
 
-const envLabel = (v?: string) => {
-  switch (v) {
-    case 'prod': return 'Prod';
-    case 'pre_prod': return 'Pre-prod';
-    case 'qa': return 'QA';
-    case 'test': return 'Test';
-    case 'dev': return 'Dev';
-    case 'sandbox': return 'Sandbox';
-    default: return v || '';
-  }
-};
-
-const ENV_LABEL_MAP: Record<string, string> = {
-  prod: 'Prod',
-  pre_prod: 'Pre-prod',
-  qa: 'QA',
-  test: 'Test',
-  dev: 'Dev',
-  sandbox: 'Sandbox',
+const ENV_LABEL_KEYS: Record<string, string> = {
+  prod: 'enums.environment.prod',
+  pre_prod: 'enums.environment.preProd',
+  qa: 'enums.environment.qa',
+  test: 'enums.environment.test',
+  dev: 'enums.environment.dev',
+  sandbox: 'enums.environment.sandbox',
 };
 
 const ENV_ORDER = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'];
@@ -74,6 +62,11 @@ export default function AssetsPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const { labelFor } = useItOpsEnumOptions();
+  const envLabelMap = useMemo(
+    () => Object.fromEntries(Object.entries(ENV_LABEL_KEYS).map(([code, key]) => [code, t(key)])) as Record<string, string>,
+    [t],
+  );
+  const envLabel = useCallback((v?: string) => (v ? envLabelMap[v] || v : ''), [envLabelMap]);
 
   // Read filters from URL to restore state when returning from workspace
   const urlFilters = useMemo(() => {
@@ -226,7 +219,7 @@ export default function AssetsPage() {
       );
     };
     return Cell;
-  }, [getAssetHref, handleInternalNavigate, theme.palette.mode]);
+  }, [envLabel, getAssetHref, handleInternalNavigate, theme.palette.mode]);
 
   const ClusterCell = useMemo(() => {
     const Cell: React.FC<ICellRendererParams<AssetRow, any>> = (params) => {
@@ -245,7 +238,7 @@ export default function AssetsPage() {
           color="inherit"
         >
           {isCluster ? (
-            <Typography variant="body2" color="text.secondary">Cluster</Typography>
+            <Typography variant="body2" color="text.secondary">{t('pages.assets.columns.cluster')}</Typography>
           ) : value ? (
             value
           ) : (
@@ -255,7 +248,7 @@ export default function AssetsPage() {
       );
     };
     return Cell;
-  }, [getAssetHref, handleInternalNavigate]);
+  }, [getAssetHref, handleInternalNavigate, t]);
 
   const columns: EnhancedColDef<AssetRow>[] = useMemo(() => [
     {
@@ -300,7 +293,7 @@ export default function AssetsPage() {
         getValues: getAssetFilterValues('cluster', { emptyLabel: t('pages.assets.filters.noCluster') }),
         searchable: false,
       },
-      valueFormatter: (p) => (p.data?.is_cluster ? 'Cluster' : p.value || '—'),
+      valueFormatter: (p) => (p.data?.is_cluster ? t('pages.assets.columns.cluster') : p.value || '—'),
       cellRenderer: ClusterCell,
     },
     {
@@ -310,7 +303,7 @@ export default function AssetsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAssetFilterValues('environment', { labelMap: ENV_LABEL_MAP, order: ENV_ORDER }),
+        getValues: getAssetFilterValues('environment', { labelMap: envLabelMap, order: ENV_ORDER }),
         searchable: false,
       },
       valueFormatter: (p) => envLabel(p.value),
@@ -417,7 +410,7 @@ export default function AssetsPage() {
       cellRenderer: ClickToWorkspace,
     },
     { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, cellRenderer: ClickToWorkspace },
-  ], [ClickToWorkspace, ClusterCell, EnvironmentCell, getAssetFilterValues, labelFor, lifecycleLabel]);
+  ], [ClickToWorkspace, ClusterCell, EnvironmentCell, envLabel, envLabelMap, getAssetFilterValues, labelFor, lifecycleLabel, t]);
 
   const actions = (
     <Stack direction="row" spacing={1}>
@@ -426,7 +419,7 @@ export default function AssetsPage() {
           const sp = buildWorkspaceSearch();
           navigate(`/it/assets/new/overview?${sp.toString()}`);
         }}>
-          Add asset
+          {t('pages.assets.addAsset')}
         </Button>
       )}
       {hasLevel('infrastructure', 'admin') && <Button onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}

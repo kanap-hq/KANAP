@@ -308,4 +308,38 @@ describe('CostCenterWorkspacePage', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.queryByText('A cost center with code IT-100 already exists.')).toBeNull();
   });
+
+  it('keeps what the user types while an earlier save of the same field lands', async () => {
+    let finishCode: (value: CostCenterDetail) => void = () => undefined;
+    let finishDescription: (value: CostCenterDetail) => void = () => undefined;
+    mocked.updateCostCenter.mockImplementationOnce(() => new Promise((resolve) => { finishCode = resolve; }));
+    renderAt('/master-data/cost-centers/cc-1/overview');
+    const code = await screen.findByLabelText('costCenters.fields.code');
+    fireEvent.focus(code);
+    fireEvent.change(code, { target: { value: 'IT-31' } });
+    fireEvent.blur(code);
+    await waitFor(() => expect(mocked.updateCostCenter).toHaveBeenCalledWith('cc-1', { code: 'IT-31' }));
+    fireEvent.focus(code);
+    fireEvent.change(code, { target: { value: 'IT-310' } });
+    finishCode({ ...NODE, code: 'IT-31' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(code).toHaveValue('IT-310');
+    fireEvent.blur(code);
+    await waitFor(() => expect(mocked.updateCostCenter).toHaveBeenLastCalledWith('cc-1', { code: 'IT-310' }));
+
+    mocked.updateCostCenter.mockImplementationOnce(() => new Promise((resolve) => { finishDescription = resolve; }));
+    const description = screen.getByLabelText('costCenters.fields.description');
+    fireEvent.focus(description);
+    fireEvent.change(description, { target: { value: 'Front line' } });
+    fireEvent.blur(description);
+    await waitFor(() => expect(mocked.updateCostCenter).toHaveBeenLastCalledWith('cc-1', { description: 'Front line' }));
+    fireEvent.focus(description);
+    fireEvent.change(description, { target: { value: 'Front line support' } });
+    finishDescription({ ...NODE, code: 'IT-310', description: 'Front line' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(description).toHaveValue('Front line support');
+    // Leaving the field saves what it holds.
+    fireEvent.blur(description);
+    await waitFor(() => expect(mocked.updateCostCenter).toHaveBeenLastCalledWith('cc-1', { description: 'Front line support' }));
+  });
 });

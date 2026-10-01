@@ -302,6 +302,23 @@ describe('Analytics report dimensions', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
   }
 
+  it('labels every filter above its field, none inside it', async () => {
+    const { container } = renderReport(<AnalyticsCategoryReport />, '/report');
+    await waitFor(() => expect(groups()).toHaveLength(5));
+    for (const name of [
+      'reports.filters.dimension',
+      'reports.filters.startYear',
+      'reports.filters.endYear',
+      'reports.filters.metric',
+      'reports.filters.chartType',
+      'reports.filters.excludeCategories',
+    ]) {
+      expect(screen.getByRole('combobox', { name })).toBeInTheDocument();
+      expect(screen.getByText(name)).toBeInTheDocument();
+    }
+    expect(container.querySelector('.MuiInputLabel-root')).toBeNull();
+  });
+
   it('hides the picker with one enabled dimension and groups on the default one', async () => {
     axesState.list = [DEFAULT_AXIS, axis('ax-off', { name: 'Old split', sort_order: 2, status: 'disabled', disabled_at: '2020-01-01T00:00:00.000Z' })];
     renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-off');

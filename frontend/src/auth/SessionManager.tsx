@@ -57,8 +57,9 @@ export function SessionManager({ children }: SessionManagerProps) {
 
     isRefreshingRef.current = true;
     try {
-      const success = await refreshAccessToken();
-      if (!success) void handleSessionExpired();
+      // 'unavailable' keeps the session: the expiry timer or the next 401 tries again.
+      const status = await refreshAccessToken();
+      if (status === 'ended') void handleSessionExpired();
     } finally {
       isRefreshingRef.current = false;
     }

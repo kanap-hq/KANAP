@@ -733,7 +733,7 @@ export default function InterfaceWorkspacePage() {
         tabs={tabs}
         onTabChange={handleTabChange}
         drawerStorageKey="kanap.interfaces.drawerOpen"
-        backLabel="Interfaces"
+        backLabel={t('pages.interfaces.title')}
         onBack={closeWorkspace}
         itemReference={!isCreate ? current?.interface_reference || null : null}
         onCopyReference={

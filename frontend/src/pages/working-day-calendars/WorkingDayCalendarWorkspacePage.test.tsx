@@ -346,4 +346,37 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     await waitFor(() => expect(yearLoads()).toBe(2));
     expect(monthInput(3, Y)).toHaveValue('19');
   });
+
+  it('keeps what the user types while an earlier save of the same field lands', async () => {
+    let finishCode: (value: WorkingDayProfileDetail) => void = () => undefined;
+    let finishDescription: (value: WorkingDayProfileDetail) => void = () => undefined;
+    mocked.updateWorkingDayProfile.mockImplementationOnce(() => new Promise((resolve) => { finishCode = resolve; }));
+    renderAt('/master-data/working-day-calendars/wd-1/overview');
+    const code = await screen.findByLabelText('workingDayCalendars.fields.code');
+    fireEvent.focus(code);
+    fireEvent.change(code, { target: { value: 'CAL-0' } });
+    fireEvent.blur(code);
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenCalledWith('wd-1', { code: 'CAL-0' }, 'en'));
+    fireEvent.focus(code);
+    fireEvent.change(code, { target: { value: 'CAL-02' } });
+    finishCode({ ...CALENDAR, code: 'CAL-0' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(code).toHaveValue('CAL-02');
+    fireEvent.blur(code);
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenLastCalledWith('wd-1', { code: 'CAL-02' }, 'en'));
+
+    mocked.updateWorkingDayProfile.mockImplementationOnce(() => new Promise((resolve) => { finishDescription = resolve; }));
+    const description = screen.getByLabelText('workingDayCalendars.fields.description');
+    fireEvent.focus(description);
+    fireEvent.change(description, { target: { value: 'Office' } });
+    fireEvent.blur(description);
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenLastCalledWith('wd-1', { description: 'Office' }, 'en'));
+    fireEvent.focus(description);
+    fireEvent.change(description, { target: { value: 'Office staff' } });
+    finishDescription({ ...CALENDAR, code: 'CAL-02', description: 'Office' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(description).toHaveValue('Office staff');
+    fireEvent.blur(description);
+    await waitFor(() => expect(mocked.updateWorkingDayProfile).toHaveBeenLastCalledWith('wd-1', { description: 'Office staff' }, 'en'));
+  });
 });

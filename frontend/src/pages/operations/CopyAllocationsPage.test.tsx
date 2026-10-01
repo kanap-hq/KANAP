@@ -30,6 +30,11 @@ vi.mock('../../components/reports/ReportLayout', () => ({
   }) => (
     <div><a data-testid="breadcrumb-root" href={rootTo}>{rootLabel}</a>{filters}{actions}{children}</div>
   ),
+  ReportFilter: ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div><span data-testid="filter-label">{label}</span>{children}</div>
+  ),
+  reportFilterSelectSx: {},
+  reportFilterMenuProps: {},
 }));
 vi.mock('../../components/design', () => ({
   useKanapDialogs: () => ({ alert: vi.fn(async () => undefined) }),
@@ -81,6 +86,17 @@ describe('CopyAllocationsPage', () => {
     const root = screen.getByTestId('breadcrumb-root');
     expect(root).toHaveAttribute('href', '/ops/operations');
     expect(root).toHaveTextContent('operations.title');
+  });
+
+  it('labels the year pickers above the field, not inside it', () => {
+    const { container } = renderPage();
+    expect(screen.getAllByTestId('filter-label').map((el) => el.textContent)).toEqual([
+      'operations.copyAllocations.sourceYear',
+      'operations.copyAllocations.destinationYear',
+    ]);
+    expect(screen.getByRole('combobox', { name: 'operations.copyAllocations.sourceYear' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'operations.copyAllocations.destinationYear' })).toBeInTheDocument();
+    expect(container.querySelector('.MuiInputLabel-root')).toBeNull();
   });
 
   it('copies OPEX allocations by default', async () => {

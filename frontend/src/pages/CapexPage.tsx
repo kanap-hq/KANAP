@@ -21,7 +21,6 @@ import {
   buildAmountColumnDefs,
   buildFteColumnDefs,
   dimensionFieldPredicate,
-  filtersOnShownColumns,
   settleListSearch,
   explicitSort,
   fteTotalsToRow,
@@ -224,15 +223,24 @@ export default function CapexPage() {
   const fteFieldsRef = useRef<string[]>([]);
   // Only the latest totals request fills the footer, so a slower earlier one cannot overwrite it.
   const totalsRequestRef = useRef(0);
+  // The parameters of the footer's last request: the grid reports the same query several times
+  // while it starts (URL sync, initial sort, grid ready), and only a different query asks again.
+  const totalsKeyRef = useRef<string | null>(null);
 
-  const updateTotals = useCallback(async ({ q, filterModel, statusScope }: { q: string; filterModel: any; statusScope?: StatusScope }) => {
+  const updateTotals = useCallback(async (
+    { q, filterModel, statusScope }: { q: string; filterModel: any; statusScope?: StatusScope },
+    force = false,
+  ) => {
+    const params: Record<string, any> = {};
+    if (q) params.q = q;
+    if (filterModel && Object.keys(filterModel).length > 0) params.filters = JSON.stringify(filterModel);
+    Object.assign(params, statusScopeParams(statusScope));
+    if (fteFieldsRef.current.length > 0) params.fte = fteFieldsRef.current.join(',');
+    const key = JSON.stringify(params);
+    if (!force && key === totalsKeyRef.current) return;
+    totalsKeyRef.current = key;
     const request = ++totalsRequestRef.current;
     try {
-      const params: Record<string, any> = {};
-      if (q) params.q = q;
-      if (filterModel && Object.keys(filterModel).length > 0) params.filters = JSON.stringify(filterModel);
-      Object.assign(params, statusScopeParams(statusScope));
-      if (fteFieldsRef.current.length > 0) params.fte = fteFieldsRef.current.join(',');
       const res = await api.get('/capex-items/summary/totals', { params });
       if (request !== totalsRequestRef.current) return;
       const totals = res.data || {};
@@ -246,7 +254,10 @@ export default function CapexPage() {
       };
       setPinnedTotals([pinned]);
     } catch (err) {
-      if (request === totalsRequestRef.current) setPinnedTotals([]);
+      if (request === totalsRequestRef.current) {
+        setPinnedTotals([]);
+        totalsKeyRef.current = null;
+      }
     }
   }, []);
 
@@ -258,27 +269,13 @@ export default function CapexPage() {
     return true;
   }, []);
 
+  // The footer follows the query the grid reports once it is ready (see onQueryStateChange). A delete
+  // or an import changes the lines without changing the query: ask again for the same one.
   useEffect(() => {
-    if (!budgetColumns.ready || !analyticsAxes.ready) return;
-    let urlParams: URLSearchParams | null = null;
-    if (typeof window !== 'undefined') {
-      urlParams = new URLSearchParams(window.location.search);
-    }
-    const stored = storedContextRef.current || readStoredCapexListContext();
-    if (stored && !storedContextRef.current) storedContextRef.current = stored;
-    const q = lastQueryRef.current?.q || urlParams?.get('q') || stored?.q || '';
-    let fm = lastQueryRef.current?.filters || (gridApiRef.current?.getFilterModel?.() || {});
-    if ((!fm || Object.keys(fm).length === 0) && stored?.filters) {
-      try {
-        const parsed = JSON.parse(stored.filters);
-        if (parsed && typeof parsed === 'object') fm = parsed;
-      } catch {}
-    }
-    const statusScope = lastQueryRef.current?.statusScope ?? 'enabled';
-    updateTotals({ q, filterModel: filtersOnShownColumns(fm, budgetColumns.shown, isListField), statusScope });
-    // The shown columns and the dimensions only matter once, when both are loaded.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey, updateTotals, budgetColumns.ready, analyticsAxes.ready]);
+    const last = lastQueryRef.current;
+    if (!refreshKey || !last) return;
+    updateTotals({ q: last.q, filterModel: last.filters, statusScope: last.statusScope }, true);
+  }, [refreshKey, updateTotals]);
 
   const buildGridSearch = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -683,7 +680,8 @@ export default function CapexPage() {
           const snapshot = { sort: normalizedSort, q: state.q || '', filters: filtersString, statusScope: scope };
           storedContextRef.current = snapshot;
           writeStoredCapexListContext(snapshot);
-          updateTotals({ q: state.q || '', filterModel: filtersObject, statusScope: scope });
+          // Before the grid is ready it reports its URL sync without the initial filter yet.
+          if (gridApiRef.current) updateTotals({ q: state.q || '', filterModel: filtersObject, statusScope: scope });
         }}
         enableRowSelection={canAdmin}
         onSelectionChanged={setSelectedRows}

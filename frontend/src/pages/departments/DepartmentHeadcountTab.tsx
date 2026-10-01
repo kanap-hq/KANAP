@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
 import YearTabs from '../../components/navigation/YearTabs';
 import { PropertyRow } from '../../components/design';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -37,16 +38,23 @@ export default function DepartmentHeadcountTab({ departmentId, year, onYearChang
   const { data: freezeData, isLoading: freezeLoading } = useFreezeState(year);
   const frozen = freezeData?.summary?.scopes?.departments?.frozen ?? false;
 
-  const [draft, setDraft] = React.useState('');
+  // The field follows the stored headcount, except while the user is typing in it.
+  const storedText = stored != null ? String(stored) : '';
+  const { draft, setDraft, onFocus, onBlur } = useFieldDraft(storedText);
+  const storedTextRef = React.useRef(storedText);
+  storedTextRef.current = storedText;
   const [error, setError] = React.useState<string | null>(null);
   // A result arriving after the user moved to another year or department is dropped.
   const currentKeyRef = React.useRef(`${departmentId}:${year}`);
   currentKeyRef.current = `${departmentId}:${year}`;
 
   React.useEffect(() => {
-    setDraft(stored != null ? String(stored) : '');
     setError(null);
   }, [stored, year]);
+  // Another year or department starts afresh, even when its stored headcount reads the same.
+  React.useEffect(() => {
+    setDraft(storedTextRef.current);
+  }, [departmentId, setDraft, year]);
 
   const commit = async () => {
     if (readOnly || frozen || stored == null) return;
@@ -94,7 +102,11 @@ export default function DepartmentHeadcountTab({ departmentId, year, onYearChang
         <TextField
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          onBlur={() => void commit()}
+          onFocus={onFocus}
+          onBlur={() => {
+            onBlur();
+            void commit();
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
           }}

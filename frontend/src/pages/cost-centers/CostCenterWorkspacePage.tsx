@@ -12,6 +12,7 @@ import CompanySelect from '../../components/fields/CompanySelect';
 import MetadataUserPicker from '../../components/workspace/MetadataUserPicker';
 import { COST_CENTER_TREE_QUERY_KEY, useCostCenterTree } from '../../hooks/useCostCenterTree';
 import { useCostCenterNav } from '../../hooks/useCostCenterNav';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
 import {
   createCostCenter,
   deleteCostCenter,
@@ -251,6 +252,7 @@ export default function CostCenterWorkspacePage() {
         actions={actions}
         properties={data && effectiveKind ? (
           <CostCenterPropertiesDrawer
+            key={data.id}
             node={data}
             kind={effectiveKind}
             disabled={disabled}
@@ -307,8 +309,7 @@ function DescriptionField({
   onCommit: (next: string | null) => void;
 }) {
   const { t } = useTranslation(['master-data']);
-  const [draft, setDraft] = React.useState(value);
-  React.useEffect(() => { setDraft(value); }, [value]);
+  const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
     <Box>
       <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1 }}>
@@ -317,7 +318,9 @@ function DescriptionField({
       <TextField
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
+        onFocus={onFocus}
         onBlur={() => {
+          onBlur();
           const next = draft.trim();
           if (next !== value.trim()) onCommit(next || null);
         }}

@@ -15,7 +15,8 @@ import {
 import { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import ReportLayout from '../../components/reports/ReportLayout';
+import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
+import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
 import AgGridBox from '../../components/AgGridBox';
 import { useLocale } from '../../i18n/useLocale';
@@ -140,10 +141,10 @@ export default function CopyAllocationsPage() {
       cellStyle: (params) => {
         const action = params.data?.action as AllocationCopyResult['action'];
         if (action === 'copy') {
-          return { color: theme.palette.success.dark, fontWeight: '600' };
+          return { color: theme.palette.success.dark, fontWeight: '500' };
         }
         if (action === 'error') {
-          return { color: theme.palette.error.dark, fontWeight: '600' };
+          return { color: theme.palette.error.dark, fontWeight: '500' };
         }
         return { color: theme.palette.text.secondary, fontWeight: '500' };
       },
@@ -226,40 +227,46 @@ export default function CopyAllocationsPage() {
               setSummary(null);
             }}
           />
-          <TextField
-            select
-            size="small"
-            label={t("operations.copyAllocations.sourceYear")}
-            value={sourceYear}
-            onChange={(e) => {
-              setSourceYear(parseInt(e.target.value, 10));
-              setPreviewData([]);
-              setSummary(null);
-            }}
-          >
-            {years.map((year) => (
-              <MenuItem key={year} value={year}>
-                {year}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label={t("operations.copyAllocations.destinationYear")}
-            value={destinationYear}
-            onChange={(e) => {
-              setDestinationYear(parseInt(e.target.value, 10));
-              setPreviewData([]);
-              setSummary(null);
-            }}
-          >
-            {years.map((year) => (
-              <MenuItem key={year} value={year}>
-                {year}
-              </MenuItem>
-            ))}
-          </TextField>
+          <ReportFilter label={t('operations.copyAllocations.sourceYear')} width={120}>
+            <TextField
+              select
+              size="small"
+              value={sourceYear}
+              onChange={(e) => {
+                setSourceYear(parseInt(e.target.value, 10));
+                setPreviewData([]);
+                setSummary(null);
+              }}
+              SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('operations.copyAllocations.sourceYear') } }}
+              sx={reportFilterSelectSx}
+            >
+              {years.map((year) => (
+                <MenuItem key={year} value={year} sx={drawerMenuItemSx}>
+                  {year}
+                </MenuItem>
+              ))}
+            </TextField>
+          </ReportFilter>
+          <ReportFilter label={t('operations.copyAllocations.destinationYear')} width={120}>
+            <TextField
+              select
+              size="small"
+              value={destinationYear}
+              onChange={(e) => {
+                setDestinationYear(parseInt(e.target.value, 10));
+                setPreviewData([]);
+                setSummary(null);
+              }}
+              SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('operations.copyAllocations.destinationYear') } }}
+              sx={reportFilterSelectSx}
+            >
+              {years.map((year) => (
+                <MenuItem key={year} value={year} sx={drawerMenuItemSx}>
+                  {year}
+                </MenuItem>
+              ))}
+            </TextField>
+          </ReportFilter>
           <FormControlLabel
             control={
               <Switch
@@ -327,7 +334,7 @@ export default function CopyAllocationsPage() {
 
         {previewData.length > 0 ? (
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
               {t('operations.copyAllocations.preview')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
