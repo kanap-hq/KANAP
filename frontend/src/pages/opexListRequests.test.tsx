@@ -57,9 +57,19 @@ const TOTALS = '/spend-items/summary/totals';
 const VALUES = '/spend-items/summary/filter-values';
 const SUPPLIERS = ['Alpha', 'Bravo', 'Charlie'];
 
-const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 700)); });
 const calls = (url: string) => get.mock.calls.filter(([u]) => u === url);
 const counts = () => ({ rows: calls(ROWS).length, totals: calls(TOTALS).length, values: calls(VALUES).length });
+// After the counts are reached: longer than the grid's block delay (150 ms) and the filters' quiet
+// delay (300 ms), so a request sent twice would show.
+const QUIET_MS = 500;
+const quiet = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, QUIET_MS)); });
+
+/** Waits for the expected request counts (slow CI included), then checks nothing more arrives. */
+async function expectCounts(expected: ReturnType<typeof counts>) {
+  await waitFor(() => expect(counts()).toEqual(expected), { timeout: 10_000 });
+  await quiet();
+  expect(counts()).toEqual(expected);
+}
 const paramsOf = (call: unknown[]) => (call[1] as { params: Record<string, string> }).params;
 
 /** The cell under a column header (the filter box). */
@@ -84,11 +94,15 @@ function renderPage() {
   );
 }
 
+/** Opens the list and waits for its first page and totals, then for the requests to stop. */
 async function openList() {
   const view = renderPage();
-  await waitFor(() => expect(grid.api).not.toBeNull());
-  await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0));
-  await settle();
+  await waitFor(() => expect(grid.api).not.toBeNull(), { timeout: 10_000 });
+  await waitFor(() => {
+    expect(calls(ROWS).length).toBeGreaterThan(0);
+    expect(calls(TOTALS).length).toBeGreaterThan(0);
+  }, { timeout: 10_000 });
+  await quiet();
   return view;
 }
 
@@ -122,12 +136,12 @@ describe('OPEX list requests per action', () => {
 
   it('open: one page and one totals request, nothing else from the grid', async () => {
     await openList();
-    expect(counts()).toEqual({ rows: 1, totals: 1, values: 0 });
+    await expectCounts({ rows: 1, totals: 1, values: 0 });
     // No user list: the rows carry the owner names.
     expect(calls('/users')).toHaveLength(0);
     // The fixed year slots are enough: no `years` parameter.
     expect(paramsOf(calls(ROWS)[0]).years).toBeUndefined();
-  }, 20_000);
+  }, 30_000);
 
   it('sort: one page request, no totals', async () => {
     await openList();
@@ -135,10 +149,9 @@ describe('OPEX list requests per action', () => {
     await act(async () => {
       grid.api.applyColumnState({ state: [{ colId: 'product_name', sort: 'asc' }], defaultState: { sort: null } });
     });
-    await settle();
-    expect(counts()).toEqual({ ...before, rows: before.rows + 1 });
+    await expectCounts({ ...before, rows: before.rows + 1 });
     expect(paramsOf(calls(ROWS).slice(-1)[0]).sort).toBe('product_name:ASC');
-  }, 20_000);
+  }, 30_000);
 
   it('one set filter click: one page and one totals request after the quiet delay; the values load once, on open', async () => {
     await openList();
@@ -146,15 +159,14 @@ describe('OPEX list requests per action', () => {
     // jsdom lays nothing out: AG Grid closes a popup whose anchor has an empty box.
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 10, left: 10, right: 110, bottom: 30, width: 100, height: 20, x: 10, y: 10, toJSON: () => ({}) } as DOMRect);
     fireEvent.click(floatingFilterCell('supplier_name').querySelector('button')!);
-    await waitFor(() => expect(document.body.textContent).toContain('Bravo'));
-    expect(counts().values).toBe(1);
+    await waitFor(() => expect(document.body.textContent).toContain('Bravo'), { timeout: 10_000 });
     const before = counts();
+    expect(before.values).toBe(1);
     const bravo = Array.from(document.querySelectorAll('label')).find((label) => label.textContent === 'Bravo')!;
     fireEvent.click(bravo.querySelector('input')!);
-    await settle();
-    expect(counts()).toEqual({ rows: before.rows + 1, totals: before.totals + 1, values: before.values });
+    await expectCounts({ rows: before.rows + 1, totals: before.totals + 1, values: before.values });
     expect(JSON.parse(paramsOf(calls(ROWS).slice(-1)[0]).filters)).toEqual({ supplier_name: { filterType: 'set', values: ['Alpha', 'Charlie'] } });
-  }, 20_000);
+  }, 30_000);
 
   it('typing five characters in a column text filter: one page and one totals request', async () => {
     await openList();
@@ -164,23 +176,28 @@ describe('OPEX list requests per action', () => {
       fireEvent.change(box, { target: { value } });
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
     }
-    await settle();
-    expect(counts()).toEqual({ ...before, rows: before.rows + 1, totals: before.totals + 1 });
+    await expectCounts({ ...before, rows: before.rows + 1, totals: before.totals + 1 });
     expect(JSON.parse(paramsOf(calls(ROWS).slice(-1)[0]).filters)).toEqual({ product_name: { filterType: 'text', type: 'contains', filter: 'cloud' } });
-  }, 20_000);
+  }, 30_000);
 
   it('keeps the sort the user picked in the list context and the cell links after a filter change', async () => {
     await openList();
     await act(async () => {
       grid.api.applyColumnState({ state: [{ colId: 'product_name', sort: 'asc' }], defaultState: { sort: null } });
     });
-    await settle();
+    await waitFor(() => expect(paramsOf(calls(ROWS).slice(-1)[0]).sort).toBe('product_name:ASC'), { timeout: 10_000 });
     await act(async () => { grid.api.setFilterModel({ product_name: { filterType: 'text', type: 'contains', filter: 'cloud' } }); });
-    await settle();
+    await waitFor(() => expect(paramsOf(calls(ROWS).slice(-1)[0]).filters).toBeDefined(), { timeout: 10_000 });
+    await waitFor(() => {
+      const context = JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}');
+      expect(context.filters).toContain('cloud');
+    }, { timeout: 10_000 });
     const context = JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}');
     expect(context.sort).toBe('product_name:ASC');
     expect(paramsOf(calls(ROWS).slice(-1)[0]).sort).toBe('product_name:ASC');
-    const link = document.querySelector('a[href^="/ops/opex/OPX-1"]') as HTMLAnchorElement | null;
-    expect(link?.getAttribute('href')).toContain('sort=product_name%3AASC');
-  }, 20_000);
+    await waitFor(() => {
+      const link = document.querySelector('a[href^="/ops/opex/OPX-1"]') as HTMLAnchorElement | null;
+      expect(link?.getAttribute('href')).toContain('sort=product_name%3AASC');
+    }, { timeout: 10_000 });
+  }, 30_000);
 });

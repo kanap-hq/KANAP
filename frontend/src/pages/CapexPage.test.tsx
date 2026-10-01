@@ -5,13 +5,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => {
-  const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
+  // The page title shows its currency: `key:currency`.
+  const t = (key: string, options?: { currency?: string }) => (options?.currency ? `${key}:${options.currency}` : key);
+  const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
-vi.mock('../components/PageHeader', () => ({ default: () => null }));
+const header = vi.hoisted(() => ({ title: '' }));
+vi.mock('../components/PageHeader', () => ({ default: ({ title }: { title: string }) => { header.title = title; return null; } }));
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
@@ -299,6 +302,18 @@ describe('CapexPage', () => {
     await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
     expect(totalsCalls().slice(-1)[0][1].params.fte).toBeUndefined();
     await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yLanding).toBeUndefined());
+  });
+
+  it('keeps the last known currency in the title while the totals reload or when they fail', async () => {
+    await renderPage();
+    expect(header.title).toBe('capex.titleWithCurrency:X');
+    get.mockRejectedValue(new Error('down'));
+    const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals').length;
+    const before = totalsCalls();
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: 'cloud', statusScope: 'enabled' }));
+    await waitFor(() => expect(totalsCalls()).toBe(before + 1));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(0));
+    expect(header.title).toBe('capex.titleWithCurrency:X');
   });
 
   it('fills the footer from the totals keys of the same name', async () => {

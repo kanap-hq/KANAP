@@ -256,7 +256,10 @@ export default function CapexPage() {
       ...fteTotalsToRow(totals.data.fte),
     }];
   }, [totals.data, totals.isError, t]);
-  const reportingCurrency = typeof totals.data?.reportingCurrency === 'string' ? totals.data.reportingCurrency : 'EUR';
+  // The title keeps the last currency the totals gave while they reload or when they fail.
+  const lastCurrencyRef = useRef<string | null>(null);
+  if (typeof totals.data?.reportingCurrency === 'string') lastCurrencyRef.current = totals.data.reportingCurrency;
+  const reportingCurrency = lastCurrencyRef.current ?? 'EUR';
 
   // A delete or an import changes the lines without changing the query: ask again for the same one.
   useEffect(() => {

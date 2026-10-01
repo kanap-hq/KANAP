@@ -21,7 +21,6 @@ import api from '../api';
 import ServerDataGrid from './ServerDataGrid';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
-const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 500)); });
 type Config = { params: Record<string, string>; signal?: AbortSignal };
 
 /** A request the test answers itself; like axios, it fails at once when its signal aborts (unless told to ignore it). */
