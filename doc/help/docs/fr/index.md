@@ -109,7 +109,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 - [Intégrations](integrations.md) - Connectez GLPI pour l'import de tickets et pour les agents
 - [Tâches planifiées](scheduled-tasks.md) - Consultez et gérez les tâches d'arrière-plan récurrentes
 - [Administration des données de référence](master-data-operations.md) - Gelez et copiez les données de référence
-- [Tableau de bord des opérations](operations-dashboard.md) - Vue d'ensemble et actions rapides
+- [Vue d'ensemble de la gestion budgétaire](operations-dashboard.md) - Aperçus OPEX et CAPEX, échéances et actions rapides
 
 ### Déploiement et opérations
 

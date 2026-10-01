@@ -35,7 +35,7 @@ Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer
 
 **Jahrauswahl**: Verwenden Sie das Feld **Jahr** in der Symbolleiste, um zu wechseln, welche Jahresmitarbeiterzahl angezeigt wird. Das Grid aktualisiert sich automatisch bei Jahreswechsel.
 
-**Statusbereich**: Verwenden Sie den Umschalter **Aktiviert / Deaktiviert / Alle**, um nach Abteilungsstatus zu filtern. Die Liste zeigt standardmäßig nur aktivierte Abteilungen.
+**Statusbereich**: Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert**, um nach Abteilungsstatus zu filtern. Die Liste zeigt standardmäßig nur aktivierte Abteilungen.
 
 **Schnellsuche**: Die Suchleiste filtert über Abteilungsnamen.
 

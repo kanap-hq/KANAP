@@ -44,6 +44,7 @@ La cuadrícula de Contratos proporciona una visión general de todos sus acuerdo
 - **Moneda**: Código de moneda
 - **Facturación**: Frecuencia de facturación (Mensual, Trimestral, Anual, Otra)
 - **OPEX vinculados**: Número de partidas OPEX vinculadas (haga clic para abrir el espacio de trabajo)
+- **Estado**: **Activado** o **Desactivado**, según el fin de validez
 
 **Columnas adicionales** (mediante el selector de columnas):
 
@@ -54,7 +55,8 @@ La cuadrícula de Contratos proporciona una visión general de todos sus acuerdo
 **Filtrado**:
 
 - Búsqueda rápida: Busca en nombre del contrato, proveedor y empresa
-- Filtros de columna: Disponibles en cada encabezado de columna
+- Filtros de columna: Disponibles en cada encabezado de columna. El filtro **Estado** ofrece **Activado** y **Desactivado**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
+- **Alcance de estado**: el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista. La lista muestra por defecto los contratos activados. Elija **Todos** o **Desactivados** para encontrar los contratos cuyo fin de validez ya pasó
 
 **Acciones**:
 
@@ -169,13 +171,15 @@ La pestaña Tareas gestiona elementos de acción para este contrato (p. ej., rev
 
 Mantenga su registro de contratos sincronizado con sistemas externos usando CSV.
 
-**Exportar**: Descarga todos los contratos con campos principales y fechas calculadas.
+**Exportar**: Descarga todos los contratos con campos principales y fechas calculadas. La columna `status` contiene el estado que se deduce del fin de validez.
 
 **Importar**:
 
 - Utilice **Verificación previa** para validar antes de aplicar
-- Coincidencia por nombre de contrato
+- Una fila corresponde a un contrato por su nombre y su proveedor
 - Soporta creación y actualizaciones
+- El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del contrato, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el contrato hoy, salvo que su fin de validez ya haya pasado
+- Un contrato nuevo queda activado salvo que la fila indique `disabled`
 
 **Notas**:
 

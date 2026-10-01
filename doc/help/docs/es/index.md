@@ -109,7 +109,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 - [Integraciones](integrations.md) - Conexión de GLPI para importar tickets y para los agentes
 - [Tareas programadas](scheduled-tasks.md) - Revisión y gestión de trabajos recurrentes en segundo plano
 - [Administración de datos maestros](master-data-operations.md) - Congelación y copia de datos maestros
-- [Panel de control de operaciones](operations-dashboard.md) - Vista general y acciones rápidas
+- [Vista general de la gestión presupuestaria](operations-dashboard.md) - Resúmenes de OPEX y CAPEX, plazos y acciones rápidas
 
 ### Despliegue y operaciones
 

@@ -108,7 +108,7 @@ Le champ de recherche en haut porte sur la référence, la description, le fourn
 
 ### Filtres de colonnes
 
-Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Plusieurs filtres se combinent avec une logique ET.
+Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**. Plusieurs filtres se combinent avec une logique ET.
 
 Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants.
 
@@ -191,7 +191,7 @@ L'onglet Vue d'ensemble contient les détails de l'investissement et ses tâches
 **Panneau Propriétés** :
 
 - **Fournisseur**, **Centre de coûts**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse), **Devise** (seulement les devises autorisées dans votre espace de travail), **Type d'immobilisation**, **Type d'investissement**, un champ par dimension analytique, **Run ou build** et **Début d'effet**
-- **Cycle de vie** : l'interrupteur **Activé** et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
+- **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
 - Dates **Créé** et **Mis à jour** (lecture seule)
 - La **Priorité** se règle dans le panneau Propriétés à la création du poste, puis dans la barre de métadonnées
 
@@ -289,7 +289,7 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 
 **Outils du mode mensuel** (mode Mensuel uniquement) :
 
-- **Effacer la colonne** : l'icône à côté d'un en-tête de colonne remet à zéro tous les mois de cette colonne
+- **Effacer la colonne** : l'icône à côté d'un en-tête de colonne remet à zéro tous les mois de cette colonne. Lorsque la colonne contient des montants, vous confirmez d'abord
 - Utile pour saisir un échéancier de décaissement à la main, par exemple tout le montant sur un seul mois
 - Effacer de cette façon compte comme une modification à la main. Pour retirer à la fois les montants et la période d'une colonne pour tous les investissements, utilisez **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire
 
@@ -521,7 +521,9 @@ Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la config
 - Séparateur : point-virgule `;` (pas de virgule)
 - Encodage : UTF-8 (enregistrez au format « CSV UTF-8 » dans Excel)
 - En-têtes : `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
-- `disabled_at` est la fin de validité : la date à laquelle le poste s'arrête. Indiquez une date (`2026-12-31`) ou une date avec heure. Laissez vide s'il n'y a pas de fin
+- `disabled_at` est la fin de validité : la date à laquelle le poste s'arrête. Indiquez une date (`2026-12-31`) ou une date avec heure
+- `status` vaut `enabled` ou `disabled`. L'export écrit le statut lu dans la fin de validité. Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne, par exemple `enabled` avec une date déjà passée
+- Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le poste aujourd'hui. Un nouveau poste est activé sauf si la ligne indique `disabled`, et `disabled` avec une date vide le termine aujourd'hui
 - Les anciens fichiers avec une colonne `effective_end` s'importent toujours : sa date alimente la fin de validité lorsque `disabled_at` est vide
 - `analytics_category` contient la valeur de la dimension analytique par défaut, quel que soit son nom. Chaque autre dimension activée a sa propre colonne, `analytics:<code>`, où `<code>` est le code de la dimension. Les exports et le modèle placent ces colonnes juste après `analytics_category`, dans l'ordre des dimensions
 - `analytics_category`, les colonnes `analytics:<code>`, `cost_center_code` et `run_build` sont des colonnes facultatives : les exports et le modèle les contiennent toujours, et les fichiers qui ne les ont pas s'importent toujours
@@ -599,7 +601,7 @@ Chaque poste CAPEX a un **statut** (Activé ou Désactivé) et une **Fin de vali
 **Définir le statut** :
 
 - À la création du poste, vous pouvez définir sa **Fin de validité** dans le panneau **Propriétés**
-- Ensuite, modifiez le **Statut** dans la barre de métadonnées, ou utilisez le champ **Cycle de vie** du panneau **Propriétés** (interrupteur **Activé** et **Fin de validité**). Désactiver un poste sans date fixe sa fin de validité à aujourd'hui
+- Ensuite, modifiez le **Statut** dans la barre de métadonnées, ou utilisez le champ **Cycle de vie** du panneau **Propriétés** (interrupteur de statut et **Fin de validité**). Désactiver un poste sans date fixe sa fin de validité à aujourd'hui
 - Vous pouvez programmer une fin de validité future (utile pour les cessions d'actifs planifiées ou les dates de fin de vie)
 
 **Afficher les postes désactivés** :
@@ -611,6 +613,7 @@ Chaque poste CAPEX a un **statut** (Activé ou Désactivé) et une **Fin de vali
 
 - **Privilégiez la désactivation** : Elle préserve l'historique, garantit la cohérence des rapports et conserve la piste d'audit
 - **Supprimez uniquement si** : Le poste a été créé par erreur
+- Un poste qui a des montants dans une colonne gelée ne peut pas être supprimé. Dégelez d'abord la colonne, ou fixez plutôt une date de fin de validité. Lorsque vous supprimez plusieurs postes à la fois, les autres sont supprimés, et le message nomme chaque poste refusé avec sa raison
 - Supprimer un poste supprime aussi ses budgets, ventilations, tâches, sites web pertinents, pièces jointes (avec leurs fichiers) et ses liens vers des contrats. Si l'une de ses tâches a été transformée en demande, la demande est conservée : elle possède sa propre copie du titre, de la description et des pièces jointes, et seul son lien vers la tâche disparaît
 
 **Conseil** : Utilisez la Fin de validité pour marquer les actifs entièrement amortis ou cédés, ou les projets terminés. Ne supprimez qu'en cas de véritable erreur.

@@ -36,7 +36,7 @@ Jede Zelle in einer Zeile ist anklickbar und navigiert zum Arbeitsbereich dieses
 
 **Filtern**:
 - Schnellsuche: Durchsucht Lieferantenfelder
-- Statusbereich: Verwenden Sie den Umschalter **Aktiviert / Deaktiviert / Alle** über dem Grid, um nach Status zu filtern
+- Statusbereich: Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid, um nach Status zu filtern. Standardmäßig zeigt die Liste aktivierte Lieferanten
 
 **Aktionen**:
 - **Neu**: Neuen Lieferanten erstellen (erfordert `suppliers:manager`)

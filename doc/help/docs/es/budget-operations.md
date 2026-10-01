@@ -86,7 +86,7 @@ Requiere permisos de administración sobre OPEX, o sobre CAPEX para las partidas
 | **Columna de origen** | Cualquier columna visible, incluida Previsión cuando se muestra. Empieza en la columna por defecto |
 | **Año de destino** | Año al que copiar (mismo rango) |
 | **Columna de destino** | Cualquier columna visible. Empieza en la columna por defecto |
-| **Incremento porcentual** | Ajuste aplicado a cada mes copiado (p. ej., `3` = +3%). Predeterminado: 0. Acepta decimales y valores negativos. |
+| **Incremento porcentual** | Ajuste aplicado a cada mes copiado (p. ej., `3` = +3%). Predeterminado: 0. Acepta decimales y valores negativos. Un porcentaje de -100% o menos se rechaza. |
 | **Sobrescribir datos existentes** | Conmutador. Cuando está desactivado, los elementos que ya tienen un valor en el destino se omiten. Cuando está activado, todos los valores de destino se reemplazan. |
 
 La página se abre con la columna por defecto del año actual como origen y la columna por defecto del año siguiente como destino. Las columnas ocultas no se ofrecen.
@@ -128,7 +128,7 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 - Solo se copian las partidas válidas en el año de destino. Una partida cuenta para los meses cuyo día 15 cae entre su **Inicio de vigencia** y su **Fin de validez**. Una partida sin ninguno de esos meses se excluye, ya que la pestaña Presupuesto tampoco la muestra
 - Una partida válida solo una parte del año de destino recibe únicamente esos meses. Los demás meses conservan su importe, y el periodo se ajusta a las fechas de la partida. Por ejemplo, un origen de doce meses copiado a una partida que termina el 30 de junio da de enero a junio
 - Sin porcentaje, los importes se copian exactamente, al céntimo
-- Con un porcentaje, cada mes se redondea a un importe entero. El total anual es el total de origen con el porcentaje aplicado, redondeado a un importe entero. La pequeña diferencia se asigna al último mes que tiene importe. Por ejemplo, 12.000 repartidos de abril a diciembre (1.333,33 al mes y 1.333,36 en diciembre) copiados con +2 % dan 1.360 al mes y 12.240 para el año
+- Con un porcentaje, cada mes se redondea a un importe entero, y el total anual sigue siendo el total de origen con el porcentaje aplicado, redondeado a un importe entero. Las unidades que deja el redondeo van a los meses que perdieron las fracciones más grandes, primero el mes más tardío en caso de empate. Ningún mes cambia de signo. Por ejemplo, 12.000 repartidos de abril a diciembre (1.333,33 al mes y 1.333,36 en diciembre) copiados con +2 % dan 1.360 al mes y 12.240 para el año
 - El periodo de la columna se desplaza con la copia: de abril a diciembre de 2026 pasa a ser de abril a diciembre de 2027. Un periodo que termina el 29 de febrero termina el 28 de febrero en un año que no lo tiene
 - Un origen sin periodo da un periodo de todo el año
 - En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026 +2 %»

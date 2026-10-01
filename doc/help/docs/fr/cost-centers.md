@@ -79,8 +79,8 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 **Filtres** :
 
 - **Recherche rapide** : recherche dans le code, le nom et le chemin complet. Rechercher le nom d'un groupe trouve aussi tout ce qu'il contient
-- **Filtres de colonnes** : **Type**, **Parent**, **Société** et **Statut** utilisent des filtres par cases à cocher
-- **Filtre de statut** : le bouton bascule **Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les éléments activés
+- **Filtres de colonnes** : **Type**, **Parent**, **Société** et **Statut** utilisent des filtres par cases à cocher. Cliquer sur **Effacer** dans le filtre **Statut**, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
+- **Filtre de statut** : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les éléments activés
 
 **Actions** :
 
@@ -121,7 +121,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail.
 | **Groupe parent** | Un groupe, ou vide pour le premier niveau. Un élément ne peut pas passer sous lui-même ni sous un élément qu'il contient ; ceux-ci ne figurent donc pas dans la liste | Votre organigramme ou l'arbre des centres de coûts de votre équipe finance |
 | **Société** | Une société activée. Centres de coûts uniquement | L'entité juridique qui paie les coûts de ce centre de coûts. C'est l'une de vos sociétés dans **Données de référence > Sociétés** |
 | **Responsable budgétaire** | Un utilisateur actif | La personne qui rend compte de cette enveloppe budgétaire lors de la revue budgétaire. L'indication sous le champ le rappelle |
-| **Cycle de vie** | L'interrupteur **Activé** et la date de **Fin de validité** | Fixez une date future pour programmer la fin, ou désactivez l'interrupteur pour le désactiver dès aujourd'hui |
+| **Cycle de vie** | L'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité** | Fixez une date future pour programmer la fin, ou désactivez l'interrupteur pour le désactiver dès aujourd'hui |
 
 ### Responsable budgétaire sur les lignes budgétaires
 

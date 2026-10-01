@@ -49,7 +49,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 
 - **Quick search**: free-text search across all visible columns
 - **Column filters**: click any column header to filter by value; numeric columns (Headcount, IT Users, Turnover) support number filters
-- **Status scope**: toggle between **Enabled**, **Disabled**, and **All** to control which companies appear
+- **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list controls which companies appear. The list shows enabled companies by default
 
 **Year selector**: use the **Year** field in the toolbar to switch which year's metrics are displayed. The bottom row shows **totals** for Headcount, IT Users, and Turnover across all visible (filtered) companies.
 

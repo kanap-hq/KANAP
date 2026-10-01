@@ -35,7 +35,7 @@ The Departments grid gives you an overview of all departments with their headcou
 
 **Year selector**: Use the **Year** field in the toolbar to change which year's headcount is displayed. The grid refreshes automatically when you change the year.
 
-**Status scope**: Use the **Enabled / Disabled / All** toggle to filter by department status. The list defaults to showing only enabled departments.
+**Status scope**: Use the **Show: All / Enabled / Disabled** toggle to filter by department status. The list defaults to showing only enabled departments.
 
 **Quick search**: The search bar filters across department names.
 

@@ -36,7 +36,7 @@ Chaque cellule d'une ligne est cliquable et navigue vers l'espace de travail du 
 
 **Filtrage** :
 - Recherche rapide : Recherche dans les champs du fournisseur
-- Filtre de statut : Utilisez le bouton bascule **Activé / Désactivé / Tous** au-dessus de la grille pour filtrer par statut
+- Filtre de statut : Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille pour filtrer par statut. Par défaut, la liste affiche les fournisseurs activés
 
 **Actions** :
 - **Nouveau** : Créer un nouveau fournisseur (nécessite `suppliers:manager`)

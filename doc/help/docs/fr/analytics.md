@@ -74,7 +74,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 **Filtres** :
 
 - **Recherche rapide** : recherche dans le nom et la description
-- **Filtre de statut** : un filtre par cases à cocher sur la colonne **Statut**
+- **Filtre de statut** : un filtre par cases à cocher sur la colonne **Statut**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
 - **Portée du statut** : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les valeurs activées
 
 **Actions** :
@@ -117,7 +117,7 @@ Ouvrez-le avec le bouton de modification de la pastille sélectionnée.
 | **Code** | De 1 à 40 caractères : lettres minuscules, chiffres, `-` ou `_`, en commençant par une lettre ou un chiffre. Chaque code est unique. Le code nomme la colonne de la dimension dans les fichiers CSV OPEX et CAPEX : le modifier change donc le nom de cette colonne. Les lignes budgétaires conservent leurs valeurs quand le code change |
 | **Ordre** | Un nombre entier. Les dimensions sont classées selon ce nombre, du plus petit au plus grand : sur cette page, sur les lignes budgétaires, dans les filtres des rapports et dans le sélecteur de dimension du rapport |
 | **Description** | À quoi sert la dimension, pour que vos collègues classent les lignes de la même façon |
-| **Cycle de vie** | L'interrupteur **Activé** et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie). Verrouillé sur la dimension par défaut, avec une ligne en dessous : « Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent. » |
+| **Cycle de vie** | L'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie). Verrouillé sur la dimension par défaut, avec une ligne en dessous : « Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent. » |
 
 ### Supprimer une dimension
 

@@ -35,7 +35,7 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 
 **Sélecteur d'année** : Utilisez le champ **Année** dans la barre d'outils pour changer l'année d'effectif affichée. La grille se rafraîchit automatiquement lorsque vous changez d'année.
 
-**Filtre de statut** : Utilisez le bouton bascule **Activé / Désactivé / Tous** pour filtrer par statut de département. La liste affiche par défaut uniquement les départements activés.
+**Filtre de statut** : Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** pour filtrer par statut de département. La liste affiche par défaut uniquement les départements activés.
 
 **Recherche rapide** : La barre de recherche filtre les noms de départements.
 

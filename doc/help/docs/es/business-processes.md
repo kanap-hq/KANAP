@@ -38,7 +38,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 **Filtrado y ordenación**:
 
 - La búsqueda rápida filtra en todas las columnas visibles.
-- El alcance predeterminado muestra solo procesos **habilitados**. Cambie para ver todos o solo los deshabilitados.
+- Use el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista para elegir qué procesos aparecen. La lista muestra por defecto los procesos activados.
 - La ordenación predeterminada agrupa las filas por **Categorías**, luego por **Nombre**.
 
 **Acciones** (barra de herramientas superior derecha):
@@ -72,7 +72,7 @@ La pestaña Visión general está organizada en tres secciones.
 
 - **Nombre** (obligatorio) -- utilice un nombre claro incluyendo el código corto, p. ej., "Pedido a cobro (O2C)" o "Contratación a jubilación (H2R)".
 - **Descripción** -- un breve resumen de lo que cubre el proceso. Una buena descripción captura los puntos de inicio y fin (p. ej., "Desde el pedido del cliente hasta la entrega, facturación y cobro.").
-- **Habilitado** -- los procesos activos aparecen en los selectores de toda la aplicación. Desactive un proceso para retirarlo sin eliminarlo, para que las referencias históricas permanezcan intactas.
+- **Interruptor de estado** -- su etiqueta muestra el estado actual (**Activado** o **Desactivado**). Los procesos activados aparecen en los selectores de toda la aplicación. Desactive un proceso para retirarlo sin eliminarlo, para que las referencias históricas permanezcan intactas.
 
 **Clasificación**
 

@@ -86,7 +86,7 @@ Nécessite les droits d'administration sur les OPEX, ou sur les CAPEX pour les p
 | **Colonne source** | Toute colonne affichée, Prévision comprise quand elle est affichée. Démarre sur la colonne par défaut |
 | **Année destination** | Année vers laquelle copier (même plage) |
 | **Colonne destination** | Toute colonne affichée. Démarre sur la colonne par défaut |
-| **Augmentation en pourcentage** | Ajustement appliqué à chaque mois copié (ex. : `3` = +3 %). Par défaut 0. Accepte les décimales et les valeurs négatives. |
+| **Augmentation en pourcentage** | Ajustement appliqué à chaque mois copié (ex. : `3` = +3 %). Par défaut 0. Accepte les décimales et les valeurs négatives. Un pourcentage de -100 % ou moins est refusé. |
 | **Écraser les données existantes** | Bascule. Désactivé : les postes qui ont déjà une valeur dans la destination sont ignorés. Activé : toutes les valeurs destination sont remplacées. |
 
 La page s'ouvre avec la colonne par défaut de l'année en cours comme source et la colonne par défaut de l'année suivante comme destination. Les colonnes masquées ne sont pas proposées.
@@ -128,7 +128,7 @@ Sous la grille, une barre de statistiques affiche :
 - Seuls les postes valides l'année de destination sont copiés. Un poste compte pour les mois dont le 15 tombe entre son **Début d'effet** et sa **Fin de validité**. Un poste sans aucun de ces mois est exclu, car l'onglet Budget ne l'affiche pas non plus
 - Un poste valide une partie de l'année de destination ne reçoit que ces mois. Les autres mois gardent leur montant, et la période est ramenée aux dates du poste. Par exemple, une source sur douze mois copiée vers un poste qui se termine le 30 juin donne janvier à juin
 - Sans pourcentage, les montants sont copiés à l'identique, au centime près
-- Avec un pourcentage, chaque mois est arrondi à l'unité. Le total annuel est le total source auquel on applique le pourcentage, arrondi à l'unité. Le petit écart est reporté sur le dernier mois qui porte un montant. Par exemple, 12 000 répartis d'avril à décembre (1 333,33 par mois et 1 333,36 en décembre) copiés avec +2 % donnent 1 360 par mois et 12 240 pour l'année
+- Avec un pourcentage, chaque mois est arrondi à l'unité, et le total annuel reste le total source auquel on applique le pourcentage, arrondi à l'unité. Les unités laissées par l'arrondi vont aux mois qui ont perdu les plus grandes fractions, le mois le plus tardif d'abord en cas d'égalité. Aucun mois ne change de signe. Par exemple, 12 000 répartis d'avril à décembre (1 333,33 par mois et 1 333,36 en décembre) copiés avec +2 % donnent 1 360 par mois et 12 240 pour l'année
 - La période de la colonne suit la copie : avril à décembre 2026 devient avril à décembre 2027. Une période qui se termine le 29 février se termine le 28 février dans une année non bissextile
 - Une source sans période donne une période couvrant toute l'année
 - Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 +2 % »

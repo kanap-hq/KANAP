@@ -56,8 +56,8 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 **Filtrado**:
 
 - **Búsqueda rápida**: busca en el código, el nombre, la descripción, y el país y la región de un calendario estándar
-- **Estado**: el filtro de columna ofrece **Activado** y **Desactivado**
-- **Ámbito de estado**: el selector **Todos / Activos / Desactivados** sobre la lista. La lista muestra por defecto los calendarios activados
+- **Estado**: el filtro de columna ofrece **Activado** y **Desactivado**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
+- **Ámbito de estado**: el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista. La lista muestra por defecto los calendarios activados
 
 **Calendarios sugeridos**: para los usuarios que pueden crear calendarios, una línea sobre la cuadrícula lista los países de sus empresas activadas que aún no tienen calendario estándar, con un botón que los crea. Cada calendario toma el código del país como código y el nombre del país, en su idioma, como nombre. La línea desaparece cuando cada país tiene su calendario.
 
@@ -104,7 +104,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo.
 | **Nombre** | Hasta 200 caracteres. Los nombres son únicos sin distinguir mayúsculas y minúsculas | El nombre con el que su equipo conoce el calendario. Es el nombre que se muestra en la pestaña Presupuesto |
 | **Descripción** | Texto libre | A quién se aplica el calendario y qué deja fuera |
 | **País** / **Región** | Solo al crear el calendario. La lista de regiones depende del país | El país, y la región cuando sus festivos difieren, donde trabajan las personas o los servicios del calendario |
-| **Ciclo de vida** | El interruptor **Activado** y la fecha de **Fin de validez** | Indique una fecha futura para programar el fin, o desactive el interruptor para desactivarlo hoy |
+| **Ciclo de vida** | El interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez** | Indique una fecha futura para programar el fin, o desactive el interruptor para desactivarlo hoy |
 
 ### Días laborables de un calendario estándar
 

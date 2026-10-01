@@ -56,8 +56,8 @@ Click any cell to open the workspace.
 **Filtering**:
 
 - **Quick search**: searches the code, the name, the description, and the country and region of a standard calendar
-- **Status**: the column filter offers **Enabled** and **Disabled**
-- **Status scope**: the **All / Enabled / Disabled** toggle above the list. The list shows enabled calendars by default
+- **Status**: the column filter offers **Enabled** and **Disabled**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
+- **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list. The list shows enabled calendars by default
 
 **Suggested calendars**: for users who can create calendars, a line above the grid lists the countries of your enabled companies that have no standard calendar yet, with one button that creates them. Each calendar takes the country code as its code and the country name, in your language, as its name. The line disappears once every country has its calendar.
 
@@ -104,7 +104,7 @@ Click any row in the list to open the workspace.
 | **Name** | Up to 200 characters. Names are unique regardless of case | The name your team knows the calendar by. It is the name shown in the budget tab |
 | **Description** | Free text | Who the calendar applies to and what it leaves out |
 | **Country** / **Region** | On creation only. The region list follows the country | The country, and the region when its public holidays differ, where the people or services of the calendar work |
-| **Lifecycle** | The **Enabled** switch and the **End of validity** date | Set a future date to schedule the end, or switch it off to disable it today |
+| **Lifecycle** | The status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date | Set a future date to schedule the end, or switch it off to disable it today |
 
 ### Working days of a standard calendar
 

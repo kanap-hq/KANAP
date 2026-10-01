@@ -43,7 +43,11 @@ The list gives you a filterable overview of every connection in your registry.
 
 **Filtering**:
   - Quick search: Searches across connection fields
-  - Column filters: Topology and Lifecycle (checkbox lists). Criticality, Data class and PII have no column filter
+  - Column filters: **Topology**, **Lifecycle**, **Criticality**, **Data class** and **PII** use checkbox lists, so you can pick several values at once. **Criticality** and **Data class** also offer **(Blank)** for connections without a value
+  - **Criticality**, **Data class** and **PII** filter and sort on the value shown. For a derived connection, that is the value inherited from its interfaces
+
+**Sorting**:
+  - **Criticality** and **Data class** sort by severity, in the order of the levels in [Classifications and continuity](it-ops-settings.md#classifications-and-continuity). Connections without a value come last
 
 **Actions**:
   - **Add connection**: Create a new connection (requires `infrastructure:member`)

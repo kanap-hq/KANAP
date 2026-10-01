@@ -86,7 +86,7 @@ Erfordert Administrationsrechte für OPEX, bzw. für CAPEX bei CAPEX-Positionen.
 | **Quellspalte** | Jede angezeigte Spalte, auch Prognose, wenn sie angezeigt wird. Beginnt mit der Standardspalte |
 | **Zieljahr** | Jahr, in das kopiert wird (gleicher Bereich) |
 | **Zielspalte** | Jede angezeigte Spalte. Beginnt mit der Standardspalte |
-| **Prozentuale Erhöhung** | Anpassung, die auf jeden kopierten Monat angewendet wird (z. B. `3` = +3 %). Standard ist 0. Dezimalwerte und negative Werte möglich. |
+| **Prozentuale Erhöhung** | Anpassung, die auf jeden kopierten Monat angewendet wird (z. B. `3` = +3 %). Standard ist 0. Dezimalwerte und negative Werte möglich. Ein Prozentsatz von -100 % oder weniger wird abgelehnt. |
 | **Vorhandene Daten überschreiben** | Umschalter. Wenn aus, werden Elemente die bereits einen Wert im Ziel haben, übersprungen. Wenn ein, werden alle Zielwerte ersetzt. |
 
 Die Seite öffnet mit der Standardspalte des aktuellen Jahres als Quelle und der Standardspalte des nächsten Jahres als Ziel. Ausgeblendete Spalten werden nicht angeboten.
@@ -128,7 +128,7 @@ Unterhalb des Grids zeigt eine Statistikleiste:
 - Nur Positionen, die im Zieljahr gültig sind, werden kopiert. Eine Position zählt für die Monate, deren 15. zwischen ihrem **Beginn der Gültigkeit** und ihrem **Ende der Gültigkeit** liegt. Eine Position ohne solchen Monat wird ausgelassen, da der Budget-Tab sie ebenfalls nicht anzeigt
 - Eine Position, die nur einen Teil des Zieljahres gültig ist, erhält nur diese Monate. Die übrigen Monate behalten ihren Betrag, und der Zeitraum wird auf die Daten der Position gekürzt. Beispiel: Eine Quelle über zwölf Monate, kopiert auf eine Position, die am 30. Juni endet, ergibt Januar bis Juni
 - Ohne Prozentsatz werden die Beträge exakt kopiert, auf den Cent genau
-- Mit einem Prozentsatz wird jeder Monat auf einen ganzen Betrag gerundet. Die Jahressumme ist die Quellsumme mit angewendetem Prozentsatz, auf einen ganzen Betrag gerundet. Die kleine Differenz wird dem letzten Monat mit einem Betrag zugeschlagen. Beispiel: 12.000, verteilt von April bis Dezember (1.333,33 pro Monat und 1.333,36 im Dezember), ergeben mit +2 % kopiert 1.360 pro Monat und 12.240 für das Jahr
+- Mit einem Prozentsatz wird jeder Monat auf einen ganzen Betrag gerundet, und die Jahressumme bleibt die Quellsumme mit angewendetem Prozentsatz, auf einen ganzen Betrag gerundet. Die durch die Rundung übrigen Einheiten gehen an die Monate mit den größten abgeschnittenen Nachkommaanteilen, bei Gleichstand zuerst an den spätesten Monat. Kein Monat wechselt das Vorzeichen. Beispiel: 12.000, verteilt von April bis Dezember (1.333,33 pro Monat und 1.333,36 im Dezember), ergeben mit +2 % kopiert 1.360 pro Monat und 12.240 für das Jahr
 - Der Zeitraum der Spalte wandert mit der Kopie: April bis Dezember 2026 wird zu April bis Dezember 2027. Ein Zeitraum, der am 29. Februar endet, endet in einem Jahr ohne diesen Tag am 28. Februar
 - Eine Quelle ohne Zeitraum ergibt einen Zeitraum über das ganze Jahr
 - Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026 +2 %“

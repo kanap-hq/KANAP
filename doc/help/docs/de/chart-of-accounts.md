@@ -82,8 +82,8 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 
 **Filtern**:
 - Schnellsuche: Durchsucht sichtbare Textspalten.
-- Statusbereich-Umschalter: Standard ist **Aktiviert**, zeigt nur aktive Konten. Auf **Alle** umschalten, um deaktivierte Konten einzubeziehen.
-- Spaltenfilter: Spaltenüberschriftsfilter verwenden (z. B. die **Status**-Spalte hat einen Set-Filter).
+- Statusbereich: der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid. Standard ist **Aktiv**, zeigt nur aktive Konten. Wählen Sie **Alle**, um deaktivierte Konten einzubeziehen.
+- Spaltenfilter: Spaltenüberschriftsfilter verwenden (z. B. die **Status**-Spalte hat einen Set-Filter). Wenn Sie im **Status**-Filter auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**.
 
 **Sortierung**: Standard ist **Kontonr.** aufsteigend.
 
@@ -390,7 +390,7 @@ Konten verwenden das gleiche Lebenszyklusmanagement wie andere Stammdaten:
       - Das Konto erscheint nicht mehr in Auswahl-Dropdowns für neue Positionen
       - Historische Daten bleiben erhalten; bestehende Positionen behalten ihre Kontozuweisungen
       - Berichte für Jahre, in denen das Konto aktiv war, enthalten es weiterhin
-  - Das Konten-Grid zeigt standardmäßig nur **aktivierte** Konten. Verwenden Sie den Statusbereich-Umschalter, um auf **Alle** umzuschalten und deaktivierte Konten einzubeziehen.
+  - Das Konten-Grid zeigt standardmäßig nur **aktivierte** Konten. Wählen Sie im Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** die Option **Alle**, um deaktivierte Konten einzubeziehen.
 
 ## Mandantenlöschung und Kontenplan
 

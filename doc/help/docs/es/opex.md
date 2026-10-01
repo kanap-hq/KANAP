@@ -69,7 +69,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
 
 **Filtrado**:
   - **Búsqueda rápida**: Busca en la referencia, el nombre del producto, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, los valores analíticos, el centro de coste (código, nombre y ruta), el responsable del presupuesto, las notas, la moneda y el estado. Filtra la lista en tiempo real mientras escribe
-  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas (selección múltiple). El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**
+  - **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas (selección múltiple). El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**
   - **Filtros de importe**: Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes
   - **Filtros de ETC**: Cada columna de ETC tiene un filtro numérico con las mismas condiciones, más vacío y no vacío. **Vacío** conserva las partidas cuya columna no tiene líneas
   - **Filtros de fecha**: **Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío
@@ -99,7 +99,7 @@ La lista OPEX (en **Gestión presupuestaria > OPEX**) es su vista principal para
   - **Nuevo**: Crear una nueva partida OPEX (requiere `opex:manager`)
   - **Importar CSV**: Carga masiva de partidas desde CSV (requiere `opex:admin`)
   - **Exportar CSV**: Exportar partidas a CSV (requiere `opex:admin`)
-  - **Eliminar seleccionadas**: Eliminación masiva de partidas seleccionadas (requiere `opex:admin`; seleccione filas mediante casillas de verificación)
+  - **Eliminar seleccionadas**: Eliminación masiva de partidas seleccionadas (requiere `opex:admin`; seleccione filas mediante casillas de verificación). Una partida con importes en una columna congelada no se puede eliminar: las demás se eliminan, y el mensaje nombra cada partida rechazada con su motivo
 
 **Navegación Anterior/Siguiente**:
   - Cuando abre una partida, el espacio de trabajo muestra botones **Ant.** y **Sig.**
@@ -143,7 +143,7 @@ La pestaña Vista general contiene los campos de texto libre y las tareas de la 
 
 **Panel Propiedades**:
   - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora), **Moneda** (solo las monedas permitidas en su espacio de trabajo), un campo por dimensión analítica, **Run o build** e **Inicio de vigencia**
-  - **Ciclo de vida**: el interruptor **Activado** y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
+  - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
   - Fechas **Creado** y **Actualizado** (solo lectura)
 
 **Centro de coste**:
@@ -227,7 +227,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - Una columna sin etiqueta conserva los datos que tenía antes de que existieran los periodos
 
 **Herramientas del modo mensual**:
-  - **Borrar columna**: el icono junto al encabezado de una columna pone a cero todos los meses de esa columna, por ejemplo antes de introducir todo el importe en un solo mes. Cuenta como una edición a mano. Para quitar a la vez los importes y el periodo de una columna en todas las partidas, use **Restablecer columna presupuestaria** en la Administración presupuestaria
+  - **Borrar columna**: el icono junto al encabezado de una columna pone a cero todos los meses de esa columna, por ejemplo antes de introducir todo el importe en un solo mes. Cuando la columna contiene importes, primero lo confirma. Cuenta como una edición a mano. Para quitar a la vez los importes y el periodo de una columna en todas las partidas, use **Restablecer columna presupuestaria** en la Administración presupuestaria
 
 **Tendencia plurianual**:
   - Un gráfico bajo la cuadrícula muestra cada columna visible a lo largo de los años, incluida Previsión cuando se muestra, y se actualiza mientras escribe
@@ -421,7 +421,9 @@ Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración 
   - Delimitador: punto y coma `;` (no coma)
   - Codificación: UTF-8 (guarde como "CSV UTF-8" en Excel)
   - Encabezados: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
-  - `disabled_at` es el fin de validez: la fecha en que la partida termina. Utilice una fecha (`2026-12-31`) o una fecha y hora completas. Déjelo vacío si no hay fin
+  - `disabled_at` es el fin de validez: la fecha en que la partida termina. Utilice una fecha (`2026-12-31`) o una fecha y hora completas
+  - `status` es `enabled` o `disabled`. La exportación escribe el estado que se deduce del fin de validez. Una fila cuyo estado contradice su fecha se rechaza con un error de fila, por ejemplo `enabled` con una fecha ya pasada
+  - En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina la partida hoy. Una partida nueva queda activada salvo que la fila indique `disabled`, y `disabled` con una fecha vacía la termina hoy
   - Los archivos antiguos con una columna `effective_end` se siguen importando: su fecha rellena el fin de validez cuando `disabled_at` está vacío
   - `analytics_category` contiene el valor de la dimensión analítica por defecto, sea cual sea su nombre. Cada una de las demás dimensiones activadas tiene su propia columna, `analytics:<code>`, donde `<code>` es el código de la dimensión. Las exportaciones y la plantilla incluyen estas columnas justo después de `analytics_category`, en el orden de las dimensiones
   - `analytics_category`, las columnas `analytics:<code>`, `cost_center_code` y `run_build` son columnas opcionales: las exportaciones y la plantilla siempre las incluyen, y los archivos sin ellas se siguen importando
@@ -489,16 +491,17 @@ Cada partida OPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de
 
 **Establecer estado**:
   - Al crear la partida, puede establecer su **Fin de validez** en el panel **Propiedades**
-  - Más adelante, cambie el **Estado** en la barra de metadatos, o use el campo **Ciclo de vida** del panel **Propiedades** (interruptor **Activado** y **Fin de validez**). Desactivar una partida sin fecha fija su fin de validez en el día de hoy
+  - Más adelante, cambie el **Estado** en la barra de metadatos, o use el campo **Ciclo de vida** del panel **Propiedades** (interruptor de estado y **Fin de validez**). Desactivar una partida sin fecha fija su fin de validez en el día de hoy
   - Puede programar un fin de validez futuro (útil para partidas con fin de contrato planificado)
 
 **Ver partidas deshabilitadas**:
   - Por defecto, la lista OPEX muestra solo partidas **Habilitadas**
-  - Utilice el conmutador **Mostrar: Desactivados** o **Mostrar: Todos** para ver partidas deshabilitadas
+  - Use el selector **Mostrar: Todos / Activos / Desactivados** y elija **Desactivados** o **Todos** para ver partidas desactivadas
 
 **Cuándo desactivar vs eliminar**:
   - **Prefiera desactivar**: Mantiene el historial intacto, asegura que los informes permanezcan consistentes y soporta registros de auditoría
   - **Elimine solo si**: La partida se creó por error
+  - Una partida con importes en una columna congelada no se puede eliminar. Primero descongele la columna, o fije en su lugar una fecha de fin de validez
   - Eliminar una partida también elimina sus presupuestos, asignaciones, tareas, sitios web relevantes, adjuntos (con sus archivos) y sus vínculos con contratos. Si una de sus tareas se convirtió en una solicitud, la solicitud se conserva: tiene su propia copia del título, la descripción y los adjuntos, y solo se pierde su vínculo con la tarea
 
 **Consejo**: Utilice el Fin de validez para retirar partidas OPEX cuando los contratos terminen o los servicios se discontinúen. No elimine a menos que sea un verdadero error.

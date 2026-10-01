@@ -82,8 +82,8 @@ The grid shows accounts for the selected CoA only.
 
 **Filtering**:
 - Quick search: Searches across visible text columns.
-- Status scope toggle: Defaults to **Enabled**, showing only active accounts. Switch to **All** to include disabled accounts.
-- Column filters: Use column header filters (e.g., the **Status** column has a set filter).
+- Status scope: the **Show: All / Enabled / Disabled** toggle above the grid. It defaults to **Enabled**, showing only active accounts. Pick **All** to include disabled accounts.
+- Column filters: Use column header filters (e.g., the **Status** column has a set filter). Clicking **Clear** in the **Status** filter, or unticking both values, lists nothing, whatever **Show** says.
 
 **Sort**: Defaults to **Account #** ascending.
 
@@ -390,7 +390,7 @@ Accounts use the same lifecycle management as other master data:
       - The account no longer appears in selection dropdowns for new items
       - Historical data remains intact; existing items keep their account assignments
       - Reports for years when the account was active still include it
-  - The accounts grid defaults to showing **Enabled** accounts only. Use the status scope toggle to switch to **All** and include disabled accounts.
+  - The accounts grid defaults to showing **Enabled** accounts only. Use the **Show: All / Enabled / Disabled** toggle to pick **All** and include disabled accounts.
 
 ## Tenant deletion and CoA
 

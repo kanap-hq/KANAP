@@ -82,8 +82,8 @@ La cuadrícula muestra cuentas solo del CoA seleccionado.
 
 **Filtrado**:
 - Búsqueda rápida: Busca en las columnas de texto visibles.
-- Conmutador de alcance de estado: Predeterminado a **Habilitadas**, mostrando solo cuentas activas. Cambie a **Todas** para incluir cuentas deshabilitadas.
-- Filtros de columna: Use filtros en los encabezados de columna (p. ej., la columna **Estado** tiene un filtro de conjunto).
+- Alcance de estado: el selector **Mostrar: Todos / Activos / Desactivados** sobre la cuadrícula. Por defecto **Activos**, mostrando solo cuentas activas. Elija **Todos** para incluir cuentas desactivadas.
+- Filtros de columna: Use filtros en los encabezados de columna (p. ej., la columna **Estado** tiene un filtro de conjunto). Si hace clic en **Limpiar** en el filtro **Estado**, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**.
 
 **Ordenación**: Predeterminada por **N.º de cuenta** ascendente.
 
@@ -390,7 +390,7 @@ Las cuentas utilizan la misma gestión de ciclo de vida que otros datos maestros
       - La cuenta ya no aparece en los desplegables de selección para nuevos elementos
       - Los datos históricos permanecen intactos; los elementos existentes conservan sus asignaciones de cuenta
       - Los informes de años cuando la cuenta estaba activa siguen incluyéndola
-  - La cuadrícula de cuentas muestra por defecto solo cuentas **Habilitadas**. Use el conmutador de alcance de estado para cambiar a **Todas** e incluir cuentas deshabilitadas.
+  - La cuadrícula de cuentas muestra por defecto solo cuentas **Habilitadas**. Use el selector **Mostrar: Todos / Activos / Desactivados** y elija **Todos** para incluir cuentas desactivadas.
 
 ## Eliminación del espacio de trabajo y CoA
 

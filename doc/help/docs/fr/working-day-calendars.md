@@ -56,8 +56,8 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 **Filtres** :
 
 - **Recherche rapide** : recherche dans le code, le nom, la description, ainsi que le pays et la région d'un calendrier standard
-- **Statut** : le filtre de colonne propose **Activé** et **Désactivé**
-- **Filtre de statut** : le bouton bascule **Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les calendriers activés
+- **Statut** : le filtre de colonne propose **Activé** et **Désactivé**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
+- **Filtre de statut** : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les calendriers activés
 
 **Calendriers suggérés** : pour les personnes qui peuvent créer des calendriers, une ligne au-dessus de la grille liste les pays de vos sociétés activées qui n'ont pas encore de calendrier standard, avec un bouton qui les crée. Chaque calendrier prend le code du pays comme code et le nom du pays, dans votre langue, comme nom. La ligne disparaît dès que chaque pays a son calendrier.
 
@@ -104,7 +104,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail.
 | **Nom** | Jusqu'à 200 caractères. Les noms sont uniques sans tenir compte de la casse | Le nom sous lequel votre équipe connaît le calendrier. C'est le nom affiché dans l'onglet Budget |
 | **Description** | Texte libre | À qui s'applique le calendrier et ce qu'il exclut |
 | **Pays** / **Région** | À la création uniquement. La liste des régions suit le pays | Le pays, et la région lorsque ses jours fériés diffèrent, où travaillent les personnes ou les services couverts par le calendrier |
-| **Cycle de vie** | L'interrupteur **Activé** et la date de **Fin de validité** | Fixez une date future pour programmer la fin, ou désactivez l'interrupteur pour le désactiver dès aujourd'hui |
+| **Cycle de vie** | L'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité** | Fixez une date future pour programmer la fin, ou désactivez l'interrupteur pour le désactiver dès aujourd'hui |
 
 ### Jours ouvrés d'un calendrier standard
 

@@ -49,7 +49,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 - **Schnellsuche**: Freitext-Suche über alle sichtbaren Spalten
 - **Spaltenfilter**: Klicken Sie auf eine Spaltenüberschrift, um nach Wert zu filtern; numerische Spalten (Mitarbeiterzahl, IT-Benutzer, Umsatz) unterstützen Zahlenfilter
-- **Statusbereich**: Umschalter zwischen **Aktiviert**, **Deaktiviert** und **Alle**, um zu steuern, welche Unternehmen angezeigt werden
+- **Statusbereich**: Der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste steuert, welche Unternehmen angezeigt werden. Standardmäßig zeigt die Liste aktivierte Unternehmen
 
 **Jahrauswahl**: Verwenden Sie das Feld **Jahr** in der Symbolleiste, um zu wechseln, welche Jahreskennzahlen angezeigt werden. Die untere Zeile zeigt **Summen** für Mitarbeiterzahl, IT-Benutzer und Umsatz über alle sichtbaren (gefilterten) Unternehmen.
 

@@ -43,7 +43,11 @@ La lista proporciona una visión filtrable de todas las conexiones en su registr
 
 **Filtrado**:
   - Búsqueda rápida: Busca en los campos de conexión
-  - Filtros de columna: Topología y Ciclo de vida (listas de casillas). Criticidad, Clase de datos y PII no tienen filtro de columna
+  - Filtros de columna: **Topología**, **Ciclo de vida**, **Criticidad**, **Clase de datos** y **PII** usan listas de casillas, así que puede elegir varios valores a la vez. **Criticidad** y **Clase de datos** ofrecen también **(Vacío)** para las conexiones sin valor
+  - **Criticidad**, **Clase de datos** y **PII** filtran y ordenan por el valor mostrado. En una conexión derivada, es el valor heredado de sus interfaces
+
+**Ordenación**:
+  - **Criticidad** y **Clase de datos** se ordenan por gravedad, en el orden de los niveles de [Clasificaciones y continuidad](it-ops-settings.md#clasificaciones-y-continuidad). Las conexiones sin valor van al final
 
 **Acciones**:
   - **Añadir conexión**: Crear una nueva conexión (requiere `infrastructure:member`)

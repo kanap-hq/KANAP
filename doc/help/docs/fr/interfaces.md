@@ -45,7 +45,8 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 **Filtrage** :
 
 - Recherche rapide sur toutes les colonnes texte
-- Filtres de colonne sur les colonnes texte, dont cycle de vie et criticité. Processus métier, catégorie de données et contient des PII n'ont pas de filtre de colonne
+- Filtres de colonne sur les colonnes texte
+- **Cycle de vie**, **Criticité**, **Processus métier**, **Catégorie de données** et **Contient des PII** utilisent des filtres par cases à cocher : vous pouvez choisir plusieurs valeurs à la fois. Le filtre **Criticité** propose aussi **(Vide)** pour les interfaces sans criticité
 
 **Actions** :
 

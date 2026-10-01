@@ -38,7 +38,7 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 **Filtern und Sortieren**:
 
 - Die Schnellsuche filtert über alle sichtbaren Spalten.
-- Der Standardbereich zeigt nur **aktivierte** Prozesse. Umschalten, um alle oder nur deaktivierte zu sehen.
+- Mit dem Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste wählen Sie, welche Prozesse angezeigt werden. Standardmäßig zeigt die Liste aktivierte Prozesse.
 - Die Standardsortierung gruppiert Zeilen nach **Kategorien**, dann nach **Name**.
 
 **Aktionen** (Symbolleiste oben rechts):
@@ -72,7 +72,7 @@ Der Übersichts-Tab ist in drei Abschnitte gegliedert.
 
 - **Name** (Pflicht) -- verwenden Sie einen klaren Namen einschließlich des Kurzcodes, z. B. „Order-to-Cash (O2C)" oder „Hire-to-Retire (H2R)".
 - **Beschreibung** -- eine kurze Zusammenfassung, was der Prozess umfasst. Eine gute Beschreibung erfasst die Start- und Endpunkte (z. B. „Von der Kundenbestellung über Lieferung, Rechnungsstellung bis zum Zahlungseingang.").
-- **Aktiviert**-Umschalter -- aktive Prozesse erscheinen in Auswahlfeldern in der gesamten App. Deaktivieren Sie einen Prozess, um ihn stillzulegen ohne zu löschen, damit historische Referenzen erhalten bleiben.
+- **Statusschalter** -- seine Beschriftung zeigt den aktuellen Zustand (**Aktiviert** oder **Deaktiviert**). Aktivierte Prozesse erscheinen in Auswahlfeldern in der gesamten App. Deaktivieren Sie einen Prozess, um ihn stillzulegen ohne zu löschen, damit historische Referenzen erhalten bleiben.
 
 **Klassifizierung**
 

@@ -108,7 +108,7 @@ The search box at the top searches the reference, description, supplier, paying 
 
 ### Column filters
 
-Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Multiple filters combine with AND logic.
+Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says. Multiple filters combine with AND logic.
 
 Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts.
 
@@ -191,7 +191,7 @@ The Overview tab holds the details of the investment and its tasks.
 **Properties panel**:
 
 - **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), **PP&E type**, **Investment type**, one field per analytics dimension, **Run or build**, and **Effective start**
-- **Lifecycle**: the **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
+- **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 - **Created** and **Updated** dates (read only)
 - **Priority** is set in the Properties panel when you create the item, then in the metadata bar
 
@@ -289,7 +289,7 @@ A budget administrator can rename the columns, hide some and choose the default 
 
 **Monthly tools** (Monthly mode only):
 
-- **Clear column**: the icon next to a column header sets every month of that column to zero
+- **Clear column**: the icon next to a column header sets every month of that column to zero. When the column holds amounts, you confirm first
 - Useful for entering a cash-out plan by hand, for example the whole amount in a single month
 - Clearing this way counts as an edit by hand. To remove both the amounts and the period of a column for every investment, use **Reset budget column** in Budget Administration
 
@@ -521,7 +521,9 @@ You can bulk-load CAPEX items via CSV to speed up initial setup or sync with ext
 - Delimiter: semicolon `;` (not comma)
 - Encoding: UTF-8 (save as "CSV UTF-8" in Excel)
 - Headers: `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
-- `disabled_at` is the end of validity: the date the item stops. Use a date (`2026-12-31`) or a full date and time. Leave it empty if there is no end
+- `disabled_at` is the end of validity: the date the item stops. Use a date (`2026-12-31`) or a full date and time
+- `status` is `enabled` or `disabled`. The export writes the status read from the end of validity. A row whose status contradicts its date is refused with a row error, for example `enabled` with a date that has passed
+- On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the item today. A new item is enabled unless the row says `disabled`, and `disabled` with an empty date ends it today
 - Older files with an `effective_end` column still import: its date fills the end of validity when `disabled_at` is empty
 - `analytics_category` holds the value of the default analytics dimension, whatever its name. Each other enabled dimension has its own column, `analytics:<code>`, where `<code>` is the dimension's code. Exports and the template carry these columns right after `analytics_category`, in dimension order
 - `analytics_category`, the `analytics:<code>` columns, `cost_center_code` and `run_build` are optional columns: exports and the template always carry them, and files without them still import
@@ -599,7 +601,7 @@ Every CAPEX item has a **status** (Enabled or Disabled) and an optional **End of
 **Setting status**:
 
 - When you create the item, you can set its **End of validity** in the **Properties** panel
-- Later, change the **Status** in the metadata bar, or use the **Lifecycle** field in the **Properties** panel (**Enabled** switch and **End of validity**). Switching an item to Disabled without a date sets its end of validity to today
+- Later, change the **Status** in the metadata bar, or use the **Lifecycle** field in the **Properties** panel (the status switch and **End of validity**). Switching an item to Disabled without a date sets its end of validity to today
 - You can schedule a future end of validity (useful for planned asset disposals or end-of-life dates)
 
 **Viewing disabled items**:
@@ -611,6 +613,7 @@ Every CAPEX item has a **status** (Enabled or Disabled) and an optional **End of
 
 - **Prefer disabling**: Keeps history intact, ensures reports remain consistent, and supports audit trails
 - **Delete only if**: The item was created by mistake
+- An item with amounts in a frozen column cannot be deleted. Unfreeze the column first, or set an end of validity date instead. When you delete several items at once, the others are deleted, and the message names each refused item with its reason
 - Deleting an item also removes its budgets, allocations, tasks, relevant websites, attachments (with their files), and its links to contracts. If one of its tasks was turned into a request, the request is kept: it has its own copy of the title, description, and attachments, and only its link to the task goes
 
 **Tip**: Use the End of validity to mark assets that have been fully depreciated, disposed of, or projects that have completed. Do not delete unless it is a true mistake.

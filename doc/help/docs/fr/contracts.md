@@ -44,6 +44,7 @@ La grille Contrats fournit une vue d'ensemble de tous vos accords fournisseurs. 
 - **Dev.** : Code devise
 - **Facturation** : Fréquence de facturation (Mensuelle, Trimestrielle, Annuelle, Autre)
 - **OPEX liés** : Nombre de postes OPEX liés (cliquez pour ouvrir l'espace de travail)
+- **Statut** : **Activé** ou **Désactivé**, lu dans la fin de validité
 
 **Colonnes supplémentaires** (via le sélecteur de colonnes) :
 
@@ -54,7 +55,8 @@ La grille Contrats fournit une vue d'ensemble de tous vos accords fournisseurs. 
 **Filtrage** :
 
 - Recherche rapide : Recherche dans le nom du contrat, le fournisseur et la société
-- Filtres de colonnes : Disponibles sur chaque en-tête de colonne
+- Filtres de colonnes : Disponibles sur chaque en-tête de colonne. Le filtre **Statut** propose **Activé** et **Désactivé**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
+- **Périmètre par statut** : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste. Par défaut, la liste affiche les contrats activés. Choisissez **Tous** ou **Désactivés** pour retrouver les contrats dont la fin de validité est passée
 
 **Actions** :
 
@@ -169,13 +171,15 @@ L'onglet Tâches gère les actions liées à ce contrat (par ex., revues de reno
 
 Maintenez votre registre de contrats synchronisé avec les systèmes externes via CSV.
 
-**Export** : Télécharge tous les contrats avec les champs principaux et les dates calculées.
+**Export** : Télécharge tous les contrats avec les champs principaux et les dates calculées. La colonne `status` contient le statut lu dans la fin de validité.
 
 **Import** :
 
 - Utilisez le **Contrôle préalable** pour valider avant d'appliquer
-- Correspondance par nom de contrat
+- Une ligne correspond à un contrat par son nom et son fournisseur
 - Supporte la création et les mises à jour
+- Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du contrat, conserve sa fin de validité. Un statut différent l'applique : `enabled` efface la fin de validité, et `disabled` termine le contrat aujourd'hui, sauf si sa fin de validité est déjà passée
+- Un nouveau contrat est activé sauf si la ligne indique `disabled`
 
 **Notes** :
 

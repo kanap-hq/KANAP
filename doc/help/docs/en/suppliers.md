@@ -36,7 +36,7 @@ Every cell in a row is clickable and navigates to that supplier's workspace.
 
 **Filtering**:
 - Quick search: Searches across supplier fields
-- Status scope: Use the **Enabled / Disabled / All** toggle above the grid to filter by status
+- Status scope: Use the **Show: All / Enabled / Disabled** toggle above the grid to filter by status. The list shows enabled suppliers by default
 
 **Actions**:
 - **New**: Create a new supplier (requires `suppliers:manager`)

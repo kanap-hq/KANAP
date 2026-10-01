@@ -69,7 +69,7 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
 
 **Filtern**:
   - **Schnellsuche**: Durchsucht Referenz, Produktname, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysewerte, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Notizen, Währung und Status. Filtert die Liste in Echtzeit während der Eingabe
-  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht
+  - **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**
   - **Betragsfilter**: Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen
   - **VZÄ-Filter**: Jede VZÄ-Spalte hat einen Zahlenfilter mit denselben Bedingungen, dazu leer und nicht leer. **Leer** behält die Positionen, deren Spalte keine Zeilen hat
   - **Datumsfilter**: **Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer
@@ -99,7 +99,7 @@ Die OPEX-Liste (unter **Budgetverwaltung > OPEX**) ist Ihre Hauptansicht zum Dur
   - **Neu**: Neue OPEX-Position erstellen (erfordert `opex:manager`)
   - **CSV importieren**: Massenladen von Positionen aus CSV (erfordert `opex:admin`)
   - **CSV exportieren**: Positionen als CSV exportieren (erfordert `opex:admin`)
-  - **Auswahl löschen**: Massenlöschung ausgewählter Positionen (erfordert `opex:admin`; Zeilen über Kontrollkästchen auswählen)
+  - **Auswahl löschen**: Massenlöschung ausgewählter Positionen (erfordert `opex:admin`; Zeilen über Kontrollkästchen auswählen). Eine Position mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden: Die anderen werden gelöscht, und die Meldung nennt jede abgelehnte Position mit ihrem Grund
 
 **Zurück/Weiter-Navigation**:
   - Wenn Sie eine Position öffnen, zeigt der Arbeitsbereich **Zurück** und **Weiter**-Schaltflächen
@@ -143,7 +143,7 @@ Der Tab Übersicht enthält die Freitextfelder und die Aufgaben der Position.
 
 **Bereich Eigenschaften**:
   - **Lieferant**, **Kostenstelle**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), ein Feld pro Analysedimension, **Run oder Build** und **Beginn der Gültigkeit**
-  - **Lebenszyklus**: der Schalter **Aktiviert** und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
+  - **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
   - Die Daten **Erstellt** und **Aktualisiert** (schreibgeschützt)
 
 **Kostenstelle**:
@@ -227,7 +227,7 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
   - Eine Spalte ohne Kennzeichnung hat die Daten behalten, die sie vor der Einführung der Zeiträume hatte
 
 **Werkzeuge im Monatsmodus**:
-  - **Spalte leeren**: Das Symbol neben einer Spaltenüberschrift setzt alle Monate dieser Spalte auf null, zum Beispiel bevor Sie den gesamten Betrag in einem einzigen Monat erfassen. Das gilt als Änderung von Hand. Um Beträge und Zeitraum einer Spalte für alle Positionen zu entfernen, verwenden Sie **Budgetspalte zurücksetzen** in der Budgetadministration
+  - **Spalte leeren**: Das Symbol neben einer Spaltenüberschrift setzt alle Monate dieser Spalte auf null, zum Beispiel bevor Sie den gesamten Betrag in einem einzigen Monat erfassen. Wenn die Spalte Beträge enthält, bestätigen Sie zuerst. Das gilt als Änderung von Hand. Um Beträge und Zeitraum einer Spalte für alle Positionen zu entfernen, verwenden Sie **Budgetspalte zurücksetzen** in der Budgetadministration
 
 **Mehrjahrestrend**:
   - Ein Diagramm unter dem Raster zeigt jede angezeigte Spalte über mehrere Jahre, auch Prognose, wenn sie angezeigt wird, und aktualisiert sich während der Eingabe
@@ -421,7 +421,9 @@ Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu
   - Trennzeichen: Semikolon `;` (kein Komma)
   - Kodierung: UTF-8 (in Excel als „CSV UTF-8" speichern)
   - Kopfzeilen: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
-  - `disabled_at` ist das Ende der Gültigkeit: das Datum, an dem die Position endet. Verwenden Sie ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Lassen Sie das Feld leer, wenn es kein Ende gibt
+  - `disabled_at` ist das Ende der Gültigkeit: das Datum, an dem die Position endet. Verwenden Sie ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit
+  - `status` ist `enabled` oder `disabled`. Der Export schreibt den Status, der sich aus dem Ende der Gültigkeit ergibt. Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt, zum Beispiel `enabled` mit einem bereits vergangenen Datum
+  - Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet die Position sonst heute. Eine neue Position ist aktiviert, sofern die Zeile nicht `disabled` angibt, und `disabled` mit leerem Datum beendet sie heute
   - Ältere Dateien mit einer Spalte `effective_end` werden weiterhin importiert: Das Datum dieser Spalte füllt das Ende der Gültigkeit, wenn `disabled_at` leer ist
   - `analytics_category` enthält den Wert der Standarddimension, unabhängig von ihrem Namen. Jede andere aktivierte Dimension hat eine eigene Spalte, `analytics:<code>`, wobei `<code>` der Code der Dimension ist. Exporte und die Vorlage führen diese Spalten direkt nach `analytics_category`, in der Reihenfolge der Dimensionen
   - `analytics_category`, die Spalten `analytics:<code>`, `cost_center_code` und `run_build` sind optionale Spalten: Exporte und die Vorlage enthalten sie immer, und Dateien ohne sie werden weiterhin importiert
@@ -489,16 +491,17 @@ Jede OPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein opt
 
 **Status setzen**:
   - Beim Anlegen der Position können Sie ihr **Ende der Gültigkeit** im Panel **Eigenschaften** festlegen
-  - Später ändern Sie den **Status** in der Metadatenleiste oder verwenden das Feld **Lebenszyklus** im Bereich **Eigenschaften** (Schalter **Aktiviert** und **Ende der Gültigkeit**). Wird eine Position ohne Datum deaktiviert, wird ihr Ende der Gültigkeit auf heute gesetzt
+  - Später ändern Sie den **Status** in der Metadatenleiste oder verwenden das Feld **Lebenszyklus** im Bereich **Eigenschaften** (Statusschalter und **Ende der Gültigkeit**). Wird eine Position ohne Datum deaktiviert, wird ihr Ende der Gültigkeit auf heute gesetzt
   - Sie können ein zukünftiges Ende der Gültigkeit planen (nützlich für geplante Vertragsenden)
 
 **Deaktivierte Positionen anzeigen**:
   - Standardmäßig zeigt die OPEX-Liste nur **aktivierte** Positionen
-  - Verwenden Sie den Umschalter **Anzeigen: Deaktiviert** oder **Anzeigen: Alle**, um deaktivierte Positionen zu sehen
+  - Wählen Sie im Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** die Option **Deaktiviert** oder **Alle**, um deaktivierte Positionen zu sehen
 
 **Wann deaktivieren vs. löschen**:
   - **Bevorzugen Sie das Deaktivieren**: Bewahrt die Historie, stellt konsistente Berichte sicher und unterstützt Audit-Trails
   - **Nur löschen, wenn**: Die Position versehentlich erstellt wurde
+  - Eine Position mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Heben Sie zuerst das Einfrieren der Spalte auf, oder setzen Sie stattdessen ein Ende der Gültigkeit
   - Beim Löschen einer Position werden auch ihre Budgets, Zuordnungen, Aufgaben, relevanten Websites, Anhänge (mit ihren Dateien) und ihre Verknüpfungen zu Verträgen entfernt. Wurde eine ihrer Aufgaben in eine Anfrage umgewandelt, bleibt die Anfrage erhalten: Sie hat eine eigene Kopie von Titel, Beschreibung und Anhängen, und nur ihre Verknüpfung zur Aufgabe entfällt
 
 **Tipp**: Verwenden Sie das Ende der Gültigkeit, um OPEX-Positionen auslaufen zu lassen, wenn Verträge enden oder Dienste eingestellt werden. Löschen Sie nur bei echten Fehlern.
