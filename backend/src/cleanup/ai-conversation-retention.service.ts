@@ -161,6 +161,22 @@ export class AiConversationRetentionService implements OnModuleInit {
         `,
         [tenantId, purgeIds],
       );
+      // An action request reaches its conversation twice: conversation_id
+      // directly and preview_id through the previews that CASCADE with it, both
+      // SET NULL. Unlink the second path first so the DELETE does not depend on
+      // the order PostgreSQL fires the FK triggers (trigger-name order, which
+      // differs between a migrated and a pg_restore'd database).
+      await manager.query(
+        `
+        UPDATE ai_action_requests
+        SET preview_id = NULL
+        WHERE tenant_id = $1
+          AND preview_id IN (
+            SELECT id FROM ai_mutation_previews WHERE tenant_id = $1 AND conversation_id = ANY($2::uuid[])
+          )
+        `,
+        [tenantId, purgeIds],
+      );
       await manager.query(
         `
         DELETE FROM ai_conversations

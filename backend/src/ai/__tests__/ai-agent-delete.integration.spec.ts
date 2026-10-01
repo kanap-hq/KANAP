@@ -168,6 +168,7 @@ async function testDeleteUsedAgentWithWorkItemLinkedAudit() {
     assert.equal(audit.some((row: { event_type: string }) => row.event_type === 'agent_deleted'), true);
     for (const row of audit) {
       assert.equal(row.agent_definition_id, null);
+      assert.equal(row.work_item_id, null);
     }
   } finally {
     await runner.rollbackTransaction();

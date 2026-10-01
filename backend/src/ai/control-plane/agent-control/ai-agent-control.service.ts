@@ -2361,7 +2361,28 @@ export class AiAgentControlService {
         acknowledged_actions: stamped.action_ids.length,
       },
     });
-    // FK cascades remove triggers, work items, target states, and agent-scoped pauses;
+    // Audit events reach a definition twice: directly (agent_definition_id) and
+    // through its work items (work_item_id), both ON DELETE SET NULL, while the
+    // work items CASCADE. Left to the cascades, the outcome depends on the order
+    // PostgreSQL fires the FK triggers (trigger-name order), which differs
+    // between a migrated and a pg_restore'd database.
+    // Unlink the audit rows from the work items, then delete the work items, so
+    // the final delete only has single-path cascades left.
+    const scope = [context.tenantId, definition.id];
+    await context.manager.query(
+      `UPDATE ai_agent_audit_events
+          SET work_item_id = NULL
+        WHERE tenant_id = $1
+          AND work_item_id IN (
+            SELECT id FROM ai_agent_work_items WHERE tenant_id = $1 AND agent_definition_id = $2
+          )`,
+      scope,
+    );
+    await context.manager.query(
+      'DELETE FROM ai_agent_work_items WHERE tenant_id = $1 AND agent_definition_id = $2',
+      scope,
+    );
+    // FK cascades remove triggers, target states, and agent-scoped pauses;
     // audit events are SET NULL so the deletion record is preserved.
     await repo.delete({ id: definition.id, tenant_id: context.tenantId });
     return { deleted: true, id: definition.id };

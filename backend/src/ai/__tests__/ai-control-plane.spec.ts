@@ -11190,8 +11190,28 @@ async function testDeleteAgentDefinitionRemovesCustomAndAutonomyPolicies() {
     metadata_json: { created_by: AGENT_AUTONOMY_POLICY_SOURCE, agent_definition_id: custom.id, action_class: 'internal_note' },
   }));
 
-  const result = await service.deleteAgentDefinition(context, custom.id);
+  // The work-item cleanup is raw SQL (covered against PostgreSQL by
+  // ai-agent-delete.integration.spec.ts); here only its order and scope are checked.
+  const statements: Array<{ sql: string; params: unknown[] }> = [];
+  const deleteContext = {
+    ...context,
+    manager: {
+      ...manager,
+      query: async (sql: string, params: unknown[] = []) => {
+        statements.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
+        return [];
+      },
+    },
+  };
+  const result = await service.deleteAgentDefinition(deleteContext, custom.id);
   assert.equal(result.deleted, true);
+  assert.deepEqual(statements.map((statement) => statement.sql.split(' ').slice(0, 3).join(' ')), [
+    'UPDATE ai_agent_audit_events SET',
+    'DELETE FROM ai_agent_work_items',
+  ]);
+  for (const statement of statements) {
+    assert.deepEqual(statement.params, [context.tenantId, custom.id]);
+  }
   assert.equal((stores.get(AiAgentDefinition.name) ?? []).some((row: AiAgentDefinition) => row.id === custom.id), false);
   assert.equal((stores.get(AiApprovalPolicy.name) ?? []).some((row: AiApprovalPolicy) => row.id === policy.id), false);
   assert.equal((stores.get(AiAgentDefinition.name) ?? []).some((row: AiAgentDefinition) => row.id === template.id), true);
