@@ -6,16 +6,18 @@ import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace 
 // Known race (plan planning/perf-scale, step 0.3, Annexe A #14), failing
 // until lot 3A lands.
 //
-// `SpendItemContactsService` checks for an existing (item, contact, role)
-// link and then inserts, without `ON CONFLICT` (`spend-item-contacts.service.ts:63-76`
-// for a manual attach, `:134-149` for the sync from the supplier). Two callers
-// that both pass the check: the second insert hits
-// `uniq_spend_item_contact_role` (23505), a 500.
+// `SpendItemContactsService.attachManual` checks for an existing (item,
+// contact, role) link and then inserts, without `ON CONFLICT`
+// (`spend-item-contacts.service.ts:45-87`). Two callers that both pass the
+// check: the second insert hits `uniq_spend_item_contact_role` (23505), a 500.
+// The sync from the supplier inserts `ON CONFLICT DO NOTHING` since b12477e0
+// (`:126-135`), so its scenario passes; the spec stays excluded until the
+// manual attach does the same.
 // Target: the insert is `ON CONFLICT DO NOTHING`; both callers succeed and
 // the item has one link.
 
 function contactsService() {
-  return new SpendItemContactsService(undefined as any, undefined as any, undefined as any, undefined as any, captureAudit() as any);
+  return new SpendItemContactsService(undefined as any, undefined as any, undefined as any, captureAudit() as any);
 }
 
 type Seeded = { itemId: string; contactId: string; supplierId: string };
@@ -49,10 +51,10 @@ async function twoManualAttaches() {
     const params = { contactId, role: SupplierContactRole.COMMERCIAL };
 
     const aInsert = race.gate(a, { label: 'insert the link', when: 'before', match: sql.insertInto('spend_item_contacts') });
-    const aWork = race.start(a, (manager) => contactsService().attachManual(itemId, params, null, { manager }));
+    const aWork = race.start(a, (manager) => contactsService().attachManual(itemId, params, null, { manager, tenantId: race.tenantId }));
     assert.equal(await progress(aWork, { party: a, gate: aInsert }), 'gated', 'harness: A must pause before inserting the link');
 
-    const bWork = race.start(b, (manager) => contactsService().attachManual(itemId, params, null, { manager }));
+    const bWork = race.start(b, (manager) => contactsService().attachManual(itemId, params, null, { manager, tenantId: race.tenantId }));
     await progress(bWork, { party: b });
     aInsert.release();
     const [aDone, bDone] = await Promise.all([settle(aWork), settle(bWork)]);
@@ -70,10 +72,10 @@ async function supplierSyncVersusManualAttach() {
     const user = await race.open('manual attach');
 
     const syncInsert = race.gate(sync, { label: 'insert the supplier link', when: 'before', match: sql.insertInto('spend_item_contacts') });
-    const syncWork = race.start(sync, (manager) => contactsService().syncFromSupplier(itemId, supplierId, null, { manager }));
+    const syncWork = race.start(sync, (manager) => contactsService().syncFromSupplier(itemId, supplierId, null, { manager, tenantId: race.tenantId }));
     assert.equal(await progress(syncWork, { party: sync, gate: syncInsert }), 'gated', 'harness: the sync must pause before inserting the link');
 
-    const userWork = race.start(user, (manager) => contactsService().attachManual(itemId, { contactId, role: SupplierContactRole.COMMERCIAL }, null, { manager }));
+    const userWork = race.start(user, (manager) => contactsService().attachManual(itemId, { contactId, role: SupplierContactRole.COMMERCIAL }, null, { manager, tenantId: race.tenantId }));
     await progress(userWork, { party: user });
     syncInsert.release();
     const [syncDone, userDone] = await Promise.all([settle(syncWork), settle(userWork)]);
