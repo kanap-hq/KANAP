@@ -7,6 +7,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import { useFeatures } from '../../config/FeaturesContext';
 import { useChat, MAX_PENDING_ATTACHMENTS } from '../../ai/useChat';
+import { useStickToBottom } from '../../ai/useStickToBottom';
 import { aiConversationsApi } from '../../ai/aiApi';
 import { AiMutationPreview, ChatConversation, ChatMessage } from '../../ai/aiTypes';
 import ArtifactPanel from '../../ai/components/ArtifactPanel';
@@ -111,6 +112,8 @@ export default function AiWorkspacePage() {
     && (chat.builtinUsage?.count ?? 0) >= (chat.builtinUsage?.limit ?? 0);
 
   const isEmpty = chat.messages.length === 0;
+  const userMessageCount = chat.messages.filter((message) => message.role === 'user').length;
+  const { scrollRef, contentRef } = useStickToBottom(`${chat.conversationId ?? ''}:${userMessageCount}`);
 
   const allPreviews = chat.previews;
   const previewGroups = useMemo(() => buildPreviewGroups(chat.messages), [chat.messages]);
@@ -378,6 +381,7 @@ export default function AiWorkspacePage() {
           /* ── Active conversation: messages + bottom input ── */
           <>
             <Box
+              ref={scrollRef}
               sx={{
                 flex: 1,
                 overflow: 'auto',
@@ -389,7 +393,7 @@ export default function AiWorkspacePage() {
                 scrollbarColor: 'auto transparent',
               }}
             >
-              <Box sx={{ width: '100%', maxWidth: CONTENT_MAX_WIDTH, mx: 'auto', px: 3 }}>
+              <Box ref={contentRef} sx={{ width: '100%', maxWidth: CONTENT_MAX_WIDTH, mx: 'auto', px: 3 }}>
                 <ChatMessageList
                   messages={chat.messages}
                   previews={chat.previews}
