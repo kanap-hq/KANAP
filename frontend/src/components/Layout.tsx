@@ -601,20 +601,42 @@ export default function Layout() {
         </Box>
       </Drawer>}
 
-      <Box component="main" sx={{ flexGrow: 1, p: 2, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Toolbar />
+      {/* The shell is exactly one viewport tall and the page scrolls inside `kanap-app-scroll`,
+          not the window. That bounded height is what lets a workspace root (`height: 100%`)
+          keep its topbar and title in place while its content column scrolls. Ordinary pages
+          are flex items that never shrink, so they keep their natural height and scroll in
+          the same container. print.css unbinds both boxes so a report prints in full. */}
+      <Box
+        component="main"
+        className="kanap-app-main"
+        sx={{ flexGrow: 1, height: '100dvh', display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}
+      >
+        <Toolbar sx={{ flexShrink: 0 }} />
         {config.features.billing && <SubscriptionBanner />}
-        {/* Pages are code-split: this keeps the nav shell on screen while a route chunk
-            loads, instead of unmounting to the full-page spinner in App. */}
-        <React.Suspense
-          fallback={
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
-              <CircularProgress size={28} />
-            </Box>
-          }
+        <Box
+          className="kanap-app-scroll"
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: 'auto',
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            '& > *': { flexShrink: 0 },
+          }}
         >
-          <Outlet />
-        </React.Suspense>
+          {/* Pages are code-split: this keeps the nav shell on screen while a route chunk
+              loads, instead of unmounting to the full-page spinner in App. */}
+          <React.Suspense
+            fallback={
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+                <CircularProgress size={28} />
+              </Box>
+            }
+          >
+            <Outlet />
+          </React.Suspense>
+        </Box>
       </Box>
     </Box>
   );

@@ -5,6 +5,11 @@ import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useFeatures } from '../config/FeaturesContext';
 
+// Rendered by Layout between the app bar spacer and the page scroller, so it stays put
+// while the page scrolls and does not push a full-height workspace past the viewport.
+// The scroller's own top padding gives the gap below it.
+const bannerSx = { mx: 2, mt: 2, flexShrink: 0 } as const;
+
 export default function SubscriptionBanner() {
   const { t } = useTranslation('common');
   const { subscription, claims } = useAuth();
@@ -31,7 +36,7 @@ export default function SubscriptionBanner() {
     return (
       <Alert
         severity="info"
-        sx={{ mb: 2 }}
+        sx={bannerSx}
         action={
           isBillingAdmin ? (
             <Button color="inherit" size="small" onClick={() => navigate('/admin/billing')}>
@@ -52,7 +57,7 @@ export default function SubscriptionBanner() {
       return (
         <Alert
           severity="warning"
-          sx={{ mb: 2 }}
+          sx={bannerSx}
           action={
             <Button color="inherit" size="small" onClick={() => navigate('/admin/billing')}>
               {t('subscription.choosePlanToContinueAction')}
@@ -64,7 +69,7 @@ export default function SubscriptionBanner() {
       );
     }
     return (
-      <Alert severity="warning" sx={{ mb: 2 }}>
+      <Alert severity="warning" sx={bannerSx}>
         {t('subscription.trialExpiredContactAdmin')}
       </Alert>
     );
@@ -75,7 +80,7 @@ export default function SubscriptionBanner() {
     return (
       <Alert
         severity="error"
-        sx={{ mb: 2 }}
+        sx={bannerSx}
         action={
           <Button color="inherit" size="small" onClick={() => navigate('/admin/billing')}>
             {t('subscription.goToBilling')}
@@ -88,7 +93,7 @@ export default function SubscriptionBanner() {
   }
 
   return (
-    <Alert severity="error" sx={{ mb: 2 }}>
+    <Alert severity="error" sx={bannerSx}>
       {t('subscription.accountAccessLimited')}
     </Alert>
   );
