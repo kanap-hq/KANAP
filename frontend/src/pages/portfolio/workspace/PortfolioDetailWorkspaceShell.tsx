@@ -530,17 +530,34 @@ export default function PortfolioDetailWorkspaceShell({
         </Box>
       </Box>
 
+      {/* Desktop: the body fills the bounded page and the content column scrolls under a fixed
+          header. Below md the properties panel stacks under the content, so the body takes its
+          natural height and the app scroller scrolls the whole page instead of squeezing the
+          content between the header and the panel. */}
       <Box
         sx={{
-          flex: 1,
+          flex: isMobile ? '1 0 auto' : 1,
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          overflow: isMobile ? 'auto' : 'visible',
+          overflow: 'visible',
           position: 'relative',
           minHeight: 380,
         }}
       >
-        <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', pt: '8px', pl: isCompact ? 2 : 3, pr: isCompact ? 2 : (isMobile || !hasProperties ? 3 : '29px'), pb: 3 }}>
+        <Box
+          data-primary-scroll={isMobile ? undefined : ''}
+          tabIndex={isMobile ? undefined : -1}
+          sx={{
+            flex: isMobile ? 'none' : 1,
+            minWidth: 0,
+            overflow: isMobile ? 'visible' : 'auto',
+            outline: 'none',
+            pt: '8px',
+            pl: isCompact ? 2 : 3,
+            pr: isCompact ? 2 : (isMobile || !hasProperties ? 3 : '29px'),
+            pb: 3,
+          }}
+        >
           {children}
         </Box>
 

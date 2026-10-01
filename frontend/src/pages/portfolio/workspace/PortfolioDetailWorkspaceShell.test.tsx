@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 
 vi.mock('react-i18next', () => ({
@@ -62,5 +62,54 @@ describe('PortfolioDetailWorkspaceShell', () => {
     expect(screen.queryByRole('tab')).toBeNull();
     expect(screen.getByRole('complementary')).toHaveStyle({ marginTop: '0px', height: 'calc(100% + 0px)' });
     expect(screen.getByRole('button', { name: 'workspace.closeProperties' })).toHaveStyle({ top: '0px' });
+  });
+});
+
+// Every breakpoint query answers `matches`: true renders the below-md (mobile) branch.
+function stubMatchMedia(matches: boolean) {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }));
+}
+
+function contentColumn() {
+  const column = screen.getByText('content').parentElement as HTMLElement;
+  return { column, body: column.parentElement as HTMLElement };
+}
+
+describe('PortfolioDetailWorkspaceShell scrolling', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('on desktop, the content column is the bounded scroller Layout focuses', () => {
+    stubMatchMedia(false);
+    renderShell({ properties: <div>drawer fields</div> });
+    const { column, body } = contentColumn();
+
+    expect(column).toHaveAttribute('data-primary-scroll');
+    expect(column).toHaveAttribute('tabindex', '-1');
+    expect(getComputedStyle(column).overflow).toBe('auto');
+    expect(getComputedStyle(body).flexDirection).toBe('row');
+  });
+
+  it('below md, content and properties take their natural height and the page scrolls', () => {
+    stubMatchMedia(true);
+    renderShell({ properties: <div>drawer fields</div> });
+    const { column, body } = contentColumn();
+
+    expect(column).not.toHaveAttribute('data-primary-scroll');
+    expect(column).not.toHaveAttribute('tabindex');
+    expect(getComputedStyle(column).overflow).toBe('visible');
+    expect(getComputedStyle(column).flex).toMatch(/^none|^0 0 auto/);
+    expect(getComputedStyle(body).overflow).toBe('visible');
+    expect(getComputedStyle(body).flexDirection).toBe('column');
+    // Below md the properties are forced open and stack under the content.
+    expect(body).toContainElement(screen.getByRole('complementary'));
   });
 });

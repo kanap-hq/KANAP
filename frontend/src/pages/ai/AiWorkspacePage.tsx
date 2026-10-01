@@ -316,7 +316,9 @@ export default function AiWorkspacePage() {
   );
 
   return (
-    <Box sx={{ display: 'flex', height: 'calc(100vh - 96px)', overflow: 'hidden' }}>
+    // Fills the app's page scroller exactly (Layout bounds it to the viewport), trial banner
+    // included, so the chat never scrolls the page.
+    <Box sx={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* Sidebar */}
       {sidebarOpen && (
         <Box
