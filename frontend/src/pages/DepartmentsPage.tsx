@@ -9,12 +9,10 @@ import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../components/grid/renderers';
-import CheckboxSetFilter from '../components/CheckboxSetFilter';
-import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
-import { STATUS_VALUES } from '../constants/status';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
+import { statusColumnProps } from '../components/grid/statusColumn';
 
 export default function DepartmentsPage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -117,12 +115,7 @@ export default function DepartmentsPage() {
       field: 'status',
       headerName: t('shared.columns.status'),
       width: 140,
-      filter: CheckboxSetFilter,
-      floatingFilterComponent: CheckboxSetFloatingFilter,
-      filterParams: {
-        values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
-        searchable: false,
-      },
+      ...statusColumnProps(t),
       defaultHidden: true,
       cellRenderer: (params: any) => (
         <LinkCellRenderer

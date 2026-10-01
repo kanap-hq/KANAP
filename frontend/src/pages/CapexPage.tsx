@@ -16,7 +16,6 @@ import { formatItemRef } from '../utils/item-ref';
 import { readStoredCapexListContext, writeStoredCapexListContext } from './capex/listContextStorage';
 import { statusScopeParams } from '../utils/statusScopeParams';
 import ForbiddenPage from './ForbiddenPage';
-import { STATUS_VALUES } from '../constants/status';
 import {
   amountColumnYear,
   buildAmountColumnDefs,
@@ -35,6 +34,7 @@ import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
 import { analyticsFieldKey } from '../services/analytics';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../lib/dateFormat';
+import { statusColumnProps } from '../components/grid/statusColumn';
 // import StatusSwitch from '../components/fields/StatusSwitch';
 
 type SummaryRow = {
@@ -579,12 +579,7 @@ export default function CapexPage() {
         field: 'status',
         headerName: t('capex.columns.enabled'),
         width: 140,
-        filter: CheckboxSetFilter,
-        floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: {
-          values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
-          searchable: false,
-        },
+        ...statusColumnProps(t),
         defaultHidden: true,
         cellRenderer: linkCell('status'),
       },

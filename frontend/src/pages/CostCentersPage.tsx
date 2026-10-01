@@ -12,7 +12,6 @@ import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import CheckboxSetFilter, { type CheckboxSetFilterOption } from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
-import { STATUS_VALUES } from '../constants/status';
 import { COST_CENTER_TREE_QUERY_KEY, useCostCenterTree } from '../hooks/useCostCenterTree';
 import {
   COST_CENTERS_ENDPOINT,
@@ -21,6 +20,7 @@ import {
 } from '../services/costCenters';
 import { COST_CENTER_KINDS } from './cost-centers/costCenterFields';
 import ForbiddenPage from './ForbiddenPage';
+import { statusColumnProps } from '../components/grid/statusColumn';
 
 const DEFAULT_SORT = 'path:ASC';
 
@@ -169,13 +169,7 @@ function CostCentersList() {
         field: 'status',
         headerName: t('costCenters.columns.status'),
         width: 140,
-        filter: CheckboxSetFilter,
-        floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: {
-          values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
-          searchable: false,
-        },
-        valueFormatter: (p: any) => (p.value ? t(`common:statuses.${p.value}`) : ''),
+        ...statusColumnProps(t),
         defaultHidden: true,
         cellRenderer: link,
       },

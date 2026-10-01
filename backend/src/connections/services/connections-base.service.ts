@@ -1,12 +1,12 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, Repository, SelectQueryBuilder } from 'typeorm';
 import { Connection } from '../connection.entity';
 import { ConnectionServer } from '../connection-server.entity';
 import { ConnectionProtocol } from '../connection-protocol.entity';
 import { ConnectionLeg } from '../connection-leg.entity';
 import { Asset } from '../../assets/asset.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
-import { highestClassification, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
+import { resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 
 /**
  * Topology types for connections.
@@ -34,6 +34,80 @@ export type LegInput = {
   port_override: string | null;
   notes: string | null;
 };
+
+/**
+ * Per connection with linked interfaces (connection link -> interface binding -> interface):
+ * the highest criticality and data class among those interfaces by the tenant catalog's rank,
+ * each axis on its own, whether any of them carries PII, and whether some value is missing
+ * from the catalog. The ranking follows highestClassification: values outside the catalog do
+ * not rank and mark the result incomplete. Every table is read in the given tenant only.
+ * With `restrictToIds`, only the links of the `:erIds` connections are aggregated.
+ */
+function linkedInterfaceRiskSql(restrictToIds: boolean): string {
+  return `
+  SELECT l.connection_id,
+         CAST(COUNT(DISTINCT i.id) AS int) AS interface_count,
+         (ARRAY_AGG(cr.code ORDER BY cr.rank DESC) FILTER (WHERE cr.code IS NOT NULL))[1] AS criticality,
+         (ARRAY_AGG(dc.code ORDER BY dc.rank DESC) FILTER (WHERE dc.code IS NOT NULL))[1] AS data_class,
+         BOOL_OR(i.contains_pii) AS contains_pii,
+         BOOL_OR(cr.code IS NULL OR dc.code IS NULL) AS incomplete
+  FROM interface_connection_links l
+  JOIN interface_bindings b ON b.id = l.interface_binding_id AND b.tenant_id = l.tenant_id
+  JOIN interfaces i ON i.id = b.interface_id AND i.tenant_id = b.tenant_id
+  LEFT JOIN UNNEST(CAST(:erCritCodes AS text[]), CAST(:erCritRanks AS float8[])) AS cr(code, rank) ON cr.code = i.criticality
+  LEFT JOIN UNNEST(CAST(:erClassCodes AS text[]), CAST(:erClassRanks AS float8[])) AS dc(code, rank) ON dc.code = i.data_class
+  WHERE l.tenant_id = :erTenant${restrictToIds ? '\n    AND l.connection_id = ANY(CAST(:erIds AS uuid[]))' : ''}
+  GROUP BY l.connection_id
+`.trim();
+}
+
+/**
+ * Effective risk of a connection aliased `c` joined to `er` (joinEffectiveRisk). A derived
+ * connection takes the values of its linked interfaces; with none linked, criticality and data
+ * class are unknown (null) and PII keeps the stored flag. A manual connection keeps its values.
+ * The list filters, sorts and pages on these, so the rows show what was filtered.
+ */
+export const EFFECTIVE_RISK = {
+  criticality: `(CASE WHEN c.risk_mode = 'derived' THEN er.criticality ELSE c.criticality END)`,
+  data_class: `(CASE WHEN c.risk_mode = 'derived' THEN er.data_class ELSE c.data_class END)`,
+  contains_pii: `(CASE WHEN c.risk_mode = 'derived' AND er.connection_id IS NOT NULL THEN er.contains_pii ELSE c.contains_pii END)`,
+  incomplete: `(CASE WHEN c.risk_mode = 'derived' THEN COALESCE(er.incomplete, true) ELSE false END)`,
+  interface_count: `COALESCE(er.interface_count, 0)`,
+} as const;
+
+/** Catalog rank of an effective classification, for sorting by severity (null when not in the catalog). */
+export const EFFECTIVE_RISK_RANK = {
+  criticality: `(SELECT r.rank FROM UNNEST(CAST(:erCritCodes AS text[]), CAST(:erCritRanks AS float8[])) AS r(code, rank) WHERE r.code = ${EFFECTIVE_RISK.criticality})`,
+  data_class: `(SELECT r.rank FROM UNNEST(CAST(:erClassCodes AS text[]), CAST(:erClassRanks AS float8[])) AS r(code, rank) WHERE r.code = ${EFFECTIVE_RISK.data_class})`,
+} as const;
+
+export type EffectiveRisk = {
+  effective_criticality: string | null;
+  effective_data_class: string | null;
+  effective_contains_pii: boolean;
+  derived_interface_count: number;
+  classification_incomplete: boolean;
+};
+
+/** Adds the effective risk columns to a query built with joinEffectiveRisk. */
+export function selectEffectiveRisk(qb: SelectQueryBuilder<Connection>): void {
+  qb.addSelect(EFFECTIVE_RISK.criticality, 'effective_criticality')
+    .addSelect(EFFECTIVE_RISK.data_class, 'effective_data_class')
+    .addSelect(EFFECTIVE_RISK.contains_pii, 'effective_contains_pii')
+    .addSelect(EFFECTIVE_RISK.interface_count, 'derived_interface_count')
+    .addSelect(EFFECTIVE_RISK.incomplete, 'classification_incomplete');
+}
+
+/** Reads the columns added by selectEffectiveRisk from a raw row. */
+export function readEffectiveRisk(row: Record<string, any>): EffectiveRisk {
+  return {
+    effective_criticality: row.effective_criticality ?? null,
+    effective_data_class: row.effective_data_class ?? null,
+    effective_contains_pii: row.effective_contains_pii === true,
+    derived_interface_count: Number(row.derived_interface_count) || 0,
+    classification_incomplete: row.classification_incomplete === true,
+  };
+}
 
 /**
  * Common options for service methods.
@@ -379,132 +453,57 @@ export abstract class ConnectionsBaseService {
   }
 
   /**
-   * Compute effective risk values for connections based on linked interfaces.
+   * Joins the effective risk of each connection onto a connection query aliased `c`, as `er`.
+   * Read the effective values with the EFFECTIVE_RISK expressions.
+   *
+   * The aggregate is a MATERIALIZED common table expression: it runs once per statement. As a
+   * joined subquery the planner could put it on the inner side of a nested loop and re-run it
+   * for every connection when the tenant's statistics are stale (a new tenant, a bulk import
+   * before autoanalyze), which took seconds for a few hundred connections. `ids`, when given,
+   * restricts the aggregate to those connections' links.
+   */
+  protected async joinEffectiveRisk(
+    qb: SelectQueryBuilder<Connection>,
+    tenantId: string,
+    mg: EntityManager,
+    ids?: string[],
+  ): Promise<void> {
+    const catalog = await this.itOpsSettings.getClassificationCatalog(tenantId, { manager: mg });
+    const params: Record<string, unknown> = {
+      erTenant: tenantId,
+      erCritCodes: catalog.businessCriticalityLevels.map((level) => level.code),
+      erCritRanks: catalog.businessCriticalityLevels.map((level) => level.rank),
+      erClassCodes: catalog.dataClasses.map((level) => level.code),
+      erClassRanks: catalog.dataClasses.map((level) => level.rank),
+    };
+    if (ids) params.erIds = ids;
+    qb.addCommonTableExpression(linkedInterfaceRiskSql(!!ids), 'er', { materialized: true });
+    qb.leftJoin('er', 'er', 'er.connection_id = c.id');
+    qb.setParameters(params);
+  }
+
+  /**
+   * Effective risk values of connections: the stored values for a manual connection, the
+   * highest classification of its linked interfaces for a derived one (see EFFECTIVE_RISK).
    */
   protected async computeEffectiveRiskForConnections(
     tenantId: string,
-    bases: Array<{
-      id: string;
-      risk_mode: 'manual' | 'derived';
-      criticality: string | null;
-      data_class: string | null;
-      contains_pii: boolean;
-    }>,
+    bases: Array<{ id: string }>,
     mg: EntityManager,
-  ): Promise<
-    Map<
-      string,
-      {
-        effective_criticality: string | null;
-        effective_data_class: string | null;
-        effective_contains_pii: boolean;
-        derived_interface_count: number;
-        classification_incomplete: boolean;
-      }
-    >
-  > {
-    if (!bases || bases.length === 0) {
-      return new Map();
-    }
-    const ids = Array.from(new Set(bases.map((b) => b.id))).filter(Boolean);
+  ): Promise<Map<string, EffectiveRisk>> {
+    const ids = Array.from(new Set((bases || []).map((b) => b.id))).filter(Boolean);
     if (ids.length === 0) {
       return new Map();
     }
-
-    const catalog = await this.itOpsSettings.getClassificationCatalog(tenantId, { manager: mg });
-
-    const rows: Array<{
-      connection_id: string;
-      interface_id: string;
-      criticality: string | null;
-      data_class: string | null;
-      contains_pii: boolean;
-    }> = await mg.query(
-      `SELECT
-         l.connection_id,
-         i.id AS interface_id,
-         i.criticality,
-         i.data_class,
-         i.contains_pii
-       FROM interface_connection_links l
-       JOIN interface_bindings b ON b.id = l.interface_binding_id
-       JOIN interfaces i ON i.id = b.interface_id
-       WHERE l.connection_id = ANY($1::uuid[])`,
-      [ids],
-    );
-
-    type Accumulator = {
-      criticalities: Array<string | null>;
-      dataClasses: Array<string | null>;
-      containsPii: boolean;
-      interfaceIds: Set<string>;
-    };
-
-    const aggregated = new Map<string, Accumulator>();
-    for (const row of rows) {
-      const cid = row.connection_id;
-      if (!cid) continue;
-      let acc = aggregated.get(cid);
-      if (!acc) {
-        acc = {
-          criticalities: [],
-          dataClasses: [],
-          containsPii: false,
-          interfaceIds: new Set<string>(),
-        };
-        aggregated.set(cid, acc);
-      }
-      acc.criticalities.push(row.criticality);
-      acc.dataClasses.push(row.data_class);
-
-      if (row.contains_pii) {
-        acc.containsPii = true;
-      }
-      const iid = String(row.interface_id || '').trim();
-      if (iid) acc.interfaceIds.add(iid);
-    }
-
-    const result = new Map<
-      string,
-      {
-        effective_criticality: string | null;
-        effective_data_class: string | null;
-        effective_contains_pii: boolean;
-        derived_interface_count: number;
-        classification_incomplete: boolean;
-      }
-    >();
-
-    for (const base of bases) {
-      const acc = aggregated.get(base.id);
-      const derivedCount = acc ? acc.interfaceIds.size : 0;
-      let effective_criticality = base.criticality;
-      let effective_data_class = base.data_class;
-      let effective_contains_pii = base.contains_pii;
-      let classification_incomplete = false;
-
-      if (base.risk_mode === 'derived' && acc && derivedCount > 0) {
-        const criticality = highestClassification(acc.criticalities, catalog.businessCriticalityLevels);
-        const dataClass = highestClassification(acc.dataClasses, catalog.dataClasses);
-        effective_criticality = criticality.code;
-        effective_data_class = dataClass.code;
-        classification_incomplete = criticality.incomplete || dataClass.incomplete;
-        effective_contains_pii = acc.containsPii;
-      } else if (base.risk_mode === 'derived') {
-        effective_criticality = null;
-        effective_data_class = null;
-        classification_incomplete = true;
-      }
-
-      result.set(base.id, {
-        effective_criticality,
-        effective_data_class,
-        effective_contains_pii,
-        derived_interface_count: derivedCount,
-        classification_incomplete,
-      });
-    }
-
-    return result;
+    const qb = mg
+      .getRepository(Connection)
+      .createQueryBuilder('c')
+      .select('c.id', 'id')
+      .where('c.tenant_id = :tenantId', { tenantId })
+      .andWhere('c.id IN (:...ids)', { ids });
+    await this.joinEffectiveRisk(qb, tenantId, mg, ids);
+    selectEffectiveRisk(qb);
+    const rows: Array<Record<string, any>> = await qb.getRawMany();
+    return new Map(rows.map((row) => [String(row.id), readEffectiveRisk(row)]));
   }
 }

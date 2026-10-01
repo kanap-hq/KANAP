@@ -1,14 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, ILike, In, Repository } from 'typeorm';
+import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Connection } from '../connection.entity';
 import { ConnectionServer } from '../connection-server.entity';
 import { ConnectionProtocol } from '../connection-protocol.entity';
 import { ConnectionLeg } from '../connection-leg.entity';
 import { Asset } from '../../assets/asset.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
-import { buildWhereFromAgFilters, parsePagination } from '../../common/pagination';
-import { ConnectionsBaseService, ServiceOpts, Topology } from './connections-base.service';
+import { parsePagination } from '../../common/pagination';
+import { compileAgFilterCondition, createParamNameGenerator, FilterTargetConfig } from '../../common/ag-grid-filtering';
+import {
+  ConnectionsBaseService,
+  EFFECTIVE_RISK,
+  EFFECTIVE_RISK_RANK,
+  EffectiveRisk,
+  readEffectiveRisk,
+  selectEffectiveRisk,
+  ServiceOpts,
+  Topology,
+} from './connections-base.service';
 import { normalizeBindingLifecycle } from '../../interface-bindings/interface-bindings.service';
 
 /**
@@ -28,6 +38,32 @@ type ListItem = Connection & {
   derived_interface_count?: number;
   classification_incomplete?: boolean;
   linked_interface_count?: number;
+};
+
+/** Grid columns the connections list filters on; the risk columns read the effective values. */
+const CONNECTION_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
+  connection_reference: { expression: 'c.connection_reference' },
+  name: { expression: 'c.name' },
+  topology: { expression: 'c.topology' },
+  lifecycle: { expression: 'c.lifecycle' },
+  risk_mode: { expression: 'c.risk_mode' },
+  created_at: { expression: 'c.created_at', textExpression: 'CAST(c.created_at AS TEXT)' },
+  criticality: { expression: EFFECTIVE_RISK.criticality },
+  data_class: { expression: EFFECTIVE_RISK.data_class },
+  contains_pii: { expression: EFFECTIVE_RISK.contains_pii, dataType: 'boolean' },
+};
+
+/** Sort keys; criticality and data class sort by their catalog rank, from the least severe up. */
+const CONNECTION_SORT_EXPRESSIONS: Record<string, string> = {
+  connection_reference: 'c.connection_reference',
+  name: 'c.name',
+  topology: 'c.topology',
+  lifecycle: 'c.lifecycle',
+  criticality: EFFECTIVE_RISK_RANK.criticality,
+  data_class: EFFECTIVE_RISK_RANK.data_class,
+  contains_pii: EFFECTIVE_RISK.contains_pii,
+  created_at: 'c.created_at',
+  updated_at: 'c.updated_at',
 };
 
 /**
@@ -53,16 +89,7 @@ export class ConnectionsListService extends ConnectionsBaseService {
     itemsRaw: Connection[],
     tenant: string,
     mg: EntityManager,
-    effectiveRiskMap?: Map<
-      string,
-      {
-        effective_criticality: string | null;
-        effective_data_class: string | null;
-        effective_contains_pii: boolean;
-        derived_interface_count: number;
-        classification_incomplete: boolean;
-      }
-    >,
+    effectiveRiskMap?: Map<string, EffectiveRisk>,
   ): Promise<ListItem[]> {
     if (itemsRaw.length === 0) return [];
 
@@ -70,8 +97,8 @@ export class ConnectionsListService extends ConnectionsBaseService {
 
     // Fetch protocols for the connections
     const protoRows: Array<{ connection_id: string; connection_type_code: string }> = await mg.query(
-      `SELECT connection_id, connection_type_code FROM connection_protocols WHERE connection_id = ANY($1)`,
-      [ids],
+      `SELECT connection_id, connection_type_code FROM connection_protocols WHERE tenant_id = $1 AND connection_id = ANY($2)`,
+      [tenant, ids],
     );
     const protoMap = new Map<string, string[]>();
     for (const row of protoRows) {
@@ -82,21 +109,10 @@ export class ConnectionsListService extends ConnectionsBaseService {
 
     // Fetch multi-server counts
     const countRows: Array<{ connection_id: string; c: string }> = await mg.query(
-      `SELECT connection_id, COUNT(*)::text as c FROM connection_servers WHERE connection_id = ANY($1) GROUP BY connection_id`,
-      [ids],
+      `SELECT connection_id, COUNT(*)::text as c FROM connection_servers WHERE tenant_id = $1 AND connection_id = ANY($2) GROUP BY connection_id`,
+      [tenant, ids],
     );
     const countMap = new Map<string, number>(countRows.map((r) => [r.connection_id, Number(r.c)]));
-
-    // Fetch linked interface counts (distinct interfaces per connection through bindings)
-    const linkedRows: Array<{ connection_id: string; c: string }> = await mg.query(
-      `SELECT l.connection_id, COUNT(DISTINCT b.interface_id)::text AS c
-       FROM interface_connection_links l
-       JOIN interface_bindings b ON b.id = l.interface_binding_id
-       WHERE l.connection_id = ANY($1)
-       GROUP BY l.connection_id`,
-      [ids],
-    );
-    const linkedCountMap = new Map<string, number>(linkedRows.map((r) => [r.connection_id, Number(r.c)]));
 
     // Collect asset IDs to resolve names for source/destination
     const assetIds = Array.from(
@@ -110,8 +126,8 @@ export class ConnectionsListService extends ConnectionsBaseService {
     if (assetIds.length > 0) {
       const rows: Array<{ id: string; name: string; environment: string; kind: string; provider: string }> =
         await mg.query(
-          `SELECT id, name, environment, kind, provider FROM assets WHERE id = ANY($1)`,
-          [assetIds],
+          `SELECT id, name, environment, kind, provider FROM assets WHERE tenant_id = $1 AND id = ANY($2)`,
+          [tenant, assetIds],
         );
       assetMap = new Map(rows.map((r) => [r.id, r]));
     }
@@ -152,7 +168,8 @@ export class ConnectionsListService extends ConnectionsBaseService {
         source_asset_name,
         destination_asset_name,
         multi_server_count: countMap.get(c.id) || 0,
-        linked_interface_count: linkedCountMap.get(c.id) || 0,
+        // Distinct linked interfaces, the count the effective risk aggregate already made.
+        linked_interface_count: effective?.derived_interface_count ?? 0,
         effective_criticality: effective ? effective.effective_criticality : c.criticality,
         effective_data_class: effective ? effective.effective_data_class : c.data_class,
         effective_contains_pii: effective?.effective_contains_pii ?? c.contains_pii,
@@ -163,70 +180,73 @@ export class ConnectionsListService extends ConnectionsBaseService {
   }
 
   /**
+   * The tenant's connections matching the quick search and the grid's filter model, with the
+   * effective risk joined. `list` and `listIds` both start from it, so the rows and the
+   * prev/next ids always agree. Risk columns filter and sort on the effective values, which
+   * are what the list shows.
+   */
+  private async buildFilteredQuery(tenant: string, query: any, mg: EntityManager): Promise<SelectQueryBuilder<Connection>> {
+    const { q, filters } = parsePagination(query);
+    const qb = mg.getRepository(Connection).createQueryBuilder('c').where('c.tenant_id = :listTenant', { listTenant: tenant });
+    await this.joinEffectiveRisk(qb, tenant, mg);
+
+    // Single-value query parameters, as the grid's set filter on the same column.
+    const legacy: Record<string, unknown> = {};
+    if (query.topology) legacy.topology = this.normalizeTopology(query.topology);
+    if (query.lifecycle) legacy.lifecycle = String(query.lifecycle || '').trim().toLowerCase();
+    if (query.criticality) legacy.criticality = await this.normalizeCriticality(query.criticality, tenant, mg);
+    if (query.data_class) legacy.data_class = await this.normalizeDataClass(query.data_class, tenant, mg);
+    if (query.contains_pii !== undefined) legacy.contains_pii = String(this.normalizeContainsPii(query.contains_pii));
+
+    const models: Array<[string, any]> = [
+      ...Object.entries(filters && typeof filters === 'object' ? filters : {}),
+      ...Object.entries(legacy).map(([field, value]): [string, any] => [field, { filterType: 'set', values: [value] }]),
+    ];
+    const nextParam = createParamNameGenerator('cfl');
+    for (const [field, model] of models) {
+      const target = CONNECTION_FILTER_TARGETS[field];
+      if (!target) continue;
+      const condition = compileAgFilterCondition(model, target, nextParam);
+      // Parenthesized, so no condition can widen the tenant predicate above.
+      if (condition) qb.andWhere(`(${condition.sql})`, condition.params);
+    }
+
+    if (q) {
+      qb.andWhere('(c.connection_reference ILIKE :listQ OR c.name ILIKE :listQ)', { listQ: `%${q}%` });
+    }
+    return qb;
+  }
+
+  /** Orders a query built by buildFilteredQuery; the id breaks ties so pages never overlap. */
+  private applySort(qb: SelectQueryBuilder<Connection>, sort: { field: string; direction: string }): void {
+    const field = CONNECTION_SORT_EXPRESSIONS[sort.field] ? sort.field : 'created_at';
+    const direction = sort.direction === 'ASC' ? 'ASC' : 'DESC';
+    // Parenthesized: TypeORM would take a bare `c.name` for the entity column and rename it.
+    qb.addSelect(`(${CONNECTION_SORT_EXPRESSIONS[field]})`, 'list_sort_key');
+    qb.orderBy('list_sort_key', direction, 'NULLS LAST').addOrderBy('c.id', 'ASC');
+  }
+
+  /**
    * List connections with filtering, sorting, and pagination.
    */
   async list(tenantId: string, query: any, opts?: ServiceOpts) {
     const tenant = this.ensureTenantId(tenantId);
     const repo = this.getRepo(opts?.manager);
     const mg = opts?.manager ?? repo.manager;
-    const { page, limit, skip, sort, q, filters } = parsePagination(query);
-    const allowedFilters = ['connection_reference', 'name', 'topology', 'lifecycle', 'criticality', 'data_class', 'contains_pii'];
-    const where: Record<string, any> = buildWhereFromAgFilters(filters, allowedFilters);
-    if (query.topology) {
-      where.topology = this.normalizeTopology(query.topology);
-    }
-    if (query.lifecycle) {
-      where.lifecycle = String(query.lifecycle || '').trim().toLowerCase();
-    }
-    if (query.criticality) {
-      where.criticality = await this.normalizeCriticality(query.criticality, tenant, mg);
-    }
-    if (query.data_class) {
-      where.data_class = await this.normalizeDataClass(query.data_class, tenant, mg);
-    }
-    if (query.contains_pii !== undefined) {
-      where.contains_pii = this.normalizeContainsPii(query.contains_pii);
-    }
+    const { page, limit, skip, sort } = parsePagination(query);
+    const qb = await this.buildFilteredQuery(tenant, query, mg);
+    const total = await qb.clone().getCount();
 
-    let whereArr: any[] | undefined;
-    if (q) {
-      const like = ILike(`%${q}%`);
-      whereArr = [{ ...where, connection_reference: like }, { ...where, name: like }];
-    }
-
-    const allowedSortFields = [
-      'connection_reference',
-      'name',
-      'topology',
-      'lifecycle',
-      'criticality',
-      'data_class',
-      'contains_pii',
-      'created_at',
-      'updated_at',
-    ];
-    const sortField = allowedSortFields.includes(sort.field) ? sort.field : 'created_at';
-    const order = { [sortField]: sort.direction as any };
-
-    const [itemsRaw, total] = await repo.findAndCount({
-      where: whereArr ?? where,
-      order,
-      skip,
-      take: limit,
-    });
-
+    selectEffectiveRisk(qb);
+    this.applySort(qb, sort);
+    // One row per connection (the risk join is grouped by connection), so offset/limit page exactly.
+    qb.offset(skip).limit(limit);
+    const { entities: itemsRaw, raw } = await qb.getRawAndEntities();
     if (itemsRaw.length === 0) {
       return { items: [], total, page, limit };
     }
 
-    const riskBases = itemsRaw.map((c) => ({
-      id: c.id,
-      risk_mode: ((c.risk_mode as any) || 'manual') as 'manual' | 'derived',
-      criticality: c.criticality,
-      data_class: c.data_class,
-      contains_pii: c.contains_pii,
-    }));
-    const effectiveRiskMap = await this.computeEffectiveRiskForConnections(tenant, riskBases, mg);
+    const effectiveRiskMap = new Map(raw.map((row: Record<string, any>) => [String(row.c_id), readEffectiveRisk(row)]));
     const items = await this.enrichListItems(itemsRaw, tenant, mg, effectiveRiskMap);
 
     return { items, total, page, limit };
@@ -236,55 +256,51 @@ export class ConnectionsListService extends ConnectionsBaseService {
     const tenant = this.ensureTenantId(tenantId);
     const repo = this.getRepo(opts?.manager);
     const mg = opts?.manager ?? repo.manager;
-    const { sort, q, filters } = parsePagination(query);
-    const allowedFilters = ['connection_reference', 'name', 'topology', 'lifecycle', 'criticality', 'data_class', 'contains_pii'];
-    const where: Record<string, any> = buildWhereFromAgFilters(filters, allowedFilters);
-    where.tenant_id = tenant;
-    if (query.topology) {
-      where.topology = this.normalizeTopology(query.topology);
-    }
-    if (query.lifecycle) {
-      where.lifecycle = String(query.lifecycle || '').trim().toLowerCase();
-    }
-    if (query.criticality) {
-      where.criticality = await this.normalizeCriticality(query.criticality, tenant, mg);
-    }
-    if (query.data_class) {
-      where.data_class = await this.normalizeDataClass(query.data_class, tenant, mg);
-    }
-    if (query.contains_pii !== undefined) {
-      where.contains_pii = this.normalizeContainsPii(query.contains_pii);
-    }
-
-    let whereArr: any[] | undefined;
-    if (q) {
-      const like = ILike(`%${q}%`);
-      whereArr = [{ ...where, connection_reference: like }, { ...where, name: like }];
-    }
-
-    const allowedSortFields = [
-      'connection_reference',
-      'name',
-      'topology',
-      'lifecycle',
-      'criticality',
-      'data_class',
-      'contains_pii',
-      'created_at',
-      'updated_at',
-    ];
-    const sortField = allowedSortFields.includes(sort.field) ? sort.field : 'created_at';
+    const { sort } = parsePagination(query);
+    const qb = await this.buildFilteredQuery(tenant, query, mg);
+    const total = await qb.clone().getCount();
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
-    const [rows, total] = await repo.findAndCount({
-      where: whereArr ?? where,
-      order: { [sortField]: sort.direction as any },
-      take: limit,
-      skip: 0,
-      select: ['id', 'connection_reference'],
-    });
+    qb.select('c.id', 'id').addSelect('c.connection_reference', 'ref');
+    this.applySort(qb, sort);
+    const rows: Array<{ id: string; ref: string | null }> = await qb.limit(limit).getRawMany();
     const ids = rows.map((row) => row.id);
-    const refs = rows.map((row) => row.connection_reference || row.id);
+    const refs = rows.map((row) => row.ref || row.id);
     return { ids, refs, total };
+  }
+
+  /**
+   * Effective risk of the given connections, keyed by id (the AI aggregate groups on it).
+   */
+  async effectiveRiskByIds(tenantId: string, ids: string[], opts?: ServiceOpts): Promise<Map<string, EffectiveRisk>> {
+    const tenant = this.ensureTenantId(tenantId);
+    const mg = opts?.manager ?? this.getRepo().manager;
+    return this.computeEffectiveRiskForConnections(tenant, ids.map((id) => ({ id })), mg);
+  }
+
+  /**
+   * Distinct effective criticality and data class values of the tenant's connections, for the
+   * fields asked in `query.fields` (comma separated). Other fields are not answered here.
+   */
+  async listFilterValues(
+    tenantId: string,
+    query: { fields?: string },
+    opts?: ServiceOpts,
+  ): Promise<Record<string, Array<string | null>>> {
+    const tenant = this.ensureTenantId(tenantId);
+    const mg = opts?.manager ?? this.getRepo().manager;
+    const fields = String(query?.fields ?? '')
+      .split(',')
+      .map((field) => field.trim())
+      .filter((field): field is 'criticality' | 'data_class' => field === 'criticality' || field === 'data_class');
+    const result: Record<string, Array<string | null>> = {};
+    for (const field of Array.from(new Set(fields))) {
+      const qb = mg.getRepository(Connection).createQueryBuilder('c').where('c.tenant_id = :listTenant', { listTenant: tenant });
+      await this.joinEffectiveRisk(qb, tenant, mg);
+      qb.select(EFFECTIVE_RISK[field], 'value').distinct(true).orderBy('value', 'ASC', 'NULLS LAST');
+      const rows: Array<{ value: string | null }> = await qb.getRawMany();
+      result[field] = rows.map((row) => (row.value == null || row.value === '' ? null : String(row.value)));
+    }
+    return result;
   }
 
   /**
@@ -298,7 +314,7 @@ export class ConnectionsListService extends ConnectionsBaseService {
     const rows: Array<{ id: string }> = await mg.query(
       `SELECT DISTINCT c.id
        FROM connections c
-       LEFT JOIN connection_servers cs ON cs.connection_id = c.id
+       LEFT JOIN connection_servers cs ON cs.connection_id = c.id AND cs.tenant_id = c.tenant_id
        WHERE c.tenant_id = $1
          AND (c.source_asset_id = $2 OR c.destination_asset_id = $2 OR cs.asset_id = $2)`,
       [tenant, aid],
@@ -581,33 +597,33 @@ export class ConnectionsListService extends ConnectionsBaseService {
          COALESCE(
            (SELECT JSONB_OBJECT_AGG(cp2.connection_type_code, cp2.port_override)
             FROM connection_protocols cp2
-            WHERE cp2.connection_id = c.id AND cp2.port_override IS NOT NULL),
+            WHERE cp2.tenant_id = c.tenant_id AND cp2.connection_id = c.id AND cp2.port_override IS NOT NULL),
            '{}'::jsonb
          ) AS protocol_port_overrides,
          ARRAY_REMOVE(ARRAY_AGG(DISTINCT cs.asset_id), NULL) AS asset_ids
        FROM connections c
-       LEFT JOIN connection_protocols cp ON cp.connection_id = c.id
-       LEFT JOIN connection_servers cs ON cs.connection_id = c.id
+       LEFT JOIN connection_protocols cp ON cp.connection_id = c.id AND cp.tenant_id = c.tenant_id
+       LEFT JOIN connection_servers cs ON cs.connection_id = c.id AND cs.tenant_id = c.tenant_id
        WHERE c.tenant_id = $1
          AND c.lifecycle = ANY($2::text[])
          AND (
            (c.topology = 'server_to_server' AND (
-             EXISTS (SELECT 1 FROM assets a WHERE a.id = c.source_asset_id AND a.environment = $3)
-             OR EXISTS (SELECT 1 FROM assets a WHERE a.id = c.destination_asset_id AND a.environment = $3)
+             EXISTS (SELECT 1 FROM assets a WHERE a.tenant_id = c.tenant_id AND a.id = c.source_asset_id AND a.environment = $3)
+             OR EXISTS (SELECT 1 FROM assets a WHERE a.tenant_id = c.tenant_id AND a.id = c.destination_asset_id AND a.environment = $3)
            ))
            OR
            (c.topology = 'multi_server' AND EXISTS (
              SELECT 1
              FROM connection_servers cs2
-             JOIN assets a2 ON a2.id = cs2.asset_id
-             WHERE cs2.connection_id = c.id
+             JOIN assets a2 ON a2.id = cs2.asset_id AND a2.tenant_id = cs2.tenant_id
+             WHERE cs2.tenant_id = c.tenant_id AND cs2.connection_id = c.id
                AND a2.environment = $3
            ))
            OR EXISTS (
              SELECT 1
              FROM connection_legs cl
-             LEFT JOIN assets a3 ON a3.id = cl.equipment_asset_id
-             WHERE cl.connection_id = c.id
+             LEFT JOIN assets a3 ON a3.id = cl.equipment_asset_id AND a3.tenant_id = cl.tenant_id
+             WHERE cl.tenant_id = c.tenant_id AND cl.connection_id = c.id
                AND (
                  (a3.environment = $3)
                  OR (cl.equipment_asset_id IS NULL AND cl.equipment_entity_code IS NULL)

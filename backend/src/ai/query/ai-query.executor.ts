@@ -2421,6 +2421,9 @@ export class AiQueryExecutor {
         // Without the real userId the library ACL degrades to "unrestricted".
         userId: context.userId ?? null,
       }) as any;
+    } else if (input.entity_type === 'connections') {
+      // Effective criticality and data class, as the list filters on them; other fields fall back below.
+      raw = await this.connections.listFilterValues(context.tenantId, query, { manager: context.manager }) as any;
     } else if (input.entity_type === 'locations') {
       raw = await this.locations.listFilterValues(query, { manager: context.manager, tenantId: context.tenantId }) as any;
     } else if (input.entity_type === 'users') {

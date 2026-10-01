@@ -8,14 +8,12 @@ import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { useAuth } from '../auth/AuthContext';
-import CheckboxSetFilter from '../components/CheckboxSetFilter';
-import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
-import { STATUS_VALUES } from '../constants/status';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import BusinessProcessCategoryManagerDialog from './business-processes/BusinessProcessCategoryManagerDialog';
 import ForbiddenPage from './ForbiddenPage';
+import { statusColumnProps } from '../components/grid/statusColumn';
 
 type BusinessProcessRow = {
   id: string;
@@ -106,12 +104,7 @@ export default function BusinessProcessesPage() {
         field: 'status',
         headerName: t('shared.columns.status'),
         width: 140,
-        filter: CheckboxSetFilter,
-        floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: {
-          values: STATUS_VALUES.map((value) => ({ value, label: t(`common:statuses.${value}`) })),
-          searchable: false,
-        },
+        ...statusColumnProps(t),
         defaultHidden: true,
         cellRenderer: (params: any) => (
           <LinkCellRenderer {...params} linkType="internal" getHref={getBusinessProcessHref} onNavigate={(href) => navigate(href)} />

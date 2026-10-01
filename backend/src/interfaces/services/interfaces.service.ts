@@ -38,6 +38,10 @@ export class InterfacesService {
     return this.listService.listIds(query, opts);
   }
 
+  businessProcessFilterValues(opts?: ServiceOpts) {
+    return this.listService.businessProcessFilterValues(opts);
+  }
+
   listByApplication(applicationId: string, tenantId: string, opts?: ServiceOpts) {
     return this.listService.listByApplication(applicationId, tenantId, opts);
   }

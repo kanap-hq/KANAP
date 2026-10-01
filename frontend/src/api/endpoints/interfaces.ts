@@ -255,15 +255,9 @@ export type UpdateConnectionInput = Partial<CreateConnectionInput>;
  */
 export const interfacesApi = {
   /**
-   * List interfaces with pagination and filtering
+   * List interfaces with pagination; column filters go in `filters` (the grid filter model, JSON).
    */
-  list: (params?: PaginationParams & {
-    lifecycle?: string;
-    criticality?: string;
-    data_category?: string;
-    business_process_id?: string;
-    contains_pii?: string;
-  }): Promise<PaginatedResponse<InterfaceSummary>> =>
+  list: (params?: PaginationParams): Promise<PaginatedResponse<InterfaceSummary>> =>
     api.paginated<InterfaceSummary>('/interfaces', params),
 
   /**
