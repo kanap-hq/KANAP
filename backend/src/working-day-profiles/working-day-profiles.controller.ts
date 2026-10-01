@@ -31,6 +31,7 @@ import {
 import { WorkingDayProfilesCsvService } from './working-day-profiles-csv.service';
 import { WorkingDayProfilesDeleteService } from './working-day-profiles-delete.service';
 import { WorkingDayProfileContext, WorkingDayProfilesService } from './working-day-profiles.service';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 function context(ctx: TenantRequest): WorkingDayProfileContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -125,6 +126,7 @@ export class WorkingDayProfilesController {
   }
 
   @RequireLevel('working_day_profiles', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   import(

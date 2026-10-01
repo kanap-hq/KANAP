@@ -36,6 +36,7 @@ import { KnowledgeService, RelationEntityType } from './knowledge.service';
 import { InlineImageResolverService } from './inline-image-resolver.service';
 import { KnowledgeRelationsService } from './knowledge-relations.service';
 import { KnowledgeWorkflowService } from './knowledge-workflow.service';
+import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('knowledge')
@@ -689,6 +690,7 @@ export class KnowledgeController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('knowledge', 'reader')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post(':idOrRef/export')
   async exportDocument(
     @Param('idOrRef') idOrRef: string,

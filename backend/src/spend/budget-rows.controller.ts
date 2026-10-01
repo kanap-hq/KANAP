@@ -9,6 +9,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { csvImportMulterOptions } from '../common/upload';
 import { BudgetRowsCsvService } from './budget-rows-csv.service';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 // Five rows per line and year (about 100 to 150 bytes each): the item CSV's
 // 1 MB would refuse the export of a mid-size tenant. A year-limited export
@@ -54,6 +55,7 @@ export class BudgetRowsController {
 
   @UseGuards(PermissionGuard)
   @RequireAnyLevel([{ resource: 'opex', level: 'admin' }, { resource: 'capex', level: 'admin' }])
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', budgetRowsMulterOptions))
   async import(

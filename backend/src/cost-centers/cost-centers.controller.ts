@@ -27,6 +27,7 @@ import { CostCentersCsvService } from './cost-centers-csv.service';
 import { CostCentersDeleteService } from './cost-centers-delete.service';
 import { CostCenterContext, CostCentersService } from './cost-centers.service';
 import { CostCenterBulkDeleteDto, CostCenterCreateDto, CostCenterUpdateDto } from './dto/cost-center.dto';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 function context(ctx: TenantRequest): CostCenterContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -96,6 +97,7 @@ export class CostCentersController {
   }
 
   @RequireLevel('cost_centers', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   import(

@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { TenancyManager } from './tenancy.manager';
+import { answerTenantLookupFailed } from './request-tenancy.middleware';
 
 /**
  * Routes that should bypass tenant resolution.
@@ -74,13 +75,13 @@ export class TenancyMiddleware implements NestMiddleware {
       } else {
         (req as any).tenant = null;
       }
-
-      return next();
     } catch (error) {
-      // Log error but don't block the request
-      console.error('[TenancyMiddleware] Error resolving tenant:', error);
-      return next();
+      // The lookup failed (pool exhausted, database down): 503 busy. Going on without a
+      // tenant would answer with fake 401s and "Tenant context is required".
+      answerTenantLookupFailed(req, res, error);
+      return;
     }
+    return next();
   }
 
   /**

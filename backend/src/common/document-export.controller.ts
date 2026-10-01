@@ -9,6 +9,7 @@ import { RateLimitGuard } from './rate-limit.guard';
 import { RATE_LIMITS } from './rate-limit';
 import { ExportDto } from './dto/export.dto';
 import { DocumentExportService, ExportImageFetchOptions } from './document-export.service';
+import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from './request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('export')
@@ -18,6 +19,7 @@ export class DocumentExportController {
     private readonly inlineImages: InlineImageResolverService,
   ) {}
 
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post()
   @UseGuards(RateLimitGuard)
   @Throttle({ default: RATE_LIMITS.documentExport })

@@ -27,6 +27,7 @@ import { IntegratedDocumentsService } from '../knowledge/integrated-documents.se
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { REFRESH_TOKEN_COOKIE_NAME, parseCookieValue } from '../auth/auth-cookie.util';
 import { resolveBusinessContributorScope, taskParticipantCondition } from '../auth/business-contributor-scope';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 const RANK: Record<PermissionLevel, number> = {
   reader: 1,
@@ -170,6 +171,7 @@ export class PortfolioRequestsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_requests', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importCsv(

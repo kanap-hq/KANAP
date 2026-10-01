@@ -5,6 +5,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ALL_KEY } from './freeze.service';
 import { assertCanManageMasterDataScope, MasterDataAccess } from '../master-data/master-data-access.util';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 const MANAGE_FREEZE_REQUIREMENTS = [
   { resource: 'budget_ops', level: 'admin' as const },
@@ -71,6 +72,7 @@ export class FreezeController {
     });
   }
 
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('freeze')
   @UseGuards(PermissionGuard)
   @RequireAnyLevel(MANAGE_FREEZE_REQUIREMENTS)
@@ -95,6 +97,7 @@ export class FreezeController {
     };
   }
 
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('unfreeze')
   @UseGuards(PermissionGuard)
   @RequireAnyLevel(MANAGE_FREEZE_REQUIREMENTS)

@@ -5,6 +5,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 import { catchError, finalize, mergeMap } from 'rxjs/operators';
 import { IS_PUBLIC_KEY } from '../auth/public.decorator';
 import { SKIP_TENANT_TRANSACTION_KEY } from './skip-tenant-transaction.decorator';
+import { resolveRequestDbTimeouts, startTenantTransaction } from './request-db-timeouts';
 
 @Injectable()
 export class TenantInterceptor implements NestInterceptor {
@@ -69,8 +70,7 @@ export class TenantInterceptor implements NestInterceptor {
     return from((async () => {
       if (!existing) {
         await runner.connect();
-        await runner.startTransaction();
-        await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+        await startTenantTransaction(runner, tenantId, resolveRequestDbTimeouts(this.reflector, context));
         (req as any).queryRunner = runner;
       }
       return true;

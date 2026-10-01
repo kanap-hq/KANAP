@@ -11,6 +11,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { contentDisposition } from '../common/content-disposition';
 import { ContractContactsService } from './contract-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -176,6 +177,7 @@ export class ContractsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(@UploadedFile() file: Express.Multer.File, @Query('dryRun') dryRunRaw: string, @Req() req: any) {

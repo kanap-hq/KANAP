@@ -9,6 +9,7 @@ import { IsBoolean, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, Min, Val
 import { SubscriptionType } from './subscription.entity';
 import { Type } from 'class-transformer';
 import type { PlanKey, IntervalKey } from './plans.config';
+import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 
 class CreateCheckoutSessionDto {
   @IsOptional()
@@ -151,6 +152,7 @@ export class BillingController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('billing', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post('change-plan')
   async changePlan(@Req() req: any, @Body() body: ChangePlanDto) {
     if (!Features.STRIPE_BILLING) throwFeatureDisabled('billing');
@@ -164,6 +166,7 @@ export class BillingController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('billing', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post('request-invoice')
   async requestInvoice(@Req() req: any, @Body() body: RequestInvoiceDto) {
     if (!Features.STRIPE_BILLING) throwFeatureDisabled('billing');
@@ -177,6 +180,7 @@ export class BillingController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('billing', 'reader')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Get('profile')
   async profile(@Req() req: any) {
     if (!Features.STRIPE_BILLING) throwFeatureDisabled('billing');
@@ -192,6 +196,7 @@ export class BillingController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('billing', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post('portal')
   async openPortal(@Req() req: any, @Body() body: OpenPortalDto) {
     if (!Features.STRIPE_BILLING) throwFeatureDisabled('billing');
@@ -206,6 +211,7 @@ export class BillingController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('billing', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post('checkout')
   async createCheckout(@Req() req: any, @Body() body: CreateCheckoutSessionDto) {
     if (!Features.STRIPE_BILLING) throwFeatureDisabled('billing');

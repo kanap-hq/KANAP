@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { DataSource } from 'typeorm';
 import { IS_PUBLIC_KEY } from '../auth/public.decorator';
 import { SKIP_TENANT_TRANSACTION_KEY } from './skip-tenant-transaction.decorator';
+import { resolveRequestDbTimeouts, startTenantTransaction } from './request-db-timeouts';
 
 @Injectable()
 export class TenantInitGuard implements CanActivate {
@@ -30,11 +31,18 @@ export class TenantInitGuard implements CanActivate {
 
     // Create QueryRunner and set tenant context BEFORE other guards run.
     // This is required for PermissionGuard to query role_permissions with proper RLS context.
+    // The transaction carries the route's bounded waits (see request-db-timeouts.ts).
     if (!req.queryRunner) {
       const runner = this.dataSource.createQueryRunner();
       await runner.connect();
-      await runner.startTransaction();
-      await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+      try {
+        await startTenantTransaction(runner, tenantId, resolveRequestDbTimeouts(this.reflector, context));
+      } catch (error) {
+        // Not on the request yet: nobody else would give the connection back.
+        if (runner.isTransactionActive) await runner.rollbackTransaction().catch(() => undefined);
+        await runner.release().catch(() => undefined);
+        throw error;
+      }
       req.queryRunner = runner;
       req._tenantRunnerOwner = true; // Mark that this guard owns the runner
     }

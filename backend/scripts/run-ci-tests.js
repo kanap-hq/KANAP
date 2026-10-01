@@ -39,7 +39,6 @@ const EXCLUDE = new Set([
   // with `npm run test:races` on a dedicated database (they refuse appdb
   // outside GitHub Actions).
   'src/capex/__tests__/capex-item-update-race.integration.spec.ts', // 3B
-  'src/common/__tests__/request-lock-timeout-race.integration.spec.ts', // 1D
   'src/spend/__tests__/allocation-rules-race.integration.spec.ts', // 3A
   'src/spend/__tests__/budget-operations-deadlock-race.integration.spec.ts', // 3F
   'src/spend/__tests__/item-applications-race.integration.spec.ts', // 3A
@@ -60,8 +59,9 @@ const ENV = {
 // A spec that matches one of these opens a real database connection. A spec
 // that opens it only through a shared helper (`runSpecs`, `runRaceSpecs`)
 // carries an explicit `// @database-spec` marker, rather than relying on a
-// word its comments happen to contain.
-const DB_PATTERN = /NestFactory\.create|createTestingModule|TypeOrmModule|\.initialize\(\)|data-source|@database-spec\b/;
+// word its comments happen to contain; the race specs also match through
+// their shared harness.
+const DB_PATTERN = /NestFactory\.create|createTestingModule|TypeOrmModule|\.initialize\(\)|data-source|@database-spec\b|race-harness/;
 
 const root = path.resolve(__dirname, '..');
 

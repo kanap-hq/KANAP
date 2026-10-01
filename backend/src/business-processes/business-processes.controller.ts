@@ -25,6 +25,7 @@ import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { BusinessProcessCategoriesService } from './business-process-categories.service';
 import { BusinessProcessCategoryUpsertDto } from './dto/business-process-category.dto';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('business-processes')
@@ -101,6 +102,7 @@ export class BusinessProcessesController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

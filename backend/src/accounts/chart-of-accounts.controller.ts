@@ -9,6 +9,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { Response } from 'express';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chart-of-accounts')
@@ -88,6 +89,7 @@ export class ChartOfAccountsController {
   // CoA-scoped Accounts CSV import
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post(':id/accounts/import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   importAccounts(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Query('dryRun') dryRunRaw: string, @Req() req: any) {
@@ -98,6 +100,7 @@ export class ChartOfAccountsController {
   // Load from template into selected CoA
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post(':id/load-template')
   loadTemplate(
     @Param('id') id: string,

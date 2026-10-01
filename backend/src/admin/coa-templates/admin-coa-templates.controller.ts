@@ -7,6 +7,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../../common/upload';
 import { contentDisposition } from '../../common/content-disposition';
 import { Response } from 'express';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../../common/request-db-timeouts';
 
 @UseGuards(MultiTenantOnlyGuard, JwtAuthGuard, PlatformAdminGuard)
 @Controller('admin/coa-templates')
@@ -42,6 +43,7 @@ export class AdminCoaTemplatesController {
     res.send(content);
   }
 
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post(':id/import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   import(

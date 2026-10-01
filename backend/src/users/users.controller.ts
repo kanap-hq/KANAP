@@ -17,6 +17,7 @@ import { UserRole } from './user-role.entity';
 import { Role } from '../roles/role.entity';
 import { User } from './user.entity';
 import { AuditService } from '../audit/audit.service';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
@@ -117,6 +118,7 @@ export class UsersController {
     );
   }
 
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')

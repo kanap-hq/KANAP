@@ -2,7 +2,20 @@ import { ArgumentsHost, Catch } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import { QueryRunner } from 'typeorm';
 import { attachErrorToResponse } from '../../admin/ops/request-metrics.middleware';
+import { mapDatabaseError } from './database-error.mapping';
 
+/**
+ * Global exception filter. Rolls back and releases the request's tenant runner
+ * when an error escaped before TenantInterceptor finished it, then answers:
+ * - a database error a race can cause (unique, foreign key, deadlock, lock or
+ *   statement timeout) as 409 / 503 with a stable `code`, see
+ *   `database-error.mapping.ts` (one warning line instead of a stack trace);
+ * - after the client aborted the request (`req._clientAborted`, set by the
+ *   finalizer in main.ts, which already rolled back): nothing, quietly. The
+ *   handler kept running on a released runner, so the error it ends with is
+ *   noise, and nobody is listening for the answer;
+ * - anything else as before (BaseExceptionFilter).
+ */
 @Catch()
 export class ReleaseTenantRunnerFilter extends BaseExceptionFilter {
   constructor(adapter?: any) {
@@ -46,6 +59,22 @@ export class ReleaseTenantRunnerFilter extends BaseExceptionFilter {
       console.error('[ReleaseTenantRunnerFilter] Cleanup error:', cleanupError);
     }
 
+    const req: any = host.switchToHttp().getRequest();
+    if (req?._clientAborted) return;
+
+    const mapped = mapDatabaseError(exception);
+    if (mapped) {
+      const res: any = host.switchToHttp().getResponse();
+      if (mapped.retryAfterSeconds && typeof res?.setHeader === 'function' && !res.headersSent) {
+        res.setHeader('Retry-After', String(mapped.retryAfterSeconds));
+      }
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[db] ${req?.method ?? ''} ${req?.originalUrl ?? req?.url ?? ''}: ${mapped.sqlState}`
+        + `${mapped.constraint ? ` (${mapped.constraint})` : ''} answered ${mapped.exception.getStatus()} ${mapped.code}`,
+      );
+      return super.catch(mapped.exception, host);
+    }
     return super.catch(exception, host);
   }
 }

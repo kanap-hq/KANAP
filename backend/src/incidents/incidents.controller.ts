@@ -44,6 +44,7 @@ import {
   parseIncidentReason,
 } from './dto';
 import { incidentViewerFromContext } from './incident-visibility';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('incidents')
@@ -162,6 +163,7 @@ export class IncidentsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'contributor')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   importCsv(
@@ -197,6 +199,7 @@ export class IncidentsController {
   @UseGuards(PermissionGuard, RateLimitGuard)
   @RequireLevel('incidents', 'reader')
   @Throttle({ default: RATE_LIMITS.documentExport })
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Get(':id/report')
   async exportReport(
     @Param('id') idOrRef: string,

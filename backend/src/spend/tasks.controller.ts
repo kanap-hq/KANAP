@@ -46,6 +46,7 @@ import { REFRESH_TOKEN_COOKIE_NAME, parseCookieValue } from '../auth/auth-cookie
 import { projectParticipantCondition, resolveBusinessContributorScope } from '../auth/business-contributor-scope';
 import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -218,6 +219,7 @@ export class TasksController {
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('tasks', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importCsv(

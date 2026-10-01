@@ -43,6 +43,7 @@ import { ApplicationDepartment } from './application-department.entity';
 import { ApplicationLink } from './application-link.entity';
 import { ApplicationAttachment } from './application-attachment.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('applications')
@@ -566,6 +567,7 @@ export class ApplicationsController {
   // Import - uses V2 CSV service
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

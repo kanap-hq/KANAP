@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import { BadRequestException } from '@nestjs/common';
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
+import { requestDbTimeoutDefaults, startTenantTransaction } from './request-db-timeouts';
 
 export type ReleaseConnectionResult<T> = {
   result: T;
@@ -61,8 +62,8 @@ export async function createTenantQueryRunner(
   const runner = dataSource.createQueryRunner();
   try {
     await runner.connect();
-    await runner.startTransaction();
-    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    // The request goes on in this transaction: same tenant and bounded waits as the one it replaces.
+    await startTenantTransaction(runner, tenantId, requestDbTimeoutDefaults());
     return runner;
   } catch (error) {
     try {
