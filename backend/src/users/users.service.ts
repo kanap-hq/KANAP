@@ -31,7 +31,7 @@ import { RolePermission } from '../permissions/role-permission.entity';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { denormalizeCsvFormulaValue, neutralizeCsvFormulaValue } from '../common/csv/csv-export.service';
-import type { ReleaseConnectionFn } from '../common/import-connection';
+import type { CommitThenRunFn } from '../common/import-connection';
 
 const SUPPORTED_USER_LOCALES = ['en', 'fr', 'de', 'es'] as const;
 const SELF_SERVICE_FIELDS = ['first_name', 'last_name', 'job_title', 'business_phone', 'mobile_phone', 'locale'] as const;
@@ -947,8 +947,8 @@ export class UsersService {
    * Invites a user: a password link by e-mail. The token, the status change
    * and the audit row are written first, the e-mail goes last.
    *
-   * With `releaseConnection` (the HTTP route) those writes are committed and
-   * the request's connection given back before the e-mail waits on the mail
+   * With `commitThenRun` (the HTTP route) those writes are committed and the
+   * request's connection given back before the e-mail waits on the mail
    * queue, whose rate limit and retries can take minutes: the request never
    * holds its transaction open on the mail service (the server would end it
    * after the idle limit, taking the token with it, while the e-mail with its
@@ -961,7 +961,7 @@ export class UsersService {
     id: string,
     actorId?: string | null,
     baseUrl?: string,
-    opts?: { manager?: EntityManager; releaseConnection?: ReleaseConnectionFn },
+    opts?: { manager?: EntityManager; commitThenRun?: CommitThenRunFn },
   ) {
     const repo = this.getRepo(opts?.manager);
     const user = await repo.findOne({ where: { id }, relations: ['role'] });
@@ -1017,12 +1017,12 @@ export class UsersService {
       result = { ...saved, password_hash: undefined };
     }
 
-    if (!opts?.releaseConnection) {
+    if (!opts?.commitThenRun) {
       await this.emailService.sendUserInviteEmail(email);
       return result;
     }
     let sendError: unknown = null;
-    await opts.releaseConnection(async () => {
+    await opts.commitThenRun(async () => {
       try {
         await this.emailService.sendUserInviteEmail(email);
       } catch (error) {

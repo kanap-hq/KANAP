@@ -5,7 +5,7 @@ import { UsersService } from '../users.service';
 // A user invitation never holds the request transaction open while its e-mail
 // waits on the mail queue (plan planning/perf-scale, lot 1D review): the
 // token, the status change and the audit row are written, then committed with
-// the request's connection given back (`releaseConnection`), and only then is
+// the request's connection given back (`commitThenRun`), and only then is
 // the e-mail sent. Holding the transaction during the send let the server end
 // it after the idle limit, losing the token while the e-mail with its link
 // still went out.
@@ -36,43 +36,40 @@ function setup(opts: { status: string; mailFails?: boolean }) {
   };
   const audit = { log: async (entry: any) => { events.push(`audit ${entry.table} ${entry.action}`); } };
   const service = new UsersService(repo as any, {} as any, {} as any, {} as any, {} as any, email as any, audit as any);
-  const releaseConnection = async <T>(fn: () => Promise<T>) => {
+  const commitThenRun = async (fn: () => Promise<void>) => {
     events.push('commit and release');
-    const result = await fn();
-    events.push('reacquire');
-    return { result, manager };
+    await fn();
   };
-  return { events, service, manager, releaseConnection };
+  return { events, service, manager, commitThenRun };
 }
 
 async function testWritesCommittedBeforeTheEmail() {
-  const { events, service, manager, releaseConnection } = setup({ status: 'disabled' });
-  const result = await service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager, releaseConnection });
+  const { events, service, manager, commitThenRun } = setup({ status: 'disabled' });
+  const result = await service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager, commitThenRun });
   assert.deepEqual(events, [
     'store token',
     'save status invited',
     'audit users update',
     'commit and release',
     'send e-mail to new.user@example.invalid',
-    'reacquire',
-  ], 'every write happens before the connection is given back; the e-mail waits outside the transaction');
+  ], 'every write happens before the connection is given back; the e-mail waits outside any transaction');
   assert.equal(result.status, 'invited');
   assert.equal(result.password_hash, undefined);
 }
 
 async function testEnabledUserKeepsItsStatus() {
-  const { events, service, manager, releaseConnection } = setup({ status: 'enabled' });
-  await service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager, releaseConnection });
-  assert.deepEqual(events, ['store token', 'commit and release', 'send e-mail to new.user@example.invalid', 'reacquire']);
+  const { events, service, manager, commitThenRun } = setup({ status: 'enabled' });
+  await service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager, commitThenRun });
+  assert.deepEqual(events, ['store token', 'commit and release', 'send e-mail to new.user@example.invalid']);
 }
 
 async function testFailedSendSaysTheInvitationIsSaved() {
-  const { events, service, manager, releaseConnection } = setup({ status: 'disabled', mailFails: true });
+  const { events, service, manager, commitThenRun } = setup({ status: 'disabled', mailFails: true });
   const originalError = console.error;
   console.error = () => undefined;
   try {
     await assert.rejects(
-      service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager, releaseConnection }),
+      service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager, commitThenRun }),
       (error: unknown) => error instanceof BadGatewayException && /saved, but its e-mail could not be sent/.test((error as Error).message),
     );
   } finally {

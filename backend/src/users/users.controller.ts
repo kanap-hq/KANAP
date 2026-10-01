@@ -12,13 +12,13 @@ import { resolveAppBaseUrl } from '../common/url';
 import { Features } from '../config/features';
 import { throwFeatureDisabled } from '../common/feature-gates';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { UserRole } from './user-role.entity';
 import { Role } from '../roles/role.entity';
 import { User } from './user.entity';
 import { AuditService } from '../audit/audit.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { createRequestReleaseConnection } from '../common/import-connection';
+import { createRequestCommitThenRun } from '../common/import-connection';
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
@@ -48,7 +48,6 @@ export class UsersController {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly audit: AuditService,
-    private readonly dataSource: DataSource,
   ) {}
 
   @Get()
@@ -154,7 +153,7 @@ export class UsersController {
     // The invitation is committed before its e-mail waits on the mail queue (see inviteUser).
     return this.svc.inviteUser(id, req.user?.sub ?? null, baseUrl, {
       manager: req?.queryRunner?.manager,
-      releaseConnection: createRequestReleaseConnection(req, this.dataSource, req?.tenant?.id ?? ''),
+      commitThenRun: createRequestCommitThenRun(req),
     });
   }
 

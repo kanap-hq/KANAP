@@ -10,6 +10,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { DataSource, QueryFailedError } from 'typeorm';
 import dataSource from '../../data-source';
 import { ReleaseTenantRunnerFilter } from '../filters/release-tenant-runner.filter';
+import { createRequestCommitThenRun } from '../import-connection';
 import { BULK_WRITE_TIMEOUTS, LongRunningRequest } from '../request-db-timeouts';
 import { ClientAbortedError, createRequestFinalizer } from '../request-finalizer.middleware';
 import { TenantInitGuard } from '../tenant-init.guard';
@@ -29,7 +30,9 @@ import { TenantInterceptor } from '../tenant.interceptor';
 //   commit alone and says the changes may be saved;
 // - a transaction the server ended after the idle limit never answers 2xx:
 //   the handler that wrote then idled gets 503 busy and nothing is committed,
-//   the handler that idled then queried gets 503 busy (not a 500);
+//   the handler that idled then queried gets 503 busy (not a 500); a handler
+//   that commits first and gives its connection back (the user invitation)
+//   can wait on outside work as long as it needs;
 // - a file upload whose body arrives slowly is not ended by the idle limit
 //   (multipart requests get the idle limit of outside work);
 // - no free connection in the pool (after the tenant lookup): 503 busy, from
@@ -138,6 +141,15 @@ class BoundsProbeController {
     await shortIdle(req);
     await sleep(SHORT_IDLE_MS * 3);
     await insertProbe(req, `${PROBE}-idle-query`);
+    return { ok: true };
+  }
+
+  // Writes, commits and gives the connection back, then waits on outside work (the invitation's e-mail).
+  @Post('commit-then-outside')
+  async commitThenOutside(@Req() req: any) {
+    await shortIdle(req);
+    await insertProbe(req, `${PROBE}-commit-then-outside-${req.query.run}`);
+    await createRequestCommitThenRun(req)(async () => { await sleep(SHORT_IDLE_MS * 3); });
     return { ok: true };
   }
 
@@ -364,6 +376,11 @@ async function testIdleTransactionEnded(app: INestApplication, tenantId: string,
     }
   }
   if (await probeRows(tenantId, `${PROBE}-idle-commit`) !== 0) failures.push('write-idle-commit: the write was committed although the transaction was ended');
+  // Committed before the outside work: the idle limit never applies to it.
+  const run = randomUUID().slice(0, 8);
+  const committedFirst = await call(app, 'POST', `commit-then-outside?run=${run}`);
+  if (committedFirst.status !== 201) failures.push(`commit-then-outside: HTTP ${committedFirst.status} ${JSON.stringify(committedFirst.body)}, expected 201`);
+  if (await probeRows(tenantId, `${PROBE}-commit-then-outside-${run}`) !== 1) failures.push('commit-then-outside: the write committed before the outside work is missing');
   if (await probeRows(tenantId, `${PROBE}-idle-query`) !== 0) failures.push('idle-query: a write reached the database outside the request transaction');
   if (error.length > 0) failures.push(`idle: errors logged: ${JSON.stringify(error)}`);
 }
