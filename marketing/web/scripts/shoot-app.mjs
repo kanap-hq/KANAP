@@ -53,16 +53,29 @@ if (!EMAIL || !PASSWORD) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Dashboard widgets load independently; wait until the last skeleton is gone.
+const waitForWidgets = (page) =>
+  page
+    .waitForFunction(() => !document.querySelector('.MuiSkeleton-root'), { timeout: 45000 })
+    .catch(() => {});
+
 const PAGES = {
-  dashboard: {
+  dashboard: { path: '/', waitFor: 'main', prepare: waitForWidgets },
+  // Same dashboard, after opening a few records: "Recently viewed" is kept in
+  // localStorage by each workspace page, so it is only filled within this browser
+  // session. Refs (PRJ-6, T-2...) resolve in the URL; last visited shows first.
+  'dashboard-rich': {
     path: '/',
     waitFor: 'main',
-    async prepare(page) {
-      // Widgets load independently; wait until the last skeleton is gone.
-      await page
-        .waitForFunction(() => !document.querySelector('.MuiSkeleton-root'), { timeout: 45000 })
-        .catch(() => {});
-    },
+    visit: [
+      '/it/applications/APP-8', // SAP S/4HANA
+      '/portfolio/projects/PRJ-12', // Customer 360 Data Contracts
+      '/portfolio/requests/REQ-6', // Cave climate sensors dashboard
+      '/portfolio/tasks/T-2', // SAP Cheddar vendor selection
+      '/portfolio/projects/PRJ-3', // Fromage-as-a-Service
+      '/portfolio/projects/PRJ-6', // SAP Cheddar Migration
+    ],
+    prepare: waitForWidgets,
   },
   plaid: { path: '/ai', waitFor: 'main' },
   'chargeback-global': { path: '/ops/reports/chargeback/global', waitFor: 'main' },
@@ -224,6 +237,22 @@ try {
   });
 
   for (const [name, def] of Object.entries(selected)) {
+    // Open the listed records first; each one writes a fresh entry to the
+    // kanap-recent-views:* localStorage key once its data has loaded.
+    for (const path of def.visit || []) {
+      const since = Date.now();
+      await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page
+        .waitForFunction(
+          (t0) =>
+            Object.keys(localStorage)
+              .filter((k) => k.startsWith('kanap-recent-views:'))
+              .some((k) => (JSON.parse(localStorage.getItem(k) || '[]')[0]?.viewedAt || 0) >= t0),
+          { timeout: 20000 },
+          since,
+        )
+        .catch(() => console.warn(`not recorded as recently viewed: ${path}`));
+    }
     // domcontentloaded + explicit wait: the SPA keeps polling, so networkidle0
     // never reliably settles.
     await page.goto(`${BASE}${def.path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
