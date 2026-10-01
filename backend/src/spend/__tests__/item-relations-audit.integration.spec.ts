@@ -129,7 +129,7 @@ async function testApplications(kind: Kind) {
     for (const ids of [[beta, foreignApp], ['not-a-uuid']]) {
       await assert.rejects(
         () => svc.bulkReplaceApplications(itemId, ids, USER, { manager: mg }),
-        (err: unknown) => err instanceof BadRequestException && /One or more applications not found/.test((err as Error).message),
+        (err: unknown) => err instanceof BadRequestException && /One or more applications were not found\./.test((err as Error).message),
         `${kind}: ${ids.join(',')} refused`,
       );
     }

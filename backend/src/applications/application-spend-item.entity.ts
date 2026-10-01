@@ -1,7 +1,7 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 @Entity('application_spend_items')
-@Index(['application_id', 'spend_item_id'], { unique: true })
+@Unique('uq_app_spend', ['tenant_id', 'application_id', 'spend_item_id'])
 export class ApplicationSpendItemLink {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
