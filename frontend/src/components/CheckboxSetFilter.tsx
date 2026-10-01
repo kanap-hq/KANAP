@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Box, Button, Checkbox, CircularProgress, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useGridFilter } from 'ag-grid-react';
 import type { IFilterParams } from 'ag-grid-community';
 
 export type CheckboxSetFilterOption = {
@@ -32,45 +34,106 @@ type SetFilterModel = {
 
 type CheckboxSetFilterProps = IFilterParams & CheckboxSetFilterParams;
 
-// Delay before a typed search is applied to the grid, so it does not refetch on every keystroke.
+// Delay before a typed search, or a run of checkbox clicks, is applied to the grid, so it does not
+// refetch on every keystroke or click.
 export const SEARCH_APPLY_DELAY_MS = 300;
+// The search box shows from this many values, even on a column that does not ask for it.
+export const SEARCH_MIN_OPTIONS = 20;
+// The value list draws a window of rows of a fixed height, so a column with thousands of values
+// stays fast: about eight rows visible, at most OPTION_WINDOW rows in the page.
+export const OPTION_ROW_HEIGHT = 30;
+export const OPTION_VISIBLE_ROWS = 8;
+export const OPTION_WINDOW = 40;
+// How long the values of a column stay fresh for the same list state.
+const VALUES_STALE_MS = 30_000;
+// The server filters the rows: every row the grid holds passes. Stable, so AG Grid does not take a
+// new function for a filter change.
+const passAll = () => true;
+
+/** Same object, keys sorted: two equal list states give the same query key. */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value as Record<string, unknown>).sort().map((key) => [key, canonical((value as Record<string, unknown>)[key])]));
+  }
+  return value;
+}
+
+/**
+ * Query key of a column's values: the list endpoint, the column and the list state without the
+ * column's own filter (its values do not depend on it).
+ */
+function valuesQueryKey(context: any, colId: string, language: string | undefined) {
+  const state = context?.getQueryState?.() ?? {};
+  const filters = { ...(state.filters || {}) };
+  delete filters[colId];
+  return [
+    'grid-filter-values',
+    state.endpoint ?? null,
+    colId,
+    language ?? null,
+    JSON.stringify(canonical({ q: state.q || '', filters, extraParams: state.extraParams || {}, statusScope: state.statusScope ?? null })),
+  ];
+}
 
 const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, ref) => {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const emptyLabel = props.emptyLabel ?? t('filters.blank');
   const searchable = props.searchable ?? true;
   const labelFormatter = props.labelFormatter;
   const treatAllAsUnfiltered = props.treatAllAsUnfiltered ?? true;
 
-  const [options, setOptions] = useState<CheckboxSetFilterOption[]>([]);
   const [selectedValues, setSelectedValues] = useState<Set<string | null>>(new Set());
   const selectedRef = useRef<Set<string | null>>(new Set());
   const explicitEmptyRef = useRef(false);
   const implicitAllRef = useRef(true);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
   // While a search is typed, the grid applies `snapshot ∩ matching values`. The snapshot is the
   // selection effective when the search started; it is restored when the search is cleared.
   const [snapshot, setSnapshotState] = useState<Set<string | null> | null>(null);
   const snapshotRef = useRef<Set<string | null> | null>(null);
   const snapshotImplicitAllRef = useRef(false);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Checkbox clicks made outside a search and not applied yet: shown at once, applied to the grid
+  // after SEARCH_APPLY_DELAY_MS of quiet.
+  const [pending, setPendingState] = useState<Set<string | null> | null>(null);
+  const pendingRef = useRef<Set<string | null> | null>(null);
+  // One timer for every delayed apply (typed search, checkbox clicks): the latest one wins.
+  const applyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // True while this filter pushes its own model to the grid, which calls setModel back on it.
   const applyingOwnModelRef = useRef(false);
+  // The column's model this filter pushed last (serialised): AG Grid hands it back as the `model`
+  // prop, which then is no outside change.
+  const lastAppliedRef = useRef<string | undefined>(undefined);
 
   const setSnapshot = useCallback((next: Set<string | null> | null) => {
     snapshotRef.current = next;
     setSnapshotState(next);
   }, []);
 
-  const cancelPendingSearch = useCallback(() => {
-    if (searchTimerRef.current != null) {
-      clearTimeout(searchTimerRef.current);
-      searchTimerRef.current = null;
-    }
+  const setPending = useCallback((next: Set<string | null> | null) => {
+    pendingRef.current = next;
+    setPendingState(next);
   }, []);
 
-  useEffect(() => cancelPendingSearch, [cancelPendingSearch]);
+  const cancelPendingApply = useCallback(() => {
+    if (applyTimerRef.current != null) {
+      clearTimeout(applyTimerRef.current);
+      applyTimerRef.current = null;
+    }
+    if (pendingRef.current) setPending(null);
+  }, [setPending]);
+
+  const scheduleApply = useCallback((apply: () => void) => {
+    if (applyTimerRef.current != null) clearTimeout(applyTimerRef.current);
+    applyTimerRef.current = setTimeout(() => {
+      applyTimerRef.current = null;
+      apply();
+    }, SEARCH_APPLY_DELAY_MS);
+  }, []);
+
+  useEffect(() => () => {
+    if (applyTimerRef.current != null) clearTimeout(applyTimerRef.current);
+  }, []);
 
   const buildLabel = useCallback((option: CheckboxSetFilterOption) => {
     if (option.label != null && option.label !== '') return option.label;
@@ -88,32 +151,39 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     return Array.from(map.values());
   }, [buildLabel]);
 
-  const loadOptions = useCallback(async () => {
-    if (!props.getValues && !props.values) return;
-    setLoading(true);
-    try {
-      let incoming: CheckboxSetFilterOption[] = [];
-      if (props.getValues) {
-        incoming = await props.getValues({
-          api: props.api,
-          column: props.column,
-          context: props.context,
-          filterParams: props,
-        });
-      } else if (props.values) {
-        incoming = props.values;
-      }
-      setOptions(normalizeOptions(incoming));
-    } catch (e) {
-      setOptions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [normalizeOptions, props]);
-
-  useEffect(() => {
-    loadOptions();
-  }, [loadOptions]);
+  // The values load when the filter opens, not when AG Grid creates it (a filter in the URL or a
+  // floating filter creates it with the grid), through the query cache: opening again within
+  // VALUES_STALE_MS for the same list state asks nothing, and the previous values stay shown while
+  // a new list state loads.
+  const [open, setOpen] = useState(false);
+  const [openCount, setOpenCount] = useState(0);
+  const colId: string = props.column?.getColId?.() ?? props.colDef?.field ?? '';
+  const propsRef = useRef(props);
+  propsRef.current = props;
+  const queryKey = useMemo(
+    () => valuesQueryKey(props.context, colId, i18n?.language),
+    // Read when the filter opens: the list state only matters for the values then.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [openCount, colId, i18n?.language],
+  );
+  const valuesQuery = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const current = propsRef.current;
+      return current.getValues!({
+        api: current.api,
+        column: current.column,
+        context: current.context,
+        filterParams: current,
+      });
+    },
+    enabled: open && !!props.getValues,
+    staleTime: VALUES_STALE_MS,
+    placeholderData: keepPreviousData,
+  });
+  const incoming = props.getValues ? valuesQuery.data : props.values;
+  const options = useMemo(() => normalizeOptions(incoming ?? []), [incoming, normalizeOptions]);
+  const loading = !!props.getValues && valuesQuery.isLoading;
 
   const mergedOptions = useMemo(() => {
     const map = new Map<string | null, CheckboxSetFilterOption>();
@@ -183,6 +253,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
         explicitEmptyRef.current = false;
       }
     }
+    lastAppliedRef.current = JSON.stringify(nextModel[colId] ?? null);
     if (typeof api.setFilterModel === 'function') {
       applyingOwnModelRef.current = true;
       try {
@@ -237,19 +308,30 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     setSelection(snap);
   }, [setSelection, setSnapshot, updateFilterModel]);
 
-  // Records an explicit choice made while a search session is open and applies it at once.
-  const commitSnapshot = useCallback((nextSnapshot: Set<string | null>) => {
-    cancelPendingSearch();
+  // Records an explicit choice made while a search session is open: a checkbox click is applied
+  // after the quiet delay, All and Clear at once.
+  const commitSnapshot = useCallback((nextSnapshot: Set<string | null>, opts?: { immediate?: boolean }) => {
+    cancelPendingApply();
     snapshotImplicitAllRef.current = false;
     const trimmed = search.trim().toLowerCase();
     if (!trimmed) {
       setSnapshot(null);
-      setSelection(nextSnapshot);
+      if (opts?.immediate) {
+        setSelection(nextSnapshot);
+        return;
+      }
+      setPending(nextSnapshot);
+      scheduleApply(() => {
+        setPending(null);
+        setSelection(nextSnapshot);
+      });
       return;
     }
     setSnapshot(nextSnapshot);
-    setSelection(matchingSubset(nextSnapshot, trimmed));
-  }, [cancelPendingSearch, search, setSnapshot, setSelection, matchingSubset]);
+    const applied = matchingSubset(nextSnapshot, trimmed);
+    if (opts?.immediate) setSelection(applied);
+    else scheduleApply(() => setSelection(applied));
+  }, [cancelPendingApply, search, setSnapshot, setSelection, matchingSubset, setPending, scheduleApply]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -259,29 +341,27 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
       if (!snap) return;
       const restored = snap;
       const wasImplicitAll = snapshotImplicitAllRef.current;
-      cancelPendingSearch();
-      searchTimerRef.current = setTimeout(() => {
-        searchTimerRef.current = null;
-        restoreSnapshot(restored, wasImplicitAll);
-      }, SEARCH_APPLY_DELAY_MS);
+      cancelPendingApply();
+      scheduleApply(() => restoreSnapshot(restored, wasImplicitAll));
       return;
     }
     if (!snap) {
-      const inactive = implicitAllRef.current
-        || (!explicitEmptyRef.current && selectedRef.current.size === 0);
-      snap = inactive
-        ? new Set(mergedOptions.map((opt) => opt.value ?? null))
-        : new Set(selectedRef.current);
+      // Clicks not applied yet are part of the selection the search starts from.
+      const clicked = pendingRef.current;
+      const inactive = !clicked && (implicitAllRef.current
+        || (!explicitEmptyRef.current && selectedRef.current.size === 0));
+      snap = clicked
+        ? new Set(clicked)
+        : inactive
+          ? new Set(mergedOptions.map((opt) => opt.value ?? null))
+          : new Set(selectedRef.current);
       snapshotImplicitAllRef.current = inactive;
       setSnapshot(snap);
     }
     const applied = matchingSubset(snap, trimmed);
-    cancelPendingSearch();
-    searchTimerRef.current = setTimeout(() => {
-      searchTimerRef.current = null;
-      setSelection(applied);
-    }, SEARCH_APPLY_DELAY_MS);
-  }, [cancelPendingSearch, restoreSnapshot, mergedOptions, setSnapshot, matchingSubset, setSelection]);
+    cancelPendingApply();
+    scheduleApply(() => setSelection(applied));
+  }, [cancelPendingApply, scheduleApply, restoreSnapshot, mergedOptions, setSnapshot, matchingSubset, setSelection]);
 
   const toggleValue = useCallback((value: string | null) => {
     if (snapshotRef.current) {
@@ -291,22 +371,26 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
       commitSnapshot(next);
       return;
     }
-    const base = implicitAllRef.current && selectedValues.size === 0
-      ? new Set(optionValueSet)
-      : new Set(selectedValues);
+    const base = pendingRef.current
+      ?? (implicitAllRef.current && selectedValues.size === 0 ? optionValueSet : selectedValues);
     const next = new Set(base);
     if (next.has(value)) next.delete(value);
     else next.add(value);
-    setSelection(next);
-  }, [selectedValues, setSelection, optionValueSet, commitSnapshot]);
+    setPending(next);
+    scheduleApply(() => {
+      setPending(null);
+      setSelection(next);
+    });
+  }, [selectedValues, setSelection, optionValueSet, commitSnapshot, setPending, scheduleApply]);
 
   const handleSelectAll = useCallback(() => {
     if (snapshotRef.current) {
       const next = new Set(snapshotRef.current);
       filteredOptions.forEach((opt) => next.add(opt.value ?? null));
-      commitSnapshot(next);
+      commitSnapshot(next, { immediate: true });
       return;
     }
+    cancelPendingApply();
     const next = new Set<string | null>();
     mergedOptions.forEach((opt) => next.add(opt.value ?? null));
     if (treatAllAsUnfiltered) {
@@ -317,18 +401,19 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     }
     implicitAllRef.current = false;
     setSelection(next);
-  }, [mergedOptions, filteredOptions, setSelection, updateFilterModel, treatAllAsUnfiltered, commitSnapshot]);
+  }, [mergedOptions, filteredOptions, setSelection, updateFilterModel, treatAllAsUnfiltered, commitSnapshot, cancelPendingApply]);
 
   const handleClear = useCallback(() => {
     if (snapshotRef.current) {
       const next = new Set(snapshotRef.current);
       filteredOptions.forEach((opt) => next.delete(opt.value ?? null));
-      commitSnapshot(next);
+      commitSnapshot(next, { immediate: true });
       return;
     }
+    cancelPendingApply();
     implicitAllRef.current = false;
     setSelection(new Set());
-  }, [filteredOptions, setSelection, commitSnapshot]);
+  }, [filteredOptions, setSelection, commitSnapshot, cancelPendingApply]);
 
   useEffect(() => {
     const api = props.api;
@@ -352,6 +437,63 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     setSelectedValues(next);
   }, [options, props.api, props.column, props.colDef]);
 
+  // A model set from outside (list context restore, Reset, the floating filter's clear, another
+  // column) ends the search session and drops clicks not applied yet; this filter's own model, handed
+  // back by the grid, changes nothing.
+  const applyModel = useCallback((model: SetFilterModel | null, own: boolean) => {
+    if (!own) {
+      cancelPendingApply();
+      setSearch('');
+      setSnapshot(null);
+      snapshotImplicitAllRef.current = false;
+    }
+    if (!model || !Array.isArray(model.values)) {
+      explicitEmptyRef.current = false;
+      implicitAllRef.current = true;
+      const next = new Set<string | null>();
+      options.forEach((opt) => next.add(opt.value ?? null));
+      selectedRef.current = next;
+      setSelectedValues(next);
+      return;
+    }
+    explicitEmptyRef.current = model.values.length === 0;
+    implicitAllRef.current = false;
+    const next = new Set((model.values ?? []).map((value) => value ?? null));
+    selectedRef.current = next;
+    setSelectedValues(next);
+  }, [options, cancelPendingApply, setSnapshot]);
+  const applyModelRef = useRef(applyModel);
+  applyModelRef.current = applyModel;
+
+  // AG Grid 32 runs this component as a reactive filter: the column's model arrives as the `model`
+  // prop (undefined outside the grid, where the imperative `setModel` below is used).
+  const reactiveModel = (props as { model?: SetFilterModel | null }).model;
+  useEffect(() => {
+    if (reactiveModel === undefined) return;
+    const key = JSON.stringify(reactiveModel ?? null);
+    if (key === lastAppliedRef.current) return;
+    lastAppliedRef.current = key;
+    applyModelRef.current(reactiveModel, false);
+  }, [reactiveModel]);
+
+  // The values load when the filter opens (see `open` above). AG Grid announces an opening with
+  // afterGuiAttached, except the first one when the opening itself creates the filter: it calls
+  // afterGuiAttached before this component has rendered and handed over its methods. A filter
+  // that first renders inside an open popup is therefore open already.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const markOpen = useCallback(() => {
+    setOpen(true);
+    setOpenCount((count) => count + 1);
+  }, []);
+  useEffect(() => {
+    if (rootRef.current?.closest('.ag-popup')) markOpen();
+  }, [markOpen]);
+  useGridFilter({
+    doesFilterPass: passAll,
+    afterGuiAttached: markOpen,
+    afterGuiDetached: () => setOpen(false),
+  });
+
   useImperativeHandle(ref, () => ({
     isFilterActive() {
       if (implicitAllRef.current) return false;
@@ -369,37 +511,38 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
       };
     },
     setModel(model: SetFilterModel | null) {
-      // AG Grid calls setModel back, synchronously, when this filter applies its own model.
-      // Any other call (list context restore, Reset, another column) ends the search session.
-      if (!applyingOwnModelRef.current) {
-        cancelPendingSearch();
-        setSearch('');
-        setSnapshot(null);
-        snapshotImplicitAllRef.current = false;
-      }
-      if (!model || !Array.isArray(model.values)) {
-        explicitEmptyRef.current = false;
-        implicitAllRef.current = true;
-        const next = new Set<string | null>();
-        options.forEach((opt) => next.add(opt.value ?? null));
-        selectedRef.current = next;
-        setSelectedValues(next);
-        return;
-      }
-      explicitEmptyRef.current = model.values.length === 0;
-      implicitAllRef.current = false;
-      const next = new Set((model.values ?? []).map((value) => value ?? null));
-      selectedRef.current = next;
-      setSelectedValues(next);
+      // Legacy (non-reactive) filters: AG Grid calls setModel back, synchronously, when this filter
+      // applies its own model.
+      applyModel(model, applyingOwnModelRef.current);
     },
     afterGuiAttached() {
-      loadOptions();
+      markOpen();
     },
-  }), [loadOptions, options, cancelPendingSearch, setSnapshot]);
+    afterGuiDetached() {
+      setOpen(false);
+    },
+  }), [applyModel, markOpen]);
+
+  // Windowing: the list keeps its full height for the scrollbar and draws only the rows near the
+  // scroll position.
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  useEffect(() => {
+    setScrollTop(0);
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [search]);
+  const rowCount = filteredOptions.length;
+  const windowed = rowCount > OPTION_WINDOW;
+  const firstRow = windowed
+    ? Math.min(Math.max(0, Math.floor(scrollTop / OPTION_ROW_HEIGHT) - Math.floor((OPTION_WINDOW - OPTION_VISIBLE_ROWS) / 2)), rowCount - OPTION_WINDOW)
+    : 0;
+  const lastRow = windowed ? firstRow + OPTION_WINDOW : rowCount;
+  const shownSelection = snapshot ?? pending ?? selectedValues;
+  const showSearch = searchable || search !== '' || mergedOptions.length >= SEARCH_MIN_OPTIONS;
 
   return (
-    <Box sx={{ p: 1, minWidth: 220 }}>
-      {searchable && (
+    <Box ref={rootRef} sx={{ p: 1, minWidth: 220, maxWidth: 360, width: windowed ? 300 : undefined }}>
+      {showSearch && (
         <TextField
           size="small"
           fullWidth
@@ -409,35 +552,54 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
           sx={{ mb: 1 }}
         />
       )}
-      <Box sx={{ maxHeight: 240, overflowY: 'auto', pr: 0.5 }}>
-        {loading && (
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 1 }}>
-            <CircularProgress size={16} />
-            <Typography variant="body2">{t('status.loading')}</Typography>
-          </Stack>
-        )}
-        {!loading && filteredOptions.length === 0 && (
-          <Typography variant="body2" color="text.secondary">{t('filters.noOptions')}</Typography>
-        )}
-        {!loading && filteredOptions.map((opt) => {
-          const value = opt.value ?? null;
-          const label = buildLabel(opt);
-          return (
-            <FormControlLabel
-              key={`${String(value)}-${label}`}
-              control={(
-                <Checkbox
-                  size="small"
-                  checked={(snapshot ?? selectedValues).has(value)}
-                  onChange={() => toggleValue(value)}
+      {loading && (
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 1 }}>
+          <CircularProgress size={16} />
+          <Typography sx={{ fontSize: 13 }}>{t('status.loading')}</Typography>
+        </Stack>
+      )}
+      {!loading && rowCount === 0 && (
+        <Typography sx={{ fontSize: 13, color: 'text.secondary', py: 0.5 }}>{t('filters.noOptions')}</Typography>
+      )}
+      {!loading && rowCount > 0 && (
+        <Box
+          ref={listRef}
+          data-testid="set-filter-options"
+          onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
+          sx={{ height: Math.min(rowCount, OPTION_VISIBLE_ROWS) * OPTION_ROW_HEIGHT, overflowY: 'auto', pr: 0.5 }}
+        >
+          <Box sx={windowed ? { position: 'relative', height: rowCount * OPTION_ROW_HEIGHT } : undefined}>
+            {filteredOptions.slice(firstRow, lastRow).map((opt, index) => {
+              const value = opt.value ?? null;
+              const label = buildLabel(opt);
+              return (
+                <FormControlLabel
+                  key={`${String(value)}-${label}`}
+                  control={(
+                    <Checkbox
+                      size="small"
+                      checked={shownSelection.has(value)}
+                      onChange={() => toggleValue(value)}
+                      sx={{ p: 0.5 }}
+                    />
+                  )}
+                  label={<Typography noWrap title={label} sx={{ fontSize: 13 }}>{label}</Typography>}
+                  sx={{
+                    ...(windowed
+                      ? { position: 'absolute', top: (firstRow + index) * OPTION_ROW_HEIGHT, left: 0, right: 0 }
+                      : {}),
+                    height: OPTION_ROW_HEIGHT,
+                    m: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    '& .MuiFormControlLabel-label': { minWidth: 0 },
+                  }}
                 />
-              )}
-              label={<Typography variant="body2">{label}</Typography>}
-              sx={{ display: 'flex', alignItems: 'center', ml: 0 }}
-            />
-          );
-        })}
-      </Box>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
       <Stack direction="row" spacing={1} sx={{ mt: 1 }} justifyContent="space-between">
         <Button size="small" onClick={handleSelectAll}>
           {t('labels.all')}
