@@ -285,11 +285,15 @@ Ces connexions restent sur le serveur — loopback ou réseau bridge Docker uniq
 ## Tâches de fond
 
 Le backend exécute des tâches de fond planifiées pour les notifications email :
-- **Alertes d'expiration** : chaque jour à 08h00 UTC. Envoie un e-mail aux responsables des contrats et des postes OPEX 30, 14, 7 et 1 jour(s) avant la date limite de résiliation d'un contrat, la date de fin d'un contrat ou la fin de validité d'un poste OPEX. Seuls les utilisateurs qui ont activé les notifications budgétaires et les alertes d'expiration dans leurs paramètres de notification les reçoivent.
+- **Alertes d'expiration** : chaque jour à 08h00 UTC. Envoie un e-mail aux responsables des contrats et des postes OPEX 30, 14, 7 et 1 jour(s) avant la date limite de résiliation d'un contrat, la date de fin d'un contrat ou la fin de validité d'un poste OPEX. Seuls les utilisateurs qui ont activé les notifications budgétaires et les alertes d'expiration dans leurs paramètres de notification les reçoivent. Chaque rappel est envoyé une seule fois par jour à chaque destinataire, même si la tâche s'exécute à nouveau ce jour-là, par exemple après un redémarrage.
 - **Résumé hebdomadaire** : vérification toutes les heures — envoie des résumés hebdomadaires tenant compte des fuseaux horaires aux utilisateurs qui ont opté pour ce service.
 
 Une tâche planifiée supplémentaire s'exécute lorsque le SSO Entra est configuré :
 
 - **Synchronisation de l'annuaire Microsoft Entra** : quotidiennement à 03h00 (heure du serveur) — actualise les attributs des utilisateurs et désactive les comptes supprimés ou désactivés dans l'annuaire. Elle reste inactive tant qu'un administrateur Microsoft Entra ne l'a pas approuvée. Voir [SSO Microsoft Entra](sso-entra.md).
+
+Une autre tâche tient les statuts à jour :
+
+- **`lifecycle-status-sync`** : toutes les heures, et une fois au démarrage de l'API. Passe les données de référence, les contrats et les postes OPEX et CAPEX à désactivé une fois leur fin de validité passée.
 
 Ces tâches nécessitent que l'API fonctionne comme un **processus long** (pas une fonction serverless). En mode on-premise, `APP_BASE_URL` est utilisé pour les liens email de notification (pas de dérivation de sous-domaine). Si aucun transport email sortant n'est configuré, ces tâches sautent l'envoi de manière transparente.

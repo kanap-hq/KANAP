@@ -96,20 +96,25 @@ The Details tab manages year-by-year headcount metrics.
 Keep departments in sync with your HR system using CSV.
 
 **Export**:
-- Downloads all departments with current year metrics
+- Downloads every department with its company, name, description, status and end of validity
+- Columns: `company_name;name;description;status;disabled_at`
 
 **Import**:
 - Use **Preflight** to validate before applying
 - Matched by department name + company name
 - Can create new departments or update existing ones
 
-**Required fields**: Name, Company
+**Required fields**: `name` and `company_name` (an existing company)
 
-**Optional fields**: Headcount, Status
+**Optional fields**: `description`, `status`, `disabled_at`
+
+**Lifecycle columns**:
+- `status` is `enabled` or `disabled`, and `disabled_at` is the end of validity, a date (`2026-12-31`) or a full date and time. The export writes the status read from the end of validity. A new department is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the department today
+- A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 
 **Notes**:
 - Use **UTF-8 encoding** and **semicolons** as separators
-- Headcount values are year-specific -- imported values apply to the current year
+- Headcount is not in the file. Enter it per year on the department's **Details** tab
 
 ---
 

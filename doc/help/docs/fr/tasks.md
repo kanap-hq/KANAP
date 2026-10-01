@@ -131,7 +131,7 @@ L'en-tête contient :
   - **Indicateur de position** : Votre position dans la liste filtrée (ex. : « 3 sur 12 ») avec flèches **Précédent** / **Suivant**
   - **Envoyer le lien** : Envoyer un lien vers la tâche par e-mail
   - **Convertir en demande** : Promouvoir la tâche en demande de portefeuille
-  - **Supprimer** : Supprimer la tâche (nécessite `tasks:admin`)
+  - **Supprimer** : Supprimer la tâche, avec ses commentaires et son historique (nécessite `tasks:admin`). Vous confirmez d'abord, et la suppression est définitive
   - **Fermer** : Retourner à la liste des tâches
 
 Sous la barre d'outils, le bloc de titre affiche :

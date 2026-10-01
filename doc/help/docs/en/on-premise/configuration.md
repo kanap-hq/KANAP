@@ -285,11 +285,15 @@ These connections stay on the server — loopback or Docker bridge network only.
 ## Background Jobs
 
 The backend runs scheduled background jobs for email notifications:
-- **Expiration warnings**: daily at 08:00 UTC. Emails the owners of contracts and OPEX items 30, 14, 7 and 1 day(s) before a contract's cancellation deadline, a contract's end date or an OPEX item's end of validity. Only users who switched on budget notifications and expiration warnings in their notification settings receive them.
+- **Expiration warnings**: daily at 08:00 UTC. Emails the owners of contracts and OPEX items 30, 14, 7 and 1 day(s) before a contract's cancellation deadline, a contract's end date or an OPEX item's end of validity. Only users who switched on budget notifications and expiration warnings in their notification settings receive them. Each reminder is sent once per day to each recipient, even if the job runs again that day, for example after a restart.
 - **Weekly review digest**: hourly check — sends timezone-aware weekly summaries to users who have opted in.
 
 One more scheduled job runs when Entra SSO is configured:
 
 - **Microsoft Entra directory sync**: daily at 03:00 server time — refreshes user attributes and disables accounts removed or deactivated in the directory. It stays inactive until a Microsoft Entra administrator approves it. See [Microsoft Entra SSO](sso-entra.md).
+
+Another job keeps statuses up to date:
+
+- **`lifecycle-status-sync`**: every hour, and once when the API starts. Switches master data, contracts, OPEX and CAPEX items to disabled once their end of validity has passed.
 
 These jobs require the API to run as a **long-running process** (not a serverless function). In on-premise mode, `APP_BASE_URL` is used for notification email links (no subdomain derivation). If no outbound email transport is configured, these jobs skip sending gracefully.

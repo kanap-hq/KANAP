@@ -342,13 +342,13 @@ The file uses a semicolon `;` as separator and UTF-8 encoding.
 1. Click **Import**, choose the file and run **Preflight check**
 2. Review the report, then click **Load**
 
-- The whole file is checked before anything is saved. If one row has an error, nothing is saved and the report lists the errors by line number
+- The whole file is checked before anything is saved. If one row has an error, nothing is saved and the report lists the errors by line number. The number is the line of the file as a text editor shows it, blank lines and cells that span several lines included
 - Each row replaces the twelve months of its line, year and column. Lines, years and columns that are not in the file stay untouched
 - All twelve months are required. Write `0` for a month without an amount
 - A row identical to what is stored is left untouched, including how the column was produced. Re-importing an export changes nothing
 - A row whose amounts change marks the column as **Edited by hand**, with the period from the file. A column built from quantity and price keeps its lines, and its Budget tab offers to use them again. See [Quantity and price](opex.md#quantity-and-price)
 - The file holds amounts only. The lines of a column are managed in the Budget tab
-- A row that only changes the period updates the period and keeps the rest
+- A row that only changes the period updates the period and keeps the rest. On a column built from quantity and price, it also marks the column as **Edited by hand** and keeps its lines, like a row whose amounts change
 - Actuals rows follow the same rules, which lets you import monthly actuals
 - A changed row on a frozen column is refused. An identical row on a frozen column is accepted
 - Rows for a hidden column are imported like any other row. Hiding a column never blocks its imports, and a hidden frozen column still refuses changed rows

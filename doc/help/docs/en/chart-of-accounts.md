@@ -386,6 +386,7 @@ Accounts use the same lifecycle management as other master data:
   - **Enabled** by default
   - Set an **End of validity** to stop using an account from a specific date. Leave it blank to keep the account active indefinitely
   - Switching the account to **Disabled** without a date sets its end of validity to today
+  - When the end of validity passes, the status switches to **Disabled** on its own within the hour
   - After the end of validity:
       - The account no longer appears in selection dropdowns for new items
       - Historical data remains intact; existing items keep their account assignments

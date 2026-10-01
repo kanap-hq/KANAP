@@ -186,8 +186,8 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 | `company_name` | Obligatoire pour un `cost_center`, vide pour un `group`. Rapproché par nom de société, sans tenir compte de la casse |
 | `owner_email` | L'e-mail du responsable budgétaire, un utilisateur actif. Vide pour aucun responsable budgétaire |
 | `description` | Texte libre |
-| `status` | `enabled` ou `disabled`. Vide signifie `enabled` |
-| `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. Vide s'il n'y a pas de fin |
+| `status` | `enabled` ou `disabled`. Vide signifie `enabled` pour un nouveau nœud et conserve le statut enregistré lors d'une mise à jour |
+| `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le nœud aujourd'hui |
 
 **Import** :
 
@@ -199,7 +199,7 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 **Fonctionnement de l'import** :
 
 - **Lignes dans n'importe quel ordre** : un enfant peut précéder son groupe parent. Les parents sont résolus sur l'ensemble du fichier et sur les éléments déjà présents dans KANAP.
-- **Le fichier entier est vérifié avant toute écriture** : chaque ligne, puis les parents, puis les règles de l'arbre (un centre de coûts a une société, un groupe n'en a pas, seuls les groupes sont parents, pas de boucle, un centre de coûts utilisé par des lignes reste un centre de coûts). Un fichier comportant une erreur ne charge rien : corrigez les lignes et relancez la vérification préalable.
+- **Le fichier entier est vérifié avant toute écriture** : chaque ligne, puis les parents, puis les règles de l'arbre (un centre de coûts a une société, un groupe n'en a pas, seuls les groupes sont parents, pas de boucle, un centre de coûts utilisé par des lignes reste un centre de coûts). Un fichier comportant une erreur ne charge rien : corrigez les lignes et relancez la vérification préalable. Chaque erreur désigne sa ligne par le numéro de ligne du fichier tel qu'un éditeur de texte l'affiche, lignes vides et cellules sur plusieurs lignes comprises.
 - **Rapprochement par code** : une ligne dont le code existe met à jour cet élément ; toute autre ligne en crée un. Chaque cellule remplace la valeur enregistrée : un `owner_email` ou une `description` vide l'efface.
 - **Lignes inchangées** : une ligne identique à l'élément enregistré ne change rien. Exporter puis importer le même fichier signale toutes les lignes comme inchangées.
 - **Les éléments absents du fichier** restent tels quels. L'import ne supprime jamais rien.
@@ -211,6 +211,8 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 - **« Unknown budget holder email '...'. »** ou **« Budget holder '...' is not an active user. »** : la cellule `owner_email` désigne le responsable budgétaire. Utilisez l'e-mail d'un utilisateur actif, ou laissez la cellule vide.
 - **« Code ... is already used on row N. »** : deux lignes portent le même code. Gardez-en une.
 - **« Type must be 'group' or 'cost_center'. »** : corrigez la cellule `kind`.
+- **« Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. »** : la ligne est activée avec une date déjà passée. Un fichier exporté avant cette date indique encore `enabled` : exportez à nouveau, ou corrigez la cellule.
+- **« Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »** : la ligne est désactivée avec une date encore à venir. Corrigez la cellule `status` ou `disabled_at`.
 - **« Header mismatch »** : téléchargez un nouveau modèle.
 
 ---

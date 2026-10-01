@@ -48,6 +48,10 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 - Spaltenfilter auf den Textspalten
 - **Lebenszyklus**, **Kritikalität**, **Geschäftsprozess**, **Datenkategorie** und **Enthält PII** verwenden Kontrollkästchen-Filter, sodass Sie mehrere Werte auf einmal wählen können. Der Filter **Kritikalität** bietet außerdem **(Leer)** für Schnittstellen ohne Kritikalität
 
+**Sortierung**:
+
+- **Kritikalität** sortiert nach Schweregrad, in der Reihenfolge der Stufen unter [Einstufungen und Kontinuität](it-ops-settings.md#einstufungen-und-kontinuitat). Schnittstellen ohne Wert stehen am Ende
+
 **Aktionen**:
 
 - **Schnittstelle hinzufügen**: Eine neue Schnittstelle erstellen (erfordert `applications:manager`)

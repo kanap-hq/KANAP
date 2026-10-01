@@ -96,20 +96,25 @@ La pestaña Detalles gestiona las métricas de plantilla año a año.
 Mantenga los departamentos sincronizados con su sistema de RRHH usando CSV.
 
 **Exportar**:
-- Descarga todos los departamentos con métricas del año actual
+- Descarga todos los departamentos con su empresa, nombre, descripción, estado y fin de validez
+- Columnas: `company_name;name;description;status;disabled_at`
 
 **Importar**:
 - Utilice **Verificación previa** para validar antes de aplicar
 - Coincidencia por nombre de departamento + nombre de empresa
 - Puede crear nuevos departamentos o actualizar los existentes
 
-**Campos obligatorios**: Nombre, Empresa
+**Campos obligatorios**: `name` y `company_name` (una empresa existente)
 
-**Campos opcionales**: Plantilla, Estado
+**Campos opcionales**: `description`, `status`, `disabled_at`
+
+**Columnas de ciclo de vida**:
+- `status` es `enabled` o `disabled`, y `disabled_at` es el fin de validez, una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe el estado deducido del fin de validez. Un departamento nuevo queda activado salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el departamento hoy
+- Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." o "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 
 **Notas**:
 - Utilice codificación **UTF-8** y **puntos y coma** como separadores
-- Los valores de plantilla son específicos del año -- los valores importados se aplican al año actual
+- La plantilla no figura en el archivo. Introdúzcala por año en la pestaña **Detalles** del departamento
 
 ---
 

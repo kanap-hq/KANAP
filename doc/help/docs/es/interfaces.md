@@ -48,6 +48,10 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 - Filtros de columna en las columnas de texto
 - **Ciclo de vida**, **Criticidad**, **Proceso de negocio**, **Categoría de datos** y **Contiene PII** usan filtros de casillas, así que puede elegir varios valores a la vez. El filtro **Criticidad** ofrece también **(Vacío)** para las interfaces sin criticidad
 
+**Ordenación**:
+
+- **Criticidad** se ordena por gravedad, en el orden de los niveles de [Clasificaciones y continuidad](it-ops-settings.md#clasificaciones-y-continuidad). Las interfaces sin valor van al final
+
 **Acciones**:
 
 - **Añadir interfaz**: Crear una nueva interfaz (requiere `applications:manager`)

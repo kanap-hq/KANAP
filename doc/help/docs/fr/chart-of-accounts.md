@@ -386,6 +386,7 @@ Les comptes suivent la même gestion du cycle de vie que les autres données de 
   - **Activé** par défaut
   - Définissez une **Fin de validité** pour cesser d'utiliser un compte à partir d'une date donnée. Laissez-la vide pour que le compte reste actif indéfiniment
   - Passer le compte à **Désactivé** sans date fixe sa fin de validité à aujourd'hui
+  - Une fois la fin de validité passée, le statut passe à **Désactivé** de lui-même dans l'heure
   - Après la fin de validité :
       - Le compte n'apparaît plus dans les menus déroulants de sélection pour les nouveaux postes
       - Les données historiques restent intactes ; les postes existants conservent leur compte

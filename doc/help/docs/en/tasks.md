@@ -131,7 +131,7 @@ The header contains:
   - **Position indicator**: Your position in the filtered list (e.g., "3 of 12") with **Previous** / **Next** arrows
   - **Send link**: Email a link to the task
   - **Convert to Request**: Promote the task to a portfolio request
-  - **Delete**: Remove the task (requires `tasks:admin`)
+  - **Delete**: Remove the task, with its comments and history (requires `tasks:admin`). You confirm first, and the delete cannot be undone
   - **Close**: Return to the task list
 
 Below the toolbar, the title block shows:

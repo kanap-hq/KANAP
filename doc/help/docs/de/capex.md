@@ -541,7 +541,7 @@ Sie können CAPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung z
    - Verantwortliche sind aktive Benutzer
    - Eine `item_number` entspricht einer bestehenden CAPEX-Position
    - Datumsangaben sind gültig, und keine zwei Zeilen beschreiben dieselbe Position
-4. Überprüfen Sie den Vorabprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus
+4. Überprüfen Sie den Vorabprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Jeder Fehler nennt seine Zeile mit der Zeilennummer der Datei, wie ein Texteditor sie anzeigt, einschließlich Leerzeilen und Zellen über mehrere Zeilen. Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus
 5. Wenn OK, klicken Sie auf **Laden** zum Importieren
 
 **Wichtige Hinweise**:
@@ -592,7 +592,7 @@ Jede CAPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein op
 **Funktionsweise**:
 
 - **Aktiviert**: Die Position ist aktiv und erscheint überall (Listen, Berichte, Zuordnungen)
-- **Ende der Gültigkeit**: Das Datum, an dem die Position endet. Lassen Sie es leer, wenn es kein Ende gibt
+- **Ende der Gültigkeit**: Das Datum, an dem die Position endet. Lassen Sie es leer, wenn es kein Ende gibt. Sobald das Ende der Gültigkeit vorbei ist, wechselt der Status innerhalb einer Stunde von selbst auf **Deaktiviert**
 - Nach dem Ende der Gültigkeit:
   - Die Position erscheint nicht mehr in Auswahllisten für neue Verträge oder Zuordnungen
   - Sie wird aus Berichten für Jahre ausgeschlossen, die strikt nach dem Ende der Gültigkeit liegen

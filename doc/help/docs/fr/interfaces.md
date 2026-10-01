@@ -48,6 +48,10 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 - Filtres de colonne sur les colonnes texte
 - **Cycle de vie**, **Criticité**, **Processus métier**, **Catégorie de données** et **Contient des PII** utilisent des filtres par cases à cocher : vous pouvez choisir plusieurs valeurs à la fois. Le filtre **Criticité** propose aussi **(Vide)** pour les interfaces sans criticité
 
+**Tri** :
+
+- **Criticité** trie par gravité, dans l'ordre des niveaux définis dans [Classifications et continuité](it-ops-settings.md#classifications-et-continuite). Les interfaces sans valeur viennent en dernier
+
 **Actions** :
 
 - **Ajouter une interface** : Créer une nouvelle interface (nécessite `applications:manager`)

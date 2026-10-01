@@ -342,13 +342,13 @@ Le fichier utilise le point-virgule `;` comme séparateur et l'encodage UTF-8.
 1. Cliquez sur **Importer**, choisissez le fichier et lancez la **Vérification préalable**
 2. Examinez le rapport, puis cliquez sur **Charger**
 
-- Tout le fichier est vérifié avant le moindre enregistrement. Si une ligne contient une erreur, rien n'est enregistré et le rapport liste les erreurs par numéro de ligne
+- Tout le fichier est vérifié avant le moindre enregistrement. Si une ligne contient une erreur, rien n'est enregistré et le rapport liste les erreurs par numéro de ligne. Ce numéro est celui de la ligne du fichier tel qu'un éditeur de texte l'affiche, lignes vides et cellules sur plusieurs lignes comprises
 - Chaque ligne remplace les douze mois de son poste, de son année et de sa colonne. Les postes, années et colonnes absents du fichier ne sont pas modifiés
 - Les douze mois sont obligatoires. Saisissez `0` pour un mois sans montant
 - Une ligne identique à ce qui est enregistré n'est pas modifiée, y compris la façon dont la colonne a été produite. Réimporter un export ne change rien
 - Une ligne dont les montants changent marque la colonne comme **Modifié à la main**, avec la période du fichier. Une colonne construite à partir de la quantité et du prix garde ses lignes, et son onglet Budget propose de les utiliser à nouveau. Voir [Quantité et prix](opex.md#quantite-et-prix)
 - Le fichier ne contient que des montants. Les lignes d'une colonne se gèrent dans l'onglet Budget
-- Une ligne qui ne change que la période met à jour la période et conserve le reste
+- Une ligne qui ne change que la période met à jour la période et conserve le reste. Sur une colonne construite à partir de la quantité et du prix, elle marque aussi la colonne comme **Modifié à la main** et garde ses lignes, comme une ligne dont les montants changent
 - Les lignes Réalisé suivent les mêmes règles, ce qui permet d'importer le réalisé mensuel
 - Une ligne modifiée sur une colonne gelée est refusée. Une ligne identique sur une colonne gelée est acceptée
 - Les lignes d'une colonne masquée sont importées comme les autres. Masquer une colonne ne bloque jamais ses imports, et une colonne masquée gelée refuse toujours les lignes modifiées

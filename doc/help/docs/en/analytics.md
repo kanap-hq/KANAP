@@ -158,6 +158,7 @@ Dimensions and values each have a status (**Enabled** or **Disabled**) and an op
 
 - **End of validity**: the date it stops. Leave it blank to keep it active. You can also schedule a future date.
 - Switching to **Disabled** without a date sets the end of validity to today. Switching back to **Enabled** clears the date.
+- When the end of validity passes, the status switches to **Disabled** on its own within the hour.
 
 **A disabled value**:
 
@@ -231,8 +232,8 @@ To set values on budget lines from a file, use the OPEX and CAPEX CSV files. In 
 | `axis_code` | The code of the value's dimension, regardless of case. Empty means the default dimension |
 | `name` | Required. The name of the value |
 | `description` | Free text |
-| `status` | `enabled` or `disabled`. Empty means `enabled` |
-| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. Empty if there is no end |
+| `status` | `enabled` or `disabled`. Empty means `enabled` for a new value and keeps the stored status on an update |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. Empty if there is no end. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the value today |
 
 Only `name` is a required column. When the `description`, `status` or `disabled_at` column is missing, existing values keep what is stored for it, and new values are enabled with no description. A file without `axis_code` puts every row in the default dimension.
 
@@ -245,7 +246,7 @@ Only `name` is a required column. When the `description`, `status` or `disabled_
 
 **How the import works**:
 
-- **The whole file is checked before anything is written.** A file with any error loads nothing: fix the rows and run the preflight again.
+- **The whole file is checked before anything is written.** A file with any error loads nothing: fix the rows and run the preflight again. Each error names its row by the line of the file as a text editor shows it, blank lines and cells that span several lines included.
 - **Matching by dimension and name**: a row whose name exists in its dimension updates that value; any other row creates one. Each cell replaces the stored value, so an empty `description` clears it. A name written with another case finds the stored value and does not rename it. To rename a value, rename it on the page.
 - **Unchanged rows**: a row identical to the stored value changes nothing. Exporting and importing the same file reports every row as unchanged.
 - **Disabled dimensions**: a row of a disabled dimension is accepted when it changes nothing, so an exported file imports as it is. A row that would create or change a value there is refused.
@@ -257,6 +258,8 @@ Only `name` is a required column. When the `description`, `status` or `disabled_
 - **"The ... dimension is disabled. Enable it or leave it out."**: a row creates or changes a value in a disabled dimension. Enable the dimension, or remove the row.
 - **"... is already on row N."**: two rows carry the same name for the same dimension. Keep one.
 - **"Invalid status '...'. Use 'enabled' or 'disabled'."**: fix the `status` cell.
+- **"Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again."**: the row is enabled with a date that has passed. A file exported before the date passed still says `enabled`: export it again, or fix the cell.
+- **"Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."**: the row is disabled with a date still to come. Fix the `status` or the `disabled_at` cell.
 - **"Header mismatch"**: download a fresh template.
 
 ---

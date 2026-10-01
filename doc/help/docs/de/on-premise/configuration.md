@@ -285,11 +285,15 @@ Diese Verbindungen bleiben auf dem Server -- Loopback oder Docker-Bridge-Netzwer
 ## Hintergrundjobs
 
 Das Backend führt geplante Hintergrundjobs für E-Mail-Benachrichtigungen aus:
-- **Ablaufwarnungen**: täglich um 08:00 UTC. Sendet den Verantwortlichen von Verträgen und OPEX-Positionen 30, 14, 7 und 1 Tag(e) vor der Kündigungsfrist eines Vertrags, dem Enddatum eines Vertrags oder dem Ende der Gültigkeit einer OPEX-Position eine E-Mail. Nur Benutzer, die in ihren Benachrichtigungseinstellungen die Budget-Benachrichtigungen und die Ablaufwarnungen eingeschaltet haben, erhalten sie.
+- **Ablaufwarnungen**: täglich um 08:00 UTC. Sendet den Verantwortlichen von Verträgen und OPEX-Positionen 30, 14, 7 und 1 Tag(e) vor der Kündigungsfrist eines Vertrags, dem Enddatum eines Vertrags oder dem Ende der Gültigkeit einer OPEX-Position eine E-Mail. Nur Benutzer, die in ihren Benachrichtigungseinstellungen die Budget-Benachrichtigungen und die Ablaufwarnungen eingeschaltet haben, erhalten sie. Jede Erinnerung geht pro Tag nur einmal an jeden Empfänger, auch wenn der Job an diesem Tag erneut läuft, etwa nach einem Neustart.
 - **Wöchentlicher Zusammenfassungs-Digest**: stündliche Prüfung -- sendet zeitzonenbewusste wöchentliche Zusammenfassungen an Benutzer, die sich dafür entschieden haben.
 
 Ein weiterer geplanter Job läuft, wenn Entra SSO konfiguriert ist:
 
 - **Microsoft Entra-Verzeichnissynchronisierung**: täglich um 03:00 Uhr Serverzeit -- aktualisiert Benutzerattribute und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden. Sie bleibt inaktiv, bis ein Microsoft Entra-Administrator sie genehmigt. Siehe [Microsoft Entra SSO](sso-entra.md).
+
+Ein weiterer Job hält die Status aktuell:
+
+- **`lifecycle-status-sync`**: stündlich und einmal beim Start der API. Setzt Stammdaten, Verträge sowie OPEX- und CAPEX-Positionen auf deaktiviert, sobald ihr Ende der Gültigkeit vorbei ist.
 
 Diese Jobs erfordern, dass die API als **dauerhaft laufender Prozess** läuft (nicht als Serverless-Funktion). Im On-Premise-Modus wird `APP_BASE_URL` für Benachrichtigungs-E-Mail-Links verwendet (keine Subdomain-Ableitung). Wenn kein ausgehender E-Mail-Transport konfiguriert ist, überspringen diese Jobs das Senden problemlos.

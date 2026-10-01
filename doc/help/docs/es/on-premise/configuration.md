@@ -285,11 +285,15 @@ Estas conexiones permanecen en el servidor — solo loopback o red bridge Docker
 ## Trabajos en segundo plano
 
 El backend ejecuta trabajos programados en segundo plano para notificaciones por correo:
-- **Alertas de vencimiento**: diariamente a las 08:00 UTC. Envía un correo a los responsables de contratos y partidas OPEX 30, 14, 7 y 1 día(s) antes de el plazo de cancelación de un contrato, la fecha de fin de un contrato o el fin de validez de una partida OPEX. Solo los reciben los usuarios que activaron las notificaciones de presupuesto y las alertas de vencimiento en su configuración de notificaciones.
+- **Alertas de vencimiento**: diariamente a las 08:00 UTC. Envía un correo a los responsables de contratos y partidas OPEX 30, 14, 7 y 1 día(s) antes de el plazo de cancelación de un contrato, la fecha de fin de un contrato o el fin de validez de una partida OPEX. Solo los reciben los usuarios que activaron las notificaciones de presupuesto y las alertas de vencimiento en su configuración de notificaciones. Cada recordatorio se envía una sola vez al día a cada destinatario, aunque el trabajo vuelva a ejecutarse ese día, por ejemplo tras un reinicio.
 - **Resumen semanal**: verificación cada hora — envía resúmenes semanales conscientes de la zona horaria a los usuarios que han optado por recibirlos.
 
 Hay un trabajo programado más que se ejecuta cuando el SSO Entra está configurado:
 
 - **Sincronización del directorio de Microsoft Entra**: diariamente a las 03:00 hora del servidor — actualiza los atributos de los usuarios y desactiva las cuentas eliminadas o desactivadas en el directorio. Permanece inactiva hasta que un administrador de Microsoft Entra la apruebe. Consulte [SSO con Microsoft Entra](sso-entra.md).
+
+Otro trabajo mantiene los estados al día:
+
+- **`lifecycle-status-sync`**: cada hora, y una vez al iniciarse la API. Pasa a desactivado los datos maestros, los contratos y las partidas OPEX y CAPEX cuando su fin de validez ha pasado.
 
 Estos trabajos requieren que la API se ejecute como un **proceso de larga duración** (no una función serverless). En modo local, se usa `APP_BASE_URL` para los enlaces de correo de notificaciones (sin derivación de subdominio). Si no hay transporte de correo saliente configurado, estos trabajos omiten el envío de forma elegante.
