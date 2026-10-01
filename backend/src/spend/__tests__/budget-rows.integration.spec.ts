@@ -260,6 +260,31 @@ async function testRowErrors() {
   });
 }
 
+/** Row errors and duplicates name the file's own line: blank lines count. */
+async function testErrorLinesAfterBlankLines() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId } = await seedBook(runner, 'blank');
+    const { lines } = await exportLines(runner, tenantId);
+    const cells = (line: Line) => BUDGET_ROWS_HEADERS.map((h) => line[h] ?? '').join(';');
+    const content = [
+      BUDGET_ROWS_HEADERS.join(';'),                // 1
+      cells(lines[0]),                              // 2
+      '',                                           // 3
+      BUDGET_ROWS_HEADERS.map(() => '').join(';'),  // 4
+      cells({ ...lines[1], mar: 'abc' }),           // 5
+      '',                                           // 6
+      cells(lines[0]),                              // 7
+    ].join('\n');
+    const result = await service().importCsv(
+      { file: { buffer: Buffer.from(`﻿${content}\n`, 'utf8') } as any, dryRun: true, userId: null, access: ADMIN },
+      { manager: runner.manager, tenantId },
+    );
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.errors.map((e: any) => e.row), [5, 7], JSON.stringify(result.errors));
+    assert.match(result.errors[1].message, /already appears on line 2/);
+  });
+}
+
 /**
  * A column computed from quantity × price lines: exported with its months and
  * `computed`, re-imported unchanged; months changed by a file make it manual,
@@ -290,6 +315,20 @@ async function testComputedRows() {
     const same = await importLines(runner, tenantId, lines);
     assert.deepEqual([same.ok, same.unchanged, same.updated], [true, 5, 0], 'an exported computed row re-imports unchanged');
     assert.equal((await readRecords(runner, 'opex', versionId)).forecast.method, 'computed');
+
+    // Period only: the period no longer matches the lines, so the column reads as edited by hand too.
+    const audit = captureAudit();
+    const periodOnly = await importLines(runner, tenantId, [{ ...forecast, period_end: `${YEAR}-09-30` }], { audit });
+    assert.deepEqual([periodOnly.ok, periodOnly.updated], [true, 1], JSON.stringify(periodOnly.errors));
+    assert.deepEqual(audit.entries.map((e) => e.table), ['spend_round_inputs'], 'no amounts write');
+    const moved = (await readRecords(runner, 'opex', versionId)).forecast;
+    assert.deepEqual(
+      [moved.method, moved.period_end, moved.fte, moved.last_calculation.kind],
+      ['manual', `${YEAR}-09-30`, '1.00', 'computed'],
+      'a computed column whose period changes becomes manual and keeps its lines as reference',
+    );
+    assert.deepEqual((await readLines(runner, 'opex', versionId, 'forecast')).map((l) => l.label), ['Support'], 'the lines stay');
+    assert.equal((await readMeasure(runner, 'opex', versionId, 'forecast', YEAR))[0], '2000.00', 'months untouched');
 
     const changed = await importLines(runner, tenantId, [{ ...forecast, jan: '2500' }]);
     assert.deepEqual([changed.ok, changed.updated], [true, 1], JSON.stringify(changed.errors));
@@ -496,6 +535,7 @@ void runSpecs('budget-rows.integration.spec', [
   ['testChangedRows', testChangedRows],
   ['testNewYearsAndAliases', testNewYearsAndAliases],
   ['testRowErrors', testRowErrors],
+  ['testErrorLinesAfterBlankLines', testErrorLinesAfterBlankLines],
   ['testComputedRows', testComputedRows],
   ['testFreeze', testFreeze],
   ['testHiddenColumns', testHiddenColumns],

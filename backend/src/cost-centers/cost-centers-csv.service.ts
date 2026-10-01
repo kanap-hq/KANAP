@@ -5,7 +5,9 @@ import * as fs from 'fs';
 import { randomUUID } from 'node:crypto';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
 import { isActiveAt, parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CostCenterKind } from './cost-center.entity';
 import { loadCostCenterTree } from './cost-center-tree.util';
 import {
@@ -76,6 +78,7 @@ export class CostCentersCsvService {
           company_name: node.company_name ?? '',
           owner_email: extra?.owner_email ?? '',
           description: extra?.description ?? '',
+          // The tree reads it from the end of validity, so it never contradicts its own row.
           status: node.status,
           disabled_at: node.disabled_at ?? '',
         });
@@ -113,7 +116,7 @@ export class CostCentersCsvService {
     });
     const parsed = await this.parseFile(file);
     if ('headerError' in parsed) return result([{ row: 0, message: parsed.headerError }]);
-    const { rows, hasDisabledAt } = parsed;
+    const { rows, hasDisabledAt, lines } = parsed;
 
     await this.costCenters.lockTree(ctx);
     const stored = await this.costCenters.loadStored(ctx);
@@ -142,7 +145,7 @@ export class CostCentersCsvService {
     const lineByCode = new Map<string, number>();
     const parentCodes: Array<{ line: number; parentCode: string }> = [];
     rows.forEach((raw, index) => {
-      const line = index + 2;
+      const line = rowLine(lines, index);
       const rowErrors: string[] = [];
       parentCodes.push({ line, parentCode: cell(raw, 'parent_code') });
       const attempt = <T>(fn: () => T): T | undefined => {
@@ -191,20 +194,25 @@ export class CostCentersCsvService {
       if (statusRaw && statusRaw !== StatusState.ENABLED && statusRaw !== StatusState.DISABLED) {
         rowErrors.push(`Invalid status '${cell(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
       }
+      const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
       const disabledAtRaw = hasDisabledAt ? cell(raw, 'disabled_at') : '';
-      let disabledAt: Date | null | undefined;
+      let disabledAt: Date | null = null;
       if (disabledAtRaw) {
-        disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? undefined;
+        disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? null;
       }
+      const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
+      if (lifecycleConflict) rowErrors.push(lifecycleConflict);
 
       if (rowErrors.length > 0 || !code || !kind || !name) {
         for (const message of rowErrors) errors.push({ row: line, message });
         return;
       }
+      // Blank status or date: enabled for a new node, the stored value on an update (`csvItemLifecycle`).
+      const next = csvItemLifecycle(status, disabledAt, !!existing);
       const lifecycle = resolveLifecycleState({
         currentDisabledAt: existing?.disabled_at ?? null,
-        nextStatus: statusRaw || StatusState.ENABLED,
-        nextDisabledAt: disabledAt,
+        nextStatus: next.status,
+        nextDisabledAt: next.disabled_at,
       });
       parsedRows.push({
         line,
@@ -278,7 +286,7 @@ export class CostCentersCsvService {
     return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [] };
   }
 
-  private async parseFile(file: Express.Multer.File): Promise<{ rows: Array<Record<string, string>>; hasDisabledAt: boolean } | { headerError: string }> {
+  private async parseFile(file: Express.Multer.File): Promise<{ rows: Array<Record<string, string>>; hasDisabledAt: boolean; lines: number[] } | { headerError: string }> {
     if (!file) throw new BadRequestException('No file uploaded');
     const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
     if (!buf) throw new BadRequestException('Empty upload');
@@ -303,7 +311,8 @@ export class CostCentersCsvService {
     if (missing.length > 0 || extras.length > 0) {
       return { headerError: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` };
     }
-    return { rows, hasDisabledAt: headers.includes('disabled_at') };
+    // Errors name the file's own line, blank lines included.
+    return { rows, hasDisabledAt: headers.includes('disabled_at'), lines: await csvDataRowLines(content, DELIMITER) };
   }
 }
 

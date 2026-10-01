@@ -8,9 +8,11 @@ import {
 /**
  * Expiry warnings (contract cancellation deadline / end date, OPEX and CAPEX end of validity) go only
  * to users who opted in: emails on, budget notifications on, expiration warnings on. The
- * same-day guard must only record a recipient who is actually emailed, so a user who opts in
- * after a skipped run still gets the reminder. The guard stops a same-day re-run of the task
- * from resending, survives the 5-minute dedupe cleanup, and never blocks the next reminder.
+ * guard must only record a recipient who is actually emailed, so a user who opts in after a
+ * skipped run still gets the reminder. The guard is stored in the database (system rows of the
+ * audit log, faked here): it stops a same-day re-run of the task from resending, an api
+ * restart included, and never blocks the next reminder. The real table is exercised in
+ * `expiry-reminder-guard.integration.spec.ts`.
  */
 
 const TENANT = '11111111-1111-1111-1111-111111111111';
@@ -28,17 +30,42 @@ function prefs(opts: { emails: boolean; budget: boolean; warnings: boolean }): N
 
 const OPTED_IN = prefs({ emails: true, budget: true, warnings: true });
 
-const HOUR_MS = 60 * 60 * 1000;
+/** The audit log rows the guard writes, shared by the services of one "database". */
+type GuardStore = Set<string>;
 
-function createService() {
+/** What `withTenant` needs from a DataSource: one runner whose queries the guard sends. */
+function fakeDataSource(store: GuardStore) {
+  const query = async (sql: string, params: any[] = []) => {
+    if (/FROM tenants/i.test(sql)) return [{ slug: 'acme', branding: null }];
+    if (/SELECT after_json->>'key'/.test(sql)) return (params[2] as string[]).filter((key) => store.has(key)).map((key) => ({ key }));
+    if (/INSERT INTO audit_log/.test(sql)) {
+      for (const key of params[6] as string[]) store.add(key);
+      return [];
+    }
+    return [];
+  };
+  return {
+    query,
+    createQueryRunner: () => ({
+      manager: { query },
+      isTransactionActive: true,
+      connect: async () => undefined,
+      startTransaction: async () => undefined,
+      commitTransaction: async () => undefined,
+      rollbackTransaction: async () => undefined,
+      release: async () => undefined,
+      query,
+    }),
+  };
+}
+
+function createService(store: GuardStore = new Set()) {
   const sent: Array<{ to: string }> = [];
   // Stored preferences per user; a user absent from the map gets the defaults (all off),
   // as NotificationPreferencesService.getForUser does when no row exists.
   const stored = new Map<string, NotificationPreferencesData>();
 
-  const dataSource = {
-    query: async (sql: string) => (/FROM tenants/i.test(sql) ? [{ slug: 'acme', branding: null }] : []),
-  };
+  const dataSource = fakeDataSource(store);
   const emailService = { send: async (mail: any) => { sent.push(mail); } };
   const preferences = {
     getForUser: async (userId: string) =>
@@ -46,10 +73,7 @@ function createService() {
   };
 
   const svc = new NotificationsService(dataSource as any, emailService as any, {} as any, preferences as any);
-  // The dedupe clock, moved by the guard cases.
-  const clock = { now: Date.UTC(2026, 9, 6, 8) };
-  (svc as any).now = () => clock.now;
-  return { svc, sent, stored, clock };
+  return { svc, sent, stored, store };
 }
 
 // A reminder 14 days before a deadline on 2026-10-20, sent by the 08:00 UTC run of 2026-10-06.
@@ -108,21 +132,19 @@ async function casesFor(itemType: 'contract' | 'opex' | 'capex') {
   }
 
   {
-    const { svc, sent, stored, clock } = createService();
+    const { svc, sent, stored, store } = createService();
     stored.set(ALICE.userId, OPTED_IN);
     await warn(svc, itemType, [ALICE]);
     assert.equal(sent.length, 1, label('first run of the day → one email'));
 
-    clock.now += 2 * HOUR_MS;
-    (svc as any).cleanupDedupeCache();
-    await warn(svc, itemType, [ALICE]);
-    assert.equal(sent.length, 1, label('re-run two hours later, after the 5-minute cleanup → still deduped'));
+    // The api restarts: a new service, nothing in memory, the same database.
+    const restarted = createService(store);
+    restarted.stored.set(ALICE.userId, OPTED_IN);
+    await warn(restarted.svc, itemType, [ALICE]);
+    assert.equal(restarted.sent.length, 0, label('re-run after an api restart → still deduped'));
 
-    clock.now += 7 * 24 * HOUR_MS - 2 * HOUR_MS;
-    (svc as any).cleanupDedupeCache();
-    await warn(svc, itemType, [ALICE], 7);
-    assert.equal(sent.length, 2, label('next reminder day (7 days left) → emailed'));
-    assert.equal((svc as any).expiryRemindersSent.size, 1, label('the previous reminder guard is cleaned after 24 hours'));
+    await warn(restarted.svc, itemType, [ALICE], 7);
+    assert.equal(restarted.sent.length, 1, label('next reminder day (7 days left) → emailed'));
   }
 
   {

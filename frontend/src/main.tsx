@@ -20,6 +20,10 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 import './styles/ag-grid-overrides.css'
 import './styles/print.css'
+import { installCsvExportGuard } from './utils/csvExportGuard'
+
+// Every grid's CSV export neutralises formula-like headers and cells.
+installCsvExportGuard()
 
 const MUI_LOCALES = {
   en: enUS,

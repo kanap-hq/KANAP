@@ -7,6 +7,7 @@ import { withSavepoint } from '../common/savepoint.util';
 import { ATTACHMENT_TABLES } from '../common/storage-path-refs';
 import { StorageService } from '../common/storage/storage.service';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
+import { deleteTaskActivities } from '../tasks/task-delete-cleanup';
 
 // What an item delete removes besides versions, amounts and allocations. Links,
 // attachments and contract links have no foreign key to the item, so nothing
@@ -171,6 +172,7 @@ async function deleteItemTasks(
     }
   }
 
+  await deleteTaskActivities(manager, tenantId, taskIds);
   await manager.query(`DELETE FROM tasks WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, taskIds]);
 
   for (const { user_id, year_month } of months) {

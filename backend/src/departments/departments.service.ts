@@ -17,9 +17,11 @@ import {
   CompiledCondition,
 } from '../common/ag-grid-filtering';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
-import { StatusState, STATUS_STATES, resolveLifecycleState } from '../common/status';
+import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
+import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { DepartmentUpsertDto } from './dto/department.dto';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
 
 type DepartmentLookupItem = { id: string; name: string; company_id: string };
 
@@ -555,7 +557,8 @@ export class DepartmentsService {
           company_name: r.company_name ?? '',
           name: r.d_name ?? r.name ?? '',
           description: r.d_description ?? r.description ?? '',
-          status: r.d_status ?? r.status ?? 'enabled',
+          // Read from the end of validity: a stored status left stale by a passed date never contradicts its own row.
+          status: deriveStatusFromDisabledAt(r.d_disabled_at ?? null),
           disabled_at: r.d_disabled_at ? new Date(r.d_disabled_at).toISOString() : '',
         });
       }
@@ -591,13 +594,13 @@ export class DepartmentsService {
     const rows: Row[] = [];
     const errors: { row: number; message: string }[] = [];
     let headerOk = false;
+    let content = '';
     await new Promise<void>((resolve, reject) => {
       const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
       if (!buf) {
         reject(new BadRequestException('Empty upload'));
         return;
       }
-      let content: string;
       try {
         content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
       } catch {
@@ -620,6 +623,8 @@ export class DepartmentsService {
     if (!headerOk) {
       return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
     }
+    // Errors name the file's own line, blank lines included.
+    const rowLines = await csvDataRowLines(content, delimiter);
     // Lookup companies by name once
     const repo = this.getRepo(opts?.manager);
     const companyRepo = this.getCompanyRepo(opts?.manager);
@@ -632,21 +637,22 @@ export class DepartmentsService {
       return c ?? null;
     };
     // Validate and normalize rows
-    const normalized: Array<DepartmentUpsertDto & { company_id: string; name: string }> = [];
+    const normalized: Array<DepartmentUpsertDto & { company_id: string; name: string; lifecycle: { status: StatusState | null; disabled_at: string | null } }> = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const line = i + 2;
+      const line = rowLine(rowLines, i);
       const company_name = (r['company_name'] ?? '').toString().trim();
       const name = (r['name'] ?? '').toString().trim();
+      // Blank: enabled for a new department, the stored status on an update (`csvItemLifecycle`).
       const statusRaw = (r['status'] ?? '').toString().trim().toLowerCase();
-      const statusNormalized = statusRaw
+      const statusValue: StatusState | null = statusRaw
         ? (STATUS_STATES.find((s) => s === statusRaw) ?? null)
-        : StatusState.ENABLED;
+        : null;
       const disabledAtRaw = (r['disabled_at'] ?? '').toString().trim();
       let disabled_at_iso: string | null = null;
       if (!company_name) errors.push({ row: line, message: 'company_name is required' });
       if (!name) errors.push({ row: line, message: 'name is required' });
-      if (!statusNormalized) {
+      if (statusRaw && !statusValue) {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
         continue;
       }
@@ -658,7 +664,11 @@ export class DepartmentsService {
         }
         disabled_at_iso = parsed.toISOString();
       }
-      const statusValue = statusNormalized as StatusState;
+      const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
+      if (lifecycleConflict) {
+        errors.push({ row: line, message: lifecycleConflict });
+        continue;
+      }
       if (company_name) {
         const comp = await findCompanyByName(company_name);
         if (!comp) errors.push({ row: line, message: `Unknown company '${company_name}'` });
@@ -667,8 +677,7 @@ export class DepartmentsService {
             company_id: comp.id,
             name,
             description: ((r['description'] ?? '').toString().trim()) || null,
-            status: statusValue,
-            disabled_at: disabled_at_iso,
+            lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
           });
         }
       }
@@ -677,7 +686,7 @@ export class DepartmentsService {
       return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
     }
     // Deduplicate by combination of company_id + name (case-insensitive on name)
-    const uniqueMap = new Map<string, DepartmentUpsertDto>();
+    const uniqueMap = new Map<string, (typeof normalized)[number]>();
     for (const item of normalized) {
       const key = `${item.company_id}|${item.name.toLowerCase()}`;
       if (!uniqueMap.has(key)) uniqueMap.set(key, item);
@@ -697,11 +706,14 @@ export class DepartmentsService {
     let processed = 0;
     for (const item of unique) {
       const existing = await repo.findOne({ where: { company_id: item.company_id as string, name: item.name as string } });
+      // A blank status or date keeps the stored value on an update; `update`/`create` resolve the rest.
+      const { lifecycle, ...values } = item;
+      const body: DepartmentUpsertDto = { ...values, ...csvItemLifecycle(lifecycle.status, lifecycle.disabled_at, !!existing) };
       if (existing) {
-        const saved = await this.update(existing.id, item, userId ?? undefined, { manager: opts?.manager });
+        const saved = await this.update(existing.id, body, userId ?? undefined, { manager: opts?.manager });
         if (saved) processed += 1;
       } else {
-        const saved = await this.create(item, userId ?? undefined, { manager: opts?.manager });
+        const saved = await this.create(body, userId ?? undefined, { manager: opts?.manager });
         if (saved) processed += 1;
       }
     }

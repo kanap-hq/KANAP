@@ -277,7 +277,8 @@ export function csvLifecycleConflict(status: StatusState | null, disabledAt: Dat
   const day = (date: Date) => date.toISOString().slice(0, 10);
   if (status === StatusState.DISABLED && day(new Date(disabledAt)) === day(now)) return null;
   return status === StatusState.ENABLED
-    ? 'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled.'
+    // An older export may carry a status written before the date passed: say how to get a fresh one.
+    ? 'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.'
     : 'Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.';
 }
 

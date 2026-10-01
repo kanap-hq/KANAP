@@ -29,6 +29,15 @@ import { getEmailStrings, resolveEmailLocale } from '../i18n/email-i18n';
 type ItemType = 'request' | 'project' | 'task' | 'contract' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
 type TriggerType = 'status_change' | 'team_added' | 'team_change_as_lead' | 'comment' | 'assignment' | 'expiration_warning';
 
+/**
+ * First key of the expiry claim's two-key advisory lock (the second is the
+ * tenant and item). PostgreSQL keeps two-key locks apart from the single-key
+ * `hashtext(...)` locks the scheduler and Netbox hold for a whole run, so a
+ * claim can never wait on its own run's lock. No other two-key lock uses this
+ * value ('EXPR' in ASCII).
+ */
+const EXPIRY_REMINDER_LOCK_NAMESPACE = 0x45585052;
+
 interface NotificationRecipient {
   userId: string;
   email: string;
@@ -72,12 +81,6 @@ export class NotificationsService {
   private recentNotifications = new Map<string, number>();
   private readonly DEDUPE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
-  // Expiry warnings follow a fixed schedule (expiry-reminder-schedule.ts). This guard only
-  // stops a re-run of the daily task on the same day from sending a reminder twice:
-  // key -> sent at, kept for 24 hours and cleaned with its own window.
-  private expiryRemindersSent = new Map<string, number>();
-  private readonly EXPIRY_REMINDER_GUARD_MS = 24 * 60 * 60 * 1000;
-
   // Clock for the dedupe windows (replaced in specs).
   private now: () => number = () => Date.now();
 
@@ -120,12 +123,6 @@ export class NotificationsService {
     for (const [key, timestamp] of this.recentNotifications) {
       if (now - timestamp > this.DEDUPE_WINDOW_MS) {
         this.recentNotifications.delete(key);
-        cleaned++;
-      }
-    }
-    for (const [key, timestamp] of this.expiryRemindersSent) {
-      if (now - timestamp >= this.EXPIRY_REMINDER_GUARD_MS) {
-        this.expiryRemindersSent.delete(key);
         cleaned++;
       }
     }
@@ -1207,31 +1204,21 @@ export class NotificationsService {
     const branding = await this.resolveBranding(params.tenantId);
     const localeGroups = new Map<string, NotificationRecipient[]>();
 
+    // Opt-in only. Only a recipient who is emailed is recorded, so a user who opts in after
+    // a skipped run still gets the reminder on a re-run.
+    const optedIn: NotificationRecipient[] = [];
     for (const recipient of params.recipients) {
-      // One reminder per recipient, item, deadline and reminder day: a same-day re-run of
-      // the task does not resend it.
-      const key = [
-        recipient.userId, params.itemType, params.itemId, params.warningType,
-        params.expirationDate, params.daysRemaining,
-      ].join(':');
-      const sentAt = this.expiryRemindersSent.get(key);
-      const now = this.now();
-      if (sentAt !== undefined && now - sentAt < this.EXPIRY_REMINDER_GUARD_MS) {
-        continue;
-      }
-
       // Don't pass manager - notifications are fire-and-forget, so the transaction
       // may be closed by the time this runs. Preferences service uses its own connection.
       const prefs = await this.preferencesService.getForUser(
         recipient.userId,
         params.tenantId,
       );
+      if (this.checkPreferences(prefs, 'budget', 'expiration_warning')) optedIn.push(recipient);
+    }
+    const claimed = await this.claimExpiryReminders(params, optedIn);
 
-      // Opt-in only. Record the key only for a recipient who is emailed, so a user who opts
-      // in after a skipped run still gets the reminder on a re-run.
-      if (!this.checkPreferences(prefs, 'budget', 'expiration_warning')) continue;
-      this.expiryRemindersSent.set(key, now);
-
+    for (const recipient of claimed) {
       const locale = resolveEmailLocale(recipient.locale);
       const existing = localeGroups.get(locale);
       if (existing) {
@@ -1257,6 +1244,55 @@ export class NotificationsService {
         this.sendNotification(recipient.email, content);
       }
     }
+  }
+
+  /**
+   * The recipients not yet sent this reminder, recorded as sent before any email goes out.
+   * One reminder per recipient, item, deadline and reminder day: the key names the day
+   * (deadline minus days left), so a re-run of the daily task on the same day, after an api
+   * restart included, sends nothing twice, and the next reminder day is never blocked.
+   * The record is a system row of the tenant's audit log (`expiry_reminders`), written in
+   * its own transaction so it holds even if the run fails afterwards; the advisory lock
+   * serialises two runs on the same item.
+   */
+  private async claimExpiryReminders(
+    params: { itemType: string; itemId: string; warningType: string; expirationDate: string; daysRemaining: number; tenantId: string },
+    recipients: NotificationRecipient[],
+  ): Promise<NotificationRecipient[]> {
+    if (recipients.length === 0) return [];
+    const keyOf = (recipient: NotificationRecipient) => [
+      recipient.userId, params.itemType, params.itemId, params.warningType,
+      params.expirationDate, params.daysRemaining,
+    ].join(':');
+    return withTenant(this.dataSource, params.tenantId, async (manager) => {
+      await manager.query(
+        `SELECT pg_advisory_xact_lock($1::int, hashtext($2))`,
+        [EXPIRY_REMINDER_LOCK_NAMESPACE, `${params.tenantId}:${params.itemId}`],
+      );
+      const keys = recipients.map(keyOf);
+      const sent: Array<{ key: string }> = await manager.query(
+        `SELECT after_json->>'key' AS key FROM audit_log
+          WHERE tenant_id = $1 AND record_id = $2 AND table_name = 'expiry_reminders' AND after_json->>'key' = ANY($3::text[])`,
+        [params.tenantId, params.itemId, keys],
+      );
+      const already = new Set(sent.map((row) => row.key));
+      const fresh = recipients.filter((recipient, index) => !already.has(keys[index]) && keys.indexOf(keys[index]) === index);
+      if (fresh.length > 0) {
+        await manager.query(
+          `INSERT INTO audit_log (tenant_id, table_name, record_id, action, after_json, source, source_ref)
+           SELECT $1::uuid, 'expiry_reminders', $2::uuid, 'create',
+                  jsonb_build_object('key', r.key, 'recipient_user_id', r.user_id, 'item_type', $3::text,
+                    'warning_type', $4::text, 'expiration_date', $5::text, 'days_remaining', $6::int),
+                  'system', 'check-expirations'
+             FROM unnest($7::text[], $8::uuid[]) AS r(key, user_id)`,
+          [
+            params.tenantId, params.itemId, params.itemType, params.warningType, params.expirationDate, params.daysRemaining,
+            fresh.map(keyOf), fresh.map((recipient) => recipient.userId),
+          ],
+        );
+      }
+      return fresh;
+    });
   }
 
   /**
