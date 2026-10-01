@@ -348,8 +348,11 @@ export class EntraDirectorySyncService implements OnModuleInit {
         : {}),
     };
     try {
-      await this.tenants.updateTenant(tenant.id, {
-        entra_metadata: { ...((tenant.entra_metadata as any) ?? {}), directory_sync } as any,
+      // Only the sync's own key: the tenant was loaded when the sync started,
+      // and the rest of entra_metadata may have changed since. Nothing is written
+      // when SSO was disconnected or moved to another directory meanwhile.
+      await this.tenants.setEntraMetadataKey(tenant.id, 'directory_sync', directory_sync, {
+        whenEntraTenantId: tenant.entra_tenant_id,
       });
     } catch (err: any) {
       this.logger.warn(`[${ENTRA_DIRECTORY_SYNC_TASK}] could not record status for tenant ${tenant.id}: ${err?.message || err}`);

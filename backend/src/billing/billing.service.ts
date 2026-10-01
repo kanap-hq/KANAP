@@ -235,16 +235,19 @@ export class BillingService {
     const customer = this.normaliseContactInput(opts.customer ?? {}, currentCustomer);
     const invoice = this.normaliseContactInput(opts.invoice ?? {}, currentInvoice);
 
-    tenant.billing_customer_info = this.contactToStorage(customer);
-    tenant.billing_invoice_info = this.contactToStorage(invoice);
-    tenant.billing_email = invoice.email;
-    tenant.billing_company_name = invoice.company ?? invoice.name ?? tenant.name;
-    tenant.billing_phone = invoice.phone;
-    tenant.billing_tax_id = invoice.vatNumber;
-    tenant.billing_address = this.addressToRecord(invoice.address);
-
-    const tenantRepo = manager.getRepository(Tenant);
-    const savedTenant = await tenantRepo.save(tenant);
+    const billingColumns: Partial<Tenant> = {
+      billing_customer_info: this.contactToStorage(customer),
+      billing_invoice_info: this.contactToStorage(invoice),
+      billing_email: invoice.email,
+      billing_company_name: invoice.company ?? invoice.name ?? tenant.name,
+      billing_phone: invoice.phone,
+      billing_tax_id: invoice.vatNumber,
+      billing_address: this.addressToRecord(invoice.address),
+    };
+    // Only the billing columns: saving the loaded tenant would write back its
+    // other columns (metadata, branding) as they were when it was read.
+    await manager.getRepository(Tenant).update({ id: tenant.id }, billingColumns);
+    const savedTenant = Object.assign(tenant, billingColumns);
 
     await this.audit.log(
       {
@@ -577,8 +580,10 @@ export class BillingService {
       address: this.normaliseStripeAddress(this.addressToRecord(invoiceContact.address)),
     });
 
+    // The tenant was loaded by the caller before the Stripe calls: write the
+    // customer id only, never the rest of that copy.
     tenant.stripe_customer_id = customer.id;
-    await this.tenants.save(tenant);
+    await this.tenants.update({ id: tenant.id }, { stripe_customer_id: customer.id });
     await this.updateSubscriptionCustomer(tenant.id, customer.id, { manager: opts.manager });
     return customer.id;
   }

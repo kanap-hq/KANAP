@@ -105,16 +105,17 @@ export class AdminBrandingController {
       }
     }
 
-    branding.logo_storage_path = key;
-    branding.logo_version = (branding.logo_version || 0) + 1;
-
-    await this.tenants.updateTenant(tenant.id, { branding }, { manager });
+    // Merged after the storage calls, from the stored branding: a colour saved
+    // meanwhile is kept.
+    const stored = this.normalizeBranding(
+      await this.tenants.mergeBranding(tenant.id, { set: { logo_storage_path: key }, bumpLogoVersion: true }, { manager }),
+    );
 
     return {
       ok: true,
       has_logo: true,
-      logo_version: branding.logo_version,
-      use_logo_in_dark: branding.use_logo_in_dark,
+      logo_version: stored.logo_version,
+      use_logo_in_dark: stored.use_logo_in_dark,
     };
   }
 
@@ -133,16 +134,15 @@ export class AdminBrandingController {
       }
     }
 
-    delete branding.logo_storage_path;
-    branding.logo_version = (branding.logo_version || 0) + 1;
-
-    await this.tenants.updateTenant(tenant.id, { branding }, { manager });
+    const stored = this.normalizeBranding(
+      await this.tenants.mergeBranding(tenant.id, { unset: ['logo_storage_path'], bumpLogoVersion: true }, { manager }),
+    );
 
     return {
       ok: true,
       has_logo: false,
-      logo_version: branding.logo_version,
-      use_logo_in_dark: branding.use_logo_in_dark,
+      logo_version: stored.logo_version,
+      use_logo_in_dark: stored.use_logo_in_dark,
     };
   }
 
@@ -151,19 +151,20 @@ export class AdminBrandingController {
   async updateSettings(@Body() body: UpdateBrandingSettingsDto, @Req() req: any) {
     const manager = req?.queryRunner?.manager;
     const tenant = await this.getTenantFromRequest(req, manager);
-    const branding = this.normalizeBranding(tenant.branding);
+    // Only the keys sent are written.
+    const set: Partial<TenantBranding> = {};
 
     if (Object.prototype.hasOwnProperty.call(body, 'primary_color_light')) {
-      branding.primary_color_light = this.normalizeHexOrNull(body.primary_color_light);
+      set.primary_color_light = this.normalizeHexOrNull(body.primary_color_light);
     }
     if (Object.prototype.hasOwnProperty.call(body, 'primary_color_dark')) {
-      branding.primary_color_dark = this.normalizeHexOrNull(body.primary_color_dark);
+      set.primary_color_dark = this.normalizeHexOrNull(body.primary_color_dark);
     }
     if (Object.prototype.hasOwnProperty.call(body, 'use_logo_in_dark')) {
-      branding.use_logo_in_dark = body.use_logo_in_dark !== false;
+      set.use_logo_in_dark = body.use_logo_in_dark !== false;
     }
 
-    await this.tenants.updateTenant(tenant.id, { branding }, { manager });
+    const branding = this.normalizeBranding(await this.tenants.mergeBranding(tenant.id, { set }, { manager }));
 
     return {
       ok: true,
@@ -190,19 +191,22 @@ export class AdminBrandingController {
       }
     }
 
-    const next: TenantBranding = {
-      logo_version: (branding.logo_version || 0) + 1,
-      use_logo_in_dark: true,
-      primary_color_light: null,
-      primary_color_dark: null,
-    };
-
-    await this.tenants.updateTenant(tenant.id, { branding: next }, { manager });
+    const stored = this.normalizeBranding(
+      await this.tenants.mergeBranding(
+        tenant.id,
+        {
+          unset: ['logo_storage_path'],
+          set: { use_logo_in_dark: true, primary_color_light: null, primary_color_dark: null },
+          bumpLogoVersion: true,
+        },
+        { manager },
+      ),
+    );
 
     return {
       ok: true,
       has_logo: false,
-      logo_version: next.logo_version,
+      logo_version: stored.logo_version,
       use_logo_in_dark: true,
       primary_color_light: null,
       primary_color_dark: null,
