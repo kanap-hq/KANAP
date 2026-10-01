@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -31,6 +31,7 @@ import { RolePermission } from '../permissions/role-permission.entity';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { denormalizeCsvFormulaValue, neutralizeCsvFormulaValue } from '../common/csv/csv-export.service';
+import type { ReleaseConnectionFn } from '../common/import-connection';
 
 const SUPPORTED_USER_LOCALES = ['en', 'fr', 'de', 'es'] as const;
 const SELF_SERVICE_FIELDS = ['first_name', 'last_name', 'job_title', 'business_phone', 'mobile_phone', 'locale'] as const;
@@ -942,7 +943,26 @@ export class UsersService {
     return { ...saved, password_hash: undefined } as any;
   }
 
-  async inviteUser(id: string, actorId?: string | null, baseUrl?: string, opts?: { manager?: EntityManager }) {
+  /**
+   * Invites a user: a password link by e-mail. The token, the status change
+   * and the audit row are written first, the e-mail goes last.
+   *
+   * With `releaseConnection` (the HTTP route) those writes are committed and
+   * the request's connection given back before the e-mail waits on the mail
+   * queue, whose rate limit and retries can take minutes: the request never
+   * holds its transaction open on the mail service (the server would end it
+   * after the idle limit, taking the token with it, while the e-mail with its
+   * link still went out). A send that fails then leaves the invitation saved
+   * without its e-mail: the answer says so, and inviting again sends a new
+   * link. Without it (a caller with its own transaction) a failed send fails
+   * the call, as before.
+   */
+  async inviteUser(
+    id: string,
+    actorId?: string | null,
+    baseUrl?: string,
+    opts?: { manager?: EntityManager; releaseConnection?: ReleaseConnectionFn },
+  ) {
     const repo = this.getRepo(opts?.manager);
     const user = await repo.findOne({ where: { id }, relations: ['role'] });
     if (!user) throw new BadRequestException('User not found');
@@ -969,33 +989,52 @@ export class UsersService {
     await this.storePasswordResetToken(token, user, opts);
     const expires = getPasswordResetExpirationMinutes();
     const inviteUrl = `${normalizedBase}/accept-invite#token=${encodeURIComponent(token)}`;
-
-    await this.emailService.sendUserInviteEmail({
+    const email = {
       to: user.email,
       inviteUrl,
       expiresInMinutes: expires,
       roleName: user.role?.role_name ?? null,
       locale: user.locale ?? undefined,
-    });
+    };
 
+    let result: any;
     if (user.status === 'invited' || user.status === 'enabled') {
       // Never demote an active account: for an enabled user the invite email is
       // just a "set your password" onboarding mail. Flipping them to 'invited'
       // would block their existing password login and hide them from the
       // default Users view.
-      return { ...user, password_hash: undefined } as any;
+      result = { ...user, password_hash: undefined };
+    } else {
+      const before = { ...user };
+      user.status = 'invited' as any;
+      const saved = await repo.save(user);
+      if (this.audit) {
+        await this.audit.log(
+          { table: 'users', recordId: saved.id, action: 'update', before, after: saved, userId: actorId ?? null },
+          { manager: opts?.manager ?? repo.manager },
+        );
+      }
+      result = { ...saved, password_hash: undefined };
     }
 
-    const before = { ...user };
-    user.status = 'invited' as any;
-    const saved = await repo.save(user);
-    if (this.audit) {
-      await this.audit.log(
-        { table: 'users', recordId: saved.id, action: 'update', before, after: saved, userId: actorId ?? null },
-        { manager: opts?.manager ?? repo.manager },
-      );
+    if (!opts?.releaseConnection) {
+      await this.emailService.sendUserInviteEmail(email);
+      return result;
     }
-    return { ...saved, password_hash: undefined } as any;
+    let sendError: unknown = null;
+    await opts.releaseConnection(async () => {
+      try {
+        await this.emailService.sendUserInviteEmail(email);
+      } catch (error) {
+        sendError = error;
+      }
+    });
+    if (sendError) {
+      // eslint-disable-next-line no-console
+      console.error(`[users] invitation of user ${user.id}: saved, but its e-mail could not be sent:`, sendError);
+      throw new BadGatewayException('The invitation is saved, but its e-mail could not be sent. Send the invitation again.');
+    }
+    return result;
   }
 
   private async storePasswordResetToken(token: string, user: User, opts?: { manager?: EntityManager }) {

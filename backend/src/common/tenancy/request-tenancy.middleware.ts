@@ -12,7 +12,11 @@ import { BUSY_RETRY_AFTER_SECONDS } from '../filters/database-error.mapping';
  * - The tenant lookup itself fails (pool exhausted, database down or slow):
  *   503 `busy` with Retry-After. Going on without a tenant would answer later
  *   with fake 401s and "Tenant context is required", and a 401 sends the
- *   browser into a token refresh, even a logout.
+ *   browser into a token refresh, even a logout. Except the liveness route
+ *   (`/health`), which reads nothing: it goes on without a tenant and still
+ *   answers that the process is alive, so a monitor or an orchestrator does
+ *   not restart a busy API (in single-tenant mode every request looks the
+ *   tenant up, the health check included).
  */
 export type RequestTenancyOptions = {
   /** Runs one read query (the DataSource's `query`). */
@@ -24,6 +28,9 @@ export type RequestTenancyOptions = {
 };
 
 const TENANT_BY_SLUG = 'SELECT id, slug, name FROM tenants WHERE slug = $1 AND deleted_at IS NULL LIMIT 1';
+
+/** Liveness routes: no tenant needed, never refused because the database is busy. */
+const LIVENESS_PATHS = new Set(['/health', '/api/health']);
 
 /** The tenant subdomain of a host, or null for apex, www and unknown hosts. */
 export function tenantSlugFromHost(host: string): string | null {
@@ -113,6 +120,11 @@ export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
         }
       }
     } catch (error) {
+      if (LIVENESS_PATHS.has(req.path)) {
+        (req as any).tenant = null;
+        next();
+        return;
+      }
       answerTenantLookupFailed(req, res, error);
       return;
     }

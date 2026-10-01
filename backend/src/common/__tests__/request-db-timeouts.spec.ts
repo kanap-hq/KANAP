@@ -1,11 +1,16 @@
 import * as assert from 'node:assert/strict';
 import { Reflector } from '@nestjs/core';
+import { DatabaseConnectionError } from '../filters/database-error.mapping';
 import {
   BULK_WRITE_TIMEOUTS,
+  connectRequestRunner,
   DEFAULT_REQUEST_DB_TIMEOUTS,
+  isMultipartRequest,
   LongRunningRequest,
   OUTSIDE_WORK_TIMEOUTS,
+  rememberRequestDbTimeouts,
   requestDbTimeoutDefaults,
+  requestDbTimeoutsOf,
   resolveRequestDbTimeouts,
   startTenantTransaction,
   TENANT_PURGE_TIMEOUTS,
@@ -45,8 +50,9 @@ class OutsideProbe {
   }
 }
 
-function context(cls: any, handler: string) {
-  return { getHandler: () => cls.prototype[handler], getClass: () => cls } as any;
+function context(cls: any, handler: string, contentType?: string) {
+  const req = { headers: contentType ? { 'content-type': contentType } : {} };
+  return { getHandler: () => cls.prototype[handler], getClass: () => cls, switchToHttp: () => ({ getRequest: () => req }) } as any;
 }
 
 function testDefaults() {
@@ -92,6 +98,56 @@ function testDecorator() {
   assert.equal(resolveRequestDbTimeouts(reflector, context(Probe, 'bulk'), raisedEnv).lockTimeoutMs, 45_000, 'an environment default above the decorator is kept');
 }
 
+/** A file upload's body is read inside the transaction: it gets the idle limit of outside work. */
+function testUploads() {
+  const reflector = new Reflector();
+  const defaults = requestDbTimeoutDefaults({});
+  const multipart = 'multipart/form-data; boundary=----x';
+  assert.ok(isMultipartRequest({ headers: { 'content-type': multipart } }));
+  assert.ok(isMultipartRequest({ headers: { 'content-type': 'Multipart/Form-Data;boundary=x' } }));
+  assert.equal(isMultipartRequest({ headers: { 'content-type': 'application/json' } }), false);
+  assert.equal(isMultipartRequest({ headers: {} }), false);
+  assert.deepEqual(
+    resolveRequestDbTimeouts(reflector, context(Probe, 'plain', multipart), defaults),
+    { lockTimeoutMs: 5_000, statementTimeoutMs: 30_000, idleInTransactionTimeoutMs: 600_000 },
+    'an upload raises the idle limit only',
+  );
+  assert.deepEqual(
+    resolveRequestDbTimeouts(reflector, context(Probe, 'bulk', multipart), defaults),
+    { lockTimeoutMs: 30_000, statementTimeoutMs: 120_000, idleInTransactionTimeoutMs: 600_000 },
+    'an import upload keeps its raised waits, with the longer idle limit',
+  );
+  assert.deepEqual(resolveRequestDbTimeouts(reflector, context(Probe, 'plain', 'application/json'), defaults), defaults, 'a JSON body: the defaults');
+  assert.equal(
+    resolveRequestDbTimeouts(reflector, context(Probe, 'plain', multipart), requestDbTimeoutDefaults({ DB_IDLE_IN_TRANSACTION_TIMEOUT_MS: '0' })).idleInTransactionTimeoutMs,
+    0,
+    'no limit stays no limit',
+  );
+}
+
+/** The request keeps its waits for a runner opened later (an import that gives its connection back). */
+function testRememberedTimeouts() {
+  const req: any = {};
+  assert.deepEqual(requestDbTimeoutsOf(req), requestDbTimeoutDefaults(), 'nothing remembered: the defaults');
+  rememberRequestDbTimeouts(req, { lockTimeoutMs: 30_000, statementTimeoutMs: 120_000, idleInTransactionTimeoutMs: 300_000 });
+  assert.deepEqual(requestDbTimeoutsOf(req), { lockTimeoutMs: 30_000, statementTimeoutMs: 120_000, idleInTransactionTimeoutMs: 300_000 });
+}
+
+/** No free connection: a DatabaseConnectionError (503 busy), the runner given back. */
+async function testConnectFailure() {
+  let released = 0;
+  const failing = { connect: async () => { throw new Error('timeout exceeded when trying to connect'); }, release: async () => { released += 1; } };
+  await assert.rejects(
+    connectRequestRunner(failing as any),
+    (error: unknown) => error instanceof DatabaseConnectionError && error.reason === 'no connection'
+      && (error as any).cause?.message === 'timeout exceeded when trying to connect',
+  );
+  assert.equal(released, 1);
+  let connected = 0;
+  await connectRequestRunner({ connect: async () => { connected += 1; }, release: async () => undefined } as any);
+  assert.equal(connected, 1);
+}
+
 async function testStartTenantTransaction() {
   const calls: Array<[string, unknown[] | undefined]> = [];
   const runner = {
@@ -111,6 +167,9 @@ async function testStartTenantTransaction() {
 async function main() {
   testDefaults();
   testDecorator();
+  testUploads();
+  testRememberedTimeouts();
+  await testConnectFailure();
   await testStartTenantTransaction();
   console.log('request-db-timeouts.spec: ok');
 }

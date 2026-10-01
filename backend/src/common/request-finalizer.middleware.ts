@@ -14,9 +14,17 @@ import { NextFunction } from 'express';
  * ClientAbortedError instead of reaching the connection. Without the fence it
  * could run between the ROLLBACK and the release, outside any transaction and
  * without tenant (row level security refused it, the logs filled with RLS
- * violations). `req._clientAborted` tells ReleaseTenantRunnerFilter to drop the
- * handler's final error quietly: the one warning line logged here is the only
- * trace of the abort.
+ * violations). `req._clientAborted` tells ReleaseTenantRunnerFilter not to
+ * answer, and to drop the abort's own fallout quietly: the one warning line
+ * logged here is the only trace of the abort.
+ *
+ * An abort that lands while TenantInterceptor's COMMIT is in flight
+ * (`req._tenantCommitStarted`) is left to the interceptor, which finishes and
+ * releases the runner itself: a ROLLBACK queued behind that COMMIT would
+ * undo nothing, and the changes may well be saved. The warning says so.
+ *
+ * A runner whose connection already ended (released by TypeORM, its
+ * transaction gone with the connection) is only marked finished.
  */
 export class ClientAbortedError extends Error {
   constructor() {
@@ -42,13 +50,19 @@ export function createRequestFinalizer() {
       if (!runner || req?._tenantRunnerReleased) return;
       if (aborted && !req._clientAborted) {
         req._clientAborted = true;
+        if (req._tenantCommitStarted && !runner.isReleased) {
+          // eslint-disable-next-line no-console
+          console.warn(`[request] ${req.method} ${req.originalUrl ?? req.url}: client aborted during the commit, its changes may be saved`);
+          return;
+        }
         fenceRunner(runner);
         // eslint-disable-next-line no-console
         console.warn(`[request] ${req.method} ${req.originalUrl ?? req.url}: client aborted, transaction rolled back`);
       }
       try {
         // One rollback per open level (a nested TypeORM transaction is a savepoint).
-        for (let level = 0; runner.isTransactionActive && level < 10; level++) {
+        // A released runner has nothing left to roll back: its connection is gone.
+        for (let level = 0; runner.isTransactionActive && !runner.isReleased && level < 10; level++) {
           try {
             await runner.rollbackTransaction();
           } catch (e: any) {

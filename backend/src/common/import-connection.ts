@@ -1,7 +1,13 @@
 import * as fs from 'fs';
 import { BadRequestException } from '@nestjs/common';
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
-import { requestDbTimeoutDefaults, startTenantTransaction } from './request-db-timeouts';
+import {
+  connectRequestRunner,
+  RequestDbTimeouts,
+  requestDbTimeoutDefaults,
+  requestDbTimeoutsOf,
+  startTenantTransaction,
+} from './request-db-timeouts';
 
 export type ReleaseConnectionResult<T> = {
   result: T;
@@ -58,12 +64,13 @@ export async function commitAndReleaseRunner(runner: QueryRunner | null | undefi
 export async function createTenantQueryRunner(
   dataSource: DataSource,
   tenantId: string,
+  timeouts: RequestDbTimeouts = requestDbTimeoutDefaults(),
 ): Promise<QueryRunner> {
   const runner = dataSource.createQueryRunner();
   try {
-    await runner.connect();
+    await connectRequestRunner(runner);
     // The request goes on in this transaction: same tenant and bounded waits as the one it replaces.
-    await startTenantTransaction(runner, tenantId, requestDbTimeoutDefaults());
+    await startTenantTransaction(runner, tenantId, timeouts);
     return runner;
   } catch (error) {
     try {
@@ -114,7 +121,8 @@ export function createRequestReleaseConnection(
     req._tenantRunnerReleased = true;
 
     const result = await fn();
-    const nextRunner = await createTenantQueryRunner(dataSource, normalizedTenantId);
+    // The route's waits (an import keeps its raised ones), not the defaults.
+    const nextRunner = await createTenantQueryRunner(dataSource, normalizedTenantId, requestDbTimeoutsOf(req));
     req.queryRunner = nextRunner;
     req._tenantRunnerOwner = true;
     req._tenantRunnerReleased = false;

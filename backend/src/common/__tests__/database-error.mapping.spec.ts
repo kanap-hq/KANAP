@@ -1,7 +1,14 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException, HttpException } from '@nestjs/common';
-import { QueryFailedError } from 'typeorm';
-import { BUSY_RETRY_AFTER_SECONDS, mapDatabaseError, sqlStateOf } from '../filters/database-error.mapping';
+import { QueryFailedError, QueryRunnerAlreadyReleasedError, QueryRunnerProviderAlreadyReleasedError } from 'typeorm';
+import {
+  BUSY_RETRY_AFTER_SECONDS,
+  DatabaseConnectionError,
+  databaseErrorLogLine,
+  isReleasedRunnerError,
+  mapDatabaseError,
+  sqlStateOf,
+} from '../filters/database-error.mapping';
 
 // The database errors a race can cause and their HTTP answer (plan
 // planning/perf-scale, lot 1D), on the errors as TypeORM and node-postgres
@@ -43,6 +50,40 @@ function testCodes() {
   assert.equal(mapDatabaseError(cases[0][0])!.constraint, 'uniq_spend_item_budget_year', 'the constraint is kept for the log');
 }
 
+/** No connection, or the connection ended inside the transaction: 503 busy with Retry-After. */
+function testConnectionErrors() {
+  for (const reason of ['no connection', 'connection lost'] as const) {
+    const mapped = mapDatabaseError(new DatabaseConnectionError(reason, { cause: new Error('timeout exceeded when trying to connect') }));
+    assert.ok(mapped, `${reason}: mapped`);
+    assert.equal(mapped!.exception.getStatus(), 503);
+    assert.equal(body(mapped!.exception).code, 'busy');
+    assert.equal(mapped!.retryAfterSeconds, BUSY_RETRY_AFTER_SECONDS);
+    assert.equal(mapped!.cause, reason);
+    assert.equal(
+      mapped!.note,
+      reason === 'no connection' ? 'timeout exceeded when trying to connect' : undefined,
+      `${reason}: why no connection could be had is kept for the log`,
+    );
+  }
+  assert.ok(isReleasedRunnerError(new QueryRunnerAlreadyReleasedError()));
+  assert.ok(isReleasedRunnerError(new QueryRunnerProviderAlreadyReleasedError()));
+  assert.equal(isReleasedRunnerError(new Error('Query runner already released')), false, 'by class, not by message');
+  // TypeORM's own "already released" errors are no database error by themselves: the filter decides from the runner.
+  assert.equal(mapDatabaseError(new QueryRunnerAlreadyReleasedError()), null);
+}
+
+/** The log line names SQLSTATE, table and constraint, never the driver's detail (it quotes row values). */
+function testLogLine() {
+  const error = queryFailed('INSERT INTO contacts (email) VALUES ($1)', '23505', {
+    table: 'contacts', constraint: 'uq_contacts_email', detail: 'Key (email)=(jane.doe@example.com) already exists.',
+  });
+  const line = databaseErrorLogLine({ method: 'POST', originalUrl: '/contacts' }, mapDatabaseError(error)!);
+  assert.equal(line, '[db] POST /contacts: 23505 (table contacts, constraint uq_contacts_email) answered 409 duplicate');
+  assert.ok(!line.includes('jane.doe'), 'no row value in the log');
+  const lost = databaseErrorLogLine({ method: 'PATCH', url: '/spend-items/x' }, mapDatabaseError(new DatabaseConnectionError('connection lost'))!);
+  assert.equal(lost, '[db] PATCH /spend-items/x: connection lost answered 503 busy');
+}
+
 function testOtherErrorsAreLeftAlone() {
   assert.equal(mapDatabaseError(queryFailed('SELECT 1/0', '22012')), null, 'division by zero stays a 500');
   assert.equal(mapDatabaseError(queryFailed('SELECT x', '42703')), null, 'undefined column stays a 500');
@@ -63,6 +104,8 @@ function testSqlState() {
 
 function main() {
   testCodes();
+  testConnectionErrors();
+  testLogLine();
   testOtherErrorsAreLeftAlone();
   testSqlState();
   console.log('database-error.mapping.spec: ok');

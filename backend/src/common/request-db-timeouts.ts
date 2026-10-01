@@ -1,6 +1,7 @@
 import { ExecutionContext, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { QueryRunner } from 'typeorm';
+import { DatabaseConnectionError } from './filters/database-error.mapping';
 
 /**
  * Bounded waits of the request transaction (plan planning/perf-scale, lot 1D).
@@ -21,6 +22,15 @@ import { QueryRunner } from 'typeorm';
  * no limit): DB_LOCK_TIMEOUT_MS, DB_STATEMENT_TIMEOUT_MS,
  * DB_IDLE_IN_TRANSACTION_TIMEOUT_MS. A legitimately long route raises them with
  * `@LongRunningRequest({...})`; a value there never lowers the default.
+ *
+ * A file upload (`multipart/form-data`) gets the idle limit of outside work
+ * (10 min) whatever its route: TenantInitGuard opens the transaction before
+ * the route's FileInterceptor reads the body, so the whole upload counts as
+ * idle in transaction (a 20 MB file on a slow line takes minutes). Reading the
+ * body before the transaction would need every upload route rewired (the
+ * permission checks run in the transaction, before the route's interceptors);
+ * the transaction holds no row lock while the body arrives, only its
+ * connection, as for any other outside work.
  */
 export type RequestDbTimeouts = {
   lockTimeoutMs: number;
@@ -104,27 +114,56 @@ function longer(a: number, b: number | undefined): number {
   return Math.max(a, b);
 }
 
-/** The defaults raised by the route's `@LongRunningRequest` (handler first, then controller). */
+/** A request whose body multer reads after the guards (a file upload). */
+export function isMultipartRequest(req: { headers?: Record<string, unknown> } | null | undefined): boolean {
+  const type = req?.headers?.['content-type'];
+  return typeof type === 'string' && /^\s*multipart\/form-data\b/i.test(type);
+}
+
+/**
+ * The defaults raised by the route's `@LongRunningRequest` (handler first,
+ * then controller), and for a file upload by the idle limit of outside work
+ * (see the module comment).
+ */
 export function resolveRequestDbTimeouts(
   reflector: Reflector,
   context: ExecutionContext,
   defaults: RequestDbTimeouts = requestDbTimeoutDefaults(),
 ): RequestDbTimeouts {
-  const raised = reflector.getAllAndOverride<Partial<RequestDbTimeouts> | undefined>(REQUEST_DB_TIMEOUTS_KEY, [
+  const declared = reflector.getAllAndOverride<Partial<RequestDbTimeouts> | undefined>(REQUEST_DB_TIMEOUTS_KEY, [
     context.getHandler(),
     context.getClass(),
   ]);
-  if (!raised) return defaults;
+  const req = typeof context.switchToHttp === 'function' ? context.switchToHttp().getRequest() : undefined;
+  const upload = isMultipartRequest(req) ? OUTSIDE_WORK_TIMEOUTS : undefined;
+  if (!declared && !upload) return defaults;
+  const raised = (key: keyof RequestDbTimeouts) => longer(longer(defaults[key], declared?.[key]), upload?.[key]);
   return {
-    lockTimeoutMs: longer(defaults.lockTimeoutMs, raised.lockTimeoutMs),
-    statementTimeoutMs: longer(defaults.statementTimeoutMs, raised.statementTimeoutMs),
-    idleInTransactionTimeoutMs: longer(defaults.idleInTransactionTimeoutMs, raised.idleInTransactionTimeoutMs),
+    lockTimeoutMs: raised('lockTimeoutMs'),
+    statementTimeoutMs: raised('statementTimeoutMs'),
+    idleInTransactionTimeoutMs: raised('idleInTransactionTimeoutMs'),
   };
 }
 
 /**
+ * Takes the request's connection from the pool. A failure (the pool timed out
+ * waiting for a free connection, the database is unreachable) becomes a
+ * DatabaseConnectionError, answered 503 `busy` instead of a 500.
+ */
+export async function connectRequestRunner(runner: QueryRunner): Promise<void> {
+  try {
+    await runner.connect();
+  } catch (error) {
+    await runner.release().catch(() => undefined);
+    throw new DatabaseConnectionError('no connection', { cause: error });
+  }
+}
+
+/**
  * Opens the request transaction on the runner: the tenant and the bounded
- * waits, all transaction-local, in one round trip.
+ * waits, all transaction-local, in one round trip. The request keeps the
+ * waits (`req._requestDbTimeouts`, see `rememberRequestDbTimeouts`) so a
+ * runner opened later for it (`import-connection.ts`) gets the same ones.
  */
 export async function startTenantTransaction(runner: QueryRunner, tenantId: string, timeouts: RequestDbTimeouts): Promise<void> {
   await runner.startTransaction();
@@ -135,4 +174,14 @@ export async function startTenantTransaction(runner: QueryRunner, tenantId: stri
             set_config('idle_in_transaction_session_timeout', $4, true)`,
     [tenantId, String(timeouts.lockTimeoutMs), String(timeouts.statementTimeoutMs), String(timeouts.idleInTransactionTimeoutMs)],
   );
+}
+
+/** Keeps the request's waits on it, for a runner opened later in the same request. */
+export function rememberRequestDbTimeouts(req: any, timeouts: RequestDbTimeouts): void {
+  if (req && typeof req === 'object') req._requestDbTimeouts = timeouts;
+}
+
+/** The waits the request's transaction was opened with, or the defaults. */
+export function requestDbTimeoutsOf(req: any): RequestDbTimeouts {
+  return (req?._requestDbTimeouts as RequestDbTimeouts | undefined) ?? requestDbTimeoutDefaults();
 }
