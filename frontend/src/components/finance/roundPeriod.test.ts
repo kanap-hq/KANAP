@@ -11,6 +11,7 @@ import {
   isDateLine,
   centsToDecimal,
   changedDays,
+  chipLines,
   chipText,
   chipUnits,
   columnLabel,
@@ -266,11 +267,31 @@ describe('columns built from lines', () => {
     // Pieces only: no FTE to show.
     expect(chipText(en(), 'en', computed([line({ quantity_unit: 'pieces', price_basis: 'per_piece', frequency: 'per_month', working_day_profile_id: null })], '0.00'))).toBe('Quantity and price · 1 line');
     expect(chipUnits(en(), 'en', undefined)).toEqual([]);
-    // A hand edit or a spread keeps the lines as a reference, and its own chip.
-    expect(chipText(en(), 'en', record({ method: 'manual', lines: [line()], fte: '1.00' }))).toBe('Edited by hand');
-    expect(chipText(en(), 'en', record({ lines: [line()], fte: '1.00' }))).toBe('Spread flat');
+    // One line of text: the lines are what the column is computed from.
+    expect(chipLines(en(), 'en', three)).toEqual([['Quantity and price ·', '3 lines · 0.12 FTE']]);
+    expect(chipLines(en(), 'en', record({}))).toEqual([['Spread flat']]);
     expect(hasLines(record({}))).toBe(false);
     expect(hasLines(record({ lines: [line()] }))).toBe(true);
+  });
+
+  it('a column that keeps its lines after a spread, a hand edit or a copy names them first, then what produced the amounts', () => {
+    const kept = (over: Partial<RoundInput>) => record({ lines: [line(), line({ id: 'l2' })], fte: '1.00', ...over });
+    const spread445 = kept({ spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '1.00', profile: '4-4-5', active_months: [1], weights: [] } });
+    expect(chipText(en(), 'en', spread445)).toBe('Quantity and price · 2 lines · 1.00 FTE · Spread 4-4-5');
+    // The way the amounts were produced starts a line of its own; the separators stay at the end of a unit.
+    expect(chipLines(en(), 'en', spread445)).toEqual([['Quantity and price ·', '2 lines · 1.00 FTE ·'], ['Spread 4-4-5']]);
+    expect(chipUnits(en(), 'en', spread445)).toEqual(['Quantity and price ·', '2 lines · 1.00 FTE ·', 'Spread 4-4-5']);
+    expect(chipText(en(), 'en', kept({ method: 'manual' }))).toBe('Quantity and price · 2 lines · 1.00 FTE · Edited by hand');
+    const copied = kept({
+      method: 'copied',
+      last_calculation: { kind: 'copy', source_year: 2025, source_measure: 'planned', uplift_pct: '5', source_total: '1.00', total: '1.05', source_method: 'computed' },
+    });
+    expect(chipLines(en(), 'en', copied)).toEqual([['Quantity and price ·', '2 lines · 1.00 FTE ·'], ['Copied from Budget 2025 +5%']]);
+    // Pieces only: no FTE, as for a computed column.
+    const pieces = line({ quantity_unit: 'pieces', price_basis: 'per_piece', frequency: 'per_month', working_day_profile_id: null });
+    expect(chipText(en(), 'en', record({ lines: [pieces], fte: '0.00' }))).toBe('Quantity and price · 1 line · Spread flat');
+    // The tooltip lists the lines the chip names.
+    expect(linesText(en(), 'en', kept({ method: 'manual' }))).toBe('Project manager: 20 days × 900 per day over the period, Jan to Jun\nProject manager: 20 days × 900 per day over the period, Jan to Jun');
   });
 
   it('lists the lines for the tooltip of a column computed from them', () => {
@@ -298,8 +319,7 @@ describe('columns built from lines', () => {
     expect(lineText(fr(), 'fr', line())).toMatch(/^Project manager : 20 jours × 900 par jour sur la période, janv\.? à juin$/);
     const two = computed([line(), line({ id: 'l2', label: 'Licences', quantity_unit: 'pieces', quantity: '3', price_basis: 'per_piece', frequency: 'per_month', unit_price: '10' })], '0.5');
     expect(linesText(en(), 'en', two)).toBe('Project manager: 20 days × 900 per day over the period, Jan to Jun\nLicences: 3 pieces × 10 per piece per month, Jan to Jun');
-    // Only a column computed from its lines explains itself with them.
-    expect(linesText(en(), 'en', record({ method: 'manual', lines: [line()] }))).toBe('');
+    // No lines, no tooltip.
     expect(linesText(en(), 'en', record({}))).toBe('');
   });
 

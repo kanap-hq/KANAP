@@ -757,5 +757,24 @@ describe('LinesPanel', () => {
         vi.unstubAllGlobals();
       }
     });
+
+    it('the first line of a narrow panel is drawn on two rows at once, its Description focused', () => {
+      vi.stubGlobal('ResizeObserver', class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      });
+      const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => 1300);
+      try {
+        renderPanel();
+        fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+        expect(screen.getByTestId('line-timing')).toBeInTheDocument();
+        // Measured before the line was added: the table was not swapped under the focus.
+        expect(document.activeElement).toBe(priced(0).getByLabelText('Description'));
+      } finally {
+        clientWidth.mockRestore();
+        vi.unstubAllGlobals();
+      }
+    });
   });
 });

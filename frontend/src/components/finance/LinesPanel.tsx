@@ -155,6 +155,12 @@ export type LineDraft = {
 let draftSeq = 0;
 const newDraftKey = () => `draft-${++draftSeq}`;
 
+/**
+ * The theme closes every menu without giving the focus back (#181: no ring left on the button that
+ * opened it). A select of a line takes it back once a choice is made, so Tab goes on to the next field.
+ */
+const selectKeepsFocus = { MenuProps: { disableRestoreFocus: false } } as const;
+
 function draftOf(line: RoundLine): LineDraft {
   return {
     key: line.id || newDraftKey(),
@@ -349,13 +355,23 @@ export default function LinesPanel({
     patchAndCommit(draft.key, { frequency, ...withDates(draft, draft.unit, frequency, draft.start || linePeriod.start) });
   };
 
+  // The line just added: its Description takes the focus once drawn, so a run of lines needs no mouse.
+  const addedLineRef = React.useRef<string | null>(null);
+  const focusIfAdded = (key: string) => (input: HTMLInputElement | null) => {
+    if (!input || addedLineRef.current !== key) return;
+    addedLineRef.current = null;
+    input.focus();
+  };
+
   // The most common line: one person priced per day (a project manager, 5 days a month or full
   // time), on the default calendar. With the calendars loaded and none enabled, a price per day
   // could not be saved: the person starts priced per month.
   const addLine = () => {
     const noCalendar = calendars.ready && calendars.enabled.length === 0;
+    const key = newDraftKey();
+    addedLineRef.current = key;
     update((prev) => [...prev, {
-      key: newDraftKey(),
+      key,
       label: '',
       unit: 'people',
       quantity: '1',
@@ -499,6 +515,7 @@ export default function LinesPanel({
       onChange={(e) => onChange(e.target.value)}
       disabled={frozen}
       inputProps={{ 'aria-label': label }}
+      SelectProps={selectKeepsFocus}
       sx={sx}
     >
       {options.map((o) => <MenuItem key={o.value} value={o.value} sx={drawerMenuItemSx}>{o.label}</MenuItem>)}
@@ -517,6 +534,7 @@ export default function LinesPanel({
       onChange={(e) => patchLine(draft.key, { label: e.target.value })}
       onBlur={commit} onKeyDown={onEnter}
       disabled={frozen}
+      inputRef={focusIfAdded(draft.key)}
       placeholder={t('budgetTab.lines.descriptionPlaceholder')}
       inputProps={{ 'aria-label': t('budgetTab.lines.description'), maxLength: 200 }}
       sx={tableCellTextFieldSx}
@@ -793,27 +811,30 @@ export default function LinesPanel({
         </PanelField>
       </Box>
 
-      {drafts.length === 0 ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Typography sx={captionSx}>{t('budgetTab.lines.empty')}</Typography>
-          {!frozen && (
-            <Button size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, py: 0 }}>
-              {t('budgetTab.lines.add')}
-            </Button>
-          )}
-        </Box>
-      ) : (
-        <Box>
-          <Box ref={tableBoxRef} sx={{ overflowX: 'auto' }}>
-            {twoRows ? twoRowsTable : oneRowTable}
+      {/* Measured before the first line: the table is drawn in its layout at once, never swapped under the focus. */}
+      <Box ref={tableBoxRef}>
+        {drafts.length === 0 ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography sx={captionSx}>{t('budgetTab.lines.empty')}</Typography>
+            {!frozen && (
+              <Button size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, py: 0 }}>
+                {t('budgetTab.lines.add')}
+              </Button>
+            )}
           </Box>
-          {!frozen && (
-            <Button size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, mt: 0.5 }}>
-              {t('budgetTab.lines.add')}
-            </Button>
-          )}
-        </Box>
-      )}
+        ) : (
+          <>
+            <Box sx={{ overflowX: 'auto' }}>
+              {twoRows ? twoRowsTable : oneRowTable}
+            </Box>
+            {!frozen && (
+              <Button size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, mt: 0.5 }}>
+                {t('budgetTab.lines.add')}
+              </Button>
+            )}
+          </>
+        )}
+      </Box>
 
       <Box data-testid="lines-notes" aria-live="polite">
         {fteText && (

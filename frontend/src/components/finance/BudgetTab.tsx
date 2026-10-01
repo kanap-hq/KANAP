@@ -33,8 +33,8 @@ import {
   RoundInput,
   activeMonths,
   centsToDecimal,
+  chipLines,
   chipText,
-  chipUnits,
   columnPeriod,
   joinList,
   periodForEdit,
@@ -661,13 +661,17 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
 
   const labelFor = (col: AmountCol) => budgetColumns.label(col);
   const chipOf = (record: RoundInput | null | undefined) => chipText(t, locale, record, labelFor);
-  // The chip as units that wrap whole ("Quantity and price ·" then "3 lines · 1.00 FTE"); a unit
-  // longer than the line still wraps inside it.
-  const chipLine = (record: RoundInput | null | undefined) => chipUnits(t, locale, record, labelFor).map((unit, i) => (
-    <React.Fragment key={unit}>
-      {i > 0 && ' '}
-      <Box component="span" sx={{ display: 'inline-block', maxWidth: '100%' }}>{unit}</Box>
-    </React.Fragment>
+  // The chip, one block per line of it, as units that wrap whole ("Quantity and price ·" then "3 lines ·
+  // 1.00 FTE"); a unit longer than the line still wraps inside it.
+  const chipBlocks = (record: RoundInput | null | undefined) => chipLines(t, locale, record, labelFor).map((units, line) => (
+    <Box component="span" key={line} sx={{ display: 'block' }}>
+      {units.map((unit, i) => (
+        <React.Fragment key={unit}>
+          {i > 0 && ' '}
+          <Box component="span" sx={{ display: 'inline-block', maxWidth: '100%' }}>{unit}</Box>
+        </React.Fragment>
+      ))}
+    </Box>
   ));
   const gridColumns = shown.map((c) => ({ col: c.measure, fr: frozen[c.freezeKey] }));
   const recordFor = (col: AmountCol) => roundInputs.find((r) => r.measure === col);
@@ -682,7 +686,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
   const captionIconSx = { p: '2px', color: 'kanap.text.tertiary', '&:hover': { color: 'primary.main', bgcolor: 'transparent' } } as const;
   // The column's lines, one per text line, as the tooltip of how it was produced; empty (no tooltip)
-  // when it is not computed from lines.
+  // when it has no lines.
   const linesOf = (col: AmountCol) => (loadedYear === year ? linesText(t, locale, recordFor(col)) : '');
   const multilineTooltip = { tooltip: { sx: { whiteSpace: 'pre-line' } } } as const;
 
@@ -851,10 +855,37 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
               const isFrozen = frozen[m.freezeKey];
               return (
                 <Box key={m.measure} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {m.label}
-                    {isFrozen && <LockOutlinedIcon sx={{ fontSize: 12 }} />}
-                  </Typography>
+                  {/* The label, then the column's two panels at its right, as wide as the field below. */}
+                  <Box data-testid={`column-title-${m.measure}`} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, maxWidth: 220, minHeight: 18 }}>
+                    <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                      {m.label}
+                      {isFrozen && <LockOutlinedIcon sx={{ fontSize: 12 }} />}
+                    </Typography>
+                    {loaded && !isFrozen && !loading && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, ml: 'auto' }}>
+                        <Tooltip title={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}>
+                          <IconButton
+                            size="small"
+                            aria-label={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}
+                            onClick={() => openSpreadPanel(m.measure)}
+                            sx={captionIconSx}
+                          >
+                            <EditOutlinedIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('budgetTab.panel.lines')}>
+                          <IconButton
+                            size="small"
+                            aria-label={t('budgetTab.panel.lines')}
+                            onClick={() => openLinesPanel(m.measure)}
+                            sx={captionIconSx}
+                          >
+                            <CalculateOutlinedIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    )}
+                  </Box>
                   <FormattedNumberField
                     value={flat[m.measure]}
                     onChange={(e) => onFlatChange(m.measure, (e.target.value as unknown as number | ''))}
@@ -864,43 +895,17 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                     sx={{ maxWidth: 220, '& .MuiInputBase-input': { fontSize: '15px !important', fontWeight: 500 } }}
                   />
                   {loaded && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                      <Tooltip title={linesOf(m.measure)} componentsProps={multilineTooltip}>
-                        {/* How the column was produced, then its period: one line each, never run together. */}
-                        <Typography component="div" sx={{ ...captionSx, minWidth: 0 }} data-testid={`period-line-${m.measure}`}>
-                          {noMonth ? t('budgetTab.noMonthInItemDates', { year }) : (
-                            <>
-                              {chip && <Box component="span" sx={{ display: 'block' }}>{chipLine(recordFor(m.measure))}</Box>}
-                              {text && <Box component="span" sx={{ display: 'block' }}>{text}</Box>}
-                            </>
-                          )}
-                        </Typography>
-                      </Tooltip>
-                      {!isFrozen && !loading && (
-                        <>
-                          <Tooltip title={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}>
-                            <IconButton
-                              size="small"
-                              aria-label={noMonth ? t('budgetTab.choosePeriod') : t('budgetTab.changePeriod')}
-                              onClick={() => openSpreadPanel(m.measure)}
-                              sx={captionIconSx}
-                            >
-                              <EditOutlinedIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title={t('budgetTab.panel.lines')}>
-                            <IconButton
-                              size="small"
-                              aria-label={t('budgetTab.panel.lines')}
-                              onClick={() => openLinesPanel(m.measure)}
-                              sx={captionIconSx}
-                            >
-                              <CalculateOutlinedIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </Box>
+                    <Tooltip title={linesOf(m.measure)} componentsProps={multilineTooltip}>
+                      {/* How the column was produced, then its period: one line each, never run together. */}
+                      <Typography component="div" sx={{ ...captionSx, minWidth: 0 }} data-testid={`period-line-${m.measure}`}>
+                        {noMonth ? t('budgetTab.noMonthInItemDates', { year }) : (
+                          <>
+                            {chip && chipBlocks(recordFor(m.measure))}
+                            {text && <Box component="span" sx={{ display: 'block' }}>{text}</Box>}
+                          </>
+                        )}
+                      </Typography>
+                    </Tooltip>
                   )}
                 </Box>
               );
@@ -939,7 +944,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                           title={[periodTextOf({ start: record.period_start, end: record.period_end }), linesOf(col)].filter(Boolean).join('\n')}
                           componentsProps={multilineTooltip}
                         >
-                          <Box sx={{ fontSize: 11, fontWeight: 400, color: 'kanap.text.tertiary', whiteSpace: 'normal', lineHeight: 1.3 }}>{chipLine(record)}</Box>
+                          <Box sx={{ fontSize: 11, fontWeight: 400, color: 'kanap.text.tertiary', whiteSpace: 'normal', lineHeight: 1.3 }}>{chipBlocks(record)}</Box>
                         </Tooltip>
                       )}
                     </Box>

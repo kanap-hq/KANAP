@@ -416,45 +416,54 @@ function linesGiveFte(record: RoundInput): boolean {
 }
 
 /**
- * How the column was produced, in parts that a narrow header wraps whole: "Spread flat", "Copied
- * from Budget 2025 +2 %", "Edited by hand", or "Quantity and price" then "3 lines · 1.00 FTE".
+ * How the column was produced, in parts that a narrow header wraps whole, grouped by line: "Spread
+ * flat", "Copied from Budget 2025 +2 %", "Edited by hand", or "Quantity and price" then "3 lines ·
+ * 1.00 FTE". A column that keeps lines it was not computed from shows them first, then on its own
+ * line what produced the amounts ("Spread 4-4-5", "Edited by hand").
  */
 function chipParts(
   t: TFunction,
   locale: string,
   record: RoundInput | null | undefined,
   nameOf: (measure: AmountMeasure) => string,
-): string[] {
+): string[][] {
   if (!record) return [];
+  if ((record.lines?.length ?? 0) === 0) return [[record.method === 'computed' ? t('budgetTab.chip.lines') : methodPart(t, locale, record, nameOf)]];
+  const detail = [
+    t('budgetTab.chip.lineCount', { count: record.lines.length }),
+    linesGiveFte(record) ? t('budgetTab.chip.fte', { value: formatFteValue(record.fte) }) : '',
+  ].filter(Boolean).join(' · ');
+  const lines = [t('budgetTab.chip.lines'), detail];
+  return record.method === 'computed' ? [lines] : [lines, [methodPart(t, locale, record, nameOf)]];
+}
+
+/** What produced the amounts of a column not computed from its lines. */
+function methodPart(
+  t: TFunction,
+  locale: string,
+  record: RoundInput,
+  nameOf: (measure: AmountMeasure) => string,
+): string {
   const calc = record.last_calculation;
-  if (record.method === 'manual') return [t('budgetTab.chip.manual')];
-  if (record.method === 'computed') {
-    const count = record.lines?.length ?? 0;
-    if (count === 0) return [t('budgetTab.chip.lines')];
-    const detail = [
-      t('budgetTab.chip.lineCount', { count }),
-      linesGiveFte(record) ? t('budgetTab.chip.fte', { value: formatFteValue(record.fte) }) : '',
-    ].filter(Boolean).join(' · ');
-    return [t('budgetTab.chip.lines'), detail];
-  }
+  if (record.method === 'manual') return t('budgetTab.chip.manual');
   if (record.method === 'copied') {
-    if (calc?.kind !== 'copy') return [t('budgetTab.chip.copiedPlain')];
+    if (calc?.kind !== 'copy') return t('budgetTab.chip.copiedPlain');
     const column = nameOf(calc.source_measure);
     const uplift = formatUplift(locale, calc.uplift_pct);
-    return [uplift
+    return uplift
       ? t('budgetTab.chip.copiedUplift', { column, year: calc.source_year, uplift })
-      : t('budgetTab.chip.copied', { column, year: calc.source_year })];
+      : t('budgetTab.chip.copied', { column, year: calc.source_year });
   }
-  if (calc?.kind === 'quarterly') return [t('budgetTab.chip.spreadQuarterly')];
+  if (calc?.kind === 'quarterly') return t('budgetTab.chip.spreadQuarterly');
   const profile = calc?.kind === 'annual' ? calc.profile : record.spread_profile_name;
-  if (profile === '4-4-5') return [t('budgetTab.chip.spread445')];
-  if (profile === 'flat' || profile == null) return [t('budgetTab.chip.spreadFlat')];
-  return [t('budgetTab.chip.spread')];
+  if (profile === '4-4-5') return t('budgetTab.chip.spread445');
+  if (profile === 'flat' || profile == null) return t('budgetTab.chip.spreadFlat');
+  return t('budgetTab.chip.spread');
 }
 
 /**
  * How the column was produced: "Spread flat", "Copied from Budget 2025 +2 %", "Edited by hand",
- * "Quantity and price · 3 lines · 1.00 FTE".
+ * "Quantity and price · 3 lines · 1.00 FTE", "Quantity and price · 3 lines · Spread 4-4-5".
  * `nameOf` names the source column of a copy (the tenant's names; the product names by default).
  */
 export function chipText(
@@ -463,21 +472,34 @@ export function chipText(
   record: RoundInput | null | undefined,
   nameOf: (measure: AmountMeasure) => string = (measure) => columnLabel(t, measure),
 ): string {
-  return chipParts(t, locale, record, nameOf).join(' · ');
+  return chipParts(t, locale, record, nameOf).flat().join(' · ');
 }
 
 /**
- * The chip in the units a narrow header wraps whole: "Quantity and price ·" then "3 lines · 1.00 FTE",
- * so the count never ends a line alone. Joined with spaces, the units read as `chipText`.
+ * The chip in the units a narrow header wraps whole, one array per line of text: "Quantity and price ·"
+ * then "3 lines · 1.00 FTE", so the count never ends a line alone; what produced the amounts of a
+ * column that keeps lines starts a line of its own. Joined with spaces, the units read as `chipText`.
  */
+export function chipLines(
+  t: TFunction,
+  locale: string,
+  record: RoundInput | null | undefined,
+  nameOf: (measure: AmountMeasure) => string = (measure) => columnLabel(t, measure),
+): string[][] {
+  const lines = chipParts(t, locale, record, nameOf);
+  const last = lines.flat().length - 1;
+  let index = 0;
+  return lines.map((parts) => parts.map((part) => (index++ < last ? `${part} ·` : part)));
+}
+
+/** The chip's units, every line of it in a row: `chipLines` flattened. */
 export function chipUnits(
   t: TFunction,
   locale: string,
   record: RoundInput | null | undefined,
   nameOf: (measure: AmountMeasure) => string = (measure) => columnLabel(t, measure),
 ): string[] {
-  const parts = chipParts(t, locale, record, nameOf);
-  return parts.map((part, i) => (i < parts.length - 1 ? `${part} ·` : part));
+  return chipLines(t, locale, record, nameOf).flat();
 }
 
 function shortMonth(locale: string, month: number): string {
@@ -520,9 +542,12 @@ export function lineText(
   return label ? t('budgetTab.lines.labeled', { label, text }) : text;
 }
 
-/** The lines of a column computed from them, one per text line, for a tooltip; empty otherwise. */
+/**
+ * The lines of a column, one per text line, for a tooltip; empty without lines. A column that keeps
+ * lines it was not computed from lists them too: its chip names them.
+ */
 export function linesText(t: TFunction, locale: string, record: RoundInput | null | undefined): string {
-  if (record?.method !== 'computed' || !hasLines(record)) return '';
+  if (!hasLines(record)) return '';
   return record.lines.map((line) => lineText(t, locale, line)).join('\n');
 }
 

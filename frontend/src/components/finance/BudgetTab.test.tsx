@@ -75,7 +75,7 @@ vi.mock('../../auth/AuthContext', () => ({
 
 import api from '../../api';
 import BudgetTab, { BudgetTabHandle } from './BudgetTab';
-import type { RoundInput, RoundLine } from './roundPeriod';
+import type { LinePayload, RoundInput, RoundLine } from './roundPeriod';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
 
 const ALL_SHOWN: BudgetColumnsSettings = {
@@ -1483,5 +1483,200 @@ describe('BudgetTab edits while a panel write runs', () => {
     openLines();
     await waitFor(() => expect(yearLoads).toBe(2));
     expect(await screen.findByTestId('lines-days-changed')).toHaveTextContent('March: 22 days, now 21.');
+  });
+});
+
+describe('BudgetTab yearly cells', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+    calendarsState.list = [FRANCE, UNITED_STATES];
+  });
+
+  const spreadKeepingLines = () => linesRecord(undefined, {
+    method: 'spread',
+    spread_profile_name: '4-4-5',
+    last_calculation: { kind: 'annual', total: '60000.00', profile: '4-4-5', active_months: MARCH_TO_DECEMBER, weights: [] },
+  });
+
+  it('the two panel buttons sit on the title row, right of the label and as wide as the field; the caption keeps its text', async () => {
+    setupApi({ grain: 'annual', frozen: ['revision'], roundInputs: [linesRecord()] });
+    renderTab();
+    await waitForAmounts();
+
+    const title = screen.getByTestId('column-title-planned');
+    expect(within(title).getByText('Budget')).toBeInTheDocument();
+    expect(within(title).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual(['Change period', 'Quantity and price']);
+    expect(title).toHaveStyle({ maxWidth: '220px', minHeight: '18px' });
+    expect(within(periodLine('planned')).queryAllByRole('button')).toHaveLength(0);
+    // A frozen column keeps its lock next to the label, and no button.
+    await waitFor(() => expect(within(screen.getByTestId('column-title-committed')).queryAllByRole('button')).toHaveLength(0));
+    expect(within(screen.getByTestId('column-title-committed')).getByTestId('LockOutlinedIcon')).toBeInTheDocument();
+
+    fireEvent.click(within(title).getByRole('button', { name: 'Quantity and price' }));
+    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
+  });
+
+  it('a column that keeps its lines after a spread shows the lines, then the spread, then the period; the tooltip lists the lines', async () => {
+    setupApi({ grain: 'annual', roundInputs: [spreadKeepingLines()] });
+    renderTab();
+    await waitForAmounts();
+
+    expect(captionLines('planned')).toEqual(['Quantity and price · 1 line · 0.40 FTE ·', 'Spread 4-4-5', '10 months, March to December']);
+    fireEvent.mouseOver(periodLine('planned'));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('US Managed IT Services: 100 days × 600 per day over the period, Mar to Dec');
+  });
+
+  it('the monthly header says the same', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [spreadKeepingLines()] });
+    const { container } = renderTab();
+    await waitForAmounts();
+
+    const header = container.querySelector('thead') as HTMLElement;
+    expect(within(header).getByText('Quantity and price ·')).toBeInTheDocument();
+    expect(within(header).getByText('1 line · 0.40 FTE ·')).toBeInTheDocument();
+    expect(within(header).getByText('Spread 4-4-5')).toBeInTheDocument();
+  });
+});
+
+/** Every field Tab stops on, in page order (nothing on the page sets a positive tabindex). */
+const tabStops = () => Array.from(document.body.querySelectorAll<HTMLElement>('input, button, select, textarea, a[href], [tabindex]'))
+  .filter((el) => el.tabIndex >= 0 && !(el as HTMLInputElement).disabled);
+/** Tab, as the browser walks it: the focus moves to the next stop. */
+function tab() {
+  const stops = tabStops();
+  const next = stops[stops.indexOf(document.activeElement as HTMLElement) + 1];
+  if (!next) throw new Error('no field after the focused one');
+  act(() => { next.focus(); });
+}
+/** The focused field as a user reads it: its label, else its placeholder or text. */
+function focusName(): string {
+  const el = document.activeElement as HTMLElement;
+  if (el instanceof HTMLInputElement && el.type === 'checkbox') return el.closest('label')?.textContent ?? 'checkbox';
+  if (el instanceof HTMLInputElement && el.type === 'date') return 'hidden date input';
+  return el.getAttribute('aria-label') ?? el.getAttribute('placeholder') ?? el.textContent ?? el.tagName;
+}
+/** Chooses an option of the focused select with the keyboard: open, arrow down, Enter. */
+async function chooseWithKeyboard(steps: number) {
+  fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'ArrowDown' });
+  await screen.findByRole('listbox');
+  for (let i = 0; i < steps; i++) fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'ArrowDown' });
+  fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Enter' });
+}
+
+/** The server keeps the lines it is sent, with ids of its own, and the reload returns them. */
+function serverKeepsLines(initial: RoundLine[]) {
+  let lines = initial;
+  let seq = 0;
+  const base = mocked.get.getMockImplementation()!;
+  mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+    const res = await base(url, config);
+    if (url !== '/spend-versions/v1/amounts') return res;
+    return { data: { ...res.data, round_inputs: [linesRecord(lines)] } };
+  });
+  routePosts(async (body) => {
+    lines = (body.lines as LinePayload[]).map((line, sort) => ({ ...storedLine(), ...line, id: `srv-${++seq}`, sort }));
+    return { updated: 12, round_inputs: [linesRecord(lines)] };
+  });
+}
+
+describe('BudgetTab keyboard run through the lines', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+    calendarsState.list = [FRANCE, UNITED_STATES];
+  });
+
+  async function openYearlyLines() {
+    setupApi({ grain: 'annual' });
+    serverKeepsLines([storedLine()]);
+    renderTab(YEAR, { payingCompanyCountry: 'US' });
+    await waitForAmounts();
+    fireEvent.click(within(screen.getByTestId('column-title-planned')).getByRole('button', { name: 'Quantity and price' }));
+    await screen.findByLabelText('Description');
+  }
+  const dates = (row: number) => within(screen.getAllByTestId('line-row')[row]).getAllByPlaceholderText('labels.datePlaceholder');
+
+  it('Add a line puts the focus in its Description; Tab then walks a person per day field by field, to Add a line', async () => {
+    await openYearlyLines();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    expect(document.activeElement).toBe(screen.getAllByLabelText('Description')[1]);
+
+    const walked = [focusName()];
+    while (focusName() !== 'Add a line') { tab(); walked.push(focusName()); }
+    expect(walked).toEqual([
+      'Description', 'Quantity', 'Unit', 'Unit price', 'Price per', 'Full time', 'days per month',
+      'labels.datePlaceholder', 'labels.datePlaceholder', 'Calendar', 'Remove the line', 'Add a line',
+    ]);
+    // Enter on Add a line: the next line, its Description focused.
+    fireEvent.click(document.activeElement as HTMLElement);
+    expect(document.activeElement).toBe(screen.getAllByLabelText('Description')[2]);
+  });
+
+  it('a line typed with the keyboard: the Unit chosen, the Unit price left, From set; every save and reload keeps the focus where Tab put it', async () => {
+    await openYearlyLines();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    const row = screen.getAllByTestId('line-row')[1];
+    fireEvent.change(document.activeElement as HTMLElement, { target: { value: 'Audit' } });
+    tab();
+    tab();
+    const unit = within(row).getByRole('combobox', { name: 'Unit' });
+    expect(document.activeElement).toBe(unit);
+
+    // people, days, pieces: one step down is days. The select takes the focus back.
+    await chooseWithKeyboard(1);
+    await waitFor(() => expect(unit).toHaveTextContent('days'));
+    expect(document.activeElement).toBe(unit);
+    tab();
+    expect(document.activeElement).toBe(within(row).getByLabelText('Unit price'));
+
+    // Leaving the Unit price completes the line: it is written, the tab reloads, From keeps the focus.
+    fireEvent.change(document.activeElement as HTMLElement, { target: { value: '1200' } });
+    const loads = amountLoads();
+    tab();
+    const [from, to] = dates(1);
+    expect(document.activeElement).toBe(from);
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    await waitFor(() => expect(amountLoads()).toBe(loads + 1));
+    await settle();
+    expect(bulkCalls()[0][1].lines[1]).toMatchObject({ label: 'Audit', quantity_unit: 'days', unit_price: '1200', working_day_profile_id: 'cal-us' });
+    expect(document.activeElement).toBe(from);
+    // The line kept its row: nothing was drawn again under the focus.
+    expect(screen.getAllByTestId('line-row')[1]).toBe(row);
+
+    // A date typed in From is written as soon as it is whole; the focus stays, Tab goes to To.
+    fireEvent.change(from, { target: { value: '01/04/2026' } });
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    await waitFor(() => expect(amountLoads()).toBe(loads + 2));
+    await settle();
+    expect(bulkCalls()[1][1].lines[1]).toMatchObject({ period_start: '2026-04-01' });
+    expect(document.activeElement).toBe(from);
+    tab();
+    expect(document.activeElement).toBe(to);
+    tab();
+    expect(focusName()).toBe('Calendar');
+    expect(screen.getAllByTestId('line-row')[1]).toBe(row);
+  });
+
+  it('a unit changed with the keyboard on a saved line is written, and the focus stays on Unit; from the last field, Tab reaches the next line', async () => {
+    await openYearlyLines();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    const unit = screen.getAllByRole('combobox', { name: 'Unit' })[0];
+    act(() => { unit.focus(); });
+    // days, then pieces: one step down. Pieces are bought once, on the column start.
+    await chooseWithKeyboard(1);
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].lines[0]).toMatchObject({ quantity_unit: 'pieces', frequency: 'once' });
+    await settle();
+    expect(document.activeElement).toBe(unit);
+    tab();
+    expect(document.activeElement).toBe(screen.getAllByLabelText('Unit price')[0]);
+
+    // How often, the one Date, then remove: Tab goes on to the next line's Description.
+    while (focusName() !== 'Remove the line') tab();
+    tab();
+    expect(document.activeElement).toBe(screen.getAllByLabelText('Description')[1]);
   });
 });
