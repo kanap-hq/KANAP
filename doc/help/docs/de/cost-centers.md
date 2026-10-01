@@ -79,8 +79,8 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 **Filtern**:
 
 - **Schnellsuche**: durchsucht den Code, den Namen und den vollständigen Pfad. Die Suche nach dem Namen einer Gruppe findet auch alles, was sie enthält
-- **Spaltenfilter**: **Typ**, **Übergeordnet**, **Unternehmen** und **Status** verwenden Kontrollkästchen-Filter
-- **Statusbereich**: der Umschalter **Alle / Aktiv / Deaktiviert** über der Liste. Standardmäßig zeigt die Liste aktivierte Elemente
+- **Spaltenfilter**: **Typ**, **Übergeordnet**, **Unternehmen** und **Status** verwenden Kontrollkästchen-Filter. Wenn Sie im **Status**-Filter auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**
+- **Statusbereich**: der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste. Standardmäßig zeigt die Liste aktivierte Elemente
 
 **Aktionen**:
 
@@ -121,7 +121,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen
 | **Übergeordnete Gruppe** | Eine Gruppe oder leer für die oberste Ebene. Ein Element kann nicht unter sich selbst oder unter etwas verschoben werden, das es enthält; diese Einträge fehlen daher in der Liste | Ihr Organigramm oder der Kostenstellenbaum Ihres Finanzteams |
 | **Unternehmen** | Ein aktiviertes Unternehmen. Nur Kostenstellen | Die juristische Person, die die Kosten dieser Kostenstelle trägt. Es ist eines Ihrer Unternehmen unter **Stammdaten > Unternehmen** |
 | **Budgetverantwortlicher** | Ein aktiver Benutzer | Die Person, die in der Budgetprüfung für diesen Budgetrahmen einsteht. Der Hinweis unter dem Feld sagt es |
-| **Lebenszyklus** | Der Schalter **Aktiviert** und das Datum **Ende der Gültigkeit** | Setzen Sie ein zukünftiges Datum, um das Ende zu planen, oder schalten Sie den Schalter aus, um das Element heute zu deaktivieren |
+| **Lebenszyklus** | Der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit** | Setzen Sie ein zukünftiges Datum, um das Ende zu planen, oder schalten Sie den Schalter aus, um das Element heute zu deaktivieren |
 
 ### Budgetverantwortlicher auf Budgetzeilen
 

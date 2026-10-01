@@ -69,7 +69,7 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
 
 **Filtering**:
   - **Quick search**: Searches the reference, product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics values, cost center (code, name and path), budget holder, notes, currency and status. Filters the list in real time as you type
-  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**
+  - **Column filters**: Click the filter icon in any column header. **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters (multi-select). The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
   - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
   - **FTE filters**: Every FTE column has a number filter with the same conditions, plus blank and not blank. **Blank** keeps the items whose column has no lines
   - **Date filters**: **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank
@@ -99,7 +99,7 @@ The OPEX list (at **Budget management > OPEX**) is your main view for browsing, 
   - **New**: Create a new OPEX item (requires `opex:manager`)
   - **Import CSV**: Bulk-load items from CSV (requires `opex:admin`)
   - **Export CSV**: Export items to CSV (requires `opex:admin`)
-  - **Delete selected**: Bulk-delete selected items (requires `opex:admin`; select rows via checkboxes)
+  - **Delete selected**: Bulk-delete selected items (requires `opex:admin`; select rows via checkboxes). An item with amounts in a frozen column cannot be deleted: the others are deleted, and the message names each refused item with its reason
 
 **Prev/Next navigation**:
   - When you open an item, the workspace shows **Prev** and **Next** buttons
@@ -143,7 +143,7 @@ The Overview tab holds the free-text fields and the tasks of the item.
 
 **Properties panel**:
   - **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts), **Currency** (only the currencies allowed in your workspace), one field per analytics dimension, **Run or build**, and **Effective start**
-  - **Lifecycle**: the **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
+  - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
   - **Created** and **Updated** dates (read only)
 
 **Cost center**:
@@ -227,7 +227,7 @@ The Budget tab is where you enter financial data per year. It supports multiple 
   - A column with no label kept the data it had before periods existed
 
 **Monthly tools**:
-  - **Clear column**: the icon next to a column header sets every month of that column to zero, for example before entering the whole amount in a single month. It counts as an edit by hand. To remove both the amounts and the period of a column for every item, use **Reset budget column** in Budget Administration
+  - **Clear column**: the icon next to a column header sets every month of that column to zero, for example before entering the whole amount in a single month. When the column holds amounts, you confirm first. It counts as an edit by hand. To remove both the amounts and the period of a column for every item, use **Reset budget column** in Budget Administration
 
 **Multi-year trend**:
   - A chart below the grid shows every shown column across years, Forecast included when it is shown, and updates as you type
@@ -421,7 +421,9 @@ You can bulk-load OPEX items via CSV to speed up initial setup or sync with exte
   - Delimiter: semicolon `;` (not comma)
   - Encoding: UTF-8 (save as "CSV UTF-8" in Excel)
   - Headers: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
-  - `disabled_at` is the end of validity: the date the item stops. Use a date (`2026-12-31`) or a full date and time. Leave it empty if there is no end
+  - `disabled_at` is the end of validity: the date the item stops. Use a date (`2026-12-31`) or a full date and time
+  - `status` is `enabled` or `disabled`. The export writes the status read from the end of validity. A row whose status contradicts its date is refused with a row error, for example `enabled` with a date that has passed
+  - On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the item today. A new item is enabled unless the row says `disabled`, and `disabled` with an empty date ends it today
   - Older files with an `effective_end` column still import: its date fills the end of validity when `disabled_at` is empty
   - `analytics_category` holds the value of the default analytics dimension, whatever its name. Each other enabled dimension has its own column, `analytics:<code>`, where `<code>` is the dimension's code. Exports and the template carry these columns right after `analytics_category`, in dimension order
   - `analytics_category`, the `analytics:<code>` columns, `cost_center_code` and `run_build` are optional columns: exports and the template always carry them, and files without them still import
@@ -489,16 +491,17 @@ Every OPEX item has a **status** (Enabled or Disabled) and an optional **End of 
 
 **Setting status**:
   - When you create the item, you can set its **End of validity** in the **Properties** panel
-  - Later, change the **Status** in the metadata bar, or use the **Lifecycle** field in the **Properties** panel (**Enabled** switch and **End of validity**). Switching an item to Disabled without a date sets its end of validity to today
+  - Later, change the **Status** in the metadata bar, or use the **Lifecycle** field in the **Properties** panel (the status switch and **End of validity**). Switching an item to Disabled without a date sets its end of validity to today
   - You can schedule a future end of validity (useful for planned end-of-contract items)
 
 **Viewing disabled items**:
   - By default, the OPEX list shows only **Enabled** items
-  - Use the **Show: Disabled** or **Show: All** toggle to see disabled items
+  - Use the **Show: All / Enabled / Disabled** toggle and pick **Disabled** or **All** to see disabled items
 
 **When to disable vs delete**:
   - **Prefer disabling**: Keeps history intact, ensures reports remain consistent, and supports audit trails
   - **Delete only if**: The item was created by mistake
+  - An item with amounts in a frozen column cannot be deleted. Unfreeze the column first, or set an end of validity date instead
   - Deleting an item also removes its budgets, allocations, tasks, relevant websites, attachments (with their files), and its links to contracts. If one of its tasks was turned into a request, the request is kept: it has its own copy of the title, description, and attachments, and only its link to the task goes
 
 **Tip**: Use the End of validity to sunset OPEX items when contracts end or services are discontinued. Do not delete unless it is a true mistake.

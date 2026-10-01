@@ -86,7 +86,7 @@ Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
 | **Source column** | Any shown column, Forecast included when it is shown. Starts on the default column |
 | **Destination year** | Year to copy to (same range) |
 | **Destination column** | Any shown column. Starts on the default column |
-| **Percentage increase** | Adjustment applied to every copied month (e.g., `3` = +3%). Defaults to 0. Accepts decimals and negative values. |
+| **Percentage increase** | Adjustment applied to every copied month (e.g., `3` = +3%). Defaults to 0. Accepts decimals and negative values. A percentage of -100% or less is refused. |
 | **Overwrite existing data** | Toggle. When off, items that already have a value in the destination are skipped. When on, all destination values are replaced. |
 
 The page opens on the default column of the current year as the source and the default column of next year as the destination. Hidden columns are not offered.
@@ -128,7 +128,7 @@ Below the grid, a stats bar shows:
 - Only items valid in the destination year are copied. An item counts for the months whose 15th falls between its **Effective start** and its **End of validity**. An item without such a month is left out, as the Budget tab does not show it either
 - An item valid for part of the destination year gets only those months. The other months keep their amount, and the period is cut to the item's dates. For example, a twelve-month source copied to an item ending on June 30 gives January to June
 - Without a percentage, amounts are copied exactly, to the cent
-- With a percentage, each month is rounded to a whole amount. The yearly total is the source total with the percentage applied, rounded to a whole amount. The small difference lands on the last month that has an amount. For example, 12,000 spread from April to December (1,333.33 a month and 1,333.36 in December) copied with +2% gives 1,360 a month and 12,240 for the year
+- With a percentage, each month is rounded to a whole amount, and the year total stays the source total with the percentage applied, rounded to a whole amount. The units left over by the rounding go to the months that dropped the largest fractions, the latest month first on a tie. No month changes sign. For example, 12,000 spread from April to December (1,333.33 a month and 1,333.36 in December) copied with +2% gives 1,360 a month and 12,240 for the year
 - The column's period moves with the copy: April to December 2026 becomes April to December 2027. A period that ends on February 29 ends on February 28 in a year without one
 - A source without a period gives a whole-year period
 - In the Budget tab, the destination column shows "Copied from Budget 2026 +2%"

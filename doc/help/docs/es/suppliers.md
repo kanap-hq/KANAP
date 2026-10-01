@@ -36,7 +36,7 @@ Cada celda de una fila es clicable y navega al espacio de trabajo de ese proveed
 
 **Filtrado**:
 - Búsqueda rápida: Busca en los campos del proveedor
-- Alcance de estado: Utilice el conmutador **Habilitados / Deshabilitados / Todos** encima de la cuadrícula para filtrar por estado
+- Alcance de estado: Utilice el selector **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula para filtrar por estado. La lista muestra por defecto los proveedores activados
 
 **Acciones**:
 - **Nuevo**: Crear un nuevo proveedor (requiere `suppliers:manager`)

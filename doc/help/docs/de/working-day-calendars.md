@@ -56,8 +56,8 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 **Filtern**:
 
 - **Schnellsuche**: durchsucht den Code, den Namen, die Beschreibung sowie Land und Region eines Standardkalenders
-- **Status**: Der Spaltenfilter bietet **Aktiviert** und **Deaktiviert**
-- **Statusbereich**: der Umschalter **Alle / Aktiv / Deaktiviert** über der Liste. Standardmäßig zeigt die Liste aktivierte Kalender
+- **Status**: Der Spaltenfilter bietet **Aktiviert** und **Deaktiviert**. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**
+- **Statusbereich**: der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste. Standardmäßig zeigt die Liste aktivierte Kalender
 
 **Vorgeschlagene Kalender**: Wer Kalender anlegen darf, sieht über dem Raster eine Zeile mit den Ländern Ihrer aktivierten Unternehmen, die noch keinen Standardkalender haben, und eine Schaltfläche, die sie anlegt. Jeder Kalender erhält den Ländercode als Code und den Namen des Landes in Ihrer Sprache als Namen. Die Zeile verschwindet, sobald jedes Land seinen Kalender hat.
 
@@ -104,7 +104,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen
 | **Name** | Bis zu 200 Zeichen. Namen sind unabhängig von Groß- und Kleinschreibung eindeutig | Der Name, unter dem Ihr Team den Kalender kennt. Dieser Name erscheint im Budget-Tab |
 | **Beschreibung** | Freitext | Für wen der Kalender gilt und was er ausschließt |
 | **Land** / **Region** | Nur beim Anlegen. Die Liste der Regionen richtet sich nach dem Land | Das Land, in dem die Personen oder Dienste des Kalenders arbeiten, und die Region, wenn deren Feiertage abweichen |
-| **Lebenszyklus** | Der Schalter **Aktiviert** und das Datum **Ende der Gültigkeit** | Setzen Sie ein zukünftiges Datum, um das Ende zu planen, oder schalten Sie den Schalter aus, um den Kalender heute zu deaktivieren |
+| **Lebenszyklus** | Der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit** | Setzen Sie ein zukünftiges Datum, um das Ende zu planen, oder schalten Sie den Schalter aus, um den Kalender heute zu deaktivieren |
 
 ### Arbeitstage eines Standardkalenders
 

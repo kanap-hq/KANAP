@@ -109,7 +109,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 - [Integrations](integrations.md) - Connect GLPI for ticket import and for agents
 - [Scheduled Tasks](scheduled-tasks.md) - Review and manage recurring background jobs
 - [Master Data Administration](master-data-operations.md) - Freeze and copy master data
-- [Operations Dashboard](operations-dashboard.md) - Overview and quick actions
+- [Budget management overview](operations-dashboard.md) - OPEX and CAPEX snapshots, deadlines and quick actions
 
 ### Deployment & Operations
 

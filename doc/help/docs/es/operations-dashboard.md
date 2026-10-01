@@ -9,7 +9,7 @@ La vista general de la gestión presupuestaria le ofrece una vista de alto nivel
 
 ## Diseño
 
-El panel de control está construido a partir de mosaicos dispuestos en una cuadrícula adaptable: tres columnas en pantalla ancha, dos en tableta y una sola columna en móvil. Cada mosaico tiene un icono, un título y generalmente un botón **Ver** que le lleva directamente a la página completa detrás de los datos.
+La vista general está construida a partir de mosaicos dispuestos en una cuadrícula adaptable: tres columnas en pantalla ancha, dos en tableta y una sola columna en móvil. Cada mosaico tiene un icono, un título y generalmente un botón **Ver** que le lleva directamente a la página completa detrás de los datos.
 
 ## Mosaicos
 
@@ -50,7 +50,7 @@ Un recuento se vuelve naranja (rojo para el control del plan de cuentas) cuando 
 
 ### Acciones rápidas
 
-Botones de acceso directo para crear una nueva partida OPEX o CAPEX directamente desde el panel de control. Estos botones solo son visibles si su rol le otorga al menos permisos de `opex:manager` o `capex:manager`.
+Botones de acceso directo para crear una nueva partida OPEX o CAPEX directamente desde la vista general. Estos botones solo son visibles si su rol le otorga al menos permisos de `opex:manager` o `capex:manager`.
 
 Debajo de los botones, una sección de **Actualizaciones recientes** lista las cinco partidas modificadas más recientemente, OPEX y CAPEX juntas. Cada fila muestra la fecha de la última modificación, el nombre de la partida y su tipo. Haga clic en una fila para abrir la partida.
 
@@ -71,6 +71,6 @@ Un tipo que usted no puede consultar aparece desactivado en las pestañas y no t
 ## Consejos
 
 - **Qué columna usan los mosaicos**: Un administrador de presupuesto elige la columna por defecto y los nombres de las columnas en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Los mosaicos de top y los informes que abren siguen esa elección.
-- **Números redondeados**: Cada importe en el panel de control se redondea a miles para una vista compacta. Abra la lista OPEX o CAPEX, o los informes, cuando necesite cifras exactas.
+- **Números redondeados**: Cada importe de la vista general se redondea a miles para una vista compacta. Abra la lista OPEX o CAPEX, o los informes, cuando necesite cifras exactas.
 - **Botones ausentes**: Si no ve los botones **Nuevo OPEX** o **Nuevo CAPEX**, su rol actual no incluye el permiso de gestor requerido. Solicite a su administrador que verifique su acceso.
 - **Mosaicos vacíos**: Un mosaico que muestra "Sin datos" simplemente significa que no hay registros de ese tipo todavía. Una vez que usted o su equipo empiecen a introducir datos, el mosaico se llenará automáticamente.

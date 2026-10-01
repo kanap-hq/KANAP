@@ -74,7 +74,7 @@ Click any cell to open the value's workspace.
 **Filtering**:
 
 - **Quick search**: searches the name and the description
-- **Status filter**: a checkbox filter on the **Status** column
+- **Status filter**: a checkbox filter on the **Status** column. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
 - **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list. The list shows enabled values by default
 
 **Actions**:
@@ -117,7 +117,7 @@ Open it with the edit button of the selected chip.
 | **Code** | 1 to 40 characters: lowercase letters, digits, `-` or `_`, starting with a letter or a digit. Each code is unique. The code names the dimension's column in the OPEX and CAPEX CSV files, so changing it changes that column name. Budget lines keep their values when the code changes |
 | **Order** | A whole number. Dimensions are listed by this number, lowest first: on this page, on budget lines, in the report filters and in the report's dimension picker |
 | **Description** | What the dimension is for, so teammates classify lines the same way |
-| **Lifecycle** | The **Enabled** switch and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle). Locked on the default dimension, with one line under it: "This dimension cannot be disabled or deleted: older files and AI questions use it." |
+| **Lifecycle** | The status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle). Locked on the default dimension, with one line under it: "This dimension cannot be disabled or deleted: older files and AI questions use it." |
 
 ### Deleting a dimension
 

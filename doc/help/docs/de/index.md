@@ -109,7 +109,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 - [Integrationen](integrations.md) - GLPI für Ticketimport und für Agenten verbinden
 - [Geplante Aufgaben](scheduled-tasks.md) - Wiederkehrende Hintergrundjobs prüfen und verwalten
 - [Stammdatenadministration](master-data-operations.md) - Stammdaten einfrieren und kopieren
-- [Operations-Dashboard](operations-dashboard.md) - Übersicht und Schnellaktionen
+- [Budgetverwaltung: Übersicht](operations-dashboard.md) - OPEX- und CAPEX-Überblick, Fristen und Schnellaktionen
 
 ### Bereitstellung & Betrieb
 

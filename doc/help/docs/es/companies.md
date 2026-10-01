@@ -49,7 +49,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 - **Búsqueda rápida**: búsqueda de texto libre en todas las columnas visibles
 - **Filtros de columna**: haga clic en cualquier encabezado de columna para filtrar por valor; las columnas numéricas (Plantilla, Usuarios IT, Facturación) admiten filtros numéricos
-- **Alcance de estado**: alterne entre **Habilitadas**, **Deshabilitadas** y **Todas** para controlar qué empresas aparecen
+- **Alcance de estado**: el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista controla qué empresas aparecen. La lista muestra por defecto las empresas activadas
 
 **Selector de año**: utilice el campo **Año** en la barra de herramientas para cambiar las métricas de qué año se muestran. La fila inferior muestra los **totales** de Plantilla, Usuarios IT y Facturación de todas las empresas visibles (filtradas).
 

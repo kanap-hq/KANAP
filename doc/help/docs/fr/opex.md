@@ -69,7 +69,7 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
 
 **Filtrage** :
   - **Recherche rapide** : Recherche dans la référence, le nom du produit, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, les valeurs analytiques, le centre de coûts (code, nom et chemin), le responsable budgétaire, les notes, la devise et le statut. Filtre la liste en temps réel pendant la saisie
-  - **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Fournisseur**, **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher (multi-sélection). Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**
+  - **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Fournisseur**, **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher (multi-sélection). Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**
   - **Filtres de montants** : Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants
   - **Filtres ETP** : Chaque colonne ETP a un filtre numérique avec les mêmes conditions, plus vide et non vide. **Vide** garde les postes dont la colonne n'a aucune ligne
   - **Filtres de dates** : **Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide
@@ -99,7 +99,7 @@ La liste OPEX (dans **Gestion budgétaire > OPEX**) est votre vue principale pou
   - **Nouveau** : Créer un nouveau poste OPEX (nécessite `opex:manager`)
   - **Import CSV** : Charger en masse depuis un CSV (nécessite `opex:admin`)
   - **Export CSV** : Exporter en CSV (nécessite `opex:admin`)
-  - **Supprimer la sélection** : Suppression en masse des postes sélectionnés (nécessite `opex:admin` ; sélectionnez via les cases à cocher)
+  - **Supprimer la sélection** : Suppression en masse des postes sélectionnés (nécessite `opex:admin` ; sélectionnez via les cases à cocher). Un poste qui a des montants dans une colonne gelée ne peut pas être supprimé : les autres sont supprimés, et le message nomme chaque poste refusé avec sa raison
 
 **Navigation Préc./Suiv.** :
   - Lorsque vous ouvrez un poste, l'espace de travail affiche les boutons **Préc.** et **Suiv.**
@@ -143,7 +143,7 @@ L'onglet Vue d'ensemble contient les champs de texte libre et les tâches du pos
 
 **Panneau Propriétés** :
   - **Fournisseur**, **Centre de coûts**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse), **Devise** (seulement les devises autorisées dans votre espace de travail), un champ par dimension analytique, **Run ou build** et **Début d'effet**
-  - **Cycle de vie** : l'interrupteur **Activé** et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
+  - **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
   - Dates **Créé** et **Mis à jour** (lecture seule)
 
 **Centre de coûts** :
@@ -227,7 +227,7 @@ L'onglet Budget est l'endroit où vous saisissez les données financières par a
   - Une colonne sans libellé a conservé les données qu'elle avait avant l'arrivée des périodes
 
 **Outils du mode mensuel** :
-  - **Effacer la colonne** : l'icône à côté d'un en-tête de colonne remet à zéro tous les mois de cette colonne, par exemple avant de saisir tout le montant sur un seul mois. Cela compte comme une modification à la main. Pour retirer à la fois les montants et la période d'une colonne pour tous les postes, utilisez **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire
+  - **Effacer la colonne** : l'icône à côté d'un en-tête de colonne remet à zéro tous les mois de cette colonne, par exemple avant de saisir tout le montant sur un seul mois. Lorsque la colonne contient des montants, vous confirmez d'abord. Cela compte comme une modification à la main. Pour retirer à la fois les montants et la période d'une colonne pour tous les postes, utilisez **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire
 
 **Tendance pluriannuelle** :
   - Un graphique sous la grille montre chaque colonne affichée sur plusieurs années, Prévision comprise quand elle est affichée, et se met à jour pendant la saisie
@@ -421,7 +421,9 @@ Vous pouvez charger en masse les postes OPEX via CSV pour accélérer la configu
   - Séparateur : point-virgule `;` (pas de virgule)
   - Encodage : UTF-8 (enregistrez au format « CSV UTF-8 » dans Excel)
   - En-têtes : `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
-  - `disabled_at` est la fin de validité : la date à laquelle le poste s'arrête. Indiquez une date (`2026-12-31`) ou une date avec heure. Laissez vide s'il n'y a pas de fin
+  - `disabled_at` est la fin de validité : la date à laquelle le poste s'arrête. Indiquez une date (`2026-12-31`) ou une date avec heure
+  - `status` vaut `enabled` ou `disabled`. L'export écrit le statut lu dans la fin de validité. Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne, par exemple `enabled` avec une date déjà passée
+  - Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le poste aujourd'hui. Un nouveau poste est activé sauf si la ligne indique `disabled`, et `disabled` avec une date vide le termine aujourd'hui
   - Les anciens fichiers avec une colonne `effective_end` s'importent toujours : sa date alimente la fin de validité lorsque `disabled_at` est vide
   - `analytics_category` contient la valeur de la dimension analytique par défaut, quel que soit son nom. Chaque autre dimension activée a sa propre colonne, `analytics:<code>`, où `<code>` est le code de la dimension. Les exports et le modèle placent ces colonnes juste après `analytics_category`, dans l'ordre des dimensions
   - `analytics_category`, les colonnes `analytics:<code>`, `cost_center_code` et `run_build` sont des colonnes facultatives : les exports et le modèle les contiennent toujours, et les fichiers qui ne les ont pas s'importent toujours
@@ -489,16 +491,17 @@ Chaque poste OPEX a un **statut** (Activé ou Désactivé) et une **Fin de valid
 
 **Définir le statut** :
   - À la création du poste, vous pouvez définir sa **Fin de validité** dans le panneau **Propriétés**
-  - Ensuite, modifiez le **Statut** dans la barre de métadonnées, ou utilisez le champ **Cycle de vie** du panneau **Propriétés** (interrupteur **Activé** et **Fin de validité**). Désactiver un poste sans date fixe sa fin de validité à aujourd'hui
+  - Ensuite, modifiez le **Statut** dans la barre de métadonnées, ou utilisez le champ **Cycle de vie** du panneau **Propriétés** (interrupteur de statut et **Fin de validité**). Désactiver un poste sans date fixe sa fin de validité à aujourd'hui
   - Vous pouvez programmer une fin de validité future (utile pour les postes dont le contrat arrive à échéance)
 
 **Afficher les postes désactivés** :
   - Par défaut, la liste OPEX n'affiche que les postes **Activés**
-  - Utilisez la bascule **Afficher : Désactivés** ou **Afficher : Tous** pour voir les postes désactivés
+  - Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** et choisissez **Désactivés** ou **Tous** pour voir les postes désactivés
 
 **Désactiver ou supprimer** :
   - **Privilégiez la désactivation** : Elle préserve l'historique, garantit la cohérence des rapports et conserve la piste d'audit
   - **Supprimez uniquement si** : Le poste a été créé par erreur
+  - Un poste qui a des montants dans une colonne gelée ne peut pas être supprimé. Dégelez d'abord la colonne, ou fixez plutôt une date de fin de validité
   - Supprimer un poste supprime aussi ses budgets, ventilations, tâches, sites web pertinents, pièces jointes (avec leurs fichiers) et ses liens vers des contrats. Si l'une de ses tâches a été transformée en demande, la demande est conservée : elle possède sa propre copie du titre, de la description et des pièces jointes, et seul son lien vers la tâche disparaît
 
 **Conseil** : Utilisez la Fin de validité pour clore les postes OPEX lorsque les contrats se terminent ou que les services sont arrêtés. Ne supprimez qu'en cas de véritable erreur.

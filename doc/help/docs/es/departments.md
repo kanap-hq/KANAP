@@ -35,7 +35,7 @@ La cuadrícula de Departamentos proporciona una visión general de todos los dep
 
 **Selector de año**: Utilice el campo **Año** en la barra de herramientas para cambiar el año de plantilla que se muestra. La cuadrícula se actualiza automáticamente al cambiar el año.
 
-**Alcance de estado**: Utilice el conmutador **Habilitados / Deshabilitados / Todos** para filtrar por estado del departamento. La lista muestra por defecto solo departamentos habilitados.
+**Alcance de estado**: Utilice el selector **Mostrar: Todos / Activos / Desactivados** para filtrar por estado del departamento. La lista muestra por defecto solo departamentos habilitados.
 
 **Búsqueda rápida**: La barra de búsqueda filtra por nombres de departamento.
 

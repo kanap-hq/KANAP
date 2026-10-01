@@ -49,7 +49,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 - **Recherche rapide** : recherche en texte libre dans toutes les colonnes visibles
 - **Filtres de colonnes** : cliquez sur n'importe quel en-tête de colonne pour filtrer par valeur ; les colonnes numériques (Effectif, Utilisateurs IT, Chiffre d'affaires) supportent les filtres numériques
-- **Périmètre par statut** : basculez entre **Activé**, **Désactivé** et **Tous** pour contrôler quelles sociétés apparaissent
+- **Périmètre par statut** : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste contrôle quelles sociétés apparaissent. Par défaut, la liste affiche les sociétés activées
 
 **Sélecteur d'année** : utilisez le champ **Année** dans la barre d'outils pour changer quelle année de métriques est affichée. La ligne du bas affiche les **totaux** pour Effectif, Utilisateurs IT et Chiffre d'affaires pour toutes les sociétés visibles (filtrées).
 

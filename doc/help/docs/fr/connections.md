@@ -43,7 +43,11 @@ La liste vous offre une vue filtrable de chaque connexion de votre registre.
 
 **Filtrage** :
   - Recherche rapide : Recherche dans les champs de connexion
-  - Filtres de colonnes : Topologie et Cycle de vie (listes à cocher). Criticité, Classe de données et PII n'ont pas de filtre de colonne
+  - Filtres de colonnes : **Topologie**, **Cycle de vie**, **Criticité**, **Classe de données** et **PII** utilisent des listes à cocher : vous pouvez choisir plusieurs valeurs à la fois. **Criticité** et **Classe de données** proposent aussi **(Vide)** pour les connexions sans valeur
+  - **Criticité**, **Classe de données** et **PII** filtrent et trient sur la valeur affichée. Pour une connexion dérivée, c'est la valeur héritée de ses interfaces
+
+**Tri** :
+  - **Criticité** et **Classe de données** trient par gravité, dans l'ordre des niveaux définis dans [Classifications et continuité](it-ops-settings.md#classifications-et-continuite). Les connexions sans valeur viennent en dernier
 
 **Actions** :
   - **Ajouter une connexion** : Créer une nouvelle connexion (nécessite `infrastructure:member`)

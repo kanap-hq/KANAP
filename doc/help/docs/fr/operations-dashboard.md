@@ -9,7 +9,7 @@ La vue d'ensemble de la gestion budgétaire vous offre une vision globale de l'�
 
 ## Disposition
 
-Le tableau de bord est composé de tuiles disposées en grille responsive : trois colonnes sur un écran large, deux sur tablette et une seule colonne sur mobile. Chaque tuile comporte une icône, un titre et généralement un bouton **Voir** qui vous amène directement à la page complète derrière les données.
+La vue d'ensemble est composée de tuiles disposées en grille responsive : trois colonnes sur un écran large, deux sur tablette et une seule colonne sur mobile. Chaque tuile comporte une icône, un titre et généralement un bouton **Voir** qui vous amène directement à la page complète derrière les données.
 
 ## Tuiles
 
@@ -50,7 +50,7 @@ Un compteur devient orange (rouge pour le contrôle du plan comptable) lorsqu'il
 
 ### Actions rapides
 
-Boutons de raccourci pour créer un nouveau poste OPEX ou CAPEX directement depuis le tableau de bord. Ces boutons ne sont visibles que si votre rôle vous accorde au moins les autorisations `opex:manager` ou `capex:manager`.
+Boutons de raccourci pour créer un nouveau poste OPEX ou CAPEX directement depuis la vue d'ensemble. Ces boutons ne sont visibles que si votre rôle vous accorde au moins les autorisations `opex:manager` ou `capex:manager`.
 
 Sous les boutons, une section **Mises à jour récentes** liste les cinq postes les plus récemment modifiés, OPEX et CAPEX confondus. Chaque ligne affiche la date de la dernière modification, le nom du poste et son type. Cliquez sur une ligne pour ouvrir le poste.
 
@@ -71,6 +71,6 @@ Un type que vous ne pouvez pas consulter est désactivé dans les onglets et n'a
 ## Conseils
 
 - **Colonne utilisée par les tuiles** : Un administrateur budgétaire choisit la colonne par défaut et les noms des colonnes dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les tuiles Top et les rapports qu'elles ouvrent suivent ce choix.
-- **Montants arrondis** : Tous les montants du tableau de bord sont arrondis au millier pour une vue compacte. Ouvrez la liste OPEX ou CAPEX, ou les rapports, lorsque vous avez besoin de chiffres exacts.
+- **Montants arrondis** : Tous les montants de la vue d'ensemble sont arrondis au millier pour une vue compacte. Ouvrez la liste OPEX ou CAPEX, ou les rapports, lorsque vous avez besoin de chiffres exacts.
 - **Boutons manquants** : Si vous ne voyez pas les boutons **Nouveau OPEX** ou **Nouveau CAPEX**, votre rôle actuel n'inclut pas l'autorisation manager requise. Demandez à votre administrateur de vérifier votre accès.
 - **Tuiles vides** : Une tuile qui affiche « Pas de données » signifie simplement qu'il n'y a pas encore d'enregistrements de ce type. Dès que vous ou votre équipe commencez à saisir des données, la tuile se remplira automatiquement.

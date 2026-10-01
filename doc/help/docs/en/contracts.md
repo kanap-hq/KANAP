@@ -44,6 +44,7 @@ The Contracts grid provides an overview of all your vendor agreements. Each row 
 - **Curr**: Currency code
 - **Billing**: Billing frequency (Monthly, Quarterly, Annual, Other)
 - **Linked OPEX**: Number of linked OPEX items (click to open workspace)
+- **Status**: **Enabled** or **Disabled**, read from the end of validity
 
 **Additional columns** (via column chooser):
 
@@ -54,7 +55,8 @@ The Contracts grid provides an overview of all your vendor agreements. Each row 
 **Filtering**:
 
 - Quick search: Searches across contract name, supplier, and company
-- Column filters: Available on each column header
+- Column filters: Available on each column header. The **Status** filter offers **Enabled** and **Disabled**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says
+- **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list. The list shows enabled contracts by default. Pick **All** or **Disabled** to find contracts past their end of validity
 
 **Actions**:
 
@@ -169,13 +171,15 @@ The Tasks tab manages action items for this contract (e.g., renewal reviews, pri
 
 Keep your contract registry in sync with external systems using CSV.
 
-**Export**: Downloads all contracts with core fields and calculated dates.
+**Export**: Downloads all contracts with core fields and calculated dates. The `status` column holds the status read from the end of validity.
 
 **Import**:
 
 - Use **Preflight** to validate before applying
-- Match by contract name
+- A row is matched to a contract by contract name and supplier
 - Supports creation and updates
+- The file has no end of validity column. On an update, a blank `status`, or one equal to the contract's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the contract today unless its end of validity has already passed
+- A new contract is enabled unless the row says `disabled`
 
 **Notes**:
 

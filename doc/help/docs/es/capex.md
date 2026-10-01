@@ -108,7 +108,7 @@ El cuadro de búsqueda en la parte superior busca en la referencia, la descripci
 
 ### Filtros de columna
 
-Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Múltiples filtros se combinan con lógica AND.
+Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**. Múltiples filtros se combinan con lógica AND.
 
 Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes.
 
@@ -191,7 +191,7 @@ La pestaña Vista general contiene los detalles de la inversión y sus tareas.
 **Panel Propiedades**:
 
 - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora), **Moneda** (solo las monedas permitidas en su espacio de trabajo), **Tipo de activo fijo**, **Tipo de inversión**, un campo por dimensión analítica, **Run o build** e **Inicio de vigencia**
-- **Ciclo de vida**: el interruptor **Activado** y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
+- **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 - Fechas **Creado** y **Actualizado** (solo lectura)
 - La **Prioridad** se define en el panel Propiedades al crear la partida y después en la barra de metadatos
 
@@ -289,7 +289,7 @@ Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y 
 
 **Herramientas del modo mensual** (solo modo Mensual):
 
-- **Borrar columna**: el icono junto al encabezado de una columna pone a cero todos los meses de esa columna
+- **Borrar columna**: el icono junto al encabezado de una columna pone a cero todos los meses de esa columna. Cuando la columna contiene importes, primero lo confirma
 - Útil para introducir a mano un plan de desembolsos, por ejemplo todo el importe en un solo mes
 - Borrar de esta forma cuenta como una edición a mano. Para quitar a la vez los importes y el periodo de una columna en todas las inversiones, use **Restablecer columna presupuestaria** en la Administración presupuestaria
 
@@ -521,7 +521,9 @@ Puede cargar masivamente partidas CAPEX vía CSV para acelerar la configuración
 - Delimitador: punto y coma `;` (no coma)
 - Codificación: UTF-8 (guarde como "CSV UTF-8" en Excel)
 - Encabezados: `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
-- `disabled_at` es el fin de validez: la fecha en que la partida termina. Utilice una fecha (`2026-12-31`) o una fecha y hora completas. Déjelo vacío si no hay fin
+- `disabled_at` es el fin de validez: la fecha en que la partida termina. Utilice una fecha (`2026-12-31`) o una fecha y hora completas
+- `status` es `enabled` o `disabled`. La exportación escribe el estado que se deduce del fin de validez. Una fila cuyo estado contradice su fecha se rechaza con un error de fila, por ejemplo `enabled` con una fecha ya pasada
+- En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina la partida hoy. Una partida nueva queda activada salvo que la fila indique `disabled`, y `disabled` con una fecha vacía la termina hoy
 - Los archivos antiguos con una columna `effective_end` se siguen importando: su fecha rellena el fin de validez cuando `disabled_at` está vacío
 - `analytics_category` contiene el valor de la dimensión analítica por defecto, sea cual sea su nombre. Cada una de las demás dimensiones activadas tiene su propia columna, `analytics:<code>`, donde `<code>` es el código de la dimensión. Las exportaciones y la plantilla incluyen estas columnas justo después de `analytics_category`, en el orden de las dimensiones
 - `analytics_category`, las columnas `analytics:<code>`, `cost_center_code` y `run_build` son columnas opcionales: las exportaciones y la plantilla siempre las incluyen, y los archivos sin ellas se siguen importando
@@ -599,7 +601,7 @@ Cada partida CAPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin d
 **Establecer estado**:
 
 - Al crear la partida, puede establecer su **Fin de validez** en el panel **Propiedades**
-- Más adelante, cambie el **Estado** en la barra de metadatos, o use el campo **Ciclo de vida** del panel **Propiedades** (interruptor **Activado** y **Fin de validez**). Desactivar una partida sin fecha fija su fin de validez en el día de hoy
+- Más adelante, cambie el **Estado** en la barra de metadatos, o use el campo **Ciclo de vida** del panel **Propiedades** (interruptor de estado y **Fin de validez**). Desactivar una partida sin fecha fija su fin de validez en el día de hoy
 - Puede programar un fin de validez futuro (útil para disposiciones de activos planificadas o fechas de fin de vida)
 
 **Ver partidas deshabilitadas**:
@@ -611,6 +613,7 @@ Cada partida CAPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin d
 
 - **Prefiera desactivar**: Mantiene el historial intacto, asegura que los informes permanezcan consistentes y soporta registros de auditoría
 - **Elimine solo si**: La partida se creó por error
+- Una partida con importes en una columna congelada no se puede eliminar. Primero descongele la columna, o fije en su lugar una fecha de fin de validez. Cuando elimina varias partidas a la vez, las demás se eliminan, y el mensaje nombra cada partida rechazada con su motivo
 - Eliminar una partida también elimina sus presupuestos, asignaciones, tareas, sitios web relevantes, adjuntos (con sus archivos) y sus vínculos con contratos. Si una de sus tareas se convirtió en una solicitud, la solicitud se conserva: tiene su propia copia del título, la descripción y los adjuntos, y solo se pierde su vínculo con la tarea
 
 **Consejo**: Utilice el Fin de validez para marcar activos que han sido completamente depreciados, eliminados o proyectos completados. No elimine a menos que sea un verdadero error.

@@ -45,7 +45,8 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 **Filtrado**:
 
 - Búsqueda rápida en todas las columnas de texto
-- Filtros de columna en las columnas de texto, incluidos ciclo de vida y criticidad. Proceso de negocio, categoría de datos y contiene PII no tienen filtro de columna
+- Filtros de columna en las columnas de texto
+- **Ciclo de vida**, **Criticidad**, **Proceso de negocio**, **Categoría de datos** y **Contiene PII** usan filtros de casillas, así que puede elegir varios valores a la vez. El filtro **Criticidad** ofrece también **(Vacío)** para las interfaces sin criticidad
 
 **Acciones**:
 

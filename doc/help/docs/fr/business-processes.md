@@ -38,7 +38,7 @@ La liste affiche tous les processus métier de votre tenant.
 **Filtrage et tri** :
 
 - La recherche rapide filtre sur toutes les colonnes visibles.
-- Le périmètre par défaut n'affiche que les processus **activés**. Basculez pour voir tous ou uniquement les désactivés.
+- Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste pour choisir les processus affichés. Par défaut, la liste affiche les processus activés.
 - Le tri par défaut groupe les lignes par **Catégories**, puis par **Nom**.
 
 **Actions** (barre d'outils en haut à droite) :
@@ -72,7 +72,7 @@ L'onglet Vue d'ensemble est organisé en trois sections.
 
 - **Nom** (obligatoire) — utilisez un nom clair incluant le code court, par ex. « Order-to-Cash (O2C) » ou « Hire-to-Retire (H2R) ».
 - **Description** — un bref résumé de ce que couvre le processus. Une bonne description capture les points de départ et d'arrivée (par ex. « De la commande client jusqu'à la livraison, la facturation et la réception du paiement. »).
-- **Activé** — les processus actifs apparaissent dans les sélecteurs de l'application. Désactivez un processus pour le retirer sans le supprimer, afin que les références historiques restent intactes.
+- **Interrupteur de statut** : son libellé indique l'état actuel (**Activé** ou **Désactivé**). Les processus activés apparaissent dans les sélecteurs de l'application. Désactivez un processus pour le retirer sans le supprimer, afin que les références historiques restent intactes.
 
 **Classification**
 

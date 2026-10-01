@@ -44,6 +44,7 @@ Das Vertrags-Grid bietet einen Überblick über alle Ihre Lieferantenvereinbarun
 - **Währ.**: Währungscode
 - **Abrechnung**: Abrechnungshäufigkeit (Monatlich, Vierteljährlich, Jährlich, Sonstige)
 - **Verknüpfte OPEX**: Anzahl verknüpfter OPEX-Positionen (zum Öffnen des Arbeitsbereichs anklicken)
+- **Status**: **Aktiviert** oder **Deaktiviert**, aus dem Ende der Gültigkeit ermittelt
 
 **Zusätzliche Spalten** (über Spaltenauswahl):
 
@@ -54,7 +55,8 @@ Das Vertrags-Grid bietet einen Überblick über alle Ihre Lieferantenvereinbarun
 **Filtern**:
 
 - Schnellsuche: Durchsucht Vertragsname, Lieferant und Unternehmen
-- Spaltenfilter: Verfügbar in jeder Spaltenüberschrift
+- Spaltenfilter: Verfügbar in jeder Spaltenüberschrift. Der Filter **Status** bietet **Aktiviert** und **Deaktiviert**. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**
+- **Statusbereich**: der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste. Standardmäßig zeigt die Liste aktivierte Verträge. Wählen Sie **Alle** oder **Deaktiviert**, um Verträge zu finden, deren Ende der Gültigkeit überschritten ist
 
 **Aktionen**:
 
@@ -169,13 +171,15 @@ Der Aufgaben-Tab verwaltet Handlungspunkte für diesen Vertrag (z. B. Verlänger
 
 Halten Sie Ihr Vertragsregister mit externen Systemen per CSV synchron.
 
-**Export**: Lädt alle Verträge mit Kernfeldern und berechneten Daten herunter.
+**Export**: Lädt alle Verträge mit Kernfeldern und berechneten Daten herunter. Die Spalte `status` enthält den Status, der sich aus dem Ende der Gültigkeit ergibt.
 
 **Import**:
 
 - Verwenden Sie die **Vorprüfung** zum Validieren vor dem Anwenden
-- Zuordnung über Vertragsnamen
+- Eine Zeile wird einem Vertrag über Vertragsnamen und Lieferant zugeordnet
 - Unterstützt Neuanlage und Aktualisierungen
+- Die Datei hat keine Spalte für das Ende der Gültigkeit. Bei einer Aktualisierung behält ein leeres `status`, oder eines, das dem aktuellen Status des Vertrags entspricht, sein Ende der Gültigkeit. Ein abweichender Status wird angewendet: `enabled` löscht das Ende der Gültigkeit, und `disabled` beendet den Vertrag heute, sofern sein Ende der Gültigkeit nicht bereits vergangen ist
+- Ein neuer Vertrag ist aktiviert, sofern die Zeile nicht `disabled` angibt
 
 **Hinweise**:
 

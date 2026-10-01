@@ -38,7 +38,7 @@ The list shows all business processes for your tenant.
 **Filtering and sorting**:
 
 - Quick search filters across all visible columns.
-- The default scope shows only **enabled** processes. Toggle to see all or disabled-only.
+- Use the **Show: All / Enabled / Disabled** toggle above the list to choose which processes appear. The list shows enabled processes by default.
 - The default sort groups rows by **Categories**, then by **Name**.
 
 **Actions** (top-right toolbar):
@@ -72,7 +72,7 @@ The Overview tab is organized into three sections.
 
 - **Name** (required) -- use a clear name including the short code, e.g. "Order-to-Cash (O2C)" or "Hire-to-Retire (H2R)".
 - **Description** -- a short summary of what the process covers. A good description captures the start and end points (e.g. "From customer order through delivery, invoicing, and payment received.").
-- **Enabled** toggle -- active processes appear in selectors across the app. Disable a process to retire it without deleting it, so historical references stay intact.
+- **Status switch** -- labelled with the current state (**Enabled** or **Disabled**). Enabled processes appear in selectors across the app. Disable a process to retire it without deleting it, so historical references stay intact.
 
 **Classification**
 

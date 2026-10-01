@@ -43,7 +43,11 @@ Die Liste gibt Ihnen einen filterbaren Überblick über jede Verbindung in Ihrem
 
 **Filterung**:
   - Schnellsuche: Durchsucht Verbindungsfelder
-  - Spaltenfilter: Topologie und Lebenszyklus (Kontrollkästchenlisten). Kritikalität, Datenklasse und PII haben keinen Spaltenfilter
+  - Spaltenfilter: **Topologie**, **Lebenszyklus**, **Kritikalität**, **Datenklasse** und **PII** verwenden Kontrollkästchenlisten, sodass Sie mehrere Werte auf einmal wählen können. **Kritikalität** und **Datenklasse** bieten außerdem **(Leer)** für Verbindungen ohne Wert
+  - **Kritikalität**, **Datenklasse** und **PII** filtern und sortieren nach dem angezeigten Wert. Bei einer abgeleiteten Verbindung ist das der Wert, der von ihren Schnittstellen übernommen wird
+
+**Sortierung**:
+  - **Kritikalität** und **Datenklasse** sortieren nach Schweregrad, in der Reihenfolge der Stufen unter [Einstufungen und Kontinuität](it-ops-settings.md#einstufungen-und-kontinuitat). Verbindungen ohne Wert stehen am Ende
 
 **Aktionen**:
   - **Verbindung hinzufügen**: Eine neue Verbindung erstellen (erfordert `infrastructure:member`)

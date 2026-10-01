@@ -82,8 +82,8 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 
 **Filtrage** :
 - Recherche rapide : Recherche dans les colonnes texte visibles.
-- Bascule de périmètre par statut : Par défaut **Activé**, qui n'affiche que les comptes actifs. Passez à **Tous** pour inclure les comptes désactivés.
-- Filtres de colonnes : Utilisez les filtres des en-têtes de colonnes (par exemple, la colonne **Statut** a un filtre par liste de valeurs).
+- Périmètre par statut : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille. Par défaut **Activés**, qui n'affiche que les comptes actifs. Choisissez **Tous** pour inclure les comptes désactivés.
+- Filtres de colonnes : Utilisez les filtres des en-têtes de colonnes (par exemple, la colonne **Statut** a un filtre par liste de valeurs). Cliquer sur **Effacer** dans le filtre **Statut**, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**.
 
 **Tri** : Par défaut, **N° de compte** par ordre croissant.
 
@@ -390,7 +390,7 @@ Les comptes suivent la même gestion du cycle de vie que les autres données de 
       - Le compte n'apparaît plus dans les menus déroulants de sélection pour les nouveaux postes
       - Les données historiques restent intactes ; les postes existants conservent leur compte
       - Les rapports des années où le compte était actif l'incluent toujours
-  - La grille des comptes affiche par défaut les comptes **Activés** uniquement. Utilisez la bascule de périmètre par statut pour passer à **Tous** et inclure les comptes désactivés.
+  - La grille des comptes affiche par défaut les comptes **Activés** uniquement. Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** pour choisir **Tous** et inclure les comptes désactivés.
 
 ## Suppression du tenant et CoA
 
