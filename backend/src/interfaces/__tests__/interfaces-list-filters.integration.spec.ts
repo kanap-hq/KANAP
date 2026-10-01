@@ -12,16 +12,35 @@ import { seedApps, seedInterface, seedTenant, setCurrentTenant } from './interfa
 
 // The interfaces list compiles the grid's filter model column by column: a set filter
 // keeps every selected value (it used to keep the first one), an empty set matches
-// nothing, and the prev/next ids walk exactly the rows the list returns.
+// nothing, and the prev/next ids walk exactly the rows the list returns. Criticality
+// sorts by the tenant catalog's rank, as connections do, with unknown values last.
 
-function service(manager: EntityManager) {
+// Ranks that disagree with the alphabetical order of the codes.
+const CATALOG = {
+  businessCriticalityLevels: [
+    { code: 'business_critical', label: 'Critical', description: '', rank: 4, maxMtdMinutes: 240 },
+    { code: 'high', label: 'High', description: '', rank: 3, maxMtdMinutes: 1440 },
+    { code: 'low', label: 'Low', description: '', rank: 1, maxMtdMinutes: null },
+  ],
+  cyberCriticalityLevels: [],
+  dataClasses: [],
+  recoveryWaves: [],
+};
+
+function service(manager: EntityManager, catalogTenants: string[]) {
+  const settings = {
+    getClassificationCatalog: async (tenantId: string) => {
+      catalogTenants.push(tenantId);
+      return CATALOG;
+    },
+  };
   return new InterfacesListService(
     manager.getRepository(InterfaceEntity),
     manager.getRepository(InterfaceLeg),
     manager.getRepository(InterfaceMiddlewareApplication),
     manager.getRepository(Application),
     manager.getRepository(InterfaceBinding),
-    {} as any,
+    settings as any,
   );
 }
 
@@ -53,7 +72,8 @@ async function run() {
     await seedInterface(runner, tenantB, appsB, { name: 'Invoices B', lifecycle: 'active', criticality: 'business_critical' });
 
     await setCurrentTenant(runner, tenantA);
-    const svc = service(runner.manager);
+    const catalogTenants: string[] = [];
+    const svc = service(runner.manager, catalogTenants);
     const opts = { manager: runner.manager };
     const query = (filters: Record<string, unknown>) => ({ filters: JSON.stringify(filters), sort: 'name:ASC', limit: 100 });
     const names = async (filters: Record<string, unknown>) => {
@@ -100,6 +120,33 @@ async function run() {
       { value: billing.id, label: 'Billing' },
       { value: payroll.id, label: 'Payroll' },
     ]);
+
+    // Criticality sorts by catalog rank, not by code; unknown and empty values come last
+    // both ways. The list, its pages and the prev/next ids agree.
+    assert.deepEqual(catalogTenants, [], 'the catalog is read only to sort by criticality');
+    await seedInterface(runner, tenantA, apps, { name: 'Legacy', criticality: 'not_in_catalog' });
+    await seedInterface(runner, tenantA, apps, { name: 'Unset', criticality: null });
+    const sorted = async (sort: string) => {
+      const result = await svc.list({ sort, limit: 100 }, opts);
+      const ids = await svc.listIds({ sort }, opts);
+      assert.deepEqual(ids.ids, result.items.map((item: any) => item.id), `ids for ${sort}`);
+      const paged: string[] = [];
+      for (let page = 1; page <= 3; page += 1) {
+        paged.push(...(await svc.list({ sort, limit: 2, page }, opts)).items.map((item: any) => item.id));
+      }
+      assert.deepEqual(paged, ids.ids, `pages for ${sort}`);
+      return result.items.map((item: any) => item.name);
+    };
+    const ascending = await sorted('criticality:ASC');
+    assert.deepEqual(ascending.slice(0, 3), ['Rates', 'Payslips', 'Invoices']);
+    assert.deepEqual(ascending.slice(3).sort(), ['Legacy', 'Unset']);
+    const descending = await sorted('criticality:DESC');
+    assert.deepEqual(descending.slice(0, 3), ['Invoices', 'Payslips', 'Rates']);
+    assert.deepEqual(descending.slice(3).sort(), ['Legacy', 'Unset']);
+    assert.ok(catalogTenants.length > 0 && catalogTenants.every((id) => id === tenantA), 'the session tenant\'s catalog ranks the rows');
+
+    // Other columns keep sorting on the stored value.
+    assert.deepEqual(await sorted('name:DESC'), ['Unset', 'Rates', 'Payslips', 'Legacy', 'Invoices']);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

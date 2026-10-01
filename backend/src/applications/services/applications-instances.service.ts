@@ -11,6 +11,13 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 type LinkedItemKind = 'spend' | 'capex' | 'contract' | 'project';
 
+/** Row shape of each list: the item's own label column, as the workspace relations panel reads it. */
+type LinkedItemRow = {
+  spend: { id: string; product_name: string };
+  capex: { id: string; description: string };
+  contract: { id: string; name: string };
+};
+
 // Table and column names come only from here: never from the caller. `unique`
 // is the link table's unique key, the target of the insert's ON CONFLICT.
 const LINKED_ITEMS = {
@@ -87,7 +94,7 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
   }
 
   /** The application's lines or contracts, as `{ id, product_name }` (OPEX), `{ id, description }` (CAPEX) or `{ id, name }` (contracts). */
-  private async listLinkedItems(kind: Exclude<LinkedItemKind, 'project'>, appId: string, opts?: ServiceOpts) {
+  private async listLinkedItems<K extends keyof LinkedItemRow>(kind: K, appId: string, opts?: ServiceOpts): Promise<Array<LinkedItemRow[K]>> {
     const t = LINKED_ITEMS[kind];
     const mg = this.getManager(opts);
     const app = await this.ensureApp(appId, mg, opts?.accessScope);

@@ -350,6 +350,8 @@ export class AssetsListService extends AssetsBaseService {
       sub_location_name: 'sl.name',
       network_segment: "a.ip_addresses->0->>'network_segment'",
       cluster: 'cluster_asset.name',
+      // The Created column's text filter reads the timestamp as text, as connections and applications do.
+      created_at: 'CAST(a.created_at AS TEXT)',
     };
 
     // Apply set and text filters

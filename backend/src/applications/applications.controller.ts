@@ -808,7 +808,7 @@ export class ApplicationsController {
   async listLinkedSpend(
     @Param('id') id: string,
     @Tenant() ctx: TenantRequest,
-  ): Promise<{ items: Array<{ id: string; name: string }> }> {
+  ): Promise<{ items: Array<{ id: string; product_name: string }> }> {
     return this.svc.listLinkedSpendItems(id, await this.readApplicationOpts(ctx));
   }
 

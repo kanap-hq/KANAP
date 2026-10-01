@@ -129,3 +129,12 @@ export function highestClassification(values: Array<string | null | undefined>, 
   const known = values.flatMap((value) => value && byCode.has(value) ? [byCode.get(value)!] : []);
   return { code: known.sort((a, b) => b.rank - a.rank)[0]?.code ?? null, incomplete: known.length !== values.length || !values.length };
 }
+
+/**
+ * SQL reading the catalog rank of the classification code `codeExpression`, for sorting by
+ * severity. The levels are bound as `:<codesParam>` (codes) and `:<ranksParam>` (ranks), in
+ * the same order; a value outside the catalog ranks null, so a NULLS LAST sort puts it last.
+ */
+export function classificationRankSql(codeExpression: string, codesParam: string, ranksParam: string): string {
+  return `(SELECT r.rank FROM UNNEST(CAST(:${codesParam} AS text[]), CAST(:${ranksParam} AS float8[])) AS r(code, rank) WHERE r.code = ${codeExpression})`;
+}
