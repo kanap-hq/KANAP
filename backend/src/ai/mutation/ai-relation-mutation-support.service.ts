@@ -9,7 +9,8 @@ import {
 import { SupplierContactsService } from '../../suppliers/supplier-contacts.service';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
-import { buildAiMutationAudit } from './ai-mutation-audit.util';
+import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
+import { firstReturnedRow } from '../../analytics/analytics-context';
 import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
@@ -362,8 +363,8 @@ export class AiRelationMutationSupportService {
     if (relationItemSignature(liveItems) !== relationItemSignature(expectedItems)) {
       throw new ConflictException(`${config.label} changed after the preview was created.`);
     }
-    await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems);
     const audit = buildAiMutationAudit(preview);
+    await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit);
     await this.audit.log(
       {
         table: this.auditTableName(config),
@@ -938,6 +939,7 @@ export class AiRelationMutationSupportService {
     config: RelationConfig,
     sourceId: string,
     nextItems: RelationItem[],
+    audit: AiMutationAuditOptions,
   ): Promise<void> {
     if (config.kind === 'simple') {
       await this.replaceSimpleRelation(context, config, sourceId, nextItems);
@@ -951,7 +953,7 @@ export class AiRelationMutationSupportService {
         await this.replaceContactRoles(context, config, sourceId, nextItems);
         return;
       case 'supplier_contacts':
-        await this.replaceSupplierContacts(context, sourceId, nextItems);
+        await this.replaceSupplierContacts(context, sourceId, nextItems, audit);
         return;
       case 'asset_relations':
         await this.replaceAssetRelations(context, sourceId, nextItems);
@@ -1013,7 +1015,13 @@ export class AiRelationMutationSupportService {
     }
   }
 
-  private async replaceSupplierContacts(context: AiExecutionContextWithManager, supplierId: string, nextItems: RelationItem[]): Promise<void> {
+  /** The supplier links and every link they propagate are audited with the preview's source, like the summary row. */
+  private async replaceSupplierContacts(
+    context: AiExecutionContextWithManager,
+    supplierId: string,
+    nextItems: RelationItem[],
+    audit: AiMutationAuditOptions,
+  ): Promise<void> {
     const current = await this.loadSupplierContacts(context, supplierId);
     const currentByKey = new Map(current.map((item) => [item.key, item]));
     const nextByKey = new Map(nextItems.map((item) => [item.key, item]));
@@ -1021,17 +1029,37 @@ export class AiRelationMutationSupportService {
       if (nextByKey.has(item.key)) continue;
       const linkId = textOrNull(item.payload.id);
       if (linkId) {
-        await this.supplierContacts.detach(linkId, { manager: context.manager });
+        await this.supplierContacts.detach(supplierId, linkId, { manager: context.manager, tenantId: context.tenantId, userId: context.userId, audit });
       }
     }
     for (const item of nextItems) {
       const currentItem = currentByKey.get(item.key);
       if (currentItem) {
         if ((currentItem.payload.is_primary === true) !== (item.payload.is_primary === true)) {
-          await context.manager.query(
-            `UPDATE supplier_contacts SET is_primary = $1, updated_at = now() WHERE tenant_id = $2 AND id = $3`,
-            [item.payload.is_primary === true, context.tenantId, currentItem.payload.id],
+          const [before] = await context.manager.query(
+            `SELECT * FROM supplier_contacts WHERE tenant_id = $1 AND id = $2`,
+            [context.tenantId, currentItem.payload.id],
           );
+          const after = firstReturnedRow<{ id: string }>(await context.manager.query(
+            `UPDATE supplier_contacts SET is_primary = $1, updated_at = now() WHERE tenant_id = $2 AND id = $3 RETURNING *`,
+            [item.payload.is_primary === true, context.tenantId, currentItem.payload.id],
+          ));
+          // The link change is audited like the links attach and detach write, with the preview's source.
+          if (before && after) {
+            await this.audit.log(
+              {
+                table: 'supplier_contacts',
+                recordId: after.id,
+                action: 'update',
+                before,
+                after,
+                userId: context.userId,
+                source: audit.source,
+                sourceRef: audit.sourceRef,
+              },
+              { manager: context.manager },
+            );
+          }
         }
         continue;
       }
@@ -1042,7 +1070,7 @@ export class AiRelationMutationSupportService {
           role: String(item.payload.role) as any,
           isPrimary: item.payload.is_primary === true,
         },
-        { manager: context.manager },
+        { manager: context.manager, tenantId: context.tenantId, userId: context.userId, audit },
       );
     }
   }

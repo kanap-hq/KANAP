@@ -5,7 +5,6 @@ import { SpendItem } from './spend-item.entity';
 import { User } from '../users/user.entity';
 import { parsePagination, buildWhereFromAgFilters } from '../common/pagination';
 import { AuditService } from '../audit/audit.service';
-import { spreadAnnualToMonths } from './spread.util';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { SUMMARY_SCOPES, SummaryDeps } from './spend-summary.builder';
 import * as budgetSummary from './budget-summary';
@@ -114,11 +113,14 @@ export class SpendItemsService {
     const scope: LifecycleScope = includeDisabled ? null : lifecycleStatus === StatusState.DISABLED ? 'inactive' : 'active';
     applyDisabledAtWhere(where, scope, filtersToApply);
     if (q) where.product_name = ILike(`%${q}%`);
+    // Not a filterable field, so no grid filter can replace it.
+    const tenantId = await this.resolveTenantId(mg);
+    where.tenant_id = tenantId;
     const safeSortField = allowedFields.includes(sort.field) ? sort.field : 'created_at';
     const [itemsRaw, total] = await repo.findAndCount({ where, order: { [safeSortField]: sort.direction as any }, skip, take: limit });
     // The default dimension's value, read from the analytics links.
     const analyticsByItem = itemsRaw.length > 0
-      ? await loadItemAnalyticsValues(mg, 'opex', await this.resolveTenantId(mg), itemsRaw.map((item) => item.id))
+      ? await loadItemAnalyticsValues(mg, 'opex', tenantId, itemsRaw.map((item) => item.id))
       : new Map();
     const items = itemsRaw.map((item) => {
       const { analytics_category_id, analytics_category_name } = itemAnalyticsFields(analyticsByItem.get(item.id) ?? []);
@@ -127,10 +129,11 @@ export class SpendItemsService {
     return { items, total, page, limit };
   }
 
-  /** The stored line (under RLS, by id or OPX reference), without its analytics values. */
+  /** The stored line of the session tenant (by id or OPX reference), without its analytics values. */
   private async findItem(id: string, mg: EntityManager): Promise<SpendItem> {
     const itemId = await resolveToUuid(id, 'spend', mg);
-    const found = await mg.getRepository(SpendItem).findOne({ where: { id: itemId } });
+    const tenantId = await this.resolveTenantId(mg);
+    const found = await mg.getRepository(SpendItem).findOne({ where: { id: itemId, tenant_id: tenantId } });
     if (!found) throw new NotFoundException('Spend item not found');
     return found;
   }
@@ -192,10 +195,10 @@ export class SpendItemsService {
       throw new BadRequestException('At least one recipient is required');
     }
     const mg = opts?.manager ?? this.repo.manager;
-    const item = await mg.getRepository(SpendItem).findOne({ where: { id }, select: ['id', 'product_name'] });
+    const item = await mg.getRepository(SpendItem).findOne({ where: { id, tenant_id: tenantId }, select: ['id', 'product_name'] });
     if (!item) throw new NotFoundException('Spend item not found');
 
-    const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
+    const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2', [tenantId, userId]);
     const senderName = senderRows.length > 0
       ? `${senderRows[0].first_name} ${senderRows[0].last_name}`.trim() || 'Someone'
       : 'Someone';
@@ -204,10 +207,10 @@ export class SpendItemsService {
       ? await mg.query(
           `SELECT u.id AS "userId", u.email, u.first_name AS "firstName", u.last_name AS "lastName", u.locale
            FROM users u
-           JOIN roles ro ON ro.id = u.role_id
-           WHERE u.id = ANY($1) AND u.status = 'enabled'
+           JOIN roles ro ON ro.id = u.role_id AND ro.tenant_id = u.tenant_id
+           WHERE u.tenant_id = $1 AND u.id = ANY($2::uuid[]) AND u.status = 'enabled'
              AND (ro.is_system = false OR LOWER(ro.role_name) = 'administrator')`,
-          [userIds],
+          [tenantId, userIds],
         )
       : [];
 
@@ -305,21 +308,25 @@ export class SpendItemsService {
 
     // Sync contacts from supplier if supplier changed
     if (oldSupplierId !== newSupplierId) {
-      await this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg });
+      await this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId: saved.tenant_id });
     }
 
     // Notify owners on status change
     if (before.status !== saved.status) {
-      const tenantId = (saved as any).tenant_id;
-      const recipients: Array<{ userId: string; email: string; locale?: string | null }> = [];
-      if (saved.owner_it_id) {
-        const user = await mg.query('SELECT id, email, locale FROM users WHERE id = $1 AND status = \'enabled\'', [saved.owner_it_id]);
-        if (user.length > 0) recipients.push({ userId: user[0].id, email: user[0].email, locale: user[0].locale });
-      }
-      if (saved.owner_business_id) {
-        const user = await mg.query('SELECT id, email, locale FROM users WHERE id = $1 AND status = \'enabled\'', [saved.owner_business_id]);
-        if (user.length > 0) recipients.push({ userId: user[0].id, email: user[0].email, locale: user[0].locale });
-      }
+      const tenantId = saved.tenant_id;
+      // IT owner first, then the business owner, read in one query.
+      const ownerIds = Array.from(new Set([saved.owner_it_id, saved.owner_business_id].filter((v): v is string => !!v)));
+      const users: Array<{ id: string; email: string; locale: string | null }> = ownerIds.length > 0
+        ? await mg.query(
+            `SELECT id, email, locale FROM users WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND status = 'enabled'`,
+            [tenantId, ownerIds],
+          )
+        : [];
+      const byId = new Map(users.map((u) => [u.id, u]));
+      const recipients = ownerIds.flatMap((ownerId) => {
+        const user = byId.get(ownerId);
+        return user ? [{ userId: user.id, email: user.email, locale: user.locale }] : [];
+      });
       if (recipients.length > 0) {
         this.notifications.notifyStatusChange({
           itemType: 'opex',
@@ -438,13 +445,15 @@ export class SpendItemsService {
   // Links (OPEX)
   async listLinks(spendItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return mg.getRepository(SpendLink).find({ where: { spend_item_id: spendItemId } as any, order: { created_at: 'DESC' as any } });
+    const tenantId = await this.resolveTenantId(mg);
+    return mg.getRepository(SpendLink).find({ where: { tenant_id: tenantId, spend_item_id: spendItemId } as any, order: { created_at: 'DESC' as any } });
   }
   async createLink(spendItemId: string, body: Partial<SpendLink>, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendLink);
     if (!body.url) throw new BadRequestException('url is required');
-    const entity = repo.create({ spend_item_id: spendItemId, url: body.url, description: body.description ?? null } as any);
+    const spend = await this.findItem(spendItemId, mg);
+    const entity = repo.create({ tenant_id: spend.tenant_id, spend_item_id: spend.id, url: body.url, description: body.description ?? null } as any);
     const saved = await repo.save(entity as any);
     await this.audit.log({ table: 'spend_links', recordId: (saved as any).id, action: 'create', before: null, after: saved, userId }, { manager: mg });
     return saved as any;
@@ -452,10 +461,14 @@ export class SpendItemsService {
   async updateLink(spendItemId: string, linkId: string, body: Partial<SpendLink>, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendLink);
-    const existing = await repo.findOne({ where: { id: linkId } });
-    if (!existing || (existing as any).spend_item_id !== spendItemId) throw new NotFoundException('Link not found');
+    const tenantId = await this.resolveTenantId(mg);
+    const existing = await repo.findOne({ where: { id: linkId, spend_item_id: spendItemId, tenant_id: tenantId } as any });
+    if (!existing) throw new NotFoundException('Link not found');
     const before = { ...existing };
-    const next = { ...existing, ...body } as any;
+    // Only the link's own fields: the line and the tenant it belongs to stay as resolved above.
+    const next = { ...existing } as any;
+    if (body.url !== undefined) next.url = body.url;
+    if (body.description !== undefined) next.description = body.description;
     const saved = await repo.save(next);
     await this.audit.log({ table: 'spend_links', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
     return saved;
@@ -463,9 +476,10 @@ export class SpendItemsService {
   async deleteLink(spendItemId: string, linkId: string, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendLink);
-    const existing = await repo.findOne({ where: { id: linkId } });
-    if (!existing || (existing as any).spend_item_id !== spendItemId) return { ok: true };
-    await repo.delete({ id: linkId } as any);
+    const tenantId = await this.resolveTenantId(mg);
+    const existing = await repo.findOne({ where: { id: linkId, spend_item_id: spendItemId, tenant_id: tenantId } as any });
+    if (!existing) return { ok: true };
+    await repo.delete({ id: linkId, spend_item_id: spendItemId, tenant_id: tenantId } as any);
     await this.audit.log({ table: 'spend_links', recordId: linkId, action: 'delete', before: existing, after: null, userId }, { manager: mg });
     return { ok: true };
   }
@@ -473,20 +487,22 @@ export class SpendItemsService {
   // Attachments (OPEX)
   async listAttachments(spendItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return mg.getRepository(SpendAttachment).find({ where: { spend_item_id: spendItemId } as any, order: { uploaded_at: 'DESC' as any } });
+    const tenantId = await this.resolveTenantId(mg);
+    return mg.getRepository(SpendAttachment).find({ where: { tenant_id: tenantId, spend_item_id: spendItemId } as any, order: { uploaded_at: 'DESC' as any } });
   }
   async uploadAttachment(spendItemId: string, file: Express.Multer.File, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendAttachment);
     if (!file) throw new BadRequestException('No file uploaded');
-    const [{ tenant_id }] = await mg.query(`SELECT app_current_tenant() AS tenant_id`);
+    const spend = await this.findItem(spendItemId, mg);
+    const tenant_id = spend.tenant_id;
     const id = randomUUID();
     const now = new Date();
     const decodedName = fixMulterFilename(file.originalname);
     const ext = path.extname(decodedName || '') || '';
     const rand = Math.random().toString(36).slice(2, 8);
     const key = [
-      'files', tenant_id, 'opex', spendItemId,
+      'files', tenant_id, 'opex', spend.id,
       now.getUTCFullYear().toString(), String(now.getUTCMonth() + 1).padStart(2, '0'),
       `${id}_${rand}${ext}`,
     ].join('/');
@@ -501,7 +517,8 @@ export class SpendItemsService {
     await this.storage.putObject({ key, body: buf as Buffer, contentType: validated.mimeType, contentLength: validated.size, sse: 'AES256' });
     const entity = repo.create({
       id,
-      spend_item_id: spendItemId,
+      tenant_id,
+      spend_item_id: spend.id,
       original_filename: decodedName || `${id}${ext}`,
       stored_filename: path.basename(key),
       mime_type: validated.mimeType || null,
@@ -515,16 +532,18 @@ export class SpendItemsService {
   async downloadAttachment(attachmentId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendAttachment);
-    const found = await repo.findOne({ where: { id: attachmentId } });
+    const tenantId = await this.resolveTenantId(mg);
+    const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } as any });
     if (!found) throw new NotFoundException('Attachment not found');
     return found;
   }
   async deleteAttachment(attachmentId: string, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendAttachment);
-    const found = await repo.findOne({ where: { id: attachmentId } });
+    const tenantId = await this.resolveTenantId(mg);
+    const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } as any });
     if (!found) return { ok: true };
-    await repo.delete({ id: attachmentId } as any);
+    await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
     try { await this.storage.deleteObject((found as any).storage_path); } catch {}
     await this.audit.log({ table: 'spend_attachments', recordId: found.id, action: 'update', before: found, after: null, userId }, { manager: mg });
     return { ok: true };
@@ -534,14 +553,13 @@ export class SpendItemsService {
   async listProjects(spendItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const spend = await this.findItem(spendItemId, mg); // ensure item exists
-    const itemId = spend.id;
     const rows = await mg.query(
       `SELECT l.project_id as id, p.name
        FROM portfolio_project_opex l
-       JOIN portfolio_projects p ON p.id = l.project_id
-       WHERE l.opex_id = $1
+       JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
+       WHERE l.tenant_id = $1 AND l.opex_id = $2
        ORDER BY p.name ASC`,
-      [itemId],
+      [spend.tenant_id, spend.id],
     );
     return { items: rows };
   }
@@ -550,18 +568,18 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const spend = await this.findItem(spendItemId, mg);
     const itemId = spend.id;
+    const tenantId = spend.tenant_id;
     const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
     if (cleanIds.length) {
-      const projects = await mg.getRepository(PortfolioProject).find({ where: { id: In(cleanIds) } as any });
+      // Read in the line's tenant: a project of another tenant is not found.
+      const projects = await mg.getRepository(PortfolioProject).find({ where: { tenant_id: tenantId, id: In(cleanIds) } as any });
       if (projects.length !== cleanIds.length) throw new BadRequestException('One or more projects not found');
-      const invalid = projects.find((p) => (p as any).tenant_id !== (spend as any).tenant_id);
-      if (invalid) throw new BadRequestException('Project does not belong to tenant');
     }
     const repo = mg.getRepository(PortfolioProjectOpex);
-    const existing = await repo.find({ where: { opex_id: itemId } as any });
-    if (existing.length) await repo.delete({ id: In(existing.map((x) => x.id)) as any });
+    const existing = await repo.find({ where: { tenant_id: tenantId, opex_id: itemId } as any });
+    if (existing.length) await repo.delete({ tenant_id: tenantId, id: In(existing.map((x) => x.id)) } as any);
     if (cleanIds.length) {
-      const rows = cleanIds.map((projId) => repo.create({ tenant_id: (spend as any).tenant_id, project_id: projId, opex_id: itemId }));
+      const rows = cleanIds.map((projId) => repo.create({ tenant_id: tenantId, project_id: projId, opex_id: itemId }));
       await repo.save(rows);
     }
     return this.listProjects(itemId, { manager: mg });

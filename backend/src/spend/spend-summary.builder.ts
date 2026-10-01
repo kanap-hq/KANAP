@@ -140,7 +140,7 @@ type AllocationLike = { resolvedMethod?: string | null; shares?: AllocationShare
 
 export interface SummaryDeps {
   allocationCalculator: {
-    computeForVersions(versions: any[], opts?: { manager?: EntityManager; suppressErrors?: boolean }): Promise<Map<string, AllocationLike>>;
+    computeForVersions(versions: any[], opts: { manager?: EntityManager; tenantId: string; suppressErrors?: boolean }): Promise<Map<string, AllocationLike>>;
   };
   fxRates: Pick<FxRateService, 'resolveRates' | 'convertValue'>;
   /** Rows the list page and the filter values build at most (default in `budget-summary.ts`). */
@@ -613,7 +613,7 @@ export async function buildBudgetSummaryRows(
   const allocate = async (year: number) => {
     const versions = versionsOfYear(year);
     return versions.length
-      ? deps.allocationCalculator.computeForVersions(versions, { manager, suppressErrors: true })
+      ? deps.allocationCalculator.computeForVersions(versions, { manager, tenantId, suppressErrors: true })
       : new Map<string, AllocationLike>();
   };
   const allocationForY = await allocate(Y);

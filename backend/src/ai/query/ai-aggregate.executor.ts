@@ -863,7 +863,7 @@ export class AiAggregateExecutor {
           filters: adaptedFilters,
           includeDisabled: true,
         },
-        { manager: context.manager },
+        { manager: context.manager, tenantId: context.tenantId },
       );
       return {
         ids: result.ids || [],

@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Raw, Repository } from 'typeorm';
+import { EntityManager, In, IsNull, Raw, Repository } from 'typeorm';
 import { SpendAllocation } from './spend-allocation.entity';
 import { SpendVersion } from './spend-version.entity';
 import { AllocationRule } from './allocation-rule.entity';
@@ -47,21 +47,31 @@ export class AllocationCalculatorService {
     @InjectRepository(CompanyMetric) private readonly metrics: Repository<CompanyMetric>,
   ) {}
 
+  /**
+   * Shares of the given versions. One call works on one tenant: `opts.tenantId`
+   * is the request's tenant, every version must belong to it (a version of
+   * another tenant throws), and every read is scoped to it.
+   */
   async computeForVersions(
     versions: SpendVersion[],
-    opts?: { manager?: EntityManager; suppressErrors?: boolean },
+    opts: { manager?: EntityManager; tenantId: string; suppressErrors?: boolean },
   ): Promise<Map<string, AllocationComputation>> {
     const result = new Map<string, AllocationComputation>();
     if (!versions || versions.length === 0) {
       return result;
     }
 
-    const manager = opts?.manager ?? this.allocations.manager;
-    const suppressErrors = opts?.suppressErrors ?? false;
+    const tenantId = opts?.tenantId;
+    if (!tenantId) throw new InternalServerErrorException('Allocations need a tenant.');
+    if (versions.some((v) => v.tenant_id !== tenantId)) {
+      throw new InternalServerErrorException('Allocations are computed for versions of one tenant only.');
+    }
+    const manager = opts.manager ?? this.allocations.manager;
+    const suppressErrors = opts.suppressErrors ?? false;
     const versionIds = versions.map((v) => v.id);
 
     const rawAllocations = await manager.getRepository(SpendAllocation).find({
-      where: { version_id: In(versionIds) as any } as any,
+      where: { tenant_id: tenantId, version_id: In(versionIds) as any } as any,
     });
     const manualRowsByVersion = new Map<string, SpendAllocation[]>();
     const persistedRowsByVersion = new Map<string, SpendAllocation[]>();
@@ -85,15 +95,13 @@ export class AllocationCalculatorService {
     // The promise is cached so a rejected selection surfaces the same error on each version.
     const manualDefaultShares = new Map<string, Promise<Map<string, number>>>();
     if (years.length > 0) {
-      const tenantIds = Array.from(
-        new Set(versions.map((v) => ((v as any).tenant_id ?? null) as string | null)),
-      );
-      const scope: any[] = [{ fiscal_year: In(years) as any, tenant_id: null }];
-      for (const tenantId of tenantIds) {
-        if (tenantId) scope.push({ fiscal_year: In(years) as any, tenant_id: tenantId });
-      }
+      // Global defaults (no tenant) and this tenant's overrides.
+      const scope: any[] = [
+        { fiscal_year: In(years) as any, tenant_id: IsNull() },
+        { fiscal_year: In(years) as any, tenant_id: tenantId },
+      ];
       const rules = await manager.getRepository(AllocationRule).find({ where: scope } as any);
-      defaultLookup = buildDefaultLookup(rules, tenantIds);
+      defaultLookup = buildDefaultLookup(rules, [tenantId]);
     }
 
     // Year-aware enabled filters: include companies through their disabled_at year.
@@ -101,14 +109,17 @@ export class AllocationCalculatorService {
     // (disabled_at IS NULL OR disabled_at >= :period_start), where period_start = YYYY-01-01.
     const enabledCompaniesByYear = new Map<number, Company[]>();
     if (years.length > 0) {
+      // One read for every year in scope, from the earliest year's start; each year keeps its own.
+      const yearStart = (y: number) => new Date(`${String(y).padStart(4, '0')}-01-01T00:00:00.000Z`);
+      const companies = await manager.getRepository(Company).find({
+        where: {
+          tenant_id: tenantId,
+          disabled_at: Raw((alias) => `${alias} IS NULL OR ${alias} >= :period_start`, { period_start: yearStart(Math.min(...years)) }),
+        },
+      } as any);
       for (const y of years) {
-        const periodStart = new Date(`${String(y).padStart(4, '0')}-01-01T00:00:00.000Z`);
-        const companies = await manager.getRepository(Company).find({
-          where: {
-            disabled_at: Raw((alias) => `${alias} IS NULL OR ${alias} >= :period_start`, { period_start: periodStart }),
-          },
-        } as any);
-        enabledCompaniesByYear.set(y, companies);
+        const periodStart = yearStart(y).getTime();
+        enabledCompaniesByYear.set(y, companies.filter((c) => c.disabled_at == null || new Date(c.disabled_at).getTime() >= periodStart));
       }
     }
 
@@ -119,6 +130,7 @@ export class AllocationCalculatorService {
     if (years.length > 0 && companyIds.length > 0) {
       const metricRows = await manager.getRepository(CompanyMetric).find({
         where: {
+          tenant_id: tenantId,
           fiscal_year: In(years) as any,
           company_id: In(companyIds) as any,
         } as any,
@@ -177,7 +189,7 @@ export class AllocationCalculatorService {
 
             const distribution = await computeCompanyShares({
               manager,
-              tenantId: version.tenant_id,
+              tenantId,
               fiscalYear: version.budget_year,
               companyIds,
               driver: ((version as any).allocation_driver ?? 'headcount') as AllocationDriver,
@@ -214,7 +226,7 @@ export class AllocationCalculatorService {
 
             const distribution = await this.computeManualDepartmentShares({
               manager,
-              tenantId: version.tenant_id,
+              tenantId,
               fiscalYear: version.budget_year,
               departmentIds: deptIds,
             });
@@ -253,19 +265,19 @@ export class AllocationCalculatorService {
         }
       }
 
-      const resolvedDefault = this.resolveDefault(method, version.budget_year, (version as any).tenant_id ?? null, defaultLookup);
+      const resolvedDefault = this.resolveDefault(method, version.budget_year, tenantId, defaultLookup);
 
       // A tenant-wide manual company selection spreads the driver over the selected
       // companies only. No stored allocation backs it, so an unusable selection surfaces
       // an error instead of silently renormalising the chargeback over other companies.
       if (resolvedDefault.kind === 'manual_company') {
         try {
-          const key = defaultMethodKey(version.tenant_id, version.budget_year);
+          const key = defaultMethodKey(tenantId, version.budget_year);
           let pending = manualDefaultShares.get(key);
           if (!pending) {
             pending = computeCompanyShares({
               manager,
-              tenantId: version.tenant_id,
+              tenantId,
               fiscalYear: version.budget_year,
               companyIds: resolvedDefault.companyIds,
               driver: resolvedDefault.method,

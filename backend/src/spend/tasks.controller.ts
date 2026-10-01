@@ -74,7 +74,7 @@ export class TasksController {
 
   private async ensureTaskAccess(id: string, req: any, level: PermissionLevel = 'reader') {
     const accessScope = await this.taskAccessScope(req, level);
-    await this.svc.assertVisible(id, accessScope, { manager: req?.queryRunner?.manager });
+    await this.svc.assertVisible(id, accessScope, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
     return accessScope;
   }
 
@@ -84,6 +84,7 @@ export class TasksController {
     if (!userId) return false;
 
     const manager = req?.queryRunner?.manager ?? this.dataSource.manager;
+    // No tenant on the request: the predicates match nothing, so no role and no permission.
     const tenantId = req?.tenant?.id ?? null;
     const rows = await manager.query(
       `
@@ -94,15 +95,15 @@ export class TasksController {
           SELECT u.role_id
           FROM users u
           WHERE u.id = $1
-            AND ($2::uuid IS NULL OR u.tenant_id = $2::uuid)
+            AND u.tenant_id = $2::uuid
           UNION
           SELECT ur.role_id
           FROM user_roles ur
           WHERE ur.user_id = $1
-            AND ($2::uuid IS NULL OR ur.tenant_id = $2::uuid)
+            AND ur.tenant_id = $2::uuid
         ) assigned_roles
         JOIN roles r ON r.id = assigned_roles.role_id
-        WHERE ($2::uuid IS NULL OR r.tenant_id = $2::uuid)
+        WHERE r.tenant_id = $2::uuid
       `,
       [userId, tenantId],
     );
@@ -129,13 +130,16 @@ export class TasksController {
     const accessScope = await resolveBusinessContributorScope(req, 'portfolio_projects', 'contributor');
     if (!accessScope) return;
 
+    // No tenant on the request: the predicate matches nothing, so the move is refused.
+    const tenantId = req?.tenant?.id ?? null;
     const rows = await req?.queryRunner?.manager.query(
       `SELECT 1
        FROM portfolio_projects p
        WHERE p.id = $1
+         AND p.tenant_id = $3
          AND ${projectParticipantCondition('p', '$2')}
        LIMIT 1`,
-      [projectId, accessScope.userId],
+      [projectId, accessScope.userId, tenantId],
     );
     if (!rows?.length) {
       throw new NotFoundException('Project not found');
@@ -147,7 +151,7 @@ export class TasksController {
   @Get()
   async list(@Query() query: any, @Req() req: any) {
     const accessScope = await this.taskAccessScope(req, 'reader');
-    return this.svc.listAllTasks(query, { manager: req?.queryRunner?.manager, accessScope });
+    return this.svc.listAllTasks(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
   }
 
   @UseGuards(PermissionGuard)
@@ -155,7 +159,7 @@ export class TasksController {
   @Get('ids')
   async listIds(@Query() query: any, @Req() req: any) {
     const accessScope = await this.taskAccessScope(req, 'reader');
-    return this.svc.listIds(query, { manager: req?.queryRunner?.manager, accessScope });
+    return this.svc.listIds(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
   }
 
   @UseGuards(PermissionGuard)
@@ -163,7 +167,7 @@ export class TasksController {
   @Get('filter-values')
   async listFilterValues(@Query() query: any, @Req() req: any) {
     const accessScope = await this.taskAccessScope(req, 'reader');
-    return this.svc.listFilterValues(query, { manager: req?.queryRunner?.manager, accessScope });
+    return this.svc.listFilterValues(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
   }
 
   // ==================== CSV ====================
@@ -264,7 +268,7 @@ export class TasksController {
   async getOne(@Param('id') idOrRef: string, @Req() req: any) {
     const id = await this.resolve(idOrRef, req);
     const accessScope = await this.taskAccessScope(req, 'reader');
-    const res = await this.svc.getOne(id, { manager: req?.queryRunner?.manager, accessScope });
+    const res = await this.svc.getOne(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
     if (!res) {
       const { NotFoundException } = await import('@nestjs/common');
       throw new NotFoundException('Task not found');
@@ -554,8 +558,8 @@ export class TasksController {
       await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
       // Only embedded images (source_field set) are served on this inline route.
       const rows = await runner.query(
-        `SELECT storage_path, mime_type, size FROM task_attachments WHERE id = $1 AND source_field IS NOT NULL LIMIT 1`,
-        [attachmentId],
+        `SELECT storage_path, mime_type, size FROM task_attachments WHERE tenant_id = $1 AND id = $2 AND source_field IS NOT NULL LIMIT 1`,
+        [tenantId, attachmentId],
       );
       // Require the caller to be an authenticated tenant user with >= reader on tasks.
       const allowed = rows.length > 0

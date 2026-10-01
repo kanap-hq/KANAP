@@ -43,7 +43,7 @@ export type AllocationOperationDeps = {
   audit: Pick<AuditService, 'log'>;
   /** The scope's allocation calculator: throws a BadRequestException when a version's rules refuse it. */
   calculator: {
-    computeForVersions(versions: any[], opts: { manager: EntityManager }): Promise<Map<string, { shares: unknown[] }>>;
+    computeForVersions(versions: any[], opts: { manager: EntityManager; tenantId: string }): Promise<Map<string, { shares: unknown[] }>>;
   };
 };
 
@@ -97,12 +97,13 @@ const methodOf = (version: AllocationVersion) => (version.allocation_method as s
  */
 async function sourceShares(
   deps: AllocationOperationDeps,
+  tenantId: string,
   versions: AllocationVersion[],
 ): Promise<Map<string, number | BadRequestException>> {
   const counts = new Map<string, number | BadRequestException>();
   if (versions.length === 0) return counts;
   try {
-    const computed = await deps.calculator.computeForVersions(versions, { manager: deps.manager });
+    const computed = await deps.calculator.computeForVersions(versions, { manager: deps.manager, tenantId });
     for (const version of versions) counts.set(version.id, computed.get(version.id)?.shares.length ?? 0);
     return counts;
   } catch (error) {
@@ -110,7 +111,7 @@ async function sourceShares(
   }
   for (const version of versions) {
     try {
-      const computed = await deps.calculator.computeForVersions([version], { manager: deps.manager });
+      const computed = await deps.calculator.computeForVersions([version], { manager: deps.manager, tenantId });
       counts.set(version.id, computed.get(version.id)?.shares.length ?? 0);
     } catch (error) {
       if (!(error instanceof BadRequestException)) throw error;
@@ -168,7 +169,7 @@ export async function copyAllocations(
     manualRows.set(row.version_id, [...(manualRows.get(row.version_id) ?? []), row]);
   }
   const sources = items.map((item) => version(item.id, sourceYear)).filter((v): v is AllocationVersion => !!v);
-  const shares = await sourceShares(deps, sources);
+  const shares = await sourceShares(deps, tenantId, sources);
 
   const results: AllocationPreview[] = [];
   const recompute: AllocationVersion[] = [];
@@ -292,7 +293,7 @@ export async function copyAllocations(
   }
 
   // Automatic methods: the destination rules must accept them; a refusal fails the whole copy.
-  if (recompute.length > 0) await deps.calculator.computeForVersions(recompute, { manager: mg });
+  if (recompute.length > 0) await deps.calculator.computeForVersions(recompute, { manager: mg, tenantId });
 
   return {
     success: errors === 0,

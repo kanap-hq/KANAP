@@ -18,7 +18,7 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'reader')
   @Get()
-  list(@Query() query: any, @Req() req: any) { return this.svc.list(query, { manager: req?.queryRunner?.manager }); }
+  list(@Query() query: any, @Req() req: any) { return this.svc.list(query, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id }); }
 
   // Declared before ':id': Nest matches routes in declaration order, and '/export' would
   // otherwise be taken for an id and fail on the uuid cast.
@@ -26,7 +26,7 @@ export class ContactsController {
   @RequireLevel('contacts', 'admin')
   @Get('export')
   async export(@Query('scope') scope: 'template' | 'data' = 'data', @Res() res: Response, @Req() req: any) {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager });
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -35,20 +35,20 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'reader')
   @Get(':id')
-  get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager }); }
+  get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id }); }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'member')
   @Post()
   create(@Body() body: ContactUpsertDto, @Req() req: any) {
-    return this.svc.create(body, { manager: req?.queryRunner?.manager, userId: req.user?.sub ?? null });
+    return this.svc.create(body, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'member')
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: ContactUpsertDto, @Req() req: any) {
-    return this.svc.update(id, body, { manager: req?.queryRunner?.manager, userId: req.user?.sub ?? null });
+    return this.svc.update(id, body, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -62,7 +62,7 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'member')
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: any) { return this.svc.delete(id, { manager: req?.queryRunner?.manager }); }
+  remove(@Param('id') id: string, @Req() req: any) { return this.svc.delete(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null }); }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'admin')
@@ -70,6 +70,6 @@ export class ContactsController {
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(@UploadedFile() file: Express.Multer.File, @Query('dryRun') dryRunRaw: string, @Req() req: any) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importCsv({ file, dryRun }, { manager: req?.queryRunner?.manager });
+    return this.svc.importCsv({ file, dryRun }, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 }

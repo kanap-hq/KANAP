@@ -5,6 +5,7 @@ import { CapexAllocationsService } from '../capex-allocations.service';
 import { CapexItem } from '../capex-item.entity';
 import { CapexItemsService } from '../capex-items.service';
 import { CapexVersion } from '../capex-version.entity';
+import { Company } from '../../companies/company.entity';
 import { resolveToUuid } from '../../common/resolve-item-id';
 
 function createCapexItemsService(manager: any) {
@@ -36,6 +37,7 @@ async function testCapexReferenceResolution() {
   const resolved = await resolveToUuid('CPX-42', 'capex', manager as any);
   assert.equal(resolved, 'capex-id-42');
   assert.match(queries[0].sql, /FROM capex_items/);
+  assert.match(queries[0].sql, /WHERE tenant_id = app_current_tenant\(\) AND item_number = \$1/, 'the item number is read in the request\'s tenant');
   assert.deepEqual(queries[0].params, [42]);
 
   queries.length = 0;
@@ -106,10 +108,20 @@ async function testManualPctBulkUpsert() {
       allocation_driver: 'headcount',
     }),
   };
+  // The tenant's companies: a manual row naming another company is refused.
+  const companyCounts: any[] = [];
+  const companyRepo = {
+    count: async (options: any) => {
+      companyCounts.push(options.where);
+      const ids: string[] = options.where.id.value;
+      return ids.filter((id) => id.startsWith('company-')).length;
+    },
+  };
   const manager = {
     getRepository: (entity: unknown) => {
       if (entity === CapexAllocation) return allocationRepo;
       if (entity === CapexVersion) return versionRepo;
+      if (entity === Company) return companyRepo;
       throw new Error('unexpected repository');
     },
   };
@@ -128,20 +140,34 @@ async function testManualPctBulkUpsert() {
       { company_id: 'company-b', department_id: null, allocation_pct: 40 },
     ],
     'user-1',
-    { manager: manager as any },
+    { manager: manager as any, tenantId: 'tenant-1' },
   );
 
   assert.equal(accepted.updated, 2);
   assert.equal(accepted.total_pct, 100);
   assert.deepEqual(savedRows.map((row) => row.allocation_pct), [60, 40]);
   assert.equal(auditCalls.length, 1);
+  assert.equal(companyCounts[0].tenant_id, 'tenant-1', 'companies are resolved in the version\'s tenant');
+
+  await assert.rejects(
+    () => service.bulkUpsert(
+      'version-1',
+      [
+        { company_id: 'company-a', department_id: null, allocation_pct: 50 },
+        { company_id: 'foreign-company', department_id: null, allocation_pct: 50 },
+      ],
+      'user-1',
+      { manager: manager as any, tenantId: 'tenant-1' },
+    ),
+    (err: unknown) => err instanceof BadRequestException && err.message === 'One or more companies were not found.',
+  );
 
   await assert.rejects(
     () => service.bulkUpsert(
       'version-1',
       [{ company_id: 'company-a', department_id: null, allocation_pct: 80 }],
       'user-1',
-      { manager: manager as any },
+      { manager: manager as any, tenantId: 'tenant-1' },
     ),
     /Manual percentages must sum to 100%/,
   );

@@ -112,7 +112,7 @@ export class CapexItemsService {
     return resolveToUuid(idOrRef, 'capex', mg);
   }
 
-  private async enrichSummaryItems(baseItems: CapexItem[], mg: EntityManager): Promise<any[]> {
+  private async enrichSummaryItems(baseItems: CapexItem[], mg: EntityManager, tenantId: string): Promise<any[]> {
     if (!baseItems.length) return [];
     const companyIds = Array.from(new Set(baseItems.map((i: any) => i.paying_company_id).filter(Boolean)));
     const supplierIds = Array.from(new Set(baseItems.map((i: any) => i.supplier_id).filter(Boolean)));
@@ -120,12 +120,12 @@ export class CapexItemsService {
     const ownerIds = Array.from(new Set(baseItems.flatMap((i: any) => [i.owner_it_id, i.owner_business_id]).filter(Boolean))) as string[];
 
     const [companies, suppliers, accounts, owners, analyticsByItem] = await Promise.all([
-      companyIds.length ? mg.getRepository(Company).find({ where: { id: In(companyIds) as any } as any }) : Promise.resolve([]),
-      supplierIds.length ? mg.getRepository(Supplier).find({ where: { id: In(supplierIds) as any } as any }) : Promise.resolve([]),
-      accountIds.length ? mg.getRepository(Account).find({ where: { id: In(accountIds) as any } as any }) : Promise.resolve([]),
-      ownerIds.length ? mg.getRepository(User).find({ where: { id: In(ownerIds) as any } as any }) : Promise.resolve([]),
+      companyIds.length ? mg.getRepository(Company).find({ where: { tenant_id: tenantId, id: In(companyIds) as any } as any }) : Promise.resolve([]),
+      supplierIds.length ? mg.getRepository(Supplier).find({ where: { tenant_id: tenantId, id: In(supplierIds) as any } as any }) : Promise.resolve([]),
+      accountIds.length ? mg.getRepository(Account).find({ where: { tenant_id: tenantId, id: In(accountIds) as any } as any }) : Promise.resolve([]),
+      ownerIds.length ? mg.getRepository(User).find({ where: { tenant_id: tenantId, id: In(ownerIds) as any } as any }) : Promise.resolve([]),
       // The default dimension's value, read from the analytics links.
-      this.resolveTenantId(mg).then((tenantId) => loadItemAnalyticsValues(mg, 'capex', tenantId, baseItems.map((i) => i.id))),
+      loadItemAnalyticsValues(mg, 'capex', tenantId, baseItems.map((i) => i.id)),
     ]);
 
     const companyById = new Map(companies.map((c) => [c.id, c]));
@@ -221,16 +221,20 @@ export class CapexItemsService {
     const scope: LifecycleScope = includeDisabled ? null : lifecycleStatus === StatusState.DISABLED ? 'inactive' : 'active';
     applyDisabledAtWhere(where, scope, filtersToApply);
     if (q) where.description = ILike(`%${q}%`);
+    // Set after the grid filters, so none of them can replace it.
+    const tenantId = await this.resolveTenantId(mg);
+    where.tenant_id = tenantId;
     const safeSortField = allowedFields.includes(sort.field) ? sort.field : 'created_at';
     const [itemsRaw, total] = await repo.findAndCount({ where, order: { [safeSortField]: sort.direction as any }, skip, take: limit });
-    const items = await this.enrichSummaryItems(itemsRaw as CapexItem[], mg);
+    const items = await this.enrichSummaryItems(itemsRaw as CapexItem[], mg, tenantId);
     return { items, total, page, limit };
   }
 
-  /** The stored line (under RLS, by id or CPX reference), without its analytics values. */
+  /** The stored line of the session tenant (by id or CPX reference), without its analytics values. */
   private async findItem(id: string, mg: EntityManager): Promise<CapexItem> {
     const itemId = await this.resolveItemId(id, mg);
-    const found = await mg.getRepository(CapexItem).findOne({ where: { id: itemId } });
+    const tenantId = await this.resolveTenantId(mg);
+    const found = await mg.getRepository(CapexItem).findOne({ where: { id: itemId, tenant_id: tenantId } });
     if (!found) throw new NotFoundException('CAPEX item not found');
     return found;
   }
@@ -291,10 +295,10 @@ export class CapexItemsService {
       throw new BadRequestException('At least one recipient is required');
     }
     const mg = opts?.manager ?? this.repo.manager;
-    const item = await mg.getRepository(CapexItem).findOne({ where: { id }, select: ['id', 'description'] as any });
+    const item = await mg.getRepository(CapexItem).findOne({ where: { id, tenant_id: tenantId }, select: ['id', 'description'] as any });
     if (!item) throw new NotFoundException('CAPEX item not found');
 
-    const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
+    const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2', [tenantId, userId]);
     const senderName = senderRows.length > 0
       ? `${senderRows[0].first_name} ${senderRows[0].last_name}`.trim() || 'Someone'
       : 'Someone';
@@ -303,10 +307,10 @@ export class CapexItemsService {
       ? await mg.query(
           `SELECT u.id AS "userId", u.email, u.first_name AS "firstName", u.last_name AS "lastName", u.locale
            FROM users u
-           JOIN roles ro ON ro.id = u.role_id
-           WHERE u.id = ANY($1) AND u.status = 'enabled'
+           JOIN roles ro ON ro.id = u.role_id AND ro.tenant_id = u.tenant_id
+           WHERE u.tenant_id = $1 AND u.id = ANY($2::uuid[]) AND u.status = 'enabled'
              AND (ro.is_system = false OR LOWER(ro.role_name) = 'administrator')`,
-          [userIds],
+          [tenantId, userIds],
         )
       : [];
 
@@ -360,7 +364,7 @@ export class CapexItemsService {
     });
     const saved = await repo.save(entity);
     await writeItemAnalyticsValues(mg, 'capex', tenantId, saved.id, analytics);
-    const persisted = (await repo.findOne({ where: { id: saved.id } })) ?? saved;
+    const persisted = (await repo.findOne({ where: { id: saved.id, tenant_id: tenantId } })) ?? saved;
     const analyticsValues = analytics.length > 0 ? await this.loadAnalytics(mg, { ...persisted, tenant_id: tenantId }) : [];
     await this.audit.log({
       table: 'capex_items', recordId: saved.id, action: 'create', before: null,
@@ -394,7 +398,7 @@ export class CapexItemsService {
     const saved = await repo.save(existing);
     // A change of analytics values alone is an edit too (updated_at above, the audit below).
     await writeItemAnalyticsValues(mg, 'capex', existing.tenant_id, itemId, analytics);
-    const persisted = await repo.findOne({ where: { id: itemId } });
+    const persisted = await repo.findOne({ where: { id: itemId, tenant_id: existing.tenant_id } });
     const analyticsAfter = analytics.length > 0 ? await this.loadAnalytics(mg, existing) : analyticsBefore;
     await this.audit.log({
       table: 'capex_items', recordId: saved.id, action: 'update',
@@ -406,7 +410,7 @@ export class CapexItemsService {
     const oldSupplierId = (before as any).supplier_id ?? null;
     const newSupplierId = (persisted as any)?.supplier_id ?? (saved as any).supplier_id ?? null;
     if (oldSupplierId !== newSupplierId) {
-      await this.itemContacts.syncFromSupplier(itemId, newSupplierId, userId ?? null, { manager: mg });
+      await this.itemContacts.syncFromSupplier(itemId, newSupplierId, userId ?? null, { manager: mg, tenantId: existing.tenant_id });
     }
 
     const after = persisted ?? saved;
@@ -933,7 +937,7 @@ export class CapexItemsService {
         const totals = (item.totals as any)[yr] || {};
         const hasAny = Object.values(totals).some((v: any) => v != null && !isNaN(Number(v)));
         if (!hasAny) continue;
-        let version = await mg.getRepository(CapexVersion).findOne({ where: { capex_item_id: target.id, budget_year: yr as any } as any });
+        let version = await mg.getRepository(CapexVersion).findOne({ where: { tenant_id: tenantId, capex_item_id: target.id, budget_year: yr as any } as any });
         if (!version) {
           const versionPartial: DeepPartial<CapexVersion> = {
             capex_item_id: target.id,
@@ -959,13 +963,15 @@ export class CapexItemsService {
   // Links
   async listLinks(capexItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return mg.getRepository(CapexLink).find({ where: { capex_item_id: capexItemId } as any, order: { created_at: 'ASC' as any } });
+    const tenantId = await this.resolveTenantId(mg);
+    return mg.getRepository(CapexLink).find({ where: { tenant_id: tenantId, capex_item_id: capexItemId } as any, order: { created_at: 'ASC' as any } });
   }
 
   async createLink(capexItemId: string, body: any, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexLink);
-    const entity = repo.create({ capex_item_id: capexItemId, description: (body?.description ?? null) as any, url: String(body?.url || '').trim() });
+    const capex = await this.findItem(capexItemId, mg);
+    const entity = repo.create({ tenant_id: capex.tenant_id, capex_item_id: capex.id, description: (body?.description ?? null) as any, url: String(body?.url || '').trim() });
     const saved = await repo.save(entity);
     await this.audit.log({ table: 'capex_links', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
     return saved;
@@ -974,8 +980,9 @@ export class CapexItemsService {
   async updateLink(capexItemId: string, linkId: string, body: any, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexLink);
-    const existing = await repo.findOne({ where: { id: linkId } });
-    if (!existing || (existing as any).capex_item_id !== capexItemId) throw new NotFoundException('Link not found');
+    const tenantId = await this.resolveTenantId(mg);
+    const existing = await repo.findOne({ where: { id: linkId, capex_item_id: capexItemId, tenant_id: tenantId } as any });
+    if (!existing) throw new NotFoundException('Link not found');
     const before = { ...existing } as any;
     (existing as any).description = (body?.description ?? null) as any;
     (existing as any).url = String(body?.url || '').trim();
@@ -987,9 +994,10 @@ export class CapexItemsService {
   async deleteLink(capexItemId: string, linkId: string, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexLink);
-    const existing = await repo.findOne({ where: { id: linkId } });
-    if (!existing || (existing as any).capex_item_id !== capexItemId) return { ok: true };
-    await repo.delete({ id: linkId } as any);
+    const tenantId = await this.resolveTenantId(mg);
+    const existing = await repo.findOne({ where: { id: linkId, capex_item_id: capexItemId, tenant_id: tenantId } as any });
+    if (!existing) return { ok: true };
+    await repo.delete({ id: linkId, capex_item_id: capexItemId, tenant_id: tenantId } as any);
     await this.audit.log({ table: 'capex_links', recordId: linkId, action: 'delete', before: existing, after: null, userId }, { manager: mg });
     return { ok: true };
   }
@@ -997,21 +1005,23 @@ export class CapexItemsService {
   // Attachments
   async listAttachments(capexItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return mg.getRepository(CapexAttachment).find({ where: { capex_item_id: capexItemId } as any, order: { uploaded_at: 'DESC' as any } });
+    const tenantId = await this.resolveTenantId(mg);
+    return mg.getRepository(CapexAttachment).find({ where: { tenant_id: tenantId, capex_item_id: capexItemId } as any, order: { uploaded_at: 'DESC' as any } });
   }
 
   async uploadAttachment(capexItemId: string, file: Express.Multer.File, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexAttachment);
     if (!file) throw new BadRequestException('No file uploaded');
-    const [{ tenant_id }] = await mg.query(`SELECT app_current_tenant() AS tenant_id`);
+    const capex = await this.findItem(capexItemId, mg);
+    const tenant_id = capex.tenant_id;
     const id = randomUUID();
     const now = new Date();
     const decodedName = fixMulterFilename(file.originalname);
     const ext = path.extname(decodedName || '') || '';
     const rand = Math.random().toString(36).slice(2, 8);
     const key = [
-      'files', tenant_id, 'capex', capexItemId,
+      'files', tenant_id, 'capex', capex.id,
       now.getUTCFullYear().toString(), String(now.getUTCMonth() + 1).padStart(2, '0'),
       `${id}_${rand}${ext}`,
     ].join('/');
@@ -1026,7 +1036,8 @@ export class CapexItemsService {
     await this.storage.putObject({ key, body: buf as Buffer, contentType: validated.mimeType, contentLength: validated.size, sse: 'AES256' });
     const entity = repo.create({
       id,
-      capex_item_id: capexItemId,
+      tenant_id,
+      capex_item_id: capex.id,
       original_filename: decodedName || `${id}${ext}`,
       stored_filename: path.basename(key),
       mime_type: validated.mimeType || null,
@@ -1041,7 +1052,8 @@ export class CapexItemsService {
   async downloadAttachment(attachmentId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexAttachment);
-    const found = await repo.findOne({ where: { id: attachmentId } });
+    const tenantId = await this.resolveTenantId(mg);
+    const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } as any });
     if (!found) throw new NotFoundException('Attachment not found');
     return found;
   }
@@ -1049,9 +1061,10 @@ export class CapexItemsService {
   async deleteAttachment(attachmentId: string, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexAttachment);
-    const found = await repo.findOne({ where: { id: attachmentId } });
+    const tenantId = await this.resolveTenantId(mg);
+    const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } as any });
     if (!found) return { ok: true };
-    await repo.delete({ id: attachmentId } as any);
+    await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
     try { await this.storage.deleteObject((found as any).storage_path); } catch {}
     await this.audit.log({ table: 'capex_attachments', recordId: found.id, action: 'update', before: found, after: null, userId }, { manager: mg });
     return { ok: true };
@@ -1061,14 +1074,13 @@ export class CapexItemsService {
   async listProjects(capexItemId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const capex = await this.findItem(capexItemId, mg); // ensure item exists
-    const itemId = capex.id;
     const rows = await mg.query(
       `SELECT l.project_id as id, p.name
        FROM portfolio_project_capex l
-       JOIN portfolio_projects p ON p.id = l.project_id
-       WHERE l.capex_id = $1
+       JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
+       WHERE l.tenant_id = $1 AND l.capex_id = $2
        ORDER BY p.name ASC`,
-      [itemId],
+      [capex.tenant_id, capex.id],
     );
     return { items: rows };
   }
@@ -1077,18 +1089,18 @@ export class CapexItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const capex = await this.findItem(capexItemId, mg);
     const itemId = capex.id;
+    const tenantId = capex.tenant_id;
     const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
     if (cleanIds.length) {
-      const projects = await mg.getRepository(PortfolioProject).find({ where: { id: In(cleanIds) } as any });
+      // Read in the line's tenant: a project of another tenant is not found.
+      const projects = await mg.getRepository(PortfolioProject).find({ where: { tenant_id: tenantId, id: In(cleanIds) } as any });
       if (projects.length !== cleanIds.length) throw new BadRequestException('One or more projects not found');
-      const invalid = projects.find((p) => (p as any).tenant_id !== (capex as any).tenant_id);
-      if (invalid) throw new BadRequestException('Project does not belong to tenant');
     }
     const repo = mg.getRepository(PortfolioProjectCapex);
-    const existing = await repo.find({ where: { capex_id: itemId } as any });
-    if (existing.length) await repo.delete({ id: In(existing.map((x) => x.id)) as any });
+    const existing = await repo.find({ where: { tenant_id: tenantId, capex_id: itemId } as any });
+    if (existing.length) await repo.delete({ tenant_id: tenantId, id: In(existing.map((x) => x.id)) } as any);
     if (cleanIds.length) {
-      const rows = cleanIds.map((projId) => repo.create({ tenant_id: (capex as any).tenant_id, project_id: projId, capex_id: itemId }));
+      const rows = cleanIds.map((projId) => repo.create({ tenant_id: tenantId, project_id: projId, capex_id: itemId }));
       await repo.save(rows);
     }
     return this.listProjects(itemId, { manager: mg });
