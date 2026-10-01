@@ -37,12 +37,19 @@ import { BudgetVersionRow, createBudgetVersion, loadVersions } from './budget-co
  * whose months change marks the column as edited by hand; a row whose only
  * change is the period updates the period and keeps how the column was
  * produced. The whole file is checked before anything is written.
+ *
+ * The file carries months, not quantity × price lines: a row's `method` is
+ * never read, so a `computed` column is treated like any other. Its months
+ * changed by a file make it `manual`; its lines and FTE stay, as after a hand
+ * edit in the budget tab.
  */
 
 const MONTH_COLUMNS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const;
-export const BUDGET_ROWS_HEADERS = [
+export const BUDGET_ROWS_BASE_HEADERS = [
   'item_type', 'item_number', 'year', 'measure', 'period_start', 'period_end', ...MONTH_COLUMNS, 'method',
 ] as const;
+/** What the export and the template write. */
+export const BUDGET_ROWS_HEADERS = BUDGET_ROWS_BASE_HEADERS;
 const REQUIRED_HEADERS: readonly string[] = BUDGET_ROWS_HEADERS.filter((h) => h !== 'method');
 
 const SCOPES: readonly AmountScope[] = ['opex', 'capex'];
@@ -319,6 +326,7 @@ export class BudgetRowsCsvService {
           method: row.monthsChanged ? 'manual' : stored?.method ?? 'manual',
           spread_profile_name: stored?.spread_profile_name ?? null,
           last_calculation: stored?.last_calculation ?? null,
+          fte: stored?.fte ?? null,
         }));
       }
     }

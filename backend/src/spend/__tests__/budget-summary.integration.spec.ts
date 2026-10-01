@@ -9,8 +9,10 @@ import { FIXED_SLOTS, SUMMARY_COLUMNS, SUMMARY_SCOPES } from '../spend-summary.b
 import * as budgetSummary from '../budget-summary';
 import {
   assert,
+  findVersion,
   inRolledBackTransaction,
   Kind,
+  period,
   repeat,
   runSpecs,
   seedItem,
@@ -739,6 +741,95 @@ async function testAnalyticsDimensions(kind: Kind) {
   });
 }
 
+/**
+ * FTE on the fixture, as a lines write stores it on the round: Alpha's Budget
+ * of Y 1.5, Bravo's 0 (pieces only), Charlie's round has no lines (unknown),
+ * Echo holds lines of Y after its end of validity, Alpha's Forecast of Y+3
+ * 0.75.
+ */
+async function seedFteRounds(runner: QueryRunner, kind: Kind, tenantId: string, ids: Fixture['ids']) {
+  const [budget, , forecast] = SUMMARY_COLUMNS;
+  const round = async (itemId: string, year: number, measure: string, fte: string | null) => {
+    const versionId = (await findVersion(runner, kind, itemId, year))?.id ?? (await seedVersion(runner, kind, tenantId, itemId, year));
+    await runner.query(
+      `INSERT INTO ${TABLES[kind].rounds} (tenant_id, version_id, measure, period_start, period_end, method, fte)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [tenantId, versionId, measure, `${year}-01-01`, `${year}-12-31`, fte === null ? 'spread' : 'computed', fte],
+    );
+    return versionId;
+  };
+  const alphaBudget = await round(ids.alpha, Y, budget.measure, '1.5');
+  await round(ids.bravo, Y, budget.measure, '0');
+  await round(ids.charlie, Y, budget.measure, null);
+  const echo = await round(ids.echo, Y, budget.measure, '1');
+  await seedMonths(runner, kind, tenantId, echo, Y, { [budget.measure]: repeat('100', 12) });
+  await round(ids.alpha, Y + 3, forecast.measure, '0.75');
+  return { alphaBudget, budget };
+}
+
+async function testFteFields(kind: Kind) {
+  await withFixture(kind, async (runner, { tenantId, ids }, svc) => {
+    const opts = { manager: runner.manager };
+    const { alphaBudget, budget } = await seedFteRounds(runner, kind, tenantId, ids);
+    const byId = async (field: string, query: Record<string, unknown> = {}) => {
+      const { items } = await svc.summary({ ...ALL, limit: 100, ...query }, opts);
+      return Object.fromEntries(items.map((row: any) => [row.id, row[field]]));
+    };
+
+    assert.deepEqual(
+      await byId('fte_yBudget'),
+      { [ids.alpha]: 1.5, [ids.bravo]: 0, [ids.charlie]: null, [ids.delta]: null, [ids.echo]: null },
+      `${kind}: the stored FTE (0 included); no lines, no version and after the end of validity unknown`,
+    );
+    const { items } = await svc.summary({ ...ALL, years: String(Y + 3), limit: 100 }, opts);
+    const alpha = items.find((row: any) => row.id === ids.alpha);
+    const expectedKeys = [...FIXED_SLOTS.map((s) => s.key as string), `y${Y + 3}`].flatMap((slot) => SUMMARY_COLUMNS.map((c) => `fte_${slot}${c.suffix}`));
+    assert.deepEqual(expectedKeys.filter((key) => !(key in alpha)), [], `${kind}: every fixed slot and column, the requested year too`);
+    assert.deepEqual(
+      [alpha[`fte_y${Y + 3}Forecast`], alpha.fte_yForecast, alpha.fte_yRevision],
+      [0.75, null, null],
+      `${kind}: a later year as stored; a column without a round is unknown`,
+    );
+
+    // A month set to zero afterwards leaves the FTE the lines gave.
+    await runner.query(
+      `UPDATE ${TABLES[kind].amounts} SET ${budget.measure} = 0 WHERE tenant_id = $1 AND version_id = $2 AND period = $3`,
+      [tenantId, alphaBudget, period(4, Y)],
+    );
+    assert.equal((await byId('fte_yBudget'))[ids.alpha], 1.5, `${kind}: the months do not move the FTE`);
+
+    const idsOf = (page: any) => page.items.map((row: any) => row.id).sort();
+    const filtered = async (model: Record<string, unknown>) => idsOf(await svc.summary({ ...ALL, filters: filters({ fte_yBudget: model }) }, opts));
+    assert.deepEqual(await filtered({ filterType: 'number', type: 'greaterThan', filter: 0 }), [ids.alpha], `${kind}: number filter`);
+    assert.deepEqual(await filtered({ filterType: 'number', type: 'equals', filter: 0 }), [ids.bravo], `${kind}: unknown is not 0`);
+    assert.deepEqual(await filtered({ filterType: 'number', type: 'lessThan', filter: 5 }), [ids.alpha, ids.bravo].sort(), `${kind}: unknown fails every comparison`);
+    assert.deepEqual(await filtered({ filterType: 'number', type: 'blank' }), [ids.charlie, ids.delta, ids.echo].sort(), `${kind}: blank is unknown`);
+    assert.deepEqual(await filtered({ filterType: 'number', type: 'notBlank' }), [ids.alpha, ids.bravo].sort());
+
+    const ascending = await svc.summary({ ...ALL, sort: 'fte_yBudget:ASC' }, opts);
+    assert.deepEqual(ascending.items.map((row: any) => row.fte_yBudget), [0, 1.5, null, null, null], `${kind}: sort ascending, unknown last`);
+    // A sort key naming a year outside the fixed window loads that year.
+    const later = await svc.summary({ ...ALL, sort: `fte_y${Y + 3}Forecast:ASC` }, opts);
+    assert.deepEqual([later.items[0].id, later.items[0][`fte_y${Y + 3}Forecast`]], [ids.alpha, 0.75], `${kind}: sort on a year outside the window`);
+    const navigation = await svc.summaryIds({ ...ALL, sort: 'fte_yBudget:DESC', filters: filters({ fte_yBudget: { filterType: 'number', type: 'greaterThanOrEqual', filter: 0 } }) }, opts);
+    assert.deepEqual(navigation.ids, [ids.alpha, ids.bravo], `${kind}: ids follow the FTE sort and filter`);
+
+    const totals = await svc.summaryTotals({ ...ALL, fte: `fte_yBudget,fte_yRevision,fte_y${Y + 3}Forecast,yBudget,fte_nothing` }, opts);
+    assert.deepEqual(
+      totals.fte,
+      {
+        fte_yBudget: { total: 1.5, unknown: 3 },
+        fte_yRevision: { total: null, unknown: 5 },
+        [`fte_y${Y + 3}Forecast`]: { total: 0.75, unknown: 4 },
+      },
+      `${kind}: FTE totals and unknown counts (no line with an FTE: null, never 0), other keys ignored`,
+    );
+    assert.equal(totals.yBudget, 1700.3, `${kind}: amounts unchanged alongside (Alpha 1 100, Bravo 600, Charlie 0.30)`);
+    const plain = await svc.summaryTotals(ALL, opts);
+    assert.equal('fte' in plain, false, `${kind}: no FTE without fte=`);
+  });
+}
+
 async function testRegistriesExposeEveryAmount() {
   const previous: Record<Kind, Record<string, string>> = {
     opex: {
@@ -749,8 +840,10 @@ async function testRegistriesExposeEveryAmount() {
   };
   for (const kind of KINDS) {
     const registry = getAiEntityRegistry(kind === 'opex' ? 'spend_items' : 'capex_items');
-    const amountKeys = Object.values(registry.fields).filter((field) => field.type === 'number').map((field) => field.ai);
+    const numberKeys = Object.values(registry.fields).filter((field) => field.type === 'number').map((field) => field.ai);
+    const amountKeys = numberKeys.filter((key) => !key.endsWith('_fte'));
     assert.equal(amountKeys.length, 25, `${kind}: 25 amount fields`);
+    assert.equal(numberKeys.length - amountKeys.length, 25, `${kind}: and 25 FTE fields`);
     for (const slot of FIXED_SLOTS) {
       for (const column of SUMMARY_COLUMNS) {
         const key = `${slot.ai}_${column.ai}`;
@@ -801,6 +894,7 @@ void runSpecs('budget-summary.integration.spec', [
     [`cost center and run or build (${kind})`, () => testCostCenterFields(kind)],
     [`budget holder from the cost center (${kind})`, () => testBudgetHolder(kind)],
     [`analytics dimensions (${kind})`, () => testAnalyticsDimensions(kind)],
+    [`FTE fields and totals (${kind})`, () => testFteFields(kind)],
   ]),
   ['AI: a capped list is truncated', testAiMarksACappedListTruncated],
   ['AI: CAPEX amount filter', testAiCapexAmountFilter],

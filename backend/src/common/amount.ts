@@ -2,6 +2,9 @@ import { parseDecimalLiteral, rescale } from './decimal';
 
 export type AmountInput = string | number | bigint | null | undefined;
 
+/** Amount columns are numeric(18,2): at most 16 digits before the decimal point, so |cents| < 10^18. */
+export const CENTS_LIMIT = 10n ** 18n;
+
 /**
  * Convert an amount into cents (a bigint with 2 decimal precision).
  *

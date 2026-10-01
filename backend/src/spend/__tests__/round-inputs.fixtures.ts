@@ -76,8 +76,8 @@ export function itemCsvImporter(kind: Kind, audit: unknown = captureAudit()): { 
 }
 
 export const TABLES = {
-  opex: { items: 'spend_items', versions: 'spend_versions', amounts: 'spend_amounts', rounds: 'spend_round_inputs' },
-  capex: { items: 'capex_items', versions: 'capex_versions', amounts: 'capex_amounts', rounds: 'capex_round_inputs' },
+  opex: { items: 'spend_items', versions: 'spend_versions', amounts: 'spend_amounts', rounds: 'spend_round_inputs', lines: 'spend_round_input_lines' },
+  capex: { items: 'capex_items', versions: 'capex_versions', amounts: 'capex_amounts', rounds: 'capex_round_inputs', lines: 'capex_round_input_lines' },
 } as const;
 
 export function period(month: number, year: number) {
@@ -202,18 +202,73 @@ export type StoredRecord = {
   method: string;
   spread_profile_name: string | null;
   last_calculation: any;
+  /** As stored ('1.00'), or null. */
+  fte: string | null;
   updated_at: Date;
   updated_by: string | null;
 };
 
+/** The stored records of a version by measure. */
 export async function readRecords(runner: QueryRunner, kind: Kind, versionId: string): Promise<Record<string, StoredRecord>> {
   const rows: StoredRecord[] = await runner.query(
     `SELECT id, tenant_id, version_id, measure, to_char(period_start, 'YYYY-MM-DD') AS period_start,
-            to_char(period_end, 'YYYY-MM-DD') AS period_end, method, spread_profile_name, last_calculation, updated_at, updated_by
+            to_char(period_end, 'YYYY-MM-DD') AS period_end, method, spread_profile_name, last_calculation,
+            fte::text AS fte, updated_at, updated_by
      FROM ${TABLES[kind].rounds} WHERE version_id = $1`,
     [versionId],
   );
   return Object.fromEntries(rows.map((r) => [r.measure, r]));
+}
+
+export type StoredLine = {
+  id: string;
+  tenant_id: string;
+  sort: number;
+  label: string;
+  quantity_unit: string;
+  quantity: string;
+  unit_price: string;
+  price_basis: string;
+  frequency: string;
+  days_per_month: string | null;
+  working_day_profile_id: string | null;
+  period_start: string;
+  period_end: string;
+};
+
+/** The stored lines of one column of a version, in order; decimals as stored ('1.000', '400.0000'). */
+export async function readLines(runner: QueryRunner, kind: Kind, versionId: string, measure: Measure): Promise<StoredLine[]> {
+  return runner.query(
+    `SELECT l.id, l.tenant_id, l.sort, l.label, l.quantity_unit::text AS quantity_unit, l.quantity::text AS quantity,
+            l.unit_price::text AS unit_price, l.price_basis::text AS price_basis, l.frequency::text AS frequency,
+            l.days_per_month::text AS days_per_month, l.working_day_profile_id,
+            to_char(l.period_start, 'YYYY-MM-DD') AS period_start, to_char(l.period_end, 'YYYY-MM-DD') AS period_end
+     FROM ${TABLES[kind].lines} l
+     JOIN ${TABLES[kind].rounds} r ON r.tenant_id = l.tenant_id AND r.id = l.round_input_id
+     WHERE r.version_id = $1 AND r.measure = $2
+     ORDER BY l.sort`,
+    [versionId, measure],
+  );
+}
+
+/** Working days of the France 218 calendar in 2026 (218 days); February to October is 163. */
+export const FRANCE_218_2026 = ['18', '18', '20', '20', '15', '20', '15', '16', '20', '19', '18', '19'];
+
+/** A working-day calendar of the current tenant; returns its id. */
+export async function seedCalendar(
+  runner: QueryRunner,
+  tenantId: string,
+  calendar: { code: string; name: string; days_by_year: Record<string, string[]>; status?: 'enabled' | 'disabled' },
+): Promise<string> {
+  const [{ id }] = await runner.query(
+    `INSERT INTO working_day_profiles (tenant_id, code, name, days_by_year, status, disabled_at)
+     VALUES ($1, $2, $3, $4::jsonb, $5, $6::timestamptz) RETURNING id`,
+    [
+      tenantId, calendar.code, calendar.name, JSON.stringify(calendar.days_by_year), calendar.status ?? 'enabled',
+      calendar.status === 'disabled' ? '2020-01-01T12:00:00Z' : null,
+    ],
+  );
+  return id;
 }
 
 export async function findVersion(runner: QueryRunner, kind: Kind, itemId: string, year: number) {

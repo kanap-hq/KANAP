@@ -31,6 +31,7 @@ export const RESOURCES = [
   'companies',
   'departments',
   'cost_centers',
+  'working_day_profiles',
   'accounts',
   'analytics',
   'business_processes',

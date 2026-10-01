@@ -12,6 +12,7 @@ import {
   inRolledBackTransaction,
   Kind,
   noFreeze,
+  readLines,
   readMeasure,
   readRecords,
   realFreeze,
@@ -86,7 +87,7 @@ async function seedBook(runner: QueryRunner, tag: string) {
   const record = (kind: Kind, versionId: string, measure: string, start: string, end: string, method: 'spread' | 'copied' | 'manual') => upsertRoundInput(
     { manager: runner.manager, scope: kind, version: { id: versionId, tenant_id: tenantId, budget_year: YEAR }, userId: null, audit: captureAudit() },
     measure,
-    { period_start: start, period_end: end, method, spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '1341.90', profile: '4-4-5', active_months: [4], weights: ['1'] } },
+    { period_start: start, period_end: end, method, spread_profile_name: '4-4-5', last_calculation: { kind: 'annual', total: '1341.90', profile: '4-4-5', active_months: [4], weights: ['1'] }, fte: null },
   );
   await record('opex', opex.versionId, 'planned', `${YEAR}-04-01`, `${YEAR}-12-31`, 'spread');
   await record('opex', opex.versionId, 'committed', `${YEAR}-01-01`, `${YEAR}-06-30`, 'copied');
@@ -256,6 +257,59 @@ async function testRowErrors() {
       { manager: runner.manager, tenantId },
     );
     assert.deepEqual([withoutMethod.ok, withoutMethod.unchanged], [true, 1], 'the method column is optional');
+  });
+}
+
+/**
+ * A column computed from quantity × price lines: exported with its months and
+ * `computed`, re-imported unchanged; months changed by a file make it manual,
+ * its lines and FTE stay (the method cell is never read). The file has no
+ * costing columns: a file that has them is refused by its header.
+ */
+async function testComputedRows() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'lines');
+    const { versionId } = await seedLine(runner, 'opex', tenantId, YEAR, {}, 5);
+    await amountsService('opex').bulkUpsert(versionId, {
+      kind: 'lines',
+      year: YEAR,
+      measure: 'forecast',
+      lines: [{
+        label: 'Support', quantity_unit: 'people', quantity: '2', unit_price: '1000', price_basis: 'per_month',
+        period_start: `${YEAR}-01-01`, period_end: `${YEAR}-06-30`,
+      }],
+    }, null, { manager: runner.manager });
+
+    const { lines, content } = await exportLines(runner, tenantId);
+    assert.equal(content.replace(/^\ufeff/, '').split('\n')[0], BUDGET_ROWS_HEADERS.join(';'), 'the months file, no costing columns');
+    const forecast = lines.find((l) => l.measure === 'forecast')!;
+    assert.deepEqual(
+      [forecast.method, forecast.period_start, forecast.period_end, forecast.jan, forecast.jun, forecast.jul],
+      ['computed', `${YEAR}-01-01`, `${YEAR}-06-30`, '2000', '2000', '0'],
+    );
+    const same = await importLines(runner, tenantId, lines);
+    assert.deepEqual([same.ok, same.unchanged, same.updated], [true, 5, 0], 'an exported computed row re-imports unchanged');
+    assert.equal((await readRecords(runner, 'opex', versionId)).forecast.method, 'computed');
+
+    const changed = await importLines(runner, tenantId, [{ ...forecast, jan: '2500' }]);
+    assert.deepEqual([changed.ok, changed.updated], [true, 1], JSON.stringify(changed.errors));
+    const record = (await readRecords(runner, 'opex', versionId)).forecast;
+    assert.deepEqual([record.method, record.fte, record.last_calculation.kind], ['manual', '1.00', 'computed'], 'like a hand edit');
+    assert.equal((await readMeasure(runner, 'opex', versionId, 'forecast', YEAR))[0], '2500.00');
+    assert.deepEqual((await readLines(runner, 'opex', versionId, 'forecast')).map((l) => l.label), ['Support'], 'the lines stay');
+
+    // `computed` in the method cell of a column without lines: read like any row.
+    const plain = lines.find((l) => l.measure === 'actual')!;
+    const noLines = await importLines(runner, tenantId, [{ ...plain, jan: '10', method: 'computed' }]);
+    assert.equal(noLines.ok, true, JSON.stringify(noLines.errors));
+    const actual = (await readRecords(runner, 'opex', versionId)).actual;
+    assert.deepEqual([actual.method, actual.fte], ['manual', null]);
+
+    const withCosting = await service().importCsv(
+      { file: toFile([forecast], [...BUDGET_ROWS_HEADERS, 'quantity', 'unit_price']), dryRun: true, userId: null, access: ADMIN },
+      { manager: runner.manager, tenantId },
+    );
+    assert.deepEqual(withCosting.errors, [{ row: 1, message: 'Header mismatch. Missing: -, Extra: quantity, unit_price' }]);
   });
 }
 
@@ -442,6 +496,7 @@ void runSpecs('budget-rows.integration.spec', [
   ['testChangedRows', testChangedRows],
   ['testNewYearsAndAliases', testNewYearsAndAliases],
   ['testRowErrors', testRowErrors],
+  ['testComputedRows', testComputedRows],
   ['testFreeze', testFreeze],
   ['testHiddenColumns', testHiddenColumns],
   ['testPermissionsAndPartialExports', testPermissionsAndPartialExports],

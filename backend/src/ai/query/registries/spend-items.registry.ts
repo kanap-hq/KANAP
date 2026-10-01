@@ -1,5 +1,5 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
-import { budgetAmountFields, budgetAmountSortFields } from './budget-amount-fields';
+import { budgetAmountFields, budgetAmountSortFields, budgetFteFields, budgetFteSortFields } from './budget-amount-fields';
 
 export const spendItemsRegistry: AiEntityFilterRegistry = {
   entityType: 'spend_items',
@@ -195,6 +195,7 @@ export const spendItemsRegistry: AiEntityFilterRegistry = {
       groupable: false,
     },
     ...budgetAmountFields(),
+    ...budgetFteFields(),
   },
   sortFields: {
     label: 'product_name',
@@ -219,6 +220,7 @@ export const spendItemsRegistry: AiEntityFilterRegistry = {
     end_of_validity: 'disabled_at',
     effective_end: 'disabled_at',
     ...budgetAmountSortFields(),
+    ...budgetFteSortFields(),
     created_at: 'created_at',
     updated_at: 'updated_at',
   },

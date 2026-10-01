@@ -5,8 +5,10 @@ import { SUMMARY_COLUMNS } from '../spend/spend-summary.builder';
 
 /**
  * The tenant's budget column settings (`tenants.metadata.budget_columns`):
- * a name per column, which columns are shown, which follow "Apply to all
- * columns", and the default column. The five columns stay equal: behaviour
+ * a name per column, which columns are shown, which follow what is applied
+ * to all columns on the budget tab ("Apply the distribution to all columns"
+ * on the spread, "Apply these lines to all columns" on the lines), and the
+ * default column. The five columns stay equal: behaviour
  * comes from these settings, never from a column's name. Hidden columns keep
  * their amounts and stay writable through the API and imports.
  */
@@ -36,7 +38,7 @@ function byColumn<T>(value: (measure: AmountMeasure) => T): Record<AmountMeasure
   return Object.fromEntries(BUDGET_COLUMN_ORDER.map((measure) => [measure, value(measure)])) as Record<AmountMeasure, T>;
 }
 
-// Product defaults: today's screens (four columns shown, every column follows "Apply to all columns", column 1 by default).
+// Product defaults: today's screens (four columns shown, every column follows the spread and the lines applied to all columns, column 1 by default).
 export const DEFAULT_BUDGET_COLUMNS: BudgetColumnsSettings = {
   labels: byColumn(() => null),
   enabled: { planned: true, committed: true, forecast: false, actual: true, expected_landing: true },

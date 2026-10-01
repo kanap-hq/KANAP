@@ -7,7 +7,14 @@ import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
 import { writeAmountsPayload } from '../spend/amounts-write.util';
-import { recordPayloadRoundInputs, versionRoundInputs } from '../spend/round-inputs.util';
+import {
+  isLinesPayload,
+  isLinesResult,
+  LinesAmountsPayload,
+  recordPayloadRoundInputs,
+  versionRoundInputs,
+  writeLinesPayload,
+} from '../spend/round-inputs.util';
 
 type AnnualPayload = {
   kind: 'annual';
@@ -50,18 +57,30 @@ export class CapexAmountsService {
     private readonly freeze: FreezeService,
   ) {}
 
-  async bulkUpsert(versionId: string, payload: AnnualPayload | QuarterlyPayload | MonthlyPayload, userId?: string | null, opts?: { manager?: EntityManager }) {
+  async bulkUpsert(
+    versionId: string,
+    payload: AnnualPayload | QuarterlyPayload | MonthlyPayload | LinesAmountsPayload,
+    userId?: string | null,
+    opts?: { manager?: EntityManager },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
     const version = await mg.getRepository(CapexVersion).findOne({ where: { id: versionId } });
     if (!version) throw new NotFoundException('Version not found');
 
     // Spread profiles resolve as on OPEX (flat, or a named SpreadProfile); an unknown one is a 400.
-    const result = await writeAmountsPayload({ manager: mg, freeze: this.freeze, scope: 'capex', version }, payload);
+    const ctx = { manager: mg, freeze: this.freeze, scope: 'capex' as const, version };
+    // Lines resolve their calendars under the tenant and replace the months of the columns they name.
+    const result = isLinesPayload(payload) ? await writeLinesPayload(ctx, payload) : await writeAmountsPayload(ctx, payload);
     const { before, after } = result;
 
-    await this.audit.log({ table: 'capex_amounts', recordId: null, action: 'update', before, after, userId }, { manager: mg });
+    // Removing the lines writes no amount: nothing to audit here.
+    if (after.length > 0) {
+      await this.audit.log({ table: 'capex_amounts', recordId: null, action: 'update', before, after, userId }, { manager: mg });
+    }
     await recordPayloadRoundInputs({ manager: mg, scope: 'capex', version, userId: userId ?? null, audit: this.audit }, result);
-    return { updated: after.length, round_inputs: await versionRoundInputs(mg, 'capex', version) };
+    const round_inputs = await versionRoundInputs(mg, 'capex', version);
+    // A lines write also says when a disabled calendar was kept.
+    return isLinesResult(result) ? { updated: after.length, round_inputs, warnings: result.lines.warnings } : { updated: after.length, round_inputs };
   }
 
   async listByYear(versionId: string, year?: number, opts?: { manager?: EntityManager }) {

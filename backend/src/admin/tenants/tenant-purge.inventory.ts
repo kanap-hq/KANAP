@@ -185,6 +185,8 @@ export const TENANT_PURGE_TABLES = [
   'item_sequences',
   'spend_amounts',
   'spend_allocations',
+  // A line references its round (ON DELETE CASCADE) and its calendar (RESTRICT): before both
+  'spend_round_input_lines',
   'spend_round_inputs',
   'spend_versions',
   'spend_tasks',
@@ -203,7 +205,10 @@ export const TENANT_PURGE_TABLES = [
   'analytics_axes',
   'capex_amounts',
   'capex_allocations',
+  'capex_round_input_lines',
   'capex_round_inputs',
+  // After both line tables (a line references its calendar ON DELETE RESTRICT)
+  'working_day_profiles',
   'capex_versions',
   'capex_links',
   'capex_attachments',

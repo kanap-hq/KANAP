@@ -19,6 +19,7 @@ import {
 } from './amounts-write.util';
 import {
   centsToDecimal,
+  costLine,
   deleteRoundInput,
   listRoundInputs,
   RoundInput,
@@ -26,6 +27,7 @@ import {
   upsertRoundInput,
   wholeYear,
 } from './round-inputs.util';
+import { CostLine } from './costing.util';
 import { activeMonths } from './spread.util';
 
 /**
@@ -124,6 +126,23 @@ export function shiftPeriod(record: Pick<RoundInput, 'period_start' | 'period_en
     return `${year}-${monthDay === '02-29' && !leap ? '02-28' : monthDay}`;
   };
   return { period_start: shift(record.period_start), period_end: shift(record.period_end) };
+}
+
+/**
+ * A column's lines copied to `year`: each period shifted like the record's
+ * (29 February becomes 28 February) and kept within that year; calendar,
+ * quantity, price, how often and days per month as they are (a one-date line
+ * stays on one date).
+ */
+export function shiftLines(record: Pick<RoundInput, 'lines'> | undefined, year: number): CostLine[] {
+  return (record?.lines ?? []).map((line) => {
+    const shifted = shiftPeriod(line, year - Number(line.period_start.slice(0, 4)));
+    return {
+      ...costLine(line),
+      period_start: shifted.period_start < `${year}-01-01` ? `${year}-01-01` : shifted.period_start,
+      period_end: shifted.period_end > `${year}-12-31` ? `${year}-12-31` : shifted.period_end,
+    };
+  });
 }
 
 /** The window of `year` in which an item is valid, and its months (1..12). */
@@ -354,20 +373,30 @@ export async function copyBudgetColumn(
     const sourceRecord = records.get(sourceVersion.id)?.find((r) => r.measure === sourceMeasure);
     const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
     const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear);
-    await upsertRoundInput(rctx, destinationMeasure, {
-      ...periodWithinValidity(copiedPeriod, item.validity),
-      method: 'copied',
-      spread_profile_name: sourceRecord?.spread_profile_name ?? null,
-      last_calculation: {
-        kind: 'copy',
-        source_year: sourceYear,
-        source_measure: sourceMeasure,
-        uplift_pct: pctText,
-        source_total: centsToDecimal(sourceTotal),
-        total: centsToDecimal(targetTotal),
-        source_method: sourceRecord?.method ?? null,
+    // A copy replaces the whole destination column, lines included: the
+    // source's lines travel with their FTE (same calendar, quantity and price:
+    // the uplift applies to the months only), and a source without lines
+    // leaves none.
+    await upsertRoundInput(
+      rctx,
+      destinationMeasure,
+      {
+        ...periodWithinValidity(copiedPeriod, item.validity),
+        method: 'copied',
+        spread_profile_name: sourceRecord?.spread_profile_name ?? null,
+        last_calculation: {
+          kind: 'copy',
+          source_year: sourceYear,
+          source_measure: sourceMeasure,
+          uplift_pct: pctText,
+          source_total: centsToDecimal(sourceTotal),
+          total: centsToDecimal(targetTotal),
+          source_method: sourceRecord?.method ?? null,
+        },
+        fte: sourceRecord?.lines.length ? sourceRecord.fte : null,
       },
-    });
+      shiftLines(sourceRecord, destinationYear),
+    );
 
     await deps.audit.log(
       {
@@ -403,8 +432,8 @@ export async function copyBudgetColumn(
 /**
  * Clear one column of a year for every item, ended or not (amounts hidden
  * behind an end of validity are cleared too): its twelve months become zero
- * and its record (period, provenance) is deleted. A version whose column is
- * already all zero is skipped, but its record is deleted too.
+ * and its record (period, provenance, lines) is deleted. A version whose
+ * column is already all zero is skipped, but its record is deleted too.
  */
 export async function clearBudgetColumn(
   deps: BudgetOperationDeps,

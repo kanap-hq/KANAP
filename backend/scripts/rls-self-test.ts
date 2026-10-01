@@ -14,11 +14,11 @@ import { assertSafeDatabaseRole } from '../src/common/database-role-safety';
 type TestResult = { name: string; ok: boolean; info?: string };
 
 const TABLES_TO_CHECK_RLS = Array.from(new Set([
-  'users', 'companies', 'departments', 'cost_centers', 'suppliers', 'accounts',
+  'users', 'companies', 'departments', 'cost_centers', 'working_day_profiles', 'suppliers', 'accounts',
   'analytics_axes', 'analytics_categories', 'spend_item_analytics_values', 'capex_item_analytics_values',
-  'spend_items', 'spend_versions', 'spend_amounts', 'spend_allocations', 'spend_tasks',
+  'spend_items', 'spend_versions', 'spend_amounts', 'spend_allocations', 'spend_round_inputs', 'spend_round_input_lines', 'spend_tasks',
   'contracts', 'contract_tasks', 'contract_spend_items', 'contract_attachments', 'contract_links',
-  'capex_items', 'capex_versions', 'capex_amounts',
+  'capex_items', 'capex_versions', 'capex_amounts', 'capex_round_inputs', 'capex_round_input_lines',
   'tasks', 'currency_rate_sets', 'item_sequences',
   'document_libraries', 'document_folders', 'document_types', 'documents', 'document_versions',
   'document_edit_locks', 'document_attachments', 'document_activities', 'document_contributors',
@@ -101,6 +101,11 @@ const TABLES_TO_CHECK_POLICY = new Set([
   'analytics_categories',
   'spend_item_analytics_values',
   'capex_item_analytics_values',
+  'spend_round_inputs',
+  'capex_round_inputs',
+  'spend_round_input_lines',
+  'capex_round_input_lines',
+  'working_day_profiles',
 ]);
 
 const TABLES_TO_CHECK_FORCE = new Set([
