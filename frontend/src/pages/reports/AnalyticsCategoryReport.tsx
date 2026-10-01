@@ -15,7 +15,7 @@ import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { ANALYTICS_VALUES_ENDPOINT, analyticsFieldKey, type AnalyticsAxis } from '../../services/analytics';
-import { drawerMenuItemSx } from '../../theme/formSx';
+import { drawerAutocompleteListboxSx, drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
 
 type AnalyticsCategory = {
@@ -401,6 +401,7 @@ export default function AnalyticsCategoryReport() {
               }}
               getOptionLabel={(option) => option.label}
               isOptionEqualToValue={(option, value) => option.id === value.id}
+              ListboxProps={{ sx: drawerAutocompleteListboxSx }}
               renderOption={(props, option, { selected }) => (
                 <li {...props}>
                   <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
@@ -415,6 +416,7 @@ export default function AnalyticsCategoryReport() {
                     {...params}
                     placeholder={count === 0 ? t('reports.filters.excludeCategoriesPlaceholder') : ''}
                     inputProps={{ ...params.inputProps, 'aria-label': t('reports.filters.excludeCategories') }}
+                    sx={{ '& input': { fontSize: 13 } }}
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: count > 0 ? (

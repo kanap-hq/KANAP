@@ -571,22 +571,22 @@ export default function InterfaceWorkspacePage() {
       const current = getCurrentState();
       const payload = buildCreatePayload(current);
       if (!payload.name) {
-        setError('Name is required.');
+        setError(t('messages.nameRequired'));
         return;
       }
       if (!payload.source_application_id || !payload.target_application_id) {
-        setError('Select source and target applications.');
+        setError(t('workspace.interface.create.applicationsRequired'));
         return;
       }
       if (!payload.data_category) {
-        setError('Select data category.');
+        setError(t('workspace.interface.create.dataCategoryRequired'));
         return;
       }
 
       const response = await api.post<InterfaceDetail>('/interfaces', payload);
       const newId = (response.data as any)?.id as string | undefined;
       if (!newId) {
-        setError('Interface was created but no identifier was returned.');
+        setError(t('workspace.interface.create.noIdentifier'));
         return;
       }
 
@@ -641,12 +641,12 @@ export default function InterfaceWorkspacePage() {
   const relationCount = (current?.dependencies?.length || 0) + (current?.links?.length || 0) + (current?.attachments?.length || 0);
 
   const tabs: PortfolioDetailWorkspaceTab[] = React.useMemo(() => [
-    { key: 'overview', label: 'Overview' },
-    { key: 'flow', label: 'Flow', disabled: isCreate },
-    { key: 'environments', label: 'Environments', disabled: isCreate },
-    { key: 'data-mapping', label: 'Data mapping', disabled: isCreate },
-    { key: 'relations', label: 'Relations', badge: relationCount || undefined, disabled: isCreate },
-  ], [isCreate, relationCount]);
+    { key: 'overview', label: t('workspace.interface.tabs.overview') },
+    { key: 'flow', label: t('workspace.interface.tabs.flow'), disabled: isCreate },
+    { key: 'environments', label: t('workspace.interface.tabs.environments'), disabled: isCreate },
+    { key: 'data-mapping', label: t('workspace.interface.tabs.dataMapping'), disabled: isCreate },
+    { key: 'relations', label: t('workspace.interface.tabs.relations'), badge: relationCount || undefined, disabled: isCreate },
+  ], [isCreate, relationCount, t]);
 
   const handleTitleSave = React.useCallback((next: string) => {
     const trimmed = next.trim();
@@ -669,7 +669,7 @@ export default function InterfaceWorkspacePage() {
           disabled={createSubmitting || !canManage}
           size="small"
         >
-          Create
+          {t('common:buttons.create')}
         </Button>
       )}
       {!isCreate && current && (
@@ -677,7 +677,7 @@ export default function InterfaceWorkspacePage() {
           itemType="interface"
           itemId={current.id}
           itemRef={current.interface_reference || null}
-          itemName={current.name || 'Untitled interface'}
+          itemName={current.name || t('workspace.interface.untitled')}
         />
       )}
       {!isCreate && current && (
@@ -687,7 +687,7 @@ export default function InterfaceWorkspacePage() {
           size="small"
           onClick={() => navigate(`/it/interface-map?focusInterfaceId=${current.id}`)}
         >
-          View in map
+          {t('workspace.interface.viewInMap')}
         </Button>
       )}
       <IconButton
@@ -724,7 +724,7 @@ export default function InterfaceWorkspacePage() {
       {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={() => setError(null)}>{error}</Alert>}
       {loading && !isCreate && !current && (
         <Typography sx={{ mx: 3, mt: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>
-          Loading interface...
+          {t('workspace.interface.loading')}
         </Typography>
       )}
 
@@ -742,7 +742,7 @@ export default function InterfaceWorkspacePage() {
             : undefined
         }
         title={current?.name || ''}
-        titleFallback={isCreate ? 'New interface' : 'Untitled interface'}
+        titleFallback={isCreate ? t('workspace.interface.newTitle') : t('workspace.interface.untitled')}
         canEditTitle={canManage}
         onTitleSave={handleTitleSave}
         isCreate={isCreate}
@@ -755,8 +755,8 @@ export default function InterfaceWorkspacePage() {
           hasNext: nav.hasNext,
           onPrev: () => navigateToInterface(nav.prevId),
           onNext: () => navigateToInterface(nav.nextId),
-          previousLabel: 'Previous interface',
-          nextLabel: 'Next interface',
+          previousLabel: t('workspace.interface.previous'),
+          nextLabel: t('workspace.interface.next'),
         } : undefined}
         onSaveShortcut={() => {
           void specificationEditorRef.current?.save();
@@ -809,7 +809,7 @@ export default function InterfaceWorkspacePage() {
           ) : !isCreate ? (
             <Alert severity="info">{t('workspace.interface.selectSourceTarget')}</Alert>
           ) : (
-            <Alert severity="info">Create the interface first to manage environment bindings.</Alert>
+            <Alert severity="info">{t('workspace.interface.environmentsAfterCreate')}</Alert>
           )
         )}
 
@@ -824,7 +824,7 @@ export default function InterfaceWorkspacePage() {
             />
             {mappingDirty && (
               <Typography sx={{ mt: 1, fontSize: 11, color: 'kanap.text.tertiary' }}>
-                Unsaved mapping changes can be flushed with Ctrl+S.
+                {t('workspace.interface.unsavedMappingHint')}
               </Typography>
             )}
           </Box>
@@ -844,13 +844,13 @@ export default function InterfaceWorkspacePage() {
 
       <KanapDialog
         open={discardCreateOpen}
-        title="Discard interface draft"
+        title={t('workspace.interface.discardDialog.title')}
         onClose={() => setDiscardCreateOpen(false)}
-        saveLabel="Discard"
+        saveLabel={t('common:buttons.discard')}
         onSave={discardCreateAndClose}
       >
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-          This interface has not been created yet. Closing the workspace will discard the draft.
+          {t('workspace.interface.discardDialog.message')}
         </Typography>
       </KanapDialog>
     </Box>

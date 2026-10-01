@@ -801,7 +801,8 @@
         "connectedTo": "Connected to",
         "receivesFrom": "Receives from",
         "sendsTo": "Sends to",
-        "moreInInterfaces": "+ {{count}} more in Interfaces"
+        "moreInInterfaces_one": "+ {{count}} more in Interfaces",
+        "moreInInterfaces_other": "+ {{count}} more in Interfaces"
       },
       "ownership": {
         "businessOwners": "Business owners",
@@ -842,7 +843,6 @@
         "role": "Role",
         "supportNotes": "Support notes",
         "sectionTitle": "Technical",
-        "notAssigned": "Not assigned",
         "support": "Support",
         "noSupportContacts": "No support contacts.",
         "unnamedContact": "Unnamed contact",
@@ -946,7 +946,7 @@
         "assetType": "Asset type",
         "startTyping": "Start typing to search",
         "isCluster": "This server represents a cluster",
-        "clusterInfo": "Cluster servers can be endpoints in connections. Assign application instances to member hosts, not to the cluster itself.",
+        "clusterInfo": "Cluster assets can be endpoints in connections. Assign application instances to the member hosts.",
         "location": "Location",
         "subLocation": "Sub-location",
         "selectSubLocation": "Select sub-location",
@@ -1015,7 +1015,7 @@
       "assignments": {
         "title": "Assignments",
         "addAssignment": "Add assignment",
-        "clusterCannotHost": "Cluster servers cannot host application assignments. Assign member hosts instead.",
+        "clusterCannotHost": "Cluster assets cannot host application assignments. Assign the member hosts.",
         "noAssignments": "No assignments yet.",
         "assignmentAdded": "Assignment added",
         "application": "Application",
@@ -1046,7 +1046,7 @@
         "destination": "Destination",
         "lifecycle": "Lifecycle",
         "title": "Connections",
-        "connectionId": "Connection id"
+        "connectionId": "Connection ID"
       },
       "editMembersDialog": {
         "title": "Edit members",
@@ -1100,7 +1100,7 @@
       "relations": {
         "assetRelations": "Asset relations",
         "dependsOn": "Depends on",
-        "searchDependsOn": "Search dependent assets",
+        "searchDependsOn": "Search dependencies",
         "contains": "Contains",
         "searchContains": "Search contained assets",
         "containedBy": "Contained by",
@@ -1122,8 +1122,8 @@
         "attachments": "Attachments",
         "dropHint": "Drag & drop files here, or use the button to select",
         "selectFiles": "Select files",
-        "uploading_one": "Uploading {{count}} file...",
-        "uploading_other": "Uploading {{count}} files...",
+        "uploading_one": "Uploading {{count}} file…",
+        "uploading_other": "Uploading {{count}} files…",
         "deleteAttachmentConfirm": "Delete attachment \"{{name}}\"?",
         "newUrl": "New URL",
         "editUrl": "Edit URL",
@@ -1138,7 +1138,8 @@
         "overview": "Overview",
         "layers": "Layers",
         "compliance": "Criticality & compliance",
-        "interfaces": "Related interfaces"
+        "interfaces": "Related interfaces",
+        "path": "Path"
       },
       "createFromBinding": "Creating from interface binding context",
       "overview": {
@@ -1209,6 +1210,46 @@
         "actions": "Actions",
         "goToInterface": "Go to interface",
         "leg": "Leg: {{type}}"
+      },
+      "untitled": "Untitled connection",
+      "previous": "Previous connection",
+      "next": "Next connection",
+      "viewInMap": "View in map",
+      "server": "Server",
+      "noServers": "No servers",
+      "serverCount_one": "{{count}} server",
+      "serverCount_other": "{{count}} servers",
+      "multiServerCount_one": "{{count}} server (multi-server)",
+      "multiServerCount_other": "{{count}} servers (multi-server)",
+      "endpointsMissing": "Endpoints missing",
+      "sourceMissing": "Source missing",
+      "destinationMissing": "Destination missing",
+      "create": {
+        "title": "Create connection",
+        "namePlaceholder": "e.g., App tier to DB tier",
+        "endpoints": "Endpoints",
+        "serversPlaceholder": "e.g., server1",
+        "protocolsPlaceholder": "e.g., HTTPS",
+        "description": "Description",
+        "descriptionPlaceholder": "e.g., Nightly export from the app tier to the DB tier",
+        "pathAfterCreate": "Create the connection first to add network path hops.",
+        "afterCreation": "After creation",
+        "protocolRequired": "Select at least one protocol.",
+        "sourceRequired": "Select a source asset or entity.",
+        "destinationRequired": "Select a destination asset or entity."
+      },
+      "deleteDialog": {
+        "title": "Delete connection?",
+        "message": "This will permanently delete this connection.",
+        "messageWithBindings_one": "This will permanently delete this connection and unlink it from {{count}} interface binding. The interfaces themselves are not deleted.",
+        "messageWithBindings_other": "This will permanently delete this connection and unlink it from {{count}} interface bindings. The interfaces themselves are not deleted."
+      },
+      "topologyDialog": {
+        "title": "Change topology?",
+        "toMultiServer": "Switching to multi-server will clear the source and destination endpoints.",
+        "toServerToServer": "Switching to server-to-server will clear the multi-server list.",
+        "layersKept_one": "{{count}} existing layer is kept; review its endpoints after the change.",
+        "layersKept_other": "{{count}} existing layers are kept; review their endpoints after the change."
       }
     },
     "interface": {
@@ -1219,10 +1260,29 @@
         "ownership": "Ownership & criticality",
         "functional": "Functional definition",
         "technical": "Technical definition",
-        "environments": "Bindings & connections",
-        "compliance": "Data & compliance"
+        "environments": "Environments",
+        "compliance": "Data & compliance",
+        "flow": "Flow",
+        "dataMapping": "Data mapping",
+        "relations": "Relations"
       },
-      "selectSourceTarget": "Select source and target applications to manage bindings."
+      "selectSourceTarget": "Select source and target applications to manage bindings.",
+      "untitled": "Untitled interface",
+      "previous": "Previous interface",
+      "next": "Next interface",
+      "viewInMap": "View in map",
+      "loading": "Loading interface…",
+      "environmentsAfterCreate": "Create the interface first to manage environment bindings.",
+      "unsavedMappingHint": "Press Ctrl+S to save unsaved mapping changes.",
+      "discardDialog": {
+        "title": "Discard interface draft",
+        "message": "This interface has not been created yet. Closing the workspace will discard the draft."
+      },
+      "create": {
+        "applicationsRequired": "Select source and target applications.",
+        "dataCategoryRequired": "Select a data category.",
+        "noIdentifier": "The interface was created, but no identifier was returned."
+      }
     },
     "location": {
       "title": "Location",
@@ -1334,29 +1394,32 @@
       "applicationName": "Application name",
       "version": "Version",
       "versionPlaceholder": "e.g., 2.0, 2024, Q1 2025",
-      "goLiveDate": "Go live date",
-      "endOfSupportDate": "End of support date",
+      "goLiveDate": "Go live",
+      "endOfSupportDate": "End of support",
       "selectWhatToCopy": "Select what to copy from the source application:",
-      "copyOwners": "Owners (business & IT)",
+      "copyOwners": "Owners (business and IT)",
       "copyCompanies": "Companies (audience)",
       "copyDepartments": "Departments",
       "copyDataResidency": "Data residency",
-      "copyLinks": "Links (documentation)",
+      "copyLinks": "Links",
       "copySupportContacts": "Support contacts",
-      "copyOpexCapex": "OPEX/CAPEX items",
+      "copyBudgetItems": "Budget items",
       "copyContracts": "Contracts",
-      "copyInstances": "Instances (environments)",
-      "copyBindings": "Bindings (environment connections)",
-      "bindingsHint": "Bindings connect interface legs to app instances. Environment-specific details (endpoints, auth, job names) will be cleared.",
+      "copyInstances": "Deployments",
+      "copyBindings": "Deployment bindings",
+      "bindingsHint": "Bindings connect interface legs to deployments. Environment-specific details will be cleared.",
       "suitesNotCopied": "Note: Suites and attachments are not copied.",
       "selectInterfaces": "Select interfaces to migrate to the new version. Selected interfaces will be duplicated and linked to the new version.",
       "loadingInterfaces": "Loading interfaces...",
       "noInterfaces": "No interfaces found for this application.",
       "selectAll": "Select all",
       "deselectAll": "Deselect all",
-      "selectedOf": "{{selected}} of {{total}} selected",
+      "selectedOf_one": "{{count}} of {{total}} selected",
+      "selectedOf_other": "{{count}} of {{total}} selected",
       "viaMiddleware": "via middleware",
       "sourceTarget": "source & target",
+      "roleSource": "source",
+      "roleTarget": "target",
       "flowsThrough": "flows through this ETL",
       "flowsThroughAs": "{{source}} → {{target}} (flows through this ETL)",
       "asRole": "{{source}} → {{target}} (as {{role}})",
@@ -1364,7 +1427,8 @@
       "back": "Back",
       "next": "Next",
       "createVersion": "Create version",
-      "nameRequired": "Application name is required"
+      "nameRequired": "Application name is required",
+      "defaultName": "{{name}} - new version"
     },
     "versionTimeline": {
       "title": "Version history"

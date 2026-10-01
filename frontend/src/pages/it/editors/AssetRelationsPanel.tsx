@@ -919,6 +919,9 @@ export default forwardRef<AssetRelationsPanelHandle, Props>(function AssetRelati
             name: String(link.description || '').trim() || link.url,
             url: link.url,
           }))}
+          nameHeader={t('common.name')}
+          emptyLabel={t('workspace.application.relations.noUrls')}
+          deleteLabel={t('workspace.application.relations.deleteUrl')}
           canEdit={!readOnly}
           canDelete={!readOnly}
           onEdit={openEditLinkDialog}

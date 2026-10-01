@@ -31,7 +31,7 @@
     },
     "applications": {
       "title": "Applications",
-      "newAppService": "Nouvelle application / Service",
+      "newAppService": "Nouvelle application / service",
       "appService": "Application / Service",
       "importCsv": "Importer CSV",
       "exportCsv": "Exporter CSV",
@@ -762,7 +762,7 @@
     },
     "application": {
       "title": "Application / Service",
-      "newTitle": "Nouvelle application / Service",
+      "newTitle": "Nouvelle application / service",
       "indexOfTotal": "({{index}} sur {{total}})",
       "tabs": {
         "overview": "Vue d'ensemble",
@@ -801,7 +801,8 @@
         "connectedTo": "Connectée à",
         "receivesFrom": "Reçoit de",
         "sendsTo": "Envoie vers",
-        "moreInInterfaces": "+ {{count}} autres dans Interfaces"
+        "moreInInterfaces_one": "+ {{count}} autre dans Interfaces",
+        "moreInInterfaces_other": "+ {{count}} autres dans Interfaces"
       },
       "ownership": {
         "businessOwners": "Responsables métier",
@@ -842,7 +843,6 @@
         "role": "Rôle",
         "supportNotes": "Notes de support",
         "sectionTitle": "Technique",
-        "notAssigned": "Non attribué",
         "support": "Support",
         "noSupportContacts": "Aucun contact de support.",
         "unnamedContact": "Contact sans nom",
@@ -946,7 +946,7 @@
         "assetType": "Type d'actif",
         "startTyping": "Commencez à saisir pour rechercher",
         "isCluster": "Ce serveur représente un cluster",
-        "clusterInfo": "Les serveurs de cluster peuvent être des endpoints dans les connexions. Affectez les instances d'application aux hôtes membres, pas au cluster lui-même.",
+        "clusterInfo": "Les actifs de cluster peuvent être des endpoints dans les connexions. Affectez les instances d'application aux hôtes membres.",
         "location": "Site",
         "subLocation": "Sous-site",
         "selectSubLocation": "Sélectionnez un sous-site",
@@ -1015,7 +1015,7 @@
       "assignments": {
         "title": "Affectations",
         "addAssignment": "Ajouter une affectation",
-        "clusterCannotHost": "Les serveurs de cluster ne peuvent pas héberger d'affectations d'applications. Affectez les hôtes membres à la place.",
+        "clusterCannotHost": "Les actifs de cluster ne peuvent pas héberger d'affectations d'applications. Affectez les hôtes membres.",
         "noAssignments": "Aucune affectation pour le moment.",
         "assignmentAdded": "Affectation ajoutée",
         "application": "Application",
@@ -1122,8 +1122,8 @@
         "attachments": "Pièces jointes",
         "dropHint": "Glissez-déposez des fichiers ici, ou utilisez le bouton pour sélectionner",
         "selectFiles": "Sélectionner des fichiers",
-        "uploading_one": "Téléversement de {{count}} fichier...",
-        "uploading_other": "Téléversement de {{count}} fichiers...",
+        "uploading_one": "Téléversement de {{count}} fichier…",
+        "uploading_other": "Téléversement de {{count}} fichiers…",
         "deleteAttachmentConfirm": "Supprimer la pièce jointe « {{name}} » ?",
         "newUrl": "Nouvelle URL",
         "editUrl": "Modifier l'URL",
@@ -1138,7 +1138,8 @@
         "overview": "Vue d'ensemble",
         "layers": "Couches",
         "compliance": "Criticité et conformité",
-        "interfaces": "Interfaces associées"
+        "interfaces": "Interfaces associées",
+        "path": "Chemin"
       },
       "createFromBinding": "Création depuis le contexte de liaison d'interface",
       "overview": {
@@ -1209,6 +1210,46 @@
         "actions": "Actions",
         "goToInterface": "Aller à l'interface",
         "leg": "Segment : {{type}}"
+      },
+      "untitled": "Connexion sans nom",
+      "previous": "Connexion précédente",
+      "next": "Connexion suivante",
+      "viewInMap": "Voir sur la carte",
+      "server": "Serveur",
+      "noServers": "Aucun serveur",
+      "serverCount_one": "{{count}} serveur",
+      "serverCount_other": "{{count}} serveurs",
+      "multiServerCount_one": "{{count}} serveur (multi-serveur)",
+      "multiServerCount_other": "{{count}} serveurs (multi-serveur)",
+      "endpointsMissing": "Endpoints manquants",
+      "sourceMissing": "Source manquante",
+      "destinationMissing": "Destination manquante",
+      "create": {
+        "title": "Créer une connexion",
+        "namePlaceholder": "ex. : Niveau applicatif vers niveau base de données",
+        "endpoints": "Endpoints",
+        "serversPlaceholder": "ex. : server1",
+        "protocolsPlaceholder": "ex. : HTTPS",
+        "description": "Description",
+        "descriptionPlaceholder": "ex. : Export nocturne du niveau applicatif vers le niveau base de données",
+        "pathAfterCreate": "Créez d'abord la connexion pour ajouter les sauts du chemin réseau.",
+        "afterCreation": "Après la création",
+        "protocolRequired": "Sélectionnez au moins un protocole.",
+        "sourceRequired": "Sélectionnez un actif ou une entité source.",
+        "destinationRequired": "Sélectionnez un actif ou une entité de destination."
+      },
+      "deleteDialog": {
+        "title": "Supprimer la connexion ?",
+        "message": "Cette connexion sera définitivement supprimée.",
+        "messageWithBindings_one": "Cette connexion sera définitivement supprimée et détachée de {{count}} liaison d'interface. Les interfaces elles-mêmes ne sont pas supprimées.",
+        "messageWithBindings_other": "Cette connexion sera définitivement supprimée et détachée de {{count}} liaisons d'interface. Les interfaces elles-mêmes ne sont pas supprimées."
+      },
+      "topologyDialog": {
+        "title": "Changer la topologie ?",
+        "toMultiServer": "Passer en multi-serveur effacera les endpoints source et destination.",
+        "toServerToServer": "Passer en serveur à serveur effacera la liste multi-serveur.",
+        "layersKept_one": "{{count}} couche existante est conservée ; vérifiez ses endpoints après le changement.",
+        "layersKept_other": "{{count}} couches existantes sont conservées ; vérifiez leurs endpoints après le changement."
       }
     },
     "interface": {
@@ -1219,10 +1260,29 @@
         "ownership": "Responsabilité et criticité",
         "functional": "Définition fonctionnelle",
         "technical": "Définition technique",
-        "environments": "Liaisons et connexions",
-        "compliance": "Données et conformité"
+        "environments": "Environnements",
+        "compliance": "Données et conformité",
+        "flow": "Flux",
+        "dataMapping": "Mappage des données",
+        "relations": "Relations"
       },
-      "selectSourceTarget": "Sélectionnez les applications source et cible pour gérer les liaisons."
+      "selectSourceTarget": "Sélectionnez les applications source et cible pour gérer les liaisons.",
+      "untitled": "Interface sans nom",
+      "previous": "Interface précédente",
+      "next": "Interface suivante",
+      "viewInMap": "Voir sur la carte",
+      "loading": "Chargement de l'interface…",
+      "environmentsAfterCreate": "Créez d'abord l'interface pour gérer les liaisons d'environnement.",
+      "unsavedMappingHint": "Appuyez sur Ctrl+S pour enregistrer les modifications du mappage.",
+      "discardDialog": {
+        "title": "Abandonner le brouillon d'interface",
+        "message": "Cette interface n'a pas encore été créée. Fermer l'espace de travail abandonnera le brouillon."
+      },
+      "create": {
+        "applicationsRequired": "Sélectionnez les applications source et cible.",
+        "dataCategoryRequired": "Sélectionnez une catégorie de données.",
+        "noIdentifier": "L'interface a été créée, mais aucun identifiant n'a été renvoyé."
+      }
     },
     "location": {
       "title": "Site",
@@ -1334,29 +1394,32 @@
       "applicationName": "Nom de l'application",
       "version": "Version",
       "versionPlaceholder": "ex. : 2.0, 2024, T1 2025",
-      "goLiveDate": "Date de mise en service",
-      "endOfSupportDate": "Date de fin de support",
+      "goLiveDate": "Mise en service",
+      "endOfSupportDate": "Fin de support",
       "selectWhatToCopy": "Sélectionnez les éléments à copier depuis l'application source :",
       "copyOwners": "Responsables (métier et IT)",
       "copyCompanies": "Sociétés (audience)",
       "copyDepartments": "Départements",
       "copyDataResidency": "Résidence des données",
-      "copyLinks": "Liens (documentation)",
+      "copyLinks": "Liens",
       "copySupportContacts": "Contacts de support",
-      "copyOpexCapex": "Postes OPEX/CAPEX",
+      "copyBudgetItems": "Postes budgétaires",
       "copyContracts": "Contrats",
-      "copyInstances": "Instances (environnements)",
-      "copyBindings": "Liaisons (connexions d'environnement)",
-      "bindingsHint": "Les liaisons connectent les segments d'interface aux instances d'application. Les détails spécifiques à l'environnement (endpoints, authentification, noms de jobs) seront effacés.",
+      "copyInstances": "Déploiements",
+      "copyBindings": "Liaisons de déploiement",
+      "bindingsHint": "Les liaisons connectent les segments d'interface aux déploiements. Les détails propres à chaque environnement seront effacés.",
       "suitesNotCopied": "Remarque : les suites et les pièces jointes ne sont pas copiées.",
       "selectInterfaces": "Sélectionnez les interfaces à migrer vers la nouvelle version. Les interfaces sélectionnées seront dupliquées et liées à la nouvelle version.",
       "loadingInterfaces": "Chargement des interfaces...",
       "noInterfaces": "Aucune interface trouvée pour cette application.",
       "selectAll": "Tout sélectionner",
       "deselectAll": "Tout désélectionner",
-      "selectedOf": "{{selected}} sur {{total}} sélectionnés",
+      "selectedOf_one": "{{count}} sur {{total}} sélectionnée",
+      "selectedOf_other": "{{count}} sur {{total}} sélectionnées",
       "viaMiddleware": "via middleware",
       "sourceTarget": "source et cible",
+      "roleSource": "source",
+      "roleTarget": "cible",
       "flowsThrough": "transite par cet ETL",
       "flowsThroughAs": "{{source}} → {{target}} (transite par cet ETL)",
       "asRole": "{{source}} → {{target}} (en tant que {{role}})",
@@ -1364,7 +1427,8 @@
       "back": "Retour",
       "next": "Suivant",
       "createVersion": "Créer la version",
-      "nameRequired": "Le nom de l'application est requis"
+      "nameRequired": "Le nom de l'application est requis",
+      "defaultName": "{{name}} - nouvelle version"
     },
     "versionTimeline": {
       "title": "Historique des versions"

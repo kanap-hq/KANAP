@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import PendingAccessPage from '../pages/PendingAccessPage';
 
@@ -13,13 +14,24 @@ type RouteRequirement = {
 };
 
 export default function ProtectedRoute() {
-  const { token, isAuthenticating, profile, claims, hasLevel, hasAnyAccess, subscription } = useAuth();
+  const { t } = useTranslation('auth');
+  const {
+    token,
+    isAuthenticating,
+    serverUnavailable,
+    sessionExpired,
+    profile,
+    claims,
+    hasLevel,
+    hasAnyAccess,
+    subscription,
+  } = useAuth();
   const location = useLocation();
   const { isPlatformHost } = useTenant();
   const { config } = useFeatures();
   const aiCapabilities = useAiCapabilities();
 
-  // Show loading spinner while authenticating
+  // Show loading spinner while authenticating; one line while the server cannot be reached.
   if (isAuthenticating) {
     return (
       <Box
@@ -27,15 +39,22 @@ export default function ProtectedRoute() {
         justifyContent="center"
         alignItems="center"
         minHeight="100vh"
+        px={2}
       >
-        <CircularProgress />
+        {serverUnavailable ? (
+          <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary', textAlign: 'center' }}>
+            {t('session.serverUnavailable')}
+          </Typography>
+        ) : (
+          <CircularProgress />
+        )}
       </Box>
     );
   }
 
   // Redirect to login if no token after authentication check
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={sessionExpired ? '/login?sessionExpired=true' : '/login'} replace />;
   }
 
   // If authenticated but the identity payload is not yet loaded, show spinner briefly
