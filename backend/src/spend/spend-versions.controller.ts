@@ -60,14 +60,14 @@ export class SpendVersionsController {
   @RequireLevel('opex', 'member')
   upsertAllocations(@Param('id') versionId: string, @Body() body: any, @Req() req: any) {
     const items = Array.isArray(body) ? body : body.items;
-    return this.allocations.bulkUpsert(versionId, items, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.allocations.bulkUpsert(versionId, items, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 
   @Get('spend-versions/:id/allocations')
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
   listAllocations(@Param('id') versionId: string, @Req() req: any) {
-    return this.allocations.listForVersion(versionId, { manager: req?.queryRunner?.manager });
+    return this.allocations.listForVersion(versionId, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 
   @Get('spend-versions/:id/amounts')

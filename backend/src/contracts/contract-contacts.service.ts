@@ -3,9 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { ContractContactLink, ContactOrigin } from './contract-contact.entity';
 import { ExternalContact } from '../contacts/external-contact.entity';
-import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-contact.entity';
+import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { Contract } from './contract.entity';
 import { AuditService } from '../audit/audit.service';
+
+/** The request's tenant: every statement filters on it. */
+type ItemContactsOpts = { manager?: EntityManager; tenantId: string };
 
 @Injectable()
 export class ContractContactsService {
@@ -14,8 +17,6 @@ export class ContractContactsService {
     private readonly linkRepo: Repository<ContractContactLink>,
     @InjectRepository(ExternalContact)
     private readonly contactRepo: Repository<ExternalContact>,
-    @InjectRepository(SupplierContactLink)
-    private readonly supplierContactRepo: Repository<SupplierContactLink>,
     @InjectRepository(Contract)
     private readonly itemRepo: Repository<Contract>,
     private readonly audit: AuditService,
@@ -27,17 +28,14 @@ export class ContractContactsService {
   private getContactRepo(manager?: EntityManager) {
     return manager ? manager.getRepository(ExternalContact) : this.contactRepo;
   }
-  private getSupplierContactRepo(manager?: EntityManager) {
-    return manager ? manager.getRepository(SupplierContactLink) : this.supplierContactRepo;
-  }
   private getItemRepo(manager?: EntityManager) {
     return manager ? manager.getRepository(Contract) : this.itemRepo;
   }
 
-  async listForItem(itemId: string, opts?: { manager?: EntityManager }) {
-    const repo = this.getLinkRepo(opts?.manager);
+  async listForItem(itemId: string, opts: ItemContactsOpts) {
+    const repo = this.getLinkRepo(opts.manager);
     const items = await repo.find({
-      where: { contract_id: itemId },
+      where: { tenant_id: opts.tenantId, contract_id: itemId },
       order: { role: 'ASC', created_at: 'DESC' } as any,
       relations: ['contact'],
     });
@@ -47,22 +45,22 @@ export class ContractContactsService {
   async attachManual(
     itemId: string,
     params: { contactId: string; role: SupplierContactRole },
-    userId?: string | null,
-    opts?: { manager?: EntityManager },
+    userId: string | null | undefined,
+    opts: ItemContactsOpts,
   ) {
-    const repo = this.getLinkRepo(opts?.manager);
-    const contactRepo = this.getContactRepo(opts?.manager);
-    const itemRepo = this.getItemRepo(opts?.manager);
+    const repo = this.getLinkRepo(opts.manager);
+    const contactRepo = this.getContactRepo(opts.manager);
+    const itemRepo = this.getItemRepo(opts.manager);
 
-    const item = await itemRepo.findOne({ where: { id: itemId } });
+    const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId } as any });
     if (!item) throw new NotFoundException('Contract not found');
 
-    const contact = await contactRepo.findOne({ where: { id: params.contactId } });
+    const contact = await contactRepo.findOne({ where: { tenant_id: opts.tenantId, id: params.contactId } });
     if (!contact) throw new NotFoundException('Contact not found');
 
     // Check duplicate by (item, contact, role)
     const existing = await repo.findOne({
-      where: { contract_id: itemId, contact_id: params.contactId, role: params.role },
+      where: { tenant_id: item.tenant_id, contract_id: itemId, contact_id: params.contactId, role: params.role },
     });
     if (existing) return existing;
 
@@ -83,16 +81,17 @@ export class ContractContactsService {
         after: saved,
         userId: userId ?? null,
       },
-      { manager: opts?.manager ?? repo.manager },
+      { manager: opts.manager ?? repo.manager },
     );
     return saved;
   }
 
-  async detach(linkId: string, userId?: string | null, opts?: { manager?: EntityManager }) {
-    const repo = this.getLinkRepo(opts?.manager);
-    const existing = await repo.findOne({ where: { id: linkId } });
+  /** Remove one contact link of the contract; a link of another contract is not found. */
+  async detach(itemId: string, linkId: string, userId: string | null | undefined, opts: ItemContactsOpts) {
+    const repo = this.getLinkRepo(opts.manager);
+    const existing = await repo.findOne({ where: { tenant_id: opts.tenantId, id: linkId, contract_id: itemId } });
     if (!existing) throw new NotFoundException('Link not found');
-    await repo.delete({ id: linkId });
+    await repo.delete({ tenant_id: opts.tenantId, id: linkId, contract_id: itemId });
     await this.audit.log(
       {
         table: 'contract_contacts',
@@ -102,7 +101,7 @@ export class ContractContactsService {
         after: null,
         userId: userId ?? null,
       },
-      { manager: opts?.manager ?? repo.manager },
+      { manager: opts.manager ?? repo.manager },
     );
     return { ok: true };
   }
@@ -112,43 +111,31 @@ export class ContractContactsService {
    * 1. Remove all contacts with origin='supplier'
    * 2. If newSupplierId is not null, fetch supplier's contacts and add them with origin='supplier'
    */
-  async syncFromSupplier(itemId: string, newSupplierId: string | null, userId?: string | null, opts?: { manager?: EntityManager }) {
-    const repo = this.getLinkRepo(opts?.manager);
-    const supplierContactRepo = this.getSupplierContactRepo(opts?.manager);
-    const itemRepo = this.getItemRepo(opts?.manager);
+  async syncFromSupplier(itemId: string, newSupplierId: string | null, userId: string | null | undefined, opts: ItemContactsOpts) {
+    const repo = this.getLinkRepo(opts.manager);
+    const itemRepo = this.getItemRepo(opts.manager);
 
-    const item = await itemRepo.findOne({ where: { id: itemId } });
+    const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId } as any });
     if (!item) throw new NotFoundException('Contract not found');
-    const before = await repo.find({ where: { contract_id: itemId, origin: ContactOrigin.SUPPLIER } });
+    const tenantId = item.tenant_id;
+    const before = await repo.find({ where: { tenant_id: tenantId, contract_id: itemId, origin: ContactOrigin.SUPPLIER } });
 
     // 1. Remove all supplier-derived contacts
-    await repo.delete({ contract_id: itemId, origin: ContactOrigin.SUPPLIER });
+    await repo.delete({ tenant_id: tenantId, contract_id: itemId, origin: ContactOrigin.SUPPLIER });
 
-    // 2. If new supplier exists, fetch and add their contacts
+    // 2. Add the new supplier's contacts in one statement; a contact and role already on the line (manual) is kept.
     if (newSupplierId) {
-      const supplierContacts = await supplierContactRepo.find({
-        where: { supplier_id: newSupplierId },
-      });
-
-      for (const sc of supplierContacts) {
-        // Check if this contact+role already exists (could be manually added)
-        const existing = await repo.findOne({
-          where: { contract_id: itemId, contact_id: sc.contact_id, role: sc.role },
-        });
-        if (existing) continue;
-
-        const link = repo.create({
-          tenant_id: item.tenant_id,
-          contract_id: itemId,
-          contact_id: sc.contact_id,
-          role: sc.role,
-          origin: ContactOrigin.SUPPLIER,
-        });
-        await repo.save(link);
-      }
+      await repo.manager.query(
+        `INSERT INTO contract_contacts (tenant_id, contract_id, contact_id, role, origin)
+         SELECT sc.tenant_id, $2::uuid, sc.contact_id, sc.role, 'supplier'
+           FROM supplier_contacts sc
+          WHERE sc.tenant_id = $1 AND sc.supplier_id = $3
+         ON CONFLICT (tenant_id, contract_id, contact_id, role) DO NOTHING`,
+        [tenantId, itemId, newSupplierId],
+      );
     }
 
-    const after = await repo.find({ where: { contract_id: itemId, origin: ContactOrigin.SUPPLIER } });
+    const after = await repo.find({ where: { tenant_id: tenantId, contract_id: itemId, origin: ContactOrigin.SUPPLIER } });
     const beforeState = before.map((r) => `${r.contact_id}:${r.role}`).sort();
     const afterState = after.map((r) => `${r.contact_id}:${r.role}`).sort();
     if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
@@ -161,7 +148,7 @@ export class ContractContactsService {
           after: afterState,
           userId: userId ?? null,
         },
-        { manager: opts?.manager ?? repo.manager },
+        { manager: opts.manager ?? repo.manager },
       );
     }
   }
@@ -169,93 +156,10 @@ export class ContractContactsService {
   /**
    * Called when supplier_id on contract changes. Fetches contract's supplier and syncs.
    */
-  async syncFromSupplierForItem(itemId: string, userId?: string | null, opts?: { manager?: EntityManager }) {
-    const itemRepo = this.getItemRepo(opts?.manager);
-    const item = await itemRepo.findOne({ where: { id: itemId } });
+  async syncFromSupplierForItem(itemId: string, userId: string | null | undefined, opts: ItemContactsOpts) {
+    const itemRepo = this.getItemRepo(opts.manager);
+    const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId } as any });
     if (!item) throw new NotFoundException('Contract not found');
     await this.syncFromSupplier(itemId, item.supplier_id, userId, opts);
-  }
-
-  /**
-   * Add a single supplier contact to a contract. Called when a contact is added to a supplier.
-   */
-  async addSupplierContact(
-    itemId: string,
-    contactId: string,
-    role: SupplierContactRole,
-    userId?: string | null,
-    opts?: { manager?: EntityManager },
-  ) {
-    const repo = this.getLinkRepo(opts?.manager);
-    const itemRepo = this.getItemRepo(opts?.manager);
-
-    const item = await itemRepo.findOne({ where: { id: itemId } });
-    if (!item) return;
-
-    // Check if already exists
-    const existing = await repo.findOne({
-      where: { contract_id: itemId, contact_id: contactId, role: role },
-    });
-    if (existing) return;
-
-    const link = repo.create({
-      tenant_id: item.tenant_id,
-      contract_id: itemId,
-      contact_id: contactId,
-      role: role,
-      origin: ContactOrigin.SUPPLIER,
-    });
-    const saved = await repo.save(link);
-    await this.audit.log(
-      {
-        table: 'contract_contacts',
-        recordId: saved.id,
-        action: 'create',
-        before: null,
-        after: saved,
-        userId: userId ?? null,
-      },
-      { manager: opts?.manager ?? repo.manager },
-    );
-  }
-
-  /**
-   * Remove a supplier-derived contact from a contract. Called when a contact is removed from a supplier.
-   */
-  async removeSupplierContact(
-    itemId: string,
-    contactId: string,
-    role: SupplierContactRole,
-    userId?: string | null,
-    opts?: { manager?: EntityManager },
-  ) {
-    const repo = this.getLinkRepo(opts?.manager);
-    const existing = await repo.findOne({
-      where: {
-        contract_id: itemId,
-        contact_id: contactId,
-        role: role,
-        origin: ContactOrigin.SUPPLIER,
-      },
-    });
-    await repo.delete({
-      contract_id: itemId,
-      contact_id: contactId,
-      role: role,
-      origin: ContactOrigin.SUPPLIER,
-    });
-    if (existing) {
-      await this.audit.log(
-        {
-          table: 'contract_contacts',
-          recordId: existing.id,
-          action: 'delete',
-          before: existing,
-          after: null,
-          userId: userId ?? null,
-        },
-        { manager: opts?.manager ?? repo.manager },
-      );
-    }
   }
 }

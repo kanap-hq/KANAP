@@ -18,7 +18,7 @@ export class ChargebackReportController {
   ) {
     const year = Number.isFinite(Number(yearRaw)) ? Number(yearRaw) : new Date().getFullYear();
     const metric = await this.svc.resolveMetric(metricRaw, req?.tenant?.id ?? null, { manager: req?.queryRunner?.manager });
-    return this.svc.generateGlobal(year, metric, { manager: req?.queryRunner?.manager });
+    return this.svc.generateGlobal(year, metric, req.tenant.id, { manager: req?.queryRunner?.manager });
   }
 
   @RequireLevel('reporting', 'reader')
@@ -32,7 +32,7 @@ export class ChargebackReportController {
     const year = Number.isFinite(Number(yearRaw)) ? Number(yearRaw) : new Date().getFullYear();
     const metric = await this.svc.resolveMetric(metricRaw, req?.tenant?.id ?? null, { manager: req?.queryRunner?.manager });
     const resolvedCompanyId = companyId || (req.query?.company_id as string);
-    return this.svc.generateCompany(year, metric, resolvedCompanyId, { manager: req?.queryRunner?.manager });
+    return this.svc.generateCompany(year, metric, resolvedCompanyId, req.tenant.id, { manager: req?.queryRunner?.manager });
   }
 
   @RequireLevel('reporting', 'reader')
@@ -44,6 +44,6 @@ export class ChargebackReportController {
   ) {
     const year = Number.isFinite(Number(yearRaw)) ? Number(yearRaw) : new Date().getFullYear();
     const metric = await this.svc.resolveMetric(metricRaw, req?.tenant?.id ?? null, { manager: req?.queryRunner?.manager });
-    return this.svc.generateGlobal(year, metric, { manager: req?.queryRunner?.manager });
+    return this.svc.generateGlobal(year, metric, req.tenant.id, { manager: req?.queryRunner?.manager });
   }
 }

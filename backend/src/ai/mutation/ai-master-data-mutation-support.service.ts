@@ -911,7 +911,7 @@ export class AiMasterDataMutationSupportService {
       case 'suppliers':
         return this.suppliers.get(id, { manager: context.manager }) as any;
       case 'contacts':
-        return this.contacts.get(id, { manager: context.manager }) as any;
+        return this.contacts.get(id, { manager: context.manager, tenantId: context.tenantId }) as any;
       case 'accounts':
         return this.accounts.get(id, { manager: context.manager }) as any;
       case 'chart_of_accounts':
@@ -1326,7 +1326,7 @@ export class AiMasterDataMutationSupportService {
       case 'suppliers':
         return this.suppliers.create(fields as any, context.userId, { manager: context.manager, audit });
       case 'contacts':
-        return this.contacts.create(fields as any, { manager: context.manager, userId: context.userId, audit });
+        return this.contacts.create(fields as any, { manager: context.manager, tenantId: context.tenantId, userId: context.userId, audit });
       case 'accounts':
         return this.accounts.create(fields as any, context.userId, { manager: context.manager, audit });
       case 'chart_of_accounts':
@@ -1409,7 +1409,7 @@ export class AiMasterDataMutationSupportService {
       case 'suppliers':
         return this.suppliers.update(id, fields as any, context.userId, { manager: context.manager, audit });
       case 'contacts':
-        return this.contacts.update(id, fields as any, { manager: context.manager, userId: context.userId, audit });
+        return this.contacts.update(id, fields as any, { manager: context.manager, tenantId: context.tenantId, userId: context.userId, audit });
       case 'accounts':
         return this.accounts.update(id, fields as any, context.userId, { manager: context.manager, audit });
       case 'chart_of_accounts':

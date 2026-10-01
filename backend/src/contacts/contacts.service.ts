@@ -4,7 +4,7 @@ import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { ExternalContact } from './external-contact.entity';
 import { SupplierContactLink, SupplierContactRole } from './supplier-contact.entity';
 import { Supplier } from '../suppliers/supplier.entity';
-import { SupplierContactsService } from '../suppliers/supplier-contacts.service';
+import { SupplierContactsContext, SupplierContactsService } from '../suppliers/supplier-contacts.service';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { format } from '@fast-csv/format';
@@ -12,6 +12,11 @@ import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+
+/** The request's tenant: every statement filters on it. */
+type TenantOpts = { manager?: EntityManager; tenantId: string };
+/** A write also names the user and the audit source. */
+type WriteOpts = TenantOpts & { userId?: string | null; audit?: AuditSourceOptions };
 
 @Injectable()
 export class ContactsService {
@@ -39,51 +44,92 @@ export class ContactsService {
     return manager ? manager.getRepository(Supplier) : this.supplierRepo;
   }
 
+  private linkContext(opts: WriteOpts, manager: EntityManager): SupplierContactsContext {
+    return { manager, tenantId: opts.tenantId, userId: opts.userId, audit: opts.audit };
+  }
+
   private normalizeSupplierRole(role: any): SupplierContactRole | null {
     if (role === '' || role == null) return null;
     const val = String(role) as SupplierContactRole;
     return (Object.values(SupplierContactRole) as string[]).includes(val) ? val : null;
   }
 
+  /**
+   * Make (supplier, role) the contact's only primary supplier link. A primary link
+   * it replaces is removed with the links it propagated to OPEX lines, CAPEX lines
+   * and contracts (origin 'supplier'); the caller propagates the new one. Every
+   * link added, changed or removed is audited.
+   */
   private async syncPrimarySupplierLink(
     contactId: string,
     supplierId: string | null,
     role: SupplierContactRole | null,
-    opts?: { manager?: EntityManager },
+    opts: WriteOpts,
   ) {
-    const linkRepo = this.getLinkRepo(opts?.manager);
-    // Ensure only one primary link per contact; remove previous ones first
-    await linkRepo.delete({ contact_id: contactId, is_primary: true } as any);
+    const linkRepo = this.getLinkRepo(opts.manager);
+    const ctx: SupplierContactsContext = { manager: linkRepo.manager, tenantId: opts.tenantId, userId: opts.userId, audit: opts.audit };
+    const log = (action: 'create' | 'update' | 'delete', recordId: string, before: unknown, after: unknown) => this.audit.log(
+      {
+        table: 'supplier_contacts',
+        recordId,
+        action,
+        before: before ?? null,
+        after: after ?? null,
+        userId: opts.userId ?? null,
+        source: opts.audit?.source,
+        sourceRef: opts.audit?.sourceRef ?? null,
+      },
+      { manager: linkRepo.manager },
+    );
+    const keeps = (link: SupplierContactLink) => !!supplierId && !!role && link.supplier_id === supplierId && link.role === role;
+
+    const primaries = await linkRepo.find({ where: { tenant_id: opts.tenantId, contact_id: contactId, is_primary: true } });
+    for (const link of primaries.filter((l) => !keeps(l))) {
+      await linkRepo.delete({ tenant_id: opts.tenantId, id: link.id });
+      await log('delete', link.id, link, null);
+      await this.supplierContactsService.removeContactFromItems(link.supplier_id, contactId, link.role, ctx);
+    }
     if (!supplierId || !role) return null;
-    const existing = await linkRepo.findOne({ where: { contact_id: contactId, supplier_id: supplierId, role, is_primary: true } });
-    if (existing) return existing;
-    const link = linkRepo.create({ contact_id: contactId, supplier_id: supplierId, role, is_primary: true });
-    return linkRepo.save(link);
+
+    // The same (supplier, contact, role) may already be linked without being primary.
+    const existing = await linkRepo.findOne({ where: { tenant_id: opts.tenantId, contact_id: contactId, supplier_id: supplierId, role } });
+    if (existing?.is_primary) return existing;
+    if (existing) {
+      const updated = { ...existing, is_primary: true, updated_at: new Date() };
+      await linkRepo.update({ tenant_id: opts.tenantId, id: existing.id }, { is_primary: true, updated_at: updated.updated_at });
+      await log('update', existing.id, existing, updated);
+      return updated;
+    }
+    const saved = await linkRepo.save(linkRepo.create({ tenant_id: opts.tenantId, contact_id: contactId, supplier_id: supplierId, role, is_primary: true }));
+    await log('create', saved.id, null, saved);
+    return saved;
   }
 
   private async findSupplierRole(
     contactId: string,
     supplierId: string | null,
-    manager?: EntityManager,
+    opts: TenantOpts,
   ): Promise<SupplierContactRole | null> {
     if (!supplierId) return null;
-    const linkRepo = this.getLinkRepo(manager);
-    const primary = await linkRepo.findOne({ where: { contact_id: contactId, supplier_id: supplierId, is_primary: true } });
+    const linkRepo = this.getLinkRepo(opts.manager);
+    const where = { tenant_id: opts.tenantId, contact_id: contactId, supplier_id: supplierId };
+    const primary = await linkRepo.findOne({ where: { ...where, is_primary: true } });
     if (primary) return primary.role;
-    const anyLink = await linkRepo.findOne({ where: { contact_id: contactId, supplier_id: supplierId } });
+    const anyLink = await linkRepo.findOne({ where });
     return anyLink?.role ?? null;
   }
 
-  async list(query: any, opts?: { manager?: EntityManager }) {
-    const repo = this.getRepo(opts?.manager);
+  async list(query: any, opts: TenantOpts) {
+    const repo = this.getRepo(opts.manager);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
     const allowedSortFields = [
       'last_name', 'first_name', 'email', 'active', 'created_at', 'updated_at', 'supplier_name'
     ];
-    const qb = repo.createQueryBuilder('c').leftJoinAndSelect('c.supplier', 's');
+    const qb = repo.createQueryBuilder('c').leftJoinAndSelect('c.supplier', 's', 's.tenant_id = c.tenant_id');
 
     const filterWhere = buildWhereFromAgFilters(filters, ['last_name', 'first_name', 'email', 'phone', 'mobile', 'country', 'active', 'supplier_id']);
     if (Object.keys(filterWhere).length > 0) qb.where(filterWhere);
+    qb.andWhere('c.tenant_id = :tenantId', { tenantId: opts.tenantId });
 
     const supplierNameFilter = filters?.supplier_name;
     if (supplierNameFilter) {
@@ -113,7 +159,7 @@ export class ContactsService {
             qb.andWhere('s.name NOT ILIKE :supplierFilterNc', { supplierFilterNc: `%${val}%` });
             break;
           case 'blank':
-            qb.andWhere("s.name IS NULL OR NULLIF(s.name, '') IS NULL");
+            qb.andWhere("(s.name IS NULL OR NULLIF(s.name, '') IS NULL)");
             break;
           case 'notBlank':
             qb.andWhere("s.name IS NOT NULL AND NULLIF(s.name, '') IS NOT NULL");
@@ -153,16 +199,17 @@ export class ContactsService {
     return { items: withSupplier, total, page, limit };
   }
 
-  async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
-    const repo = this.getRepo(opts?.manager);
+  async listIds(query: any, opts: TenantOpts): Promise<{ ids: string[]; total: number }> {
+    const repo = this.getRepo(opts.manager);
     const { sort, q, filters } = parsePagination(query);
     const allowedSortFields = [
       'last_name', 'first_name', 'email', 'active', 'created_at', 'updated_at', 'supplier_name'
     ];
-    const qb = repo.createQueryBuilder('c').leftJoin('c.supplier', 's').select('c.id', 'id');
+    const qb = repo.createQueryBuilder('c').leftJoin('c.supplier', 's', 's.tenant_id = c.tenant_id').select('c.id', 'id');
 
     const filterWhere = buildWhereFromAgFilters(filters, ['last_name', 'first_name', 'email', 'phone', 'mobile', 'country', 'active', 'supplier_id']);
     if (Object.keys(filterWhere).length > 0) qb.where(filterWhere);
+    qb.andWhere('c.tenant_id = :tenantId', { tenantId: opts.tenantId });
 
     const supplierNameFilter = filters?.supplier_name;
     if (supplierNameFilter) {
@@ -192,7 +239,7 @@ export class ContactsService {
             qb.andWhere('s.name NOT ILIKE :supplierFilterNc', { supplierFilterNc: `%${val}%` });
             break;
           case 'blank':
-            qb.andWhere("s.name IS NULL OR NULLIF(s.name, '') IS NULL");
+            qb.andWhere("(s.name IS NULL OR NULLIF(s.name, '') IS NULL)");
             break;
           case 'notBlank':
             qb.andWhere("s.name IS NOT NULL AND NULLIF(s.name, '') IS NOT NULL");
@@ -232,21 +279,21 @@ export class ContactsService {
     return { ids: rows.map((row) => row.id).filter(Boolean), total };
   }
 
-  async get(id: string, opts?: { manager?: EntityManager }) {
-    const repo = this.getRepo(opts?.manager);
-    const item = await repo.findOne({ where: { id }, relations: ['supplier'] });
+  async get(id: string, opts: TenantOpts) {
+    const repo = this.getRepo(opts.manager);
+    const item = await repo.findOne({ where: { tenant_id: opts.tenantId, id }, relations: ['supplier'] });
     if (!item) throw new NotFoundException('Contact not found');
-    const supplierRole = await this.findSupplierRole(id, item.supplier_id, opts?.manager);
+    const supplierRole = await this.findSupplierRole(id, item.supplier_id, opts);
     const { supplier, ...rest } = item as any;
     return { ...rest, supplier_role: supplierRole ?? null, supplier_name: supplier?.name ?? null };
   }
 
-  async create(body: Partial<ExternalContact>, opts?: { manager?: EntityManager; userId?: string | null; audit?: AuditSourceOptions }) {
-    const repo = this.getRepo(opts?.manager);
-    const supplierRepo = this.getSupplierRepo(opts?.manager);
+  async create(body: Partial<ExternalContact>, opts: WriteOpts) {
+    const repo = this.getRepo(opts.manager);
+    const supplierRepo = this.getSupplierRepo(opts.manager);
     if (!body?.email) throw new BadRequestException('email is required');
     const email = String(body.email).trim().toLowerCase();
-    const existing = await repo.findOne({ where: { email } });
+    const existing = await repo.findOne({ where: { tenant_id: opts.tenantId, email } });
     if (existing) throw new BadRequestException('A contact with this email already exists');
     const supplierId = body?.supplier_id ? String(body.supplier_id) : null;
     const supplierRole = this.normalizeSupplierRole((body as any)?.supplier_role);
@@ -257,10 +304,11 @@ export class ContactsService {
       throw new BadRequestException('supplier_role requires supplier_id');
     }
     if (supplierId) {
-      const supplier = await supplierRepo.findOne({ where: { id: supplierId } });
+      const supplier = await supplierRepo.findOne({ where: { tenant_id: opts.tenantId, id: supplierId } as any });
       if (!supplier) throw new BadRequestException('Supplier not found');
     }
     const entity = repo.create({
+      tenant_id: opts.tenantId,
       first_name: body.first_name ?? null,
       last_name: body.last_name ?? null,
       job_title: body.job_title ?? null,
@@ -273,14 +321,14 @@ export class ContactsService {
       supplier_id: supplierId,
     });
     const saved = await repo.save(entity);
-    await this.syncPrimarySupplierLink(saved.id, supplierId, supplierRole, opts);
+    await this.syncPrimarySupplierLink(saved.id, supplierId, supplierRole, { ...opts, manager: repo.manager });
 
     // Propagate contact to linked items when created with supplier+role
     if (supplierId && supplierRole) {
-      await this.supplierContactsService.propagateContactToItemsPublic(supplierId, saved.id, supplierRole, opts);
+      await this.supplierContactsService.propagateContactToItems(supplierId, saved.id, supplierRole, this.linkContext(opts, repo.manager));
     }
 
-    const supplier_role = await this.findSupplierRole(saved.id, supplierId, opts?.manager);
+    const supplier_role = await this.findSupplierRole(saved.id, supplierId, opts);
     await this.audit.log(
       {
         table: 'contacts',
@@ -288,21 +336,21 @@ export class ContactsService {
         action: 'create',
         before: null,
         after: { ...saved, supplier_role },
-        userId: opts?.userId ?? null,
-        source: opts?.audit?.source,
-        sourceRef: opts?.audit?.sourceRef ?? null,
+        userId: opts.userId ?? null,
+        source: opts.audit?.source,
+        sourceRef: opts.audit?.sourceRef ?? null,
       },
-      { manager: opts?.manager ?? repo.manager },
+      { manager: opts.manager ?? repo.manager },
     );
     return { ...saved, supplier_role };
   }
 
-  async update(id: string, body: Partial<ExternalContact>, opts?: { manager?: EntityManager; userId?: string | null; audit?: AuditSourceOptions }) {
-    const repo = this.getRepo(opts?.manager);
-    const supplierRepo = this.getSupplierRepo(opts?.manager);
-    const existing = await repo.findOne({ where: { id } });
+  async update(id: string, body: Partial<ExternalContact>, opts: WriteOpts) {
+    const repo = this.getRepo(opts.manager);
+    const supplierRepo = this.getSupplierRepo(opts.manager);
+    const existing = await repo.findOne({ where: { tenant_id: opts.tenantId, id } });
     if (!existing) throw new NotFoundException('Contact not found');
-    const beforeRole = await this.findSupplierRole(id, existing.supplier_id, opts?.manager);
+    const beforeRole = await this.findSupplierRole(id, existing.supplier_id, opts);
     const before = { ...existing, supplier_role: beforeRole };
     const supplierRoleProvided = Object.prototype.hasOwnProperty.call(body, 'supplier_role');
     const supplierRole = supplierRoleProvided ? this.normalizeSupplierRole((body as any).supplier_role) : null;
@@ -312,7 +360,7 @@ export class ContactsService {
     if (body.email) {
       const email = String(body.email).trim().toLowerCase();
       if (email !== existing.email) {
-        const dup = await repo.findOne({ where: { email } });
+        const dup = await repo.findOne({ where: { tenant_id: opts.tenantId, email } });
         if (dup) throw new BadRequestException('A contact with this email already exists');
         existing.email = email;
       }
@@ -331,7 +379,7 @@ export class ContactsService {
       const rawSupplierId = (body as any).supplier_id;
       const supplierId = rawSupplierId ? String(rawSupplierId) : null;
       if (supplierId) {
-        const supplier = await supplierRepo.findOne({ where: { id: supplierId } });
+        const supplier = await supplierRepo.findOne({ where: { tenant_id: opts.tenantId, id: supplierId } as any });
         if (!supplier) throw new BadRequestException('Supplier not found');
       }
       existing.supplier_id = supplierId;
@@ -342,15 +390,15 @@ export class ContactsService {
     if (typeof body.active === 'boolean') existing.active = body.active;
     const saved = await repo.save(existing);
     if (supplierRoleProvided || has('supplier_id')) {
-      const roleForSync = supplierRoleProvided ? supplierRole ?? null : await this.findSupplierRole(saved.id, saved.supplier_id, opts?.manager);
-      await this.syncPrimarySupplierLink(saved.id, saved.supplier_id, roleForSync, opts);
+      const roleForSync = supplierRoleProvided ? supplierRole ?? null : await this.findSupplierRole(saved.id, saved.supplier_id, opts);
+      await this.syncPrimarySupplierLink(saved.id, saved.supplier_id, roleForSync, { ...opts, manager: repo.manager });
 
       // Propagate contact to linked items (spend, capex, contracts) when supplier+role is set
       if (saved.supplier_id && roleForSync) {
-        await this.supplierContactsService.propagateContactToItemsPublic(saved.supplier_id, saved.id, roleForSync, opts);
+        await this.supplierContactsService.propagateContactToItems(saved.supplier_id, saved.id, roleForSync, this.linkContext(opts, repo.manager));
       }
     }
-    const supplier_role = await this.findSupplierRole(saved.id, saved.supplier_id, opts?.manager);
+    const supplier_role = await this.findSupplierRole(saved.id, saved.supplier_id, opts);
     await this.audit.log(
       {
         table: 'contacts',
@@ -358,24 +406,46 @@ export class ContactsService {
         action: 'update',
         before,
         after: { ...saved, supplier_role },
-        userId: opts?.userId ?? null,
-        source: opts?.audit?.source,
-        sourceRef: opts?.audit?.sourceRef ?? null,
+        userId: opts.userId ?? null,
+        source: opts.audit?.source,
+        sourceRef: opts.audit?.sourceRef ?? null,
       },
-      { manager: opts?.manager ?? repo.manager },
+      { manager: opts.manager ?? repo.manager },
     );
     return { ...saved, supplier_role };
   }
 
-  async delete(id: string, opts?: { manager?: EntityManager }) {
-    const repo = this.getRepo(opts?.manager);
-    const linkRepo = this.getLinkRepo(opts?.manager);
+  /**
+   * Delete a contact and its supplier links, one audit row each. Its links on
+   * OPEX lines, CAPEX lines, contracts, applications, assets and locations go
+   * with it (ON DELETE CASCADE).
+   */
+  async delete(id: string, opts: WriteOpts) {
+    const repo = this.getRepo(opts.manager);
+    const linkRepo = this.getLinkRepo(opts.manager);
+    const existing = await repo.findOne({ where: { tenant_id: opts.tenantId, id } });
+    if (!existing) return { ok: true };
+    const log = (table: string, recordId: string, before: unknown) => this.audit.log(
+      {
+        table,
+        recordId,
+        action: 'delete',
+        before,
+        after: null,
+        userId: opts.userId ?? null,
+        source: opts.audit?.source,
+        sourceRef: opts.audit?.sourceRef ?? null,
+      },
+      { manager: repo.manager },
+    );
     // Ensure links are removed first
-    const links = await linkRepo.find({ where: { contact_id: id } });
+    const links = await linkRepo.find({ where: { tenant_id: opts.tenantId, contact_id: id } });
     if (links.length > 0) {
-      await linkRepo.delete({ id: In(links.map((l) => l.id)) as any });
+      await linkRepo.delete({ tenant_id: opts.tenantId, id: In(links.map((l) => l.id)) as any });
+      for (const link of links) await log('supplier_contacts', link.id, link);
     }
-    await repo.delete({ id });
+    await repo.delete({ tenant_id: opts.tenantId, id });
+    await log('contacts', id, existing);
     return { ok: true };
   }
 
@@ -386,13 +456,13 @@ export class ContactsService {
     ];
   }
 
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }): Promise<{ filename: string; content: string }> {
-    const repo = this.getRepo(opts?.manager);
+  async exportCsv(scope: 'template' | 'data', opts: TenantOpts): Promise<{ filename: string; content: string }> {
+    const repo = this.getRepo(opts.manager);
     const headers = this.csvHeaders();
     const delimiter = ';';
     const rows: any[] = [];
     if (scope === 'data') {
-      const items = await repo.find({ order: { created_at: 'DESC' as any } });
+      const items = await repo.find({ where: { tenant_id: opts.tenantId }, order: { created_at: 'DESC' as any } });
       for (const c of items) {
         rows.push({
           first_name: c.first_name ?? '',
@@ -429,7 +499,7 @@ export class ContactsService {
 
   async importCsv(
     { file, dryRun }: { file: Express.Multer.File; dryRun: boolean },
-    opts?: { manager?: EntityManager },
+    opts: TenantOpts,
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
     const delimiter = ';';
@@ -467,7 +537,7 @@ export class ContactsService {
     if (!headerOk) {
       return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
     }
-    const repo = this.getRepo(opts?.manager);
+    const repo = this.getRepo(opts.manager);
 
     // Validate + normalize
     type Norm = Partial<ExternalContact> & { email: string };
@@ -507,14 +577,19 @@ export class ContactsService {
     if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted: 0, updated: 0, errors: [] };
 
     let inserted = 0, updated = 0;
+    // Emails are stored lower-cased (create, update and this import), so one read finds every existing contact.
+    const existingRows = unique.length > 0
+      ? await repo.find({ where: { tenant_id: opts.tenantId, email: In(unique.map((item) => item.email)) as any } })
+      : [];
+    const existingByEmail = new Map(existingRows.map((row) => [row.email, row] as const));
     for (const item of unique) {
-      const existing = await repo.findOne({ where: { email: item.email } });
+      const existing = existingByEmail.get(item.email);
       if (existing) {
         Object.assign(existing, item);
         await repo.save(existing);
         updated += 1;
       } else {
-        const created = repo.create(item);
+        const created = repo.create({ ...item, tenant_id: opts.tenantId });
         await repo.save(created);
         inserted += 1;
       }

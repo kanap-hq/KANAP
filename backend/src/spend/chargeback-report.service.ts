@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, In } from 'typeorm';
 import { SpendVersion } from './spend-version.entity';
@@ -167,20 +167,14 @@ export class ChargebackReportService {
     return raw;
   }
 
-  async generate(
-    year: number,
-    metric: ChargebackMetricKey,
-    opts?: { manager?: EntityManager },
-  ) {
-    return this.generateGlobal(year, metric, opts);
-  }
-
+  /** The report of the request's tenant (`tenantId` is `req.tenant.id`); every read is scoped to it. */
   async generateGlobal(
     year: number,
     metric: ChargebackMetricKey,
+    tenantId: string,
     opts?: { manager?: EntityManager },
   ) {
-    const ctx = await this.computeBase(year, metric, opts);
+    const ctx = await this.computeBase(year, metric, tenantId, opts);
 
     const detailed: Array<{
       companyId: string;
@@ -323,18 +317,19 @@ export class ChargebackReportService {
     year: number,
     metric: ChargebackMetricKey,
     companyId: string,
+    tenantId: string,
     opts?: { manager?: EntityManager },
   ): Promise<CompanyChargebackReportResponse> {
     if (!companyId) {
       throw new BadRequestException('companyId is required');
     }
 
-    const ctx = await this.computeBase(year, metric, opts);
+    const ctx = await this.computeBase(year, metric, tenantId, opts);
     const manager = opts?.manager ?? this.versionsRepo.manager;
 
     let company = ctx.companyById.get(companyId);
     if (!company) {
-      company = await manager.getRepository(Company).findOne({ where: { id: companyId } as any }) ?? undefined;
+      company = await manager.getRepository(Company).findOne({ where: { tenant_id: tenantId, id: companyId } as any }) ?? undefined;
       if (company) ctx.companyById.set(companyId, company);
     }
 
@@ -346,7 +341,7 @@ export class ChargebackReportService {
 
     let companyMetric = ctx.companyMetrics.get(companyId);
     if (!companyMetric) {
-      companyMetric = await manager.getRepository(CompanyMetric).findOne({ where: { company_id: companyId, fiscal_year: ctx.year } as any }) ?? undefined;
+      companyMetric = await manager.getRepository(CompanyMetric).findOne({ where: { tenant_id: tenantId, company_id: companyId, fiscal_year: ctx.year } as any }) ?? undefined;
       if (companyMetric) ctx.companyMetrics.set(companyId, companyMetric);
     }
 
@@ -389,11 +384,8 @@ export class ChargebackReportService {
       const department = departmentId ? ctx.departmentById.get(departmentId) : undefined;
       let localHeadcount: number | null = null;
       if (departmentId) {
-        let deptMetric = ctx.departmentMetrics.get(departmentId);
-        if (!deptMetric) {
-          deptMetric = await manager.getRepository(DepartmentMetric).findOne({ where: { department_id: departmentId, fiscal_year: ctx.year } as any }) ?? undefined;
-          if (deptMetric) ctx.departmentMetrics.set(departmentId, deptMetric);
-        }
+        // computeBase already read the year's metrics of every department in the shares.
+        const deptMetric = ctx.departmentMetrics.get(departmentId);
         localHeadcount = deptMetric != null && deptMetric.headcount != null ? Number(deptMetric.headcount) : null;
       } else if (headcount && headcount > 0) {
         localHeadcount = headcount;
@@ -536,10 +528,12 @@ export class ChargebackReportService {
   private async computeBase(
     year: number,
     metric: ChargebackMetricKey,
+    tenantId: string,
     opts?: { manager?: EntityManager },
   ): Promise<ChargebackComputationContext> {
     const yr = Number.isFinite(year) ? Math.trunc(year) : new Date().getFullYear();
     if (!isMetric(metric)) throw invalidMetric(metric);
+    if (!tenantId) throw new InternalServerErrorException('A chargeback report needs a tenant.');
     const metricColumn = METRIC_COLUMN_MAP[metric];
 
     const manager = opts?.manager ?? this.versionsRepo.manager;
@@ -554,9 +548,10 @@ export class ChargebackReportService {
       .innerJoin(
         SpendItem,
         'item',
-        `item.id = v.spend_item_id AND (item.disabled_at IS NULL OR item.disabled_at >= :period_start)`,
+        `item.id = v.spend_item_id AND item.tenant_id = v.tenant_id AND (item.disabled_at IS NULL OR item.disabled_at >= :period_start)`,
       )
-      .where('v.budget_year = :year', { year: yr })
+      .where('v.tenant_id = :tenantId', { tenantId })
+      .andWhere('v.budget_year = :year', { year: yr })
       .setParameters({ period_start: periodStart })
       .select(['v.id AS id', 'v.spend_item_id AS spend_item_id'])
       .getRawMany<{ id: string; spend_item_id: string }>();
@@ -590,17 +585,16 @@ export class ChargebackReportService {
 
     const versionIds = versions.map((v) => v.id);
     const fullVersions = versionIds.length > 0
-      ? await versionRepo.find({ where: { id: In(versionIds) as any } as any })
+      ? await versionRepo.find({ where: { tenant_id: tenantId, id: In(versionIds) as any } as any })
       : [];
 
     const itemIds = Array.from(new Set(fullVersions.map((v) => v.spend_item_id)));
     const itemRepo = manager.getRepository(SpendItem);
     const itemEntities = itemIds.length > 0
-      ? await itemRepo.find({ where: { id: In(itemIds) as any } as any })
+      ? await itemRepo.find({ where: { tenant_id: tenantId, id: In(itemIds) as any } as any })
       : [];
     const itemById = new Map(itemEntities.map((item) => [item.id, item] as const));
 
-    const tenantId = fullVersions[0]?.tenant_id ?? (itemEntities[0]?.tenant_id ?? null);
     const lookupKeys: FxLookupKey[] = [];
     const versionCurrency = new Map<string, string>();
     for (const version of fullVersions) {
@@ -615,13 +609,9 @@ export class ChargebackReportService {
       });
     }
 
-    let reportingCurrency = 'EUR';
-    let fxMap = new Map<string, FxResolvedRate>();
-    if (tenantId) {
-      const fxResult = await this.fxRates.resolveRates(tenantId, lookupKeys, { manager });
-      reportingCurrency = fxResult.settings.reportingCurrency;
-      fxMap = fxResult.map;
-    }
+    const fxResult = await this.fxRates.resolveRates(tenantId, lookupKeys, { manager });
+    const reportingCurrency = fxResult.settings.reportingCurrency;
+    const fxMap = fxResult.map;
     const fxByVersion = new Map<string, FxResolvedRate>();
     const getFx = (version: SpendVersion, currency: string): FxResolvedRate => {
       const upper = currency.toUpperCase();
@@ -643,7 +633,8 @@ export class ChargebackReportService {
       .createQueryBuilder('amount')
       .select('amount.version_id', 'version_id')
       .addSelect(`SUM(COALESCE(amount.${metricColumn}, 0))`, 'total')
-      .where('amount.version_id IN (:...ids)', { ids: versionIds })
+      .where('amount.tenant_id = :tenantId', { tenantId })
+      .andWhere('amount.version_id IN (:...ids)', { ids: versionIds })
       .andWhere('EXTRACT(YEAR FROM amount.period) = :year', { year: yr })
       .groupBy('amount.version_id')
       .getRawMany<{ version_id: string; total: string }>();
@@ -655,7 +646,7 @@ export class ChargebackReportService {
       totalsByVersion.set(row.version_id, total);
     }
 
-    const allocationData = await this.allocationCalculator.computeForVersions(fullVersions, { manager, suppressErrors: true });
+    const allocationData = await this.allocationCalculator.computeForVersions(fullVersions, { manager, tenantId, suppressErrors: true });
 
     const warningsSet = new Set<string>();
     const warnings: string[] = [];
@@ -785,25 +776,25 @@ export class ChargebackReportService {
 
     const companyRepo = manager.getRepository(Company);
     const companies = companyIds.size > 0
-      ? await companyRepo.find({ where: { id: In([...companyIds]) } as any })
+      ? await companyRepo.find({ where: { tenant_id: tenantId, id: In([...companyIds]) } as any })
       : [];
     const companyById = new Map(companies.map((c) => [c.id, c] as const));
 
     const departmentRepo = manager.getRepository(Department);
     const departments = departmentIds.size > 0
-      ? await departmentRepo.find({ where: { id: In([...departmentIds]) } as any })
+      ? await departmentRepo.find({ where: { tenant_id: tenantId, id: In([...departmentIds]) } as any })
       : [];
     const departmentById = new Map(departments.map((d) => [d.id, d] as const));
 
     const metricsRepo = manager.getRepository(CompanyMetric);
     const metrics = companyIds.size > 0
-      ? await metricsRepo.find({ where: { company_id: In([...companyIds]) as any, fiscal_year: yr } as any })
+      ? await metricsRepo.find({ where: { tenant_id: tenantId, company_id: In([...companyIds]) as any, fiscal_year: yr } as any })
       : [];
     const companyMetrics = new Map(metrics.map((m) => [m.company_id, m] as const));
 
     const deptMetricRepo = manager.getRepository(DepartmentMetric);
     const deptMetrics = departmentIds.size > 0
-      ? await deptMetricRepo.find({ where: { department_id: In([...departmentIds]) as any, fiscal_year: yr } as any })
+      ? await deptMetricRepo.find({ where: { tenant_id: tenantId, department_id: In([...departmentIds]) as any, fiscal_year: yr } as any })
       : [];
     const departmentMetrics = new Map(deptMetrics.map((m) => [m.department_id, m] as const));
 

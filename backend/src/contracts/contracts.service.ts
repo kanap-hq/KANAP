@@ -19,6 +19,7 @@ import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { ContractCapexItem } from './contract-capex-item.entity';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
+import { validate as isUuid } from 'uuid';
 import { ContractContactsService } from './contract-contacts.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { validateUploadedFile } from '../common/upload-validation';
@@ -31,6 +32,26 @@ import {
   FilterTargetConfig,
 } from '../common/ag-grid-filtering';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+
+/**
+ * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
+ * written out on every read and write besides the policy. Once a record is resolved, its
+ * own `tenant_id` is used instead.
+ */
+function sessionTenant() {
+  return Raw((alias) => `${alias} = app_current_tenant()`);
+}
+
+// The ids a contract names, each resolved in the session tenant before a write
+// (a foreign key does not check the tenant). Table names come only from here.
+const CONTRACT_REFERENCES = {
+  company_id: { table: 'companies', label: 'Company' },
+  supplier_id: { table: 'suppliers', label: 'Supplier' },
+  owner_user_id: { table: 'users', label: 'Owner' },
+} as const;
+
+// Never written from a body: the row's identity, tenant and timestamps.
+const NOT_WRITABLE = ['id', 'tenant_id', 'created_at', 'updated_at'] as const;
 
 type ListItem = Contract & {
   supplier?: { id: string; name: string } | null;
@@ -148,7 +169,8 @@ export class ContractsService {
     const lifecycleStatus = status ?? statusFromAg ?? StatusState.ENABLED;
 
     const applyCompiledFilters = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
-      compiledFilters.forEach((cond) => builder.andWhere(cond.sql, cond.params));
+      // Parenthesized, so no condition can widen the tenant predicate above.
+      compiledFilters.forEach((cond) => builder.andWhere(`(${cond.sql})`, cond.params));
     };
     const applyQuickSearch = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
       if (quickSearchConditions.length === 0) return;
@@ -165,7 +187,8 @@ export class ContractsService {
     const qbBase = repo
       .createQueryBuilder('c')
       .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
-      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id');
+      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
+      .where('c.tenant_id = app_current_tenant()');
     if (!includeDisabled) {
       if (lifecycleStatus === StatusState.DISABLED) {
         qbBase.andWhere('c.disabled_at IS NOT NULL AND c.disabled_at <= NOW()');
@@ -216,22 +239,22 @@ export class ContractsService {
     const supplierIds = Array.from(new Set(items.map(i => i.supplier_id).filter(Boolean))) as string[];
     const companyIds = Array.from(new Set(items.map(i => i.company_id).filter(Boolean))) as string[];
     const [suppliers, companies] = await Promise.all([
-      supplierIds.length ? mg.query(`SELECT id, name FROM suppliers WHERE id = ANY($1)`, [supplierIds]) : [],
-      companyIds.length ? mg.query(`SELECT id, name FROM companies WHERE id = ANY($1)`, [companyIds]) : [],
+      supplierIds.length ? mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [supplierIds]) : [],
+      companyIds.length ? mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [companyIds]) : [],
     ]);
     const sById = new Map<string, any>(suppliers.map((r: any) => [r.id, r]));
     const cById = new Map<string, any>(companies.map((r: any) => [r.id, r]));
 
     const contractIds = items.map(i => i.id);
     const counts: Array<{ contract_id: string; c: string }> = contractIds.length
-      ? await mg.query(`SELECT contract_id, COUNT(*)::text as c FROM contract_spend_items WHERE contract_id = ANY($1) GROUP BY contract_id`, [contractIds])
+      ? await mg.query(`SELECT contract_id, COUNT(*)::text as c FROM contract_spend_items WHERE tenant_id = app_current_tenant() AND contract_id = ANY($1) GROUP BY contract_id`, [contractIds])
       : [];
     const countById = new Map<string, number>(counts.map((r) => [r.contract_id, Number(r.c)]));
 
     const latestTasks: Array<{ id: string; related_object_id: string; title: string | null; description: string | null; status: string; created_at: Date }> = contractIds.length
       ? await mg.query(
           `SELECT DISTINCT ON (related_object_id) id, related_object_id, title, description, status, created_at
-           FROM tasks WHERE related_object_type = 'contract' AND related_object_id = ANY($1)
+           FROM tasks WHERE tenant_id = app_current_tenant() AND related_object_type = 'contract' AND related_object_id = ANY($1)
            ORDER BY related_object_id, created_at DESC`, [contractIds])
       : [];
     const latestById = new Map(latestTasks.map(t => [t.related_object_id, t]));
@@ -264,20 +287,23 @@ export class ContractsService {
     const linksRepo = mg.getRepository(ContractSpendItem);
     const urlsRepo = mg.getRepository(ContractLink);
     const attachRepo = mg.getRepository(ContractAttachment);
-    const found = await repo.findOne({ where: { id } });
+    const found = await repo.findOne({ where: { id, tenant_id: sessionTenant() } });
     if (!found) throw new NotFoundException('Contract not found');
+    const tenantId = found.tenant_id;
     const end = this.computeEndDate(found.start_date, found.duration_months || 0);
     const cancel = this.computeCancellationDeadline(end, found.notice_period_months || 0);
-    const linked = await linksRepo.find({ where: { contract_id: id } });
+    const linked = await linksRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const spendIds = linked.map(l => l.spend_item_id);
-    const spendItems = spendIds.length ? await mg.query(`SELECT id, product_name FROM spend_items WHERE id = ANY($1)`, [spendIds]) : [];
-    const links = await urlsRepo.find({ where: { contract_id: id } });
-    const attachments = await attachRepo.find({ where: { contract_id: id } });
+    const spendItems = spendIds.length
+      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = $1 AND id = ANY($2)`, [tenantId, spendIds])
+      : [];
+    const links = await urlsRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
+    const attachments = await attachRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const latestTaskRows: Array<{ id: string; title: string | null; description: string | null; status: string; created_at: Date; due_date?: string | null; assignee_user_id?: string | null }>
       = await mg.query(
         `SELECT id, title, description, status, created_at, due_date, assignee_user_id FROM tasks
-         WHERE related_object_type = 'contract' AND related_object_id = $1
-         ORDER BY created_at DESC LIMIT 1`, [id]);
+         WHERE tenant_id = $1 AND related_object_type = 'contract' AND related_object_id = $2
+         ORDER BY created_at DESC LIMIT 1`, [tenantId, id]);
     const latest_task = latestTaskRows?.[0] ?? null;
     return { ...found, end_date: end, cancellation_deadline: cancel, linked_spend_items: spendItems, links, attachments, latest_task };
   }
@@ -298,11 +324,42 @@ export class ContractsService {
     if (!body.supplier_id) throw new BadRequestException('supplier_id is required');
   }
 
-  async create(body: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
+  /**
+   * The body without the columns a write never takes, its referenced ids
+   * checked in the session tenant (one query): an id of another tenant, or no
+   * id at all, is refused as "<Field> not found.".
+   */
+  private async writableBody(mg: EntityManager, body: ContractUpsertDto): Promise<ContractUpsertDto> {
+    const input = { ...(body ?? {}) } as Record<string, unknown>;
+    for (const column of NOT_WRITABLE) delete input[column];
+    const wanted: Array<{ table: string; label: string; id: string }> = [];
+    for (const [column, ref] of Object.entries(CONTRACT_REFERENCES)) {
+      const value = input[column];
+      if (value == null || value === '') continue;
+      if (typeof value !== 'string' || !isUuid(value)) throw new BadRequestException(`${ref.label} not found.`);
+      wanted.push({ ...ref, id: value.toLowerCase() });
+    }
+    if (wanted.length > 0) {
+      const params: unknown[] = [];
+      const selects = wanted.map((w) => {
+        params.push(w.id);
+        return `SELECT '${w.table}' AS tbl, id::text AS id FROM ${w.table} WHERE tenant_id = app_current_tenant() AND id = $${params.length}::uuid`;
+      });
+      const rows: Array<{ tbl: string; id: string }> = await mg.query(selects.join(' UNION ALL '), params);
+      const found = new Set(rows.map((row) => `${row.tbl}:${row.id}`));
+      for (const w of wanted) {
+        if (!found.has(`${w.table}:${w.id}`)) throw new BadRequestException(`${w.label} not found.`);
+      }
+    }
+    return input as ContractUpsertDto;
+  }
+
+  async create(rawBody: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
-    if (!body.name) throw new BadRequestException('name is required');
-    this.validateInput(body);
+    if (!rawBody?.name) throw new BadRequestException('name is required');
+    this.validateInput(rawBody);
+    const body = await this.writableBody(mg, rawBody);
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
     const toCreate: DeepPartial<Contract> = {
@@ -327,12 +384,13 @@ export class ContractsService {
     return saved;
   }
 
-  async update(id: string, body: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
+  async update(id: string, rawBody: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
-    const existing = await repo.findOne({ where: { id } });
+    const existing = await repo.findOne({ where: { id, tenant_id: sessionTenant() } });
     if (!existing) throw new NotFoundException('Contract not found');
-    this.validateInput({ ...existing, ...body });
+    this.validateInput({ ...existing, ...rawBody });
+    const body = await this.writableBody(mg, rawBody);
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     Object.assign(existing, rest);
@@ -353,13 +411,13 @@ export class ContractsService {
 
     // Sync contacts from supplier if supplier changed
     if (oldSupplierId !== newSupplierId) {
-      await this.itemContacts.syncFromSupplier(id, newSupplierId, userId ?? null, { manager: mg });
+      await this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId: saved.tenant_id });
     }
 
     // Notify owner on status change
     if (before.status !== saved.status && saved.owner_user_id) {
-      const tenantId = (saved as any).tenant_id;
-      const user = await mg.query('SELECT id, email, locale FROM users WHERE id = $1 AND status = \'enabled\'', [saved.owner_user_id]);
+      const tenantId = saved.tenant_id;
+      const user = await mg.query('SELECT id, email, locale FROM users WHERE tenant_id = $1 AND id = $2 AND status = \'enabled\'', [tenantId, saved.owner_user_id]);
       if (user.length > 0) {
         this.notifications.notifyStatusChange({
           itemType: 'contract',
@@ -378,25 +436,53 @@ export class ContractsService {
     return saved;
   }
 
+  /** The contract of the session tenant, or a 404. */
+  private async findContract(id: string, mg: EntityManager): Promise<Contract> {
+    const found = await mg.getRepository(Contract).findOne({ where: { id, tenant_id: sessionTenant() } });
+    if (!found) throw new NotFoundException('Contract not found.');
+    return found;
+  }
+
+  /** Refuses any id that is not a row of `table` in the tenant. */
+  private async assertIdsInTenant(
+    mg: EntityManager,
+    table: 'spend_items' | 'capex_items' | 'contracts',
+    tenantId: string,
+    ids: string[],
+    message: string,
+  ) {
+    if (ids.length === 0) return;
+    const rows: Array<{ id: string }> = await mg.query(
+      `SELECT id FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, ids],
+    );
+    if (rows.length !== ids.length) throw new BadRequestException(message);
+  }
+
   // Links
   async listLinkedSpendItems(contractId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const linksRepo = mg.getRepository(ContractSpendItem);
-    const rows = await linksRepo.find({ where: { contract_id: contractId } });
+    const rows = await linksRepo.find({ where: { tenant_id: sessionTenant(), contract_id: contractId } });
     const ids = rows.map(r => r.spend_item_id);
-    const items = ids.length ? await mg.query(`SELECT id, product_name FROM spend_items WHERE id = ANY($1)`, [ids]) : [];
+    const items = ids.length
+      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [ids])
+      : [];
     return { items };
   }
 
   async bulkReplaceLinkedSpendItems(contractId: string, spendItemIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractSpendItem);
+    const contract = await this.findContract(contractId, mg);
+    const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((spendItemIds || []).filter(Boolean)));
-    const existing = await repo.find({ where: { contract_id: contractId } });
+    await this.assertIdsInTenant(mg, 'spend_items', tenantId, uniqueIds, 'One or more spend items not found.');
+    const existing = await repo.find({ where: { tenant_id: tenantId, contract_id: contract.id } });
     const toDelete = existing.filter(e => !uniqueIds.includes(e.spend_item_id));
     const existingSet = new Set(existing.map(e => e.spend_item_id));
-    const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ contract_id: contractId, spend_item_id: id }));
-    if (toDelete.length > 0) await repo.remove(toDelete);
+    const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
+    if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
     if (toInsert.length > 0) await repo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
@@ -417,15 +503,16 @@ export class ContractsService {
   }
 
   // URLs
-  listUrls(contractId: string, opts?: { manager?: EntityManager }) { 
+  listUrls(contractId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return mg.getRepository(ContractLink).find({ where: { contract_id: contractId }, order: { created_at: 'DESC' as any } });
+    return mg.getRepository(ContractLink).find({ where: { tenant_id: sessionTenant(), contract_id: contractId }, order: { created_at: 'DESC' as any } });
   }
   async createUrl(contractId: string, body: Partial<ContractLink>, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const urlsRepo = mg.getRepository(ContractLink);
     if (!body.url) throw new BadRequestException('url is required');
-    const entity = urlsRepo.create({ contract_id: contractId, url: body.url, description: body.description ?? null });
+    const contract = await this.findContract(contractId, mg);
+    const entity = urlsRepo.create({ tenant_id: contract.tenant_id, contract_id: contract.id, url: body.url, description: body.description ?? null });
     const saved = await urlsRepo.save(entity);
     await this.audit.log({ table: 'contract_links', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
     return saved;
@@ -433,9 +520,12 @@ export class ContractsService {
   async updateUrl(contractId: string, linkId: string, body: Partial<ContractLink>, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const urlsRepo = mg.getRepository(ContractLink);
-    const existing = await urlsRepo.findOne({ where: { id: linkId } });
-    if (!existing || existing.contract_id !== contractId) throw new NotFoundException('Link not found');
-    const next = { ...existing, ...body } as ContractLink;
+    const existing = await urlsRepo.findOne({ where: { id: linkId, contract_id: contractId, tenant_id: sessionTenant() } });
+    if (!existing) throw new NotFoundException('Link not found');
+    // Only the link's own fields: the contract and the tenant it belongs to stay as resolved above.
+    const next = { ...existing } as ContractLink;
+    if (body?.url !== undefined) next.url = body.url;
+    if (body?.description !== undefined) next.description = body.description;
     const saved = await urlsRepo.save(next);
     await this.audit.log({ table: 'contract_links', recordId: saved.id, action: 'update', before: existing, after: saved, userId }, { manager: mg });
     return saved;
@@ -443,9 +533,9 @@ export class ContractsService {
   async deleteUrl(contractId: string, linkId: string, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const urlsRepo = mg.getRepository(ContractLink);
-    const existing = await urlsRepo.findOne({ where: { id: linkId } });
-    if (!existing || existing.contract_id !== contractId) throw new NotFoundException('Link not found');
-    await urlsRepo.remove(existing);
+    const existing = await urlsRepo.findOne({ where: { id: linkId, contract_id: contractId, tenant_id: sessionTenant() } });
+    if (!existing) throw new NotFoundException('Link not found');
+    await urlsRepo.delete({ id: existing.id, contract_id: existing.contract_id, tenant_id: existing.tenant_id });
     await this.audit.log({ table: 'contract_links', recordId: existing.id, action: 'update', before: existing, after: null, userId }, { manager: mg });
     return { ok: true };
   }
@@ -483,7 +573,8 @@ export class ContractsService {
       .createQueryBuilder('c')
       .select(['c.id'])
       .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
-      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id');
+      .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
+      .where('c.tenant_id = app_current_tenant()');
     if (!includeDisabled) {
       if (lifecycleStatus === StatusState.DISABLED) {
         qb.andWhere('c.disabled_at IS NOT NULL AND c.disabled_at <= NOW()');
@@ -493,7 +584,8 @@ export class ContractsService {
     } else if (status || statusFromAg) {
       qb.andWhere('c.status = :contractStatus', { contractStatus: lifecycleStatus });
     }
-    compiledFilters.forEach((cond) => qb.andWhere(cond.sql, cond.params));
+    // Parenthesized, so no condition can widen the tenant predicate above.
+    compiledFilters.forEach((cond) => qb.andWhere(`(${cond.sql})`, cond.params));
     if (quickSearchConditions.length > 0) {
       qb.andWhere(
         new Brackets((sub) => {
@@ -591,22 +683,23 @@ export class ContractsService {
   }
 
   // Attachments stored via StorageService (S3)
-  async listAttachments(contractId: string, opts?: { manager?: EntityManager }) { 
+  async listAttachments(contractId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return mg.getRepository(ContractAttachment).find({ where: { contract_id: contractId }, order: { uploaded_at: 'DESC' as any } });
+    return mg.getRepository(ContractAttachment).find({ where: { tenant_id: sessionTenant(), contract_id: contractId }, order: { uploaded_at: 'DESC' as any } });
   }
   async uploadAttachment(contractId: string, file: Express.Multer.File, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const attachRepo = mg.getRepository(ContractAttachment);
     if (!file) throw new BadRequestException('No file uploaded');
-    const [{ tenant_id }] = await mg.query(`SELECT app_current_tenant() AS tenant_id`);
+    const contract = await this.findContract(contractId, mg);
+    const tenant_id = contract.tenant_id;
     const id = randomUUID();
     const now = new Date();
     const decodedName = fixMulterFilename(file.originalname);
     const ext = path.extname(decodedName || '') || '';
     const rand = Math.random().toString(36).slice(2, 8);
     const key = [
-      'files', tenant_id, 'contracts', contractId,
+      'files', tenant_id, 'contracts', contract.id,
       now.getUTCFullYear().toString(), String(now.getUTCMonth() + 1).padStart(2, '0'),
       `${id}_${rand}${ext}`,
     ].join('/');
@@ -621,7 +714,8 @@ export class ContractsService {
     await this.storage.putObject({ key, body: buf, contentType: validated.mimeType, contentLength: validated.size, sse: 'AES256' });
     const meta = attachRepo.create({
       id,
-      contract_id: contractId,
+      tenant_id,
+      contract_id: contract.id,
       original_filename: decodedName || `${id}${ext}`,
       stored_filename: path.basename(key),
       mime_type: (validated.mimeType || null) as any,
@@ -635,17 +729,17 @@ export class ContractsService {
   async downloadAttachment(attachmentId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const attachRepo = mg.getRepository(ContractAttachment);
-    const found = await attachRepo.findOne({ where: { id: attachmentId } });
+    const found = await attachRepo.findOne({ where: { id: attachmentId, tenant_id: sessionTenant() } });
     if (!found) throw new NotFoundException('Attachment not found');
     return found;
   }
   async deleteAttachment(attachmentId: string, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const attachRepo = mg.getRepository(ContractAttachment);
-    const found = await attachRepo.findOne({ where: { id: attachmentId } });
+    const found = await attachRepo.findOne({ where: { id: attachmentId, tenant_id: sessionTenant() } });
     if (!found) throw new NotFoundException('Attachment not found');
     try { await this.storage.deleteObject(found.storage_path); } catch {}
-    await attachRepo.remove(found);
+    await attachRepo.delete({ id: found.id, tenant_id: found.tenant_id });
     await this.audit.log({ table: 'contract_attachments', recordId: found.id, action: 'update', before: found, after: null, userId }, { manager: mg });
     return { ok: true };
   }
@@ -671,15 +765,15 @@ export class ContractsService {
       return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
     };
     if (scope === 'data') {
-      const items = await repo.find({ order: { created_at: 'DESC' as any } });
+      const items = await repo.find({ where: { tenant_id: sessionTenant() }, order: { created_at: 'DESC' as any } });
       if (items.length) {
         const sIds = Array.from(new Set(items.map(i => i.supplier_id)));
         const cIds = Array.from(new Set(items.map(i => i.company_id)));
         const uIds = Array.from(new Set(items.map(i => i.owner_user_id).filter(Boolean)));
         const [sRows, cRows, uRows] = await Promise.all([
-          mg.query(`SELECT id, name FROM suppliers WHERE id = ANY($1)`, [sIds]),
-          mg.query(`SELECT id, name FROM companies WHERE id = ANY($1)`, [cIds]),
-          uIds.length ? mg.query(`SELECT id, email FROM users WHERE id = ANY($1)`, [uIds]) : Promise.resolve([]),
+          mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [sIds]),
+          mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [cIds]),
+          uIds.length ? mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [uIds]) : Promise.resolve([]),
         ]);
         const sMap = new Map<string, any>(sRows.map((r: any) => [r.id, r]));
         const cMap = new Map<string, any>(cRows.map((r: any) => [r.id, r]));
@@ -751,9 +845,9 @@ export class ContractsService {
     if (rows.length === 0) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors: [{ row: 0, message: 'Empty CSV' }] };
 
     // Preload reference maps by name/email for resolution
-    const allCompanies = await mg.query(`SELECT id, name FROM companies`);
-    const allSuppliers = await mg.query(`SELECT id, name FROM suppliers`);
-    const allUsers = await mg.query(`SELECT id, email FROM users`);
+    const allCompanies = await mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant()`);
+    const allSuppliers = await mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant()`);
+    const allUsers = await mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant()`);
     const cByName = new Map<string, any>(allCompanies.map((r: any) => [r.name, r]));
     const sByName = new Map<string, any>(allSuppliers.map((r: any) => [r.name, r]));
     const uByEmail = new Map<string, any>(allUsers.map((r: any) => [r.email.toLowerCase(), r]));
@@ -802,7 +896,7 @@ export class ContractsService {
     for (const item of unique) {
       const s = sByName.get(item.supplier_name);
       if (!s) { updated += 0; continue; }
-      const exists = await repo.findOne({ where: { name: item.name as any, supplier_id: s.id as any } });
+      const exists = await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: s.id as any } });
       if (exists) updated += 1; else inserted += 1;
     }
     if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
@@ -814,7 +908,7 @@ export class ContractsService {
       const supplier = sByName.get(item.supplier_name);
       const owner = item.owner_email ? uByEmail.get(item.owner_email.toLowerCase()) : null;
       if (!company || !supplier) continue; // skip unresolved refs silently
-      const exists = await repo.findOne({ where: { name: item.name as any, supplier_id: supplier.id as any } });
+      const exists = await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: supplier.id as any } });
       const payload: ContractUpsertDto = {
         name: item.name as any,
         company_id: company.id,
@@ -841,9 +935,9 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const linksRepo = mg.getRepository(ContractSpendItem);
     const contractRepo = mg.getRepository(Contract);
-    const rows = await linksRepo.find({ where: { spend_item_id: spendItemId } });
+    const rows = await linksRepo.find({ where: { tenant_id: sessionTenant(), spend_item_id: spendItemId } });
     const ids = rows.map(r => r.contract_id);
-    const items = ids.length ? await contractRepo.findBy({ id: In(ids) }) : [];
+    const items = ids.length ? await contractRepo.findBy({ tenant_id: sessionTenant(), id: In(ids) }) : [];
     // Only return essentials
     return { items: items.map(i => ({ id: i.id, name: i.name })) };
   }
@@ -851,12 +945,19 @@ export class ContractsService {
   async bulkReplaceContractsForSpendItem(spendItemId: string, contractIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractSpendItem);
+    const [spend]: Array<{ id: string; tenant_id: string }> = await mg.query(
+      `SELECT id, tenant_id FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1`,
+      [spendItemId],
+    );
+    if (!spend) throw new NotFoundException('Spend item not found.');
+    const tenantId = spend.tenant_id;
     const uniqueIds = Array.from(new Set((contractIds || []).filter(Boolean)));
-    const existing = await repo.find({ where: { spend_item_id: spendItemId } });
+    await this.assertIdsInTenant(mg, 'contracts', tenantId, uniqueIds, 'One or more contracts not found.');
+    const existing = await repo.find({ where: { tenant_id: tenantId, spend_item_id: spend.id } });
     const toDelete = existing.filter(e => !uniqueIds.includes(e.contract_id));
     const existingSet = new Set(existing.map(e => e.contract_id));
-    const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ contract_id: id, spend_item_id: spendItemId }));
-    if (toDelete.length > 0) await repo.remove(toDelete);
+    const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: id, spend_item_id: spend.id }));
+    if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
     if (toInsert.length > 0) await repo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
@@ -867,24 +968,31 @@ export class ContractsService {
     // Use dedicated repo for CAPEX join
     const capexLinksRepo = mg.getRepository(ContractCapexItem);
     const contractRepo = mg.getRepository(Contract);
-    const rows = await capexLinksRepo.find({ where: { capex_item_id: capexItemId } as any });
-    const ids = rows.map((r: any) => r.contract_id);
-    const items = ids.length ? await contractRepo.findBy({ id: In(ids) as any }) : [];
+    const rows = await capexLinksRepo.find({ where: { tenant_id: sessionTenant(), capex_item_id: capexItemId } });
+    const ids = rows.map((r) => r.contract_id);
+    const items = ids.length ? await contractRepo.findBy({ tenant_id: sessionTenant(), id: In(ids) }) : [];
     return { items: items.map((i) => ({ id: i.id, name: i.name })) };
   }
 
   async bulkReplaceContractsForCapexItem(capexItemId: string, contractIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const capexLinksRepo = mg.getRepository(ContractCapexItem);
+    const [capex]: Array<{ id: string; tenant_id: string }> = await mg.query(
+      `SELECT id, tenant_id FROM capex_items WHERE tenant_id = app_current_tenant() AND id = $1`,
+      [capexItemId],
+    );
+    if (!capex) throw new NotFoundException('CAPEX item not found.');
+    const tenantId = capex.tenant_id;
     const uniqueIds = Array.from(new Set((contractIds || []).filter(Boolean)));
-    const existing = await capexLinksRepo.find({ where: { capex_item_id: capexItemId } as any });
-    const toDelete = existing.filter((e: any) => !uniqueIds.includes(e.contract_id));
-    const existingSet = new Set(existing.map((e: any) => e.contract_id));
+    await this.assertIdsInTenant(mg, 'contracts', tenantId, uniqueIds, 'One or more contracts not found.');
+    const existing = await capexLinksRepo.find({ where: { tenant_id: tenantId, capex_item_id: capex.id } });
+    const toDelete = existing.filter((e) => !uniqueIds.includes(e.contract_id));
+    const existingSet = new Set(existing.map((e) => e.contract_id));
     const toInsert = uniqueIds
       .filter((id) => !existingSet.has(id))
-      .map((id) => capexLinksRepo.create({ contract_id: id, capex_item_id: capexItemId } as any));
-    if (toDelete.length > 0) await capexLinksRepo.remove(toDelete as any);
-    if (toInsert.length > 0) await capexLinksRepo.save(toInsert as any);
+      .map((id) => capexLinksRepo.create({ tenant_id: tenantId, contract_id: id, capex_item_id: capex.id }));
+    if (toDelete.length > 0) await capexLinksRepo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    if (toInsert.length > 0) await capexLinksRepo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
 
@@ -893,22 +1001,25 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractCapexItem);
     const capexRepo = mg.getRepository((await import('../capex/capex-item.entity')).CapexItem);
-    const rows = await repo.find({ where: { contract_id: contractId } as any });
-    const ids = rows.map((r) => (r as any).capex_item_id);
-    const items = ids.length ? await capexRepo.findBy({ id: In(ids) as any } as any) : [];
+    const rows = await repo.find({ where: { tenant_id: sessionTenant(), contract_id: contractId } });
+    const ids = rows.map((r) => r.capex_item_id);
+    const items = ids.length ? await capexRepo.findBy({ tenant_id: sessionTenant(), id: In(ids) }) : [];
     return { items: items.map((i: any) => ({ id: i.id, description: i.description })) };
   }
 
   async bulkReplaceLinkedCapexItems(contractId: string, capexItemIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractCapexItem);
+    const contract = await this.findContract(contractId, mg);
+    const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((capexItemIds || []).filter(Boolean)));
-    const existing = await repo.find({ where: { contract_id: contractId } as any });
-    const toDelete = existing.filter((e: any) => !uniqueIds.includes(e.capex_item_id));
-    const existingSet = new Set(existing.map((e: any) => e.capex_item_id));
-    const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ contract_id: contractId, capex_item_id: id } as any));
-    if (toDelete.length > 0) await repo.remove(toDelete as any);
-    if (toInsert.length > 0) await repo.save(toInsert as any);
+    await this.assertIdsInTenant(mg, 'capex_items', tenantId, uniqueIds, 'One or more CAPEX items not found.');
+    const existing = await repo.find({ where: { tenant_id: tenantId, contract_id: contract.id } });
+    const toDelete = existing.filter((e) => !uniqueIds.includes(e.capex_item_id));
+    const existingSet = new Set(existing.map((e) => e.capex_item_id));
+    const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, capex_item_id: id }));
+    if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    if (toInsert.length > 0) await repo.save(toInsert);
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
 }

@@ -40,8 +40,8 @@ async function testChargebackColumns() {
     const svc = service(randomUUID());
     const opts = { manager: runner.manager };
 
-    assert.equal((await svc.generateGlobal(YEAR, 'forecast', opts)).total, 84, 'forecast sums the Forecast column');
-    assert.equal((await svc.generateGlobal(YEAR, 'budget', opts)).total, 120);
+    assert.equal((await svc.generateGlobal(YEAR, 'forecast', tenantId, opts)).total, 84, 'forecast sums the Forecast column');
+    assert.equal((await svc.generateGlobal(YEAR, 'budget', tenantId, opts)).total, 120);
 
     assert.equal(await svc.resolveMetric(undefined, tenantId, opts), 'budget', 'no metric: the product default column');
     await setBudgetColumns(runner, tenantId, { enabled: { forecast: true }, default_column: 'forecast' });
@@ -54,7 +54,7 @@ async function testChargebackColumns() {
           && err.message === `Unknown column '${bad}'. Use budget, revision, forecast, follow_up, landing.`,
       );
     }
-    await assert.rejects(() => svc.generateGlobal(YEAR, 'constructor' as any, opts), BadRequestException);
+    await assert.rejects(() => svc.generateGlobal(YEAR, 'constructor' as any, tenantId, opts), BadRequestException);
   });
 }
 

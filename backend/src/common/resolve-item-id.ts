@@ -44,7 +44,10 @@ export function parseItemRef(
 
 /**
  * Resolve an item reference (UUID, prefixed ref like T-1, or plain number) to a UUID.
- * RLS ensures tenant isolation — no explicit tenant_id filter needed.
+ * Item numbers are per tenant: the lookup filters on the request's tenant
+ * (`app_current_tenant()`, the session tenant the request transaction sets from
+ * `req.tenant.id`), besides RLS. A UUID is returned as given; the caller's own
+ * read resolves it under the tenant.
  */
 export async function resolveToUuid(
   raw: string,
@@ -56,14 +59,14 @@ export async function resolveToUuid(
 
   // Static query map — no dynamic table interpolation
   const queries: Record<EntityType, string> = {
-    task: 'SELECT id FROM tasks WHERE item_number = $1 LIMIT 1',
-    request: 'SELECT id FROM portfolio_requests WHERE item_number = $1 LIMIT 1',
-    project: 'SELECT id FROM portfolio_projects WHERE item_number = $1 LIMIT 1',
-    document: 'SELECT id FROM documents WHERE item_number = $1 LIMIT 1',
-    spend: 'SELECT id FROM spend_items WHERE item_number = $1 LIMIT 1',
-    capex: 'SELECT id FROM capex_items WHERE item_number = $1 LIMIT 1',
-    incident: 'SELECT id FROM incidents WHERE item_number = $1 LIMIT 1',
-    contributor: 'SELECT id FROM portfolio_team_member_configs WHERE item_number = $1 LIMIT 1',
+    task: 'SELECT id FROM tasks WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    request: 'SELECT id FROM portfolio_requests WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    project: 'SELECT id FROM portfolio_projects WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    document: 'SELECT id FROM documents WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    spend: 'SELECT id FROM spend_items WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    capex: 'SELECT id FROM capex_items WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    incident: 'SELECT id FROM incidents WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    contributor: 'SELECT id FROM portfolio_team_member_configs WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
   };
 
   const rows = await manager.query(queries[entityType], [parsed.value]);

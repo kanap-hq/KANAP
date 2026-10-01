@@ -24,7 +24,7 @@ const T = {
 } as const;
 
 function contactsService(kind: Kind, audit: unknown): any {
-  const args = [undefined, undefined, undefined, undefined, audit];
+  const args = [undefined, undefined, undefined, audit];
   return kind === 'opex' ? new (SpendItemContactsService as any)(...args) : new (CapexItemContactsService as any)(...args);
 }
 
@@ -172,7 +172,7 @@ async function testContactsAudit(kind: Kind) {
     const { supplierId, contactId } = await seedSupplierWithContact(runner, tenantId, kind);
     const audit = captureAudit();
     const contacts = contactsService(kind, audit);
-    const opts = { manager: runner.manager };
+    const opts = { manager: runner.manager, tenantId };
 
     const link = await contacts.attachManual(itemId, { contactId: manual.id, role: 'technical' }, USER, opts);
     assert.deepEqual(

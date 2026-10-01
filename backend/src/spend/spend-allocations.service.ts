@@ -3,8 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { SpendAllocation } from './spend-allocation.entity';
 import { AuditService } from '../audit/audit.service';
+import { currentTenantId } from './budget-column-operations';
 import { SpendVersion } from './spend-version.entity';
 import { AllocationCalculatorService } from './allocation-calculator.service';
+import { Company } from '../companies/company.entity';
 import { Department } from '../departments/department.entity';
 import { DepartmentMetric } from '../departments/department-metric.entity';
 import {
@@ -30,17 +32,18 @@ export class SpendAllocationsService {
     private readonly audit: AuditService,
   ) {}
 
-  async bulkUpsert(versionId: string, items: AllocationInput[], userId?: string, opts?: { manager?: EntityManager }) {
+  /** `opts.tenantId` is the request's tenant; without it, the tenant of the request transaction. */
+  async bulkUpsert(versionId: string, items: AllocationInput[], userId?: string, opts?: { manager?: EntityManager; tenantId?: string }) {
     const manager = opts?.manager ?? this.repo.manager;
     const repo = manager.getRepository(SpendAllocation);
     const versions = manager.getRepository(SpendVersion);
     if (!Array.isArray(items)) throw new BadRequestException('Invalid payload');
 
-    const version = await versions.findOne({ where: { id: versionId } });
+    const tenantId = opts?.tenantId ?? await currentTenantId(manager);
+    const version = await versions.findOne({ where: { id: versionId, tenant_id: tenantId } });
     if (!version) throw new BadRequestException('Invalid version');
     const method = (version.allocation_method as any) ?? 'default';
     const driver = (version.allocation_driver as any) ?? 'headcount';
-    const tenantId = version.tenant_id;
 
     const isManualCompany = method === 'manual_company';
     const isManualDept = method === 'manual_department';
@@ -56,12 +59,12 @@ export class SpendAllocationsService {
         throw new BadRequestException('Automatic allocation methods do not accept manual rows. Save without overrides.');
       }
 
-      const before = await repo.find({ where: { version_id: versionId } });
+      const before = await repo.find({ where: { tenant_id: tenantId, version_id: versionId } });
       if (before.length > 0) {
-        await repo.delete({ version_id: versionId } as any);
+        await repo.delete({ tenant_id: tenantId, version_id: versionId } as any);
       }
 
-      const computation = await this.calculator.computeForVersions([version], { manager });
+      const computation = await this.calculator.computeForVersions([version], { manager, tenantId });
       const distribution = computation.get(versionId);
       const total = distribution?.shares.reduce((acc, share) => acc + Number(share.allocation_pct || 0), 0) ?? 0;
 
@@ -77,8 +80,8 @@ export class SpendAllocationsService {
       return { updated: 0, total_pct: Math.round(total * 10000) / 10000 };
     }
 
-    const before = await repo.find({ where: { version_id: versionId } });
-    await repo.delete({ version_id: versionId } as any);
+    const before = await repo.find({ where: { tenant_id: tenantId, version_id: versionId } });
+    await repo.delete({ tenant_id: tenantId, version_id: versionId } as any);
 
     let after: SpendAllocation[] = [];
 
@@ -96,6 +99,12 @@ export class SpendAllocationsService {
       const sum = rows.reduce((acc, row) => acc + row.allocation_pct, 0);
       if (sum < 99.99 || sum > 100.01) {
         throw new BadRequestException(`Manual percentages must sum to 100% (currently ${Math.round(sum * 100) / 100}%).`);
+      }
+      // Every company is resolved in the tenant: a foreign key does not check it.
+      const companyIds = Array.from(new Set(rows.map((row) => row.company_id)));
+      const found = await manager.getRepository(Company).count({ where: { tenant_id: tenantId, id: In(companyIds) } as any });
+      if (found !== companyIds.length) {
+        throw new BadRequestException('One or more companies were not found.');
       }
       after = await repo.save(
         rows.map((row) =>
@@ -177,12 +186,13 @@ export class SpendAllocationsService {
     return { updated: after.length, total_pct: Math.round(finalTotal * 10000) / 10000 };
   }
 
-  async listForVersion(versionId: string, opts?: { manager?: EntityManager }) {
+  async listForVersion(versionId: string, opts?: { manager?: EntityManager; tenantId?: string }) {
     const manager = opts?.manager ?? this.repo.manager;
-    const version = await manager.getRepository(SpendVersion).findOne({ where: { id: versionId } });
+    const tenantId = opts?.tenantId ?? await currentTenantId(manager);
+    const version = await manager.getRepository(SpendVersion).findOne({ where: { id: versionId, tenant_id: tenantId } });
     if (!version) throw new BadRequestException('Invalid version');
 
-    const computation = await this.calculator.computeForVersions([version], { manager });
+    const computation = await this.calculator.computeForVersions([version], { manager, tenantId });
     const dist = computation.get(versionId);
     const items = (dist?.shares ?? []).map((share) => ({
       id: share.allocation_id ?? null,

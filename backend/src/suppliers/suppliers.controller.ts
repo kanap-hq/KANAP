@@ -87,7 +87,7 @@ export class SuppliersController {
   @RequireLevel('suppliers', 'reader')
   @Get(':id/contacts')
   listContacts(@Param('id') id: string, @Req() req: any) {
-    return this.links.listForSupplier(id, { manager: req?.queryRunner?.manager });
+    return this.links.listForSupplier(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 
   @UseGuards(PermissionGuard)
@@ -98,13 +98,17 @@ export class SuppliersController {
     @Body() body: { contactId: string; role: SupplierContactRole; isPrimary?: boolean },
     @Req() req: any,
   ) {
-    return this.links.attach(id, { contactId: body.contactId, role: body.role, isPrimary: !!body.isPrimary }, { manager: req?.queryRunner?.manager });
+    return this.links.attach(
+      id,
+      { contactId: body.contactId, role: body.role, isPrimary: !!body.isPrimary },
+      { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null },
+    );
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Delete(':id/contacts/:linkId')
   detachContact(@Param('id') id: string, @Param('linkId') linkId: string, @Req() req: any) {
-    return this.links.detach(linkId, { manager: req?.queryRunner?.manager });
+    return this.links.detach(id, linkId, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
   }
 }

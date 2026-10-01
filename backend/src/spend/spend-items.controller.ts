@@ -303,7 +303,7 @@ export class SpendItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.contactsSvc.listForItem(id, { manager: ctx.manager });
+    return this.contactsSvc.listForItem(id, { manager: ctx.manager, tenantId: ctx.tenantId });
   }
 
   @UseGuards(PermissionGuard)
@@ -315,7 +315,7 @@ export class SpendItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.contactsSvc.attachManual(id, body, ctx.userId || null, { manager: ctx.manager });
+    return this.contactsSvc.attachManual(id, body, ctx.userId || null, { manager: ctx.manager, tenantId: ctx.tenantId });
   }
 
   @UseGuards(PermissionGuard)
@@ -327,7 +327,7 @@ export class SpendItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.contactsSvc.detach(id, linkId, ctx.userId || null, { manager: ctx.manager });
+    return this.contactsSvc.detach(id, linkId, ctx.userId || null, { manager: ctx.manager, tenantId: ctx.tenantId });
   }
 
   @UseGuards(PermissionGuard)
@@ -338,7 +338,7 @@ export class SpendItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.contactsSvc.syncFromSupplierForItem(id, ctx.userId || null, { manager: ctx.manager });
+    return this.contactsSvc.syncFromSupplierForItem(id, ctx.userId || null, { manager: ctx.manager, tenantId: ctx.tenantId });
   }
 
   @UseGuards(PermissionGuard)

@@ -1395,7 +1395,7 @@ export class AiQueryExecutor {
     }
 
     if (input.entity_type === 'contacts') {
-      const result = await this.contacts.list(scoped.query, { manager: context.manager });
+      const result = await this.contacts.list(scoped.query, { manager: context.manager, tenantId: context.tenantId });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
@@ -2147,7 +2147,7 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'contacts') {
-      const row = await this.contacts.get(entityId, { manager: context.manager });
+      const row = await this.contacts.get(entityId, { manager: context.manager, tenantId: context.tenantId });
       return this.toDetailResult(this.mapContact(row), row);
     }
 
