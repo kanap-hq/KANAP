@@ -244,6 +244,11 @@ function createFakeDatabase(seed: {
     // Every other statement is tenant-scoped, by contract.
     assert.ok(sql.includes('tenant_id = $1'), `statement must be tenant-scoped: ${sql}`);
     const tenantId = params[0];
+    // The unlinks that make the deletes independent of FK trigger order: the
+    // fake keeps no tool executions, so there is nothing to change.
+    if (/^UPDATE (ai_tool_executions SET approval_id|ai_evidence SET tool_execution_id|ai_action_requests SET tool_execution_id) = NULL /.test(sql)) {
+      return [];
+    }
     if (sql.includes('FROM ai_agent_definitions')) {
       return seed.definitions.filter((row) => row.tenant_id === tenantId);
     }
@@ -377,6 +382,29 @@ async function testPurgeCronGuardrails() {
   // Deletes are batched by id, never issued as an open-ended DELETE ... WHERE created_at.
   for (const entry of scoped.filter((item) => item.sql.startsWith('DELETE'))) {
     assert.ok(entry.sql.includes('id = ANY($2::uuid[])'), `delete must target explicit ids: ${entry.sql}`);
+  }
+  // Each proposal or run batch is preceded by the unlinks of its second FK path,
+  // for the same ids.
+  const expectedUnlinks: Record<string, string[]> = {
+    'DELETE FROM ai_action_requests': ['UPDATE ai_tool_executions SET approval_id = NULL'],
+    'DELETE FROM ai_runs': [
+      'UPDATE ai_evidence SET tool_execution_id = NULL',
+      'UPDATE ai_action_requests SET tool_execution_id = NULL',
+    ],
+  };
+  for (const [index, entry] of scoped.entries()) {
+    const prefix = Object.keys(expectedUnlinks).find((key) => entry.sql.startsWith(key));
+    if (!prefix) continue;
+    const unlinks = expectedUnlinks[prefix];
+    const preceding = scoped.slice(index - unlinks.length, index);
+    assert.deepEqual(
+      preceding.map((item) => unlinks.find((unlink) => item.sql.startsWith(unlink)) ?? item.sql),
+      unlinks,
+      `${prefix} must follow its unlinks`,
+    );
+    for (const item of preceding) {
+      assert.deepEqual(item.params, entry.params, `${prefix} unlinks must target the same tenant and ids`);
+    }
   }
 }
 

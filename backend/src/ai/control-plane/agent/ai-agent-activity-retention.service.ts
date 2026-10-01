@@ -143,8 +143,8 @@ export class AiAgentActivityRetentionService implements OnModuleInit {
     const cutoff = retentionCutoff(now, retentionDays);
     const counts = emptyCounts();
     counts.auditEvents = await this.purgeAuditEvents(manager, tenantId, agentDefinitionId, cutoff);
-    // Terminal proposals go before the runs so a run whose only remaining
-    // references were terminal proposals becomes purgeable in the same pass.
+    // Order does not decide which runs are purgeable: runIdsSafeToPurge only
+    // holds a run back for a non-terminal proposal.
     counts.actions = await this.purgeTerminalActions(manager, tenantId, agentDefinitionId, cutoff);
     const runs = await this.purgeRuns(manager, tenantId, agentDefinitionId, cutoff);
     counts.runs = runs.deleted;
@@ -197,9 +197,21 @@ export class AiAgentActivityRetentionService implements OnModuleInit {
         [tenantId, agentDefinitionId, cutoff.toISOString(), [...TERMINAL_ACTION_STATUSES], PURGE_BATCH_SIZE],
       );
       if (rows.length === 0) break;
+      const actionIds = rows.map((row) => row.id);
+      // A tool execution reaches its proposal twice: action_request_id directly,
+      // approval_id through the approval that CASCADEs with it, both SET NULL.
+      // Unlink the second path first so the DELETE does not depend on the order
+      // PostgreSQL fires the FK triggers (trigger-name order, which differs
+      // between a migrated and a pg_restore'd database).
+      await manager.query(
+        `UPDATE ai_tool_executions SET approval_id = NULL
+          WHERE tenant_id = $1
+            AND approval_id IN (SELECT id FROM ai_approvals WHERE tenant_id = $1 AND action_request_id = ANY($2::uuid[]))`,
+        [tenantId, actionIds],
+      );
       await manager.query(
         'DELETE FROM ai_action_requests WHERE tenant_id = $1 AND id = ANY($2::uuid[])',
-        [tenantId, rows.map((row) => row.id)],
+        [tenantId, actionIds],
       );
       deleted += rows.length;
       if (rows.length < PURGE_BATCH_SIZE) break;
@@ -237,6 +249,20 @@ export class AiAgentActivityRetentionService implements OnModuleInit {
       );
       const purgeable = runIdsSafeToPurge(candidateIds, references);
       if (purgeable.length > 0) {
+        // Evidence and action requests reach a run twice: run_id directly and
+        // tool_execution_id through the tool executions that CASCADE with it,
+        // both SET NULL. On a pg_restore'd database the run_id action fires
+        // first and re-checks tool_execution_id against a row the same DELETE
+        // removed (the evidence row is rewritten earlier in this transaction
+        // when its terminal proposal is purged). Unlink the second path first.
+        for (const table of ['ai_evidence', 'ai_action_requests']) {
+          await manager.query(
+            `UPDATE ${table} SET tool_execution_id = NULL
+              WHERE tenant_id = $1
+                AND tool_execution_id IN (SELECT id FROM ai_tool_executions WHERE tenant_id = $1 AND run_id = ANY($2::uuid[]))`,
+            [tenantId, purgeable],
+          );
+        }
         await manager.query(
           'DELETE FROM ai_runs WHERE tenant_id = $1 AND id = ANY($2::uuid[])',
           [tenantId, purgeable],

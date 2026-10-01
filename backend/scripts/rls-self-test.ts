@@ -1419,7 +1419,21 @@ async function runAiControlPlaneChecks(
        VALUES ($1, $2, $3, $4, 'work_item_processing_failed', 'error', 'used agent delete guard')`,
       [auditEventId, tenantOneId, definitionId, workItemId],
     );
-    await r.query(`DELETE FROM ai_agent_definitions WHERE id = $1`, [definitionId]);
+    // Same order as AiAgentControlService.deleteAgentDefinition. A bare DELETE
+    // of the definition reaches this audit row twice (directly and through the
+    // work item) and fails when the agent_definition_id SET NULL fires first,
+    // which is the case on a pg_restore'd database.
+    await r.query(
+      `UPDATE ai_agent_audit_events SET work_item_id = NULL
+        WHERE tenant_id = $1
+          AND work_item_id IN (SELECT id FROM ai_agent_work_items WHERE tenant_id = $1 AND agent_definition_id = $2)`,
+      [tenantOneId, definitionId],
+    );
+    await r.query(
+      `DELETE FROM ai_agent_work_items WHERE tenant_id = $1 AND agent_definition_id = $2`,
+      [tenantOneId, definitionId],
+    );
+    await r.query(`DELETE FROM ai_agent_definitions WHERE tenant_id = $1 AND id = $2`, [tenantOneId, definitionId]);
     const leftover = await r.query(
       `SELECT agent_definition_id, work_item_id FROM ai_agent_audit_events WHERE id = $1`,
       [auditEventId],
@@ -1429,6 +1443,9 @@ async function runAiControlPlaneChecks(
     }
     if (leftover[0].agent_definition_id != null) {
       throw new Error('audit agent_definition_id should be SET NULL after agent delete');
+    }
+    if (leftover[0].work_item_id != null) {
+      throw new Error('audit work_item_id should be NULL after agent delete');
     }
   });
   await setTenant(r, tenantTwoId);
