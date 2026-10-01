@@ -7,6 +7,7 @@ import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { getAiEntityRegistry } from '../../ai/query/registries';
 import { FIXED_SLOTS, SUMMARY_COLUMNS, SUMMARY_SCOPES } from '../spend-summary.builder';
 import * as budgetSummary from '../budget-summary';
+import * as budgetList from '../budget-list/budget-list.service';
 import {
   assert,
   findVersion,
@@ -23,8 +24,9 @@ import {
 } from './round-inputs.fixtures';
 import { seedCompany as seedCostCenterCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
 
-// The shared list engine (budget-summary.ts) against the database, with the
-// same assertions for OPEX and CAPEX: five columns in every slot, sort and
+// The list engines against the database (OPEX on the SQL list engine,
+// `budget-list/`; CAPEX on the in-memory engine of budget-summary.ts until it
+// moves), with the same assertions for both: five columns in every slot, sort and
 // filters on any year and column, the Ref filter, quick search on contracts
 // and projects, ids and totals aligned with the summary, the lifecycle
 // window, exact money; then the AI query layer on CAPEX and the CAPEX export.
@@ -288,9 +290,39 @@ async function testMoneyIsExact(kind: Kind) {
   });
 }
 
-/** The engine called directly, with a cap small enough to be hit by the five fixture lines. */
+/** The engine called directly, with a cap small enough to be hit by the five fixture lines (CAPEX; OPEX has no cap). */
 function engineDeps(cap: number): any {
   return { allocationCalculator: noAllocations, fxRates: identityFx, memoryRowCap: cap };
+}
+
+/**
+ * One page from the engine of a type, called directly: OPEX on the SQL list
+ * engine (no cap: `capped` is never set), CAPEX on the in-memory engine with
+ * the given cap, where `capped` shows whether a filter or sort ran in memory.
+ */
+function engineSummary(kind: Kind, cap: number, query: any, manager: any): Promise<any> {
+  return kind === 'opex'
+    ? budgetList.budgetListSummary(SUMMARY_SCOPES.opex, engineDeps(cap), query, manager)
+    : budgetSummary.summary(SUMMARY_SCOPES.capex, engineDeps(cap), query, manager);
+}
+
+/** OPEX on the SQL engine: no cap, the page, its total, the ids, the totals and the filter values read every line. */
+async function testEngineReadsEveryLine() {
+  await withFixture('opex', async (runner, { ids }) => {
+    const query = { ...ALL, sort: 'yBudget:DESC', limit: 2 };
+    const page = await engineSummary('opex', 2, query, runner.manager);
+    assert.equal('capped' in page, false, 'opex: no cap, never reported');
+    assert.equal(page.items.length, 2);
+    assert.equal(page.total, 5);
+    assert.deepEqual(page.items.map((row: any) => row.id), [ids.alpha, ids.bravo], 'opex: the page comes from every line, sorted');
+    const deps = engineDeps(2);
+    const navigation = await budgetList.budgetListIds(SUMMARY_SCOPES.opex, deps, query, runner.manager);
+    assert.equal(navigation.total, 5);
+    const totals = await budgetList.budgetListTotals(SUMMARY_SCOPES.opex, deps, query, runner.manager);
+    assert.equal(totals.yBudget, 1800.3);
+    const values = await budgetList.budgetListFilterValues(SUMMARY_SCOPES.opex, deps, { ...ALL, fields: 'currency' }, runner.manager);
+    assert.deepEqual(values.currency, ['EUR']);
+  });
 }
 
 async function testCapIsReported(kind: Kind) {
@@ -317,12 +349,11 @@ async function testCapIsReported(kind: Kind) {
 
 async function testBlankOnAnyColumnRunsInSql(kind: Kind) {
   await withFixture(kind, async (runner) => {
-    const config = SUMMARY_SCOPES[kind];
     // With a cap of 1, a filter evaluated in memory would report the cap: this one runs in SQL.
-    const blank = await budgetSummary.summary(config, engineDeps(1), { ...ALL, filters: filters({ owner_it_id: { filterType: 'text', type: 'blank' } }) }, runner.manager);
+    const blank = await engineSummary(kind, 1, { ...ALL, filters: filters({ owner_it_id: { filterType: 'text', type: 'blank' } }) }, runner.manager);
     assert.equal(blank.capped, undefined, `${kind}: a blank filter on owner_it_id runs in SQL`);
     assert.equal(blank.total, 5);
-    const notBlank = await budgetSummary.summary(config, engineDeps(1), { ...ALL, filters: filters({ owner_it_id: { filterType: 'text', type: 'notBlank' } }) }, runner.manager);
+    const notBlank = await engineSummary(kind, 1, { ...ALL, filters: filters({ owner_it_id: { filterType: 'text', type: 'notBlank' } }) }, runner.manager);
     assert.equal(notBlank.capped, undefined);
     assert.equal(notBlank.total, 0, `${kind}: no line has an IT owner`);
   });
@@ -333,7 +364,7 @@ async function testStatusSortsTheSameEverywhere(kind: Kind) {
     const statuses = (page: any) => page.items.map((row: any) => row.status);
     const expected = ['enabled', 'enabled', 'enabled', 'disabled', 'disabled'];
     // In SQL (no search): the enum order, enabled first.
-    const inSql = await budgetSummary.summary(SUMMARY_SCOPES[kind], engineDeps(1), { ...ALL, sort: 'status:ASC' }, runner.manager);
+    const inSql = await engineSummary(kind, 1, { ...ALL, sort: 'status:ASC' }, runner.manager);
     assert.equal(inSql.capped, undefined, `${kind}: the status sort runs in SQL`);
     assert.deepEqual(statuses(inSql), expected, `${kind}: status ascending, in SQL`);
     // In memory (every name contains "e"): the same order.
@@ -511,7 +542,6 @@ async function seedCostCenters(runner: QueryRunner, tenantId: string, kind: Kind
 async function testCostCenterFields(kind: Kind) {
   await withFixture(kind, async (runner, { tenantId, ids }, svc) => {
     const opts = { manager: runner.manager };
-    const config = SUMMARY_SCOPES[kind];
     const { it200 } = await seedCostCenters(runner, tenantId, kind, ids);
 
     const { items } = await svc.summary({ ...ALL, limit: 100 }, opts);
@@ -541,10 +571,10 @@ async function testCostCenterFields(kind: Kind) {
     assert.deepEqual(byGroup.items.map((row: any) => row.id), [ids.alpha], `${kind}: a group through the path`);
 
     // With a cap of 1, a filter or a sort evaluated in memory would report the cap: these run in SQL.
-    const build = await budgetSummary.summary(config, engineDeps(1), { ...ALL, filters: filters({ run_build: { filterType: 'set', values: ['build'] } }) }, runner.manager);
+    const build = await engineSummary(kind, 1, { ...ALL, filters: filters({ run_build: { filterType: 'set', values: ['build'] } }) }, runner.manager);
     assert.equal(build.capped, undefined, `${kind}: the run or build filter runs in SQL`);
     assert.deepEqual(build.items.map((row: any) => row.id), [ids.bravo]);
-    const blankRunBuild = await budgetSummary.summary(config, engineDeps(1), { ...ALL, filters: filters({ run_build: { filterType: 'set', values: [null] } }) }, runner.manager);
+    const blankRunBuild = await engineSummary(kind, 1, { ...ALL, filters: filters({ run_build: { filterType: 'set', values: [null] } }) }, runner.manager);
     assert.equal(blankRunBuild.capped, undefined);
     assert.equal(blankRunBuild.total, 3, `${kind}: blank run or build`);
 
@@ -562,14 +592,14 @@ async function testCostCenterFields(kind: Kind) {
     assert.deepEqual(labels(descending), [null, null, null, 'LG-10 · Logistics IT', 'IT-200 · Business apps'], `${kind}: label descending`);
 
     const runBuilds = (page: any) => page.items.map((row: any) => row.run_build);
-    const inSql = await budgetSummary.summary(config, engineDeps(1), { ...ALL, sort: 'run_build:ASC' }, runner.manager);
+    const inSql = await engineSummary(kind, 1, { ...ALL, sort: 'run_build:ASC' }, runner.manager);
     assert.equal(inSql.capped, undefined, `${kind}: the run or build sort runs in SQL`);
     assert.deepEqual(runBuilds(inSql), ['run', 'build', null, null, null]);
     const inMemory = await svc.summary({ ...ALL, sort: 'run_build:ASC', q: 'e' }, opts);
     assert.deepEqual(runBuilds(inMemory), ['run', 'build', null, null, null], `${kind}: the same order in memory`);
     const down = await svc.summary({ ...ALL, sort: 'run_build:DESC', q: 'e' }, opts);
     assert.deepEqual(runBuilds(down), [null, null, null, 'build', 'run'], `${kind}: run or build descending`);
-    const downSql = await budgetSummary.summary(config, engineDeps(1), { ...ALL, sort: 'run_build:DESC' }, runner.manager);
+    const downSql = await engineSummary(kind, 1, { ...ALL, sort: 'run_build:DESC' }, runner.manager);
     assert.deepEqual(runBuilds(downSql), [null, null, null, 'build', 'run'], `${kind}: run or build descending, in SQL`);
   });
 }
@@ -682,7 +712,6 @@ async function seedAnalytics(runner: QueryRunner, tenantId: string, kind: Kind, 
 async function testAnalyticsDimensions(kind: Kind) {
   await withFixture(kind, async (runner, { tenantId, ids }, svc) => {
     const opts = { manager: runner.manager };
-    const config = SUMMARY_SCOPES[kind];
     const a = await seedAnalytics(runner, tenantId, kind, ids);
     const natureKey = `analytics_${a.nature}`;
     const defaultKey = `analytics_${a.defaultAxis}`;
@@ -728,8 +757,9 @@ async function testAnalyticsDimensions(kind: Kind) {
     assert.deepEqual(natureOf(descending), [null, null, null, 'Subscriptions', 'Maintenance'], `${kind}: sort descending on a dimension`);
 
     // The legacy column left the SQL columns: a filter on the default dimension runs in memory on the links.
-    const byIdCapped = await budgetSummary.summary(config, engineDeps(1), { ...ALL, filters: filters({ analytics_category_id: { filterType: 'set', values: [a.licences] } }) }, runner.manager);
-    assert.equal(byIdCapped.capped, true, `${kind}: the default dimension filter runs in memory`);
+    // CAPEX (in memory): the filter on the default dimension cannot run in SQL, so the cap shows. OPEX reads the links in SQL.
+    const byIdCapped = await engineSummary(kind, 1, { ...ALL, filters: filters({ analytics_category_id: { filterType: 'set', values: [a.licences] } }) }, runner.manager);
+    assert.equal(byIdCapped.capped, kind === 'capex' ? true : undefined, `${kind}: where the default dimension filter runs`);
     const byId = await svc.summary({ ...ALL, filters: filters({ analytics_category_id: { filterType: 'set', values: [a.licences] } }) }, opts);
     assert.deepEqual(idsOf(byId), [ids.alpha], `${kind}: filtered on the link, not on the stale column`);
     const blank = await svc.summary({ ...ALL, filters: filters({ analytics_category_id: { filterType: 'text', type: 'blank' } }) }, opts);
@@ -885,7 +915,7 @@ void runSpecs('budget-summary.integration.spec', [
     [`lifecycle window (${kind})`, () => testLifecycleWindow(kind)],
     [`explicit status wins over all (${kind})`, () => testExplicitStatusWinsOverAll(kind)],
     [`money is exact (${kind})`, () => testMoneyIsExact(kind)],
-    [`cap is reported (${kind})`, () => testCapIsReported(kind)],
+    ...(kind === 'capex' ? [[`cap is reported (${kind})`, () => testCapIsReported(kind)] as [string, () => Promise<void>]] : []),
     [`blank on any column runs in SQL (${kind})`, () => testBlankOnAnyColumnRunsInSql(kind)],
     [`status sorts the same everywhere (${kind})`, () => testStatusSortsTheSameEverywhere(kind)],
     [`text filter on a date (${kind})`, () => testTextFilterOnADate(kind)],
@@ -896,6 +926,7 @@ void runSpecs('budget-summary.integration.spec', [
     [`analytics dimensions (${kind})`, () => testAnalyticsDimensions(kind)],
     [`FTE fields and totals (${kind})`, () => testFteFields(kind)],
   ]),
+  ['OPEX engine reads every line', testEngineReadsEveryLine],
   ['AI: a capped list is truncated', testAiMarksACappedListTruncated],
   ['AI: CAPEX amount filter', testAiCapexAmountFilter],
   ['AI: CAPEX detail', testAiCapexDetail],
