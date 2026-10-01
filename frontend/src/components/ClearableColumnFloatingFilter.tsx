@@ -31,6 +31,8 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
   const activeTextTypeRef = useRef<string>(defaultTextType);
 
   const [value, setValue] = useState('');
+  const valueRef = useRef('');
+  valueRef.current = value;
   const [hasValue, setHasValue] = useState(false);
   // The typed text not applied yet, and its timer.
   const pendingRef = useRef<string | null>(null);
@@ -82,28 +84,41 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
 
   useEffect(() => cancelPending, [cancelPending]);
 
-  useImperativeHandle(ref, () => ({
-    onParentModelChanged(model: TextFilterModel | null) {
-      // Text typed but not applied yet is newer than the grid's model: keep it in the box.
-      if (pendingRef.current != null) return;
-      if (!model) {
-        activeTextTypeRef.current = defaultTextType;
-        setValue('');
-        setHasValue(false);
-        return;
-      }
+  // Shows the column's model: set at the start (a link, the list context), from outside (Reset,
+  // another view) or handed back after this box applied its own text.
+  const followModel = useCallback((model: TextFilterModel | null | undefined) => {
+    // Text typed but not applied yet is newer than the grid's model: keep it in the box.
+    if (pendingRef.current != null) return;
+    if (!model) {
+      activeTextTypeRef.current = defaultTextType;
+      setValue('');
+      setHasValue(false);
+      return;
+    }
 
-      const nextValue = model.filter ?? '';
-      activeTextTypeRef.current = typeof model.type === 'string' ? model.type : defaultTextType;
-      if (nextValue !== '') {
-        setValue(String(nextValue));
-        setHasValue(true);
-      } else {
-        setValue('');
-        setHasValue(false);
-      }
+    const nextValue = model.filter == null ? '' : String(model.filter);
+    activeTextTypeRef.current = typeof model.type === 'string' ? model.type : defaultTextType;
+    // The box's own text, applied trimmed, keeps its spaces while the user goes on typing.
+    if (nextValue !== '' && nextValue === valueRef.current.trim()) return;
+    setValue(nextValue);
+    setHasValue(nextValue !== '');
+  }, [defaultTextType]);
+
+  useImperativeHandle(ref, () => ({
+    // Legacy (non-reactive) floating filters.
+    onParentModelChanged(model: TextFilterModel | null) {
+      followModel(model);
     },
   }));
+
+  // AG Grid 32 runs this component as a reactive floating filter: it passes `onModelChange` and the
+  // column's model as the `model` prop (left out when the column has no filter) and never calls
+  // onParentModelChanged.
+  const reactive = typeof (props as { onModelChange?: unknown }).onModelChange === 'function';
+  const parentModel = (props as { model?: TextFilterModel | null }).model;
+  useEffect(() => {
+    if (reactive) followModel(parentModel ?? null);
+  }, [reactive, parentModel, followModel]);
 
   const handleInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const next = event.target.value ?? '';
@@ -162,6 +177,8 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
       </div>
       <IconButton
         size="small"
+        // Keeps the focus in the box: leaving it would apply the typed text first, then the clear.
+        onMouseDown={(event) => event.preventDefault()}
         onClick={handleClear}
         aria-label={t('filters.clearFilter')}
         sx={{

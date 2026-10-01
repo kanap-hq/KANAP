@@ -70,6 +70,8 @@
     "blank": "(Vacío)",
     "selectedCount": "{{count}} seleccionados",
     "selectedCount_one": "{{count}} seleccionado",
+    "valueCount": "{{formatted}} valores",
+    "valueCount_one": "{{formatted}} valor",
     "clearFilter": "Borrar filtro",
     "columnPlaceholder": "Filtrar…",
     "filterColumn": "Filtrar {{column}}"

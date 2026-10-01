@@ -6,15 +6,22 @@ import ClearableColumnFloatingFilter, { TEXT_FILTER_APPLY_DELAY_MS } from './Cle
 
 const COL = 'name';
 
-function renderBox() {
-  let model: Record<string, any> = {};
+/**
+ * The box as AG Grid 32 runs it (reactive): the column's model as the `model` prop, handed back
+ * after every setFilterModel, left out when the column has no filter.
+ */
+function renderBox(initial?: Record<string, any>) {
+  let model: Record<string, any> = initial ?? {};
   const api = {
     getFilterModel: vi.fn(() => model),
-    setFilterModel: vi.fn((next: Record<string, any>) => { model = next; }),
+    setFilterModel: vi.fn((next: Record<string, any>) => { model = next; rerender(); }),
   };
   const column = { getColId: () => COL, getColDef: () => ({ field: COL, headerName: 'Name', filterParams: {} }) };
-  render(<ClearableColumnFloatingFilter {...({ api, column } as any)} />);
-  return { api, box: screen.getByRole('textbox'), applied: () => model[COL] };
+  const ui = () => <ClearableColumnFloatingFilter {...({ api, column, model: model[COL], onModelChange: vi.fn() } as any)} />;
+  const view = render(ui());
+  function rerender() { view.rerender(ui()); }
+  const setFromOutside = (next: Record<string, any>) => { model = next; act(() => rerender()); };
+  return { api, box: screen.getByRole('textbox') as HTMLInputElement, applied: () => model[COL], setFromOutside };
 }
 
 const type = (box: HTMLElement, value: string) => fireEvent.change(box, { target: { value } });
@@ -61,5 +68,36 @@ describe('ClearableColumnFloatingFilter', () => {
     type(box, 'abc');
     act(() => { vi.advanceTimersByTime(TEXT_FILTER_APPLY_DELAY_MS); });
     expect(api.setFilterModel).toHaveBeenCalledTimes(1);
+  });
+
+  it('the cross right after typing changes nothing: the typed text is never applied', () => {
+    const { api, box } = renderBox();
+    type(box, 'abc');
+    const cross = screen.getByRole('button', { name: /clear filter/i });
+    // Default prevented: the box keeps the focus and is not left (no apply on blur).
+    expect(fireEvent.mouseDown(cross)).toBe(false);
+    fireEvent.click(cross);
+    act(() => { vi.advanceTimersByTime(TEXT_FILTER_APPLY_DELAY_MS); });
+    expect(api.setFilterModel).not.toHaveBeenCalled();
+    expect(box).toHaveValue('');
+  });
+
+  it('shows the model it starts with and a model set from outside', () => {
+    const { box, setFromOutside } = renderBox({ [COL]: { filterType: 'text', type: 'contains', filter: 'abc' } });
+    expect(box).toHaveValue('abc');
+    setFromOutside({ [COL]: { filterType: 'text', type: 'contains', filter: 'xyz' } });
+    expect(box).toHaveValue('xyz');
+    setFromOutside({});
+    expect(box).toHaveValue('');
+  });
+
+  it('keeps text typed and not applied yet when the model changes from outside', () => {
+    const { box, setFromOutside, applied } = renderBox({ [COL]: { filterType: 'text', type: 'contains', filter: 'abc' } });
+    type(box, 'abcd');
+    setFromOutside({ [COL]: { filterType: 'text', type: 'contains', filter: 'abc' }, other: { filterType: 'text', type: 'contains', filter: 'x' } });
+    expect(box).toHaveValue('abcd');
+    act(() => { vi.advanceTimersByTime(TEXT_FILTER_APPLY_DELAY_MS); });
+    expect(applied()).toMatchObject({ filter: 'abcd' });
+    expect(box).toHaveValue('abcd');
   });
 });

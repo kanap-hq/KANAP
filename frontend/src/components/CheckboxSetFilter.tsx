@@ -61,7 +61,8 @@ function canonical(value: unknown): unknown {
 
 /**
  * Query key of a column's values: the list endpoint, the column and the list state without the
- * column's own filter (its values do not depend on it).
+ * column's own filter (its values do not depend on it). The grid's refresh key is part of it: after
+ * a delete or an import, the next opening asks again.
  */
 function valuesQueryKey(context: any, colId: string, language: string | undefined) {
   const state = context?.getQueryState?.() ?? {};
@@ -70,6 +71,7 @@ function valuesQueryKey(context: any, colId: string, language: string | undefine
   return [
     'grid-filter-values',
     state.endpoint ?? null,
+    state.refreshKey ?? null,
     colId,
     language ?? null,
     JSON.stringify(canonical({ q: state.q || '', filters, extraParams: state.extraParams || {}, statusScope: state.statusScope ?? null })),
@@ -180,6 +182,8 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     enabled: open && !!props.getValues,
     staleTime: VALUES_STALE_MS,
     placeholderData: keepPreviousData,
+    // A refused request (431, 403) shows at once instead of after the retries.
+    retry: false,
   });
   const incoming = props.getValues ? valuesQuery.data : props.values;
   const options = useMemo(() => normalizeOptions(incoming ?? []), [incoming, normalizeOptions]);
@@ -309,17 +313,14 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   }, [setSelection, setSnapshot, updateFilterModel]);
 
   // Records an explicit choice made while a search session is open: a checkbox click is applied
-  // after the quiet delay, All and Clear at once.
+  // after the quiet delay, All and Clear at once while a search is typed. With the search box
+  // emptied, every choice waits for the quiet delay, like the clicks outside a search.
   const commitSnapshot = useCallback((nextSnapshot: Set<string | null>, opts?: { immediate?: boolean }) => {
     cancelPendingApply();
     snapshotImplicitAllRef.current = false;
     const trimmed = search.trim().toLowerCase();
     if (!trimmed) {
       setSnapshot(null);
-      if (opts?.immediate) {
-        setSelection(nextSnapshot);
-        return;
-      }
       setPending(nextSnapshot);
       scheduleApply(() => {
         setPending(null);
@@ -390,18 +391,22 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
       commitSnapshot(next, { immediate: true });
       return;
     }
-    cancelPendingApply();
+    // Outside a search, All waits for the quiet delay like a click: "All, then untick one" reloads once.
     const next = new Set<string | null>();
     mergedOptions.forEach((opt) => next.add(opt.value ?? null));
-    if (treatAllAsUnfiltered) {
-      implicitAllRef.current = true;
-      setSelection(next, { skipModelUpdate: true });
-      updateFilterModel(null);
-      return;
-    }
-    implicitAllRef.current = false;
-    setSelection(next);
-  }, [mergedOptions, filteredOptions, setSelection, updateFilterModel, treatAllAsUnfiltered, commitSnapshot, cancelPendingApply]);
+    setPending(next);
+    scheduleApply(() => {
+      setPending(null);
+      if (treatAllAsUnfiltered) {
+        implicitAllRef.current = true;
+        setSelection(next, { skipModelUpdate: true });
+        updateFilterModel(null);
+        return;
+      }
+      implicitAllRef.current = false;
+      setSelection(next);
+    });
+  }, [mergedOptions, filteredOptions, setSelection, updateFilterModel, treatAllAsUnfiltered, commitSnapshot, setPending, scheduleApply]);
 
   const handleClear = useCallback(() => {
     if (snapshotRef.current) {
@@ -410,10 +415,15 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
       commitSnapshot(next, { immediate: true });
       return;
     }
-    cancelPendingApply();
-    implicitAllRef.current = false;
-    setSelection(new Set());
-  }, [filteredOptions, setSelection, commitSnapshot, cancelPendingApply]);
+    // Outside a search, Clear waits for the quiet delay like a click: "Clear, then tick one" reloads once.
+    const next = new Set<string | null>();
+    setPending(next);
+    scheduleApply(() => {
+      setPending(null);
+      implicitAllRef.current = false;
+      setSelection(next);
+    });
+  }, [filteredOptions, setSelection, commitSnapshot, setPending, scheduleApply]);
 
   useEffect(() => {
     const api = props.api;
@@ -439,7 +449,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
 
   // A model set from outside (list context restore, Reset, the floating filter's clear, another
   // column) ends the search session and drops clicks not applied yet; this filter's own model, handed
-  // back by the grid, changes nothing.
+  // back by the grid, changes nothing. No model (null) means every value: all boxes ticked.
   const applyModel = useCallback((model: SetFilterModel | null, own: boolean) => {
     if (!own) {
       cancelPendingApply();
@@ -465,16 +475,19 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   const applyModelRef = useRef(applyModel);
   applyModelRef.current = applyModel;
 
-  // AG Grid 32 runs this component as a reactive filter: the column's model arrives as the `model`
-  // prop (undefined outside the grid, where the imperative `setModel` below is used).
+  // AG Grid 32 runs this component as a reactive filter: it passes `onModelChange`, and the column's
+  // model as the `model` prop, left out (undefined) when the column has no filter, after the floating
+  // filter's clear or a reset. Without `onModelChange` (legacy mode) the imperative `setModel` below
+  // is used instead.
+  const reactive = typeof (props as { onModelChange?: unknown }).onModelChange === 'function';
   const reactiveModel = (props as { model?: SetFilterModel | null }).model;
   useEffect(() => {
-    if (reactiveModel === undefined) return;
+    if (!reactive) return;
     const key = JSON.stringify(reactiveModel ?? null);
     if (key === lastAppliedRef.current) return;
     lastAppliedRef.current = key;
-    applyModelRef.current(reactiveModel, false);
-  }, [reactiveModel]);
+    applyModelRef.current(reactiveModel ?? null, false);
+  }, [reactive, reactiveModel]);
 
   // The values load when the filter opens (see `open` above). AG Grid announces an opening with
   // afterGuiAttached, except the first one when the opening itself creates the filter: it calls
@@ -539,9 +552,49 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   const lastRow = windowed ? firstRow + OPTION_WINDOW : rowCount;
   const shownSelection = snapshot ?? pending ?? selectedValues;
   const showSearch = searchable || search !== '' || mergedOptions.length >= SEARCH_MIN_OPTIONS;
+  // The width follows the column's values, not the search: the popup does not jump while typing.
+  const wide = mergedOptions.length > OPTION_WINDOW;
+
+  // Keyboard: Tab and Shift+Tab go from row to row, also to a row outside the drawn window. The
+  // list scrolls that row into view and the focus moves to it once it is drawn.
+  const focusRowRef = useRef<number | null>(null);
+  const focusDrawnRow = useCallback(() => {
+    const row = focusRowRef.current;
+    if (row == null) return;
+    const input = listRef.current?.querySelector<HTMLInputElement>(`input[data-option-index="${row}"]`);
+    if (!input) return;
+    focusRowRef.current = null;
+    input.focus();
+  }, []);
+  useEffect(() => { focusDrawnRow(); });
+  const handleListKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab' || !windowed) return;
+    const attr = (event.target as HTMLElement).getAttribute?.('data-option-index');
+    if (attr == null) return;
+    const row = Number(attr) + (event.shiftKey ? -1 : 1);
+    // Past the first or the last value, the focus leaves the list as usual.
+    if (row < 0 || row >= rowCount) return;
+    event.preventDefault();
+    const list = listRef.current;
+    if (list) {
+      const top = row * OPTION_ROW_HEIGHT;
+      const viewHeight = OPTION_VISIBLE_ROWS * OPTION_ROW_HEIGHT;
+      let next = list.scrollTop;
+      if (top < next) next = top;
+      else if (top + OPTION_ROW_HEIGHT > next + viewHeight) next = top + OPTION_ROW_HEIGHT - viewHeight;
+      list.scrollTop = next;
+      setScrollTop(next);
+    }
+    focusRowRef.current = row;
+    focusDrawnRow();
+  }, [windowed, rowCount, focusDrawnRow]);
+  const countLabel = t('filters.valueCount', {
+    count: rowCount,
+    formatted: rowCount.toLocaleString(i18n?.language),
+  });
 
   return (
-    <Box ref={rootRef} sx={{ p: 1, minWidth: 220, maxWidth: 360, width: windowed ? 300 : undefined }}>
+    <Box ref={rootRef} sx={{ p: 1, minWidth: 220, maxWidth: 360, width: wide ? 300 : undefined }}>
       {showSearch && (
         <TextField
           size="small"
@@ -559,42 +612,58 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
         </Stack>
       )}
       {!loading && rowCount === 0 && (
-        <Typography sx={{ fontSize: 13, color: 'text.secondary', py: 0.5 }}>{t('filters.noOptions')}</Typography>
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', py: 0.5 }}>{t('filters.noOptions')}</Typography>
       )}
       {!loading && rowCount > 0 && (
         <Box
           ref={listRef}
           data-testid="set-filter-options"
           onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
+          onKeyDown={handleListKeyDown}
           sx={{ height: Math.min(rowCount, OPTION_VISIBLE_ROWS) * OPTION_ROW_HEIGHT, overflowY: 'auto', pr: 0.5 }}
         >
-          <Box sx={windowed ? { position: 'relative', height: rowCount * OPTION_ROW_HEIGHT } : undefined}>
+          {/* A list of every value, for screen readers: its size and each row's place in it, also
+              for the rows not drawn. */}
+          <Box
+            role="list"
+            aria-label={countLabel}
+            sx={windowed ? { position: 'relative', height: rowCount * OPTION_ROW_HEIGHT } : undefined}
+          >
             {filteredOptions.slice(firstRow, lastRow).map((opt, index) => {
               const value = opt.value ?? null;
               const label = buildLabel(opt);
+              const row = firstRow + index;
               return (
-                <FormControlLabel
+                <Box
                   key={`${String(value)}-${label}`}
-                  control={(
-                    <Checkbox
-                      size="small"
-                      checked={shownSelection.has(value)}
-                      onChange={() => toggleValue(value)}
-                      sx={{ p: 0.5 }}
-                    />
-                  )}
-                  label={<Typography noWrap title={label} sx={{ fontSize: 13 }}>{label}</Typography>}
+                  role="listitem"
+                  aria-setsize={rowCount}
+                  aria-posinset={row + 1}
                   sx={{
-                    ...(windowed
-                      ? { position: 'absolute', top: (firstRow + index) * OPTION_ROW_HEIGHT, left: 0, right: 0 }
-                      : {}),
+                    ...(windowed ? { position: 'absolute', top: row * OPTION_ROW_HEIGHT, left: 0, right: 0 } : {}),
                     height: OPTION_ROW_HEIGHT,
-                    m: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    '& .MuiFormControlLabel-label': { minWidth: 0 },
                   }}
-                />
+                >
+                  <FormControlLabel
+                    control={(
+                      <Checkbox
+                        size="small"
+                        checked={shownSelection.has(value)}
+                        onChange={() => toggleValue(value)}
+                        inputProps={{ 'data-option-index': row } as React.InputHTMLAttributes<HTMLInputElement>}
+                        sx={{ p: 0.5 }}
+                      />
+                    )}
+                    label={<Typography noWrap title={label} sx={{ fontSize: 13 }}>{label}</Typography>}
+                    sx={{
+                      height: '100%',
+                      m: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      '& .MuiFormControlLabel-label': { minWidth: 0 },
+                    }}
+                  />
+                </Box>
               );
             })}
           </Box>

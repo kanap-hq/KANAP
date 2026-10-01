@@ -70,6 +70,8 @@
     "blank": "(Vide)",
     "selectedCount": "{{count}} sélectionnés",
     "selectedCount_one": "{{count}} sélectionné",
+    "valueCount": "{{formatted}} valeurs",
+    "valueCount_one": "{{formatted}} valeur",
     "clearFilter": "Effacer le filtre",
     "columnPlaceholder": "Filtrer…",
     "filterColumn": "Filtrer {{column}}"

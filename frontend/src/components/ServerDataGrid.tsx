@@ -572,6 +572,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   // Keep endpoint current inside datasource without recreating it
   const endpointRef = useRef<string>(endpoint);
   useEffect(() => { endpointRef.current = endpoint; }, [endpoint]);
+  const refreshKeyRef = useRef(refreshKey);
+  useEffect(() => { refreshKeyRef.current = refreshKey; }, [refreshKey]);
 
   // Block requests in flight, with the sort and filter each was asked with, and the query generation
   // they belong to. A sort or filter change aborts the requests asked with another sort or filter
@@ -840,8 +842,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       filters: filterModelRef.current || {},
       extraParams: extraParamsRef.current || {},
       statusScope: statusScopeRef.current,
-      // Keys the set filters' value cache per list.
+      // Keys the set filters' value cache per list, and again after a delete or an import.
       endpoint: endpointRef.current,
+      refreshKey: refreshKeyRef.current ?? null,
     }),
   }), []);
 
