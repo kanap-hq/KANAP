@@ -18,6 +18,7 @@ import { formatAllocationMethodLabel } from './allocation-utils';
 import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center-tree.util';
 import { analyticsFieldKey, parseAnalyticsFieldKey } from '../analytics/analytics-axes.util';
 import { Decimal } from '../common/decimal';
+import { naturalCompare } from '../common/list-engine/sql-fragments';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -234,6 +235,18 @@ export interface BuildRowsOptions {
   includeLatestTask?: boolean;
   includeRecipientDetails?: boolean;
   includeNextYearAllocation?: boolean;
+  /**
+   * `full` (default): every key, as the AI and the API read them. `grid`: the
+   * keys the list grid shows (`y<year>` slots only for years outside the fixed
+   * window, `fte_*` keys only for `fteKeys`, the latest task without its
+   * description, no recipient, warning or next-year label), and no allocation
+   * computation when `allocationLabels` gives each line's label.
+   */
+  shape?: 'full' | 'grid';
+  /** Grid shape: the FTE keys to emit (`fte_yBudget`, `fte_y2028Revision`). */
+  fteKeys?: readonly string[];
+  /** Grid shape: the allocation method label of each item, read by the list statement. */
+  allocationLabels?: ReadonlyMap<string, string>;
 }
 
 type Cents = Record<SlotMetric, bigint>;
@@ -354,7 +367,8 @@ function displayName(user?: User | null): string {
   return name || (user as any).email || '';
 }
 
-const byName = (a: string, b: string) => a.localeCompare(b);
+// The engine's text order (ICU, then code points), so the joined names equal the list statement's.
+const byName = (a: string, b: string) => naturalCompare(a, b);
 const joinNames = (names: string[]) => (names.length ? names.join(', ') : null);
 
 /**
@@ -607,7 +621,10 @@ export async function buildBudgetSummaryRows(
   const Y = options.currentYear;
   const years = Array.from(new Set(options.years)).sort((a, b) => a - b);
   const itemIds = items.map((item) => item.id);
-  const totals = await loadVersionTotals(config, deps, manager, tenantId, items, years, { reporting: true, fte: true });
+  const grid = options.shape === 'grid';
+  const gridFteKeys = new Set(options.fteKeys ?? []);
+  const labelsFromList = grid ? options.allocationLabels : undefined;
+  const totals = await loadVersionTotals(config, deps, manager, tenantId, items, years, { reporting: true, fte: !grid || gridFteKeys.size > 0 });
 
   const versionsOfYear = (year: number) => Array.from(totals.versionsByItemYear.values())
     .map((perYear) => perYear.get(year))
@@ -618,8 +635,8 @@ export async function buildBudgetSummaryRows(
       ? deps.allocationCalculator.computeForVersions(versions, { manager, tenantId, suppressErrors: true })
       : new Map<string, AllocationLike>();
   };
-  const allocationForY = await allocate(Y);
-  const allocationForNext = options.includeNextYearAllocation ? await allocate(Y + 1) : new Map<string, AllocationLike>();
+  const allocationForY = labelsFromList ? new Map<string, AllocationLike>() : await allocate(Y);
+  const allocationForNext = options.includeNextYearAllocation && !grid ? await allocate(Y + 1) : new Map<string, AllocationLike>();
 
   const [suppliers, accounts, owners, payingCompanies] = await Promise.all([
     findByIds<Supplier>(manager, Supplier, tenantId, distinct(items.map((i) => i.supplier_id))),
@@ -640,7 +657,7 @@ export async function buildBudgetSummaryRows(
      FROM ${config.contractLink.table} l
      JOIN contracts c ON c.id = l.contract_id AND c.tenant_id = l.tenant_id
      WHERE l.tenant_id = $1 AND l.${config.contractLink.itemColumn} = ANY($2::uuid[])
-     ORDER BY l.${config.contractLink.itemColumn}, l.created_at DESC`,
+     ORDER BY l.${config.contractLink.itemColumn}, l.created_at DESC, l.id DESC`,
     [tenantId, itemIds],
   );
   const contractByItem = new Map(contracts.map((row) => [row.item_id, row]));
@@ -678,15 +695,18 @@ export async function buildBudgetSummaryRows(
          AND related_object_type = $2
          AND related_object_id = ANY($3::uuid[])
          AND status = ANY($4)
-       ORDER BY related_object_id, created_at DESC`,
+       ORDER BY related_object_id, created_at DESC, id DESC`,
       [tenantId, config.taskObjectType, itemIds, ACTIVE_TASK_STATUSES],
     );
-    for (const { related_object_id: itemId, ...task } of tasks) latestTaskByItem.set(itemId, task);
+    for (const { related_object_id: itemId, ...task } of tasks) {
+      if (grid) delete (task as any).description;
+      latestTaskByItem.set(itemId, task as any);
+    }
   }
 
   let companyById = new Map<string, Company>();
   let departmentById = new Map<string, Department>();
-  if (options.includeRecipientDetails && allocationForY.size) {
+  if (options.includeRecipientDetails && !grid && allocationForY.size) {
     const shares = Array.from(allocationForY.values()).flatMap((entry) => entry.shares ?? []);
     const [companies, departments] = await Promise.all([
       findByIds<Company>(manager, Company, tenantId, distinct(shares.map((s) => s.company_id))),
@@ -709,18 +729,24 @@ export async function buildBudgetSummaryRows(
       : { company_id: top.company_id, department_id: null, pct, label: `${company.name} (${pct.toFixed(2)}%)` };
   };
 
+  const fixedYears = new Set(FIXED_SLOTS.map((slot) => Y + slot.offset));
   return items.map((item) => {
     const perYear = totals.versionsByItemYear.get(item.id);
     const shown = (year: number) => versionWithinValidity(perYear, year, item.disabled_at);
     const versions: Record<string, SummarySlot> = {};
     const fte: Record<string, number | null> = {};
-    const slotYears: Array<[string, number]> = [...FIXED_SLOTS.map((slot): [string, number] => [slot.key, Y + slot.offset]), ...years.map((year): [string, number] => [`y${year}`, year])];
+    const slotYears: Array<[string, number]> = [
+      ...FIXED_SLOTS.map((slot): [string, number] => [slot.key, Y + slot.offset]),
+      ...years.filter((year) => !grid || !fixedYears.has(year)).map((year): [string, number] => [`y${year}`, year]),
+    ];
     for (const [slotKey, year] of slotYears) {
       const version = shown(year);
       versions[slotKey] = toSlot(version, totals);
       for (const column of SUMMARY_COLUMNS) {
+        const key = fteFieldKey(`${slotKey}${column.suffix}`);
+        if (grid && !gridFteKeys.has(key)) continue;
         const value = versionFte(totals, version, column.measure);
-        fte[fteFieldKey(`${slotKey}${column.suffix}`)] = value == null ? null : Number(value);
+        fte[key] = value == null ? null : Number(value);
       }
     }
 
@@ -787,13 +813,19 @@ export async function buildBudgetSummaryRows(
       project_category_name: joinNames(projectLists.project_category_name),
       latest_task: options.includeLatestTask ? latestTaskByItem.get(item.id) ?? null : undefined,
       spread_mode_for_y: current ? (current.input_grain === 'annual' ? 'flat' : 'manual') : null,
-      allocation_method_label: formatAllocationMethodLabel(allocation?.resolvedMethod ?? current?.allocation_method ?? null),
+      allocation_method_label: labelsFromList
+        ? labelsFromList.get(item.id) ?? ''
+        : formatAllocationMethodLabel(allocation?.resolvedMethod ?? current?.allocation_method ?? null),
       allocation_warning: allocation?.error ?? null,
       versions,
       ...fte,
     };
-    if (options.includeRecipientDetails) row.main_recipient = mainRecipient(allocation);
-    if (options.includeNextYearAllocation) {
+    if (grid) {
+      delete (row as any).allocation_warning;
+    } else if (options.includeRecipientDetails) {
+      row.main_recipient = mainRecipient(allocation);
+    }
+    if (options.includeNextYearAllocation && !grid) {
       row.next_year_allocation_method_label = formatAllocationMethodLabel(nextAllocation?.resolvedMethod ?? next?.allocation_method ?? null);
     }
     projectNamesByRow.set(row, projectLists);
@@ -935,9 +967,16 @@ function rowPassesFilter(row: any, field: string, rawModel: any, config: Summary
 
   if (type === 'set' && Array.isArray(model.values)) {
     const rawValues: any[] = model.values;
-    if (rawValues.length === 0) return false;
     const values = rawValues.filter((v) => v !== null && v !== undefined && v !== '').map((v) => String(v));
     const hasNull = values.length < rawValues.length;
+    if (model.mode === 'exclude') {
+      // Every value but the listed ones (a value created later shows): a line linked to several
+      // projects stays while one of its names is not listed.
+      if (blank) return !hasNull;
+      if (PROJECT_LIST_FIELDS.includes(field)) return projectNames(row, field).some((name) => !values.includes(name));
+      return !values.includes(String(rowVal ?? ''));
+    }
+    if (rawValues.length === 0) return false;
     if (hasNull && blank) return true;
     // A line linked to several projects is kept when any one of its names is selected.
     const candidates = PROJECT_LIST_FIELDS.includes(field) ? [...projectNames(row, field), String(rowVal ?? '')] : [String(rowVal ?? '')];

@@ -111,6 +111,16 @@ export class FxRateService {
     const snapshotById = new Map(snapshots.map((entry) => [entry.id, entry]));
 
     const result = new Map<string, FxResolvedRate>();
+    // The latest live set depends on the year only: read it once per year, not once per currency and rate set.
+    const latestByYear = new Map<number, Promise<CurrencyRateSet | null>>();
+    const latestLiveSet = (fiscalYear: number) => {
+      let latest = latestByYear.get(fiscalYear);
+      if (!latest) {
+        latest = this.getLatestRateSet(tenantId, fiscalYear, settings.reportingCurrency, opts);
+        latestByYear.set(fiscalYear, latest);
+      }
+      return latest;
+    };
 
     for (const item of uniqueKeys.values()) {
       const upperSource = item.sourceCurrency.toUpperCase();
@@ -137,7 +147,7 @@ export class FxRateService {
       }
 
       // fallback to latest live set
-      rateSet = await this.getLatestRateSet(tenantId, item.fiscalYear, settings.reportingCurrency, opts);
+      rateSet = await latestLiveSet(item.fiscalYear);
       const resolved = rateSet
         ? this.resolveRateFromSet(rateSet, upperSource)
         : upperSource === settings.reportingCurrency.toUpperCase()
