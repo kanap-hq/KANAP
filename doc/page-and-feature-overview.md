@@ -83,7 +83,7 @@ Behavior
 | `/admin/billing` | `frontend/src/pages/admin/BillingCenter.tsx` | Subscription summary, seat usage, plan updates. | `billing` |
 | `/admin/auth` | `frontend/src/pages/admin/AdminAuthPage.tsx` | Tenant SSO settings: shows current Microsoft Entra connection, “Connect/Reconnect Microsoft Entra” (calls `POST /auth/entra/setup/start`), and “Test Microsoft sign-in” (hits `/auth/entra/login?redirectTo=/admin/auth`). | `users` (admin level) |
 | `/admin/branding` | `frontend/src/pages/admin/AdminBrandingPage.tsx` | Tenant branding workspace: logo upload/removal (with dark-mode visibility toggle), light/dark primary color inputs, color picker + presets, contrast warning, dirty-state save/discard, and one-click reset to defaults. Uses `/admin/branding/*` endpoints and refreshes tenant context without full page reload. Blocked on platform host. | `users` (admin level, tenant host only) |
-| `/admin/tenants` | `frontend/src/pages/admin/AdminTenantsPage.tsx` | Platform host console: tenant list, freeze/unfreeze, plan updates, synchronous deletion. | Platform admin only (host guard). |
+| `/admin/tenants` | `frontend/src/pages/admin/AdminTenantsPage.tsx` | Platform host console: tenant list, freeze/unfreeze, plan updates (status and trial end included), mark as internal tenant, synchronous deletion. | Platform admin only (host guard). |
 | `/admin/ops-dashboard` | `frontend/src/pages/admin/OpsDashboardPage.tsx` | Ops monitoring dashboard: API traffic counters (1m/5m/15m windows), rate-limit (429) and auth pressure, DB connection/pool stats (pg_stat_activity + TypeORM pool), Node.js process metrics (memory, event loop lag, CPU), endpoint latency table (P50/P95/P99 by route group), and recent errors list. Polls every 15s, pauses when tab hidden. Backend: `GET /admin/ops/snapshot` aggregates in-memory request metrics store + cached DB snapshot (10s TTL). Multi-tenant only (cloud). | Platform admin only (host guard + `MultiTenantOnlyGuard`). |
 
 ### Public/Auth Pages
@@ -310,6 +310,7 @@ Platform admins operate through `AdminTenantsService` (`backend/src/admin/tenant
 - List/search tenants with aggregated stats (`TenantStatsService`) and billing snapshot (`BillingService`).
 - Freeze/unfreeze flips `TenantStatus` and records audit entries via `AuditService`.
 - Plan updates run inside `withTenant` to respect RLS while touching per-tenant subscriptions.
+- Mark as internal tenant (`markInternal`) turns a demonstration or test tenant into an active subscription with plan `Internal`, unlimited seats and no money flow, which also reactivates an expired trial. It is refused when the subscription is linked to Stripe. See "Internal tenants" in `architecture.md`.
 - Synchronous deletion (`deleteTenant`) validates confirmation slug, transitions status to `deleting`, purges tenant data across spend, contracts, CAPEX, RBAC, audit, accounting master data (including `chart_of_accounts` and `accounts`), and branding storage objects (tenant logo), then marks the record `deleted`. The tenant slug is cleared for reuse by assigning a unique `deleted-<slug>-<timestamp>` marker. Failures revert to `frozen` with an audit trail.
 
 ## Audit & Compliance

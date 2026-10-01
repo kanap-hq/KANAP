@@ -8,6 +8,13 @@ export const FREEZE_GRACE_DAYS = 14;
 export const HEALTHY_STATUSES = ['active', 'trialing'] as const;
 export const BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS = 100000;
 
+/**
+ * Plan name of an internal tenant (demonstration, test): active, unlimited seats,
+ * no Stripe subscription and no money flow. Set by a platform administrator through
+ * `POST /admin/tenants/:id/mark-internal`. Commercial indicators leave these tenants out.
+ */
+export const INTERNAL_PLAN_NAME = 'Internal';
+
 export interface PlanPrices {
   monthly: number; // EUR cents
   annual: number;  // EUR cents

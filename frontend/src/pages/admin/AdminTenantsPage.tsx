@@ -30,7 +30,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { getDotColor } from '../../utils/statusColors';
-import { StatusDot } from '../../components/design';
+import { KanapDialog, StatusDot } from '../../components/design';
 import DateEUField from '../../components/fields/DateEUField';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
@@ -43,6 +43,9 @@ import ForbiddenPage from '../ForbiddenPage';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  INTERNAL_PLAN_NAME,
+  SUBSCRIPTION_STATUSES,
+  SubscriptionStatus,
   TenantDetail,
   TenantSummary,
   TenantListResponse,
@@ -50,6 +53,7 @@ import {
   freezeTenant,
   getTenant,
   listTenants,
+  markTenantInternal,
   unfreezeTenant,
   updateTenantPlan,
 } from '../../services/adminTenants';
@@ -73,12 +77,18 @@ const STATUS_COLOR: Record<string, 'default' | 'success' | 'warning' | 'error' |
 
 type PlanDraft = {
   plan_name: string;
-  seat_limit: number;
+  /** Empty string means unlimited seats. */
+  seat_limit: string;
   active_seats: number;
   subscription_type: 'monthly' | 'annual';
   payment_mode: 'card' | 'bank_transfer';
   next_payment_at: string;
+  /** Empty string when the subscription has no status yet. */
+  status: SubscriptionStatus | '';
+  trial_end: string;
 };
+
+const toYmd = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
 
 export default function AdminTenantsPage() {
   const { claims } = useAuth();
@@ -138,11 +148,13 @@ export default function AdminTenantsPage() {
     }
     setPlanDraft({
       plan_name: plan.plan_name ?? '',
-      seat_limit: plan.seat_limit ?? 0,
+      seat_limit: plan.seat_limit == null ? '' : String(plan.seat_limit),
       active_seats: plan.active_seats ?? plan.seats_used ?? 0,
       subscription_type: plan.subscription_type ?? 'monthly',
       payment_mode: plan.payment_mode ?? 'card',
-      next_payment_at: plan.next_payment_at ? plan.next_payment_at.slice(0, 10) : '',
+      next_payment_at: toYmd(plan.next_payment_at),
+      status: (plan.status as SubscriptionStatus | null | undefined) ?? '',
+      trial_end: toYmd(plan.trial_end),
     });
   }, [effectiveDetail]);
 
@@ -185,21 +197,43 @@ export default function AdminTenantsPage() {
   });
 
   const planMutation = useMutation<TenantDetail, unknown, PlanDraft>({
-    mutationFn: (draft: PlanDraft) =>
-      updateTenantPlan(selectedId!, {
+    mutationFn: (draft: PlanDraft) => {
+      const current = effectiveDetail?.plan ?? null;
+      return updateTenantPlan(selectedId!, {
         plan_name: draft.plan_name,
-        seat_limit: Number(draft.seat_limit),
+        seat_limit: draft.seat_limit.trim() === '' ? null : Number(draft.seat_limit),
         active_seats: Number(draft.active_seats),
         subscription_type: draft.subscription_type,
         payment_mode: draft.payment_mode,
         next_payment_at: draft.next_payment_at ? new Date(draft.next_payment_at).toISOString() : null,
-      }),
+        // Status and trial end are sent only when edited, so saving other fields never rewrites them.
+        ...(draft.status && draft.status !== (current?.status ?? '') ? { status: draft.status } : {}),
+        ...(draft.trial_end !== toYmd(current?.trial_end)
+          ? { trial_end: draft.trial_end ? new Date(draft.trial_end).toISOString() : null }
+          : {}),
+      });
+    },
     onSuccess: (data: TenantDetail) => {
       setSelectedSummary(data);
       setSuccessMessage(t('tenants.messages.planUpdated'));
       invalidateTenants();
     },
     onError: (err: any) => setErrorMessage(getApiErrorMessage(err, t, t('tenants.messages.updatePlanFailed'))),
+  });
+
+  const [markInternalOpen, setMarkInternalOpen] = useState(false);
+  const markInternalMutation = useMutation<TenantDetail>({
+    mutationFn: () => markTenantInternal(selectedId!),
+    onSuccess: (data: TenantDetail) => {
+      setMarkInternalOpen(false);
+      setSelectedSummary(data);
+      setSuccessMessage(t('tenants.messages.markedInternal'));
+      invalidateTenants();
+    },
+    onError: (err: any) => {
+      setMarkInternalOpen(false);
+      setErrorMessage(getApiErrorMessage(err, t, t('tenants.messages.markInternalFailed')));
+    },
   });
 
   const deleteMutation = useMutation<{ tenant: TenantDetail; purgeReport: { table: string; deleted: number }[] }, unknown, { confirmSlug: string; reason?: string | null }>({
@@ -239,6 +273,12 @@ export default function AdminTenantsPage() {
 
   const canFreeze = effectiveDetail && 'status' in effectiveDetail && effectiveDetail.status === 'active';
   const canUnfreeze = effectiveDetail && 'status' in effectiveDetail && effectiveDetail.status === 'frozen';
+  const currentPlan = effectiveDetail?.plan ?? null;
+  const isSystemTenant = !!effectiveDetail?.is_system_tenant;
+  const isInternal = currentPlan?.plan_name === INTERNAL_PLAN_NAME;
+  const hasStripeSubscription = !!currentPlan?.stripe_subscription_id;
+  const isDeletedOrDeleting = isDeleted || effectiveDetail?.status === 'deleting';
+  const canMarkInternal = !!selectedId && !isSystemTenant && !isDeletedOrDeleting && !isInternal && !hasStripeSubscription;
   const confirmMatches = effectiveDetail && 'slug' in effectiveDetail
     ? deleteConfirm.trim() === effectiveDetail.slug
     : false;
@@ -345,7 +385,7 @@ const renderStatCard = (label: string, value: React.ReactNode) => (
                       <TableCell align="right">{tenant.stats.users.enabled}/{tenant.stats.users.total}</TableCell>
                       <TableCell align="right">
                         {tenant.plan ? (
-                          <Typography variant="body2">{tenant.plan.seats_used}/{tenant.plan.seat_limit}</Typography>
+                          <Typography variant="body2">{tenant.plan.seats_used}/{tenant.plan.seat_limit ?? '∞'}</Typography>
                         ) : (
                           <Typography variant="body2" color="text.secondary">{t('tenants.shared.none')}</Typography>
                         )}
@@ -488,7 +528,23 @@ const renderStatCard = (label: string, value: React.ReactNode) => (
               <Divider />
 
               <Box>
-                <Typography variant="subtitle1" sx={{ mb: 1 }}>{t('tenants.sections.plan')}</Typography>
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle1">{t('tenants.sections.plan')}</Typography>
+                  {canMarkInternal ? (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setMarkInternalOpen(true)}
+                      disabled={markInternalMutation.isPending}
+                    >
+                      {t('tenants.actions.markInternal')}
+                    </Button>
+                  ) : !isSystemTenant && !isDeletedOrDeleting && (isInternal || hasStripeSubscription) ? (
+                    <Typography variant="body2" color="text.secondary">
+                      {isInternal ? t('tenants.internal.alreadyInternal') : t('tenants.internal.stripeLinked')}
+                    </Typography>
+                  ) : null}
+                </Stack>
                 {planDraft ? (
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={4}>
@@ -506,7 +562,8 @@ const renderStatCard = (label: string, value: React.ReactNode) => (
                         type="number"
                         inputProps={{ min: 0 }}
                         value={planDraft.seat_limit}
-                        onChange={(e) => setPlanDraft({ ...planDraft, seat_limit: Number(e.target.value) })}
+                        onChange={(e) => setPlanDraft({ ...planDraft, seat_limit: e.target.value })}
+                        helperText={t('tenants.plan.seatLimitHelper')}
                         fullWidth
                         disabled={planMutation.isPending || isDeleted}
                       />
@@ -554,6 +611,23 @@ const renderStatCard = (label: string, value: React.ReactNode) => (
                     </Grid>
                     <Grid item xs={12} md={4}>
                       <DateEUField label={t('tenants.plan.fields.nextPaymentDate')} valueYmd={planDraft.next_payment_at || ''} onChangeYmd={(v) => setPlanDraft({ ...planDraft, next_payment_at: v })} />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        select
+                        label={t('tenants.plan.fields.status')}
+                        value={planDraft.status}
+                        onChange={(e) => setPlanDraft({ ...planDraft, status: e.target.value as SubscriptionStatus })}
+                        fullWidth
+                        disabled={planMutation.isPending || isDeleted}
+                      >
+                        {SUBSCRIPTION_STATUSES.map((value) => (
+                          <MenuItem key={value} value={value}>{t(`tenants.plan.statuses.${value}`)}</MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <DateEUField label={t('tenants.plan.fields.trialEnd')} valueYmd={planDraft.trial_end || ''} onChangeYmd={(v) => setPlanDraft({ ...planDraft, trial_end: v })} disabled={planMutation.isPending || isDeleted} />
                     </Grid>
                     <Grid item xs={12}>
                       <Stack direction="row" spacing={1}>
@@ -645,6 +719,20 @@ const renderStatCard = (label: string, value: React.ReactNode) => (
           <Button onClick={handleCloseDetail}>{t('common:buttons.close')}</Button>
         </DialogActions>
       </Dialog>
+
+      <KanapDialog
+        open={markInternalOpen}
+        title={t('tenants.internal.confirmTitle')}
+        onClose={() => { if (!markInternalMutation.isPending) setMarkInternalOpen(false); }}
+        onSave={() => markInternalMutation.mutate()}
+        saveLabel={t('tenants.internal.confirm')}
+        saveLoading={markInternalMutation.isPending}
+      >
+        <Stack spacing={1.5}>
+          <Typography variant="body2">{t('tenants.internal.confirmBody')}</Typography>
+          <Typography variant="body2" color="text.secondary">{t('tenants.internal.confirmNote')}</Typography>
+        </Stack>
+      </KanapDialog>
     </>
   );
 }

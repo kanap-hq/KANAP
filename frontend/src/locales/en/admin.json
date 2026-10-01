@@ -870,6 +870,7 @@
       "clear": "Clear",
       "deleteTenant": "Delete tenant",
       "freeze": "Freeze",
+      "markInternal": "Mark as internal tenant",
       "refresh": "Refresh",
       "savePlan": "Save plan",
       "unfreeze": "Unfreeze",
@@ -923,6 +924,8 @@
       "deleted": "Tenant deleted successfully.",
       "freezeFailed": "Failed to freeze tenant.",
       "frozen": "Tenant frozen.",
+      "markInternalFailed": "Failed to mark the tenant as internal.",
+      "markedInternal": "Tenant marked as internal.",
       "planUpdated": "Plan updated.",
       "unfreezeFailed": "Failed to unfreeze tenant.",
       "unfrozen": "Tenant unfrozen.",
@@ -936,14 +939,27 @@
         "paymentMode": "Payment mode",
         "planName": "Plan name",
         "seatLimit": "Seat limit",
-        "subscription": "Subscription"
+        "status": "Subscription status",
+        "subscription": "Subscription",
+        "trialEnd": "Trial end date"
       },
+      "seatLimitHelper": "Leave empty for unlimited seats.",
       "seatsUsed": "Seats used: {{count}}",
       "values": {
         "annual": "Annual",
         "bankTransfer": "Bank transfer",
         "card": "Card",
         "monthly": "Monthly"
+      },
+      "statuses": {
+        "active": "Active",
+        "canceled": "Canceled",
+        "incomplete": "Payment not completed",
+        "incomplete_expired": "Payment never completed",
+        "past_due": "Payment overdue",
+        "paused": "Paused",
+        "trialing": "Trial",
+        "unpaid": "Unpaid"
       }
     },
     "sections": {
@@ -971,7 +987,15 @@
       "deleting": "Deleting",
       "frozen": "Frozen"
     },
-    "title": "Tenants"
+    "title": "Tenants",
+    "internal": {
+      "alreadyInternal": "This tenant is already internal.",
+      "confirm": "Mark as internal",
+      "confirmBody": "Use this for a demonstration or test tenant. Its subscription becomes active with no end date and unlimited seats, and no payment is expected. A tenant whose trial has expired can be used again right away. Nothing is sent to Stripe.",
+      "confirmNote": "A line with today's date is added to the plan notes. You can still change the plan below afterwards.",
+      "confirmTitle": "Mark as internal tenant?",
+      "stripeLinked": "This tenant has a Stripe subscription, so it cannot become internal."
+    }
   },
   "userForm": {
     "entraManagedHint": "This user is managed by Microsoft Entra ID. Directory fields cannot be edited here.",

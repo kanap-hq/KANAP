@@ -1465,8 +1465,14 @@ The monthly amounts of every OPEX and CAPEX line, one row per line, year and bud
 - GET `/admin/tenants/:tenantId`
   - Returns full detail including lifecycle timestamps (`frozen_at`, `deletion_requested_at`, `deletion_confirmed_at`, `deleted_at`), optional deletion reason, plan details, and stats
 - PATCH `/admin/tenants/:tenantId/plan`
-  - Body: subset of `{ plan_name, seat_limit, active_seats, subscription_type, payment_mode, next_payment_at, notes }`
+  - Body: subset of `{ plan_name, seat_limit, active_seats, subscription_type, payment_mode, next_payment_at, status, trial_end, notes }`
+  - `seat_limit: null` means unlimited seats. `status` is one of the subscription statuses (`trialing`, `active`, `past_due`, `unpaid`, `paused`, `canceled`, `incomplete`, `incomplete_expired`). `trial_end` is an ISO-8601 date-time, or `null` to clear it.
   - Updates the tenant’s subscription metadata and records an audit entry
+- POST `/admin/tenants/:tenantId/mark-internal`
+  - No body. Marks the tenant as an internal tenant (demonstration, test): subscription `active`, no trial end, plan `Internal`, unlimited seats, `bank_transfer`, no next payment, and a dated line appended to the notes. No Stripe call.
+  - Returns the tenant detail. Calling it again on an internal tenant changes nothing.
+  - 400 on system tenants and on deleted tenants. 409 when the subscription has a `stripe_subscription_id`, whatever its status.
+  - Audited on `tenants_plan` with `source_ref = 'mark-internal'`. See "Internal tenants" in `architecture.md`.
 - POST `/admin/tenants/:tenantId/freeze`
   - Body (optional): `{ reason?: string }`
   - Sets tenant status to `frozen`, records timestamp, blocks login for tenant users, and logs audit trail

@@ -27,6 +27,11 @@ export class AdminTenantsController {
     return this.svc.updatePlan(id, req.user?.sub ?? null, body);
   }
 
+  @Post(':id/mark-internal')
+  markInternal(@Param('id') id: string, @Req() req: any) {
+    return this.svc.markInternal(id, req.user?.sub ?? null);
+  }
+
   @Post(':id/freeze')
   freeze(@Param('id') id: string, @Body() body: FreezeTenantDto, @Req() req: any) {
     return this.svc.freezeTenant(id, req.user?.sub ?? null, body);

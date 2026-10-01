@@ -870,6 +870,7 @@
       "clear": "Borrar",
       "deleteTenant": "Eliminar espacio de trabajo",
       "freeze": "Congelar",
+      "markInternal": "Marcar como espacio de trabajo interno",
       "refresh": "Actualizar",
       "savePlan": "Guardar plan",
       "unfreeze": "Descongelar",
@@ -923,6 +924,8 @@
       "deleted": "Espacio de trabajo eliminado correctamente.",
       "freezeFailed": "No se pudo congelar el espacio de trabajo.",
       "frozen": "Espacio de trabajo congelado.",
+      "markInternalFailed": "No se pudo marcar el espacio de trabajo como interno.",
+      "markedInternal": "Espacio de trabajo marcado como interno.",
       "planUpdated": "Plan actualizado.",
       "unfreezeFailed": "No se pudo descongelar el espacio de trabajo.",
       "unfrozen": "Espacio de trabajo descongelado.",
@@ -936,14 +939,27 @@
         "paymentMode": "Modo de pago",
         "planName": "Nombre del plan",
         "seatLimit": "Límite de puestos",
-        "subscription": "Suscripción"
+        "status": "Estado de la suscripción",
+        "subscription": "Suscripción",
+        "trialEnd": "Fecha de fin de la prueba"
       },
+      "seatLimitHelper": "Dejar vacío para puestos ilimitados.",
       "seatsUsed": "Puestos utilizados: {{count}}",
       "values": {
         "annual": "Anual",
         "bankTransfer": "Transferencia bancaria",
         "card": "Tarjeta",
         "monthly": "Mensual"
+      },
+      "statuses": {
+        "active": "Activa",
+        "canceled": "Cancelada",
+        "incomplete": "Pago no completado",
+        "incomplete_expired": "Pago nunca completado",
+        "past_due": "Pago atrasado",
+        "paused": "En pausa",
+        "trialing": "Prueba",
+        "unpaid": "Impagada"
       }
     },
     "sections": {
@@ -971,7 +987,15 @@
       "deleting": "Eliminando",
       "frozen": "Congelado"
     },
-    "title": "Espacios de trabajo"
+    "title": "Espacios de trabajo",
+    "internal": {
+      "alreadyInternal": "Este espacio de trabajo ya es interno.",
+      "confirm": "Marcar como interno",
+      "confirmBody": "Para un espacio de trabajo de demostración o de prueba. Su suscripción pasa a estar activa, sin fecha de fin y con puestos ilimitados, y no se espera ningún pago. Un espacio de trabajo cuya prueba ha caducado vuelve a poder usarse de inmediato. No se envía nada a Stripe.",
+      "confirmNote": "Se añade una línea con la fecha de hoy a las notas del plan. Después, el plan se puede seguir modificando más abajo.",
+      "confirmTitle": "¿Marcar como espacio de trabajo interno?",
+      "stripeLinked": "Este espacio de trabajo tiene una suscripción de Stripe, así que no puede pasar a ser interno."
+    }
   },
   "userForm": {
     "entraManagedHint": "Este usuario es gestionado por Microsoft Entra ID y no puede ser editado aquí.",
