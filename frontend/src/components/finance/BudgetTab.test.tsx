@@ -5,7 +5,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
-import { OPEX_FINANCE_CONFIG } from './config';
+import { CAPEX_FINANCE_CONFIG, OPEX_FINANCE_CONFIG, type FinanceModuleConfig } from './config';
+import { KanapDialogProvider } from '../design';
 
 // A stable `t`: the component's loader depends on it, like react-i18next's own.
 // Period, column and label texts come from the real English strings so the
@@ -17,7 +18,7 @@ vi.mock('react-i18next', async () => {
   await real.init({ lng: 'en', resources: { en: { ops: enOps } }, defaultNS: 'ops', interpolation: { escapeValue: false } });
   const t = (rawKey: string, options?: unknown) => {
     const key = rawKey.replace(/^ops:/, '');
-    return key.startsWith('budgetTab.') || key.startsWith('operations.')
+    return key.startsWith('budgetTab.') || key.startsWith('operations.') || key.endsWith('.budget.clearColumnConfirm')
       ? real.t(key, options as Record<string, unknown>)
       : rawKey;
   };
@@ -183,17 +184,23 @@ function setupApi({ grain, frozen = [], empty = false, noVersion = false, roundI
   return state;
 }
 
-function renderTab(year = YEAR, dates: { effectiveStart?: string; endOfValidity?: string; payingCompanyCountry?: string } = {}) {
+function renderTab(
+  year = YEAR,
+  dates: { effectiveStart?: string; endOfValidity?: string; payingCompanyCountry?: string } = {},
+  config: FinanceModuleConfig = OPEX_FINANCE_CONFIG,
+) {
   const ref = React.createRef<BudgetTabHandle>();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui = (y: number) => (
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
-          <BudgetTab
-            ref={ref} id="item-1" year={y} currency="EUR" onYearChange={() => undefined} config={OPEX_FINANCE_CONFIG}
-            effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity} payingCompanyCountry={dates.payingCompanyCountry}
-          />
+          <KanapDialogProvider>
+            <BudgetTab
+              ref={ref} id="item-1" year={y} currency="EUR" onYearChange={() => undefined} config={config}
+              effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity} payingCompanyCountry={dates.payingCompanyCountry}
+            />
+          </KanapDialogProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </MemoryRouter>
@@ -397,15 +404,83 @@ describe('BudgetTab write safety', () => {
     expect(ref.current?.isDirty()).toBe(false);
   });
 
-  it('clearing a column sends that column only, for the twelve months', async () => {
+  it('clearing a column asks first, then sends that column only, for the twelve months', async () => {
     setupApi({ grain: 'monthly' });
-    const { ref } = renderTab();
+    const { ref, container } = renderTab();
     await waitForAmounts();
 
     const clearButtons = screen.getAllByRole('button', { name: 'opex.budget.clearColumn' });
     fireEvent.click(clearButtons[1]); // Revision
+    const dialog = await screen.findByRole('dialog');
+    // The tenant's name of the column and the year.
+    expect(dialog).toHaveTextContent('Clear every month of Revision for 2026? The other columns stay as they are.');
+    // Nothing is cleared while the question is open (the grid is hidden from the accessibility tree meanwhile).
+    expect(container.querySelector('table')!.querySelectorAll('input')[1]).toHaveValue('900');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'opex.budget.clearColumn' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(cell(monthCells(container), 1, 1)).toHaveValue('0'));
     await flush(ref);
 
+    expect(bulkCalls()).toHaveLength(1);
+    expect(bulkCalls()[0][1]).toEqual({
+      kind: 'monthly',
+      year: YEAR,
+      months: Array.from({ length: 12 }, (_, i) => ({ period: period(i + 1), committed: 0 })),
+    });
+  });
+
+  it('on a CAPEX item the question names the column as the tenant calls it', async () => {
+    columnsSetting.current = { ...ALL_SHOWN, labels: { ...ALL_SHOWN.labels, committed: 'Run cost' } };
+    setupApi({ grain: 'monthly' });
+    // The same item, under the CAPEX routes.
+    const spendGet = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation((url: string, config?: unknown) => spendGet(
+      url.replace('/capex-items/', '/spend-items/').replace('/capex-versions/', '/spend-versions/'), config,
+    ));
+    const { ref } = renderTab(YEAR, {}, CAPEX_FINANCE_CONFIG);
+    await waitFor(() => {
+      expect(mocked.get.mock.calls.some(([url]) => url === '/capex-versions/v1/amounts')).toBe(true);
+      expect(screen.getAllByRole('textbox')[0]).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'capex.budget.clearColumn' })[1]);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Clear every month of Run cost for 2026?');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'capex.budget.clearColumn' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await flush(ref);
+
+    const posts = mocked.post.mock.calls.filter(([url]) => url === '/capex-versions/v1/amounts/bulk-upsert');
+    expect(posts).toHaveLength(1);
+    expect(posts[0][1]).toMatchObject({ kind: 'monthly', months: Array.from({ length: 12 }, (_, i) => ({ period: period(i + 1), committed: 0 })) });
+  });
+
+  it('cancelling the question leaves the months as they are and saves nothing', async () => {
+    setupApi({ grain: 'monthly' });
+    const { ref, container } = renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'opex.budget.clearColumn' })[1]); // Revision
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await flush(ref);
+
+    const cells = monthCells(container);
+    for (let month = 1; month <= 12; month++) expect(cell(cells, month, 1)).toHaveValue('900');
+    expect(bulkCalls()).toHaveLength(0);
+    expect(ref.current?.isDirty()).toBe(false);
+  });
+
+  it('a column already at zero is cleared without a question', async () => {
+    setupApi({ grain: 'monthly', monthValues: { committed: '0' } });
+    const { ref } = renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'opex.budget.clearColumn' })[1]); // Revision
+    await flush(ref);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(bulkCalls()).toHaveLength(1);
     expect(bulkCalls()[0][1]).toEqual({
       kind: 'monthly',
@@ -1678,5 +1753,85 @@ describe('BudgetTab keyboard run through the lines', () => {
     while (focusName() !== 'Remove the line') tab();
     tab();
     expect(document.activeElement).toBe(screen.getAllByLabelText('Description')[1]);
+  });
+
+  it('the spread Column and Distribution keep the focus after a choice made with the keyboard', async () => {
+    setupApi({ grain: 'monthly' });
+    renderTab();
+    await waitForAmounts();
+
+    const column = screen.getByRole('combobox', { name: 'Column' });
+    act(() => { column.focus(); });
+    await chooseWithKeyboard(1);
+    await waitFor(() => expect(column).toHaveTextContent('Revision'));
+    expect(document.activeElement).toBe(column);
+
+    const distribution = screen.getByRole('combobox', { name: 'Distribution' });
+    act(() => { distribution.focus(); });
+    await chooseWithKeyboard(1);
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ spread_profile_name: '4-4-5' });
+    await settle();
+    expect(document.activeElement).toBe(distribution);
+  });
+
+  it('the lines Column keeps the focus after a choice made with the keyboard, while the lines of the new column are drawn', async () => {
+    setupApi({ grain: 'monthly' });
+    serverKeepsLines([storedLine()]);
+    renderTab();
+    await waitForAmounts();
+    openLines();
+    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
+
+    const column = screen.getByRole('combobox', { name: 'Column' });
+    act(() => { column.focus(); });
+    await chooseWithKeyboard(1);
+    await waitFor(() => expect(column).toHaveTextContent('Revision'));
+    // Revision has no lines: its own panel is drawn.
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(column);
+  });
+
+  it('removing a line with the mouse leaves the focus alone', async () => {
+    await openYearlyLines();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    const remove = screen.getAllByRole('button', { name: 'Remove the line' })[0];
+    act(() => { remove.focus(); });
+    // A pointer click: `detail` counts the clicks.
+    fireEvent.click(remove, { detail: 1 });
+    await settle();
+    expect(screen.getAllByLabelText('Description')).toHaveLength(2);
+    expect(screen.getAllByLabelText('Description')).not.toContain(document.activeElement);
+    expect(document.activeElement).not.toBe(screen.getByRole('button', { name: 'Add a line' }));
+  });
+
+  it('removing a line puts the focus on the next line, else the previous one, else on Add a line', async () => {
+    await openYearlyLines();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    const [, second] = screen.getAllByLabelText('Description');
+
+    // The first of three (the stored one): the next one, which is now first. The two left are not
+    // complete yet, so nothing is written.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove the line' })[0]);
+    expect(document.activeElement).toBe(second);
+    await settle();
+    expect(document.activeElement).toBe(second);
+
+    // The last of two: the previous one.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove the line' })[1]);
+    expect(screen.getAllByLabelText('Description')).toEqual([second]);
+    expect(document.activeElement).toBe(second);
+
+    // The only one: Add a line.
+    fireEvent.click(screen.getByRole('button', { name: 'Remove the line' }));
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Add a line' }));
+    // No line left: the column's lines are cleared.
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    await settle();
+    expect(bulkCalls()[0][1]).toMatchObject({ kind: 'lines', lines: [] });
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Add a line' }));
   });
 });

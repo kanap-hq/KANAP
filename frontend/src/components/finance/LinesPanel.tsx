@@ -12,7 +12,7 @@ import { useAuth } from '../../auth/AuthContext';
 import FormattedNumberField from '../inputs/FormattedNumberField';
 import DateEUField from '../fields/DateEUField';
 import { FieldLabel } from '../design';
-import { drawerMenuItemSx, drawerSelectSx, inlineControlSx, tableCellFieldSx, tableCellTextFieldSx } from '../../theme/formSx';
+import { drawerMenuItemSx, inlineControlSx, selectKeepsFocus, tableCellFieldSx, tableCellTextFieldSx } from '../../theme/formSx';
 import {
   AmountMeasure,
   BASES_BY_UNIT,
@@ -155,11 +155,8 @@ export type LineDraft = {
 let draftSeq = 0;
 const newDraftKey = () => `draft-${++draftSeq}`;
 
-/**
- * The theme closes every menu without giving the focus back (#181: no ring left on the button that
- * opened it). A select of a line takes it back once a choice is made, so Tab goes on to the next field.
- */
-const selectKeepsFocus = { MenuProps: { disableRestoreFocus: false } } as const;
+/** Where the focus goes once drawn: a line's Description, or Add a line. */
+const ADD_LINE = 'add-line';
 
 function draftOf(line: RoundLine): LineDraft {
   return {
@@ -241,10 +238,6 @@ export type LinesSaveResult = { ok: true; warnings?: string[] } | { ok: false; e
 
 export type LinesPanelProps = {
   year: number;
-  measure: AmountMeasure;
-  /** Shown columns, fixed order; a frozen one cannot be picked. */
-  columns: Array<{ measure: AmountMeasure; label: string; frozen: boolean }>;
-  onMeasureChange: (measure: AmountMeasure) => void;
   /** The column's stored record, with its lines when it has some. */
   record: RoundInput | undefined;
   /** The period a new line starts with (the column's, within the item's dates); the whole year when null. */
@@ -275,7 +268,7 @@ export type LinesPanelProps = {
  * server. A line that is not complete yet stays here until it is.
  */
 export default function LinesPanel({
-  year, measure, columns, onMeasureChange, record, period, itemStart, itemEnd, frozen, frozenHint,
+  year, record, period, itemStart, itemEnd, frozen, frozenHint,
   payingCompanyCountry, columnName, applyToAll, onSave, layout = 'auto',
 }: LinesPanelProps) {
   const { t } = useTranslation(['ops', 'common']);
@@ -355,12 +348,13 @@ export default function LinesPanel({
     patchAndCommit(draft.key, { frequency, ...withDates(draft, draft.unit, frequency, draft.start || linePeriod.start) });
   };
 
-  // The line just added: its Description takes the focus once drawn, so a run of lines needs no mouse.
-  const addedLineRef = React.useRef<string | null>(null);
-  const focusIfAdded = (key: string) => (input: HTMLInputElement | null) => {
-    if (!input || addedLineRef.current !== key) return;
-    addedLineRef.current = null;
-    input.focus();
+  // What takes the focus once drawn, so a run of lines needs no mouse: the Description of a line just
+  // added, or after a removal the next line's, else the previous line's, else Add a line.
+  const focusTargetRef = React.useRef<string | null>(null);
+  const focusIfTarget = (target: string) => (el: HTMLElement | null) => {
+    if (!el || focusTargetRef.current !== target) return;
+    focusTargetRef.current = null;
+    el.focus();
   };
 
   // The most common line: one person priced per day (a project manager, 5 days a month or full
@@ -369,7 +363,7 @@ export default function LinesPanel({
   const addLine = () => {
     const noCalendar = calendars.ready && calendars.enabled.length === 0;
     const key = newDraftKey();
-    addedLineRef.current = key;
+    focusTargetRef.current = key;
     update((prev) => [...prev, {
       key,
       label: '',
@@ -385,7 +379,13 @@ export default function LinesPanel({
       calendarId: fallbackCalendar,
     }]);
   };
-  const removeLine = (key: string) => send(update((prev) => prev.filter((d) => d.key !== key)));
+  // Removed with the keyboard, the focus goes on to a neighbour; with the mouse, it is left alone (#181).
+  const removeLine = (key: string, byKeyboard: boolean) => {
+    const lines = draftsRef.current;
+    const index = lines.findIndex((d) => d.key === key);
+    if (byKeyboard) focusTargetRef.current = (lines[index + 1] ?? lines[index - 1])?.key ?? ADD_LINE;
+    send(update((prev) => prev.filter((d) => d.key !== key)));
+  };
   const sendLinesAgain = () => send(draftsRef.current, { force: true });
   const toggleApplyToAll = (on: boolean) => {
     applyToAll.onChange(on);
@@ -534,7 +534,7 @@ export default function LinesPanel({
       onChange={(e) => patchLine(draft.key, { label: e.target.value })}
       onBlur={commit} onKeyDown={onEnter}
       disabled={frozen}
-      inputRef={focusIfAdded(draft.key)}
+      inputRef={focusIfTarget(draft.key)}
       placeholder={t('budgetTab.lines.descriptionPlaceholder')}
       inputProps={{ 'aria-label': t('budgetTab.lines.description'), maxLength: 200 }}
       sx={tableCellTextFieldSx}
@@ -669,7 +669,8 @@ export default function LinesPanel({
       <IconButton
         size="small"
         aria-label={t('budgetTab.lines.remove')}
-        onClick={() => removeLine(draft.key)}
+        // Enter and Space click with no pointer: `detail` is 0.
+        onClick={(e) => removeLine(draft.key, e.detail === 0)}
         sx={{ p: '2px', color: 'kanap.text.tertiary', '&:hover': { color: 'error.main', bgcolor: 'transparent' } }}
       >
         <CloseIcon sx={{ fontSize: 14 }} />
@@ -796,28 +797,13 @@ export default function LinesPanel({
 
   return (
     <>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 1.5, rowGap: 1 }}>
-        <PanelField label={t('budgetTab.column')} width={150}>
-          <TextField
-            select size="small" variant="standard" value={measure}
-            onChange={(e) => onMeasureChange(e.target.value as AmountMeasure)}
-            inputProps={{ 'aria-label': t('budgetTab.column') }}
-            sx={drawerSelectSx}
-          >
-            {columns.map((c) => (
-              <MenuItem key={c.measure} value={c.measure} disabled={c.frozen} sx={drawerMenuItemSx}>{c.label}</MenuItem>
-            ))}
-          </TextField>
-        </PanelField>
-      </Box>
-
       {/* Measured before the first line: the table is drawn in its layout at once, never swapped under the focus. */}
       <Box ref={tableBoxRef}>
         {drafts.length === 0 ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Typography sx={captionSx}>{t('budgetTab.lines.empty')}</Typography>
             {!frozen && (
-              <Button size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, py: 0 }}>
+              <Button ref={focusIfTarget(ADD_LINE)} size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, py: 0 }}>
                 {t('budgetTab.lines.add')}
               </Button>
             )}
@@ -828,7 +814,7 @@ export default function LinesPanel({
               {twoRows ? twoRowsTable : oneRowTable}
             </Box>
             {!frozen && (
-              <Button size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, mt: 0.5 }}>
+              <Button ref={focusIfTarget(ADD_LINE)} size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, mt: 0.5 }}>
                 {t('budgetTab.lines.add')}
               </Button>
             )}

@@ -18,12 +18,13 @@ export default function YearTabs({
   disabled = false
 }: YearTabsProps) {
   const { t } = useTranslation('common');
-  // Generate years around current year if no availableYears provided
+  // Generate years around current year if no availableYears provided. The current year is always one
+  // of them: a page opened on a year outside the list still shows it selected.
   const allYears = availableYears.length > 0
-    ? availableYears
+    ? [...availableYears, currentYear]
     : Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
-  const sortedYears = [...allYears].sort((a, b) => a - b);
+  const sortedYears = [...new Set(allYears)].sort((a, b) => a - b);
   const currentIndex = sortedYears.indexOf(currentYear);
 
   // Show 5 tabs centered around current year

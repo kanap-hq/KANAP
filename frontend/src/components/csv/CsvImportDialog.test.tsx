@@ -42,6 +42,61 @@ describe('CsvImportDialog', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('csv.rowsUnchanged:12');
   });
 
+  it('heads row errors with validation failed: a frozen column refused on a row', async () => {
+    post.mockResolvedValueOnce({
+      data: report({ ok: false, errors: [{ row: 3, message: 'Budget for 2026 is frozen for OPEX. Unfreeze it first.' }] }),
+    });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.validationFailed$/);
+    expect(screen.getByText('csv.rowError')).toBeInTheDocument();
+  });
+
+  it('heads a header mismatch with file not formatted, on row 1 (budget rows) as on row 0 (other importers)', async () => {
+    for (const row of [1, 0]) {
+      post.mockResolvedValueOnce({
+        data: report({ ok: false, total: 0, errors: [{ row, message: 'Header mismatch. Missing: year, Extra: -' }] }),
+      });
+      const view = renderDialog();
+      fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.fileNotFormatted$/);
+      view.unmount();
+    }
+  });
+
+  it('heads a header error reported with row errors with file not formatted', async () => {
+    post.mockResolvedValueOnce({
+      data: report({
+        ok: false,
+        errors: [
+          { row: 0, message: 'Header mismatch. Missing: currency, Extra: -' },
+          { row: 2, message: 'product_name is required' },
+          { row: 5, message: 'Unknown supplier' },
+        ],
+      }),
+    });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.fileNotFormatted$/);
+    expect(screen.getAllByText('csv.rowError')).toHaveLength(3);
+  });
+
+  it('shows the server message when the request fails', async () => {
+    post.mockRejectedValueOnce({ response: { status: 413, data: { message: 'File too large' } }, message: 'Request failed with status code 413' });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/^File too large$/);
+    expect(screen.queryByText('csv.fileNotFormatted')).not.toBeInTheDocument();
+    expect(screen.queryByText('csv.rowError')).not.toBeInTheDocument();
+  });
+
+  it('falls back to file not formatted when the failed request carries no message', async () => {
+    post.mockRejectedValueOnce({});
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.fileNotFormatted$/);
+  });
+
   it('renders as before when the report has no unchanged count', async () => {
     post.mockResolvedValueOnce({ data: report({}) });
     renderDialog();

@@ -130,9 +130,6 @@ function renderPanel(options: Options = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const props: LinesPanelProps = {
     year: 2026,
-    measure: 'planned',
-    columns: [{ measure: 'planned', label: 'Budget', frozen: false }, { measure: 'committed', label: 'Revision', frozen: false }],
-    onMeasureChange: () => undefined,
     record: undefined,
     period: { start: '2026-04-01', end: '2026-12-31' },
     frozen: false,
