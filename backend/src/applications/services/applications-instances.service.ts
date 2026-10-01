@@ -1,15 +1,52 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, EntityManager } from 'typeorm';
+import { Repository, EntityManager } from 'typeorm';
 import { Application } from '../application.entity';
-import { ApplicationSpendItemLink } from '../application-spend-item.entity';
-import { ApplicationCapexItemLink } from '../application-capex-item.entity';
-import { ApplicationContractLink } from '../application-contract.entity';
-import { ApplicationProject } from '../application-project.entity';
 import { PortfolioProject } from '../../portfolio/portfolio-project.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 import { projectParticipantCondition } from '../../auth/business-contributor-scope';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type LinkedItemKind = 'spend' | 'capex' | 'contract' | 'project';
+
+// Table and column names come only from here: never from the caller. `unique`
+// is the link table's unique key, the target of the insert's ON CONFLICT.
+const LINKED_ITEMS = {
+  spend: {
+    links: 'application_spend_items',
+    items: 'spend_items',
+    itemFk: 'spend_item_id',
+    label: 'product_name',
+    unique: '(tenant_id, application_id, spend_item_id)',
+    notFound: 'One or more OPEX items were not found.',
+  },
+  capex: {
+    links: 'application_capex_items',
+    items: 'capex_items',
+    itemFk: 'capex_item_id',
+    label: 'description',
+    unique: '(tenant_id, application_id, capex_item_id)',
+    notFound: 'One or more CAPEX items were not found.',
+  },
+  contract: {
+    links: 'application_contracts',
+    items: 'contracts',
+    itemFk: 'contract_id',
+    label: 'name',
+    unique: '(tenant_id, application_id, contract_id)',
+    notFound: 'One or more contracts were not found.',
+  },
+  project: {
+    links: 'application_projects',
+    items: 'portfolio_projects',
+    itemFk: 'project_id',
+    label: 'name',
+    unique: '(application_id, project_id)',
+    notFound: 'One or more projects were not found.',
+  },
+} as const;
 
 /**
  * Service for managing application relations (spend items, capex items, contracts, projects).
@@ -24,138 +61,129 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
     super(appRepo);
   }
 
-  // Relations - OPEX (spend items)
+  // Relations - OPEX and CAPEX lines, contracts
   async listLinkedSpendItems(appId: string, opts?: ServiceOpts) {
-    const mg = this.getManager(opts);
-    const app = await this.ensureApp(appId, mg, opts?.accessScope);
-    const resolvedAppId = app.id;
-    const repo = mg.getRepository(ApplicationSpendItemLink);
-    const rows = await repo.find({ where: { application_id: resolvedAppId } as any });
-    const ids = rows.map((r: any) => r.spend_item_id);
-    const items = ids.length ? await mg.query(`SELECT id, product_name FROM spend_items WHERE id = ANY($1)`, [ids]) : [];
-    return { items };
+    return { items: await this.listLinkedItems('spend', appId, opts) };
   }
 
   async bulkReplaceLinkedSpendItems(appId: string, spendItemIds: string[], userId?: string | null, opts?: ServiceOpts) {
-    const mg = this.getManager(opts);
-    const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
-    const repo = mg.getRepository(ApplicationSpendItemLink);
-    const unique = Array.from(new Set((spendItemIds || []).filter(Boolean)));
-    const existing = await repo.find({ where: { application_id: resolvedAppId } as any });
-    const beforeState = existing.map((e: any) => e.spend_item_id).sort();
-    const toDelete = existing.filter((e: any) => !unique.includes(e.spend_item_id));
-    const existingSet = new Set(existing.map((e: any) => e.spend_item_id));
-    const toInsert = unique.filter((id) => !existingSet.has(id)).map((id) => repo.create({ application_id: resolvedAppId, spend_item_id: id } as any));
-    if (toDelete.length > 0) await repo.remove(toDelete as any);
-    if (toInsert.length > 0) await repo.save(toInsert as any);
-    const afterState = [...unique].sort();
-    if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
-      await this.audit.log(
-        {
-          table: 'application_spend_items',
-          recordId: resolvedAppId,
-          action: 'update',
-          before: beforeState,
-          after: afterState,
-          userId: userId ?? null,
-        },
-        { manager: mg },
-      );
-    }
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return this.replaceLinkedItems('spend', appId, spendItemIds, userId, opts);
   }
 
-  // Relations - CAPEX items
   async listLinkedCapexItems(appId: string, opts?: ServiceOpts) {
-    const mg = this.getManager(opts);
-    const app = await this.ensureApp(appId, mg, opts?.accessScope);
-    const resolvedAppId = app.id;
-    const repo = mg.getRepository(ApplicationCapexItemLink);
-    const rows = await repo.find({ where: { application_id: resolvedAppId } as any });
-    const ids = rows.map((r: any) => r.capex_item_id);
-    if (ids.length === 0) return { items: [] };
-    const { CapexItem } = await import('../../capex/capex-item.entity');
-    const capexRepo = mg.getRepository(CapexItem);
-    const items = await capexRepo.findBy({ id: In(ids) as any } as any);
-    return { items: items.map((i: any) => ({ id: i.id, description: i.description })) };
+    return { items: await this.listLinkedItems('capex', appId, opts) };
   }
 
   async bulkReplaceLinkedCapexItems(appId: string, capexItemIds: string[], userId?: string | null, opts?: ServiceOpts) {
-    const mg = this.getManager(opts);
-    const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
-    const repo = mg.getRepository(ApplicationCapexItemLink);
-    const unique = Array.from(new Set((capexItemIds || []).filter(Boolean)));
-    const existing = await repo.find({ where: { application_id: resolvedAppId } as any });
-    const beforeState = existing.map((e: any) => e.capex_item_id).sort();
-    const toDelete = existing.filter((e: any) => !unique.includes(e.capex_item_id));
-    const existingSet = new Set(existing.map((e: any) => e.capex_item_id));
-    const toInsert = unique.filter((id) => !existingSet.has(id)).map((id) => repo.create({ application_id: resolvedAppId, capex_item_id: id } as any));
-    if (toDelete.length > 0) await repo.remove(toDelete as any);
-    if (toInsert.length > 0) await repo.save(toInsert as any);
-    const afterState = [...unique].sort();
-    if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
-      await this.audit.log(
-        {
-          table: 'application_capex_items',
-          recordId: resolvedAppId,
-          action: 'update',
-          before: beforeState,
-          after: afterState,
-          userId: userId ?? null,
-        },
-        { manager: mg },
-      );
-    }
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return this.replaceLinkedItems('capex', appId, capexItemIds, userId, opts);
   }
 
-  // Relations - Contracts
   async listLinkedContracts(appId: string, opts?: ServiceOpts) {
-    const mg = this.getManager(opts);
-    const app = await this.ensureApp(appId, mg, opts?.accessScope);
-    const resolvedAppId = app.id;
-    const repo = mg.getRepository(ApplicationContractLink);
-    const rows = await repo.find({ where: { application_id: resolvedAppId } as any });
-    const ids = rows.map((r: any) => r.contract_id);
-    const items = ids.length ? await mg.query(`SELECT id, name FROM contracts WHERE id = ANY($1)`, [ids]) : [];
-    return { items };
+    return { items: await this.listLinkedItems('contract', appId, opts) };
   }
 
   async bulkReplaceLinkedContracts(appId: string, contractIds: string[], userId?: string | null, opts?: ServiceOpts) {
+    return this.replaceLinkedItems('contract', appId, contractIds, userId, opts);
+  }
+
+  /** The application's lines or contracts, as `{ id, product_name }` (OPEX), `{ id, description }` (CAPEX) or `{ id, name }` (contracts). */
+  private async listLinkedItems(kind: Exclude<LinkedItemKind, 'project'>, appId: string, opts?: ServiceOpts) {
+    const t = LINKED_ITEMS[kind];
+    const mg = this.getManager(opts);
+    const app = await this.ensureApp(appId, mg, opts?.accessScope);
+    return mg.query(
+      `SELECT i.id, i.${t.label}
+       FROM ${t.links} l
+       JOIN ${t.items} i ON i.id = l.${t.itemFk} AND i.tenant_id = l.tenant_id
+       WHERE l.tenant_id = $1 AND l.application_id = $2`,
+      [app.tenant_id, app.id],
+    );
+  }
+
+  /**
+   * Replace the application's lines, contracts or projects with `itemIds`
+   * (trimmed, lower-cased, deduplicated). Every id must name a row of the
+   * tenant: foreign-key checks bypass RLS, so the ids are resolved here (400
+   * otherwise). The application's row is locked first (FOR NO KEY UPDATE, which
+   * the link keys' FOR KEY SHARE checks do not wait for): a second replacement
+   * of the same application waits, then reads the set the first one committed,
+   * so the last one wins and its audit row matches what is stored. A link
+   * another writer has just inserted is skipped, not duplicated. One audit row
+   * on the link table when the set changes: `recordId` the application, before
+   * and after the sorted ids.
+   */
+  private async replaceLinkedItems(
+    kind: LinkedItemKind,
+    appId: string,
+    itemIds: string[],
+    userId?: string | null,
+    opts?: ServiceOpts,
+  ) {
+    const t = LINKED_ITEMS[kind];
     const mg = this.getManager(opts);
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
-    const repo = mg.getRepository(ApplicationContractLink);
-    const unique = Array.from(new Set((contractIds || []).filter(Boolean)));
-    const existing = await repo.find({ where: { application_id: resolvedAppId } as any });
-    const beforeState = existing.map((e: any) => e.contract_id).sort();
-    const toDelete = existing.filter((e: any) => !unique.includes(e.contract_id));
-    const existingSet = new Set(existing.map((e: any) => e.contract_id));
-    const toInsert = unique.filter((id) => !existingSet.has(id)).map((id) => repo.create({ application_id: resolvedAppId, contract_id: id } as any));
-    if (toDelete.length > 0) await repo.remove(toDelete as any);
-    if (toInsert.length > 0) await repo.save(toInsert as any);
-    const afterState = [...unique].sort();
-    if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
+    const tenantId = await this.getCurrentTenantId(mg);
+    // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
+    const nextIds = Array.from(new Set((itemIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
+    if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException(t.notFound);
+    const locked = await mg.query(
+      `SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+      [tenantId, resolvedAppId],
+    );
+    if (locked.length === 0) throw new NotFoundException('Application not found');
+    if (nextIds.length) {
+      const found: Array<{ id: string }> = await mg.query(
+        `SELECT id FROM ${t.items} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenantId, nextIds],
+      );
+      if (found.length !== nextIds.length) throw new BadRequestException(t.notFound);
+    }
+
+    const existing: Array<{ item_id: string }> = await mg.query(
+      `SELECT ${t.itemFk} AS item_id FROM ${t.links} WHERE tenant_id = $1 AND application_id = $2`,
+      [tenantId, resolvedAppId],
+    );
+    const beforeState = Array.from(new Set(existing.map((r) => r.item_id))).sort();
+    const [{ n: removed }] = await mg.query(
+      `WITH d AS (
+         DELETE FROM ${t.links}
+         WHERE tenant_id = $1 AND application_id = $2 AND ${t.itemFk} <> ALL($3::uuid[])
+         RETURNING 1
+       )
+       SELECT count(*)::int AS n FROM d`,
+      [tenantId, resolvedAppId, nextIds],
+    );
+    const [{ n: added }] = await mg.query(
+      `WITH ins AS (
+         INSERT INTO ${t.links} (tenant_id, application_id, ${t.itemFk})
+         SELECT $1, $2, item_id FROM unnest($3::uuid[]) AS item_id
+         ON CONFLICT ${t.unique} DO NOTHING
+         RETURNING 1
+       )
+       SELECT count(*)::int AS n FROM ins`,
+      [tenantId, resolvedAppId, nextIds],
+    );
+    if (JSON.stringify(beforeState) !== JSON.stringify(nextIds)) {
       await this.audit.log(
         {
-          table: 'application_contracts',
+          table: t.links,
           recordId: resolvedAppId,
           action: 'update',
           before: beforeState,
-          after: afterState,
+          after: nextIds,
           userId: userId ?? null,
         },
         { manager: mg },
       );
     }
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added, removed };
   }
 
   // Projects
   async listProjects(applicationId: string, opts?: ServiceOpts) {
     const mg = this.getManager(opts);
     const app = await this.ensureApp(applicationId, mg, opts?.accessScope);
-    const resolvedAppId = app.id;
-    const params: unknown[] = [resolvedAppId];
+    const params: unknown[] = [app.tenant_id, app.id];
     const projectScopeSql = opts?.projectAccessScope
       ? (() => {
         params.push(opts.projectAccessScope.userId);
@@ -165,8 +193,8 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
     const rows = await mg.query(
       `SELECT l.project_id as id, p.name
        FROM application_projects l
-       JOIN portfolio_projects p ON p.id = l.project_id
-       WHERE l.application_id = $1
+       JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
+       WHERE l.tenant_id = $1 AND l.application_id = $2
          ${projectScopeSql}
        ORDER BY p.name ASC`,
       params,
@@ -176,37 +204,7 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
 
   async bulkReplaceProjects(applicationId: string, projectIds: string[], userId?: string | null, opts?: ServiceOpts) {
     const mg = this.getManager(opts);
-    const resolvedAppId = await this.resolveApplicationIdentifier(applicationId, mg);
-    const app = await this.ensureApp(resolvedAppId, mg);
-    const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
-    if (cleanIds.length) {
-      const projects = await mg.getRepository(PortfolioProject).find({ where: { id: In(cleanIds) } as any });
-      if (projects.length !== cleanIds.length) throw new BadRequestException('One or more projects not found');
-      const invalid = projects.find((p) => (p as any).tenant_id !== (app as any).tenant_id);
-      if (invalid) throw new BadRequestException('Project does not belong to tenant');
-    }
-    const repo = mg.getRepository(ApplicationProject);
-    const existing = await repo.find({ where: { application_id: resolvedAppId } as any });
-    const beforeState = existing.map((e) => e.project_id).sort();
-    if (existing.length) await repo.delete({ id: In(existing.map((x) => x.id)) as any });
-    if (cleanIds.length) {
-      const rows = cleanIds.map((projId) => repo.create({ tenant_id: (app as any).tenant_id, project_id: projId, application_id: resolvedAppId }));
-      await repo.save(rows);
-    }
-    const afterState = [...cleanIds].sort();
-    if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
-      await this.audit.log(
-        {
-          table: 'application_projects',
-          recordId: resolvedAppId,
-          action: 'update',
-          before: beforeState,
-          after: afterState,
-          userId: userId ?? null,
-        },
-        { manager: mg },
-      );
-    }
-    return this.listProjects(resolvedAppId, { manager: mg });
+    await this.replaceLinkedItems('project', applicationId, projectIds, userId, { manager: mg });
+    return this.listProjects(applicationId, { manager: mg });
   }
 }

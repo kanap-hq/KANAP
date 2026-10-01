@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { AmountScope } from './amounts-write.util';
@@ -6,17 +6,23 @@ import { AmountScope } from './amounts-write.util';
 /**
  * Applications linked to an OPEX or CAPEX line, from the line's side: list and
  * replace the whole set. Every statement carries the line's tenant besides RLS.
- * Replacing the whole set cannot create duplicates, so `application_capex_items`
- * needs no unique constraint for this path.
+ * A replacement locks the line's row first (FOR NO KEY UPDATE, which the link
+ * keys' FOR KEY SHARE checks do not wait for): a second replacement of the
+ * same line waits, then reads the set the first one committed, so the last
+ * one wins and its audit row matches what is stored. Writers that take no
+ * lock (the AI relation path) cannot store a link twice either: the unique key
+ * (tenant_id, application_id, item) of each link table (migration
+ * 1853690000000) makes the second insert wait and skip the committed link.
  */
 
 // Table and column names come only from here: never from the caller.
 const SCOPES = {
-  opex: { links: 'application_spend_items', itemFk: 'spend_item_id' },
-  capex: { links: 'application_capex_items', itemFk: 'capex_item_id' },
+  opex: { links: 'application_spend_items', itemFk: 'spend_item_id', items: 'spend_items', itemNotFound: 'Spend item not found' },
+  capex: { links: 'application_capex_items', itemFk: 'capex_item_id', items: 'capex_items', itemNotFound: 'CAPEX item not found' },
 } as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const APPLICATIONS_NOT_FOUND = 'One or more applications were not found.';
 
 /** The line, as read under the current tenant (its `tenant_id` scopes every statement). */
 export type ApplicationsItem = { id: string; tenant_id: string };
@@ -56,13 +62,18 @@ export async function replaceItemApplications(
   const t = SCOPES[scope];
   // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
   const nextIds = Array.from(new Set((applicationIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
+  if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException(APPLICATIONS_NOT_FOUND);
+  const locked = await manager.query(
+    `SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+    [item.tenant_id, item.id],
+  );
+  if (locked.length === 0) throw new NotFoundException(t.itemNotFound);
   if (nextIds.length) {
-    if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException('One or more applications not found');
     const found: Array<{ id: string }> = await manager.query(
       `SELECT id FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [item.tenant_id, nextIds],
     );
-    if (found.length !== nextIds.length) throw new BadRequestException('One or more applications not found');
+    if (found.length !== nextIds.length) throw new BadRequestException(APPLICATIONS_NOT_FOUND);
   }
 
   const current: Array<{ application_id: string }> = await manager.query(
@@ -75,7 +86,8 @@ export async function replaceItemApplications(
   if (nextIds.length) {
     await manager.query(
       `INSERT INTO ${t.links} (tenant_id, ${t.itemFk}, application_id)
-       SELECT $1, $2, app_id FROM unnest($3::uuid[]) AS app_id`,
+       SELECT $1, $2, app_id FROM unnest($3::uuid[]) AS app_id
+       ON CONFLICT (tenant_id, application_id, ${t.itemFk}) DO NOTHING`,
       [item.tenant_id, item.id, nextIds],
     );
   }
