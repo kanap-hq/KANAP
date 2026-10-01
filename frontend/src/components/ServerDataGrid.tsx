@@ -102,6 +102,26 @@ function parseSortParam(sortModel: SortModelItem[] | undefined, fallback: { fiel
   return `${fallback.field}:${fallback.direction}`;
 }
 
+/**
+ * The grid's sort, from the column state: the sorted columns by sort index. AG Grid 32 has no
+ * public `getSortModel`, so reading the sort anywhere else returns nothing.
+ */
+export function gridSortModel(gridApi: { getColumnState?: () => ColumnState[] } | null | undefined): SortModelItem[] {
+  const state = (gridApi?.getColumnState?.() ?? []) as ColumnState[];
+  return state
+    .filter((col) => !!col.colId && (col.sort === 'asc' || col.sort === 'desc'))
+    .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+    .map((col) => ({ colId: col.colId, sort: col.sort as 'asc' | 'desc' }));
+}
+
+/** The grid's sort as the API's `sort` parameter (`field:ASC`), the fallback when nothing is sorted. */
+export function gridSortParam(
+  gridApi: { getColumnState?: () => ColumnState[] } | null | undefined,
+  fallback: { field: string; direction: 'ASC' | 'DESC' },
+): string {
+  return parseSortParam(gridSortModel(gridApi), fallback);
+}
+
 function parseUrlSort(sortFromUrl: string | null | undefined, fallback: { field: string; direction: 'ASC' | 'DESC' }) {
   const raw = sortFromUrl || `${fallback.field}:${fallback.direction}`;
   const [field, dir] = String(raw).split(':');
@@ -135,6 +155,24 @@ export function mergeSavedColumnState(savedState: ColumnState[], defaultState: C
     previous = d.colId;
   }
   return merged;
+}
+
+/**
+ * Frees AG Grid's request slot held by a superseded block request, without touching rows, row count
+ * or error. AG Grid counts a block load as running until one of its callbacks is called, and the
+ * grid allows one at a time (`maxConcurrentDatasourceRequests`), so a request answered by neither
+ * would stop every later load. A superseded request always belongs to a block AG Grid has already
+ * dropped (cache reset by a sort or filter, purge by the reset effect, grid destroyed): AG Grid 32
+ * ignores the callback of such a block (`RowNodeBlock.isRequestMostRecentAndLive`) apart from
+ * freeing the slot, so nothing shows as failed.
+ */
+function releaseSupersededBlock(params: IGetRowsParams) {
+  params.failCallback();
+}
+
+/** The sort and filter a block request was asked with, comparable with the grid's current ones. */
+function blockQueryKey(sortModel: SortModelItem[] | undefined, filterModel: unknown): string {
+  return JSON.stringify([(sortModel ?? []).map((s) => [s.colId, s.sort]), filterModel ?? {}]);
 }
 
 /** Date columns: date models from both the filter menu and the box under the header. */
@@ -535,8 +573,44 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const endpointRef = useRef<string>(endpoint);
   useEffect(() => { endpointRef.current = endpoint; }, [endpoint]);
 
+  // Block requests in flight, with the sort and filter each was asked with, and the query generation
+  // they belong to. A sort or filter change aborts the requests asked with another sort or filter
+  // (AG Grid then starts a new cache); a search, extra parameters, refresh, endpoint or status scope
+  // change (the reset effect below) and an unmount abort them all. A late answer of a superseded
+  // request is dropped: no rows, no row count, no error.
+  const generationRef = useRef(0);
+  const inFlightRef = useRef(new Map<AbortController, string>());
+  // AG Grid hands every block of one cache the same filter model object: a block request carrying
+  // another one comes from a new cache, made by a sort or filter change.
+  const cacheTokenRef = useRef<unknown>(undefined);
+  const supersedeRequests = useCallback(() => {
+    generationRef.current += 1;
+    inFlightRef.current.forEach((_query, controller) => controller.abort());
+    inFlightRef.current.clear();
+  }, []);
+  useEffect(() => supersedeRequests, [supersedeRequests]);
+  // Called once AG Grid has applied a sort or filter change. The requests of the new cache carry the
+  // grid's current sort and filter, so they are kept even when they already started.
+  const abortOtherQueries = useCallback((gridApi: any) => {
+    const current = blockQueryKey(gridSortModel(gridApi), gridApi?.getFilterModel?.() ?? {});
+    inFlightRef.current.forEach((query, controller) => {
+      if (query === current) return;
+      controller.abort();
+      inFlightRef.current.delete(controller);
+    });
+  }, []);
+
   const dataSourceRef = useRef<IDatasource>({
     getRows: async (params: IGetRowsParams) => {
+      const cacheToken = (params as any).filterModel;
+      if (cacheToken !== cacheTokenRef.current) {
+        if (cacheTokenRef.current !== undefined) supersedeRequests();
+        cacheTokenRef.current = cacheToken;
+      }
+      const generation = generationRef.current;
+      const controller = new AbortController();
+      inFlightRef.current.set(controller, blockQueryKey((params as any).sortModel, (params as any).filterModel));
+      const superseded = () => controller.signal.aborted || generation !== generationRef.current;
       try {
         setLoadError(undefined);
         const startRow = params.startRow ?? 0;
@@ -561,14 +635,24 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         // include global quick search (server-side)
         const q = searchRef.current;
         if (enableSearch && q) reqParams.q = q;
-        const res = await api.get<ServerResponse<T>>(endpointRef.current, { params: reqParams });
+        const res = await api.get<ServerResponse<T>>(endpointRef.current, { params: reqParams, signal: controller.signal });
+        if (superseded()) {
+          releaseSupersededBlock(params);
+          return;
+        }
         const rows = (res.data?.items ?? []) as any[];
         const total = res.data?.total ?? rows.length;
         setTotalRowCount(total);
         params.successCallback(rows, total);
       } catch (e: any) {
+        if (superseded()) {
+          releaseSupersededBlock(params);
+          return;
+        }
         setLoadError(e instanceof Error ? e : new Error('Failed to load data'));
         params.failCallback();
+      } finally {
+        inFlightRef.current.delete(controller);
       }
     },
   });
@@ -637,7 +721,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     setTimeout(() => {
       try {
         if (onQueryStateChange) {
-          const sort = parseSortParam(((event.api as any).getSortModel?.() ?? []) as SortModelItem[], defaultSort);
+          const sort = gridSortParam(event.api as any, defaultSort);
           const fm = (event.api as any).getFilterModel?.() ?? filterModelRef.current;
           onQueryStateChange({ sort, filterModel: fm, q: searchRef.current, statusScope: statusScopeRef.current });
         }
@@ -647,68 +731,44 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
   const onSortChanged = useCallback((e: any) => {
     const api = e?.api ?? gridApiRef.current;
-    let model: SortModelItem[] = (api?.getSortModel?.() ?? []) as SortModelItem[];
-    if ((!model || model.length === 0) && Array.isArray(e?.columns) && e.columns.length > 0) {
-      const explicit = e.columns
-        .map((col: any) => {
-          const sort = col?.getSort?.();
-          const colId = col?.getColId?.();
-          return sort ? { colId, sort } : null;
-        })
-        .filter(Boolean) as SortModelItem[];
-      if (explicit.length > 0) model = explicit;
-    }
-    if ((!model || model.length === 0) && e?.column) {
-      const sort = e.column.getSort?.();
-      const colId = e.column.getColId?.();
-      if (sort && colId) {
-        model = [{ colId, sort }];
-      }
-    }
-    if ((!model || model.length === 0) && api?.getColumnState) {
-      const state = (api.getColumnState?.() ?? []) as ColumnState[];
-      const sorted = state.find((col) => col.sort && col.colId);
-      if (sorted?.colId && sorted.sort) {
-        model = [{ colId: sorted.colId, sort: sorted.sort as 'asc' | 'desc' }];
-      }
-    }
-    if (!model || model.length === 0) {
-      model = [];
-    }
-    // Deep-compare to avoid redundant state updates that would purge cache
-    const sameLength = model.length === sortModel.length;
-    const isSame = sameLength && model.every((m, i) => m.colId === sortModel[i].colId && m.sort === sortModel[i].sort);
+    const model = gridSortModel(api);
+    // AG Grid reloads the rows on a sort change by itself; the state only feeds the URL.
+    const isSame = model.length === sortModel.length
+      && model.every((m, i) => m.colId === sortModel[i].colId && m.sort === sortModel[i].sort);
     if (!isSame) setSortModel(model);
+    abortOtherQueries(api);
     try {
       if (onQueryStateChange) {
         const sort = parseSortParam(model, defaultSort);
         onQueryStateChange({ sort, filterModel: filterModelRef.current, q: searchRef.current, statusScope: statusScopeRef.current });
       }
     } catch {}
-  }, [defaultSort, onQueryStateChange, sortModel]);
+  }, [abortOtherQueries, defaultSort, onQueryStateChange, sortModel]);
 
   const onFilterChanged = useCallback((e: any) => {
     const api = e?.api ?? gridApiRef.current;
     const fm = api?.getFilterModel?.() ?? {};
     filterModelRef.current = fm;
+    // AG Grid reloads the rows on a filter change by itself: no purge here, which would load them twice.
+    abortOtherQueries(api);
     try {
       if (enablePagination) {
         (api as any)?.paginationGoToFirstPage?.();
       }
-      (api as any)?.purgeInfiniteCache?.();
       if (api?.ensureIndexVisible) api.ensureIndexVisible(0, 'top');
     } catch {}
     // Inform parent immediately
     try {
       if (onQueryStateChange) {
-        const sort = parseSortParam((api?.getSortModel?.() ?? []) as SortModelItem[], defaultSort);
+        const sort = gridSortParam(api, defaultSort);
         onQueryStateChange({ sort, filterModel: fm, q: searchRef.current, statusScope: statusScopeRef.current });
       }
     } catch {}
-  }, [defaultSort, enablePagination, onQueryStateChange]);
+  }, [abortOtherQueries, defaultSort, enablePagination, onQueryStateChange]);
 
 
-  // Reset data when sort/search, extra params, refreshKey, endpoint, or status scope change
+  // Reload when the search, extra params, refreshKey, endpoint or status scope change: AG Grid does
+  // not see those. It reloads on a sort or filter change by itself.
   useEffect(() => {
     // Skip first run to avoid double-fetch on mount
     if (!initializedRef.current) {
@@ -717,6 +777,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     }
     const api = gridApiRef.current;
     // update URL handled in other effect; here we simply purge cache to refetch with new params
+    supersedeRequests();
     try {
       if (enablePagination) {
         (api as any)?.paginationGoToFirstPage?.();
@@ -725,7 +786,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       if (api?.ensureIndexVisible) api.ensureIndexVisible(0, 'top');
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortModel, debouncedSearch, extraParamsKey, refreshKey, endpoint, statusScope, enablePagination]);
+  }, [debouncedSearch, extraParamsKey, refreshKey, endpoint, statusScope, enablePagination]);
 
   const agGetRowId = useCallback((params: GetRowIdParams<T>) => {
     if (getRowId) return String(getRowId(params.data));
@@ -779,6 +840,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       filters: filterModelRef.current || {},
       extraParams: extraParamsRef.current || {},
       statusScope: statusScopeRef.current,
+      // Keys the set filters' value cache per list.
+      endpoint: endpointRef.current,
     }),
   }), []);
 
@@ -993,6 +1056,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           pinnedBottomRowData={mergedPinnedBottomRowData}
           cacheBlockSize={cacheBlockSize}
           maxConcurrentDatasourceRequests={1}
+          // Rows scrolled past quickly are not asked for, and a change of query starts one request.
+          blockLoadDebounceMillis={150}
           getRowId={agGetRowId}
           onGridReady={(e) => {
             onGridReady(e);
