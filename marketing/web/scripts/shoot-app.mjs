@@ -147,18 +147,25 @@ const PAGES = {
       // Second selection: 2027 A0 → 2026 A3, so the chart compares budget and landing of the same year.
       await page.waitForSelector('.MuiSelect-select', { timeout: 20000 });
       await sleep(1500);
-      const choose = async (index, text) => {
+      // Select by current text: the last select showing `from` becomes `to`.
+      const choose = async (from, to) => {
         const selects = await page.$$('.MuiSelect-select');
-        await selects[index].click();
+        let target = null;
+        for (const el of selects) {
+          const label = await el.evaluate((n) => n.textContent?.trim() || '');
+          if (label === from) target = el;
+        }
+        if (!target) { console.warn(`select '${from}' not found`); return; }
+        await target.click();
         await page.waitForSelector('li[role="option"]', { timeout: 10000 });
         for (const option of await page.$$('li[role="option"]')) {
           const label = await option.evaluate((el) => el.textContent?.trim() || '');
-          if (label === text) { await option.click(); break; }
+          if (label === to) { await option.click(); break; }
         }
         await sleep(800);
       };
-      await choose(3, '2026');
-      await choose(4, 'A3 Atterrissage');
+      await choose('2027', '2026');
+      await choose('A0 Budget', 'A3 Atterrissage');
       await page.waitForFunction(() => document.querySelectorAll('table tbody tr').length > 1, { timeout: 30000 }).catch(() => {});
       await sleep(1500);
     },
