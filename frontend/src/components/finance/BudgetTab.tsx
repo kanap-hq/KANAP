@@ -17,7 +17,8 @@ import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import useAutosave from '../../hooks/useAutosave';
 import YearTabs from '../navigation/YearTabs';
 import FormattedNumberField from '../inputs/FormattedNumberField';
-import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx } from '../../theme/formSx';
+import { drawerMenuItemSx, drawerSelectSx, selectKeepsFocus, tableCellFieldSx } from '../../theme/formSx';
+import { useKanapDialogs } from '../design';
 import DateEUField from '../fields/DateEUField';
 import BudgetTrendChart from './BudgetTrendChart';
 import LinesPanel, { LinesSaveResult, PanelField, PanelPeriod } from './LinesPanel';
@@ -124,6 +125,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const queryClient = useQueryClient();
   const budgetColumns = useBudgetColumns();
   const { shown, group, defaultColumn } = budgetColumns;
+  const dialogs = useKanapDialogs();
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -185,6 +187,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const monthsRef = React.useRef(months); monthsRef.current = months;
   const versionRef = React.useRef(version); versionRef.current = version;
   const frozenRef = React.useRef(frozen); frozenRef.current = frozen;
+  const yearRef = React.useRef(year); yearRef.current = year;
   const roundInputsRef = React.useRef(roundInputs); roundInputsRef.current = roundInputs;
   const storedAmountsRef = React.useRef(storedAmounts); storedAmountsRef.current = storedAmounts;
   const periodForRef = React.useRef(periodFor); periodForRef.current = periodFor;
@@ -453,8 +456,17 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     scheduleSave();
   };
   // Clear every month for a column: convenient when entering a cash-out plan manually
-  // (e.g. the whole amount in a single month).
-  const clearColumn = (key: AmountCol) => {
+  // (e.g. the whole amount in a single month). Asked first, unless the column is already empty.
+  const clearColumn = async (key: AmountCol) => {
+    if (monthsRef.current.some((m) => toCents(m[key]) !== 0)) {
+      const confirmed = await dialogs.confirm({
+        message: t(`${config.i18nPrefix}.budget.clearColumnConfirm`, { column: budgetColumns.label(key), year }),
+        confirmLabel: t(`${config.i18nPrefix}.budget.clearColumn`),
+        intent: 'danger',
+      });
+      // While the question was open, the column may have been frozen or the year changed: then nothing is cleared.
+      if (!confirmed || frozenRef.current[FREEZE_KEY[key]] || yearRef.current !== year) return;
+    }
     setMonths((prev) => prev.map((m) => ({ ...m, [key]: 0 })));
     for (let m = 1; m <= 12; m++) editCell(monthPeriod(year, m), key);
     scheduleSave();
@@ -705,7 +717,6 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   ].filter(Boolean).join(' ');
   const zeroedText = spreadProblem ? '' : zeroedMonthsText(t, locale, spreadActive);
 
-  const panelColumns = shown.map((c) => ({ measure: c.measure, label: c.label, frozen: frozen[c.freezeKey] }));
   const spreadFields = (
     <>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 1.5, rowGap: 1 }}>
@@ -714,6 +725,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
             select size="small" variant="standard" value={spreadMeasure}
             onChange={(e) => onSpreadMeasureChange(e.target.value as AmountCol)}
             inputProps={{ 'aria-label': t('budgetTab.column') }}
+            SelectProps={selectKeepsFocus}
             sx={drawerSelectSx}
           >
             {shown.map((c) => <MenuItem key={c.measure} value={c.measure} sx={drawerMenuItemSx}>{c.label}</MenuItem>)}
@@ -735,6 +747,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
             select size="small" variant="standard" value={spreadProfile}
             onChange={(e) => onSpreadProfileChange(e.target.value as 'flat' | '4-4-5')}
             inputProps={{ 'aria-label': t('budgetTab.distribution') }}
+            SelectProps={selectKeepsFocus}
             sx={drawerSelectSx}
           >
             <MenuItem value="flat" sx={drawerMenuItemSx}>{t(`${config.i18nPrefix}.budget.profileFlat`)}</MenuItem>
@@ -798,25 +811,40 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         )}
       </Box>
       {panelKind === 'spread' ? spreadFields : loadedYear === year && (
-        // One panel per year and column: it starts from the column's stored lines and keeps what is
-        // typed across its own saves.
-        <LinesPanel
-          key={`${year}:${spreadMeasure}`}
-          year={year}
-          measure={spreadMeasure}
-          columns={panelColumns}
-          onMeasureChange={onSpreadMeasureChange}
-          record={recordFor(spreadMeasure)}
-          period={periodForEdit(year, recordFor(spreadMeasure), storedAmounts[spreadMeasure], suggestion)}
-          itemStart={effectiveStart}
-          itemEnd={endOfValidity}
-          frozen={spreadFrozen}
-          frozenHint={t(`${config.i18nPrefix}.budget.someColumnsFrozen`)}
-          payingCompanyCountry={payingCompanyCountry}
-          columnName={labelFor}
-          applyToAll={{ offered: offerApplyToAll, on: linesAllColumns, hint: applyToAllHint, onChange: setLinesAllColumns }}
-          onSave={(lines, toAllColumns) => saveLines(spreadMeasure, lines, toAllColumns)}
-        />
+        <>
+          {/* Outside the panel below: a column picked here keeps the focus while that panel is drawn again. */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 1.5, rowGap: 1 }}>
+            {panelField(t('budgetTab.column'), 150, (
+              <TextField
+                select size="small" variant="standard" value={spreadMeasure}
+                onChange={(e) => onSpreadMeasureChange(e.target.value as AmountCol)}
+                inputProps={{ 'aria-label': t('budgetTab.column') }}
+                SelectProps={selectKeepsFocus}
+                sx={drawerSelectSx}
+              >
+                {shown.map((c) => (
+                  <MenuItem key={c.measure} value={c.measure} disabled={frozen[c.freezeKey]} sx={drawerMenuItemSx}>{c.label}</MenuItem>
+                ))}
+              </TextField>
+            ))}
+          </Box>
+          {/* One panel per year and column: it starts from the column's stored lines and keeps what is
+              typed across its own saves. */}
+          <LinesPanel
+            key={`${year}:${spreadMeasure}`}
+            year={year}
+            record={recordFor(spreadMeasure)}
+            period={periodForEdit(year, recordFor(spreadMeasure), storedAmounts[spreadMeasure], suggestion)}
+            itemStart={effectiveStart}
+            itemEnd={endOfValidity}
+            frozen={spreadFrozen}
+            frozenHint={t(`${config.i18nPrefix}.budget.someColumnsFrozen`)}
+            payingCompanyCountry={payingCompanyCountry}
+            columnName={labelFor}
+            applyToAll={{ offered: offerApplyToAll, on: linesAllColumns, hint: applyToAllHint, onChange: setLinesAllColumns }}
+            onSave={(lines, toAllColumns) => saveLines(spreadMeasure, lines, toAllColumns)}
+          />
+        </>
       )}
     </Box>
   );
@@ -933,7 +961,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                           <LockOutlinedIcon sx={{ fontSize: 12, color: 'kanap.text.tertiary' }} />
                         ) : (
                           <Tooltip title={t(`${config.i18nPrefix}.budget.clearColumn`)}>
-                            <IconButton size="small" aria-label={t(`${config.i18nPrefix}.budget.clearColumn`)} onClick={() => clearColumn(col)} sx={{ p: '2px' }}>
+                            <IconButton size="small" aria-label={t(`${config.i18nPrefix}.budget.clearColumn`)} onClick={() => { void clearColumn(col); }} sx={{ p: '2px' }}>
                               <BackspaceOutlinedIcon sx={{ fontSize: 13 }} />
                             </IconButton>
                           </Tooltip>

@@ -77,6 +77,7 @@
       "failedToLoad": "Versionsdaten konnten nicht geladen werden",
       "failedToSave": "Version konnte nicht gespeichert werden",
       "clearColumn": "Spalte leeren",
+      "clearColumnConfirm": "Alle Monate der Spalte {{column}} für {{year}} leeren? Die anderen Spalten bleiben unverändert.",
       "multiYearTitle": "Mehrjahrestrend"
     },
     "allocations": {
@@ -287,6 +288,7 @@
       "failedToLoad": "Versionsdaten konnten nicht geladen werden",
       "failedToSave": "Version konnte nicht gespeichert werden",
       "clearColumn": "Spalte leeren",
+      "clearColumnConfirm": "Alle Monate der Spalte {{column}} für {{year}} leeren? Die anderen Spalten bleiben unverändert.",
       "multiYearTitle": "Mehrjahrestrend"
     },
     "allocations": {

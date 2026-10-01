@@ -77,6 +77,7 @@
       "failedToLoad": "Impossible de charger les données de version",
       "failedToSave": "Impossible d'enregistrer la version",
       "clearColumn": "Effacer la colonne",
+      "clearColumnConfirm": "Effacer tous les mois de la colonne {{column}} pour {{year}} ? Les autres colonnes ne changent pas.",
       "multiYearTitle": "Tendance pluriannuelle"
     },
     "allocations": {
@@ -287,6 +288,7 @@
       "failedToLoad": "Impossible de charger les données de version",
       "failedToSave": "Impossible d'enregistrer la version",
       "clearColumn": "Effacer la colonne",
+      "clearColumnConfirm": "Effacer tous les mois de la colonne {{column}} pour {{year}} ? Les autres colonnes ne changent pas.",
       "multiYearTitle": "Tendance pluriannuelle"
     },
     "allocations": {

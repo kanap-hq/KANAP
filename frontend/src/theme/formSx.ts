@@ -145,6 +145,13 @@ export const drawerMenuItemSx = {
   minHeight: 'auto',
 } as const;
 
+/**
+ * `SelectProps` of a select that takes the focus back once a choice is made. The theme closes every
+ * menu without giving the focus back (#181: no ring left on the button that opened it); a select in a
+ * run of fields typed with the keyboard needs it, so Tab goes on to the next field.
+ */
+export const selectKeepsFocus = { MenuProps: { disableRestoreFocus: false } } as const;
+
 /** Shared width bounds for page-level dropdowns: the control and its menu match. */
 export const COMPACT_SELECT_MIN_WIDTH = 240;
 export const COMPACT_SELECT_MAX_WIDTH = 420;

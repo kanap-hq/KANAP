@@ -3,6 +3,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typogra
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 type ImportReport = {
   ok: boolean;
@@ -15,6 +16,15 @@ type ImportReport = {
   unchanged?: number;
   errors: { row: number; message: string }[];
 };
+
+/**
+ * The heading of a refused file. Every importer numbers the data rows from 2 (row 1 is the header):
+ * an error on row 0 or 1 is about the file itself (a header mismatch, an empty file, an unknown
+ * column), the others are about the rows.
+ */
+function refusedFileHeading(errors: ImportReport['errors']): 'csv.fileNotFormatted' | 'csv.validationFailed' {
+  return errors.length > 0 && errors.every((e) => e.row >= 2) ? 'csv.validationFailed' : 'csv.fileNotFormatted';
+}
 
 export default function CsvImportDialog({
   open,
@@ -38,12 +48,15 @@ export default function CsvImportDialog({
   const [file, setFile] = useState<File | null>(null);
   const [hover, setHover] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
+  // The request itself failed: the server's message, shown instead of a report.
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = useCallback(() => {
     setFile(null);
     setReport(null);
+    setRequestError(null);
     setLoading(false);
     setHover(false);
   }, []);
@@ -65,6 +78,7 @@ export default function CsvImportDialog({
     if (!file) return;
     setLoading(true);
     setReport(null);
+    setRequestError(null);
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -77,7 +91,7 @@ export default function CsvImportDialog({
       }
     } catch (e) {
       console.error('Import failed', e);
-      setReport({ ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors: [{ row: 0, message: t('csv.fileNotFormatted') }] });
+      setRequestError(getApiErrorMessage(e, t, t('csv.fileNotFormatted')));
     } finally {
       setLoading(false);
     }
@@ -155,6 +169,7 @@ export default function CsvImportDialog({
           )}
         </Stack>
         {loading && <LinearProgress sx={{ mt: 2 }} />}
+        {requestError && <Alert severity="error" sx={{ mt: 2 }}>{requestError}</Alert>}
         {report && (
           <Box sx={{ mt: 2 }}>
             {(report as any).ok ? (
@@ -173,7 +188,7 @@ export default function CsvImportDialog({
                 )}
               </Alert>
             ) : (
-              <Alert severity="error">{t('csv.fileNotFormatted')}</Alert>
+              <Alert severity="error">{t(refusedFileHeading(report.errors ?? []))}</Alert>
             )}
             {(report as any).errors && (report as any).errors.length > 0 && (
               <Box sx={{ mt: 1 }}>

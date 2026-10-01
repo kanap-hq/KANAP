@@ -77,6 +77,7 @@
       "failedToLoad": "No se pudieron cargar los datos de versión",
       "failedToSave": "No se pudo guardar la versión",
       "clearColumn": "Borrar columna",
+      "clearColumnConfirm": "¿Borrar todos los meses de la columna {{column}} en {{year}}? Las demás columnas no cambian.",
       "multiYearTitle": "Tendencia plurianual"
     },
     "allocations": {
@@ -287,6 +288,7 @@
       "failedToLoad": "No se pudieron cargar los datos de versión",
       "failedToSave": "No se pudo guardar la versión",
       "clearColumn": "Borrar columna",
+      "clearColumnConfirm": "¿Borrar todos los meses de la columna {{column}} en {{year}}? Las demás columnas no cambian.",
       "multiYearTitle": "Tendencia plurianual"
     },
     "allocations": {

@@ -111,6 +111,7 @@
       "failedToLoad": "Failed to load version data",
       "failedToSave": "Failed to save version",
       "clearColumn": "Clear column",
+      "clearColumnConfirm": "Clear every month of {{column}} for {{year}}? The other columns stay as they are.",
       "multiYearTitle": "Multi-year trend"
     },
     "allocations": {
@@ -287,6 +288,7 @@
       "failedToLoad": "Failed to load version data",
       "failedToSave": "Failed to save version",
       "clearColumn": "Clear column",
+      "clearColumnConfirm": "Clear every month of {{column}} for {{year}}? The other columns stay as they are.",
       "multiYearTitle": "Multi-year trend"
     },
     "allocations": {
