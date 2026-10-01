@@ -870,6 +870,7 @@
       "clear": "Leeren",
       "deleteTenant": "Mandant löschen",
       "freeze": "Einfrieren",
+      "markInternal": "Als internen Mandanten markieren",
       "refresh": "Aktualisieren",
       "savePlan": "Plan speichern",
       "unfreeze": "Auftauen",
@@ -923,6 +924,8 @@
       "deleted": "Mandant erfolgreich gelöscht.",
       "freezeFailed": "Mandant konnte nicht eingefroren werden.",
       "frozen": "Mandant eingefroren.",
+      "markInternalFailed": "Mandant konnte nicht als intern markiert werden.",
+      "markedInternal": "Mandant als intern markiert.",
       "planUpdated": "Plan aktualisiert.",
       "unfreezeFailed": "Mandant konnte nicht aufgetaut werden.",
       "unfrozen": "Mandant aufgetaut.",
@@ -936,14 +939,27 @@
         "paymentMode": "Zahlungsmodus",
         "planName": "Planname",
         "seatLimit": "Platzlimit",
-        "subscription": "Abonnement"
+        "status": "Abonnementstatus",
+        "subscription": "Abonnement",
+        "trialEnd": "Ende der Testphase"
       },
+      "seatLimitHelper": "Leer lassen für unbegrenzte Plätze.",
       "seatsUsed": "Genutzte Plätze: {{count}}",
       "values": {
         "annual": "Jährlich",
         "bankTransfer": "Banküberweisung",
         "card": "Karte",
         "monthly": "Monatlich"
+      },
+      "statuses": {
+        "active": "Aktiv",
+        "canceled": "Gekündigt",
+        "incomplete": "Zahlung nicht abgeschlossen",
+        "incomplete_expired": "Zahlung nie abgeschlossen",
+        "past_due": "Zahlung überfällig",
+        "paused": "Pausiert",
+        "trialing": "Testphase",
+        "unpaid": "Unbezahlt"
       }
     },
     "sections": {
@@ -971,7 +987,15 @@
       "deleting": "Wird gelöscht",
       "frozen": "Eingefroren"
     },
-    "title": "Mandanten"
+    "title": "Mandanten",
+    "internal": {
+      "alreadyInternal": "Dieser Mandant ist bereits intern.",
+      "confirm": "Als intern markieren",
+      "confirmBody": "Für einen Demo- oder Testmandanten. Sein Abonnement wird aktiv, ohne Enddatum und mit unbegrenzten Plätzen, und es wird keine Zahlung erwartet. Ein Mandant mit abgelaufener Testphase ist sofort wieder nutzbar. An Stripe wird nichts gesendet.",
+      "confirmNote": "Den Plannotizen wird eine Zeile mit dem heutigen Datum hinzugefügt. Der Plan lässt sich danach unten weiterhin ändern.",
+      "confirmTitle": "Als internen Mandanten markieren?",
+      "stripeLinked": "Dieser Mandant hat ein Stripe-Abonnement und kann daher nicht intern werden."
+    }
   },
   "userForm": {
     "entraManagedHint": "Dieser Benutzer wird von Microsoft Entra ID verwaltet und kann hier nicht bearbeitet werden.",

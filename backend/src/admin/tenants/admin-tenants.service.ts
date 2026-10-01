@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Tenant, TenantBranding, TenantStatus } from '../../tenants/tenant.entity';
@@ -10,7 +10,8 @@ import { UpdateTenantPlanDto } from './dto/update-tenant-plan.dto';
 import { FreezeTenantDto } from './dto/freeze-tenant.dto';
 import { DeleteTenantDto } from './dto/delete-tenant.dto';
 import { AuditService } from '../../audit/audit.service';
-import { Subscription } from '../../billing/subscription.entity';
+import { PaymentMode, Subscription, SubscriptionStatus } from '../../billing/subscription.entity';
+import { INTERNAL_PLAN_NAME } from '../../billing/plans.config';
 import { TrialSignup } from '../../public/trial-signup.entity';
 import { StorageService } from '../../common/storage/storage.service';
 import {
@@ -73,6 +74,28 @@ export class AdminTenantsService {
     return this.getTenantDetail(tenantId);
   }
 
+  /**
+   * Turns a tenant into an internal tenant (demonstration, test): active, no trial end,
+   * unlimited seats, no money flow. Reactivates a tenant whose trial has expired.
+   *
+   * Refused when the subscription row carries a Stripe subscription id, whatever its
+   * status. A live one belongs to a paying customer, who must never be masked. An ended
+   * one (canceled, incomplete_expired) would not hold either: the billing page refreshes
+   * any linked subscription from Stripe and would write the Stripe status back over it.
+   * Stripe ids are never touched here.
+   */
+  async markInternal(tenantId: string, actorId: string | null) {
+    const tenant = await this.findTenantOrFail(tenantId);
+    this.ensureNotSystemTenant(tenant);
+    if (tenant.status === TenantStatus.DELETED || tenant.status === TenantStatus.DELETING) {
+      throw new BadRequestException('Tenant already deleted');
+    }
+    await withTenant(this.dataSource, tenantId, async (manager) => {
+      await this.applyInternalPlan(manager, actorId, new Date());
+    });
+    return this.getTenantDetail(tenantId);
+  }
+
   async freezeTenant(tenantId: string, actorId: string | null, body: FreezeTenantDto) {
     const tenant = await this.findTenantOrFail(tenantId);
     this.ensureNotSystemTenant(tenant);
@@ -121,6 +144,7 @@ export class AdminTenantsService {
       slug: tenant.slug,
       name: tenant.name,
       status: tenant.status,
+      is_system_tenant: tenant.is_system_tenant === true,
       frozen_at: tenant.frozen_at,
       frozen_by: tenant.frozen_by,
       deletion_requested_at: tenant.deletion_requested_at,
@@ -170,8 +194,8 @@ export class AdminTenantsService {
       sub.plan_name = dto.plan_name ?? null;
     }
     if (dto.seat_limit !== undefined) {
-      if (dto.seat_limit < 0) throw new BadRequestException('seat_limit must be >= 0');
-      sub.seat_limit = dto.seat_limit;
+      if (dto.seat_limit !== null && dto.seat_limit < 0) throw new BadRequestException('seat_limit must be >= 0');
+      sub.seat_limit = dto.seat_limit; // null = unlimited
     }
     if (dto.active_seats !== undefined) {
       if (dto.active_seats < 0) throw new BadRequestException('active_seats must be >= 0');
@@ -185,6 +209,12 @@ export class AdminTenantsService {
     }
     if (dto.next_payment_at !== undefined) {
       sub.next_payment_at = dto.next_payment_at ? new Date(dto.next_payment_at) : null;
+    }
+    if (dto.status != null) {
+      sub.status = dto.status;
+    }
+    if (dto.trial_end !== undefined) {
+      sub.trial_end = dto.trial_end ? new Date(dto.trial_end) : null;
     }
     if (dto.notes !== undefined) {
       sub.notes = dto.notes ?? null;
@@ -201,6 +231,64 @@ export class AdminTenantsService {
         before,
         after,
         userId: actorId ?? null,
+      },
+      { manager },
+    );
+  }
+
+  private async applyInternalPlan(manager: EntityManager, actorId: string | null, now: Date) {
+    const subsRepo = manager.getRepository(Subscription);
+    // Same row as the access gates (latest first), locked against a concurrent webhook write.
+    let sub = await subsRepo.findOne({
+      where: {},
+      order: { created_at: 'DESC' },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (!sub) {
+      sub = subsRepo.create({ plan_name: 'Trial', seat_limit: null });
+      sub = await subsRepo.save(sub);
+    }
+    if (sub.stripe_subscription_id) {
+      throw new ConflictException(
+        'This tenant has a Stripe subscription. Internal tenants are for demonstration and test tenants without one.',
+      );
+    }
+
+    const alreadyInternal =
+      sub.plan_name === INTERNAL_PLAN_NAME &&
+      sub.status === SubscriptionStatus.ACTIVE &&
+      sub.trial_end == null &&
+      sub.seat_limit == null &&
+      sub.payment_mode === PaymentMode.BANK_TRANSFER &&
+      sub.next_payment_at == null;
+    if (alreadyInternal) return;
+
+    const before = this.serializeSubscription(sub);
+    sub.status = SubscriptionStatus.ACTIVE;
+    sub.trial_end = null;
+    sub.plan_name = INTERNAL_PLAN_NAME;
+    sub.seat_limit = null;
+    sub.payment_mode = PaymentMode.BANK_TRANSFER;
+    sub.next_payment_at = null;
+    const noteLine = `Tenant interne (démonstration, test), marqué le ${now.toISOString().slice(0, 10)}`;
+    const existingNotes = sub.notes?.trim() ? sub.notes : null;
+    if (!existingNotes) {
+      sub.notes = noteLine;
+    } else if (!existingNotes.includes(noteLine)) {
+      sub.notes = `${existingNotes}\n${noteLine}`;
+    }
+    sub.last_synced_at = now;
+    sub = await subsRepo.save(sub);
+
+    await this.audit.log(
+      {
+        table: 'tenants_plan',
+        recordId: sub.id,
+        action: 'update',
+        before,
+        after: this.serializeSubscription(sub),
+        userId: actorId ?? null,
+        sourceRef: 'mark-internal',
       },
       { manager },
     );

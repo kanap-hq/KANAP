@@ -870,6 +870,7 @@
       "clear": "Effacer",
       "deleteTenant": "Supprimer le tenant",
       "freeze": "Geler",
+      "markInternal": "Marquer comme tenant interne",
       "refresh": "Actualiser",
       "savePlan": "Enregistrer le plan",
       "unfreeze": "Dégeler",
@@ -923,6 +924,8 @@
       "deleted": "Tenant supprimé avec succès.",
       "freezeFailed": "Impossible de geler le tenant.",
       "frozen": "Tenant gelé.",
+      "markInternalFailed": "Impossible de marquer le tenant comme interne.",
+      "markedInternal": "Tenant marqué comme interne.",
       "planUpdated": "Plan mis à jour.",
       "unfreezeFailed": "Impossible de dégeler le tenant.",
       "unfrozen": "Tenant dégelé.",
@@ -936,14 +939,27 @@
         "paymentMode": "Mode de paiement",
         "planName": "Nom du plan",
         "seatLimit": "Limite de postes",
-        "subscription": "Abonnement"
+        "status": "Statut de l'abonnement",
+        "subscription": "Abonnement",
+        "trialEnd": "Date de fin d'essai"
       },
+      "seatLimitHelper": "Laisser vide pour des postes illimités.",
       "seatsUsed": "Postes utilisés : {{count}}",
       "values": {
         "annual": "Annuel",
         "bankTransfer": "Virement bancaire",
         "card": "Carte",
         "monthly": "Mensuel"
+      },
+      "statuses": {
+        "active": "Actif",
+        "canceled": "Annulé",
+        "incomplete": "Paiement non finalisé",
+        "incomplete_expired": "Paiement jamais finalisé",
+        "past_due": "Paiement en retard",
+        "paused": "En pause",
+        "trialing": "Essai",
+        "unpaid": "Impayé"
       }
     },
     "sections": {
@@ -971,7 +987,15 @@
       "deleting": "En suppression",
       "frozen": "Gelé"
     },
-    "title": "Tenants"
+    "title": "Tenants",
+    "internal": {
+      "alreadyInternal": "Ce tenant est déjà interne.",
+      "confirm": "Marquer comme interne",
+      "confirmBody": "À utiliser pour un tenant de démonstration ou de test. Son abonnement devient actif, sans date de fin et avec des postes illimités, sans aucun paiement attendu. Un tenant dont l'essai a expiré redevient utilisable tout de suite. Rien n'est envoyé à Stripe.",
+      "confirmNote": "Une ligne datée du jour est ajoutée aux notes du plan. Le plan reste modifiable ci-dessous ensuite.",
+      "confirmTitle": "Marquer comme tenant interne ?",
+      "stripeLinked": "Ce tenant a un abonnement Stripe, il ne peut pas devenir interne."
+    }
   },
   "userForm": {
     "entraManagedHint": "Cet utilisateur est géré par Microsoft Entra ID et ne peut pas être modifié ici.",

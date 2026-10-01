@@ -1,5 +1,21 @@
 import api from '../api';
 
+/** Plan name of an internal tenant (demonstration, test). Mirrors the backend INTERNAL_PLAN_NAME. */
+export const INTERNAL_PLAN_NAME = 'Internal';
+
+/** Subscription statuses, as stored on the tenant's subscription. */
+export const SUBSCRIPTION_STATUSES = [
+  'trialing',
+  'active',
+  'past_due',
+  'unpaid',
+  'paused',
+  'canceled',
+  'incomplete',
+  'incomplete_expired',
+] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
 export type TenantUserStats = {
   total: number;
   enabled: number;
@@ -17,7 +33,8 @@ export type TenantStats = {
 
 export type TenantPlan = {
   plan_name?: string | null;
-  seat_limit: number;
+  /** null means unlimited seats. */
+  seat_limit: number | null;
   seats_used: number;
   active_seats?: number;
   subscription_type?: 'monthly' | 'annual';
@@ -62,6 +79,7 @@ export type TenantSummary = {
   slug: string;
   name: string;
   status: 'active' | 'frozen' | 'deleting' | 'deleted';
+  is_system_tenant?: boolean;
   frozen_at?: string | null;
   frozen_by?: string | null;
   deletion_requested_at?: string | null;
@@ -109,15 +127,22 @@ export async function updateTenantPlan(
   id: string,
   payload: Partial<{
     plan_name: string | null;
-    seat_limit: number;
+    seat_limit: number | null;
     active_seats: number;
     subscription_type: 'monthly' | 'annual';
     payment_mode: 'card' | 'bank_transfer';
     next_payment_at: string | null;
+    status: SubscriptionStatus;
+    trial_end: string | null;
     notes: string | null;
   }>,
 ) {
   const res = await api.patch<TenantDetail>(`/admin/tenants/${id}/plan`, payload);
+  return res.data;
+}
+
+export async function markTenantInternal(id: string) {
+  const res = await api.post<TenantDetail>(`/admin/tenants/${id}/mark-internal`);
   return res.data;
 }
 

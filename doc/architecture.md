@@ -179,6 +179,16 @@ flowchart LR
 - `BillingModule` (`backend/src/billing/`) integrates Stripe: `GET /billing/plans|subscription|profile`, `POST /billing/checkout|change-plan|portal|request-invoice`, and `POST /stripe/webhook` (raw body). Subscription state lives on `subscriptions`, not on `tenant.status`.
 - Freeze and grace rules are computed in `subscription-freeze.util.ts` and enforced by `PermissionGuard` (`TRIAL_EXPIRED`, `SUBSCRIPTION_FROZEN`) on every permission-checked request, and by the AI policy and agent sweepers. Without `STRIPE_SECRET_KEY` (on-premise, or a cloud dev stack) the gate allows everything.
 
+#### Internal tenants
+An internal tenant is a demonstration or test tenant that runs with no money flow. A platform administrator marks it from the tenant detail in the platform console ("Mark as internal tenant"), which calls `POST /admin/tenants/:id/mark-internal`.
+- The tenant's subscription becomes `status = active`, `trial_end = null`, `plan_name = 'Internal'` (`INTERNAL_PLAN_NAME` in `billing/plans.config.ts`), `seat_limit = null` (unlimited), `payment_mode = bank_transfer` and `next_payment_at = null`. A dated line is appended to the subscription notes. The change runs in one tenant-scoped transaction and is audited on `tenants_plan` with `source_ref = 'mark-internal'`.
+- A tenant whose trial has expired is usable again at once: `evaluateSubscriptionAccess` allows any `active` subscription, whatever its period end.
+- Nothing is sent to Stripe and the Stripe ids are left as they are. The action is refused (409) when the subscription carries a `stripe_subscription_id`, whatever its status. A live one belongs to a paying customer. An ended one would not hold: the billing page refreshes a linked subscription from Stripe and would write the Stripe status back.
+- Nothing reverts the change on its own. Stripe refreshes and webhooks only touch a tenant linked to Stripe, and the scheduled jobs only read the subscription. If the tenant later subscribes through checkout, the Stripe webhook writes the paid plan over it.
+- The action is refused on system tenants and on deleted tenants. It does not lift a manual freeze (`tenant.status = frozen`), which stays a separate action.
+- The platform console has no commercial indicators (customer count, revenue, trial count) today. Any that are added must leave out subscriptions whose `plan_name` is `INTERNAL_PLAN_NAME`.
+- The plan form also edits the subscription status and the trial end date (`PATCH /admin/tenants/:id/plan`), for example to extend a trial. An empty seat limit means unlimited.
+
 ### Request DB Context
 - A global guard (`TenantInitGuard`) opens a per-request QueryRunner transaction and sets the tenant GUC before any other guard, so permission checks already run under RLS. A global interceptor (`TenantInterceptor`) reuses the transaction for the handler, commits it before the handler's value goes out (a failed commit answers 500, unless a handler that writes the response itself has already answered), and rolls it back before a handler error reaches the exception filter. Both release the connection on error. Opt-outs: `@Public()` and `@SkipTenantTransaction()`.
 - Controllers pass the request `EntityManager` (`req.queryRunner.manager`) into services so every query runs in the tenant-scoped session.

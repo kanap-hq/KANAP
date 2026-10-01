@@ -1,15 +1,16 @@
 import { IsEnum, IsInt, IsISO8601, IsOptional, IsString, Min } from 'class-validator';
-import { PaymentMode, SubscriptionType } from '../../../billing/subscription.entity';
+import { PaymentMode, SubscriptionStatus, SubscriptionType } from '../../../billing/subscription.entity';
 
 export class UpdateTenantPlanDto {
   @IsOptional()
   @IsString()
   plan_name?: string | null;
 
+  /** null means unlimited seats. */
   @IsOptional()
   @IsInt()
   @Min(0)
-  seat_limit?: number;
+  seat_limit?: number | null;
 
   @IsOptional()
   @IsInt()
@@ -29,7 +30,15 @@ export class UpdateTenantPlanDto {
   next_payment_at?: string | null;
 
   @IsOptional()
+  @IsEnum(SubscriptionStatus)
+  status?: SubscriptionStatus;
+
+  /** null clears the trial end. */
+  @IsOptional()
+  @IsISO8601({ strict: true }, { message: 'trial_end must be ISO-8601' })
+  trial_end?: string | null;
+
+  @IsOptional()
   @IsString()
   notes?: string | null;
 }
-
