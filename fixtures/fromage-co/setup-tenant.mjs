@@ -163,16 +163,16 @@ function lower(value) {
   return normalizeValue(value).toLowerCase();
 }
 
-async function request(method, route, body, { uploadPath, noAuth, publicHost } = {}) {
+async function request(method, route, body, { uploadPath, uploadBytes, uploadName, noAuth, publicHost } = {}) {
   const headers = {};
   const init = { method, headers };
 
   if (token && !noAuth) headers.Authorization = `Bearer ${token}`;
 
-  if (uploadPath) {
-    const bytes = readFileSync(uploadPath);
+  if (uploadPath || uploadBytes) {
+    const bytes = uploadBytes ?? readFileSync(uploadPath);
     const form = new FormData();
-    form.append('file', new Blob([bytes], { type: 'text/csv;charset=utf-8' }), path.basename(uploadPath));
+    form.append('file', new Blob([bytes], { type: 'text/csv;charset=utf-8' }), uploadName ?? path.basename(uploadPath));
     init.body = form;
   } else if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
@@ -517,6 +517,116 @@ async function ensureAnalyticsCategories() {
     await apiPost('/analytics-categories', { name, description });
     ok(`Created analytics category '${name}'`);
   }
+}
+
+
+// ── Budget: analytics dimensions, costed lines, monthly rows ─────────────────
+//
+// The budget files (26-30) come from tools/generate-budget.mjs. Cost centres,
+// dimension values and calendars import like any master data. Costed lines
+// (quantity × price, file 30) and monthly amounts (file 29) are keyed by item
+// name in the files, because item numbers only exist once the items are
+// imported: both steps resolve the names against the tenant first.
+
+const ANALYTICS_AXES = [
+  { code: 'nature', name: 'Nature de coût', description: 'Ce que la dépense paie : licences, assistance technique, cloud, matériel…', sort_order: 10 },
+  { code: 'reference', name: 'Référence budget', description: "Regroupe les lignes OPEX et CAPEX d'une même commande ou d'un même centre de compétences, quel que soit le fournisseur", sort_order: 20 },
+  { code: 'recurrence', name: 'Récurrence', description: 'Dépense récurrente ou ponctuelle', sort_order: 30 },
+];
+
+async function ensureAnalyticsAxes() {
+  info('Ensuring analytics dimensions');
+  const existing = items(await apiGet('/analytics-axes'));
+  for (const axis of ANALYTICS_AXES) {
+    if (existing.some((item) => lower(item.code) === axis.code)) continue;
+    await apiPost('/analytics-axes', axis);
+    ok(`Created analytics dimension '${axis.name}'`);
+  }
+}
+
+const CSV_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+async function listAllPages(route) {
+  const all = [];
+  for (let offset = 0; ; offset += 200) {
+    const page = items(await apiGet(`${route}${route.includes('?') ? '&' : '?'}limit=200&offset=${offset}`));
+    all.push(...page);
+    if (page.length < 200) return all;
+  }
+}
+
+async function budgetItemIndex() {
+  // Items whose end of validity has passed list as disabled: fetch both.
+  const spend = [...(await listAllPages('/spend-items?status=enabled')), ...(await listAllPages('/spend-items?status=disabled'))];
+  const capex = [...(await listAllPages('/capex-items?status=enabled')), ...(await listAllPages('/capex-items?status=disabled'))];
+  return {
+    opex: new Map(spend.map((item) => [item.product_name, item])),
+    capex: new Map(capex.map((item) => [item.description, item])),
+  };
+}
+
+async function ensureCostedLines(index) {
+  info('Writing costed lines (quantity × price)');
+  const calendars = await listAllPages('/working-day-profiles');
+  const calendarId = (code) => firstBy(calendars, (item) => lower(item.code) === lower(code));
+  const groups = new Map();
+  for (const row of readCsv('30-costed-lines.csv')) {
+    const key = `${row.item_type}|${row.item_name}|${row.year}|${row.measure}`;
+    if (!groups.has(key)) groups.set(key, { ...row, lines: [] });
+    groups.get(key).lines.push(row);
+  }
+  let written = 0;
+  for (const group of groups.values()) {
+    const item = index[group.item_type]?.get(group.item_name);
+    if (!item) { warn(`Costed lines: ${group.item_type} '${group.item_name}' not found`); continue; }
+    const itemBase = group.item_type === 'opex' ? '/spend-items' : '/capex-items';
+    const versionBase = group.item_type === 'opex' ? '/spend-versions' : '/capex-versions';
+    const year = Number(group.year);
+    const versions = items(await apiGet(`${itemBase}/${item.id}/versions`));
+    let version = versions.find((v) => Number(v.budget_year) === year);
+    if (!version) version = await apiPost(`${itemBase}/${item.id}/versions`, { budget_year: year });
+    const lines = group.lines.map((line) => {
+      const calendar = line.calendar_code ? calendarId(line.calendar_code) : null;
+      if (line.calendar_code && !calendar) throw new Error(`Costed lines: calendar '${line.calendar_code}' not found`);
+      return {
+        label: line.label,
+        quantity_unit: line.quantity_unit,
+        quantity: line.quantity,
+        unit_price: line.unit_price,
+        price_basis: line.price_basis,
+        frequency: line.frequency,
+        days_per_month: line.days_per_month || null,
+        period_start: line.period_start,
+        period_end: line.period_end,
+        working_day_profile_id: calendar,
+      };
+    });
+    await apiPost(`${versionBase}/${version.id}/amounts/bulk-upsert`, { kind: 'lines', year, measure: group.measure, lines });
+    written += 1;
+  }
+  ok(`Costed lines written on ${written} item columns`);
+}
+
+async function importBudgetRows(index) {
+  info('Importing monthly budget rows');
+  const header = ['item_type', 'item_number', 'year', 'measure', 'period_start', 'period_end', ...CSV_MONTHS, 'method'];
+  const out = [header.join(';')];
+  let skipped = 0;
+  for (const row of readCsv('29-budget-rows.csv')) {
+    const item = index[row.item_type]?.get(row.item_name);
+    if (!item) { warn(`Budget rows: ${row.item_type} '${row.item_name}' not found`); skipped += 1; continue; }
+    out.push([row.item_type, item.item_number, row.year, row.measure, row.period_start, row.period_end, ...CSV_MONTHS.map((m) => row[m]), ''].join(';'));
+  }
+  const bytes = Buffer.from(out.join('\n') + '\n', 'utf8');
+  const result = await request('POST', '/budget-rows/import?dryRun=false', undefined, { uploadBytes: bytes, uploadName: '29-budget-rows.csv' });
+  if (result?.ok === false) throw new Error(`Budget rows import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
+  ok(`Imported budget rows (${out.length - 1} rows${skipped ? `, ${skipped} skipped` : ''})`);
+}
+
+async function runBudget() {
+  const index = await budgetItemIndex();
+  await ensureCostedLines(index);
+  await importBudgetRows(index);
 }
 
 // ── Chart of accounts ────────────────────────────────────────────────────────
@@ -1487,11 +1597,15 @@ async function runImports() {
   await importCsv('08-departments.csv', '/departments/import');
   await importCsv('09-contacts.csv', '/contacts/import');
   await ensureDemoUsers();
+  await importCsv('26-cost-centers.csv', '/cost-centers/import');
+  await importCsv('27-analytics-values.csv', '/analytics-categories/import');
+  await importCsv('28-working-day-calendars.csv', '/working-day-profiles/import');
   await importCsv('11-business-processes.csv', '/business-processes/import');
   await importCsv('12-applications.csv', '/applications/import');
   await importCsv('13-contracts.csv', '/contracts/import');
   await importCsv('14-spend-items.csv', '/spend-items/import');
   await importCsv('15-capex-items.csv', '/capex-items/import');
+  await runBudget();
   await importCsv('16-portfolio-projects.csv', '/portfolio/projects/import');
   await importCsv('17-portfolio-requests.csv', '/portfolio/requests/import');
   const locationIdByFixtureCode = await ensureLocations();
@@ -1526,6 +1640,7 @@ async function main() {
   await setupSettings();
   await ensurePortfolioClassification();
   await ensureAnalyticsCategories();
+  await ensureAnalyticsAxes();
   await runImports();
   if (!options.skipRelations) await runRelations();
   await ensureServiceDeskDocs();
@@ -1536,7 +1651,7 @@ async function main() {
   console.log(`  App URL:      ${options.baseUrl}`);
   console.log(`  Tenant admin: ${options.email}`);
   if (options.demoPassword) {
-    console.log(`  Demo users:   thomas.berger@fromage-co.com (and 15 others) / ${options.demoPassword}`);
+    console.log(`  Demo users:   thomas.berger@fromage-co.com (and 18 others) / ${options.demoPassword}`);
   }
   if (!options.skipAgents) {
     console.log(`  Demo agent:   '${AGENT_NAME}' (mock ticketing) — check the Agents pages`);
