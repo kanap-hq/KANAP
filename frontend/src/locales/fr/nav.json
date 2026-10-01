@@ -47,6 +47,7 @@
       "contacts": "Contacts",
       "chartsOfAccounts": "Plans comptables",
       "currency": "Devise",
+      "workingDayCalendars": "Calendriers de jours ouvrés",
       "businessProcesses": "Processus métier",
       "analyticsDimensions": "Dimensions analytiques",
       "administration": "Administration"
@@ -127,6 +128,7 @@
     "companies": "Sociétés",
     "departments": "Départements",
     "costCenters": "Centres de coûts",
+    "workingDayCalendars": "Calendriers de jours ouvrés",
     "suppliers": "Fournisseurs",
     "accounts": "Comptes",
     "coa": "Plans comptables",

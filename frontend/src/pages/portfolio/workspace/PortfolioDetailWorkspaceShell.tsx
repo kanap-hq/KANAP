@@ -263,6 +263,12 @@ export default function PortfolioDetailWorkspaceShell({
   // hide them with no visible way back.
   const effectiveDrawerOpen = forceDrawerOpen || drawerOpen || isMobile;
   const hasProperties = properties != null;
+  // The drawer and its tab rise beside the tab row. Without a tab row (a single tab) there is
+  // nothing to sit beside: rising would cover the title row and its actions, so they start at
+  // the content top.
+  const hasTabRow = tabs.length > 1;
+  const drawerLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.panelTop) : 0;
+  const tabLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.tabTop) : 0;
 
   React.useEffect(() => {
     if (forceDrawerOpen) return;
@@ -376,7 +382,7 @@ export default function PortfolioDetailWorkspaceShell({
               alignItems: 'flex-start',
               gap: taskDetailTokens.titleRow.gap,
               flexDirection: isCompact ? 'column' : 'row',
-              mb: tabs.length > 1 ? (metadata ? taskDetailTokens.titleStack.metadataToTabsGap : taskDetailTokens.titleRow.mb) : 0,
+              mb: hasTabRow ? (metadata ? taskDetailTokens.titleStack.metadataToTabsGap : taskDetailTokens.titleRow.mb) : 0,
             }}
           >
             <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: taskDetailTokens.titleStack.gap }}>
@@ -445,7 +451,7 @@ export default function PortfolioDetailWorkspaceShell({
             )}
           </Box>
 
-          {tabs.length > 1 && (
+          {hasTabRow && (
             <Tabs
               value={activeTab}
               onChange={(_, nextValue) => onTabChange(String(nextValue))}
@@ -552,7 +558,7 @@ export default function PortfolioDetailWorkspaceShell({
               tabIndex={forceDrawerOpen ? -1 : 0}
               sx={(theme) => ({
                 position: 'absolute',
-                top: taskDetailTokens.drawer.tabTop,
+                top: -tabLift,
                 right: 0,
                 width: 26,
                 height: 120,
@@ -603,8 +609,8 @@ export default function PortfolioDetailWorkspaceShell({
             component="aside"
             sx={(theme) => ({
               width: isMobile ? '100%' : taskDetailTokens.drawer.panelWidth,
-              mt: isMobile ? 0 : `${taskDetailTokens.drawer.panelTop}px`,
-              height: isMobile ? 'auto' : `calc(100% + ${Math.abs(taskDetailTokens.drawer.panelTop)}px)`,
+              mt: isMobile ? 0 : `${-drawerLift}px`,
+              height: isMobile ? 'auto' : `calc(100% + ${drawerLift}px)`,
               maxHeight: isMobile ? '60vh' : undefined,
               flexShrink: 0,
               borderTop: isMobile ? `1px solid ${theme.palette.kanap.border.default}` : undefined,

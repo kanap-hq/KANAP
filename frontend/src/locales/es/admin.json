@@ -763,7 +763,8 @@
       "settings": "Configuración",
       "suppliers": "Proveedores",
       "tasks": "Tareas",
-      "users": "Usuarios"
+      "users": "Usuarios",
+      "working_day_profiles": "Calendarios laborales"
     },
     "sections": {
       "roles": "Roles"

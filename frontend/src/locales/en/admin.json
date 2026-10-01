@@ -763,7 +763,8 @@
       "settings": "Settings",
       "suppliers": "Suppliers",
       "tasks": "Tasks",
-      "users": "Users"
+      "users": "Users",
+      "working_day_profiles": "Working-day calendars"
     },
     "sections": {
       "roles": "Roles"

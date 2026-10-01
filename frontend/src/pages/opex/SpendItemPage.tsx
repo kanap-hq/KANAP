@@ -418,6 +418,15 @@ export default function SpendItemPage() {
 
   // ----- Transitional ref-save tabs (budget / allocations / relations) -----
   const budgetRef = React.useRef<BudgetTabHandle>(null);
+  // The paying company's country, for the budget tab: a new costed line starts on its standard calendar.
+  const payingCompanyId = form.paying_company_id;
+  const payingCompanyQuery = useQuery({
+    queryKey: ['companies', payingCompanyId],
+    queryFn: async () => (await api.get(`/companies/${payingCompanyId}`)).data,
+    enabled: routeTab === 'budget' && !isCreate && !!payingCompanyId,
+    staleTime: 5 * 60_000,
+  });
+  const payingCompanyCountry = (payingCompanyQuery.data as { country_iso?: string | null } | undefined)?.country_iso ?? null;
   const allocRef = React.useRef<AllocationsTabHandle>(null);
   const relationsRef = React.useRef<RelationsPanelHandle>(null);
 
@@ -748,7 +757,7 @@ export default function SpendItemPage() {
         )}
 
         {routeTab === 'budget' && !isCreate && uuid && (
-          <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} ref={budgetRef} />
+          <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} ref={budgetRef} />
         )}
         {routeTab === 'allocations' && !isCreate && uuid && (
           <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} ref={allocRef} />

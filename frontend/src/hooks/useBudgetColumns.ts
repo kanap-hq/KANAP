@@ -31,7 +31,7 @@ export type BudgetColumns = {
   /** Shown columns, fixed order. */
   shown: BudgetColumnView[];
   defaultColumn: BudgetColumnView;
-  /** Shown columns that follow "Apply to all columns", fixed order. */
+  /** Shown columns that follow the spread and the lines applied to all columns, fixed order. */
   group: BudgetColumnView[];
   /** Amount columns a list shows until the user picks others: the default column, then the last shown one. */
   displayDefaults: BudgetColumnView[];
@@ -96,7 +96,7 @@ export function resolveBudgetColumns(
   };
 }
 
-/** The tenant's budget columns: names, shown columns, "Apply to all columns" group and default column. */
+/** The tenant's budget columns: names, shown columns, the group that follows the spread and the lines, and default column. */
 export function useBudgetColumns(): BudgetColumns {
   const { t } = useTranslation(['ops']);
   const query = useQuery({

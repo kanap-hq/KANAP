@@ -763,7 +763,8 @@
       "settings": "Einstellungen",
       "suppliers": "Lieferanten",
       "tasks": "Aufgaben",
-      "users": "Benutzer"
+      "users": "Benutzer",
+      "working_day_profiles": "Arbeitstagekalender"
     },
     "sections": {
       "roles": "Rollen"

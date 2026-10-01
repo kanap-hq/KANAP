@@ -70,14 +70,18 @@ type Col = {
   headerName?: string;
   valueGetter?: (p: unknown) => unknown;
   valueFormatter?: (p: unknown) => unknown;
-  filterParams?: { getValues?: (p: unknown) => Promise<Array<{ value: string | null; label: string }>> };
+  tooltipValueGetter?: (p: unknown) => unknown;
+  filterParams?: { getValues?: (p: unknown) => Promise<Array<{ value: string | null; label: string }>>; filterOptions?: string[] };
   cellRenderer?: (p: unknown) => React.ReactElement;
+  cellRendererSelector?: (p: unknown) => { component: unknown };
 };
 type GridProps = {
   columns: Col[];
-  pinnedBottomRowData: Array<{ versions?: Record<string, { totals?: Record<string, number> }> }>;
+  pinnedBottomRowData: Array<{ versions?: Record<string, { totals?: Record<string, number> }> } & Record<string, unknown>>;
   defaultSort: { field: string; direction: string };
   onQueryStateChange: (state: { sort: string; filterModel: Record<string, unknown>; q: string; statusScope: string }) => void;
+  onGridApiReady: (api: unknown) => void;
+  onColumnStateChange: (state: Array<{ colId: string; hide?: boolean }>) => void;
 };
 const location = { search: '' };
 function LocationProbe() {
@@ -139,9 +143,10 @@ describe('OpexListPage', () => {
 
   it('offers every shown column of every list year and a supplier filter with the values the server lists', async () => {
     await renderPage();
-    // Forecast is hidden by default.
-    expect(lastProps().columns.filter((c) => c.filter === 'agNumberColumnFilter')).toHaveLength(16);
+    // Forecast is hidden by default. Four shown columns over four years: sixteen amounts, sixteen FTE.
+    expect(lastProps().columns.filter((c) => c.filter === 'agNumberColumnFilter')).toHaveLength(32);
     expect(column('yForecast')).toBeUndefined();
+    expect(column('fte_yForecast')).toBeUndefined();
     expect(column('supplier_name')?.filter).toBe(CheckboxSetFilter);
   });
 
@@ -211,6 +216,67 @@ describe('OpexListPage', () => {
     // The grid never mounted on the product default.
     for (const [props] of grid.mock.calls) expect((props as GridProps).defaultSort).toEqual({ field: 'yLanding', direction: 'DESC' });
     expect(lastProps().columns.filter((c) => c.filter === 'agNumberColumnFilter' && !c.defaultHidden).map((c) => c.colId)).toEqual(['yLanding']);
+  });
+
+  it('offers the FTE of every shown column, hidden by default, right after the amount columns', async () => {
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field ?? '');
+    const amounts = ids.filter((id) => /^y(Minus1|Plus1|Plus2)?[A-Z]/.test(id));
+    const fte = ids.filter((id) => id.startsWith('fte_'));
+    expect(fte).toEqual(amounts.map((id) => `fte_${id}`));
+    expect(ids.indexOf(fte[0])).toBe(ids.indexOf(amounts[amounts.length - 1]) + 1);
+    for (const id of fte) {
+      expect(column(id)).toMatchObject({ defaultHidden: true, filter: 'agNumberColumnFilter', headerName: 'ops:shared.fteColumnHeader' });
+      expect(column(id)!.filterParams!.filterOptions).toContain('blank');
+    }
+    // The cell opens the budget of its year.
+    const Y = new Date().getFullYear();
+    const data = { id: 'o-1', item_number: 3, fte_yPlus1Budget: 0.75 };
+    const el = (column('fte_yPlus1Budget')!.cellRendererSelector!({ node: {} }).component as (p: unknown) => React.ReactElement)({ data, value: 0.75, colDef: {} });
+    expect((el.props as { getHref: (row: unknown) => string | null }).getHref(data)).toMatch(new RegExp(`^/ops/opex/OPX-3/budget\\?.*year=${Y + 1}`));
+  });
+
+  it('asks the totals for the FTE columns shown only, and follows them when they are shown or hidden', async () => {
+    get.mockImplementation(async (url: string, config?: { params?: { fte?: string } }) => {
+      if (url === '/users') return { data: { items: [] } };
+      if (url === '/budget-columns') return { data: columnsSetting };
+      const fte = config?.params?.fte
+        ? Object.fromEntries(config.params.fte.split(',').map((key) => [key, { total: 12.5, unknown: 3 }]))
+        : undefined;
+      return { data: { yBudget: 10, ...(fte ? { fte } : {}) } };
+    });
+    await renderPage();
+    const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/spend-items/summary/totals');
+    // Nothing shown: no FTE asked.
+    for (const [, config] of totalsCalls()) expect(config.params.fte).toBeUndefined();
+
+    // The saved layout shows one FTE column: the first request from the grid asks for it.
+    act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'product_name', hide: false }, { colId: 'fte_yPlus1Budget', hide: false }, { colId: 'fte_yBudget', hide: true }] }));
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yPlus1Budget).toBe(12.5));
+    expect(totalsCalls().slice(-1)[0][1].params.fte).toBe('fte_yPlus1Budget');
+
+    // Showing another one refetches with both; the footer shows the sum and the unknown lines in a tooltip.
+    let count = totalsCalls().length;
+    act(() => lastProps().onColumnStateChange([{ colId: 'fte_yPlus1Budget', hide: false }, { colId: 'fte_yBudget', hide: false }]));
+    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
+    expect(totalsCalls().slice(-1)[0][1].params.fte).toBe('fte_yPlus1Budget,fte_yBudget');
+    await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yBudget).toBe(12.5));
+    const pinned = lastProps().pinnedBottomRowData[0];
+    expect(column('fte_yBudget')!.valueFormatter!({ value: column('fte_yBudget')!.valueGetter!({ data: pinned }) })).toBe('12.50');
+    expect(column('fte_yBudget')!.tooltipValueGetter!({ data: pinned, node: { rowPinned: 'bottom' } })).toBe('ops:shared.fteUnknownLines');
+
+    // A resize or a move changes nothing shown: no request.
+    count = totalsCalls().length;
+    act(() => lastProps().onColumnStateChange([{ colId: 'fte_yPlus1Budget', hide: false }, { colId: 'fte_yBudget', hide: false }, { colId: 'status', hide: true }]));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
+    expect(totalsCalls()).toHaveLength(count);
+
+    // Hiding them all: back to the totals without FTE.
+    act(() => lastProps().onColumnStateChange([{ colId: 'fte_yPlus1Budget', hide: true }, { colId: 'fte_yBudget', hide: true }]));
+    await waitFor(() => expect(totalsCalls()).toHaveLength(count + 1));
+    expect(totalsCalls().slice(-1)[0][1].params.fte).toBeUndefined();
+    await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yBudget).toBeUndefined());
   });
 
   it('filters every date column with date models, from the menu and from the box under the header', async () => {

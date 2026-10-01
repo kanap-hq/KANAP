@@ -334,6 +334,7 @@ interface ModuleItemNavResult {
 - `useAssetNav` - Assets (`/assets/ids`)
 - `useApplicationNav` - Applications (`/applications/ids`)
 - `useCostCenterNav` - Cost centers (`/cost-centers/ids`, default sort `path:ASC`)
+- `useWorkingDayCalendarNav` - Working-day calendars (`/working-day-profiles/ids`, default sort `name:ASC`)
 - `useAnalyticsNav` - Analytics values (`/analytics-categories/ids`; pass the dimension as `extraParams: { axis_id }` so the walk stays in it). `useAnalyticsDimensionNav(id)` in the same file walks the dimensions in their order from `useAnalyticsAxes()`, with no request of its own.
 - Plus: suppliers, companies, departments, accounts, template accounts, business processes
 
@@ -507,6 +508,25 @@ type AnalyticsAxes = {
 - Items read `analytics_values: ItemAnalyticsValue[]` and write `analytics_values: { [axisId]: valueId | null }` (omitted dimensions untouched, `null` clears); the frontend never sends the legacy field.
 - `buildAnalyticsAxes(list, t)` is the hook's pure core; tests mock the hook with it. `analyticsAxisLabel(axis, t)` labels an axis-like object (`{ name }`) outside the hook.
 
+### useWorkingDayProfiles
+The tenant's working-day calendars (storage word: working-day profiles), for the budget tab's compute panel and the Working-day calendars page (`/master-data/working-day-calendars`, resource `working_day_profiles`, nav Master data → Finance). A calendar holds, per year, the working days of each month; a price per day multiplies them.
+
+**Location:** `frontend/src/hooks/useWorkingDayProfiles.ts` (service `services/workingDayProfiles.ts`, `GET /working-day-profiles?limit=1000&includeDisabled=true&sort=name:ASC`, readable with `working_day_profiles`, `opex` or `capex` reader; query key `['working-day-profiles']`, 5 min `staleTime`; the calendars page and workspace invalidate it after every write).
+
+```typescript
+type WorkingDayProfiles = {
+  ready: boolean;                          // false until loaded, or while disabled (`useWorkingDayProfiles({ enabled })`)
+  isError: boolean;                        // the load failed: `profiles` is empty and proves nothing
+  profiles: WorkingDayProfile[];           // every calendar, disabled ones included, by name then code
+  enabled: WorkingDayProfile[];            // enabled now (a future disable date still counts): a new assignment offers these only
+  byId: Map<string, WorkingDayProfile>;
+};
+```
+
+- `days_by_year` is `{ "<year>": twelve decimal strings }` (January first, at most 6 decimals, none above the month's calendar days). `PATCH` merges it per year: a year sent replaces that year, `null` removes it.
+- The workspace edits one year at a time (`pages/working-day-calendars/WorkingDayProfileEditor.tsx`): a year the calendar does not hold yet is written once its twelve months are filled (or copied from the year before), then each month autosaves on blur. Totals are summed exactly in millionths (`workingDayCalendarFields.ts`), never in binary floating point.
+- `buildWorkingDayProfiles(list)` is the hook's pure core; tests mock the hook with it.
+
 ## Shared Components
 - `FormModal` (`src/components/forms/FormModal.tsx`)
   - Replaces `FormDrawer` for create/edit forms, providing a centered modal overlay.
@@ -534,6 +554,13 @@ type AnalyticsAxes = {
   - MUI Autocomplete over one dimension's values: `axisId` (required) loads `GET /analytics-categories?axis_id=…&limit=1000&sort=name:ASC` (enabled values, query key `['analytics-categories', 'axis', axisId]`).
   - A disabled current value is fetched by id and kept shown, marked Disabled; it cannot be picked anew because the list holds enabled values only.
   - Label: `label` when given, else the dimension's display name from `useAnalyticsAxes()` (loaded only in that case). With `hideLabel`, `label` still names the input for assistive technology.
+- `FormattedNumberField` (`src/components/inputs/FormattedNumberField.tsx`)
+  - Text field that groups thousands with spaces and reads a comma as the decimal point. A typed point and trailing zeros stay while typing (`1.` then `1.5`, `400.10`).
+  - `decimals` (default 2, the budget amounts) caps the decimals kept while typing: quantities 3, unit prices and price indexes 4, working days 6.
+  - `emit`: `'number'` (default) sends a JS number, or `''` when empty; `'string'` sends the cleaned decimal string (point separator, no group spaces, minus kept, `''` when empty), for values that must stay exact (quantities, prices, indexes, working days).
+  - When the parent hands back the value the field just sent, the text stays as typed; any other value replaces it.
+- `YearTabs` (`src/components/navigation/YearTabs.tsx`)
+  - Year tabs with previous and next arrows (`currentYear`, `availableYears`, `onYearChange`, `disabled`); texts from `common:yearTabs.*`.
 - `UserSelect` (`src/components/fields/UserSelect.tsx`)
   - MUI Autocomplete for selecting a single user; supports `size` prop for compact display.
   - Fetches enabled users, preloads missing selections by ID.

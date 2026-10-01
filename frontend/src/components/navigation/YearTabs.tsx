@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Tab, Tabs, IconButton, Stack, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { useTranslation } from 'react-i18next';
 
 interface YearTabsProps {
   currentYear: number;
@@ -16,6 +17,7 @@ export default function YearTabs({
   onYearChange,
   disabled = false
 }: YearTabsProps) {
+  const { t } = useTranslation('common');
   // Generate years around current year if no availableYears provided
   const allYears = availableYears.length > 0
     ? availableYears
@@ -61,7 +63,7 @@ export default function YearTabs({
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 1 }}>
         <Typography variant="subtitle1" color="text.secondary">
-          Year: {currentYear}
+          {t('yearTabs.single', { year: currentYear })}
         </Typography>
       </Box>
     );
@@ -74,7 +76,7 @@ export default function YearTabs({
         disabled={disabled || currentIndex <= 0}
         size="small"
         sx={{ minWidth: 'auto' }}
-        aria-label="Previous year"
+        aria-label={t('yearTabs.previous')}
       >
         <ArrowBackIcon />
       </IconButton>
@@ -107,7 +109,7 @@ export default function YearTabs({
         disabled={disabled || currentIndex >= sortedYears.length - 1}
         size="small"
         sx={{ minWidth: 'auto' }}
-        aria-label="Next year"
+        aria-label={t('yearTabs.next')}
       >
         <ArrowForwardIcon />
       </IconButton>
