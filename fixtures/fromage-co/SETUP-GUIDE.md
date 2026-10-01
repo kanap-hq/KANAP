@@ -26,12 +26,22 @@ creating anything.
    DNS domains, connection entities.
 3. **Portfolio classification** (sources, categories, streams) and
    **analytics categories**.
-4. **CSV imports** (01→19): companies, charts of accounts, suppliers,
-   departments, contacts, users, business processes, applications, contracts,
+4. **CSV imports** (01→19 and 26→30): companies, charts of accounts, suppliers,
+   departments, contacts, users, cost centres, analytics dimension values,
+   working-day calendars, business processes, applications, contracts,
    spend, CAPEX, portfolio projects and requests, locations, assets, tasks.
    The companies import is pinned to `--year` (default 2026) because year
    columns are relative to the import year.
-5. **Demo user passwords**: all 16 imported users get `--demo-password`
+   **Budget data**: right after the spend and CAPEX imports, the runner writes
+   the quantity × price lines of the external staffing items (`30-costed-lines.csv`,
+   keyed by item name, resolved to versions) and imports the monthly amounts
+   (`29-budget-rows.csv`: 2026 actuals January to August for every item, a
+   forecast on some). Three analytics dimensions are created first (Nature de
+   coût, Référence budget, Récurrence). 2027 is left empty on purpose: the
+   budget demo initialises it by copying the 2026 landing. Re-running the
+   runner restores the budget data, except on frozen columns: unfreeze them
+   first (Budget administration → Freeze).
+5. **Demo user passwords**: all 19 imported users get `--demo-password`
    (default `Fromage2026!`) so you can log in as e.g.
    `thomas.berger@fromage-co.com` during a demo. Pass `--demo-password ''`
    to skip.
@@ -110,7 +120,8 @@ the fixture works without AI.
 | Tenant owner | the `--email` you passed | Administrator |
 | Thomas Berger (CIO) | `thomas.berger@fromage-co.com` | Administrator |
 | Sophie Laurent | `sophie.laurent@fromage-co.com` | IT Landscape Administrator |
-| Marie Fontaine | `marie.fontaine@fromage-co.com` | Budget Administrator |
+| Marie Fontaine (controller) | `marie.fontaine@fromage-co.com` | Budget Administrator |
+| Nadia Lemaire (shops and e-commerce operations) | `nadia.lemaire@fromage-co.com` | Budget Member |
 
 All demo users share the `--demo-password` (default `Fromage2026!`).
 
@@ -118,6 +129,13 @@ All demo users share the `--demo-password` (default `Fromage2026!`).
 
 - `setup-tenant.mjs` — the runner (Node ≥ 20, no dependencies).
 - `01-…25-*.csv` — the dataset (semicolon-separated, UTF-8).
+- `26-…30-*.csv` — the budget dataset: cost centres, dimension values,
+  calendars, costed lines and monthly rows. `14-spend-items.csv` and
+  `15-capex-items.csv` are generated too. Regenerate all of them with
+  `node fixtures/fromage-co/tools/generate-budget.mjs` (deterministic; edit the
+  script, not the files). The IT division has three divisions and twelve cost
+  centres over the four legal entities; about 40 % of the OPEX is external
+  staffing priced per working day.
 - `docs/*.md` — the Service Desk Docs contents.
 - The fromage mock helpdesk tickets live in the backend's mock ticketing
   provider (`backend/src/ai/control-plane/providers/mocks/mock-ticketing.provider.ts`,

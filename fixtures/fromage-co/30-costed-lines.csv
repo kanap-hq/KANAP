@@ -1,0 +1,85 @@
+item_type;item_name;year;measure;label;quantity_unit;quantity;unit_price;price_basis;frequency;days_per_month;period_start;period_end;calendar_code
+opex;Régie · Chef de projet EDI · DIS-100;2026;planned;Chef de projet EDI;people;1;850;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Chef de projet EDI · DIS-100;2026;expected_landing;Chef de projet EDI;people;1;850;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Business analyst ventes · DIS-100;2026;planned;Business analyst ventes;people;1;720;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Business analyst ventes · DIS-100;2026;expected_landing;Business analyst ventes;people;1;720;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur senior SAP SD · DIS-200;2026;planned;Développeur senior SAP SD;people;1;790;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur senior SAP SD · DIS-200;2026;expected_landing;Développeur senior SAP SD;people;1;790;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur SAP MM · DIS-200;2026;planned;Développeur SAP MM;people;2;480;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur SAP MM · DIS-200;2026;expected_landing;Développeur SAP MM;people;2;480;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Architecte intégration · DIS-200;2026;planned;Architecte intégration;people;1;950;per_day;per_month;;2026-02-01;2026-12-31;CAD218
+opex;Régie · Architecte intégration · DIS-200;2026;expected_landing;Architecte intégration;people;1;950;per_day;per_month;;2026-04-01;2026-12-31;CAD218
+opex;Régie · Développeur portail B2B · DIS-200;2026;planned;Développeur portail B2B;people;1;460;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur portail B2B · DIS-200;2026;expected_landing;Développeur portail B2B;people;1;460;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Administrateur SAP Basis · DIS-300;2026;planned;Administrateur SAP Basis;people;1;820;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Administrateur SAP Basis · DIS-300;2026;expected_landing;Administrateur SAP Basis;people;1;820;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Analyste support applicatif · DIS-300;2026;planned;Analyste support applicatif;people;1;410;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Analyste support applicatif · DIS-300;2026;expected_landing;Analyste support applicatif;people;1;410;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Applicatiebeheerder Sage X3 · DIS-300;2026;planned;Applicatiebeheerder Sage X3;people;1;690;per_day;per_month;;2026-01-01;2026-12-31;NL
+opex;Régie · Applicatiebeheerder Sage X3 · DIS-300;2026;expected_landing;Applicatiebeheerder Sage X3;people;1;690;per_day;per_month;;2026-01-01;2026-12-31;NL
+opex;Régie · Projectleider WMS · DIS-300;2026;planned;Projectleider WMS;people;1;820;per_day;per_month;;2026-01-01;2026-09-30;NL
+opex;Régie · Projectleider WMS · DIS-300;2026;expected_landing;Projectleider WMS;people;1;820;per_day;per_month;;2026-01-01;2026-09-30;NL
+opex;Régie · Product owner e-commerce · BOU-100;2026;planned;Product owner e-commerce;people;1;880;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Product owner e-commerce · BOU-100;2026;expected_landing;Product owner e-commerce;people;1;880;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur front e-commerce · BOU-100;2026;planned;Développeur front e-commerce;people;2;470;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur front e-commerce · BOU-100;2026;expected_landing;Développeur front e-commerce;people;2;470;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur back e-commerce · BOU-100;2026;planned;Développeur back e-commerce;people;2;490;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur back e-commerce · BOU-100;2026;expected_landing;Développeur back e-commerce;people;2;490;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Développeur mobile · BOU-100;2026;planned;Développeur mobile;people;1;560;per_day;per_month;;2026-05-01;2026-12-31;CAD218
+opex;Régie · Développeur mobile · BOU-100;2026;expected_landing;Développeur mobile;people;1;560;per_day;per_month;;2026-05-01;2026-12-31;CAD218
+opex;Régie · UX designer · BOU-100;2026;planned;UX designer;people;1;760;per_day;per_month;;2026-01-01;2026-06-30;CAD218
+opex;Régie · UX designer · BOU-100;2026;expected_landing;UX designer;people;1;760;per_day;per_month;;2026-01-01;2026-10-31;CAD218
+opex;Régie · Ingénieur DevOps e-commerce · BOU-310;2026;planned;Ingénieur DevOps e-commerce;people;1;840;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur DevOps e-commerce · BOU-310;2026;expected_landing;Ingénieur DevOps e-commerce;people;1;840;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Support caisses niveau 2 · BOU-310;2026;planned;Support caisses niveau 2;people;1;580;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Support caisses niveau 2 · BOU-310;2026;expected_landing;Support caisses niveau 2;people;1;580;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Analyste exploitation e-commerce · BOU-310;2026;planned;Analyste exploitation e-commerce;people;1;430;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Analyste exploitation e-commerce · BOU-310;2026;expected_landing;Analyste exploitation e-commerce;people;1;430;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Administrateur plateforme paiement · BOU-310;2026;planned;Administrateur plateforme paiement;people;1;700;per_day;per_month;;2026-07-01;2026-12-31;CAD218
+opex;Régie · Administrateur plateforme paiement · BOU-310;2026;expected_landing;Administrateur plateforme paiement;people;1;700;per_day;per_month;;2026-06-01;2026-12-31;CAD218
+opex;Régie · Sistemista punti vendita · BOU-310;2026;planned;Sistemista punti vendita;people;1;520;per_day;per_month;;2026-01-01;2026-12-31;IT
+opex;Régie · Sistemista punti vendita · BOU-310;2026;expected_landing;Sistemista punti vendita;people;1;520;per_day;per_month;;2026-01-01;2026-12-31;IT
+opex;Régie · Sviluppatore integrazioni · BOU-310;2026;planned;Sviluppatore integrazioni;people;1;540;per_day;per_month;;2026-03-01;2026-12-31;IT
+opex;Régie · Sviluppatore integrazioni · BOU-310;2026;expected_landing;Sviluppatore integrazioni;people;1;540;per_day;per_month;;2026-03-01;2026-12-31;IT
+opex;Régie · E-commerce engineer · BOU-310;2026;planned;E-commerce engineer;people;1;900;per_day;per_month;;2026-01-01;2026-12-31;US
+opex;Régie · E-commerce engineer · BOU-310;2026;expected_landing;E-commerce engineer;people;1;900;per_day;per_month;;2026-01-01;2026-12-31;US
+opex;Régie · Site reliability engineer · BOU-310;2026;planned;Site reliability engineer;people;1;950;per_day;per_month;;2026-01-01;2026-12-31;US
+opex;Régie · Site reliability engineer · BOU-310;2026;expected_landing;Site reliability engineer;people;1;950;per_day;per_month;;2026-01-01;2026-12-31;US
+opex;Régie · Ingénieur système Windows · TRV-400;2026;planned;Ingénieur système Windows;people;1;650;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur système Windows · TRV-400;2026;expected_landing;Ingénieur système Windows;people;1;650;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur système Linux · TRV-400;2026;planned;Ingénieur système Linux;people;1;680;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur système Linux · TRV-400;2026;expected_landing;Ingénieur système Linux;people;1;680;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur réseau · TRV-400;2026;planned;Ingénieur réseau;people;1;720;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur réseau · TRV-400;2026;expected_landing;Ingénieur réseau;people;1;720;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur cloud Azure · TRV-400;2026;planned;Ingénieur cloud Azure;people;1;820;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur cloud Azure · TRV-400;2026;expected_landing;Ingénieur cloud Azure;people;1;820;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Chef de projet refonte DC · TRV-400;2026;planned;Chef de projet refonte DC;people;1;860;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Chef de projet refonte DC · TRV-400;2026;expected_landing;Chef de projet refonte DC;people;1;860;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Technicien support de proximité Paris · TRV-500;2026;planned;Technicien support de proximité Paris;people;2;380;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Technicien support de proximité Paris · TRV-500;2026;expected_landing;Technicien support de proximité Paris;people;2;380;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Technicien support de proximité usines · TRV-500;2026;planned;Technicien support de proximité usines;people;1;380;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Technicien support de proximité usines · TRV-500;2026;expected_landing;Technicien support de proximité usines;people;1;380;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Administrateur M365 · TRV-500;2026;planned;Administrateur M365;people;1;620;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Administrateur M365 · TRV-500;2026;expected_landing;Administrateur M365;people;1;620;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Chef de projet Workday · TRV-500;2026;planned;Chef de projet Workday;people;1;880;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Chef de projet Workday · TRV-500;2026;expected_landing;Chef de projet Workday;people;1;880;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Consultant Workday paie · TRV-500;2026;planned;Consultant Workday paie;people;1;1050;per_day;per_month;;2026-01-01;2026-09-30;CAD218
+opex;Régie · Consultant Workday paie · TRV-500;2026;expected_landing;Consultant Workday paie;people;1;1050;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Analyste SOC interne · TRV-600;2026;planned;Analyste SOC interne;people;1;700;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Analyste SOC interne · TRV-600;2026;expected_landing;Analyste SOC interne;people;1;700;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur sécurité réseau · TRV-600;2026;planned;Ingénieur sécurité réseau;people;1;820;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Ingénieur sécurité réseau · TRV-600;2026;expected_landing;Ingénieur sécurité réseau;people;1;820;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Consultant IAM · TRV-600;2026;planned;Consultant IAM;people;1;900;per_day;per_month;;2026-02-01;2026-10-31;CAD218
+opex;Régie · Consultant IAM · TRV-600;2026;expected_landing;Consultant IAM;people;1;900;per_day;per_month;;2026-02-01;2026-10-31;CAD218
+opex;Régie · Data engineer · TRV-700;2026;planned;Data engineer;people;1;760;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Data engineer · TRV-700;2026;expected_landing;Data engineer;people;1;760;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Data analyst · TRV-700;2026;planned;Data analyst;people;1;440;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Data analyst · TRV-700;2026;expected_landing;Data analyst;people;1;440;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+opex;Régie · Contrôleur de gestion IT en renfort · TRV-700;2026;planned;Contrôleur de gestion IT en renfort;people;1;700;per_day;per_month;;2026-01-01;2026-06-30;CAD218
+opex;Régie · Contrôleur de gestion IT en renfort · TRV-700;2026;expected_landing;Contrôleur de gestion IT en renfort;people;1;700;per_day;per_month;;2026-01-01;2026-08-31;CAD218
+capex;S/4HANA — développements spécifiques capitalisés;2026;planned;Développeur SAP ABAP (Nearshore Digital Lisboa);people;2;520;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+capex;S/4HANA — développements spécifiques capitalisés;2026;expected_landing;Développeur SAP ABAP (Nearshore Digital Lisboa);people;2;520;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+capex;La Boutique — version 2 (abonnements et marketplace);2026;planned;Développeur full stack e-commerce (Nearshore Digital Lisboa);people;2;480;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+capex;La Boutique — version 2 (abonnements et marketplace);2026;expected_landing;Développeur full stack e-commerce (Nearshore Digital Lisboa);people;2;480;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+capex;Plateforme data — construction;2026;planned;Data engineer plateforme (Alpine Data Experts);people;2;780;per_day;per_month;;2026-01-01;2026-12-31;CAD218
+capex;Plateforme data — construction;2026;expected_landing;Data engineer plateforme (Alpine Data Experts);people;2;780;per_day;per_month;;2026-01-01;2026-12-31;CAD218

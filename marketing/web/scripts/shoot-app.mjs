@@ -45,6 +45,9 @@ const PASSWORD = process.env.APP_PASSWORD;
 const ALLOC_ITEM_ID = '97ed5331-5cf0-4ba1-bfa7-8e13fa3b3cb4'; // SAP S/4HANA, Headcount
 const ANALYTICS_ITEM_ID = '9f2f0c3f-fc65-441b-b22b-cfeefdd27086'; // OPX-8 AWS Cloud Hosting, Infrastructure
 const COMPANY_NAME = 'Fromage & Co SA';
+const LANG = flag('lang', ''); // UI language override, e.g. fr
+// Budget demo data (Fromage & Co fixture with the budget files 26-30, QA tenant).
+const STAFFING_ITEM_ID = flag('staffing-item', '91fb51a9-1ba1-4794-8758-1bcb797933de'); // Régie · Product owner e-commerce · BOU-100
 
 if (!EMAIL || !PASSWORD) {
   console.error('APP_EMAIL and APP_PASSWORD are required (never hardcode them).');
@@ -116,6 +119,59 @@ const PAGES = {
   'reports-landing': { path: '/ops/reports', waitFor: 'main' },
   'opex-list': { path: '/ops/opex', waitFor: 'main' },
   'analytics-dimensions': { path: '/master-data/analytics', waitFor: 'main' },
+  // Budget presentation set: one item across years and columns, costed lines, organisation, settings, reports.
+  'budget-item-tab': {
+    path: `/ops/opex/${STAFFING_ITEM_ID}/budget?year=2026`,
+    waitFor: 'main',
+    prepare: (page) => page.waitForSelector('button[aria-label="Quantité et prix"], button[aria-label="Quantity and price"]', { timeout: 30000 }),
+  },
+  'budget-item-lines': {
+    path: `/ops/opex/${STAFFING_ITEM_ID}/budget?year=2026`,
+    waitFor: 'main',
+    prepare: async (page) => {
+      const sel = 'button[aria-label="Quantité et prix"], button[aria-label="Quantity and price"]';
+      await page.waitForSelector(sel, { timeout: 30000 });
+      await page.click(sel);
+      await sleep(2000);
+    },
+  },
+  'budget-cost-centers': { path: '/master-data/cost-centers', waitFor: 'main' },
+  'budget-calendars': { path: '/master-data/working-day-calendars', waitFor: 'main' },
+  'budget-columns': { path: '/ops/operations/columns', waitFor: 'main' },
+  'budget-freeze': { path: '/ops/operations/freeze', waitFor: 'main' },
+  'budget-rows': { path: '/ops/operations/budget-rows', waitFor: 'main' },
+  'budget-compare': {
+    path: '/ops/reports/budget-columns-compare',
+    waitFor: 'main',
+    prepare: async (page) => {
+      // Second selection: 2027 A0 → 2026 A3, so the chart compares budget and landing of the same year.
+      await page.waitForSelector('.MuiSelect-select', { timeout: 20000 });
+      await sleep(1500);
+      const choose = async (index, text) => {
+        const selects = await page.$$('.MuiSelect-select');
+        await selects[index].click();
+        await page.waitForSelector('li[role="option"]', { timeout: 10000 });
+        for (const option of await page.$$('li[role="option"]')) {
+          const label = await option.evaluate((el) => el.textContent?.trim() || '');
+          if (label === text) { await option.click(); break; }
+        }
+        await sleep(800);
+      };
+      await choose(3, '2026');
+      await choose(4, 'A3 Atterrissage');
+      await page.waitForFunction(() => document.querySelectorAll('table tbody tr').length > 1, { timeout: 30000 }).catch(() => {});
+      await sleep(1500);
+    },
+  },
+  'budget-top-opex': {
+    path: '/ops/reports/top-opex',
+    waitFor: 'main',
+    prepare: async (page) => {
+      await page.waitForFunction(() => !document.body.innerText.includes('No data to display') && !document.body.innerText.includes('Top 0'), { timeout: 40000 }).catch(() => console.warn('top opex still empty'));
+      await sleep(1500);
+    },
+  },
+  'budget-opex-list': { path: '/ops/opex', waitFor: 'main', prepare: async (page) => { await sleep(2500); } },
   'analytics-opex-item': { path: `/ops/opex/${ANALYTICS_ITEM_ID}`, waitFor: 'main' },
   'analytics-report': { path: '/ops/reports/analytics', waitFor: 'main' },
   'analytics-report-range': {
@@ -217,6 +273,7 @@ try {
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle0', timeout: 30000 });
   await page.evaluate((theme) => window.localStorage.setItem('themeMode', theme), THEME);
   await page.evaluate((theme) => document.documentElement.setAttribute('data-theme', theme), THEME);
+  if (LANG) await page.evaluate((lang) => window.localStorage.setItem('kanap_language', lang), LANG);
   await page.type('input[type="text"]', EMAIL);
   await page.type('input[type="password"]', PASSWORD);
   await Promise.all([
