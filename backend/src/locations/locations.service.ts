@@ -1,12 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, ILike, In, Repository } from 'typeorm';
+import { EntityManager, FindOperator, ILike, In, Raw, Repository } from 'typeorm';
 import { Location } from './location.entity';
 import { LocationUserContact } from './location-user-contact.entity';
 import { LocationContactLink } from './location-contact.entity';
 import { LocationLink } from './location-link.entity';
 import { LocationSubItem } from './location-sub-item.entity';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
+import { compileAgFilterCondition, createParamNameGenerator } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { Company } from '../companies/company.entity';
@@ -27,6 +28,20 @@ export type SubItemOpts = {
   external?: SubItemExternal;
   audit?: AuditSourceOptions;
 };
+
+/**
+ * The Created column's filter, compiled as the connections list compiles it: a text filter
+ * reads the timestamp as text. buildWhereFromAgFilters cannot take this column (ILIKE does
+ * not apply to a timestamp).
+ */
+function createdAtFilter(filters: any): FindOperator<Date> | undefined {
+  const model = filters && typeof filters === 'object' ? filters.created_at : undefined;
+  if (!model) return undefined;
+  const column = '__created_at__';
+  const condition = compileAgFilterCondition(model, { expression: column, textExpression: `CAST(${column} AS TEXT)` }, createParamNameGenerator('locCreated'));
+  if (!condition) return undefined;
+  return Raw((alias) => condition.sql.split(column).join(alias), condition.params);
+}
 
 @Injectable()
 export class LocationsService {
@@ -195,6 +210,8 @@ export class LocationsService {
     });
     const allowedFilters = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city'];
     const where: Record<string, any> = buildWhereFromAgFilters(filters, allowedFilters);
+    const created = createdAtFilter(filters);
+    if (created) where.created_at = created;
     // Explicit tenant_id filtering (defense-in-depth alongside RLS)
     if (opts?.tenantId) {
       where.tenant_id = opts.tenantId;
@@ -267,6 +284,8 @@ export class LocationsService {
     });
     const allowedFilters = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city'];
     const where: Record<string, any> = buildWhereFromAgFilters(filters, allowedFilters);
+    const created = createdAtFilter(filters);
+    if (created) where.created_at = created;
     if (opts?.tenantId) {
       where.tenant_id = opts.tenantId;
     }

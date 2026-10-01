@@ -6,7 +6,7 @@ import { ConnectionProtocol } from '../connection-protocol.entity';
 import { ConnectionLeg } from '../connection-leg.entity';
 import { Asset } from '../../assets/asset.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
-import { resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
+import { classificationRankSql, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 
 /**
  * Topology types for connections.
@@ -77,8 +77,8 @@ export const EFFECTIVE_RISK = {
 
 /** Catalog rank of an effective classification, for sorting by severity (null when not in the catalog). */
 export const EFFECTIVE_RISK_RANK = {
-  criticality: `(SELECT r.rank FROM UNNEST(CAST(:erCritCodes AS text[]), CAST(:erCritRanks AS float8[])) AS r(code, rank) WHERE r.code = ${EFFECTIVE_RISK.criticality})`,
-  data_class: `(SELECT r.rank FROM UNNEST(CAST(:erClassCodes AS text[]), CAST(:erClassRanks AS float8[])) AS r(code, rank) WHERE r.code = ${EFFECTIVE_RISK.data_class})`,
+  criticality: classificationRankSql(EFFECTIVE_RISK.criticality, 'erCritCodes', 'erCritRanks'),
+  data_class: classificationRankSql(EFFECTIVE_RISK.data_class, 'erClassCodes', 'erClassRanks'),
 } as const;
 
 export type EffectiveRisk = {

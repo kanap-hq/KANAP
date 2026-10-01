@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, In, Repository, SelectQueryBuilder } from 'typeorm';
+import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { InterfaceEntity } from '../interface.entity';
 import { InterfaceLeg } from '../interface-leg.entity';
 import { InterfaceMiddlewareApplication } from '../interface-middleware-application.entity';
 import { InterfaceBinding } from '../../interface-bindings/interface-binding.entity';
 import { Application } from '../../applications/application.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { classificationRankSql } from '../../it-ops-settings/classification-catalog';
 import { parsePagination } from '../../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, FilterTargetConfig } from '../../common/ag-grid-filtering';
 import { normalizeBindingLifecycle } from '../../interface-bindings/interface-bindings.service';
@@ -37,7 +38,19 @@ const INTERFACE_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
 /** Columns filtering on the environments of the interface's bindings. */
 const ENVIRONMENT_FILTER_FIELDS = new Set(['environment', 'binding_environments']);
 
-const INTERFACE_SORT_FIELDS = ['interface_reference', 'interface_id', 'name', 'lifecycle', 'criticality', 'created_at', 'updated_at'];
+/**
+ * Sort keys. Criticality sorts by its rank in the tenant catalog, from the least severe up,
+ * as the connections list does; a value outside the catalog has no rank and sorts last.
+ */
+const INTERFACE_SORT_EXPRESSIONS: Record<string, string> = {
+  interface_reference: 'i.interface_reference',
+  interface_id: 'i.interface_id',
+  name: 'i.name',
+  lifecycle: 'i.lifecycle',
+  criticality: classificationRankSql('i.criticality', 'sortCritCodes', 'sortCritRanks'),
+  created_at: 'i.created_at',
+  updated_at: 'i.updated_at',
+};
 
 /**
  * Service for listing, filtering, and querying interfaces.
@@ -105,9 +118,20 @@ export class InterfacesListService extends InterfacesBaseService {
     return qb;
   }
 
-  private resolveSort(sort: { field: string; direction: string }): { field: string; direction: 'ASC' | 'DESC' } {
-    const field = INTERFACE_SORT_FIELDS.includes(sort.field) ? sort.field : 'interface_reference';
-    return { field, direction: sort.direction === 'ASC' ? 'ASC' : 'DESC' };
+  /** Orders a query built by buildFilteredQuery; the id breaks ties so pages never overlap. */
+  private async applySort(qb: SelectQueryBuilder<InterfaceEntity>, sort: { field: string; direction: string }, mg: EntityManager): Promise<void> {
+    const field = INTERFACE_SORT_EXPRESSIONS[sort.field] ? sort.field : 'interface_reference';
+    const direction = sort.direction === 'ASC' ? 'ASC' : 'DESC';
+    if (field === 'criticality') {
+      // The rows all belong to the session tenant (see buildFilteredQuery): rank with its catalog.
+      const rows: Array<{ tenant_id: string | null }> = await mg.query(`SELECT app_current_tenant() AS tenant_id`);
+      const tenantId = rows[0]?.tenant_id;
+      const levels = tenantId ? (await this.itOpsSettings.getClassificationCatalog(tenantId, { manager: mg })).businessCriticalityLevels : [];
+      qb.setParameters({ sortCritCodes: levels.map((level) => level.code), sortCritRanks: levels.map((level) => level.rank) });
+    }
+    // Parenthesized: TypeORM would take a bare `i.name` for the entity column and rename it.
+    qb.addSelect(`(${INTERFACE_SORT_EXPRESSIONS[field]})`, 'list_sort_key');
+    qb.orderBy('list_sort_key', direction, 'NULLS LAST').addOrderBy('i.id', 'ASC');
   }
 
   /**
@@ -121,9 +145,9 @@ export class InterfacesListService extends InterfacesBaseService {
     qb.addSelect('ta.name', 'target_name');
     qb.addSelect('bp.name', 'business_process_name');
 
-    const order = this.resolveSort(sort);
     const total = await qb.clone().getCount();
-    qb.orderBy(`i.${order.field}`, order.direction).addOrderBy('i.id', 'ASC').skip(skip).take(limit);
+    await this.applySort(qb, sort, opts?.manager ?? repo.manager);
+    qb.skip(skip).take(limit);
 
     const { raw, entities } = await qb.getRawAndEntities();
     const pageIds = entities.map((e) => e.id);
@@ -180,12 +204,10 @@ export class InterfacesListService extends InterfacesBaseService {
     const repo = this.getRepo(opts?.manager);
     const { sort, q, filters } = parsePagination(query);
     const qb = this.buildFilteredQuery(repo, q, filters).select('i.id', 'id').addSelect('i.interface_reference', 'ref');
-    const order = this.resolveSort(sort);
     const total = await qb.clone().getCount();
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
+    await this.applySort(qb, sort, opts?.manager ?? repo.manager);
     const rows = await qb
-      .orderBy(`i.${order.field}`, order.direction)
-      .addOrderBy('i.id', 'ASC')
       // limit, not take: with joins TypeORM only applies take through its entity paging.
       .limit(limit)
       .getRawMany<{ id: string; ref: string | null }>();
