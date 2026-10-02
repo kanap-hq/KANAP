@@ -731,6 +731,11 @@ export async function writeLinesPayload(ctx: AmountsWriteContext, rawPayload: un
     [...calendars.values()].map((calendar) => [calendar.id, { name: calendar.name, days: calendarDaysFor(calendar, year) }]),
   );
   const result = lines.length > 0 ? asBadRequest(() => computeColumn(lines, year, days)) : null;
+  // Each column written: the months the lines give (left as stored when they are removed) and the lines.
+  await ctx.beforeWrite?.({
+    kind: 'columns',
+    columns: measures.map((measure) => ({ measure, months: result ? result.month_cents : null, lines })),
+  });
 
   let written: AmountsWriteResult = { periods: [], measures, before: [], after: [] };
   if (result) {

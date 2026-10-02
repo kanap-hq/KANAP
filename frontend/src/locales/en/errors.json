@@ -29,5 +29,6 @@
   "retry": "Another change to the same data was saved at the same moment, so this one did not go through. Please try again.",
   "busy": "This data is busy with another operation. Please try again in a few seconds.",
   "notSavedYet": "Your last change is not saved yet because the server is busy. It stays on this page and is sent again with your next change.",
-  "edit_conflict": "Someone else changed this field while you were editing it. Choose which value to keep."
+  "edit_conflict": "Someone else changed this field while you were editing it. Choose which value to keep.",
+  "edit_conflict_unreadable": "Someone else changed what you were saving, and the answer could not be read. Your values stay on screen, not saved yet."
 }

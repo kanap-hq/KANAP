@@ -631,7 +631,10 @@
     "leaveMessage": "Some of your changes could not be saved. Leave anyway and lose them, or stay on this page and try again.",
     "leaveConfirm": "Leave without saving",
     "leaveConflictMessage": "Someone else changed a field you were editing, and you have not chosen which value to keep. Leave anyway and lose your value, or stay and choose.",
-    "leaveConflictOtherMessage": "Someone else changed a field you were editing on {{items}}, and you have not chosen which value to keep. Leave anyway and lose your value, or stay and choose."
+    "leaveConflictOtherMessage": "Someone else changed a field you were editing on {{items}}, and you have not chosen which value to keep. Leave anyway and lose your value, or stay and choose.",
+    "leaveColumnsMessage_one": "Someone else changed the {{columns}} column while you were editing it, and you have not chosen which values to keep. Leave anyway and lose your values in {{columns}}, or stay and choose.",
+    "leaveColumnsMessage_other": "Someone else changed the {{columns}} columns while you were editing them, and you have not chosen which values to keep. Leave anyway and lose your values in these columns, or stay and choose.",
+    "leaveAllocationMessage": "Someone else changed the allocation while you were editing it, and you have not chosen which to keep. Leave anyway and lose your allocation, or stay and choose."
   },
   "editConflict": {
     "title_one": "Someone else changed a field you were editing",
@@ -657,6 +660,45 @@
     "unavailable": "Value no longer available",
     "elsewhere_one": "{{items}} has a change waiting for your choice.",
     "elsewhere_other": "{{items}} have changes waiting for your choice.",
-    "open": "Open {{item}}"
+    "open": "Open {{item}}",
+    "column": {
+      "title_one": "Someone else changed a column you were editing",
+      "title_other": "Someone else changed {{count}} columns you were editing",
+      "titleSelf_one": "You changed a column in another window",
+      "titleSelf_other": "You changed {{count}} columns in another window",
+      "hint": "Your entries in these columns wait for your choice. They are saved as soon as you have chosen.",
+      "changedByAt": "{{name}} changed this column at {{time}} while you were editing it.",
+      "changedByOn": "{{name}} changed this column on {{date}} at {{time}} while you were editing it.",
+      "changedBy": "{{name}} changed this column while you were editing it.",
+      "changedAt": "This column was changed at {{time}} while you were editing it.",
+      "changedOn": "This column was changed on {{date}} at {{time}} while you were editing it.",
+      "changed": "This column was changed while you were editing it.",
+      "changedByYouAt": "You changed this column in another window at {{time}}.",
+      "changedByYouOn": "You changed this column in another window on {{date}} at {{time}}.",
+      "changedByYou": "You changed this column in another window.",
+      "keepTheirs": "Reload the column",
+      "applyMine": "Overwrite"
+    },
+    "allocation": {
+      "field": "Allocation",
+      "title_one": "Someone else changed the allocation you were editing",
+      "title_other": "Someone else changed the allocation you were editing",
+      "titleSelf_one": "You changed this allocation in another window",
+      "titleSelf_other": "You changed this allocation in another window",
+      "hint": "Your allocation waits for your choice. It is saved as soon as you have chosen.",
+      "changedByAt": "{{name}} changed the allocation at {{time}} while you were editing it.",
+      "changedByOn": "{{name}} changed the allocation on {{date}} at {{time}} while you were editing it.",
+      "changedBy": "{{name}} changed the allocation while you were editing it.",
+      "changedAt": "The allocation was changed at {{time}} while you were editing it.",
+      "changedOn": "The allocation was changed on {{date}} at {{time}} while you were editing it.",
+      "changed": "The allocation was changed while you were editing it.",
+      "changedByYouAt": "You changed this allocation in another window at {{time}}.",
+      "changedByYouOn": "You changed this allocation in another window on {{date}} at {{time}}.",
+      "changedByYou": "You changed this allocation in another window.",
+      "keepTheirs": "Reload the allocation",
+      "applyMine": "Overwrite",
+      "yearChange": "Someone else changed the allocation while you were editing it, and you have not chosen which to keep. Change the year anyway and lose your allocation, or stay and choose."
+    },
+    "yearChangeConfirm": "Change the year"
   }
 }

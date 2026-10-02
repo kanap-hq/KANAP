@@ -17,6 +17,12 @@ import { fetchAllocationRule } from '../../services/allocationRules';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import type { AmountMeasure } from './roundPeriod';
 import { allocationsSnapshotKey } from './allocationsCache';
+import { useAuth } from '../../auth/AuthContext';
+import EditConflictBanner from '../workspace/EditConflictBanner';
+import { editConflictsOf, type ConflictChoice, type EditConflict } from '../../hooks/editConflicts';
+import { useKanapDialogs } from '../design';
+import { unreadableConflict } from './budgetConflicts';
+import type { HeldAllocationChoice } from './heldChoices';
 
 type PickerOption = { id: string; label: string };
 
@@ -87,7 +93,13 @@ function InlinePicker({
   );
 }
 
-export type AllocationsTabHandle = { flush: () => Promise<boolean>; isDirty: () => boolean };
+export type AllocationsTabHandle = {
+  /** Saves what can go; false while a choice waits, unless `ignoreHeld` (a move that keeps the line and its choice). */
+  flush: (options?: { ignoreHeld?: boolean }) => Promise<boolean>;
+  isDirty: () => boolean;
+  /** True while the allocation waits for the user's choice (for the leave warning). */
+  hasWaitingChoice: () => boolean;
+};
 
 type Props = {
   id: string;
@@ -96,6 +108,8 @@ type Props = {
   availableYears?: number[];
   onYearChange: (y: number) => void;
   config: FinanceModuleConfig;
+  /** The line's choice kept by the item page while the user is on another tab (`heldChoices.ts`). */
+  held?: React.MutableRefObject<HeldAllocationChoice | null>;
 };
 
 type Method = 'default' | 'headcount' | 'it_users' | 'turnover' | 'manual_company' | 'manual_department' | 'manual_pct';
@@ -108,8 +122,30 @@ type Department = { id: string; name: string; company_id: string };
 
 type ComputedItem = { company_id: string; department_id: string | null; allocation_pct: number };
 type YearTotals = Partial<Record<AmountMeasure, number | string>>;
-/** The line's allocation for one year, as stored: the tab's server state (React Query). */
-type AllocationsSnapshot = { version: Version | null; computed: ComputedItem[]; totals: YearTotals };
+/**
+ * The line's allocation for one year, as stored: the tab's server state (React Query). `signature`
+ * is what a save sends back as `base_signature` (plan planning/perf-scale, lot 3E): read with the
+ * method and driver shown, so a save started from them is refused when someone else changed them.
+ */
+type AllocationsSnapshot = { version: Version | null; computed: ComputedItem[]; totals: YearTotals; signature: string | null };
+/** `GET` and `PUT …/allocations`: the distribution, the stored method and driver, and the signature they were read with. */
+type AllocationsAnswer = { items?: ComputedItem[]; method?: Method; driver?: Driver; base_signature?: string | null };
+
+/**
+ * The signature of an allocation nobody touched (default method, head count, no row): the base of a
+ * save made before the year has a version (`UNTOUCHED_ALLOCATION_SIGNATURE`, backend `allocation-save.ts`).
+ */
+export const UNTOUCHED_ALLOCATION_SIGNATURE = 'default';
+
+/** The allocation someone else saved while the user was editing it, kept for the user's choice. */
+type AllocationConflict = {
+  entry: EditConflict;
+  /** The signature of the stored allocation: « Overwrite » sends the user's allocation again with it as the base. */
+  signature: string | null;
+  /** The refusal, thrown again by a save while the choice waits (the autosave keeps its `conflict` state). */
+  error: unknown;
+};
+type AllocationView = { method?: string; rows?: Array<{ company_id: string; department_id: string | null; allocation_pct: number }> };
 
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -121,20 +157,31 @@ const ORGANISATION_STALE_MS = 5 * 60_000;
 async function fetchAllocationsSnapshot(config: FinanceModuleConfig, id: string, year: number, signal?: AbortSignal): Promise<AllocationsSnapshot> {
   const versRes = await api.get<Version[]>(`${config.itemsApi}/${id}/versions`, { signal });
   const version = (versRes.data || []).find((vv) => Number(vv.budget_year) === year) || null;
-  if (!version) return { version: null, computed: [], totals: {} };
-  const [computed, totals] = await Promise.all([
-    api.get<{ items: ComputedItem[] }>(`${config.versionsApi}/${version.id}/allocations`, { signal }).then((r) => r.data?.items || []),
+  if (!version) return { version: null, computed: [], totals: {}, signature: UNTOUCHED_ALLOCATION_SIGNATURE };
+  const [answer, totals] = await Promise.all([
+    api.get<AllocationsAnswer>(`${config.versionsApi}/${version.id}/allocations`, { signal }).then((r) => r.data ?? {}),
     api.get<{ totals?: YearTotals }>(`${config.versionsApi}/${version.id}/amounts`, { params: { year }, signal })
       .then((r) => r.data?.totals ?? {}).catch(() => ({} as YearTotals)),
   ]);
-  return { version, computed, totals };
+  return { version: withStored(version, answer), computed: answer.items || [], totals, signature: answer.base_signature ?? null };
+}
+
+/** The version with the method and driver an allocations answer read with its signature. */
+function withStored(version: Version, answer: AllocationsAnswer): Version {
+  return {
+    ...version,
+    ...(answer.method ? { allocation_method: answer.method } : {}),
+    ...(answer.driver ? { allocation_driver: answer.driver } : {}),
+  };
 }
 const keyOf = (companyId: string | null, departmentId: string | null) => `${companyId ?? ''}|${departmentId ?? ''}`;
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config }, ref) {
+export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config, held }, ref) {
   const { t } = useTranslation(['ops', 'common']);
   const { defaultColumn } = useBudgetColumns();
+  const { profile } = useAuth();
+  const dialogs = useKanapDialogs();
 
   const queryClient = useQueryClient();
   const [error, setError] = React.useState<string | null>(null);
@@ -178,7 +225,22 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   const isManualDept = method === 'manual_department';
   const isAuto = !isManualPct && !isManualCompany && !isManualDept;
 
-  const autosave = useAutosave({ onError: (e) => setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.allocations.failedToSave`))) });
+  // The allocation the user's edit started from (its signature), and a refused save waiting for a choice.
+  const baseSignatureRef = React.useRef<string | null>(null);
+  const [conflict, setConflict] = React.useState<AllocationConflict | null>(null);
+  const conflictRef = React.useRef<AllocationConflict | null>(null);
+  const setWaitingConflict = (next: AllocationConflict | null) => { conflictRef.current = next; setConflict(next); };
+  // The choice this tab left waiting when the user went to another tab of the line: given back once
+  // the stored allocation is on screen.
+  const restoreRef = React.useRef<HeldAllocationChoice | null>(
+    held?.current && held.current.lineId === id && held.current.year === year ? held.current : null,
+  );
+
+  const autosave = useAutosave({
+    onError: (e) => setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.allocations.failedToSave`))),
+    // A choice waiting keeps the tab busy: leaving asks first, a flush answers false.
+    held: () => !!conflictRef.current,
+  });
 
   // Effective default method for this fiscal year (tenant override, else the standard
   // method). Used to label the "default" option; falls back to the static label if the
@@ -192,6 +254,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
 
   // Latest-value refs for the debounced persist.
   const methodRef = React.useRef(method); methodRef.current = method;
+  const yearRef = React.useRef(year); yearRef.current = year;
   const driverRef = React.useRef(driver); driverRef.current = driver;
   const rowsRef = React.useRef(rows); rowsRef.current = rows;
   const versionRef = React.useRef(version); versionRef.current = version;
@@ -213,6 +276,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     if (versionRef.current) return versionRef.current;
     const res = await api.get<Version[]>(`${config.itemsApi}/${id}/versions`);
     const existing = (res.data || []).find((v) => Number(v.budget_year) === year);
+    // Created meanwhile by someone else: the save compares it with the untouched allocation the screen showed.
     if (existing) { setVersion(existing); return existing; }
     const created = await api.post<Version>(`${config.itemsApi}/${id}/versions`, {
       version_name: `Y${year}`, budget_year: year, as_of_date: `${year}-01-01`, input_grain: 'annual', notes: null,
@@ -224,31 +288,33 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   // The stored distribution after a write; the cache follows, so the tab shows it when it comes back.
   // The snapshot this tab wrote into the cache itself: the tab already shows it (rows keep their pins).
   const writtenSnapshotRef = React.useRef<AllocationsSnapshot | null>(null);
-  const loadComputed = React.useCallback(async (saved: Version) => {
-    const res = await api.get<{ items: ComputedItem[] }>(`${config.versionsApi}/${saved.id}/allocations`);
-    const items = res.data?.items || [];
+  const keepSaved = React.useCallback((saved: Version, answer: AllocationsAnswer) => {
+    const items = answer.items || [];
     const map = new Map<string, number>();
     items.forEach((it) => map.set(keyOf(it.company_id, it.department_id), num(it.allocation_pct)));
     setComputedPct(map);
+    const version = withStored(saved, answer);
+    versionRef.current = version;
+    setVersion(version);
+    // The next save starts from what this one stored.
+    baseSignatureRef.current = answer.base_signature ?? null;
     const previous = queryClient.getQueryData<AllocationsSnapshot>(snapshotKey);
-    const next: AllocationsSnapshot = { version: saved, computed: items, totals: previous?.totals ?? {} };
+    const next: AllocationsSnapshot = { version, computed: items, totals: previous?.totals ?? {}, signature: baseSignatureRef.current };
     writtenSnapshotRef.current = next;
     queryClient.setQueryData<AllocationsSnapshot>(snapshotKey, next);
-    return items;
   }, [queryClient, snapshotKey]);
 
   // The loaded allocation becomes the tab's state, unless an edit is waiting to be saved (it is newer).
   const busyRef = React.useRef(autosave.isBusy);
   busyRef.current = autosave.isBusy;
   const snapshot = snapshotQuery.data;
-  // Before paint: a cached allocation shows on the first frame, never an empty table first.
-  React.useLayoutEffect(() => {
-    if (!snapshot || snapshot === writtenSnapshotRef.current || busyRef.current()) return;
-    const v = snapshot.version;
+  const applySnapshot = React.useCallback((loaded: AllocationsSnapshot) => {
+    const v = loaded.version;
     setVersion(v);
-    setYearTotals(snapshot.totals);
+    baseSignatureRef.current = loaded.signature;
+    setYearTotals(loaded.totals);
     const map = new Map<string, number>();
-    snapshot.computed.forEach((it) => map.set(keyOf(it.company_id, it.department_id), num(it.allocation_pct)));
+    loaded.computed.forEach((it) => map.set(keyOf(it.company_id, it.department_id), num(it.allocation_pct)));
     setComputedPct(map);
     if (!v) {
       setMethod('default'); setDriver('headcount'); setRows([]);
@@ -260,26 +326,40 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     setDriver((v.allocation_driver ?? 'headcount') as Driver);
     // Seed editable rows from stored distribution for manual methods.
     if (m === 'manual_pct' || m === 'manual_company' || m === 'manual_department') {
-      setRows(snapshot.computed.map((it) => ({ company_id: it.company_id, department_id: it.department_id, allocation_pct: num(it.allocation_pct) })));
+      setRows(loaded.computed.map((it) => ({ company_id: it.company_id, department_id: it.department_id, allocation_pct: num(it.allocation_pct) })));
     } else {
       setRows([]);
     }
-  }, [snapshot]);
+    // The user's allocation and its waiting choice, kept while they were on another tab of the line.
+    const restore = restoreRef.current;
+    restoreRef.current = null;
+    if (restore) {
+      setMethod(restore.method as Method);
+      setDriver(restore.driver as Driver);
+      setRows(restore.rows.map((row) => ({ ...row })));
+      setWaitingConflict(restore.conflict);
+    }
+    // setWaitingConflict only sets a ref and state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Before paint: a cached allocation shows on the first frame, never an empty table first.
+  React.useLayoutEffect(() => {
+    if (!snapshot || snapshot === writtenSnapshotRef.current || busyRef.current()) return;
+    applySnapshot(snapshot);
+  }, [snapshot, applySnapshot]);
   const loadError = snapshotQuery.error ?? (companiesQuery.data ? null : companiesQuery.error);
   React.useEffect(() => {
     if (loadError) setError(getApiErrorMessage(loadError, t, t(`${config.i18nPrefix}.allocations.failedToLoad`)));
   }, [loadError, t, config.i18nPrefix]);
 
+  // Method, driver and rows in one request (lot 3E), from the allocation the edit started from. Someone
+  // else's save meanwhile answers 409: the user's allocation stays on screen until they choose.
   const persist = React.useCallback(async () => {
+    // A choice waits: nothing goes; an edit made meanwhile is part of what « Overwrite » sends.
+    if (conflictRef.current) throw conflictRef.current.error;
     const v = await ensureVersion();
     const m = methodRef.current;
     const d: Driver = m === 'it_users' ? 'it_users' : m === 'turnover' ? 'turnover' : m === 'manual_company' ? driverRef.current : 'headcount';
-    let saved: Version = v;
-    if (v.allocation_method !== m || v.allocation_driver !== d) {
-      await api.patch(`${config.itemsApi}/${id}/versions`, { id: v.id, allocation_method: m, allocation_driver: d });
-      saved = { ...v, allocation_method: m, allocation_driver: d };
-      setVersion((prev) => (prev ? { ...prev, allocation_method: m, allocation_driver: d } : prev));
-    }
     let payload: Array<{ company_id: string; department_id: string | null; allocation_pct?: number }> = [];
     if (m === 'manual_pct') {
       payload = rowsRef.current.filter((r) => r.company_id).map((r) => ({ company_id: r.company_id!, department_id: null, allocation_pct: round2(num(r.allocation_pct)) }));
@@ -288,22 +368,98 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     } else if (m === 'manual_department') {
       payload = rowsRef.current.filter((r) => r.company_id && r.department_id).map((r) => ({ company_id: r.company_id!, department_id: r.department_id }));
     }
-    const isManual = m === 'manual_pct' || m === 'manual_company' || m === 'manual_department';
-    // Manual methods require ≥1 valid row; while the user is still picking, the
-    // method is saved (PATCH above) but the empty upsert is skipped to avoid an error.
-    if (isManual && payload.length === 0) {
-      await loadComputed(saved);
-      return;
+    // A manual method without a complete row yet (the user is still picking) saves the method alone:
+    // the server keeps the stored rows.
+    try {
+      const res = await api.put<AllocationsAnswer>(`${config.versionsApi}/${v.id}/allocations`, {
+        method: m,
+        driver: d,
+        rows: payload,
+        base_signature: baseSignatureRef.current,
+      });
+      keepSaved(v, res.data ?? {});
+    } catch (e) {
+      const refused = editConflictsOf(e)?.[0];
+      if (refused) {
+        const data = (e as { response?: { data?: { base_signature?: unknown } } }).response?.data;
+        setWaitingConflict({ entry: refused, signature: typeof data?.base_signature === 'string' ? data.base_signature : null, error: e });
+        throw e;
+      }
+      // A conflict answer the screen cannot read: an error the user sees, the allocation kept on screen.
+      throw unreadableConflict(e) ?? e;
     }
-    await api.post(`${config.versionsApi}/${v.id}/allocations/bulk-upsert`, payload);
-    await loadComputed(saved);
-  }, [ensureVersion, id, loadComputed]);
+  }, [ensureVersion, keepSaved]);
 
   const scheduleSave = React.useCallback(() => { autosave.schedule(persist); }, [autosave, persist]);
 
-  useImperativeHandle(ref, () => ({ flush: () => autosave.flush(), isDirty: () => autosave.isBusy() }), [autosave]);
+  useImperativeHandle(ref, () => ({
+    flush: (options) => autosave.flush(options),
+    isDirty: () => autosave.isBusy(),
+    hasWaitingChoice: () => !!conflictRef.current || !!restoreRef.current,
+  }), [autosave]);
 
-  const handleYearChange = React.useCallback(async (y: number) => { await autosave.flush(); onYearChange(y); }, [autosave, onYearChange]);
+  // Leaving the tab with a choice waiting (another tab of the line): the item page keeps it for the line.
+  React.useEffect(() => {
+    if (held?.current?.lineId === id) held.current = null;
+    return () => {
+      const waiting = conflictRef.current;
+      if (!held) return;
+      // Left before the allocation was on screen again: the choice stays as it was kept.
+      if (!waiting) {
+        if (restoreRef.current) held.current = restoreRef.current;
+        return;
+      }
+      held.current = {
+        lineId: id,
+        year: yearRef.current,
+        conflict: waiting,
+        method: methodRef.current,
+        driver: driverRef.current,
+        rows: rowsRef.current.map((row) => ({ ...row })),
+      };
+    };
+    // Mount and unmount only: the refs hold the latest state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // A choice waiting asks before the year changes: the allocation waiting is dropped.
+  const handleYearChange = React.useCallback(async (y: number) => {
+    if (!(await autosave.flush()) && conflictRef.current) {
+      const change = await dialogs.confirm({
+        title: t('common:autosave.leaveTitle'),
+        message: t('common:editConflict.allocation.yearChange'),
+        confirmLabel: t('common:editConflict.yearChangeConfirm'),
+        intent: 'danger',
+      });
+      if (!change) return;
+      setWaitingConflict(null);
+      autosave.discard();
+    }
+    onYearChange(y);
+  }, [autosave, onYearChange, dialogs, t]);
+
+  // The user's choice after a refused save (lot 3E): « Overwrite » sends their allocation again over the
+  // stored one; « Reload the allocation » shows the stored one and drops theirs.
+  const onConflictChoice = React.useCallback(async (_field: string, choice: ConflictChoice) => {
+    const waiting = conflictRef.current;
+    if (!waiting) return;
+    setWaitingConflict(null);
+    if (choice === 'mine') {
+      baseSignatureRef.current = waiting.signature;
+      autosave.schedule(persist);
+      return;
+    }
+    autosave.discard();
+    try {
+      const loaded = await fetchAllocationsSnapshot(config, id, year);
+      writtenSnapshotRef.current = loaded;
+      queryClient.setQueryData<AllocationsSnapshot>(snapshotKey, loaded);
+      applySnapshot(loaded);
+    } catch (e) {
+      setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.allocations.failedToLoad`)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosave, persist, id, year, queryClient, snapshotKey, applySnapshot, t]);
 
   const onMethodChange = (next: Method) => {
     setMethod(next);
@@ -409,12 +565,36 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     { value: 'manual_pct', label: t(`${config.i18nPrefix}.allocations.manualByPct`) },
   ];
 
+  // An allocation as the conflict banner shows it: the method, and the rows of a manual one.
+  const describeAllocation = (value: unknown): string => {
+    const view = (value ?? {}) as AllocationView;
+    const label = methodOptions.find((o) => o.value === view.method)?.label ?? String(view.method ?? '');
+    const manual = view.method === 'manual_pct' || view.method === 'manual_company' || view.method === 'manual_department';
+    if (!manual || !view.rows?.length) return label;
+    const parts = view.rows.map((r) => {
+      const department = r.department_id ? departments.find((d) => d.id === r.department_id)?.name : null;
+      return `${companyName(r.company_id)}${department ? ` / ${department}` : ''} ${round2(num(r.allocation_pct))} %`;
+    });
+    return `${label} · ${parts.join(', ')}`;
+  };
+
   const numHeadSx = { textAlign: 'right', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1.5, py: 0.75, whiteSpace: 'nowrap' } as const;
   const numCellSx = { textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, color: 'kanap.text.primary', px: 1.5, py: 0.5, whiteSpace: 'nowrap' } as const;
 
   return (
     <Stack spacing={2.5} sx={{ pt: 1 }}>
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
+
+      {/* Someone else saved this allocation while the user was editing it: reload or overwrite. */}
+      <EditConflictBanner
+        wording="allocation"
+        conflicts={conflict ? [conflict.entry] : []}
+        fieldLabel={() => t('common:editConflict.allocation.field')}
+        formatValue={(_field, value) => describeAllocation(value)}
+        onResolve={(field, choice) => { void onConflictChoice(field, choice); }}
+        currentUserId={profile?.id ?? null}
+        sx={{ mx: 0, mt: 0 }}
+      />
 
       {/* Saving hint is absolutely positioned so it never reflows the year selector / table. */}
       <Box sx={{ position: 'relative' }}>

@@ -139,16 +139,23 @@ function renderPanel(options: Options = {}) {
     ...options,
     onSave,
   };
-  const view = render(
+  const ui = (next: LinesPanelProps) => (
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
-          <LinesPanel {...props} />
+          <LinesPanel {...next} />
         </ThemeProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
-  return { onSave: onSave as ReturnType<typeof vi.fn>, onApplyToAll, unmount: view.unmount };
+  const view = render(ui(props));
+  return {
+    onSave: onSave as ReturnType<typeof vi.fn>,
+    onApplyToAll,
+    unmount: view.unmount,
+    /** The same panel drawn again with other props (a reload brought another record). */
+    rerender: (change: Partial<LinesPanelProps>) => view.rerender(ui({ ...props, ...change })),
+  };
 }
 
 const rows = () => screen.getAllByTestId('line-row');
@@ -239,7 +246,7 @@ describe('LinesPanel', () => {
     expect(onSave).toHaveBeenCalledWith([{
       label: '', quantity_unit: 'people', quantity: '1', unit_price: '1200', price_basis: 'per_day', frequency: 'per_month',
       days_per_month: '5', period_start: '2026-04-01', period_end: '2026-12-31', working_day_profile_id: 'us',
-    }], false);
+    }], false, []);
   });
 
   it('without an enabled calendar, a new line is one person per month and saves with its price alone', async () => {
@@ -257,7 +264,7 @@ describe('LinesPanel', () => {
     expect(onSave).toHaveBeenCalledWith([{
       label: '', quantity_unit: 'people', quantity: '1', unit_price: '8000', price_basis: 'per_month', frequency: 'per_month',
       days_per_month: null, period_start: '2026-04-01', period_end: '2026-12-31', working_day_profile_id: null,
-    }], false);
+    }], false, []);
   });
 
   it('while the calendars are loading, a new line keeps the price per day', () => {
@@ -773,5 +780,62 @@ describe('LinesPanel', () => {
         vi.unstubAllGlobals();
       }
     });
+  });
+});
+
+describe('LinesPanel and the stored lines (lot 3D, scenario 4)', () => {
+  beforeEach(() => {
+    calendarsState.list = [calendar('fr', 'France', 'FR')];
+  });
+  const description = () => screen.getByLabelText('Description') as HTMLInputElement;
+  const theirs = () => roundWith([storedLine({ id: 'l9', label: 'Their manager', unit_price: '950.0000' })]);
+
+  it('the drafts become the stored lines when nothing is pending, and the next save starts from them', async () => {
+    const { rerender, onSave } = renderPanel({ record: roundWith([storedLine()]) });
+    expect(description()).toHaveValue('Project manager');
+
+    // Someone else's save, shown by a reload of the budget tab.
+    rerender({ record: theirs() });
+    await waitFor(() => expect(description()).toHaveValue('Their manager'));
+
+    typeAndLeave(description(), 'Their manager, half time');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const [lines, , startedFrom] = onSave.mock.calls[0];
+    expect(lines[0]).toMatchObject({ label: 'Their manager, half time' });
+    expect(startedFrom).toEqual([expect.objectContaining({ label: 'Their manager', unit_price: '950' })]);
+  });
+
+  it('a line being typed is never replaced by the stored lines', async () => {
+    const { rerender } = renderPanel({ record: roundWith([storedLine()]) });
+    fireEvent.change(description(), { target: { value: 'Typing…' } });
+    rerender({ record: theirs() });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(description()).toHaveValue('Typing…');
+  });
+
+  it('a save of these lines starts the next one from them', async () => {
+    const { onSave } = renderPanel({ record: roundWith([storedLine()]) });
+    typeAndLeave(description(), 'Lead');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][2]).toEqual([expect.objectContaining({ label: 'Project manager' })]);
+    typeAndLeave(description(), 'Lead, part time');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave.mock.calls[1][2]).toEqual([expect.objectContaining({ label: 'Lead' })]);
+  });
+
+  it('while the column waits for a choice the drafts stay; Reload the column replaces them', async () => {
+    const onSave = vi.fn(async () => ({ ok: false as const, conflict: true as const }));
+    const { rerender } = renderPanel({ record: roundWith([storedLine()]), onSave });
+    typeAndLeave(description(), 'Mine');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    // Held for the choice: no message under the table, the user's line stays.
+    expect(screen.queryByText(/could not/i)).toBeNull();
+
+    rerender({ record: theirs(), waiting: true });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(description()).toHaveValue('Mine');
+
+    rerender({ record: theirs(), waiting: false, reloadSignal: 1 });
+    await waitFor(() => expect(description()).toHaveValue('Their manager'));
   });
 });

@@ -233,8 +233,12 @@ export function tableLineMessage(message: string, rows: number[]): string {
   });
 }
 
-/** A save of the lines: fine (with the server's warnings, if any), or refused with a sentence. */
-export type LinesSaveResult = { ok: true; warnings?: string[] } | { ok: false; error: string };
+/**
+ * A save of the lines: fine (with the server's warnings, if any), refused with a sentence, or held
+ * for the user's choice (someone else changed the column meanwhile, lot 3D: the budget tab shows the
+ * choice; the drafts stay as typed).
+ */
+export type LinesSaveResult = { ok: true; warnings?: string[] } | { ok: false; error: string } | { ok: false; conflict: true };
 
 export type LinesPanelProps = {
   year: number;
@@ -247,14 +251,23 @@ export type LinesPanelProps = {
   itemEnd?: string | null;
   frozen: boolean;
   frozenHint: string;
+  /** The column waits for the user's choice after a refused save: the drafts are kept as they are. */
+  waiting?: boolean;
+  /** Changed by « Reload the column »: the drafts start again from the stored lines, whatever is typed. */
+  reloadSignal?: number;
+  /** The lines the panel opens on instead of the stored ones: a refused write still waiting for a choice. */
+  startLines?: LinePayload[];
   /** The paying company's country: its standard calendar is the default of a new line. */
   payingCompanyCountry?: string | null;
   /** The tenant's name of a column, for "copied from". */
   columnName: (measure: AmountMeasure) => string;
   /** "Apply these lines to all columns": offered when the group has other columns that are not frozen. */
   applyToAll: { offered: boolean; on: boolean; hint: string; onChange: (on: boolean) => void };
-  /** Writes every complete line of the column (and of the group when `applyToAll`), then reloads. */
-  onSave: (lines: LinePayload[], applyToAll: boolean) => Promise<LinesSaveResult>;
+  /**
+   * Writes every complete line of the column (and of the group when `applyToAll`), then reloads.
+   * `startedFrom`: the stored lines the drafts started from, the base of the write (lot 3D).
+   */
+  onSave: (lines: LinePayload[], applyToAll: boolean, startedFrom: LinePayload[]) => Promise<LinesSaveResult>;
   /**
    * One row per line (`wide`), two (`narrow`), or `auto`: one row when the panel has room for the
    * whole table, two otherwise. Fixed for the specs, which have no layout.
@@ -268,7 +281,7 @@ export type LinesPanelProps = {
  * server. A line that is not complete yet stays here until it is.
  */
 export default function LinesPanel({
-  year, record, period, itemStart, itemEnd, frozen, frozenHint,
+  year, record, period, itemStart, itemEnd, frozen, frozenHint, waiting = false, reloadSignal = 0, startLines,
   payingCompanyCountry, columnName, applyToAll, onSave, layout = 'auto',
 }: LinesPanelProps) {
   const { t } = useTranslation(['ops', 'common']);
@@ -278,10 +291,14 @@ export default function LinesPanel({
   const queryClient = useQueryClient();
 
   const storedLines = React.useMemo(() => record?.lines ?? [], [record]);
-  const [drafts, setDrafts] = React.useState<LineDraft[]>(() => storedLines.map(draftOf));
+  const [drafts, setDrafts] = React.useState<LineDraft[]>(() => (startLines ? startLines.map((line) => draftOf(line as RoundLine)) : storedLines.map(draftOf)));
   const draftsRef = React.useRef(drafts);
   // What the server holds (or was last asked to hold): a commit that would send the same lines writes nothing.
-  const sentRef = React.useRef(JSON.stringify(storedLines.map(linePayloadOf)));
+  const sentRef = React.useRef(JSON.stringify((startLines ?? storedLines).map(linePayloadOf)));
+  // The stored lines the drafts started from: the base of the next write (someone else's change meanwhile is a conflict).
+  const startedFromRef = React.useRef<LinePayload[]>(storedLines.map(linePayloadOf));
+  // Saves on their way: the drafts are not replaced by stored lines meanwhile.
+  const inFlightRef = React.useRef(0);
   const [error, setError] = React.useState<string | null>(null);
 
   const update = (change: (prev: LineDraft[]) => LineDraft[]): LineDraft[] => {
@@ -300,12 +317,19 @@ export default function LinesPanel({
     const signature = JSON.stringify(lines);
     if (!options.force && signature === sentRef.current) return;
     sentRef.current = signature;
-    void onSave(lines, options.applyToAll ?? applyToAll.on).then((result) => {
+    inFlightRef.current += 1;
+    void onSave(lines, options.applyToAll ?? applyToAll.on, startedFromRef.current).then((result) => {
+      inFlightRef.current -= 1;
       if (result.ok) {
         setError(null);
+        // The column now holds these lines: the next write starts from them.
+        startedFromRef.current = lines;
         // The only warning is a disabled calendar: the note under the table comes from the calendars
         // list, refreshed here in case it was disabled since the list was loaded.
         if (result.warnings?.length) void queryClient.invalidateQueries({ queryKey: WORKING_DAY_PROFILES_QUERY_KEY });
+      } else if ('conflict' in result) {
+        // Held for the user's choice, shown by the budget tab: the drafts stay as sent.
+        setError(null);
       } else {
         setError(tableLineMessage(result.error, rows));
         // Refused: the next commit sends the same lines again.
@@ -313,6 +337,37 @@ export default function LinesPanel({
       }
     });
   };
+
+  // The stored lines change (a save of this panel, someone else's save shown by a reload, a column
+  // reloaded): when nothing is pending here (every line complete and sent, no save on its way, no
+  // choice waiting), the drafts become the stored lines, so a later edit starts from them and never
+  // sends back lines someone else replaced (plan planning/perf-scale, scenario 4). Rows keep their
+  // place, so a field being tabbed through is not drawn again. « Reload the column » always does it.
+  const reloadSeenRef = React.useRef(reloadSignal);
+  React.useEffect(() => {
+    const stored = (record?.lines ?? []).map(linePayloadOf);
+    const storedSignature = JSON.stringify(stored);
+    const forced = reloadSeenRef.current !== reloadSignal;
+    reloadSeenRef.current = reloadSignal;
+    if (!forced) {
+      if (waiting || inFlightRef.current > 0) return;
+      const current = draftsRef.current;
+      if (current.some((d) => lineProblem(year, d))) return;
+      const signature = JSON.stringify(current.map(payloadOf));
+      if (signature !== sentRef.current) return;
+      if (signature === storedSignature) {
+        startedFromRef.current = stored;
+        return;
+      }
+    }
+    const previous = draftsRef.current;
+    update(() => (record?.lines ?? []).map((line, index) => ({ ...draftOf(line), key: previous[index]?.key ?? draftOf(line).key })));
+    sentRef.current = storedSignature;
+    startedFromRef.current = stored;
+    setError(null);
+    // `update` only sets state and a ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [record, waiting, reloadSignal, year]);
 
   const commit = () => send(draftsRef.current);
   const patchLine = (key: string, patch: Partial<LineDraft>) => update((prev) => prev.map((d) => (d.key === key ? { ...d, ...patch } : d)));

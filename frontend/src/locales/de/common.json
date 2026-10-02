@@ -631,7 +631,10 @@
     "leaveMessage": "Einige Ihrer Änderungen konnten nicht gespeichert werden. Verlassen Sie die Seite trotzdem und verwerfen Sie sie, oder bleiben Sie auf dieser Seite und versuchen Sie es erneut.",
     "leaveConfirm": "Ohne Speichern verlassen",
     "leaveConflictMessage": "Eine andere Person hat ein Feld geändert, das Sie bearbeitet haben, und Sie haben noch nicht gewählt, welchen Wert Sie behalten. Verlassen Sie die Seite trotzdem und verwerfen Sie Ihren Wert, oder bleiben Sie und wählen Sie.",
-    "leaveConflictOtherMessage": "Eine andere Person hat ein Feld geändert, das Sie in {{items}} bearbeitet haben, und Sie haben noch nicht gewählt, welchen Wert Sie behalten. Verlassen Sie die Seite trotzdem und verwerfen Sie Ihren Wert, oder bleiben Sie und wählen Sie."
+    "leaveConflictOtherMessage": "Eine andere Person hat ein Feld geändert, das Sie in {{items}} bearbeitet haben, und Sie haben noch nicht gewählt, welchen Wert Sie behalten. Verlassen Sie die Seite trotzdem und verwerfen Sie Ihren Wert, oder bleiben Sie und wählen Sie.",
+    "leaveColumnsMessage_one": "Eine andere Person hat die Spalte {{columns}} geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche Werte bleiben. Trotzdem verlassen und Ihre Werte in {{columns}} verlieren, oder bleiben und wählen.",
+    "leaveColumnsMessage_other": "Eine andere Person hat die Spalten {{columns}} geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche Werte bleiben. Trotzdem verlassen und Ihre Werte in diesen Spalten verlieren, oder bleiben und wählen.",
+    "leaveAllocationMessage": "Eine andere Person hat die Zuordnung geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche bleibt. Trotzdem verlassen und Ihre Zuordnung verlieren, oder bleiben und wählen."
   },
   "editConflict": {
     "title_one": "Eine andere Person hat ein Feld geändert, das Sie bearbeitet haben",
@@ -657,6 +660,45 @@
     "unavailable": "Wert nicht mehr verfügbar",
     "elsewhere_one": "{{items}} hat eine Änderung, die auf Ihre Wahl wartet.",
     "elsewhere_other": "{{items}} haben Änderungen, die auf Ihre Wahl warten.",
-    "open": "{{item}} öffnen"
+    "open": "{{item}} öffnen",
+    "column": {
+      "title_one": "Eine andere Person hat eine Spalte geändert, die Sie bearbeitet haben",
+      "title_other": "Eine andere Person hat {{count}} Spalten geändert, die Sie bearbeitet haben",
+      "titleSelf_one": "Sie haben eine Spalte in einem anderen Fenster geändert",
+      "titleSelf_other": "Sie haben {{count}} Spalten in einem anderen Fenster geändert",
+      "hint": "Ihre Eingaben in diesen Spalten warten auf Ihre Wahl. Sie werden gespeichert, sobald Sie gewählt haben.",
+      "changedByAt": "{{name}} hat diese Spalte um {{time}} geändert, während Sie sie bearbeitet haben.",
+      "changedByOn": "{{name}} hat diese Spalte am {{date}} um {{time}} geändert, während Sie sie bearbeitet haben.",
+      "changedBy": "{{name}} hat diese Spalte geändert, während Sie sie bearbeitet haben.",
+      "changedAt": "Diese Spalte wurde um {{time}} geändert, während Sie sie bearbeitet haben.",
+      "changedOn": "Diese Spalte wurde am {{date}} um {{time}} geändert, während Sie sie bearbeitet haben.",
+      "changed": "Diese Spalte wurde geändert, während Sie sie bearbeitet haben.",
+      "changedByYouAt": "Sie haben diese Spalte um {{time}} in einem anderen Fenster geändert.",
+      "changedByYouOn": "Sie haben diese Spalte am {{date}} um {{time}} in einem anderen Fenster geändert.",
+      "changedByYou": "Sie haben diese Spalte in einem anderen Fenster geändert.",
+      "keepTheirs": "Spalte neu laden",
+      "applyMine": "Überschreiben"
+    },
+    "allocation": {
+      "field": "Zuordnung",
+      "title_one": "Eine andere Person hat die Zuordnung geändert, die Sie bearbeitet haben",
+      "title_other": "Eine andere Person hat die Zuordnung geändert, die Sie bearbeitet haben",
+      "titleSelf_one": "Sie haben diese Zuordnung in einem anderen Fenster geändert",
+      "titleSelf_other": "Sie haben diese Zuordnung in einem anderen Fenster geändert",
+      "hint": "Ihre Zuordnung wartet auf Ihre Wahl. Sie wird gespeichert, sobald Sie gewählt haben.",
+      "changedByAt": "{{name}} hat die Zuordnung um {{time}} geändert, während Sie sie bearbeitet haben.",
+      "changedByOn": "{{name}} hat die Zuordnung am {{date}} um {{time}} geändert, während Sie sie bearbeitet haben.",
+      "changedBy": "{{name}} hat die Zuordnung geändert, während Sie sie bearbeitet haben.",
+      "changedAt": "Die Zuordnung wurde um {{time}} geändert, während Sie sie bearbeitet haben.",
+      "changedOn": "Die Zuordnung wurde am {{date}} um {{time}} geändert, während Sie sie bearbeitet haben.",
+      "changed": "Die Zuordnung wurde geändert, während Sie sie bearbeitet haben.",
+      "changedByYouAt": "Sie haben diese Zuordnung um {{time}} in einem anderen Fenster geändert.",
+      "changedByYouOn": "Sie haben diese Zuordnung am {{date}} um {{time}} in einem anderen Fenster geändert.",
+      "changedByYou": "Sie haben diese Zuordnung in einem anderen Fenster geändert.",
+      "keepTheirs": "Zuordnung neu laden",
+      "applyMine": "Überschreiben",
+      "yearChange": "Eine andere Person hat die Zuordnung geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche bleibt. Trotzdem das Jahr wechseln und Ihre Zuordnung verlieren, oder bleiben und wählen."
+    },
+    "yearChangeConfirm": "Jahr wechseln"
   }
 }

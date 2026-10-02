@@ -37,6 +37,7 @@ import SpendPropertiesDrawer, { RunBuild } from './workspace/SpendPropertiesDraw
 import { useCostCenterTree } from '../../hooks/useCostCenterTree';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
+import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
 import { OPEX_FINANCE_CONFIG } from '../../components/finance/config';
 import type { RelationsPanelHandle } from './editors/RelationsPanel';
 import EntityTasksPanel from '../../components/EntityTasksPanel';
@@ -663,6 +664,8 @@ export default function SpendItemPage() {
   });
   const payingCompanyCountry = (payingCompanyQuery.data as { country_iso?: string | null } | undefined)?.country_iso ?? null;
   const allocRef = React.useRef<AllocationsTabHandle>(null);
+  // Budget and allocation choices kept for this line while the user is on another of its tabs.
+  const heldChoices = useHeldChoices(uuid);
   const relationsRef = React.useRef<RelationsPanelHandle>(null);
 
   // Relations autosaves internally; flushAll drains any pending write on navigation.
@@ -673,25 +676,42 @@ export default function SpendItemPage() {
 
   // Drain every pending write before a controlled transition. If a save fails we
   // return false so the caller aborts the navigation — no edit is silently lost.
+  // The Budget and Allocations choices waiting on this line: the tab shown answers, a tab left
+  // meanwhile kept its choice in `heldChoices` (lots 3D, 3E).
+  const budgetChoices = React.useCallback((): string[] => (
+    budgetRef.current?.waitingColumns() ?? (heldChoices.budget.current?.lineId === uuid ? heldChoices.budget.current?.labels ?? [] : [])
+  ), [heldChoices, uuid]);
+  const allocationChoice = React.useCallback((): boolean => (
+    allocRef.current?.hasWaitingChoice() ?? heldChoices.allocation.current?.lineId === uuid
+  ), [heldChoices, uuid]);
+
   // `ignoreHeld`: edits waiting for a choice stay (the page and its banner stay too).
   const flushAll = React.useCallback(async (options?: { ignoreHeld?: boolean }): Promise<boolean> => {
     const overviewOk = await autosave.flush(options);
     if (!overviewOk) return false;
-    // Budget and Allocations autosave internally; flush() resolves false if the save rejected.
-    if (routeTab === 'budget') return (await budgetRef.current?.flush()) ?? true;
-    if (routeTab === 'allocations') return (await allocRef.current?.flush()) ?? true;
-    const editor = activeRefEditor();
-    if (editor?.isDirty?.()) {
-      try { await editor.save(); } catch { return false; }
+    // Budget and Allocations autosave internally; flush() resolves false if the save rejected or a choice waits.
+    if (routeTab === 'budget') {
+      if (!((await budgetRef.current?.flush(options)) ?? true)) return false;
+    } else if (routeTab === 'allocations') {
+      if (!((await allocRef.current?.flush(options)) ?? true)) return false;
+    } else {
+      const editor = activeRefEditor();
+      if (editor?.isDirty?.()) {
+        try { await editor.save(); } catch { return false; }
+      }
     }
-    return true;
-  }, [autosave, activeRefEditor, routeTab]);
+    // A budget or allocation choice kept from a tab left meanwhile: only a move that keeps the line goes on.
+    return !!options?.ignoreHeld || (budgetChoices().length === 0 && !allocationChoice());
+  }, [autosave, activeRefEditor, routeTab, budgetChoices, allocationChoice]);
 
   const tabUnsaved = React.useCallback(() => (routeTab === 'budget' && !!budgetRef.current?.isDirty())
     || (routeTab === 'allocations' && !!allocRef.current?.isDirty())
     || !!activeRefEditor()?.isDirty?.(), [routeTab, activeRefEditor]);
-  // Something would be lost by leaving: a save not done, a choice not made (on any line).
-  const unsavedWork = React.useCallback(() => autosaveRegistry.isBusy() || tabUnsaved(), [autosaveRegistry, tabUnsaved]);
+  // Something would be lost by leaving: a save not done, a choice not made (on any line or tab).
+  const unsavedWork = React.useCallback(
+    () => autosaveRegistry.isBusy() || tabUnsaved() || budgetChoices().length > 0 || allocationChoice(),
+    [autosaveRegistry, tabUnsaved, budgetChoices, allocationChoice],
+  );
 
   // A save that still fails once flushed (the server stays busy, a tab keeps its edits) must not
   // trap the user on the line: leaving is offered, and drops what could not be saved.
@@ -704,10 +724,15 @@ export default function SpendItemPage() {
     // Nothing left unsaved (the save was refused and the screen reloaded): stay, the message shows why.
     if (!unsaved) return false;
     const elsewhere = patchBuffer.conflictTargets().filter((lineId) => lineId !== uuid);
-    const message = keepChoices || !patchBuffer.hasConflicts() ? t('common:autosave.leaveMessage')
-      : elsewhere.length > 0 && !(uuid && patchBuffer.conflictsOf(uuid).length > 0)
-        ? t('common:autosave.leaveConflictOtherMessage', { items: elsewhere.map(lineRef).join(', ') })
-        : t('common:autosave.leaveConflictMessage');
+    // Leaving the line drops a budget or allocation choice still waiting: the warning names it.
+    const columns = keepChoices ? [] : budgetChoices();
+    const message = columns.length > 0
+      ? t('common:autosave.leaveColumnsMessage', { count: columns.length, columns: namesInSentence(locale, columns) })
+      : !keepChoices && allocationChoice() ? t('common:autosave.leaveAllocationMessage')
+        : keepChoices || !patchBuffer.hasConflicts() ? t('common:autosave.leaveMessage')
+          : elsewhere.length > 0 && !(uuid && patchBuffer.conflictsOf(uuid).length > 0)
+            ? t('common:autosave.leaveConflictOtherMessage', { items: elsewhere.map(lineRef).join(', ') })
+            : t('common:autosave.leaveConflictMessage');
     const leave = await dialogs.confirm({
       title: t('common:autosave.leaveTitle'),
       message,
@@ -716,11 +741,16 @@ export default function SpendItemPage() {
     });
     if (!leave) return false;
     autosaveRegistry.discardAll();
+    // The budget and allocation choices kept for the line are lost with it.
+    if (!keepChoices) {
+      heldChoices.budget.current = null;
+      heldChoices.allocation.current = null;
+    }
     patchBuffer.discard({ keepChoices });
     setSaveError(null);
     if (dataRef.current) syncForm(dataRef.current);
     return true;
-  }, [flushAll, autosave, tabUnsaved, unsavedWork, patchBuffer, uuid, t, lineRef, dialogs, autosaveRegistry, syncForm]);
+  }, [flushAll, autosave, tabUnsaved, unsavedWork, patchBuffer, uuid, t, lineRef, dialogs, autosaveRegistry, syncForm, budgetChoices, allocationChoice, heldChoices, locale]);
 
   // A link of the app (left menu, top bar, user menu) asks the same as the close button.
   useLeaveGuard(unsavedWork, flushOrLeave);
@@ -1076,10 +1106,10 @@ export default function SpendItemPage() {
         <WorkspaceTabBoundary resetKey={routeTab} onRetry={retryTabs}>
           <React.Suspense fallback={null}>
             {routeTab === 'budget' && !isCreate && uuid && (
-              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} ref={budgetRef} />
+              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} ref={budgetRef} />
             )}
             {routeTab === 'allocations' && !isCreate && uuid && (
-              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} ref={allocRef} />
+              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} held={heldChoices.allocation} ref={allocRef} />
             )}
             {routeTab === 'relations' && !isCreate && uuid && (
               <RelationsPanel key={uuid} id={uuid} ref={relationsRef} autoSave onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
