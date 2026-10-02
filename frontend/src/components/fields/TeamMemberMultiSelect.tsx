@@ -1,13 +1,12 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Autocomplete, CircularProgress, Divider, IconButton, Stack, TextField, Typography,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
-import api from '../../api';
-import { useAuth } from '../../auth/AuthContext';
+import { useLookupPicker } from '../../hooks/useLookupPicker';
+import { USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
@@ -21,12 +20,7 @@ interface TeamMember {
   email?: string;
 }
 
-interface User {
-  id: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  email: string;
-}
+type User = UserOption;
 
 interface TeamMemberMultiSelectProps {
   label: string;
@@ -47,39 +41,17 @@ export default function TeamMemberMultiSelect({
 }: TeamMemberMultiSelectProps) {
   const { t } = useTranslation('common');
   const [loading, setLoading] = useState(false);
-  const { profile } = useAuth();
-  const myId = profile?.id ?? null;
+  const me = useMeOption();
+  const myId = me?.id ?? null;
 
-  // Fetch all users
-  const { data: users, isLoading: loadingUsers } = useQuery({
-    queryKey: ['users-for-team-select'],
-    queryFn: async () => {
-      const res = await api.get('/users', { params: { status: 'enabled', limit: 1000 } });
-      return (res.data?.items || []) as User[];
-    },
-  });
-
-  // Users that are not yet selected
-  const selectedUserIds = useMemo(() => {
-    return new Set(value.map((m) => m.user_id));
-  }, [value]);
-
-  const availableUsers = useMemo(() => {
-    if (!users) return [];
-    const list = users.filter((u) => !selectedUserIds.has(u.id));
-    const sortKey = (u: User) => {
-      const ln = (u.last_name || '').trim().toLowerCase();
-      const fn = (u.first_name || '').trim().toLowerCase();
-      return ln ? `${ln}\0${fn}` : (fn || u.email.toLowerCase());
-    };
-    list.sort((a, b) => sortKey(a).localeCompare(sortKey(b), undefined, { sensitivity: 'base' }));
-    // Pin current user first
-    if (myId) {
-      const idx = list.findIndex((u) => u.id === myId);
-      if (idx > 0) list.unshift(...list.splice(idx, 1));
-    }
-    return list;
-  }, [users, selectedUserIds, myId]);
+  // People searched as the user types; the ones already in the team are not offered.
+  const picker = useLookupPicker<User>({ endpoint: USERS_LOOKUP_ENDPOINT, value: [] });
+  const selectedUserIds = useMemo(() => new Set(value.map((m) => m.user_id)), [value]);
+  const availableUsers = useMemo(
+    () => withMeFirst(picker.options, me, picker.searching, (u) => selectedUserIds.has(u.id))
+      .filter((u) => !selectedUserIds.has(u.id)),
+    [picker.options, me, picker.searching, selectedUserIds],
+  );
 
   // Get display name for a team member
   const getDisplayName = useCallback((m: TeamMember) => {
@@ -94,7 +66,7 @@ export default function TeamMemberMultiSelect({
     const fn = (u.first_name || '').trim();
     const ln = (u.last_name || '').trim();
     const name = [fn, ln].filter(Boolean).join(' ');
-    return name || u.email;
+    return name || u.email || '';
   }, []);
 
   const handleAdd = useCallback(async (user: User | null) => {
@@ -126,7 +98,7 @@ export default function TeamMemberMultiSelect({
     }
   }, [value, onChange]);
 
-  const isLoading = loadingUsers || loading;
+  const isLoading = picker.loading || loading;
 
   return (
     <Stack spacing={0.75}>
@@ -169,6 +141,7 @@ export default function TeamMemberMultiSelect({
       ) : null}
 
       <Autocomplete
+        {...picker.autocomplete}
         options={availableUsers}
         getOptionLabel={(option) => formatUserName(option)}
         value={null}
@@ -184,7 +157,7 @@ export default function TeamMemberMultiSelect({
                   {formatUserName(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
                 </Typography>
               </li>
-              {option.id === myId && <Divider />}
+              {option.id === myId && !picker.searching && <Divider />}
             </Fragment>
           );
         }}
@@ -206,8 +179,7 @@ export default function TeamMemberMultiSelect({
             }}
           />
         )}
-        disabled={disabled || isLoading}
-        loading={isLoading}
+        disabled={disabled || loading}
         ListboxProps={hideLabel ? { sx: drawerAutocompleteListboxSx } : undefined}
         size="small"
       />

@@ -43,6 +43,8 @@ export default function BusinessProcessCategoryMultiSelect({
   const naked = hideLabel || label === '';
   const queryClient = useQueryClient();
 
+  // The full list on purpose: categories are a short admin-managed list in a manual order
+  // (sort_order), created from this picker; a server search would lose that order.
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['business-process-categories', 'all'],
     queryFn: async () => {

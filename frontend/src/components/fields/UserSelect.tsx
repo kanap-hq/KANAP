@@ -1,20 +1,14 @@
 import React from 'react';
 import { Autocomplete, Box, Divider, TextField, CircularProgress } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import api from '../../api';
-import { useAuth } from '../../auth/AuthContext';
+import { useLookupPicker } from '../../hooks/useLookupPicker';
+import { formatUserName } from '../../utils/userDisplay';
+import { USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
-type User = {
-  id: string;
-  email: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  status: string;
-};
+type User = UserOption;
 
 type UserSelectProps = {
   label?: string;
@@ -31,6 +25,8 @@ type UserSelectProps = {
   size?: 'small' | 'medium';
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
+  /** The chosen person's label when the caller holds it: no request to show it. */
+  selectedOption?: UserOption | null;
 };
 
 function assignRef<T>(target: React.Ref<T | null> | undefined, value: T | null) {
@@ -56,72 +52,38 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
     size,
     hideLabel = false,
     textFieldSx,
+    selectedOption,
   },
   ref,
 ) {
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.user');
   const naked = hideLabel || label === '';
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users', 'enabled', 'select'],
-    queryFn: async () => {
-      const res = await api.get<{ items: User[] }>('/users', {
-        params: { status: 'enabled', limit: 1000 },
-      });
-      return res.data.items;
-    },
+  const me = useMeOption();
+  const myId = me?.id ?? null;
+  const picker = useLookupPicker<User>({
+    endpoint: USERS_LOOKUP_ENDPOINT,
+    value: value ? [value] : [],
+    given: [selectedOption],
   });
+  const options = React.useMemo(
+    () => withMeFirst(picker.options, me, picker.searching, (u) => u.id === excludeUserId)
+      .filter((u) => u.id !== excludeUserId),
+    [picker.options, me, picker.searching, excludeUserId],
+  );
+  const selected = value ? picker.selected[0] ?? null : null;
 
-  const { profile } = useAuth();
-  const myId = profile?.id ?? null;
-
-  const sortedUsers = React.useMemo(() => {
-    const list = users ? [...users] : [];
-    const sortKey = (u: User) => {
-      const ln = (u.last_name || '').trim().toLowerCase();
-      const fn = (u.first_name || '').trim().toLowerCase();
-      return ln ? `${ln}\0${fn}` : (fn || u.email.toLowerCase());
-    };
-    list.sort((a, b) => sortKey(a).localeCompare(sortKey(b), undefined, { sensitivity: 'base' }));
-    // Pin current user first
-    if (myId) {
-      const idx = list.findIndex((u) => u.id === myId);
-      if (idx > 0) list.unshift(...list.splice(idx, 1));
-    }
-    return list;
-  }, [users, myId]);
-
-  // Fetch selected user if not present (e.g., disabled or off-page)
-  const needSelectedFetch = !!value && !sortedUsers.some((u) => u.id === value);
-  const { data: selectedById, isLoading: isLoadingSelected } = useQuery({
-    queryKey: ['users', 'by-id', value],
-    enabled: needSelectedFetch,
-    queryFn: async () => {
-      const res = await api.get<User>(`/users/${value}`);
-      return res.data as unknown as User;
-    },
-  });
-
-  const mergedOptions = React.useMemo(() => {
-    const base = sortedUsers.filter((u) => u.id !== excludeUserId);
-    if (selectedById && !base.some((u) => u.id === selectedById.id)) base.unshift(selectedById);
-    return base;
-  }, [excludeUserId, sortedUsers, selectedById]);
-
-  const selected = mergedOptions.find((u) => u.id === value) || null;
-
-  const formatName = (u: User) => {
-    const fn = (u.first_name || '').trim();
-    const ln = (u.last_name || '').trim();
-    const name = [fn, ln].filter(Boolean).join(' ');
-    return name || u.email;
-  };
+  const formatName = (u: User) => formatUserName(u) ?? '';
 
   const control = (
     <Autocomplete
-      options={mergedOptions}
+      {...picker.autocomplete}
+      options={options}
       value={selected}
-      onChange={(_, newValue) => onChange(newValue?.id || null, newValue ?? null)}
+      onChange={(_, newValue) => {
+        picker.remember([newValue]);
+        onChange(newValue?.id || null, newValue ?? null);
+      }}
       getOptionLabel={(option) => formatName(option)}
       size={size}
       renderOption={(props, option) => (
@@ -131,7 +93,7 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
               {formatName(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
             </div>
           </li>
-          {option.id === myId && <Divider />}
+          {option.id === myId && !picker.searching && <Divider />}
         </React.Fragment>
       )}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
@@ -153,24 +115,15 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
             ...params.InputProps,
             endAdornment: (
               <>
-                {(isLoading || isLoadingSelected) ? <CircularProgress color="inherit" size={20} /> : null}
+                {picker.loading ? <CircularProgress color="inherit" size={20} /> : null}
                 {params.InputProps.endAdornment}
               </>
             ),
           }}
         />
       )}
-      disabled={disabled || isLoading}
-      loading={isLoading || isLoadingSelected}
-      filterOptions={(options, { inputValue }) => {
-        const s = inputValue.toLowerCase();
-        return options.filter((o) =>
-          (o.first_name || '').toLowerCase().includes(s) ||
-          (o.last_name || '').toLowerCase().includes(s) ||
-          o.email.toLowerCase().includes(s)
-        );
-      }}
-      noOptionsText={isLoading ? t('selects.loading') : t('selects.noUsersFound')}
+      disabled={disabled}
+      noOptionsText={picker.loading ? t('selects.loading') : t('selects.noUsersFound')}
       fullWidth
     />
   );

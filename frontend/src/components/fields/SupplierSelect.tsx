@@ -2,17 +2,17 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Autocomplete, Box, TextField, CircularProgress } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { useQuery } from '@tanstack/react-query';
-import api from '../../api';
+import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
-type Supplier = {
+export type SupplierOption = {
   id: string;
   name: string;
   erp_supplier_id: string | null;
   status: string;
 };
+type Supplier = SupplierOption;
 
 type SupplierSelectProps = {
   label?: string;
@@ -25,6 +25,8 @@ type SupplierSelectProps = {
   required?: boolean;
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
+  /** The chosen supplier's label when the caller holds it (the detail's references): no request to show it. */
+  selectedOption?: SupplierOption | null;
 };
 
 function assignRef<T>(target: React.Ref<T | null> | undefined, value: T | null) {
@@ -48,52 +50,29 @@ const SupplierSelect = React.forwardRef<HTMLInputElement, SupplierSelectProps>(f
     required = false,
     hideLabel = false,
     textFieldSx,
+    selectedOption,
   },
   ref,
 ) {
   const { t } = useTranslation(['master-data', 'common']);
   const naked = hideLabel || label === '';
-  const { data: suppliers, isLoading } = useQuery({
-    queryKey: ['suppliers', 'active'],
-    queryFn: async () => {
-      const res = await api.get<{ items: Supplier[] }>('/suppliers', { 
-        params: { limit: 1000 } 
-      });
-      return res.data.items;
-    },
+  const picker = useLookupPicker<Supplier>({
+    endpoint: '/suppliers/lookup',
+    value: value ? [value] : [],
+    given: [selectedOption],
   });
-
-  const sortedSuppliers = React.useMemo(() => {
-    const list = suppliers ? [...suppliers] : [];
-    return list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  }, [suppliers]);
-
-  // If the currently selected supplier is not in the active list (e.g., disabled or beyond page limit),
-  // fetch it explicitly so it can still be displayed.
-  const needSelectedFetch = !!value && !sortedSuppliers.some((s) => s.id === value);
-  const { data: selectedFromId, isLoading: isLoadingSelected } = useQuery({
-    queryKey: ['suppliers', 'by-id', value],
-    enabled: needSelectedFetch,
-    queryFn: async () => {
-      const res = await api.get<Supplier>(`/suppliers/${value}`);
-      return res.data as unknown as Supplier;
-    },
-  });
-
-  const mergedOptions = React.useMemo(() => {
-    const base = [...sortedSuppliers];
-    if (selectedFromId && !base.some((s) => s.id === selectedFromId.id)) base.unshift(selectedFromId);
-    return base;
-  }, [sortedSuppliers, selectedFromId]);
-
-  const selectedSupplier = mergedOptions.find((supplier: Supplier) => supplier.id === value) || null;
+  const selectedSupplier = value ? picker.selected[0] ?? null : null;
 
   const control = (
     <Autocomplete
-      options={mergedOptions}
+      {...picker.autocomplete}
+      options={picker.options}
       value={selectedSupplier}
-      onChange={(_, newValue) => onChange(newValue?.id || null)}
-      getOptionLabel={(option) => option.name}
+      onChange={(_, newValue) => {
+        picker.remember([newValue]);
+        onChange(newValue?.id || null);
+      }}
+      getOptionLabel={(option) => option.name ?? ''}
       renderOption={(props, option) => (
         <li {...props} key={option.id}>
           <div>
@@ -129,23 +108,15 @@ const SupplierSelect = React.forwardRef<HTMLInputElement, SupplierSelectProps>(f
             ...params.InputProps,
             endAdornment: (
               <>
-                {(isLoading || isLoadingSelected) ? <CircularProgress color="inherit" size={20} /> : null}
+                {picker.loading ? <CircularProgress color="inherit" size={20} /> : null}
                 {params.InputProps.endAdornment}
               </>
             ),
           }}
         />
       )}
-      disabled={disabled || isLoading}
-      loading={isLoading || isLoadingSelected}
-      filterOptions={(options, { inputValue }) => {
-        const searchTerm = inputValue.toLowerCase();
-        return options.filter(option => 
-          option.name.toLowerCase().includes(searchTerm) ||
-          (option.erp_supplier_id && option.erp_supplier_id.toLowerCase().includes(searchTerm))
-        );
-      }}
-      noOptionsText={isLoading ? t('common:status.loading') : t('master-data:suppliers.noSuppliersFound')}
+      disabled={disabled}
+      noOptionsText={picker.loading ? t('common:status.loading') : t('master-data:suppliers.noSuppliersFound')}
       fullWidth
     />
   );

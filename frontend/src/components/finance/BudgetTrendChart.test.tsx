@@ -1,8 +1,8 @@
 import React from 'react';
-import { act, render } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { OPEX_FINANCE_CONFIG } from './config';
 import {
@@ -125,6 +125,14 @@ function renderChart(liveTotals?: LiveBudgetTotals) {
 }
 
 describe('BudgetTrendChart', () => {
+  // The chart library loads with the first chart drawn (its own chunk): load it once, then every test draws at once.
+  beforeAll(async () => {
+    columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
+    const view = renderChart(undefined);
+    expect(await screen.findByTestId('budget-trend-chart')).toBeInTheDocument();
+    view.unmount();
+  });
+
   beforeEach(() => {
     chartState.mounts = 0;
     chartState.lastOptions = null;

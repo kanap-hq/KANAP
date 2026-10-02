@@ -2,8 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { TextField, CircularProgress, Autocomplete, Box } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { useQuery } from '@tanstack/react-query';
-import api from '../../api';
+import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
@@ -20,6 +19,7 @@ type DepartmentSelectProps = {
   placeholder?: string;
   required?: boolean;
   size?: 'small' | 'medium';
+  /** Kept for callers; departments are not year-scoped. */
   year?: number;
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
@@ -46,7 +46,6 @@ const DepartmentSelect = React.forwardRef<HTMLInputElement, DepartmentSelectProp
     placeholder,
     required,
     size = 'medium',
-    year,
     hideLabel = false,
     textFieldSx,
   },
@@ -54,47 +53,27 @@ const DepartmentSelect = React.forwardRef<HTMLInputElement, DepartmentSelectProp
 ) {
   const { t } = useTranslation(['master-data', 'common']);
   const naked = hideLabel || label === '';
-  const { data: departments, isLoading } = useQuery({
-    queryKey: ['departments', 'lookup', 'active', companyId, year],
-    queryFn: async () => {
-      if (!companyId) return [];
-      const params: Record<string, any> = { limit: 1000, company_id: companyId };
-      if (year) params.year = year;
-      const res = await api.get<{ items: Department[] }>('/departments/lookup', { params });
-      const items = res.data.items || [];
-      return items.filter((dept) => !dept.company_id || dept.company_id === companyId);
-    },
+  // The company's departments, searched as the user types; nothing before a company is chosen.
+  const picker = useLookupPicker<Department>({
+    endpoint: '/departments/lookup',
+    scope: { company_id: companyId || null },
     enabled: !!companyId,
+    value: value ? [value] : [],
   });
-
-  // Ensure the currently selected department is visible even if filtered out or off-page
-  const needSelectedFetch = !!value && !(departments || []).some((d) => d.id === value);
-  const { data: selectedById, isLoading: isLoadingSelected } = useQuery({
-    queryKey: ['departments', 'lookup', 'by-id', value],
-    enabled: needSelectedFetch,
-    queryFn: async () => {
-      const res = await api.get<Department>(`/departments/lookup/${value}`);
-      return res.data as unknown as Department;
-    },
-  });
-
-  const sorted = React.useMemo(() => {
-    const base = departments ? [...departments] : [];
-    if (selectedById && !base.some((d) => d.id === selectedById.id)) base.unshift(selectedById);
-    return base.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  }, [departments, selectedById]);
-
-  const isDisabled = disabled || !companyId || isLoading;
-  const selected = sorted.find((d) => d.id === value) || null;
+  const isDisabled = disabled || !companyId;
+  const selected = value ? picker.selected[0] ?? null : null;
 
   const control = (
     <Box sx={{ position: 'relative' }}>
       <Autocomplete
-        options={sorted}
+        {...picker.autocomplete}
+        options={picker.options}
         value={selected}
-        onChange={(_, v) => onChange(v?.id || null)}
-        getOptionLabel={(o) => o.name}
-        isOptionEqualToValue={(a, b) => a.id === b.id}
+        onChange={(_, v) => {
+          picker.remember([v]);
+          onChange(v?.id || null);
+        }}
+        getOptionLabel={(o) => o.name ?? ''}
         renderInput={(params) => (
           <TextField
             {...params}
@@ -113,19 +92,14 @@ const DepartmentSelect = React.forwardRef<HTMLInputElement, DepartmentSelectProp
               ...params.InputProps,
               endAdornment: (
                 <>
-                  {(isLoading || isLoadingSelected) ? <CircularProgress size={20} /> : null}
+                  {picker.loading ? <CircularProgress size={20} /> : null}
                   {params.InputProps.endAdornment}
                 </>
               ),
             }}
           />
         )}
-        filterOptions={(opts, { inputValue }) => {
-          const s = inputValue.toLowerCase();
-          return opts.filter((o) => o.name.toLowerCase().includes(s));
-        }}
         disabled={isDisabled}
-        loading={isLoading || isLoadingSelected}
         ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
         size={size}
         fullWidth

@@ -51,10 +51,13 @@ vi.mock('./workspace/SpendPropertiesDrawer', () => ({
     onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
     onAnalyticsValueChange: (axisId: string, v: string | null) => void; onDisabledAtChange?: (v: string | null) => void;
+    references?: unknown; analyticsOptions?: unknown;
   }) => (
     <div
       data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
       data-analytics={JSON.stringify(props.analyticsValues)}
+      data-references={JSON.stringify(props.references ?? null)}
+      data-analytics-options={JSON.stringify(props.analyticsOptions ?? null)}
     >
       <button type="button" onClick={() => props.onPayingCompanyChange('company-1')}>pick company</button>
       <button type="button" onClick={() => props.onPayingCompanyChange('company-2')}>pick other company</button>
@@ -353,6 +356,41 @@ describe('SpendItemPage edit', () => {
       { run_build: 'build' },
       { run_build: null },
     ]);
+  });
+});
+
+describe('SpendItemPage picker labels from the detail', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/spend-items/${ITEM_ID}`) {
+        return {
+          data: {
+            id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1', currency: 'EUR',
+            paying_company_id: 'company-1', account_id: 'account-1', effective_start: '2026-01-01',
+            analytics_values: [{ axis_id: 'axis-default', axis_code: 'default', axis_name: null, is_default: true, category_id: 'value-1', category_name: 'Licences' }],
+            references: {
+              supplier: { id: 'supplier-1', name: 'Société Test', erp_supplier_id: null, status: 'enabled' },
+              paying_company: { id: 'company-1', name: 'Company One' },
+              account: { id: 'account-1', account_number: 6110, account_name: 'Software', description: null, coa_id: 'coa-a' },
+              owner_it: null,
+              owner_business: null,
+            },
+          },
+        };
+      }
+      return { data: {} };
+    });
+  });
+
+  it("hands the detail's labels to the pickers, which then read no list", async () => {
+    renderAt(`/ops/opex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')?.getAttribute('data-references')).toContain('Société Test'));
+    const drawer = document.querySelector('[data-mode="edit"]')!;
+    expect(JSON.parse(drawer.getAttribute('data-references')!).account.account_number).toBe(6110);
+    expect(JSON.parse(drawer.getAttribute('data-analytics-options')!)).toEqual({ 'axis-default': { id: 'value-1', name: 'Licences' } });
+    const urls = mocked.get.mock.calls.map(([url]) => String(url));
+    expect(urls.filter((url) => /^\/(suppliers|companies|accounts|users)\b/.test(url))).toEqual([]);
   });
 });
 

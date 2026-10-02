@@ -4,7 +4,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { formatAmount } from '../../i18n/formatters';
@@ -105,7 +105,30 @@ type Row = { company_id: string | null; department_id: string | null; allocation
 type Company = { id: string; name: string; headcount_year?: number; it_users_year?: number; turnover_year?: number };
 type Department = { id: string; name: string; company_id: string };
 
+type ComputedItem = { company_id: string; department_id: string | null; allocation_pct: number };
+type YearTotals = Partial<Record<AmountMeasure, number | string>>;
+/** The line's allocation for one year, as stored: the tab's server state (React Query). */
+type AllocationsSnapshot = { version: Version | null; computed: ComputedItem[]; totals: YearTotals };
+
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+
+/** The companies and departments of a year with their metrics, shared by every line (the drivers read them). */
+export const allocationCompaniesKey = (year: number) => ['companies', 'allocation-metrics', year] as const;
+export const allocationDepartmentsKey = (year: number) => ['departments', 'allocation-metrics', year] as const;
+export const allocationsSnapshotKey = (itemsApi: string, id: string, year: number) => ['finance-allocations', itemsApi, id, year] as const;
+const ORGANISATION_STALE_MS = 5 * 60_000;
+
+async function fetchAllocationsSnapshot(config: FinanceModuleConfig, id: string, year: number, signal?: AbortSignal): Promise<AllocationsSnapshot> {
+  const versRes = await api.get<Version[]>(`${config.itemsApi}/${id}/versions`, { signal });
+  const version = (versRes.data || []).find((vv) => Number(vv.budget_year) === year) || null;
+  if (!version) return { version: null, computed: [], totals: {} };
+  const [computed, totals] = await Promise.all([
+    api.get<{ items: ComputedItem[] }>(`${config.versionsApi}/${version.id}/allocations`, { signal }).then((r) => r.data?.items || []),
+    api.get<{ totals?: YearTotals }>(`${config.versionsApi}/${version.id}/amounts`, { params: { year }, signal })
+      .then((r) => r.data?.totals ?? {}).catch(() => ({} as YearTotals)),
+  ]);
+  return { version, computed, totals };
+}
 const keyOf = (companyId: string | null, departmentId: string | null) => `${companyId ?? ''}|${departmentId ?? ''}`;
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -113,7 +136,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   const { t } = useTranslation(['ops', 'common']);
   const { defaultColumn } = useBudgetColumns();
 
-  const [loading, setLoading] = React.useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = React.useState<string | null>(null);
   const [version, setVersion] = React.useState<Version | null>(null);
   const [method, setMethod] = React.useState<Method>('default');
@@ -123,8 +146,28 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   // The version's yearly totals; the reference amount is the default column's.
   const [yearTotals, setYearTotals] = React.useState<Partial<Record<AmountMeasure, number | string>>>({});
   const budgetTotal = num(yearTotals[defaultColumn.measure]);
-  const [companies, setCompanies] = React.useState<Company[]>([]);
-  const [departments, setDepartments] = React.useState<Department[]>([]);
+  // Companies (headcount, IT users, turnover of the year) and departments: the full lists, read once per
+  // year for every line. A tenant has a bounded set of them, and every driver needs all their metrics.
+  const companiesQuery = useQuery({
+    queryKey: allocationCompaniesKey(year),
+    queryFn: async ({ signal }) => (await api.get<{ items: Company[] }>(`/companies`, { params: { year, page: 1, limit: 1000, sort: 'name:ASC' }, signal })).data?.items || [],
+    staleTime: ORGANISATION_STALE_MS,
+  });
+  const departmentsQuery = useQuery({
+    queryKey: allocationDepartmentsKey(year),
+    queryFn: async ({ signal }) => (await api.get<{ items: Department[] }>(`/departments`, { params: { year, page: 1, limit: 1000, sort: 'name:ASC' }, signal })
+      .catch(() => ({ data: { items: [] as Department[] } }))).data?.items || [],
+    staleTime: ORGANISATION_STALE_MS,
+  });
+  const companies = React.useMemo(() => companiesQuery.data ?? [], [companiesQuery.data]);
+  const departments = React.useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
+  // The line's allocation of the year: shown at once when the tab comes back, refreshed in the background.
+  const snapshotKey = React.useMemo(() => allocationsSnapshotKey(config.itemsApi, id, year), [config.itemsApi, id, year]);
+  const snapshotQuery = useQuery({
+    queryKey: snapshotKey,
+    queryFn: ({ signal }) => fetchAllocationsSnapshot(config, id, year, signal),
+  });
+  const loading = !snapshotQuery.data || !companiesQuery.data;
   const [autoOpenIdx, setAutoOpenIdx] = React.useState<number | null>(null);
 
   const isManualPct = method === 'manual_pct';
@@ -175,61 +218,62 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     return created.data;
   }, [id, year]);
 
-  const loadComputed = React.useCallback(async (vid: string) => {
-    const res = await api.get<{ items: Array<{ company_id: string; department_id: string | null; allocation_pct: number }>; }>(`${config.versionsApi}/${vid}/allocations`);
+  // The stored distribution after a write; the cache follows, so the tab shows it when it comes back.
+  // The snapshot this tab wrote into the cache itself: the tab already shows it (rows keep their pins).
+  const writtenSnapshotRef = React.useRef<AllocationsSnapshot | null>(null);
+  const loadComputed = React.useCallback(async (saved: Version) => {
+    const res = await api.get<{ items: ComputedItem[] }>(`${config.versionsApi}/${saved.id}/allocations`);
+    const items = res.data?.items || [];
     const map = new Map<string, number>();
-    (res.data?.items || []).forEach((it) => map.set(keyOf(it.company_id, it.department_id), num(it.allocation_pct)));
+    items.forEach((it) => map.set(keyOf(it.company_id, it.department_id), num(it.allocation_pct)));
     setComputedPct(map);
-    return res.data?.items || [];
-  }, []);
+    const previous = queryClient.getQueryData<AllocationsSnapshot>(snapshotKey);
+    const next: AllocationsSnapshot = { version: saved, computed: items, totals: previous?.totals ?? {} };
+    writtenSnapshotRef.current = next;
+    queryClient.setQueryData<AllocationsSnapshot>(snapshotKey, next);
+    return items;
+  }, [queryClient, snapshotKey]);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [versRes, compRes, deptRes] = await Promise.all([
-        api.get<Version[]>(`${config.itemsApi}/${id}/versions`),
-        api.get<{ items: Company[] }>(`/companies`, { params: { year, page: 1, limit: 1000, sort: 'name:ASC' } }),
-        api.get<{ items: Department[] }>(`/departments`, { params: { year, page: 1, limit: 1000, sort: 'name:ASC' } }).catch(() => ({ data: { items: [] } })),
-      ]);
-      setCompanies(compRes.data?.items || []);
-      setDepartments(deptRes.data?.items || []);
-      const v = (versRes.data || []).find((vv) => Number(vv.budget_year) === year) || null;
-      setVersion(v);
-      if (!v) {
-        setMethod('default'); setDriver('headcount'); setRows([]); setComputedPct(new Map()); setYearTotals({});
-        return;
-      }
-      const rawMethod = String(v.allocation_method ?? 'default');
-      const m: Method = (METHODS as string[]).includes(rawMethod) ? (rawMethod as Method) : 'default';
-      setMethod(m);
-      setDriver((v.allocation_driver ?? 'headcount') as Driver);
-      const [items] = await Promise.all([
-        loadComputed(v.id),
-        api.get<{ totals?: Partial<Record<AmountMeasure, number | string>> }>(`${config.versionsApi}/${v.id}/amounts`, { params: { year } })
-          .then((r) => setYearTotals(r.data?.totals ?? {})).catch(() => setYearTotals({})),
-      ]);
-      // Seed editable rows from stored distribution for manual methods.
-      if (m === 'manual_pct' || m === 'manual_company' || m === 'manual_department') {
-        setRows(items.map((it) => ({ company_id: it.company_id, department_id: it.department_id, allocation_pct: num(it.allocation_pct) })));
-      } else {
-        setRows([]);
-      }
-    } catch (e) {
-      setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.allocations.failedToLoad`)));
-    } finally {
-      setLoading(false);
+  // The loaded allocation becomes the tab's state, unless an edit is waiting to be saved (it is newer).
+  const busyRef = React.useRef(autosave.isBusy);
+  busyRef.current = autosave.isBusy;
+  const snapshot = snapshotQuery.data;
+  // Before paint: a cached allocation shows on the first frame, never an empty table first.
+  React.useLayoutEffect(() => {
+    if (!snapshot || snapshot === writtenSnapshotRef.current || busyRef.current()) return;
+    const v = snapshot.version;
+    setVersion(v);
+    setYearTotals(snapshot.totals);
+    const map = new Map<string, number>();
+    snapshot.computed.forEach((it) => map.set(keyOf(it.company_id, it.department_id), num(it.allocation_pct)));
+    setComputedPct(map);
+    if (!v) {
+      setMethod('default'); setDriver('headcount'); setRows([]);
+      return;
     }
-  }, [id, year, loadComputed, t]);
-
-  React.useEffect(() => { void load(); }, [load]);
+    const rawMethod = String(v.allocation_method ?? 'default');
+    const m: Method = (METHODS as string[]).includes(rawMethod) ? (rawMethod as Method) : 'default';
+    setMethod(m);
+    setDriver((v.allocation_driver ?? 'headcount') as Driver);
+    // Seed editable rows from stored distribution for manual methods.
+    if (m === 'manual_pct' || m === 'manual_company' || m === 'manual_department') {
+      setRows(snapshot.computed.map((it) => ({ company_id: it.company_id, department_id: it.department_id, allocation_pct: num(it.allocation_pct) })));
+    } else {
+      setRows([]);
+    }
+  }, [snapshot]);
+  React.useEffect(() => {
+    if (snapshotQuery.error) setError(getApiErrorMessage(snapshotQuery.error, t, t(`${config.i18nPrefix}.allocations.failedToLoad`)));
+  }, [snapshotQuery.error, t, config.i18nPrefix]);
 
   const persist = React.useCallback(async () => {
     const v = await ensureVersion();
     const m = methodRef.current;
     const d: Driver = m === 'it_users' ? 'it_users' : m === 'turnover' ? 'turnover' : m === 'manual_company' ? driverRef.current : 'headcount';
+    let saved: Version = v;
     if (v.allocation_method !== m || v.allocation_driver !== d) {
       await api.patch(`${config.itemsApi}/${id}/versions`, { id: v.id, allocation_method: m, allocation_driver: d });
+      saved = { ...v, allocation_method: m, allocation_driver: d };
       setVersion((prev) => (prev ? { ...prev, allocation_method: m, allocation_driver: d } : prev));
     }
     let payload: Array<{ company_id: string; department_id: string | null; allocation_pct?: number }> = [];
@@ -244,11 +288,11 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     // Manual methods require ≥1 valid row; while the user is still picking, the
     // method is saved (PATCH above) but the empty upsert is skipped to avoid an error.
     if (isManual && payload.length === 0) {
-      await loadComputed(v.id);
+      await loadComputed(saved);
       return;
     }
     await api.post(`${config.versionsApi}/${v.id}/allocations/bulk-upsert`, payload);
-    await loadComputed(v.id);
+    await loadComputed(saved);
   }, [ensureVersion, id, loadComputed]);
 
   const scheduleSave = React.useCallback(() => { autosave.schedule(persist); }, [autosave, persist]);

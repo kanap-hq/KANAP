@@ -81,6 +81,24 @@ type YearAmounts = {
 
 type BulkUpsertResponse = { updated?: number; round_inputs?: RoundInput[]; warnings?: string[] };
 
+/** One year of a line as stored: its version and the amounts of the year (null without a version). */
+type BudgetYear = { version: Version | null; amounts: YearAmounts | null };
+
+/**
+ * The tab's server state lives in the React Query cache under this key: a line's year comes back
+ * at once when the tab is shown again, then refreshes in the background. Any write marks it stale,
+ * so a cached year is never shown after a save it does not hold.
+ */
+export const budgetYearKey = (itemsApi: string, id: string, year: number) => ['finance-budget-year', itemsApi, id, year] as const;
+
+async function fetchBudgetYear(config: FinanceModuleConfig, id: string, year: number, signal?: AbortSignal): Promise<BudgetYear> {
+  const res = await api.get<Version[]>(`${config.itemsApi}/${id}/versions`, { signal });
+  const version = (res.data || []).find((vv) => Number(vv.budget_year) === year) ?? null;
+  if (!version) return { version: null, amounts: null };
+  const amt = await api.get<YearAmounts>(`${config.versionsApi}/${version.id}/amounts`, { params: { year }, signal });
+  return { version, amounts: amt.data ?? null };
+}
+
 /**
  * Every column, fixed order. State and saves carry all five; the screen shows the shown ones
  * (`useBudgetColumns`), and a column that is not shown is never edited, so never sent.
@@ -258,66 +276,97 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   // `quietSince`: a reload after a panel write, which saved the grid up to that edit number. Nothing
   // turns read-only meanwhile, the spread panel keeps what it shows (it is what was just written, or
   // what the user is typing), and a cell or total typed since keeps its value and stays unsaved.
-  const load = React.useCallback(async ({ quietSince }: { quietSince?: number } = {}) => {
+  const applyYear = React.useCallback((snapshot: BudgetYear, { quietSince }: { quietSince?: number } = {}) => {
     const quiet = quietSince !== undefined;
     const typedSince = (key: string) => quiet && (editedAtRef.current.get(key) ?? 0) > quietSince;
+    if (!quiet) setSpreadDates(null);
+    const v = snapshot.version;
+    if (!v) {
+      setVersion(null);
+      setMode('flat');
+      setFlat(EMPTY_FLAT);
+      setMonths(emptyMonths(year));
+      setRoundInputs([]);
+      setStoredAmounts(NO_STORED_AMOUNTS);
+      if (!quiet) showSpreadAmount('');
+      resetDirty();
+      setLoadedYear(year);
+      return;
+    }
+    setVersion(v);
+    setMode(v.input_grain === 'annual' ? 'flat' : 'monthly');
+    const amt = snapshot.amounts;
+    const totals = amt?.totals;
+    setFlat((prev) => perColumn((col) => (typedSince(`total:${col}`) ? prev[col] : Number(totals?.[col] || 0))));
+    const byPeriod = new Map((amt?.items || []).map((r) => [r.period, r]));
+    const loadedMonths = Array.from({ length: 12 }, (_, i) => {
+      const p = monthPeriod(year, i + 1);
+      const found = byPeriod.get(p);
+      return { period: p, ...perColumn((col) => Number(found?.[col] || 0)) };
+    });
+    setMonths((prev) => loadedMonths.map((row, i) => (
+      prev[i]?.period === row.period
+        ? { period: row.period, ...perColumn((col) => (typedSince(`${row.period}:${col}`) ? prev[i][col] : row[col])) }
+        : row
+    )));
+    const hasAmounts = (m: AmountCol) => loadedMonths.some((row) => row[m] !== 0);
+    setStoredAmounts(perColumn(hasAmounts));
+    const loadedInputs = Array.isArray(amt?.round_inputs) ? amt!.round_inputs! : [];
+    roundInputsRef.current = loadedInputs;
+    setRoundInputs(loadedInputs);
+    if (!quiet) {
+      setSpreadProfile(profileOf(spreadMeasureRef.current, loadedInputs));
+      showSpreadAmount(amountOrEmpty(monthsCents(loadedMonths, spreadMeasureRef.current)));
+    }
+    // After a panel write, the unsaved edits are the ones typed since: the pending autosave sends them.
+    if (!quiet) resetDirty();
+    setLoadedYear(year);
+    // showSpreadAmount only sets state and a ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year]);
+
+  // `background`: a refresh of the year shown from the cache; nothing turns read-only, and a cell
+  // typed since it was shown is kept as after a panel write.
+  const load = React.useCallback(async ({ quietSince, background = false }: { quietSince?: number; background?: boolean } = {}) => {
+    const quiet = quietSince !== undefined || background;
     if (!quiet) setLoading(true);
     setError(null);
     try {
-      const res = await api.get<Version[]>(`${config.itemsApi}/${id}/versions`);
-      const v = (res.data || []).find((vv) => Number(vv.budget_year) === year);
-      if (!quiet) setSpreadDates(null);
-      if (!v) {
-        setVersion(null);
-        setMode('flat');
-        setFlat(EMPTY_FLAT);
-        setMonths(emptyMonths(year));
-        setRoundInputs([]);
-        setStoredAmounts(NO_STORED_AMOUNTS);
-        if (!quiet) showSpreadAmount('');
-        resetDirty();
-        setLoadedYear(year);
-        return;
-      }
-      setVersion(v);
-      setMode(v.input_grain === 'annual' ? 'flat' : 'monthly');
-      const amt = await api.get<YearAmounts>(`${config.versionsApi}/${v.id}/amounts`, { params: { year } });
-      const totals = amt.data?.totals;
-      setFlat((prev) => perColumn((col) => (typedSince(`total:${col}`) ? prev[col] : Number(totals?.[col] || 0))));
-      const byPeriod = new Map((amt.data?.items || []).map((r) => [r.period, r]));
-      const loadedMonths = Array.from({ length: 12 }, (_, i) => {
-        const p = monthPeriod(year, i + 1);
-        const found = byPeriod.get(p);
-        return { period: p, ...perColumn((col) => Number(found?.[col] || 0)) };
+      const snapshot = await queryClient.fetchQuery({
+        queryKey: budgetYearKey(config.itemsApi, id, year),
+        queryFn: ({ signal }) => fetchBudgetYear(config, id, year, signal),
+        staleTime: 0,
       });
-      setMonths((prev) => loadedMonths.map((row, i) => (
-        prev[i]?.period === row.period
-          ? { period: row.period, ...perColumn((col) => (typedSince(`${row.period}:${col}`) ? prev[i][col] : row[col])) }
-          : row
-      )));
-      const hasAmounts = (m: AmountCol) => loadedMonths.some((row) => row[m] !== 0);
-      setStoredAmounts(perColumn(hasAmounts));
-      const loadedInputs = Array.isArray(amt.data?.round_inputs) ? amt.data.round_inputs : [];
-      roundInputsRef.current = loadedInputs;
-      setRoundInputs(loadedInputs);
-      if (!quiet) {
-        setSpreadProfile(profileOf(spreadMeasureRef.current, loadedInputs));
-        showSpreadAmount(amountOrEmpty(monthsCents(loadedMonths, spreadMeasureRef.current)));
-      }
-      // After a panel write, the unsaved edits are the ones typed since: the pending autosave sends them.
-      if (!quiet) resetDirty();
-      setLoadedYear(year);
+      if (background && editSeqRef.current === quietSince) applyYear(snapshot);
+      else applyYear(snapshot, { quietSince });
     } catch (e) {
       setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToLoad`)));
     } finally {
       if (!quiet) setLoading(false);
     }
-    // showSpreadAmount only sets state and a ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, year, t]);
+  }, [id, year, t, queryClient, applyYear]);
   const loadRef = React.useRef(load); loadRef.current = load;
 
-  React.useEffect(() => { void load(); }, [load]);
+  // A year cached by an earlier visit shows before the first paint, then refreshes; otherwise a first load.
+  React.useLayoutEffect(() => {
+    const key = budgetYearKey(config.itemsApi, id, year);
+    const cached = queryClient.getQueryData<BudgetYear>(key);
+    if (cached && !queryClient.getQueryState(key)?.isInvalidated) {
+      applyYear(cached);
+      void load({ quietSince: editSeqRef.current, background: true });
+    } else {
+      void load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load]);
+  // Every write makes the cached year stale: a later visit loads it again instead of showing it.
+  const markYearStale = React.useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: budgetYearKey(config.itemsApi, id, year), refetchType: 'none' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, id, year]);
+  const markYearStaleRef = React.useRef(markYearStale); markYearStaleRef.current = markYearStale;
+
   // A year switch closes the panel: its total belongs to the previous year.
   React.useEffect(() => {
     setPanelOpen(false);
@@ -370,6 +419,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       }
       if (bodies.length === 0) return;
 
+      markYearStaleRef.current();
       const v = await ensureVersion();
       const nextGrain = flatMode ? 'annual' : 'monthly';
       if (v.input_grain !== nextGrain) {
@@ -483,12 +533,13 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     const v = versionRef.current;
     if (!v) return; // no version yet: the grain persists on first edit
     try {
+      markYearStale();
       await api.patch(`${config.itemsApi}/${id}/versions`, { id: v.id, input_grain: next === 'flat' ? 'annual' : 'monthly' });
       await load();
     } catch (e) {
       setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToSave`)));
     }
-  }, [flushAll, id, load, t]);
+  }, [flushAll, id, load, t, markYearStale]);
 
   // The period the panel shows: what the user typed, else the column's own
   // period within the item's dates.
@@ -573,6 +624,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     // The grid is saved up to here: what is typed from now on is kept by the reload.
     const savedUpTo = editSeqRef.current;
     try {
+      markYearStaleRef.current();
       const v = await ensureVersion();
       const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, body);
       keepRoundInputs(res?.data);

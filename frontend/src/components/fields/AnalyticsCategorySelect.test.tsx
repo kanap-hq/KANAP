@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,39 +47,54 @@ describe('AnalyticsCategorySelect', () => {
       { id: 'ax-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, status: 'enabled', disabled_at: null },
       { id: 'ax-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, status: 'enabled', disabled_at: null },
     ];
-    apiGet.mockImplementation(async (url: string) => {
-      if (url === '/analytics-categories') return { data: { items: NATURE_VALUES } };
-      if (url === '/analytics-categories/v-old') {
-        return { data: { id: 'v-old', axis_id: 'ax-nature', name: 'Old licenses', description: null, status: 'disabled', disabled_at: '2026-01-01T00:00:00.000Z' } };
+    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      if (url !== '/analytics-categories/lookup') throw new Error(`unexpected ${url}`);
+      if (config?.params?.ids === 'v-old') {
+        return { data: { items: [{ id: 'v-old', axis_id: 'ax-nature', name: 'Old licenses', description: null, status: 'disabled' }], has_more: false } };
       }
-      throw new Error(`unexpected ${url}`);
+      // The server sorts by name.
+      return { data: { items: [NATURE_VALUES[1], NATURE_VALUES[0]], has_more: false } };
     });
   });
 
-  it('loads the values of its dimension only, under a cache key per dimension', async () => {
-    const { queryClient } = renderSelect();
-    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/analytics-categories', {
-      params: { axis_id: 'ax-nature', limit: 1000, sort: 'name:ASC' },
-    }));
-    await waitFor(() => expect(queryClient.getQueryData(['analytics-categories', 'axis', 'ax-nature'])).toEqual(NATURE_VALUES));
+  it("searches its dimension's values on the server, once the list opens", async () => {
+    renderSelect();
+    const input = await screen.findByRole('combobox');
+    await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
+    expect(apiGet).not.toHaveBeenCalled();
+    act(() => { input.focus(); });
+    fireEvent.mouseDown(input);
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/analytics-categories/lookup', expect.objectContaining({
+      params: { axis_id: 'ax-nature', limit: 30 },
+    })));
+    fireEvent.change(input, { target: { value: 'lic' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/analytics-categories/lookup', expect.objectContaining({
+      params: { axis_id: 'ax-nature', q: 'lic', limit: 30 },
+    })));
   });
 
   it('offers the values by name and returns the picked id', async () => {
     const { onChange } = renderSelect();
     const input = await screen.findByRole('combobox');
-    await waitFor(() => expect(input).not.toBeDisabled());
+    act(() => { input.focus(); });
     fireEvent.mouseDown(input);
-    fireEvent.keyDown(input, { key: 'ArrowDown' });
     const options = await screen.findAllByRole('option');
     expect(options.map((o) => o.textContent)).toEqual(['Hardware' + 'Servers and laptops', 'Licenses']);
     fireEvent.click(screen.getByText('Licenses'));
     expect(onChange).toHaveBeenCalledWith('v-lic');
   });
 
-  it('keeps a disabled current value shown, fetched by id', async () => {
+  it('keeps a disabled current value shown, read by id', async () => {
     renderSelect({ value: 'v-old' });
-    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/analytics-categories/v-old'));
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/analytics-categories/lookup', expect.objectContaining({ params: { ids: 'v-old' } })));
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('Old licenses'));
+  });
+
+  it("shows the line's value from the label it is given, without any request", async () => {
+    renderSelect({ value: 'v-lic', selectedOption: { id: 'v-lic', name: 'Licenses' } });
+    expect(screen.getByRole('combobox')).toHaveValue('Licenses');
+    await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
+    expect(apiGet).not.toHaveBeenCalled();
   });
 
   it('is labelled with the dimension name, the translated default label for the unnamed default', async () => {

@@ -12,6 +12,9 @@ type Props = {
   status: StatusValue;
   ownerItId: string | null;
   ownerBizId: string | null;
+  /** The owners' names from the detail: shown without reading the user records. */
+  ownerItName?: string | null;
+  ownerBizName?: string | null;
   /** The line's current cost center: its budget holder shows after the owners. */
   costCenterId?: string | null;
   disabled?: boolean;
@@ -24,6 +27,8 @@ export default function SpendMetadataBar({
   status,
   ownerItId,
   ownerBizId,
+  ownerItName = null,
+  ownerBizName = null,
   costCenterId = null,
   disabled = false,
   onStatusChange,
@@ -56,6 +61,7 @@ export default function SpendMetadataBar({
       <PortfolioMetadataItem label={t('opex.metadata.itOwner')}>
         <MetadataUserPicker
           value={ownerItId}
+          displayName={ownerItName}
           placeholder={t('opex.metadata.itOwnerMissing')}
           searchPlaceholder={t('opex.metadata.itOwner')}
           disabled={disabled}
@@ -66,6 +72,7 @@ export default function SpendMetadataBar({
       <PortfolioMetadataItem label={t('opex.metadata.businessOwner')}>
         <MetadataUserPicker
           value={ownerBizId}
+          displayName={ownerBizName}
           placeholder={t('opex.metadata.businessOwnerMissing')}
           searchPlaceholder={t('opex.metadata.businessOwner')}
           disabled={disabled}

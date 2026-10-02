@@ -188,9 +188,9 @@ function renderTab(
   year = YEAR,
   dates: { effectiveStart?: string; endOfValidity?: string; payingCompanyCountry?: string } = {},
   config: FinanceModuleConfig = OPEX_FINANCE_CONFIG,
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
 ) {
   const ref = React.createRef<BudgetTabHandle>();
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui = (y: number) => (
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
@@ -206,7 +206,7 @@ function renderTab(
     </MemoryRouter>
   );
   const view = render(ui(year));
-  return { ...view, ref, rerenderYear: (y: number) => view.rerender(ui(y)) };
+  return { ...view, ref, queryClient, rerenderYear: (y: number) => view.rerender(ui(y)) };
 }
 
 const bulkCalls = () => mocked.post.mock.calls.filter(([url]) => url === BULK);
@@ -247,6 +247,60 @@ async function flush(ref: React.RefObject<BudgetTabHandle>) {
   await act(async () => { ok = (await ref.current?.flush()) ?? true; });
   return ok;
 }
+
+describe('BudgetTab on the query cache', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+  });
+
+  /** The flat view's Budget total field. */
+  const budgetTotal = () => screen.getAllByRole('textbox')[0] as HTMLInputElement;
+
+  it('shows the year at once when the tab comes back, editable, then refreshes it in the background', async () => {
+    setupApi({ grain: 'annual' });
+    const first = renderTab();
+    await waitForAmounts();
+    expect(budgetTotal()).toHaveValue('12 000');
+    const loads = amountLoads();
+    first.unmount();
+
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient);
+    // First render: the cached year, no blank grid and no disabled fields while it refreshes.
+    expect(budgetTotal()).toHaveValue('12 000');
+    expect(budgetTotal()).not.toBeDisabled();
+    await waitFor(() => expect(amountLoads()).toBe(loads + 1));
+  });
+
+  it('never shows a cached year after a save: the tab loads it again', async () => {
+    setupApi({ grain: 'annual' });
+    const first = renderTab();
+    await waitForAmounts();
+    fireEvent.change(budgetTotal(), { target: { value: '15000' } });
+    await flush(first.ref);
+    expect(bulkCalls()).toHaveLength(1);
+    first.unmount();
+
+    // The server now holds the saved total; the next load answers it, a little later.
+    let answer: () => void = () => undefined;
+    const served = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === '/spend-versions/v1/amounts') {
+        await new Promise<void>((resolve) => { answer = resolve; });
+        const res = await served(url, config);
+        return { data: { ...res.data, totals: { ...res.data.totals, planned: 15000 } } };
+      }
+      return served(url, config);
+    });
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient);
+    // The pre-save year is not shown meanwhile.
+    expect(screen.queryByDisplayValue('12 000')).toBeNull();
+    await waitFor(() => expect(amountLoads()).toBeGreaterThan(1));
+    await act(async () => { answer(); });
+    await waitFor(() => expect(budgetTotal()).toHaveValue('15 000'));
+  });
+});
 
 describe('BudgetTab write safety', () => {
   beforeEach(() => {

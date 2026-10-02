@@ -1,11 +1,9 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Autocomplete, Box, Chip, CircularProgress, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
-import { useQuery } from '@tanstack/react-query';
+import { useLookupPicker } from '../../hooks/useLookupPicker';
 
 type Department = { id: string; name: string; company_id?: string | null };
 
@@ -17,6 +15,7 @@ type DepartmentMultiSelectProps = {
   disabled?: boolean;
   placeholder?: string;
   size?: 'small' | 'medium';
+  /** Kept for callers; departments are not year-scoped. */
   year?: number;
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
@@ -30,33 +29,20 @@ export default function DepartmentMultiSelect({
   disabled,
   placeholder,
   size = 'medium',
-  year,
   hideLabel = false,
   textFieldSx,
 }: DepartmentMultiSelectProps) {
   const { t } = useTranslation(['master-data', 'common']);
   const naked = hideLabel || label === '';
-  const { data: departments, isLoading } = useQuery({
-    queryKey: ['departments', 'active', companyId, year],
-    queryFn: async () => {
-      if (!companyId) return [];
-      const params: Record<string, any> = { limit: 1000 };
-      if (year) params.year = year;
-      params.filters = JSON.stringify({ company_id: { type: 'equals', filter: companyId } });
-      const res = await api.get<{ items: Department[] }>('/departments', { params });
-      const items = res.data.items || [];
-      return items.filter((dept) => !dept.company_id || dept.company_id === companyId);
-    },
+  // The company's departments, searched as the user types; nothing before a company is chosen.
+  const picker = useLookupPicker<Department>({
+    endpoint: '/departments/lookup',
+    scope: { company_id: companyId || null },
     enabled: !!companyId,
+    value: value || [],
   });
-
-  const selectedIds = React.useMemo(() => new Set(value || []), [value]);
-  const sorted = React.useMemo(() => {
-    const base = departments ? [...departments] : [];
-    return base.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  }, [departments]);
-  const selected = React.useMemo(() => sorted.filter((department) => selectedIds.has(department.id)), [selectedIds, sorted]);
-  const isDisabled = disabled || !companyId || isLoading;
+  const selected = picker.selected;
+  const isDisabled = disabled || !companyId || picker.hydrating;
 
   const baseSx: SxProps<Theme> = [
     ...(Array.isArray(textFieldSx) ? textFieldSx : [textFieldSx]),
@@ -71,11 +57,14 @@ export default function DepartmentMultiSelect({
     <Box sx={{ position: 'relative' }}>
       <Autocomplete
         multiple
-        options={sorted}
+        {...picker.autocomplete}
+        options={picker.options}
         value={selected}
-        onChange={(_, next) => onChange(next.map((department) => department.id))}
-        getOptionLabel={(option) => option.name}
-        isOptionEqualToValue={(a, b) => a.id === b.id}
+        onChange={(_, next) => {
+          picker.remember(next);
+          onChange(next.map((department) => department.id));
+        }}
+        getOptionLabel={(option) => option.name ?? ''}
         filterSelectedOptions
         renderTags={(tagValue, getTagProps) => tagValue.map((option, index) => (
           <Chip
@@ -111,19 +100,14 @@ export default function DepartmentMultiSelect({
               ...params.InputProps,
               endAdornment: (
                 <>
-                  {isLoading ? <CircularProgress size={20} /> : null}
+                  {picker.loading ? <CircularProgress size={20} /> : null}
                   {params.InputProps.endAdornment}
                 </>
               ),
             }}
           />
         )}
-        filterOptions={(opts, { inputValue }) => {
-          const s = inputValue.toLowerCase();
-          return opts.filter((option) => option.name.toLowerCase().includes(s));
-        }}
         disabled={isDisabled}
-        loading={isLoading}
         ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
         size={size}
         fullWidth

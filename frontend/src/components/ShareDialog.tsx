@@ -17,21 +17,17 @@ import {
 } from '@mui/material';
 import { fieldResetSx } from '../theme/formSx';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import { useQuery } from '@tanstack/react-query';
 import api from '../api';
+import { useLookupSearch } from '../hooks/useLookupPicker';
+import { USERS_LOOKUP_ENDPOINT, type UserOption } from './fields/userLookup';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../config/ThemeContext';
 import { formatItemRef } from '../utils/item-ref';
 
 export type ShareItemType = 'task' | 'project' | 'request' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
 
-type User = {
-  id: string;
-  email: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  status: string;
-};
+/** A person as the user lookup returns it (the email only for a person without a name). */
+type User = UserOption;
 
 /** A selected recipient: either a database user or a raw email address. */
 type RecipientValue = User | string;
@@ -104,7 +100,7 @@ function formatName(u: User) {
   const fn = (u.first_name || '').trim();
   const ln = (u.last_name || '').trim();
   const name = [fn, ln].filter(Boolean).join(' ');
-  return name || u.email;
+  return name || u.email || '';
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -132,26 +128,10 @@ export default function ShareDialog({
   const refOrId = displayRef || itemId;
   const itemUrl = `${window.location.origin}${buildItemPath(itemType, refOrId)}`;
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users', 'enabled', 'select'],
-    queryFn: async () => {
-      const res = await api.get<{ items: User[] }>('/users', {
-        params: { status: 'enabled', limit: 1000 },
-      });
-      return res.data.items;
-    },
-  });
-
-  const sortedUsers = React.useMemo(() => {
-    const list = users ? [...users] : [];
-    const getName = (u: User) => {
-      const fn = (u.first_name || '').trim();
-      const ln = (u.last_name || '').trim();
-      const name = [fn, ln].filter(Boolean).join(' ');
-      return (name || u.email).toLowerCase();
-    };
-    return list.sort((a, b) => getName(a).localeCompare(getName(b), undefined, { sensitivity: 'base' }));
-  }, [users]);
+  // People searched as the user types, once the recipients list opens in an open dialog (names only).
+  const [listOpen, setListOpen] = React.useState(false);
+  const search = useLookupSearch<User>({ endpoint: USERS_LOOKUP_ENDPOINT, open: open && listOpen, text: inputValue });
+  const isLoading = listOpen && search.isFetching;
 
   React.useEffect(() => {
     if (open) {
@@ -273,8 +253,11 @@ export default function ShareDialog({
               <Autocomplete<RecipientValue, true, false, true>
               multiple
               freeSolo
-              options={sortedUsers}
+              options={search.items}
               value={recipients}
+              open={listOpen}
+              onOpen={() => setListOpen(true)}
+              onClose={() => setListOpen(false)}
               inputValue={inputValue}
               onInputChange={(_, value, reason) => {
                 if (reason !== 'reset') setInputValue(value);
@@ -286,14 +269,8 @@ export default function ShareDialog({
               getOptionLabel={(option) =>
                 typeof option === 'string' ? option : formatName(option)
               }
-              filterOptions={(options, { inputValue }) => {
-                const s = inputValue.toLowerCase();
-                return options.filter((o) => {
-                  if (typeof o === 'string') return o.toLowerCase().includes(s);
-                  const fullName = `${o.first_name || ''} ${o.last_name || ''}`.trim().toLowerCase();
-                  return fullName.includes(s);
-                });
-              }}
+              // The server matched the names already.
+              filterOptions={(options) => options}
               isOptionEqualToValue={(option, value) => {
                 if (typeof option === 'string' || typeof value === 'string') {
                   return option === value;

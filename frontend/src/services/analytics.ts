@@ -83,6 +83,8 @@ export type ItemAnalyticsValue = {
 
 export const ANALYTICS_AXES_ENDPOINT = '/analytics-axes';
 export const ANALYTICS_VALUES_ENDPOINT = '/analytics-categories';
+/** Picker search within one dimension (`axis_id`) and labels by `ids`. */
+export const ANALYTICS_VALUES_LOOKUP_ENDPOINT = `${ANALYTICS_VALUES_ENDPOINT}/lookup`;
 
 /** List and summary field of a dimension's value name (`analytics_<axis id>`), never split on a colon. */
 export const ANALYTICS_FIELD_PREFIX = 'analytics_';

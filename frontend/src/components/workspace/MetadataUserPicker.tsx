@@ -12,10 +12,10 @@ import {
 } from '@mui/material';
 import { fieldResetSx } from '../../theme/formSx';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { useLookupHydration, useLookupSearch } from '../../hooks/useLookupPicker';
+import { USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst } from '../fields/userLookup';
 import { taskDetailAvatarSizes, taskDetailTypography, metaItemSx, metaLabelSx } from '../../pages/tasks/theme/taskDetailTokens';
 import { formatUserName, getInitials } from '../../utils/userDisplay';
 
@@ -45,12 +45,7 @@ export function formatMetadataUserName(user: MetadataUserOption | null | undefin
   return formatUserName(user);
 }
 
-function sortUserKey(user: MetadataUserOption): string {
-  const lastName = String(user.last_name || '').trim().toLowerCase();
-  const firstName = String(user.first_name || '').trim().toLowerCase();
-  const fullName = String(user.full_name || '').trim().toLowerCase();
-  return lastName ? `${lastName}\0${firstName}` : (fullName || firstName || user.id);
-}
+const NO_KNOWN_USERS: ReadonlyMap<string, MetadataUserOption> = new Map();
 
 function normalizeDisplayName(value: string | null | undefined): string | null {
   const name = String(value || '').trim();
@@ -73,7 +68,8 @@ export default function MetadataUserPicker({
   const { t } = useTranslation('common');
   const { profile } = useAuth();
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
-  const [search, setSearch] = React.useState('');
+  const [searchText, setSearch] = React.useState('');
+  const me = useMeOption();
   const [localSelectedUser, setLocalSelectedUser] = React.useState<MetadataUserOption | null>(null);
   const selectedUserId = value || null;
   const localSelectedName = localSelectedUser?.id === selectedUserId
@@ -83,49 +79,23 @@ export default function MetadataUserPicker({
   const normalizedDisplayName = normalizeDisplayName(displayName);
   const needSelectedFetch = !!selectedUserId && !normalizedDisplayName && !localSelectedName;
 
-  const { data: users = [], isLoading } = useQuery({
-    queryKey: ['users', 'enabled', 'metadata-picker'],
-    queryFn: async () => {
-      const res = await api.get<{ items: MetadataUserOption[] }>('/users', {
-        params: { status: 'enabled', limit: 1000 },
-      });
-      return res.data.items;
-    },
-    enabled: !!anchorEl,
-    staleTime: 5 * 60_000,
-  });
-
-  const { data: selectedUser, isLoading: isLoadingSelected } = useQuery({
-    queryKey: ['users', 'metadata-picker', selectedUserId],
-    queryFn: async () => {
-      const res = await api.get<MetadataUserOption>(`/users/${selectedUserId}`);
-      return res.data;
-    },
+  // People searched as the user types, once the popover is open (names only, server side).
+  const search = useLookupSearch<MetadataUserOption>({ endpoint: USERS_LOOKUP_ENDPOINT, open: !!anchorEl, text: searchText });
+  const { items: selectedUsers, isLoading: isLoadingSelected } = useLookupHydration<MetadataUserOption>({
+    endpoint: USERS_LOOKUP_ENDPOINT,
+    ids: selectedUserId ? [selectedUserId] : [],
+    known: NO_KNOWN_USERS,
     enabled: needSelectedFetch,
-    staleTime: 5 * 60_000,
   });
+  const selectedUser = selectedUsers.find((user) => user.id === selectedUserId) ?? null;
 
-  const sortedUsers = React.useMemo(() => {
-    const list = [...users].sort((a, b) => sortUserKey(a).localeCompare(sortUserKey(b), undefined, { sensitivity: 'base' }));
-    const myId = profile?.id || null;
-    if (myId) {
-      const ownIndex = list.findIndex((user) => user.id === myId);
-      if (ownIndex > 0) list.unshift(...list.splice(ownIndex, 1));
-    }
-    return list;
-  }, [profile?.id, users]);
-
-  const normalizedSearch = search.trim().toLowerCase();
-  const filteredUsers = React.useMemo(() => {
-    if (!normalizedSearch) return sortedUsers;
-    return sortedUsers.filter((user) => (
-      formatMetadataUserName(user) || ''
-    ).toLowerCase().includes(normalizedSearch));
-  }, [normalizedSearch, sortedUsers]);
+  const searching = search.searchedText !== '';
+  const filteredUsers = React.useMemo(() => withMeFirst(search.items, me, searching), [search.items, me, searching]);
 
   const selectedName = localSelectedName || normalizedDisplayName || formatMetadataUserName(selectedUser) || null;
   const displayedName = selectedName || placeholder;
-  const loading = isLoading || isLoadingSelected;
+  // The previous matches stay listed while the next ones load; the spinner only shows before the first page.
+  const loading = (search.isFetching && search.items.length === 0) || isLoadingSelected;
 
   const close = React.useCallback(() => {
     setAnchorEl(null);
@@ -211,7 +181,7 @@ export default function MetadataUserPicker({
           fullWidth
           size="small"
           placeholder={searchPlaceholder || t('selects.user')}
-          value={search}
+          value={searchText}
           onChange={(event) => setSearch(event.target.value)}
           variant="standard"
           sx={[fieldResetSx, (theme) => ({
@@ -242,7 +212,7 @@ export default function MetadataUserPicker({
                   {name}
                   {isCurrentUser ? ` ${t('selects.meSuffix')}` : ''}
                 </MenuItem>
-                {index === 0 && isCurrentUser && filteredUsers.length > 1 && (
+                {index === 0 && isCurrentUser && !searching && filteredUsers.length > 1 && (
                   <Divider sx={(theme) => ({ my: 0.25, borderColor: theme.palette.kanap.border.soft })} />
                 )}
               </React.Fragment>

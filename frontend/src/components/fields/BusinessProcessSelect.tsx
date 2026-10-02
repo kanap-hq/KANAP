@@ -1,9 +1,8 @@
 import React from 'react';
 import { Autocomplete, Box, CircularProgress, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import api from '../../api';
+import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
@@ -50,57 +49,26 @@ const BusinessProcessSelect = React.forwardRef<HTMLInputElement, BusinessProcess
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.businessProcess');
   const naked = hideLabel || label === '';
-  const { data: processes, isLoading } = useQuery({
-    queryKey: ['business-processes', 'select', 'enabled'],
-    queryFn: async () => {
-      const res = await api.get<{ items: BusinessProcessOption[] }>('/business-processes', {
-        params: {
-          page: 1,
-          limit: 500,
-          sort: 'name:ASC',
-          status: 'enabled',
-        },
-      });
-      return res.data.items || [];
-    },
-  });
-
-  const needSelectedFetch = !!value && !(processes || []).some((p) => p.id === value);
-  const { data: selected, isLoading: loadingSelected } = useQuery({
-    queryKey: ['business-processes', 'by-id', value],
-    enabled: needSelectedFetch,
-    queryFn: async () => {
-      const res = await api.get<BusinessProcessOption>(`/business-processes/${value}`);
-      return res.data as unknown as BusinessProcessOption;
-    },
-  });
-
-  const mergedOptions = React.useMemo(() => {
-    const list = processes ? [...processes] : [];
-    if (selected && !list.some((p) => p.id === selected.id)) {
-      list.unshift(selected);
-    }
-    return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [processes, selected]);
-
-  const selectedOption = mergedOptions.find((p) => p.id === value) || null;
+  // Processes searched as the user types; the current one keeps its label (read once by id).
+  const picker = useLookupPicker<BusinessProcessOption>({ endpoint: '/business-processes/lookup', value: value ? [value] : [] });
+  const selectedOption = value ? picker.selected[0] ?? null : null;
 
   const control = (
     <Autocomplete
-      options={mergedOptions}
+      {...picker.autocomplete}
+      options={picker.options}
       value={selectedOption}
-      disabled={disabled || isLoading || loadingSelected}
-      onChange={(_, newValue) => onChange(newValue?.id || null)}
-      getOptionLabel={(option) => option.name}
+      disabled={disabled}
+      onChange={(_, newValue) => {
+        picker.remember([newValue]);
+        onChange(newValue?.id || null);
+      }}
+      getOptionLabel={(option) => option.name ?? ''}
       renderOption={(props, option) => (
         <li {...props} key={option.id}>
           {option.name}
         </li>
       )}
-      filterOptions={(options, { inputValue }) => {
-        const term = inputValue.toLowerCase();
-        return options.filter((opt) => opt.name.toLowerCase().includes(term));
-      }}
       renderInput={(params) => (
         <TextField
           {...params}
@@ -116,7 +84,7 @@ const BusinessProcessSelect = React.forwardRef<HTMLInputElement, BusinessProcess
             ...params.InputProps,
             endAdornment: (
               <>
-                {(isLoading || loadingSelected) ? <CircularProgress color="inherit" size={16} /> : null}
+                {picker.loading ? <CircularProgress color="inherit" size={16} /> : null}
                 {params.InputProps.endAdornment}
               </>
             ),
@@ -125,8 +93,7 @@ const BusinessProcessSelect = React.forwardRef<HTMLInputElement, BusinessProcess
         />
       )}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
-      loading={isLoading || loadingSelected}
-      noOptionsText={isLoading ? t('selects.loadingEllipsis') : t('selects.noBusinessProcessesFound')}
+      noOptionsText={picker.loading ? t('selects.loadingEllipsis') : t('selects.noBusinessProcessesFound')}
       fullWidth
     />
   );

@@ -1,20 +1,14 @@
 import React from 'react';
 import { Autocomplete, Box, Divider, TextField, CircularProgress, Chip } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import api from '../../api';
-import { useAuth } from '../../auth/AuthContext';
+import { useLookupPicker } from '../../hooks/useLookupPicker';
+import { formatUserName } from '../../utils/userDisplay';
+import { USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
-type User = {
-  id: string;
-  email: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  status: string;
-};
+type User = UserOption;
 
 type UserMultiSelectProps = {
   label?: string;
@@ -28,6 +22,8 @@ type UserMultiSelectProps = {
   size?: 'small' | 'medium';
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
+  /** Labels of chosen people the caller already holds: no request to show them. */
+  selectedOptions?: UserOption[];
 };
 
 export default function UserMultiSelect({
@@ -42,75 +38,33 @@ export default function UserMultiSelect({
   size,
   hideLabel = false,
   textFieldSx,
+  selectedOptions,
 }: UserMultiSelectProps) {
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.users');
   const naked = hideLabel || label === '';
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users', 'enabled', 'select'],
-    queryFn: async () => {
-      const res = await api.get<{ items: User[] }>('/users', {
-        params: { status: 'enabled', limit: 1000 },
-      });
-      return res.data.items;
-    },
+  const me = useMeOption();
+  const myId = me?.id ?? null;
+  const picker = useLookupPicker<User>({
+    endpoint: USERS_LOOKUP_ENDPOINT,
+    value,
+    given: selectedOptions,
   });
+  const options = React.useMemo(() => withMeFirst(picker.options, me, picker.searching), [picker.options, me, picker.searching]);
+  const selected = picker.selected;
 
-  const { profile } = useAuth();
-  const myId = profile?.id ?? null;
-
-  const sortedUsers = React.useMemo(() => {
-    const list = users ? [...users] : [];
-    const sortKey = (u: User) => {
-      const ln = (u.last_name || '').trim().toLowerCase();
-      const fn = (u.first_name || '').trim().toLowerCase();
-      return ln ? `${ln}\0${fn}` : (fn || u.email.toLowerCase());
-    };
-    list.sort((a, b) => sortKey(a).localeCompare(sortKey(b), undefined, { sensitivity: 'base' }));
-    // Pin current user first
-    if (myId) {
-      const idx = list.findIndex((u) => u.id === myId);
-      if (idx > 0) list.unshift(...list.splice(idx, 1));
-    }
-    return list;
-  }, [users, myId]);
-
-  // Fetch any selected users not in the list
-  const missingIds = value.filter(id => !sortedUsers.some(u => u.id === id));
-  const { data: missingUsers = [], isLoading: isLoadingMissing } = useQuery({
-    queryKey: ['users', 'by-ids', missingIds],
-    enabled: missingIds.length > 0,
-    queryFn: async () => {
-      const results = await Promise.all(
-        missingIds.map(id => api.get<User>(`/users/${id}`).then(r => r.data).catch(() => null))
-      );
-      return results.filter((u): u is User => u !== null);
-    },
-  });
-
-  const mergedOptions = React.useMemo(() => {
-    const base = [...sortedUsers];
-    for (const u of missingUsers) {
-      if (!base.some(b => b.id === u.id)) base.unshift(u);
-    }
-    return base;
-  }, [sortedUsers, missingUsers]);
-
-  const selected = mergedOptions.filter(u => value.includes(u.id));
-
-  const formatName = (u: User) => {
-    const fn = (u.first_name || '').trim();
-    const ln = (u.last_name || '').trim();
-    const name = [fn, ln].filter(Boolean).join(' ');
-    return name || u.email;
-  };
+  const formatName = (u: User) => formatUserName(u) ?? (picker.isPending(u.id) ? '…' : '');
 
   const control = (
     <Autocomplete
       multiple
-      options={mergedOptions}
+      {...picker.autocomplete}
+      options={options}
       value={selected}
-      onChange={(_, newValue) => onChange(newValue.map(u => u.id))}
+      onChange={(_, newValue) => {
+        picker.remember(newValue);
+        onChange(newValue.map((u) => u.id));
+      }}
       getOptionLabel={(option) => formatName(option)}
       size={size}
       renderOption={(props, option) => (
@@ -120,7 +74,7 @@ export default function UserMultiSelect({
               {formatName(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
             </div>
           </li>
-          {option.id === myId && <Divider />}
+          {option.id === myId && !picker.searching && <Divider />}
         </React.Fragment>
       )}
       renderTags={(tagValue, getTagProps) =>
@@ -148,24 +102,16 @@ export default function UserMultiSelect({
             ...params.InputProps,
             endAdornment: (
               <>
-                {(isLoading || isLoadingMissing) ? <CircularProgress color="inherit" size={20} /> : null}
+                {picker.loading ? <CircularProgress color="inherit" size={20} /> : null}
                 {params.InputProps.endAdornment}
               </>
             ),
           }}
         />
       )}
-      disabled={disabled || isLoading}
-      loading={isLoading || isLoadingMissing}
-      filterOptions={(options, { inputValue }) => {
-        const s = inputValue.toLowerCase();
-        return options.filter((o) =>
-          (o.first_name || '').toLowerCase().includes(s) ||
-          (o.last_name || '').toLowerCase().includes(s) ||
-          o.email.toLowerCase().includes(s)
-        );
-      }}
-      noOptionsText={isLoading ? t('selects.loading') : t('selects.noUsersFound')}
+      // A chosen person whose name is still loading cannot be dropped by an edit meanwhile.
+      disabled={disabled || picker.hydrating}
+      noOptionsText={picker.loading ? t('selects.loading') : t('selects.noUsersFound')}
       fullWidth
     />
   );
