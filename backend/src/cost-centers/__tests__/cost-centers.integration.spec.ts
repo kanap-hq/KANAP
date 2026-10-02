@@ -10,7 +10,6 @@ import { AuditService } from '../../audit/audit.service';
 import { CompaniesDeleteService } from '../../companies/companies-delete.service';
 import { Company } from '../../companies/company.entity';
 import { ReferenceCheckService } from '../../common/reference-check.service';
-import { loadCostCenterTree } from '../cost-center-tree.util';
 import {
   backendPid,
   closeRunner,
@@ -90,22 +89,13 @@ async function testGroupSpansCompanies() {
     const group = await svc.create({ code: 'GRP', kind: 'group', name: 'Group IT' }, ctx);
     const a = await svc.create({ code: 'GRP-FR', kind: 'cost_center', name: 'France', company_id: paris, parent_id: group.id }, ctx);
     const b = await svc.create({ code: 'GRP-BE', kind: 'cost_center', name: 'Belgium', company_id: brussels, parent_id: group.id }, ctx);
-    const items = await loadCostCenterTree(ctx.manager, ctx.tenantId);
+    const { items } = await svc.tree(ctx);
     assert.deepEqual(items.map((node) => node.code), ['GRP', 'GRP-BE', 'GRP-FR'], 'tree order: parent, then siblings by code');
     const byId = new Map(items.map((node) => [node.id, node]));
     assert.equal(byId.get(a.id)!.path, 'Group IT › France');
     assert.deepEqual(byId.get(b.id)!.path_ids, [group.id, b.id]);
     assert.equal(byId.get(b.id)!.company_name, 'Test company Brussels');
     assert.equal(byId.get(b.id)!.depth, 1);
-    // The route's outline: the same order, ids only, each company name once.
-    const outline = await svc.tree(ctx);
-    assert.deepEqual(outline.nodes.map((node) => node.code), ['GRP', 'GRP-BE', 'GRP-FR']);
-    assert.deepEqual(outline.nodes.find((node) => node.id === b.id), {
-      id: b.id, code: 'GRP-BE', name: 'Belgium', kind: 'cost_center', parent_id: group.id,
-      company_id: brussels, owner_user_id: null, status: 'enabled',
-    });
-    assert.deepEqual(outline.companies, { [paris]: 'Test company Paris', [brussels]: 'Test company Brussels' });
-    assert.deepEqual(outline.owners, {});
   });
 }
 

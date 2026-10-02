@@ -28,7 +28,7 @@ import { CostCentersService } from '../cost-centers.service';
 // `GET /cost-centers/tree` and `GET /cost-centers/tree/count` over HTTP, with
 // the real controller, its real guards (JwtAuthGuard on a signed access token,
 // PermissionGuard on roles stored in the database) and the request pipeline
-// main.ts installs: the outline's shape and order, who may read it (the page's
+// main.ts installs: the tree's shape and order, who may read it (the page's
 // readers and the OPEX, CAPEX and reporting readers, nobody else), the tenant
 // (another tenant's session reads none of these nodes), and the cache
 // validators (an unchanged tree answers 304 to its ETag, a renamed node a new
@@ -149,21 +149,25 @@ async function main() {
       return { status: res.status, etag: res.headers.get('etag'), cacheControl: res.headers.get('cache-control'), text, body: text ? JSON.parse(text) : null };
     };
 
-    // Shape and order: ids only, each company and owner name once, the effective status.
+    // Shape and order: the tree's nodes in tree order (siblings by sort order, then code), effective status.
     const tree = await get('/cost-centers/tree', a.people.page);
     assert.equal(tree.status, 200, tree.text);
-    assert.deepEqual(tree.body, {
-      nodes: [
-        { id: a.group, code: 'T-G', name: 'Tree group', kind: 'group', parent_id: null, company_id: null, owner_user_id: null, status: 'enabled' },
-        { id: a.first, code: 'T-2', name: 'Tree two', kind: 'cost_center', parent_id: a.group, company_id: a.paris, owner_user_id: null, status: 'disabled' },
-        { id: a.second, code: 'T-1', name: 'Tree one', kind: 'cost_center', parent_id: a.group, company_id: a.paris, owner_user_id: a.people.opex.id, status: 'enabled' },
-      ],
-      companies: { [a.paris]: 'Tree Paris' },
-      owners: { [a.people.opex.id]: 'Tree opex reader' },
+    assert.deepEqual(Object.keys(tree.body), ['items']);
+    const items = tree.body.items as Array<Record<string, unknown>>;
+    assert.deepEqual(items.map((node) => [node.code, node.depth, node.path, node.status]), [
+      ['T-G', 0, 'Tree group', 'enabled'],
+      ['T-2', 1, 'Tree group › Tree two', 'disabled'],
+      ['T-1', 1, 'Tree group › Tree one', 'enabled'],
+    ]);
+    assert.deepEqual(items[2], {
+      id: a.second, code: 'T-1', name: 'Tree one', kind: 'cost_center', parent_id: a.group,
+      company_id: a.paris, company_name: 'Tree Paris', owner_user_id: a.people.opex.id, owner_name: 'Tree opex reader',
+      status: 'enabled', disabled_at: null, sort_order: 5, depth: 1, path: 'Tree group › Tree one', path_ids: [a.group, a.second],
     });
+    assert.ok(items[1].disabled_at, 'the end of validity of a disabled node');
     const count = await get('/cost-centers/tree/count', a.people.page);
     assert.deepEqual([count.status, count.body], [200, { count: 3 }]);
-    console.log('ok - outline: tree order, ids, names once, effective status; count');
+    console.log('ok - the tree in tree order, effective status; count');
 
     // Who reads it: the page, the item forms and the reports; nobody else.
     for (const who of ['page', 'opex', 'capex', 'reporting', 'admin'] as const) {
@@ -181,7 +185,7 @@ async function main() {
 
     // Tenant: another tenant's administrator reads an empty tree.
     const other = await get('/cost-centers/tree', b.admin);
-    assert.deepEqual([other.status, other.body], [200, { nodes: [], companies: {}, owners: {} }]);
+    assert.deepEqual([other.status, other.body], [200, { items: [] }]);
     assert.deepEqual((await get('/cost-centers/tree/count', b.admin)).body, { count: 0 });
     // A token of tenant B on tenant A's address is refused before any read.
     const crossed = await fetch(`${base}/cost-centers/tree`, { headers: { authorization: `Bearer ${token(b.admin)}`, 'x-probe-tenant': tenantA } });
@@ -202,12 +206,12 @@ async function main() {
     const renamed = await get('/cost-centers/tree', a.people.opex, { 'if-none-match': tree.etag as string, 'cache-control': 'max-age=0' });
     assert.equal(renamed.status, 200, 'a renamed node: a new body');
     assert.notEqual(renamed.etag, tree.etag);
-    assert.equal(renamed.body.nodes[2].name, 'Tree one renamed');
+    assert.equal(renamed.body.items[2].name, 'Tree one renamed');
     // An owner's new name changes the answer too (names come from the users table).
     await seed(tenantA, (runner) => runner.query(`UPDATE users SET first_name = 'Renamed' WHERE tenant_id = $1 AND id = $2`, [tenantA, a.people.opex.id]));
     const owner = await get('/cost-centers/tree', a.people.opex, { 'if-none-match': renamed.etag as string, 'cache-control': 'max-age=0' });
     assert.equal(owner.status, 200);
-    assert.equal(owner.body.owners[a.people.opex.id], 'Renamed opex reader');
+    assert.equal(owner.body.items[2].owner_name, 'Renamed opex reader');
     // A refused reader gets no 304 for a valid ETag: the guard runs first.
     assert.equal((await get('/cost-centers/tree', a.people.tasks, { 'if-none-match': owner.etag as string, 'cache-control': 'max-age=0' })).status, 403);
     console.log('ok - private, no-cache; 304 to an unchanged tree, a new body after a rename (node or owner); guard before the 304');

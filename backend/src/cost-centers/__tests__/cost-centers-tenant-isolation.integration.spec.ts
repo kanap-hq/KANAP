@@ -67,7 +67,7 @@ async function testServiceRefusesOtherTenantsNodes() {
     const ctxB = context(runner.manager, tenantB);
 
     // Reads: nothing of A is visible to B.
-    assert.deepEqual(await b.svc.tree(ctxB), { nodes: [], companies: {}, owners: {} });
+    assert.deepEqual((await b.svc.tree(ctxB)).items, []);
     assert.deepEqual(await b.svc.count(ctxB), { count: 0 });
     assert.equal((await b.svc.list({ includeDisabled: '1' }, ctxB)).total, 0);
     assert.equal((await b.svc.listIds({ includeDisabled: '1' }, ctxB)).total, 0);
@@ -133,7 +133,7 @@ async function testServiceRefusesOtherTenantsNodes() {
     // B's writes left A's tree as it was.
     await setCurrentTenant(runner, tenantA);
     const treeA = await a.svc.tree(ctxA);
-    assert.deepEqual(treeA.nodes.map((node) => [node.code, node.name]), [['GA', 'Group A'], ['CA', 'Center A']]);
+    assert.deepEqual(treeA.items.map((node) => [node.code, node.name]), [['GA', 'Group A'], ['CA', 'Center A']]);
     assert.deepEqual(await a.svc.count(ctxA), { count: 2 });
     const [line] = await runner.query(`SELECT cost_center_id FROM spend_items WHERE tenant_id = $1 AND id = $2`, [tenantA, lineA]);
     assert.equal(line.cost_center_id, leafA.id);
