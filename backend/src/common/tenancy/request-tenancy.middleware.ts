@@ -17,7 +17,8 @@ import { BUSY_RETRY_AFTER_SECONDS } from '../filters/database-error.mapping';
  *   looked up at all and goes on with `req.tenant = null`, so it costs no
  *   connection and still answers that the process is alive when the pool is
  *   exhausted (a monitor or an orchestrator does not restart a busy API), or
- *   before the single tenant is provisioned.
+ *   before the single tenant is provisioned. Same for the ops metrics of a
+ *   monitoring tool (`/ops/metrics`).
  */
 export type RequestTenancyOptions = {
   /** Runs one read query (the DataSource's `query`). */
@@ -30,8 +31,12 @@ export type RequestTenancyOptions = {
 
 const TENANT_BY_SLUG = 'SELECT id, slug, name FROM tenants WHERE slug = $1 AND deleted_at IS NULL LIMIT 1';
 
-/** Liveness routes: no tenant needed, never looked up. */
-const LIVENESS_PATHS = new Set(['/health', '/api/health']);
+/**
+ * Routes that need no tenant and are never looked up: the liveness route, and the ops metrics of
+ * a monitoring tool (token-protected, admin/ops/ops-metrics.controller.ts), which must answer
+ * when the pool is saturated.
+ */
+const LIVENESS_PATHS = new Set(['/health', '/api/health', '/ops/metrics', '/api/ops/metrics']);
 
 /** The request path without a trailing slash (`/health/` is `/health`). */
 function routePath(req: Request): string {

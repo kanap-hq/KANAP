@@ -2,9 +2,11 @@
  * Fixed latency buckets, in milliseconds. Counts per bucket add up across seconds and across
  * API processes, which exact samples do not: a p95 of several processes is the p95 of their
  * merged counts. A percentile read from the buckets is the upper bound of the bucket it falls
- * in (at most one bucket step above the exact value).
+ * in (at most one bucket step above the exact value). So an alert threshold on such a value is
+ * a bucket bound and is compared with `>` (ops-health.ts): a value at most the threshold reads as
+ * the threshold itself, never above it.
  */
-export const LATENCY_BUCKETS_MS = [1, 2, 5, 10, 25, 50, 100, 150, 250, 400, 600, 1000, 1500, 2500, 4000, 6000, 10000, 15000, 30000, 60000];
+export const LATENCY_BUCKETS_MS = [1, 2, 5, 10, 25, 50, 100, 150, 250, 400, 600, 1000, 1500, 2500, 3000, 4000, 6000, 10000, 15000, 30000, 60000];
 
 /** One count per bucket, plus a last one for anything above 60 s. */
 export function emptyCounts(): number[] {

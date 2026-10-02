@@ -77,7 +77,7 @@ async function testHealthIsNeverLookedUp() {
     ['subdomain', {}, 'acme.kanap.net'],
     ['platform admin host', {}, 'admin.kanap.net'],
   ] as const) {
-    for (const path of ['/health', '/api/health', '/health/']) {
+    for (const path of ['/health', '/api/health', '/health/', '/ops/metrics', '/api/ops/metrics']) {
       const res = await quietly(() => run({ ...options, query: poolTimeout }, host, path));
       assert.equal(res.nextCalled, true, `${label} ${path}: goes on`);
       assert.equal(res.status, undefined, `${label} ${path}: not answered`);

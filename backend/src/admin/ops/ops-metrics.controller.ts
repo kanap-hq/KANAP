@@ -2,21 +2,22 @@ import { CanActivate, Controller, ExecutionContext, Get, Header, Injectable, Not
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { Public } from '../../auth/public.decorator';
 import { OpsSnapshotService } from './ops-snapshot.service';
+import { configuredOpsMetricsToken } from './ops-metrics-token';
 import type { OpsSnapshotDto } from './dto/ops-snapshot.dto';
+import type { ErrorEntry } from './ops-metrics.store';
+
+/** The snapshot as the monitoring token reads it: the recent errors without their messages. */
+export type MonitoringSnapshot = Omit<OpsSnapshotDto, 'recentErrors'> & { recentErrors: Array<Omit<ErrorEntry, 'errorMessage'>> };
 
 /**
  * The ops snapshot for a monitoring tool, in both deployment modes: on-premise has no platform
  * console, so `GET /admin/ops/snapshot` is out of reach there. Enabled by `OPS_METRICS_TOKEN`
- * (24 characters or more, e.g. `openssl rand -hex 32`); without it the route does not exist (404).
- * The probe sends `Authorization: Bearer <token>`. No tenant transaction, no database connection
- * beyond the pg_stat reads of the snapshot (cached 10 s).
+ * (ops-metrics-token.ts); without it the route does not exist (404). The probe sends
+ * `Authorization: Bearer <token>`. No tenant lookup (the tenancy middleware skips this path), no
+ * tenant transaction (`@Public()`); the database reads of the snapshot are best effort (1 s), so
+ * it answers when the pool is saturated. The error messages of the recent 5xx are left out (they
+ * can quote internals); the platform console keeps them.
  */
-export const OPS_METRICS_TOKEN_MIN_LENGTH = 24;
-
-export function configuredOpsMetricsToken(env: NodeJS.ProcessEnv = process.env): string | null {
-  const token = String(env.OPS_METRICS_TOKEN ?? '').trim();
-  return token.length >= OPS_METRICS_TOKEN_MIN_LENGTH ? token : null;
-}
 
 function digest(value: string): Buffer {
   return createHash('sha256').update(value, 'utf8').digest();
@@ -47,7 +48,11 @@ export class OpsMetricsController {
   @UseGuards(OpsMetricsTokenGuard)
   @Get('metrics')
   @Header('Cache-Control', 'no-store')
-  async metrics(): Promise<OpsSnapshotDto> {
-    return this.snapshots.build();
+  async metrics(): Promise<MonitoringSnapshot> {
+    const snapshot = await this.snapshots.build();
+    return {
+      ...snapshot,
+      recentErrors: snapshot.recentErrors.map(({ errorType, count, lastSeen, route }) => ({ errorType, count, lastSeen, route })),
+    };
   }
 }

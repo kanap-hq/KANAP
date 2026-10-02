@@ -44,6 +44,15 @@ export type PoolMetricsSnapshot = {
   };
 };
 
+/**
+ * Every connection the pool may open is open and requests wait for one: a read added now would
+ * only queue behind them. (Waiting alone is not enough: a request also waits while the pool
+ * opens a new connection below its size.)
+ */
+export function poolSaturated(pool: Pick<PoolMetricsSnapshot, 'totalCount' | 'maxPool' | 'waitingCount'>): boolean {
+  return pool.waitingCount > 0 && pool.totalCount >= pool.maxPool;
+}
+
 export class PoolMetrics {
   private readonly slots: Slot[] = [];
   private pool: PgPoolLike | null = null;

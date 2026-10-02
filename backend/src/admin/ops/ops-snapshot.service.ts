@@ -1,12 +1,15 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { hostname } from 'node:os';
 import { DataSource } from 'typeorm';
-import { apiProcessCount, clusterWorkerId, processLabel } from '../../common/cluster/process-role';
+import { apiProcessCount, clusterWorkerId, isLeadProcess, processLabel } from '../../common/cluster/process-role';
 import { DbMetricsService } from './db-metrics.service';
 import { addInto, emptyCounts, percentileOf, totalOf } from './latency-histogram';
 import { evaluateOpsHealth, OpsHealth } from './ops-health';
 import { OpsMetricsStore, RouteLatency } from './ops-metrics.store';
 import type { OpsSnapshotDto } from './dto/ops-snapshot.dto';
+import { opsMetricsTokenWarning } from './ops-metrics-token';
+import { OPS_DB_READ_TIMEOUT_MS, withTimeout } from './with-timeout';
+import { poolSaturated } from './pool-metrics';
 
 /**
  * The ops snapshot (`GET /admin/ops/snapshot` for platform admins, `GET /ops/metrics` with the
@@ -15,9 +18,15 @@ import type { OpsSnapshotDto } from './dto/ops-snapshot.dto';
  *
  * With several API processes (API_WORKERS > 1) a request reaches one of them. Each process
  * publishes a summary of itself every 15 s (UNLOGGED table `ops_process_metrics`); the snapshot
- * lists them in `processes` and adds them up in `aggregate`: sums for requests, memory and the
- * pool, the worst process for the event loop, merged latency counts for the p95s. With one
- * process nothing is published and both fields are absent.
+ * lists them in `processes`, the newest row per worker slot (a worker forked again after a crash
+ * has a new row, the old one ages out), and adds them up in `aggregate`: sums for requests and
+ * memory, current pool use summed and the fullest pool named, the worst process for the event
+ * loop, merged latency counts for the p95s. With one process nothing is published and both
+ * fields are absent.
+ *
+ * The figures held in memory (requests, latencies, event loop, pool) are always served; what the
+ * snapshot reads from the database (pg_stat views, the other processes' rows) is given 1 s, so the
+ * snapshot still answers, without those parts, when the pool is saturated.
  */
 export type ProcessSummary = {
   label: string;
@@ -39,7 +48,19 @@ export type OpsAggregate = {
   processes: number;
   rssMB: number;
   eventLoop: { p95Ms: number; maxMs: number };
-  pool: { maxPool: number; inUse: number; inUseMax1m: number; waiting: number; waitP95Ms1m: number; failures5m: number };
+  pool: {
+    maxPool: number;
+    /** Connections in use now, summed. */
+    inUse: number;
+    /** Sum of each process's highest use over the minute: an upper bound (the highs need not coincide). */
+    inUseMax1mUpperBound: number;
+    /** The fullest pool over the minute (its highest use against its size) and its process. */
+    inUsePctMax1m: number;
+    fullestProcess: string | null;
+    waiting: number;
+    waitP95Ms1m: number;
+    failures5m: number;
+  };
   requests: { count1m: number; count5m: number; errors5xx5m: number };
   topRoutes: RouteLatency[];
 };
@@ -49,10 +70,12 @@ const PUBLISH_EVERY_MS = 15_000;
 const PEER_FRESH_MS = 45_000;
 
 @Injectable()
-export class OpsSnapshotService implements OnModuleInit, OnModuleDestroy {
+export class OpsSnapshotService implements OnModuleInit, OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger('OpsMetrics');
   private readonly processKey = `${hostname()}:${process.pid}`;
   private publishTimer: NodeJS.Timeout | null = null;
+  private publishing: Promise<void> | null = null;
+  private stopped = false;
   private lastPublishWarnAt = 0;
 
   constructor(
@@ -68,11 +91,30 @@ export class OpsSnapshotService implements OnModuleInit, OnModuleDestroy {
     setTimeout(() => { void this.publish(); }, 1_000).unref?.();
   }
 
-  /** On a stop, the row goes with the process; after a crash it ages out (PEER_FRESH_MS). */
+  /**
+   * Once per start (the lead process): a monitoring token too short to be accepted is said so,
+   * and rows a day old are purged, also left by an earlier run with several processes when this
+   * one runs alone (nothing publishes then, nothing purges).
+   */
+  onApplicationBootstrap() {
+    if (!isLeadProcess()) return;
+    const warning = opsMetricsTokenWarning();
+    if (warning) this.logger.warn(warning);
+    this.dataSource
+      .query(`DELETE FROM ops_process_metrics WHERE updated_at < now() - interval '1 day'`)
+      .catch(() => undefined);
+  }
+
+  /**
+   * On a stop, the row goes with the process (after a publish in flight, which would write it
+   * back); after a crash it ages out (PEER_FRESH_MS).
+   */
   async onModuleDestroy() {
     if (!this.publishTimer) return;
     clearInterval(this.publishTimer);
     this.publishTimer = null;
+    this.stopped = true;
+    await this.publishing;
     await this.dataSource
       .query(`DELETE FROM ops_process_metrics WHERE process_key = $1`, [this.processKey])
       .catch(() => undefined);
@@ -80,21 +122,23 @@ export class OpsSnapshotService implements OnModuleInit, OnModuleDestroy {
 
   async build(): Promise<OpsSnapshotDto> {
     const requestSnapshot = this.store.snapshot();
-    const dbSnapshot = await this.dbMetrics.snapshot();
     const label = processLabel();
-    let processes: ProcessSummary[] | undefined;
-    let aggregate: OpsAggregate | undefined;
-    if (apiProcessCount() > 1) {
-      processes = await this.peers(this.summary(requestSnapshot));
-      aggregate = aggregateProcesses(processes);
-    }
+    // This process's summary first, before the snapshot's own reads take connections.
+    const self = apiProcessCount() > 1 ? this.summary(requestSnapshot) : null;
+    const saturated = poolSaturated(this.dbMetrics.poolMetrics.snapshot());
+    // Both database reads at once, each given 1 s at most.
+    const [dbSnapshot, processes] = await Promise.all([
+      this.dbMetrics.snapshot(),
+      self ? this.peers(self, saturated) : Promise.resolve(undefined),
+    ]);
+    const aggregate: OpsAggregate | undefined = processes ? aggregateProcesses(processes) : undefined;
 
     const health: OpsHealth = aggregate
       ? evaluateOpsHealth({
         eventLoopP95Ms: aggregate.eventLoop.p95Ms,
         poolWaitP95Ms: aggregate.pool.waitP95Ms1m,
-        poolInUseMax1m: aggregate.pool.inUseMax1m,
-        poolMax: aggregate.pool.maxPool,
+        poolInUsePct: aggregate.pool.inUsePctMax1m,
+        poolInUseLabel: aggregate.pool.fullestProcess ?? undefined,
         poolFailures5m: aggregate.pool.failures5m,
         requests5m: aggregate.requests.count5m,
         errors5xx5m: aggregate.requests.errors5xx5m,
@@ -104,8 +148,7 @@ export class OpsSnapshotService implements OnModuleInit, OnModuleDestroy {
       : evaluateOpsHealth({
         eventLoopP95Ms: requestSnapshot.process.eventLoopLagMs.p95,
         poolWaitP95Ms: dbSnapshot.pool.wait.p95Ms1m,
-        poolInUseMax1m: dbSnapshot.pool.inUseMax1m,
-        poolMax: dbSnapshot.pool.maxPool,
+        poolInUsePct: dbSnapshot.pool.maxPool > 0 ? (dbSnapshot.pool.inUseMax1m / dbSnapshot.pool.maxPool) * 100 : 0,
         poolFailures5m: dbSnapshot.pool.wait.failures5m,
         requests5m: requestSnapshot.windows['5m'].totalRequests,
         errors5xx5m: requestSnapshot.windows['5m'].statusClasses['5xx'],
@@ -162,6 +205,13 @@ export class OpsSnapshotService implements OnModuleInit, OnModuleDestroy {
   }
 
   async publish(): Promise<void> {
+    // A publish waiting for a saturated pool is not stacked on by the next ones.
+    if (this.publishing || this.stopped) return;
+    this.publishing = this.publishOnce().finally(() => { this.publishing = null; });
+    await this.publishing;
+  }
+
+  private async publishOnce(): Promise<void> {
     try {
       const summary = this.summary();
       await this.dataSource.query(
@@ -181,22 +231,42 @@ export class OpsSnapshotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** The live processes: this one fresh, the others as they last published. */
-  private async peers(self: ProcessSummary): Promise<ProcessSummary[]> {
+  /**
+   * The live processes: this one fresh, the others as they last published, the newest row per
+   * worker slot (host and worker id). Not read while this process's pool is saturated, and given
+   * 1 s otherwise: without it, this process alone.
+   */
+  private async peers(self: ProcessSummary, saturated: boolean): Promise<ProcessSummary[]> {
     let rows: Array<{ process_key: string; summary: ProcessSummary }> = [];
+    if (saturated) {
+      // Every connection is taken and requests wait: the read would only queue behind them.
+      return newestPerSlot([], self);
+    }
     try {
-      rows = await this.dataSource.query(
-        `SELECT process_key, summary FROM ops_process_metrics
+      rows = await withTimeout(this.dataSource.query(
+        `SELECT DISTINCT ON (host, worker_id) process_key, summary
+           FROM ops_process_metrics
           WHERE updated_at > now() - make_interval(secs => $1::double precision / 1000)
-          ORDER BY worker_id NULLS FIRST, process_key`,
+          ORDER BY host, worker_id, updated_at DESC`,
         [PEER_FRESH_MS],
-      );
+      ), OPS_DB_READ_TIMEOUT_MS, 'other processes');
     } catch (error) {
       this.logger.warn(`Process metrics of the other processes unavailable: ${(error as Error)?.message ?? error}`);
     }
-    const others = rows.filter((row) => row.process_key !== this.processKey).map((row) => row.summary);
-    return [...others, self].sort((a, b) => (a.workerId ?? 0) - (b.workerId ?? 0));
+    return newestPerSlot(rows.map((row) => row.summary), self);
   }
+}
+
+/** One summary per worker slot (host and worker id), `self` for its own slot. */
+export function newestPerSlot(summaries: ProcessSummary[], self: ProcessSummary): ProcessSummary[] {
+  const slot = (p: ProcessSummary) => `${p.host}:${p.workerId ?? '-'}`;
+  const bySlot = new Map<string, ProcessSummary>();
+  for (const p of summaries) {
+    const current = bySlot.get(slot(p));
+    if (!current || p.updatedAt > current.updatedAt) bySlot.set(slot(p), p);
+  }
+  bySlot.set(slot(self), self);
+  return [...bySlot.values()].sort((a, b) => (a.workerId ?? 0) - (b.workerId ?? 0) || a.host.localeCompare(b.host));
 }
 
 export function aggregateProcesses(processes: ProcessSummary[]): OpsAggregate {
@@ -225,6 +295,11 @@ export function aggregateProcesses(processes: ProcessSummary[]): OpsAggregate {
     .slice(0, 30);
   const sum = (pick: (p: ProcessSummary) => number) => processes.reduce((total, p) => total + (Number(pick(p)) || 0), 0);
   const max = (pick: (p: ProcessSummary) => number) => processes.reduce((top, p) => Math.max(top, Number(pick(p)) || 0), 0);
+  let fullest: { pct: number; label: string | null } = { pct: 0, label: null };
+  for (const p of processes) {
+    const pct = p.pool.maxPool > 0 ? (p.pool.inUseMax1m / p.pool.maxPool) * 100 : 0;
+    if (pct > fullest.pct) fullest = { pct, label: p.label };
+  }
   return {
     processes: processes.length,
     rssMB: Math.round(sum((p) => p.rssMB) * 10) / 10,
@@ -232,7 +307,9 @@ export function aggregateProcesses(processes: ProcessSummary[]): OpsAggregate {
     pool: {
       maxPool: sum((p) => p.pool.maxPool),
       inUse: sum((p) => p.pool.inUse),
-      inUseMax1m: sum((p) => p.pool.inUseMax1m),
+      inUseMax1mUpperBound: sum((p) => p.pool.inUseMax1m),
+      inUsePctMax1m: Math.round(fullest.pct * 10) / 10,
+      fullestProcess: fullest.label,
       waiting: sum((p) => p.pool.waiting),
       waitP95Ms1m: percentileOf(waitCounts, 95),
       failures5m: sum((p) => p.pool.failures5m),

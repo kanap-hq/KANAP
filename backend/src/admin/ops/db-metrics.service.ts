@@ -1,7 +1,8 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { readPoolMax } from '../../common/db-pool-budget';
-import { PoolMetrics, PoolMetricsSnapshot } from './pool-metrics';
+import { PoolMetrics, PoolMetricsSnapshot, poolSaturated } from './pool-metrics';
+import { OPS_DB_READ_TIMEOUT_MS, withTimeout } from './with-timeout';
 
 export interface DbActivityStats {
   active: number;
@@ -27,8 +28,15 @@ export interface DbMetricsSnapshot {
   activity: DbActivityStats;
   database: DbDatabaseStats;
   pool: PoolStats;
+  /** When `activity` and `database` were read (0: never). */
   collectedAt: number;
+  /** The last read of the pg_stat views failed or took over 1 s (saturated pool): the values are the last ones read, or zeros. */
+  statsStale?: boolean;
+  statsError?: string;
 }
+
+const EMPTY_ACTIVITY: DbActivityStats = { active: 0, idle: 0, idleInTransaction: 0, waiting: 0, total: 0 };
+const EMPTY_DATABASE: DbDatabaseStats = { xactCommit: 0, xactRollback: 0, deadlocks: 0, conflictsSnapshot: 0, tempFiles: 0, tempBytes: 0 };
 
 const CACHE_TTL_MS = 10_000; // 10 seconds
 
@@ -50,19 +58,39 @@ export class DbMetricsService implements OnModuleInit, OnModuleDestroy {
     this.poolMetrics.detach();
   }
 
-  /** The pg_stat views are read at most every 10 s; the pool figures are always current. */
+  /**
+   * The pool figures are always current (memory). The pg_stat views are read at most every 10 s,
+   * best effort: not while the pool is saturated (pool-metrics.ts), and a read that fails or takes over
+   * 1 s (database down) is left; the last values read are then served, flagged `statsStale`, and
+   * the read is tried again at the next snapshot.
+   */
   async snapshot(): Promise<DbMetricsSnapshot> {
     const now = Date.now();
+    let stale: { error: string } | null = null;
+    const pool = this.getPoolStats();
     if (!this.cache || now - this.cacheTime >= CACHE_TTL_MS) {
       const appName = process.env.DB_APP_NAME || 'cio-api';
-      const [activity, database] = await Promise.all([
-        this.queryActivity(appName),
-        this.queryDatabaseStats(),
-      ]);
-      this.cache = { activity, database, collectedAt: now };
-      this.cacheTime = now;
+      if (poolSaturated(pool)) {
+        // Every connection is taken and requests wait: the read would only queue behind them.
+        stale = { error: `pool busy (${pool.waitingCount} waiting): not read` };
+      } else try {
+        const [activity, database] = await withTimeout(
+          Promise.all([this.queryActivity(appName), this.queryDatabaseStats()]),
+          OPS_DB_READ_TIMEOUT_MS,
+          'pg_stat views',
+        );
+        this.cache = { activity, database, collectedAt: now };
+        this.cacheTime = now;
+      } catch (error) {
+        stale = { error: (error as Error)?.message ?? String(error) };
+      }
     }
-    return { ...this.cache, pool: this.getPoolStats() };
+    const read = this.cache ?? { activity: EMPTY_ACTIVITY, database: EMPTY_DATABASE, collectedAt: 0 };
+    return {
+      ...read,
+      pool,
+      ...(stale ? { statsStale: true, statsError: stale.error } : {}),
+    };
   }
 
   private async queryActivity(appName: string): Promise<DbActivityStats> {
