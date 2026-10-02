@@ -7,26 +7,12 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireAnyLevel, RequireAnyLevelMeta, RequireLevel } from '../auth/require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
+import { ORGANISATION_LOOKUP_READERS } from '../common/lookup/lookup-requirements';
+import { lookupReference, COMPANY_LOOKUP } from '../common/lookup/reference-lookups';
 import { CompanyUpsertDto } from './dto/company.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-
-const referenceLookupRequirements: RequireAnyLevelMeta = [
-  { resource: 'companies', level: 'reader' },
-  { resource: 'departments', level: 'reader' },
-  { resource: 'users', level: 'admin' },
-  { resource: 'opex', level: 'reader' },
-  { resource: 'capex', level: 'reader' },
-  { resource: 'contracts', level: 'reader' },
-  { resource: 'reporting', level: 'reader' },
-  { resource: 'tasks', level: 'reader' },
-  { resource: 'portfolio_requests', level: 'reader' },
-  { resource: 'portfolio_projects', level: 'reader' },
-  { resource: 'applications', level: 'reader' },
-  { resource: 'locations', level: 'reader' },
-  { resource: 'infrastructure', level: 'reader' },
-];
 
 @UseGuards(JwtAuthGuard)
 @Controller('companies')
@@ -58,14 +44,14 @@ export class CompaniesController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireAnyLevel(referenceLookupRequirements)
+  @RequireAnyLevel(ORGANISATION_LOOKUP_READERS)
   @Get('lookup')
   lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
-    return this.svc.lookup(query, { manager: ctx.manager });
+    return lookupReference({ manager: ctx.manager, tenantId: ctx.tenantId }, COMPANY_LOOKUP, query);
   }
 
   @UseGuards(PermissionGuard)
-  @RequireAnyLevel(referenceLookupRequirements)
+  @RequireAnyLevel(ORGANISATION_LOOKUP_READERS)
   @Get('lookup/:id')
   lookupById(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
     return this.svc.lookupById(id, { manager: ctx.manager });

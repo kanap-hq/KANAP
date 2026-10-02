@@ -7,7 +7,10 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireLevel } from '../auth/require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
+import { Tenant, TenantRequest } from '../common/decorators';
+import { SUPPLIER_LOOKUP_READERS } from '../common/lookup/lookup-requirements';
+import { lookupReference, SUPPLIER_LOOKUP } from '../common/lookup/reference-lookups';
 import { SupplierUpsertDto } from './dto/supplier.dto';
 import { SupplierContactsService } from './supplier-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
@@ -32,6 +35,13 @@ export class SuppliersController {
   @Get('ids')
   listIds(@Query() query: any, @Req() req: any) {
     return this.svc.listIds(query, { manager: req?.queryRunner?.manager });
+  }
+  // Picker search (`q`) and hydration of chosen values (`ids`); see common/lookup.
+  @UseGuards(PermissionGuard)
+  @RequireAnyLevel(SUPPLIER_LOOKUP_READERS)
+  @Get('lookup')
+  lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    return lookupReference({ manager: ctx.manager, tenantId: ctx.tenantId }, SUPPLIER_LOOKUP, query);
   }
   // Place static path before parameterized route to avoid collisions with ':id'
   @UseGuards(PermissionGuard)

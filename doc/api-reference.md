@@ -775,6 +775,8 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - `analytics_values: [{ axis_id, axis_code, axis_name, is_default, category_id, category_name }]`: every dimension the line holds a value on (disabled dimensions included), in dimension order; `axis_name` is `null` on the default dimension while it has no name
   - `analytics_category_id`, `analytics_category_name`: the default dimension's value, `null` when the line has none. They are read from the line's analytics values; the item column of the same name is no longer read or written (it stays in the database for one release)
   - The create and update responses carry the same fields
+  - The GET detail (OPEX and CAPEX) adds `references: { supplier, paying_company, account, owner_it, owner_business }`: the labels the workspace pickers show, in the shapes of the reference lookups (below), each `null` when the line has none. One statement, so the workspace never loads a picker's list or a user record to show the chosen value
+- GET `/spend-items/:id/relation-counts` (same on `/capex-items/:id/relation-counts`) → `{ contracts, applications, projects, links, attachments, total }`: the counts of the Relations tab, in one statement (the tab badge shows `total`)
 - GET `/spend-items` and GET `/capex-items` (the plain lists the pickers use) carry the item columns plus `analytics_category_id` and `analytics_category_name` of the default dimension, read the same way
 - Writable fields and write rules (OPEX and CAPEX alike, `spend/item-write.util.ts`; the UI, the API, the AI and both item CSVs all go through them):
   - OPEX: `product_name, description, supplier_id, paying_company_id, account_id, currency, effective_start, owner_it_id, owner_business_id, analytics_values, analytics_category_id, project_id, contract_id, cost_center_id, run_build, notes`, plus the lifecycle inputs `status`, `disabled_at` and the deprecated `effective_end`
@@ -1292,6 +1294,12 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - Example: `disabled_at = 2025-06-30` → contributes to 2025 totals; excluded from 2026.
 
 ## Common Notes
+- Reference lookups (pickers, `common/lookup/`)
+  - GET `/<resource>/lookup?q=&limit=&<scope>` searches a reference table as the user types: `q` matches with accents and case folded on both sides (as the list quick search), rows whose label starts with `q` first, then rows where a word starts with it, then the others; `limit` defaults to 30, at most 50; the response is `{ items, has_more }`. Only active rows are offered
+  - GET `/<resource>/lookup?ids=a,b` returns the rows of those ids whatever their status (the values already chosen, at most 100 ids), and ignores `q` and the scope
+  - Resources and scopes: `/suppliers/lookup` (`{ id, name, erp_supplier_id, status }`, the ERP id is searched too), `/accounts/lookup?companyId=` (the company's chart, else the global default chart; or `coaId=`; `{ id, account_number, account_name, description, coa_id }`, by number, a typed number ranks first), `/companies/lookup`, `/departments/lookup?company_id=`, `/users/lookup` (people: `{ id, first_name, last_name, email, status }`, names only, searched as "first last" and "last first", sorted by last name; `email` is set only for a person without a name, the only case it is shown or searched), `/analytics-categories/lookup?axis_id=`, `/business-processes/lookup`, `/contracts/lookup`
+  - Read access: the reference's own page, or any page whose forms pick it (for example `/users/lookup` for every page with an owner, an assignee or a share dialog; `/contracts/lookup` for OPEX and CAPEX readers)
+  - GET `/currency/settings` is also readable by OPEX and CAPEX readers (their forms' currency picker)
 - Pagination/sort
   - `page`, `limit`, `sort=field:ASC|DESC` supported on list endpoints; lists return `{ items, total, page, limit }`
 - Filtering (grids)

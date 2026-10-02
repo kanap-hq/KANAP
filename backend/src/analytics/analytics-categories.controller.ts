@@ -26,6 +26,7 @@ import { csvImportMulterOptions } from '../common/upload';
 import { AnalyticsCategoriesCsvService } from './analytics-categories-csv.service';
 import { AnalyticsCategoriesService } from './analytics-categories.service';
 import { AnalyticsContext } from './analytics-context';
+import { lookupAnalyticsValues } from '../common/lookup/reference-lookups';
 import {
   AnalyticsCategoryBulkDeleteDto,
   AnalyticsCategoryCreateDto,
@@ -58,6 +59,13 @@ export class AnalyticsCategoriesController {
   @Get()
   list(@Query() query: any, @Tenant() ctx: TenantRequest) {
     return this.svc.list(query, analyticsContext(ctx));
+  }
+
+  // Picker search within one dimension (`axis_id`) and hydration (`ids`); see common/lookup.
+  @RequireAnyLevel(ANALYTICS_READERS)
+  @Get('lookup')
+  lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    return lookupAnalyticsValues({ manager: ctx.manager, tenantId: ctx.tenantId }, query);
   }
 
   @RequireAnyLevel(ANALYTICS_READERS)

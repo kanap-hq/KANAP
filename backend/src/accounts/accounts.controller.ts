@@ -7,7 +7,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireLevel } from '../auth/require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
+import { ACCOUNT_LOOKUP_READERS } from '../common/lookup/lookup-requirements';
+import { lookupAccounts } from '../common/lookup/reference-lookups';
 import { AccountUpsertDto } from './dto/account.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
@@ -30,6 +32,13 @@ export class AccountsController {
   @Get('ids')
   listIds(@Query() query: any, @Tenant() ctx: TenantRequest) {
     return this.svc.listIds(query, { manager: ctx.manager });
+  }
+  // Picker search within a company's chart (`companyId`) and hydration (`ids`); see common/lookup.
+  @UseGuards(PermissionGuard)
+  @RequireAnyLevel(ACCOUNT_LOOKUP_READERS)
+  @Get('lookup')
+  lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    return lookupAccounts({ manager: ctx.manager, tenantId: ctx.tenantId }, query);
   }
   // Export before parameterized ':id' to avoid collisions
   @UseGuards(PermissionGuard)

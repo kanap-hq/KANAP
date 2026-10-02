@@ -122,7 +122,18 @@ export class SpendItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.svc.get(id, { manager: ctx.manager });
+    return this.svc.getDetail(id, { manager: ctx.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('opex', 'reader')
+  @Get(':id/relation-counts')
+  async relationCounts(
+    @Param('id') idOrRef: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.svc.relationCounts(id, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
