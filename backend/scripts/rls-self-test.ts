@@ -19,7 +19,7 @@ const TABLES_TO_CHECK_RLS = Array.from(new Set([
   'spend_items', 'spend_versions', 'spend_amounts', 'spend_version_totals', 'spend_allocations', 'spend_round_inputs', 'spend_round_input_lines', 'spend_tasks',
   'contracts', 'contract_tasks', 'contract_spend_items', 'contract_attachments', 'contract_links',
   'capex_items', 'capex_versions', 'capex_amounts', 'capex_version_totals', 'capex_round_inputs', 'capex_round_input_lines',
-  'tasks', 'currency_rate_sets', 'item_sequences',
+  'tasks', 'currency_rate_sets', 'item_sequences', 'list_contexts',
   'document_libraries', 'document_folders', 'document_types', 'documents', 'document_versions',
   'document_edit_locks', 'document_attachments', 'document_activities', 'document_contributors',
   'document_classifications', 'document_references', 'document_applications', 'document_assets',
@@ -108,6 +108,7 @@ const TABLES_TO_CHECK_POLICY = new Set([
   'spend_version_totals',
   'capex_version_totals',
   'working_day_profiles',
+  'list_contexts',
 ]);
 
 const TABLES_TO_CHECK_FORCE = new Set([

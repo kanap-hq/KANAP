@@ -15,6 +15,8 @@ import { RESOURCES } from './permissions/permissions.service';
 import * as argon2 from 'argon2';
 import { Request, Response, NextFunction } from 'express';
 import { TenantInterceptor } from './common/tenant.interceptor';
+import { ListContextInterceptor } from './common/list-context/list-context.interceptor';
+import { ListContextsService } from './common/list-context/list-contexts.service';
 import { TenantInitGuard } from './common/tenant-init.guard';
 import { HttpAdapterHost, Reflector } from '@nestjs/core';
 import { ReleaseTenantRunnerFilter } from './common/filters/release-tenant-runner.filter';
@@ -401,8 +403,9 @@ async function bootstrap() {
   }));
   // Initialize tenant DB context before guards
   app.useGlobalGuards(new TenantInitGuard(ds, reflector));
-  // Bind tenant to DB session (reuse or create) around controller handling
-  app.useGlobalInterceptors(new TenantInterceptor(ds, reflector));
+  // Bind tenant to DB session (reuse or create) around controller handling. Then, inside that
+  // transaction, a GET carrying `ctx=<id>` gets its saved list state merged into its query.
+  app.useGlobalInterceptors(new TenantInterceptor(ds, reflector), new ListContextInterceptor(app.get(ListContextsService)));
 
   // Finalizer middleware: ensure any leftover queryRunner is released on finish/close; a client
   // abort rolls back quietly (one warning line). See common/request-finalizer.middleware.ts.
