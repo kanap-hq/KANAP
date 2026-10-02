@@ -1,7 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { centsToNumber, formatCents } from '../../common/amount';
-import { aggregateSql, AggregateSpec, validateAggregateSpec } from '../../common/list-engine/list-aggregate';
+import { aggregateSql, AggregateSpec, assertLineMeasureCap, validateAggregateSpec } from '../../common/list-engine/list-aggregate';
+import { mergeListContextQuery } from '../../common/list-context/list-context';
+import { ListContextsService } from '../../common/list-context/list-contexts.service';
 import { assertListEngineSupport } from '../../common/list-engine/list-engine-support';
 import type { ListState } from '../../common/list-engine/list-engine.types';
 import { fieldOf, filterValuesSql, idsSql, neighborsSql, pageSql, countSql, buildCore } from '../../common/list-engine/list-sql-builder';
@@ -17,13 +19,14 @@ import {
   parseSummaryYears,
   resolveAmountField,
   resolveFteField,
+  resolveLocalAmountField,
   SUMMARY_COLUMNS,
   SummaryDeps,
   SummaryScopeConfig,
   summaryTenantId,
   yearsNamedByFields,
 } from '../spend-summary.builder';
-import { BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
+import { BUDGET_LINE_KEYS, BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 
@@ -467,6 +470,7 @@ export async function budgetListAggregate(
   manager: EntityManager,
 ): Promise<BudgetListAggregate> {
   validateAggregateSpec(spec);
+  assertLineMeasureCap({ lineKeys: BUDGET_LINE_KEYS }, spec);
   const req = await readRequest(query, manager);
   const specKeys = [...spec.groupBy, ...spec.measures.flatMap((measure) => [measure.field, ...(measure.minus ? [measure.minus] : [])])];
   assertBudgetYearsWithinBounds([...req.years, ...yearsNamedByFields(specKeys)], req.currentYear);
@@ -494,8 +498,35 @@ export async function budgetListAggregate(
     others: others ? shape(others) : null,
     total: shape(total),
     groupCount: Number(total.gc),
-    reportingCurrency: money.some(Boolean) ? rt.fx?.reportingCurrency ?? null : null,
+    // Amounts in the lines' own currencies (`local_…`) are in no one currency.
+    reportingCurrency: money.some((isMoney, i) => isMoney && !resolveLocalAmountField(spec.measures[i].field)) ? rt.fx?.reportingCurrency ?? null : null,
   };
+}
+
+/**
+ * The body of `POST /spend-items/summary/aggregate` (and CAPEX):
+ * `{ query, spec }`. `query` is what the list's GET takes (`filters` as an
+ * object or as JSON, `q`, `status`, `includeDisabled`, `years`; a POST
+ * because exclusion lists and cost centre subtrees can be long), and `ctx`, a
+ * saved list context, merged as the GET routes merge it (its filters, unless
+ * the query has its own). The answer is `budgetListAggregate`'s.
+ */
+export async function budgetListAggregateRequest(
+  scope: SummaryScopeConfig,
+  deps: SummaryDeps,
+  body: unknown,
+  manager: EntityManager,
+): Promise<BudgetListAggregate> {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('Aggregate: the body is { query, spec }.');
+  const { query: rawQuery, spec } = body as { query?: unknown; spec?: unknown };
+  if (rawQuery != null && (typeof rawQuery !== 'object' || Array.isArray(rawQuery))) throw new BadRequestException('Aggregate: query must be an object.');
+  let query = (rawQuery ?? {}) as Record<string, unknown>;
+  validateAggregateSpec(spec as AggregateSpec);
+  if (query.ctx !== undefined && query.ctx !== '') {
+    const stored = await new ListContextsService().require(manager, await summaryTenantId(manager), query.ctx);
+    query = mergeListContextQuery(stored.state, query);
+  }
+  return budgetListAggregate(scope, deps, query, spec as AggregateSpec, manager);
 }
 
 /**

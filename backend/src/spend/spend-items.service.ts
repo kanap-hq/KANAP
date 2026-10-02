@@ -383,10 +383,15 @@ export class SpendItemsService {
 
   /**
    * The lines of a list state grouped and measured in one statement
-   * (`budget-list.service.ts`, `budgetListAggregate`): the AI aggregates.
+   * (`budget-list.service.ts`, `budgetListAggregate`): the AI aggregates, the reports and the dashboard.
    */
   async summaryAggregate(query: any, spec: AggregateSpec, opts?: { manager?: EntityManager }): Promise<budgetList.BudgetListAggregate> {
     return budgetList.budgetListAggregate(SUMMARY_SCOPES.opex, this.summaryDeps(), query, spec, opts?.manager ?? this.repo.manager);
+  }
+
+  /** `POST …/summary/aggregate`: `{ query, spec }` (reports and the dashboard). */
+  async summaryAggregateRequest(body: unknown, opts?: { manager?: EntityManager }): Promise<budgetList.BudgetListAggregate> {
+    return budgetList.budgetListAggregateRequest(SUMMARY_SCOPES.opex, this.summaryDeps(), body, opts?.manager ?? this.repo.manager);
   }
 
   async summaryRowsByIds(

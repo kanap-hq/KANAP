@@ -46,6 +46,8 @@ export interface ListConfig {
   scopeFields: readonly string[];
   /** The quick search predicate for a trimmed, non-empty needle. */
   quickSearch(stmt: SqlStatement, q: string): string;
+  /** Keys besides `id` unique to each line (an aggregate grouped by one makes a group per line). */
+  lineKeys?: readonly string[];
 }
 
 /** A parsed list request, common to every list endpoint. */

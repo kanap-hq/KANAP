@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CapexItemsService } from './capex-items.service';
 import { CapexItemsDeleteService } from './capex-items-delete.service';
@@ -7,7 +7,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireLevel } from '../auth/require-level.decorator';
+import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { StorageService } from '../common/storage/storage.service';
 import { CapexItemContactsService } from './capex-item-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
@@ -96,6 +96,23 @@ export class CapexItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     return this.svc.summaryTotals(query, { manager: ctx.manager });
+  }
+
+  /**
+   * The lines of a list state grouped and measured on the server (reports,
+   * dashboard): body `{ query, spec }`, same read level as the list. A read:
+   * a frozen tenant keeps it, like the GET routes.
+   */
+  @ReadOnlyRoute()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'reader')
+  @Post('summary/aggregate')
+  @HttpCode(200)
+  summaryAggregate(
+    @Body() body: unknown,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.summaryAggregateRequest(body, { manager: ctx.manager });
   }
 
   @UseGuards(PermissionGuard)
