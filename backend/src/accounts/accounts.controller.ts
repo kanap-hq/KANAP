@@ -8,7 +8,7 @@ import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
-import { ACCOUNT_LOOKUP_READERS } from '../common/lookup/lookup-requirements';
+import { ACCOUNT_LOOKUP_ACCESS, ACCOUNT_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
 import { lookupAccounts } from '../common/lookup/reference-lookups';
 import { AccountUpsertDto } from './dto/account.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
@@ -38,6 +38,8 @@ export class AccountsController {
   @RequireAnyLevel(ACCOUNT_LOOKUP_READERS)
   @Get('lookup')
   lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    // A role that only reads a picking page gets the chosen labels (`ids`), not the list.
+    assertLookupSearch(ACCOUNT_LOOKUP_ACCESS, ctx, query);
     return lookupAccounts({ manager: ctx.manager, tenantId: ctx.tenantId }, query);
   }
   // Export before parameterized ':id' to avoid collisions

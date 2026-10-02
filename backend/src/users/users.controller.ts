@@ -9,7 +9,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
-import { USER_LOOKUP_READERS } from '../common/lookup/lookup-requirements';
+import { USER_LOOKUP_ACCESS, USER_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
 import { lookupReference, USER_LOOKUP } from '../common/lookup/reference-lookups';
 import { resolveAppBaseUrl } from '../common/url';
 import { Features } from '../config/features';
@@ -86,6 +86,8 @@ export class UsersController {
   @UseGuards(PermissionGuard)
   @RequireAnyLevel(USER_LOOKUP_READERS)
   lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    // A role that only reads a picking page gets the chosen labels (`ids`), not the list.
+    assertLookupSearch(USER_LOOKUP_ACCESS, ctx, query);
     return lookupReference({ manager: ctx.manager, tenantId: ctx.tenantId }, USER_LOOKUP, query);
   }
 

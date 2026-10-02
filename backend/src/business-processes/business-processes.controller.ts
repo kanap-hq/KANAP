@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
-import { BUSINESS_PROCESS_LOOKUP_READERS } from '../common/lookup/lookup-requirements';
+import { BUSINESS_PROCESS_LOOKUP_ACCESS, BUSINESS_PROCESS_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
 import { BUSINESS_PROCESS_LOOKUP, lookupReference } from '../common/lookup/reference-lookups';
 import { BusinessProcessesService } from './business-processes.service';
 import { BusinessProcessesDeleteService } from './business-processes-delete.service';
@@ -57,6 +57,8 @@ export class BusinessProcessesController {
   @RequireAnyLevel(BUSINESS_PROCESS_LOOKUP_READERS)
   @Get('lookup')
   lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    // A role that only reads a picking page gets the chosen labels (`ids`), not the list.
+    assertLookupSearch(BUSINESS_PROCESS_LOOKUP_ACCESS, ctx, query);
     return lookupReference({ manager: ctx.manager, tenantId: ctx.tenantId }, BUSINESS_PROCESS_LOOKUP, query);
   }
 

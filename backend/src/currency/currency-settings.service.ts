@@ -80,10 +80,8 @@ export class CurrencySettingsService {
     const defaultSpendCurrency = this.normalizeCode(metadata.default_spend_currency, reportingCurrency);
     const defaultCapexCurrency = this.normalizeCode(metadata.default_capex_currency, reportingCurrency);
     const allowedCurrencies = this.normalizeList(metadata.allowed_currencies);
-    await this.ensureCurrencyRecords(
-      [reportingCurrency, defaultSpendCurrency, defaultCapexCurrency, ...(allowedCurrencies ?? [])],
-      { manager: repo.manager },
-    );
+    // A read writes nothing: the currency rows are ensured where these settings are saved
+    // (updateSettings, the only writer of this metadata) and by the FX refresh.
     return { reportingCurrency, defaultSpendCurrency, defaultCapexCurrency, allowedCurrencies };
   }
 

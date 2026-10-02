@@ -7,7 +7,7 @@ import { attachmentMulterOptions, csvImportMulterOptions } from '../common/uploa
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
-import { CONTRACT_LOOKUP_READERS } from '../common/lookup/lookup-requirements';
+import { CONTRACT_LOOKUP_ACCESS, CONTRACT_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
 import { CONTRACT_LOOKUP, lookupReference } from '../common/lookup/reference-lookups';
 import { ContractUpsertDto } from './dto/contract.dto';
 import { StorageService } from '../common/storage/storage.service';
@@ -40,6 +40,8 @@ export class ContractsController {
   @RequireAnyLevel(CONTRACT_LOOKUP_READERS)
   @Get('lookup')
   lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    // A role that only reads a picking page gets the chosen labels (`ids`), not the list.
+    assertLookupSearch(CONTRACT_LOOKUP_ACCESS, ctx, query);
     return lookupReference({ manager: ctx.manager, tenantId: ctx.tenantId }, CONTRACT_LOOKUP, query);
   }
 
