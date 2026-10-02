@@ -7,10 +7,13 @@ import type { AmountScope } from './amounts-write.util';
  * planning/perf-scale, lot 3B):
  *
  *   0. a bulk operation (column copy or clear, allocation copy, item CSV
- *      import, budget rows import): the tenant's budget-operations advisory
- *      lock (`lockTenantBudgetOperations`), so two of them never run at once;
+ *      import, budget rows import, and a freeze or unfreeze that pins or
+ *      unpins the year's FX rate set): the tenant's budget-operations
+ *      advisory lock (`lockTenantBudgetOperations`), so two of them never run
+ *      at once;
  *   1. the line (`spend_items` / `capex_items`) FOR NO KEY UPDATE (FOR UPDATE
- *      for its delete); several lines in id order (`lockBudgetLines`);
+ *      for its delete); several lines in id order (`lockBudgetLines`, or
+ *      `lockBudgetYear` for every line of a year);
  *   2. its versions FOR NO KEY UPDATE; several in id order (`lockBudgetVersions`);
  *   3. the months of a version, created then locked in period order
  *      (`amounts-write.util.ts`, which locks the version again first);
@@ -24,6 +27,15 @@ import type { AmountScope } from './amounts-write.util';
  * 1853740000000) update the version (`budget_rev`) and the line
  * (`row_version`) after their children: that is deadlock-free only because
  * the writer already holds both. A new writer must follow this order.
+ *
+ * One known exception, left as it is: deleting a supplier, a company or a
+ * user sets the lines that name it to NULL (`ON DELETE SET NULL`), which
+ * PostgreSQL does in the order it finds those lines, outside the id order and
+ * without the tenant lock, while the delete holds the deleted row. A bulk
+ * operation that holds one of those lines and writes a reference to that row
+ * meanwhile waits for the delete, which waits for the line: one of the two
+ * ends with a deadlock, answered 409 `retry` (lot 1D). Rare (a master data
+ * delete during a bulk operation) and retried as is.
  */
 
 // Table names come only from here: never from the caller.
@@ -99,19 +111,62 @@ export async function lockVersionWithLineOrFail(manager: EntityManager, scope: A
   return locked;
 }
 
+/**
+ * Locks every line of the tenant that has a version of `year`, in id order,
+ * then those versions, in id order: what a write over the whole year (the FX
+ * pin of a freeze) takes before its UPDATE, after the tenant lock. Returns
+ * the ids of the versions locked.
+ */
+export async function lockBudgetYear(manager: EntityManager, scope: AmountScope, tenantId: string, year: number): Promise<string[]> {
+  const t = TABLES[scope];
+  await manager.query(
+    `SELECT i.id FROM ${t.items} i
+      WHERE i.tenant_id = $1
+        AND EXISTS (SELECT 1 FROM ${t.versions} v WHERE v.tenant_id = i.tenant_id AND v.${t.itemFk} = i.id AND v.budget_year = $2)
+      ORDER BY i.id
+        FOR NO KEY UPDATE OF i`,
+    [tenantId, year],
+  );
+  const rows: Array<{ id: string }> = await manager.query(
+    `SELECT id FROM ${t.versions} WHERE tenant_id = $1 AND budget_year = $2 ORDER BY id FOR NO KEY UPDATE`,
+    [tenantId, year],
+  );
+  return rows.map((row) => row.id);
+}
+
+/** The code of the 409 a bulk budget operation gets while another one runs: not retried by itself (the autosave never sees it). */
+export const BUDGET_OPERATION_RUNNING_CODE = 'operation_running';
+
 export const BUDGET_OPERATION_RUNNING =
-  'Another budget operation (a column copy or clear, an allocation copy or a CSV import) is running for this workspace. Try again when it has finished.';
+  'Another budget operation (a column copy or clear, an allocation copy, a CSV import, or a freeze or unfreeze of a year) is running for this workspace. Try again when it has finished.';
+
+/**
+ * The advisory lock namespace of the tenant budget-operations lock ("BOPS"):
+ * the two-key form, a key space of its own, so it never meets the single-key
+ * locks (scheduled tasks, Netbox sync, ingestion) whatever their hash.
+ */
+const BUDGET_OPERATIONS_LOCK_NAMESPACE = 0x424f5053;
 
 /**
  * The tenant's budget-operations lock: a transaction advisory lock shared by
- * the column copy and clear, the allocation copy, the item CSV imports and
- * the budget rows import, held until the request transaction ends. A second
- * operation does not wait: it is refused with a 409 (`retry`, the code a
- * client may try again on), whose message says what runs.
+ * the column copy and clear, the allocation copy, the item CSV imports, the
+ * budget rows import and a freeze or unfreeze that pins or unpins FX rates,
+ * held until the request transaction ends. A second operation does not wait:
+ * it is refused with a 409 `operation_running` (its own code, not the `retry`
+ * of a deadlock that a client may send again at once), whose message says
+ * what runs.
  */
 export async function lockTenantBudgetOperations(manager: EntityManager, tenantId: string): Promise<void> {
-  const [row] = await manager.query(`SELECT pg_try_advisory_xact_lock(hashtext($1)) AS locked`, [`budget-ops:${tenantId}`]);
+  const [row] = await manager.query(
+    `SELECT pg_try_advisory_xact_lock($1::int, hashtext($2)) AS locked`,
+    [BUDGET_OPERATIONS_LOCK_NAMESPACE, `budget-ops:${tenantId}`],
+  );
   if (!row?.locked) {
-    throw new ConflictException({ statusCode: HttpStatus.CONFLICT, error: 'Conflict', code: 'retry', message: BUDGET_OPERATION_RUNNING });
+    throw new ConflictException({
+      statusCode: HttpStatus.CONFLICT,
+      error: 'Conflict',
+      code: BUDGET_OPERATION_RUNNING_CODE,
+      message: BUDGET_OPERATION_RUNNING,
+    });
   }
 }

@@ -381,7 +381,15 @@ export class SpendItemsCsvService {
 
     const allCompanies = await mg.getRepository(Company).find({ where: { tenant_id: tenantId ?? undefined } as any });
     const companiesByName = new Map(allCompanies.map(c => [c.name.toLowerCase(), c]));
-    const companiesById = new Map(allCompanies.map((c) => [c.id, c]));
+    const companiesById = new Map<string, Company | null>(allCompanies.map((c) => [c.id, c]));
+    /** A company by id: from the list read at the start, else read now (one a line got meanwhile). */
+    const findCompany = async (id: string | null | undefined): Promise<Company | null> => {
+      if (!id) return null;
+      if (!companiesById.has(id)) {
+        companiesById.set(id, await mg.getRepository(Company).findOne({ where: { id, tenant_id: tenantId ?? undefined } as any }));
+      }
+      return companiesById.get(id) ?? null;
+    };
     const costCentersByCode = hasCostCenter && tenantId ? await loadCostCentersByCode(mg, tenantId) : new Map<string, CsvCostCenter>();
 
     const now = new Date();
@@ -391,8 +399,13 @@ export class SpendItemsCsvService {
       product_name: string;
       description: string | null;
       supplier_id: string | null;
-      paying_company_id: string | null;
+      /** Undefined: the column is not written (an existing line keeps its company). */
+      paying_company_id: string | null | undefined;
       account_id: string | null;
+      /** A blank company cell: the company is decided with the existing line, read under its lock. */
+      company_from_line: boolean;
+      /** The account number of the file, resolved in that company's chart once it is known. */
+      account_number: string | null;
       currency: string;
       effective_start: string | null;
       status: StatusState | null;
@@ -447,19 +460,13 @@ export class SpendItemsCsvService {
         else if (supplierIds.length > 1) errors.push({ row: line, message: `Supplier '${supplier_name}' matches more than one supplier` });
         else supplier_id = supplierIds[0];
       }
-      // A blank company keeps an existing line's company, and a new line takes its cost
-      // center's (as on CAPEX); the account then resolves in that company's chart.
+      // A named company resolves here, with the account in its chart. A blank cell is
+      // decided below with the existing line, as read under its lock: it keeps an existing
+      // line's company, and a new line takes its cost center's (as on CAPEX).
       let company: Company | null = null;
       if (company_name) {
         company = companiesByName.get(company_name.toLowerCase()) ?? null;
         if (!company) errors.push({ row: line, message: `Company '${company_name}' not found` });
-      } else if (product_name && (!supplier_name || supplier_id)) {
-        const stored = await mg.getRepository(SpendItem).findOne({
-          where: { tenant_id: tenantId ?? undefined, product_name, supplier_id: supplier_id ?? IsNull() },
-        });
-        if (stored?.paying_company_id) company = companiesById.get(stored.paying_company_id) ?? null;
-        else if (cost_center?.company_id) company = companiesById.get(cost_center.company_id) ?? null;
-        else if (!costCenterCode) errors.push({ row: line, message: CSV_COMPANY_REQUIRED_ERROR });
       }
       // A line is its product name and supplier (the existing-line match): a second row for it is refused, never dropped.
       if (product_name && (!supplier_name || supplier_id)) {
@@ -556,6 +563,8 @@ export class SpendItemsCsvService {
         supplier_id,
         paying_company_id: company ? company.id : null,
         account_id,
+        company_from_line: !company_name,
+        account_number: normalizedAccountNumber,
         currency,
         effective_start,
         status,
@@ -599,6 +608,25 @@ export class SpendItemsCsvService {
       : new Map();
     for (const item of unique) {
       const exists = existingByItem.get(item) ?? null;
+      // A blank company cell, decided on the line read here (under its lock in a real run, never
+      // on a read made before it): an existing line keeps its company, the column is not written;
+      // a line without one, or a new line, takes its cost center's. The account number then
+      // resolves in that company's chart.
+      if (item.company_from_line) {
+        const company = await findCompany(exists?.paying_company_id ?? item.cost_center?.company_id);
+        if (!exists?.paying_company_id && !item.cost_center) {
+          errors.push({ row: item.line, message: CSV_COMPANY_REQUIRED_ERROR });
+          continue;
+        }
+        item.paying_company_id = exists?.paying_company_id ? undefined : company?.id ?? null;
+        if (company && item.account_number != null) {
+          item.account_id = await findAccountId(company, item.account_number);
+          if (!item.account_id) {
+            errors.push({ row: item.line, message: `Account ${item.account_number} not found in ${company.name}'s chart of accounts` });
+            continue;
+          }
+        }
+      }
       const disabledCostCenter = item.cost_center ? csvCostCenterDisabledError(item.cost_center, exists?.cost_center_id) : null;
       if (disabledCostCenter) {
         errors.push({ row: item.line, message: disabledCostCenter });
@@ -638,7 +666,7 @@ export class SpendItemsCsvService {
         product_name: item.product_name,
         description: item.description ?? null,
         supplier_id: item.supplier_id,
-        paying_company_id: item.paying_company_id,
+        ...(item.paying_company_id !== undefined ? { paying_company_id: item.paying_company_id } : {}),
         account_id: item.account_id,
         ...(item.currency ? { currency: item.currency } : {}),
         ...(item.effective_start ? { effective_start: item.effective_start } : exists ? {} : { effective_start: defaultStart }),

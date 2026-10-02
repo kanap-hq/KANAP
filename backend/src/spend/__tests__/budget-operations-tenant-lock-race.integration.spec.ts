@@ -21,9 +21,11 @@ import {
 
 // The tenant lock of the bulk budget operations (plan planning/perf-scale,
 // lot 3B, moved from 3F): the column copy and clear, the allocation copy, the
-// item CSV imports and the budget rows import share one transaction advisory
-// lock per tenant. While one runs, another is refused at once with a 409
-// (code `retry`) that says what runs; a dry run takes no lock; another tenant
+// item CSV imports, the budget rows import and a freeze or unfreeze that pins
+// or unpins FX rates (`budget-freeze-race.integration.spec.ts`) share one
+// transaction advisory lock per tenant. While one runs, another is refused at
+// once with a 409 (code `operation_running`, never the `retry` a client sends
+// again at once) that says what runs; a dry run takes no lock; another tenant
 // is never held up.
 
 const YEAR = 2026;
@@ -51,11 +53,11 @@ function itemFile(kind: 'opex' | 'capex') {
   return { csv, file: { buffer: Buffer.from(`${headers.join(';')}\n${headers.map((h) => row[h] ?? '').join(';')}\n`, 'utf8') } as any };
 }
 
-/** Refused at once with a 409 `retry` that names the running operation. */
+/** Refused at once with a 409 `operation_running` that names the running operation. */
 function assertRefused(outcome: Outcome, who: string) {
   assert.ok(!outcome.ok && httpStatus(outcome.error) === 409, `${who} must be refused with a 409 while a bulk operation runs; it ${describe(outcome)}`);
   const body = (outcome.error as any).getResponse?.();
-  assert.equal(body?.code, 'retry', `${who}: code retry`);
+  assert.equal(body?.code, 'operation_running', `${who}: code operation_running`);
   assert.equal(body?.message, BUDGET_OPERATION_RUNNING, `${who}: the message says what runs`);
 }
 

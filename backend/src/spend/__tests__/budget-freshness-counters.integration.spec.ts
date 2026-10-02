@@ -3,9 +3,11 @@ import { QueryRunner } from 'typeorm';
 import { AiFinancialPlanMutationSupportService } from '../../ai/mutation/ai-financial-plan-mutation-support.service';
 import { CapexVersionsService } from '../../capex/capex-versions.service';
 import { syncTableLifecycleStatus } from '../../cleanup/lifecycle-status-sync.service';
-import { copyAllocations } from '../budget-allocation-operations';
+import { FreezeService } from '../../freeze/freeze.service';
+import { copyAllocations, sameAllocationRows, storedAllocationPct } from '../budget-allocation-operations';
 import { clearBudgetColumn, copyBudgetColumn } from '../budget-column-operations';
 import { BUDGET_ROWS_HEADERS, BudgetRowsCsvService } from '../budget-rows-csv.service';
+import { SpendAllocation } from '../spend-allocation.entity';
 import { SpendAllocationsService } from '../spend-allocations.service';
 import { SpendVersionsService } from '../spend-versions.service';
 import { csvService, itemService, lineBody, seedCompany } from './cost-center.fixtures';
@@ -27,8 +29,11 @@ import {
 // migration 1853740000000), against the database: every writer path bumps a
 // line's `row_version` or a version's `budget_rev` when it changes something
 // the CSV token covers, and never on a write that changes nothing, on the
-// status the hourly sync rewrites, on `updated_at` or on the view choice
-// (`input_grain`). Each test runs in a transaction rolled back at the end.
+// status the hourly sync rewrites or on `updated_at`. Of a version's own
+// columns only the allocation method and driver count: never the view choice
+// (`input_grain`), the notes, the name, the dates or the FX pin a freeze
+// rewrites on every version of a year. Each test runs in a transaction rolled
+// back at the end.
 // @database-spec: run-ci-tests.js runs this file in its serial database lane.
 
 const KINDS: Kind[] = ['opex', 'capex'];
@@ -120,6 +125,24 @@ async function lineAnalytics(kind: Kind) {
     assert.equal(await bumpOf(rv, () => update({ analytics_values: { [axisId]: second } })), 1, `${kind}: another value bumps`);
     assert.equal(await bumpOf(rv, () => update({ analytics_values: { [axisId]: null } })), 1, `${kind}: a cleared value bumps`);
     assert.equal(await bumpOf(rv, () => update({ analytics_values: { [axisId]: null } })), 0, `${kind}: clearing an empty value bumps nothing`);
+
+    // The search index holds no analytics value: the line's update that only bumps its counter
+    // (a value written alone, here in SQL: the service also sets the line's updated_at) refreshes nothing.
+    const indexed = async () => (await runner.query(`SELECT count(*)::int AS n FROM search_index WHERE entity_type = $1 AND entity_id = $2`, [TABLES[kind].items, itemId]))[0].n;
+    await runner.query(`DELETE FROM search_index WHERE entity_type = $1 AND entity_id = $2`, [TABLES[kind].items, itemId]);
+    const values = kind === 'opex' ? 'spend_item_analytics_values' : 'capex_item_analytics_values';
+    assert.equal(await bumpOf(rv, () => runner.query(`INSERT INTO ${values} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`, [tenantId, itemId, axisId, second])), 1,
+      `${kind}: a value written alone bumps its line`);
+    assert.equal(await indexed(), 0, `${kind}: a counter-only update of the line does not refresh its search entry`);
+    await update({ notes: 'Indexed again' });
+    assert.equal(await indexed(), 1, `${kind}: any other update of the line refreshes it`);
+
+    // A line created with analytics values starts at 2: their insert bumps it, like any later change.
+    const created = await itemService(kind).create(
+      lineBody(kind, `Counters ${kind} line with values`, { paying_company_id: (await runner.query(`SELECT paying_company_id FROM ${TABLES[kind].items} WHERE id = $1`, [itemId]))[0].paying_company_id, analytics_values: { [axisId]: first } }),
+      undefined, { manager: runner.manager },
+    );
+    assert.equal(await rowVersion(runner, kind, created.id), 2, `${kind}: a line created with analytics values starts at 2`);
   });
 }
 
@@ -162,11 +185,45 @@ async function versionColumns(kind: Kind) {
     assert.equal(await bumpOf(br, () => patch({ input_grain: 'annual' })), 0, `${kind}: the view choice (input_grain) bumps nothing`);
     assert.equal(await bumpOf(br, () => patch({ allocation_method: 'manual_pct' })), 1, `${kind}: the allocation method bumps once`);
     assert.equal(await bumpOf(br, () => patch({ allocation_method: 'manual_pct' })), 0, `${kind}: the same method bumps nothing`);
-    assert.equal(await bumpOf(br, () => patch({ notes: 'Budget note' })), 1, `${kind}: the notes bump`);
+    assert.equal(await bumpOf(br, () => patch({ allocation_driver: 'turnover' })), 1, `${kind}: the allocation driver bumps once`);
+    assert.equal(await bumpOf(br, () => patch({ allocation_driver: 'turnover' })), 0, `${kind}: the same driver bumps nothing`);
+    assert.equal(await bumpOf(br, () => patch({ notes: 'Budget note' })), 0, `${kind}: the notes bump nothing`);
+    assert.equal(await bumpOf(br, () => patch({ version_name: 'Renamed' })), 0, `${kind}: the name bumps nothing`);
+    assert.equal(await bumpOf(br, () => patch({ as_of_date: `${YEAR}-02-01` })), 0, `${kind}: the as-of date bumps nothing`);
+    assert.equal(await bumpOf(br, () => patch({ reporting_currency: 'USD' })), 0, `${kind}: the reporting currency bumps nothing`);
+    assert.equal(await bumpOf(br, () => runner.query(`UPDATE ${TABLES[kind].versions} SET is_approved = NOT is_approved WHERE id = $1`, [versionId])), 0,
+      `${kind}: the approval bumps nothing`);
     const [listed] = (await versions.listForItem(itemId, { manager: runner.manager })).filter((v: any) => v.id === versionId);
     assert.equal(listed.budget_rev, await br(), `${kind}: the version list carries budget_rev`);
     assert.equal(await bumpOf(br, () => runner.query(`UPDATE ${TABLES[kind].versions} SET updated_at = now() + interval '1 hour' WHERE id = $1`, [versionId])), 0,
       `${kind}: updated_at alone bumps nothing`);
+  });
+}
+
+/** A freeze pins the year's FX rate set on every version, an unfreeze unpins it: neither bumps a counter. */
+async function freezeFxPin(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `br-freeze-${kind}`);
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('100', 12) });
+    const [{ id: rateSetId }] = await runner.query(
+      `INSERT INTO currency_rate_sets (tenant_id, fiscal_year, base_currency, rates) VALUES ($1, $2, 'EUR', '{}'::jsonb) RETURNING id`,
+      [tenantId, YEAR],
+    );
+    const freeze = new FreezeService(
+      undefined as any,
+      { refreshTenant: async () => undefined } as any,
+      { getLatestRateSet: async () => ({ id: rateSetId }) } as any,
+      { getSettings: async () => ({ reportingCurrency: 'USD' }) } as any,
+    );
+    const counters = async () => ({ rv: await rowVersion(runner, kind, itemId), br: await budgetRev(runner, kind, versionId) });
+    const pinned = async () => (await runner.query(`SELECT fx_rate_set_id FROM ${TABLES[kind].versions} WHERE id = $1`, [versionId]))[0].fx_rate_set_id;
+    const before = await counters();
+    await freeze.freeze(YEAR, [{ scope: kind }], null, { manager: runner.manager });
+    assert.equal(await pinned(), rateSetId, `${kind}: the freeze pinned the rate set`);
+    assert.deepEqual(await counters(), before, `${kind}: a freeze (FX pin and reporting currency) bumps no counter`);
+    await freeze.unfreeze(YEAR, [{ scope: kind }], null, { manager: runner.manager });
+    assert.equal(await pinned(), null, `${kind}: the unfreeze unpinned it`);
+    assert.deepEqual(await counters(), before, `${kind}: an unfreeze bumps no counter`);
   });
 }
 
@@ -196,6 +253,38 @@ async function allocations() {
     const destinationRev = () => budgetRev(runner, 'opex', destination);
     assert.ok(await bumpOf(destinationRev, copy) > 0, 'an allocation copy bumps the destination');
     assert.equal(await bumpOf(destinationRev, copy), 0, 'the same allocation copy again bumps nothing');
+  });
+}
+
+/**
+ * A share is compared as PostgreSQL stores it (numeric(7,4), half away from
+ * zero on the decimal text the driver sends), never with `toFixed(4)`, which
+ * rounds the binary double: a halfway share stored, then computed again, is
+ * the same split (no rewrite, no bump).
+ */
+async function allocationShareRounding() {
+  await inRolledBackTransaction(async (runner) => {
+    const values = [0.30665, 12.34565, 1.00005, 2.00005, 10.00005, 99.99995, 0.00005, 0.00004, 100 / 3, 200 / 3, 100 / 7, 1e-7, 0, 100, 61.33 / 2, 12.3456];
+    for (let i = 1; i <= 200; i++) values.push((i * 100) / 997, i / 20000 + 0.00005);
+    const stored: Array<{ v: string }> = await runner.query(`SELECT unnest($1::numeric(7,4)[])::text AS v`, [values]);
+    values.forEach((value, i) => assert.equal(storedAllocationPct(value), stored[i].v, `${value} as stored`));
+
+    const tenantId = await seedTenant(runner, 'br-allocation-rounding');
+    const { companyId: c1 } = await seedCompany(runner, tenantId, 'Rounding company 1', 6001);
+    const { companyId: c2 } = await seedCompany(runner, tenantId, 'Rounding company 2', 6002);
+    const { versionId } = await seedLine(runner, 'opex', tenantId, YEAR);
+    const split = [
+      { company_id: c1, department_id: null, allocation_pct: 0.30665, is_system_generated: false, rule_id: null, materialized_from: null },
+      { company_id: c2, department_id: null, allocation_pct: 99.69335, is_system_generated: false, rule_id: null, materialized_from: null },
+    ];
+    for (const row of split) {
+      await runner.manager.getRepository(SpendAllocation).save({ ...row, tenant_id: tenantId, version_id: versionId });
+    }
+    const rows = await runner.query(
+      `SELECT company_id, department_id, allocation_pct, is_system_generated, rule_id, materialized_from FROM spend_allocations WHERE version_id = $1`,
+      [versionId],
+    );
+    assert.ok(sameAllocationRows(rows, split), `the split as stored (${rows.map((r: any) => r.allocation_pct).join(', ')}) is the split computed`);
   });
 }
 
@@ -305,8 +394,10 @@ void runSpecs('budget-freshness-counters.integration.spec', [
   ...KINDS.map((kind): [string, () => Promise<void>] => [`${kind}: row_version follows the line's columns, never status or updated_at`, () => lineColumns(kind)]),
   ...KINDS.map((kind): [string, () => Promise<void>] => [`${kind}: analytics values bump their line`, () => lineAnalytics(kind)]),
   ...KINDS.map((kind): [string, () => Promise<void>] => [`${kind}: budget_rev follows the amounts and costed lines, never a no-op`, () => versionAmounts(kind)]),
-  ...KINDS.map((kind): [string, () => Promise<void>] => [`${kind}: budget_rev follows the version's columns, never input_grain`, () => versionColumns(kind)]),
+  ...KINDS.map((kind): [string, () => Promise<void>] => [`${kind}: budget_rev follows the allocation method and driver, no other version column`, () => versionColumns(kind)]),
+  ...KINDS.map((kind): [string, () => Promise<void>] => [`${kind}: a freeze or unfreeze (FX pin) bumps nothing`, () => freezeFxPin(kind)]),
   ['allocations: a save or a copy bumps, the same split does not', allocations],
+  ['allocations: a halfway share compares as PostgreSQL stores it', allocationShareRounding],
   ...KINDS.map((kind): [string, () => Promise<void>] => [`${kind}: column copy and clear bump once, not when repeated`, () => columnOperations(kind)]),
   ['budget rows import: an unchanged row bumps nothing', budgetRowsImport],
   ['item CSV: an export imported back bumps nothing', itemCsvReimport],

@@ -31,15 +31,23 @@ const SCOPES = [
 
 type Scope = (typeof SCOPES)[number];
 
-/** Pinned on every function below, as in 1853720000000: public first, pg_temp last. */
+/** Pinned on every counter function below, as in 1853720000000: public first, pg_temp last (the search index function keeps its own setup). */
 const SEARCH_PATH = 'SET search_path = public, pg_temp';
 
 const LINE_FUNCTION = 'budget_line_row_version';
 const VERSION_FUNCTION = 'budget_version_budget_rev';
 /** Columns that never bump a line's row_version: the hourly lifecycle sync rewrites `status`. */
 const LINE_IGNORED = ['updated_at', 'status', 'row_version'];
-/** Columns that never bump a version's budget_rev: `input_grain` is a display preference. */
-const VERSION_IGNORED = ['input_grain', 'updated_at', 'budget_rev'];
+/**
+ * The only columns of a version that bump its budget_rev: how its amounts are
+ * allocated. The others are not budget data the CSV token guards: the view
+ * choice (`input_grain`), the FX pin a freeze or unfreeze rewrites on every
+ * version of a year (`fx_rate_set_id`, `reporting_currency`), the approval,
+ * the dates, the name, the notes, the budget year (never changed) and the
+ * counter itself. Counting them would show every line of a year as changed
+ * since its export after a freeze, the false alarm `status` is left out for.
+ */
+const VERSION_COUNTED = ['allocation_method', 'allocation_driver'];
 
 const COUNTERS = [
   { column: 'row_version', table: (scope: Scope) => scope.items },
@@ -90,18 +98,53 @@ function lineFunctionSql(): string {
   `;
 }
 
-/** BEFORE UPDATE of a version: one more `budget_rev` when a column other than input_grain, updated_at and budget_rev changes. */
+/** The counted columns of a version, old and new side, as two rows to compare. */
+const versionCounted = (r: string) => `(${VERSION_COUNTED.map((c) => `${r}.${c}`).join(', ')})`;
+const VERSION_CHANGED = `${versionCounted('NEW')} IS DISTINCT FROM ${versionCounted('OLD')}`;
+
+/** BEFORE UPDATE of a version: one more `budget_rev` when its allocation method or driver changes. */
 function versionFunctionSql(): string {
   return `
     CREATE OR REPLACE FUNCTION ${VERSION_FUNCTION}() RETURNS trigger
     LANGUAGE plpgsql ${SEARCH_PATH} AS $fn$
     BEGIN
-      IF ${withoutColumns('NEW', VERSION_IGNORED)} IS DISTINCT FROM ${withoutColumns('OLD', VERSION_IGNORED)} THEN
+      IF ${VERSION_CHANGED} THEN
         NEW.budget_rev := OLD.budget_rev + 1;
       END IF;
       RETURN NEW;
     END
     $fn$
+  `;
+}
+
+/**
+ * The search index trigger function of a line table (migrations 1853000000000
+ * and 1853220000000), with one early return: an UPDATE that changed nothing
+ * but `row_version` (the analytics values trigger below bumping its line) has
+ * nothing to refresh, as the index holds no analytics value. Any other update,
+ * an `updated_at` alone included, refreshes as before. `original` gives back
+ * the body of those migrations (down()).
+ */
+function searchSyncFunctionSql(table: string, original = false): string {
+  const counterOnly = original ? '' : `
+      IF TG_OP = 'UPDATE' THEN
+        IF NEW.row_version IS DISTINCT FROM OLD.row_version
+           AND (to_jsonb(NEW) - 'row_version') = (to_jsonb(OLD) - 'row_version') THEN
+          RETURN NEW;
+        END IF;
+      END IF;`;
+  return `
+    CREATE OR REPLACE FUNCTION search_index_sync_${table}()
+    RETURNS trigger AS $fn$
+    BEGIN
+      IF TG_OP = 'DELETE' THEN
+        PERFORM search_index_delete(OLD.tenant_id, '${table}', OLD.id);
+        RETURN OLD;
+      END IF;${counterOnly}
+      PERFORM search_index_refresh_${table}(NEW.tenant_id, ARRAY[NEW.id]);
+      RETURN NEW;
+    END
+    $fn$ LANGUAGE plpgsql
   `;
 }
 
@@ -391,17 +434,21 @@ async function counterColumns(queryRunner: QueryRunner): Promise<ColumnState[]> 
  *   UPDATE row trigger), and each time its analytics values change (statement
  *   triggers on *_item_analytics_values): what the line file exports besides
  *   the amounts.
- * - `budget_rev` on spend_versions and capex_versions: one more each time a
- *   column of the version other than input_grain, updated_at and budget_rev
- *   changes (BEFORE UPDATE row trigger), and each time its amounts, round
- *   inputs, costed lines or allocations really change (statement triggers on
- *   the transition tables; for the amounts, a step 0 in 1853720000000's
- *   function rather than a second trigger on those tables).
+ * - `budget_rev` on spend_versions and capex_versions: one more each time the
+ *   version's allocation method or driver changes (BEFORE UPDATE row trigger;
+ *   no other column of the version counts, see VERSION_COUNTED: a freeze
+ *   rewrites the FX pin of every version of a year), and each time its
+ *   amounts, round inputs, costed lines or allocations really change
+ *   (statement triggers on the transition tables; for the amounts, a step 0
+ *   in 1853720000000's function rather than a second trigger on those tables).
  *
  * A write that changes no value (the same value written back, an identical
  * copy, an unchanged CSV row) bumps nothing; a request running several
  * statements may bump more than once (the token compares by equality). A
- * created line or version starts at 1; a deleted one has nothing to bump.
+ * created version starts at 1; a created line at 1, or 2 when it is created
+ * with analytics values (their insert bumps it, like any later change); a
+ * deleted one has nothing to bump. The line's search index trigger skips an
+ * update that only bumped `row_version`.
  * The triggers run as the caller, under RLS (a session without a tenant
  * bumps nothing), and update the line or the version after their children:
  * deadlock-free because every writer locks the line, then the version, first
@@ -412,11 +459,12 @@ async function counterColumns(queryRunner: QueryRunner): Promise<ColumnState[]> 
  * when they lost them (a NULL becomes 1, RLS disabled around that update and
  * put back as it was), every function is replaced and every trigger dropped
  * and created again. The amounts tables keep the triggers of 1853720000000
- * (same names, same function names, replaced bodies).
+ * (same names, same function names, replaced bodies), the line tables their
+ * search index trigger (replaced body).
  *
- * down() drops the counter triggers and functions, puts back
- * 1853720000000's amounts function (by running that migration again, which
- * also recomputes the totals) and drops the columns.
+ * down() drops the counter triggers and functions, puts back the search
+ * index functions and 1853720000000's amounts function (by running that
+ * migration again, which also recomputes the totals) and drops the columns.
  */
 export class BudgetFreshnessCounters1853740000000 implements MigrationInterface {
   name = 'BudgetFreshnessCounters1853740000000';
@@ -433,7 +481,9 @@ export class BudgetFreshnessCounters1853740000000 implements MigrationInterface 
     const broken = (await counterColumns(queryRunner)).filter((state) => !state.not_null || !state.has_default);
     for (const state of broken) await repairColumn(queryRunner, state);
 
-    // 2. The line and the version themselves.
+    // 2. The line and the version themselves. The line's trigger has no WHEN guard: a
+    // whole-row comparison there fails once the table has a column without equality (json);
+    // its body compares the rows as jsonb. The version's guard names its two counted columns.
     await queryRunner.query(lineFunctionSql());
     await queryRunner.query(versionFunctionSql());
     for (const scope of SCOPES) {
@@ -441,16 +491,18 @@ export class BudgetFreshnessCounters1853740000000 implements MigrationInterface 
       await queryRunner.query(`
         CREATE TRIGGER ${scope.items}_row_version
         BEFORE UPDATE ON ${scope.items}
-        FOR EACH ROW WHEN (OLD.* IS DISTINCT FROM NEW.*)
+        FOR EACH ROW
         EXECUTE FUNCTION ${LINE_FUNCTION}()
       `);
       await queryRunner.query(`DROP TRIGGER IF EXISTS ${scope.versions}_budget_rev ON ${scope.versions}`);
       await queryRunner.query(`
         CREATE TRIGGER ${scope.versions}_budget_rev
         BEFORE UPDATE ON ${scope.versions}
-        FOR EACH ROW WHEN (OLD.* IS DISTINCT FROM NEW.*)
+        FOR EACH ROW WHEN (${VERSION_CHANGED})
         EXECUTE FUNCTION ${VERSION_FUNCTION}()
       `);
+      // The line's search index: no refresh for a counter-only update.
+      await queryRunner.query(searchSyncFunctionSql(scope.items));
 
       // 3. The children: analytics values of the line, round inputs, costed lines and allocations of the version.
       await queryRunner.query(analyticsFunctionSql(scope));
@@ -478,6 +530,8 @@ export class BudgetFreshnessCounters1853740000000 implements MigrationInterface 
       await queryRunner.query(`DROP FUNCTION IF EXISTS ${scope.analytics}_row_version()`);
       await queryRunner.query(`DROP TRIGGER IF EXISTS ${scope.versions}_budget_rev ON ${scope.versions}`);
       await queryRunner.query(`DROP TRIGGER IF EXISTS ${scope.items}_row_version ON ${scope.items}`);
+      // Before the column goes: the replaced body names row_version.
+      await queryRunner.query(searchSyncFunctionSql(scope.items, true));
     }
     await queryRunner.query(`DROP FUNCTION IF EXISTS ${VERSION_FUNCTION}()`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS ${LINE_FUNCTION}()`);

@@ -430,11 +430,15 @@ export async function copyBudgetColumn(
       );
       destinationVersion = ensured.version;
       if (!ensured.created && !overwrite) {
-        // The year had no version in the snapshot, and one exists now: a budget
-        // tab created it meanwhile and may have typed months into it. Decide
-        // again on its months, read under the lock every amounts write takes
-        // (a save in flight is waited for): a column with amounts is kept, as
-        // for a destination that had them from the start.
+        // Defensive, kept on purpose (lot 3A; 3B review). The versions were read
+        // again under this line's lock, held since then, and every app path that
+        // creates a version takes that lock first (`budget-locks.ts`), so none can
+        // have created this one meanwhile. A writer outside the lock order still
+        // can: an INSERT of a version takes only FOR KEY SHARE on its line (the
+        // foreign key), which our FOR NO KEY UPDATE does not block (a raw SQL
+        // write, a tenant import, a future path). If one did, decide again on its
+        // months, read under the lock every amounts write takes: a column with
+        // amounts is kept, as for a destination that had them from the start.
         await lockYearMonths({ manager: mg, scope, version: destinationVersion }, destinationYear);
         const locked = (await readVersionMonths(mg, scope, tenantId, [destinationVersion])).get(destinationVersion.id)!;
         if (locked.months[destinationMeasure].some((v) => v !== 0n)) {

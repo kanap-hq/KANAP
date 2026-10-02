@@ -363,18 +363,50 @@ type ComparableAllocation = {
   materialized_from?: string | null;
 };
 
+/** Decimals of `allocation_pct` (numeric(7,4)). */
+const PCT_SCALE = 4;
+
+/**
+ * A percentage as PostgreSQL stores it in `allocation_pct`, as text: the
+ * driver sends a number as `String(value)`, and PostgreSQL rounds those
+ * decimal digits half away from zero. `toFixed(4)` rounds the binary double
+ * instead and can disagree on a halfway share (0.30665 gives 0.3066 where
+ * PostgreSQL stores 0.3067), so a split computed again would not match the
+ * one stored and would be written again for nothing.
+ */
+export function storedAllocationPct(value: number | string | null | undefined): string {
+  const text = String(value ?? 0).trim();
+  const match = /^([+-]?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(text);
+  if (!match || (!match[2] && !match[3])) return text;
+  const [, sign, whole = '', fraction = '', exponent = '0'] = match;
+  const digits = BigInt(`${whole}${fraction}` || '0');
+  // value × 10^4 = digits × 10^shift
+  const shift = Number(exponent) - fraction.length + PCT_SCALE;
+  let scaled = digits;
+  if (shift >= 0) {
+    scaled = digits * 10n ** BigInt(shift);
+  } else {
+    const divisor = 10n ** BigInt(-shift);
+    scaled = digits / divisor;
+    if ((digits % divisor) * 2n >= divisor) scaled += 1n;
+  }
+  const padded = scaled.toString().padStart(PCT_SCALE + 1, '0');
+  const stored = `${padded.slice(0, -PCT_SCALE)}.${padded.slice(-PCT_SCALE)}`;
+  return sign === '-' && scaled !== 0n ? `-${stored}` : stored;
+}
+
 /**
  * Whether two sets of allocation rows are the same split: same companies and
- * departments, same percentages to the 4 decimals stored, same origin,
- * whatever their order. The manual saves and the copy then write nothing
- * (and bump no `budget_rev`, migration 1853740000000).
+ * departments, same percentages as PostgreSQL stores them (4 decimals, its
+ * rounding), same origin, whatever their order. The manual saves and the
+ * copy then write nothing (and bump no `budget_rev`, migration 1853740000000).
  */
 export function sameAllocationRows(a: readonly ComparableAllocation[], b: readonly ComparableAllocation[]): boolean {
   if (a.length !== b.length) return false;
   const key = (row: ComparableAllocation) => [
     row.company_id,
     row.department_id ?? '',
-    Number(row.allocation_pct || 0).toFixed(4),
+    storedAllocationPct(row.allocation_pct || 0),
     row.is_system_generated ? 'system' : 'manual',
     row.rule_id ?? '',
     row.materialized_from ?? '',
