@@ -15,6 +15,9 @@ import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
 import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../hooks/useAutosave';
 import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
+import { ConflictChoice, useEditConflicts } from '../../hooks/editConflicts';
+import EditConflictBanner from '../../components/workspace/EditConflictBanner';
+import { formatShortDate } from '../../lib/dateFormat';
 import { useKanapDialogs } from '../../components/design';
 import { formatItemRef } from '../../utils/item-ref';
 import {
@@ -153,6 +156,26 @@ function toForm(data: any): SpendForm {
   };
 }
 
+/** The label of each field the server may name in an edit conflict (lot 3C); analytics dimensions by their name. */
+const CONFLICT_FIELD_LABELS: Record<string, string> = {
+  product_name: 'opex.columns.productName',
+  description: 'opex.fields.description',
+  notes: 'opex.fields.notes',
+  supplier_id: 'opex.fields.supplier',
+  paying_company_id: 'opex.fields.payingCompany',
+  account_id: 'opex.fields.account',
+  currency: 'opex.fields.currency',
+  cost_center_id: 'opex.fields.costCenter',
+  run_build: 'opex.fields.runBuild',
+  effective_start: 'opex.fields.effectiveStart',
+  disabled_at: 'opex.fields.endOfValidity',
+  owner_it_id: 'opex.metadata.itOwner',
+  owner_business_id: 'opex.metadata.businessOwner',
+};
+const ANALYTICS_CONFLICT_PREFIX = 'analytics_values.';
+const LONG_TEXT_FIELDS = new Set(['description', 'notes']);
+const isLongTextField = (field: string) => LONG_TEXT_FIELDS.has(field);
+
 const sectionLabelSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1, display: 'block' } as const;
 const composerSx = {
   '& .MuiInputBase-root': {
@@ -168,7 +191,8 @@ const composerSx = {
 } as const;
 
 export default function SpendItemPage() {
-  const { t } = useTranslation(['ops', 'common']);
+  const { t, i18n } = useTranslation(['ops', 'common']);
+  const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
@@ -181,7 +205,7 @@ export default function SpendItemPage() {
   const isCreate = idParam === 'new';
   const routeTab: TabKey = TAB_KEYS.includes(params.tab as TabKey) ? (params.tab as TabKey) : 'overview';
 
-  const { data, error, refetch, isPlaceholderData } = useQuery({
+  const { data, error, isPlaceholderData } = useQuery({
     // Shared with the neighbours' prefetch (previous / next show at once).
     ...spendDetailQuery(idParam),
     enabled: !isCreate,
@@ -356,42 +380,68 @@ export default function SpendItemPage() {
   // ----- Autosave (overview metadata / drawer / notes / title) -----
   const dialogs = useKanapDialogs();
   const autosaveRegistry = useAutosaveRegistry();
+  // Fields edited and not saved yet, each with the line it was edited on (the page
+  // stays mounted from one line to the next): a field only ever goes to its own line.
+  // Each also keeps the value the screen showed when its edit began (its base, lot 3C):
+  // the server refuses a field someone else changed meanwhile (409 edit_conflict).
+  const patchBuffer = usePatchBuffer<Partial<SpendForm>>(mergePatch);
   const autosave = useAutosave({
     onError: (e) => setSaveError(autosaveErrorMessage(e, t, t('opex.editor.failedToSave'))),
     registry: autosaveRegistry,
+    // A conflict waiting for the user's choice keeps the page busy: leaving asks first.
+    held: patchBuffer.hasConflicts,
   });
-  // Fields typed and not saved yet, each with the line it was typed on (the page
-  // stays mounted from one line to the next): a field only ever goes to its own line.
-  const patchBuffer = usePatchBuffer<Partial<SpendForm>>(mergePatch);
+  const conflicts = useEditConflicts(patchBuffer, isCreate ? null : uuid);
   const uuidRef = React.useRef(uuid);
   uuidRef.current = uuid;
   const dataRef = React.useRef(data);
   dataRef.current = data;
-  // Resync the form on every refetch. A field typed and not saved yet (buffered,
-  // or being sent) keeps the local text, newer than the server's; every other
-  // field takes the server copy.
+  const formRef = React.useRef(form);
+  formRef.current = form;
+  // The form from the server copy, except the fields edited and not saved yet
+  // (buffered, being sent, or waiting for a conflict choice): they keep the
+  // user's values, newer than the server's.
+  const syncForm = React.useCallback((stored: unknown) => {
+    const next = toForm(stored);
+    const held = next.id ? patchBuffer.held(next.id) : undefined;
+    setForm(held ? mergePatch(next, held) : next);
+  }, [patchBuffer]);
+  // Resync the form on every refetch.
   React.useEffect(() => {
     if (!data || isCreate) return;
-    // The fields typed through patchDebounced.
-    const DEBOUNCED_FIELDS: ReadonlyArray<keyof SpendForm> = ['description', 'notes'];
-    setForm((prev) => {
-      const next = toForm(data);
-      if (prev.id !== next.id || !next.id) return next;
-      const kept = Object.fromEntries(
-        DEBOUNCED_FIELDS.filter((field) => patchBuffer.holds(next.id as string, field)).map((field) => [field, prev[field]]),
-      );
-      return { ...next, ...kept };
-    });
-  }, [data, isCreate, patchBuffer]);
+    syncForm(data);
+  }, [data, isCreate, syncForm]);
+
+  // Per field of an edit, the value the screen showed before it: the base the
+  // server compares with what is stored (lot 3C). The status follows the end of
+  // validity and has none of its own.
+  const baseFor = React.useCallback((patch: Partial<SpendForm>): Partial<SpendForm> => {
+    const shown = formRef.current;
+    const base: Record<string, unknown> = {};
+    for (const key of Object.keys(patch) as Array<keyof SpendForm>) {
+      if (key === 'status') continue;
+      base[key] = key === 'analytics_values'
+        ? Object.fromEntries(Object.keys(patch.analytics_values ?? {}).map((axisId) => [axisId, shown.analytics_values[axisId] ?? null]))
+        : shown[key];
+    }
+    return base as Partial<SpendForm>;
+  }, []);
+
+  const invalidateLine = React.useCallback((lineId: string) => queryClient.invalidateQueries({
+    queryKey: ['spend'],
+    predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId,
+  }), [queryClient]);
 
   const flushPending = React.useCallback(() => sendPatchBuffer(
     patchBuffer,
-    async (lineId, patch) => {
-      await api.patch(`/spend-items/${lineId}`, normalizePatch({ ...patch }));
+    async (lineId, patch, base) => {
+      const body = normalizePatch({ ...patch });
+      const baseBody = normalizePatch({ ...base });
+      await api.patch(`/spend-items/${lineId}`, Object.keys(baseBody).length > 0 ? { ...body, base: baseBody } : body);
     },
     {
       onSaved: async (lineId) => {
-        await queryClient.invalidateQueries({ queryKey: ['spend'], predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId });
+        await invalidateLine(lineId);
         queryClient.invalidateQueries({ queryKey: ['spend-summary'] });
       },
       // Refused for good: the screen shows the line's stored values again for those fields.
@@ -405,10 +455,13 @@ export default function SpendItemPage() {
             return fields.length ? { ...prev, ...Object.fromEntries(fields.map((field) => [field, server[field]])) } : prev;
           });
         }
-        void queryClient.invalidateQueries({ queryKey: ['spend'], predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId });
+        void invalidateLine(lineId);
       },
+      // Someone else changed a field meanwhile: the line reloads (their other changes show),
+      // the fields waiting for the user's choice keep the user's values.
+      onConflict: (lineId) => { void invalidateLine(lineId); },
     },
-  ), [patchBuffer, queryClient]);
+  ), [patchBuffer, queryClient, invalidateLine]);
 
   // An edit still pending for the previous line (prev/next, back button) goes to that line now.
   const { flush: flushAutosave } = autosave;
@@ -416,20 +469,18 @@ export default function SpendItemPage() {
     if (uuid && patchBuffer.holdsOtherThan(uuid)) void flushAutosave();
   }, [uuid, patchBuffer, flushAutosave]);
 
-  // Immediate persist — selects, dates, pickers, status, title-on-blur.
+  // Immediate persist — selects, dates, pickers, status, title-on-blur. Through the same
+  // buffer as typing, sent at once: the field goes to its own line with its base, a busy
+  // answer is retried, a refusal shows the stored value again, a conflict asks the user.
   const patchNow = React.useCallback(async (patch: Partial<SpendForm>) => {
     if (isCreate || !uuid || stale) return;
+    const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
     setSaveError(null);
-    try {
-      await api.patch(`/spend-items/${uuid}`, normalizePatch(patch));
-      await queryClient.invalidateQueries({ queryKey: ['spend', idParam] });
-      queryClient.invalidateQueries({ queryKey: ['spend-summary'] });
-    } catch (e) {
-      setSaveError(getApiErrorMessage(e, t, t('opex.editor.failedToSave')));
-      await refetch();
-    }
-  }, [isCreate, uuid, stale, idParam, queryClient, refetch, t]);
+    patchBuffer.add(uuid, patch, base);
+    autosave.schedule(flushPending);
+    await autosave.flush();
+  }, [isCreate, uuid, stale, baseFor, patchBuffer, autosave, flushPending]);
 
   // The server refuses a company on another chart of accounts than the line's account, and the
   // account picker only lists the current company's chart: clear the account in the same write,
@@ -456,10 +507,46 @@ export default function SpendItemPage() {
   // Debounced persist — long-form notes / description while typing.
   const patchDebounced = React.useCallback((patch: Partial<SpendForm>) => {
     if (isCreate || !uuid || stale) return;
+    const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
-    patchBuffer.add(uuid, patch);
+    patchBuffer.add(uuid, patch, base);
     autosave.schedule(flushPending);
-  }, [isCreate, uuid, stale, autosave, flushPending, patchBuffer]);
+  }, [isCreate, uuid, stale, autosave, flushPending, patchBuffer, baseFor]);
+
+  // ----- Edit conflicts (lot 3C): someone else changed a field being saved -----
+  const resolveConflict = React.useCallback((field: string, choice: ConflictChoice) => {
+    if (!uuid) return;
+    // Keeping their end of validity drops the status the user's date set; keeping their
+    // company drops the account the user's company cleared (it only made sense with it).
+    const held = patchBuffer.held(uuid);
+    const companions = choice !== 'theirs' ? []
+      : field === 'disabled_at' ? ['status']
+        : field === 'paying_company_id' && held?.account_id === '' ? ['account_id'] : [];
+    const send = patchBuffer.resolve(uuid, field, choice, companions);
+    // A field kept as theirs shows the stored value again; the line reloads for the latest one.
+    if (dataRef.current) syncForm(dataRef.current);
+    void invalidateLine(uuid);
+    if (send) {
+      autosave.schedule(flushPending);
+      void autosave.flush();
+    }
+  }, [uuid, patchBuffer, syncForm, invalidateLine, autosave, flushPending]);
+
+  const conflictFieldLabel = React.useCallback((field: string) => {
+    if (field.startsWith(ANALYTICS_CONFLICT_PREFIX)) {
+      const axisId = field.slice(ANALYTICS_CONFLICT_PREFIX.length);
+      return analyticsAxes.label(analyticsAxes.axes.find((axis) => axis.id === axisId) ?? { name: null });
+    }
+    const key = CONFLICT_FIELD_LABELS[field];
+    return key ? t(key) : field;
+  }, [analyticsAxes, t]);
+
+  const formatConflictValue = React.useCallback((field: string, value: unknown): string | undefined => {
+    if (field === 'effective_start') return formatShortDate(String(value), locale, { year: 'always' });
+    if (field === 'disabled_at') return formatShortDate(new Date(String(value)), locale, { year: 'always' });
+    if (field === 'run_build' && (value === 'run' || value === 'build')) return t(`opex.runBuild.${value}`);
+    return undefined;
+  }, [locale, t]);
 
   // ----- Transitional ref-save tabs (budget / allocations / relations) -----
   const budgetRef = React.useRef<BudgetTabHandle>(null);
@@ -508,7 +595,7 @@ export default function SpendItemPage() {
     if (!unsaved) return false;
     const leave = await dialogs.confirm({
       title: t('common:autosave.leaveTitle'),
-      message: t('common:autosave.leaveMessage'),
+      message: patchBuffer.hasConflicts() ? t('common:autosave.leaveConflictMessage') : t('common:autosave.leaveMessage'),
       confirmLabel: t('common:autosave.leaveConfirm'),
       intent: 'danger',
     });
@@ -634,6 +721,16 @@ export default function SpendItemPage() {
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('opex.workspace.failedToLoad')}</Alert>}
       {!!saveError && <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={() => setSaveError(null)}>{saveError}</Alert>}
+      {!isCreate && (
+        <EditConflictBanner
+          conflicts={conflicts}
+          fieldLabel={conflictFieldLabel}
+          formatValue={formatConflictValue}
+          isLongText={isLongTextField}
+          onResolve={resolveConflict}
+          busy={autosave.status === 'saving'}
+        />
+      )}
 
       <PortfolioDetailWorkspaceShell
         activeTab={routeTab}

@@ -626,6 +626,23 @@
   "autosave": {
     "leaveTitle": "Modifications non enregistrées",
     "leaveMessage": "Certaines de vos modifications n'ont pas pu être enregistrées. Quittez quand même et perdez-les, ou restez sur cette page et réessayez.",
-    "leaveConfirm": "Quitter sans enregistrer"
+    "leaveConfirm": "Quitter sans enregistrer",
+    "leaveConflictMessage": "Une autre personne a modifié un champ que vous modifiiez, et vous n'avez pas encore choisi la valeur à garder. Quittez quand même et perdez votre valeur, ou restez pour choisir."
+  },
+  "editConflict": {
+    "title": "Une autre personne a modifié {{count}} champs que vous modifiiez",
+    "title_one": "Une autre personne a modifié un champ que vous modifiiez",
+    "hint": "Vos modifications sur cet élément attendent votre choix. Elles seront enregistrées dès que vous aurez choisi.",
+    "changedByAt": "{{name}} a modifié ce champ à {{time}} pendant que vous le modifiiez.",
+    "changedByOn": "{{name}} a modifié ce champ le {{date}} à {{time}} pendant que vous le modifiiez.",
+    "changedBy": "{{name}} a modifié ce champ pendant que vous le modifiiez.",
+    "changedAt": "Ce champ a été modifié à {{time}} pendant que vous le modifiiez.",
+    "changedOn": "Ce champ a été modifié le {{date}} à {{time}} pendant que vous le modifiiez.",
+    "changed": "Ce champ a été modifié pendant que vous le modifiiez.",
+    "theirValue": "Sa valeur",
+    "yourValue": "Votre valeur",
+    "keepTheirs": "Garder sa valeur",
+    "applyMine": "Appliquer la vôtre",
+    "empty": "Vide"
   }
 }

@@ -626,6 +626,23 @@
   "autosave": {
     "leaveTitle": "Cambios sin guardar",
     "leaveMessage": "Algunos de sus cambios no se han podido guardar. Salga de todos modos y piérdalos, o quédese en esta página y vuelva a intentarlo.",
-    "leaveConfirm": "Salir sin guardar"
+    "leaveConfirm": "Salir sin guardar",
+    "leaveConflictMessage": "Otra persona modificó un campo que usted estaba editando y aún no ha elegido qué valor conservar. Salga de todos modos y pierda su valor, o quédese y elija."
+  },
+  "editConflict": {
+    "title": "Otra persona modificó {{count}} campos que usted estaba editando",
+    "title_one": "Otra persona modificó un campo que usted estaba editando",
+    "hint": "Sus cambios en este elemento esperan su elección. Se guardarán en cuanto haya elegido.",
+    "changedByAt": "{{name}} modificó este campo a las {{time}} mientras usted lo editaba.",
+    "changedByOn": "{{name}} modificó este campo el {{date}} a las {{time}} mientras usted lo editaba.",
+    "changedBy": "{{name}} modificó este campo mientras usted lo editaba.",
+    "changedAt": "Este campo se modificó a las {{time}} mientras usted lo editaba.",
+    "changedOn": "Este campo se modificó el {{date}} a las {{time}} mientras usted lo editaba.",
+    "changed": "Este campo se modificó mientras usted lo editaba.",
+    "theirValue": "Valor de la otra persona",
+    "yourValue": "Su valor",
+    "keepTheirs": "Conservar el otro valor",
+    "applyMine": "Aplicar el suyo",
+    "empty": "Vacío"
   }
 }

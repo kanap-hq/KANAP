@@ -97,6 +97,19 @@ const mocked = api as unknown as {
 
 const ITEM_ID = '11111111-2222-3333-4444-555555555555';
 
+/**
+ * The PATCH bodies without their `base` (lot 3C), checking that each base
+ * names exactly the fields of its body (the status follows the end of
+ * validity and has none).
+ */
+function patchedFields(): Array<Record<string, unknown>> {
+  return mocked.patch.mock.calls.map(([, body]) => {
+    const { base, ...fields } = body as Record<string, unknown>;
+    expect(Object.keys(base as object).sort()).toEqual(Object.keys(fields).filter((key) => key !== 'status').sort());
+    return fields;
+  });
+}
+
 /** Stands for the list page: shows the URL the workspace went back to. */
 function ListPageProbe() {
   const { search } = useLocation();
@@ -268,7 +281,10 @@ describe('SpendItemPage edit', () => {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2', account_id: null });
+    // Each field with the value the screen showed before (its base, lot 3C).
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, {
+      paying_company_id: 'company-2', account_id: null, base: { paying_company_id: 'company-1', account_id: 'account-1' },
+    });
     // The Account row now asks for an account on the new chart.
     expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', '');
   });
@@ -278,7 +294,7 @@ describe('SpendItemPage edit', () => {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2' });
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2', base: { paying_company_id: 'company-1' } });
   });
 
   it('saves cleared notes as null after the typing pause', async () => {
@@ -290,7 +306,7 @@ describe('SpendItemPage edit', () => {
       expect(notes).toHaveValue('');
     });
     await waitFor(() => expect(mocked.patch).toHaveBeenCalled(), { timeout: 3000 });
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { notes: null });
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { notes: null, base: { notes: 'Renewal' } });
   });
 
   it('clears the supplier as null, not as an empty string', async () => {
@@ -301,21 +317,19 @@ describe('SpendItemPage edit', () => {
       fireEvent.click(screen.getByRole('button', { name: 'clear supplier' }));
       expect(mocked.patch).toHaveBeenCalled();
     });
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { supplier_id: null });
+    expect(mocked.patch.mock.calls[0][1]).toEqual({ supplier_id: null, base: { supplier_id: 'supplier-1' } });
   });
 
   it('patches the cost center and run or build, as null when cleared', async () => {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`));
-    await waitFor(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-      expect(mocked.patch).toHaveBeenCalled();
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'clear cost center' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick build' }));
-    fireEvent.click(screen.getByRole('button', { name: 'clear run or build' }));
-    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(4));
-    expect(mocked.patch.mock.calls.map((call) => call[1])).toEqual([
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
+    // One pick at a time (picks made while a save runs go together in the next one).
+    const picks = ['pick cost center', 'clear cost center', 'pick build', 'clear run or build'];
+    for (const [index, name] of picks.entries()) {
+      fireEvent.click(screen.getByRole('button', { name }));
+      await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(index + 1));
+    }
+    expect(patchedFields()).toEqual([
       { cost_center_id: 'cc-2' },
       { cost_center_id: null },
       { run_build: 'build' },
@@ -366,7 +380,8 @@ describe('SpendItemPage notes typed during a save', () => {
     // The refetch carries the older 'Renewal A'; the newer text stays in the box.
     expect(notes).toHaveValue('Renewal AB');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
-    expect(mocked.patch.mock.calls[1][1]).toEqual({ notes: 'Renewal AB' });
+    // Started from the text being saved: once that save lands, it is the stored one.
+    expect(mocked.patch.mock.calls[1][1]).toEqual({ notes: 'Renewal AB', base: { notes: 'Renewal A' } });
     saves[1]();
     await waitFor(() => expect(mocked.get.mock.calls.filter(([u]) => u === `/spend-items/${ITEM_ID}`).length).toBeGreaterThanOrEqual(3));
     expect(notes).toHaveValue('Renewal AB');
@@ -408,8 +423,8 @@ describe('SpendItemPage analytics dimensions', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
     // Only the changed dimension is sent, never the old single field.
     expect(mocked.patch.mock.calls.map((call) => call[1])).toEqual([
-      { analytics_values: { 'axis-nature': 'value-2' } },
-      { analytics_values: { 'axis-default': null } },
+      { analytics_values: { 'axis-nature': 'value-2' }, base: { analytics_values: { 'axis-nature': null } } },
+      { analytics_values: { 'axis-default': null }, base: { analytics_values: { 'axis-default': 'value-1' } } },
     ]);
   });
 });
@@ -632,8 +647,8 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
     await typeInto('Line B notes', 'Line B notes, edited');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
     expect(mocked.patch.mock.calls).toEqual([
-      [`/spend-items/${LINE_A}`, { description: 'X' }],
-      [`/spend-items/${LINE_B}`, { notes: 'Line B notes, edited' }],
+      [`/spend-items/${LINE_A}`, { description: 'X', base: { description: 'Line A stored' } }],
+      [`/spend-items/${LINE_B}`, { notes: 'Line B notes, edited', base: { notes: 'Line B notes' } }],
     ]);
   });
 
@@ -658,8 +673,8 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
     await typeInto('Line B notes', 'B edited');
     await waitFor(() => expect(mocked.patch.mock.calls.filter(([url]) => url === `/spend-items/${LINE_B}`)).toHaveLength(1), { timeout: 3000 });
     const sent = mocked.patch.mock.calls.slice(4);
-    expect(sent).toContainEqual([`/spend-items/${LINE_A}`, { notes: 'A edited' }]);
-    expect(sent).toContainEqual([`/spend-items/${LINE_B}`, { notes: 'B edited' }]);
+    expect(sent).toContainEqual([`/spend-items/${LINE_A}`, { notes: 'A edited', base: { notes: 'Line A notes' } }]);
+    expect(sent).toContainEqual([`/spend-items/${LINE_B}`, { notes: 'B edited', base: { notes: 'Line B notes' } }]);
     expect(sent).toHaveLength(2);
   });
 
@@ -688,5 +703,146 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
     expect(mocked.patch).toHaveBeenCalledTimes(6);
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     expect(mocked.patch).toHaveBeenCalledTimes(6);
+  });
+});
+
+describe('SpendItemPage edit conflicts (lot 3C)', () => {
+  const LINE_A = 'aaaaaaaa-0000-4000-8000-0000000000a1';
+  const LINE_B = 'bbbbbbbb-0000-4000-8000-0000000000b2';
+  // What the server holds, per line; a PATCH whose base is stale for a field someone else changed answers 409.
+  const stored: Record<string, Record<string, unknown>> = {};
+  const line = (id: string, n: number, name: string) => ({
+    id, item_number: n, product_name: name, notes: `${name} notes`, supplier_id: 'supplier-1',
+    currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1',
+  });
+  const idOf = (url: string) => url.split('/').pop() as string;
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    dialogs.confirm.mockReset();
+    stored[LINE_A] = line(LINE_A, 1, 'Line A');
+    stored[LINE_B] = line(LINE_B, 2, 'Line B');
+    mocked.get.mockImplementation(async (url: string) => (stored[idOf(url)] ? { data: { ...stored[idOf(url)] } } : { data: {} }));
+    mocked.patch.mockImplementation(async (url: string, body: Record<string, unknown>) => {
+      const target = stored[idOf(url)];
+      const { base = {}, ...patch } = body as { base?: Record<string, unknown> } & Record<string, unknown>;
+      const now = (field: string) => target[field] ?? null;
+      const conflicts = Object.keys(patch)
+        .filter((field) => field in base && base[field] !== now(field) && patch[field] !== now(field))
+        .map((field) => ({
+          field, base: base[field], current: now(field), mine: patch[field],
+          labels: { base: null, current: null, mine: null },
+          changed_by: { id: 'marie', name: 'Marie Dupont' }, changed_at: '2026-10-02T12:02:00.000Z',
+        }));
+      if (conflicts.length > 0) {
+        throw Object.assign(new Error('HTTP 409'), { response: { status: 409, headers: {}, data: { code: 'edit_conflict', conflicts, row_version: 3 } } });
+      }
+      Object.assign(target, patch);
+      return { data: {} };
+    });
+  });
+
+  function renderLines(path: string) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router: { navigate: NavigateFunction | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = useNavigate();
+      return null;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[path]}>
+            <NavigateProbe />
+            <Routes>
+              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+              <Route path="/ops/opex" element={<div>opex list</div>} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    return { navigate: (to: string) => router.navigate!(to) };
+  }
+
+  async function typeInto(currentValue: string, value: string) {
+    const field = await screen.findByDisplayValue(currentValue);
+    await waitFor(() => {
+      fireEvent.change(field, { target: { value } });
+      expect(field).toHaveValue(value);
+    });
+    return field;
+  }
+
+  /** Marie saved other notes on line A after the screen read them; the user's notes are refused. */
+  async function conflictOnNotes() {
+    const router = renderLines(`/ops/opex/${LINE_A}/overview`);
+    await screen.findByDisplayValue('Line A notes');
+    stored[LINE_A].notes = 'Notes from Marie';
+    const notes = await typeInto('Line A notes', 'My notes');
+    await screen.findByTestId('edit-conflict-notes', undefined, { timeout: 3000 });
+    expect(mocked.patch.mock.calls[0]).toEqual([`/spend-items/${LINE_A}`, { notes: 'My notes', base: { notes: 'Line A notes' } }]);
+    return { router, notes };
+  }
+
+  it('shows the conflict, keeps the user\'s text through the reload, and applies it over theirs on request', async () => {
+    const { notes } = await conflictOnNotes();
+    // The line reloads (Marie's notes are stored), the box keeps the user's text.
+    await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === `/spend-items/${LINE_A}`).length).toBeGreaterThanOrEqual(2));
+    expect(notes).toHaveValue('My notes');
+    expect(screen.queryByText('opex.editor.failedToSave')).toBeNull();
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.applyMine: opex.fields.notes' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(mocked.patch.mock.calls[1]).toEqual([`/spend-items/${LINE_A}`, { notes: 'My notes', base: { notes: 'Notes from Marie' } }]);
+    await waitFor(() => expect(screen.queryByTestId('edit-conflict-notes')).toBeNull());
+    expect(stored[LINE_A].notes).toBe('My notes');
+  });
+
+  it('keeping their value drops the user\'s text and shows theirs', async () => {
+    const { notes } = await conflictOnNotes();
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.keepTheirs: opex.fields.notes' }));
+    await waitFor(() => expect(notes).toHaveValue('Notes from Marie'));
+    expect(screen.queryByTestId('edit-conflict-notes')).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(stored[LINE_A].notes).toBe('Notes from Marie');
+  });
+
+  it('asks before leaving with a conflict not decided, then drops the user\'s value', async () => {
+    await conflictOnNotes();
+    dialogs.confirm.mockResolvedValueOnce(false);
+    fireEvent.click(screen.getByRole('button', { name: 'close workspace' }));
+    await waitFor(() => expect(dialogs.confirm).toHaveBeenCalledTimes(1));
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'common:autosave.leaveTitle', message: 'common:autosave.leaveConflictMessage',
+    }));
+    expect(screen.queryByText('opex list')).toBeNull();
+    expect(screen.getByTestId('edit-conflict-notes')).toBeInTheDocument();
+
+    dialogs.confirm.mockResolvedValueOnce(true);
+    fireEvent.click(screen.getByRole('button', { name: 'close workspace' }));
+    expect(await screen.findByText('opex list')).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(stored[LINE_A].notes).toBe('Notes from Marie');
+  });
+
+  it('never carries a conflict of line A to line B', async () => {
+    const { router } = await conflictOnNotes();
+    // Another way to line B (no flush): no banner there, B's edit goes to B alone.
+    act(() => { router.navigate(`/ops/opex/${LINE_B}/overview`); });
+    await typeInto('Line B notes', 'B edited');
+    expect(screen.queryByTestId('edit-conflict-notes')).toBeNull();
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    expect(mocked.patch.mock.calls[1]).toEqual([`/spend-items/${LINE_B}`, { notes: 'B edited', base: { notes: 'Line B notes' } }]);
+    expect(stored[LINE_A].notes).toBe('Notes from Marie');
+
+    // Back on line A, the choice is still asked, with the user's text.
+    act(() => { router.navigate(`/ops/opex/${LINE_A}/overview`); });
+    expect(await screen.findByTestId('edit-conflict-notes')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('My notes')).toBeInTheDocument();
   });
 });
