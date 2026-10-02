@@ -1,9 +1,9 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate, type NavigateFunction } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
@@ -11,6 +11,12 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+// The page asks before leaving with changes it could not save.
+const dialogs = vi.hoisted(() => ({ confirm: vi.fn(async () => true), alert: vi.fn(async () => undefined), prompt: vi.fn(async () => null) }));
+vi.mock('../../components/design', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/design')>()),
+  useKanapDialogs: () => dialogs,
+}));
 const nav = vi.hoisted(() => ({ calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
 vi.mock('../../hooks/useSpendNav', () => ({
   useSpendNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }) => {
@@ -29,6 +35,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
     <div>
       <button type="button" onClick={() => onTitleSave('Monitoring')}>set title</button>
       <button type="button" onClick={() => onBack?.()}>back to list</button>
+      <button type="button" onClick={() => onBack?.()}>close workspace</button>
       {actions}{properties}{children}
     </div>
   ),
@@ -545,5 +552,141 @@ describe('SpendItemPage list context and dimensions', () => {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === `analytics_${NATURE}:DESC`)).toBe(true);
+  });
+});
+
+/** An API error as axios rejects it. */
+function apiError(status: number, code: string) {
+  return Object.assign(new Error(`HTTP ${status}`), { response: { status, data: { code, message: code }, headers: {} } });
+}
+
+describe('SpendItemPage autosave across lines, refusals and a busy server', () => {
+  const LINE_A = 'aaaaaaaa-0000-4000-8000-000000000001';
+  const LINE_B = 'bbbbbbbb-0000-4000-8000-000000000002';
+  const line = (id: string, n: number, name: string) => ({
+    id, item_number: n, product_name: name, description: `${name} stored`, notes: `${name} notes`,
+    currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1',
+  });
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    dialogs.confirm.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/spend-items/${LINE_A}`) return { data: line(LINE_A, 1, 'Line A') };
+      if (url === `/spend-items/${LINE_B}`) return { data: line(LINE_B, 2, 'Line B') };
+      return { data: {} };
+    });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The page, and a navigate function for the test: the route changes, the page instance stays. */
+  function renderLines(path: string) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router: { navigate: NavigateFunction | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = useNavigate();
+      return null;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[path]}>
+            <NavigateProbe />
+            <Routes>
+              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+              <Route path="/ops/opex" element={<div>opex list</div>} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    return { navigate: (to: string) => router.navigate!(to) };
+  }
+
+  async function typeInto(currentValue: string, value: string) {
+    const field = await screen.findByDisplayValue(currentValue);
+    // Writes wait for the line to load; retry the change until it sticks.
+    await waitFor(() => {
+      fireEvent.change(field, { target: { value } });
+      expect(field).toHaveValue(value);
+    });
+    return field;
+  }
+
+  it('never sends a description refused on line A to line B, and shows A\'s stored text again', async () => {
+    mocked.patch.mockImplementation(async (url: string, patch: Record<string, unknown>) => {
+      if (url === `/spend-items/${LINE_A}` && 'description' in patch) throw apiError(409, 'duplicate');
+      return { data: {} };
+    });
+    const router = renderLines(`/ops/opex/${LINE_A}/overview`);
+    await typeInto('Line A stored', 'X');
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    // Refused for good: the message shows and the stored text is back.
+    expect(await screen.findByText('errors:duplicate')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('Line A stored')).toBeInTheDocument();
+
+    act(() => { router.navigate(`/ops/opex/${LINE_B}/overview`); });
+    await typeInto('Line B notes', 'Line B notes, edited');
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    expect(mocked.patch.mock.calls).toEqual([
+      [`/spend-items/${LINE_A}`, { description: 'X' }],
+      [`/spend-items/${LINE_B}`, { notes: 'Line B notes, edited' }],
+    ]);
+  });
+
+  it('sends a busy edit of line A to line A, never to line B, once the server answers', async () => {
+    let busy = true;
+    mocked.patch.mockImplementation(async () => {
+      if (busy) throw apiError(503, 'busy');
+      return { data: {} };
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const router = renderLines(`/ops/opex/${LINE_A}/overview`);
+    await typeInto('Line A notes', 'A edited');
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    // Three retries by itself, then kept and shown as not saved yet.
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+    expect(mocked.patch).toHaveBeenCalledTimes(4);
+    expect(await screen.findByText('errors:notSavedYet')).toBeInTheDocument();
+
+    // The user goes to line B another way (no flush): the edit for A stays bound to A.
+    busy = false;
+    act(() => { router.navigate(`/ops/opex/${LINE_B}/overview`); });
+    await typeInto('Line B notes', 'B edited');
+    await waitFor(() => expect(mocked.patch.mock.calls.filter(([url]) => url === `/spend-items/${LINE_B}`)).toHaveLength(1), { timeout: 3000 });
+    const sent = mocked.patch.mock.calls.slice(4);
+    expect(sent).toContainEqual([`/spend-items/${LINE_A}`, { notes: 'A edited' }]);
+    expect(sent).toContainEqual([`/spend-items/${LINE_B}`, { notes: 'B edited' }]);
+    expect(sent).toHaveLength(2);
+  });
+
+  it('asks before leaving while the server keeps the edit busy, then drops it for good', async () => {
+    mocked.patch.mockRejectedValue(apiError(503, 'busy'));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderLines(`/ops/opex/${LINE_A}/overview`);
+    await typeInto('Line A notes', 'never saved');
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+    expect(mocked.patch).toHaveBeenCalledTimes(4);
+
+    // "Stay": one more attempt, no retry storm, the edit is still on screen.
+    dialogs.confirm.mockResolvedValueOnce(false);
+    fireEvent.click(screen.getByRole('button', { name: 'close workspace' }));
+    await waitFor(() => expect(dialogs.confirm).toHaveBeenCalledTimes(1));
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'common:autosave.leaveTitle', intent: 'danger' }));
+    expect(mocked.patch).toHaveBeenCalledTimes(5);
+    expect(screen.queryByText('opex list')).toBeNull();
+    expect(screen.getByDisplayValue('never saved')).toBeInTheDocument();
+
+    // "Leave without saving": the page goes, and the dropped edit is never sent again.
+    dialogs.confirm.mockResolvedValueOnce(true);
+    fireEvent.click(screen.getByRole('button', { name: 'close workspace' }));
+    expect(await screen.findByText('opex list')).toBeInTheDocument();
+    expect(mocked.patch).toHaveBeenCalledTimes(6);
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    expect(mocked.patch).toHaveBeenCalledTimes(6);
   });
 });

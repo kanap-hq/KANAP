@@ -19,7 +19,8 @@ import type {
   IntegratedDocumentEditorHandle,
   IntegratedDocumentSaveStatus,
 } from '../../components/IntegratedDocumentEditor';
-import useAutosave from '../../hooks/useAutosave';
+import useAutosave, { autosaveErrorMessage } from '../../hooks/useAutosave';
+import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
 import { useIncidentItemNav } from '../../hooks/useModuleItemNav';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
@@ -199,33 +200,60 @@ export function IncidentWorkspacePage() {
   }, [listContextParams, navigate, queryClient]);
 
   // Debounced autosave for long-form text: the cache is patched immediately so
-  // the page never redraws from a server round-trip.
-  const pendingPatchRef = React.useRef<UpdateIncidentInput>({});
-  const incidentIdRef = React.useRef<string | null>(null);
-  if (data && !stale) incidentIdRef.current = data.id;
+  // the page never redraws from a server round-trip. The fields typed and not
+  // saved yet are kept with the incident they were typed on (the page stays
+  // mounted from one incident to the next): a field only ever goes to its own
+  // incident.
+  const patchBuffer = usePatchBuffer<UpdateIncidentInput>();
+  const currentIncidentId = data && !stale ? data.id : null;
+  /** Every cached copy of one incident (its route may be a reference or a uuid). */
+  const ofIncident = React.useCallback(
+    (incidentId: string) => ({ queryKey: ['incident'], predicate: (q: { state: { data?: unknown } }) => (q.state.data as Incident | undefined)?.id === incidentId }),
+    [],
+  );
+  const currentIncidentIdRef = React.useRef(currentIncidentId);
+  currentIncidentIdRef.current = currentIncidentId;
+  // Bumped after a reload of the incident on screen: its description field shows the reloaded value.
+  const [descriptionResync, setDescriptionResync] = React.useState(0);
+  /** The incident as stored, with the fields still typed and not saved shown over it. */
+  const reloadIncident = React.useCallback(async (incidentId: string) => {
+    await queryClient.invalidateQueries(ofIncident(incidentId));
+    const held = patchBuffer.held(incidentId);
+    if (held) queryClient.setQueriesData<Incident>(ofIncident(incidentId), (current) => (current ? { ...current, ...held } : current));
+    if (incidentId === currentIncidentIdRef.current) setDescriptionResync((count) => count + 1);
+  }, [ofIncident, patchBuffer, queryClient]);
   const handleAutosaveError = React.useCallback((e: unknown) => {
-    setError(getApiErrorMessage(e, t, t('workspace.incident.messages.saveFailed')));
-    void queryClient.invalidateQueries({ queryKey });
-  }, [queryClient, queryKey, t]);
-  const { schedule: scheduleSave, flush: flushSave, status: autosaveStatus } = useAutosave({
+    // A busy save is still kept (the message says it is not saved yet); a refused one was
+    // dropped and its incident reloaded (onRefused below).
+    setError(autosaveErrorMessage(e, t, t('workspace.incident.messages.saveFailed')));
+  }, [t]);
+  const { schedule: scheduleSave, flush: flushSave, status: autosaveStatus, isBusy: isSaveBusy, discard: discardSave } = useAutosave({
     onError: handleAutosaveError,
   });
 
-  const flushPending = React.useCallback(async () => {
-    const patch = pendingPatchRef.current;
-    pendingPatchRef.current = {};
-    const incidentId = incidentIdRef.current;
-    if (!incidentId || Object.keys(patch).length === 0) return;
-    const saved = await incidentsApi.update(incidentId, patch);
-    setIncidentCache((current) => ({ ...current, ...patch, updated_at: saved.updated_at }));
-  }, [setIncidentCache]);
+  const flushPending = React.useCallback(() => sendPatchBuffer(
+    patchBuffer,
+    async (incidentId, patch) => {
+      const saved = await incidentsApi.update(incidentId, patch);
+      queryClient.setQueriesData<Incident>(
+        ofIncident(incidentId),
+        (current) => (current ? { ...current, ...patch, updated_at: saved.updated_at } : current),
+      );
+    },
+    { onRefused: (incidentId) => { void reloadIncident(incidentId); } },
+  ), [ofIncident, patchBuffer, queryClient, reloadIncident]);
 
   const patchDebounced = React.useCallback((patch: UpdateIncidentInput) => {
-    if (!editable) return;
+    if (!editable || !currentIncidentId) return;
     setIncidentCache((current) => ({ ...current, ...patch }));
-    pendingPatchRef.current = { ...pendingPatchRef.current, ...patch };
+    patchBuffer.add(currentIncidentId, patch);
     scheduleSave(flushPending);
-  }, [editable, flushPending, scheduleSave, setIncidentCache]);
+  }, [currentIncidentId, editable, flushPending, patchBuffer, scheduleSave, setIncidentCache]);
+
+  // An edit still pending for the previous incident (prev/next, back button) goes to that incident now.
+  React.useEffect(() => {
+    if (currentIncidentId && patchBuffer.holdsOtherThan(currentIncidentId)) void flushSave();
+  }, [currentIncidentId, flushSave, patchBuffer]);
 
   /**
    * Drains both drafts of the overview tab — the debounced property autosave and
@@ -238,20 +266,39 @@ export function IncidentWorkspacePage() {
     const reviewSaved = reviewEditorRef.current ? await reviewEditorRef.current.save() : true;
     if (propertiesSaved && reviewSaved) return true;
     if (!reviewSaved) setError(t('workspace.incident.messages.reviewSaveFailed'));
+    // A property save refused for good was dropped and the incident reloaded:
+    // nothing of it is left to lose, the message says why.
+    const propertiesKept = !propertiesSaved && isSaveBusy();
+    if (reviewSaved && !propertiesKept) return false;
     // Some failures never clear on a retry: the incident was closed elsewhere,
-    // the edit lock was taken over. Without a way out the user is stuck on this
-    // incident, unable to close it, change tab or navigate away.
-    const discard = await dialogs.confirm({
-      title: t('workspace.incident.dialogs.discardReviewTitle'),
-      message: t('workspace.incident.dialogs.discardReviewMessage'),
-      confirmLabel: t('workspace.incident.dialogs.discardReviewConfirm'),
-      intent: 'danger',
-    });
+    // the edit lock was taken over, the server stays busy. Without a way out
+    // the user is stuck on this incident, unable to close it, change tab or
+    // navigate away.
+    const discard = await dialogs.confirm(reviewSaved
+      ? {
+        title: t('common:autosave.leaveTitle'),
+        message: t('common:autosave.leaveMessage'),
+        confirmLabel: t('common:autosave.leaveConfirm'),
+        intent: 'danger',
+      }
+      : {
+        title: t('workspace.incident.dialogs.discardReviewTitle'),
+        message: t('workspace.incident.dialogs.discardReviewMessage'),
+        confirmLabel: t('workspace.incident.dialogs.discardReviewConfirm'),
+        intent: 'danger',
+      });
     if (!discard) return false;
-    await reviewEditorRef.current?.reset();
+    if (!reviewSaved) await reviewEditorRef.current?.reset();
+    if (propertiesKept) {
+      // Dropped for every incident: none of it may reach the server later, on any incident.
+      const incidents = new Set([...patchBuffer.targets(), ...(currentIncidentId ? [currentIncidentId] : [])]);
+      discardSave();
+      patchBuffer.discard();
+      for (const incidentId of incidents) void reloadIncident(incidentId);
+    }
     setError(null);
     return true;
-  }, [dialogs, flushSave, t]);
+  }, [currentIncidentId, dialogs, discardSave, flushSave, isSaveBusy, patchBuffer, reloadIncident, t]);
 
   /**
    * The row the optimistic update rolls back to. Read after the flush, never
@@ -713,6 +760,7 @@ export function IncidentWorkspacePage() {
                 reviewEditorRef={reviewEditorRef}
                 onReviewSaveStateChange={handleReviewSaveStateChange}
                 onPatchDebounced={patchDebounced}
+                descriptionResync={descriptionResync}
               />
             )}
             {validTab === 'journal' && (

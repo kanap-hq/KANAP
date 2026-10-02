@@ -1,9 +1,9 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useNavigate, type NavigateFunction } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
@@ -11,6 +11,12 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+// The page asks before leaving with changes it could not save.
+const dialogs = vi.hoisted(() => ({ confirm: vi.fn(async () => true), alert: vi.fn(async () => undefined), prompt: vi.fn(async () => null) }));
+vi.mock('../../components/design', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/design')>()),
+  useKanapDialogs: () => dialogs,
+}));
 const nav = vi.hoisted(() => ({ calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
 vi.mock('../../hooks/useCapexNav', () => ({
   useCapexNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }) => {
@@ -414,5 +420,76 @@ describe('CapexItemPage list context and dimensions', () => {
     renderAt(`/ops/capex/${ITEM_ID}/overview`);
     await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
     expect(nav.calls.filter((c) => c.enabled).every((c) => c.sort === `analytics_${NATURE}:DESC`)).toBe(true);
+  });
+});
+
+/** An API error as axios rejects it. */
+function apiError(status: number, code: string) {
+  return Object.assign(new Error(`HTTP ${status}`), { response: { status, data: { code, message: code }, headers: {} } });
+}
+
+describe('CapexItemPage autosave across lines', () => {
+  const LINE_A = 'aaaaaaaa-0000-4000-8000-00000000000a';
+  const LINE_B = 'bbbbbbbb-0000-4000-8000-00000000000b';
+  const line = (id: string, n: number, name: string) => ({
+    id, item_number: n, description: name, notes: `${name} notes`, currency: 'EUR', effective_start: '2026-01-01',
+    paying_company_id: 'company-1', account_id: 'account-1', ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium',
+  });
+  let busy = true;
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    busy = true;
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/capex-items/${LINE_A}`) return { data: line(LINE_A, 1, 'Line A') };
+      if (url === `/capex-items/${LINE_B}`) return { data: line(LINE_B, 2, 'Line B') };
+      return { data: {} };
+    });
+    mocked.patch.mockImplementation(async () => {
+      if (busy) throw apiError(503, 'busy');
+      return { data: {} };
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('keeps a busy note of line A for line A: it is neither lost nor sent to line B', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router: { navigate: NavigateFunction | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = useNavigate();
+      return null;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[`/ops/capex/${LINE_A}/overview`]}>
+            <NavigateProbe />
+            <Routes><Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} /></Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const notesA = await screen.findByDisplayValue('Line A notes');
+    await waitFor(() => {
+      fireEvent.change(notesA, { target: { value: 'A edited' } });
+      expect(notesA).toHaveValue('A edited');
+    });
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+    expect(mocked.patch).toHaveBeenCalledTimes(4);
+
+    busy = false;
+    act(() => { router.navigate!(`/ops/capex/${LINE_B}/overview`); });
+    const notesB = await screen.findByDisplayValue('Line B notes');
+    fireEvent.change(notesB, { target: { value: 'B edited' } });
+    await waitFor(() => expect(mocked.patch.mock.calls.some(([url]) => url === `/capex-items/${LINE_B}`)).toBe(true), { timeout: 3000 });
+    const sent = mocked.patch.mock.calls.slice(4);
+    expect(sent).toContainEqual([`/capex-items/${LINE_A}`, { notes: 'A edited' }]);
+    expect(sent).toContainEqual([`/capex-items/${LINE_B}`, { notes: 'B edited' }]);
+    expect(sent).toHaveLength(2);
   });
 });

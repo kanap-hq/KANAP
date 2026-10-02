@@ -622,5 +622,10 @@
   "lifecycleField": {
     "endOfValidity": "Ende der Gültigkeit",
     "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben."
+  },
+  "autosave": {
+    "leaveTitle": "Änderungen nicht gespeichert",
+    "leaveMessage": "Einige Ihrer Änderungen konnten nicht gespeichert werden. Verlassen Sie die Seite trotzdem und verwerfen Sie sie, oder bleiben Sie auf dieser Seite und versuchen Sie es erneut.",
+    "leaveConfirm": "Ohne Speichern verlassen"
   }
 }

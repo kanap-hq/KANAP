@@ -1,9 +1,9 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../api';
 import { incidentsApi, type Incident } from '../../api/endpoints/incidents';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -336,5 +336,89 @@ describe('IncidentWorkspacePage — review draft is flushed before every transit
 
     fireEvent.click(screen.getByText('shell-save-shortcut'));
     await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+  });
+});
+
+/** An API error as axios rejects it. */
+function apiError(status: number, code: string) {
+  return Object.assign(new Error(`HTTP ${status}`), { response: { status, data: { code, message: code }, headers: {} } });
+}
+
+describe('IncidentWorkspacePage — description autosave across incidents', () => {
+  const second: Incident = { ...incident, id: 'inc-2', item_number: 2, title: 'Mail down', description: 'Second summary' };
+  let busy = true;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    busy = true;
+    vi.mocked(incidentsApi.get).mockImplementation(async (routeId: string) => ({ ...(routeId === 'INC-2' ? second : incident) }));
+    vi.mocked(incidentsApi.update).mockImplementation(async (id: string, patch: any) => {
+      if (busy) throw apiError(503, 'busy');
+      return { ...(id === 'inc-2' ? second : incident), ...patch, updated_at: '2026-09-03T00:00:00.000Z' };
+    });
+    vi.mocked(api.get).mockResolvedValue({
+      data: { id: 'doc-1', item_number: 12, item_ref: 'DOC-12', content_markdown: '## Description', revision: 1, edit_lock: null },
+    } as any);
+    vi.mocked(api.post).mockResolvedValue({ data: { lock_token: 'lock-1', expires_at: null } } as any);
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The page, and the router's own navigate (the page's is mocked): the route changes, the page instance stays. */
+  async function renderIncidents() {
+    const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+    const router: { navigate: ((to: string) => void) | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = actual.useNavigate();
+      return null;
+    }
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/it/incidents/INC-1/overview']}>
+            <NavigateProbe />
+            <Routes>
+              <Route path="/it/incidents/:id/:tab" element={<IncidentWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    return { navigate: (to: string) => router.navigate!(to), queryClient };
+  }
+
+  it('after "leave without saving", the dropped text never reaches another incident, and the stored one is back', async () => {
+    const { navigate } = await renderIncidents();
+    const field = await screen.findByDisplayValue('Short summary');
+    fireEvent.change(field, { target: { value: 'text for INC-1' } });
+    await waitFor(() => expect(incidentsApi.update).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    // Retried three times, then kept and shown as not saved yet.
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_000); });
+    expect(incidentsApi.update).toHaveBeenCalledTimes(4);
+    expect(await screen.findByText('errors:notSavedYet')).toBeInTheDocument();
+
+    // Leaving tries once more, then asks; the user leaves without it.
+    dialogsMock.confirm.mockResolvedValueOnce(true);
+    fireEvent.click(screen.getByText('shell-back'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalled());
+    expect(dialogsMock.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'common:autosave.leaveTitle' }));
+    expect(incidentsApi.update).toHaveBeenCalledTimes(5);
+    // The incident shows its stored description again.
+    expect(await screen.findByDisplayValue('Short summary')).toBeInTheDocument();
+
+    // The page moves to INC-2 (same instance); the server answers again.
+    busy = false;
+    act(() => navigate('/it/incidents/INC-2/overview'));
+    const next = await screen.findByDisplayValue('Second summary');
+    fireEvent.change(next, { target: { value: 'text for INC-2' } });
+    await waitFor(() => expect(incidentsApi.update).toHaveBeenCalledTimes(6), { timeout: 3000 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+
+    const after = vi.mocked(incidentsApi.update).mock.calls.slice(5);
+    expect(after).toEqual([['inc-2', { description: 'text for INC-2' }]]);
+    expect(vi.mocked(incidentsApi.update).mock.calls.every(([id, patch]) => id === 'inc-1' || (patch as any).description !== 'text for INC-1')).toBe(true);
   });
 });

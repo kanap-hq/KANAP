@@ -16,10 +16,17 @@
   "WEEKLY_REVIEW_ROLE_INELIGIBLE": "Die wöchentliche Übersicht ist für Ihre aktuelle Rolle nicht verfügbar.",
   "WEEKLY_REVIEW_NOT_ENABLED": "Aktivieren Sie sowohl E-Mail-Benachrichtigungen als auch die wöchentliche Übersichts-E-Mail, um die Vorschau anzuzeigen.",
   "WEEKLY_REVIEW_SEND_FAILED": "Die wöchentliche Übersichts-E-Mail konnte nicht gesendet werden.",
+  "operation_running": "Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.",
   "APP_CRASH_TITLE": "Etwas ist schiefgelaufen.",
   "APP_CRASH_BODY": "Die Seite konnte nicht angezeigt werden. Ein Neuladen behebt das meistens.",
   "APP_CRASH_RELOAD": "Neu laden",
   "APP_CRASH_DETAILS": "Technische Details",
   "APP_UPDATE_AVAILABLE": "Eine neue Version ist verfügbar.",
-  "list_context_not_found": "Die gespeicherten Filter dieser Liste sind nicht mehr verfügbar. Legen Sie die Filter erneut fest."
+  "list_context_not_found": "Die gespeicherten Filter dieser Liste sind nicht mehr verfügbar. Legen Sie die Filter erneut fest.",
+  "duplicate": "Dieser Eintrag existiert bereits. Laden Sie die Seite neu, um die aktuellen Daten zu sehen.",
+  "parent_gone": "Etwas, von dem diese Änderung abhängt, wurde inzwischen gelöscht. Laden Sie die Seite neu, um die aktuellen Daten zu sehen.",
+  "in_use": "Diese Änderung würde etwas entfernen, das noch an anderer Stelle verwendet wird. Sie wurde daher nicht gespeichert.",
+  "retry": "Eine andere Änderung an denselben Daten wurde im selben Moment gespeichert, daher wurde diese nicht übernommen. Bitte versuchen Sie es erneut.",
+  "busy": "Diese Daten sind gerade durch einen anderen Vorgang belegt. Bitte versuchen Sie es in einigen Sekunden erneut.",
+  "notSavedYet": "Ihre letzte Änderung ist noch nicht gespeichert, weil der Server ausgelastet ist. Sie bleibt auf dieser Seite und wird mit Ihrer nächsten Änderung erneut gesendet."
 }

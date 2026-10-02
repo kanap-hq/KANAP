@@ -622,5 +622,10 @@
   "lifecycleField": {
     "endOfValidity": "End of validity",
     "endOfValidityHint": "Leave blank to keep active indefinitely."
+  },
+  "autosave": {
+    "leaveTitle": "Changes not saved",
+    "leaveMessage": "Some of your changes could not be saved. Leave anyway and lose them, or stay on this page and try again.",
+    "leaveConfirm": "Leave without saving"
   }
 }

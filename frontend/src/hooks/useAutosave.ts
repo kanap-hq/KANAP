@@ -1,6 +1,68 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { TFunction } from 'i18next';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 
 export type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+
+/**
+ * What a failed save means for the autosave, from the API's answer (the
+ * backend's database error codes, plan planning/perf-scale lot 1D):
+ * - `transient`: 409 `retry` (another write to the same data at the same
+ *   moment) or 503 `busy` (the data is held by a long operation, or the
+ *   server is saturated). The same save can go through a moment later: it is
+ *   retried by itself a few times, then kept (see useAutosave);
+ * - `conflict`: 409 `duplicate`, `parent_gone` or `in_use`. Sending the same
+ *   save again fails the same way: it is reported and dropped, and the page
+ *   rolls the screen back to the server's values;
+ * - `fatal`: anything else. Reported and dropped.
+ */
+export type SaveFailure = { kind: 'transient' | 'conflict' | 'fatal'; retryAfterMs?: number };
+
+/**
+ * Whether a failed save is kept to be sent again (409 `retry`, 503 `busy`).
+ * A save that takes its payload out of a buffer before sending puts it back
+ * only then (see `sendPatchBuffer`): any other failure drops the payload, so a
+ * refused field is never sent again with the next edit.
+ */
+export function isTransientSaveFailure(error: unknown): boolean {
+  return classifySaveFailure(error).kind === 'transient';
+}
+
+/**
+ * Waits before each automatic retry of a transient failure. Three retries per
+ * pending edit in all, flushes included: a new edit gives a fresh three. The
+ * wait is the longer of this and the server's Retry-After (the backend sends
+ * a fixed 2 s), so the waits grow: 2, 2, 4 s on a busy answer.
+ */
+export const AUTOSAVE_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000];
+/** Ceiling for a wait the server asks for in Retry-After. */
+const MAX_RETRY_AFTER_MS = 10_000;
+
+const CONFLICT_CODES = new Set(['duplicate', 'parent_gone', 'in_use']);
+
+export function classifySaveFailure(error: unknown): SaveFailure {
+  const response = (error as { response?: { status?: number; data?: { code?: unknown }; headers?: Record<string, unknown> } } | null)?.response;
+  const status = response?.status;
+  const code = typeof response?.data?.code === 'string' ? response.data.code : undefined;
+  if ((status === 409 && code === 'retry') || (status === 503 && code === 'busy')) {
+    const seconds = Number(String(response?.headers?.['retry-after'] ?? '').trim() || NaN);
+    return {
+      kind: 'transient',
+      retryAfterMs: Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, MAX_RETRY_AFTER_MS) : undefined,
+    };
+  }
+  if (status === 409 && code && CONFLICT_CODES.has(code)) return { kind: 'conflict' };
+  return { kind: 'fatal' };
+}
+
+/**
+ * The message for an autosave error. A transient one reaches the screen only
+ * once its retries are spent, while the edit is still kept: it says the change
+ * is not saved yet, not that it was refused.
+ */
+export function autosaveErrorMessage(error: unknown, t: TFunction, fallback: string): string {
+  return isTransientSaveFailure(error) ? t('errors:notSavedYet') : getApiErrorMessage(error, t, fallback);
+}
 
 /**
  * Serializes the save tasks of several autosave controllers that write to the
@@ -41,6 +103,8 @@ export interface AutosaveHandle {
   flush: () => Promise<boolean>;
   /** See {@link AutosaveController.isBusy}. */
   isBusy: () => boolean;
+  /** See {@link AutosaveController.discard}. */
+  discard: () => void;
 }
 
 /**
@@ -55,6 +119,8 @@ export interface AutosaveRegistry {
   flushAll: () => Promise<boolean>;
   /** True when any registered controller has pending or in-flight work. */
   isBusy: () => boolean;
+  /** Drop every registered controller's pending work (the user chose to leave without it). */
+  discardAll: () => void;
 }
 
 export function createAutosaveRegistry(): AutosaveRegistry {
@@ -74,6 +140,9 @@ export function createAutosaveRegistry(): AutosaveRegistry {
     },
     isBusy() {
       return [...handles].some((handle) => handle.isBusy());
+    },
+    discardAll() {
+      for (const handle of handles) handle.discard();
     },
   };
 }
@@ -130,8 +199,16 @@ export interface AutosaveController {
    * save rejected (caller should abort the navigation to avoid losing the edit).
    */
   flush: () => Promise<boolean>;
-  /** True when a save is pending (debouncing) or currently in flight. */
+  /** True when a save is pending (debouncing, or kept after a transient failure) or currently in flight. */
   isBusy: () => boolean;
+  /**
+   * Drop the pending save, the one kept after a failure included, without
+   * sending it: the user chose to leave without it. A request already in
+   * flight still lands or fails, but is neither retried nor kept nor
+   * reported. The caller drops its own buffered payload and shows the
+   * server's values again.
+   */
+  discard: () => void;
 }
 
 /**
@@ -146,6 +223,18 @@ export interface AutosaveController {
  * the bounded-flush note in the OPEX revamp plan. Reliable persistence is only
  * guaranteed on controlled transitions that call `flush()` (see
  * {@link useAutosaveRegistry} for flushing a whole screen at once).
+ *
+ * A failed save is classified by {@link classifySaveFailure}:
+ * - transient: retried in place (status stays `saving`), at most three times
+ *   per pending edit in all ({@link AUTOSAVE_RETRY_DELAYS_MS}); a new edit
+ *   (schedule) gives a fresh three. Once they are spent the save is kept
+ *   pending (`isBusy()` stays true, status `error`, reported once): the next
+ *   edit sends it again, an explicit flush makes one more attempt, and a page
+ *   lets the user leave without it after a confirmation (`discard`). A kept
+ *   save must be safe to run again: a caller that takes its payload out of a
+ *   buffer puts it back on a transient failure only;
+ * - conflict or anything else: reported and dropped. A save scheduled while
+ *   it was in flight still runs, the failure is reported once it has.
  */
 export default function useAutosave(options?: UseAutosaveOptions): AutosaveController {
   const delay = options?.delay ?? 700;
@@ -158,6 +247,10 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
   const timerRef = useRef<number | null>(null);
   const savedTimerRef = useRef<number | null>(null);
   const pendingRef = useRef<null | (() => Promise<void>)>(null);
+  // Automatic retries left for the pending edit, across drains and flushes; a new edit resets them.
+  const retriesLeftRef = useRef(AUTOSAVE_RETRY_DELAYS_MS.length);
+  // Bumped by discard(): a save started before it is neither retried, kept nor reported.
+  const generationRef = useRef(0);
   const drainingRef = useRef<Promise<void> | null>(null);
   // Read at execution time so a queue/handler swap never strands a running drain.
   const queueRef = useRef(options?.queue);
@@ -187,16 +280,44 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
       // Yield once so `drainingRef` is assigned before `finally` can clear it;
       // a save that throws synchronously would otherwise strand a settled marker.
       await Promise.resolve();
+      // A save dropped while a newer one was pending: reported once the loop ends.
+      let dropped: unknown = null;
+      let saved = false;
       try {
         while (pendingRef.current) {
           const fn = pendingRef.current;
+          const generation = generationRef.current;
           pendingRef.current = null;
           setStatus('saving');
           const queue = queueRef.current;
-          // Serialized with the sibling controllers when a queue is shared, so
-          // two sections never PATCH the same entity concurrently.
-          await (queue ? queue.run(fn) : fn());
+          try {
+            // Serialized with the sibling controllers when a queue is shared, so
+            // two sections never PATCH the same entity concurrently.
+            await (queue ? queue.run(fn) : fn());
+            if (generation === generationRef.current) saved = true;
+          } catch (error) {
+            // Discarded while in flight: nothing to keep, retry or report.
+            if (generation !== generationRef.current) continue;
+            const failure = classifySaveFailure(error);
+            if (failure.kind !== 'transient') {
+              // Dropped; a save scheduled meanwhile carries only newer edits and still goes.
+              dropped ??= error;
+              continue;
+            }
+            // Kept. A save scheduled meanwhile carries this one's payload too
+            // (callers put a transient payload back), so it goes instead.
+            if (!pendingRef.current) pendingRef.current = fn;
+            if (retriesLeftRef.current === 0) throw error;
+            const attempt = AUTOSAVE_RETRY_DELAYS_MS.length - retriesLeftRef.current;
+            retriesLeftRef.current -= 1;
+            const wait = Math.max(failure.retryAfterMs ?? 0, AUTOSAVE_RETRY_DELAYS_MS[attempt]);
+            await new Promise((resolve) => window.setTimeout(resolve, wait));
+          }
         }
+        if (dropped) throw dropped;
+        // Everything left was discarded: discard() already set the status.
+        if (!saved) return;
+        retriesLeftRef.current = AUTOSAVE_RETRY_DELAYS_MS.length;
         setStatus('saved');
         clearSavedTimer();
         savedTimerRef.current = window.setTimeout(() => {
@@ -204,9 +325,6 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
           setStatus('idle');
         }, savedLingerMs);
       } catch (error) {
-        // Drop the pending payload so a failing endpoint is not hammered; the
-        // caller can reschedule. Status stays 'error' until the next schedule.
-        pendingRef.current = null;
         setStatus('error');
         onError?.(error);
         throw error;
@@ -220,6 +338,8 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
 
   const schedule = useCallback((save: () => Promise<void>) => {
     pendingRef.current = save;
+    // A new edit: a fresh set of automatic retries.
+    retriesLeftRef.current = AUTOSAVE_RETRY_DELAYS_MS.length;
     clearTimer();
     clearSavedTimer();
     setStatus('pending');
@@ -244,6 +364,8 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
     if (pendingRef.current || drainingRef.current) {
       try {
         await drain();
+        // A save scheduled while the drain was finishing still needs its own run.
+        if (pendingRef.current) await drain();
       } catch {
         // Surfaced via status / onError. Report failure so callers can abort navigation.
         return false;
@@ -252,6 +374,15 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
     return true;
   }, [drain]);
 
+  const discard = useCallback(() => {
+    clearTimer();
+    clearSavedTimer();
+    pendingRef.current = null;
+    generationRef.current += 1;
+    retriesLeftRef.current = AUTOSAVE_RETRY_DELAYS_MS.length;
+    setStatus('idle');
+  }, []);
+
   const isBusy = useCallback(
     () => pendingRef.current != null || drainingRef.current != null,
     [],
@@ -259,13 +390,14 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
 
   // Stable handle over the latest closures, so registering/unregistering does
   // not churn every render.
-  const latestHandleRef = useRef<AutosaveHandle>({ flush, isBusy });
-  latestHandleRef.current = { flush, isBusy };
+  const latestHandleRef = useRef<AutosaveHandle>({ flush, isBusy, discard });
+  latestHandleRef.current = { flush, isBusy, discard };
   const handleRef = useRef<AutosaveHandle | null>(null);
   if (!handleRef.current) {
     handleRef.current = {
       flush: () => latestHandleRef.current.flush(),
       isBusy: () => latestHandleRef.current.isBusy(),
+      discard: () => latestHandleRef.current.discard(),
     };
   }
   const handle = handleRef.current;
@@ -289,5 +421,5 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
     }
   }, []);
 
-  return { status, schedule, flush, isBusy };
+  return { status, schedule, flush, isBusy, discard };
 }

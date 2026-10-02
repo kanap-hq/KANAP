@@ -16,10 +16,17 @@
   "WEEKLY_REVIEW_ROLE_INELIGIBLE": "La revisión semanal no está disponible para su rol actual.",
   "WEEKLY_REVIEW_NOT_ENABLED": "Active las notificaciones por correo electrónico y la revisión semanal para ver la vista previa.",
   "WEEKLY_REVIEW_SEND_FAILED": "Error al enviar el correo de revisión semanal.",
+  "operation_running": "Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.",
   "APP_CRASH_TITLE": "Se ha producido un error.",
   "APP_CRASH_BODY": "No se ha podido mostrar la página. Recargarla suele solucionarlo.",
   "APP_CRASH_RELOAD": "Recargar",
   "APP_CRASH_DETAILS": "Detalles técnicos",
   "APP_UPDATE_AVAILABLE": "Hay una nueva versión disponible.",
-  "list_context_not_found": "Los filtros guardados de esta lista ya no están disponibles. Vuelva a definir los filtros."
+  "list_context_not_found": "Los filtros guardados de esta lista ya no están disponibles. Vuelva a definir los filtros.",
+  "duplicate": "Este registro ya existe. Vuelva a cargar la página para ver los datos actuales.",
+  "parent_gone": "Algo de lo que depende este cambio se eliminó mientras tanto. Vuelva a cargar la página para ver los datos actuales.",
+  "in_use": "Este cambio eliminaría algo que todavía se usa en otro lugar, por lo que no se ha guardado.",
+  "retry": "Otro cambio en los mismos datos se guardó en el mismo momento, por lo que este no se ha aplicado. Vuelva a intentarlo.",
+  "busy": "Estos datos están ocupados por otra operación. Vuelva a intentarlo en unos segundos.",
+  "notSavedYet": "Su último cambio aún no se ha guardado porque el servidor está ocupado. Se queda en esta página y se enviará de nuevo con su próximo cambio."
 }
