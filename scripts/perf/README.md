@@ -76,6 +76,18 @@ list state) and `next (neighbours)` (10: `/summary/neighbors?id=CPX-n` of a line
 In `single` mode it times the CAPEX page (default sort, grid rows, `priority` sort, item number
 sort, quick search, paying company filter), totals, filter values, ids and neighbours.
 
+`--list reports` (both modes) replays the budget reports and the dashboard's budget tiles (lot 2D).
+A report open sends what the page sends: the settings-like reads (budget columns, dimensions, cost
+centre tree, cached 5 min), the filter bar's options (run or build present, the values per enabled
+dimension) and the report's own `POST …/summary/aggregate`; the item exclusion picker is its own
+scenario (every line by name). Its mix: top items 14, increases 14, consolidation 10, analytics 10,
+OPEX trend 10, CAPEX top items 10, dashboard budget tiles 16 (hygiene counts of both types, top
+increases), item exclusion picker 6. With `--legacy 1` the same opens replay the pattern before lot 2D
+(every line downloaded through `/summary`, pages of 500 full rows one after the other, cached 5 min;
+the hygiene counts as `/summary?limit=1`), on the same image: `/summary` is unchanged. In `single`
+mode each open runs with empty caches and reports its time, requests and bytes. `--cold 1` (any
+list) turns the client cache off in `load` mode: every open asks everything, the worst case.
+
 React Query caching is modelled per virtual user (30 s default stale time, 5 min for settings-like
 hooks). 403 answers (budget members may not read users or currency settings, which the pages ask
 for anyway) are reported apart and not counted as errors.

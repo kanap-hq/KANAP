@@ -7,9 +7,14 @@
 // The patterns come from the frontend code; see scripts/perf/README.md.
 // `--list capex` replays the CAPEX list instead: its list actions and the
 // list side of the navigation (ids, neighbours), no workspace.
+// `--list reports` replays the budget reports and the dashboard's budget
+// tiles (lot 2D): each report open as the page sends it, its server
+// aggregates (`POST …/summary/aggregate`); with `--legacy 1`, as the pages
+// sent it before lot 2D (every line downloaded, pages of 500 full rows).
 //
-//   node scripts/perf/bench.mjs single --config <cfg.json> --out <file.json> [--list capex]
-//   node scripts/perf/bench.mjs load   --config <cfg.json> --vus 10 --duration 240 --out <file.json> [--list capex]
+//   node scripts/perf/bench.mjs single --config <cfg.json> --out <file.json> [--list capex|reports] [--legacy 1]
+//   node scripts/perf/bench.mjs load   --config <cfg.json> --vus 10 --duration 240 --out <file.json> [--list capex|reports] [--legacy 1] [--cold 1]
+// `--cold 1` turns the client cache off: every open asks everything.
 //
 // cfg.json: { "baseUrl": "...", "admin": {"email","password"}, "members": [{"email","password"}, ...],
 //             "pg": { "host", "port", "user", "password", "database", "appName" }, "container": "kanap-perf-api" }
@@ -19,7 +24,7 @@ import { execFile } from 'node:child_process';
 import { spawn } from 'node:child_process';
 import { createClient, percentile } from './lib/http.mjs';
 
-const args = { mode: process.argv[2], config: '', out: '', vus: 1, duration: 240, ramp: 30, thinkMin: 2, thinkMax: 5, seed: 7, year: new Date().getFullYear(), timeout: 60, abortErrorRate: 0.2, repeat: 10, list: 'opex' };
+const args = { mode: process.argv[2], config: '', out: '', vus: 1, duration: 240, ramp: 30, thinkMin: 2, thinkMax: 5, seed: 7, year: new Date().getFullYear(), timeout: 60, abortErrorRate: 0.2, repeat: 10, list: 'opex', legacy: 0, cold: 0 };
 for (let i = 3; i < process.argv.length; i += 1) {
   const key = process.argv[i].replace(/^--/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
   if (!(key in args)) throw new Error(`Unknown argument: ${process.argv[i]}`);
@@ -39,6 +44,8 @@ const LISTS = {
   opex: { base: '/spend-items', ref: 'OPX', textField: 'product_name', altSort: 'item_number:ASC' },
   // The CAPEX page loads no user list; its second sort is an enum in business order (decision Q4).
   capex: { base: '/capex-items', ref: 'CPX', textField: 'description', altSort: 'priority:ASC' },
+  // The reports read both lists (OPEX mostly); the list actions are not replayed.
+  reports: { base: '/spend-items', ref: 'OPX', textField: 'product_name', altSort: 'item_number:ASC' },
 };
 if (!(args.list in LISTS)) throw new Error(`--list: opex or capex, not ${args.list}`);
 const LIST = LISTS[args.list];
@@ -272,12 +279,152 @@ class VirtualUser {
   }
 }
 
+// ── Reports (lot 2D): what each report page asks at open ───────────────────
+// The request bodies mirror frontend/src/pages/reports/reportAggregates.ts (default columns: Budget
+// and Landing, Y-1 to Y+1, the default topCount 10, no filter picked). Aggregates are cached per key
+// like React Query (30 s), the settings-like reads for 5 minutes; the former full download for 5 minutes.
+const BASES = { opex: '/spend-items', capex: '/capex-items' };
+const NAME_FIELD = { opex: 'product_name', capex: 'description' };
+const WINDOW_Y2 = [Y - 2, Y - 1, Y, Y + 1, Y + 2];
+const yearsQuery = (years) => (years ? { years: years.join(',') } : {});
+const AGG = {
+  presence: (years) => ({ query: yearsQuery(years), spec: { groupBy: ['run_build'], measures: [] } }),
+  axisValues: (axisId, years) => ({ query: yearsQuery(years), spec: { groupBy: [`analytics_id_${axisId}`, `analytics_${axisId}`], measures: [], order: [{ by: 'key', index: 1, dir: 'ASC' }] } }),
+  top: (scope) => ({ query: { filters: {} }, spec: { groupBy: ['id', NAME_FIELD[scope]], measures: [{ id: 'value', fn: 'sum', field: `y${Y}Budget` }], order: [{ by: 'measure', id: 'value', dir: 'DESC' }], limit: 10 } }),
+  deltaYears: () => ({ query: {}, spec: { groupBy: [`has_version_y${Y - 2}`, `has_version_y${Y + 2}`], measures: [] } }),
+  delta: (scope) => ({
+    query: { filters: {} },
+    spec: {
+      groupBy: ['id', NAME_FIELD[scope]],
+      measures: [
+        { id: 'prev', fn: 'sum', field: `y${Y - 1}Budget` },
+        { id: 'curr', fn: 'sum', field: `y${Y}Budget` },
+        { id: 'delta', fn: 'sum', field: `y${Y}Budget`, minus: `y${Y - 1}Budget` },
+        { id: 'up', fn: 'sum', field: `y${Y}Budget`, minus: `y${Y - 1}Budget`, part: 'positive' },
+        { id: 'down', fn: 'sum', field: `y${Y}Budget`, minus: `y${Y - 1}Budget`, part: 'negative' },
+      ],
+      having: [{ measure: 'delta', op: 'gt', value: 0 }],
+      order: [{ by: 'measure', id: 'delta', dir: 'DESC' }],
+      limit: 10,
+    },
+  }),
+  consolidation: () => ({ query: { filters: {} }, spec: { groupBy: ['account_consolidation_key', 'account_consolidation_label'], measures: [{ id: `y${Y}`, fn: 'sum', field: `y${Y}Budget` }], order: [{ by: 'measure', id: `y${Y}`, dir: 'DESC' }] } }),
+  analytics: (axisId) => ({ query: { filters: {} }, spec: { groupBy: [`analytics_id_${axisId}`, `analytics_${axisId}`], measures: [{ id: `y${Y}`, fn: 'sum', field: `y${Y}Budget` }], order: [{ by: 'measure', id: `y${Y}`, dir: 'DESC' }] } }),
+  trend: () => ({
+    query: { filters: {}, years: WINDOW_Y2.join(',') },
+    spec: { groupBy: [], measures: ['budget', 'landing'].flatMap((m) => [Y - 1, Y, Y + 1].map((year) => ({ id: `${m}_${year}`, fn: 'sum', field: `y${year}${m === 'budget' ? 'Budget' : 'Landing'}` }))) },
+  }),
+  topIncreases: (scope) => ({ query: {}, spec: { groupBy: ['id', NAME_FIELD[scope]], measures: [{ id: 'delta', fn: 'sum', field: 'yBudget', minus: 'yMinus1Budget' }], having: [{ measure: 'delta', op: 'gt', value: 0 }], order: [{ by: 'measure', id: 'delta', dir: 'DESC' }], limit: 5 } }),
+  count: (filters) => ({ query: { filters }, spec: { groupBy: [], measures: [] } }),
+  itemOptions: (scope) => ({ query: {}, spec: { groupBy: ['id', NAME_FIELD[scope]], measures: [], order: [{ by: 'key', index: 1, dir: 'ASC', nulls: 'FIRST' }] } }),
+};
+const HYGIENE_FILTERS = [
+  { owner_it_id: { filterType: 'text', type: 'blank' } },
+  { owner_business_id: { filterType: 'text', type: 'blank' } },
+  { paying_company_id: { filterType: 'text', type: 'blank' } },
+  { account_warning: { filterType: 'text', type: 'notBlank' } },
+];
+/** The report opens of the load mix: [scenario, report, scope]. */
+const REPORT_OPENS = [
+  ['report: top items', 'top', 'opex', 14],
+  ['report: increases', 'delta', 'opex', 14],
+  ['report: consolidation', 'consolidation', 'opex', 10],
+  ['report: analytics', 'analytics', 'opex', 10],
+  ['report: OPEX trend', 'trend', 'opex', 10],
+  ['report: CAPEX top items', 'top', 'capex', 10],
+  ['dashboard budget tiles', 'dashboard', 'opex', 16],
+  ['report: item exclusion picker', 'itemOptions', 'opex', 6],
+];
+
+function enabledAxisIds(res) {
+  const list = Array.isArray(res?.data) ? res.data : res?.data?.items ?? [];
+  return list.filter((a) => a.status !== 'disabled' && (!a.disabled_at || new Date(a.disabled_at).getTime() > Date.now())).map((a) => a.id);
+}
+
+Object.assign(VirtualUser.prototype, {
+  aggregate(name, scope, body) {
+    return this.req(`POST ${BASES[scope]}/summary/aggregate [${name}]`, 'POST', `${BASES[scope]}/summary/aggregate`, { json: body });
+  },
+  cachedAggregate(name, scope, body) {
+    return cached(this, `agg:${scope}:${JSON.stringify(body)}`, 30_000, () => this.aggregate(name, scope, body));
+  },
+  async settings() {
+    const [, axes] = await Promise.all([
+      cached(this, 'budget-columns', 300_000, () => this.get('GET /budget-columns', '/budget-columns')),
+      cached(this, 'analytics-axes', 300_000, () => this.get('GET /analytics-axes', '/analytics-axes')),
+      cached(this, 'cost-centers-tree', 300_000, () => this.get('GET /cost-centers/tree', '/cost-centers/tree')),
+    ]);
+    return enabledAxisIds(axes);
+  },
+  /** A report open as the page sends it since lot 2D: settings, the filter bar's options, the report's aggregates. */
+  async reportOpen(report, scope) {
+    if (report === 'dashboard') return this.dashboardTiles();
+    if (report === 'itemOptions') {
+      await this.cachedAggregate('item exclusion options', scope, AGG.itemOptions(scope));
+      return;
+    }
+    const years = report === 'trend' ? WINDOW_Y2 : undefined;
+    let axes = [];
+    const own = {
+      top: () => this.cachedAggregate('top items', scope, AGG.top(scope)),
+      delta: () => Promise.all([this.cachedAggregate('variance years', scope, AGG.deltaYears()), this.cachedAggregate('increases', scope, AGG.delta(scope))]),
+      consolidation: () => this.cachedAggregate('consolidation', scope, AGG.consolidation()),
+      trend: () => this.cachedAggregate('trend', scope, AGG.trend()),
+      analytics: async () => {},
+    }[report];
+    // Wave 1: settings (cached), the run or build presence, the report's own aggregates.
+    await Promise.all([
+      this.settings().then((ids) => { axes = ids; }),
+      this.cachedAggregate('filter bar: run or build', scope, AGG.presence(years)),
+      own(),
+    ]);
+    // Wave 2, once the dimensions are known: the values per dimension (and the Analytics report itself).
+    await Promise.all([
+      ...axes.map((axisId) => this.cachedAggregate('filter bar: dimension values', scope, AGG.axisValues(axisId, years))),
+      ...(report === 'analytics' && axes.length ? [this.cachedAggregate('analytics', scope, AGG.analytics(axes[0]))] : []),
+    ]);
+  },
+  async dashboardTiles() {
+    // The two budget tiles moved to aggregates: the four hygiene counts per type and the top increases.
+    await Promise.all([
+      ...['opex', 'capex'].flatMap((scope) => HYGIENE_FILTERS.map((filters) => this.cachedAggregate('hygiene count', scope, AGG.count(filters)))),
+      this.cachedAggregate('top increases', 'opex', AGG.topIncreases('opex')),
+    ]);
+  },
+  /** The same report open before lot 2D: every line downloaded (pages of 500 full rows, one after the other), then the report's other reads. */
+  async legacyReportOpen(report, scope) {
+    const download = (years) => cached(this, `all:${scope}:${years ?? ''}`, 300_000, async () => {
+      let last;
+      for (let page = 1; page <= 50; page += 1) {
+        last = await this.get(`GET ${BASES[scope]}/summary (all lines, page of 500)`, `${BASES[scope]}/summary${qs({ page, limit: 500, sort: 'created_at:DESC', years: years?.join(',') })}`);
+        if (last.status !== 200 || !last.data?.items?.length || page * 500 >= (last.data?.total ?? 0)) break;
+      }
+      return last;
+    });
+    if (report === 'dashboard') {
+      await Promise.all([
+        ...['opex', 'capex'].flatMap((s) => HYGIENE_FILTERS.map((filters) => cached(this, `hygiene:${s}:${JSON.stringify(filters)}`, 120_000, () => this.get(`GET ${BASES[s]}/summary?limit=1 (hygiene count)`, `${BASES[s]}/summary${qs({ limit: 1, filters: JSON.stringify(filters) })}`)))),
+        download(undefined),
+      ]);
+      return;
+    }
+    if (report === 'itemOptions') return; // the options came with the download
+    await Promise.all([
+      this.settings(),
+      download(report === 'trend' ? WINDOW_Y2 : undefined),
+      ...(report === 'consolidation' ? [cached(this, 'accounts', 30_000, () => this.get('GET /accounts?limit=1000', `/accounts${qs({ limit: 1000 })}`))] : []),
+    ]);
+  },
+});
+
 // ── Workspace patterns (SpendItemPage.tsx and children) ────────────────────
 // React Query semantics: a query is sent when its key is not cached or is stale
 // (staleTime 30 s by default, 5 min for the settings-like hooks) at observer mount.
 // On "next" the page instance stays mounted, so only queries whose key changes are sent.
 // The properties drawer is open by default: its selects load their full lists.
 async function cached(vu, key, ttlMs, fn) {
+  // `--cold 1`: no client cache, every open asks everything (the worst case).
+  if (args.cold) return fn();
   const hit = vu.cache.get(key);
   if (hit && Date.now() - hit.at < ttlMs) return hit.res;
   const res = await fn();
@@ -385,7 +532,9 @@ const MIX_CAPEX = [
   ['open an item (ordered ids)', 'listIds', 16],
   ['next (neighbours)', 'listNeighbors', 10],
 ];
-const RUN_MIX = args.list === 'capex' ? MIX_CAPEX : MIX;
+// Reports: each report open once in the mix weights (the former pattern with `--legacy 1`).
+const MIX_REPORTS = REPORT_OPENS.map(([name, report, scope, weight]) => [name, args.legacy ? 'legacyReportOpen' : 'reportOpen', weight, [report, scope]]);
+const RUN_MIX = args.list === 'capex' ? MIX_CAPEX : args.list === 'reports' ? MIX_REPORTS : MIX;
 const MIX_TOTAL = RUN_MIX.reduce((a, m) => a + m[2], 0);
 function pickScenario(rand) {
   let r = rand() * MIX_TOTAL;
@@ -515,6 +664,26 @@ async function single() {
       results[`${label}: ${name}`] = { ...stats(ms.map((v) => Math.round(v))), bytes, status };
       log(`${label}: ${name} → p50 ${Math.round(percentile([...ms].sort((a, b) => a - b), 50))} ms, ${bytes} B, ${status}`);
     };
+    if (args.list === 'reports') {
+      // Each report open, caches empty (a first open), timed as one scenario with its requests and bytes.
+      for (const [name, report, scope] of REPORT_OPENS) {
+        const opens = [];
+        for (let i = 0; i < args.repeat + 2; i += 1) {
+          vu.cache.clear();
+          const from = records.length;
+          const start = process.hrtime.bigint();
+          await (args.legacy ? vu.legacyReportOpen(report, scope) : vu.reportOpen(report, scope));
+          const ms = Number(process.hrtime.bigint() - start) / 1e6;
+          const recs = records.slice(from);
+          if (i >= 2) opens.push({ ms, requests: recs.length, bytes: recs.reduce((sum, r) => sum + (r.bytes ?? 0), 0), failed: recs.filter((r) => r.status === 0 || r.status >= 400).length });
+        }
+        const key = `${label}: ${name}${args.legacy ? ' (before lot 2D)' : ''}`;
+        results[key] = { ...stats(opens.map((o) => Math.round(o.ms))), requests: opens[0].requests, bytes: opens[0].bytes, failed: opens.reduce((sum, o) => sum + o.failed, 0) };
+        log(`${key} → p50 ${results[key].p50} ms, ${results[key].requests} requests, ${results[key].bytes} B, ${results[key].failed} failed`);
+      }
+      vu.client.close();
+      continue;
+    }
     if (args.list === 'capex') {
       const page = (params) => `/capex-items/summary${qs({ page: 1, limit: 50, shape: GRID_SHAPE, status: 'enabled', ...params })}`;
       await sample('capex summary default sort (yBudget:DESC)', page({ sort: DEFAULT_SORT }));
@@ -574,12 +743,13 @@ async function load() {
     runners.push((async () => {
       await sleep((args.ramp * 1000 * i) / Math.max(1, args.vus));
       try { await vu.login(); } catch (e) { log(`VU ${i}: ${e.message}`); return; }
-      await vu.run('list open', () => vu.listOpen());
+      // The reports run starts on the reports hub: no list is opened first.
+      if (args.list !== 'reports') await vu.run('list open', () => vu.listOpen());
       while (Date.now() < stopAt && !aborted) {
         await sleep((args.thinkMin + vu.rand() * (args.thinkMax - args.thinkMin)) * 1000);
         if (Date.now() >= stopAt || aborted) break;
-        const [label, method] = pickScenario(vu.rand);
-        await vu.run(label, () => vu[method]());
+        const [label, method, , params = []] = pickScenario(vu.rand);
+        await vu.run(label, () => vu[method](...params));
       }
     })());
   }
