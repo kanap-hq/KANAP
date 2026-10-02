@@ -24,6 +24,7 @@ import { UpdatePlatformAiConfigDto } from './dto/update-platform-ai-config.dto';
 import { UpdateFreeMessageLimitDto } from './dto/update-free-message-limit.dto';
 import { AiBuiltinUsageService } from './ai-builtin-usage.service';
 import { BUILTIN_REASONING_EFFORT, PlatformAiConfigService } from './platform-ai-config.service';
+import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../../common/request-db-timeouts';
 
 @UseGuards(MultiTenantOnlyGuard, JwtAuthGuard, PlatformAdminGuard)
 @Controller('admin/ai')
@@ -56,6 +57,7 @@ export class PlatformAiAdminController {
     return { config };
   }
 
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post('config/test')
   async testConfig(@Body() body: TestPlatformAiConfigDto): Promise<AiProviderTestResult> {
     const existing = await this.platformAiConfig.getRuntimeConfig().catch(() => null);

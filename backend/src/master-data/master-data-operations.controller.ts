@@ -3,12 +3,14 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel } from '../auth/require-level.decorator';
 import { MasterDataOperationsService } from './master-data-operations.service';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('master-data-operations')
 export class MasterDataOperationsController {
   constructor(private readonly svc: MasterDataOperationsService) {}
 
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('copy')
   @UseGuards(PermissionGuard)
   @RequireAnyLevel([

@@ -16,12 +16,18 @@
  * Type-checking is done once by `npm run typecheck:ci` before this script, so
  * CI sets TS_NODE_TRANSPILE_ONLY=1 to skip the per-process type-check.
  *
+ * The race specs (`*-race.integration.spec.ts`) refuse a developer's `appdb`
+ * (race-harness.ts): against `appdb` outside GitHub Actions they are left out
+ * of the run, with one line saying how to run them on a dedicated database.
+ *
  * Usage: node scripts/run-ci-tests.js [--jobs N]
  */
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env'), quiet: true });
 
 // Database scripts that are part of the hardening checks.
 const EXTRA = ['scripts/tenant-isolation-audit.ts', 'scripts/rls-self-test.ts'];
@@ -34,21 +40,16 @@ const EXCLUDE = new Set([
   'src/applications/__tests__/application-classification-concurrency.integration.spec.ts',
   'src/applications/__tests__/application-classification-http-permissions.integration.spec.ts',
   'src/it-ops-settings/__tests__/it-ops-settings.integration.spec.ts',
-  // Known races, plan planning/perf-scale step 3 (and 1D): each spec fails
-  // until its lot lands; each fix PR removes its spec from this list. Run them
-  // with `npm run test:races` on a dedicated database (they refuse appdb
-  // outside GitHub Actions).
+  // Known races, plan planning/perf-scale step 3: each spec fails until its
+  // lot lands; each fix PR removes its spec from this list (a file mixing lots
+  // is split). Run them with `npm run test:races` on a dedicated database
+  // (they refuse appdb outside GitHub Actions).
   'src/capex/__tests__/capex-item-update-race.integration.spec.ts', // 3B
-  'src/common/__tests__/request-lock-timeout-race.integration.spec.ts', // 1D
-  'src/spend/__tests__/allocation-rules-race.integration.spec.ts', // 3A
   'src/spend/__tests__/budget-operations-deadlock-race.integration.spec.ts', // 3F
-  'src/spend/__tests__/item-applications-race.integration.spec.ts', // 3A
-  'src/spend/__tests__/spend-allocations-race.integration.spec.ts', // 3E (+ 3A index)
-  'src/spend/__tests__/spend-item-contacts-race.integration.spec.ts', // 3A
   'src/spend/__tests__/spend-item-delete-race.integration.spec.ts', // 3B
   'src/spend/__tests__/spend-item-update-race.integration.spec.ts', // 3B
   'src/spend/__tests__/spend-items-csv-race.integration.spec.ts', // 3F + 3B
-  'src/spend/__tests__/spend-versions-race.integration.spec.ts', // 3A (version create) + 3B (version update)
+  'src/spend/__tests__/spend-version-update-race.integration.spec.ts', // 3B
 ]);
 
 // Specs that exercise the on-premise code paths.
@@ -60,10 +61,28 @@ const ENV = {
 // A spec that matches one of these opens a real database connection. A spec
 // that opens it only through a shared helper (`runSpecs`, `runRaceSpecs`)
 // carries an explicit `// @database-spec` marker, rather than relying on a
-// word its comments happen to contain.
-const DB_PATTERN = /NestFactory\.create|createTestingModule|TypeOrmModule|\.initialize\(\)|data-source|@database-spec\b/;
+// word its comments happen to contain; the race specs also match through
+// their shared harness.
+const DB_PATTERN = /NestFactory\.create|createTestingModule|TypeOrmModule|\.initialize\(\)|data-source|@database-spec\b|race-harness/;
 
 const root = path.resolve(__dirname, '..');
+
+const RACE_SPEC = /-race\.integration\.spec\.ts$/;
+
+/** The database name of DATABASE_URL, or null (same reading as race-harness.ts). */
+function databaseName(url = process.env.DATABASE_URL) {
+  if (!url) return null;
+  try {
+    return decodeURIComponent(new URL(url).pathname.replace(/^\//, '')) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** The race specs refuse a developer's appdb; GitHub Actions' appdb is a throwaway service container. */
+function racesRefused() {
+  return databaseName() === 'appdb' && process.env.GITHUB_ACTIONS !== 'true';
+}
 
 function discover() {
   const found = [];
@@ -113,7 +132,15 @@ async function main() {
   const cpus = typeof os.availableParallelism === 'function' ? os.availableParallelism() : os.cpus().length;
   const jobs = Math.max(2, jobsArg >= 0 ? Number(process.argv[jobsArg + 1]) : cpus);
 
-  const specs = discover();
+  let specs = discover();
+  if (racesRefused()) {
+    const races = specs.filter((f) => RACE_SPEC.test(f));
+    specs = specs.filter((f) => !RACE_SPEC.test(f));
+    console.log(
+      `${races.length} race specs left out: they never run against appdb. Run them on a dedicated database: `
+        + 'DATABASE_URL=postgres://app:app@localhost:5432/appdb_races npm run test:races',
+    );
+  }
   const db = specs.filter((f) => DB_PATTERN.test(fs.readFileSync(path.join(root, f), 'utf8')));
   const unit = specs.filter((f) => !db.includes(f));
   console.log(`${specs.length} specs: ${unit.length} in parallel (${jobs - 1} lanes), ${db.length} database specs in series`);
@@ -131,7 +158,11 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+module.exports = { databaseName, racesRefused, RACE_SPEC };

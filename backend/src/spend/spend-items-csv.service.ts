@@ -52,6 +52,7 @@ import {
   resolveCsvCostCenter,
   resolveItemWrite,
 } from './item-write.util';
+import { ensureBudgetVersion } from './budget-version-ensure';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
@@ -632,18 +633,23 @@ export class SpendItemsCsvService {
         if (!hasAny) continue;
         let version = await mg.getRepository(SpendVersion).findOne({ where: { spend_item_id: target.id, budget_year: yr as any } as any });
         if (!version) {
-          const versionPartial = {
-            spend_item_id: target.id,
-            budget_year: yr as any,
-            version_name: `Auto ${yr}`,
-            input_grain: 'annual' as any,
-            is_approved: false,
-            as_of_date: `${yr}-01-01`,
-            tenant_id: target.tenant_id,
-          };
-          version = mg.getRepository(SpendVersion).create(versionPartial);
-          version = await mg.getRepository(SpendVersion).save(version);
-          await this.audit.log({ table: 'spend_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
+          // Get-or-create: the budget tab may create the year at the same moment.
+          const ensured = await ensureBudgetVersion(mg, 'opex', {
+            tenantId: target.tenant_id,
+            itemId: target.id,
+            year: yr,
+            versionName: `Auto ${yr}`,
+            inputGrain: 'annual',
+            asOfDate: `${yr}-01-01`,
+            allocationMethod: 'default',
+          });
+          if (!ensured) {
+            throw new BadRequestException(`Another year of "${target.product_name}" already has a version named "Auto ${yr}": rename it, then import again.`);
+          }
+          version = ensured.version;
+          if (ensured.created) {
+            await this.audit.log({ table: 'spend_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
+          }
         }
         await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze, userId ?? null);
       }

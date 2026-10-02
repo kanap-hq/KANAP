@@ -14,6 +14,7 @@ import {
   computeCompanyShares,
   normalizeWeights,
 } from './allocation-distribution';
+import { lockAllocationVersion } from './budget-allocation-operations';
 
 type AllocationInput = {
   company_id: string;
@@ -40,6 +41,9 @@ export class SpendAllocationsService {
     if (!Array.isArray(items)) throw new BadRequestException('Invalid payload');
 
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
+    // The version is locked before its allocations are read or replaced: two saves of one
+    // version take turns, so it ends with one split, never both (see lockAllocationVersion).
+    if (!(await lockAllocationVersion(manager, 'opex', tenantId, versionId))) throw new BadRequestException('Invalid version');
     const version = await versions.findOne({ where: { id: versionId, tenant_id: tenantId } });
     if (!version) throw new BadRequestException('Invalid version');
     const method = (version.allocation_method as any) ?? 'default';
@@ -106,8 +110,12 @@ export class SpendAllocationsService {
       if (found !== companyIds.length) {
         throw new BadRequestException('One or more companies were not found.');
       }
+      // One row per company (unique key on version, company, department): a company picked
+      // on two lines gets their percentages added, the split it had before.
+      const byCompany = new Map<string, number>();
+      for (const row of rows) byCompany.set(row.company_id, (byCompany.get(row.company_id) ?? 0) + row.allocation_pct);
       after = await repo.save(
-        rows.map((row) =>
+        Array.from(byCompany, ([company_id, allocation_pct]) => ({ company_id, allocation_pct })).map((row) =>
           repo.create({
             version_id: versionId,
             company_id: row.company_id,

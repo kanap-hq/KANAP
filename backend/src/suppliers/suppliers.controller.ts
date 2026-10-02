@@ -11,6 +11,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { SupplierUpsertDto } from './dto/supplier.dto';
 import { SupplierContactsService } from './supplier-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('suppliers')
@@ -57,6 +58,7 @@ export class SuppliersController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

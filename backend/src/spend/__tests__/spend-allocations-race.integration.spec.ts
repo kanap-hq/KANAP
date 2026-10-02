@@ -1,10 +1,14 @@
+import { AllocationCalculatorService } from '../allocation-calculator.service';
+import { copyAllocations } from '../budget-allocation-operations';
 import { SpendAllocationsService } from '../spend-allocations.service';
 import { seedCompany } from './cost-center.fixtures';
 import { captureAudit, seedItem, seedVersion } from './round-inputs.fixtures';
 import { assert, assertClean, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known race (plan planning/perf-scale, step 0.3, Annexe A #11), failing until
-// lot 3E lands (with the unique index of 3A).
+// Race (plan planning/perf-scale, step 0.3, Annexe A #11), fixed by lot 3A:
+// the save locks the version first (`lockAllocationVersion`), and migration
+// 1853730000000 adds the unique key (version, company, department). Runs in CI;
+// lot 3E (one PUT of method, driver and rows) must keep it passing.
 //
 // Today `SpendAllocationsService.bulkUpsert` deletes the version's rows and
 // inserts the new set, without locking the version and without a unique
@@ -72,6 +76,68 @@ async function twoManualSaves() {
   });
 }
 
+/**
+ * The yearly allocation copy writes a version a user saves by hand at the same
+ * moment: the copy locks the destination version too, so the two take turns
+ * and the version keeps one split.
+ */
+async function copyVersusManualSave() {
+  await withRace('allocations-copy', async (race) => {
+    const seeded = await race.seedWith(async (runner) => {
+      const c1 = (await seedCompany(runner, race.tenantId, 'Company 1', 6001)).companyId;
+      const c2 = (await seedCompany(runner, race.tenantId, 'Company 2', 6002)).companyId;
+      const c3 = (await seedCompany(runner, race.tenantId, 'Company 3', 6003)).companyId;
+      const itemId = await seedItem(runner, 'opex', race.tenantId, 1);
+      const source = await seedVersion(runner, 'opex', race.tenantId, itemId, 2026);
+      const destination = await seedVersion(runner, 'opex', race.tenantId, itemId, 2027);
+      for (const [versionId, companyId] of [[source, c1], [destination, c2]]) {
+        await runner.query(`UPDATE spend_versions SET allocation_method = 'manual_pct' WHERE id = $1`, [versionId]);
+        await runner.query(
+          `INSERT INTO spend_allocations (tenant_id, version_id, company_id, department_id, allocation_pct) VALUES ($1, $2, $3, NULL, 100)`,
+          [race.tenantId, versionId, companyId],
+        );
+      }
+      return { c1, c2, c3, destination };
+    });
+    const { c1, c3, destination } = seeded;
+    const copier = await race.open('allocation copy 2026 → 2027');
+    const user = await race.open('manual save of 2027');
+
+    const copyDeleted = race.gate(copier, { label: 'replace the destination rows', when: 'after', match: sql.deleteFrom('spend_allocations') });
+    const copyWork = race.start(copier, (manager) => copyAllocations(
+      {
+        manager,
+        audit: captureAudit() as any,
+        calculator: new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any),
+      },
+      'opex',
+      { sourceYear: 2026, destinationYear: 2027, overwrite: true, dryRun: false },
+      null,
+    ));
+    assert.equal(await progress(copyWork, { party: copier, gate: copyDeleted }), 'gated', 'harness: the copy must pause after deleting the destination rows');
+
+    const userWork = race.start(user, (manager) => allocationsService().bulkUpsert(
+      destination, [{ company_id: c3, department_id: null, allocation_pct: 100 }], undefined, { manager },
+    ));
+    await progress(userWork, { party: user });
+    copyDeleted.release();
+    const [copyDone, userDone] = await Promise.all([settle(copyWork), settle(userWork)]);
+    assertClean(copyDone, 'the copy', [409]);
+    assertClean(userDone, 'the manual save', [409]);
+
+    const rows: Array<{ company_id: string; allocation_pct: string }> = await race.read(
+      `SELECT company_id, allocation_pct FROM spend_allocations WHERE version_id = $1`,
+      [destination],
+    );
+    const total = rows.reduce((sum, r) => sum + Number(r.allocation_pct), 0);
+    assert.ok(
+      Math.abs(total - 100) < 0.01 && [`${c1}:100`, `${c3}:100`].includes(rowsKey(rows)),
+      `the 2027 version must end with the copied split or the saved one (100 %); it has ${rows.length} rows totalling ${total} %`,
+    );
+  });
+}
+
 void runRaceSpecs('Allocation save races', [
   ['Annexe A #11: two manual allocation saves of one version leave one split of 100 % (3E, 3A index)', twoManualSaves],
+  ['Annexe A #11: an allocation copy and a manual save of the destination leave one split of 100 % (3A)', copyVersusManualSave],
 ]);

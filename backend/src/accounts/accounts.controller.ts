@@ -10,6 +10,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { AccountUpsertDto } from './dto/account.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('accounts')
@@ -64,6 +65,7 @@ export class AccountsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

@@ -8,6 +8,7 @@ import { formatAllocationMethodLabel } from './allocation-utils';
 import { currentTenantId, loadItemsValidIn, loadVersions } from './budget-column-operations';
 import { SpendAllocation } from './spend-allocation.entity';
 import { SpendVersion } from './spend-version.entity';
+import { ensureBudgetVersion } from './budget-version-ensure';
 
 /**
  * Copy allocations from one year to another, for OPEX and CAPEX alike.
@@ -233,23 +234,48 @@ export async function copyAllocations(
     }
 
     if (!destinationVersion) {
-      destinationVersion = await versionRepo.save(versionRepo.create({
-        [t.itemFk]: item.id,
-        budget_year: destinationYear,
-        version_name: `Y${destinationYear}`,
-        input_grain: sourceVersion.input_grain ?? 'annual',
-        is_approved: false,
-        as_of_date: `${destinationYear}-01-01`,
-        allocation_method: sourceMethod,
-        tenant_id: item.tenant_id,
+      // Get-or-create: a budget tab may create the year at the same moment.
+      const ensured = await ensureBudgetVersion(mg, scope, {
+        tenantId: item.tenant_id,
+        itemId: item.id,
+        year: destinationYear,
+        versionName: `Y${destinationYear}`,
+        inputGrain: sourceVersion.input_grain ?? 'annual',
+        asOfDate: `${destinationYear}-01-01`,
+        allocationMethod: sourceMethod,
         notes: sourceVersion.notes ?? null,
-      } as unknown as DeepPartial<AllocationVersion>));
-      await deps.audit.log(
-        { table: t.versions, recordId: destinationVersion.id, action: 'create', before: null, after: destinationVersion, userId },
-        { manager: mg },
-      );
-    } else if (destinationMethod !== sourceMethod) {
-      const beforeMethod = destinationVersion.allocation_method;
+      });
+      if (!ensured) {
+        throw new BadRequestException(`Another year of "${item.name}" already has a version named "Y${destinationYear}": rename it, then copy again.`);
+      }
+      destinationVersion = ensured.version;
+      if (ensured.created) {
+        await deps.audit.log(
+          { table: t.versions, recordId: destinationVersion.id, action: 'create', before: null, after: destinationVersion, userId },
+          { manager: mg },
+        );
+      }
+    }
+
+    // Every writer of a version's allocations (this copy, a manual save) locks
+    // the version first: they take turns, and what is read below is what the
+    // rows are replaced against. Without it two writers each delete what they
+    // saw and insert their own rows, and the version keeps both sets.
+    const locked = await lockAllocationVersion(mg, scope, tenantId, destinationVersion.id);
+    if (!locked) {
+      // The line was deleted meanwhile.
+      skipped++;
+      continue;
+    }
+    const lockedManual = await countManualAllocations(mg, scope, tenantId, destinationVersion.id);
+    if (!overwrite && lockedManual > 0) {
+      // A manual split was saved meanwhile: kept, as for a destination that had one from the start.
+      skipped++;
+      continue;
+    }
+    // Compared like `methodOf`: a method read as NULL is the default one (no change, no write, no audit row).
+    if ((locked.allocation_method ?? 'default') !== sourceMethod) {
+      const beforeMethod = locked.allocation_method;
       await versionRepo.update({ id: destinationVersion.id, tenant_id: tenantId } as any, { allocation_method: sourceMethod } as any);
       await deps.audit.log({
         table: t.versions,
@@ -259,10 +285,13 @@ export async function copyAllocations(
         after: { allocation_method: sourceMethod, operation: 'allocation_copy', sourceYear, destinationYear },
         userId,
       }, { manager: mg });
-      destinationVersion.allocation_method = sourceMethod as AllocationVersion['allocation_method'];
     }
+    destinationVersion.allocation_method = sourceMethod as AllocationVersion['allocation_method'];
 
-    if (destinationManual.length > 0) {
+    // A manual split replaces every row of the version, system rows included:
+    // a row left by an older automatic method for the same company and
+    // department would hit the unique key (version, company, department).
+    if (lockedManual > 0 || isManual) {
       await allocationRepo.delete({ tenant_id: tenantId, version_id: destinationVersion.id } as any);
     }
     if (isManual) {
@@ -285,7 +314,7 @@ export async function copyAllocations(
       table: t.allocations,
       recordId: destinationVersion.id,
       action: 'update',
-      before: { count: destinationManual.length },
+      before: { count: lockedManual },
       after: { count: isManual ? sourceManual.length : 0, operation: 'allocation_copy', sourceYear, destinationYear, overwrite },
       userId,
     }, { manager: mg });
@@ -301,4 +330,33 @@ export async function copyAllocations(
     summary: { totalItems: items.length, processed, skipped, errors },
     results: dryRun ? results : [],
   };
+}
+
+/**
+ * Locks the version row (FOR NO KEY UPDATE: the allocation and amount inserts
+ * that only check the version's key do not wait for it) and reads its method
+ * under the lock. Null when the version is gone. Shared by every writer of a
+ * version's allocations: `copyAllocations`, and the manual saves of
+ * `SpendAllocationsService` / `CapexAllocationsService`.
+ */
+export async function lockAllocationVersion(
+  manager: EntityManager,
+  scope: AmountScope,
+  tenantId: string,
+  versionId: string,
+): Promise<{ allocation_method: string | null } | null> {
+  const rows: Array<{ allocation_method: string | null }> = await manager.query(
+    `SELECT allocation_method FROM ${SCOPES[scope].versions} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+    [tenantId, versionId],
+  );
+  return rows[0] ?? null;
+}
+
+async function countManualAllocations(manager: EntityManager, scope: AmountScope, tenantId: string, versionId: string): Promise<number> {
+  const [row] = await manager.query(
+    `SELECT count(*)::int AS n FROM ${SCOPES[scope].allocations}
+     WHERE tenant_id = $1 AND version_id = $2 AND NOT COALESCE(is_system_generated, false)`,
+    [tenantId, versionId],
+  );
+  return Number(row?.n ?? 0);
 }

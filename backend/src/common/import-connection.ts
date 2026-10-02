@@ -1,6 +1,14 @@
 import * as fs from 'fs';
 import { BadRequestException } from '@nestjs/common';
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
+import { DatabaseConnectionError } from './filters/database-error.mapping';
+import {
+  connectRequestRunner,
+  RequestDbTimeouts,
+  requestDbTimeoutDefaults,
+  requestDbTimeoutsOf,
+  startTenantTransaction,
+} from './request-db-timeouts';
 
 export type ReleaseConnectionResult<T> = {
   result: T;
@@ -29,8 +37,16 @@ export function readUploadedFileBuffer(file: Express.Multer.File | null | undefi
   return buffer;
 }
 
+/**
+ * Commits the runner's transaction and releases it. A runner whose connection
+ * ended while it held its transaction (TypeORM released it, the transaction
+ * still marked active) has nothing committed: that is a
+ * DatabaseConnectionError (503 busy), never a silent success.
+ */
 export async function commitAndReleaseRunner(runner: QueryRunner | null | undefined): Promise<void> {
-  if (!runner || runner.isReleased) {
+  if (!runner) return;
+  if (runner.isReleased) {
+    if (runner.isTransactionActive) throw new DatabaseConnectionError('connection lost');
     return;
   }
 
@@ -39,6 +55,8 @@ export async function commitAndReleaseRunner(runner: QueryRunner | null | undefi
       await runner.commitTransaction();
     }
   } catch (commitError) {
+    // The connection ended under the COMMIT: the transaction is gone with it.
+    if (runner.isReleased) throw new DatabaseConnectionError('connection lost', { cause: commitError });
     try {
       if (runner.isTransactionActive) {
         await runner.rollbackTransaction();
@@ -57,12 +75,13 @@ export async function commitAndReleaseRunner(runner: QueryRunner | null | undefi
 export async function createTenantQueryRunner(
   dataSource: DataSource,
   tenantId: string,
+  timeouts: RequestDbTimeouts = requestDbTimeoutDefaults(),
 ): Promise<QueryRunner> {
   const runner = dataSource.createQueryRunner();
   try {
-    await runner.connect();
-    await runner.startTransaction();
-    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    await connectRequestRunner(runner);
+    // The request goes on in this transaction: same tenant and bounded waits as the one it replaces.
+    await startTenantTransaction(runner, tenantId, timeouts);
     return runner;
   } catch (error) {
     try {
@@ -81,6 +100,37 @@ export async function createTenantQueryRunner(
     }
     throw error;
   }
+}
+
+/** Commits the request's writes, gives its connection back, then runs `fn` outside any transaction. */
+export type CommitThenRunFn = (fn: () => Promise<void>) => Promise<void>;
+
+/**
+ * For a request that ends with outside work and no further query (the user
+ * invitation's e-mail): its transaction is committed and its connection given
+ * back before `fn` runs, and no new transaction is opened afterwards, so the
+ * outside work never holds a transaction or a pooled connection, and a busy
+ * pool cannot fail a request whose work is already done. The request must not
+ * query after `fn`.
+ */
+export function createRequestCommitThenRun(req: any): CommitThenRunFn {
+  return async (fn) => {
+    const runner: QueryRunner | undefined = req?.queryRunner;
+    if (runner) {
+      try {
+        await commitAndReleaseRunner(runner);
+      } catch (error) {
+        if (runner.isReleased) {
+          if (req.queryRunner === runner) req.queryRunner = null;
+          req._tenantRunnerReleased = true;
+        }
+        throw error;
+      }
+    }
+    req.queryRunner = null;
+    req._tenantRunnerReleased = true;
+    await fn();
+  };
 }
 
 export function createRequestReleaseConnection(
@@ -113,7 +163,8 @@ export function createRequestReleaseConnection(
     req._tenantRunnerReleased = true;
 
     const result = await fn();
-    const nextRunner = await createTenantQueryRunner(dataSource, normalizedTenantId);
+    // The route's waits (an import keeps its raised ones), not the defaults.
+    const nextRunner = await createTenantQueryRunner(dataSource, normalizedTenantId, requestDbTimeoutsOf(req));
     req.queryRunner = nextRunner;
     req._tenantRunnerOwner = true;
     req._tenantRunnerReleased = false;

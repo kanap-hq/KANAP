@@ -11,8 +11,8 @@ import {
 import { TenantInitGuard } from '../tenant-init.guard';
 import { TenantInterceptor } from '../tenant.interceptor';
 
-// Known gap (plan planning/perf-scale, step 0.3, Annexe A #18), failing until
-// lot 1D lands.
+// Gap (plan planning/perf-scale, step 0.3, Annexe A #18), fixed by lot 1D:
+// `common/request-db-timeouts.ts`. Runs in CI.
 //
 // The request transaction (opened by TenantInitGuard, or by TenantInterceptor
 // when no guard did) runs with PostgreSQL's defaults: no lock_timeout, no

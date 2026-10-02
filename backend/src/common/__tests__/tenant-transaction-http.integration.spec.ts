@@ -71,8 +71,10 @@ class TransactionProbeController {
     return { ok: true };
   }
 
-  // The handler succeeds but COMMIT fails: a deferred unique constraint on a
-  // temporary table is only checked at commit. Nothing outlives the transaction.
+  // The handler succeeds but COMMIT fails: a deferred constraint trigger on a
+  // temporary table raises at commit. Nothing outlives the transaction. (A
+  // deferred unique key would fail at commit too, but answers 409 duplicate:
+  // see request-transaction-bounds-http.integration.spec.ts.)
   @Post('write-then-commit-fails')
   async writeThenCommitFails(@Req() req: any) {
     const query = (sql: string, params?: any[]) => req.queryRunner.manager.query(sql, params);
@@ -80,8 +82,13 @@ class TransactionProbeController {
       `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES (app_current_tenant(), ${DEFAULT_AXIS}, $1)`,
       [`${PROBE_PREFIX}-commit-fails`],
     );
-    await query(`CREATE TEMP TABLE tx_probe_commit_guard (k int UNIQUE DEFERRABLE INITIALLY DEFERRED) ON COMMIT DROP`);
-    await query(`INSERT INTO tx_probe_commit_guard (k) VALUES (1), (1)`);
+    await query(`CREATE TEMP TABLE tx_probe_commit_guard (k int) ON COMMIT DROP`);
+    await query(`CREATE OR REPLACE FUNCTION pg_temp.tx_probe_refuse() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'refused at commit'; END $$`);
+    await query(
+      `CREATE CONSTRAINT TRIGGER tx_probe_refuse AFTER INSERT ON tx_probe_commit_guard
+       DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION pg_temp.tx_probe_refuse()`,
+    );
+    await query(`INSERT INTO tx_probe_commit_guard (k) VALUES (1)`);
     return { ok: true };
   }
 }

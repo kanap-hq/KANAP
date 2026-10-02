@@ -10,6 +10,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireAnyLevelMeta, RequireLevel } from '../auth/require-level.decorator';
 import { CompanyUpsertDto } from './dto/company.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 const referenceLookupRequirements: RequireAnyLevelMeta = [
   { resource: 'companies', level: 'reader' },
@@ -110,6 +111,7 @@ export class CompaniesController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

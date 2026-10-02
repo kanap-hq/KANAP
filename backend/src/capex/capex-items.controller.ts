@@ -21,6 +21,7 @@ import {
   UpdateCapexItemInput,
   ListCapexQueryInput,
 } from './dto';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('capex-items')
@@ -363,6 +364,7 @@ export class CapexItemsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('capex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(
@@ -376,6 +378,7 @@ export class CapexItemsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('capex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('budget-operations/copy-column')
   copyBudgetColumn(
     @Body() body: {
@@ -394,6 +397,7 @@ export class CapexItemsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('capex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('budget-operations/copy-allocations')
   copyAllocations(
     @Body() body: {
@@ -409,6 +413,7 @@ export class CapexItemsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('capex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('budget-operations/clear-column')
   clearBudgetColumn(
     @Body() body: {
@@ -422,6 +427,7 @@ export class CapexItemsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('capex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Delete('bulk')
   bulkDelete(
     @Body() body: { ids: string[] },

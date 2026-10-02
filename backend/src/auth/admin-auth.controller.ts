@@ -7,6 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { EntraAuthService } from './entra-auth.service';
 import { EntraDirectorySyncService } from './entra-directory-sync.service';
 import { Features } from '../config/features';
+import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('admin/auth')
@@ -55,6 +56,7 @@ export class AdminAuthController {
   }
 
   /** Run the directory sync for this tenant now (same code path as the nightly task). */
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post('directory-sync')
   @RequireLevel('users', 'admin')
   async runDirectorySync(@Req() req: any) {

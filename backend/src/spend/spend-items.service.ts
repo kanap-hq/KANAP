@@ -35,6 +35,8 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import type { BudgetColumn } from './amounts-write.util';
 import { resolveItemWrite } from './item-write.util';
 import { itemAnalyticsAuditFields, itemAnalyticsFields, loadItemAnalyticsValues, writeItemAnalyticsValues } from './item-analytics.util';
+import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
+import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
 
 @Injectable()
 export class SpendItemsService {
@@ -313,7 +315,8 @@ export class SpendItemsService {
 
     // Sync contacts from supplier if supplier changed
     if (oldSupplierId !== newSupplierId) {
-      await this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId: saved.tenant_id });
+      await syncSupplierContactsWithinUpdate(mg, `OPEX line ${saved.id}`, () =>
+        this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId: saved.tenant_id }));
     }
 
     // Notify owners on status change
@@ -580,13 +583,11 @@ export class SpendItemsService {
       const projects = await mg.getRepository(PortfolioProject).find({ where: { tenant_id: tenantId, id: In(cleanIds) } as any });
       if (projects.length !== cleanIds.length) throw new BadRequestException('One or more projects not found');
     }
-    const repo = mg.getRepository(PortfolioProjectOpex);
-    const existing = await repo.find({ where: { tenant_id: tenantId, opex_id: itemId } as any });
-    if (existing.length) await repo.delete({ tenant_id: tenantId, id: In(existing.map((x) => x.id)) } as any);
-    if (cleanIds.length) {
-      const rows = cleanIds.map((projId) => repo.create({ tenant_id: tenantId, project_id: projId, opex_id: itemId }));
-      await repo.save(rows);
-    }
+    // Two saves of the line's projects take turns (the last one wins); a link the project
+    // side stored meanwhile is kept, never a unique violation. See project-budget-links.util.ts.
+    if (!(await lockBudgetLine(mg, 'opex', tenantId, itemId))) throw new NotFoundException('Spend item not found');
+    await mg.getRepository(PortfolioProjectOpex).delete({ tenant_id: tenantId, opex_id: itemId } as any);
+    await insertProjectBudgetLinks(mg, 'opex', tenantId, cleanIds.map((projectId) => ({ projectId, itemId })));
     return this.listProjects(itemId, { manager: mg });
   }
 }

@@ -29,6 +29,8 @@ import { OpsMetricsStore } from './admin/ops/ops-metrics.store';
 import { createRequestMetricsMiddleware } from './admin/ops/request-metrics.middleware';
 import { ScheduledTasksService } from './admin/scheduled-tasks/scheduled-tasks.service';
 import { assertSafeDatabaseRole } from './common/database-role-safety';
+import { createRequestTenancyMiddleware } from './common/tenancy/request-tenancy.middleware';
+import { createRequestFinalizer } from './common/request-finalizer.middleware';
 
 function validateStartupEnv() {
   requireEnv('DATABASE_URL');
@@ -386,123 +388,25 @@ async function bootstrap() {
     }
   }
 
-  // Tenancy resolution middleware: attach { slug, id? } based on Host header
+  // Tenancy resolution middleware: attach { slug, id? } based on Host header (or the single-tenant
+  // slug); a failed lookup answers 503 busy. See common/tenancy/request-tenancy.middleware.ts.
   // NOTE: TenancyMiddleware is available in common/tenancy for use with NestJS module-level
-  // middleware configuration. This inline middleware is kept for backward compatibility.
-  // New code should prefer using TenancyManager and @Tenant() decorator in controllers.
-  const platformAdminHost = (process.env.PLATFORM_ADMIN_HOST || '').toLowerCase();
-  const marketingRedirectUrl = (process.env.MARKETING_BASE_URL || 'https://www.kanap.net').replace(/\/$/, '');
-
-  const tenancy = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // Single-tenant mode: skip all Host parsing, resolve tenant by slug
-      if (Features.SINGLE_TENANT) {
-        const stSlug = (process.env.DEFAULT_TENANT_SLUG || 'default').trim();
-        const rows = await ds.query('SELECT id, slug, name FROM tenants WHERE slug = $1 AND deleted_at IS NULL LIMIT 1', [stSlug]);
-        if (rows?.[0]) {
-          (req as any).tenant = { id: rows[0].id, slug: rows[0].slug, name: rows[0].name };
-        } else {
-          res.status(503).json({ error: 'TENANT_NOT_READY', message: 'Single-tenant provisioning in progress. Retry shortly.' });
-          return;
-        }
-        return next();
-      }
-
-      const rawHost = req.headers.host || '';
-      const host = rawHost.split(':')[0]?.toLowerCase() ?? '';
-
-      if (platformAdminHost && host === platformAdminHost) {
-        const rows = await ds.query('SELECT id, slug, name FROM tenants WHERE slug = $1 AND deleted_at IS NULL LIMIT 1', ['platform-admin']);
-        if (rows && rows[0]) {
-          (req as any).isPlatformHost = true;
-          (req as any).tenant = { id: rows[0].id, slug: rows[0].slug, name: rows[0].name };
-          return next();
-        }
-        res.status(503).json({ error: 'PLATFORM_ADMIN_TENANT_MISSING' });
-        return;
-      }
-
-      // Determine slug from host; apex hosts are marketing/public (no tenant)
-      const slug = (() => {
-        const h = host;
-        if (!h) return null;
-        // Dev: *.lvh.me
-        if (h.endsWith('.lvh.me')) {
-          const sub = h.replace('.lvh.me', '');
-          if (sub === 'www' || sub === 'lvh') return null;
-          return sub;
-        }
-        // Dev (local via tunnel): *.dev.kanap.net (apex dev.kanap.net)
-        if (h.endsWith('.dev.kanap.net')) {
-          const sub = h.replace('.dev.kanap.net', '');
-          if (!sub || sub === 'www') return null;
-          return sub;
-        }
-        if (h === 'dev.kanap.net') return null;
-        // QA: *.qa.kanap.net (apex qa.kanap.net)
-        if (h.endsWith('.qa.kanap.net')) {
-          const sub = h.replace('.qa.kanap.net', '');
-          if (!sub || sub === 'www') return null;
-          return sub;
-        }
-        if (h === 'qa.kanap.net') return null;
-        // Prod: *.kanap.net (apex kanap.net/www)
-        if (h.endsWith('.kanap.net')) {
-          const sub = h.replace('.kanap.net', '');
-          if (!sub || sub === 'www') return null;
-          return sub;
-        }
-        if (h === 'kanap.net' || h === 'www.kanap.net') return null;
-        return null;
-      })();
-
-      if (!slug) {
-        (req as any).tenant = null;
-        return next();
-      }
-
-      const dataSource = app.get(DataSource);
-      const rows = await dataSource.query('SELECT id, slug, name FROM tenants WHERE slug = $1 AND deleted_at IS NULL LIMIT 1', [slug]);
-      if (rows && rows[0]) {
-        (req as any).tenant = { slug, id: rows[0].id, name: rows[0].name };
-        return next();
-      }
-
-      res.status(404).json({ error: 'TENANT_NOT_FOUND', marketingUrl: marketingRedirectUrl });
-      return;
-    } catch (_e) {
-      next();
-    }
-  };
-  app.use(tenancy);
+  // middleware configuration. New code should prefer using TenancyManager and @Tenant() decorator in controllers.
+  app.use(createRequestTenancyMiddleware({
+    query: (sql, params) => ds.query(sql, params),
+    singleTenant: Features.SINGLE_TENANT,
+    defaultTenantSlug: (process.env.DEFAULT_TENANT_SLUG || 'default').trim(),
+    platformAdminHost: process.env.PLATFORM_ADMIN_HOST || '',
+    marketingRedirectUrl: (process.env.MARKETING_BASE_URL || 'https://www.kanap.net').replace(/\/$/, ''),
+  }));
   // Initialize tenant DB context before guards
   app.useGlobalGuards(new TenantInitGuard(ds, reflector));
   // Bind tenant to DB session (reuse or create) around controller handling
   app.useGlobalInterceptors(new TenantInterceptor(ds, reflector));
 
-  // Finalizer middleware: ensure any leftover queryRunner is released on finish/close
-  app.use((req: any, res: any, next: any) => {
-    const finalize = async () => {
-      const runner = req?.queryRunner;
-      if (runner && !req?._tenantRunnerReleased) {
-        try {
-          if ((runner as any).isTransactionActive) {
-            try { await runner.rollbackTransaction(); } catch (e: any) { console.error('[Finalizer] Rollback failed:', e); }
-          }
-        } finally {
-          try {
-            if (!(runner as any).isReleased) await runner.release();
-            req._tenantRunnerReleased = true;
-          } catch (e: any) {
-            console.error('[Finalizer] CRITICAL: Connection release failed:', e);
-          }
-        }
-      }
-    };
-    res.on('finish', () => { void finalize(); });
-    res.on('close', () => { void finalize(); });
-    next();
-  });
+  // Finalizer middleware: ensure any leftover queryRunner is released on finish/close; a client
+  // abort rolls back quietly (one warning line). See common/request-finalizer.middleware.ts.
+  app.use(createRequestFinalizer());
 
   // Global exception filter: release queryRunner on errors thrown before interceptors finalize
   const { httpAdapter } = app.get(HttpAdapterHost);

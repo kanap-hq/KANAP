@@ -7,12 +7,14 @@ import dataSource from '../../data-source';
 import { CapexVersionsService } from '../capex-versions.service';
 
 // One CAPEX version per line and year (migration 1853640000000), against a
-// real database: the unique index refuses a second version, and
-// createForItem answers the same 400 whether its own check (given or
-// default year) or the index (two concurrent creates) catches the duplicate.
+// real database: the unique index refuses a second version, and createForItem
+// is a get-or-create of the year (lot 3A, `spend/budget-version-ensure.ts`):
+// a second create of a year (given or default) returns the version that year
+// already has, also when it was created concurrently, without a failed
+// statement; a name used by another year is a 400.
 
 const YEAR = 2033;
-const DUPLICATE_YEAR = 'A version for this budget year already exists';
+const NAME_TAKEN = 'Version name already exists for this item';
 
 const noAudit = { log: async () => undefined };
 const currencySettings = { getSettings: async () => ({ reportingCurrency: 'EUR' }) };
@@ -21,8 +23,8 @@ function versionsService() {
   return new CapexVersionsService(undefined as any, undefined as any, noAudit as any, currencySettings as any);
 }
 
-function isDuplicateYear(err: unknown) {
-  return err instanceof BadRequestException && err.message === DUPLICATE_YEAR;
+function isNameTaken(err: unknown) {
+  return err instanceof BadRequestException && err.message === NAME_TAKEN;
 }
 
 async function seedTenantAndItem(runner: QueryRunner, tag: string) {
@@ -78,34 +80,37 @@ async function testIndexRefusesSecondVersion() {
   });
 }
 
-/** The service's own check: a second version for a year is a 400, nothing is written. */
-async function testCreateForItemRefusesDuplicateYear() {
+/** A second create of a year returns the version it has; a name of another year is a 400. */
+async function testCreateForItemReturnsTheYearsVersion() {
   await inRolledBackTransaction('check', async (runner, { itemId }) => {
     const service = versionsService();
-    await service.createForItem(itemId, { version_name: `Budget ${YEAR}`, budget_year: YEAR }, null, { manager: runner.manager });
+    const first = await service.createForItem(itemId, { version_name: `Budget ${YEAR}`, budget_year: YEAR }, null, { manager: runner.manager });
+    const again = await service.createForItem(itemId, { version_name: 'Another name', budget_year: YEAR }, null, { manager: runner.manager });
+    assert.equal(again.id, first.id, 'the version of the year is returned');
+    assert.equal(again.version_name, `Budget ${YEAR}`, 'unchanged');
     await assert.rejects(
-      service.createForItem(itemId, { version_name: 'Another name', budget_year: YEAR }, null, { manager: runner.manager }),
-      isDuplicateYear,
+      service.createForItem(itemId, { version_name: `Budget ${YEAR}`, budget_year: YEAR + 1 }, null, { manager: runner.manager }),
+      isNameTaken,
     );
     const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM capex_versions WHERE capex_item_id = $1`, [itemId]);
-    assert.equal(n, 1, 'one version for the year');
+    assert.equal(n, 1, 'one version');
+    await runner.query(`SELECT 1`); // the transaction is still usable
   });
 }
 
 /**
- * A create without a year takes the current one and the check covers it:
- * the same 400, without a failed statement (the transaction stays usable).
+ * A create without a year takes the current one and returns the version that
+ * year has, without a failed statement (the transaction stays usable).
  */
-async function testCreateForItemDefaultYearDuplicate() {
+async function testCreateForItemDefaultYear() {
   await inRolledBackTransaction('default', async (runner, { tenantId, itemId }) => {
     const currentYear = new Date().getFullYear();
     await insertVersion(runner, tenantId, itemId, `Budget ${currentYear}`, currentYear);
-    await assert.rejects(
-      versionsService().createForItem(itemId, { version_name: 'No year given' }, null, { manager: runner.manager }),
-      isDuplicateYear,
-    );
+    const version = await versionsService().createForItem(itemId, { version_name: 'No year given' }, null, { manager: runner.manager });
+    assert.equal(version.budget_year, currentYear);
+    assert.equal(version.version_name, `Budget ${currentYear}`);
     const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM capex_versions WHERE capex_item_id = $1`, [itemId]);
-    assert.equal(n, 1, 'refused by the check, not by the index: the transaction is not aborted');
+    assert.equal(n, 1, 'no second version, and the transaction is not aborted');
   });
 }
 
@@ -128,11 +133,11 @@ async function openTenantTransaction(tenantId: string) {
 }
 
 /**
- * Two creates of the same year at once: T2 passes the check (T1's version
- * is not committed yet), waits on the index, and gets the same 400 once T1
+ * Two creates of the same year at once: T2 finds no version (T1's is not
+ * committed yet), waits on the index, and returns T1's version once T1
  * commits. Only T1's version is kept.
  */
-async function testConcurrentCreateMapsUniqueViolation() {
+async function testConcurrentCreateReturnsTheWinner() {
   const seed = dataSource.createQueryRunner();
   await seed.connect();
   await seed.startTransaction();
@@ -164,8 +169,9 @@ async function testConcurrentCreateMapsUniqueViolation() {
     assert.equal(t2Done, false, 'the second create waits on the index');
 
     await t1.commitTransaction();
-    await assert.rejects(t2Create, isDuplicateYear);
-    await t2.rollbackTransaction();
+    const second = await t2Create;
+    await t2.commitTransaction();
+    assert.equal(second.version_name, 'First', 'T2 gets the version T1 committed');
 
     const names = await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
@@ -192,9 +198,9 @@ async function main() {
   try {
     for (const test of [
       testIndexRefusesSecondVersion,
-      testCreateForItemRefusesDuplicateYear,
-      testCreateForItemDefaultYearDuplicate,
-      testConcurrentCreateMapsUniqueViolation,
+      testCreateForItemReturnsTheYearsVersion,
+      testCreateForItemDefaultYear,
+      testConcurrentCreateReturnsTheWinner,
     ]) {
       try {
         await test();

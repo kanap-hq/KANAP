@@ -8,6 +8,7 @@ import {
   NetboxTestInput,
 } from './netbox-config.service';
 import { NetboxResolveInput, NetboxSyncInput, NetboxSyncService } from './netbox-sync.service';
+import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 
 // Netbox inventory administration. Everything is infrastructure:admin except
 // the status endpoint, which the home tile reads.
@@ -51,6 +52,7 @@ export class NetboxController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post('integration/test')
   testIntegration(@Body() body: NetboxTestInput, @Req() req: any) {
     return this.sync.testConnection(this.manager(req), this.tenantId(req), body ?? {});
@@ -58,6 +60,7 @@ export class NetboxController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Get('mapping-options')
   mappingOptions(@Req() req: any) {
     return this.sync.mappingOptions(this.manager(req), this.tenantId(req));
@@ -72,6 +75,7 @@ export class NetboxController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post('sync/preview')
   preview(@Body() body: NetboxSyncInput, @Req() req: any) {
     return this.sync.preview(this.manager(req), this.tenantId(req), body ?? {});

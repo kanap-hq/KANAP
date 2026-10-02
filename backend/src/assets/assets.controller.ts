@@ -13,6 +13,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('assets')
@@ -89,6 +90,7 @@ export class AssetsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importCsv(

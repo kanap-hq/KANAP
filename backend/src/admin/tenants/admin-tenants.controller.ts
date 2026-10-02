@@ -6,6 +6,7 @@ import { AdminTenantsService } from './admin-tenants.service';
 import { UpdateTenantPlanDto } from './dto/update-tenant-plan.dto';
 import { FreezeTenantDto } from './dto/freeze-tenant.dto';
 import { DeleteTenantDto } from './dto/delete-tenant.dto';
+import { LongRunningRequest, TENANT_PURGE_TIMEOUTS } from '../../common/request-db-timeouts';
 
 @UseGuards(MultiTenantOnlyGuard, JwtAuthGuard, PlatformAdminGuard)
 @Controller('admin/tenants')
@@ -42,6 +43,7 @@ export class AdminTenantsController {
     return this.svc.unfreezeTenant(id, req.user?.sub ?? null);
   }
 
+  @LongRunningRequest(TENANT_PURGE_TIMEOUTS)
   @Post(':id/delete')
   delete(@Param('id') id: string, @Body() body: DeleteTenantDto, @Req() req: any) {
     return this.svc.deleteTenant(id, req.user?.sub ?? null, body);

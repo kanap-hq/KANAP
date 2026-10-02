@@ -5,6 +5,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 import { catchError, finalize, mergeMap } from 'rxjs/operators';
 import { IS_PUBLIC_KEY } from '../auth/public.decorator';
 import { SKIP_TENANT_TRANSACTION_KEY } from './skip-tenant-transaction.decorator';
+import { DatabaseConnectionError } from './filters/database-error.mapping';
+import { connectRequestRunner, rememberRequestDbTimeouts, resolveRequestDbTimeouts, startTenantTransaction } from './request-db-timeouts';
 
 @Injectable()
 export class TenantInterceptor implements NestInterceptor {
@@ -68,9 +70,11 @@ export class TenantInterceptor implements NestInterceptor {
     let finished = false;
     return from((async () => {
       if (!existing) {
-        await runner.connect();
-        await runner.startTransaction();
-        await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+        // No free connection: 503 busy (connectRequestRunner), not a 500.
+        await connectRequestRunner(runner);
+        const timeouts = resolveRequestDbTimeouts(this.reflector, context);
+        await startTenantTransaction(runner, tenantId, timeouts);
+        rememberRequestDbTimeouts(req, timeouts);
         (req as any).queryRunner = runner;
       }
       return true;
@@ -138,19 +142,39 @@ function commitBeforeValue<T>(commit: () => Promise<void>) {
 
 type RunnerLabels = { commit: string; rollback: string; release: string };
 
-// A commit error is rethrown once the runner is rolled back and released, so the
-// request answers 500. Rollback and release errors are only logged.
+/**
+ * Commits or rolls back the runner, then releases it. A commit error is
+ * rethrown once the runner is rolled back and released, so the request
+ * answers 500 (or 409 / 503 for a database error a race can cause).
+ * Rollback and release errors are only logged.
+ *
+ * A runner whose connection ended while the request held its transaction
+ * (the server ended a transaction left idle too long, the database
+ * restarted) is released by TypeORM with its transaction still marked
+ * active, and nothing it wrote is committed. On the commit path that is a
+ * DatabaseConnectionError (503 `busy`), never a success: answering 2xx would
+ * claim changes that are gone.
+ */
 async function finishRunner(req: any, candidate: QueryRunner | undefined, outcome: 'commit' | 'rollback', labels: RunnerLabels) {
-  if (!candidate || candidate.isReleased) {
+  if (!candidate) return;
+  if (candidate.isReleased) {
+    if (candidate.isTransactionActive) {
+      if (req?.queryRunner === candidate) req._tenantRunnerReleased = true;
+      if (outcome === 'commit') throw new DatabaseConnectionError('connection lost');
+    }
     return;
   }
 
   try {
     if (candidate.isTransactionActive) {
       if (outcome === 'commit') {
+        // A client abort from now on leaves the runner to us (request-finalizer.middleware.ts).
+        if (req && req.queryRunner === candidate) req._tenantCommitStarted = true;
         try {
           await candidate.commitTransaction();
         } catch (commitError) {
+          // The connection ended under the COMMIT: the transaction is gone with it.
+          if (candidate.isReleased) throw new DatabaseConnectionError('connection lost', { cause: commitError });
           console.error(labels.commit, commitError);
           try {
             if (candidate.isTransactionActive) {
@@ -177,6 +201,8 @@ async function finishRunner(req: any, candidate: QueryRunner | undefined, outcom
       } catch (releaseError) {
         console.error(labels.release, releaseError);
       }
+    } else if (req?.queryRunner === candidate) {
+      req._tenantRunnerReleased = true;
     }
   }
 }

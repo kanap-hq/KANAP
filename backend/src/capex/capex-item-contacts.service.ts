@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { CapexItemContactLink, ContactOrigin } from './capex-item-contact.entity';
@@ -6,6 +6,7 @@ import { ExternalContact } from '../contacts/external-contact.entity';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { CapexItem } from './capex-item.entity';
 import { AuditService } from '../audit/audit.service';
+import { attachManualContactLink, LINK_REMOVED } from '../contacts/contact-link-attach.util';
 
 /** The request's tenant: every statement filters on it. */
 type ItemContactsOpts = { manager?: EntityManager; tenantId: string };
@@ -58,20 +59,16 @@ export class CapexItemContactsService {
     const contact = await contactRepo.findOne({ where: { tenant_id: opts.tenantId, id: params.contactId } });
     if (!contact) throw new NotFoundException('Contact not found');
 
-    // Check duplicate by (item, contact, role)
-    const existing = await repo.findOne({
-      where: { tenant_id: item.tenant_id, capex_item_id: itemId, contact_id: params.contactId, role: params.role },
-    });
-    if (existing) return existing;
-
-    const link = repo.create({
-      tenant_id: item.tenant_id,
-      capex_item_id: itemId,
-      contact_id: params.contactId,
+    // Idempotent: the link of (item, contact, role) committed first is returned as it is.
+    const { id, created } = await attachManualContactLink(repo.manager, 'capex_item_contacts', {
+      tenantId: item.tenant_id,
+      ownerId: itemId,
+      contactId: params.contactId,
       role: params.role,
-      origin: ContactOrigin.MANUAL,
     });
-    const saved = await repo.save(link);
+    const saved = await repo.findOne({ where: { tenant_id: item.tenant_id, id } });
+    if (!saved) throw new ConflictException(LINK_REMOVED);
+    if (!created) return saved;
     await this.audit.log(
       {
         table: 'capex_item_contacts',

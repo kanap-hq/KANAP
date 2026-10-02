@@ -31,6 +31,7 @@ import { KnowledgeService } from '../knowledge/knowledge.service';
 import { REFRESH_TOKEN_COOKIE_NAME, parseCookieValue } from '../auth/auth-cookie.util';
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { PermissionLevel } from '../permissions/permissions.service';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('portfolio/projects')
@@ -145,6 +146,7 @@ export class PortfolioProjectsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importCsv(

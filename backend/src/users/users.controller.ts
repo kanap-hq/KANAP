@@ -17,6 +17,8 @@ import { UserRole } from './user-role.entity';
 import { Role } from '../roles/role.entity';
 import { User } from './user.entity';
 import { AuditService } from '../audit/audit.service';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { createRequestCommitThenRun } from '../common/import-connection';
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
@@ -117,6 +119,7 @@ export class UsersController {
     );
   }
 
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
@@ -147,7 +150,11 @@ export class UsersController {
   async invite(@Param('id') id: string, @Req() req: any) {
     if (!Features.EMAIL_ENABLED) throwFeatureDisabled('email');
     const baseUrl = resolveAppBaseUrl(req);
-    return this.svc.inviteUser(id, req.user?.sub ?? null, baseUrl, { manager: req?.queryRunner?.manager });
+    // The invitation is committed before its e-mail waits on the mail queue (see inviteUser).
+    return this.svc.inviteUser(id, req.user?.sub ?? null, baseUrl, {
+      manager: req?.queryRunner?.manager,
+      commitThenRun: createRequestCommitThenRun(req),
+    });
   }
 
   @UseGuards(PermissionGuard)

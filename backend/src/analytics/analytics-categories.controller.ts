@@ -31,6 +31,7 @@ import {
   AnalyticsCategoryCreateDto,
   AnalyticsCategoryUpdateDto,
 } from './dto/analytics.dto';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 export function analyticsContext(ctx: TenantRequest): AnalyticsContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -90,6 +91,7 @@ export class AnalyticsCategoriesController {
   }
 
   @RequireLevel('analytics', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   import(

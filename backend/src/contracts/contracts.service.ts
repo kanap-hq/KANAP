@@ -32,6 +32,7 @@ import {
   FilterTargetConfig,
 } from '../common/ag-grid-filtering';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -410,7 +411,8 @@ export class ContractsService {
 
     // Sync contacts from supplier if supplier changed
     if (oldSupplierId !== newSupplierId) {
-      await this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId: saved.tenant_id });
+      await syncSupplierContactsWithinUpdate(mg, `contract ${saved.id}`, () =>
+        this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId: saved.tenant_id }));
     }
 
     // Notify owner on status change

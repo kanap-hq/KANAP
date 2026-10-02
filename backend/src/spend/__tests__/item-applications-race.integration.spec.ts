@@ -2,8 +2,9 @@ import { replaceItemApplications } from '../item-applications';
 import { captureAudit, Kind, seedItem } from './round-inputs.fixtures';
 import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known race (plan planning/perf-scale, step 0.3, Annexe A #15), failing
-// until lot 3A lands.
+// Race (plan planning/perf-scale, step 0.3, Annexe A #15), fixed before lot
+// 3A by migration 1853690000000 (unique key on both link tables) and the line
+// lock of `replaceItemApplications`. Runs in CI.
 //
 // `replaceItemApplications` deletes the line's links and inserts the new set
 // (`item-applications.ts:74-77`). Two saves of the relations panel: B's DELETE

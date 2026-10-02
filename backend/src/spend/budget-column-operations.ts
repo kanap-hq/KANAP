@@ -1,11 +1,9 @@
 import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
-import { DeepPartial, EntityManager } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { formatCents } from '../common/amount';
 import { Decimal, DECIMAL_SCALE_DIGITS, divRoundHalfAway } from '../common/decimal';
-import { SpendVersion } from './spend-version.entity';
-import { CapexVersion } from '../capex/capex-version.entity';
 import {
   AmountMeasure,
   AmountScope,
@@ -13,6 +11,7 @@ import {
   BUDGET_COLUMN_MEASURE,
   BudgetColumn,
   MEASURE_FREEZE_COLUMN,
+  lockYearMonths,
   readVersionMonths,
   replaceAmounts,
   yearPeriods,
@@ -29,6 +28,7 @@ import {
 } from './round-inputs.util';
 import { CostLine } from './costing.util';
 import { activeMonths } from './spread.util';
+import { ensureBudgetVersion } from './budget-version-ensure';
 
 /**
  * Budget column operations (copy a column to another year or column, clear a
@@ -205,7 +205,11 @@ export function validityInYear(year: number, item: Pick<ItemRow, 'effective_star
   return months.length > 0 ? { start, end, months } : null;
 }
 
-/** Every item of the tenant, ended or not. Dates are read as text so no time zone shifts them. */
+/**
+ * Every item of the tenant, ended or not. Dates are read as text so no time
+ * zone shifts them. The id breaks ties: the lines of one import share their
+ * created_at, and the order must not change from one run to the next.
+ */
 async function loadItems(manager: EntityManager, scope: AmountScope, tenantId: string): Promise<ItemRow[]> {
   const t = SCOPES[scope];
   return manager.query(
@@ -214,7 +218,7 @@ async function loadItems(manager: EntityManager, scope: AmountScope, tenantId: s
             to_char(disabled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS end_of_validity
      FROM ${t.items}
      WHERE tenant_id = $1
-     ORDER BY created_at DESC`,
+     ORDER BY created_at DESC, id DESC`,
     [tenantId],
   );
 }
@@ -267,34 +271,42 @@ export async function loadVersions(
   return byItemYear;
 }
 
-/** Create the version of an item's year, with the item's tenant_id, and audit it. */
+/**
+ * The version of an item's year, created (and audited) when it has none, with
+ * the item's tenant_id. Get-or-create: a version a concurrent request created
+ * meanwhile is used as it is (see `budget-version-ensure.ts`); `created` says
+ * which, so a caller that decided on a snapshot without that version can
+ * check it again (a budget tab may have typed months into it).
+ */
 export async function createBudgetVersion(
   deps: Pick<BudgetOperationDeps, 'manager' | 'audit'>,
   scope: AmountScope,
   params: { itemId: string; tenantId: string; year: number; name: string; inputGrain: 'annual' | 'quarterly' | 'monthly' },
   userId: string | null,
-): Promise<BudgetVersionRow> {
-  const common = {
-    budget_year: params.year,
-    version_name: params.name,
-    input_grain: params.inputGrain,
-    is_approved: false,
-    as_of_date: `${params.year}-01-01`,
-    allocation_method: 'default' as const,
-    tenant_id: params.tenantId,
-  };
-  const saved = scope === 'opex'
-    ? await deps.manager.getRepository(SpendVersion).save(
-      deps.manager.getRepository(SpendVersion).create({ ...common, spend_item_id: params.itemId } as DeepPartial<SpendVersion>),
-    )
-    : await deps.manager.getRepository(CapexVersion).save(
-      deps.manager.getRepository(CapexVersion).create({ ...common, capex_item_id: params.itemId } as DeepPartial<CapexVersion>),
+): Promise<{ version: BudgetVersionRow; created: boolean }> {
+  const ensured = await ensureBudgetVersion(deps.manager, scope, {
+    tenantId: params.tenantId,
+    itemId: params.itemId,
+    year: params.year,
+    versionName: params.name,
+    inputGrain: params.inputGrain,
+    asOfDate: `${params.year}-01-01`,
+    allocationMethod: 'default',
+  });
+  if (!ensured) {
+    throw new BadRequestException(`Another year of a line already has a version named "${params.name}": rename it, then try again.`);
+  }
+  const { version, created } = ensured;
+  if (created) {
+    await deps.audit.log(
+      { table: SCOPES[scope].versions, recordId: version.id, action: 'create', before: null, after: version, userId },
+      { manager: deps.manager },
     );
-  await deps.audit.log(
-    { table: SCOPES[scope].versions, recordId: saved.id, action: 'create', before: null, after: saved, userId },
-    { manager: deps.manager },
-  );
-  return { id: saved.id, tenant_id: params.tenantId, budget_year: params.year, item_id: params.itemId, input_grain: params.inputGrain };
+  }
+  return {
+    version: { id: version.id, tenant_id: params.tenantId, budget_year: params.year, item_id: params.itemId, input_grain: version.input_grain },
+    created,
+  };
 }
 
 export type CopyColumnOperation = {
@@ -397,12 +409,26 @@ export async function copyBudgetColumn(
     }
 
     if (!destinationVersion) {
-      destinationVersion = await createBudgetVersion(
+      const ensured = await createBudgetVersion(
         deps,
         scope,
         { itemId: item.id, tenantId: item.tenant_id, year: destinationYear, name: `Y${destinationYear}`, inputGrain: sourceVersion.input_grain ?? 'annual' },
         userId,
       );
+      destinationVersion = ensured.version;
+      if (!ensured.created && !overwrite) {
+        // The year had no version in the snapshot, and one exists now: a budget
+        // tab created it meanwhile and may have typed months into it. Decide
+        // again on its months, read under the lock every amounts write takes
+        // (a save in flight is waited for): a column with amounts is kept, as
+        // for a destination that had them from the start.
+        await lockYearMonths({ manager: mg, scope, version: destinationVersion }, destinationYear);
+        const locked = (await readVersionMonths(mg, scope, tenantId, [destinationVersion])).get(destinationVersion.id)!;
+        if (locked.months[destinationMeasure].some((v) => v !== 0n)) {
+          skipped++;
+          continue;
+        }
+      }
     }
 
     // Replace the destination measure only; the other measures keep their months.

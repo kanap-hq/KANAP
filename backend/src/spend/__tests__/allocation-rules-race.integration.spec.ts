@@ -2,8 +2,8 @@ import { AllocationRulesService } from '../allocation-rules.service';
 import { captureAudit } from './round-inputs.fixtures';
 import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known race (plan planning/perf-scale, step 0.3, Annexe A #19), failing
-// until lot 3A lands.
+// Race (plan planning/perf-scale, step 0.3, Annexe A #19), fixed by lot 3A:
+// `setTenantMethod` now upserts. Runs in CI.
 //
 // `AllocationRulesService.setTenantMethod` reads the tenant's rule of the
 // year, then inserts it when missing (`allocation-rules.service.ts:183-194`;

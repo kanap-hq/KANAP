@@ -302,12 +302,12 @@ export class BudgetRowsCsvService {
     const checkedFreeze = new Set<string>();
     for (const group of groups.values()) {
       const { scope, item, year } = group[0];
-      const version = group[0].version ?? await createBudgetVersion(
+      const version = group[0].version ?? (await createBudgetVersion(
         { manager, audit: this.audit },
         scope,
         { itemId: item.id, tenantId: item.tenant_id, year, name: `Auto ${year}`, inputGrain: 'monthly' },
         userId,
-      );
+      )).version;
       const changed = group.filter((r) => r.monthsChanged);
       if (changed.length > 0) {
         const rows: AmountRowInput[] = yearPeriods(year).map((period, i) => {

@@ -9,6 +9,7 @@ import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { ContactUpsertDto } from './dto/contact.dto';
 import { ContactsDeleteService } from './contacts-delete.service';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contacts')
@@ -66,6 +67,7 @@ export class ContactsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(@UploadedFile() file: Express.Multer.File, @Query('dryRun') dryRunRaw: string, @Req() req: any) {
