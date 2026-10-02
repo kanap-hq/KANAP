@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => {
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
-vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 const readable: Record<string, boolean> = { opex: true, capex: true };
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string) => readable[resource] ?? true }),
@@ -51,6 +51,7 @@ vi.mock('../../components/reports/ReportGrid', () => ({
 }));
 
 import api from '../../api';
+import { fakeAggregate, fakeFilterValues } from '../../test/fakeBudgetAggregate';
 import { setBudgetColumns } from './budgetColumnsTestState';
 import TopOpexReport from './TopOpexReport';
 import OpexDeltaReport from './OpexDeltaReport';
@@ -58,6 +59,9 @@ import ConsolidationReport from './ConsolidationReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+const OPEX_AGGREGATE = '/spend-items/summary/aggregate';
+const CAPEX_AGGREGATE = '/capex-items/summary/aggregate';
 const Y = new Date().getFullYear();
 
 /** A year slot whose reporting block also carries the currency and rate keys the summary sends. */
@@ -89,17 +93,24 @@ function renderReport(element: React.ReactElement, path = '/report') {
   );
 }
 
-const calledUrls = () => get.mock.calls.map(([url]) => url as string);
+const calledUrls = () => [...get.mock.calls, ...post.mock.calls].map(([url]) => url as string);
 
 beforeEach(() => {
   setBudgetColumns();
   readable.opex = true;
   readable.capex = true;
   get.mockReset();
-  get.mockImplementation(async (url: string) => {
-    if (url === '/spend-items/summary') return { data: { items: opexRows, total: opexRows.length } };
-    if (url === '/capex-items/summary') return { data: { items: capexRows, total: capexRows.length } };
+  get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
+    const fields = String(config?.params?.fields ?? '').split(',');
+    if (url === '/spend-items/summary/filter-values') return { data: fakeFilterValues(opexRows, fields) };
+    if (url === '/capex-items/summary/filter-values') return { data: fakeFilterValues(capexRows, fields) };
     return { data: { items: [], total: 0 } };
+  });
+  post.mockReset();
+  post.mockImplementation(async (url: string, body: any) => {
+    if (url === OPEX_AGGREGATE) return { data: fakeAggregate(opexRows, body) };
+    if (url === CAPEX_AGGREGATE) return { data: fakeAggregate(capexRows, body) };
+    throw new Error(`unexpected POST ${url}`);
   });
 });
 
@@ -107,13 +118,13 @@ describe('Top items report', () => {
   it('opens on OPEX and switches to CAPEX: CAPEX data, names from the description, type in the titles', async () => {
     renderReport(<TopOpexReport />);
     expect(await screen.findByText('Opex line')).toBeInTheDocument();
-    expect(calledUrls()).not.toContain('/capex-items/summary');
+    expect(calledUrls()).not.toContain(CAPEX_AGGREGATE);
 
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
 
     expect(await screen.findByText('Capex growth')).toBeInTheDocument();
     expect(within(screen.getByTestId('grid')).getByText('Capex cut')).toBeInTheDocument();
-    expect(calledUrls()).toContain('/capex-items/summary');
+    expect(calledUrls()).toContain(CAPEX_AGGREGATE);
     expect(screen.getByTestId('subtitle').textContent).toContain('"type":"operations.scope.capex"');
     expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.capex"');
   });
@@ -121,7 +132,7 @@ describe('Top items report', () => {
   it('opens on CAPEX from ?scope=capex', async () => {
     renderReport(<TopOpexReport />, '/report?scope=capex');
     expect(await screen.findByText('Capex growth')).toBeInTheDocument();
-    expect(calledUrls()).not.toContain('/spend-items/summary');
+    expect(calledUrls()).not.toContain(OPEX_AGGREGATE);
     expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).toHaveAttribute('aria-selected', 'true');
   });
 });
@@ -145,7 +156,7 @@ describe('Top increase / decrease report', () => {
     renderReport(<OpexDeltaReport />, '/report?scope=capex');
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Capex growth'));
     expect(screen.getByTestId('grid').textContent).not.toContain('Capex cut');
-    expect(calledUrls()).not.toContain('/spend-items/summary');
+    expect(calledUrls()).not.toContain(OPEX_AGGREGATE);
     expect(screen.getByTestId('subtitle').textContent).toContain('"type":"operations.scope.capex"');
     expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.capex"');
 
@@ -161,20 +172,20 @@ describe.each([
 ])('%s report', (_name, Report) => {
   it('switches to CAPEX data with the type in the subtitle and chart title', async () => {
     renderReport(<Report />);
-    await waitFor(() => expect(calledUrls()).toContain('/spend-items/summary'));
+    await waitFor(() => expect(calledUrls()).toContain(OPEX_AGGREGATE));
     expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.opex"');
 
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
 
-    await waitFor(() => expect(calledUrls()).toContain('/capex-items/summary'));
+    await waitFor(() => expect(calledUrls()).toContain(CAPEX_AGGREGATE));
     await waitFor(() => expect(screen.getByTestId('chart-title').textContent).toContain('"type":"operations.scope.capex"'));
     expect(screen.getByTestId('subtitle').textContent).toContain('"type":"operations.scope.capex"');
   });
 
   it('opens on CAPEX from ?scope=capex', async () => {
     renderReport(<Report />, '/report?scope=capex');
-    await waitFor(() => expect(calledUrls()).toContain('/capex-items/summary'));
-    expect(calledUrls()).not.toContain('/spend-items/summary');
+    await waitFor(() => expect(calledUrls()).toContain(CAPEX_AGGREGATE));
+    expect(calledUrls()).not.toContain(OPEX_AGGREGATE);
   });
 });
 
@@ -183,7 +194,7 @@ describe('Report type from the address', () => {
     readable.capex = false;
     renderReport(<TopOpexReport />, '/report?scope=capex');
     expect(await screen.findByText('Opex line')).toBeInTheDocument();
-    expect(calledUrls()).not.toContain('/capex-items/summary');
+    expect(calledUrls()).not.toContain(CAPEX_AGGREGATE);
     expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'operations.scope.capex' })).toBeDisabled();
   });
@@ -191,7 +202,7 @@ describe('Report type from the address', () => {
   it('falls back to the default type for an unknown ?scope=', async () => {
     renderReport(<OpexDeltaReport />, '/report?scope=assets');
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Opex line'));
-    expect(calledUrls()).not.toContain('/capex-items/summary');
+    expect(calledUrls()).not.toContain(CAPEX_AGGREGATE);
     expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toHaveAttribute('aria-selected', 'true');
   });
 });

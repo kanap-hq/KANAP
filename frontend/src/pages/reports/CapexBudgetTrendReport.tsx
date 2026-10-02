@@ -4,7 +4,9 @@ import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
-import { useCapexSummaryAll, pickYearSlot } from './useCapexSummary';
+import ReportDataStatus from '../../components/reports/ReportDataStatus';
+import { readTrend, trendRequest, type MetricKey } from './reportAggregates';
+import { useBudgetAggregate } from './useBudgetAggregate';
 import { useTranslation } from 'react-i18next';
 import { metricFileName, useReportMetrics } from './reportMetrics';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
@@ -22,9 +24,8 @@ export default function CapexBudgetTrendReport() {
   const now = new Date();
   const Y = now.getFullYear();
   const allowedYears = [Y - 2, Y - 1, Y, Y + 1, Y + 2];
-  const { data: allRows, isLoading } = useCapexSummaryAll(allowedYears);
-  const reportFilters = useBudgetReportFilters();
-  const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
+  // The years read set the window: the lines still active on 1 January of Y-2.
+  const reportFilters = useBudgetReportFilters({ scope: 'capex', years: allowedYears });
 
   const [startYear, setStartYear] = useState<number>(Y - 1);
   const [endYear, setEndYear] = useState<number>(Y + 1);
@@ -37,23 +38,16 @@ export default function CapexBudgetTrendReport() {
     [budgetColumns],
   );
 
-  const totalsByMetricAndYear = useMemo(() => {
-    const acc: Record<string, Record<number, number>> = {};
-    for (const m of metrics) acc[m] = {} as any;
-    for (const yr of years) {
-      for (const m of metrics) {
-        let sum = 0;
-        for (const r of rows || []) {
-          const slot = pickYearSlot(r as any, yr);
-          const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
-          const v = Number(totals?.[m] ?? 0);
-          sum += v;
-        }
-        acc[m][yr] = sum;
-      }
-    }
-    return acc;
-  }, [rows, years, metrics]);
+  // One total per column and year of the range, over the lines the filter bar keeps.
+  const request = useMemo(() => (reportFilters.queryFilters == null ? null : trendRequest({
+    years,
+    metrics: metrics as MetricKey[],
+    windowYears: allowedYears,
+    filters: reportFilters.queryFilters,
+  })), [reportFilters.queryFilters, years, metrics]); // eslint-disable-line react-hooks/exhaustive-deps
+  const report = useBudgetAggregate('capex', request, { keepPrevious: true });
+  const isLoading = report.isLoading;
+  const totalsByMetricAndYear = useMemo(() => readTrend({ years, metrics: metrics as MetricKey[] }, report.data), [years, metrics, report.data]);
 
   const tableRows = useMemo(() => {
     return metrics.map((m) => {
@@ -103,7 +97,7 @@ export default function CapexBudgetTrendReport() {
       subtitle={t("reports.budgetTrendCapex.subtitle")}
       filters={(
         <>
-          <BudgetReportFilters filters={reportFilters} rows={allRows} />
+          <BudgetReportFilters filters={reportFilters} />
           <TextField select size="small" label={t("reports.filters.startYear")} value={startYear} onChange={(e) => {
             const v = parseInt(e.target.value, 10);
             setStartYear(v);
@@ -155,9 +149,7 @@ export default function CapexBudgetTrendReport() {
           />
         </Paper>
       </Stack>
-      {isLoading && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t("reports.shared.loadingData")}</Typography>
-      )}
+      <ReportDataStatus loading={isLoading} error={report.isError} onRetry={() => void report.refetch()} />
     </ReportLayout>
   );
 }

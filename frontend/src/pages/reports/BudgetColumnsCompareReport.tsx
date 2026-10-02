@@ -6,10 +6,10 @@ import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
-import { useOpexSummaryAll, pickYearSlot as pickOpexYearSlot } from './useOpexSummary';
-import { useCapexSummaryAll, pickYearSlot as pickCapexYearSlot } from './useCapexSummary';
+import ReportDataStatus from '../../components/reports/ReportDataStatus';
 import { MetricKey, metricKeys, resolveMetric } from './reportMetrics';
-import type { BudgetSummaryRow } from './useBudgetSummaryAll';
+import { columnsCompareRequest, readColumnsCompare } from './reportAggregates';
+import { useBudgetAggregate } from './useBudgetAggregate';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { useTranslation } from 'react-i18next';
@@ -56,14 +56,9 @@ export default function BudgetColumnsCompareReport() {
   );
   const [yearGrouping, setYearGrouping] = useState<boolean>(false);
 
-  // Fetch only needed years
+  // The years picked set the window: the lines still active on 1 January of the earliest one.
   const yearsNeeded = useMemo(() => Array.from(new Set(selections.map((s) => s.year))).sort((a, b) => a - b), [selections]);
-  const { data: opexRows, isLoading: opexLoading } = useOpexSummaryAll(itemType === 'opex' ? yearsNeeded : undefined, { enabled: itemType === 'opex' });
-  const { data: capexRows, isLoading: capexLoading } = useCapexSummaryAll(itemType === 'capex' ? yearsNeeded : undefined, { enabled: itemType === 'capex' });
-  const allRows: BudgetSummaryRow[] | undefined = itemType === 'opex' ? opexRows : capexRows;
-  const reportFilters = useBudgetReportFilters();
-  const rows = useMemo(() => reportFilters.filterRows(allRows) ?? [], [allRows, reportFilters.filterRows]);
-  const pickYearSlot = itemType === 'opex' ? pickOpexYearSlot : pickCapexYearSlot;
+  const reportFilters = useBudgetReportFilters({ scope: itemType, years: yearsNeeded });
 
   // Sort selections chronologically for display (chart and table)
   const sortedSelections = useMemo(() => {
@@ -73,20 +68,22 @@ export default function BudgetColumnsCompareReport() {
     });
   }, [selections]);
 
+  // One total per year and column picked, over the lines the filter bar keeps.
+  const request = useMemo(
+    () => (reportFilters.queryFilters == null ? null : columnsCompareRequest({ selections: sortedSelections, filters: reportFilters.queryFilters })),
+    [reportFilters.queryFilters, sortedSelections],
+  );
+  const report = useBudgetAggregate(itemType, request, { keepPrevious: true });
+  const selectionTotals = useMemo(() => readColumnsCompare(sortedSelections, report.data), [sortedSelections, report.data]);
+
   type TableRow = { key: string; selection: string; year: number; column: string; total: number };
   const tableRows = useMemo<TableRow[]>(() => {
     return sortedSelections.map((sel, idx) => {
-      let total = 0;
-      for (const r of rows) {
-        const slot = pickYearSlot(r as any, sel.year);
-        const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
-        const v = Number(totals?.[sel.metric] ?? 0);
-        total += v;
-      }
+      const total = selectionTotals[idx] ?? 0;
       const label = `${sel.year} ${metricLabels[sel.metric]}`;
       return { key: `${sel.year}-${sel.metric}-${idx}`, selection: label, year: sel.year, column: metricLabels[sel.metric], total };
     });
-  }, [rows, sortedSelections, pickYearSlot, metricLabels]);
+  }, [sortedSelections, selectionTotals, metricLabels]);
 
   const columns = useMemo<ColDef[]>(() => ([
     { field: 'selection', headerName: t('reports.columns.selection'), flex: 1, minWidth: 200 },
@@ -125,24 +122,13 @@ export default function BudgetColumnsCompareReport() {
   const groupedYears = useMemo(() => Array.from(new Set(sortedSelections.map((s) => s.year))).sort((a, b) => a - b), [sortedSelections]);
   const totalsByMetricYear = useMemo(() => {
     const map = new Map<string, number>(); // key: `${year}:${metric}`
-    for (const row of tableRows) {
-      // Recover metric key from column label by reverse lookup
-      // Safer approach: recompute from selections instead of tableRows
-    }
-    // Recompute from selections for reliability
-    for (const sel of sortedSelections) {
-      let total = 0;
-      for (const r of rows) {
-        const slot = pickYearSlot(r as any, sel.year);
-        const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
-        const v = Number(totals?.[sel.metric] ?? 0);
-        total += v;
-      }
+    // A year and column picked twice adds up twice, as the table lists it twice.
+    sortedSelections.forEach((sel, idx) => {
       const key = `${sel.year}:${sel.metric}`;
-      map.set(key, (map.get(key) || 0) + total);
-    }
+      map.set(key, (map.get(key) || 0) + (selectionTotals[idx] ?? 0));
+    });
     return map;
-  }, [sortedSelections, rows, pickYearSlot]);
+  }, [sortedSelections, selectionTotals]);
 
   const groupedChartData = useMemo(() => {
     return groupedYears.map((year) => {
@@ -229,7 +215,7 @@ export default function BudgetColumnsCompareReport() {
             <MenuItem value="opex">{t('operations.scope.opex')}</MenuItem>
             <MenuItem value="capex">{t('operations.scope.capex')}</MenuItem>
           </TextField>
-          <BudgetReportFilters filters={reportFilters} rows={allRows} />
+          <BudgetReportFilters filters={reportFilters} />
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 300 }}>
             {selections.map((sel, idx) => (
@@ -299,9 +285,7 @@ export default function BudgetColumnsCompareReport() {
           />
         </Paper>
       </Stack>
-      {(opexLoading || capexLoading) && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t("reports.shared.loadingData")}</Typography>
-      )}
+      <ReportDataStatus loading={report.isLoading} error={report.isError} onRetry={() => void report.refetch()} />
     </ReportLayout>
   );
 }

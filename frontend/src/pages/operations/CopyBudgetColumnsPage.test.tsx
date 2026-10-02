@@ -51,16 +51,8 @@ const summaryRow = (name: 'product_name' | 'description', label: string) => ({
   [name]: label,
   versions: { [`y${new Date().getFullYear()}`]: { totals: { budget: 12000, revision: 0, follow_up: 0, landing: 0 } } },
 });
-const opexHook = vi.fn();
-const capexHook = vi.fn();
-vi.mock('../reports/useOpexSummary', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../reports/useOpexSummary')>()),
-  useOpexSummaryAll: (years: number[], options?: { enabled?: boolean }) => opexHook(years, options),
-}));
-vi.mock('../reports/useCapexSummary', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../reports/useCapexSummary')>()),
-  useCapexSummaryAll: (years: number[], options?: { enabled?: boolean }) => capexHook(years, options),
-}));
+/** The lines the server holds, per type (the page reads them through the aggregate route). */
+const server = { opex: [] as unknown[], capex: [] as unknown[] };
 
 // The tenant's column settings, set per test.
 const columnsSetting = vi.hoisted(() => ({ current: null as unknown }));
@@ -80,10 +72,16 @@ vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
 });
 
 import api from '../../api';
+import { fakeAggregate } from '../../test/fakeBudgetAggregate';
 import CopyBudgetColumnsPage, { ItemNameCell } from './CopyBudgetColumnsPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+/** The budget operation calls (dry run, copy). */
+const operation = vi.fn();
+const aggregateUrls = () => post.mock.calls.map(([url]) => url as string).filter((url) => url.endsWith('/summary/aggregate'));
+/** The lines are in: the dry run can start. */
+const linesLoaded = () => waitFor(() => expect(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' })).toBeEnabled());
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -102,48 +100,55 @@ describe('CopyBudgetColumnsPage', () => {
     readable.clear();
     readable.add('opex');
     readable.add('capex');
+    operation.mockReset();
+    operation.mockResolvedValue({ data: { success: true, dryRun: true, summary: { totalItems: 1, processed: 1, skipped: 0, errors: 0 }, results: [] } });
+    server.opex = [summaryRow('product_name', 'Licences')];
+    server.capex = [summaryRow('description', 'Servers')];
     post.mockReset();
-    post.mockResolvedValue({ data: { success: true, dryRun: true, summary: { totalItems: 1, processed: 1, skipped: 0, errors: 0 }, results: [] } });
-    opexHook.mockReset();
-    capexHook.mockReset();
-    opexHook.mockReturnValue({ data: [summaryRow('product_name', 'Licences')], isLoading: false });
-    capexHook.mockReturnValue({ data: [summaryRow('description', 'Servers')], isLoading: false });
+    post.mockImplementation(async (url: string, body: any) => {
+      if (url === '/spend-items/summary/aggregate') return { data: fakeAggregate(server.opex as any[], body) };
+      if (url === '/capex-items/summary/aggregate') return { data: fakeAggregate(server.capex as any[], body) };
+      return operation(url, body);
+    });
   });
 
   it('copies OPEX columns by default', async () => {
     renderPage();
+    await linesLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
-    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(post.mock.calls[0][0]).toBe('/spend-items/budget-operations/copy-column');
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1));
+    expect(operation.mock.calls[0][0]).toBe('/spend-items/budget-operations/copy-column');
   });
 
   it('the CAPEX switch reads CAPEX lines and posts to the CAPEX route', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
-    await waitFor(() => expect(capexHook).toHaveBeenLastCalledWith(expect.any(Array), { enabled: true }));
-    expect(opexHook).toHaveBeenLastCalledWith(expect.any(Array), { enabled: false });
+    await waitFor(() => expect(aggregateUrls()).toContain('/capex-items/summary/aggregate'));
+    expect(await screen.findByText('Servers')).toBeInTheDocument();
+    await linesLoaded();
 
     fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
-    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(post.mock.calls[0][0]).toBe('/capex-items/budget-operations/copy-column');
-    expect(post.mock.calls[0][1]).toMatchObject({ sourceColumn: 'budget', destinationColumn: 'budget', dryRun: true });
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1));
+    expect(operation.mock.calls[0][0]).toBe('/capex-items/budget-operations/copy-column');
+    expect(operation.mock.calls[0][1]).toMatchObject({ sourceColumn: 'budget', destinationColumn: 'budget', dryRun: true });
   });
 
   it('marks skipped items from the dry run flag, not from totals', async () => {
     // Totals say the source is empty (+500 / -500); the server still copies it.
-    post.mockResolvedValueOnce({ data: {
+    operation.mockResolvedValueOnce({ data: {
       success: true, dryRun: true, summary: { totalItems: 1, processed: 1, skipped: 0, errors: 0 },
       results: [{ itemId: 'Licences-1', itemName: 'Licences', sourceValue: 0, currentDestinationValue: 0, newValue: 0, skipped: false }],
     } });
-    opexHook.mockReturnValue({ data: [{ ...summaryRow('product_name', 'Licences'), versions: {} }], isLoading: false });
+    server.opex = [{ ...summaryRow('product_name', 'Licences'), versions: {} }];
     renderPage();
+    await linesLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'operations.copyBudgetColumns.copyData' })).toBeEnabled());
     expect(screen.getByText('Licences')).toBeInTheDocument();
     expect(screen.queryByText('Licences (skipped)')).not.toBeInTheDocument();
 
     // A destination the server refuses to overwrite, although its total is zero.
-    post.mockResolvedValueOnce({ data: {
+    operation.mockResolvedValueOnce({ data: {
       success: true, dryRun: true, summary: { totalItems: 1, processed: 0, skipped: 1, errors: 0 },
       results: [{ itemId: 'Licences-1', itemName: 'Licences', sourceValue: 0, currentDestinationValue: 0, newValue: 0, skipped: true }],
     } });
@@ -154,6 +159,7 @@ describe('CopyBudgetColumnsPage', () => {
   it('drops the dry run when a copy parameter changes', async () => {
     renderPage();
     const copy = () => screen.getByRole('button', { name: 'operations.copyBudgetColumns.copyData' });
+    await linesLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
     await waitFor(() => expect(copy()).toBeEnabled());
 
@@ -179,27 +185,25 @@ describe('CopyBudgetColumnsPage', () => {
     readable.delete('opex');
     renderPage();
     expect(screen.getByRole('tab', { name: 'operations.scope.opex' })).toBeDisabled();
+    await linesLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
-    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(post.mock.calls[0][0]).toBe('/capex-items/budget-operations/copy-column');
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1));
+    expect(operation.mock.calls[0][0]).toBe('/capex-items/budget-operations/copy-column');
   });
 
   it('a row the dry run did not answer shows as skipped and keeps its destination value', async () => {
     const year = new Date().getFullYear();
-    opexHook.mockReturnValue({
-      data: [
-        summaryRow('product_name', 'Licences'),
-        // Disabled item: the server leaves it out of the dry run.
-        { id: 'Hosting-1', product_name: 'Hosting', versions: { [`y${year + 1}`]: { totals: { budget: 700, revision: 0, follow_up: 0, landing: 0 } } } },
-      ],
-      isLoading: false,
-    });
-    post.mockResolvedValueOnce({ data: {
+    server.opex = [
+      summaryRow('product_name', 'Licences'),
+      // Disabled item: the server leaves it out of the dry run.
+      { id: 'Hosting-1', product_name: 'Hosting', versions: { [`y${year + 1}`]: { totals: { budget: 700, revision: 0, follow_up: 0, landing: 0 } } } },
+    ];
+    operation.mockResolvedValueOnce({ data: {
       success: true, dryRun: true, summary: { totalItems: 1, processed: 1, skipped: 0, errors: 0 },
       results: [{ itemId: 'Licences-1', itemName: 'Licences', sourceValue: 12000, currentDestinationValue: 0, newValue: 12000, skipped: false }],
     } });
     renderPage();
-    expect(screen.getByText('Hosting')).toBeInTheDocument();
+    expect(await screen.findByText('Hosting')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
     const hosting = await screen.findByText('Hosting (skipped)');
@@ -208,12 +212,12 @@ describe('CopyBudgetColumnsPage', () => {
   });
 
   it('a row the dry run prorates carries the flag to its item cell', async () => {
-    post.mockResolvedValueOnce({ data: {
+    operation.mockResolvedValueOnce({ data: {
       success: true, dryRun: true, summary: { totalItems: 1, processed: 1, skipped: 0, errors: 0 },
       results: [{ itemId: 'Licences-1', itemName: 'Licences', sourceValue: 12000, currentDestinationValue: 0, newValue: 6000, skipped: false, prorated: true }],
     } });
     renderPage();
-    expect(screen.getByText('Licences')).not.toHaveAttribute('data-prorated');
+    expect(await screen.findByText('Licences')).not.toHaveAttribute('data-prorated');
     fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
     await waitFor(() => expect(screen.getByText('Licences')).toHaveAttribute('data-prorated', 'true'));
     expect(screen.getByText('Licences')).toHaveAttribute('data-preview', '6000');
@@ -238,10 +242,11 @@ describe('CopyBudgetColumnsPage', () => {
   it('copies from the default column of Y to the default column of Y+1', async () => {
     columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, default_column: 'committed' };
     renderPage();
+    await linesLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
-    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1));
     const Y = new Date().getFullYear();
-    expect(post.mock.calls[0][1]).toMatchObject({ sourceYear: Y, sourceColumn: 'revision', destinationYear: Y + 1, destinationColumn: 'revision' });
+    expect(operation.mock.calls[0][1]).toMatchObject({ sourceYear: Y, sourceColumn: 'revision', destinationYear: Y + 1, destinationColumn: 'revision' });
   });
 
   it('offers the shown columns, Forecast included when it is shown, and copies into it', async () => {
@@ -268,8 +273,9 @@ describe('CopyBudgetColumnsPage', () => {
     expect(await options(3)).toContain('A2');
     fireEvent.mouseDown(screen.getAllByRole('combobox')[3]);
     fireEvent.click(await screen.findByRole('option', { name: 'A2' }));
+    await linesLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
-    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
-    expect(post.mock.calls[0][1]).toMatchObject({ sourceColumn: 'budget', destinationColumn: 'forecast' });
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1));
+    expect(operation.mock.calls[0][1]).toMatchObject({ sourceColumn: 'budget', destinationColumn: 'forecast' });
   });
 });

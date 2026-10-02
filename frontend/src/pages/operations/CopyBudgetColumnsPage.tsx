@@ -18,8 +18,8 @@ import type { ColDef } from 'ag-grid-community';
 import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
 import { useTranslation } from 'react-i18next';
 import AgGridBox from '../../components/AgGridBox';
-import { useOpexSummaryAll, pickYearSlot } from '../reports/useOpexSummary';
-import { useCapexSummaryAll } from '../reports/useCapexSummary';
+import { operationLinesRequest, readOperationLines } from '../reports/reportAggregates';
+import { useBudgetAggregate } from '../reports/useBudgetAggregate';
 import { useQueryClient } from '@tanstack/react-query';
 import { forgetAllAllocations } from '../../components/finance/allocationsCache';
 import { copyBudgetColumn, BudgetColumn, BudgetOperationResult, BudgetScope } from '../../services/budgetOperations';
@@ -109,31 +109,26 @@ export default function CopyBudgetColumnsPage() {
     return Array.from(yearsSet).sort((a, b) => a - b);
   }, [sourceYear, destinationYear]);
 
-  const opexSummary = useOpexSummaryAll(requiredYears, { enabled: scope === 'opex' });
-  const capexSummary = useCapexSummaryAll(requiredYears, { enabled: scope === 'capex' });
-  const { data: rows, isLoading } = scope === 'opex' ? opexSummary : capexSummary;
+  // Every line of the window from the earlier year, with both amounts in the line's own currency, from one server aggregate.
+  const request = useMemo(() => operationLinesRequest(scope, requiredYears, [
+    { id: 'source', year: sourceYear, metric: sourceColumn },
+    { id: 'destination', year: destinationYear, metric: destinationColumn },
+  ]), [scope, requiredYears, sourceYear, sourceColumn, destinationYear, destinationColumn]);
+  const { data: lines, isLoading } = useBudgetAggregate(scope, request);
 
   const freezeKey = budgetColumns.get(destinationColumn).freezeKey;
   const destinationFrozen = freezeData?.summary?.scopes[scope][freezeKey]?.frozen ?? false;
 
   const processedData = useMemo(() => {
-    if (!rows) return [];
-
-    return rows.map((r: any) => {
-      const sourceSlot = pickYearSlot(r, sourceYear);
-      const destinationSlot = pickYearSlot(r, destinationYear);
-
-      const sourceValue = Number(sourceSlot?.totals?.[sourceColumn] || 0);
-      const destinationValue = Number(destinationSlot?.totals?.[destinationColumn] || 0);
-
-      return {
-        id: r.id,
-        product_name: r.product_name ?? r.description,
-        sourceValue,
-        destinationValue,
-      };
-    }); // Show ALL items in preview, not just ones with non-zero source values
-  }, [rows, sourceYear, sourceColumn, destinationYear, destinationColumn]);
+    if (!lines) return [];
+    // Every item shows in the preview, not just the ones with a source amount.
+    return readOperationLines(lines).map((line) => ({
+      id: line.id,
+      product_name: line.name,
+      sourceValue: line.values.source ?? 0,
+      destinationValue: line.values.destination ?? 0,
+    }));
+  }, [lines]);
 
   // A dry run belongs to the parameters it ran with: any change drops it, and
   // an answer that arrives after a change is ignored.

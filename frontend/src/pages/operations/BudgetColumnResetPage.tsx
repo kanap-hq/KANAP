@@ -15,8 +15,8 @@ import type { ColDef } from 'ag-grid-community';
 import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
 import { useTranslation } from 'react-i18next';
 import AgGridBox from '../../components/AgGridBox';
-import { useOpexSummaryAll, pickYearSlot } from '../reports/useOpexSummary';
-import { useCapexSummaryAll } from '../reports/useCapexSummary';
+import { operationLinesRequest, readOperationLines } from '../reports/reportAggregates';
+import { useBudgetAggregate } from '../reports/useBudgetAggregate';
 import { useQueryClient } from '@tanstack/react-query';
 import { forgetAllAllocations } from '../../components/finance/allocationsCache';
 import { clearBudgetColumn, BudgetColumn, BudgetScope } from '../../services/budgetOperations';
@@ -65,25 +65,22 @@ export default function BudgetColumnResetPage() {
   const { data: freezeData, isLoading: freezeLoading } = useFreezeState(year);
   const columnFrozen = column ? freezeData?.summary?.scopes[scope][budgetColumns.get(column).freezeKey]?.frozen ?? false : false;
 
-  // Fetch data for the selected year
-  const opexSummary = useOpexSummaryAll([year], { enabled: scope === 'opex' });
-  const capexSummary = useCapexSummaryAll([year], { enabled: scope === 'capex' });
-  const { data: rows, isLoading } = scope === 'opex' ? opexSummary : capexSummary;
+  // Every line of the window from the selected year, with the column's amount in the line's own
+  // currency (what the clear removes), from one server aggregate.
+  const request = useMemo(
+    () => operationLinesRequest(scope, [year], column ? [{ id: 'current', year, metric: column }] : []),
+    [scope, year, column],
+  );
+  const { data: lines, isLoading } = useBudgetAggregate(scope, request);
 
-  const processedData = useMemo(() => {
-    if (!rows) return [];
-
-    return rows.map((r: any) => {
-      const slot = pickYearSlot(r, year);
-      const currentValue = column ? Number(slot?.totals?.[column] || 0) : 0;
-
-      return {
-        id: r.id,
-        product_name: r.product_name ?? r.description,
-        currentValue,
-      };
-    });
-  }, [rows, year, column]);
+  const processedData = useMemo<ProcessedRow[]>(() => {
+    if (!lines) return [];
+    return readOperationLines(lines).map((line) => ({
+      id: line.id,
+      product_name: line.name,
+      currentValue: line.values.current ?? 0,
+    }));
+  }, [lines]);
 
   const stats = useMemo(() => {
     const totalItems = processedData.length;

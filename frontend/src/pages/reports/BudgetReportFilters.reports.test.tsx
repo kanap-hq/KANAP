@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => {
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
-vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
@@ -66,6 +66,7 @@ vi.mock('../../components/reports/ReportGrid', () => ({
 }));
 
 import api from '../../api';
+import { fakeAggregate, fakeFilterValues } from '../../test/fakeBudgetAggregate';
 import { setBudgetColumns } from './budgetColumnsTestState';
 import TopOpexReport from './TopOpexReport';
 import OpexDeltaReport from './OpexDeltaReport';
@@ -76,6 +77,7 @@ import ConsolidationReport from './ConsolidationReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 const Y = new Date().getFullYear();
 
 function node(id: string, patch: Partial<CostCenterNode>): CostCenterNode {
@@ -160,9 +162,15 @@ beforeEach(() => {
   axesState.list = [DEFAULT_AXIS, NATURE];
   chart.options = null;
   get.mockReset();
-  get.mockImplementation(async (url: string) => {
-    if (url.endsWith('/summary')) return { data: { items: ROWS, total: ROWS.length } };
+  get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
+    if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(ROWS, String(config?.params?.fields ?? '').split(',')) };
     return { data: { items: [], total: 0 } };
+  });
+  // The server's aggregates, computed from the same lines.
+  post.mockReset();
+  post.mockImplementation(async (url: string, body: any) => {
+    if (url.endsWith('/summary/aggregate')) return { data: fakeAggregate(ROWS, body) };
+    throw new Error(`unexpected POST ${url}`);
   });
 });
 
@@ -343,6 +351,9 @@ describe('Analytics report dimensions', () => {
     renderReport(<AnalyticsCategoryReport />, '/report');
     await waitFor(() => expect(groups()).toHaveLength(5));
     expect(await optionsOf('reports.filters.dimension', 'mouseDown')).toEqual(['Analytics dimension', 'Nature']);
+    // The dimension's own values load with the exclusion picker, not with the report.
+    expect(valueCalls()).toEqual([]);
+    await optionsOf('reports.filters.excludeCategories', 'keyDown');
     expect(valueCalls()).toContainEqual({ axis_id: 'ax-def', limit: 1000, sort: 'name:ASC' });
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.dimension' }));
@@ -354,7 +365,7 @@ describe('Analytics report dimensions', () => {
       ['Software', 3],
     ]));
     expect(chart.options.title.text).toContain('"dimension":"Nature"');
-    expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC' });
+    await waitFor(() => expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC' }));
   });
 
   it('opens on the dimension the address names', async () => {

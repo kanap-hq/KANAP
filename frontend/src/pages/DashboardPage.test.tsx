@@ -17,7 +17,7 @@ vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
   const state = await import('./reports/budgetColumnsTestState');
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
-vi.mock('../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 const readable: Record<string, boolean> = { opex: true, capex: true };
 vi.mock('../auth/AuthContext', () => ({
@@ -33,8 +33,10 @@ vi.mock('./workspace/tiles/DashboardTile', () => ({
 import api from '../api';
 import DashboardPage from './DashboardPage';
 import { setBudgetColumns } from './reports/budgetColumnsTestState';
+import { fakeAggregate } from '../test/fakeBudgetAggregate';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -55,6 +57,8 @@ const TENANT_NAMES = { planned: 'A0', committed: 'A1', forecast: 'A2', actual: '
 describe('DashboardPage budget snapshot', () => {
   beforeEach(() => {
     setBudgetColumns();
+    post.mockReset();
+    post.mockResolvedValue({ data: { groups: [], others: null, total: { keys: [], count: 0, values: {}, unknown: {} }, groupCount: 0, reportingCurrency: null } });
     get.mockReset();
     get.mockImplementation(async (url: string) => {
       if (url === '/spend-items/summary/totals') {
@@ -109,13 +113,6 @@ function mockBudgetEndpoints() {
     if (url.endsWith('/summary/totals')) return { data: {} };
     const scope = url === '/spend-items/summary' ? 'opex' : url === '/capex-items/summary' ? 'capex' : null;
     if (!scope) return { data: { items: [], total: 0, page: 1, limit: 5 } };
-    if (params.filters) {
-      const filters = JSON.parse(params.filters);
-      const counts: Record<string, number> = scope === 'opex'
-        ? { owner_it_id: 1, owner_business_id: 2, paying_company_id: 0, account_warning: 0 }
-        : { owner_it_id: 4, owner_business_id: 3, paying_company_id: 0, account_warning: 1 };
-      return { data: { items: [], total: counts[Object.keys(filters)[0]] ?? 0 } };
-    }
     if (params.sort === 'updated_at:DESC') {
       const items = scope === 'opex'
         ? [{ id: 'o1', item_number: 1, product_name: 'Opex edited', updated_at: '2026-09-20T10:00:00Z' }]
@@ -128,7 +125,20 @@ function mockBudgetEndpoints() {
         : [{ id: 'c1', description: 'Capex top', versions: budgetSlots(0, 9000) }];
       return { data: { items, total: items.length } };
     }
-    // Every line of the type (top increases).
+    return { data: { items: [], total: 0, page: 1, limit: 5 } };
+  });
+  // The server's aggregates: hygiene counts by check, top increases over every line of the type.
+  post.mockImplementation(async (url: string, body: any) => {
+    const scope = url === '/spend-items/summary/aggregate' ? 'opex' : url === '/capex-items/summary/aggregate' ? 'capex' : null;
+    if (!scope) throw new Error(`unexpected POST ${url}`);
+    const filters = Object.keys(body.query.filters ?? {});
+    if (filters.length) {
+      const counts: Record<string, number> = scope === 'opex'
+        ? { owner_it_id: 1, owner_business_id: 2, paying_company_id: 0, account_warning: 0 }
+        : { owner_it_id: 4, owner_business_id: 3, paying_company_id: 0, account_warning: 1 };
+      const count = counts[filters[0]] ?? 0;
+      return { data: { groups: [], others: null, total: { keys: [], count, values: {}, unknown: {} }, groupCount: count ? 1 : 0, reportingCurrency: null } };
+    }
     const items = scope === 'opex'
       ? [
         { id: 'o1', product_name: 'Opex grows', versions: budgetSlots(1000, 3000) },
@@ -136,9 +146,11 @@ function mockBudgetEndpoints() {
         { id: 'o3', product_name: 'Opex small rise', versions: budgetSlots(1000, 1300) },
       ]
       : [{ id: 'c1', description: 'Capex grows', versions: budgetSlots(0, 4000) }];
-    return { data: { items, total: items.length, page: 1, limit: 500 } };
+    return { data: fakeAggregate(items, body) };
   });
 }
+
+const aggregateCalls = (url: string) => post.mock.calls.filter(([called]) => called === url).map(([, body]) => body);
 
 const summaryCalls = (url: string) => get.mock.calls.filter(([called]) => called === url).map(([, config]) => config?.params ?? {});
 
@@ -149,6 +161,7 @@ describe('DashboardPage budget tiles', () => {
   beforeEach(() => {
     setBudgetColumns();
     get.mockReset();
+    post.mockReset();
     readable.opex = true;
     readable.capex = true;
     try { window.localStorage.clear(); } catch { /* storage unavailable */ }
@@ -166,7 +179,7 @@ describe('DashboardPage budget tiles', () => {
     expect(summaryCalls('/capex-items/summary').some((p) => p.sort === 'yBudget:DESC')).toBe(true);
   });
 
-  it('lists only increases, computed over every line of the type from the reports cache entry', async () => {
+  it('lists only increases, computed over every line of the type by one server aggregate', async () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: TOP_INCREASES });
     expect(await within(tile).findByText('Opex grows')).toBeInTheDocument();
@@ -174,8 +187,19 @@ describe('DashboardPage budget tiles', () => {
     expect(within(tile).queryByText('Opex shrinks')).not.toBeInTheDocument();
     // A rise under a thousand keeps its value instead of reading "+0k".
     expect(within(tile).getByText(`+${compact(300)}`)).toBeInTheDocument();
-    // Same request as the reports' all-lines hook (no years), so both share one cache entry.
-    expect(summaryCalls('/spend-items/summary').some((p) => p.limit === 500 && p.sort === 'created_at:DESC' && p.years === undefined)).toBe(true);
+    // One aggregate over the list's window (no years): Y minus Y-1 per line, the increases, the five largest.
+    expect(aggregateCalls('/spend-items/summary/aggregate')).toContainEqual({
+      query: {},
+      spec: {
+        groupBy: ['id', 'product_name'],
+        measures: [{ id: 'delta', fn: 'sum', field: 'yBudget', minus: 'yMinus1Budget' }],
+        having: [{ measure: 'delta', op: 'gt', value: 0 }],
+        order: [{ by: 'measure', id: 'delta', dir: 'DESC' }],
+        limit: 5,
+      },
+    });
+    // No line is downloaded for it.
+    expect(summaryCalls('/spend-items/summary').some((p) => p.limit === 500)).toBe(false);
 
     fireEvent.click(within(tile).getByRole('tab', { name: 'operations.scope.capex' }));
     expect(await within(tile).findByText('Capex grows')).toBeInTheDocument();
@@ -213,7 +237,7 @@ describe('DashboardPage budget tiles', () => {
     await waitFor(() => expect(within(top).getByText('Opex top')).toBeInTheDocument());
     expect(screen.queryByRole('region', { name: 'dashboard.capexSnapshot' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'dashboard.opexSnapshot' })).toBeInTheDocument();
-    expect(get.mock.calls.some(([url]) => (url as string).startsWith('/capex-items/'))).toBe(false);
+    expect([...get.mock.calls, ...post.mock.calls].some(([url]) => (url as string).startsWith('/capex-items/'))).toBe(false);
   });
 
   it('hides the OPEX snapshot and sends no OPEX request to a user who cannot read OPEX', async () => {
@@ -223,7 +247,7 @@ describe('DashboardPage budget tiles', () => {
     await waitFor(() => expect(within(top).getByText('Capex top')).toBeInTheDocument());
     expect(screen.queryByRole('region', { name: 'dashboard.opexSnapshot' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'dashboard.capexSnapshot' })).toBeInTheDocument();
-    expect(get.mock.calls.some(([url]) => (url as string).startsWith('/spend-items/'))).toBe(false);
+    expect([...get.mock.calls, ...post.mock.calls].some(([url]) => (url as string).startsWith('/spend-items/'))).toBe(false);
   });
   it('ranks the top items by the default column and names it in the title', async () => {
     setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' });

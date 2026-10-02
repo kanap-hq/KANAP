@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => {
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
-vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
@@ -55,6 +55,7 @@ vi.mock('../../components/fields/CompanySelect', () => ({
 }));
 
 import api from '../../api';
+import { fakeAggregate } from '../../test/fakeBudgetAggregate';
 import { setBudgetColumns } from './budgetColumnsTestState';
 import TopOpexReport from './TopOpexReport';
 import OpexDeltaReport from './OpexDeltaReport';
@@ -67,6 +68,9 @@ import GlobalChargebackReport from './GlobalChargebackReport';
 import CompanyChargebackReport from './CompanyChargebackReport';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+/** The lines the server aggregates. */
+let serverRows: unknown[] = [];
 const Y = new Date().getFullYear();
 
 const ALL_SHOWN = { planned: true, committed: true, forecast: true, actual: true, expected_landing: true };
@@ -113,10 +117,10 @@ const combo = (name: string, index = 0) => screen.getAllByRole('combobox', { nam
 beforeEach(() => {
   setBudgetColumns();
   get.mockReset();
-  get.mockImplementation(async (url: string) => {
-    if (url.endsWith('/summary')) return { data: { items: rows, total: rows.length } };
-    return { data: { items: [], total: 0 } };
-  });
+  get.mockImplementation(async () => ({ data: { items: [], total: 0 } }));
+  serverRows = rows;
+  post.mockReset();
+  post.mockImplementation(async (_url: string, body: any) => ({ data: fakeAggregate(serverRows as any[], body) }));
 });
 
 describe.each([
@@ -252,7 +256,7 @@ describe('Company chargeback report', () => {
 describe('Chart tooltips', () => {
   it('escape the item name the chart puts in the tooltip title', async () => {
     const tagged = [{ id: 'o9', product_name: '<b>Bold</b> & co', versions: { y: slot(Y, { budget: 90 }) } }];
-    get.mockImplementation(async (url: string) => (url.endsWith('/summary') ? { data: { items: tagged, total: 1 } } : { data: { items: [], total: 0 } }));
+    serverRows = tagged;
     renderReport(<TopOpexReport />);
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('90'));
     const pie = chart.options.series[0];
