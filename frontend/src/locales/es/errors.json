@@ -16,6 +16,7 @@
   "WEEKLY_REVIEW_ROLE_INELIGIBLE": "La revisión semanal no está disponible para su rol actual.",
   "WEEKLY_REVIEW_NOT_ENABLED": "Active las notificaciones por correo electrónico y la revisión semanal para ver la vista previa.",
   "WEEKLY_REVIEW_SEND_FAILED": "Error al enviar el correo de revisión semanal.",
+  "operation_running": "Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.",
   "APP_CRASH_TITLE": "Se ha producido un error.",
   "APP_CRASH_BODY": "No se ha podido mostrar la página. Recargarla suele solucionarlo.",
   "APP_CRASH_RELOAD": "Recargar",

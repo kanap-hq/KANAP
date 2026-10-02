@@ -16,6 +16,7 @@
   "WEEKLY_REVIEW_ROLE_INELIGIBLE": "Die wöchentliche Übersicht ist für Ihre aktuelle Rolle nicht verfügbar.",
   "WEEKLY_REVIEW_NOT_ENABLED": "Aktivieren Sie sowohl E-Mail-Benachrichtigungen als auch die wöchentliche Übersichts-E-Mail, um die Vorschau anzuzeigen.",
   "WEEKLY_REVIEW_SEND_FAILED": "Die wöchentliche Übersichts-E-Mail konnte nicht gesendet werden.",
+  "operation_running": "Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.",
   "APP_CRASH_TITLE": "Etwas ist schiefgelaufen.",
   "APP_CRASH_BODY": "Die Seite konnte nicht angezeigt werden. Ein Neuladen behebt das meistens.",
   "APP_CRASH_RELOAD": "Neu laden",

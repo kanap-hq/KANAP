@@ -16,6 +16,7 @@
   "WEEKLY_REVIEW_ROLE_INELIGIBLE": "Weekly review is unavailable for your current role.",
   "WEEKLY_REVIEW_NOT_ENABLED": "Enable both email notifications and weekly review email to preview.",
   "WEEKLY_REVIEW_SEND_FAILED": "Failed to send weekly review email.",
+  "operation_running": "Another budget operation is running. Try again when it has finished.",
   "APP_CRASH_TITLE": "Something went wrong.",
   "APP_CRASH_BODY": "The page could not be displayed. Reloading usually fixes it.",
   "APP_CRASH_RELOAD": "Reload",
