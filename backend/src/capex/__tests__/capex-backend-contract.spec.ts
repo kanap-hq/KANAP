@@ -2,7 +2,6 @@ import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { CapexAllocation } from '../capex-allocation.entity';
 import { CapexAllocationsService } from '../capex-allocations.service';
-import { CapexItem } from '../capex-item.entity';
 import { CapexItemsService } from '../capex-items.service';
 import { CapexVersion } from '../capex-version.entity';
 import { Company } from '../../companies/company.entity';
@@ -57,23 +56,19 @@ async function testSummaryIdsReturnsAlignedItemNumbers() {
     { id: 'capex-a', item_number: 1, tenant_id: 'tenant-1', description: 'A', disabled_at: null },
   ] as any[];
 
-  const finds: any[] = [];
+  // The list engine (`spend/budget-list/`): the tenant, the database check (ICU, unaccent), then one
+  // statement for the ordered ids; no row is built and no repository is read.
+  const statements: Array<{ sql: string; params: unknown[] }> = [];
   const manager = {
-    query: async (sql: string) => (/app_current_tenant/.test(sql) ? [{ tenant_id: 'tenant-1' }] : []),
-    getRepository: (entity: unknown) => {
-      if (entity === CapexItem) {
-        return {
-          // A sort on an item column runs in SQL: the read carries the order and the tenant.
-          find: async (options: any) => {
-            finds.push(options);
-            const [field, direction] = Object.entries(options.order)[0] as [string, string];
-            return [...items].sort((a, b) => (a[field] - b[field]) * (direction === 'ASC' ? 1 : -1));
-          },
-        };
-      }
-      return {
-        find: async () => [],
-      };
+    query: async (sql: string, params: unknown[] = []) => {
+      if (/SELECT app_current_tenant\(\) AS tenant_id/.test(sql)) return [{ tenant_id: 'tenant-1' }];
+      if (/pg_collation/.test(sql)) return [{ icu: true, unaccent: true }];
+      statements.push({ sql, params });
+      // The database orders the lines; item numbers come back as the driver gives an int.
+      return [...items].sort((a, b) => a.item_number - b.item_number).map((item) => ({ id: item.id, item_number: item.item_number }));
+    },
+    getRepository: () => {
+      throw new Error('no repository read for the ids');
     },
   };
 
@@ -83,9 +78,12 @@ async function testSummaryIdsReturnsAlignedItemNumbers() {
   assert.deepEqual(result.ids, ['capex-a', 'capex-b']);
   assert.deepEqual(result.item_numbers, [1, 2]);
   assert.equal(result.total, 2);
-  assert.equal(finds.length, 1, 'one item read, no rows built for a column sort');
-  assert.equal(finds[0].where.tenant_id, 'tenant-1', 'the item read names the tenant');
-  assert.deepEqual(finds[0].order, { item_number: 'ASC', id: 'ASC' });
+  assert.equal(statements.length, 1, 'one statement for the ordered ids');
+  const [{ sql, params }] = statements;
+  assert.match(sql, /FROM capex_items i\b/);
+  assert.match(sql, /i\.tenant_id = \$1/, 'the statement names the tenant');
+  assert.equal(params[0], 'tenant-1');
+  assert.match(sql, /ORDER BY \(i\.item_number\) ASC, i\.created_at DESC, i\.id DESC/, 'the item number, then the newest first');
 }
 
 async function testManualPctBulkUpsert() {
