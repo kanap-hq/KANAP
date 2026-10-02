@@ -15,6 +15,7 @@ This document describes the technical design for on-premise deployments. User-fa
 ## Works Out of the Box
 
 - **Database & RLS:** PostgreSQL 16 with Row-Level Security works unchanged when `DATABASE_URL` uses a dedicated application role; startup fails instead of running with a role that can bypass RLS
+- **Database requirement, list engine:** PostgreSQL must be built with ICU (collation `und-x-icu`; the official, PGDG and Alpine images are) and have the `unaccent` extension (the migrations create it). The OPEX list is computed in SQL with them. Without either, the API still starts, logs `List engine disabled: missing …` once at startup, and the OPEX list endpoints answer 503 with the same requirement
 - **Storage:** S3-compatible storage via AWS SDK v3 S3 client (`S3_ENDPOINT`, supports MinIO/R2/B2/AWS)
 - **Billing:** Disabled when `STRIPE_SECRET_KEY` is not set (backend returns `FEATURE_DISABLED`, UI hides billing features)
 - **Migrations:** Run automatically on container startup (`migrate-and-start.js`)
