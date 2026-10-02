@@ -4,6 +4,8 @@ import { toCents } from '../common/amount';
 import { EDIT_CONFLICT_CODE, EditConflictAuthor, authorAt, userNames } from '../common/edit-conflicts';
 import {
   AMOUNT_MEASURES,
+  BUDGET_COLUMN_MEASURE,
+  BudgetColumn,
   AmountMeasure,
   AmountScope,
   AmountVersion,
@@ -72,6 +74,14 @@ import { RoundInput, centsToDecimal, costLine, versionRoundInputs } from './roun
 const AMOUNT_TABLE: Record<AmountScope, string> = { opex: 'spend_amounts', capex: 'capex_amounts' };
 const ROUND_TABLE: Record<AmountScope, string> = { opex: 'spend_round_inputs', capex: 'capex_round_inputs' };
 const VERSION_TABLE: Record<AmountScope, string> = { opex: 'spend_versions', capex: 'capex_versions' };
+const ITEM_TABLE: Record<AmountScope, { items: string; itemFk: string }> = {
+  opex: { items: 'spend_items', itemFk: 'spend_item_id' },
+  capex: { items: 'capex_items', itemFk: 'capex_item_id' },
+};
+/** The API name of each column, as the column copy and clear audit it (`budget-column-operations.ts`). */
+const MEASURE_COLUMN = Object.fromEntries(
+  (Object.entries(BUDGET_COLUMN_MEASURE) as Array<[BudgetColumn, AmountMeasure]>).map(([column, measure]) => [measure, column]),
+) as Record<AmountMeasure, BudgetColumn>;
 
 /** A column's base: its twelve months and, for costed lines, its lines (null: lines that could not be read, compared as different). */
 type ColumnBase = { months: bigint[]; lines?: CostLine[] | null };
@@ -249,7 +259,9 @@ export async function findBudgetConflicts(
     if (!startedFrom) continue;
     const current = stored[column.measure];
     const mine = column.months ? [...column.months] : current;
-    const moved = current.flatMap((cents, i) => (cents === startedFrom.months[i] ? [] : [i]));
+    // Removing costed lines leaves the months as stored: a month changed meanwhile is not overwritten,
+    // so only the lines are compared.
+    const moved = column.months === null ? [] : current.flatMap((cents, i) => (cents === startedFrom.months[i] ? [] : [i]));
     let currentLines: CostLine[] | undefined;
     if (startedFrom.lines !== undefined || column.lines !== undefined) {
       records ??= await versionRoundInputs(manager, scope, version);
@@ -313,6 +325,7 @@ async function monthsAuthors(manager: EntityManager, scope: AmountScope, version
     [version.tenant_id, version.id, Array.from(new Set(conflicts.flatMap((c) => c.moved.map((i) => periods[i]))))],
   );
   const writtenAt = new Map(written.map((row) => [row.period, new Date(row.updated_at)]));
+  const operations = await columnOperations(manager, scope, version, conflicts);
   for (const conflict of conflicts) {
     const row = rows.find((r) => r.measure === conflict.measure);
     const after = Array.isArray(row?.after_json) ? (row!.after_json as Array<Record<string, unknown>>) : [];
@@ -321,13 +334,67 @@ async function monthsAuthors(manager: EntityManager, scope: AmountScope, version
       const month = after.find((m) => m.period === periods[i]);
       return !month || toCents(month[conflict.measure] as string | null) === conflict.current[i];
     });
-    if (explains) {
+    // A column copy or clear writes no amounts audit row: its row on the line names who ran it, when it
+    // is the column's latest change and left the column's current total.
+    const operation = operations.get(conflict.measure);
+    const operationLater = !!operation && (!row?.created_at || new Date(operation.created_at).getTime() > new Date(row.created_at).getTime());
+    if (operationLater && operation!.explains(sumOf(conflict.current))) {
+      result.set(conflict.measure, { userId: operation!.user_id, at: operation!.created_at });
+    } else if (explains) {
       result.set(conflict.measure, { userId: row!.user_id, at: row!.created_at });
     } else {
       const times = conflict.moved.map((i) => writtenAt.get(periods[i])?.getTime() ?? 0);
       const latest = Math.max(0, ...times);
       result.set(conflict.measure, { userId: null, at: latest > 0 ? new Date(latest) : null });
     }
+  }
+  return result;
+}
+
+const sumOf = (months: readonly bigint[]) => months.reduce((sum, cents) => sum + cents, 0n);
+
+type ColumnOperation = { user_id: string | null; created_at: Date; explains: (total: bigint) => boolean };
+
+/**
+ * The latest column copy or clear of each conflicting column of the version's year: the audit row
+ * the operation writes on the line (`budget-column-operations.ts`: `operation`, the column by its API
+ * name, the year, the column's total after it). One query.
+ */
+async function columnOperations(manager: EntityManager, scope: AmountScope, version: AmountVersion, conflicts: ColumnConflict[]): Promise<Map<AmountMeasure, ColumnOperation>> {
+  const result = new Map<AmountMeasure, ColumnOperation>();
+  const t = ITEM_TABLE[scope];
+  const rows: Array<{ measure: AmountMeasure; user_id: string | null; created_at: Date | null; after_json: Record<string, unknown> | null }> = await manager.query(
+    `SELECT f.measure, a.user_id::text AS user_id, a.created_at, a.after_json
+       FROM unnest($4::text[], $5::text[]) AS f(measure, api_column)
+       LEFT JOIN LATERAL (
+         SELECT l.user_id, l.created_at, l.after_json
+           FROM audit_log l
+          WHERE l.tenant_id = $1 AND l.table_name = $3
+            AND l.record_id = (SELECT v.${t.itemFk} FROM ${VERSION_TABLE[scope]} v WHERE v.tenant_id = $1 AND v.id = $2)
+            AND (
+              (l.after_json->>'operation' = 'budget_column_copy' AND l.after_json->>'destinationColumn' = f.api_column
+                 AND l.after_json->>'destinationYear' = $6)
+              OR (l.after_json->>'operation' = 'budget_column_clear' AND l.after_json->>'column' = f.api_column
+                 AND l.after_json->>'year' = $6))
+          ORDER BY l.created_at DESC
+          LIMIT 1
+       ) a ON true`,
+    [
+      version.tenant_id,
+      version.id,
+      t.items,
+      conflicts.map((c) => c.measure),
+      conflicts.map((c) => MEASURE_COLUMN[c.measure]),
+      String(Number(version.budget_year)),
+    ],
+  );
+  for (const row of rows) {
+    if (!row.created_at || !row.after_json) continue;
+    const column = MEASURE_COLUMN[row.measure];
+    const written = row.after_json[column];
+    // The total the operation left; a clear leaves zero.
+    const total = toCents(written as number | string | null);
+    result.set(row.measure, { user_id: row.user_id, created_at: row.created_at, explains: (current) => current === total });
   }
   return result;
 }

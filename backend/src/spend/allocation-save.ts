@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { validate as isUuid } from 'uuid';
 import { BadRequestException, ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { DeepPartial, EntityManager, In } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
@@ -352,6 +353,20 @@ function parsePutBody(body: unknown): { method: string; driver: string | null; r
   }
   const rows = input.rows ?? [];
   if (!Array.isArray(rows)) throw new BadRequestException('rows must be a list of allocation rows.');
+  rows.forEach((row, index) => {
+    const at = `Allocation row ${index + 1}`;
+    if (!row || typeof row !== 'object' || Array.isArray(row)) throw new BadRequestException(`${at} must be an object with a company_id.`);
+    const { company_id, department_id, allocation_pct } = row as Record<string, unknown>;
+    if (company_id !== undefined && company_id !== null && company_id !== '' && !(typeof company_id === 'string' && isUuid(company_id))) {
+      throw new BadRequestException(`${at}: company_id must be a company id.`);
+    }
+    if (department_id !== undefined && department_id !== null && department_id !== '' && !(typeof department_id === 'string' && isUuid(department_id))) {
+      throw new BadRequestException(`${at}: department_id must be a department id or null.`);
+    }
+    if (allocation_pct !== undefined && allocation_pct !== null && typeof allocation_pct !== 'number' && typeof allocation_pct !== 'string') {
+      throw new BadRequestException(`${at}: allocation_pct must be a number.`);
+    }
+  });
   const base = input.base_signature;
   if (base !== undefined && base !== null && typeof base !== 'string') throw new BadRequestException('base_signature must be the signature the allocation was read with.');
   return { method, driver: (driver as string | null | undefined) ?? null, rows: rows as AllocationInput[], baseSignature: (base as string | null | undefined) ?? null };

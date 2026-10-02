@@ -6,7 +6,7 @@ import { EDIT_CONFLICT_CODE } from '../../common/edit-conflicts';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
 import { SpendAllocationsService } from '../spend-allocations.service';
 import { seedCompany } from './cost-center.fixtures';
-import { Kind, Measure, TABLES, amountsService, period, readLines, readMeasure, readRecords, repeat, seedItem, seedMonths, seedVersion } from './round-inputs.fixtures';
+import { Kind, Measure, TABLES, amountsService, budgetOperations, freezeColumn, period, readLines, readMeasure, readRecords, realFreeze, repeat, seedItem, seedMonths, seedVersion } from './round-inputs.fixtures';
 import { Outcome, Party, Race, assert, assertSucceeded, describe, httpStatus, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
 // Edit conflicts of the budget and of the allocations (plan planning/perf-scale,
@@ -397,6 +397,90 @@ async function allocationsBothSides(kind: Kind) {
   });
 }
 
+/** A column copy or clear writes no amounts audit row: its row on the line names who ran it. */
+async function columnOperationsAreNamed() {
+  await withRace('budget-column-ops', async (race) => {
+    const s = await setup(race, 'opex');
+    const ops = budgetOperations('opex', realAudit());
+    await race.seedWith((runner) => ops.copyBudgetColumn({
+      sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR, destinationColumn: 'forecast', percentageIncrease: 0, overwrite: true, dryRun: false,
+    }, s.jean, { manager: runner.manager }));
+    const party = await race.open('Marie');
+    let [conflict] = conflictOf(await settle(save(race, party, 'opex', s, s.marie, monthly([[3, 'forecast', 80]], [[3, 'forecast', 50]]))), 'Marie after the copy').conflicts;
+    assert.equal(conflict.current[2], '100.00');
+    assert.equal(conflict.changed_by?.name, 'Jean Martin', 'the copy names who ran it');
+
+    await race.seedWith((runner) => ops.clearBudgetColumn({ year: YEAR, column: 'forecast' }, s.jean, { manager: runner.manager }));
+    [conflict] = conflictOf(await settle(save(race, party, 'opex', s, s.marie, monthly([[3, 'forecast', 80]], [[3, 'forecast', 100]]))), 'Marie after the clear').conflicts;
+    assert.equal(conflict.current[2], '0.00');
+    assert.equal(conflict.changed_by?.name, 'Jean Martin', 'the clear names who ran it');
+  });
+}
+
+/** Removing costed lines leaves the months as stored: a month changed meanwhile is no conflict; lines changed meanwhile are. */
+async function removingLinesComparesLinesOnly() {
+  await withRace('budget-lines-removal', async (race) => {
+    const s = await setup(race, 'opex');
+    await race.seedWith((runner) => amountsService('opex', realAudit()).bulkUpsert(
+      s.versionId, { kind: 'lines', year: YEAR, measure: 'forecast', lines: [supportLine('1', '1000')] }, s.jean, { manager: runner.manager },
+    ));
+    const startedFrom = { months: months12('1000.00'), lines: [supportLine('1', '1000')] };
+    const party = await race.open('Parties');
+    assertSucceeded(await settle(save(race, party, 'opex', s, s.marie, monthly([[3, 'forecast', 1200]], [[3, 'forecast', 1000]]))), 'Marie\'s month');
+    assertSucceeded(await settle(save(race, party, 'opex', s, s.jean, {
+      kind: 'lines', year: YEAR, measure: 'forecast', lines: [], base: { columns: { forecast: startedFrom } },
+    })), 'removing the lines after a month changed');
+    const [forecast, lines] = await race.seedWith(async (runner) => [
+      await readMeasure(runner, 'opex', s.versionId, 'forecast', YEAR),
+      await readLines(runner, 'opex', s.versionId, 'forecast'),
+    ] as const);
+    assert.equal(forecast[2], '1200.00', 'Marie\'s month stays');
+    assert.equal(lines.length, 0);
+
+    // Lines changed meanwhile: the removal is refused.
+    await race.seedWith((runner) => amountsService('opex', realAudit()).bulkUpsert(
+      s.versionId, { kind: 'lines', year: YEAR, measure: 'forecast', lines: [supportLine('1', '1000', 'Desk')] }, s.marie, { manager: runner.manager },
+    ));
+    const [conflict] = conflictOf(await settle(save(race, party, 'opex', s, s.jean, {
+      kind: 'lines', year: YEAR, measure: 'forecast', lines: [], base: { columns: { forecast: { months: months12('1000.00'), lines: [] } } },
+    })), 'removing lines someone else wrote').conflicts;
+    assert.deepEqual(conflict.periods, []);
+    assert.equal(conflict.current_lines[0].label, 'Desk');
+  });
+}
+
+/** "Apply to all columns" with a frozen column is refused before any month is created or locked. */
+async function applyToAllChecksFreezeFirst() {
+  await withRace('budget-apply-all-frozen', async (race) => {
+    const s = await setup(race, 'opex', {});
+    await race.seedWith(async (runner) => {
+      await runner.query(`DELETE FROM spend_amounts WHERE version_id = $1`, [s.versionId]);
+      await freezeColumn(runner, 'opex', race.tenantId, YEAR, 'forecast');
+    });
+    const party = await race.open('Marie');
+    // Paused at its first month written, if it ever writes one.
+    const created = race.gate(party, { label: 'creates a month', when: 'before', match: sql.insertInto('spend_amounts') });
+    const work = race.start(party, (manager) => amountsService('opex', realAudit(), realFreeze()).bulkUpsert(s.versionId, {
+      kind: 'annual', year: YEAR, totals: { planned: '1200.00' }, also_measures: ['forecast'], spread_profile_name: 'flat',
+    }, s.marie, { manager }));
+    assert.equal(await progress(work, { party, gate: created }), 'settled', 'the spread is refused before any month is created or locked');
+    const done = await settle(work);
+    assert.ok(!done.ok && httpStatus(done.error) === 403, `a frozen column refuses the spread (403, frozen): ${describe(done)}`);
+  });
+}
+
+/** A PUT whose rows are not allocation rows is a 400, never a 500. */
+async function putRefusesMalformedRows() {
+  await withRace('allocations-put-rows', async (race) => {
+    const s = await setup(race, 'opex', {});
+    const party = await race.open('Marie');
+    for (const rows of [[null], [{ company_id: 'not-an-id', allocation_pct: 100 }], [{ company_id: 12 }], 'all']) {
+      const done = await settle(race.start(party, (manager) => allocations('opex').put(s.versionId, { method: 'manual_pct', rows }, s.marie, { manager, tenantId: race.tenantId })));
+      assert.ok(!done.ok && httpStatus(done.error) === 400, `rows ${JSON.stringify(rows)} must be refused with 400: ${describe(done)}`);
+    }
+  });
+}
+
 void runRaceSpecs('Budget and allocation edit conflicts (lots 3D, 3E)', [
   ['3D: the same month on both sides, the second save is refused with who and when (OPEX)', () => sameMonth('opex')],
   ['3D: the same month on both sides, the second save is refused with who and when (CAPEX)', () => sameMonth('capex')],
@@ -408,4 +492,8 @@ void runRaceSpecs('Budget and allocation edit conflicts (lots 3D, 3E)', [
   ['3D: a base equal to the stored value, or the same change twice, is no conflict; no base compares nothing', baseEqualToCurrent],
   ['Annexe A #10, #11: allocation PUTs on both sides, the second is refused, one split of 100 % (OPEX)', () => allocationsBothSides('opex')],
   ['Annexe A #10, #11: allocation PUTs on both sides, the second is refused, one split of 100 % (CAPEX)', () => allocationsBothSides('capex')],
+  ['3D: a column copy or clear names who ran it', columnOperationsAreNamed],
+  ['3D: removing costed lines compares the lines only', removingLinesComparesLinesOnly],
+  ['3D: "apply to all columns" checks the freeze before it creates a month', applyToAllChecksFreezeFirst],
+  ['3E: a PUT with malformed rows is a 400', putRefusesMalformedRows],
 ]);

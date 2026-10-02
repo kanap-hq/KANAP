@@ -565,6 +565,9 @@ async function writePayload(ctx: AmountsWriteContext, rawPayload: unknown): Prom
     const period = parsePayloadPeriod(payload, year);
     const profile = await resolveSpreadProfile(ctx.manager, profileName);
     if (also.length > 0) {
+      // A frozen column refuses the whole spread before any month is created or locked.
+      assertVersionTenant(ctx.version);
+      await assertMeasuresEditable(ctx, year, AMOUNT_MEASURES.filter((m) => totals[m] !== undefined || also.includes(m)));
       // The months' lock first (the lock order of every amounts write), so the totals read
       // below are the ones the spread replaces: no write of the line can land in between.
       await lockYearMonths(ctx, year);
