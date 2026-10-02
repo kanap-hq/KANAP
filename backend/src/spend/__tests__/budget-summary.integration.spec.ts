@@ -28,7 +28,7 @@ import { seedCompany as seedCostCenterCompany, seedCostCenter, seedUser } from '
 // filters on any year and column, the Ref filter, quick search on contracts
 // and projects, ids and totals aligned with the summary, the lifecycle
 // window, exact money; then the AI query layer on CAPEX and the CAPEX export.
-// runSpecs opens the data-source, so test:ci runs this file in its database lane.
+// @database-spec: runSpecs opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const Y = new Date().getFullYear();
 const KINDS: Kind[] = ['opex', 'capex'];

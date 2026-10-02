@@ -1,11 +1,13 @@
--- EXPLAIN (ANALYZE, BUFFERS) of the OPEX list's main SQL and of the chargeback amounts query,
--- as the API runs them (role app, RLS on, tenant set in the transaction).
+-- EXPLAIN (ANALYZE, BUFFERS) of the OPEX list's main SQL and of the chargeback totals query,
+-- as the API runs them (role app, RLS on, tenant set in the transaction), with the amounts
+-- aggregates they replaced in lot 2A kept for comparison.
 -- Read-only: every statement runs in a READ ONLY transaction.
 --
 --   PGPASSWORD=app psql -h 127.0.0.1 -U app -d appdb_perf -v tenant=perf -f scripts/perf/explain.sql
 --
 -- Sources: backend/src/spend/spend-summary.builder.ts (loadVersionTotals: versions read, amounts
--- aggregate per version), backend/src/spend/chargeback-report.service.ts (totals per version).
+-- aggregate per version until lot 2A, stored totals since), backend/src/spend/chargeback-report.service.ts
+-- (totals per version: same switch). Sections 2b, 2c and 3 need migration 1853720000000.
 
 \set ON_ERROR_STOP on
 \pset pager off
@@ -25,7 +27,7 @@ WHERE v.tenant_id = :'tenant_id'::uuid
   AND v.budget_year = ANY('{2025,2026,2027,2028}'::int[])
 ORDER BY v.created_at DESC, v.id DESC;
 
-\echo '=== 2. Amounts aggregate per version (loadVersionTotals)'
+\echo '=== 2. Amounts aggregate per version (loadVersionTotals until lot 2A, for comparison)'
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT a.version_id,
        COALESCE(SUM(a.planned), 0)::text AS planned,
@@ -40,15 +42,30 @@ WHERE a.tenant_id = :'tenant_id'::uuid
   AND EXTRACT(YEAR FROM a.period) = v.budget_year
 GROUP BY a.version_id;
 
-\echo '=== 3. Chargeback amounts per version (no explicit tenant_id: RLS only)'
+\echo '=== 2b. Totals read per version since lot 2A (loadVersionTotals reads the stored totals, migration 1853720000000)'
 EXPLAIN (ANALYZE, BUFFERS)
-SELECT amount.version_id AS version_id, SUM(COALESCE(amount.planned, 0)) AS total
-FROM spend_amounts amount
-WHERE amount.version_id = ANY(:'version_ids_y'::uuid[])
-  AND EXTRACT(YEAR FROM amount.period) = 2026
-GROUP BY amount.version_id;
+SELECT t.version_id, t.planned::text AS planned, t.committed::text AS committed, t.forecast::text AS forecast,
+       t.actual::text AS actual, t.expected_landing::text AS expected_landing
+FROM spend_version_totals t
+WHERE t.tenant_id = :'tenant_id'::uuid
+  AND t.version_id = ANY(:'version_ids'::uuid[]);
 
-\echo '=== 4. Same as 3 with an explicit tenant_id predicate (what plan step 1D proposes)'
+\echo '=== 2c. Versions of one year joined to their totals (the join lot 2B builds on)'
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*), sum(t.planned), sum(t.forecast)
+FROM spend_versions v
+LEFT JOIN spend_version_totals t ON t.tenant_id = v.tenant_id AND t.version_id = v.id
+WHERE v.tenant_id = :'tenant_id'::uuid
+  AND v.budget_year = 2026;
+
+\echo '=== 3. Chargeback totals per version since lot 2A (the stored totals of the year versions, migration 1853720000000)'
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT t.version_id, t.planned::text AS total
+FROM spend_version_totals t
+WHERE t.tenant_id = :'tenant_id'::uuid
+  AND t.version_id = ANY(:'version_ids_y'::uuid[]);
+
+\echo '=== 4. Chargeback amounts aggregate per version until lot 2A (for comparison)'
 EXPLAIN (ANALYZE, BUFFERS)
 SELECT amount.version_id AS version_id, SUM(COALESCE(amount.planned, 0)) AS total
 FROM spend_amounts amount

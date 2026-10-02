@@ -62,7 +62,12 @@ export interface SummaryScopeConfig {
   versionEntity: typeof SpendVersion | typeof CapexVersion;
   itemTable: string;
   versionTable: string;
-  amountTable: string;
+  /**
+   * One row per version with the sums of its months of its own budget year,
+   * kept by the database (migration 1853720000000): the list reads them
+   * instead of aggregating the amounts.
+   */
+  totalsTable: string;
   /** One round per version and column: period, method and the FTE of its lines. */
   roundTable: string;
   versionItemFk: string;
@@ -91,7 +96,7 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     versionEntity: SpendVersion,
     itemTable: 'spend_items',
     versionTable: 'spend_versions',
-    amountTable: 'spend_amounts',
+    totalsTable: 'spend_version_totals',
     roundTable: 'spend_round_inputs',
     versionItemFk: 'spend_item_id',
     contractLink: { table: 'contract_spend_items', itemColumn: 'spend_item_id' },
@@ -115,7 +120,7 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
     versionEntity: CapexVersion,
     itemTable: 'capex_items',
     versionTable: 'capex_versions',
-    amountTable: 'capex_amounts',
+    totalsTable: 'capex_version_totals',
     roundTable: 'capex_round_inputs',
     versionItemFk: 'capex_item_id',
     contractLink: { table: 'contract_capex_items', itemColumn: 'capex_item_id' },
@@ -375,8 +380,9 @@ export function summaryFieldValues(row: any, field: string): unknown[] {
 
 /**
  * Versions of the items for the given years (the newest per item and year) and
- * their totals: one SQL aggregate per version (months of its own year only),
- * kept in cents, and each version converted to the reporting currency once.
+ * their totals: the stored sums of each version's months of its own year (a
+ * version without such a month has no totals row, so no entry), kept in cents,
+ * and each version converted to the reporting currency once.
  */
 export async function loadVersionTotals(
   config: SummaryScopeConfig,
@@ -416,13 +422,9 @@ export async function loadVersionTotals(
 
   if (kept.length) {
     const sums: Array<Record<string, string>> = await manager.query(
-      `SELECT a.version_id, ${SUMMARY_COLUMNS.map((c) => `COALESCE(SUM(a.${c.measure}), 0)::text AS ${c.measure}`).join(', ')}
-       FROM ${config.amountTable} a
-       JOIN ${config.versionTable} v ON v.id = a.version_id AND v.tenant_id = a.tenant_id
-       WHERE a.tenant_id = $1
-         AND a.version_id = ANY($2::uuid[])
-         AND EXTRACT(YEAR FROM a.period) = v.budget_year
-       GROUP BY a.version_id`,
+      `SELECT t.version_id, ${SUMMARY_COLUMNS.map((c) => `t.${c.measure}::text AS ${c.measure}`).join(', ')}
+       FROM ${config.totalsTable} t
+       WHERE t.tenant_id = $1 AND t.version_id = ANY($2::uuid[])`,
       [tenantId, kept.map((v) => v.id)],
     );
     for (const row of sums) {

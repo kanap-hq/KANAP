@@ -263,13 +263,13 @@ export class CapexItemsService {
     const hi = Math.min(Math.max(from, to), lo + 20);
     const rows: Array<{ year: number; budget: string; revision: string; forecast: string; actual: string; landing: string }> = await mg.query(
       `SELECT v.budget_year AS year,
-              COALESCE(SUM(a.planned), 0) AS budget,
-              COALESCE(SUM(a.committed), 0) AS revision,
-              COALESCE(SUM(a.forecast), 0) AS forecast,
-              COALESCE(SUM(a.actual), 0) AS actual,
-              COALESCE(SUM(a.expected_landing), 0) AS landing
+              COALESCE(SUM(t.planned), 0) AS budget,
+              COALESCE(SUM(t.committed), 0) AS revision,
+              COALESCE(SUM(t.forecast), 0) AS forecast,
+              COALESCE(SUM(t.actual), 0) AS actual,
+              COALESCE(SUM(t.expected_landing), 0) AS landing
        FROM capex_versions v
-       LEFT JOIN capex_amounts a ON a.tenant_id = v.tenant_id AND a.version_id = v.id AND EXTRACT(YEAR FROM a.period) = v.budget_year
+       LEFT JOIN capex_version_totals t ON t.tenant_id = v.tenant_id AND t.version_id = v.id
        WHERE v.tenant_id = app_current_tenant() AND v.capex_item_id = $1 AND v.budget_year BETWEEN $2 AND $3
        GROUP BY v.budget_year
        ORDER BY v.budget_year`,

@@ -242,6 +242,7 @@ if [[ -n "$DEFAULT_TENANT_ID" ]]; then
     tasks
     portfolio_task_types
     item_sequences
+    spend_version_totals
     spend_amounts
     spend_allocations
     spend_round_input_lines
@@ -259,6 +260,7 @@ if [[ -n "$DEFAULT_TENANT_ID" ]]; then
     business_process_categories
     analytics_categories
     analytics_axes
+    capex_version_totals
     capex_amounts
     capex_allocations
     capex_round_input_lines
@@ -467,6 +469,11 @@ psql_cmd -c "
     ('$SOURCE_TENANT_ID', 'request',  (SELECT COALESCE(MAX(item_number), 0) + 1 FROM portfolio_requests WHERE tenant_id = '$SOURCE_TENANT_ID')),
     ('$SOURCE_TENANT_ID', 'document', (SELECT COALESCE(MAX(item_number), 0) + 1 FROM documents WHERE tenant_id = '$SOURCE_TENANT_ID'));
 "
+
+# Rebuild the derived budget totals: they are not exported, and the triggers
+# that keep them were off while the amounts were loaded (replica mode)
+echo "  Rebuilding budget totals per version..."
+psql_cmd -c "SELECT count(*) FROM budget_version_totals_rebuild('$SOURCE_TENANT_ID')" > /dev/null
 
 # Recount active seats
 echo "  Recounting active seats..."

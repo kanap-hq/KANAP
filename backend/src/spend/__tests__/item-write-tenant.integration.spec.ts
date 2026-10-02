@@ -26,7 +26,7 @@ import {
 // - the chart of accounts is checked on the resulting company and account
 //   (a CAPEX company change re-checks the stored account);
 // - run_build is run, build or empty.
-// runSpecs opens the data-source, so test:ci runs this file in its database lane.
+// @database-spec: runSpecs opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const KINDS: Kind[] = ['opex', 'capex'];
 

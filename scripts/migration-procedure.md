@@ -182,7 +182,7 @@ database role (kanap) has Row Level Security and cannot bulk-import data.
 The import performs three phases internally:
 1. Purges the existing default tenant data
 2. Imports all CSV data (with FK triggers disabled)
-3. Post-import fixes (subscription, sequences, seat count)
+3. Post-import fixes (subscription, sequences, budget totals, seat count)
 
 ### 4a. Stop the application
 

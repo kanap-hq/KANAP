@@ -17,7 +17,7 @@ import { csvService, ITEM_TABLE, seedCompany } from './cost-center.fixtures';
 //   line's current one is a row error found by the dry run;
 // - export writes analytics_category then one analytics:<code> column per
 //   enabled non-default dimension; export then import changes nothing.
-// runSpecs opens the data-source, so test:ci runs this file in its database lane.
+// @database-spec: runSpecs opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const KINDS: Kind[] = ['opex', 'capex'];
 const COMPANY = 'Csv analytics company';

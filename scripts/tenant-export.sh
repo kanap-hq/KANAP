@@ -86,6 +86,8 @@ mkdir -p "$OUTPUT_DIR"
 
 # ---------------------------------------------------------------------------
 # Tenant-scoped tables (derived from TENANT_SCOPED_TABLES inventory)
+# Derived tables are not exported: spend_version_totals and capex_version_totals
+# (sums of the amounts, kept by triggers) are rebuilt by tenant-import.sh.
 # ---------------------------------------------------------------------------
 TENANT_TABLES=(
   accounts
