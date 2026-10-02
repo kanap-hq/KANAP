@@ -178,6 +178,33 @@ It covers the app registration, the delegated and application permissions, and t
 | `APP_URL` | Base URL for notification email links in multi-tenant mode (tenant slug replaces `app`). **Not needed for on-prem** — `APP_BASE_URL` is used instead. | `https://app.kanap.net` |
 | `EMAIL_OVERRIDE` | Redirect all emails to this address (dev/QA only, **never in production**) | *unset* |
 
+## Optional: Capacity and Performance
+
+The defaults suit a few dozen users. For more users at once, run several API processes and size the database connections.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `API_WORKERS` | Number of API processes in the API container (1 to 16). With more than one, a request that computes no longer makes everyone else wait. | `1` |
+| `DB_POOL_MAX` | Database connections per API process (2 at least: a lower value is raised to 2) | `20` |
+| `SHUTDOWN_DRAIN_TIMEOUT_MS` | On stop or upgrade, how long the API lets requests in progress, the notifications they started, running background jobs and queued emails finish (milliseconds, at most 120000). The container is stopped after 30 s whatever happens. | `20000` |
+
+**What each costs.** Every API process uses about 200 MB of memory at start and up to 300 MB under load (measured with 50 users on 5,000 budget lines); with several, a small supervising process adds about 100 MB. Every API process can open up to `DB_POOL_MAX` connections to PostgreSQL. Count:
+
+- memory: `API_WORKERS` × 0.4 GB for the API, plus what PostgreSQL uses if it runs on the same server, plus about 1 GB of headroom (image builds need it during upgrades);
+- connections: `API_WORKERS` × `DB_POOL_MAX` must stay under PostgreSQL's `max_connections` (100 by default) minus about 15. The API checks this at start and writes a warning in its log when it does not fit, with a value that would.
+
+**Suggested values.**
+
+| Users working at the same time | `API_WORKERS` | `DB_POOL_MAX` | Server memory (API + PostgreSQL) |
+|---|---|---|---|
+| Up to 20 | 1 | 20 | 4 GB |
+| 20 to 50 | 2 | 15 | 8 GB |
+| 50 and more | 4 | 10 | 8 to 16 GB |
+
+Measured on 5,000 budget lines: at 10 users one process answers as fast as four. At 50 users, opening a line took 237 ms (95th percentile) with one process, 142 ms with two and 82 ms with four, and one process kept all its database connections busy.
+
+Keep `API_WORKERS` at or below the number of CPU cores the server gives KANAP. Changes take effect when the API container restarts (`docker compose -f infra/compose.onprem.yml up -d api`).
+
 ## Full Example (.env)
 
 ```bash
@@ -231,6 +258,11 @@ S3_FORCE_PATH_STYLE=false   # true for MinIO
 # JWT_REFRESH_TOKEN_TTL=4h
 # RATE_LIMIT_ENABLED=true
 # RATE_LIMIT_TRUST_PROXY=false
+
+# CAPACITY (optional - see "Capacity and Performance")
+# API_WORKERS=1
+# DB_POOL_MAX=20
+# SHUTDOWN_DRAIN_TIMEOUT_MS=20000
 ```
 
 ## Firewall Rules
@@ -295,5 +327,7 @@ One more scheduled job runs when Entra SSO is configured:
 Another job keeps statuses up to date:
 
 - **`lifecycle-status-sync`**: every hour, and once when the API starts. Switches master data, contracts, OPEX and CAPEX items to disabled once their end of validity has passed.
+
+With several API processes (`API_WORKERS`), each job still runs once per scheduled time: the processes agree through the database on which one runs it. When the API stops (an upgrade), a job in progress gets the drain time to finish; one still running then is shown as failed ("interrupted") in the scheduled tasks list and runs again at its next time.
 
 These jobs require the API to run as a **long-running process** (not a serverless function). In on-premise mode, `APP_BASE_URL` is used for notification email links (no subdomain derivation). If no outbound email transport is configured, these jobs skip sending gracefully.

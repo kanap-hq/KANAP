@@ -48,7 +48,7 @@ Support policy:
 
 ## Deployment Constraints
 
-- **Single-container deployment only** (one API and one web instance)
+- **One API container and one web container.** The API container can run several API processes (`API_WORKERS`, Node cluster, default 1): migrations run once in its entrypoint before the workers start, and scheduled jobs, notification dedupe, start-up provisioning and rate limits are coordinated through the database. See `doc/architecture.md`, "Several API Processes".
 - HA should be handled by the customer (database HA, storage durability, restart policies)
 
 ## Maintenance Strategy

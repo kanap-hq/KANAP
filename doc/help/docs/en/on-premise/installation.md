@@ -7,7 +7,7 @@
 - Docker Engine 24.0+
 - Docker Compose v2.20+
 - Git
-- 4 GB RAM minimum (8 GB recommended)
+- 4 GB RAM minimum (8 GB recommended; more API processes need more, see [Configuration](configuration.md#optional-capacity-and-performance))
 - 20 GB disk minimum (+ build cache)
 
 **Customer-provided infrastructure:**
@@ -189,7 +189,7 @@ Replace `YOUR_IP` with your server's IP and update `server_name`, `APP_BASE_URL`
                     └─────────────────────────────────────────────────────┘
 ```
 
-**Deployment model:** Single-container deployment only. Running multiple API or web replicas is not supported. For high availability, rely on Docker restart policies and infrastructure-level redundancy (database HA, S3 durability).
+**Deployment model:** one API container and one web container. Running several API or web containers is not supported. For more users at once, run several API processes inside the API container with `API_WORKERS` (see [Configuration](configuration.md#optional-capacity-and-performance)). For high availability, rely on Docker restart policies and infrastructure-level redundancy (database HA, S3 durability).
 
 ## First Login
 

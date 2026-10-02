@@ -13,6 +13,8 @@ docker build -t kanap-web:latest ./frontend
 
 # 3. Restart containers (migrations run automatically)
 docker compose -f infra/compose.onprem.yml up -d
+# The old API container first finishes the requests in progress, the emails it queued and
+# its running background jobs (up to 20 s), then stops.
 
 # 4. Verify startup
 docker compose -f infra/compose.onprem.yml logs -f api
@@ -80,7 +82,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 **Key metrics:**
 - Containers running (`api`, `web`)
-- API memory under ~1 GB
+- API memory under ~1 GB per API process
 - Database connections
 - Storage usage
 
@@ -89,6 +91,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 | Symptom | Check | Solution |
 |---------|-------|----------|
 | Containers not starting | `docker compose logs api` | Check for startup errors |
+| `[DB] pool budget exceeded` in the API log | `API_WORKERS`, `DB_POOL_MAX`, PostgreSQL `max_connections` | Lower `DB_POOL_MAX` to the value the message gives (or `API_WORKERS`), or raise `max_connections` |
 | "Database connection failed" | Verify `DATABASE_URL` | Check PostgreSQL accessibility/credentials |
 | "S3 error" | Verify S3_* variables | Ensure bucket exists and permissions are correct |
 | Migration failed | Check PostgreSQL version | Must be 16+, extensions available |
