@@ -105,9 +105,18 @@ export function useAutosaveQueue(): AutosaveQueue {
   return ref.current;
 }
 
+export type FlushOptions = {
+  /**
+   * Edits waiting for the user's choice (`held`) do not make the flush fail:
+   * a move that keeps the page and its conflict banner (a tab change) only
+   * waits for the saves that can go.
+   */
+  ignoreHeld?: boolean;
+};
+
 export interface AutosaveHandle {
   /** See {@link AutosaveController.flush}. */
-  flush: () => Promise<boolean>;
+  flush: (options?: FlushOptions) => Promise<boolean>;
   /** See {@link AutosaveController.isBusy}. */
   isBusy: () => boolean;
   /** See {@link AutosaveController.discard}. */
@@ -211,11 +220,16 @@ export interface AutosaveController {
    * Cancel the debounce and run any pending/in-flight save now, resolving when
    * fully drained. Use on controlled transitions (tab/year/prev/next/close/Escape)
    * where persistence must complete before navigating. Resolves to false if the
-   * save rejected (caller should abort the navigation to avoid losing the edit).
+   * save rejected (caller should abort the navigation to avoid losing the edit),
+   * or while edits wait for the user's choice (`held`), unless `ignoreHeld`.
    */
-  flush: () => Promise<boolean>;
+  flush: (options?: FlushOptions) => Promise<boolean>;
   /** True when a save is pending (debouncing, or kept after a transient failure), in flight, or held for the user's choice (`held`). */
   isBusy: () => boolean;
+  /** True when a save is pending or in flight (the edits waiting for a choice aside). */
+  isSaving: () => boolean;
+  /** The user made every choice and nothing was left to send: the `conflict` state ends. */
+  resetConflict: () => void;
   /**
    * Drop the pending save, the one kept after a failure included, without
    * sending it: the user chose to leave without it. A request already in
@@ -397,20 +411,23 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
     }, delay);
   }, [delay, drain, onError]);
 
-  const flush = useCallback(async (): Promise<boolean> => {
+  const flush = useCallback(async (options?: FlushOptions): Promise<boolean> => {
     clearTimer();
     if (pendingRef.current || drainingRef.current) {
-      try {
-        await drain();
-        // A save scheduled while the drain was finishing still needs its own run.
-        if (pendingRef.current) await drain();
-      } catch {
-        // Surfaced via status / onError. Report failure so callers can abort navigation.
-        return false;
+      // A save scheduled while the drain was finishing still needs its own run.
+      for (let round = 0; round === 0 || (round === 1 && pendingRef.current); round += 1) {
+        try {
+          await drain();
+        } catch (error) {
+          // An answer kept for the user's choice, when the caller keeps the page and its banner.
+          if (options?.ignoreHeld && classifySaveFailure(error).kind === 'edit_conflict') continue;
+          // Surfaced via status / onError. Report failure so callers can abort navigation.
+          return false;
+        }
       }
     }
     // Edits waiting for the user's choice cannot be flushed.
-    return !heldRef.current?.();
+    return !!options?.ignoreHeld || !heldRef.current?.();
   }, [drain]);
 
   const discard = useCallback(() => {
@@ -422,10 +439,11 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
     setStatus('idle');
   }, []);
 
-  const isBusy = useCallback(
-    () => pendingRef.current != null || drainingRef.current != null || !!heldRef.current?.(),
-    [],
-  );
+  const isSaving = useCallback(() => pendingRef.current != null || drainingRef.current != null, []);
+  const isBusy = useCallback(() => isSaving() || !!heldRef.current?.(), [isSaving]);
+  const resetConflict = useCallback(() => {
+    setStatus((current) => (current === 'conflict' && !heldRef.current?.() ? 'idle' : current));
+  }, []);
 
   // Stable handle over the latest closures, so registering/unregistering does
   // not churn every render.
@@ -434,7 +452,7 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
   const handleRef = useRef<AutosaveHandle | null>(null);
   if (!handleRef.current) {
     handleRef.current = {
-      flush: () => latestHandleRef.current.flush(),
+      flush: (options) => latestHandleRef.current.flush(options),
       isBusy: () => latestHandleRef.current.isBusy(),
       discard: () => latestHandleRef.current.discard(),
     };
@@ -460,5 +478,5 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
     }
   }, []);
 
-  return { status, schedule, flush, isBusy, discard };
+  return { status, schedule, flush, isBusy, isSaving, resetConflict, discard };
 }

@@ -59,6 +59,7 @@ import { aiAgentControlApi } from '../ai/aiApi';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../i18n/useLocale';
 import { useBusinessContributorApplicationVisibility } from '../hooks/useBusinessContributorApplicationVisibility';
+import { useGuardedLeave, useInAppLinkGuard } from '../hooks/leaveGuard';
 
 const drawerWidth = 220;
 
@@ -104,6 +105,9 @@ const getNavRequirements = (entries: NavEntry[]): Array<{ resource: string; leve
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
+  // A page with edits it could not save yet asks before a link of the app takes the user away.
+  useInAppLinkGuard(navigate);
+  const guardedLeave = useGuardedLeave();
   const { logout, token, hasLevel, claims, profile } = useAuth();
   const { isPlatformHost, tenantName, logoUrl, useLogoInDark } = useTenant();
   const { config } = useFeatures();
@@ -403,7 +407,7 @@ export default function Layout() {
             <Tabs
               value={workspace === 'home' ? false : (visibleWorkspaces.includes(workspace) ? workspace : visibleWorkspaces[0])}
               onChange={(_, val) => {
-                navigate(workspaceRoutes[val as WorkspaceKey] ?? workspaceRoutes.admin);
+                void guardedLeave(() => navigate(workspaceRoutes[val as WorkspaceKey] ?? workspaceRoutes.admin));
               }}
               centered
               sx={{
@@ -472,8 +476,8 @@ export default function Layout() {
                   </Typography>
                 </Box>
                 <Divider sx={{ my: 0.5 }} />
-                <MenuItem onClick={() => { closeMenu(); navigate('/settings'); }}>{t('nav:userMenu.myProfile')}</MenuItem>
-                <MenuItem onClick={() => { closeMenu(); logout(); }}>{t('nav:userMenu.logout')}</MenuItem>
+                <MenuItem onClick={() => { closeMenu(); void guardedLeave(() => navigate('/settings')); }}>{t('nav:userMenu.myProfile')}</MenuItem>
+                <MenuItem onClick={() => { closeMenu(); void guardedLeave(logout); }}>{t('nav:userMenu.logout')}</MenuItem>
               </Menu>
             </>
           )}

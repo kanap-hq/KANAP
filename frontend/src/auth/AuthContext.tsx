@@ -17,6 +17,7 @@ import {
 } from './sessionStorage';
 import { getAccessToken, getAccessTokenExpiresAt, setAccessToken, subscribeAccessToken } from './accessTokenStore';
 import i18n, { detectBrowserLocale, LANGUAGE_OVERRIDE_STORAGE_KEY, SupportedLocale } from '../i18n';
+import { resetSharedPatchBuffers } from '../hooks/patchBuffer';
 
 type PermissionLevel = 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
 type Claims = {
@@ -158,6 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearAuthState = useCallback((opts?: { clearActivity?: boolean }) => {
     bumpSessionGeneration();
+    // Edits a workspace kept for the session (an edit waiting for a choice) end with it.
+    resetSharedPatchBuffers();
     queryClient.removeQueries({ queryKey: ['ai-capabilities'] });
     clearLegacyTokenStorage();
     if (opts?.clearActivity) {
@@ -242,6 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     // A new session: a refresh started before it answers for the previous one.
     bumpSessionGeneration();
+    resetSharedPatchBuffers();
     queryClient.removeQueries({ queryKey: ['ai-capabilities'] });
     setSessionExpired(false);
     setProfile(null);

@@ -2,8 +2,10 @@ import React from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import useAutosave, { classifySaveFailure, createAutosaveRegistry } from './useAutosave';
-import { createPatchBuffer, sendPatchBuffer, usePatchBuffer } from './patchBuffer';
-import { EditConflict, editConflictsOf, omitPath, pickLike, setPath, useEditConflicts } from './editConflicts';
+import { createPatchBuffer, resetSharedPatchBuffers, sendPatchBuffer, sharedPatchBuffer, usePatchBuffer } from './patchBuffer';
+import {
+  EditConflict, conflictCompanions, editConflictsOf, isEmptyPatch, mergeConflicts, omitLike, omitPath, pickLike, setPath, useEditConflicts,
+} from './editConflicts';
 
 // Field-level edit conflicts on the client (plan planning/perf-scale, lot 3C):
 // each edit carries its base, a 409 edit_conflict keeps the edit for the
@@ -71,6 +73,27 @@ describe('editConflictsOf', () => {
     expect(setPath({ notes: 'x' }, 'analytics_values.a', '2')).toEqual({ notes: 'x', analytics_values: { a: '2' } });
     expect(pickLike({ notes: 'n0', supplier_id: 's0', analytics_values: { a: '0', b: '9' } }, { notes: 'x', analytics_values: { a: '1' } }))
       .toEqual({ notes: 'n0', analytics_values: { a: '0' } });
+    expect(omitLike({ notes: 'n', supplier_id: 's', analytics_values: { a: '1', b: '2' } }, { notes: 'x', analytics_values: { a: '0' } }))
+      .toEqual({ supplier_id: 's', analytics_values: { b: '2' } });
+    expect(isEmptyPatch({ analytics_values: {} })).toBe(true);
+    expect(isEmptyPatch({ notes: '' })).toBe(false);
+  });
+
+  it('merges a second answer into the conflicts kept, field by field', () => {
+    const entry = (field: string, current: string) => ({
+      field, base: null, current, mine: null, labels: { base: null, current: null, mine: null }, changed_by: null, changed_at: null,
+    });
+    expect(mergeConflicts([entry('notes', 'a'), entry('supplier_id', 's')], [entry('notes', 'b')]).map((c) => [c.field, c.current]))
+      .toEqual([['supplier_id', 's'], ['notes', 'b']]);
+  });
+
+  it('names the companions of a field: the other fields of its group held with it', () => {
+    const groups = [['paying_company_id', 'account_id'], ['disabled_at', 'status']];
+    expect(conflictCompanions('paying_company_id', { paying_company_id: 'c2', account_id: '' }, groups)).toEqual(['account_id']);
+    expect(conflictCompanions('account_id', { paying_company_id: 'c2', account_id: '' }, groups)).toEqual(['paying_company_id']);
+    expect(conflictCompanions('account_id', { account_id: 'a2' }, groups)).toEqual([]);
+    expect(conflictCompanions('disabled_at', { disabled_at: null, status: 'enabled' }, groups)).toEqual(['status']);
+    expect(conflictCompanions('notes', { notes: 'x', account_id: '' }, groups)).toEqual([]);
   });
 });
 
@@ -163,16 +186,113 @@ describe('patch buffer conflicts', () => {
     expect(buffer.holds('A', 'notes')).toBe(false);
   });
 
-  it('a new edit of the item sends it all again (the server compares again); the conflicts show until the answer', () => {
+  it('an edit of another field goes alone; a refusal of it keeps the choice (lot 3C review, B1)', () => {
     const buffer = parked();
+    buffer.add('A', { paying_company_id: '' }, { paying_company_id: 'c1' });
+    const alone = buffer.take()!;
+    expect(alone.patch).toEqual({ paying_company_id: '' });
+    expect(alone.base).toEqual({ paying_company_id: 'c1' });
+    // Refused for good (400 "Paying company is required"): only that field goes.
+    buffer.refuse(alone);
+    expect(buffer.conflictsOf('A').map((c) => c.field)).toEqual(['notes', 'disabled_at']);
+    expect(buffer.held('A')).toMatchObject({ notes: 'mine', supplier_id: 's1' });
+    expect(buffer.holds('A', 'paying_company_id')).toBe(false);
+    expect(buffer.take()).toBeNull();
+  });
+
+  it('an edit of a waiting field joins it and waits; the banner shows the newer value as the user\'s', () => {
+    const buffer = parked();
+    const listener = vi.fn();
+    buffer.subscribe(listener);
+    const before = buffer.conflictsOf('A');
     buffer.add('A', { notes: 'mine, longer' }, { notes: 'mine' });
-    expect(buffer.conflictsOf('A')).toHaveLength(2);
-    const again = buffer.take()!;
-    expect(again.patch).toMatchObject({ notes: 'mine, longer', supplier_id: 's1' });
-    // The base is still the one the edit started from.
-    expect(again.base).toMatchObject({ notes: 'n0', supplier_id: 's0' });
-    buffer.settle(again);
+    expect(buffer.take()).toBeNull();
+    expect(listener).toHaveBeenCalled();
+    const [notes] = buffer.conflictsOf('A');
+    expect(buffer.conflictsOf('A')).not.toBe(before);
+    expect(notes).toMatchObject({ field: 'notes', mine: 'mine, longer', mineEdited: true, base: 'n0' });
+    // The base is still the one the edit started from; the choice sends the newer value.
+    expect(buffer.resolve('A', 'disabled_at', 'mine')).toBe(false);
+    expect(buffer.resolve('A', 'notes', 'mine')).toBe(true);
+    expect(buffer.take()).toMatchObject({ patch: { notes: 'mine, longer', supplier_id: 's1' }, base: { notes: 'theirs', supplier_id: 's0' }, chosen: true });
+  });
+
+  it('a value picked again that is their value takes their name', () => {
+    const buffer = createPatchBuffer<Patch>();
+    buffer.add('A', { supplier_id: 's2' }, { supplier_id: 's0' });
+    buffer.park(buffer.take()!, [{
+      field: 'supplier_id', base: 's0', current: 's1', mine: 's2',
+      labels: { base: 'Old', current: 'Acme', mine: 'Globex' }, changed_by: null, changed_at: null,
+    }]);
+    buffer.add('A', { supplier_id: 's1' }, { supplier_id: 's2' });
+    expect(buffer.conflictsOf('A')[0]).toMatchObject({ mine: 's1', labels: { mine: 'Acme' }, mineEdited: true });
+    buffer.add('A', { supplier_id: 's3' }, { supplier_id: 's1' });
+    expect(buffer.conflictsOf('A')[0]).toMatchObject({ mine: 's3', labels: { mine: null } });
+  });
+
+  it('once every choice is made, the waiting edit goes first and alone, before the other pending edits', () => {
+    const buffer = parked();
+    buffer.add('A', { description: 'typed meanwhile' }, { description: 'd0' });
+    buffer.resolve('A', 'disabled_at', 'theirs', ['status']);
+    expect(buffer.resolve('A', 'notes', 'mine')).toBe(true);
+    const chosen = buffer.take()!;
+    expect(chosen).toMatchObject({ chosen: true, patch: { notes: 'mine', supplier_id: 's1' } });
+    expect(chosen.patch).not.toHaveProperty('description');
+    expect(buffer.take()).toMatchObject({ patch: { description: 'typed meanwhile' } });
+  });
+
+  it('a busy answer keeps the chosen edit apart, with what was typed in its fields meanwhile', () => {
+    const buffer = parked();
+    buffer.resolve('A', 'disabled_at', 'theirs', ['status']);
+    buffer.resolve('A', 'notes', 'mine');
+    const chosen = buffer.take()!;
+    buffer.add('A', { notes: 'mine, again', description: 'other' }, { notes: 'mine', description: 'd0' });
+    buffer.putBack(chosen);
+    expect(buffer.take()).toMatchObject({ chosen: true, patch: { notes: 'mine, again', supplier_id: 's1' }, base: { notes: 'theirs', supplier_id: 's0' } });
+    expect(buffer.take()).toMatchObject({ patch: { description: 'other' }, base: { description: 'd0' } });
+  });
+
+  it('a second refusal of the item joins the first: both edits and all their conflicts wait together', () => {
+    const buffer = createPatchBuffer<Patch>();
+    const conflict = (field: string) => ({ field, base: 'b', current: 'c', mine: 'm', labels: { base: null, current: null, mine: null }, changed_by: null, changed_at: null });
+    buffer.add('A', { notes: 'mine' }, { notes: 'n0' });
+    buffer.park(buffer.take()!, [conflict('notes')]);
+    buffer.add('A', { supplier_id: 's2' }, { supplier_id: 's0' });
+    buffer.park(buffer.take()!, [conflict('supplier_id')]);
+    expect(buffer.conflictsOf('A').map((c) => c.field)).toEqual(['notes', 'supplier_id']);
+    expect(buffer.waiting('A')).toEqual({ notes: 'mine', supplier_id: 's2' });
+    // Keeping their supplier leaves the notes waiting.
+    expect(buffer.resolve('A', 'supplier_id', 'theirs')).toBe(false);
+    expect(buffer.waiting('A')).toEqual({ notes: 'mine' });
+  });
+
+  it('keeping their value of one field of a pair decides the other row too', () => {
+    const buffer = createPatchBuffer<Patch>();
+    const conflict = (field: string) => ({ field, base: 'b', current: 'c', mine: 'm', labels: { base: null, current: null, mine: null }, changed_by: null, changed_at: null });
+    buffer.add('A', { paying_company_id: 'c2', account_id: '' }, { paying_company_id: 'c1', account_id: 'a1' });
+    buffer.park(buffer.take()!, [conflict('paying_company_id'), conflict('account_id')]);
+    expect(buffer.resolve('A', 'account_id', 'theirs', ['paying_company_id'])).toBe(false);
     expect(buffer.hasConflicts()).toBe(false);
+    expect(buffer.isEmpty()).toBe(true);
+  });
+
+  it('a discard that keeps the choices drops only what is not waiting for one', () => {
+    const buffer = parked();
+    buffer.add('A', { description: 'pending' }, { description: 'd0' });
+    buffer.discard({ keepChoices: true });
+    expect(buffer.conflictsOf('A')).toHaveLength(2);
+    expect(buffer.held('A')).toEqual({ notes: 'mine', supplier_id: 's1', disabled_at: '2027-01-01', status: 'enabled' });
+    expect(buffer.hasUnsent()).toBe(false);
+  });
+
+  it('lists the items with a choice waiting, the same array until it changes', () => {
+    const buffer = parked();
+    const first = buffer.conflictTargets();
+    expect(first).toEqual(['A']);
+    buffer.add('B', { notes: 'b' }, { notes: 'b0' });
+    expect(buffer.conflictTargets()).toBe(first);
+    buffer.discard();
+    expect(buffer.conflictTargets()).toEqual([]);
   });
 
   it('a discard drops the conflicts and tells the screen', () => {
@@ -329,5 +449,85 @@ describe('autosave and a 409 edit_conflict', () => {
     expect(flushed).toBe(true);
     await advance(30_000);
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe('session buffers (lot 3C review)', () => {
+  afterEach(() => resetSharedPatchBuffers());
+
+  it('gives a page kind the same buffer each time, until the session ends', () => {
+    const opex = sharedPatchBuffer<Patch>('opex');
+    expect(sharedPatchBuffer<Patch>('opex')).toBe(opex);
+    expect(sharedPatchBuffer<Patch>('capex')).not.toBe(opex);
+    opex.add('A', { notes: 'kept' }, { notes: 'n0' });
+    const listener = vi.fn();
+    opex.subscribe(listener);
+    opex.park(opex.take()!, [{ field: 'notes', base: 'n0', current: 'c', mine: 'kept', labels: { base: null, current: null, mine: null }, changed_by: null, changed_at: null }]);
+    resetSharedPatchBuffers();
+    // The page still mounted sees its banner go; the next page gets a fresh buffer.
+    expect(opex.hasConflicts()).toBe(false);
+    expect(sharedPatchBuffer<Patch>('opex')).not.toBe(opex);
+  });
+});
+
+describe('autosave flush with a choice waiting', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('fails a flush, unless the caller keeps the banner (a tab change); the conflict state ends with the choices', async () => {
+    let held = true;
+    const { result } = renderHook(() => useAutosave({ delay: 10, held: () => held }));
+    act(() => result.current.schedule(async () => { throw conflictError([{ field: 'notes' }]); }));
+    await advance(10);
+    await settle();
+    expect(result.current.status).toBe('conflict');
+    expect(result.current.isSaving()).toBe(false);
+    expect(result.current.isBusy()).toBe(true);
+    let plain: boolean | undefined;
+    let keeping: boolean | undefined;
+    await act(async () => { plain = await result.current.flush(); });
+    await act(async () => { keeping = await result.current.flush({ ignoreHeld: true }); });
+    expect(plain).toBe(false);
+    expect(keeping).toBe(true);
+
+    // A save still pending is waited for, its conflict does not fail the move either.
+    act(() => result.current.schedule(async () => { throw conflictError([{ field: 'notes' }]); }));
+    await act(async () => { keeping = await result.current.flush({ ignoreHeld: true }); });
+    expect(keeping).toBe(true);
+
+    // A refusal does.
+    act(() => result.current.schedule(async () => { throw Object.assign(new Error('400'), { response: { status: 400, data: {} } }); }));
+    await act(async () => { keeping = await result.current.flush({ ignoreHeld: true }); });
+    expect(keeping).toBe(false);
+
+    act(() => result.current.schedule(async () => { throw conflictError([{ field: 'notes' }]); }));
+    await act(async () => { await result.current.flush({ ignoreHeld: true }); });
+    expect(result.current.status).toBe('conflict');
+    // Still a choice waiting: the state stays.
+    act(() => result.current.resetConflict());
+    expect(result.current.status).toBe('conflict');
+    held = false;
+    act(() => result.current.resetConflict());
+    expect(result.current.status).toBe('idle');
+  });
+});
+
+describe('the reviewer\'s probe: a choice waiting, then a refused field of the same line', () => {
+  it('sends the refused field alone and keeps the choice and the user\'s text', async () => {
+    const buffer = createPatchBuffer<Patch>();
+    const bad400 = Object.assign(new Error('400'), { response: { status: 400, headers: {}, data: { message: 'Paying company is required.' } } });
+    let answer: unknown = conflictError([{ field: 'notes', base: 'n0', current: 'theirs', mine: 'mine' }]);
+    const sent: Patch[] = [];
+    const send = async (_id: string, patch: Patch, base: Patch) => { sent.push({ ...patch, base }); if (answer) throw answer; };
+    buffer.add('L', { notes: 'mine' }, { notes: 'n0' });
+    await sendPatchBuffer(buffer, send).catch(() => undefined);
+    expect(buffer.conflictsOf('L').map((c) => c.field)).toEqual(['notes']);
+    answer = bad400;
+    buffer.add('L', { paying_company_id: '' }, { paying_company_id: 'c1' });
+    await expect(sendPatchBuffer(buffer, send)).rejects.toBe(bad400);
+    expect(sent[1]).toEqual({ paying_company_id: '', base: { paying_company_id: 'c1' } });
+    expect(buffer.conflictsOf('L').map((c) => c.field)).toEqual(['notes']);
+    expect(buffer.held('L')).toEqual({ notes: 'mine' });
+    expect(buffer.isEmpty()).toBe(false);
   });
 });

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import type { EditConflict } from '../../hooks/editConflicts';
-import EditConflictBanner from './EditConflictBanner';
+import EditConflictBanner, { OtherConflictsNotice } from './EditConflictBanner';
 
 // The conflict banner (plan planning/perf-scale, lot 3C, decision D3), in
 // French: « Marie Dupont a modifié ce champ à 14:02 pendant que vous le
@@ -55,8 +55,10 @@ describe('EditConflictBanner', () => {
       field: 'supplier_id', base: 's0', current: 's1', mine: 's2',
       labels: { base: 'Ancien', current: 'Acme', mine: 'Globex' },
     })]);
-    expect(screen.getByText('Une autre personne a modifié un champ que vous modifiiez')).toBeInTheDocument();
-    expect(screen.getByText('Marie Dupont a modifié ce champ à 14:02 pendant que vous le modifiiez.')).toBeInTheDocument();
+    // A region named by its title; the title alone goes to the polite live region.
+    const region = screen.getByRole('region', { name: 'Une autre personne a modifié un champ que vous modifiiez' });
+    expect(screen.getByRole('status')).toHaveTextContent(/^Une autre personne a modifié un champ que vous modifiiez$/);
+    expect(within(region).getByText('Marie Dupont a modifié ce champ à 14:02 pendant que vous le modifiiez.')).toBeInTheDocument();
     const row = screen.getByTestId('edit-conflict-supplier_id');
     expect(within(row).getByText('Fournisseur')).toBeInTheDocument();
     // Names, never the ids.
@@ -76,7 +78,7 @@ describe('EditConflictBanner', () => {
       conflict({ field: 'notes', base: 'Start', current: 'Texte de Marie\nsur deux lignes', mine: '' }),
       conflict({ field: 'effective_start', current: '2026-02-01', mine: '2026-03-01', changed_by: null, changed_at: '2026-01-15T09:30:00.000Z' }),
     ], { formatValue: (field, value) => (field === 'effective_start' ? `le ${String(value)}` : undefined) });
-    expect(screen.getByText('Une autre personne a modifié 2 champs que vous modifiiez')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Une autre personne a modifié 2 champs que vous modifiiez' })).toBeInTheDocument();
     const notes = screen.getByTestId('edit-conflict-notes');
     expect(within(notes).getByText(/Texte de Marie/)).toHaveStyle({ whiteSpace: 'pre-wrap' });
     expect(within(notes).getByText('Vide')).toBeInTheDocument();
@@ -90,12 +92,86 @@ describe('EditConflictBanner', () => {
     for (const button of screen.getAllByRole('button')) expect(button).toBeDisabled();
   });
 
-  it('renders nothing when there is no conflict', () => {
-    const { container } = render(
+  it('renders no banner when there is no conflict, only an empty live region', () => {
+    render(
       <ThemeProvider theme={createAppTheme('light')}>
         <EditConflictBanner conflicts={[]} fieldLabel={(f) => f} onResolve={() => undefined} />
       </ThemeProvider>,
     );
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByRole('region')).toBeNull();
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('says so when the change is the user\'s own, from another window', () => {
+    renderBanner([conflict({ field: 'notes', current: 'a', mine: 'b', changed_by: { id: 'me', name: 'Moi Même' } })], { currentUserId: 'me' });
+    expect(screen.getByRole('region', { name: 'Vous avez modifié un champ dans une autre fenêtre' })).toBeInTheDocument();
+    expect(screen.getByText('Vous avez modifié ce champ dans une autre fenêtre à 14:02.')).toBeInTheDocument();
+    expect(screen.queryByText(/Moi Même/)).toBeNull();
+  });
+
+  it('names nobody when the server cannot say who, and gives the time of the line\'s last change', () => {
+    renderBanner([conflict({ field: 'supplier_id', current: null, mine: 's2', changed_by: null, labels: { base: null, current: null, mine: 'Globex' } })]);
+    expect(screen.getByText('Ce champ a été modifié à 14:02 pendant que vous le modifiiez.')).toBeInTheDocument();
+  });
+
+  it('never shows an id: a record gone is said so, a value picked after the answer points to the field', () => {
+    renderBanner([
+      conflict({ field: 'supplier_id', base: 's0', current: '6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b', mine: '7f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b' }),
+      conflict({ field: 'account_id', current: { id: 'x' }, mine: '8f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b', mineEdited: true }),
+    ]);
+    const supplier = screen.getByTestId('edit-conflict-supplier_id');
+    expect(within(supplier).getAllByText('Valeur plus disponible')).toHaveLength(2);
+    expect(supplier).not.toHaveTextContent('6f1c2a3b');
+    const account = screen.getByTestId('edit-conflict-account_id');
+    expect(within(account).getByText('Valeur plus disponible')).toBeInTheDocument();
+    expect(within(account).getByText('Votre nouveau choix, affiché dans le champ')).toBeInTheDocument();
+  });
+
+  it('gives the page the conflict to format a value with (two ends of validity on the same day)', () => {
+    const formatValue = vi.fn(() => 'formatted');
+    const entry = conflict({ field: 'disabled_at', current: '2026-10-02T08:00:00.000Z', mine: '2026-10-02T09:00:00.000Z' });
+    renderBanner([entry], { formatValue });
+    expect(formatValue).toHaveBeenCalledWith('disabled_at', '2026-10-02T08:00:00.000Z', entry);
+  });
+
+  it('scrolls its rows instead of growing past 40% of the screen', () => {
+    renderBanner([conflict({ field: 'notes', current: 'a', mine: 'b' }), conflict({ field: 'supplier_id', current: 'x', mine: 'y' })]);
+    expect(screen.getByRole('region')).toHaveStyle({ maxHeight: '40vh' });
+    expect(screen.getByTestId('edit-conflict-rows')).toHaveStyle({ overflowY: 'auto' });
+  });
+
+  it('hands the focus on after the last choice only', () => {
+    const returnFocus = vi.fn();
+    const two = [conflict({ field: 'notes', current: 'a', mine: 'b' }), conflict({ field: 'supplier_id', current: 'x', mine: 'y' })];
+    const { onResolve } = renderBanner(two, { returnFocus });
+    fireEvent.click(within(screen.getByTestId('edit-conflict-notes')).getByRole('button', { name: 'Garder sa valeur: Notes' }));
+    expect(onResolve).toHaveBeenCalledWith('notes', 'theirs');
+    expect(returnFocus).not.toHaveBeenCalled();
+  });
+
+  it('hands the focus on once the banner goes', () => {
+    const returnFocus = vi.fn();
+    renderBanner([conflict({ field: 'notes', current: 'a', mine: 'b' })], { returnFocus });
+    fireEvent.click(screen.getByRole('button', { name: 'Appliquer la vôtre: Notes' }));
+    expect(returnFocus).toHaveBeenCalledWith('notes');
+  });
+
+  it('in Spanish, the user\'s own value is "mi valor"', async () => {
+    await i18n.changeLanguage('es');
+    renderBanner([conflict({ field: 'notes', current: 'a', mine: 'b' })]);
+    expect(screen.getByText('Mi valor')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aplicar mi valor: Notes' })).toBeInTheDocument();
+  });
+
+  it('names the other lines a choice waits on, with a link to each', () => {
+    const onOpen = vi.fn();
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <OtherConflictsNotice items={[{ id: 'a', label: 'OPX-1' }]} onOpen={onOpen} />
+      </ThemeProvider>,
+    );
+    expect(screen.getByText('OPX-1 a une modification qui attend votre choix.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir OPX-1' }));
+    expect(onOpen).toHaveBeenCalledWith('a');
   });
 });

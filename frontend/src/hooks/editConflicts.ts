@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import React, { useCallback, useSyncExternalStore } from 'react';
 
 /**
  * Field-level edit conflicts (plan planning/perf-scale, lot 3C, decisions D2
@@ -11,7 +11,11 @@ import { useCallback, useSyncExternalStore } from 'react';
  * - the edit is kept, not retried and not dropped (`PatchBuffer.park`), until
  *   the user chooses per field: keep their value (the field is dropped from
  *   the pending edit) or apply theirs (`base` becomes their value and the edit
- *   goes again). `EditConflictBanner` shows the choice.
+ *   goes again). `EditConflictBanner` shows the choice;
+ * - while it waits, the edit is never sent with another one: an edit of
+ *   another field goes alone (the server checks a request before it compares
+ *   it, so a refusal of that other field would drop the waiting one too), an
+ *   edit of a waiting field joins it and waits (lot 3C review).
  */
 
 export const EDIT_CONFLICT_CODE = 'edit_conflict';
@@ -33,6 +37,12 @@ export type EditConflict = {
   changed_by: EditConflictAuthor | null;
   /** When, ISO timestamp, null when unknown. */
   changed_at: string | null;
+  /**
+   * Client side: the user changed the field again after the server's answer;
+   * `mine` is that newer value, which the server never named (`labels.mine`
+   * null unless it is their value or the base).
+   */
+  mineEdited?: boolean;
 };
 
 export type ConflictChoice = 'theirs' | 'mine';
@@ -81,6 +91,13 @@ function splitPath(path: string): [string, string | null] {
 
 const isRecord = (value: unknown): value is AnyRecord => !!value && typeof value === 'object' && !Array.isArray(value);
 
+export function getPath(patch: object, path: string): unknown {
+  const [key, inner] = splitPath(path);
+  const value = (patch as AnyRecord)[key];
+  if (inner === null) return value;
+  return isRecord(value) ? value[inner] : undefined;
+}
+
 export function hasPath(patch: object, path: string): boolean {
   const [key, inner] = splitPath(path);
   const value = (patch as AnyRecord)[key];
@@ -124,18 +141,83 @@ export function pickLike<P extends object>(source: P, shape: object): P {
   return result as P;
 }
 
+/** `source` without the paths `shape` holds (a nested object left empty goes too). */
+export function omitLike<P extends object>(source: P, shape: object): P {
+  let result = source;
+  for (const [key, value] of Object.entries(shape as AnyRecord)) {
+    if (isRecord(value) && isRecord((source as AnyRecord)[key])) {
+      for (const inner of Object.keys(value)) result = omitPath(result, `${key}.${inner}`);
+    } else {
+      result = omitPath(result, key);
+    }
+  }
+  return result;
+}
+
+/** No field at all (an empty nested object counts as none). */
+export function isEmptyPatch(patch: object): boolean {
+  return Object.values(patch as AnyRecord).every((value) => isRecord(value) && Object.keys(value).length === 0);
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Two values of a field as the server compares them: an empty text is no value, texts trimmed, ids without case. */
+export function sameEditValue(a: unknown, b: unknown): boolean {
+  const norm = (value: unknown) => (value === undefined || value === '' ? null : value);
+  const x = norm(a);
+  const y = norm(b);
+  if (typeof x === 'string' && typeof y === 'string') {
+    return x.trim() === y.trim() || (UUID.test(x) && x.toLowerCase() === y.toLowerCase());
+  }
+  return JSON.stringify(x) === JSON.stringify(y);
+}
+
+/** The conflicts once the server answered again: a field it names again takes the new entry, the others stay. */
+export function mergeConflicts(kept: readonly EditConflict[] | undefined, next: readonly EditConflict[]): EditConflict[] {
+  const fields = new Set(next.map((conflict) => conflict.field));
+  return [...(kept ?? []).filter((conflict) => !fields.has(conflict.field)), ...next];
+}
+
+/**
+ * Fields kept or dropped together. "Keep their value" on one field of a group
+ * also drops the user's value of the group's other fields held with it, and
+ * decides their rows: a company with its account (their account belongs to
+ * their company's chart of accounts), an end of validity with its status.
+ */
+export function conflictCompanions(field: string, waiting: object | undefined, groups: readonly (readonly string[])[]): string[] {
+  if (!waiting) return [];
+  const companions = new Set<string>();
+  for (const group of groups) {
+    if (!group.includes(field)) continue;
+    for (const other of group) if (other !== field && hasPath(waiting, other)) companions.add(other);
+  }
+  return [...companions];
+}
+
 /* ---- Subscription ---- */
 
 export interface EditConflictSource {
   subscribe: (listener: () => void) => () => void;
   /** The conflicts of one item; the same array until they change. */
   conflictsOf: (targetId: string) => readonly EditConflict[];
+  /** The items with a choice waiting; the same array until it changes. */
+  conflictTargets: () => readonly string[];
 }
 
 export const NO_CONFLICTS: readonly EditConflict[] = Object.freeze([]);
+const NO_TARGETS: readonly string[] = Object.freeze([]);
 
 /** The conflicts waiting for the user's choice on the item the page shows (re-renders when they change). */
 export function useEditConflicts(source: EditConflictSource, targetId: string | null | undefined): readonly EditConflict[] {
   const getSnapshot = useCallback(() => (targetId ? source.conflictsOf(targetId) : NO_CONFLICTS), [source, targetId]);
   return useSyncExternalStore(source.subscribe, getSnapshot, getSnapshot);
+}
+
+/** The items other than `targetId` with a choice waiting (a line left another way than through the workspace). */
+export function useOtherConflictTargets(source: EditConflictSource, targetId: string | null | undefined): readonly string[] {
+  const targets = useSyncExternalStore(source.subscribe, source.conflictTargets, source.conflictTargets);
+  return React.useMemo(() => {
+    const others = targets.filter((id) => id !== targetId);
+    return others.length > 0 ? others : NO_TARGETS;
+  }, [targets, targetId]);
 }
