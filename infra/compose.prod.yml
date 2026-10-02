@@ -20,6 +20,13 @@ services:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped
     # Default CMD runs migrations then starts API
+    # Stop: SIGTERM reaches node (init + exec CMD), which finishes the requests in flight
+    # (SHUTDOWN_DRAIN_TIMEOUT_MS, default 20 s) before it exits; the kill comes after 30 s.
+    init: true
+    stop_grace_period: 30s
+    # API processes: API_WORKERS in backend/.env.<env> (default 1, unset here on purpose). Each
+    # process adds about 150 to 500 MB and DB_POOL_MAX connections: QA has 3.8 GB and no swap,
+    # keep 1 there. See doc/architecture.md, "Several API processes".
 
   web:
     build:

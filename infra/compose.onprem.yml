@@ -10,6 +10,15 @@ services:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped
     # Default CMD runs migrations then starts the API
+    # Stop: SIGTERM reaches node (init + exec CMD), which finishes the requests in flight
+    # (SHUTDOWN_DRAIN_TIMEOUT_MS, default 20 s) before it exits; the kill comes after 30 s.
+    init: true
+    stop_grace_period: 30s
+    # Capacity, set in ../.env (see .env.onprem.example and the operations guide):
+    #   API_WORKERS   API processes in this container (default 1). Each adds about 150 to 500 MB
+    #                 of memory and up to DB_POOL_MAX database connections.
+    #   DB_POOL_MAX   database connections per process (default 20). Workers × pool must stay
+    #                 under PostgreSQL's max_connections minus about 15; the API warns at start.
 
   web:
     build:

@@ -13,4 +13,7 @@ COPY scripts ./scripts
 RUN npm run build
 EXPOSE 8080
 USER node
-CMD ["sh","-lc","node ./scripts/migrate-and-start.js"]
+# Exec form: node receives SIGTERM itself and drains in-flight requests before it exits
+# (src/common/graceful-shutdown.ts). Through `sh -lc` the signal never reached node and every
+# stop waited for the kill. API_WORKERS > 1 runs several API processes (Node cluster).
+CMD ["node", "./scripts/migrate-and-start.js"]
