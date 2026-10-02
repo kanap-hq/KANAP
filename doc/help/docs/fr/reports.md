@@ -342,7 +342,7 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par compte de cons
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (disponible uniquement pour une seule année sélectionnée)
-- **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques
+- **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques. Propose tous les comptes utilisés par les lignes du rapport, par nom et numéro, que vous puissiez ou non ouvrir le plan comptable
 - **Centre de coûts**, **Run ou build** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
@@ -358,7 +358,7 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par compte de cons
 
 **Tableau** : Une ligne par compte de consolidation avec des colonnes d'années. Une ligne de totaux épinglée en bas additionne tous les groupes.
 
-Les postes sans compte de consolidation apparaissent comme « Non affecté ».
+Une ligne sur un compte de consolidation désactivé depuis compte toujours, sur la ligne de consolidation de ce compte. Les noms et numéros de compte ne s'affichent que si vous pouvez lire le [plan comptable](chart-of-accounts.md) ; sans cet accès, toutes les lignes apparaissent sous « Non affecté » à la place (les totaux restent corrects, seule la répartition par compte est masquée). Les postes sans compte de consolidation apparaissent aussi comme « Non affecté ».
 
 ---
 

@@ -342,7 +342,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wob
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
 - **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur verfügbar bei Auswahl eines einzelnen Jahres)
-- **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten
+- **Konten ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Konten. Bietet jedes vom Bericht verwendete Konto nach Name und Nummer an, unabhängig davon, ob Sie den Kontenplan öffnen können
 - **Kostenstelle**, **Run oder Build** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
 ### Was Sie sehen
@@ -358,7 +358,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wob
 
 **Tabelle**: Eine Zeile pro Konsolidierungskonto mit Jahresspalten. Eine angeheftete Summenzeile unten summiert alle Gruppen.
 
-Positionen ohne Konsolidierungskonto erscheinen als „Nicht zugeordnet".
+Eine Zeile auf einem inzwischen deaktivierten Konsolidierungskonto zählt weiterhin, unter der Konsolidierungszeile dieses Kontos. Kontonamen und -nummern werden nur angezeigt, wenn Sie den [Kontenplan](chart-of-accounts.md) lesen dürfen; ohne diesen Zugriff erscheinen alle Zeilen stattdessen unter „Nicht zugeordnet“ (die Summen bleiben richtig, nur die Aufteilung nach Konto ist ausgeblendet). Positionen ohne Konsolidierungskonto erscheinen ebenfalls als „Nicht zugeordnet“.
 
 ---
 

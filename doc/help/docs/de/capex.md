@@ -104,11 +104,13 @@ Diese Spalten sind standardmäßig ausgeblendet. Zeigen Sie sie über die Spalte
 
 ### Schnellsuche
 
-Das Suchfeld oben durchsucht Referenz, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysewerte, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Anlagentyp, Investitionsart, Priorität, Notizen, Währung und Status. Ergebnisse aktualisieren sich in Echtzeit während der Eingabe.
+Das Suchfeld oben durchsucht Referenz, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysewerte, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Anlagentyp, Investitionsart, Priorität, Notizen, Währung und Status. Ergebnisse aktualisieren sich in Echtzeit während der Eingabe, unabhängig von Akzenten und Groß-/Kleinschreibung.
 
 ### Spaltenfilter
 
 Jede filterbare Spaltenüberschrift hat ein Filtersymbol. **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Anlagentyp**, **Investitionsart**, **Priorität**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **Aktiviert** verwenden Kontrollkästchen-Set-Filter mit **Alle**, **Keine** und einer Löschen-Schaltfläche. Der Filter **Aktiviert** bietet **Aktiviert** und **Deaktiviert** und grenzt die Liste ein, wenn **Anzeigen** auf **Alle** steht. Wenn Sie darin auf **Leeren** klicken oder beide Werte abwählen, zeigt die Liste nichts mehr an, unabhängig von **Anzeigen**. Mehrere Filter werden mit UND-Logik kombiniert.
+
+Aktivieren Sie **Alle** und deaktivieren Sie dann die Werte, die Sie ausschließen möchten: Der Filter behält alles außer diesen (die Überschrift zeigt dann zum Beispiel **Alle außer 3**), und ein später angelegter Wert wird automatisch einbezogen.
 
 Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Positionen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen.
 
@@ -116,11 +118,11 @@ Jede VZÄ-Spalte hat einen Zahlenfilter mit denselben Bedingungen, dazu leer und
 
 **Gültig ab**, **Ende der Gültigkeit**, **Erstellt** und **Aktualisiert** haben Datumsfilter. Wählen Sie ein Datum im Feld unter der Überschrift, um die Positionen an diesem Datum zu behalten, oder öffnen Sie das Filtermenü für vor, nach, zwischen, leer oder nicht leer.
 
-Textspalten verwenden Textfilter. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `CPX-12`.
+Textspalten verwenden Textfilter, unabhängig von Akzenten und Groß-/Kleinschreibung. Geben Sie bei **Ref** die Nummer oder die vollständige Referenz ein, zum Beispiel `12` oder `CPX-12`.
 
 ### Sortierung
 
-Klicken Sie auf eine Spaltenüberschrift, um aufsteigend oder absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betrags- und VZÄ-Spalte. Positionen ohne VZÄ stehen bei aufsteigender Sortierung am Ende. Standardmäßig wird nach der Standardspalte des aktuellen Jahres sortiert, höchster Betrag zuerst (**Budget J** mit den Standardeinstellungen). **Zurück** und **Weiter** im Arbeitsbereich folgen derselben Reihenfolge. Die Liste merkt sich Ihre letzte Sortierung bei der Rückkehr.
+Klicken Sie auf eine Spaltenüberschrift, um aufsteigend oder absteigend zu sortieren. Jede Spalte ist sortierbar, auch jede Betrags- und VZÄ-Spalte. Positionen ohne VZÄ stehen bei aufsteigender Sortierung am Ende. Textspalten sortieren in natürlicher Lesereihenfolge: Ein Name mit Akzent wird neben seiner unakzentuierten Schreibweise eingeordnet (zum Beispiel „Électricité“ neben „Electricite“), und Kleinbuchstaben stehen vor Großbuchstaben, wenn die Buchstaben sonst gleich sind. Standardmäßig wird nach der Standardspalte des aktuellen Jahres sortiert, höchster Betrag zuerst (**Budget J** mit den Standardeinstellungen). **Zurück** und **Weiter** im Arbeitsbereich folgen derselben Reihenfolge. Die Liste merkt sich Ihre letzte Sortierung bei der Rückkehr.
 
 ### Summenzeile
 
@@ -147,6 +149,8 @@ Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem 
 
 Ihr Listenkontext (Sortierreihenfolge, Suchtext und aktive Filter) wird beibehalten, wenn Sie eine Position öffnen, und wiederhergestellt, wenn Sie zur Liste zurückkehren. Sie können also mehrere Positionen nacheinander aufrufen, ohne Ihren Platz zu verlieren.
 
+Dieselben Filter werden auch in der Webadresse der Seite gespeichert. Ein Neuladen der Seite oder das Teilen des Links öffnet dieselbe Ansicht wieder. Ein Link, dessen Filter nicht mehr verfügbar sind, zeigt „Die Filter dieses Links sind nicht mehr verfügbar.“
+
 ### Zurück/Weiter-Navigation
 
 Wenn Sie eine Position öffnen, zeigt der Arbeitsbereich die Schaltflächen **Zurück** und **Weiter**. Diese navigieren durch die Liste in der aktuellen Sortierreihenfolge unter Berücksichtigung von Filtern und Suche und speichern zuerst Ihre ausstehenden Änderungen. Der Zähler (z. B. „Position 3 von 47") zeigt Ihre Position in der gefilterten Liste.
@@ -169,6 +173,16 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen
 - Jede Änderung wird automatisch gespeichert. In der Kopfzeile erscheint der Hinweis **Wird gespeichert...** / **Gespeichert**
 - Beim Wechsel des Tabs, beim Wechsel zur vorherigen oder nächsten Position oder beim Schließen des Arbeitsbereichs werden ausstehende Änderungen zuerst gespeichert. Schlägt ein Speichervorgang fehl, bleiben Sie an Ort und Stelle und eine Meldung nennt den Grund, sodass keine Änderung unbemerkt verloren geht
 - **Strg+S** (**Cmd+S** auf dem Mac) speichert sofort
+- Kann eine Speicherung nicht sofort erfolgen, weil gerade eine andere Speicherung auf denselben Daten läuft, wiederholt KANAP sie automatisch für Sie
+- Läuft ein Budgetvorgang für mehrere Positionen (zum Beispiel eine Spaltenkopie oder ein Zurücksetzen in der Budgetadministration), werden Änderungen hier mit der Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“ zurückgestellt. Versuchen Sie es erneut, sobald er abgeschlossen ist
+
+**Gleichzeitiges Bearbeiten**:
+
+- Zwei Personen können dieselbe Position gleichzeitig bearbeiten, ohne sich zu stören. Die Bearbeitung unterschiedlicher Felder, unterschiedlicher Budgetmonate oder unterschiedlicher Budgetspalten führt nie zu einem Konflikt, selbst auf derselben Position im selben Moment
+- Ändert jemand anderes dasselbe Feld, dieselbe Budgetspalte oder die Zuordnung, während Sie sie bearbeiten, zeigt ein Banner den anderen Wert und Ihren, mit wer ihn geändert hat und wann. Wählen Sie **Anderen Wert behalten**, um dessen Wert zu übernehmen, oder **Ihren Wert übernehmen**, um Ihre Eingabe zu behalten. Bei einer Budgetspalte lauten die Optionen **Spalte neu laden** oder **Überschreiben**; bei der Zuordnung **Zuordnung neu laden** oder **Überschreiben**
+- Nur das geänderte Feld, die Spalte oder die Zuordnung wartet auf Ihre Wahl; alles andere wird weiterhin wie gewohnt gespeichert
+- Eine wartende Wahl bleibt erhalten, wenn Sie den Tab wechseln. Sie geht, nach einer Warnung, verloren, wenn Sie die Position verlassen oder das Jahr wechseln
+- War die frühere Änderung Ihre eigene, aus einem anderen Fenster oder Tab, sagt das Banner das, statt jemand anderen zu nennen
 
 ### Übersicht
 
@@ -193,6 +207,7 @@ Der Tab Übersicht enthält die Details der Investition und ihre Aufgaben.
 - **Lieferant**, **Kostenstelle**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), **Anlagentyp**, **Investitionsart**, ein Feld pro Analysedimension, **Run oder Build** und **Beginn der Gültigkeit**
 - **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
 - Die Daten **Erstellt** und **Aktualisiert** (schreibgeschützt)
+- Geben Sie in **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher** oder einem Analysedimensionsfeld Text ein, um nach Namen zu suchen. Treffer erscheinen während der Eingabe, sodass Sie jeden Wert auch in einer sehr langen Liste finden; eine Zeile unter der Liste zeigt „Weiter tippen, um einzugrenzen: es gibt weitere Ergebnisse“, wenn es mehr Treffer gibt als angezeigt werden
 - Die **Priorität** stellen Sie beim Erstellen im Bereich Eigenschaften ein, danach in der Metadatenleiste
 
 **Kostenstelle**:
@@ -253,6 +268,7 @@ Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die S
 - **Monatlich**: Geben Sie Beträge pro Monat (Januar bis Dezember) für jede angezeigte Spalte ein, für eine genaue Verfolgung der Projektausgaben. Quartalszwischensummen und eine Jahressumme werden angezeigt. Nur die Monate, die Sie ändern, werden gespeichert.
 - Beide Tabs zeigen dieselben Spalten: Prognose erscheint auch in **Jährlich**, wenn sie angezeigt wird.
 - Wechseln Sie mit den Tabs **Jährlich** und **Monatlich** zwischen den Modi
+- Ihre Wahl zwischen **Jährlich** und **Monatlich** wird in Ihrem Browser gespeichert, nur für Sie: Der Wechsel ändert nicht, was andere Benutzer sehen, die diese Position öffnen. Bis Sie wählen, öffnet sich eine Spalte in dem Modus, in dem ihre Beträge zuletzt erfasst wurden.
 - Der Moduswechsel ändert Ihre Beträge nicht, nur die Ansicht. Jährlich zeigt die Jahressumme der gespeicherten Monate, Monatlich zeigt die gespeicherten Monate.
 
 **Einfrierverhalten**:
@@ -286,6 +302,13 @@ Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die S
 - **Menge und Preis · 3 Zeilen · 1.00 VZÄ**: Die Beträge stammen aus Zeilen, mit ihrer Anzahl und, wenn die Zeilen Personen oder Tage zählen, den VZÄ der Spalte. Die VZÄ sind der Jahresdurchschnitt. Fahren Sie mit der Maus über die Kennzeichnung, um die Zeilen zu sehen, zum Beispiel „Projektleitung: 1 Person × 1.200 pro Tag, 5 Tage pro Monat, Feb. bis Juli“
 - **Von Hand geändert**: Ein Monat wurde im Raster oder durch einen Import der Datei der Budgetzeilen geändert
 - Eine Spalte ohne Kennzeichnung hat die Daten behalten, die sie vor der Einführung der Zeiträume hatte
+
+**Wenn jemand anderes dieselbe Spalte bearbeitet**:
+
+- Zwei Personen können gleichzeitig unterschiedliche Monate oder unterschiedliche Spalten derselben Position ausfüllen, ohne Konflikt
+- Bei einer monatlichen Eingabe warten, wenn jemand anderes einen der gleichen Monate geändert hat, nur diese Monate auf Ihre Wahl; die übrigen Monate der Spalte werden gespeichert, wie Sie sie eingegeben haben
+- Hat jemand anderes die Summe der Spalte, ihre Verteilung oder ihre Mengen-und-Preis-Zeilen geändert, während Sie daran arbeiteten, wartet die ganze Spalte: Ein Banner bietet **Spalte neu laden** oder **Überschreiben**. Die Beträge, das Verteilungsfeld und die Zeilen der Spalte bleiben bis zu Ihrer Wahl schreibgeschützt
+- Speichern lädt das Jahr neu, sodass Sie für jede andere Spalte immer die neuesten Zahlen sehen; die Zelle oder Spalte, die Sie bearbeiten, wird dabei nicht gestört
 
 **Werkzeuge im Monatsmodus** (nur Modus Monatlich):
 
@@ -446,6 +469,11 @@ Der Tab Zuordnungen verteilt die Investitionsausgabe auf Ihre Unternehmen und Ab
 
 - **Fehlende Kennzahlen**: Für ein oder mehrere Unternehmen fehlen Mitarbeiterzahl, IT-Benutzer oder Umsatz für das ausgewählte Jahr, oder der Wert ist null. Tragen Sie die Kennzahlen unter **Stammdaten > Unternehmen** (Details-Tab) ein.
 - **„Manuelle Prozentsätze müssen in Summe 100 % ergeben."**: Passen Sie die Zeilen an oder klicken Sie auf **Gleichmäßig aufteilen**.
+
+**Wenn jemand anderes die Zuordnung bearbeitet**:
+
+- Methode, Treiber und Zeilen werden zusammen gespeichert. Hat jemand anderes die Zuordnung geändert, während Sie sie bearbeiteten, bietet ein Banner **Zuordnung neu laden** oder **Überschreiben**
+- Ein Jahreswechsel bei einer wartenden Wahl fragt zuerst nach einer Bestätigung
 
 **Tipp**: Verwenden Sie für die meisten Positionen Mitarbeiterzahl (am einfachsten, aktualisiert sich automatisch). Reservieren Sie Manuell nach Unternehmen für Investitionen, die nur bestimmten Einheiten zugutekommen (z. B. ein regionales Rechenzentrum). Verwenden Sie Manuell nach Abteilung für sehr gezielte Investitionen.
 

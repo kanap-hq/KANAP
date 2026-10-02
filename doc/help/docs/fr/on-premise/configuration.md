@@ -178,6 +178,34 @@ Il couvre l'enregistrement d'application, les autorisations déléguées et d'ap
 | `APP_URL` | URL de base pour les liens email de notification en mode multi-tenant (le slug du tenant remplace `app`). **Non nécessaire pour l'on-premise** — `APP_BASE_URL` est utilisé à la place. | `https://app.kanap.net` |
 | `EMAIL_OVERRIDE` | Rediriger tous les emails vers cette adresse (dev/QA uniquement, **jamais en production**) | *non défini* |
 
+## Optionnel : Capacité et performance
+
+Les valeurs par défaut conviennent à quelques dizaines d'utilisateurs. Pour plus d'utilisateurs en même temps, exécutez plusieurs processus API et dimensionnez les connexions à la base de données.
+
+| Variable | Description | Valeur par défaut |
+|----------|-------------|---------|
+| `API_WORKERS` | Nombre de processus API dans le conteneur API (1 à 16). Au-delà d'un seul, une requête qui calcule ne fait plus attendre tout le monde. | `1` |
+| `DB_POOL_MAX` | Connexions à la base de données par processus API (2 au minimum : une valeur plus basse est relevée à 2) | `20` |
+| `SHUTDOWN_DRAIN_TIMEOUT_MS` | À l'arrêt ou à la mise à jour, durée pendant laquelle l'API laisse se terminer les requêtes en cours, les notifications qu'elles ont déclenchées, les tâches de fond en cours et les emails en file (millisecondes, 120000 au maximum). Le conteneur est arrêté après 30 s dans tous les cas. | `20000` |
+| `OPS_METRICS_TOKEN` | Active `GET /api/ops/metrics` pour votre outil de supervision (24 caractères ou plus, par exemple `openssl rand -hex 32` ; une valeur plus courte le laisse désactivé et l'API le signale au démarrage). Voir [Opérations](operations.md#metriques-api-pour-un-outil-de-supervision). | *non défini (désactivé)* |
+
+**Ce que chacun coûte.** Chaque processus API utilise environ 200 Mo de mémoire au démarrage et jusqu'à 300 Mo en charge (mesuré avec 50 utilisateurs sur 5 000 lignes budgétaires) ; avec plusieurs processus, un petit processus de supervision ajoute environ 100 Mo. Chaque processus API peut ouvrir jusqu'à `DB_POOL_MAX` connexions à PostgreSQL. À compter :
+
+- mémoire : `API_WORKERS` × 0,4 Go pour l'API, plus ce que PostgreSQL utilise s'il tourne sur le même serveur, plus environ 1 Go de marge (nécessaire aux compilations d'image pendant les mises à jour) ;
+- connexions : `API_WORKERS` × `DB_POOL_MAX` doit rester sous `max_connections` de PostgreSQL (100 par défaut) moins environ 15. L'API vérifie cela au démarrage et écrit un avertissement dans son journal lorsque ça ne rentre pas, avec une valeur qui convient.
+
+**Valeurs suggérées.**
+
+| Utilisateurs travaillant en même temps | `API_WORKERS` | `DB_POOL_MAX` | Mémoire serveur (API + PostgreSQL) |
+|---|---|---|---|
+| Jusqu'à 20 | 1 | 20 | 4 Go |
+| 20 à 50 | 2 | 15 | 8 Go |
+| 50 et plus | 4 | 10 | 8 à 16 Go |
+
+Mesuré sur 5 000 lignes budgétaires : à 10 utilisateurs, un seul processus répond aussi vite que quatre. À 50 utilisateurs, ouvrir une ligne a pris 237 ms (95e centile) avec un seul processus, 142 ms avec deux et 82 ms avec quatre, et le processus unique gardait toutes ses connexions à la base occupées.
+
+Gardez `API_WORKERS` au nombre de cœurs CPU que le serveur donne à KANAP, ou moins. Les changements prennent effet au redémarrage du conteneur API (`docker compose -f infra/compose.onprem.yml up -d api`).
+
 ## Exemple complet (.env)
 
 ```bash
@@ -231,6 +259,12 @@ S3_FORCE_PATH_STYLE=false   # true pour MinIO
 # JWT_REFRESH_TOKEN_TTL=4h
 # RATE_LIMIT_ENABLED=true
 # RATE_LIMIT_TRUST_PROXY=false
+
+# CAPACITÉ (optionnel - voir « Capacité et performance »)
+# API_WORKERS=1
+# DB_POOL_MAX=20
+# SHUTDOWN_DRAIN_TIMEOUT_MS=20000
+# OPS_METRICS_TOKEN=
 ```
 
 ## Règles de pare-feu
@@ -295,5 +329,7 @@ Une tâche planifiée supplémentaire s'exécute lorsque le SSO Entra est config
 Une autre tâche tient les statuts à jour :
 
 - **`lifecycle-status-sync`** : toutes les heures, et une fois au démarrage de l'API. Passe les données de référence, les contrats et les postes OPEX et CAPEX à désactivé une fois leur fin de validité passée.
+
+Avec plusieurs processus API (`API_WORKERS`), chaque tâche continue de s'exécuter une seule fois par échéance : les processus se mettent d'accord via la base de données sur celui qui l'exécute. Lorsque l'API s'arrête (une mise à jour), une tâche en cours reçoit le temps de la purge pour se terminer ; une tâche encore en cours à ce moment-là apparaît comme **Échoué** dans la liste des tâches planifiées et s'exécute à nouveau à son prochain horaire.
 
 Ces tâches nécessitent que l'API fonctionne comme un **processus long** (pas une fonction serverless). En mode on-premise, `APP_BASE_URL` est utilisé pour les liens email de notification (pas de dérivation de sous-domaine). Si aucun transport email sortant n'est configuré, ces tâches sautent l'envoi de manière transparente.

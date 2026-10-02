@@ -342,7 +342,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, c
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo disponible cuando se selecciona un solo año)
-- **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas
+- **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas. Ofrece todas las cuentas usadas por las líneas del informe, por nombre y número, pueda o no abrir el plan de cuentas
 - **Centro de coste**, **Run o build** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
@@ -358,7 +358,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, c
 
 **Tabla**: Una fila por cuenta de consolidación con columnas de año. Una fila de totales fijada en la parte inferior suma todos los grupos.
 
-Las partidas sin cuenta de consolidación aparecen como "Sin asignar".
+Una línea en una cuenta de consolidación desactivada desde entonces sigue contando, en la línea de consolidación de esa cuenta. Los nombres y números de cuenta solo se muestran si puede leer el [plan de cuentas](chart-of-accounts.md); sin ese acceso, todas las líneas aparecen bajo "Sin asignar" en su lugar (los totales siguen siendo correctos, solo se oculta el desglose por cuenta). Las partidas sin cuenta de consolidación también aparecen como "Sin asignar".
 
 ---
 

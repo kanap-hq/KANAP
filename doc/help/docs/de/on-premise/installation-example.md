@@ -221,6 +221,17 @@ S3_FORCE_PATH_STYLE=true
 # SMTP_FROM=KANAP <noreply@company.com>
 ```
 
+### PostgreSQL für diesen Server dimensionieren
+
+Die Standardwerte von PostgreSQL sind für eine kleine Maschine ausgelegt. Das Repository enthält ein Skript, das Einstellungen ausgibt, die anhand des Arbeitsspeichers dieses Servers dimensioniert sind; es ändert von sich aus nichts. Es behält die von PostgreSQL bereits vorgeladenen Bibliotheken bei (geben Sie ihm deren Liste) und fügt die Anweisungsstatistik-Bibliothek hinzu, wenn es sie auf diesem Server findet. Lesen Sie die Datei, die es schreibt, starten Sie dann PostgreSQL neu und aktivieren Sie die Anweisungsstatistiken:
+
+```bash
+CURRENT=$(sudo -u postgres psql -XAtc 'SHOW shared_preload_libraries')
+sh infra/postgres/kanap-pg-tune.sh --preload "$CURRENT" | sudo tee /etc/postgresql/16/main/conf.d/kanap.conf
+sudo systemctl restart postgresql
+sudo -u postgres psql -d kanap -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
+```
+
 **Wichtig:** Generieren Sie ein echtes JWT-Secret (`openssl rand -hex 32`) — verwenden Sie keine Beispielwerte.
 
 Wenn Sie auf KANAP über die IP-Adresse anstelle einer Domäne zugreifen, setzen Sie `APP_BASE_URL` und `CORS_ORIGINS` auf `https://YOUR_IP`.
@@ -281,8 +292,10 @@ Erstellen Sie `/etc/nginx/sites-available/kanap`:
 
 ```nginx
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    # HTTP/2: Der Browser sendet die Dutzenden Anfragen einer Seite über eine Verbindung.
+    # nginx 1.25.1 und neuer: Schreiben Sie stattdessen `listen 443 ssl;` und `http2 on;`.
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name kanap.company.com;
 
     ssl_certificate     /etc/ssl/kanap/server.crt;
@@ -304,6 +317,15 @@ server {
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host  $host;
+
+        # Komprimiert die JSON- und CSV-Antworten der API (eine Budgetlisten-Seite wird etwa 8-mal kleiner).
+        # Gestreamte KI-Antworten (application/x-ndjson) sind absichtlich ausgenommen.
+        gzip on;
+        gzip_proxied any;
+        gzip_comp_level 5;
+        gzip_min_length 1024;
+        gzip_vary on;
+        gzip_types application/json text/csv text/plain;
 
         proxy_http_version 1.1;
         proxy_set_header Upgrade    $http_upgrade;

@@ -21,6 +21,8 @@ La page d'accueil affiche sept cartes, chacune renvoyant à un outil dédié :
 
 Les colonnes budgétaires sont Budget, Révision, Prévision, Réalisé et Atterrissage prévu. Ce sont les noms standard. Votre organisation peut les renommer, en masquer certaines et choisir une colonne par défaut dans [Colonnes budgétaires](#colonnes-budgetaires). Chaque page ci-dessous affiche les noms choisis par votre organisation.
 
+Tant qu'une de ces opérations est en cours, les postes OPEX et CAPEX ne peuvent pas être enregistrés : une modification affiche le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » jusqu'à la fin de l'opération.
+
 ---
 
 ## Geler / Dégeler les données

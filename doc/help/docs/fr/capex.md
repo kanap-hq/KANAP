@@ -104,11 +104,13 @@ Ces colonnes sont masquées par défaut. Affichez-les depuis le sélecteur de co
 
 ### Recherche rapide
 
-Le champ de recherche en haut porte sur la référence, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, les valeurs analytiques, le centre de coûts (code, nom et chemin), le responsable budgétaire, le type d'immobilisation, le type d'investissement, la priorité, les notes, la devise et le statut. Les résultats se mettent à jour en temps réel pendant la saisie.
+Le champ de recherche en haut porte sur la référence, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, les valeurs analytiques, le centre de coûts (code, nom et chemin), le responsable budgétaire, le type d'immobilisation, le type d'investissement, la priorité, les notes, la devise et le statut. Les résultats se mettent à jour en temps réel pendant la saisie, en ignorant les accents et la casse.
 
 ### Filtres de colonnes
 
 Chaque en-tête de colonne filtrable a une icône de filtre. **Fournisseur**, **Société payeuse**, **Compte**, **Type d'immobilisation**, **Type d'investissement**, **Priorité**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build** et **Activé** utilisent des filtres par jeu de cases à cocher avec **Tous**, **Aucun** et un bouton d'effacement. Le filtre **Activé** propose **Activé** et **Désactivé** et restreint la liste lorsque **Afficher** est réglé sur **Tous**. Cliquer sur **Effacer** dans ce filtre, ou décocher les deux valeurs, n'affiche plus rien, quel que soit le choix de **Afficher**. Plusieurs filtres se combinent avec une logique ET.
+
+Cochez **Tous**, puis décochez les valeurs à exclure : le filtre garde tout sauf celles-ci (l'en-tête affiche par exemple **Tous sauf 3**), et une valeur créée plus tard est incluse automatiquement.
 
 Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les postes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants.
 
@@ -116,11 +118,11 @@ Chaque colonne ETP a un filtre numérique avec les mêmes conditions, plus vide 
 
 **Début effectif**, **Fin de validité**, **Créé** et **Mis à jour** ont des filtres de date. Choisissez une date dans la case sous l'en-tête pour garder les postes à cette date, ou ouvrez le menu du filtre pour avant, après, entre, vide ou non vide.
 
-Les colonnes texte utilisent des filtres texte. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `CPX-12`.
+Les colonnes texte utilisent des filtres texte, en ignorant les accents et la casse. Sur **Réf**, saisissez le numéro ou la référence complète, par exemple `12` ou `CPX-12`.
 
 ### Tri
 
-Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant et chaque colonne ETP. Les postes sans ETP viennent en dernier dans l'ordre croissant. Le tri par défaut suit la colonne par défaut de l'année en cours, du plus élevé au plus faible (**Budget A** avec les réglages standard). **Préc.** et **Suiv.** dans l'espace de travail suivent le même ordre. La liste mémorise votre dernier tri quand vous revenez.
+Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant et chaque colonne ETP. Les postes sans ETP viennent en dernier dans l'ordre croissant. Les colonnes de texte se trient dans l'ordre de lecture naturel : un nom accentué se trie à côté de son équivalent sans accent (par exemple « Électricité » à côté de « Electricite »), et les minuscules passent avant les majuscules à égalité de lettres. Le tri par défaut suit la colonne par défaut de l'année en cours, du plus élevé au plus faible (**Budget A** avec les réglages standard). **Préc.** et **Suiv.** dans l'espace de travail suivent le même ordre. La liste mémorise votre dernier tri quand vous revenez.
 
 ### Ligne de totaux
 
@@ -147,6 +149,8 @@ Utilisez la bascule **Afficher : Tous / Activés / Désactivés** au-dessus de l
 
 Votre contexte de liste (ordre de tri, texte de recherche et filtres actifs) est conservé lorsque vous ouvrez un poste et restauré lorsque vous revenez à la liste. Vous pouvez ainsi consulter plusieurs postes à la suite sans perdre votre position.
 
+Ces mêmes filtres sont aussi conservés dans l'adresse de la page : recharger la page ou partager le lien rouvre la même vue. Un lien dont les filtres ne sont plus disponibles affiche « Les filtres de ce lien ne sont plus disponibles. »
+
 ### Navigation Préc./Suiv.
 
 Lorsque vous ouvrez un poste, l'espace de travail affiche les boutons **Préc.** et **Suiv.**. Ils parcourent la liste dans l'ordre de tri actuel, en respectant les filtres et la recherche, et enregistrent d'abord vos modifications en attente. Le compteur (ex. : « Poste 3 sur 47 ») indique votre position dans la liste filtrée.
@@ -169,6 +173,16 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. 
 - Chaque modification s'enregistre automatiquement. L'indication **Enregistrement...** / **Enregistré** apparaît dans l'en-tête
 - Changer d'onglet, passer au poste précédent ou suivant, ou fermer l'espace de travail enregistre d'abord les modifications en attente. Si un enregistrement échoue, vous restez sur place et un message en donne la raison : aucune modification n'est perdue sans que vous le sachiez
 - **Ctrl+S** (**Cmd+S** sur Mac) enregistre immédiatement
+- Si un enregistrement ne peut pas passer tout de suite parce qu'un autre enregistrement est en cours sur la même donnée, KANAP le relance automatiquement
+- Si une opération budgétaire groupée est en cours (par exemple une copie ou une réinitialisation de colonne dans l'Administration budgétaire), les modifications sont mises en attente avec le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » Réessayez une fois l'opération terminée
+
+**Modifications simultanées** :
+
+- Deux personnes peuvent travailler sur le même poste en même temps sans se gêner. Modifier des champs différents, des mois budgétaires différents ou des colonnes budgétaires différentes ne crée jamais de conflit, même sur le même poste au même moment
+- Lorsqu'une autre personne modifie le même champ, la même colonne budgétaire ou la ventilation pendant que vous la modifiez, un bandeau affiche sa valeur et la vôtre, avec qui l'a modifiée et quand. Choisissez **Garder sa valeur** pour reprendre la sienne, ou **Appliquer la vôtre** pour garder ce que vous avez saisi. Pour une colonne budgétaire, les choix sont **Recharger la colonne** ou **Écraser** ; pour la ventilation, **Recharger la ventilation** ou **Écraser**
+- Seul le champ, la colonne ou la ventilation qui a été modifié attend votre choix ; tout le reste continue à s'enregistrer normalement
+- Un choix en attente est conservé quand vous changez d'onglet. Il est perdu, après un avertissement, si vous quittez le poste ou changez d'année
+- Si la modification précédente est la vôtre, depuis une autre fenêtre ou un autre onglet, le bandeau le précise au lieu de nommer quelqu'un d'autre
 
 ### Vue d'ensemble
 
@@ -194,6 +208,7 @@ L'onglet Vue d'ensemble contient les détails de l'investissement et ses tâches
 - **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
 - Dates **Créé** et **Mis à jour** (lecture seule)
 - La **Priorité** se règle dans le panneau Propriétés à la création du poste, puis dans la barre de métadonnées
+- Saisissez du texte dans **Fournisseur**, **Société payeuse**, **Compte**, **Responsable IT**, **Responsable métier** ou un champ de dimension analytique pour rechercher par nom. Les résultats apparaissent au fur et à mesure que vous tapez, afin de trouver n'importe quelle valeur même dans une très longue liste ; une ligne sous la liste indique « Tapez pour affiner : d'autres résultats existent » lorsqu'il y a plus de résultats qu'affichés
 
 **Centre de coûts** :
 
@@ -254,6 +269,7 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 - Les deux onglets montrent les mêmes colonnes : Prévision apparaît aussi dans **Annuel** quand elle est affichée.
 - Passez d'un mode à l'autre avec les onglets **Annuel** et **Mensuel**
 - Changer de mode ne modifie pas vos montants : seul l'affichage change. Annuel montre le total annuel des mois enregistrés, Mensuel montre les mois enregistrés.
+- Votre choix entre **Annuel** et **Mensuel** est conservé dans votre navigateur, pour vous seul : changer de mode ne modifie pas ce que voient les autres utilisateurs qui ouvrent ce poste. Tant que vous n'avez pas choisi, une colonne s'ouvre dans le mode utilisé pour la dernière saisie de ses montants.
 
 **Comportement du gel** :
 
@@ -286,6 +302,13 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 - **Quantité et prix · 3 lignes · 1.00 ETP** : les montants proviennent de lignes, avec leur nombre et, lorsque les lignes comptent des personnes ou des jours, l'ETP de la colonne. Cet ETP est la moyenne sur l'année. Survolez le libellé pour voir les lignes, par exemple « Chef de projet : 1 personne × 1 200 par jour, 5 jours par mois, févr. à juil. »
 - **Modifié à la main** : un mois a été modifié dans la grille ou par un import du fichier des lignes budgétaires
 - Une colonne sans libellé a conservé les données qu'elle avait avant l'arrivée des périodes
+
+**Lorsqu'une autre personne modifie la même colonne** :
+
+- Deux personnes peuvent remplir des mois ou des colonnes différents du même poste en même temps, sans conflit
+- En saisie mensuelle, si une autre personne a modifié l'un des mêmes mois, ces mois attendent votre choix ; les autres mois de la colonne s'enregistrent comme vous les avez saisis
+- Si une autre personne a modifié le total de la colonne, sa répartition ou ses lignes Quantité et prix pendant que vous y travailliez, toute la colonne attend : un bandeau propose **Recharger la colonne** ou **Écraser**. Les montants, le panneau de répartition et les lignes de la colonne restent en lecture seule jusqu'à votre choix
+- Enregistrer recharge l'année : vous voyez toujours les derniers chiffres de chaque autre colonne ; la cellule ou la colonne que vous modifiez n'est pas perturbée
 
 **Outils du mode mensuel** (mode Mensuel uniquement) :
 
@@ -446,6 +469,11 @@ L'onglet Ventilations répartit la dépense d'investissement entre vos société
 
 - **Métriques manquantes** : Une ou plusieurs sociétés ont un effectif, un nombre d'utilisateurs IT ou un chiffre d'affaires nul ou manquant pour l'année sélectionnée. Renseignez les métriques dans **Données de référence > Sociétés** (onglet Détails).
 - **« Les pourcentages manuels doivent totaliser 100 %. »** : Ajustez les lignes, ou cliquez sur **Répartir équitablement**.
+
+**Lorsqu'une autre personne modifie la ventilation** :
+
+- La méthode, l'inducteur et les lignes s'enregistrent ensemble. Si une autre personne a modifié la ventilation pendant que vous la modifiiez, un bandeau propose **Recharger la ventilation** ou **Écraser**
+- Changer d'année alors qu'un choix est en attente demande d'abord confirmation
 
 **Conseil** : Utilisez Effectif pour la plupart des postes (c'est le plus simple et il se met à jour automatiquement). Réservez Manuel par société aux investissements qui ne bénéficient qu'à des entités précises (ex. : un datacenter régional). Utilisez Manuel par département pour les investissements très ciblés.
 
