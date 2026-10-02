@@ -30,6 +30,17 @@ export function addCents(current: bigint, value: AmountInput): bigint {
   return current + toCents(value);
 }
 
+const EXACT_CENTS = 2n ** 53n;
+
+/**
+ * `Number(formatCents(cents))` without the text round trip: below 2^53 cents
+ * the integer is exact as a double and the division by 100 is correctly
+ * rounded, so it gives the very double the decimal text parses to.
+ */
+export function centsToNumber(cents: bigint): number {
+  return cents < EXACT_CENTS && cents > -EXACT_CENTS ? Number(cents) / 100 : Number(formatCents(cents));
+}
+
 export function formatCents(cents: bigint): string {
   const neg = cents < 0n;
   const abs = neg ? -cents : cents;

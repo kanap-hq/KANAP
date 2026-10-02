@@ -9,7 +9,7 @@ import { Application } from '../../applications/application.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { classificationRankSql } from '../../it-ops-settings/classification-catalog';
 import { parsePagination } from '../../common/pagination';
-import { compileAgFilterCondition, createParamNameGenerator, FilterTargetConfig } from '../../common/ag-grid-filtering';
+import { compileAgFilterCondition, createParamNameGenerator, FilterTargetConfig, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { normalizeBindingLifecycle } from '../../interface-bindings/interface-bindings.service';
 import {
   InterfacesBaseService,
@@ -90,6 +90,7 @@ export class InterfacesListService extends InterfacesBaseService {
     }
 
     if (!filters || typeof filters !== 'object') return qb;
+    assertSetFilterModes(filters, (field) => !ENVIRONMENT_FILTER_FIELDS.has(field));
     const nextParam = createParamNameGenerator('ifl');
     for (const [field, model] of Object.entries(filters)) {
       if (ENVIRONMENT_FILTER_FIELDS.has(field)) {

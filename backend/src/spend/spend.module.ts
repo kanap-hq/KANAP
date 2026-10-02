@@ -11,6 +11,7 @@ import { DepartmentMetric } from '../departments/department-metric.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { Account } from '../accounts/account.entity';
 import { SpendItemsService } from './spend-items.service';
+import { ListEngineStartupCheck } from '../common/list-engine/list-engine-startup-check';
 import { SpendItemsCsvService } from './spend-items-csv.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
 import { SpendVersionsService } from './spend-versions.service';
@@ -72,6 +73,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
   ],
   controllers: [SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController, BudgetRowsController],
   providers: [
+    ListEngineStartupCheck,
     SpendItemsService,
     SpendItemsCsvService,
     SpendBudgetOperationsService,

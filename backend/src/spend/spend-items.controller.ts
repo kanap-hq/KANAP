@@ -80,6 +80,17 @@ export class SpendItemsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
+  @Get('summary/neighbors')
+  async summaryNeighbors(
+    @Query() query: ListSpendQueryInput & { id?: string },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.resolveId(String(query?.id ?? ''), ctx.manager as EntityManager);
+    return this.svc.summaryNeighbors(query, id, { manager: ctx.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('opex', 'reader')
   @Get('summary/totals')
   summaryTotals(
     @Query() query: ListSpendQueryInput,

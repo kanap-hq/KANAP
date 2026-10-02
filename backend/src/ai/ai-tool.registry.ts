@@ -76,6 +76,8 @@ const GetDocumentInputSchema = z.object({
 
 const AiFilterValueSchema = z.union([
   z.array(z.union([z.string(), z.null()])),
+  // Exclude mode of a set field: every value but these (OPEX and CAPEX lines only).
+  z.object({ not: z.array(z.union([z.string(), z.null()])) }).strict(),
   z.string(),
   z.object({
     op: z.enum(['eq', 'gt', 'lt', 'gte', 'lte', 'between']),

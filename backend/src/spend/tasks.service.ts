@@ -4,6 +4,7 @@ import { Repository, EntityManager, DataSource } from 'typeorm';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { incidentRelatedLabelSql } from '../incidents/incident-visibility';
 import { resolveRecordCreators } from '../audit/record-creator.util';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 export interface TaskListItem {
   id: string;
@@ -106,6 +107,7 @@ function buildWhereConditions(
   // Every condition below is appended as ` AND <atom>` or ` AND (<...>)`, so none widens this one.
   let whereConditions = `t.tenant_id = ${tenantParamRef}`;
   const filters: AgFilterModel = rawFilters && typeof rawFilters === 'object' ? rawFilters : {};
+  assertSetFilterModes(filters);
 
   const shouldSkip = (field: string) => field === skipField;
 

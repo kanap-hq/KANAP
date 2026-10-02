@@ -14,6 +14,7 @@ import { resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { SupplierUpsertDto } from './dto/supplier.dto';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 @Injectable()
 export class SuppliersService {
@@ -31,6 +32,7 @@ export class SuppliersService {
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query)
       : parsePagination(query);
+    assertSetFilterModes(filters, ['status']);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const where: any = {};
@@ -83,6 +85,7 @@ export class SuppliersService {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
+    assertSetFilterModes(filters, ['status']);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const where: any = {};

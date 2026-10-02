@@ -7,7 +7,7 @@ import { LocationContactLink } from './location-contact.entity';
 import { LocationLink } from './location-link.entity';
 import { LocationSubItem } from './location-sub-item.entity';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
-import { compileAgFilterCondition, createParamNameGenerator } from '../common/ag-grid-filtering';
+import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { Company } from '../companies/company.entity';
@@ -208,6 +208,7 @@ export class LocationsService {
       field: 'created_at',
       direction: 'DESC',
     });
+    assertSetFilterModes(filters, ['created_at']);
     const allowedFilters = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city'];
     const where: Record<string, any> = buildWhereFromAgFilters(filters, allowedFilters);
     const created = createdAtFilter(filters);
@@ -282,6 +283,7 @@ export class LocationsService {
       field: 'created_at',
       direction: 'DESC',
     });
+    assertSetFilterModes(filters, ['created_at']);
     const allowedFilters = ['location_reference', 'name', 'hosting_type', 'provider', 'country_iso', 'city'];
     const where: Record<string, any> = buildWhereFromAgFilters(filters, allowedFilters);
     const created = createdAtFilter(filters);

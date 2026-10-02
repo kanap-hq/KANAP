@@ -9,6 +9,7 @@ import { Company } from '../companies/company.entity';
 import { Account } from './account.entity';
 import { AccountsService } from './accounts.service';
 import { parseString } from '@fast-csv/parse';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 @Injectable()
 export class ChartOfAccountsService {
@@ -28,6 +29,7 @@ export class ChartOfAccountsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
+    assertSetFilterModes(filters);
     const allowed = ['code','name','country_iso','scope','is_default','is_global_default','created_at','updated_at'];
     const where: any = {};
     if (filters && Object.keys(filters).length > 0) {
@@ -70,6 +72,7 @@ export class ChartOfAccountsService {
   async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
     const repo = this.getRepo(opts?.manager);
     const { sort, q, filters } = parsePagination(query);
+    assertSetFilterModes(filters);
     const allowed = ['code','name','country_iso','scope','is_default','is_global_default','created_at','updated_at'];
     const where: any = {};
     if (filters && Object.keys(filters).length > 0) {

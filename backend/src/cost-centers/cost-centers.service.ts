@@ -6,6 +6,7 @@ import { parsePagination } from '../common/pagination';
 import { isActiveAt, parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
 import { COST_CENTER_KINDS, CostCenterKind } from './cost-center.entity';
 import { CostCenterTreeNode, loadCostCenterTree } from './cost-center-tree.util';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 /** Every call runs in the caller's tenant transaction; there is no fallback manager. */
 export interface CostCenterContext {
@@ -380,6 +381,7 @@ export class CostCentersService {
   }
 
   private async listRows(query: any, parsed: ReturnType<typeof parsePagination>, ctx: CostCenterContext): Promise<CostCenterListRow[]> {
+    assertSetFilterModes(parsed.filters);
     const nodes = await loadCostCenterTree(ctx.manager, ctx.tenantId);
     const byId = new Map(nodes.map((node) => [node.id, node]));
     const treeOrder = new Map(nodes.map((node, index) => [node.id, index]));

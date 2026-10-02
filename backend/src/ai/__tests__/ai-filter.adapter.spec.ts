@@ -124,7 +124,21 @@ function testSameColumnConflictIsReported() {
   assert.deepEqual(adapted.ignored, ['country_iso'], 'the later one is reported as not applied');
 }
 
+function testExcludeSetFilter() {
+  const adapted = adaptFilters(spendItemsRegistry, { supplier: { not: ['Acme', null] }, status: { not: ['disabled', 'bogus'] } } as any);
+  assert.deepEqual(adapted.filters, {
+    supplier_name: { filterType: 'set', mode: 'exclude', values: ['Acme', null] },
+    status: { filterType: 'set', mode: 'exclude', values: ['disabled'] },
+  }, 'OPEX: every value but these; a value outside the declared ones excludes nothing');
+  assert.deepEqual(adapted.applied, ['supplier', 'status']);
+  // A list that does not know the exclude mode reports the filter as not applied.
+  const tasks = adaptFilters(tasksRegistry, { status: { not: ['done'] } } as any);
+  assert.deepEqual(tasks.filters, {});
+  assert.deepEqual(tasks.ignored, ['status']);
+}
+
 function run() {
+  testExcludeSetFilter();
   testSetFilterAdaptation();
   testStringToSetFilterAdaptation();
   testDateFilterAdaptation();

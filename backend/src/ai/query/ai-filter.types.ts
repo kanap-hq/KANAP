@@ -26,6 +26,8 @@ export type AiQueryEntityType =
   | 'users';
 
 export type AiSetFilterValue = Array<string | null>;
+/** Every value of a set field but these (exclude mode): a value created later is kept. */
+export type AiSetExcludeFilterValue = { not: Array<string | null> };
 export type AiTextFilterValue = string;
 export type AiNumberFilterValue = {
   op: 'eq' | 'gt' | 'lt' | 'gte' | 'lte' | 'between';
@@ -39,6 +41,7 @@ export type AiDateFilterValue = {
 };
 export type AiFilterValue =
   | AiSetFilterValue
+  | AiSetExcludeFilterValue
   | AiTextFilterValue
   | AiNumberFilterValue
   | AiDateFilterValue;

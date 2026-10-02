@@ -4,7 +4,7 @@ import { DeepPartial, EntityManager, ILike, IsNull, Raw, Repository } from 'type
 import { Account } from './account.entity';
 import { Company } from '../companies/company.entity';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
-import { compileAgFilterCondition, createParamNameGenerator } from '../common/ag-grid-filtering';
+import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { format } from '@fast-csv/format';
 import { parseString } from '@fast-csv/parse';
@@ -56,6 +56,7 @@ export class AccountsService {
   async list(query: any, opts?: { manager?: EntityManager }) {
     const repo = this.getRepo(opts?.manager);
     const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
+    assertSetFilterModes(filters, ['status', 'account_number']);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;
@@ -206,6 +207,7 @@ export class AccountsService {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
+    assertSetFilterModes(filters, ['status', 'account_number']);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;

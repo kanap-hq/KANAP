@@ -4,7 +4,15 @@ import {
   AiEntityFilterRegistry,
   AiFilterValue,
   AiNumberFilterValue,
+  AiSetExcludeFilterValue,
 } from './ai-filter.types';
+
+/** Entities whose list understands a set filter in exclude mode (the SQL list engine and the CAPEX list). */
+const EXCLUDE_SET_ENTITIES = new Set(['spend_items', 'capex_items']);
+
+function isExcludeSetValue(value: AiFilterValue): value is AiSetExcludeFilterValue {
+  return !!value && typeof value === 'object' && !Array.isArray(value) && Array.isArray((value as any).not);
+}
 
 function isNumberFilterValue(value: AiFilterValue): value is AiNumberFilterValue {
   return !!value && typeof value === 'object' && !Array.isArray(value) && typeof (value as any).op === 'string' && typeof (value as any).value === 'number';
@@ -92,7 +100,15 @@ export function adaptFilters(
     }
 
     let adapted: any = null;
-    if (field.type === 'set') {
+    if (field.type === 'set' && isExcludeSetValue(rawValue)) {
+      // `{ not: [...] }`: every value but these. Only lists that know the exclude mode take it.
+      // A value outside the field's declared values matches no line: leaving it out excludes the same lines.
+      const values = rawValue.not.filter((value) => value === null || typeof value === 'string');
+      const allowed = Array.isArray(field.values) ? new Set(field.values) : null;
+      if (EXCLUDE_SET_ENTITIES.has(registry.entityType)) {
+        adapted = { filterType: 'set', mode: 'exclude', values: allowed ? values.filter((value) => allowed.has(value)) : values };
+      }
+    } else if (field.type === 'set') {
       const values = Array.isArray(rawValue)
         ? rawValue.filter((value) => value === null || typeof value === 'string')
         : typeof rawValue === 'string'

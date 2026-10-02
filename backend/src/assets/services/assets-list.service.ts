@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { parsePagination } from '../../common/pagination';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
+import { assertSetFilterModes } from '../../common/ag-grid-filtering';
 
 /**
  * Service for listing and filtering assets.
@@ -329,6 +330,7 @@ export class AssetsListService extends AssetsBaseService {
     let whereConditions = '1=1';
     const params: any[] = [];
     const filters: Record<string, any> = rawFilters && typeof rawFilters === 'object' ? rawFilters : {};
+    assertSetFilterModes(filters);
 
     const shouldSkip = (field: string) => field === skipField;
 

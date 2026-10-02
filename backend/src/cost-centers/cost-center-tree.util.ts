@@ -42,10 +42,14 @@ export function costCenterLabel(node: { code: string; name: string }): string {
   return `${node.code} · ${node.name}`;
 }
 
+// One collator for every comparison: `localeCompare` with options builds a new ICU collator per call,
+// which made the tree sort the main CPU cost of the OPEX list under load (same order, by definition).
+const codeCollator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+
 const compareSiblings = (a: CostCenterTreeRow, b: CostCenterTreeRow): number => {
   const byOrder = Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0);
   if (byOrder !== 0) return byOrder;
-  return a.code.localeCompare(b.code, 'en', { numeric: true, sensitivity: 'base' });
+  return codeCollator.compare(a.code, b.code);
 };
 
 function toIso(value: Date | string | null): string | null {

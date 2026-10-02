@@ -137,7 +137,18 @@ async function testDisabledWithoutADate() {
   assert.deepEqual(resolveLifecycleState({ currentDisabledAt: future, nextStatus: 'enabled', nowFactory }), { status: StatusState.ENABLED, disabled_at: null });
 }
 
+async function testExcludeMode() {
+  // Exclude mode (the user unticked values from "all"): the statuses kept are the others.
+  const read = (values: unknown[]) => extractStatusFilterFromAgModel({ status: { filterType: 'set', mode: 'exclude', values }, other: { filterType: 'text' } });
+  assert.deepEqual(read(['disabled']), { status: StatusState.ENABLED, sanitizedFilters: { other: { filterType: 'text' } } });
+  assert.deepEqual(read(['enabled']), { status: StatusState.DISABLED, sanitizedFilters: { other: { filterType: 'text' } } });
+  assert.deepEqual(read([]), { sanitizedFilters: { other: { filterType: 'text' } } }, 'nothing unticked: every status');
+  assert.deepEqual(read(['enabled', 'disabled']), { matchNone: true, sanitizedFilters: { other: { filterType: 'text' } } }, 'everything unticked: no line');
+  assert.deepEqual(read(['bogus']), { sanitizedFilters: { other: { filterType: 'text' } } }, 'an unknown value excludes nothing');
+}
+
 (async () => {
+  await testExcludeMode();
   await testEmptySetMatchesNothing();
   await testDisabledWithoutADate();
   await testExplicitStatusFragment();

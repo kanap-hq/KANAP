@@ -17,6 +17,7 @@ import {
   FilterTargetConfig,
   CompiledCondition,
   normalizeAgFilterModel,
+  assertSetFilterModes,
 } from '../../common/ag-grid-filtering';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 import { buildDerivedUsersByApp } from './derived-users';
@@ -151,6 +152,12 @@ const buildApplicationOwnerNamesSql = (ownerType: 'business' | 'it', alias = 'a'
       AND o.owner_type = '${ownerType}'
   ) owner
 ), '')`;
+
+/**
+ * Fields whose filter the compilers below read rather than `compileAgFilterCondition`: they take a set
+ * model's `values` as the ticked values, so an exclude model answers 400 there (`assertSetFilterModes`).
+ */
+const CUSTOM_SET_FILTER_FIELDS = new Set(['environments', 'hosting_types', 'linked_project_name', 'owners_business', 'owners_it']);
 
 const compileEnvironmentsSetFilter = (model: any, nextParam: ParamNameFactory): CompiledCondition | null => {
   const normalized = normalizeSetFilterModel(model);
@@ -333,6 +340,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
   private buildFilteredScope(query: any, opts: ServiceOpts | undefined, sortField?: string) {
     const tenantId = String(opts?.tenantId || '').trim();
     const { q, filters } = parsePagination(query, { field: 'created_at', direction: 'DESC' });
+    assertSetFilterModes(filters, (field) => !CUSTOM_SET_FILTER_FIELDS.has(field));
     const ownerScope = parseOwnerScope(query);
     const includeInactive = parseIncludeInactive(query);
     const includeRaw = String(query?.include || '').trim();
@@ -724,6 +732,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
     const repo = mg.getRepository(Application);
     const tenantId = String(opts?.tenantId || '').trim();
     const { q, filters } = parsePagination(query, { field: 'created_at', direction: 'DESC' });
+    assertSetFilterModes(filters, (field) => !CUSTOM_SET_FILTER_FIELDS.has(field));
     const ownerScope = parseOwnerScope(query);
     const includeInactive = parseIncludeInactive(query);
     const fm = (filters && typeof filters === 'object') ? filters : undefined;

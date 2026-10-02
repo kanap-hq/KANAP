@@ -12,6 +12,7 @@ import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 /** The request's tenant: every statement filters on it. */
 type TenantOpts = { manager?: EntityManager; tenantId: string };
@@ -122,6 +123,7 @@ export class ContactsService {
   async list(query: any, opts: TenantOpts) {
     const repo = this.getRepo(opts.manager);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
+    assertSetFilterModes(filters);
     const allowedSortFields = [
       'last_name', 'first_name', 'email', 'active', 'created_at', 'updated_at', 'supplier_name'
     ];
@@ -202,6 +204,7 @@ export class ContactsService {
   async listIds(query: any, opts: TenantOpts): Promise<{ ids: string[]; total: number }> {
     const repo = this.getRepo(opts.manager);
     const { sort, q, filters } = parsePagination(query);
+    assertSetFilterModes(filters);
     const allowedSortFields = [
       'last_name', 'first_name', 'email', 'active', 'created_at', 'updated_at', 'supplier_name'
     ];

@@ -80,10 +80,16 @@ export class FxRateService {
     return { rate: 1, source: 'missing' };
   }
 
+  /**
+   * Resolves each lookup to a rate (its snapshot set, else the latest live set
+   * of its year, else 1) and warns for each distinct key whose rate is missing.
+   * `quiet`: no warning, for a caller resolving speculative keys that no
+   * version may use (the list engine's rate table).
+   */
   async resolveRates(
     tenantId: string,
     lookups: FxLookupKey[],
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; quiet?: boolean },
   ): Promise<{ map: Map<string, FxResolvedRate>; settings: CurrencySettings }> {
     if (!lookups.length) {
       const settings = await this.currencySettings.getSettings(tenantId, opts);
@@ -111,6 +117,16 @@ export class FxRateService {
     const snapshotById = new Map(snapshots.map((entry) => [entry.id, entry]));
 
     const result = new Map<string, FxResolvedRate>();
+    // The latest live set depends on the year only: read it once per year, not once per currency and rate set.
+    const latestByYear = new Map<number, Promise<CurrencyRateSet | null>>();
+    const latestLiveSet = (fiscalYear: number) => {
+      let latest = latestByYear.get(fiscalYear);
+      if (!latest) {
+        latest = this.getLatestRateSet(tenantId, fiscalYear, settings.reportingCurrency, opts);
+        latestByYear.set(fiscalYear, latest);
+      }
+      return latest;
+    };
 
     for (const item of uniqueKeys.values()) {
       const upperSource = item.sourceCurrency.toUpperCase();
@@ -137,14 +153,14 @@ export class FxRateService {
       }
 
       // fallback to latest live set
-      rateSet = await this.getLatestRateSet(tenantId, item.fiscalYear, settings.reportingCurrency, opts);
+      rateSet = await latestLiveSet(item.fiscalYear);
       const resolved = rateSet
         ? this.resolveRateFromSet(rateSet, upperSource)
         : upperSource === settings.reportingCurrency.toUpperCase()
           ? { rate: 1, source: 'identity' as FxRateSource }
           : this.resolveRateFromSet(rateSet, upperSource);
       rateSource = rateSet ? 'live' : resolved.source;
-      if (resolved.source === 'missing' && upperSource !== settings.reportingCurrency.toUpperCase()) {
+      if (!opts?.quiet && resolved.source === 'missing' && upperSource !== settings.reportingCurrency.toUpperCase()) {
         this.logger.warn(
           `Missing FX rate for ${upperSource}->${settings.reportingCurrency} ${item.fiscalYear} (tenant ${tenantId})`,
         );

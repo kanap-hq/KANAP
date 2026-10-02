@@ -5,6 +5,7 @@ import {
   type CompiledCondition,
   type FilterTargetConfig,
   type ParamNameFactory,
+  assertSetFilterModes,
 } from '../common/ag-grid-filtering';
 
 export const USER_LIST_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
@@ -139,6 +140,7 @@ export function compileUserListFilters(
 ): CompiledCondition[] {
   if (!filters || typeof filters !== 'object') return [];
   const conditions: CompiledCondition[] = [];
+  assertSetFilterModes(filters, (field) => !['status', 'roles', 'account_type'].includes(field));
   for (const [field, model] of Object.entries(filters)) {
     let compiled: CompiledCondition | null = null;
     if (field === 'status') compiled = compileStatusFilter(model, nextParam);

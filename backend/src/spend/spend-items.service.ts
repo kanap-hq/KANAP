@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { SUMMARY_SCOPES, SummaryDeps } from './spend-summary.builder';
 import * as budgetSummary from './budget-summary';
+import * as budgetList from './budget-list/budget-list.service';
 import { SpendItemsCsvService } from './spend-items-csv.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -38,6 +39,7 @@ import { updateItemUnderLock } from './item-locked-update';
 import { itemAnalyticsAuditFields, itemAnalyticsFields, loadItemAnalyticsValues, writeItemAnalyticsValues } from './item-analytics.util';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 @Injectable()
 export class SpendItemsService {
@@ -99,6 +101,7 @@ export class SpendItemsService {
     const repo = mg.getRepository(SpendItem);
     const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    assertSetFilterModes(filters, ['status']);
     const filtersToApply = sanitizedFilters ?? filters;
     // Only allow filtering/sorting by real columns on SpendItem
     const allowedFields = [
@@ -332,26 +335,35 @@ export class SpendItemsService {
     return updated;
   }
 
-  /** Dependencies of the shared list engine (`budget-summary.ts`). */
+  /** Dependencies of the list engine and the row builder. */
   private summaryDeps(): SummaryDeps {
     return { allocationCalculator: this.allocationCalculator, fxRates: this.fxRates };
   }
 
-  /** One page of the OPEX list; see `budget-summary.ts`. The AI query asks for the next year's allocation too. */
+  /**
+   * One page of the OPEX list, on the SQL list engine (`budget-list/`). The
+   * AI query asks for the next year's allocation too; `shape=grid` returns
+   * the lean rows of the grid.
+   */
   async summary(query: any, opts?: { manager?: EntityManager; includeNextYearAllocation?: boolean }) {
-    return budgetSummary.summary(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager, {
+    return budgetList.budgetListSummary(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager, {
       includeRecipientDetails: true,
       includeNextYearAllocation: opts?.includeNextYearAllocation ?? false,
     });
   }
 
   async summaryFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
-    return budgetSummary.summaryFilterValues(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+    return budgetList.budgetListFilterValues(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
   }
 
-  // Return ordered list of matching item IDs for navigation, reflecting sort/filter/q
+  /** Every id of the list in its order (workspace navigation, AI aggregates). */
   async summaryIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; item_numbers: number[]; total: number }> {
-    return budgetSummary.summaryIds(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+    return budgetList.budgetListIds(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+  }
+
+  /** Where one line stands in the list, with its previous and next lines. */
+  async summaryNeighbors(query: any, id: string, opts?: { manager?: EntityManager }) {
+    return budgetList.budgetListNeighbors(SUMMARY_SCOPES.opex, this.summaryDeps(), query, id, opts?.manager ?? this.repo.manager);
   }
 
   async summaryRowsByIds(
@@ -368,7 +380,7 @@ export class SpendItemsService {
   }
 
   async summaryTotals(query: any, opts?: { manager?: EntityManager }): Promise<any> {
-    return budgetSummary.summaryTotals(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+    return budgetList.budgetListTotals(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
   }
 
   async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }) {

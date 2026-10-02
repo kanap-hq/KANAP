@@ -1195,7 +1195,8 @@ export class AiQueryExecutor {
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
-      const truncated = result.capped === true || (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
+      // The OPEX list has no cap: the total is every matching line.
+      const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
         items: (result.items || []).map((row: any) => this.mapSpendItem(row, registry)),
         total: result.total ?? 0,
