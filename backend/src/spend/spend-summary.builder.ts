@@ -86,11 +86,9 @@ export interface SummaryScopeConfig {
   /**
    * Grid shape: the item columns the list grid reads; the row then carries
    * those, the derived fields the grid shows (`GRID_DERIVED_FIELDS`) and the
-   * amounts it shows, nothing else. Without it (CAPEX until it runs on the SQL
-   * list engine, lot 2B PR C, which checks its own grid's readers), the grid
-   * shape keeps every key but the ones `BuildRowsOptions.shape` lists.
+   * amounts it shows, nothing else.
    */
-  gridItemColumns?: readonly string[];
+  gridItemColumns: readonly string[];
 }
 
 // Table and column names come only from here: never from the caller.
@@ -144,6 +142,12 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
       'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at',
     ],
     extraFields: ['ppe_type', 'investment_type', 'priority'],
+    // Read by CapexPage.tsx: the cells (the three enums through their labels), their tooltips and
+    // links, the row id and the delete confirmation (description).
+    gridItemColumns: [
+      'id', 'item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'status', 'currency', 'effective_start',
+      'disabled_at', 'notes', 'created_at', 'updated_at',
+    ],
   },
 };
 
@@ -247,10 +251,10 @@ export interface BuildRowsOptions {
   includeNextYearAllocation?: boolean;
   /**
    * `full` (default): every key, as the AI and the API read them. `grid`: the
-   * keys the list grid shows (`y<year>` slots only for years outside the fixed
-   * window, `fte_*` keys only for `fteKeys`, the latest task without its
-   * description, no recipient, warning or next-year label), and no allocation
-   * computation when `allocationLabels` gives each line's label.
+   * keys the list grid shows (`gridRow`: the scope's `gridItemColumns`, the
+   * derived fields and enabled dimensions the grid shows, the latest task's
+   * title, the four list year slots, the `fte_*` keys of `fteKeys`), and no
+   * allocation computation when `allocationLabels` gives each line's label.
    */
   shape?: 'full' | 'grid';
   /** Grid shape: the FTE keys to emit (`fte_yBudget`, `fte_y2028Revision`). */
@@ -879,13 +883,11 @@ export async function buildBudgetSummaryRows(
       versions,
       ...fte,
     };
-    if (grid && config.gridItemColumns) return gridRow(row, config.gridItemColumns, gridAxisKeys, fte);
-    if (grid) {
-      delete (row as any).allocation_warning;
-    } else if (options.includeRecipientDetails) {
+    if (grid) return gridRow(row, config.gridItemColumns, gridAxisKeys, fte);
+    if (options.includeRecipientDetails) {
       row.main_recipient = mainRecipient(allocation);
     }
-    if (options.includeNextYearAllocation && !grid) {
+    if (options.includeNextYearAllocation) {
       row.next_year_allocation_method_label = formatAllocationMethodLabel(nextAllocation?.resolvedMethod ?? next?.allocation_method ?? null);
     }
     projectNamesByRow.set(row, projectLists);
@@ -894,10 +896,9 @@ export async function buildBudgetSummaryRows(
 }
 
 /**
- * The grid shape of a built row, for a scope that names its grid columns: the
- * item columns, the derived fields and dimensions the grid shows, the latest
- * task's title, the four list year slots (`gridSlot`) and the requested FTE
- * keys. About a quarter of the full row: no ids the grid does not link to, no
+ * The grid shape of a built row: the scope's grid item columns, the derived
+ * fields and dimensions the grid shows, the latest task's title, the four list
+ * year slots (`gridSlot`) and the requested FTE keys. About a quarter of the full row: no ids the grid does not link to, no
  * supplier or account objects, no Y-2 or named-year slots, no FX details.
  */
 function gridRow(

@@ -84,11 +84,14 @@ function deepSorted(value: any): any {
   return value;
 }
 
-// The grid shape of an OPEX row (lot 2B, PR B2 review): what the OPEX grid reads, nothing else.
-// A list without its keys here (CAPEX until its grid's readers are listed) keeps every key of the
-// full row but the ones the grid shape drops.
-const GRID_ITEM_KEYS: Partial<Record<SummaryScopeConfig['scope'], string[]>> = {
+// The grid shape of a row (lot 2B, PR B2): what each list's grid reads (OpexListPage.tsx,
+// CapexPage.tsx), nothing else; listed here apart from the builder's own lists.
+const GRID_ITEM_KEYS: Record<SummaryScopeConfig['scope'], string[]> = {
   opex: ['id', 'item_number', 'product_name', 'description', 'status', 'currency', 'effective_start', 'disabled_at', 'notes', 'created_at', 'updated_at'],
+  capex: [
+    'id', 'item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'status', 'currency', 'effective_start', 'disabled_at',
+    'notes', 'created_at', 'updated_at',
+  ],
 };
 const GRID_DERIVED_KEYS = [
   'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_name', 'supplier_name', 'paying_company_name', 'account_display',
@@ -456,22 +459,10 @@ async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummar
       const grid = await engine.budgetListSummary(scope, deps, { ...c.query, shape: 'grid' }, m, ROW_OPTIONS);
       const full = await env.oracle.summary(c.query);
       const fteKeys = engine.parseFteKeys(c.query.fte, Y).map((k) => k.key);
-      const itemKeys = GRID_ITEM_KEYS[scope.scope];
-      const fixedYears = new Set(FIXED_SLOTS.map((slot) => Y + slot.offset));
-      // The keys the OPEX grid reads (OpexListPage.tsx), picked from the full row.
+      // The keys the list's grid reads, picked from the full row.
       const expected = full.items.map((row: any) => {
-        if (!itemKeys) {
-          const copy: any = JSON.parse(JSON.stringify(row));
-          delete copy.main_recipient;
-          delete copy.allocation_warning;
-          delete copy.next_year_allocation_method_label;
-          for (const key of Object.keys(copy.versions)) if (/^y\d{4}$/.test(key) && fixedYears.has(Number(key.slice(1)))) delete copy.versions[key];
-          for (const key of Object.keys(copy)) if (key.startsWith('fte_') && !fteKeys.includes(key)) delete copy[key];
-          if (copy.latest_task) delete copy.latest_task.description;
-          return copy;
-        }
         const lean: any = {};
-        for (const key of [...itemKeys, ...GRID_DERIVED_KEYS, ...env.gridAxisKeys]) if (row[key] !== undefined) lean[key] = row[key];
+        for (const key of [...GRID_ITEM_KEYS[scope.scope], ...GRID_DERIVED_KEYS, ...env.gridAxisKeys]) if (row[key] !== undefined) lean[key] = row[key];
         if (row.latest_task !== undefined) lean.latest_task = row.latest_task ? { title: row.latest_task.title } : null;
         lean.versions = Object.fromEntries(GRID_SLOTS.map((slot) => {
           const v = row.versions[slot];
