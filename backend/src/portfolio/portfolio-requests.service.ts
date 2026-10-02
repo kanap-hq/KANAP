@@ -37,6 +37,7 @@ import {
   CompiledCondition,
   buildQuickSearchConditions,
   normalizeAgFilterModel,
+  assertSetFilterModes,
 } from '../common/ag-grid-filtering';
 import { PortfolioCriteriaService } from './portfolio-criteria.service';
 import { validateUploadedFile } from '../common/upload-validation';
@@ -268,6 +269,7 @@ export class PortfolioRequestsService {
       field: 'created_at',
       direction: 'DESC',
     });
+    assertSetFilterModes(filters, (field) => field !== 'linked_project_id' && field !== 'involved_team_id');
 
     const include = new Set(
       (query?.include || '').split(',').map((s: string) => s.trim()).filter(Boolean)
@@ -451,6 +453,7 @@ export class PortfolioRequestsService {
       field: 'created_at',
       direction: 'DESC',
     });
+    assertSetFilterModes(filters, (field) => field !== 'linked_project_id' && field !== 'involved_team_id');
 
     const fm = filters && typeof filters === 'object' ? filters : undefined;
     const hasStatusFilter = fm && Object.prototype.hasOwnProperty.call(fm, 'status');
@@ -608,6 +611,7 @@ export class PortfolioRequestsService {
       field: 'created_at',
       direction: 'DESC',
     });
+    assertSetFilterModes(filters, (field) => field !== 'linked_project_id' && field !== 'involved_team_id');
     const fm = filters && typeof filters === 'object' ? filters : undefined;
 
     const rawFields = String(query?.fields || query?.field || '').split(',').map((f) => f.trim()).filter(Boolean);

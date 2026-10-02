@@ -1,4 +1,4 @@
-import { normalizeAgFilterModel } from '../ag-grid-filtering';
+import { normalizeAgFilterModel, setFilterMode } from '../ag-grid-filtering';
 import type { FieldKind, FieldSql } from './list-engine.types';
 import type { SqlStatement } from './sql-statement';
 import { centsNumber, centsText, epochDay, fold, jsIsoString, utcDay } from './sql-fragments';
@@ -229,7 +229,7 @@ function setText(field: FieldSql): string | null {
  */
 function compileSet(stmt: SqlStatement, field: FieldSql, model: any): string {
   const rawValues: any[] = model.values;
-  const exclude = model.mode === 'exclude';
+  const exclude = setFilterMode(model) === 'exclude';
   const values = rawValues.filter((v) => v !== null && v !== undefined && v !== '').map((v) => String(v));
   const hasNull = values.length < rawValues.length;
   const blank = blankSql(field);

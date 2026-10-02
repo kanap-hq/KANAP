@@ -1,10 +1,11 @@
+import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { formatCents } from '../../common/amount';
 import { assertListEngineSupport } from '../../common/list-engine/list-engine-support';
 import type { ListState } from '../../common/list-engine/list-engine.types';
 import { fieldOf, filterValuesSql, idsSql, neighborsSql, pageSql, countSql, buildCore } from '../../common/list-engine/list-sql-builder';
 import { parseListRequest, ParsedListRequest, resolveLifecycleScope } from '../../common/list-engine/list-state';
-import { compareNullableText, decimal2ToFloat, jsRound } from '../../common/list-engine/sql-fragments';
+import { compareNullableText, decimal2ToFloat, jsRound, sumJsCents } from '../../common/list-engine/sql-fragments';
 import { SqlStatement } from '../../common/list-engine/sql-statement';
 import type { LifecycleScope } from '../../common/status';
 import { parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
@@ -21,7 +22,7 @@ import {
   yearsNamedByFields,
 } from '../spend-summary.builder';
 import { BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
-import { fxJoinCurrency, fxTableSql, RequestFxRates } from './budget-fx-table';
+import { fxKeyCurrency, fxSetKeySql, fxTableSql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 
 /**
@@ -59,6 +60,32 @@ function fixedYears(currentYear: number): number[] {
   return FIXED_SLOTS.map((slot) => currentYear + slot.offset);
 }
 
+/**
+ * The budget years one request may read: within ten years of the current one,
+ * at most twelve distinct years with the fixed window (Y-2 to Y+2) included.
+ * Each year a statement reads costs it a few milliseconds (versions, totals
+ * and FX of that year), and `years=`, a `y<YYYY>…` sort or filter key or an
+ * FTE key can name any year: without a bound, one request naming 150 years
+ * held a connection for 93 s. Every screen stays well inside: the grid asks
+ * for Y-1 to Y+2, the reports for years of the fixed window, the AI for the
+ * fixed window; twelve years leave room for a decade of history.
+ */
+export const BUDGET_YEAR_REACH = 10;
+export const MAX_BUDGET_YEARS_PER_REQUEST = 12;
+
+export function assertBudgetYearsWithinBounds(years: number[], currentYear: number): void {
+  const outside = years.filter((year) => Math.abs(year - currentYear) > BUDGET_YEAR_REACH);
+  if (outside.length) {
+    throw new BadRequestException(
+      `Budget years must be within ${BUDGET_YEAR_REACH} years of ${currentYear} (${currentYear - BUDGET_YEAR_REACH} to ${currentYear + BUDGET_YEAR_REACH}): ${Array.from(new Set(outside)).sort((a, b) => a - b).join(', ')}.`,
+    );
+  }
+  const distinct = new Set(years).size;
+  if (distinct > MAX_BUDGET_YEARS_PER_REQUEST) {
+    throw new BadRequestException(`A request reads at most ${MAX_BUDGET_YEARS_PER_REQUEST} budget years, fixed window included (${distinct} asked).`);
+  }
+}
+
 async function readRequest(query: any, manager: EntityManager): Promise<BudgetRequest> {
   const tenantId = await summaryTenantId(manager);
   await assertListEngineSupport(manager);
@@ -66,13 +93,9 @@ async function readRequest(query: any, manager: EntityManager): Promise<BudgetRe
   const request = parseListRequest(query);
   const requestedYears = parseSummaryYears(query?.years);
   const namedYears = yearsNamedByFields([request.sort.field, ...Object.keys(request.filters)]);
-  return {
-    tenantId,
-    currentYear,
-    request,
-    requestedYears,
-    years: Array.from(new Set([...fixedYears(currentYear), ...requestedYears, ...namedYears])),
-  };
+  const years = Array.from(new Set([...fixedYears(currentYear), ...requestedYears, ...namedYears]));
+  assertBudgetYearsWithinBounds([...years, ...parseFteKeys(query?.fte, currentYear).map((fte) => fte.year)], currentYear);
+  return { tenantId, currentYear, request, requestedYears, years };
 }
 
 /** The items still active on January 1 of the earliest requested year (the year before this one by default). */
@@ -283,7 +306,7 @@ export type SummaryTotals = Record<string, number | string> & { fte?: Record<str
  * The footer totals of what the list shows: every `<slot><Suffix>` of the
  * fixed slots and of the requested years, in the reporting currency, masked
  * after each line's end of validity. Each version is converted to the cent
- * once and the sums are exact (bigint cents). With `fte=<keys>`, `fte` sums
+ * once and the sums are exact (numeric cents). With `fte=<keys>`, `fte` sums
  * each FTE key over the lines and counts the lines whose FTE is unknown.
  * Without a status: active lines.
  */
@@ -309,26 +332,25 @@ export async function budgetListTotals(
   const core = buildCore(stmt, config, state);
   const s = scope;
   const fx = rt.fx!;
-  stmt.cte('fx', () => fxTableSql((value, cast) => stmt.bind(value, cast), fx));
   // A version shows only up to the UTC year of its line's end of validity.
   const validity = `(c.disabled_at IS NULL OR v.budget_year <= extract(year FROM c.disabled_at AT TIME ZONE 'UTC'))`;
   // Each version converted once (the builder's chain, `Math.round(Number(formatCents(local)) * rate * 100)`),
   // the products computed once per row (OFFSET 0 keeps the subquery from being flattened into the sums).
   const products = SUMMARY_COLUMNS.map((column) => `${decimal2ToFloat(`t.${column.measure}`)} * coalesce(fx.rate, 1::float8) * 100 AS ${column.measure}`).join(',\n          ');
-  const sums = SUMMARY_COLUMNS.map((column) => `sum(${jsRound(`x.${column.measure}`)}::bigint)::text AS ${column.measure}`).join(',\n        ');
+  const rounded = SUMMARY_COLUMNS.map((column) => `${jsRound(`p.${column.measure}`)} AS ${column.measure}`).join(', ');
+  const sums = SUMMARY_COLUMNS.map((column) => `${sumJsCents(`x.${column.measure}`)}::text AS ${column.measure}`).join(',\n        ');
   const amounts = `SELECT x.yr,
         ${sums}
-      FROM (
+      FROM (SELECT p.yr, ${rounded} FROM (
         SELECT v.budget_year AS yr,
           ${products}
         FROM core c
         JOIN ${s.versionTable} v ON v.tenant_id = ${stmt.tenant} AND v.${s.versionItemFk} = c.id
           AND v.budget_year = ANY(${stmt.bind(slotYears, 'int[]')}) AND ${validity}
         JOIN ${s.totalsTable} t ON t.tenant_id = ${stmt.tenant} AND t.version_id = v.id
-        LEFT JOIN fx ON fx.yr = v.budget_year AND fx.cur = ${fxJoinCurrency('c')}
-          AND fx.set_key = CASE WHEN v.fx_rate_set_id = ANY(${stmt.bind(fx.knownSets, 'uuid[]')}) THEN v.fx_rate_set_id::text ELSE 'live' END
+        LEFT JOIN ${fxTableSql(stmt, fx)} ON fx.yr = v.budget_year AND fx.cur = ${fxKeyCurrency('c')} AND fx.set_key = ${fxSetKeySql(stmt, fx, 'v.fx_rate_set_id')}
         OFFSET 0
-      ) x
+      ) p OFFSET 0) x
       GROUP BY x.yr`;
   const fte = fteKeys.length
     ? `SELECT k.key, sum(ri.fte)::text AS total, (count(*) FILTER (WHERE ri.fte IS NULL))::int AS unknown, count(*)::int AS lines

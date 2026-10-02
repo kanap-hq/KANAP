@@ -12,7 +12,7 @@ import { User } from '../users/user.entity';
 import { FxLookupKey, FxRateService, FxResolvedRate } from '../currency/fx-rate.service';
 import { ACTIVE_TASK_STATUSES } from '../tasks/task.entity';
 import { centsToNumber, formatCents, toCents } from '../common/amount';
-import { normalizeAgFilterModel } from '../common/ag-grid-filtering';
+import { normalizeAgFilterModel, setFilterMode } from '../common/ag-grid-filtering';
 import { StatusState } from '../common/status';
 import { formatAllocationMethodLabel } from './allocation-utils';
 import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center-tree.util';
@@ -436,9 +436,9 @@ export async function loadVersionTotals(
 
   if (kept.length) {
     const sums: Array<Record<string, string>> = await manager.query(
-      // Cents straight from the database: the stored sums have 2 decimals, and numeric to bigint rounds half
-      // away from zero like toCents would.
-      `SELECT t.version_id, ${SUMMARY_COLUMNS.map((c) => `(t.${c.measure} * 100)::bigint::text AS ${c.measure}`).join(', ')}
+      // Cents straight from the database: the stored sums have 2 decimals, and round() is half away from zero
+      // like toCents. Numeric, not bigint: twelve months of numeric(18,2) can exceed a bigint of cents.
+      `SELECT t.version_id, ${SUMMARY_COLUMNS.map((c) => `round(t.${c.measure} * 100)::text AS ${c.measure}`).join(', ')}
        FROM ${config.totalsTable} t
        WHERE t.tenant_id = $1 AND t.version_id = ANY($2::uuid[])`,
       [tenantId, kept.map((v) => v.id)],
@@ -590,7 +590,8 @@ async function loadAnalyticsForRows(
        LEFT JOIN ${config.analyticsLink.table} v
          ON v.tenant_id = $1 AND v.axis_id = ax.id AND v.item_id = ANY($2::uuid[])
        LEFT JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = $1
-       WHERE ax.tenant_id = $1`,
+       WHERE ax.tenant_id = $1
+       ORDER BY ax.sort_order, ax.id`, // the dimensions' order, whatever the plan: the rows' keys come in it
       [tenantId, itemIds],
     );
   const axisIds = new Set<string>();
@@ -901,9 +902,12 @@ export function getSummaryFieldValue(row: any, field: string): any {
       return blankToNull(row?.allocation_method_label);
     case 'latest_task_text':
       return blankToNull(row?.latest_task?.title);
-    default:
+    default: {
+      // A key the row does not hold itself (`constructor`, `__proto__`…) reads as missing, never as an inherited member.
+      const own = row != null && Object.prototype.hasOwnProperty.call(row, field) ? row[field] : undefined;
       // A dimension's value name (`analytics_<axis id>`) is derived text like the names above.
-      return parseAnalyticsFieldKey(field) ? blankToNull(row?.[field]) : row?.[field];
+      return parseAnalyticsFieldKey(field) ? blankToNull(own) : own;
+    }
   }
 }
 
@@ -971,7 +975,7 @@ function rowPassesFilter(row: any, field: string, rawModel: any, config: Summary
     const rawValues: any[] = model.values;
     const values = rawValues.filter((v) => v !== null && v !== undefined && v !== '').map((v) => String(v));
     const hasNull = values.length < rawValues.length;
-    if (model.mode === 'exclude') {
+    if (setFilterMode(model) === 'exclude') {
       // Every value but the listed ones (a value created later shows): a line linked to several
       // projects stays while one of its names is not listed.
       if (blank) return !hasNull;
@@ -1062,7 +1066,7 @@ export function quickSearchSummaryRows<T extends Record<string, any>>(
  */
 export function sortSummaryRows<T extends Record<string, any>>(rows: T[], field: string, direction: 'ASC' | 'DESC'): T[] {
   const dir = direction === 'ASC' ? 1 : -1;
-  const order = FIXED_SORT_ORDERS[field];
+  const order = Object.prototype.hasOwnProperty.call(FIXED_SORT_ORDERS, field) ? FIXED_SORT_ORDERS[field] : undefined;
   const valueOf = (row: T) => {
     const value = getSummaryFieldValue(row, field);
     if (!order) return value;

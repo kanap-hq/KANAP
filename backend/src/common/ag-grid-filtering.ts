@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+
 export type FilterDataType = 'string' | 'number' | 'boolean';
 
 export type FilterTargetConfig = {
@@ -48,15 +50,57 @@ const numericComparableTypes = new Set([
   'inRange',
 ]);
 
+export type SetFilterMode = 'include' | 'exclude';
+
+/**
+ * The mode of a set model: include (no `mode`, or `'include'`: `values` are
+ * the ticked values) or exclude (`'exclude'`: the user started from "all" and
+ * unticked `values`). Any other mode is a request error (400): read as
+ * include, it would return what the user asked to hide.
+ */
+export function setFilterMode(model: any): SetFilterMode {
+  const mode = model?.mode;
+  if (mode == null || mode === 'include') return 'include';
+  if (mode === 'exclude') return 'exclude';
+  throw new BadRequestException(`Unknown set filter mode ${JSON.stringify(mode)}: expected "include" or "exclude".`);
+}
+
+function isSetModel(model: any): boolean {
+  return !!model && typeof model === 'object' && (model.filterType === 'set' || model.type === 'set') && Array.isArray(model.values);
+}
+
+/**
+ * For a list whose own set filter code reads `values` as the ticked values:
+ * answers 400 for a set model in exclude mode on a field that code compiles,
+ * and for any unknown mode, instead of silently returning the opposite of
+ * what the user asked. `supportsExclude` names the fields that do honour the
+ * mode (those compiled by `compileAgFilterCondition` or read by
+ * `extractStatusFilterFromAgModel`): a list of them, or a predicate. Every
+ * condition of a combined model is checked.
+ */
+export function assertSetFilterModes(filters: unknown, supportsExclude: readonly string[] | ((field: string) => boolean) = []): void {
+  if (!filters || typeof filters !== 'object') return;
+  const supported = typeof supportsExclude === 'function' ? supportsExclude : (field: string) => supportsExclude.includes(field);
+  for (const [field, raw] of Object.entries(filters as Record<string, any>)) {
+    const models = raw && typeof raw === 'object' && Array.isArray(raw.conditions) ? [raw, ...raw.conditions] : [raw];
+    for (const model of models) {
+      if (!isSetModel(model)) continue;
+      if (setFilterMode(model) === 'exclude' && !supported(field)) {
+        throw new BadRequestException(`The filter on "${field}" cannot exclude values on this list: send the values to keep instead.`);
+      }
+    }
+  }
+}
+
 /**
  * A set model in exclude mode (`mode: 'exclude'`): the user started from
  * "all" and unticked `values`, so the list keeps every other value, including
  * values created later. It matches exactly the rows the include model of the
  * same values does not match (a row whose include condition is NULL counts as
- * not matched).
+ * not matched). An unknown mode answers 400 (`setFilterMode`).
  */
 export function isExcludeSetModel(model: any): boolean {
-  return !!model && typeof model === 'object' && model.mode === 'exclude' && model.filterType === 'set' && Array.isArray(model.values);
+  return !!model && typeof model === 'object' && model.filterType === 'set' && Array.isArray(model.values) && setFilterMode(model) === 'exclude';
 }
 
 export function compileAgFilterCondition(

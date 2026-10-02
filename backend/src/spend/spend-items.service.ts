@@ -39,6 +39,7 @@ import { updateItemUnderLock } from './item-locked-update';
 import { itemAnalyticsAuditFields, itemAnalyticsFields, loadItemAnalyticsValues, writeItemAnalyticsValues } from './item-analytics.util';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 @Injectable()
 export class SpendItemsService {
@@ -100,6 +101,7 @@ export class SpendItemsService {
     const repo = mg.getRepository(SpendItem);
     const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    assertSetFilterModes(filters, ['status']);
     const filtersToApply = sanitizedFilters ?? filters;
     // Only allow filtering/sorting by real columns on SpendItem
     const allowedFields = [

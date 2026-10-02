@@ -1,5 +1,7 @@
 import * as assert from 'node:assert/strict';
-import { compileAgFilterCondition, createParamNameGenerator, isExcludeSetModel } from '../ag-grid-filtering';
+import { BadRequestException } from '@nestjs/common';
+import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, isExcludeSetModel, setFilterMode } from '../ag-grid-filtering';
+import { buildWhereFromAgFilters } from '../pagination';
 
 // The shared grid filter compiler of the 24 SQL lists. Include mode must stay
 // exactly as it was before the exclude mode (decision Q3, lot 2B): the
@@ -107,7 +109,47 @@ function testExcludeModeOnlyOnSetModels() {
   assert.equal(isExcludeSetModel({ filterType: 'set', mode: 'exclude' }), false, 'no values');
 }
 
+const isBadRequest = (pattern: RegExp) => (err: unknown) => err instanceof BadRequestException && pattern.test((err as Error).message);
+
+function testUnknownModeIsRefused() {
+  assert.equal(setFilterMode({ filterType: 'set', values: [] }), 'include');
+  assert.equal(setFilterMode({ filterType: 'set', mode: null, values: [] }), 'include');
+  assert.equal(setFilterMode({ filterType: 'set', mode: 'include', values: [] }), 'include');
+  assert.equal(setFilterMode({ filterType: 'set', mode: 'exclude', values: [] }), 'exclude');
+  for (const mode of ['Exclude', 'not', '', 0, true]) {
+    assert.throws(() => setFilterMode({ filterType: 'set', mode, values: ['a'] }), isBadRequest(/Unknown set filter mode/), `mode ${JSON.stringify(mode)}`);
+    assert.throws(() => compile({ filterType: 'set', mode, values: ['a'] }, { expression: 'c.name' }), isBadRequest(/Unknown set filter mode/));
+  }
+}
+
+// Lists whose own set code reads `values` as the ticked values answer 400 for an exclude model
+// on those fields, never the inverted list; the fields that honour it keep it.
+function testSetModeGuard() {
+  const exclude = { filterType: 'set', mode: 'exclude', values: ['a'] };
+  assert.throws(() => assertSetFilterModes({ name: exclude }), isBadRequest(/"name" cannot exclude values/));
+  assert.doesNotThrow(() => assertSetFilterModes({ status: exclude }, ['status']));
+  assert.throws(() => assertSetFilterModes({ status: exclude, name: exclude }, ['status']), isBadRequest(/"name"/));
+  assert.doesNotThrow(() => assertSetFilterModes({ kind: exclude }, (field) => field !== 'environments'));
+  assert.throws(() => assertSetFilterModes({ environments: exclude }, (field) => field !== 'environments'), isBadRequest(/"environments"/));
+  // Every condition of a combined model, `type: 'set'` too.
+  assert.throws(() => assertSetFilterModes({ name: { operator: 'OR', conditions: [{ filterType: 'text', type: 'contains', filter: 'a' }, exclude] } }), isBadRequest(/"name"/));
+  assert.throws(() => assertSetFilterModes({ name: { type: 'set', mode: 'exclude', values: ['a'] } }), isBadRequest(/"name"/));
+  // Include models, text models and no filters pass; an unknown mode never does.
+  assert.doesNotThrow(() => assertSetFilterModes({ name: { filterType: 'set', values: ['a'] }, notes: { filterType: 'text', type: 'contains', filter: 'a', mode: 'exclude' } }));
+  assert.doesNotThrow(() => assertSetFilterModes(undefined));
+  assert.doesNotThrow(() => assertSetFilterModes('{"name":1}'));
+  assert.throws(() => assertSetFilterModes({ status: { filterType: 'set', mode: 'invert', values: ['a'] } }, ['status']), isBadRequest(/Unknown set filter mode/));
+
+  // `buildWhereFromAgFilters` (accounts, chart of accounts, audit logs, contacts, locations, suppliers,
+  // plain OPEX and CAPEX lists): include unchanged, exclude refused.
+  assert.equal(JSON.stringify(buildWhereFromAgFilters({ name: { filterType: 'set', values: ['a', 'b'] } })), JSON.stringify({ name: { _type: 'in', _value: ['a', 'b'], _useParameter: true, _multipleParameters: true } }));
+  assert.throws(() => buildWhereFromAgFilters({ name: exclude }), isBadRequest(/"name" cannot exclude values/));
+  assert.throws(() => buildWhereFromAgFilters({ name: { filterType: 'set', mode: 'other', values: ['a'] } }), isBadRequest(/Unknown set filter mode/));
+}
+
 testIncludeModeUnchanged();
 testExcludeModeIsTheComplement();
 testExcludeModeOnlyOnSetModels();
+testUnknownModeIsRefused();
+testSetModeGuard();
 console.log('ag-grid-filtering.spec: ok');

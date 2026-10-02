@@ -71,24 +71,45 @@ export function jsIsoString(ts: string): string {
   return `to_char(date_trunc('milliseconds', ${ts}) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
 }
 
-/** `String(n)` of a 2-decimal number held as integer cents (bigint); equal below 10^15 cents, where a double still holds two decimals. */
+/**
+ * `String(n)` of a 2-decimal number held as integer cents (a float8 or a
+ * bigint holding an integer); equal below 10^15 cents, where a double still
+ * holds two decimals (and `float8::numeric`, which keeps 15 digits, is exact).
+ */
 export function centsText(cents: string): string {
   return `trim_scale((${cents})::numeric / 100)::text`;
 }
 
 /**
  * A 2-decimal `numeric` as the double JavaScript parses from its text
- * (`Number(formatCents(toCents(text)))`): exact cents through bigint, then
- * one correctly rounded division. Cheaper than `numeric::float8`, which
- * formats and parses text, and equal to it for 2-decimal values.
+ * (`Number(formatCents(toCents(text)))`). Below 2^53 cents: exact cents
+ * through bigint, then one correctly rounded division, cheaper than
+ * `numeric::float8` (which formats and parses text) and equal to it. From
+ * 2^53 cents on (90 trillion units, the sum of absurd months), the text path
+ * itself: it never leaves the range a bigint would.
  */
 export function decimal2ToFloat(expr: string): string {
-  return `(((${expr}) * 100)::bigint::float8 / 100)`;
+  return `(CASE WHEN abs(${expr}) < 90071992547409.92 THEN ((${expr}) * 100)::bigint::float8 / 100 ELSE (${expr})::float8 END)`;
 }
 
 /** `Number(formatCents(c))` of integer cents: IEEE division is correctly rounded, so it equals the parsed decimal. */
 export function centsNumber(cents: string): string {
   return `((${cents})::float8 / 100)`;
+}
+
+/**
+ * The sum of the cents JavaScript keeps of converted amounts `r` (a float8
+ * holding an integer, `jsRound(amount × rate × 100)`): each is
+ * `toCents(r / 100)`, summed as a scale-0 `numeric`, never out of range.
+ * Below 10^15, that is `r` itself (`r / 100` prints as its own two
+ * decimals), summed as bigint for speed: exact. From 10^15 on (ten trillion
+ * units), the shortest decimal PostgreSQL prints for `r / 100`, rounded half
+ * away from zero to the cent: the same double as JavaScript's, though V8 may
+ * print a tie of the shortest form differently (in the 17th digit).
+ */
+export function sumJsCents(r: string): string {
+  return `round(coalesce(sum((${r})::bigint) FILTER (WHERE abs(${r}) < 1e15), 0)
+    + coalesce(sum(round(((${r}) / 100)::text::numeric, 2) * 100) FILTER (WHERE abs(${r}) >= 1e15), 0))`;
 }
 
 /** The sort key of a text value: blank (null or '') last ascending, then the ICU order. */
@@ -101,9 +122,15 @@ export function timestampSortKey(ts: string): string {
   return `date_trunc('milliseconds', ${ts})`;
 }
 
-/** Quotes a constant string as a SQL literal (for engine constants such as labels; never user input). */
+/**
+ * Quotes a constant string as a SQL literal (for engine constants such as
+ * labels; never user input). Refuses `$<digit>`: `SqlStatement.finalize`
+ * renumbers every `$n` of the text, string literals included.
+ */
 export function sqlLiteral(value: string): string {
-  return `'${String(value).replace(/'/g, "''")}'`;
+  const text = String(value);
+  if (/\$\d/.test(text)) throw new Error(`sqlLiteral: "$<digit>" would be read as a parameter: ${JSON.stringify(text)}`);
+  return `'${text.replace(/'/g, "''")}'`;
 }
 
 // ----- JavaScript side -----

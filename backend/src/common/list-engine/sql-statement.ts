@@ -9,7 +9,8 @@ import type { FieldSql } from './list-engine.types';
 export class SqlStatement {
   readonly params: unknown[] = [];
   private readonly ctes = new Map<string, string>();
-  private readonly joins = new Map<string, { sql: string; deps: string[] }>();
+  private readonly joins = new Map<string, { sql: string | (() => string); deps: string[] }>();
+  private readonly shared = new Map<string, unknown>();
   readonly fieldCache = new Map<string, FieldSql>();
 
   constructor(tenantId: string) {
@@ -36,6 +37,12 @@ export class SqlStatement {
     return name;
   }
 
+  /** A value built once per statement: a parameter several fragments read, or state the fields of a statement share. */
+  once<T>(key: string, build: () => T): T {
+    if (!this.shared.has(key)) this.shared.set(key, build());
+    return this.shared.get(key) as T;
+  }
+
   hasCte(name: string): boolean {
     return this.ctes.has(name);
   }
@@ -46,6 +53,16 @@ export class SqlStatement {
       const sql = build();
       if (!this.joins.has(key)) this.joins.set(key, { sql, deps });
     }
+    return key;
+  }
+
+  /**
+   * Registers a join whose text is built each time `joinSql` writes it, so it
+   * holds what the fields compiled since its registration need (the measures
+   * of an amount year, for example).
+   */
+  joinLazy(key: string, build: () => string, deps: string[] = []): string {
+    if (!this.joins.has(key)) this.joins.set(key, { sql: build, deps });
     return key;
   }
 
@@ -62,7 +79,7 @@ export class SqlStatement {
     for (const key of keys) visit(key);
     return Array.from(this.joins.entries())
       .filter(([key]) => wanted.has(key))
-      .map(([, def]) => def.sql)
+      .map(([, def]) => (typeof def.sql === 'function' ? def.sql() : def.sql))
       .join('\n');
   }
 

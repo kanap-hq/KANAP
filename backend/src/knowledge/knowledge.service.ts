@@ -27,7 +27,7 @@ import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import
 import { fixMulterFilename } from '../common/upload';
 import { validateUploadedFile } from '../common/upload-validation';
 import { parsePagination } from '../common/pagination';
-import { normalizeAgFilterModel } from '../common/ag-grid-filtering';
+import { normalizeAgFilterModel, assertSetFilterModes } from '../common/ag-grid-filtering';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { resolveInlineTenantSlug } from '../common/resolve-inline-tenant-slug';
 import { StorageService } from '../common/storage/storage.service';
@@ -2661,6 +2661,7 @@ export class KnowledgeService {
     const manager = this.getManager(opts);
     const tenantId = String(opts?.tenantId || '').trim();
     const { page, limit, skip, sort, q, filters } = parsePagination(query, { field: 'updated_at', direction: 'DESC' });
+    assertSetFilterModes(filters);
     let reviewDueDateParamIndex = 0;
     const nextReviewDueDateParam = () => `reviewDueDate${reviewDueDateParamIndex++}`;
     let linkedEntityParamIndex = 0;
@@ -3000,6 +3001,7 @@ export class KnowledgeService {
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 }, { field: 'updated_at', direction: 'DESC' });
     const search = this.getDocumentSearchState(parsed.q);
     const filters = parsed.filters as Record<string, any> | undefined;
+    assertSetFilterModes(filters);
     let linkedEntityParamIndex = 0;
     const nextLinkedEntityParam = () => `linkedEntity${linkedEntityParamIndex++}`;
     const accessibleLibraries = await this.listAccessibleLibraryIds(manager, opts?.userId || null, 'reader');

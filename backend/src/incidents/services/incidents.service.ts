@@ -10,6 +10,7 @@ import { parsePagination, Sort } from '../../common/pagination';
 import { parseCreateIncident, parseListIncidentsQuery, parseUpdateIncident, UpdateIncidentDto } from '../dto';
 import { IncidentsBaseService, ServiceOpts, incidentRef, userNameSql } from './incidents-base.service';
 import { IncidentViewer, incidentVisibilitySql, isFrozenIncidentStatus } from '../incident-visibility';
+import { assertSetFilterModes } from '../../common/ag-grid-filtering';
 
 const DEFAULT_SORT: Sort = { field: 'detected_at', direction: 'DESC' };
 
@@ -226,6 +227,7 @@ export class IncidentsService extends IncidentsBaseService {
     const params: any[] = [input.tenantId];
     let where = 'i.tenant_id = $1';
     const filters: Record<string, any> = input.filters && typeof input.filters === 'object' ? input.filters : {};
+    assertSetFilterModes(filters);
 
     for (const [field, model] of Object.entries(filters)) {
       if (field === input.skipField) continue;

@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { FIXED_SLOTS, getSummaryFieldValue, SUMMARY_COLUMNS, SUMMARY_SCOPES, summaryFieldValues } from '../spend-summary.builder';
@@ -21,8 +21,13 @@ import { prng, seedListFixture } from './oracle/budget-list.fixture';
 //     npx ts-node src/spend/__tests__/budget-list-differential.integration.spec.ts
 // Options: LIST_DIFF_SEED (cases and fixture), LIST_DIFF_CASES (combined cases),
 // LIST_DIFF_PER_OP (needles per field and operator, default 1), LIST_DIFF_MATRIX=0
-// (skip the single-field matrix), LIST_DIFF_ONLY=<case id> (replay one case, as
-// printed on failure).
+// (skip the single-field matrix), LIST_DIFF_FULL=1 (every amount and FTE column
+// of every slot in the matrix, the default on a loaded tenant; CI reads the five
+// columns of Y and one column of each other slot), LIST_DIFF_ONLY=<case id>
+// (replay one case, as printed on failure).
+// Deterministic: the fixture's ids and every needle come from the seed, so one
+// seed gives the same cases (see the digest on the summary line), checks and
+// results on every run.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const SEED = Number(process.env.LIST_DIFF_SEED ?? 20261002);
@@ -32,6 +37,9 @@ const MATRIX = process.env.LIST_DIFF_MATRIX !== '0';
 /** Needles per field and operator in the matrix (CI: 1, about 2,500 cases; 3 for a deep local run). */
 const PER_OP = Math.max(1, Number(process.env.LIST_DIFF_PER_OP ?? 1));
 const ONLY = process.env.LIST_DIFF_ONLY ?? null;
+const FULL = process.env.LIST_DIFF_FULL === '1' || (process.env.LIST_DIFF_FULL !== '0' && !!TENANT_SLUG);
+/** A dimension id no tenant has (fixed, so the case id is the same every run). */
+const UNKNOWN_AXIS = '00000000-0000-4000-8000-00000000d1ff';
 const Y = new Date().getFullYear();
 const scope = SUMMARY_SCOPES.opex;
 const ROW_OPTIONS = { includeRecipientDetails: true, includeNextYearAllocation: true };
@@ -42,9 +50,13 @@ interface Case { id: string; query: Query; checks: Check[]; fvFields?: string[] 
 
 const failures: string[] = [];
 const timing = { engine: 0, oracle: 0 };
-/** How many id checks selected no line, every line, or some: the matrix must mostly select some. */
+/** How many id checks of a filtered case (a column filter or a quick search) selected no line, every line, or some: mostly some. */
 const selectivity = { empty: 0, every: 0, some: 0 };
+/** Id checks selecting no line, per operator or edge (the part of the case id after the field). */
+const emptyByKind = new Map<string, number>();
 let checksRun = 0;
+/** Checks where both sides failed (the same request error on both): counted and listed, not compared. */
+const bothFailedChecks: string[] = [];
 
 function same(label: string, actual: unknown, expected: unknown): boolean {
   checksRun += 1;
@@ -65,7 +77,11 @@ function sortedObject(value: Record<string, any>): Record<string, any> {
 
 function fieldCatalogue(axisIds: string[]) {
   const slots = [...FIXED_SLOTS.map((slot) => slot.key as string), `y${Y + 3}`];
-  const money = slots.flatMap((slot) => SUMMARY_COLUMNS.map((column) => `${slot}${column.suffix}`));
+  // Every column of every slot compiles the same way: CI reads the five columns of Y and one column
+  // (a different one each) of every other slot; a full run reads them all.
+  const money = slots.flatMap((slot, s) => SUMMARY_COLUMNS
+    .filter((_, c) => FULL || slot === 'y' || c === s % SUMMARY_COLUMNS.length)
+    .map((column) => `${slot}${column.suffix}`));
   return {
     text: [
       'product_name', 'description', 'notes', 'currency', 'supplier_name', 'paying_company_name', 'company_name', 'account_display', 'account_name',
@@ -79,7 +95,7 @@ function fieldCatalogue(axisIds: string[]) {
     money,
     fte: money.map((key) => `fte_${key}`),
     date: ['effective_start', 'created_at', 'updated_at'],
-    unknown: ['nonexistent_field', `analytics_${randomUUID()}`],
+    unknown: ['nonexistent_field', `analytics_${UNKNOWN_AXIS}`, 'constructor', '__proto__'],
   };
 }
 
@@ -88,14 +104,30 @@ function fieldCatalogue(axisIds: string[]) {
 const flipCase = (text: string) => Array.from(text, (c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase())).join('');
 const stripAccents = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-function textNeedles(r: ReturnType<typeof prng>, values: string[]): string[] {
+/** Three needles in four should select some lines (the matrix checks semantics, not only edges). */
+const HIT = 0.75;
+
+/**
+ * A needle drawn from one of the field's values, for a text operator: most
+ * are forms of the value the operator can match (the whole value in another
+ * case or without accents for equals, its start for startsWith, its end for
+ * endsWith, any part for contains), the rest an edge (`%`, `_`, `\\`, a
+ * space, a padded value, a needle no line holds).
+ */
+function textNeedle(r: ReturnType<typeof prng>, values: string[], type = 'contains', hit = HIT): string {
   const v = values.length ? r.pick(values) : 'x';
   const chars = Array.from(v);
   const cut = Math.max(1, Math.min(chars.length, r.int(1, 4)));
-  return [
-    chars.slice(0, cut).join(''), chars.slice(-cut).join(''), chars.slice(1, 1 + cut).join('') || v, v, flipCase(v), stripAccents(v),
-    stripAccents(v).toUpperCase(), '%', '_', '\\', ' ', `  ${v}`, 'zz-none',
-  ];
+  const whole = [v, flipCase(v), stripAccents(v), stripAccents(v).toUpperCase()];
+  const start = chars.slice(0, cut).join('');
+  const end = chars.slice(-cut).join('');
+  const middle = chars.slice(1, 1 + cut).join('') || v;
+  const forms = type === 'equals' || type === 'notEqual' ? whole
+    : type === 'startsWith' ? [start, flipCase(start), stripAccents(start), v]
+      : type === 'endsWith' ? [end, flipCase(end), stripAccents(end), v]
+        : [start, end, middle, ...whole];
+  const edges = ['%', '_', '\\', ' ', `  ${v}`, 'zz-none'];
+  return r.chance(hit) ? r.pick(forms) : r.pick(edges);
 }
 
 // ----- the cases -----
@@ -107,6 +139,9 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
   const all = { includeDisabled: 'true' };
   const f = (model: Record<string, unknown>) => JSON.stringify(model);
   const textValues = (field: string) => (sample.get(field) ?? []).filter((v) => v != null && v !== '').map(String);
+  // A field the tenant holds no value for (on the perf tenant: FTE, project and contract ids…) reads as
+  // blank on every line: a few cases cover it, the operator matrix would only select no line.
+  const hasData = (field: string) => textValues(field).length > 0;
   const TEXT_OPS = ['contains', 'notContains', 'equals', 'notEqual', 'startsWith', 'endsWith', 'unknownOperator'];
   const NUMBER_OPS = ['equals', 'notEqual', 'lessThan', 'lessThanOrEqual', 'greaterThan', 'greaterThanOrEqual', 'inRange'];
 
@@ -114,34 +149,51 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
     // Text-like fields: set (include and exclude), blank, the text operators, wrong-kind models.
     for (const field of [...fields.text, ...fields.uuid, ...fields.multi, ...fields.unknown]) {
       const values = textValues(field);
+      if (!values.length && !fields.unknown.includes(field)) {
+        for (const [i, model] of [{ filterType: 'set', values: [null] }, { filterType: 'set', mode: 'exclude', values: [null] }, { filterType: 'text', type: 'notContains', filter: 'a' }].entries()) {
+          add(`${field}/empty${i}`, { ...all, filters: f({ [field]: model }) }, ['ids', 'fv'], [field]);
+        }
+        continue;
+      }
       const v = values.length ? values : ['none'];
       const pick3 = [r.pick(v), r.pick(v), r.pick(v)];
-      const sets: unknown[][] = [[v[0]], pick3, [v[0], null], [null], [], [flipCase(v[0])], [''], ['a, b']];
+      // Values that select lines, then two of the edges (each edge still runs on many fields).
+      const edges: Array<[string, unknown[]]> = [['blankMarker', [null]], ['none', []], ['otherCase', [flipCase(v[0])]], ['emptyString', ['']], ['joinedText', ['a, b']]];
+      const first = r.int(0, edges.length - 1);
+      const second = (first + r.int(1, edges.length - 1)) % edges.length;
+      const sets: Array<[string, unknown[]]> = [['one', [v[0]]], ['three', pick3], ['oneAndBlank', [v[0], null]], edges[first], edges[second]];
       if (fields.multi.includes(field)) {
         const joined = (sample.get(`${field}#joined`) ?? []).filter(Boolean);
-        if (joined.length) sets.push([r.pick(joined)]);
+        if (joined.length) sets.push(['joinedValue', [r.pick(joined)]]);
       }
-      sets.forEach((values, i) => add(`${field}/set${i}`, { ...all, filters: f({ [field]: { filterType: 'set', values } }) }, ['ids', 'fv'], [field]));
+      sets.forEach(([name, values]) => add(`${field}/set-${name}`, { ...all, filters: f({ [field]: { filterType: 'set', values } }) }, ['ids', 'fv'], [field]));
       [[v[0]], [v[0], null], [], [null], pick3].forEach((values, i) => add(`${field}/exclude${i}`, { ...all, filters: f({ [field]: { filterType: 'set', mode: 'exclude', values } }) }, ['ids', 'fv'], [field]));
       add(`${field}/blank`, { ...all, filters: f({ [field]: { filterType: 'text', type: 'blank' } }) });
       add(`${field}/notBlank`, { ...all, filters: f({ [field]: { filterType: 'text', type: 'notBlank' } }) });
       for (const type of TEXT_OPS) {
-        const needles = textNeedles(r, values);
-        for (let k = 0; k < PER_OP; k++) add(`${field}/${type}${k}`, { ...all, filters: f({ [field]: { filterType: 'text', type, filter: r.pick(needles) } }) });
+        for (let k = 0; k < PER_OP; k++) add(`${field}/${type}${k}`, { ...all, filters: f({ [field]: { filterType: 'text', type, filter: textNeedle(r, values, type) } }) });
       }
-      add(`${field}/numberModel`, { ...all, filters: f({ [field]: { filterType: 'number', type: 'greaterThan', filter: 1 } }) });
-      add(`${field}/dateModel`, { ...all, filters: f({ [field]: { filterType: 'date', type: 'greaterThan', dateFrom: '2020-01-01' } }) });
+      // Models of another kind match no line (A5): on about a third of the fields.
+      if (r.chance(0.35)) add(`${field}/numberModel`, { ...all, filters: f({ [field]: { filterType: 'number', type: 'greaterThan', filter: 1 } }) });
+      if (r.chance(0.35)) add(`${field}/dateModel`, { ...all, filters: f({ [field]: { filterType: 'date', type: 'greaterThan', dateFrom: '2020-01-01' } }) });
     }
     // Numbers: number operators, the implicit numeric path, text operators, blank, set.
     for (const field of [...fields.int, ...fields.money, ...fields.fte]) {
       const values = (sample.get(field) ?? []).filter((v) => typeof v === 'number') as number[];
+      if (!values.length) {
+        for (const [i, model] of [{ filterType: 'number', type: 'blank' }, { filterType: 'number', type: 'greaterThan', filter: 0 }, { filterType: 'set', values: ['0', null] }].entries()) {
+          add(`${field}/empty${i}`, { ...all, filters: f({ [field]: model }) });
+        }
+        continue;
+      }
       const v = values.length ? values : [0];
       const a = r.pick(v);
       const b = r.pick(v);
-      const needles: unknown[] = [a, a + 0.01, a - 0.01, 0, -10, 'abc', 'Infinity', String(a), `${a}`.replace('.', ',')];
+      const near = [a, a + 0.01, a - 0.01, String(a)];
+      const edges: unknown[] = [0, -10, 'abc', 'Infinity', `${a}`.replace('.', ',')];
       for (const type of NUMBER_OPS) {
         for (let k = 0; k < PER_OP + (type === 'inRange' ? 1 : 0); k++) {
-          const filter = r.pick(needles);
+          const filter = r.chance(HIT) ? r.pick(near) : r.pick(edges);
           const model: Record<string, unknown> = { filterType: 'number', type, filter };
           if (type === 'inRange') { model.filter = Math.min(a, b); model.filterTo = k === PER_OP ? undefined : Math.max(a, b); }
           add(`${field}/${type}${k}`, { ...all, filters: f({ [field]: model }) });
@@ -154,17 +206,19 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
       add(`${field}/blank`, { ...all, filters: f({ [field]: { filterType: 'number', type: 'blank' } }) });
       add(`${field}/notBlank`, { ...all, filters: f({ [field]: { filterType: 'number', type: 'notBlank' } }) });
       add(`${field}/set`, { ...all, filters: f({ [field]: { filterType: 'set', values: [String(a), String(b), null] } }) });
-      add(`${field}/dateModel`, { ...all, filters: f({ [field]: { filterType: 'date', type: 'equals', dateFrom: '2026-01-01' } }) });
+      if (r.chance(0.35)) add(`${field}/dateModel`, { ...all, filters: f({ [field]: { filterType: 'date', type: 'equals', dateFrom: '2026-01-01' } }) });
     }
     // Dates: the date operators with existing and absent days, missing and malformed bounds; text operators; blank.
     for (const field of fields.date) {
       const days = (sample.get(field) ?? []).filter(Boolean).map((v) => (v instanceof Date ? v.toISOString() : String(v)).slice(0, 10));
       const d = days.length ? days : ['2026-01-01'];
-      const bounds: unknown[] = [r.pick(d), r.pick(d), '1999-05-05', `${r.pick(d)} 00:00:00`, '', 'abc', '2026/03/01', '2026-13-45', null];
+      const sampledDays = [r.pick(d), r.pick(d), `${r.pick(d)} 00:00:00`];
+      const edges: unknown[] = ['1999-05-05', '', 'abc', '2026/03/01', '2026-13-45', null];
+      const bound = () => (r.chance(HIT) ? r.pick(sampledDays) : r.pick(edges));
       for (const type of NUMBER_OPS) {
         for (let k = 0; k < PER_OP + 1; k++) {
-          const model: Record<string, unknown> = { filterType: 'date', type, dateFrom: r.pick(bounds) };
-          if (type === 'inRange') model.dateTo = k === PER_OP ? null : r.pick(bounds);
+          const model: Record<string, unknown> = { filterType: 'date', type, dateFrom: bound() };
+          if (type === 'inRange') model.dateTo = k === PER_OP ? null : bound();
           add(`${field}/${type}${k}`, { ...all, filters: f({ [field]: model }) });
         }
       }
@@ -197,6 +251,11 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
         }
       }
     }
+    // Needles holding U+001F, the separator of the entries the engine reads as one text: never across two entries.
+    const firstNumber = (sample.get('item_number') ?? [1])[0];
+    for (const [i, q] of ['\u001f', `${firstNumber}\u001fopx-${firstNumber}`, `${firstNumber}\u001f`, `a\u001fb`].entries()) {
+      add(`q/separator/${i}`, { ...all, q, sort: 'item_number:ASC' });
+    }
     // Combined models: every condition applies.
     for (let k = 0; k < 12; k++) {
       const field = r.pick([...fields.text, ...fields.money, ...fields.date]);
@@ -207,7 +266,7 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
         ? { filterType: 'number', type: r.pick(['greaterThan', 'lessThan']), filter: r.pick([0, 100, 1000, -5]) }
         : isDate
           ? { filterType: 'date', type: r.pick(['greaterThan', 'lessThan']), dateFrom: `${r.int(2019, Y + 1)}-06-01` }
-          : { filterType: 'text', type: r.pick(['contains', 'notContains']), filter: r.pick(textNeedles(r, values)) });
+          : { filterType: 'text', type: r.pick(['contains', 'notContains']), filter: textNeedle(r, values) });
       add(`combined${k}/${field}`, { ...all, filters: f({ [field]: { filterType: 'text', operator: r.pick(['AND', 'OR']), conditions: [cond(), cond()] } }) });
     }
     // Every sortable field, both directions.
@@ -239,26 +298,35 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
   // Seeded combined states: 1 to 3 filters, maybe a quick search, a sort, a scope, maybe years and FTE keys.
   const filterable = [...fields.text, ...fields.uuid, ...fields.multi, ...fields.int, ...fields.money, ...fields.fte, ...fields.date];
   const sortable = [...filterable, 'status', 'disabled_at'];
+  const filterableWithData = filterable.filter(hasData);
   const qPool = [...textValues('product_name'), ...textValues('supplier_name'), ...textValues('cost_center_path'), ...textValues('project_name'),
     ...textValues('analytics_category_name'), ...axisIds.flatMap((id) => textValues(`analytics_${id}`)), ...textValues('owner_it_name'),
     ...textValues('account_display'), ...textValues('contract_name'),
     'cyber', 'Électricité', 'electricite', 'opx-1', '12', 'headcount', 'company', 'en', 'able', '%', '_', 'zz-none', 'ete', 'été'];
   for (let k = 0; k < COMBINED; k++) {
     const filters: Record<string, unknown> = {};
-    const count = r.int(1, 3);
+    const count = r.pick([1, 1, 2, 2, 3]);
     for (let n = 0; n < count; n++) {
-      const field = r.pick(filterable);
+      const field = r.pick(filterableWithData);
       const values = textValues(field);
+      // Combinations, not edges (the single-field matrix has them): needles that match, and after the
+      // first filter broad ones (a range, values excluded, a short needle). Narrow filters ANDed on
+      // 5,000 lines select nothing, which compares little.
+      const broad = n > 0;
       if (fields.money.includes(field) || fields.fte.includes(field) || fields.int.includes(field)) {
         const nums = (sample.get(field) ?? []).filter((v) => typeof v === 'number') as number[];
-        filters[field] = r.chance(0.15) ? { filterType: 'number', type: r.pick(['blank', 'notBlank']) } : { filterType: 'number', type: r.pick(NUMBER_OPS.slice(0, 6)), filter: nums.length ? r.pick(nums) : 0 };
+        const type = r.pick(['lessThan', 'lessThanOrEqual', 'greaterThan', 'greaterThanOrEqual', ...(broad ? [] : ['notEqual'])]);
+        filters[field] = !broad && r.chance(0.15) ? { filterType: 'number', type: r.pick(['blank', 'notBlank']) } : { filterType: 'number', type, filter: nums.length ? r.pick(nums) : 0 };
       } else if (fields.date.includes(field)) {
-        filters[field] = { filterType: 'date', type: r.pick(['greaterThan', 'lessThan', 'equals']), dateFrom: `${r.int(2019, Y + 1)}-${String(r.int(1, 12)).padStart(2, '0')}-15` };
+        filters[field] = { filterType: 'date', type: r.pick(broad ? ['greaterThan', 'lessThan'] : ['greaterThan', 'lessThan', 'equals']), dateFrom: `${r.int(2019, Y + 1)}-${String(r.int(1, 12)).padStart(2, '0')}-15` };
       } else if (r.chance(0.5) && values.length) {
         const chosen = Array.from(new Set([r.pick(values), r.pick(values), ...(r.chance(0.3) ? [null] : [])]));
-        filters[field] = { filterType: 'set', ...(r.chance(0.25) ? { mode: 'exclude' } : {}), values: chosen };
+        filters[field] = { filterType: 'set', ...(broad || r.chance(0.25) ? { mode: 'exclude' } : {}), values: chosen };
+      } else if (broad) {
+        filters[field] = { filterType: 'text', type: r.pick(['contains', 'notContains']), filter: Array.from(r.pick(values.length ? values : ['a']))[0] };
       } else {
-        filters[field] = { filterType: 'text', type: r.pick(TEXT_OPS.slice(0, 6)), filter: r.pick(textNeedles(r, values)) };
+        const type = r.pick(TEXT_OPS.slice(0, 6));
+        filters[field] = { filterType: 'text', type, filter: textNeedle(r, values, type, 1) };
       }
     }
     const status = r.pick(['enabled', 'enabled', 'disabled', undefined, 'all']);
@@ -266,7 +334,8 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
       sort: `${r.pick(sortable)}:${r.pick(['ASC', 'DESC'])}`,
       limit: r.pick([10, 25, 50]),
       ...(status === 'all' ? { includeDisabled: 'true' } : status ? { status } : {}),
-      ...(r.chance(0.4) ? { q: r.pick(qPool) } : {}),
+      // One word of a value (a whole name selects one line, which no other filter then keeps).
+      ...(r.chance(0.3) ? { q: r.pick(r.pick(qPool).split(/[\s·,]+/).filter((word) => word.length >= 3).concat(['en'])) } : {}),
       ...(r.chance(0.3) ? { years: r.pick([`${Y + 3}`, `${Y - 1},${Y}`, `${Y + 1}`]) } : {}),
       ...(r.chance(0.4) ? { fte: r.pick([`fte_yBudget,fte_yPlus1Forecast`, `fte_y${Y + 3}Budget,fte_yRevision`, 'fte_nothing']) } : {}),
       filters: f(filters),
@@ -296,15 +365,20 @@ async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummar
   try {
     if (c.checks.includes('ids')) {
       const [e, o] = await settle(() => engine.budgetListIds(scope, deps, c.query, m), () => env.oracle.summaryIds(c.query), env.runner);
-      if (!bothFailed(e, o) && same(label('ids'), e.value, o.value)) {
+      if (!bothFailed(label('ids'), e, o) && same(label('ids'), e.value, o.value)) {
         const n = (o.value as any).total as number;
-        selectivity[n === 0 ? 'empty' : n === env.lineCount ? 'every' : 'some'] += 1;
+        const filtered = !!c.query.q || (!!c.query.filters && c.query.filters !== '{}');
+        if (filtered) selectivity[n === 0 ? 'empty' : n === env.lineCount ? 'every' : 'some'] += 1;
+        if (filtered && n === 0) {
+          const kind = /^(combined|q)\//.test(c.id) ? c.id.split('/')[0] : c.id.split('/').slice(-1)[0].replace(/\d+(\.\d+)?$/, '');
+          emptyByKind.set(kind, (emptyByKind.get(kind) ?? 0) + 1);
+        }
       }
     }
     if (c.checks.includes('fv') || (c.checks.includes('full') && c.fvFields?.length)) {
       const query = { ...c.query, fields: (c.fvFields ?? []).join(',') };
       const [e, o] = await settle(() => engine.budgetListFilterValues(scope, deps, query, m), () => env.oracle.summaryFilterValues(query, engine.FILTER_VALUE_FIELDS), env.runner);
-      if (!bothFailed(e, o)) same(label('filter values'), e.value, o.value);
+      if (!bothFailed(label('filter values'), e, o)) same(label('filter values'), e.value, o.value);
     }
     if (c.checks.includes('full')) {
       const [e, o] = await settle(
@@ -312,7 +386,7 @@ async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummar
         () => env.oracle.summary(c.query),
         env.runner,
       );
-      if (!bothFailed(e, o)) {
+      if (!bothFailed(label('page'), e, o)) {
         const ev = e.value as any;
         const ov = o.value as any;
         same(label('page total'), ev?.total, ov?.total);
@@ -329,7 +403,7 @@ async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummar
         }
       }
       const [et, ot] = await settle(() => engine.budgetListTotals(scope, deps, c.query, m), () => env.oracle.summaryTotals(c.query), env.runner);
-      if (!bothFailed(et, ot)) same(label('totals'), et.value && sortedObject(et.value as any), ot.value && sortedObject(ot.value as any));
+      if (!bothFailed(label('totals'), et, ot)) same(label('totals'), et.value && sortedObject(et.value as any), ot.value && sortedObject(ot.value as any));
     }
     if (c.checks.includes('grid')) {
       const grid = await engine.budgetListSummary(scope, deps, { ...c.query, shape: 'grid' }, m, ROW_OPTIONS);
@@ -350,7 +424,7 @@ async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummar
     }
     if (c.checks.includes('neighbors')) {
       const { ids } = await env.oracle.summaryIds(c.query);
-      const pick = ids.length ? ids[Math.floor(ids.length / 3)] : randomUUID();
+      const pick = ids.length ? ids[Math.floor(ids.length / 3)] : UNKNOWN_AXIS;
       const n = await engine.budgetListNeighbors(scope, deps, c.query, pick, m);
       const index = ids.indexOf(pick);
       same(label('neighbors'), n, index < 0
@@ -369,11 +443,15 @@ function neighbor(ids: string[], index: number, _env: Engines) {
 }
 
 type Settled = { value?: unknown; error?: Error };
-function bothFailed(e: Settled, o: Settled): boolean {
-  if (e.error && o.error) return true;
+/** Both sides failed (listed, not compared), or one only (a difference); false when both answered. */
+function bothFailed(label: string, e: Settled, o: Settled): boolean {
+  if (e.error && o.error) {
+    bothFailedChecks.push(`${label}\n      engine: ${e.error.message.slice(0, 160)}\n      oracle: ${o.error.message.slice(0, 160)}`);
+    return true;
+  }
   if (e.error || o.error) {
     checksRun += 1;
-    failures.push(`one engine failed: engine=${e.error?.message ?? 'ok'} oracle=${o.error?.message ?? 'ok'}`);
+    failures.push(`${label}: one side failed: engine=${e.error?.message ?? 'ok'} oracle=${o.error?.message ?? 'ok'}`);
     return true;
   }
   return false;
@@ -422,8 +500,8 @@ async function main() {
     const oracle = new BudgetSummaryOracle(scope, deps, m, tenantId, fold, ROW_OPTIONS);
     const axisRows: Array<{ id: string }> = await m.query(`SELECT id FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order, id`, [tenantId]);
 
-    // Field values to draw needles from: every line, every field.
-    const sampleRows = await oracle.summary({ includeDisabled: 'true', years: String(Y + 3), limit: 1000, sort: 'id:ASC' });
+    // Field values to draw needles from: the first 1,000 lines by item number (a stable order), every field.
+    const sampleRows = await oracle.summary({ includeDisabled: 'true', years: String(Y + 3), limit: 1000, sort: 'item_number:ASC' });
     const sample = new Map<string, any[]>();
     const catalogue = fieldCatalogue(axisRows.map((a) => a.id));
     for (const row of sampleRows.items) itemNumbers.set(row.id, row.item_number);
@@ -445,6 +523,7 @@ async function main() {
 
     const r = prng(SEED);
     const cases = buildCases(r, sample, axisRows.map((a) => a.id));
+    const digest = createHash('sha256').update(JSON.stringify(cases)).digest('hex').slice(0, 12);
     const env: Engines = { oracle, runner, lineCount: allIds.total };
     for (const c of cases) await runCase(env, c, deps);
 
@@ -457,7 +536,9 @@ async function main() {
       }
     }
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
-    console.log(`budget-list-differential (${TENANT_SLUG ?? 'fixture'}, seed ${SEED}): ${cases.length} cases, ${checksRun} checks, ${failures.length} differences, ${seconds}s (engine ${(timing.engine / 1000).toFixed(1)}s, oracle ${(timing.oracle / 1000).toFixed(1)}s); id checks selecting no line ${selectivity.empty}, every line ${selectivity.every}, some ${selectivity.some}`);
+    console.log(`budget-list-differential (${TENANT_SLUG ?? 'fixture'}, seed ${SEED}${FULL ? ', full' : ''}): ${cases.length} cases (digest ${digest}), ${checksRun} checks, ${failures.length} differences, ${bothFailedChecks.length} checks failed on both sides, ${seconds}s (engine ${(timing.engine / 1000).toFixed(1)}s, oracle ${(timing.oracle / 1000).toFixed(1)}s); filtered id checks selecting no line ${selectivity.empty}, every line ${selectivity.every}, some ${selectivity.some}`);
+    console.log(`  selecting no line, most often: ${Array.from(emptyByKind.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([kind, n]) => `${kind} ${n}`).join(', ')}`);
+    if (bothFailedChecks.length) console.log(`  failed on both sides (same request refused by both):\n  ${bothFailedChecks.slice(0, 20).join('\n  ')}${bothFailedChecks.length > 20 ? `\n  … ${bothFailedChecks.length - 20} more` : ''}`);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

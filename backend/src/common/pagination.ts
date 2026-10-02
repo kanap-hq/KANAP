@@ -1,4 +1,6 @@
+import { BadRequestException } from '@nestjs/common';
 import { ILike, In, Not, Raw } from 'typeorm';
+import { setFilterMode } from './ag-grid-filtering';
 import { StatusState } from './status';
 
 export type Sort = { field: string; direction: 'ASC' | 'DESC' };
@@ -17,8 +19,10 @@ export const MAX_LIST_LIMIT = 1000;
 export const MAX_EXPORT_LIMIT = 50_000;
 
 function parsePaginationWithCap(query: any, defaultSort: Sort, maxLimit: number) {
-  const page = Math.max(1, parseInt(query.page ?? '1', 10) || 1);
   const limit = Math.min(maxLimit, Math.max(1, parseInt(query.limit ?? '20', 10) || 20));
+  // A page past every list still answers an empty page, but `skip` stays an exact integer (a page
+  // such as 1e24 would make it 1e27, which no OFFSET reads).
+  const page = Math.min(Math.max(1, parseInt(query.page ?? '1', 10) || 1), Math.floor(Number.MAX_SAFE_INTEGER / limit));
   const sortParam: string = query.sort ?? `${defaultSort.field}:${defaultSort.direction}`;
   const [field, dirRaw] = String(sortParam).split(':');
   const direction = String(dirRaw ?? defaultSort.direction).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
@@ -69,8 +73,12 @@ export function buildWhereFromAgFilters(filters: any, allowedFields?: string[]):
       model = model.conditions[0];
     }
     const type = (model?.type ?? model?.filterType ?? 'contains') as string;
-    // Handle Set filter (multi-select)
+    // Handle Set filter (multi-select): the ticked values only (exclude mode answers 400 rather than
+    // returning the values the user unticked).
     if (type === 'set' && Array.isArray(model?.values)) {
+      if (setFilterMode(model) === 'exclude') {
+        throw new BadRequestException(`The filter on "${field}" cannot exclude values on this list: send the values to keep instead.`);
+      }
       const allValues: any[] = model.values;
       const nonNullValues: any[] = allValues.filter((v: any) => v !== null && v !== undefined);
       const hasNull = allValues.some((v: any) => v === null || v === undefined);

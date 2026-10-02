@@ -9,6 +9,7 @@ import {
   centsNumber,
   centsText,
   codePointCompare,
+  decimal2ToFloat,
   epochDay,
   fold,
   jsIsoString,
@@ -17,6 +18,8 @@ import {
   jsTrim,
   jsUpper,
   naturalCompare,
+  sqlLiteral,
+  sumJsCents,
   textSortKey,
   utcDay,
 } from '../sql-fragments';
@@ -138,6 +141,51 @@ async function testCentsAsJavaScriptNumbers(runner: QueryRunner) {
   });
 }
 
+/**
+ * Amounts of every size a version can total (twelve months of numeric(18,2):
+ * up to 1.2e19 cents, past a bigint): `decimal2ToFloat` is the double
+ * JavaScript parses, and the engine's chain summed by `sumJsCents` is the
+ * builder's `toCents(convertValue(Number(formatCents(c)), rate))`: to the
+ * cent below 10^15 converted cents; beyond, the same double (PostgreSQL and
+ * V8 may print a shortest form differently on a tie, in the 17th digit).
+ */
+async function testAmountsOfEverySize(runner: QueryRunner) {
+  const fx = new FxRateService(undefined as any, undefined as any);
+  const big = (digits: number) => BigInt(Array.from({ length: digits }, (_, i) => (i === 0 ? r.int(1, 9) : r.int(0, 9))).join(''));
+  const cents: bigint[] = [
+    0n, 1n, -1n, 2n ** 53n - 1n, 2n ** 53n, 2n ** 53n + 1n, -(2n ** 53n) - 3n, 10n ** 15n - 1n, 10n ** 15n, 10n ** 15n + 1n,
+    9223372036854775807n, 9223372036854775808n, 11999999999999999988n, -11999999999999999988n,
+    ...Array.from({ length: 600 }, () => big(r.int(14, 20)) * (r.chance(0.3) ? -1n : 1n)),
+  ];
+  const rates = cents.map(() => r.pick([1, 0.881812, 1.169828, 0.913579, 1 + r.next(), r.next() * 3, 0]));
+  // `c * 0.01`: a 2-decimal numeric like the stored totals (`c / 100` would keep 16 significant digits only).
+  const rows: Array<{ f: number; c: string }> = await runner.query(
+    `SELECT (${decimal2ToFloat('x.v')})::text AS f, ${sumJsCents(jsRound(`${decimal2ToFloat('x.v')} * x.r * 100`))}::text AS c
+       FROM (SELECT t.k, t.c * 0.01 AS v, t.r FROM unnest($1::numeric[], $2::float8[]) WITH ORDINALITY AS t(c, r, k)) x
+      GROUP BY x.k, x.v, x.r ORDER BY x.k`,
+    [cents.map(String), rates.map(String)],
+  );
+  let beyond = 0;
+  cents.forEach((c, i) => {
+    const amount = Number(formatCents(c));
+    assert.equal(Number(rows[i].f), amount, `decimal2ToFloat of ${c} cents`);
+    const expected = toCents(fx.convertValue(amount, rates[i]));
+    if (expected < 10n ** 15n && expected > -(10n ** 15n)) {
+      assert.equal(rows[i].c, expected.toString(), `converted cents of ${c} × ${rates[i]}`);
+    } else {
+      beyond += 1;
+      assert.equal(Number(formatCents(BigInt(rows[i].c))), Number(formatCents(expected)), `converted amount of ${c} × ${rates[i]}`);
+    }
+  });
+  assert.ok(beyond > 100, 'the sample reaches past 10^15 converted cents');
+}
+
+function testSqlLiteralRefusesParameters() {
+  assert.equal(sqlLiteral("l'été"), "'l''été'");
+  assert.equal(sqlLiteral('cost $ 5'), "'cost $ 5'");
+  assert.throws(() => sqlLiteral('price $1'), /parameter/);
+}
+
 async function testTimestampsAsJavaScriptSeesThem(runner: QueryRunner) {
   const stamps = ['2026-10-01T12:34:56.123456Z', '2026-10-01T12:34:56.999999Z', '1999-12-31T23:59:59.9995Z', '2025-12-31T23:30:00Z', '2026-01-01T00:00:00.0004Z'];
   const rows: Array<{ ts: Date; iso: string; day: number }> = await runner.query(
@@ -214,6 +262,8 @@ async function main() {
       ['jsRound', () => testJsRound(runner)],
       ['FX conversion to the cent', () => testFxConversionToTheCent(runner)],
       ['cents as JavaScript numbers', () => testCentsAsJavaScriptNumbers(runner)],
+      ['amounts of every size', () => testAmountsOfEverySize(runner)],
+      ['sqlLiteral refuses parameters', async () => testSqlLiteralRefusesParameters()],
       ['timestamps as JavaScript sees them', () => testTimestampsAsJavaScriptSeesThem(runner)],
       ['text order', () => testTextOrder(runner)],
       ['exclude is the complement in SQL', () => testExcludeIsTheComplementInSql(runner)],

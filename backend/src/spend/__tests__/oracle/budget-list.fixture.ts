@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 
 /**
@@ -21,6 +20,9 @@ import { QueryRunner } from 'typeorm';
  * - lines linked to several projects (one named "Alpha, Beta"), a legacy
  *   project, ties on task and contract creation time;
  * - created_at ties and sub-millisecond differences.
+ *
+ * Every id comes from the seed too (`uuidFrom`): the same seed gives the same
+ * tenant, rows, order and cases on every run.
  */
 
 /** mulberry32: the generator of the perf dataset. */
@@ -40,6 +42,23 @@ export function prng(seed: number) {
     chance: (p: number) => next() < p,
   };
 }
+
+/** A version 4 uuid drawn from `r`. */
+export function uuidFrom(r: ReturnType<typeof prng>): string {
+  const bytes = Array.from({ length: 16 }, () => Math.floor(r.next() * 256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** The tables the fixture writes, analysed once seeded (see the end of `seedListFixture`). */
+const SEEDED_TABLES = [
+  'tenants', 'roles', 'users', 'chart_of_accounts', 'companies', 'company_metrics', 'accounts', 'suppliers', 'cost_centers',
+  'analytics_axes', 'analytics_categories', 'portfolio_categories', 'portfolio_streams', 'portfolio_projects', 'contracts',
+  'currency_rate_sets', 'allocation_rules', 'spend_items', 'spend_item_analytics_values', 'contract_spend_items',
+  'portfolio_project_opex', 'tasks', 'spend_versions', 'spend_amounts', 'spend_version_totals', 'spend_round_inputs',
+];
 
 type Column = [name: string, type: string];
 
@@ -80,9 +99,12 @@ export interface ListFixture {
 /** Seeds the fixture tenant (and an empty tenant) in the runner's transaction; leaves the fixture tenant current. */
 export async function seedListFixture(runner: QueryRunner, seed: number, itemCount = 300): Promise<ListFixture> {
   const r = prng(seed);
+  // Ids from their own stream: the values drawn from `r` stay those of earlier runs of the same seed.
+  const ids = prng(seed ^ 0x5bd1e995);
+  const uuid = () => uuidFrom(ids);
   const Y = new Date().getFullYear();
-  const tenantId = randomUUID();
-  const emptyTenantId = randomUUID();
+  const tenantId = uuid();
+  const emptyTenantId = uuid();
   for (const [id, tag] of [[tenantId, 'list'], [emptyTenantId, 'empty']] as const) {
     await runner.query(
       `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
@@ -103,7 +125,7 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   const userIds: string[] = [];
   const odd: Array<[string | null, string | null]> = [[null, null], ['', ''], ['  Padded ', ' Name  '], [' ', null], [' Nbsp', 'Space '], ['Élise', null], [null, 'Seul']];
   for (let i = 0; i < 22; i++) {
-    const id = randomUUID();
+    const id = uuid();
     userIds.push(id);
     const [first, last] = i < odd.length ? odd[i] : [r.pick(FIRST), r.pick(LAST)];
     userRows.push([id, t, role.id, `user${i}.${r.int(100, 999)}@list.test`, first, last, 'enabled']);
@@ -111,10 +133,10 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   await insert(runner, 'users', [['id', 'uuid'], ['tenant_id', 'uuid'], ['role_id', 'uuid'], ['email', 'text'], ['first_name', 'text'], ['last_name', 'text'], ['status', 'text']], userRows);
 
   // Charts, companies (one without a chart), accounts in both charts.
-  const charts = [randomUUID(), randomUUID()];
+  const charts = [uuid(), uuid()];
   await insert(runner, 'chart_of_accounts', [['id', 'uuid'], ['tenant_id', 'uuid'], ['code', 'text'], ['name', 'text'], ['country_iso', 'text']],
     charts.map((id, i) => [id, t, `LD${i}${id.slice(0, 6)}`, `Chart ${i}`, 'FR']));
-  const companyIds = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+  const companyIds = [uuid(), uuid(), uuid(), uuid()];
   await insert(runner, 'companies', [['id', 'uuid'], ['tenant_id', 'uuid'], ['name', 'text'], ['country_iso', 'text'], ['city', 'text'], ['coa_id', 'uuid']],
     [[companyIds[0], t, 'Société Générale IT', 'FR', 'Paris', charts[0]], [companyIds[1], t, 'Societe generale it', 'FR', 'Lyon', charts[1]],
       [companyIds[2], t, 'Ünited Holding', 'DE', 'Berlin', charts[0]], [companyIds[3], t, 'No chart Ltd', 'GB', 'London', null]]);
@@ -123,7 +145,7 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   const accountIds: string[] = [];
   const accountRows: unknown[][] = [];
   for (let i = 0; i < 30; i++) {
-    const id = randomUUID();
+    const id = uuid();
     accountIds.push(id);
     accountRows.push([id, t, charts[i % 2], 600000 + i * 7, `${r.pick(WORDS)} ${r.pick(['été', 'hiver', 'Ête', 'base'])} ${i}`]);
   }
@@ -131,20 +153,20 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
 
   const supplierIds: string[] = [];
   await insert(runner, 'suppliers', [['id', 'uuid'], ['tenant_id', 'uuid'], ['name', 'text']],
-    SUPPLIER_NAMES.map((name) => { const id = randomUUID(); supplierIds.push(id); return [id, t, name]; }));
+    SUPPLIER_NAMES.map((name) => { const id = uuid(); supplierIds.push(id); return [id, t, name]; }));
 
   // Cost centres: groups, cost centres, and a cycle of two groups (never written by the service).
   const ccRows: unknown[][] = [];
   const groups: string[] = [];
   const leaves: string[] = [];
   const group = (code: string, name: string, parent: string | null, owner: string | null) => {
-    const id = randomUUID();
+    const id = uuid();
     groups.push(id);
     ccRows.push([id, t, code, name, 'group', parent, null, owner, ccRows.length]);
     return id;
   };
   const leaf = (code: string, name: string, parent: string | null, owner: string | null) => {
-    const id = randomUUID();
+    const id = uuid();
     leaves.push(id);
     ccRows.push([id, t, code, name, 'cost_center', parent, companyIds[leaves.length % 3], owner, ccRows.length]);
     return id;
@@ -164,14 +186,14 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   await runner.query(`UPDATE cost_centers SET parent_id = $2 WHERE tenant_id = $1 AND id = $3`, [t, cycleB, cycleA]);
 
   // Analytics: the default dimension (no name) and two named ones.
-  const axes = [randomUUID(), randomUUID(), randomUUID()];
+  const axes = [uuid(), uuid(), uuid()];
   await insert(runner, 'analytics_axes', [['id', 'uuid'], ['tenant_id', 'uuid'], ['code', 'text'], ['name', 'text'], ['is_default', 'bool'], ['sort_order', 'int']],
     [[axes[0], t, 'default', null, true, 0], [axes[1], t, 'nature', 'Nature', false, 1], [axes[2], t, 'region', 'Région', false, 2]]);
   const categoriesByAxis = axes.map(() => [] as string[]);
   const categoryRows: unknown[][] = [];
   axes.forEach((axis, a) => {
     for (const name of CATEGORY_NAMES.slice(a, a + 6)) {
-      const id = randomUUID();
+      const id = uuid();
       categoriesByAxis[a].push(id);
       categoryRows.push([id, t, axis, `${name}${a ? ` ${a}` : ''}`]);
     }
@@ -179,16 +201,16 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   await insert(runner, 'analytics_categories', [['id', 'uuid'], ['tenant_id', 'uuid'], ['axis_id', 'uuid'], ['name', 'text']], categoryRows);
 
   // Projects with streams and categories (one empty stream name).
-  const pCats = [randomUUID(), randomUUID(), randomUUID()];
+  const pCats = [uuid(), uuid(), uuid()];
   await insert(runner, 'portfolio_categories', [['id', 'uuid'], ['tenant_id', 'uuid'], ['name', 'text']],
     [[pCats[0], t, 'Run'], [pCats[1], t, 'Transformation'], [pCats[2], t, 'Éphémère']]);
-  const streams = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+  const streams = [uuid(), uuid(), uuid(), uuid()];
   await insert(runner, 'portfolio_streams', [['id', 'uuid'], ['tenant_id', 'uuid'], ['category_id', 'uuid'], ['name', 'text']],
     [[streams[0], t, pCats[0], 'Digital'], [streams[1], t, pCats[0], 'Infra'], [streams[2], t, pCats[1], 'Données'], [streams[3], t, pCats[1], '']]);
   const projectIds: string[] = [];
   await insert(runner, 'portfolio_projects', [['id', 'uuid'], ['tenant_id', 'uuid'], ['name', 'text'], ['item_number', 'int'], ['stream_id', 'uuid'], ['category_id', 'uuid']],
     PROJECT_NAMES.map((name, i) => {
-      const id = randomUUID();
+      const id = uuid();
       projectIds.push(id);
       return [id, t, name, i + 1, i % 5 === 4 ? null : streams[i % 4], i % 3 === 2 ? null : pCats[i % 3]];
     }));
@@ -196,17 +218,17 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   // Contracts.
   const contractIds: string[] = [];
   await insert(runner, 'contracts', [['id', 'uuid'], ['tenant_id', 'uuid'], ['name', 'text'], ['company_id', 'uuid'], ['supplier_id', 'uuid'], ['start_date', 'date']],
-    CONTRACT_NAMES.map((name, i) => { const id = randomUUID(); contractIds.push(id); return [id, t, name, companyIds[i % 3], supplierIds[i], '2024-01-01']; }));
+    CONTRACT_NAMES.map((name, i) => { const id = uuid(); contractIds.push(id); return [id, t, name, companyIds[i % 3], supplierIds[i], '2024-01-01']; }));
 
   // FX: live sets per year (two for Y, the later wins), a snapshot of Y without GBP, CHF in Y+1 only, JPY nowhere.
-  const snapshot = randomUUID();
+  const snapshot = uuid();
   const rateRows: unknown[][] = [];
   for (const year of [Y - 2, Y - 1, Y, Y + 1, Y + 2]) {
     const rates: Record<string, number> = { USD: 0.9 + (year % 5) / 100 + 0.0013, ...(year === Y - 1 ? {} : { GBP: 1.17 + (year % 3) / 100 }) };
     if (year === Y + 1) rates.CHF = 1.0471;
-    rateRows.push([randomUUID(), t, year, 'EUR', JSON.stringify(rates), `${year}-06-01T00:00:00Z`]);
+    rateRows.push([uuid(), t, year, 'EUR', JSON.stringify(rates), `${year}-06-01T00:00:00Z`]);
   }
-  rateRows.push([randomUUID(), t, Y, 'EUR', JSON.stringify({ USD: 0.5, GBP: 0.5 }), `${Y - 1}-01-01T00:00:00Z`]);
+  rateRows.push([uuid(), t, Y, 'EUR', JSON.stringify({ USD: 0.5, GBP: 0.5 }), `${Y - 1}-01-01T00:00:00Z`]);
   rateRows.push([snapshot, t, Y, 'EUR', JSON.stringify({ USD: 0.913579 }), `${Y}-02-01T00:00:00Z`]);
   await insert(runner, 'currency_rate_sets', [['id', 'uuid'], ['tenant_id', 'uuid'], ['fiscal_year', 'int'], ['base_currency', 'text'], ['rates', 'jsonb'], ['captured_at', 'timestamptz']], rateRows);
 
@@ -230,7 +252,7 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   const items: Array<{ id: string; currency: string; disabledYear: number | null }> = [];
   const numbers = Array.from({ length: itemCount }, (_, i) => i + 1 + (i > itemCount / 2 ? 7 : 0));
   for (let i = 0; i < itemCount; i++) {
-    const id = randomUUID();
+    const id = uuid();
     const name = i < PRODUCT_NAMES.length ? PRODUCT_NAMES[i] : `${r.pick(WORDS)} ${r.pick(['été', 'Ete', 'ÉTÉ', 'hiver', 'Hiver', '100%', 'a_b'])} ${String(i).padStart(3, '0')}`;
     const currency = r.chance(0.7) ? 'EUR' : r.pick(['USD', 'USD', 'GBP', 'CHF', 'JPY']);
     const disabled = r.chance(0.22) ? r.pick(endsOfValidity) : null;
@@ -282,7 +304,7 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
     if (r.chance(0.4)) {
       const linked = r.chance(0.2) ? [r.pick(contractIds), r.pick(contractIds)] : [r.pick(contractIds)];
       const tie = r.chance(0.5);
-      Array.from(new Set(linked)).forEach((contract, k) => contractRows.push([randomUUID(), t, contract, item.id, tie ? linkTime : new Date(base + k * 1000).toISOString()]));
+      Array.from(new Set(linked)).forEach((contract, k) => contractRows.push([uuid(), t, contract, item.id, tie ? linkTime : new Date(base + k * 1000).toISOString()]));
     }
     if (r.chance(0.25)) {
       const count = r.int(1, 3);
@@ -291,7 +313,7 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
     if (r.chance(0.2)) {
       const tie = r.chance(0.4);
       for (let k = 0; k < r.int(1, 3); k++) {
-        taskRows.push([randomUUID(), t, `${r.pick(TASK_TITLES)} ${k}`, taskNumber++, r.pick(['open', 'in_progress', 'pending', 'in_testing', 'done', 'cancelled']),
+        taskRows.push([uuid(), t, `${r.pick(TASK_TITLES)} ${k}`, taskNumber++, r.pick(['open', 'in_progress', 'pending', 'in_testing', 'done', 'cancelled']),
           'spend_item', item.id, tie ? linkTime : new Date(base + k * 60_000).toISOString()]);
       }
     }
@@ -317,7 +339,7 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   for (const item of items) {
     for (const year of [Y - 2, Y - 1, Y, Y + 1, Y + 2, Y + 3]) {
       if (!r.chance(year === Y + 3 ? 0.2 : 0.78)) continue;
-      const versionId = randomUUID();
+      const versionId = uuid();
       versionRows.push([versionId, t, item.id, `Y${year}`, r.pick(['monthly', 'monthly', 'monthly', 'annual', 'quarterly']), `${year}-01-01`, year,
         r.pick(methods), year === Y && r.chance(0.15) ? snapshot : null]);
       const shape = r.next();
@@ -343,5 +365,9 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   if (emptied.length) await runner.query(`DELETE FROM spend_amounts WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`, [t, emptied]);
   await insert(runner, 'spend_round_inputs', [['tenant_id', 'uuid'], ['version_id', 'uuid'], ['measure', 'text'], ['period_start', 'date'], ['period_end', 'date'],
     ['method', 'text'], ['fte', 'numeric']], roundRows);
+  // Statistics, as on a loaded database: without them the planner reads the fixture tenant as unknown
+  // (one row per table) and joins by nested loops, slower than at 5,000 lines. ANALYZE sees the
+  // transaction's own rows, and its statistics roll back with it.
+  await runner.query(`ANALYZE ${SEEDED_TABLES.join(', ')}`);
   return { tenantId, emptyTenantId, itemCount };
 }

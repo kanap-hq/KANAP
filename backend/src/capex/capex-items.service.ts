@@ -80,6 +80,7 @@ import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attac
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
 import { updateItemUnderLock } from '../spend/item-locked-update';
 import { lockBudgetVersions, lockTenantBudgetOperations } from '../spend/budget-locks';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
@@ -215,6 +216,7 @@ export class CapexItemsService {
     const repo = mg.getRepository(CapexItem);
     const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
+    assertSetFilterModes(filters, ['status']);
     const filtersToApply = sanitizedFilters ?? filters;
     const allowedFields = [...SUMMARY_SCOPES.capex.columns];
     const where: any = {};

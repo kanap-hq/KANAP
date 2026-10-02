@@ -1,7 +1,7 @@
 import type { FieldSql, ListConfig, ListState } from './list-engine.types';
 import type { SqlStatement } from './sql-statement';
 import { compileFieldFilter } from './list-filter-compiler';
-import { textSortKey, timestampSortKey } from './sql-fragments';
+import { sqlLiteral, textSortKey, timestampSortKey } from './sql-fragments';
 
 /**
  * Assembles one list statement from a config and a request state. Every
@@ -61,7 +61,7 @@ export function sortKey(field: FieldSql): string {
   switch (field.kind) {
     case 'enum':
       if (field.rank) {
-        return `(CASE ${field.sql} ${field.rank.map((value, i) => `WHEN '${value.replace(/'/g, "''")}' THEN ${i}`).join(' ')} END)`;
+        return `(CASE ${field.sql} ${field.rank.map((value, i) => `WHEN ${sqlLiteral(value)} THEN ${i}`).join(' ')} END)`;
       }
       return textSortKey(field.sql);
     case 'text':
@@ -91,7 +91,7 @@ export function pageSql(stmt: SqlStatement, config: ListConfig, state: ListState
 ${core.from}
 ${core.where}
 ${orderBy(stmt, config, state)}
-LIMIT ${stmt.bind(state.limit, 'int')} OFFSET ${stmt.bind(state.skip, 'int')}`;
+LIMIT ${stmt.bind(state.limit, 'int')} OFFSET ${stmt.bind(String(state.skip), 'bigint')}`;
 }
 
 /** The count of the list (a page past the end returns no row to read it from). */

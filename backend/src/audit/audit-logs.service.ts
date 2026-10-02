@@ -4,6 +4,7 @@ import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
 import { User } from '../users/user.entity';
 import { AuditLog } from './audit.entity';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 type AuditListItem = {
   id: string;
@@ -164,6 +165,7 @@ export class AuditLogsService {
     excludeField?: 'table_name' | 'action' | 'source' | 'user_id';
   }) {
     const { query, q, filters, manager, excludeField } = params;
+    assertSetFilterModes(filters);
     const repo = this.getAuditRepo(manager);
     const qb = repo
       .createQueryBuilder('a')

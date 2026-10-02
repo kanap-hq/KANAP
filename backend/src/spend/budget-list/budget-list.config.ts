@@ -13,7 +13,7 @@ import {
   resolveAmountField,
   resolveFteField,
 } from '../spend-summary.builder';
-import { fxJoinCurrency, fxTableSql } from './budget-fx-table';
+import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
 
 /**
@@ -54,6 +54,8 @@ const ITEM_COLUMNS: Record<string, FieldSql['kind']> = {
 const OPEX_ONLY_COLUMNS: Record<string, FieldSql['kind']> = { product_name: 'text', contract_id: 'uuid' };
 const CAPEX_ONLY_COLUMNS: Record<string, FieldSql['kind']> = { ppe_type: 'enum', investment_type: 'enum', priority: 'enum' };
 
+/** The separator of the entries the quick search reads as one text (U+001F), and its SQL literal. */
+const SEP_CHAR = '\u001f';
 const SEP = `E'\\x1f'`;
 
 export class BudgetListConfig implements ListConfig {
@@ -120,27 +122,59 @@ export class BudgetListConfig implements ListConfig {
     );
   }
 
-  private fxCte(stmt: SqlStatement): string {
-    const fx = this.rt.fx;
-    if (!fx) throw new Error('FX rates were not loaded for this statement');
-    return stmt.cte('fx', () => fxTableSql((value, cast) => stmt.bind(value, cast), fx));
+  /**
+   * The converted cents of one measure of the version of `year` (0 without a
+   * version or without amounts, or after the line's end of validity).
+   *
+   * One derived table holds every amount the statement reads: the versions of
+   * the years in play are read once, joined to their totals and FX rows (which
+   * the planner hashes), each converted once (`OFFSET 0` keeps the conversion
+   * from being repeated wherever a field appears), then one row per line with
+   * a column per year and measure. A field reads a column, and an amount year
+   * costs a few milliseconds more instead of three joins (with a version,
+   * totals and FX join per year, the planner fell to nested loops from three
+   * years on).
+   */
+  private amountCents(stmt: SqlStatement, year: number, measure: string): FieldSql {
+    const wanted = stmt.once('amounts:wanted', () => new Map<number, Set<string>>());
+    if (!wanted.has(year)) wanted.set(year, new Set());
+    wanted.get(year)!.add(measure);
+    stmt.joinLazy('am', () => this.amountsJoinSql(stmt, wanted));
+    return { kind: 'money', sql: `coalesce(am.y${year}_${measure}, 0::float8)`, joins: ['am'] };
   }
 
-  /** The converted cents of one measure of the version of `year` (0 without a version or without amounts). */
-  private amountCents(stmt: SqlStatement, year: number, measure: string): FieldSql {
-    const v = this.version(stmt, year);
-    const t = this.join(stmt, `t${year}`, `LEFT JOIN ${this.scope.totalsTable} t${year} ON t${year}.tenant_id = ${stmt.tenant} AND t${year}.version_id = ${v}.id`, [v]);
-    this.fxCte(stmt);
-    const fx = this.join(
-      stmt,
-      `fx${year}`,
-      () => `LEFT JOIN fx fx${year} ON fx${year}.yr = ${year} AND fx${year}.cur = ${fxJoinCurrency('i')}
-        AND fx${year}.set_key = CASE WHEN ${v}.fx_rate_set_id = ANY(${stmt.bind(this.rt.fx!.knownSets, 'uuid[]')}) THEN ${v}.fx_rate_set_id::text ELSE 'live' END`,
-      [v],
-    );
-    // The builder's chain: `Math.round(Number(formatCents(local)) * rate * 100)`.
-    const x = `${decimal2ToFloat(`${t}.${measure}`)} * coalesce(${fx}.rate, 1::float8) * 100`;
-    return { kind: 'money', sql: `(CASE WHEN ${t}.version_id IS NULL THEN 0::bigint ELSE ${jsRound(x)}::bigint END)`, joins: [t, fx] };
+  private amountsJoinSql(stmt: SqlStatement, wanted: Map<number, Set<string>>): string {
+    const s = this.scope;
+    const t = stmt.tenant;
+    const fx = this.rt.fx;
+    if (!fx) throw new Error('FX rates were not loaded for this statement');
+    const years = Array.from(wanted.keys()).sort((a, b) => a - b);
+    const measures = Array.from(new Set(Array.from(wanted.values()).flatMap((set) => Array.from(set)))).sort();
+    // The builder's chain, `Math.round(Number(formatCents(local)) * rate * 100)`: the product once per
+    // version below, rounded once per line and year above (at most one version per line and year: `max`
+    // picks it, and the rounding reads the one aggregate).
+    const converted = measures
+      .map((measure) => `${decimal2ToFloat(`at.${measure}`)} * coalesce(fx.rate, 1::float8) * 100 AS ${measure}`)
+      .join(',\n            ');
+    const pivot = years
+      .flatMap((year) => Array.from(wanted.get(year)!).sort().map((measure) => `${jsRound(`max(x.${measure}) FILTER (WHERE x.yr = ${year})`)} AS y${year}_${measure}`))
+      .join(',\n          ');
+    return `LEFT JOIN (
+        SELECT x.item_id,
+          ${pivot}
+        FROM (
+          SELECT av.${s.versionItemFk} AS item_id, av.budget_year AS yr,
+            ${converted}
+          FROM ${s.versionTable} av
+          JOIN ${s.itemTable} ai ON ai.tenant_id = ${t} AND ai.id = av.${s.versionItemFk}
+          JOIN ${s.totalsTable} at ON at.tenant_id = ${t} AND at.version_id = av.id
+          LEFT JOIN ${fxTableSql(stmt, fx)} ON fx.yr = av.budget_year AND fx.cur = ${fxKeyCurrency('ai')} AND fx.set_key = ${fxSetKeySql(stmt, fx, 'av.fx_rate_set_id')}
+          WHERE av.tenant_id = ${t} AND av.budget_year = ANY(${stmt.bind(years, 'int[]')})
+            AND (ai.disabled_at IS NULL OR av.budget_year <= extract(year FROM ai.disabled_at AT TIME ZONE 'UTC'))
+          OFFSET 0
+        ) x
+        GROUP BY x.item_id
+      ) am ON am.item_id = i.id`;
   }
 
   private fte(stmt: SqlStatement, year: number, measure: string): FieldSql {
@@ -278,7 +312,8 @@ export class BudgetListConfig implements ListConfig {
     const axisId = parseAnalyticsFieldKey(key);
     if (axisId) return this.axisValue(stmt, axisId);
 
-    if (key in this.columns) {
+    // Own keys only: a request key such as `constructor` or `__proto__` names no column.
+    if (Object.prototype.hasOwnProperty.call(this.columns, key)) {
       const kind = this.columns[key];
       const column = `i.${key}`;
       switch (kind) {
@@ -289,7 +324,7 @@ export class BudgetListConfig implements ListConfig {
             kind,
             sql: `${column}::text`,
             joins: [],
-            ...(FIXED_SORT_ORDERS[key] ? { rank: FIXED_SORT_ORDERS[key] } : {}),
+            ...(Object.prototype.hasOwnProperty.call(FIXED_SORT_ORDERS, key) ? { rank: FIXED_SORT_ORDERS[key] } : {}),
           };
         case 'int':
           return {
@@ -415,6 +450,12 @@ export class BudgetListConfig implements ListConfig {
     stmt.cte('qs_needle', () => `SELECT ${fold(stmt.bind(q, 'text'))} AS n`);
     const N = `(SELECT n FROM qs_needle)`;
     const match = (expr: string) => `strpos(${fold(expr)}, ${N}) > 0`;
+    // Several entries are read as one text joined by U+001F (one fold, one strpos). A needle holding
+    // U+001F would match across two entries there, so it reads them one by one, like the bag of the rows.
+    const separatorInNeedle = q.includes(SEP_CHAR);
+    const matchAny = (entries: string[]) => (separatorInNeedle
+      ? `(${entries.map((entry) => `COALESCE(${match(entry)}, FALSE)`).join(' OR ')})`
+      : match(`concat_ws(${SEP}, ${entries.join(', ')})`));
     const Y = this.rt.currentYear;
 
     stmt.cte('qs_sup', () => `SELECT x.id FROM suppliers x WHERE x.tenant_id = ${t} AND ${match('x.name')}`);
@@ -422,12 +463,12 @@ export class BudgetListConfig implements ListConfig {
     stmt.cte('qs_acc', () => `SELECT x.id FROM accounts x WHERE x.tenant_id = ${t} AND ${match(`concat(x.account_number::text, ' - ', x.account_name)`)}`);
     stmt.cte('qs_user', () => `SELECT x.id FROM users x WHERE x.tenant_id = ${t} AND ${match(displayNameSql('x'))}`);
     this.costCenter(stmt);
-    stmt.cte('qs_cc', () => `SELECT x.id FROM cc_nodes x WHERE ${match(`concat_ws(${SEP}, x.code, x.name, x.path, x.holder_name)`)}`);
+    stmt.cte('qs_cc', () => `SELECT x.id FROM cc_nodes x WHERE ${matchAny(['x.code', 'x.name', 'x.path', 'x.holder_name'])}`);
     this.projectsCte(stmt);
     this.latestContract(stmt);
     const axes = this.rt.axes;
     if (!axes) throw new Error('Analytics dimensions were not loaded for this statement');
-    stmt.cte('qs_items', () => `SELECT x.item_id FROM proj x WHERE ${match(`concat_ws(${SEP}, x.project_name, x.project_stream_name, x.project_category_name)`)}
+    stmt.cte('qs_items', () => `SELECT x.item_id FROM proj x WHERE ${matchAny(['x.project_name', 'x.project_stream_name', 'x.project_category_name'])}
       UNION SELECT x.item_id FROM lc x WHERE ${match('x.contract_name')}
       UNION SELECT a.item_id FROM ${s.analyticsLink.table} a
         WHERE a.tenant_id = ${t} AND a.axis_id = ANY(${stmt.bind(axes.ids, 'uuid[]')})
@@ -453,7 +494,7 @@ export class BudgetListConfig implements ListConfig {
       OR i.cost_center_id IN (SELECT id FROM qs_cc)
       OR i.id IN (SELECT item_id FROM qs_items)
       OR ((i.disabled_at IS NULL OR ${Y} <= extract(year FROM i.disabled_at AT TIME ZONE 'UTC')) AND i.id IN (SELECT item_id FROM qs_alloc))
-      OR ${match(`concat_ws(${SEP}, ${own.join(', ')})`)})`;
+      OR ${matchAny(own)})`;
   }
 }
 

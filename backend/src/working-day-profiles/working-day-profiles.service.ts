@@ -21,6 +21,7 @@ import {
   mergeDaysByYear,
   normalizeDaysByYear,
 } from './working-day-profiles.util';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 /** Every call runs in the caller's tenant transaction; there is no fallback manager. */
 export interface WorkingDayProfileContext {
@@ -458,6 +459,7 @@ export class WorkingDayProfilesService {
   }
 
   private async listRows(query: any, parsed: ReturnType<typeof parsePagination>, ctx: WorkingDayProfileContext): Promise<WorkingDayProfileListRow[]> {
+    assertSetFilterModes(parsed.filters);
     this.assertContext(ctx);
     const lang = holidayLanguage(query?.lang);
     const stored = await this.loadStored(ctx);

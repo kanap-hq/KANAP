@@ -119,11 +119,8 @@ export class BudgetSummaryOracle {
     const cleanFilters: Record<string, any> = (sanitizedFilters ?? filters ?? {}) as Record<string, any>;
     const requestedYears = parseSummaryYears(query?.years);
     const namedYears = yearsNamedByFields([sort.field, ...Object.keys(cleanFilters)]);
-    const memoryFilters: Record<string, any> = {};
-    for (const [field, model] of Object.entries(cleanFilters)) {
-      if (field === 'disabled_at') continue;
-      memoryFilters[field] = model;
-    }
+    // Own properties whatever the key (`memoryFilters['__proto__'] = model` would set the prototype instead).
+    const memoryFilters: Record<string, any> = Object.fromEntries(Object.entries(cleanFilters).filter(([field]) => field !== 'disabled_at'));
     return {
       tenantId: this.tenantId,
       currentYear,
@@ -430,7 +427,7 @@ function textMatches(type: string, value: string, needle: string): boolean {
 /** Today's `sortSummaryRows`, text compared in the natural order (A2). */
 export function sortRows<T extends Record<string, any>>(rows: T[], field: string, direction: 'ASC' | 'DESC'): T[] {
   const dir = direction === 'ASC' ? 1 : -1;
-  const order = FIXED_SORT_ORDERS[field];
+  const order = Object.prototype.hasOwnProperty.call(FIXED_SORT_ORDERS, field) ? FIXED_SORT_ORDERS[field] : undefined;
   const valueOf = (row: T) => {
     const value = getSummaryFieldValue(row, field);
     if (!order) return value;

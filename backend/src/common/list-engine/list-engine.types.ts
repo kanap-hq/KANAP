@@ -7,7 +7,7 @@ import type { SqlStatement } from './sql-statement';
  * sorted, searched and listed (see `list-filter-compiler.ts`):
  * - `text`, `enum`, `uuid`: text values (`enum` may carry a rank order);
  * - `multi`: several names per line plus their joined text (`a, b`);
- * - `int`: an integer; `money`: integer cents (bigint); `fte`: a numeric;
+ * - `int`: an integer; `money`: converted cents (a float8 holding an integer, as JavaScript holds them); `fte`: a numeric;
  * - `day`: a `date`; `ts`: a `timestamptz`;
  * - `unknown`: a key the rows do not hold, read as null.
  */
@@ -16,7 +16,7 @@ export type FieldKind = 'text' | 'enum' | 'uuid' | 'multi' | 'int' | 'money' | '
 /** One field compiled for one statement. */
 export interface FieldSql {
   kind: FieldKind;
-  /** The value: text for text kinds (the joined text for `multi`), bigint cents for money, numeric for fte, date, timestamptz, integer. */
+  /** The value: text for text kinds (the joined text for `multi`), float8 cents for money, numeric for fte, date, timestamptz, integer. */
   sql: string;
   /** Joins (keys registered on the statement) the value needs. */
   joins: string[];
