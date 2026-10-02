@@ -35,6 +35,33 @@ For customers under support, an upgrade to the latest version might be requested
 
 **Recommendation:** Daily database backups, retain at least 30 days.
 
+## PostgreSQL Settings
+
+PostgreSQL's defaults are sized for a small machine. `infra/postgres/kanap-pg-tune.sh` prints settings sized from your server's memory (memory, SSD costs, slow statement log, statement statistics). Run it on the PostgreSQL server and read the file before applying it: its header explains each value.
+
+```bash
+# The libraries PostgreSQL already preloads (often none): the script keeps them.
+CURRENT=$(sudo -u postgres psql -XAtc 'SHOW shared_preload_libraries')
+# PostgreSQL on the same server as KANAP (add --dedicated if it has the server to itself)
+sh infra/postgres/kanap-pg-tune.sh --preload "$CURRENT" | sudo tee /etc/postgresql/16/main/conf.d/kanap.conf
+sudo systemctl restart postgresql
+sudo -u postgres psql -d kanap -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
+```
+
+Two checks before the restart, both done by the script, which writes the `shared_preload_libraries` line commented out when one fails:
+
+- **The list of preloaded libraries.** `shared_preload_libraries` is one list, and the value in `kanap.conf` replaces the one in `postgresql.conf`. Without `--preload`, add the value of `SHOW shared_preload_libraries` in front yourself (for example `'pg_cron,pg_stat_statements'`), then remove the `#`.
+- **The library itself.** PostgreSQL does not start when a preloaded library is missing. It ships with PostgreSQL on Debian and Ubuntu; on RHEL and derivatives, install the contrib package (`postgresql16-contrib`). Check with `ls "$(pg_config --pkglibdir)/pg_stat_statements.so"`.
+
+The restart is needed once, for the memory setting and the statement statistics: plan it in a maintenance window, KANAP cannot reach its database while PostgreSQL restarts. Statements slower than 500 ms then appear in the PostgreSQL log, without their parameters (`log_parameter_max_length = 0`: they can hold personal data). `pg_stat_statements` lists the costliest statements:
+
+```sql
+SELECT calls, round(mean_exec_time) AS avg_ms, left(query, 80) AS query
+FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 10;
+```
+
+KANAP's migrations also make autovacuum start earlier on the two largest tables (budget amounts). That needs no restart and no memory.
+
 ## Monitoring
 
 **Health endpoint:**

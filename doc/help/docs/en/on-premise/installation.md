@@ -77,8 +77,10 @@ Since containers bind to `127.0.0.1`, nginx runs on the same host and proxies to
 
 ```nginx
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    # HTTP/2: the browser sends the dozens of requests of a page over one connection.
+    # nginx 1.25.1 and later: write `listen 443 ssl;` and `http2 on;` instead.
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name kanap.company.com;
 
     ssl_certificate     /path/to/fullchain.pem;
@@ -101,6 +103,15 @@ server {
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host  $host;
+
+        # Compress the API's JSON and CSV answers (a budget list page shrinks about 8 times).
+        # Streamed AI answers (application/x-ndjson) are left out on purpose.
+        gzip on;
+        gzip_proxied any;
+        gzip_comp_level 5;
+        gzip_min_length 1024;
+        gzip_vary on;
+        gzip_types application/json text/csv text/plain;
 
         # WebSocket support
         proxy_http_version 1.1;
@@ -135,6 +146,8 @@ server {
     return 301 https://$host$request_uri;
 }
 ```
+
+**Compression and HTTP/2:** the example compresses the API's answers and enables HTTP/2. Keep both in your own proxy: a page of the budget list is about 390 KB of JSON uncompressed and 47 KB compressed. If your nginx has the brotli module (`libnginx-mod-http-brotli-filter` on Debian and Ubuntu), `brotli on; brotli_types application/json text/csv text/plain;` in the same `location` compresses a little better; gzip is enough.
 
 **Self-signed TLS (no domain):** If you don't have a domain and access KANAP by IP address, generate a self-signed certificate:
 

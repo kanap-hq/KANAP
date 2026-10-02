@@ -221,6 +221,17 @@ S3_FORCE_PATH_STYLE=true
 # SMTP_FROM=KANAP <noreply@company.com>
 ```
 
+### Size PostgreSQL for this server
+
+PostgreSQL's defaults are sized for a small machine. The repository has a script that prints settings sized from this server's memory; it changes nothing by itself. It keeps the libraries PostgreSQL already preloads (give it their list) and adds the statement statistics library when it finds it on this server. Read the file it writes, then restart PostgreSQL and enable the statement statistics:
+
+```bash
+CURRENT=$(sudo -u postgres psql -XAtc 'SHOW shared_preload_libraries')
+sh infra/postgres/kanap-pg-tune.sh --preload "$CURRENT" | sudo tee /etc/postgresql/16/main/conf.d/kanap.conf
+sudo systemctl restart postgresql
+sudo -u postgres psql -d kanap -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
+```
+
 **Important:** Generate a real JWT secret (`openssl rand -hex 32`) — do not reuse example values.
 
 If you access KANAP by IP address instead of a domain, set `APP_BASE_URL` and `CORS_ORIGINS` to `https://YOUR_IP`.
@@ -281,8 +292,10 @@ Create `/etc/nginx/sites-available/kanap`:
 
 ```nginx
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    # HTTP/2: the browser sends the dozens of requests of a page over one connection.
+    # nginx 1.25.1 and later: write `listen 443 ssl;` and `http2 on;` instead.
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name kanap.company.com;
 
     ssl_certificate     /etc/ssl/kanap/server.crt;
@@ -304,6 +317,15 @@ server {
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host  $host;
+
+        # Compress the API's JSON and CSV answers (a budget list page shrinks about 8 times).
+        # Streamed AI answers (application/x-ndjson) are left out on purpose.
+        gzip on;
+        gzip_proxied any;
+        gzip_comp_level 5;
+        gzip_min_length 1024;
+        gzip_vary on;
+        gzip_types application/json text/csv text/plain;
 
         proxy_http_version 1.1;
         proxy_set_header Upgrade    $http_upgrade;
