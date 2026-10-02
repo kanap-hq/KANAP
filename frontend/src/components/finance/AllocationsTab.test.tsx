@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { OPEX_FINANCE_CONFIG } from './config';
+import { KanapDialogProvider } from '../design';
 
 vi.mock('react-i18next', () => {
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
@@ -16,6 +17,7 @@ vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me'
 import api from '../../api';
 import AllocationsTab, { type AllocationsTabHandle } from './AllocationsTab';
 import { forgetAllocationsYear } from './allocationsCache';
+import type { HeldAllocationChoice } from './heldChoices';
 
 const mocked = api as unknown as { get: ReturnType<typeof vi.fn>; put: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn> };
 const YEAR = 2026;
@@ -62,8 +64,10 @@ function renderTab(id: string, client: QueryClient) {
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
+          <KanapDialogProvider>
         <AllocationsTab id={id} year={YEAR} onYearChange={() => undefined} config={OPEX_FINANCE_CONFIG} />
-      </ThemeProvider>
+        </KanapDialogProvider>
+        </ThemeProvider>
     </QueryClientProvider>,
   );
 }
@@ -128,7 +132,9 @@ describe('AllocationsTab on the query cache', () => {
     render(
       <QueryClientProvider client={client}>
         <ThemeProvider theme={createAppTheme('light')}>
+          <KanapDialogProvider>
           <AllocationsTab id="item-1" year={YEAR} availableYears={[YEAR - 1, YEAR]} onYearChange={() => undefined} config={OPEX_FINANCE_CONFIG} />
+          </KanapDialogProvider>
         </ThemeProvider>
       </QueryClientProvider>,
     );
@@ -188,17 +194,27 @@ describe('AllocationsTab saves (lot 3E)', () => {
     serve();
   });
 
-  function renderWithRef() {
-    const ref = React.createRef<AllocationsTabHandle>();
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
+  function renderWithRef(extra: {
+    held?: React.MutableRefObject<HeldAllocationChoice | null>;
+    onYearChange?: (y: number) => void;
+    client?: QueryClient;
+  } = {}) {
+    // A plain object (React.createRef is sealed): the helper adds the view's unmount and client.
+    const ref: React.MutableRefObject<AllocationsTabHandle | null> = { current: null };
+    const client = extra.client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(
       <QueryClientProvider client={client}>
         <ThemeProvider theme={createAppTheme('light')}>
-          <AllocationsTab ref={ref} id="item-1" year={YEAR} onYearChange={() => undefined} config={OPEX_FINANCE_CONFIG} />
+          <KanapDialogProvider>
+          <AllocationsTab
+            ref={ref} id="item-1" year={YEAR} availableYears={[YEAR, YEAR + 1]} onYearChange={extra.onYearChange ?? (() => undefined)}
+            config={OPEX_FINANCE_CONFIG} held={extra.held}
+          />
+          </KanapDialogProvider>
         </ThemeProvider>
       </QueryClientProvider>,
     );
-    return ref;
+    return Object.assign(ref, { unmount: view.unmount, client });
   }
   async function flushTab(ref: React.RefObject<AllocationsTabHandle>) {
     let ok = true;
@@ -280,5 +296,57 @@ describe('AllocationsTab saves (lot 3E)', () => {
     expect(screen.queryByRole('region')).toBeNull();
     expect(await flushTab(ref)).toBe(true);
     expect(puts()).toHaveLength(1);
+  });
+
+  it('a tab change keeps the waiting choice: the tab comes back with the banner and the user\'s allocation', async () => {
+    mocked.put.mockRejectedValueOnce(conflictAnswer('sig-9'));
+    mocked.put.mockResolvedValue({ data: { items: stored.items, method: 'manual_pct', driver: 'headcount', base_signature: 'sig-10' } });
+    const held = { current: null } as React.MutableRefObject<HeldAllocationChoice | null>;
+    const first = renderWithRef({ held });
+    expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
+    await pickMethod('opex.allocations.manualByPct');
+    expect(await flushTab(first)).toBe(false);
+    await screen.findByRole('region');
+    let moved = false;
+    await act(async () => { moved = await first.current!.flush({ ignoreHeld: true }); });
+    expect(moved).toBe(true);
+    expect(first.current!.hasWaitingChoice()).toBe(true);
+    first.unmount();
+    expect(held.current?.method).toBe('manual_pct');
+
+    const again = renderWithRef({ held, client: first.client });
+    const banner = await screen.findByRole('region');
+    expect(within(banner).getByText('opex.allocations.manualByCompany · Beta Services 100 %')).toBeInTheDocument();
+    expect(again.current!.hasWaitingChoice()).toBe(true);
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.allocation\.applyMine/ }));
+    await waitFor(() => expect(puts()).toHaveLength(2));
+    expect(puts()[1][1]).toMatchObject({ method: 'manual_pct', base_signature: 'sig-9' });
+  });
+
+  it('a year change with a choice waiting asks first, and drops it only when confirmed', async () => {
+    mocked.put.mockRejectedValueOnce(conflictAnswer('sig-9'));
+    const onYearChange = vi.fn();
+    const ref = renderWithRef({ onYearChange });
+    expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
+    await pickMethod('opex.allocations.manualByPct');
+    expect(await flushTab(ref)).toBe(false);
+    await screen.findByRole('region');
+
+    fireEvent.click(screen.getByRole('tab', { name: String(YEAR + 1) }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('common:editConflict.allocation.yearChange');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:editConflict.yearChangeConfirm' }));
+    await waitFor(() => expect(onYearChange).toHaveBeenCalledWith(YEAR + 1));
+    expect(puts()).toHaveLength(1);
+  });
+
+  it('a conflict answer the screen cannot read is an error the user sees', async () => {
+    mocked.put.mockRejectedValueOnce({ response: { status: 409, data: { code: 'edit_conflict', conflicts: [] } } });
+    const ref = renderWithRef();
+    expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
+    await pickMethod('opex.allocations.manualByPct');
+    expect(await flushTab(ref)).toBe(false);
+    expect(await screen.findByRole('alert')).toHaveTextContent('errors:edit_conflict_unreadable');
+    expect(screen.queryByRole('region')).toBeNull();
   });
 });

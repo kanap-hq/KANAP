@@ -32,8 +32,9 @@ import { FinanceModuleConfig } from './config';
 import { patchYearlyTotalsCache } from './yearlyTotals';
 import { AMOUNT_COLUMNS } from './amountColumns';
 import type { FreezeColumn } from '../../services/freeze';
-import { budgetConflictsOf, centsByColumn, monthsBase, type BudgetConflict } from './budgetConflicts';
+import { budgetConflictsOf, centsByColumn, monthsBase, unreadableConflict, type BudgetConflict } from './budgetConflicts';
 import { initialBudgetView, writeBudgetView, type BudgetView } from './budgetViewPreference';
+import { namesInSentence, type HeldBudgetChoices } from './heldChoices';
 import {
   AmountMeasure,
   LinePayload,
@@ -57,8 +58,11 @@ import {
 } from './roundPeriod';
 
 export type BudgetTabHandle = {
-  flush: () => Promise<boolean>;
+  /** Saves what can go; false while a choice waits, unless `ignoreHeld` (a move that keeps the line and its choice). */
+  flush: (options?: { ignoreHeld?: boolean }) => Promise<boolean>;
   isDirty: () => boolean;
+  /** The columns waiting for the user's choice, as the tenant names them (for the leave warning). */
+  waitingColumns: () => string[];
 };
 
 type Props = {
@@ -73,6 +77,8 @@ type Props = {
   endOfValidity?: string | null;
   /** The paying company's country: its standard calendar is the default of a new line. */
   payingCompanyCountry?: string | null;
+  /** The line's choices kept by the item page while the user is on another tab (`heldChoices.ts`). */
+  held?: React.MutableRefObject<HeldBudgetChoices | null>;
 };
 
 type Version = { id: string; input_grain: 'annual' | 'quarterly' | 'monthly'; budget_year?: number };
@@ -96,8 +102,12 @@ type BulkUpsertResponse = {
   items?: YearAmounts['items'];
 };
 
-/** A column waiting for the user's choice: refused by a grid save, or by a panel write (spread or lines). */
-type WaitingColumn = BudgetConflict & { source: 'grid' | 'panel' };
+/**
+ * A column waiting for the user's choice: refused by a grid save, or by a panel write (spread or
+ * lines). `cells`: the months of a monthly entry that were refused, the only ones waiting (the other
+ * months of the column go on); null: the whole column (a yearly total or a panel write).
+ */
+type WaitingColumn = BudgetConflict & { source: 'grid' | 'panel'; cells: Set<string> | null };
 
 /** A panel write refused with a 409, kept until the user chose for each of its columns. */
 type ParkedPanel = {
@@ -140,6 +150,7 @@ const NO_STORED_AMOUNTS = perColumn(() => false);
 const EMPTY_FLAT = perColumn((): number | '' => '');
 const zeroMonths = () => perColumn(() => Array.from({ length: 12 }, () => 0));
 const monthIndexOf = (period: string) => Number(period.slice(5, 7)) - 1;
+const yearPeriodsOf = (year: number) => Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}-01`);
 const sumCents = (months: readonly number[]) => months.reduce((sum, cents) => sum + cents, 0);
 const conflictTint = (theme: Theme) => alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.12 : 0.08);
 
@@ -171,7 +182,7 @@ const QUARTERS = [
   { label: 'Q4', months: [9, 10, 11] },
 ];
 
-export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year, currency, availableYears, onYearChange, config, effectiveStart, endOfValidity, payingCompanyCountry }, ref) {
+export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year, currency, availableYears, onYearChange, config, effectiveStart, endOfValidity, payingCompanyCountry, held }, ref) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const queryClient = useQueryClient();
@@ -254,11 +265,28 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const [resolving, setResolving] = React.useState(false);
   // Bumped by « Reload the column » on a panel write: the lines panel starts again from the stored lines.
   const [linesReload, setLinesReload] = React.useState(0);
+  // Any choice waiting in the column (a panel write, a total, or some of its months): nothing writes the
+  // whole column meanwhile.
   const isWaiting = React.useCallback((col: AmountCol) => (
     waitingRef.current.some((c) => c.measure === col) || !!parkedPanelRef.current?.columns.has(col)
   ), []);
+  // This month of the column waits for a choice (a refused month, or the whole column).
+  const isCellWaiting = React.useCallback((period: string, col: AmountCol) => {
+    if (parkedPanelRef.current?.columns.has(col)) return true;
+    const entry = waitingRef.current.find((c) => c.measure === col);
+    return !!entry && (entry.cells === null || entry.cells.has(period));
+  }, []);
+  // The whole column waits (a refused total or panel write), not only some of its months.
+  const isColumnWaiting = React.useCallback((col: AmountCol) => (
+    !!parkedPanelRef.current?.columns.has(col) || waitingRef.current.some((c) => c.measure === col && c.cells === null)
+  ), []);
   // The view chosen in this tab: it outlives a year change and a reload, whatever the version says.
   const chosenViewRef = React.useRef<BudgetView | null>(null);
+  // The choices this tab left waiting when the user went to another tab of the line: given back by the
+  // first loads of the year (the cached one, then its refresh), then forgotten.
+  const restoreRef = React.useRef<HeldBudgetChoices | null>(
+    held?.current && held.current.lineId === id ? held.current : null,
+  );
 
   const autosave = useAutosave({
     onError: (e) => setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToSave`))),
@@ -348,15 +376,21 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     const quiet = quietSince !== undefined;
     const typedSince = (key: string) => quiet && (editedAtRef.current.get(key) ?? 0) > quietSince;
     const keepCell = (period: string, col: AmountCol) => quiet && (
-      typedSince(`${period}:${col}`) || !!dirtyCellsRef.current.get(period)?.has(col) || isWaiting(col)
+      typedSince(`${period}:${col}`) || !!dirtyCellsRef.current.get(period)?.has(col) || isCellWaiting(period, col)
     );
-    const keepTotal = (col: AmountCol) => quiet && (typedSince(`total:${col}`) || dirtyTotalsRef.current.has(col) || isWaiting(col));
+    // The column's months are not the screen's (a total typed or waiting): the base stays.
+    const keepColumn = (col: AmountCol) => quiet && (typedSince(`total:${col}`) || dirtyTotalsRef.current.has(col) || isColumnWaiting(col));
+    const keepTotal = (col: AmountCol) => keepColumn(col) || (quiet && isWaiting(col));
+    // A full load starts again from the server: nothing typed, nothing waiting, except the choices
+    // this tab had when the user went to another tab of the line (`held`), given back here.
+    const restore = !quiet && restoreRef.current?.year === year ? restoreRef.current : null;
     if (!quiet) {
       setSpreadDates(null);
-      // A full load starts again from the server: nothing typed, nothing waiting.
-      setWaiting([]);
-      parkedPanelRef.current = null;
+      setWaiting(restore ? restore.waiting.map((c) => ({ ...c, cells: c.cells ? new Set(c.cells) : null })) : []);
+      parkedPanelRef.current = restore?.parkedPanel ? { ...restore.parkedPanel, columns: new Set(restore.parkedPanel.columns) } : null;
     }
+    const restoredCell = new Map((restore?.cells ?? []).map((c) => [`${c.period}:${c.col}`, c.value]));
+    const restoredTotal = new Map((restore?.totals ?? []).map((c) => [c.col, c.value]));
     const v = snapshot.version;
     if (!v) {
       setVersion(null);
@@ -377,22 +411,27 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     if (!quiet) setMode(chosenViewRef.current ?? initialBudgetView(userIdRef.current, v.input_grain));
     const amt = snapshot.amounts;
     const totals = amt?.totals;
-    setFlat((prev) => perColumn((col) => (keepTotal(col) ? prev[col] : Number(totals?.[col] || 0))));
+    setFlat((prev) => perColumn((col) => (
+      restoredTotal.has(col) ? restoredTotal.get(col)! : keepTotal(col) ? prev[col] : Number(totals?.[col] || 0)
+    )));
     const byPeriod = new Map((amt?.items || []).map((r) => [r.period, r]));
     const loadedMonths = Array.from({ length: 12 }, (_, i) => {
       const p = monthPeriod(year, i + 1);
       const found = byPeriod.get(p);
       return { period: p, ...perColumn((col) => Number(found?.[col] || 0)) };
     });
-    setMonths((prev) => loadedMonths.map((row, i) => (
-      prev[i]?.period === row.period
-        ? { period: row.period, ...perColumn((col) => (keepCell(row.period, col) ? prev[i][col] : row[col])) }
-        : row
-    )));
+    setMonths((prev) => loadedMonths.map((row, i) => {
+      const value = (col: AmountCol) => {
+        const restored = restoredCell.get(`${row.period}:${col}`);
+        if (restored !== undefined) return restored;
+        return prev[i]?.period === row.period && keepCell(row.period, col) ? prev[i][col] : row[col];
+      };
+      return { period: row.period, ...perColumn(value) };
+    }));
     // What the screen now takes from the server is the base of the next edit; a kept cell keeps its own.
     const loadedCents = centsByColumn(year, amt?.items || []);
     ALL_COLS.forEach((col) => {
-      if (keepTotal(col)) return;
+      if (keepColumn(col)) return;
       loadedMonths.forEach((row, i) => {
         if (!keepCell(row.period, col)) serverMonthsRef.current[col][i] = loadedCents[col][i];
       });
@@ -403,14 +442,19 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     roundInputsRef.current = loadedInputs;
     setRoundInputs(loadedInputs);
     ALL_COLS.forEach((col) => {
-      if (!(quiet && isWaiting(col))) serverLinesRef.current[col] = (loadedInputs.find((r) => r.measure === col)?.lines ?? []).map(linePayloadOf);
+      if (!(quiet && isColumnWaiting(col))) serverLinesRef.current[col] = (loadedInputs.find((r) => r.measure === col)?.lines ?? []).map(linePayloadOf);
     });
     if (!quiet) {
       setSpreadProfile(profileOf(spreadMeasureRef.current, loadedInputs));
       showSpreadAmount(amountOrEmpty(monthsCents(loadedMonths, spreadMeasureRef.current)));
     }
     // After a panel write, the unsaved edits are the ones typed since: the pending autosave sends them.
-    if (!quiet) resetDirty();
+    if (!quiet) {
+      resetDirty();
+      // The values given back wait again, unsaved, in their columns.
+      restore?.cells.forEach((c) => markCellDirty(c.period, c.col));
+      restore?.totals.forEach((c) => dirtyTotalsRef.current.add(c.col));
+    }
     setLoadedYear(year);
     // showSpreadAmount only sets state and a ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -436,6 +480,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       }
       if (background && editSeqRef.current === quietSince) applyYear(snapshot);
       else applyYear(snapshot, { quietSince });
+      // The choices given back are on screen now: a later full load starts from the server.
+      restoreRef.current = null;
     } catch (e) {
       setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToLoad`)));
     } finally {
@@ -504,6 +550,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     const sentCells = new Map<string, Set<AmountCol>>();
     if (flatMode) {
       for (const col of [...dirtyTotalsRef.current]) {
+        // A total replaces the whole column: not while any of it waits for a choice.
         if (isWaiting(col)) continue;
         dirtyTotalsRef.current.delete(col);
         if (!fr[FREEZE_KEY[col]]) sentTotals.push(col);
@@ -511,7 +558,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     } else {
       for (const [period, cols] of [...dirtyCellsRef.current]) {
         for (const col of [...cols]) {
-          if (isWaiting(col)) continue;
+          // Only the months waiting for a choice stay: the column's other months go.
+          if (isCellWaiting(period, col)) continue;
           cols.delete(col);
           if (!fr[FREEZE_KEY[col]]) sentCells.set(period, (sentCells.get(period) ?? new Set<AmountCol>()).add(col));
         }
@@ -585,23 +633,39 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       void loadRef.current({ quietSince: savedUpTo });
     } catch (e) {
       const conflicts = budgetConflictsOf(e);
-      const refused = new Set(conflicts?.map((c) => c.measure) ?? []);
+      // What waits: a refused monthly entry, the months the server refused, each column's other
+      // months going on; a refused yearly total, the whole column.
+      const monthly = bodies[sent]?.body.kind === 'monthly';
+      const refused = new Map<AmountCol, Set<string> | null>(
+        // (An answer naming no month for a monthly entry: the whole column waits, never an empty set.)
+        (conflicts ?? []).map((c) => [c.measure, monthly && c.periods.length > 0 ? new Set(c.periods) : null]),
+      );
+      const refusedCell = (period: string, col: AmountCol) => refused.has(col) && (refused.get(col) === null || refused.get(col)!.has(period));
       let others = false;
       bodies.slice(sent).forEach(({ totals, cells }) => {
         totals.forEach((col) => { dirtyTotalsRef.current.add(col); if (!refused.has(col)) others = true; });
-        cells.forEach((cols, period) => cols.forEach((col) => { markCellDirty(period, col); if (!refused.has(col)) others = true; }));
+        cells.forEach((cols, period) => cols.forEach((col) => { markCellDirty(period, col); if (!refusedCell(period, col)) others = true; }));
       });
       if (conflicts) {
-        // The refused columns wait for the user's choice, read-only, their edits kept.
-        setWaiting([...waitingRef.current.filter((c) => !refused.has(c.measure)), ...conflicts.map((c) => ({ ...c, source: 'grid' as const }))]);
-        // The whole request was refused (D5): the edits of other columns go again on their own.
+        // The refused months or columns wait for the user's choice, read-only, their edits kept; a
+        // column already waiting on other months keeps them.
+        const next = waitingRef.current.filter((c) => !refused.has(c.measure));
+        for (const conflict of conflicts) {
+          const cells = refused.get(conflict.measure) ?? null;
+          const earlier = waitingRef.current.find((c) => c.measure === conflict.measure && c.source === 'grid');
+          const merged = cells && earlier?.cells ? new Set([...earlier.cells, ...cells]) : cells;
+          next.push({ ...conflict, source: 'grid', cells: merged });
+        }
+        setWaiting(next);
+        // The whole request was refused (D5): the edits that did not conflict go again on their own.
         if (others) autosaveRef.current.schedule(persistRef.current);
-      } else {
-        // The save may have been refused because a column was frozen meanwhile: refresh the freeze
-        // state so that column turns read-only and the next save leaves it out.
-        void queryClient.invalidateQueries({ queryKey: ['freeze-state', year] });
+        throw e;
       }
-      throw e;
+      // The save may have been refused because a column was frozen meanwhile: refresh the freeze
+      // state so that column turns read-only and the next save leaves it out.
+      void queryClient.invalidateQueries({ queryKey: ['freeze-state', year] });
+      // A conflict answer the screen cannot read: an error the user sees, the edits kept.
+      throw unreadableConflict(e) ?? e;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ensureVersion, id, year, queryClient]);
@@ -612,7 +676,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const hasUnsavedEdits = () => dirtyTotalsRef.current.size > 0 || dirtyCellsRef.current.size > 0;
   // Edits that can go now: not in a column waiting for the user's choice.
   const hasSendableEdits = () => [...dirtyTotalsRef.current].some((col) => !isWaiting(col))
-    || [...dirtyCellsRef.current.values()].some((cols) => [...cols].some((col) => !isWaiting(col)));
+    || [...dirtyCellsRef.current.entries()].some(([period, cols]) => [...cols].some((col) => !isCellWaiting(period, col)));
   // Save every unsaved edit now. A save the autosave dropped (refused) left its
   // edits dirty here, so it is scheduled again; a save the autosave still
   // keeps (isSaving) goes again within the flush. False if the save fails, or
@@ -642,22 +706,93 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   }, []);
 
   // Grid edits, then the panel writes already queued. Never called from inside a queued write.
-  const flushAll = React.useCallback(async () => {
-    const saved = await flushEdits();
+  const flushAll = React.useCallback(async (options?: { ignoreHeld?: boolean }) => {
+    const saved = await flushEdits(options);
     await chainRef.current;
     return saved;
   }, [flushEdits]);
 
-  // Flush pending edits before switching year so nothing is lost on reload.
+  // The columns waiting for a choice (refused months or totals, a parked panel write), as the tenant names them.
+  const labelForRef = React.useRef((col: AmountCol) => budgetColumns.label(col));
+  labelForRef.current = (col: AmountCol) => budgetColumns.label(col);
+  const waitingLabels = React.useCallback(() => {
+    // Not on screen again yet (the year is loading): the choices kept for the line.
+    if (restoreRef.current && waitingRef.current.length === 0 && !parkedPanelRef.current) return restoreRef.current.labels;
+    const cols = new Set<AmountCol>([...waitingRef.current.map((c) => c.measure), ...(parkedPanelRef.current?.columns ?? [])]);
+    return ALL_COLS.filter((col) => cols.has(col)).map((col) => labelForRef.current(col));
+  }, []);
+  // The user leaves the year with a choice waiting: the waiting edits are dropped.
+  const dropChoices = () => {
+    for (const conflict of waitingRef.current) {
+      if (conflict.cells === null) dirtyTotalsRef.current.delete(conflict.measure);
+      dirtyCellsRef.current.forEach((cols, period) => {
+        if (conflict.cells === null || conflict.cells.has(period)) cols.delete(conflict.measure);
+        if (cols.size === 0) dirtyCellsRef.current.delete(period);
+      });
+    }
+    parkedPanelRef.current = null;
+    restoreRef.current = null;
+    setWaiting([]);
+    autosaveRef.current.resetConflict();
+  };
+
+  // Flush pending edits before switching year so nothing is lost on reload. A choice waiting asks
+  // first, naming its columns: leaving the year drops it.
   const handleYearChange = React.useCallback(async (y: number) => {
-    if (!(await flushAll())) return;
+    if (!(await flushAll())) {
+      const columns = waitingLabels();
+      if (columns.length === 0) return;
+      const change = await dialogs.confirm({
+        title: t('common:autosave.leaveTitle'),
+        message: t('budgetTab.conflict.yearChange', { count: columns.length, columns: namesInSentence(locale, columns) }),
+        confirmLabel: t('budgetTab.conflict.yearChangeConfirm'),
+        intent: 'danger',
+      });
+      if (!change) return;
+      dropChoices();
+      if (!(await flushAll())) return;
+    }
     onYearChange(y);
-  }, [flushAll, onYearChange]);
+    // dropChoices only touches refs and state setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flushAll, onYearChange, waitingLabels, dialogs, t, locale]);
 
   useImperativeHandle(ref, () => ({
     flush: flushAll,
     isDirty: () => autosave.isBusy() || hasUnsavedEdits() || writesPendingRef.current > 0,
-  }), [autosave, flushAll]);
+    waitingColumns: waitingLabels,
+  }), [autosave, flushAll, waitingLabels]);
+
+  // Leaving the tab with a choice waiting (another tab of the line): the item page keeps it for the
+  // line (`heldChoices.ts`), and this tab takes it back when it comes back for the same year.
+  React.useEffect(() => {
+    if (held?.current?.lineId === id) held.current = null;
+    return () => {
+      if (!held) return;
+      const waiting = waitingRef.current;
+      const parked = parkedPanelRef.current;
+      if (waiting.length === 0 && !parked) {
+        // Left before the year was on screen again: the choices stay as they were kept.
+        if (restoreRef.current) held.current = restoreRef.current;
+        return;
+      }
+      const cells: HeldBudgetChoices['cells'] = [];
+      dirtyCellsRef.current.forEach((cols, period) => cols.forEach((col) => {
+        if (isCellWaiting(period, col)) cells.push({ period, col, value: Number(monthsRef.current[monthIndexOf(period)]?.[col] || 0) });
+      }));
+      held.current = {
+        lineId: id,
+        year: yearRef.current,
+        labels: waitingLabels(),
+        waiting: waiting.map((c) => ({ ...c, cells: c.cells ? [...c.cells] : null })),
+        parkedPanel: parked ? { ...parked, columns: [...parked.columns] } : null,
+        cells,
+        totals: [...dirtyTotalsRef.current].filter((col) => isWaiting(col)).map((col) => ({ col, value: flatRef.current[col] })),
+      };
+    };
+    // Mount and unmount only: the refs hold the latest state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onFlatChange = (key: AmountCol, value: number | '') => {
     setFlat((prev) => ({ ...prev, [key]: value }));
@@ -813,12 +948,13 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         // Kept whole (D5) until the user chose for each refused column; its columns stay read-only.
         parkedPanelRef.current = { body, main, columns: new Set(columns) };
         const refused = new Set(conflicts.map((c) => c.measure));
-        setWaiting([...waitingRef.current.filter((c) => !refused.has(c.measure)), ...conflicts.map((c) => ({ ...c, source: 'panel' as const }))]);
+        setWaiting([...waitingRef.current.filter((c) => !refused.has(c.measure)), ...conflicts.map((c) => ({ ...c, source: 'panel' as const, cells: null }))]);
         return { status: 'conflict' };
       }
       // The write may have been refused because a column was frozen meanwhile.
       void queryClient.invalidateQueries({ queryKey: ['freeze-state', year] });
-      throw e;
+      // A conflict answer the screen cannot read: an error the user sees.
+      throw unreadableConflict(e) ?? e;
     }
   };
 
@@ -912,20 +1048,27 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const settleChoices = () => {
     if (waitingRef.current.length === 0 && !parkedPanelRef.current) autosaveRef.current.resetConflict();
   };
-  // Their months for the column on screen and as the base; the cells and total typed in it are dropped.
-  const takeTheirs = (conflict: BudgetConflict) => {
+  // Their months on screen and as the base, the user's edits there dropped: the whole column, or only
+  // `cells` (the refused months of a monthly entry; the column's other months keep what is typed or saved).
+  const takeTheirs = (conflict: BudgetConflict, cells: ReadonlySet<string> | null = null) => {
     const col = conflict.measure;
-    dirtyTotalsRef.current.delete(col);
-    editedAtRef.current.delete(`total:${col}`);
+    const mine = (period: string) => cells === null || cells.has(period);
+    if (cells === null) {
+      dirtyTotalsRef.current.delete(col);
+      editedAtRef.current.delete(`total:${col}`);
+    }
     dirtyCellsRef.current.forEach((cols, period) => {
+      if (!mine(period)) return;
       cols.delete(col);
       editedAtRef.current.delete(`${period}:${col}`);
       if (cols.size === 0) dirtyCellsRef.current.delete(period);
     });
-    serverMonthsRef.current[col] = [...conflict.current];
+    yearPeriodsOf(year).forEach((period, i) => {
+      if (mine(period)) serverMonthsRef.current[col][i] = conflict.current[i];
+    });
     if (conflict.currentLines) serverLinesRef.current[col] = conflict.currentLines;
-    setMonths((prev) => prev.map((row, i) => ({ ...row, [col]: conflict.current[i] / 100 })));
-    setFlat((prev) => ({ ...prev, [col]: sumCents(conflict.current) / 100 }));
+    setMonths((prev) => prev.map((row, i) => (mine(row.period) ? { ...row, [col]: conflict.current[i] / 100 } : row)));
+    if (cells === null) setFlat((prev) => ({ ...prev, [col]: sumCents(conflict.current) / 100 }));
   };
   // A panel write whose every refused column has a choice goes again, with the bases chosen.
   const sendParkedPanel = () => {
@@ -948,18 +1091,22 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     const conflict = waitingRef.current.find((c) => c.measure === field);
     if (!conflict) return;
     const col = conflict.measure;
+    restoreRef.current = null;
     if (conflict.source === 'grid') {
       if (choice === 'mine') {
-        // « Overwrite »: the column's edits go again over theirs, from the column as the server answered it.
-        serverMonthsRef.current[col] = [...conflict.current];
-        // The months the user did not type show theirs, as the base now says.
+        // « Overwrite »: the waiting edits go again over theirs, from what the server answered. The
+        // months the user did not type show theirs too; a month typed and not refused keeps its base.
         const dirtyHere = (period: string) => !!dirtyCellsRef.current.get(period)?.has(col);
+        const waits = (period: string) => conflict.cells === null || conflict.cells.has(period);
+        yearPeriodsOf(year).forEach((period, i) => {
+          if (waits(period) || !dirtyHere(period)) serverMonthsRef.current[col][i] = conflict.current[i];
+        });
         setMonths((prev) => prev.map((row, i) => (dirtyHere(row.period) ? row : { ...row, [col]: conflict.current[i] / 100 })));
         dropWaiting([col]);
         autosaveRef.current.schedule(persistRef.current);
       } else {
-        // « Reload the column »: their values, the user's edits of the column dropped.
-        takeTheirs(conflict);
+        // « Reload the column »: their values where the choice waited; the column's other months stay.
+        takeTheirs(conflict, conflict.cells);
         dropWaiting([col]);
         settleChoices();
         void loadRef.current({ quietSince: editSeqRef.current });
@@ -1049,18 +1196,23 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     ...(parkedPanelRef.current ? [...parkedPanelRef.current.columns] : []),
   ]);
   const gridColumns = shown.map((c) => ({ col: c.measure, fr: frozen[c.freezeKey], waits: waitingSet.has(c.measure) }));
+  // This cell waits for a choice: the whole column, or one of its refused months.
+  const cellWaits = (period: string, col: AmountCol) => {
+    if (parkedPanelRef.current?.columns.has(col)) return true;
+    const entry = waitingColumns.find((c) => c.measure === col);
+    return !!entry && (entry.cells === null || entry.cells.has(period));
+  };
   const monthName = (period: string) => new Date(year, monthIndexOf(period), 1).toLocaleString(locale, { month: 'short' });
-  // A side of a refused column in the banner: the months refused (a few cells typed in the monthly
-  // view), else the year's total, with its number of lines when lines were compared.
-  const conflictSide = (c: WaitingColumn, cents: readonly number[], lineCount: number | null) => {
-    if (c.source === 'grid' && mode === 'monthly' && c.periods.length > 0 && c.periods.length <= 3) {
-      return c.periods.map((p) => `${monthName(p)} ${fmt(cents[monthIndexOf(p)] / 100)}`).join(' · ');
-    }
+  const yearSide = (cents: readonly number[], lineCount: number | null) => {
     const amount = fmt(sumCents(cents) / 100);
     return lineCount === null ? t('budgetTab.conflict.yearTotal', { amount }) : t('budgetTab.conflict.yearTotalLines', { amount, count: lineCount });
   };
+  // The banner shows what really waits: the refused months of a monthly entry (their value, the
+  // user's value on screen), else the column's year, with its number of lines when lines were compared.
   const bannerConflicts: EditConflict[] = waitingColumns.map((c) => {
     const parkedLines = c.source === 'panel' && c.currentLines ? parkedPanelRef.current?.body.lines : undefined;
+    const waitingMonths = c.cells ? [...c.cells].sort() : null;
+    const monthsSide = (value: (period: string) => number) => waitingMonths!.map((p) => `${monthName(p)} ${fmt(value(p))}`).join(' · ');
     return {
       field: c.measure,
       base: null,
@@ -1068,8 +1220,12 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       mine: c.measure,
       labels: {
         base: null,
-        current: conflictSide(c, c.current, c.currentLines ? c.currentLines.length : null),
-        mine: conflictSide(c, c.mine, Array.isArray(parkedLines) ? parkedLines.length : null),
+        current: waitingMonths
+          ? monthsSide((p) => c.current[monthIndexOf(p)] / 100)
+          : yearSide(c.current, c.currentLines ? c.currentLines.length : null),
+        mine: waitingMonths
+          ? monthsSide((p) => Number(months[monthIndexOf(p)]?.[c.measure] || 0))
+          : yearSide(c.mine, Array.isArray(parkedLines) ? parkedLines.length : null),
       },
       changed_by: c.changed_by,
       changed_at: c.changed_at,
@@ -1126,6 +1282,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
             onChange={(e) => setSpreadAmount(e.target.value as unknown as number | '')}
             onBlur={commitSpreadAmount}
             onKeyDown={(e) => { if (e.key === 'Enter') commitSpread(); }}
+            // The column waits for a choice: read-only until it is made, as the lines panel.
+            disabled={spreadWaiting}
             variant="standard" size="small" fullWidth
             placeholder={t(`${config.i18nPrefix}.budget.spreadPlaceholder`)}
             inputProps={{ 'aria-label': t('budgetTab.amount') }}
@@ -1134,6 +1292,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         {panelField(t('budgetTab.distribution'), 120, (
           <TextField
             select size="small" variant="standard" value={spreadProfile}
+            disabled={spreadWaiting}
             onChange={(e) => onSpreadProfileChange(e.target.value as 'flat' | '4-4-5')}
             inputProps={{ 'aria-label': t('budgetTab.distribution') }}
             SelectProps={selectKeepsFocus}
@@ -1144,8 +1303,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
           </TextField>
         ))}
         <PanelPeriod>
-          <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} size="small" sx={{ width: 150 }} />
-          <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} size="small" sx={{ width: 150 }} />
+          <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} disabled={spreadWaiting} size="small" sx={{ width: 150 }} />
+          <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} disabled={spreadWaiting} size="small" sx={{ width: 150 }} />
         </PanelPeriod>
       </Box>
       {/* Only the lines that apply: a whole-year period shows none. */}
@@ -1171,7 +1330,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       {offerApplyToAll && (
         <Box>
           <FormControlLabel
-            control={<Switch size="small" checked={spreadAllColumns} onChange={(e) => onSpreadAllColumnsChange(e.target.checked)} />}
+            control={<Switch size="small" checked={spreadAllColumns} disabled={spreadWaiting} onChange={(e) => onSpreadAllColumnsChange(e.target.checked)} />}
             label={(
               <Tooltip title={applyToAllHint}>
                 <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyDistributionToAll')}</Typography>
@@ -1233,6 +1392,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
             frozenHint={spreadWaiting ? t('budgetTab.conflict.waiting') : t(`${config.i18nPrefix}.budget.someColumnsFrozen`)}
             waiting={spreadWaiting}
             reloadSignal={linesReload}
+            startLines={parkedPanelRef.current?.main === spreadMeasure && parkedPanelRef.current.body.kind === 'lines'
+              ? parkedPanelRef.current.body.lines as LinePayload[]
+              : undefined}
             payingCompanyCountry={payingCompanyCountry}
             columnName={labelFor}
             applyToAll={{ offered: offerApplyToAll, on: linesAllColumns, hint: applyToAllHint, onChange: setLinesAllColumns }}
@@ -1407,8 +1569,10 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                         <Box component="td" sx={{ fontSize: 13, color: 'kanap.text.primary', px: 1, py: 0.25 }}>
                           {new Date(year, mi, 1).toLocaleString(locale, { month: 'short' })}
                         </Box>
-                        {gridColumns.map(({ col, fr, waits }) => (
-                          <Box component="td" key={col} sx={{ px: 0.5, py: '2px', ...(waits ? { bgcolor: conflictTint } : {}) }}>
+                        {gridColumns.map(({ col, fr }) => {
+                          const waits = cellWaits(monthPeriod(year, mi + 1), col);
+                          return (
+                          <Box component="td" key={col} data-waiting={waits ? 'true' : undefined} sx={{ px: 0.5, py: '2px', ...(waits ? { bgcolor: conflictTint } : {}) }}>
                             <FormattedNumberField
                               value={months[mi]?.[col] ?? 0}
                               onChange={(e) => onMonthChange(mi, col, e.target.value as unknown as number | '')}
@@ -1418,7 +1582,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                               sx={tableCellFieldSx}
                             />
                           </Box>
-                        ))}
+                          );
+                        })}
                       </Box>
                     ))}
                     <Box component="tr" sx={{ bgcolor: 'kanap.bg.drawer' }}>

@@ -97,7 +97,34 @@ vi.mock('./workspace/SpendMetadataBar', () => ({
   ),
 }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
-vi.mock('../../components/finance/BudgetTab', () => ({ default: () => null }));
+// The Budget tab stands in with its handle and the line's held choices (lot 3D): « budget refused »
+// leaves the Budget column waiting for a choice.
+vi.mock('../../components/finance/BudgetTab', async () => {
+  const React = await import('react');
+  type Held = { current: { lineId: string; labels: string[] } | null };
+  const BudgetTabStandIn = React.forwardRef(({ id, held }: { id: string; held?: Held }, ref) => {
+    const waiting = React.useRef<string[]>(held?.current?.lineId === id ? held.current.labels : []);
+    const [, redraw] = React.useState(0);
+    React.useEffect(() => {
+      if (held?.current?.lineId === id) held.current = null;
+      return () => {
+        if (held && waiting.current.length > 0) held.current = { lineId: id, labels: waiting.current } as never;
+      };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    React.useImperativeHandle(ref, () => ({
+      flush: async (options?: { ignoreHeld?: boolean }) => !!options?.ignoreHeld || waiting.current.length === 0,
+      isDirty: () => waiting.current.length > 0,
+      waitingColumns: () => waiting.current,
+    }));
+    return (
+      <div>
+        <span data-testid="budget-waiting">{waiting.current.join(',')}</span>
+        <button type="button" onClick={() => { waiting.current = ['Budget']; redraw((n) => n + 1); }}>budget refused</button>
+      </div>
+    );
+  });
+  return { default: BudgetTabStandIn };
+});
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
 vi.mock('./editors/RelationsPanel', () => ({ default: () => null }));
 vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
@@ -1048,6 +1075,36 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
     await settleSaves();
     expect(mocked.patch).toHaveBeenCalledTimes(1);
     expect(stored[LINE_A].notes).toBe('Notes from Marie');
+  });
+
+  it('a budget column waiting for a choice: a tab change keeps it, leaving the line names it, then drops it', async () => {
+    renderLines(`/ops/opex/${LINE_A}/budget`);
+    fireEvent.click(await screen.findByRole('button', { name: 'budget refused' }));
+
+    // Another tab of the line: no question, the choice is kept for the line.
+    fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
+    await waitFor(() => expect(path()).toBe(`/ops/opex/${LINE_A}/overview`));
+    expect(dialogs.confirm).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'budget tab' }));
+    expect(await screen.findByTestId('budget-waiting')).toHaveTextContent('Budget');
+    fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
+    await waitFor(() => expect(path()).toBe(`/ops/opex/${LINE_A}/overview`));
+
+    // Leaving the line, from another tab: the warning names the column waiting.
+    dialogs.confirm.mockResolvedValueOnce(false);
+    fireEvent.click(screen.getByRole('button', { name: 'close workspace' }));
+    await waitFor(() => expect(dialogs.confirm).toHaveBeenCalledTimes(1));
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'common:autosave.leaveTitle', message: 'common:autosave.leaveColumnsMessage',
+    }));
+    expect(screen.queryByText('opex list')).toBeNull();
+
+    // The app's links ask the same; leaving drops the choice with the line.
+    dialogs.confirm.mockResolvedValueOnce(true);
+    let left = false;
+    await act(async () => { left = await confirmLeave(); });
+    expect(left).toBe(true);
+    expect(dialogs.confirm).toHaveBeenLastCalledWith(expect.objectContaining({ message: 'common:autosave.leaveColumnsMessage' }));
   });
 
   it('a link of the app asks the page first (the layout\'s guard), with the same question', async () => {

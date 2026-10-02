@@ -255,6 +255,8 @@ export type LinesPanelProps = {
   waiting?: boolean;
   /** Changed by « Reload the column »: the drafts start again from the stored lines, whatever is typed. */
   reloadSignal?: number;
+  /** The lines the panel opens on instead of the stored ones: a refused write still waiting for a choice. */
+  startLines?: LinePayload[];
   /** The paying company's country: its standard calendar is the default of a new line. */
   payingCompanyCountry?: string | null;
   /** The tenant's name of a column, for "copied from". */
@@ -279,7 +281,7 @@ export type LinesPanelProps = {
  * server. A line that is not complete yet stays here until it is.
  */
 export default function LinesPanel({
-  year, record, period, itemStart, itemEnd, frozen, frozenHint, waiting = false, reloadSignal = 0,
+  year, record, period, itemStart, itemEnd, frozen, frozenHint, waiting = false, reloadSignal = 0, startLines,
   payingCompanyCountry, columnName, applyToAll, onSave, layout = 'auto',
 }: LinesPanelProps) {
   const { t } = useTranslation(['ops', 'common']);
@@ -289,10 +291,10 @@ export default function LinesPanel({
   const queryClient = useQueryClient();
 
   const storedLines = React.useMemo(() => record?.lines ?? [], [record]);
-  const [drafts, setDrafts] = React.useState<LineDraft[]>(() => storedLines.map(draftOf));
+  const [drafts, setDrafts] = React.useState<LineDraft[]>(() => (startLines ? startLines.map((line) => draftOf(line as RoundLine)) : storedLines.map(draftOf)));
   const draftsRef = React.useRef(drafts);
   // What the server holds (or was last asked to hold): a commit that would send the same lines writes nothing.
-  const sentRef = React.useRef(JSON.stringify(storedLines.map(linePayloadOf)));
+  const sentRef = React.useRef(JSON.stringify((startLines ?? storedLines).map(linePayloadOf)));
   // The stored lines the drafts started from: the base of the next write (someone else's change meanwhile is a conflict).
   const startedFromRef = React.useRef<LinePayload[]>(storedLines.map(linePayloadOf));
   // Saves on their way: the drafts are not replaced by stored lines meanwhile.

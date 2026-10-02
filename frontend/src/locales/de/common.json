@@ -631,7 +631,10 @@
     "leaveMessage": "Einige Ihrer Änderungen konnten nicht gespeichert werden. Verlassen Sie die Seite trotzdem und verwerfen Sie sie, oder bleiben Sie auf dieser Seite und versuchen Sie es erneut.",
     "leaveConfirm": "Ohne Speichern verlassen",
     "leaveConflictMessage": "Eine andere Person hat ein Feld geändert, das Sie bearbeitet haben, und Sie haben noch nicht gewählt, welchen Wert Sie behalten. Verlassen Sie die Seite trotzdem und verwerfen Sie Ihren Wert, oder bleiben Sie und wählen Sie.",
-    "leaveConflictOtherMessage": "Eine andere Person hat ein Feld geändert, das Sie in {{items}} bearbeitet haben, und Sie haben noch nicht gewählt, welchen Wert Sie behalten. Verlassen Sie die Seite trotzdem und verwerfen Sie Ihren Wert, oder bleiben Sie und wählen Sie."
+    "leaveConflictOtherMessage": "Eine andere Person hat ein Feld geändert, das Sie in {{items}} bearbeitet haben, und Sie haben noch nicht gewählt, welchen Wert Sie behalten. Verlassen Sie die Seite trotzdem und verwerfen Sie Ihren Wert, oder bleiben Sie und wählen Sie.",
+    "leaveColumnsMessage_one": "Eine andere Person hat die Spalte {{columns}} geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche Werte bleiben. Trotzdem verlassen und Ihre Werte in {{columns}} verlieren, oder bleiben und wählen.",
+    "leaveColumnsMessage_other": "Eine andere Person hat die Spalten {{columns}} geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche Werte bleiben. Trotzdem verlassen und Ihre Werte in diesen Spalten verlieren, oder bleiben und wählen.",
+    "leaveAllocationMessage": "Eine andere Person hat die Zuordnung geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche bleibt. Trotzdem verlassen und Ihre Zuordnung verlieren, oder bleiben und wählen."
   },
   "editConflict": {
     "title_one": "Eine andere Person hat ein Feld geändert, das Sie bearbeitet haben",
@@ -693,7 +696,9 @@
       "changedByYouOn": "Sie haben diese Zuordnung am {{date}} um {{time}} in einem anderen Fenster geändert.",
       "changedByYou": "Sie haben diese Zuordnung in einem anderen Fenster geändert.",
       "keepTheirs": "Zuordnung neu laden",
-      "applyMine": "Überschreiben"
-    }
+      "applyMine": "Überschreiben",
+      "yearChange": "Eine andere Person hat die Zuordnung geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche bleibt. Trotzdem das Jahr wechseln und Ihre Zuordnung verlieren, oder bleiben und wählen."
+    },
+    "yearChangeConfirm": "Jahr wechseln"
   }
 }

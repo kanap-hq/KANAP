@@ -81,6 +81,7 @@ import BudgetTab, { BudgetTabHandle } from './BudgetTab';
 import type { LinePayload, RoundInput, RoundLine } from './roundPeriod';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
 import { allocationsSnapshotKey } from './allocationsCache';
+import type { HeldBudgetChoices } from './heldChoices';
 
 const ALL_SHOWN: BudgetColumnsSettings = {
   ...DEFAULT_BUDGET_COLUMNS,
@@ -251,6 +252,7 @@ function renderTab(
   dates: { effectiveStart?: string; endOfValidity?: string; payingCompanyCountry?: string } = {},
   config: FinanceModuleConfig = OPEX_FINANCE_CONFIG,
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  extra: { held?: React.MutableRefObject<HeldBudgetChoices | null>; onYearChange?: (y: number) => void; availableYears?: number[] } = {},
 ) {
   const ref = React.createRef<BudgetTabHandle>();
   const ui = (y: number) => (
@@ -259,7 +261,8 @@ function renderTab(
         <ThemeProvider theme={theme}>
           <KanapDialogProvider>
             <BudgetTab
-              ref={ref} id="item-1" year={y} currency="EUR" onYearChange={() => undefined} config={config}
+              ref={ref} id="item-1" year={y} currency="EUR" onYearChange={extra.onYearChange ?? (() => undefined)} config={config}
+              held={extra.held} availableYears={extra.availableYears}
               effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity} payingCompanyCountry={dates.payingCompanyCountry}
             />
           </KanapDialogProvider>
@@ -2237,5 +2240,143 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
     const other = renderTab();
     await waitForAmounts(3);
     expect(other.container.querySelector('table')).toBeNull();
+  });
+});
+
+describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+  });
+
+  /** Revision: March refused (Marie wrote 950 there). */
+  const marchRefused = () => {
+    const theirs = twelve('900.00');
+    theirs[2] = '950.00';
+    return columnConflict('committed', theirs, { periods: [period(3)] });
+  };
+
+  it('Reload the column takes their value for the refused month only; a month typed in the same request is saved', async () => {
+    const server = setupApi({ grain: 'monthly' });
+    refuseBulk((body, call) => (call === 1 ? marchRefused() : null));
+    const { ref, container } = renderTab();
+    await waitForAmounts();
+
+    fireEvent.change(cell(monthCells(container), 1, 1), { target: { value: '111' } });
+    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    expect(await flush(ref)).toBe(false);
+
+    // One request with both months was refused; January, which did not conflict, went again alone.
+    expect(written(bulkCalls()[0][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(1), committed: 111 }, { period: period(3), committed: 450 }] });
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(1), committed: 111 }] });
+    // Only March waits: the banner shows it alone, January stays editable.
+    const banner = await screen.findByRole('region');
+    expect(within(banner).getByText('Mar 950')).toBeInTheDocument();
+    expect(within(banner).getByText('Mar 450')).toBeInTheDocument();
+    expect(within(banner).queryByText(/Jan/)).toBeNull();
+    expect(cell(monthCells(container), 3, 1)).toHaveAttribute('readonly');
+    expect(cell(monthCells(container), 1, 1)).not.toHaveAttribute('readonly');
+
+    server.items[2].committed = '950';
+    changedByOthers.add(server.items);
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.keepTheirs/ }));
+    await waitFor(() => expect(cell(monthCells(container), 3, 1)).toHaveValue('950'));
+    await settle();
+    expect(cell(monthCells(container), 1, 1)).toHaveValue('111');
+    expect(await flush(ref)).toBe(true);
+    expect(bulkCalls()).toHaveLength(2);
+  });
+
+  it('a tab change keeps the waiting choice: the tab comes back with the banner and the user\'s value', async () => {
+    setupApi({ grain: 'monthly' });
+    refuseBulk((body, call) => (call === 1 ? marchRefused() : null));
+    const held = { current: null } as React.MutableRefObject<HeldBudgetChoices | null>;
+    const first = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { held });
+    await waitForAmounts();
+    fireEvent.change(cell(monthCells(first.container), 3, 1), { target: { value: '450' } });
+    expect(await flush(first.ref)).toBe(false);
+    await screen.findByRole('region');
+
+    // A move that keeps the line (another tab) is not stopped by the choice.
+    let moved = false;
+    await act(async () => { moved = await first.ref.current!.flush({ ignoreHeld: true }); });
+    expect(moved).toBe(true);
+    expect(first.ref.current!.waitingColumns()).toEqual(['Revision']);
+    first.unmount();
+    expect(held.current?.labels).toEqual(['Revision']);
+
+    const again = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient, { held });
+    const banner = await screen.findByRole('region');
+    expect(within(banner).getByText('Mar 950')).toBeInTheDocument();
+    await waitFor(() => expect(cell(monthCells(again.container), 3, 1)).toHaveValue('450'));
+    expect(cell(monthCells(again.container), 3, 1)).toHaveAttribute('readonly');
+    expect(again.ref.current!.waitingColumns()).toEqual(['Revision']);
+    expect(await flush(again.ref)).toBe(false);
+
+    fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
+    expect(bulkCalls()[1][1].base).toEqual({ months: [{ period: period(3), committed: '950.00' }] });
+  });
+
+  it('the spread panel is read-only while its column waits for a choice', async () => {
+    setupApi({ grain: 'monthly' });
+    const theirs = twelve('1000.00');
+    theirs[2] = '1100.00';
+    refuseBulk((body, call) => (call === 1 ? columnConflict('planned', theirs, { periods: [period(3)] }) : null));
+    const { ref, container } = renderTab();
+    await waitForAmounts();
+    expect(amountField()).not.toBeDisabled();
+
+    fireEvent.change(cell(monthCells(container), 3, 0), { target: { value: '1500' } });
+    expect(await flush(ref)).toBe(false);
+    await screen.findByRole('region');
+    expect(amountField()).toBeDisabled();
+    for (const date of screen.getAllByPlaceholderText('labels.datePlaceholder')) expect(date).toBeDisabled();
+    expect(screen.getByLabelText('Apply the distribution to all columns')).toBeDisabled();
+    expect(screen.getByTestId('spread-notes')).toHaveTextContent('Choose first, above, whether to reload this column or overwrite it.');
+  });
+
+  it('a year change with a choice waiting asks, naming the column, and drops it only when confirmed', async () => {
+    setupApi({ grain: 'monthly' });
+    refuseBulk((body, call) => (call === 1 ? marchRefused() : null));
+    const onYearChange = vi.fn();
+    const { ref, container } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onYearChange, availableYears: [YEAR, YEAR + 1] });
+    await waitForAmounts();
+    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    expect(await flush(ref)).toBe(false);
+    await screen.findByRole('region');
+
+    fireEvent.click(screen.getByRole('tab', { name: String(YEAR + 1) }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Someone else changed the Revision column while you were editing it, and you have not chosen which values to keep. Change the year anyway and lose your values in Revision, or stay and choose.');
+    fireEvent.click(within(dialog).getByRole('button', { name: /cancel/i }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(onYearChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('region')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: String(YEAR + 1) }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Change the year' }));
+    await waitFor(() => expect(onYearChange).toHaveBeenCalledWith(YEAR + 1));
+    expect(bulkCalls()).toHaveLength(1);
+  });
+
+  it('a conflict answer the screen cannot read is an error the user sees; the edit stays, not saved', async () => {
+    setupApi({ grain: 'monthly' });
+    refuseBulk((body, call) => (call === 1 ? { response: { status: 409, data: { code: 'edit_conflict', conflicts: [{ field: 'nonsense' }] } } } : null));
+    const { ref, container } = renderTab();
+    await waitForAmounts();
+    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    expect(await flush(ref)).toBe(false);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('errors:edit_conflict_unreadable');
+    expect(screen.queryByRole('region')).toBeNull();
+    expect(cell(monthCells(container), 3, 1)).toHaveValue('450');
+    expect(ref.current?.isDirty()).toBe(true);
+    // The next flush sends it again.
+    expect(await flush(ref)).toBe(true);
+    expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
   });
 });

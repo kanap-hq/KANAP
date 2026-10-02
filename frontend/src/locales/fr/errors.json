@@ -29,5 +29,6 @@
   "retry": "Une autre modification des mêmes données a été enregistrée au même moment, celle-ci n'est donc pas passée. Réessayez.",
   "busy": "Ces données sont occupées par une autre opération. Réessayez dans quelques secondes.",
   "notSavedYet": "Votre dernière modification n'est pas encore enregistrée, car le serveur est occupé. Elle reste sur cette page et sera renvoyée avec votre prochaine modification.",
-  "edit_conflict": "Une autre personne a modifié ce champ pendant que vous le modifiiez. Choisissez la valeur à garder."
+  "edit_conflict": "Une autre personne a modifié ce champ pendant que vous le modifiiez. Choisissez la valeur à garder.",
+  "edit_conflict_unreadable": "Une autre personne a modifié ce que vous enregistriez, et sa réponse n'a pas pu être lue. Vos valeurs restent à l'écran, pas encore enregistrées."
 }

@@ -631,7 +631,10 @@
     "leaveMessage": "Certaines de vos modifications n'ont pas pu être enregistrées. Quittez quand même et perdez-les, ou restez sur cette page et réessayez.",
     "leaveConfirm": "Quitter sans enregistrer",
     "leaveConflictMessage": "Une autre personne a modifié un champ que vous modifiiez, et vous n'avez pas encore choisi la valeur à garder. Quittez quand même et perdez votre valeur, ou restez pour choisir.",
-    "leaveConflictOtherMessage": "Une autre personne a modifié un champ que vous modifiiez sur {{items}}, et vous n'avez pas encore choisi la valeur à garder. Quittez quand même et perdez votre valeur, ou restez pour choisir."
+    "leaveConflictOtherMessage": "Une autre personne a modifié un champ que vous modifiiez sur {{items}}, et vous n'avez pas encore choisi la valeur à garder. Quittez quand même et perdez votre valeur, ou restez pour choisir.",
+    "leaveColumnsMessage_one": "Une autre personne a modifié la colonne {{columns}} pendant que vous la modifiiez, et vous n'avez pas choisi quelles valeurs garder. Quitter quand même et perdre vos valeurs de {{columns}}, ou rester et choisir.",
+    "leaveColumnsMessage_other": "Une autre personne a modifié les colonnes {{columns}} pendant que vous les modifiiez, et vous n'avez pas choisi quelles valeurs garder. Quitter quand même et perdre vos valeurs dans ces colonnes, ou rester et choisir.",
+    "leaveAllocationMessage": "Une autre personne a modifié la ventilation pendant que vous la modifiiez, et vous n'avez pas choisi laquelle garder. Quitter quand même et perdre votre ventilation, ou rester et choisir."
   },
   "editConflict": {
     "title_one": "Une autre personne a modifié un champ que vous modifiiez",
@@ -693,7 +696,9 @@
       "changedByYouOn": "Vous avez modifié cette ventilation dans une autre fenêtre le {{date}} à {{time}}.",
       "changedByYou": "Vous avez modifié cette ventilation dans une autre fenêtre.",
       "keepTheirs": "Recharger la ventilation",
-      "applyMine": "Écraser"
-    }
+      "applyMine": "Écraser",
+      "yearChange": "Une autre personne a modifié la ventilation pendant que vous la modifiiez, et vous n'avez pas choisi laquelle garder. Changer d'année quand même et perdre votre ventilation, ou rester et choisir."
+    },
+    "yearChangeConfirm": "Changer d'année"
   }
 }

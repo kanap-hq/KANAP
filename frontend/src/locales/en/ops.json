@@ -1199,7 +1199,10 @@
       "waiting": "Choose first, above, whether to reload this column or overwrite it.",
       "yearTotal": "{{amount}} for the year",
       "yearTotalLines_one": "{{amount}} for the year, {{count}} line",
-      "yearTotalLines_other": "{{amount}} for the year, {{count}} lines"
+      "yearTotalLines_other": "{{amount}} for the year, {{count}} lines",
+      "yearChange_one": "Someone else changed the {{columns}} column while you were editing it, and you have not chosen which values to keep. Change the year anyway and lose your values in {{columns}}, or stay and choose.",
+      "yearChange_other": "Someone else changed the {{columns}} columns while you were editing them, and you have not chosen which values to keep. Change the year anyway and lose your values in these columns, or stay and choose.",
+      "yearChangeConfirm": "Change the year"
     }
   }
 }

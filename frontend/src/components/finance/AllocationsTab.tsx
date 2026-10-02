@@ -20,6 +20,9 @@ import { allocationsSnapshotKey } from './allocationsCache';
 import { useAuth } from '../../auth/AuthContext';
 import EditConflictBanner from '../workspace/EditConflictBanner';
 import { editConflictsOf, type ConflictChoice, type EditConflict } from '../../hooks/editConflicts';
+import { useKanapDialogs } from '../design';
+import { unreadableConflict } from './budgetConflicts';
+import type { HeldAllocationChoice } from './heldChoices';
 
 type PickerOption = { id: string; label: string };
 
@@ -90,7 +93,13 @@ function InlinePicker({
   );
 }
 
-export type AllocationsTabHandle = { flush: () => Promise<boolean>; isDirty: () => boolean };
+export type AllocationsTabHandle = {
+  /** Saves what can go; false while a choice waits, unless `ignoreHeld` (a move that keeps the line and its choice). */
+  flush: (options?: { ignoreHeld?: boolean }) => Promise<boolean>;
+  isDirty: () => boolean;
+  /** True while the allocation waits for the user's choice (for the leave warning). */
+  hasWaitingChoice: () => boolean;
+};
 
 type Props = {
   id: string;
@@ -99,6 +108,8 @@ type Props = {
   availableYears?: number[];
   onYearChange: (y: number) => void;
   config: FinanceModuleConfig;
+  /** The line's choice kept by the item page while the user is on another tab (`heldChoices.ts`). */
+  held?: React.MutableRefObject<HeldAllocationChoice | null>;
 };
 
 type Method = 'default' | 'headcount' | 'it_users' | 'turnover' | 'manual_company' | 'manual_department' | 'manual_pct';
@@ -166,10 +177,11 @@ function withStored(version: Version, answer: AllocationsAnswer): Version {
 const keyOf = (companyId: string | null, departmentId: string | null) => `${companyId ?? ''}|${departmentId ?? ''}`;
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config }, ref) {
+export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config, held }, ref) {
   const { t } = useTranslation(['ops', 'common']);
   const { defaultColumn } = useBudgetColumns();
   const { profile } = useAuth();
+  const dialogs = useKanapDialogs();
 
   const queryClient = useQueryClient();
   const [error, setError] = React.useState<string | null>(null);
@@ -218,6 +230,11 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   const [conflict, setConflict] = React.useState<AllocationConflict | null>(null);
   const conflictRef = React.useRef<AllocationConflict | null>(null);
   const setWaitingConflict = (next: AllocationConflict | null) => { conflictRef.current = next; setConflict(next); };
+  // The choice this tab left waiting when the user went to another tab of the line: given back once
+  // the stored allocation is on screen.
+  const restoreRef = React.useRef<HeldAllocationChoice | null>(
+    held?.current && held.current.lineId === id && held.current.year === year ? held.current : null,
+  );
 
   const autosave = useAutosave({
     onError: (e) => setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.allocations.failedToSave`))),
@@ -237,6 +254,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
 
   // Latest-value refs for the debounced persist.
   const methodRef = React.useRef(method); methodRef.current = method;
+  const yearRef = React.useRef(year); yearRef.current = year;
   const driverRef = React.useRef(driver); driverRef.current = driver;
   const rowsRef = React.useRef(rows); rowsRef.current = rows;
   const versionRef = React.useRef(version); versionRef.current = version;
@@ -312,6 +330,17 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     } else {
       setRows([]);
     }
+    // The user's allocation and its waiting choice, kept while they were on another tab of the line.
+    const restore = restoreRef.current;
+    restoreRef.current = null;
+    if (restore) {
+      setMethod(restore.method as Method);
+      setDriver(restore.driver as Driver);
+      setRows(restore.rows.map((row) => ({ ...row })));
+      setWaitingConflict(restore.conflict);
+    }
+    // setWaitingConflict only sets a ref and state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Before paint: a cached allocation shows on the first frame, never an empty table first.
   React.useLayoutEffect(() => {
@@ -354,20 +383,60 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
       if (refused) {
         const data = (e as { response?: { data?: { base_signature?: unknown } } }).response?.data;
         setWaitingConflict({ entry: refused, signature: typeof data?.base_signature === 'string' ? data.base_signature : null, error: e });
+        throw e;
       }
-      throw e;
+      // A conflict answer the screen cannot read: an error the user sees, the allocation kept on screen.
+      throw unreadableConflict(e) ?? e;
     }
   }, [ensureVersion, keepSaved]);
 
   const scheduleSave = React.useCallback(() => { autosave.schedule(persist); }, [autosave, persist]);
 
-  useImperativeHandle(ref, () => ({ flush: () => autosave.flush(), isDirty: () => autosave.isBusy() }), [autosave]);
+  useImperativeHandle(ref, () => ({
+    flush: (options) => autosave.flush(options),
+    isDirty: () => autosave.isBusy(),
+    hasWaitingChoice: () => !!conflictRef.current || !!restoreRef.current,
+  }), [autosave]);
 
-  // A choice waiting keeps the year: its allocation belongs to this one.
+  // Leaving the tab with a choice waiting (another tab of the line): the item page keeps it for the line.
+  React.useEffect(() => {
+    if (held?.current?.lineId === id) held.current = null;
+    return () => {
+      const waiting = conflictRef.current;
+      if (!held) return;
+      // Left before the allocation was on screen again: the choice stays as it was kept.
+      if (!waiting) {
+        if (restoreRef.current) held.current = restoreRef.current;
+        return;
+      }
+      held.current = {
+        lineId: id,
+        year: yearRef.current,
+        conflict: waiting,
+        method: methodRef.current,
+        driver: driverRef.current,
+        rows: rowsRef.current.map((row) => ({ ...row })),
+      };
+    };
+    // Mount and unmount only: the refs hold the latest state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // A choice waiting asks before the year changes: the allocation waiting is dropped.
   const handleYearChange = React.useCallback(async (y: number) => {
-    if (!(await autosave.flush()) && conflictRef.current) return;
+    if (!(await autosave.flush()) && conflictRef.current) {
+      const change = await dialogs.confirm({
+        title: t('common:autosave.leaveTitle'),
+        message: t('common:editConflict.allocation.yearChange'),
+        confirmLabel: t('common:editConflict.yearChangeConfirm'),
+        intent: 'danger',
+      });
+      if (!change) return;
+      setWaitingConflict(null);
+      autosave.discard();
+    }
     onYearChange(y);
-  }, [autosave, onYearChange]);
+  }, [autosave, onYearChange, dialogs, t]);
 
   // The user's choice after a refused save (lot 3E): « Overwrite » sends their allocation again over the
   // stored one; « Reload the allocation » shows the stored one and drops theirs.

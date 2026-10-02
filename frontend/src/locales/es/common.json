@@ -631,7 +631,10 @@
     "leaveMessage": "Algunos de sus cambios no se han podido guardar. Salga de todos modos y piérdalos, o quédese en esta página y vuelva a intentarlo.",
     "leaveConfirm": "Salir sin guardar",
     "leaveConflictMessage": "Otra persona modificó un campo que usted estaba editando y aún no ha elegido qué valor conservar. Salga de todos modos y pierda su valor, o quédese y elija.",
-    "leaveConflictOtherMessage": "Otra persona modificó un campo que usted estaba editando en {{items}} y aún no ha elegido qué valor conservar. Salga de todos modos y pierda su valor, o quédese y elija."
+    "leaveConflictOtherMessage": "Otra persona modificó un campo que usted estaba editando en {{items}} y aún no ha elegido qué valor conservar. Salga de todos modos y pierda su valor, o quédese y elija.",
+    "leaveColumnsMessage_one": "Otra persona modificó la columna {{columns}} mientras usted la editaba, y no ha elegido qué valores conservar. Salir de todos modos y perder sus valores de {{columns}}, o quedarse y elegir.",
+    "leaveColumnsMessage_other": "Otra persona modificó las columnas {{columns}} mientras usted las editaba, y no ha elegido qué valores conservar. Salir de todos modos y perder sus valores en estas columnas, o quedarse y elegir.",
+    "leaveAllocationMessage": "Otra persona modificó la asignación mientras usted la editaba, y no ha elegido cuál conservar. Salir de todos modos y perder su asignación, o quedarse y elegir."
   },
   "editConflict": {
     "title_one": "Otra persona modificó un campo que usted estaba editando",
@@ -693,7 +696,9 @@
       "changedByYouOn": "Usted modificó esta asignación en otra ventana el {{date}} a las {{time}}.",
       "changedByYou": "Usted modificó esta asignación en otra ventana.",
       "keepTheirs": "Recargar la asignación",
-      "applyMine": "Sobrescribir"
-    }
+      "applyMine": "Sobrescribir",
+      "yearChange": "Otra persona modificó la asignación mientras usted la editaba, y no ha elegido cuál conservar. Cambiar de año de todos modos y perder su asignación, o quedarse y elegir."
+    },
+    "yearChangeConfirm": "Cambiar de año"
   }
 }

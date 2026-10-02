@@ -86,13 +86,35 @@ vi.mock('./workspace/CapexMetadataBar', () => ({
 }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/finance/BudgetTab', () => ({ default: () => null }));
-vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
+// The Allocations tab stands in with its handle and the line's held choice (lot 3E).
+vi.mock('../../components/finance/AllocationsTab', async () => {
+  const React = await import('react');
+  type Held = { current: { lineId: string } | null };
+  const AllocationsTabStandIn = React.forwardRef(({ id, held }: { id: string; held?: Held }, ref) => {
+    const waiting = React.useRef(held?.current?.lineId === id);
+    const [, redraw] = React.useState(0);
+    React.useEffect(() => {
+      if (held?.current?.lineId === id) held.current = null;
+      return () => {
+        if (held && waiting.current) held.current = { lineId: id } as never;
+      };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    React.useImperativeHandle(ref, () => ({
+      flush: async (options?: { ignoreHeld?: boolean }) => !!options?.ignoreHeld || !waiting.current,
+      isDirty: () => waiting.current,
+      hasWaitingChoice: () => waiting.current,
+    }));
+    return <button type="button" onClick={() => { waiting.current = true; redraw((n) => n + 1); }}>allocation refused</button>;
+  });
+  return { default: AllocationsTabStandIn };
+});
 vi.mock('./editors/RelationsPanel', () => ({ default: () => null }));
 vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 
 import api from '../../api';
 import CapexItemPage from './CapexItemPage';
 import { resetSharedPatchBuffers } from '../../hooks/patchBuffer';
+import { confirmLeave } from '../../hooks/leaveGuard';
 import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 
 const mocked = api as unknown as {
@@ -662,5 +684,26 @@ describe('CapexItemPage edit conflicts (lot 3C)', () => {
     await waitFor(() => expect(stored.cost_center_id).toBeNull());
     expect(screen.queryByTestId('edit-conflict-cost_center_id')).toBeNull();
     expect(stored.notes).toBe('Notes from Marie');
+  });
+
+  it('an allocation waiting for a choice: leaving the line names it in the warning', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[`/ops/capex/${ITEM_ID}/allocations`]}>
+            <Routes><Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} /></Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'allocation refused' }));
+    dialogs.confirm.mockResolvedValueOnce(false);
+    let left = true;
+    await act(async () => { left = await confirmLeave(); });
+    expect(left).toBe(false);
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'common:autosave.leaveTitle', message: 'common:autosave.leaveAllocationMessage',
+    }));
   });
 });

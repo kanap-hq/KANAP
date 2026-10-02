@@ -78,3 +78,19 @@ export function centsByColumn(
   }
   return result;
 }
+
+/** The code of a 409 `edit_conflict` answer whose details could not be read: an error the user sees. */
+export const UNREADABLE_CONFLICT_CODE = 'edit_conflict_unreadable';
+
+/**
+ * A 409 `edit_conflict` answer the screen cannot read (no column, no allocation it knows) becomes a
+ * plain error: the autosave reports it and the edits stay on screen, not saved, instead of waiting
+ * silently for a choice nobody can make. Null for any other error.
+ */
+export function unreadableConflict(error: unknown): Error | null {
+  const response = (error as { response?: { status?: number; data?: { code?: unknown } } } | null)?.response;
+  if (response?.status !== 409 || response.data?.code !== EDIT_CONFLICT_CODE) return null;
+  return Object.assign(new Error('The answer to the save could not be read.'), {
+    response: { status: 409, data: { code: UNREADABLE_CONFLICT_CODE } },
+  });
+}

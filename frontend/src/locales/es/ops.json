@@ -1199,7 +1199,10 @@
       "waiting": "Elija primero, arriba, si recarga esta columna o la sobrescribe.",
       "yearTotal": "{{amount}} en el año",
       "yearTotalLines_one": "{{amount}} en el año, {{count}} línea",
-      "yearTotalLines_other": "{{amount}} en el año, {{count}} líneas"
+      "yearTotalLines_other": "{{amount}} en el año, {{count}} líneas",
+      "yearChange_one": "Otra persona modificó la columna {{columns}} mientras usted la editaba, y no ha elegido qué valores conservar. Cambiar de año de todos modos y perder sus valores de {{columns}}, o quedarse y elegir.",
+      "yearChange_other": "Otra persona modificó las columnas {{columns}} mientras usted las editaba, y no ha elegido qué valores conservar. Cambiar de año de todos modos y perder sus valores en estas columnas, o quedarse y elegir.",
+      "yearChangeConfirm": "Cambiar de año"
     }
   }
 }
