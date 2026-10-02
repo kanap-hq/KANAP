@@ -5,9 +5,11 @@
 // browser sends them (parallel requests in parallel, waterfalls in sequence,
 // at most 6 connections per virtual user like HTTP/1.1 in a browser).
 // The patterns come from the frontend code; see scripts/perf/README.md.
+// `--list capex` replays the CAPEX list instead: its list actions and the
+// list side of the navigation (ids, neighbours), no workspace.
 //
-//   node scripts/perf/bench.mjs single --config <cfg.json> --out <file.json>
-//   node scripts/perf/bench.mjs load   --config <cfg.json> --vus 10 --duration 240 --out <file.json>
+//   node scripts/perf/bench.mjs single --config <cfg.json> --out <file.json> [--list capex]
+//   node scripts/perf/bench.mjs load   --config <cfg.json> --vus 10 --duration 240 --out <file.json> [--list capex]
 //
 // cfg.json: { "baseUrl": "...", "admin": {"email","password"}, "members": [{"email","password"}, ...],
 //             "pg": { "host", "port", "user", "password", "database", "appName" }, "container": "kanap-perf-api" }
@@ -17,7 +19,7 @@ import { execFile } from 'node:child_process';
 import { spawn } from 'node:child_process';
 import { createClient, percentile } from './lib/http.mjs';
 
-const args = { mode: process.argv[2], config: '', out: '', vus: 1, duration: 240, ramp: 30, thinkMin: 2, thinkMax: 5, seed: 7, year: new Date().getFullYear(), timeout: 60, abortErrorRate: 0.2, repeat: 10 };
+const args = { mode: process.argv[2], config: '', out: '', vus: 1, duration: 240, ramp: 30, thinkMin: 2, thinkMax: 5, seed: 7, year: new Date().getFullYear(), timeout: 60, abortErrorRate: 0.2, repeat: 10, list: 'opex' };
 for (let i = 3; i < process.argv.length; i += 1) {
   const key = process.argv[i].replace(/^--/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
   if (!(key in args)) throw new Error(`Unknown argument: ${process.argv[i]}`);
@@ -32,6 +34,14 @@ const cfg = JSON.parse(readFileSync(args.config, 'utf8'));
 const Y = args.year;
 const YEARS = [Y - 1, Y, Y + 1, Y + 2].join(',');
 const DEFAULT_SORT = 'yBudget:DESC';
+// The list a run replays: its routes, reference prefix, text filter column and second sort.
+const LISTS = {
+  opex: { base: '/spend-items', ref: 'OPX', textField: 'product_name', altSort: 'item_number:ASC' },
+  // The CAPEX page loads no user list; its second sort is an enum in business order (decision Q4).
+  capex: { base: '/capex-items', ref: 'CPX', textField: 'description', altSort: 'priority:ASC' },
+};
+if (!(args.list in LISTS)) throw new Error(`--list: opex or capex, not ${args.list}`);
+const LIST = LISTS[args.list];
 const log = (m) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`);
 
 // ── Seeded random per virtual user ─────────────────────────────────────────
@@ -118,22 +128,26 @@ class VirtualUser {
   // ── List: request builders (OpexListPage.tsx + ServerDataGrid.tsx) ───────
   filtersParam() { return Object.keys(this.list.filters).length ? JSON.stringify(this.list.filters) : undefined; }
   summaryName() {
+    if (args.list !== 'opex') return `GET ${LIST.base}/summary`;
     const sqlSort = !/^y/.test(this.list.sort) && !this.list.q && Object.keys(this.list.filters).every((k) => ['product_name', 'description', 'currency', 'notes', 'status', 'run_build'].includes(k));
     return `GET /spend-items/summary [${sqlSort ? 'sql path' : 'memory path'}]`;
   }
   page(n) {
-    return this.get(this.summaryName(), `/spend-items/summary${qs({ page: n, limit: 50, sort: this.list.sort, years: YEARS, filters: this.filtersParam(), status: this.list.status, q: this.list.q })}`);
+    return this.get(this.summaryName(), `${LIST.base}/summary${qs({ page: n, limit: 50, sort: this.list.sort, years: YEARS, filters: this.filtersParam(), status: this.list.status, q: this.list.q })}`);
   }
   totals() {
-    return this.get('GET /spend-items/summary/totals', `/spend-items/summary/totals${qs({ q: this.list.q, filters: this.filtersParam(), status: this.list.status })}`);
+    return this.get(`GET ${LIST.base}/summary/totals`, `${LIST.base}/summary/totals${qs({ q: this.list.q, filters: this.filtersParam(), status: this.list.status })}`);
   }
   filterValues(field) {
     const filters = { ...this.list.filters };
     delete filters[field];
-    return this.get(`GET /spend-items/summary/filter-values [${field}]`, `/spend-items/summary/filter-values${qs({ fields: field, years: YEARS, q: this.list.q, filters: Object.keys(filters).length ? JSON.stringify(filters) : undefined, status: this.list.status })}`);
+    return this.get(`GET ${LIST.base}/summary/filter-values [${field}]`, `${LIST.base}/summary/filter-values${qs({ fields: field, years: YEARS, q: this.list.q, filters: Object.keys(filters).length ? JSON.stringify(filters) : undefined, status: this.list.status })}`);
   }
   summaryIds() {
-    return this.get('GET /spend-items/summary/ids', `/spend-items/summary/ids${qs({ sort: this.list.sort, q: this.list.q, filters: this.filtersParam(), status: this.list.status })}`);
+    return this.get(`GET ${LIST.base}/summary/ids`, `${LIST.base}/summary/ids${qs({ sort: this.list.sort, q: this.list.q, filters: this.filtersParam(), status: this.list.status })}`);
+  }
+  neighbors(ref) {
+    return this.get(`GET ${LIST.base}/summary/neighbors`, `${LIST.base}/summary/neighbors${qs({ id: ref, sort: this.list.sort, q: this.list.q, filters: this.filtersParam(), status: this.list.status })}`);
   }
 
   // Grid block load + footer totals after a filter change: the filter change purges the
@@ -150,7 +164,9 @@ class VirtualUser {
     await Promise.all([
       cached(this, 'budget-columns', 300_000, () => this.get('GET /budget-columns', '/budget-columns')),
       cached(this, 'analytics-axes', 300_000, () => this.get('GET /analytics-axes', '/analytics-axes')),
-      cached(this, 'users-lookup', 30_000, () => this.get('GET /users?status=enabled&limit=1000 (list page)', '/users?status=enabled&limit=1000')),
+      ...(args.list === 'opex'
+        ? [cached(this, 'users-lookup', 30_000, () => this.get('GET /users?status=enabled&limit=1000 (list page)', '/users?status=enabled&limit=1000'))]
+        : []),
     ]);
     // Wave 2: first block + three undeduplicated footer totals (mount effect, onGridReady
     // timeout, URL sync effect: OpexListPage.tsx:258-278, ServerDataGrid.tsx:492-511, 627-635).
@@ -158,7 +174,7 @@ class VirtualUser {
   }
 
   async sortChange() {
-    this.list.sort = this.list.sort === DEFAULT_SORT ? 'item_number:ASC' : DEFAULT_SORT;
+    this.list.sort = this.list.sort === DEFAULT_SORT ? LIST.altSort : DEFAULT_SORT;
     // Two block requests in a row + two totals (onSortChanged and the URL sync effect).
     await Promise.all([(async () => { await this.page(1); await this.page(1); })(), this.totals(), this.totals()]);
   }
@@ -182,7 +198,7 @@ class VirtualUser {
     const word = this.pick(['Licences', 'Régie', 'Support', 'Cloud', 'Sécurité']).slice(0, 5);
     const inflight = [];
     for (let i = 1; i <= word.length; i += 1) {
-      this.list.filters = { ...this.list.filters, product_name: { filter: word.slice(0, i), type: 'contains', filterType: 'text' } };
+      this.list.filters = { ...this.list.filters, [LIST.textField]: { filter: word.slice(0, i), type: 'contains', filterType: 'text' } };
       inflight.push(this.page(1), this.totals());
       await sleep(120 + this.rand() * 80);
     }
@@ -204,6 +220,19 @@ class VirtualUser {
       await this.page(n);
       await sleep(150 + this.rand() * 250);
     }
+  }
+
+  // CAPEX list (`--list capex`): the list side of opening a line (the ordered ids, uncached) and of
+  // the next line (the neighbours of one line of the first 50, without downloading every id).
+  async listIds() {
+    const res = await this.summaryIds();
+    if (res?.status === 200) this.ids = { ids: res.data?.ids ?? [], itemNumbers: res.data?.item_numbers ?? [] };
+  }
+
+  async listNeighbors() {
+    const numbers = this.ids?.itemNumbers;
+    const ref = numbers?.length ? `${LIST.ref}-${numbers[Math.floor(this.rand() * Math.min(50, numbers.length))]}` : `${LIST.ref}-${1 + Math.floor(this.rand() * 1000)}`;
+    await this.neighbors(ref);
   }
 
   async openItem(ref) {
@@ -343,11 +372,23 @@ const MIX = [
   ['field save', 'fieldSave', 11],
   ['budget cell save', 'budgetCellSave', 10],
 ];
-const MIX_TOTAL = MIX.reduce((a, m) => a + m[2], 0);
+// CAPEX list: the list actions with their OPEX weights, and the list side of the navigation.
+const MIX_CAPEX = [
+  ['list open', 'listOpen', 14],
+  ['sort change', 'sortChange', 8],
+  ['set filter open + 3 clicks', 'setFilter', 8],
+  ['column text filter (typed)', 'textFilter', 7],
+  ['quick search', 'quickSearch', 10],
+  ['scroll 10 blocks', 'scroll', 6],
+  ['open an item (ordered ids)', 'listIds', 16],
+  ['next (neighbours)', 'listNeighbors', 10],
+];
+const RUN_MIX = args.list === 'capex' ? MIX_CAPEX : MIX;
+const MIX_TOTAL = RUN_MIX.reduce((a, m) => a + m[2], 0);
 function pickScenario(rand) {
   let r = rand() * MIX_TOTAL;
-  for (const m of MIX) { r -= m[2]; if (r <= 0) return m; }
-  return MIX[0];
+  for (const m of RUN_MIX) { r -= m[2]; if (r <= 0) return m; }
+  return RUN_MIX[0];
 }
 
 // ── Server-side sampling ───────────────────────────────────────────────────
@@ -472,6 +513,23 @@ async function single() {
       results[`${label}: ${name}`] = { ...stats(ms.map((v) => Math.round(v))), bytes, status };
       log(`${label}: ${name} → p50 ${Math.round(percentile([...ms].sort((a, b) => a - b), 50))} ms, ${bytes} B, ${status}`);
     };
+    if (args.list === 'capex') {
+      const page = (params) => `/capex-items/summary${qs({ page: 1, limit: 50, years: YEARS, status: 'enabled', ...params })}`;
+      await sample('capex summary default sort (yBudget:DESC)', page({ sort: DEFAULT_SORT }));
+      await sample('capex summary, grid rows (shape=grid)', page({ sort: DEFAULT_SORT, shape: 'grid' }));
+      await sample('capex summary sort priority:ASC (Q4)', page({ sort: 'priority:ASC' }));
+      await sample('capex summary sort item_number:ASC', page({ sort: 'item_number:ASC' }));
+      await sample('capex summary quick search "Licences"', page({ sort: DEFAULT_SORT, q: 'Licences' }));
+      await sample('capex summary, set filter paying company (2 values)', page({ sort: DEFAULT_SORT, filters: JSON.stringify({ paying_company_name: { filterType: 'set', values: ['Perf Groupe SA', 'Perf UK Ltd'] } }) }));
+      await sample('capex summary/totals', `/capex-items/summary/totals${qs({ status: 'enabled' })}`);
+      await sample('capex summary/filter-values paying_company_name', `/capex-items/summary/filter-values${qs({ fields: 'paying_company_name', years: YEARS, status: 'enabled' })}`);
+      await sample('capex summary/filter-values priority', `/capex-items/summary/filter-values${qs({ fields: 'priority', years: YEARS, status: 'enabled' })}`);
+      await sample('capex summary/ids default sort', `/capex-items/summary/ids${qs({ sort: DEFAULT_SORT, status: 'enabled' })}`);
+      await sample('capex summary/neighbors CPX-500', `/capex-items/summary/neighbors${qs({ id: 'CPX-500', sort: DEFAULT_SORT, status: 'enabled' })}`);
+      await sample('health (trivial, tenancy query only)', '/health');
+      vu.client.close();
+      continue;
+    }
     await sample('summary default sort (yBudget:DESC)', `/spend-items/summary${qs({ page: 1, limit: 50, sort: DEFAULT_SORT, years: YEARS, status: 'enabled' })}`);
     await sample('summary SQL sort (item_number:ASC)', `/spend-items/summary${qs({ page: 1, limit: 50, sort: 'item_number:ASC', years: YEARS, status: 'enabled' })}`);
     await sample('summary/totals', `/spend-items/summary/totals${qs({ status: 'enabled' })}`);
