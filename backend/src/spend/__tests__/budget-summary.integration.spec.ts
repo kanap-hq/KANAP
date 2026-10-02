@@ -396,6 +396,57 @@ async function testAiAggregateSumsInCents(kind: Kind) {
 }
 
 /**
+ * The list engine's aggregate (lot 2B, PR D) on the five lines, numbers
+ * worked out by hand: a top 2 of the lines by Y Budget with the others and
+ * the total (Alpha 1 200, Bravo 600, the rest 0.30), a variance between two
+ * years with its gross decreases and increases, kept by a condition (the
+ * total still covers every line), a mean, FTE unknown on every line, and the
+ * page's default scope (the window: Delta, ended two years ago, is out).
+ */
+async function testAggregate(kind: Kind) {
+  await withFixture(kind, async (runner, _fixture, svc) => {
+    const opts = { manager: runner.manager };
+    const name = kind === 'opex' ? 'product_name' : 'description';
+    const top: any = await svc.summaryAggregate(ALL, {
+      groupBy: [name],
+      measures: [{ id: 'budget', fn: 'sum', field: 'yBudget' }],
+      order: [{ by: 'measure', id: 'budget', dir: 'DESC' }],
+      limit: 2,
+      others: true,
+    }, opts);
+    assert.deepEqual(top.groups.map((g: any) => [g.keys[0], g.count, g.values.budget]), [['Alpha line', 1, 1200], ['Bravo line', 1, 600]], `${kind}: top 2 lines`);
+    assert.deepEqual([top.others.count, top.others.values.budget], [3, 0.3], `${kind}: the others add up the rest`);
+    assert.deepEqual([top.total.count, top.total.values.budget, top.groupCount, top.reportingCurrency], [5, 1800.3, 5, 'EUR'], `${kind}: the total of every line`);
+
+    // Revision of Y against Revision of Y-2: Alpha 0.10 - 36, Bravo 0.10 - 12, Charlie 0.10, Delta and Echo 0.
+    const variance = (id: string, part?: 'positive' | 'negative') => ({ id, fn: 'sum' as const, field: 'yRevision', minus: 'yMinus2Revision', ...(part ? { part } : {}) });
+    const down: any = await svc.summaryAggregate(ALL, {
+      groupBy: [name],
+      measures: [variance('delta'), variance('up', 'positive'), variance('down', 'negative')],
+      having: [{ measure: 'delta', op: 'lt', value: 0 }],
+      order: [{ by: 'measure', id: 'delta', dir: 'ASC' }],
+    }, opts);
+    assert.deepEqual(down.groups.map((g: any) => [g.keys[0], g.values.delta]), [['Alpha line', -35.9], ['Bravo line', -11.9]], `${kind}: the decreases, largest first`);
+    assert.deepEqual([down.groupCount, down.total.count, down.total.values], [2, 5, { delta: -47.7, up: 0.1, down: -47.8 }], `${kind}: the net and gross variance of every line`);
+
+    const byStatus: any = await svc.summaryAggregate(ALL, {
+      groupBy: ['status'],
+      measures: [{ id: 'mean', fn: 'avg', field: 'yRevision' }, { id: 'fte', fn: 'sum', field: 'fte_yBudget' }],
+    }, opts);
+    assert.deepEqual(
+      byStatus.groups.map((g: any) => [g.keys[0], g.count, g.values.mean, g.values.fte, g.unknown.fte]),
+      [['enabled', 3, 0.1, null, 3], ['disabled', 2, 0, null, 2]],
+      `${kind}: count first; a mean to the cent; FTE unknown on every line`,
+    );
+
+    const window: any = await svc.summaryAggregate({}, { groupBy: [], measures: [] }, opts);
+    const page = await svc.summary({ limit: 1 }, opts);
+    assert.deepEqual([window.total.count, window.groups.length], [page.total, 1], `${kind}: without a status, the page's lines`);
+    assert.equal(page.total, 4, `${kind}: the window leaves out Delta, ended two years ago`);
+  });
+}
+
+/**
  * Decision Q4 (lot 2B, PR C): the CAPEX priority, investment type and PPE type
  * sort in their business order (the declaration order of their enums), with
  * or without a search, in the page, the ids and the AI list (before: by code,
@@ -929,6 +980,7 @@ void runSpecs('budget-summary.integration.spec', [
     [`text filter on a date (${kind})`, () => testTextFilterOnADate(kind)],
     [`several linked projects (${kind})`, () => testSeveralLinkedProjects(kind)],
     [`AI aggregate sums in cents (${kind})`, () => testAiAggregateSumsInCents(kind)],
+    [`aggregate: top N, others, variance, window (${kind})`, () => testAggregate(kind)],
     [`cost center and run or build (${kind})`, () => testCostCenterFields(kind)],
     [`budget holder from the cost center (${kind})`, () => testBudgetHolder(kind)],
     [`analytics dimensions (${kind})`, () => testAnalyticsDimensions(kind)],

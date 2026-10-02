@@ -112,6 +112,26 @@ export function sumJsCents(r: string): string {
     + coalesce(sum(round(((${r}) / 100)::text::numeric, 2) * 100) FILTER (WHERE abs(${r}) >= 1e15), 0))`;
 }
 
+/**
+ * The cents JavaScript keeps of one converted amount `r` (a float8 holding an
+ * integer), `toCents(r / 100)`, as a scale-0 `numeric`: `r` itself below
+ * 10^15, else the shortest decimal PostgreSQL prints for `r / 100` rounded to
+ * the cent, as `sumJsCents` reads each term.
+ */
+export function jsCents(r: string): string {
+  return `(CASE WHEN abs(${r}) < 1e15 THEN (${r})::bigint::numeric ELSE round(round(((${r}) / 100)::text::numeric, 2) * 100) END)`;
+}
+
+/**
+ * `divRoundHalfAway(n, d)` of `common/decimal.ts` for an integer `numeric`
+ * `n` and a positive integer `d`: the quotient rounded once, half away from
+ * zero, in exact integer arithmetic (`div` truncates; a numeric division
+ * would round to its own scale first).
+ */
+export function divRoundHalfAway(n: string, d: string): string {
+  return `(sign(${n}) * div(2 * abs(${n}) + (${d})::numeric, 2 * (${d})::numeric))`;
+}
+
 /** The sort key of a text value: blank (null or '') last ascending, then the ICU order. */
 export function textSortKey(expr: string): string {
   return `NULLIF(${expr}, '') COLLATE ${ICU_COLLATION}`;
