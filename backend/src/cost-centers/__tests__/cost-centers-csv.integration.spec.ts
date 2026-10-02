@@ -205,6 +205,46 @@ async function testConversionInFileAgainstLines() {
   });
 }
 
+async function testEndOfValidityFormat() {
+  await withRollback(async (runner) => {
+    const { tenantId, csv, ctx } = await seed(runner, 'date');
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    const refused = await csv.importCsv({
+      file: file([
+        'SLASH;group;Slash;;;;;enabled;01/03/2027',
+        'DAY;group;Day first;;;;;enabled;31/12/2027',
+        'DOT;group;Dotted;;;;;enabled;03.01.2027',
+      ]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(refused.ok, false);
+    assert.deepEqual(refused.errors, [
+      { row: 2, message: message('01/03/2027') },
+      { row: 3, message: message('31/12/2027') },
+      { row: 4, message: message('03.01.2027') },
+    ]);
+    assert.deepEqual(await codes(runner, tenantId), []);
+
+    // A blank status skips the "enabled, but the date has passed" check, so the case still passes after 2027-03-01.
+    const accepted = await csv.importCsv({
+      file: file([
+        'BARE;group;Bare day;;;;;;2027-03-01',
+        'TS;group;Timestamp;;;;;;2027-03-01T15:04:05.000Z',
+      ]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(accepted.ok, true, JSON.stringify(accepted.errors));
+    const rows = await runner.query(
+      `SELECT code, disabled_at FROM cost_centers WHERE tenant_id = $1 ORDER BY code`,
+      [tenantId],
+    );
+    assert.deepEqual(
+      rows.map((row: { code: string; disabled_at: Date }) => [row.code, new Date(row.disabled_at).toISOString()]),
+      [['BARE', '2027-03-01T12:00:00.000Z'], ['TS', '2027-03-01T15:04:05.000Z']],
+    );
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   const failures: string[] = [];
@@ -215,6 +255,7 @@ async function main() {
       testCycleInsideTheFile,
       testExportImportIsUnchanged,
       testConversionInFileAgainstLines,
+      testEndOfValidityFormat,
     ]) {
       try {
         await test();

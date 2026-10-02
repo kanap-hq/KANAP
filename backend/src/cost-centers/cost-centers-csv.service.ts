@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
-import { isActiveAt, parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { isActiveAt, parseCsvEndOfValidity, resolveLifecycleState, StatusState } from '../common/status';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CostCenterKind } from './cost-center.entity';
 import { loadCostCenterTree } from './cost-center-tree.util';
@@ -198,7 +198,7 @@ export class CostCentersCsvService {
       const disabledAtRaw = hasDisabledAt ? cell(raw, 'disabled_at') : '';
       let disabledAt: Date | null = null;
       if (disabledAtRaw) {
-        disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? null;
+        disabledAt = attempt(() => parseCsvEndOfValidity(disabledAtRaw)) ?? null;
       }
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
       if (lifecycleConflict) rowErrors.push(lifecycleConflict);

@@ -23,6 +23,7 @@ import { assert, captureAudit, inRolledBackTransaction, Kind, noFreeze, runSpecs
 // a line repeated in the file is a row error; a CSV update moves updated_at.
 // Both types: effective_start is YYYY-MM-DD (a real day) or a row error; a
 // blank start is 1 January for a new line and keeps the stored date on an update.
+// disabled_at is YYYY-MM-DD or a full ISO timestamp; a local form is a row error.
 // CAPEX also: a line repeated in the file (same item number, or same
 // description without one) is a row error; the currency must be one of the tenant's allowed currencies
 // (OPEX's rule and message), a new line needs its paying company, and an
@@ -473,6 +474,60 @@ async function testBlankEffectiveStart(kind: Kind) {
   });
 }
 
+async function testEndOfValidityFormat(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `csv-end-${kind}`);
+    await seedCompany(runner, tenantId);
+    const svc = importer(kind);
+    const headers = svc.csvHeaders();
+    const nameColumn = kind === 'opex' ? 'product_name' : 'description';
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    const refused = await svc.importCsv(
+      {
+        file: csvFile(headers, [
+          row(kind, 'Slash', { disabled_at: '01/03/2027' }),
+          row(kind, 'Day first', { disabled_at: '31/12/2027' }),
+          row(kind, 'Dotted', { disabled_at: '03.01.2027' }),
+        ]),
+        dryRun: false,
+        userId: null,
+      },
+      { manager: runner.manager },
+    );
+    assert.equal(refused.ok, false, `${kind}: a local date is refused`);
+    assert.deepEqual(refused.errors, [
+      { row: 2, message: message('01/03/2027') },
+      { row: 3, message: message('31/12/2027') },
+      { row: 4, message: message('03.01.2027') },
+    ], `${kind}: the row error names the format`);
+    assert.equal(await count(runner, itemTable(kind), tenantId), 0, `${kind}: a refused file writes nothing`);
+
+    const accepted = await svc.importCsv(
+      {
+        file: csvFile(headers, [
+          // A blank status skips the "enabled, but the date has passed" check, so the case still passes after 2027-03-01.
+          row(kind, 'Bare day', { disabled_at: '2027-03-01', status: '' }),
+          row(kind, 'Timestamp', { disabled_at: '2027-03-01T15:04:05.000Z', status: '' }),
+        ]),
+        dryRun: false,
+        userId: null,
+      },
+      { manager: runner.manager },
+    );
+    assert.equal(accepted.ok, true, `${kind}: YYYY-MM-DD and a full timestamp import (${JSON.stringify(accepted.errors)})`);
+    const stored = Object.fromEntries(
+      (await runner.query(
+        `SELECT ${nameColumn} AS name, disabled_at FROM ${itemTable(kind)} WHERE tenant_id = $1`,
+        [tenantId],
+      )).map((entry: { name: string; disabled_at: Date }) => [entry.name, new Date(entry.disabled_at).toISOString()]),
+    );
+    assert.deepEqual(stored, {
+      'Bare day': '2027-03-01T12:00:00.000Z',
+      Timestamp: '2027-03-01T15:04:05.000Z',
+    }, `${kind}: a bare day is noon UTC and a timestamp is kept`);
+  });
+}
+
 async function testOpexCsvUpdateMovesUpdatedAt() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'csv-updated-at');
@@ -499,6 +554,7 @@ void runSpecs('csv-validation.integration.spec', [
     [`testOwnersAreCheckedBeforeWriting(${kind})`, () => testOwnersAreCheckedBeforeWriting(kind)],
     [`testBlankCurrency(${kind})`, () => testBlankCurrency(kind)],
     [`testEffectiveStartFormat(${kind})`, () => testEffectiveStartFormat(kind)],
+    [`testEndOfValidityFormat(${kind})`, () => testEndOfValidityFormat(kind)],
     [`testBlankEffectiveStart(${kind})`, () => testBlankEffectiveStart(kind)],
     [`testErrorLinesAfterBlankLines(${kind})`, () => testErrorLinesAfterBlankLines(kind)],
   ] as Array<[string, () => Promise<void>]>),

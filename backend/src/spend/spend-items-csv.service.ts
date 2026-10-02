@@ -31,7 +31,7 @@ import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { addCents, formatCents, toCents } from '../common/amount';
 import { AmountMeasure } from './amounts-write.util';
 import { writeItemCsvTotals } from './round-inputs.util';
-import { deriveStatusFromDisabledAt, parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { deriveStatusFromDisabledAt, parseCsvEndOfValidity, resolveLifecycleState, StatusState } from '../common/status';
 import { SpendItemUpsertDto } from './dto/spend-item.dto';
 import { ItemNumberService } from '../common/item-number.service';
 import { csvDateError, parseCsvDate } from './csv-date';
@@ -504,9 +504,9 @@ export class SpendItemsCsvService {
       const disabledAtRaw = (r['disabled_at'] ?? '').toString().trim();
       let disabled_at: string | null = null;
       try {
-        disabled_at = parseEndOfValidityInput(disabledAtRaw)?.toISOString() ?? null;
-      } catch {
-        errors.push({ row: line, message: `Invalid disabled_at '${disabledAtRaw}'. Use ISO date format.` });
+        disabled_at = parseCsvEndOfValidity(disabledAtRaw)?.toISOString() ?? null;
+      } catch (err) {
+        errors.push({ row: line, message: (err as Error).message });
       }
       // The status cell must agree with the date cell (not with a legacy effective_end below).
       const lifecycleConflict = csvLifecycleConflict(status, disabled_at);
@@ -514,7 +514,7 @@ export class SpendItemsCsvService {
       // Files from before the single end date carry effective_end: it fills an empty end of validity.
       if (!disabledAtRaw) {
         const legacyEnd = readDate(r['effective_end'], 'effective_end', line);
-        if (legacyEnd) disabled_at = parseEndOfValidityInput(legacyEnd)?.toISOString() ?? null;
+        if (legacyEnd) disabled_at = parseCsvEndOfValidity(legacyEnd)?.toISOString() ?? null;
       }
       const ownerItEmailRaw = (r['owner_it_email'] ?? '').toString().trim();
       const ownerBizEmailRaw = (r['owner_business_email'] ?? '').toString().trim();

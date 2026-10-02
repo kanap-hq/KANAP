@@ -18,7 +18,7 @@ import {
   CompiledCondition,
 } from '../common/ag-grid-filtering';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
-import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
+import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, parseCsvEndOfValidity, resolveLifecycleState } from '../common/status';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CompanyUpsertDto } from './dto/company.dto';
 import { createCompanyStandardCalendar } from '../working-day-profiles/company-standard-calendar';
@@ -914,12 +914,12 @@ export class CompaniesService {
         return;
       }
       if (disabledAtRaw) {
-        const parsedDisabledAt = new Date(disabledAtRaw);
-        if (Number.isNaN(parsedDisabledAt.getTime())) {
-          errors.push({ row: line, message: `Invalid disabled_at '${disabledAtRaw}'. Use ISO 8601 format.` });
+        try {
+          disabled_at_iso = parseCsvEndOfValidity(disabledAtRaw)?.toISOString() ?? null;
+        } catch (err) {
+          errors.push({ row: line, message: (err as Error).message });
           return;
         }
-        disabled_at_iso = parsedDisabledAt.toISOString();
       }
       const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
       if (lifecycleConflict) {

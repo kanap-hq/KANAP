@@ -4,7 +4,7 @@ import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
-import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { parseCsvEndOfValidity, resolveLifecycleState, StatusState } from '../common/status';
 import { mergeDaysByYear } from './working-day-profiles.util';
 import {
   CalendarSource,
@@ -304,7 +304,7 @@ export class WorkingDayProfilesCsvService {
     }
     const disabledAtRaw = hasDisabledAt ? cell(raw, 'disabled_at') : '';
     let disabledAt: Date | null | undefined;
-    if (disabledAtRaw) disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? undefined;
+    if (disabledAtRaw) disabledAt = attempt(() => parseCsvEndOfValidity(disabledAtRaw)) ?? undefined;
 
     const year = cell(raw, 'year');
     const months = CALENDAR_MONTH_HEADERS.map((month) => cell(raw, month));
