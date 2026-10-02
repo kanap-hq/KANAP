@@ -2,7 +2,7 @@ import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../../data-source';
-import { formatCents, toCents } from '../../amount';
+import { centsToNumber, formatCents, toCents } from '../../amount';
 import { compileAgFilterCondition, createParamNameGenerator } from '../../ag-grid-filtering';
 import { FxRateService } from '../../../currency/fx-rate.service';
 import {
@@ -119,13 +119,20 @@ async function testFxConversionToTheCent(runner: QueryRunner) {
 }
 
 async function testCentsAsJavaScriptNumbers(runner: QueryRunner) {
-  const cents = [0n, 1n, -1n, 10n, 30n, 100n, -250n, 123456789n, 99999999999999n, ...Array.from({ length: 500 }, () => BigInt(r.int(-(10 ** 9), 10 ** 9)))];
+  const cents = [
+    0n, 1n, -1n, 10n, 30n, 100n, -250n, 123456789n, 99999999999999n, 2n ** 53n - 1n, -(2n ** 53n) + 1n, 2n ** 53n + 7n,
+    ...Array.from({ length: 500 }, () => BigInt(r.int(-(10 ** 9), 10 ** 9))),
+    ...Array.from({ length: 500 }, () => BigInt(r.int(0, 2 ** 31)) * BigInt(r.int(0, 2 ** 21)) * (r.chance(0.5) ? 1n : -1n)),
+  ];
   const rows: Array<{ t: string; n: string }> = await runner.query(
     `SELECT ${centsText('t.c')} AS t, (${centsNumber('t.c')})::text AS n FROM unnest($1::bigint[]) WITH ORDINALITY AS t(c, k) ORDER BY t.k`,
     [cents.map(String)],
   );
   cents.forEach((c, i) => {
     const number = Number(formatCents(c));
+    assert.equal(centsToNumber(c), number, `centsToNumber(${c})`);
+    // The SQL forms match below 10^15 cents (10^13 in the currency); beyond, a double no longer holds two decimals.
+    if (c >= 10n ** 15n || c <= -(10n ** 15n)) return;
     assert.equal(rows[i].t, String(number), `String of ${c} cents`);
     assert.equal(Number(rows[i].n), number, `Number of ${c} cents`);
   });

@@ -71,7 +71,7 @@ export function jsIsoString(ts: string): string {
   return `to_char(date_trunc('milliseconds', ${ts}) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
 }
 
-/** `String(n)` of a 2-decimal number held as integer cents (bigint). */
+/** `String(n)` of a 2-decimal number held as integer cents (bigint); equal below 10^15 cents, where a double still holds two decimals. */
 export function centsText(cents: string): string {
   return `trim_scale((${cents})::numeric / 100)::text`;
 }

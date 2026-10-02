@@ -11,7 +11,7 @@ import { Account } from '../accounts/account.entity';
 import { User } from '../users/user.entity';
 import { FxLookupKey, FxRateService, FxResolvedRate } from '../currency/fx-rate.service';
 import { ACTIVE_TASK_STATUSES } from '../tasks/task.entity';
-import { formatCents, toCents } from '../common/amount';
+import { centsToNumber, formatCents, toCents } from '../common/amount';
 import { normalizeAgFilterModel } from '../common/ag-grid-filtering';
 import { StatusState } from '../common/status';
 import { formatAllocationMethodLabel } from './allocation-utils';
@@ -279,7 +279,7 @@ export interface VersionTotals {
 const zeroCents = (): Cents => Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, 0n])) as Cents;
 
 export function centsToNumbers(cents: Cents): SummarySlotTotals {
-  return Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, Number(formatCents(cents[c.key]))])) as SummarySlotTotals;
+  return Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, centsToNumber(cents[c.key])])) as SummarySlotTotals;
 }
 
 /** The tenant of the request transaction; every engine query names it explicitly besides RLS. */
@@ -436,13 +436,15 @@ export async function loadVersionTotals(
 
   if (kept.length) {
     const sums: Array<Record<string, string>> = await manager.query(
-      `SELECT t.version_id, ${SUMMARY_COLUMNS.map((c) => `t.${c.measure}::text AS ${c.measure}`).join(', ')}
+      // Cents straight from the database: the stored sums have 2 decimals, and numeric to bigint rounds half
+      // away from zero like toCents would.
+      `SELECT t.version_id, ${SUMMARY_COLUMNS.map((c) => `(t.${c.measure} * 100)::bigint::text AS ${c.measure}`).join(', ')}
        FROM ${config.totalsTable} t
        WHERE t.tenant_id = $1 AND t.version_id = ANY($2::uuid[])`,
       [tenantId, kept.map((v) => v.id)],
     );
     for (const row of sums) {
-      result.cents.set(row.version_id, Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, toCents(row[c.measure])])) as Cents);
+      result.cents.set(row.version_id, Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, BigInt(row[c.measure])])) as Cents);
     }
     if (opts.fte) result.fte = await loadVersionFte(config, manager, tenantId, kept.map((v) => v.id));
   }
@@ -468,7 +470,7 @@ export async function loadVersionTotals(
     result.reporting.set(version.id, {
       cents: Object.fromEntries(SUMMARY_COLUMNS.map((c) => [
         c.key,
-        toCents(deps.fxRates.convertValue(Number(formatCents(cents[c.key])), fxRate)),
+        toCents(deps.fxRates.convertValue(centsToNumber(cents[c.key]), fxRate)),
       ])) as Cents,
       currency,
       reporting_currency: rate?.reportingCurrency ?? result.reportingCurrency,
