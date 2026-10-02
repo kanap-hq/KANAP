@@ -117,13 +117,21 @@ async function testManualPctBulkUpsert() {
       return ids.filter((id) => id.startsWith('company-')).length;
     },
   };
-  // The save locks the version before it reads or replaces the rows (two saves take turns).
+  // The save locks the line, then the version, before it reads or replaces the rows (two saves
+  // take turns; lock order of `spend/budget-locks.ts`).
   const locks: unknown[][] = [];
   const manager = {
-    query: async (sql: string, params: unknown[]) => {
-      if (!/FROM capex_versions WHERE tenant_id = \$1 AND id = \$2 FOR NO KEY UPDATE/.test(sql)) throw new Error(`unexpected query: ${sql}`);
-      locks.push(params);
-      return [{ allocation_method: 'manual_pct' }];
+    query: async (sql: string, params: any[]) => {
+      if (/SELECT capex_item_id AS item_id FROM capex_versions WHERE tenant_id = \$1 AND id = \$2$/.test(sql)) return [{ item_id: 'item-1' }];
+      if (/FROM capex_items WHERE tenant_id = \$1 AND id = \$2 FOR NO KEY UPDATE/.test(sql)) {
+        locks.push(['line', ...params]);
+        return [{ locked: 1 }];
+      }
+      if (/FROM capex_versions WHERE tenant_id = \$1 AND id = ANY\(\$2::uuid\[\]\) ORDER BY id FOR NO KEY UPDATE/.test(sql)) {
+        locks.push(['version', params[0], ...params[1]]);
+        return [{ id: params[1][0] }];
+      }
+      throw new Error(`unexpected query: ${sql}`);
     },
     getRepository: (entity: unknown) => {
       if (entity === CapexAllocation) return allocationRepo;
@@ -155,7 +163,7 @@ async function testManualPctBulkUpsert() {
   assert.deepEqual(savedRows.map((row) => row.allocation_pct), [60, 40]);
   assert.equal(auditCalls.length, 1);
   assert.equal(companyCounts[0].tenant_id, 'tenant-1', 'companies are resolved in the version\'s tenant');
-  assert.deepEqual(locks[0], ['tenant-1', 'version-1'], 'the version is locked in its tenant');
+  assert.deepEqual(locks.slice(0, 2), [['line', 'tenant-1', 'item-1'], ['version', 'tenant-1', 'version-1']], 'the line, then the version are locked in their tenant');
 
   // A company picked on two lines is one row (unique key per version, company and department), percentages added.
   savedRows.length = 0;

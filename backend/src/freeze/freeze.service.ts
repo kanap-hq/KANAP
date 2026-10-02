@@ -9,6 +9,7 @@ import { SpendVersion } from '../spend/spend-version.entity';
 import { CapexVersion } from '../capex/capex-version.entity';
 import { AmountMeasure, AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN } from '../spend/amounts-write.util';
 import { budgetColumnName, readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { lockBudgetYear, lockTenantBudgetOperations } from '../spend/budget-locks';
 
 export type FreezeColumn = 'budget' | 'revision' | 'forecast' | 'actual' | 'landing';
 export type FreezeTarget = { scope: FreezeScope; columns?: FreezeColumn[] };
@@ -84,12 +85,27 @@ export class FreezeService {
     return MEASURE_FREEZE_COLUMN[settings.default_column];
   }
 
+  /**
+   * Before the FX pin or unpin, an UPDATE of every version of the year: the
+   * lock order of a bulk budget operation (`spend/budget-locks.ts`). The
+   * tenant's budget-operations lock first (refused at once with a 409 while a
+   * column copy, an import or another freeze runs), then the year's lines and
+   * versions in id order. Without it the UPDATE locked the versions in the
+   * order it scanned them, and deadlocked with an item CSV import or a bulk
+   * line delete holding the lines in id order.
+   */
+  private async lockYearForFx(scope: 'opex' | 'capex', year: number, tenantId: string, manager: EntityManager) {
+    await lockTenantBudgetOperations(manager, tenantId);
+    await lockBudgetYear(manager, scope, tenantId, year);
+  }
+
   private async attachFxRates(scope: 'opex' | 'capex', year: number, tenantId: string, manager: EntityManager) {
     await this.fxIngestion.refreshTenant(tenantId, year, { manual: true, manager });
     const settings = await this.currencySettings.getSettings(tenantId, { manager });
     const rateSet = await this.fxRates.getLatestRateSet(tenantId, year, settings.reportingCurrency, { manager });
     if (!rateSet) return;
 
+    await this.lockYearForFx(scope, year, tenantId, manager);
     const repo = manager.getRepository(scope === 'opex' ? SpendVersion : CapexVersion);
     await repo.createQueryBuilder()
       .update()
@@ -102,6 +118,7 @@ export class FreezeService {
   }
 
   private async detachFxRates(scope: 'opex' | 'capex', year: number, tenantId: string, manager: EntityManager) {
+    await this.lockYearForFx(scope, year, tenantId, manager);
     const repo = manager.getRepository(scope === 'opex' ? SpendVersion : CapexVersion);
     await repo.createQueryBuilder()
       .update()

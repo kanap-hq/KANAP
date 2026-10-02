@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
+import { lockBudgetLine } from '../../spend/budget-locks';
 import {
   applicationParticipantCondition,
   resolveBusinessContributorScopeForUser,
@@ -359,6 +360,14 @@ export class AiRelationMutationSupportService {
     if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the target record.');
     const expectedItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     const nextItems = this.coerceRelationItems(preview.mutation_input?.next_items, 'mutation_input.next_items');
+    // An OPEX or CAPEX line is locked before its relations are compared and replaced (lock
+    // order, `spend/budget-locks.ts`): no writer of the line changes them in between.
+    if (config.sourceEntity === 'spend_items' || config.sourceEntity === 'capex_items') {
+      const scope = config.sourceEntity === 'spend_items' ? 'opex' : 'capex';
+      if (!(await lockBudgetLine(context.manager, scope, context.tenantId, preview.target_entity_id))) {
+        throw new NotFoundException(`${config.label}: the line was not found.`);
+      }
+    }
     const liveItems = await this.loadRelationItems(context, config, preview.target_entity_id);
     if (relationItemSignature(liveItems) !== relationItemSignature(expectedItems)) {
       throw new ConflictException(`${config.label} changed after the preview was created.`);

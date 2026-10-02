@@ -23,11 +23,16 @@ import { AiPolicyService } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
+import { mapDatabaseError } from '../common/filters/database-error.mapping';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
 const MAX_CONVERSATION_PREVIEWS = 50;
 const MAX_PENDING_CONVERSATION_PREVIEWS = 50;
 const EXECUTION_SAVEPOINT_NAME = 'ai_mutation_preview_execution';
+/** A preview whose data was held by another operation: nothing ran, it can be approved again. */
+const PREVIEW_DATA_BUSY_MESSAGE =
+  'The data this change writes was busy with another operation, so nothing was changed. Approve it again in a moment.';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PLAN_PLACEHOLDER_RE = /\{\{\s*([A-Za-z0-9_-]+)\.(id|ref|title)\s*\}\}/g;
 
 export type AiMutationPlanOperationInput = {
@@ -688,6 +693,47 @@ export class AiMutationPreviewService {
     return preview;
   }
 
+  /**
+   * The preview, read again under its row lock after a first read that
+   * checks it is the user's: two approvals of one preview, or an approval and
+   * a rejection, take turns, and the second finds it no longer pending, so it
+   * never executes twice (plan planning/perf-scale, lot 3B, Annexe A #24).
+   * FOR NO KEY UPDATE: the preview's key never changes, and the rows that
+   * reference it (plan steps, action requests) need not wait. The lock is
+   * taken before the execution's own locks (a budget line, then its version)
+   * and held until the request ends.
+   */
+  private async lockPreviewForUser(
+    context: AiExecutionContextWithManager,
+    previewId: string,
+  ): Promise<AiMutationPreview> {
+    const preview = await this.getPreviewForUser(context, previewId);
+    await context.manager.query(
+      'SELECT id FROM ai_mutation_previews WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE',
+      [context.tenantId, preview.id],
+    );
+    return this.getPreviewForUser(context, previewId);
+  }
+
+  /**
+   * A batch locks all its previews first, in id order, then runs them in the
+   * order given: two batches that share previews never each hold one while
+   * waiting for the other (each run also locks budget lines, after its
+   * preview). Ids that are not the user's previews (or not ids) are left to
+   * the per-preview read, which refuses them as before.
+   */
+  private async lockPreviewsInIdOrder(context: AiExecutionContextWithManager, previewIds: string[]): Promise<void> {
+    const ids = previewIds.filter((id) => UUID_RE.test(id));
+    if (ids.length < 2) return;
+    await context.manager.query(
+      `SELECT id FROM ai_mutation_previews
+        WHERE tenant_id = $1 AND user_id = $2 AND id = ANY($3::uuid[])
+        ORDER BY id
+          FOR NO KEY UPDATE`,
+      [context.tenantId, context.userId, ids],
+    );
+  }
+
   private async markPlanStepsFromExecutedPreview(
     context: AiExecutionContextWithManager,
     preview: AiMutationPreview,
@@ -900,6 +946,15 @@ export class AiMutationPreviewService {
         await queryRunner.query(`ROLLBACK TO SAVEPOINT ${EXECUTION_SAVEPOINT_NAME}`);
         preview.target_entity_id = originalTargetEntityId;
         preview.current_values = originalCurrentValues;
+        // The data was held by another operation (a lock wait that ran out, a deadlock, a
+        // statement cut short): everything it ran is rolled back to the savepoint, so the
+        // preview stays pending and can be approved again, with a plain message instead of
+        // the database's. Its plan does not move.
+        const transient = mapDatabaseError(error);
+        if (transient && (transient.code === 'busy' || transient.code === 'retry')) {
+          preview.error_message = PREVIEW_DATA_BUSY_MESSAGE;
+          return this.toPreviewDto(await repo.save(preview));
+        }
       }
       preview.status = 'failed';
       preview.approved_at = new Date();
@@ -918,7 +973,7 @@ export class AiMutationPreviewService {
     context: AiExecutionContextWithManager,
     previewId: string,
   ): Promise<AiMutationPreviewDto> {
-    const preview = await this.getPreviewForUser(context, previewId);
+    const preview = await this.lockPreviewForUser(context, previewId);
     const operation = this.operations.getOperation(preview.tool_name);
     await this.policy.assertWriteAccess(
       context,
@@ -960,7 +1015,9 @@ export class AiMutationPreviewService {
     previewIds: string[],
   ): Promise<AiMutationPreviewDto[]> {
     const results: AiMutationPreviewDto[] = [];
-    for (const previewId of this.normalizePreviewIds(previewIds)) {
+    const ids = this.normalizePreviewIds(previewIds);
+    await this.lockPreviewsInIdOrder(context, ids);
+    for (const previewId of ids) {
       results.push(await this.executePreview(context, previewId));
     }
     return results;
@@ -972,8 +1029,10 @@ export class AiMutationPreviewService {
   ): Promise<{ results: AiMutationPreviewDto[]; followUpPreviews: AiMutationPreviewDto[] }> {
     const results: AiMutationPreviewDto[] = [];
     const followUpPreviews: AiMutationPreviewDto[] = [];
-    for (const previewId of this.normalizePreviewIds(previewIds)) {
-      const preview = await this.getPreviewForUser(context, previewId);
+    const ids = this.normalizePreviewIds(previewIds);
+    await this.lockPreviewsInIdOrder(context, ids);
+    for (const previewId of ids) {
+      const preview = await this.lockPreviewForUser(context, previewId);
       const operation = this.operations.getOperation(preview.tool_name);
       await this.policy.assertWriteAccess(
         context,
@@ -1006,7 +1065,7 @@ export class AiMutationPreviewService {
     previewId: string,
   ): Promise<AiMutationPreviewDto> {
     const repo = this.getRepo(context.manager);
-    const preview = await this.getPreviewForUser(context, previewId);
+    const preview = await this.lockPreviewForUser(context, previewId);
     const operation = this.operations.getOperation(preview.tool_name);
     await this.policy.assertWriteAccess(
       context,
@@ -1050,7 +1109,9 @@ export class AiMutationPreviewService {
     previewIds: string[],
   ): Promise<AiMutationPreviewDto[]> {
     const results: AiMutationPreviewDto[] = [];
-    for (const previewId of this.normalizePreviewIds(previewIds)) {
+    const ids = this.normalizePreviewIds(previewIds);
+    await this.lockPreviewsInIdOrder(context, ids);
+    for (const previewId of ids) {
       results.push(await this.rejectPreview(context, previewId));
     }
     return results;

@@ -9,6 +9,7 @@ import { currentTenantId, loadItemsValidIn, loadVersions } from './budget-column
 import { SpendAllocation } from './spend-allocation.entity';
 import { SpendVersion } from './spend-version.entity';
 import { ensureBudgetVersion } from './budget-version-ensure';
+import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
 
 /**
  * Copy allocations from one year to another, for OPEX and CAPEX alike.
@@ -148,8 +149,19 @@ export async function copyAllocations(
   }
 
   const tenantId = await currentTenantId(mg);
-  const items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
-  const picked = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
+  // One bulk budget operation at a time per tenant: a second one gets a 409 (`budget-locks.ts`).
+  if (!dryRun) await lockTenantBudgetOperations(mg, tenantId);
+  let items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
+  let picked = await loadVersions(mg, scope, tenantId, items.map((i) => i.id), [sourceYear, destinationYear]);
+  if (!dryRun) {
+    // Lock order: the lines with a source version, in id order, then their destination versions,
+    // before anything is decided. Lines, validity and versions are read again under the locks; a
+    // line without a source version in the first read stays skipped.
+    const locked = await lockBudgetLines(mg, scope, tenantId, items.filter((i) => picked.has(`${i.id}:${sourceYear}`)).map((i) => i.id));
+    items = await loadItemsValidIn(mg, scope, tenantId, destinationYear);
+    picked = await loadVersions(mg, scope, tenantId, items.filter((i) => locked.has(i.id)).map((i) => i.id), [sourceYear, destinationYear]);
+    await lockBudgetVersions(mg, scope, tenantId, Array.from(picked.values()).filter((v) => v.budget_year === destinationYear).map((v) => v.id));
+  }
   const versionIds = Array.from(picked.values()).map((v) => v.id);
   const versionRepo = mg.getRepository<AllocationVersion>(t.versionEntity);
   const allocationRepo = mg.getRepository<AllocationRow>(t.allocationEntity);
@@ -258,9 +270,11 @@ export async function copyAllocations(
     }
 
     // Every writer of a version's allocations (this copy, a manual save) locks
-    // the version first: they take turns, and what is read below is what the
-    // rows are replaced against. Without it two writers each delete what they
-    // saw and insert their own rows, and the version keeps both sets.
+    // the line, then the version first: they take turns, and what is read below
+    // is what the rows are replaced against. Without it two writers each delete
+    // what they saw and insert their own rows, and the version keeps both sets.
+    // This line is held since the start; a version created above is this
+    // transaction's own row.
     const locked = await lockAllocationVersion(mg, scope, tenantId, destinationVersion.id);
     if (!locked) {
       // The line was deleted meanwhile.
@@ -273,6 +287,10 @@ export async function copyAllocations(
       skipped++;
       continue;
     }
+    // The destination already holds the source's manual split (an identical copy): nothing to write.
+    const copiedRows = isManual ? sourceManual.map((row) => ({ ...row, is_system_generated: false, rule_id: null, materialized_from: null })) : [];
+    const destinationRows = isManual ? await allocationRepo.find({ where: { tenant_id: tenantId, version_id: destinationVersion.id } as any }) : [];
+    const sameSplit = isManual && sameAllocationRows(destinationRows, copiedRows);
     // Compared like `methodOf`: a method read as NULL is the default one (no change, no write, no audit row).
     if ((locked.allocation_method ?? 'default') !== sourceMethod) {
       const beforeMethod = locked.allocation_method;
@@ -288,6 +306,10 @@ export async function copyAllocations(
     }
     destinationVersion.allocation_method = sourceMethod as AllocationVersion['allocation_method'];
 
+    if (sameSplit) {
+      processed++;
+      continue;
+    }
     // A manual split replaces every row of the version, system rows included:
     // a row left by an older automatic method for the same company and
     // department would hit the unique key (version, company, department).
@@ -332,12 +354,74 @@ export async function copyAllocations(
   };
 }
 
+type ComparableAllocation = {
+  company_id: string;
+  department_id: string | null;
+  allocation_pct: number | string;
+  is_system_generated?: boolean | null;
+  rule_id?: string | null;
+  materialized_from?: string | null;
+};
+
+/** Decimals of `allocation_pct` (numeric(7,4)). */
+const PCT_SCALE = 4;
+
+/**
+ * A percentage as PostgreSQL stores it in `allocation_pct`, as text: the
+ * driver sends a number as `String(value)`, and PostgreSQL rounds those
+ * decimal digits half away from zero. `toFixed(4)` rounds the binary double
+ * instead and can disagree on a halfway share (0.30665 gives 0.3066 where
+ * PostgreSQL stores 0.3067), so a split computed again would not match the
+ * one stored and would be written again for nothing.
+ */
+export function storedAllocationPct(value: number | string | null | undefined): string {
+  const text = String(value ?? 0).trim();
+  const match = /^([+-]?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(text);
+  if (!match || (!match[2] && !match[3])) return text;
+  const [, sign, whole = '', fraction = '', exponent = '0'] = match;
+  const digits = BigInt(`${whole}${fraction}` || '0');
+  // value × 10^4 = digits × 10^shift
+  const shift = Number(exponent) - fraction.length + PCT_SCALE;
+  let scaled = digits;
+  if (shift >= 0) {
+    scaled = digits * 10n ** BigInt(shift);
+  } else {
+    const divisor = 10n ** BigInt(-shift);
+    scaled = digits / divisor;
+    if ((digits % divisor) * 2n >= divisor) scaled += 1n;
+  }
+  const padded = scaled.toString().padStart(PCT_SCALE + 1, '0');
+  const stored = `${padded.slice(0, -PCT_SCALE)}.${padded.slice(-PCT_SCALE)}`;
+  return sign === '-' && scaled !== 0n ? `-${stored}` : stored;
+}
+
+/**
+ * Whether two sets of allocation rows are the same split: same companies and
+ * departments, same percentages as PostgreSQL stores them (4 decimals, its
+ * rounding), same origin, whatever their order. The manual saves and the
+ * copy then write nothing (and bump no `budget_rev`, migration 1853740000000).
+ */
+export function sameAllocationRows(a: readonly ComparableAllocation[], b: readonly ComparableAllocation[]): boolean {
+  if (a.length !== b.length) return false;
+  const key = (row: ComparableAllocation) => [
+    row.company_id,
+    row.department_id ?? '',
+    storedAllocationPct(row.allocation_pct || 0),
+    row.is_system_generated ? 'system' : 'manual',
+    row.rule_id ?? '',
+    row.materialized_from ?? '',
+  ].join('|');
+  const left = a.map(key).sort();
+  const right = b.map(key).sort();
+  return left.every((value, i) => value === right[i]);
+}
+
 /**
  * Locks the version row (FOR NO KEY UPDATE: the allocation and amount inserts
  * that only check the version's key do not wait for it) and reads its method
- * under the lock. Null when the version is gone. Shared by every writer of a
- * version's allocations: `copyAllocations`, and the manual saves of
- * `SpendAllocationsService` / `CapexAllocationsService`.
+ * under the lock. Null when the version is gone. The caller holds the line
+ * already (lock order, `budget-locks.ts`): `copyAllocations` locks its lines
+ * first; the manual saves use `lockVersionWithLine`.
  */
 export async function lockAllocationVersion(
   manager: EntityManager,

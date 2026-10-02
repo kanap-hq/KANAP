@@ -76,4 +76,12 @@ export class SpendItem {
 
   @Column('timestamptz', { default: () => 'now()' })
   updated_at!: Date;
+
+  /**
+   * Freshness counter of the line, kept by the database (migration
+   * 1853740000000): one more on each change of a column other than updated_at
+   * and status, or of its analytics values. Read-only here.
+   */
+  @Column({ type: 'int', default: 1, insert: false, update: false })
+  row_version!: number;
 }

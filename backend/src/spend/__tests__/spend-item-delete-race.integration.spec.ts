@@ -5,8 +5,8 @@ import { SpendItemsDeleteService } from '../spend-items-delete.service';
 import { amountsService, captureAudit, noFreeze, repeat, seedLine } from './round-inputs.fixtures';
 import { assert, assertClean, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known race (plan planning/perf-scale, step 0.3, Annexe A #17), failing
-// until lot 3B lands.
+// Race of the line delete (plan planning/perf-scale, step 0.3, Annexe A #17),
+// fixed in lot 3B.
 //
 // A budget cell save reads the version, then writes the months. The delete of
 // the line (`spend-items-delete.service.ts:51-92`) takes no lock on the line

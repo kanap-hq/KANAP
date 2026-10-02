@@ -5,7 +5,8 @@ import { SpendVersion } from './spend-version.entity';
 import { AuditService } from '../audit/audit.service';
 import { SpendItem } from './spend-item.entity';
 import { CurrencySettingsService } from '../currency/currency-settings.service';
-import { ensureBudgetVersion } from './budget-version-ensure';
+import { ensureBudgetVersion, updateBudgetVersionUnderLock } from './budget-version-ensure';
+import { lockBudgetLine } from './budget-locks';
 
 @Injectable()
 export class SpendVersionsService {
@@ -49,6 +50,8 @@ export class SpendVersionsService {
     const itemRepo = mg.getRepository(SpendItem);
     const item = await itemRepo.findOne({ where: { id: itemId } });
     if (!item) throw new NotFoundException('Spend item not found');
+    // Lock order (`budget-locks.ts`): the line first, so a create waits for any writer of the line's budget.
+    if (!(await lockBudgetLine(mg, 'opex', item.tenant_id, itemId))) throw new NotFoundException('Spend item not found');
     const tenantId = item.tenant_id;
     const settings = await this.currencySettings.getSettings(tenantId, { manager: mg });
 
@@ -74,43 +77,11 @@ export class SpendVersionsService {
     return ensured.version;
   }
 
-  async updateForItem(itemId: string, body: Partial<SpendVersion> & { id: string }, userId?: string, opts?: { manager?: EntityManager }) {
-    const repo = (opts?.manager ?? this.repo.manager).getRepository(SpendVersion);
-    if (!body?.id) throw new BadRequestException('id is required');
-    const existing = await this.get(body.id, { manager: opts?.manager });
-    if (existing.spend_item_id !== itemId) throw new BadRequestException('Version does not belong to item');
-
-    // Prevent changing budget_year
-    if ((body as any).budget_year != null && (body as any).budget_year !== (existing as any).budget_year) {
-      throw new BadRequestException('budget_year is immutable');
-    }
-
-    // Enforce version_name uniqueness if changed
-    if (body.version_name && body.version_name !== existing.version_name) {
-    const dup = await repo.findOne({ where: { spend_item_id: itemId, version_name: String(body.version_name) } });
-      if (dup) throw new BadRequestException('version_name must be unique per item');
-    }
-
-    const { budget_year, allocation_method, allocation_driver, is_approved, reporting_currency, fx_rate_set_id, ...rest } = body as any;
-    const next = { ...existing, ...rest, budget_year: existing.budget_year } as SpendVersion;
-    if (allocation_method) {
-      (next as any).allocation_method = allocation_method;
-      if (!allocation_driver) {
-        (next as any).allocation_driver = allocation_method === 'it_users' ? 'it_users' : allocation_method === 'turnover' ? 'turnover' : 'headcount';
-      }
-    }
-    if (allocation_driver) (next as any).allocation_driver = allocation_driver;
-
-    if (reporting_currency) {
-      (next as any).reporting_currency = String(reporting_currency).trim().toUpperCase().slice(0, 3);
-    }
-
-    if (is_approved === false) {
-      (next as any).fx_rate_set_id = null;
-    }
-
-    const saved = await repo.save(next);
-    await this.audit.log({ table: 'spend_versions', recordId: saved.id, action: 'update', before: existing, after: saved, userId }, { manager: opts?.manager ?? this.repo.manager });
-    return saved;
+  /** Only the fields the body supplies, under the line's and the version's locks; see `updateBudgetVersionUnderLock`. */
+  async updateForItem(itemId: string, body: Partial<SpendVersion> & { id: string }, userId?: string | null, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const { before, after } = await updateBudgetVersionUnderLock(mg, 'opex', itemId, body as any, 'version_name must be unique per item');
+    await this.audit.log({ table: 'spend_versions', recordId: after.id, action: 'update', before, after, userId }, { manager: mg });
+    return after as SpendVersion;
   }
 }

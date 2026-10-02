@@ -3,13 +3,14 @@ import { SpendVersionsService } from '../spend-versions.service';
 import { captureAudit, Kind, seedItem, seedVersion } from './round-inputs.fixtures';
 import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known race of the budget version update (plan planning/perf-scale, step
-// 0.3), failing until lot 3B lands (split from spend-versions-race, whose
-// create races lot 3A fixed).
+// Race of the budget version update (plan planning/perf-scale, step 0.3),
+// fixed in lot 3B (split from spend-versions-race, whose create races lot 3A
+// fixed).
 //
 // Annexe A #2 on versions: `updateForItem` merges the body into the version it
 // read and `save()`s it, so a concurrent change of another field is put back.
-// Target: targeted UPDATE under the version lock.
+// Fixed: a targeted UPDATE under the line's and the version's locks
+// (`updateBudgetVersionUnderLock`).
 
 const YEAR = 2027;
 const currencySettings = { getSettings: async () => ({ reportingCurrency: 'EUR' }) };

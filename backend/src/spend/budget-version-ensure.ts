@@ -1,6 +1,8 @@
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { CapexVersion } from '../capex/capex-version.entity';
 import { AmountScope } from './amounts-write.util';
+import { lockBudgetLine, lockBudgetVersions } from './budget-locks';
 import { SpendVersion } from './spend-version.entity';
 
 /**
@@ -100,4 +102,65 @@ export async function ensureBudgetVersion(
   if (!id) return null;
   const version = await manager.getRepository<BudgetVersionEntity>(t.entity).findOne({ where: { id, tenant_id: params.tenantId } as any });
   return version ? { version, created } : null;
+}
+
+/** Version columns a PATCH writes as given (when present); the allocation fields, the currency and the approval have their own rules. */
+const VERSION_PLAIN_COLUMNS = ['version_name', 'input_grain', 'as_of_date', 'notes'] as const;
+
+const defaultDriver = (method: string) => (method === 'it_users' ? 'it_users' : method === 'turnover' ? 'turnover' : 'headcount');
+
+/**
+ * The PATCH of a budget version (the budget tab's view, the allocations tab's
+ * method, the AI), for OPEX and CAPEX alike (plan planning/perf-scale, lot 3B,
+ * Annexe A #2 on versions). It used to merge the body into the version it
+ * read and `save()` it, putting back a field another request committed in
+ * between. Now the line, then the version are locked (`budget-locks.ts`), the
+ * version is read again under the lock, and one UPDATE sets only the columns
+ * the body supplies: `version_name`, `input_grain`, `as_of_date`, `notes`;
+ * `allocation_method` (with its default driver unless one is given),
+ * `allocation_driver`, `reporting_currency` when not empty; `is_approved:
+ * false` clears the rate set. The budget year never changes. Returns the
+ * version before (as locked) and after, for the caller's audit row.
+ */
+export async function updateBudgetVersionUnderLock(
+  manager: EntityManager,
+  scope: AmountScope,
+  itemId: string,
+  body: Record<string, unknown> & { id?: unknown },
+  duplicateNameMessage: string,
+): Promise<{ before: BudgetVersionEntity; after: BudgetVersionEntity }> {
+  const versionId = typeof body?.id === 'string' ? body.id : null;
+  if (!versionId) throw new BadRequestException('id is required');
+  const t = SCOPES[scope];
+  const [{ tenant_id: tenantId }] = await manager.query(`SELECT app_current_tenant() AS tenant_id`);
+  if (!tenantId) throw new BadRequestException('Tenant context is required');
+  const repo = manager.getRepository<BudgetVersionEntity>(t.entity);
+  const read = () => repo.findOne({ where: { id: versionId, tenant_id: tenantId } as any });
+  if (!(await lockBudgetLine(manager, scope, tenantId, itemId))) throw new NotFoundException('Version not found');
+  const before = (await lockBudgetVersions(manager, scope, tenantId, [versionId])).has(versionId) ? await read() : null;
+  if (!before) throw new NotFoundException('Version not found');
+  if ((before as any)[t.itemFk] !== itemId) throw new BadRequestException('Version does not belong to item');
+  if (body.budget_year != null && body.budget_year !== before.budget_year) {
+    throw new BadRequestException('budget_year is immutable');
+  }
+  if (body.version_name && body.version_name !== before.version_name) {
+    const duplicate = await repo.findOne({ where: { tenant_id: tenantId, [t.itemFk]: itemId, version_name: String(body.version_name) } as any });
+    if (duplicate) throw new BadRequestException(duplicateNameMessage);
+  }
+
+  const set: Record<string, unknown> = {};
+  for (const column of VERSION_PLAIN_COLUMNS) {
+    if (body[column] !== undefined) set[column] = body[column];
+  }
+  if (body.allocation_method) {
+    set.allocation_method = body.allocation_method;
+    if (!body.allocation_driver) set.allocation_driver = defaultDriver(String(body.allocation_method));
+  }
+  if (body.allocation_driver) set.allocation_driver = body.allocation_driver;
+  if (body.reporting_currency) set.reporting_currency = String(body.reporting_currency).trim().toUpperCase().slice(0, 3);
+  if (body.is_approved === false) set.fx_rate_set_id = null;
+  if (Object.keys(set).length > 0) {
+    await manager.createQueryBuilder().update(t.entity).set(set as any).where('tenant_id = :tenantId AND id = :versionId', { tenantId, versionId }).execute();
+  }
+  return { before, after: (await read()) ?? before };
 }

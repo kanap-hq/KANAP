@@ -25,6 +25,12 @@ import { QueryRunnerAlreadyReleasedError, QueryRunnerProviderAlreadyReleasedErro
  *   wrote is committed)          → 503 `busy` with Retry-After
  *
  * Any other error is left alone (a 500, as before).
+ *
+ * Same family, not mapped here: 409 `operation_running`, a bulk budget
+ * operation (column copy or clear, allocation copy, CSV import, freeze or
+ * unfreeze of a year) refused at once while another one of the tenant runs
+ * (`spend/budget-locks.ts`). Not `retry`: nothing to send again at once, the
+ * user waits for the other operation, so no client retries it by itself.
  */
 export type DatabaseErrorCode = 'duplicate' | 'parent_gone' | 'in_use' | 'retry' | 'busy';
 

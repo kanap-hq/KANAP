@@ -1,16 +1,18 @@
 import { csvService, itemService, lineBody, seedCompany } from './cost-center.fixtures';
 import { assert, assertSucceeded, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
-// Known race (plan planning/perf-scale, step 0.3, Annexe A #3), failing until
-// lots 3B and 3F land.
+// Race of the OPEX line import (plan planning/perf-scale, step 0.3, Annexe
+// A #3), fixed in lot 3B.
 //
 // The OPEX line import reads every existing line first
 // (`spend-items-csv.service.ts:551-555`), then writes each one by merging the
 // file's row into the line it read and calling TypeORM `save()`
 // (`:595-618`, `:704-718`). A column the file does not carry, changed by a
 // user meanwhile, is put back to the value read at the start of the import.
-// Target: the import writes only the columns present in the file (3F), on the
-// line read under its lock (3B); the user's change stays.
+// Fixed: the import locks the lines it names before deciding, and writes only
+// the columns present in the file, under the line's lock
+// (`item-locked-update.ts`); the user's change stays. The new CSV engine adds
+// the freshness check of the export (decision D6).
 
 async function importVersusEdit() {
   await withRace('opex-csv', async (race) => {
@@ -60,6 +62,61 @@ async function importVersusEdit() {
   });
 }
 
+/**
+ * A blank company cell keeps the line's company (3B review). The import used
+ * to read the line's company while it parsed the file, before it locked the
+ * line, then wrote that company back and resolved the account in its chart:
+ * a company change committed in between was undone. Fixed: the company of a
+ * blank cell is decided on the line read under its lock, the import leaves
+ * the column alone, and the account resolves in the locked line's company.
+ */
+async function blankCompanyVersusCompanyChange() {
+  await withRace('opex-csv-company', async (race) => {
+    const s = await race.seedWith(async (runner) => {
+      const one = await seedCompany(runner, race.tenantId, 'Company one', 6000);
+      const two = await seedCompany(runner, race.tenantId, 'Company two', 6000);
+      const line = await itemService('opex').create(
+        lineBody('opex', 'Race line', { paying_company_id: one.companyId, account_id: one.accountId, notes: 'Start' }), undefined, { manager: runner.manager },
+      );
+      return { itemId: line.id as string, two };
+    });
+    const importer = await race.open('OPEX line import');
+    const user = await race.open('user (company)');
+
+    const csv = csvService('opex');
+    const headers: string[] = csv.csvHeaders();
+    // Company cell blank: "keep the line's company".
+    const row: Record<string, string> = {
+      product_name: 'Race line', company_name: '', account_number: '6000', currency: 'EUR', status: 'enabled', notes: 'From the file',
+    };
+    const file = { buffer: Buffer.from(`${headers.join(';')}\n${headers.map((h) => row[h] ?? '').join(';')}\n`, 'utf8') } as any;
+
+    const beforeLock = race.gate(importer, { label: 'lock the lines', when: 'before', match: sql.lockOn('spend_items') });
+    const importWork = race.start(importer, (manager) => csv.importCsv({ file, dryRun: false, userId: null }, { manager }));
+    assert.equal(await progress(importWork, { party: importer, gate: beforeLock }), 'gated', 'harness: the import must pause after parsing, before its line lock');
+
+    assertSucceeded(await settle(race.start(user, (manager) => itemService('opex').update(
+      s.itemId, { paying_company_id: s.two.companyId, account_id: s.two.accountId }, undefined, { manager },
+    ))), 'the user\'s company change');
+    beforeLock.release();
+    const importDone = await settle(importWork);
+    assertSucceeded(importDone, 'the import');
+    assert.equal((importDone as any).value?.ok, true, `the import result: ${JSON.stringify((importDone as any).value?.errors)}`);
+
+    const stored = await race.readOne(
+      `SELECT c.name AS company, i.account_id, i.notes FROM spend_items i LEFT JOIN companies c ON c.id = i.paying_company_id WHERE i.id = $1`,
+      [s.itemId],
+    );
+    assert.equal(stored?.notes, 'From the file', 'the file\'s notes are imported');
+    assert.equal(
+      stored?.company, 'Company two',
+      `the import put the line's company back to "${stored?.company}": a blank company cell wrote back the company read before the line was locked`,
+    );
+    assert.equal(stored?.account_id, s.two.accountId, 'the account number resolves in the chart of the line\'s company, as locked');
+  });
+}
+
 void runRaceSpecs('OPEX line import races', [
   ['Annexe A #3: a line import keeps a column absent from the file that a user changed meanwhile (3F, 3B)', importVersusEdit],
+  ['a blank company cell keeps a company a user changed before the import locked the line (3B review)', blankCompanyVersusCompanyChange],
 ]);

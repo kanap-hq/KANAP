@@ -74,8 +74,11 @@ function isLockTimeout(err: unknown): boolean {
  * Sets the stored status of one table's rows of one tenant from their end of
  * validity, in the caller's transaction. Only `status` changes: `updated_at`
  * keeps the last real edit and no audit row is written, as this is a derivation
- * (like migration 1758803100000), not an edit. No table has a BEFORE UPDATE
- * trigger; the AFTER UPDATE search index triggers refresh the indexed status.
+ * (like migration 1758803100000), not an edit. The AFTER UPDATE search index
+ * triggers refresh the indexed status. spend_items and capex_items have a
+ * BEFORE UPDATE trigger (`row_version`, migration 1853740000000) that ignores
+ * `status` (and `updated_at`): this sync never bumps a line's freshness
+ * counter, so a CSV export is not reported as changed because a date passed.
  */
 export async function syncTableLifecycleStatus(
   manager: EntityManager,

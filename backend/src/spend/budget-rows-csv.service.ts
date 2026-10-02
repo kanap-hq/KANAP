@@ -26,6 +26,7 @@ import {
 import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, SpreadInputError } from './spread.util';
 import { listRoundInputs, ROUND_MEASURES, RoundInput, saveRoundInput, wholeYear } from './round-inputs.util';
 import { BudgetVersionRow, createBudgetVersion, loadVersions } from './budget-column-operations';
+import { lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
 
 /**
  * Budget rows file: the monthly amounts of every OPEX and CAPEX line, one row
@@ -221,6 +222,10 @@ export class BudgetRowsCsvService {
       unique.push(row);
     }
 
+    // An import (not a dry run) is one bulk budget operation at a time per tenant (a second
+    // one gets a 409), and locks the lines it names, in id order, then their versions, before
+    // comparing anything: what it decides is what is stored (lock order, `budget-locks.ts`).
+    if (!dryRun) await lockTenantBudgetOperations(ctx.manager, ctx.tenantId);
     const planned: PlannedRow[] = [];
     let unchanged = 0;
     for (const scope of SCOPES) {
@@ -228,12 +233,14 @@ export class BudgetRowsCsvService {
       if (scopeRows.length === 0) continue;
       const numbers = Array.from(new Set(scopeRows.map((r) => r.itemNumber)));
       const items: Array<{ id: string; tenant_id: string; item_number: number }> = await ctx.manager.query(
-        `SELECT id, tenant_id, item_number FROM ${ITEM_TABLE[scope]} WHERE tenant_id = $1 AND item_number = ANY($2::int[])`,
+        `SELECT id, tenant_id, item_number FROM ${ITEM_TABLE[scope]} WHERE tenant_id = $1 AND item_number = ANY($2::int[])
+         ORDER BY id${dryRun ? '' : ' FOR NO KEY UPDATE'}`,
         [ctx.tenantId, numbers],
       );
       const itemByNumber = new Map(items.map((i) => [Number(i.item_number), i]));
       const years = Array.from(new Set(scopeRows.map((r) => r.year)));
       const versions = await loadVersions(ctx.manager, scope, ctx.tenantId, items.map((i) => i.id), years);
+      if (!dryRun) await lockBudgetVersions(ctx.manager, scope, ctx.tenantId, Array.from(versions.values()).map((v) => v.id));
       const versionList = Array.from(versions.values());
       const months = await readVersionMonths(ctx.manager, scope, ctx.tenantId, versionList);
       const records = await listRoundInputs(ctx.manager, scope, ctx.tenantId, versionList.map((v) => v.id));

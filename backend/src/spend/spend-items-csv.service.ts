@@ -53,9 +53,29 @@ import {
   resolveItemWrite,
 } from './item-write.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
+import { lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
+import { updateItemUnderLock } from './item-locked-update';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
+
+/**
+ * Locks, in id order, every line a row of the file names (same product name,
+ * same supplier or none): the lines it may update, held before the import
+ * looks them up and decides.
+ */
+async function lockCsvLines(mg: EntityManager, tenantId: string, rows: Array<{ product_name: string; supplier_id: string | null }>) {
+  if (rows.length === 0) return;
+  await mg.query(
+    `SELECT i.id FROM spend_items i
+       JOIN unnest($2::text[], $3::uuid[]) AS k(product_name, supplier_id)
+         ON i.product_name = k.product_name AND i.supplier_id IS NOT DISTINCT FROM k.supplier_id
+      WHERE i.tenant_id = $1
+      ORDER BY i.id
+        FOR NO KEY UPDATE OF i`,
+    [tenantId, rows.map((row) => row.product_name), rows.map((row) => row.supplier_id)],
+  );
+}
 
 @Injectable()
 export class SpendItemsCsvService {
@@ -361,7 +381,15 @@ export class SpendItemsCsvService {
 
     const allCompanies = await mg.getRepository(Company).find({ where: { tenant_id: tenantId ?? undefined } as any });
     const companiesByName = new Map(allCompanies.map(c => [c.name.toLowerCase(), c]));
-    const companiesById = new Map(allCompanies.map((c) => [c.id, c]));
+    const companiesById = new Map<string, Company | null>(allCompanies.map((c) => [c.id, c]));
+    /** A company by id: from the list read at the start, else read now (one a line got meanwhile). */
+    const findCompany = async (id: string | null | undefined): Promise<Company | null> => {
+      if (!id) return null;
+      if (!companiesById.has(id)) {
+        companiesById.set(id, await mg.getRepository(Company).findOne({ where: { id, tenant_id: tenantId ?? undefined } as any }));
+      }
+      return companiesById.get(id) ?? null;
+    };
     const costCentersByCode = hasCostCenter && tenantId ? await loadCostCentersByCode(mg, tenantId) : new Map<string, CsvCostCenter>();
 
     const now = new Date();
@@ -371,8 +399,13 @@ export class SpendItemsCsvService {
       product_name: string;
       description: string | null;
       supplier_id: string | null;
-      paying_company_id: string | null;
+      /** Undefined: the column is not written (an existing line keeps its company). */
+      paying_company_id: string | null | undefined;
       account_id: string | null;
+      /** A blank company cell: the company is decided with the existing line, read under its lock. */
+      company_from_line: boolean;
+      /** The account number of the file, resolved in that company's chart once it is known. */
+      account_number: string | null;
       currency: string;
       effective_start: string | null;
       status: StatusState | null;
@@ -427,19 +460,13 @@ export class SpendItemsCsvService {
         else if (supplierIds.length > 1) errors.push({ row: line, message: `Supplier '${supplier_name}' matches more than one supplier` });
         else supplier_id = supplierIds[0];
       }
-      // A blank company keeps an existing line's company, and a new line takes its cost
-      // center's (as on CAPEX); the account then resolves in that company's chart.
+      // A named company resolves here, with the account in its chart. A blank cell is
+      // decided below with the existing line, as read under its lock: it keeps an existing
+      // line's company, and a new line takes its cost center's (as on CAPEX).
       let company: Company | null = null;
       if (company_name) {
         company = companiesByName.get(company_name.toLowerCase()) ?? null;
         if (!company) errors.push({ row: line, message: `Company '${company_name}' not found` });
-      } else if (product_name && (!supplier_name || supplier_id)) {
-        const stored = await mg.getRepository(SpendItem).findOne({
-          where: { tenant_id: tenantId ?? undefined, product_name, supplier_id: supplier_id ?? IsNull() },
-        });
-        if (stored?.paying_company_id) company = companiesById.get(stored.paying_company_id) ?? null;
-        else if (cost_center?.company_id) company = companiesById.get(cost_center.company_id) ?? null;
-        else if (!costCenterCode) errors.push({ row: line, message: CSV_COMPANY_REQUIRED_ERROR });
       }
       // A line is its product name and supplier (the existing-line match): a second row for it is refused, never dropped.
       if (product_name && (!supplier_name || supplier_id)) {
@@ -536,6 +563,8 @@ export class SpendItemsCsvService {
         supplier_id,
         paying_company_id: company ? company.id : null,
         account_id,
+        company_from_line: !company_name,
+        account_number: normalizedAccountNumber,
         currency,
         effective_start,
         status,
@@ -559,6 +588,13 @@ export class SpendItemsCsvService {
     // (a null in a TypeORM `where` is dropped, so it would match any supplier).
     const existingByItem = new Map<typeof normalized[number], SpendItem | null>();
     let inserted = 0; let updated = 0;
+    if (!dryRun && tenantId) {
+      // One bulk budget operation at a time per tenant (a second one gets a 409), then the
+      // lines the file names, locked in id order before anything is decided: the lookups
+      // below and every check after them read the locked lines (lock order: `budget-locks.ts`).
+      await lockTenantBudgetOperations(mg, tenantId);
+      await lockCsvLines(mg, tenantId, unique);
+    }
     for (const item of unique) {
       existingByItem.set(item, await mg.getRepository(SpendItem).findOne({
         where: { tenant_id: tenantId ?? undefined, product_name: item.product_name, supplier_id: item.supplier_id ?? IsNull() },
@@ -572,6 +608,25 @@ export class SpendItemsCsvService {
       : new Map();
     for (const item of unique) {
       const exists = existingByItem.get(item) ?? null;
+      // A blank company cell, decided on the line read here (under its lock in a real run, never
+      // on a read made before it): an existing line keeps its company, the column is not written;
+      // a line without one, or a new line, takes its cost center's. The account number then
+      // resolves in that company's chart.
+      if (item.company_from_line) {
+        const company = await findCompany(exists?.paying_company_id ?? item.cost_center?.company_id);
+        if (!exists?.paying_company_id && !item.cost_center) {
+          errors.push({ row: item.line, message: CSV_COMPANY_REQUIRED_ERROR });
+          continue;
+        }
+        item.paying_company_id = exists?.paying_company_id ? undefined : company?.id ?? null;
+        if (company && item.account_number != null) {
+          item.account_id = await findAccountId(company, item.account_number);
+          if (!item.account_id) {
+            errors.push({ row: item.line, message: `Account ${item.account_number} not found in ${company.name}'s chart of accounts` });
+            continue;
+          }
+        }
+      }
       const disabledCostCenter = item.cost_center ? csvCostCenterDisabledError(item.cost_center, exists?.cost_center_id) : null;
       if (disabledCostCenter) {
         errors.push({ row: item.line, message: disabledCostCenter });
@@ -611,7 +666,7 @@ export class SpendItemsCsvService {
         product_name: item.product_name,
         description: item.description ?? null,
         supplier_id: item.supplier_id,
-        paying_company_id: item.paying_company_id,
+        ...(item.paying_company_id !== undefined ? { paying_company_id: item.paying_company_id } : {}),
         account_id: item.account_id,
         ...(item.currency ? { currency: item.currency } : {}),
         ...(item.effective_start ? { effective_start: item.effective_start } : exists ? {} : { effective_start: defaultStart }),
@@ -651,6 +706,8 @@ export class SpendItemsCsvService {
             await this.audit.log({ table: 'spend_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
           }
         }
+        // Lock order: the line (locked above, or created here), then its version, then the months.
+        await lockBudgetVersions(mg, 'opex', tenantId, [version.id]);
         await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze, userId ?? null);
       }
       processed += 1;
@@ -716,30 +773,20 @@ export class SpendItemsCsvService {
     return saved;
   }
 
+  /**
+   * The line as the file has it: only the columns of the body, which carries
+   * only the columns present in the file (an optional column left out is never
+   * written), under the line's row lock; see `item-locked-update.ts`.
+   */
   private async updateSpendItem({ manager, existing, body, userId }: { manager: EntityManager; existing: SpendItem; body: SpendItemUpsertDto; userId?: string | null }) {
-    const repo = manager.getRepository(SpendItem);
-    const before = { ...existing };
-    const analyticsBefore = (await loadItemAnalyticsValues(manager, 'opex', existing.tenant_id, [existing.id])).get(existing.id) ?? [];
-    const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, 'opex', body, existing);
-    const lifecycle = resolveLifecycleState({
-      currentDisabledAt: existing.disabled_at,
-      nextStatus: input.status,
-      nextDisabledAt: input.disabled_at,
-    });
-    Object.assign(existing, values);
-    existing.status = lifecycle.status;
-    existing.disabled_at = lifecycle.disabled_at;
-    existing.updated_at = new Date();
-    const saved = await repo.save(existing);
-    await writeItemAnalyticsValues(manager, 'opex', existing.tenant_id, saved.id, analytics);
-    const analyticsAfter = analytics.length > 0
-      ? (await loadItemAnalyticsValues(manager, 'opex', existing.tenant_id, [saved.id])).get(saved.id) ?? []
-      : analyticsBefore;
+    const result = await updateItemUnderLock(manager, 'opex', existing.tenant_id, existing.id, body);
+    if (!result) throw new BadRequestException(`The line "${existing.product_name}" was deleted during the import. Import the file again.`);
+    const { before, after, analyticsBefore, analyticsAfter } = result;
     await this.audit.log({
-      table: 'spend_items', recordId: saved.id, action: 'update',
+      table: 'spend_items', recordId: after.id, action: 'update',
       before: { ...before, ...itemAnalyticsAuditFields(analyticsBefore) },
-      after: { ...saved, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
+      after: { ...after, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
     }, { manager });
-    return saved;
+    return after;
   }
 }

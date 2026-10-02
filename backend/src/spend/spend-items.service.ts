@@ -12,7 +12,7 @@ import { SpendItemsCsvService } from './spend-items-csv.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
 import { FxRateService } from '../currency/fx-rate.service';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
-import { applyDisabledAtWhere, deriveStatusFromDisabledAt, LifecycleScope, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
+import { applyDisabledAtWhere, LifecycleScope, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { SpendItemUpsertDto } from './dto/spend-item.dto';
 import { SpendLink } from './spend-link.entity';
 import { SpendAttachment } from './spend-attachment.entity';
@@ -34,6 +34,7 @@ import { resolveToUuid } from '../common/resolve-item-id';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import type { BudgetColumn } from './amounts-write.util';
 import { resolveItemWrite } from './item-write.util';
+import { updateItemUnderLock } from './item-locked-update';
 import { itemAnalyticsAuditFields, itemAnalyticsFields, loadItemAnalyticsValues, writeItemAnalyticsValues } from './item-analytics.util';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
@@ -276,44 +277,22 @@ export class SpendItemsService {
 
   async update(id: string, body: SpendItemUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(SpendItem);
-    const existing = await this.findItem(id, mg);
-    const before = { ...existing };
-    const analyticsBefore = (await loadItemAnalyticsValues(mg, 'opex', existing.tenant_id, [existing.id])).get(existing.id) ?? [];
-    // Writable columns only, every id resolved in this tenant; see `item-write.util.ts`.
-    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, 'opex', body, existing);
-    const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
-    Object.assign(existing, values);
-    const now = new Date();
-    const lifecycle = resolveLifecycleState({
-      currentDisabledAt: before.disabled_at,
-      nextStatus: input.status,
-      nextDisabledAt: disabled_at,
-      nowFactory: () => now,
-    });
-    // The status before this edit, from the stored end of validity: the stored
-    // status lags until the hourly sync once that date passes.
-    const statusBefore = deriveStatusFromDisabledAt(before.disabled_at, now);
-    existing.status = lifecycle.status;
-    existing.disabled_at = lifecycle.disabled_at;
-    // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
-    existing.updated_at = new Date();
-
-    // Detect supplier change for contact sync
-    const oldSupplierId = before.supplier_id;
-    const newSupplierId = existing.supplier_id;
-
-    const saved = await repo.save(existing);
-    // A change of analytics values alone is an edit too (updated_at above, the audit below).
-    await writeItemAnalyticsValues(mg, 'opex', saved.tenant_id, saved.id, analytics);
-    const updated = analytics.length > 0 ? await this.withAnalytics(mg, saved) : { ...saved, ...itemAnalyticsFields(analyticsBefore) };
+    const itemId = await resolveToUuid(id, 'spend', mg);
+    const tenantId = await this.resolveTenantId(mg);
+    // Only the columns the body supplied, written under the line's row lock; see `item-locked-update.ts`.
+    const result = await updateItemUnderLock(mg, 'opex', tenantId, itemId, body);
+    if (!result) throw new NotFoundException('Spend item not found');
+    const { before, after: saved, analyticsBefore, analyticsAfter, statusBefore } = result;
+    const updated = { ...saved, ...itemAnalyticsFields(analyticsAfter) };
     await this.audit.log({
       table: 'spend_items', recordId: saved.id, action: 'update',
       before: { ...before, ...itemAnalyticsAuditFields(analyticsBefore) },
-      after: { ...saved, ...itemAnalyticsAuditFields(updated.analytics_values) }, userId,
+      after: { ...saved, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
     }, { manager: mg });
 
     // Sync contacts from supplier if supplier changed
+    const oldSupplierId = before.supplier_id;
+    const newSupplierId = saved.supplier_id;
     if (oldSupplierId !== newSupplierId) {
       await syncSupplierContactsWithinUpdate(mg, `OPEX line ${saved.id}`, () =>
         this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId: saved.tenant_id }));
@@ -470,14 +449,21 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendLink);
     const tenantId = await this.resolveTenantId(mg);
-    const existing = await repo.findOne({ where: { id: linkId, spend_item_id: spendItemId, tenant_id: tenantId } as any });
-    if (!existing) throw new NotFoundException('Link not found');
-    const before = { ...existing };
-    // Only the link's own fields: the line and the tenant it belongs to stay as resolved above.
-    const next = { ...existing } as any;
-    if (body.url !== undefined) next.url = body.url;
-    if (body.description !== undefined) next.description = body.description;
-    const saved = await repo.save(next);
+    // Lock order (`budget-locks.ts`): the line, then its link, read again under the lock.
+    await lockBudgetLine(mg, 'opex', tenantId, spendItemId);
+    const where = { id: linkId, spend_item_id: spendItemId, tenant_id: tenantId } as any;
+    const locked = await mg.query(
+      `SELECT id FROM spend_links WHERE tenant_id = $1 AND id = $2 AND spend_item_id = $3 FOR NO KEY UPDATE`,
+      [tenantId, linkId, spendItemId],
+    );
+    const before = locked.length > 0 ? await repo.findOne({ where }) : null;
+    if (!before) throw new NotFoundException('Link not found');
+    // Only the link's own fields the body supplies: the line and the tenant it belongs to stay as stored.
+    const set: Partial<SpendLink> = {};
+    if (body.url !== undefined) set.url = body.url;
+    if (body.description !== undefined) set.description = body.description;
+    if (Object.keys(set).length > 0) await repo.update(where, set);
+    const saved = (await repo.findOne({ where })) ?? before;
     await this.audit.log({ table: 'spend_links', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
     return saved;
   }

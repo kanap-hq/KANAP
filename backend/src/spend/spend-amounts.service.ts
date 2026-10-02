@@ -8,6 +8,8 @@ import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
 import { writeAmountsPayload } from './amounts-write.util';
+import { lockVersionWithLine } from './budget-locks';
+import { currentTenantId } from './budget-column-operations';
 import {
   isLinesPayload,
   isLinesResult,
@@ -66,7 +68,10 @@ export class SpendAmountsService {
     opts?: { manager?: EntityManager },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
-    const version = await mg.getRepository(SpendVersion).findOne({ where: { id: versionId } });
+    // Lock order (`budget-locks.ts`): the line, then the version, before any month; read again under the locks.
+    const tenantId = await currentTenantId(mg);
+    if (!(await lockVersionWithLine(mg, 'opex', tenantId, versionId))) throw new NotFoundException('Version not found');
+    const version = await mg.getRepository(SpendVersion).findOne({ where: { id: versionId, tenant_id: tenantId } });
     if (!version) throw new NotFoundException('Version not found');
 
     // Spread profiles (flat, or a named SpreadProfile) are resolved by the writer; an unknown one is a 400.

@@ -23,6 +23,7 @@ import { assert, assertSucceeded, httpStatus, progress, runRaceSpecs, settle, sq
 const YEAR = 2027;
 const currencySettings = { getSettings: async () => ({ reportingCurrency: 'EUR' }) };
 const VERSIONS: Record<Kind, string> = { opex: 'spend_versions', capex: 'capex_versions' };
+const ITEMS: Record<Kind, string> = { opex: 'spend_items', capex: 'capex_items' };
 const ITEM_FK: Record<Kind, string> = { opex: 'spend_item_id', capex: 'capex_item_id' };
 
 function versionsService(kind: Kind): { createForItem: (...args: any[]) => Promise<any>; updateForItem: (...args: any[]) => Promise<any> } {
@@ -75,9 +76,11 @@ async function aiCreateVersusTab(kind: Kind) {
       ? new SpendVersionsService(undefined as any, undefined as any, aiAudit as any, currencySettings as any)
       : new CapexVersionsService(undefined as any, undefined as any, aiAudit as any, currencySettings as any);
 
-    const aiInsert = race.gate(ai, { label: 'insert the version', when: 'before', match: sql.insertInto(VERSIONS[kind]) });
+    // Before the line lock (lot 3B): every version create locks the line first, so the tab can
+    // only create the year before the AI takes the line, not between the lock and the insert.
+    const aiInsert = race.gate(ai, { label: 'lock the line', when: 'before', match: sql.lockOn(ITEMS[kind]) });
     const aiWork = race.start(ai, (manager) => aiService.createForItem(itemId, { ...uiVersion } as any, undefined, { manager, refuseExisting: true }));
-    assert.equal(await progress(aiWork, { party: ai, gate: aiInsert }), 'gated', 'harness: the AI must pause before inserting the version');
+    assert.equal(await progress(aiWork, { party: ai, gate: aiInsert }), 'gated', 'harness: the AI must pause before locking the line');
     const tabWork = race.start(tab, (manager) => versionsService(kind).createForItem(itemId, { ...uiVersion }, undefined, { manager }));
     await progress(tabWork, { party: tab });
     aiInsert.release();

@@ -5,7 +5,8 @@ import { CapexVersion } from './capex-version.entity';
 import { AuditService } from '../audit/audit.service';
 import { CapexItem } from './capex-item.entity';
 import { CurrencySettingsService } from '../currency/currency-settings.service';
-import { ensureBudgetVersion } from '../spend/budget-version-ensure';
+import { ensureBudgetVersion, updateBudgetVersionUnderLock } from '../spend/budget-version-ensure';
+import { lockBudgetLine } from '../spend/budget-locks';
 
 @Injectable()
 export class CapexVersionsService {
@@ -47,6 +48,10 @@ export class CapexVersionsService {
 
     const item = await mg.getRepository(CapexItem).findOne({ where: { id: itemId } });
     if (!item) throw new NotFoundException('CAPEX item not found');
+
+    // Lock order (`budget-locks.ts`): the line first, so a create waits for any writer of the line's budget.
+
+    if (!(await lockBudgetLine(mg, 'capex', item.tenant_id, itemId))) throw new NotFoundException('CAPEX item not found');
     const settings = await this.currencySettings.getSettings(item.tenant_id, { manager: mg });
 
     const ensured = await ensureBudgetVersion(mg, 'capex', {
@@ -71,38 +76,11 @@ export class CapexVersionsService {
     return ensured.version;
   }
 
+  /** Only the fields the body supplies, under the line's and the version's locks; see `updateBudgetVersionUnderLock`. */
   async updateForItem(itemId: string, body: Partial<CapexVersion> & { id: string }, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const repo = mg.getRepository(CapexVersion);
-    const existing = await repo.findOne({ where: { id: body.id } });
-    if (!existing) throw new NotFoundException('Version not found');
-    if (existing.capex_item_id !== itemId) throw new BadRequestException('Version does not belong to item');
-
-    if (body.version_name && body.version_name !== existing.version_name) {
-      const dup = await repo.findOne({ where: { capex_item_id: itemId, version_name: String(body.version_name) } as any });
-      if (dup) throw new BadRequestException('Version name already exists for this item');
-    }
-    if (body.budget_year != null && body.budget_year !== existing.budget_year) {
-      throw new BadRequestException('budget_year is immutable');
-    }
-
-    const { allocation_method, allocation_driver, is_approved, budget_year, reporting_currency, fx_rate_set_id, ...rest } = body as any;
-    const next = { ...existing, ...rest } as CapexVersion;
-    if (allocation_method) {
-      next.allocation_method = allocation_method;
-      if (!allocation_driver) {
-        next.allocation_driver = allocation_method === 'it_users' ? 'it_users' : allocation_method === 'turnover' ? 'turnover' : 'headcount';
-      }
-    }
-    if (allocation_driver) next.allocation_driver = allocation_driver;
-    if (reporting_currency) {
-      next.reporting_currency = String(reporting_currency).trim().toUpperCase().slice(0, 3);
-    }
-    if (is_approved === false) {
-      next.fx_rate_set_id = null;
-    }
-    const saved = await repo.save(next);
-    await this.audit.log({ table: 'capex_versions', recordId: saved.id, action: 'update', before: existing, after: saved, userId }, { manager: mg });
-    return saved;
+    const { before, after } = await updateBudgetVersionUnderLock(mg, 'capex', itemId, body as any, 'Version name already exists for this item');
+    await this.audit.log({ table: 'capex_versions', recordId: after.id, action: 'update', before, after, userId }, { manager: mg });
+    return after as CapexVersion;
   }
 }

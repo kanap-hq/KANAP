@@ -14,7 +14,8 @@ import {
   computeCompanyShares,
   normalizeWeights,
 } from '../spend/allocation-distribution';
-import { lockAllocationVersion } from '../spend/budget-allocation-operations';
+import { sameAllocationRows } from '../spend/budget-allocation-operations';
+import { lockVersionWithLine } from '../spend/budget-locks';
 
 type AllocationInput = {
   company_id: string;
@@ -41,9 +42,9 @@ export class CapexAllocationsService {
     if (!Array.isArray(items)) throw new BadRequestException('Invalid payload');
 
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
-    // The version is locked before its allocations are read or replaced: two saves of one
-    // version take turns, so it ends with one split, never both (see lockAllocationVersion).
-    if (!(await lockAllocationVersion(manager, 'capex', tenantId, versionId))) throw new BadRequestException('Invalid version');
+    // Lock order (`budget-locks.ts`): the line, then the version, before its allocations are read
+    // or replaced: two saves of one version take turns, so it ends with one split, never both.
+    if (!(await lockVersionWithLine(manager, 'capex', tenantId, versionId))) throw new BadRequestException('Invalid version');
     const version = await versions.findOne({ where: { id: versionId, tenant_id: tenantId } });
     if (!version) throw new BadRequestException('Invalid version');
     const method = (version as any).allocation_method ?? 'default';
@@ -85,9 +86,7 @@ export class CapexAllocationsService {
     }
 
     const before = await repo.find({ where: { tenant_id: tenantId, version_id: versionId } });
-    await repo.delete({ tenant_id: tenantId, version_id: versionId } as any);
-
-    let after: CapexAllocation[] = [];
+    let next: CapexAllocation[] = [];
 
     if (isManualPct) {
       const rows = items
@@ -113,19 +112,17 @@ export class CapexAllocationsService {
       // on two lines gets their percentages added, the split it had before.
       const byCompany = new Map<string, number>();
       for (const row of rows) byCompany.set(row.company_id, (byCompany.get(row.company_id) ?? 0) + row.allocation_pct);
-      after = await repo.save(
-        Array.from(byCompany, ([company_id, allocation_pct]) => ({ company_id, allocation_pct })).map((row) =>
-          repo.create({
-            version_id: versionId,
-            company_id: row.company_id,
-            department_id: null,
-            allocation_pct: Math.round(row.allocation_pct * 10000) / 10000,
-            is_system_generated: false,
-            rule_id: null,
-            materialized_from: null,
-            tenant_id: tenantId,
-          }),
-        ),
+      next = Array.from(byCompany, ([company_id, allocation_pct]) => ({ company_id, allocation_pct })).map((row) =>
+        repo.create({
+          version_id: versionId,
+          company_id: row.company_id,
+          department_id: null,
+          allocation_pct: Math.round(row.allocation_pct * 10000) / 10000,
+          is_system_generated: false,
+          rule_id: null,
+          materialized_from: null,
+          tenant_id: tenantId,
+        }),
       );
     } else if (isManualCompany) {
       const uniqueCompanyIds = Array.from(new Set(items.map((row) => row.company_id).filter((id): id is string => !!id)));
@@ -141,19 +138,17 @@ export class CapexAllocationsService {
         driver: driver as AllocationDriver,
       });
 
-      after = await repo.save(
-        uniqueCompanyIds.map((companyId) =>
-          repo.create({
-            version_id: versionId,
-            company_id: companyId,
-            department_id: null,
-            allocation_pct: distribution.get(companyId) ?? 0,
-            is_system_generated: false,
-            rule_id: null,
-            materialized_from: null,
-            tenant_id: tenantId,
-          }),
-        ),
+      next = uniqueCompanyIds.map((companyId) =>
+        repo.create({
+          version_id: versionId,
+          company_id: companyId,
+          department_id: null,
+          allocation_pct: distribution.get(companyId) ?? 0,
+          is_system_generated: false,
+          rule_id: null,
+          materialized_from: null,
+          tenant_id: tenantId,
+        }),
       );
     } else if (isManualDept) {
       const selections = items
@@ -171,25 +166,30 @@ export class CapexAllocationsService {
         selections,
       });
 
-      after = await repo.save(
-        computed.map((row) =>
-          repo.create({
-            version_id: versionId,
-            company_id: row.company_id,
-            department_id: row.department_id,
-            allocation_pct: row.allocation_pct,
-            is_system_generated: false,
-            rule_id: null,
-            materialized_from: null,
-            tenant_id: tenantId,
-          }),
-        ),
+      next = computed.map((row) =>
+        repo.create({
+          version_id: versionId,
+          company_id: row.company_id,
+          department_id: row.department_id,
+          allocation_pct: row.allocation_pct,
+          is_system_generated: false,
+          rule_id: null,
+          materialized_from: null,
+          tenant_id: tenantId,
+        }),
       );
     }
 
+    // The split already stored, saved again, writes nothing: no row replaced, no audit row
+    // (and no budget_rev bump of the version, migration 1853740000000).
+    let after: CapexAllocation[] = before;
+    if (!sameAllocationRows(before, next)) {
+      await repo.delete({ tenant_id: tenantId, version_id: versionId } as any);
+      after = await repo.save(next);
+      await this.audit.log({ table: 'capex_allocations', recordId: null, action: 'update', before, after, userId }, { manager });
+    }
     const finalTotal = after.reduce((acc, it) => acc + Number(it.allocation_pct || 0), 0);
 
-    await this.audit.log({ table: 'capex_allocations', recordId: null, action: 'update', before, after, userId }, { manager });
     return { updated: after.length, total_pct: Math.round(finalTotal * 10000) / 10000 };
   }
 

@@ -40,16 +40,11 @@ const EXCLUDE = new Set([
   'src/applications/__tests__/application-classification-concurrency.integration.spec.ts',
   'src/applications/__tests__/application-classification-http-permissions.integration.spec.ts',
   'src/it-ops-settings/__tests__/it-ops-settings.integration.spec.ts',
-  // Known races, plan planning/perf-scale step 3: each spec fails until its
-  // lot lands; each fix PR removes its spec from this list (a file mixing lots
-  // is split). Run them with `npm run test:races` on a dedicated database
-  // (they refuse appdb outside GitHub Actions).
-  'src/capex/__tests__/capex-item-update-race.integration.spec.ts', // 3B
-  'src/spend/__tests__/budget-operations-deadlock-race.integration.spec.ts', // 3F
-  'src/spend/__tests__/spend-item-delete-race.integration.spec.ts', // 3B
-  'src/spend/__tests__/spend-item-update-race.integration.spec.ts', // 3B
-  'src/spend/__tests__/spend-items-csv-race.integration.spec.ts', // 3F + 3B
-  'src/spend/__tests__/spend-version-update-race.integration.spec.ts', // 3B
+  // Known races, plan planning/perf-scale step 3: a spec that fails until its
+  // lot lands is listed here; each fix PR removes its spec from this list (a
+  // file mixing lots is split). Run them with `npm run test:races` on a
+  // dedicated database (they refuse appdb outside GitHub Actions). Lot 3B
+  // fixed the last ones listed.
 ]);
 
 // Specs that exercise the on-premise code paths.
