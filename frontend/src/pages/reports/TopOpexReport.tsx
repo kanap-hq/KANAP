@@ -1,16 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Autocomplete, Box, Checkbox, ListItemText, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
-import { BudgetSummaryRow, itemName, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
+import ReportExclusionPicker from '../../components/reports/ReportExclusionPicker';
+import ReportDataStatus from '../../components/reports/ReportDataStatus';
+import { useReportScope } from './useReportScope';
 import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
+import { excludedAccountValues, readTopItems, topItemsRequest } from './reportAggregates';
+import { useBudgetAggregate } from './useBudgetAggregate';
+import { useAccountLabelOptions, useItemOptions } from './useReportOptions';
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -34,91 +39,33 @@ export default function TopOpexReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
 
-  const { data: allRows, isLoading } = useBudgetSummaryAll(scope);
-  const reportFilters = useBudgetReportFilters();
-  // Totals and shares read the kept lines only; the exclusion pickers still offer every line.
-  const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
+  const reportFilters = useBudgetReportFilters({ scope });
+  // The exclusion pickers offer every line and account of the window; they load when first opened.
+  const [itemsWanted, setItemsWanted] = useState(false);
+  const [accountsWanted, setAccountsWanted] = useState(false);
+  const itemOptions = useItemOptions(scope, itemsWanted);
+  const accountOptions = useAccountLabelOptions(scope, accountsWanted);
   // Lines and the accounts they use differ between OPEX and CAPEX: a type switch drops both exclusions.
   useEffect(() => {
     setExcludedIds([]);
     setExcludedAccounts([]);
   }, [scope]);
 
-  type ProcessedRow = {
-    id: string;
-    name: string;
-    value: number;
-    pct_of_total: number;
-  };
-
-  type RawRow = {
-    id: string;
-    name: string;
-    value: number;
-    account_display: string | null;
-  };
-
-  type ItemOption = { id: string; name: string };
-  type AccountOption = { id: string; name: string };
-
-  const { processed, totalMetric, topSelectionTotal } = useMemo(() => {
-    const all: RawRow[] = (rows ?? []).map((r: BudgetSummaryRow) => {
-      const slot = pickSlot(r, year);
-      const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
-      const value = Number(totals?.[metric] ?? 0);
-      return { id: r.id, name: itemName(scope, r), value, account_display: r.account_display ?? null };
-    });
-    const filtered = all.filter((item: RawRow) => {
-      if (excludedIds.includes(item.id)) return false;
-      if (item.account_display && excludedAccounts.includes(item.account_display)) return false;
-      return true;
-    });
-    const totalMetric = filtered.reduce((acc: number, it: RawRow) => acc + (Number(it.value) || 0), 0);
-    const sorted = [...filtered].sort((a: RawRow, b: RawRow) => (b.value - a.value));
-    const limit = Number.isFinite(topCount) && topCount > 0 ? Math.floor(topCount) : 1;
-    const topEntries = sorted.slice(0, limit);
-    const topSelectionTotal = topEntries.reduce((acc: number, it: RawRow) => acc + (Number(it.value) || 0), 0);
-    const processed = topEntries.map<ProcessedRow>((r) => ({
-      id: r.id,
-      name: r.name,
-      value: r.value,
-      pct_of_total: totalMetric > 0 ? Math.round((r.value / totalMetric) * 100) : 0,
-    }));
-    return { processed, totalMetric, topSelectionTotal };
-  }, [rows, scope, year, excludedIds, excludedAccounts, topCount, metric]);
-
-  const itemOptions = useMemo<ItemOption[]>(() => (allRows ?? [])
-    .map((r: BudgetSummaryRow) => ({ id: r.id, name: itemName(scope, r) }))
-    .sort((a: ItemOption, b: ItemOption) => a.name.localeCompare(b.name)), [allRows, scope]);
-
-  const selectedItemOptions = useMemo<ItemOption[]>(() => {
-    if (excludedIds.length === 0) return [];
-    const lookup = new Map<string, ItemOption>(itemOptions.map((option) => [option.id, option]));
-    return excludedIds
-      .map((id) => lookup.get(id))
-      .filter((option): option is ItemOption => Boolean(option));
-  }, [excludedIds, itemOptions]);
-
-  const accountOptions = useMemo<AccountOption[]>(() => {
-    const seen = new Set<string>();
-    const options: AccountOption[] = [];
-    for (const row of allRows ?? []) {
-      const name = row.account_display?.trim();
-      if (!name || seen.has(name)) continue;
-      seen.add(name);
-      options.push({ id: name, name });
-    }
-    options.sort((a, b) => a.name.localeCompare(b.name));
-    return options;
-  }, [allRows]);
-
-  const selectedAccountOptions = useMemo<AccountOption[]>(() => {
-    if (excludedAccounts.length === 0) return [];
-    const lookup = new Map<string, AccountOption>(accountOptions.map((option) => [option.id, option]));
-    return excludedAccounts
-      .map((id) => lookup.get(id))
-      .filter((option): option is AccountOption => Boolean(option));
-  }, [excludedAccounts, accountOptions]);
+  // The server keeps the lines of the filter bar, leaves out the excluded lines and accounts, and
+  // returns the top lines and the total of every kept line.
+  const request = useMemo(() => (reportFilters.queryFilters == null ? null : topItemsRequest({
+    scope,
+    year,
+    metric,
+    topCount,
+    excludedIds,
+    excludedAccounts: excludedAccountValues(excludedAccounts, accountOptions.options ?? []),
+    filters: reportFilters.queryFilters,
+  })), [reportFilters.queryFilters, scope, year, metric, topCount, excludedIds, excludedAccounts, accountOptions.options]);
+  const report = useBudgetAggregate(scope, request, { keepPrevious: true });
+  // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
+  const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
+  const { processed, totalMetric, topSelectionTotal } = useMemo(() => readTopItems(report.data), [report.data]);
 
   const columns = useMemo<ColDef[]>(() => [
     { field: 'name', headerName: t('reports.columns.item'), flex: 1, minWidth: 220 },
@@ -225,6 +172,7 @@ export default function TopOpexReport() {
 
   return (
     <ReportLayout
+      busy={busy}
       title={t("reports.topOpex.title")}
       subtitle={t('reports.topOpex.subtitle', { type: scopeLabel, metric: metricLabel })}
       filters={(
@@ -237,7 +185,7 @@ export default function TopOpexReport() {
         }}
         >
           <ItemScopeTabs value={scope} onChange={setScope} />
-          <BudgetReportFilters filters={reportFilters} rows={allRows} />
+          <BudgetReportFilters filters={reportFilters} />
           <TextField select size="small" label={t("reports.filters.year")} value={year} onChange={(e) => setYear(parseInt(e.target.value, 10))} sx={{ minWidth: 140 }}>
             <MenuItem value={Y - 1}>{Y - 1}</MenuItem>
             <MenuItem value={Y}>{Y}</MenuItem>
@@ -278,99 +226,27 @@ export default function TopOpexReport() {
             <MenuItem value="pie">{t("reports.filters.pieChart")}</MenuItem>
             <MenuItem value="bar">{t("reports.filters.horizontalBarChart")}</MenuItem>
           </TextField>
-          <Autocomplete
-            multiple
-            size="small"
-            disableCloseOnSelect
-            options={itemOptions}
-            value={selectedItemOptions}
-            onChange={(_, next) => {
-              setExcludedIds(next.map((option) => option.id));
-            }}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderOption={(props, option, { selected }) => (
-              <li {...props}>
-                <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
-                <ListItemText primary={option.name} />
-              </li>
-            )}
-            renderTags={() => []}
-            renderInput={(params) => {
-              const count = excludedIds.length;
-              return (
-                <TextField
-                  {...params}
-                  label={t("reports.filters.excludeItems")}
-                  placeholder={count === 0 ? t('reports.filters.excludeItemsPlaceholder') : ''}
-                  InputLabelProps={{ shrink: true }}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: count > 0 ? (
-                      <>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ ml: 0.5, mr: 1, whiteSpace: 'nowrap' }}
-                        >
-                          {t('reports.filters.itemSelected', { count })}
-                        </Typography>
-                        {params.InputProps.startAdornment}
-                      </>
-                    ) : params.InputProps.startAdornment,
-                  }}
-                />
-              );
-            }}
-            sx={{ minWidth: 260 }}
-            noOptionsText={t("reports.filters.noMatchingItems")}
+          <ReportExclusionPicker
+            label={t('reports.filters.excludeItems')}
+            placeholder={t('reports.filters.excludeItemsPlaceholder')}
+            selectedText={(count) => t('reports.filters.itemSelected', { count })}
+            noOptionsText={t('reports.filters.noMatchingItems')}
+            options={itemOptions.options}
+            loading={itemOptions.loading}
+            onFirstOpen={() => setItemsWanted(true)}
+            value={excludedIds}
+            onChange={setExcludedIds}
           />
-          <Autocomplete
-            multiple
-            size="small"
-            disableCloseOnSelect
-            options={accountOptions}
-            value={selectedAccountOptions}
-            onChange={(_, next) => {
-              setExcludedAccounts(next.map((option) => option.id));
-            }}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderOption={(props, option, { selected }) => (
-              <li {...props}>
-                <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
-                <ListItemText primary={option.name} />
-              </li>
-            )}
-            renderTags={() => []}
-            renderInput={(params) => {
-              const count = excludedAccounts.length;
-              return (
-                <TextField
-                  {...params}
-                  label={t("reports.filters.excludeAccounts")}
-                  placeholder={count === 0 ? t('reports.filters.excludeAccountsPlaceholder') : ''}
-                  InputLabelProps={{ shrink: true }}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: count > 0 ? (
-                      <>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ ml: 0.5, mr: 1, whiteSpace: 'nowrap' }}
-                        >
-                          {t('reports.filters.accountSelected', { count })}
-                        </Typography>
-                        {params.InputProps.startAdornment}
-                      </>
-                    ) : params.InputProps.startAdornment,
-                  }}
-                />
-              );
-            }}
-            sx={{ minWidth: 260 }}
-            noOptionsText={t("reports.filters.noMatchingAccounts")}
+          <ReportExclusionPicker
+            label={t('reports.filters.excludeAccounts')}
+            placeholder={t('reports.filters.excludeAccountsPlaceholder')}
+            selectedText={(count) => t('reports.filters.accountSelected', { count })}
+            noOptionsText={t('reports.filters.noMatchingAccounts')}
+            options={accountOptions.options?.map((option) => ({ id: option.id, label: option.name }))}
+            loading={accountOptions.loading}
+            onFirstOpen={() => setAccountsWanted(true)}
+            value={excludedAccounts}
+            onChange={setExcludedAccounts}
           />
         </Box>
       )}
@@ -405,9 +281,7 @@ export default function TopOpexReport() {
           </Box>
         </Paper>
       </Stack>
-      {isLoading && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t("reports.shared.loadingData")}</Typography>
-      )}
+      <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />
     </ReportLayout>
   );
 }

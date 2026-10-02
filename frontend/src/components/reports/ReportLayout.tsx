@@ -11,6 +11,7 @@ import { compactSelectMenuProps } from '../../theme/formSx';
 import { lightIslandTheme } from '../../config/ThemeContext';
 import { useLocale } from '../../i18n/useLocale';
 import { prepareReportPrint, setReportPrinting, useReportPrinting } from './reportPrint';
+import { REPORT_DATA_STATUS_CLASS } from './ReportDataStatus';
 
 /**
  * Label-above wrapper for a filter control in a report filter bar. The charter bans
@@ -147,6 +148,7 @@ export default function ReportLayout({
   rootLabel,
   onExportTableCsv,
   onExportChartPng,
+  busy = false,
   children,
 }: {
   title: string;
@@ -157,6 +159,11 @@ export default function ReportLayout({
   rootLabel?: string;
   onExportTableCsv?: () => void;
   onExportChartPng?: () => void;
+  /**
+   * The report's numbers are loading, or are the last answer kept while new ones load: the chart
+   * and the tables are dimmed (the status line is not), and the exports and the print wait.
+   */
+  busy?: boolean;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation(['ops']);
@@ -164,13 +171,17 @@ export default function ReportLayout({
   const screenTheme = useTheme();
   const { printing, requestPrint } = useReportPrintMode();
 
-  // Auto-print when `?print=1` present
+  // Auto-print when `?print=1` present, once the numbers are in.
+  const autoPrinted = useRef(false);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('print') === '1') {
-      setTimeout(() => void requestPrint(), 300);
-    }
-  }, [requestPrint]);
+    if (params.get('print') !== '1' || busy || autoPrinted.current) return undefined;
+    const timer = setTimeout(() => {
+      autoPrinted.current = true;
+      void requestPrint();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [requestPrint, busy]);
 
   const printedOn = printing
     ? new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(new Date())
@@ -228,27 +239,40 @@ export default function ReportLayout({
               {actions}
               {onExportTableCsv && (
                 <Tooltip title={t('reports.shared.exportTableCsv')}>
-                  <IconButton size="small" onClick={onExportTableCsv} aria-label={t('reports.shared.exportTableCsv')} sx={{ color: 'kanap.text.secondary' }}>
-                    <DownloadIcon fontSize="small" />
-                  </IconButton>
+                  <span>
+                    <IconButton size="small" onClick={onExportTableCsv} disabled={busy} aria-label={t('reports.shared.exportTableCsv')} sx={{ color: 'kanap.text.secondary' }}>
+                      <DownloadIcon fontSize="small" />
+                    </IconButton>
+                  </span>
                 </Tooltip>
               )}
               {onExportChartPng && (
                 <Tooltip title={t('reports.shared.exportChartPng')}>
-                  <IconButton size="small" onClick={onExportChartPng} aria-label={t('reports.shared.exportChartPng')} sx={{ color: 'kanap.text.secondary' }}>
-                    <ImageIcon fontSize="small" />
-                  </IconButton>
+                  <span>
+                    <IconButton size="small" onClick={onExportChartPng} disabled={busy} aria-label={t('reports.shared.exportChartPng')} sx={{ color: 'kanap.text.secondary' }}>
+                      <ImageIcon fontSize="small" />
+                    </IconButton>
+                  </span>
                 </Tooltip>
               )}
               <Tooltip title={t('reports.shared.printPdf')}>
-                <IconButton size="small" onClick={() => void requestPrint()} aria-label={t('reports.shared.printReport')} sx={{ color: 'kanap.text.secondary' }}>
-                  <PrintIcon fontSize="small" />
-                </IconButton>
+                <span>
+                  <IconButton size="small" onClick={() => void requestPrint()} disabled={busy} aria-label={t('reports.shared.printReport')} sx={{ color: 'kanap.text.secondary' }}>
+                    <PrintIcon fontSize="small" />
+                  </IconButton>
+                </span>
               </Tooltip>
             </Stack>
           </Stack>
         </Box>
-        {children}
+        <Box
+          aria-busy={busy || undefined}
+          sx={{
+            [`& > :not(.${REPORT_DATA_STATUS_CLASS})`]: { transition: 'opacity 120ms', opacity: busy ? 0.45 : 1 },
+          }}
+        >
+          {children}
+        </Box>
       </Stack>
     </ThemeProvider>
   );

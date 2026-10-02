@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CapexItemsService } from './capex-items.service';
 import { CapexItemsDeleteService } from './capex-items-delete.service';
@@ -7,11 +7,12 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireLevel } from '../auth/require-level.decorator';
+import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { StorageService } from '../common/storage/storage.service';
 import { CapexItemContactsService } from './capex-item-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { budgetListAccess } from '../spend/budget-list/budget-list.runtime';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
@@ -54,7 +55,7 @@ export class CapexItemsController {
     @Query() query: ListCapexQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summary(query, { manager: ctx.manager });
+    return this.svc.summary(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -64,7 +65,7 @@ export class CapexItemsController {
     @Query() query: any,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryFilterValues(query, { manager: ctx.manager });
+    return this.svc.summaryFilterValues(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -74,7 +75,7 @@ export class CapexItemsController {
     @Query() query: ListCapexQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryIds(query, { manager: ctx.manager });
+    return this.svc.summaryIds(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -85,7 +86,7 @@ export class CapexItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const id = await this.resolveId(String(query?.id ?? ''), ctx.manager as EntityManager);
-    return this.svc.summaryNeighbors(query, id, { manager: ctx.manager });
+    return this.svc.summaryNeighbors(query, id, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -95,7 +96,24 @@ export class CapexItemsController {
     @Query() query: ListCapexQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryTotals(query, { manager: ctx.manager });
+    return this.svc.summaryTotals(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
+  }
+
+  /**
+   * The lines of a list state grouped and measured on the server (reports,
+   * dashboard): body `{ query, spec }`, same read level as the list. A read:
+   * a frozen tenant keeps it, like the GET routes.
+   */
+  @ReadOnlyRoute()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'reader')
+  @Post('summary/aggregate')
+  @HttpCode(200)
+  summaryAggregate(
+    @Body() body: unknown,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.summaryAggregateRequest(body, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SpendItemsService } from './spend-items.service';
 import { SpendItemsDeleteService } from './spend-items-delete.service';
@@ -6,12 +6,13 @@ import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireLevel } from '../auth/require-level.decorator';
+import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { StorageService } from '../common/storage/storage.service';
 import { contentDisposition } from '../common/content-disposition';
 import { SpendItemContactsService } from './spend-item-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { budgetListAccess } from './budget-list/budget-list.runtime';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
@@ -55,7 +56,7 @@ export class SpendItemsController {
     @Query() query: ListSpendQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summary(query, { manager: ctx.manager });
+    return this.svc.summary(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -65,7 +66,7 @@ export class SpendItemsController {
     @Query() query: any,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryFilterValues(query, { manager: ctx.manager });
+    return this.svc.summaryFilterValues(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -75,7 +76,7 @@ export class SpendItemsController {
     @Query() query: ListSpendQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryIds(query, { manager: ctx.manager });
+    return this.svc.summaryIds(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -86,7 +87,7 @@ export class SpendItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const id = await this.resolveId(String(query?.id ?? ''), ctx.manager as EntityManager);
-    return this.svc.summaryNeighbors(query, id, { manager: ctx.manager });
+    return this.svc.summaryNeighbors(query, id, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -96,7 +97,24 @@ export class SpendItemsController {
     @Query() query: ListSpendQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryTotals(query, { manager: ctx.manager });
+    return this.svc.summaryTotals(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
+  }
+
+  /**
+   * The lines of a list state grouped and measured on the server (reports,
+   * dashboard): body `{ query, spec }`, same read level as the list. A read:
+   * a frozen tenant keeps it, like the GET routes.
+   */
+  @ReadOnlyRoute()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('opex', 'reader')
+  @Post('summary/aggregate')
+  @HttpCode(200)
+  summaryAggregate(
+    @Body() body: unknown,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.summaryAggregateRequest(body, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   // Export before parameterized ':id'

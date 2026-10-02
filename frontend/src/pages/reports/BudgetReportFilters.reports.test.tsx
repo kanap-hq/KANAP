@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => {
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
-vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
@@ -23,10 +23,10 @@ vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   const state = await import('./budgetColumnsTestState');
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
-const tree = vi.hoisted(() => ({ nodes: [] as unknown[] }));
+const tree = vi.hoisted(() => ({ nodes: [] as unknown[], ready: true }));
 vi.mock('../../hooks/useCostCenterTree', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useCostCenterTree')>();
-  return { ...actual, useCostCenterTree: () => actual.buildCostCenterTree(tree.nodes as CostCenterNode[]) };
+  return { ...actual, useCostCenterTree: () => actual.buildCostCenterTree(tree.nodes as CostCenterNode[], tree.ready) };
 });
 const axesState = vi.hoisted(() => ({ list: [] as unknown[] }));
 vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
@@ -43,8 +43,8 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
 });
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
-  default: ({ filters, children }: { filters?: React.ReactNode; children?: React.ReactNode }) => (
-    <div>
+  default: ({ filters, children, busy }: { filters?: React.ReactNode; children?: React.ReactNode; busy?: boolean }) => (
+    <div data-testid="layout" data-busy={busy ? 'true' : 'false'}>
       <div data-testid="filters">{filters}</div>
       {children}
     </div>
@@ -66,6 +66,7 @@ vi.mock('../../components/reports/ReportGrid', () => ({
 }));
 
 import api from '../../api';
+import { fakeAggregate, fakeFilterValues } from '../../test/fakeBudgetAggregate';
 import { setBudgetColumns } from './budgetColumnsTestState';
 import TopOpexReport from './TopOpexReport';
 import OpexDeltaReport from './OpexDeltaReport';
@@ -76,6 +77,7 @@ import ConsolidationReport from './ConsolidationReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 const Y = new Date().getFullYear();
 
 function node(id: string, patch: Partial<CostCenterNode>): CostCenterNode {
@@ -157,12 +159,19 @@ const gridRows = (index = 0) => JSON.parse(screen.getAllByTestId('grid')[index].
 beforeEach(() => {
   setBudgetColumns();
   tree.nodes = NODES;
+  tree.ready = true;
   axesState.list = [DEFAULT_AXIS, NATURE];
   chart.options = null;
   get.mockReset();
-  get.mockImplementation(async (url: string) => {
-    if (url.endsWith('/summary')) return { data: { items: ROWS, total: ROWS.length } };
+  get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
+    if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(ROWS, String(config?.params?.fields ?? '').split(',')) };
     return { data: { items: [], total: 0 } };
+  });
+  // The server's aggregates, computed from the same lines.
+  post.mockReset();
+  post.mockImplementation(async (url: string, body: any) => {
+    if (url.endsWith('/summary/aggregate')) return { data: fakeAggregate(ROWS, body) };
+    throw new Error(`unexpected POST ${url}`);
   });
 });
 
@@ -343,6 +352,9 @@ describe('Analytics report dimensions', () => {
     renderReport(<AnalyticsCategoryReport />, '/report');
     await waitFor(() => expect(groups()).toHaveLength(5));
     expect(await optionsOf('reports.filters.dimension', 'mouseDown')).toEqual(['Analytics dimension', 'Nature']);
+    // The dimension's own values load with the exclusion picker, not with the report.
+    expect(valueCalls()).toEqual([]);
+    await optionsOf('reports.filters.excludeCategories', 'keyDown');
     expect(valueCalls()).toContainEqual({ axis_id: 'ax-def', limit: 1000, sort: 'name:ASC' });
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.dimension' }));
@@ -354,7 +366,7 @@ describe('Analytics report dimensions', () => {
       ['Software', 3],
     ]));
     expect(chart.options.title.text).toContain('"dimension":"Nature"');
-    expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC' });
+    await waitFor(() => expect(valueCalls()).toContainEqual({ axis_id: 'ax-nat', limit: 1000, sort: 'name:ASC' }));
   });
 
   it('opens on the dimension the address names', async () => {
@@ -389,5 +401,43 @@ describe('Analytics report dimensions', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
     await waitFor(() => expect(filters.textContent).not.toContain('reports.filters.categorySelected'));
     await waitFor(() => expect(groups()).toHaveLength(3));
+  });
+});
+
+describe('A report while new numbers load', () => {
+  const busy = () => screen.getByTestId('layout').getAttribute('data-busy');
+  /** Every later aggregate stays pending: the report shows what it shows while it loads. */
+  const holdAnswers = () => post.mockImplementation(() => new Promise(() => undefined));
+
+  it('keeps the last answer, dimmed and marked loading, when the measures are the same (top count)', async () => {
+    renderReport(<TopOpexReport />, '/report');
+    await waitFor(() => expect(gridRows()).toHaveLength(5));
+    expect(busy()).toBe('false');
+    holdAnswers();
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'reports.filters.topCount' }), { target: { value: '2' } });
+    await waitFor(() => expect(busy()).toBe('true'));
+    expect(screen.getByText('ops:reports.shared.loadingData')).toBeInTheDocument();
+    // The last answer stays on screen (same measure, same keys), dimmed by the layout.
+    expect(gridRows()).toHaveLength(5);
+  });
+
+  it('shows no last answer under new columns when the measures change (a year added)', async () => {
+    renderReport(<ConsolidationReport />, '/report');
+    await waitFor(() => expect(gridRows().map((row) => row[String(Y)])).toEqual([8123]));
+    holdAnswers();
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.endYear' }));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: String(Y + 1) }));
+    await waitFor(() => expect(busy()).toBe('true'));
+    expect(screen.getByText('ops:reports.shared.loadingData')).toBeInTheDocument();
+    // No group of the former answer sits under the Y and Y+1 columns.
+    expect(gridRows()).toEqual([]);
+  });
+
+  it('says it loads while the filter bar still reads its address (cost center tree not loaded)', async () => {
+    tree.ready = false;
+    renderReport(<TopOpexReport />, '/report?costCenter=grp');
+    expect(busy()).toBe('true');
+    expect(screen.getByText('ops:reports.shared.loadingData')).toBeInTheDocument();
+    expect(post.mock.calls.some(([, body]) => body.spec.groupBy[0] === 'id' && body.spec.measures.length === 1)).toBe(false);
   });
 });

@@ -10,7 +10,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import type { CostCenterNode } from '../../services/costCenters';
 import type { AnalyticsAxis } from '../../services/analytics';
 
-vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => false }) }));
 const treeState = vi.hoisted(() => ({ nodes: [] as unknown[], ready: true, isError: false }));
 vi.mock('../../hooks/useCostCenterTree', async (importOriginal) => {
@@ -39,16 +39,13 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
 });
 
 import api from '../../api';
-import {
-  BudgetReportFilters,
-  type BudgetReportFilterRow,
-  filterBudgetRows,
-  parseAnalyticsParam,
-  useBudgetReportFilters,
-} from './BudgetReportFilters';
+import { BudgetReportFilters, parseAnalyticsParam, useBudgetReportFilters } from './BudgetReportFilters';
 import { buildCostCenterTree } from '../../hooks/useCostCenterTree';
+import { reportFilterModels, type ColumnFilters, type ReportFilterPicks } from '../../pages/reports/reportAggregates';
+import { fakeAggregate } from '../../test/fakeBudgetAggregate';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
+const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
 function node(id: string, patch: Partial<CostCenterNode>): CostCenterNode {
   return {
@@ -93,7 +90,7 @@ const AXES: AnalyticsAxis[] = [
   axis('ax-idle', { name: 'Activity', sort_order: 3 }),
 ];
 
-type Row = BudgetReportFilterRow & { id: string } & Record<string, unknown>;
+type Row = { id: string; cost_center_id?: string | null; run_build?: string | null; analytics_value_ids?: Record<string, string> } & Record<string, unknown>;
 
 /** A line's values as the summary sends them: ids by dimension, and each value's name under its field. */
 function values(pairs: Record<string, [string, string]>) {
@@ -116,40 +113,54 @@ const ROWS: Row[] = [
 
 const ids = (rows: Row[] | undefined) => (rows ?? []).map((row) => row.id);
 
-describe('filterBudgetRows', () => {
+/** The lines the server keeps under column filters (the stand-in of the aggregate). */
+const kept = (rows: Row[], filters: ColumnFilters | null) => (filters == null
+  ? []
+  : fakeAggregate(rows, { query: { filters }, spec: { groupBy: ['id'], measures: [], order: [{ by: 'key', index: 0, dir: 'ASC' }] } }).groups.map((group) => group.keys[0] as string));
+const keptBy = (rows: Row[], picks: Partial<ReportFilterPicks>) => kept(rows, reportFilterModels({ costCenterIds: null, runBuild: null, analytics: [], ...picks }));
+/** The lines the bar's picks keep, in id order. */
+const sorted = (list: string[]) => [...list].sort();
+
+describe('reportFilterModels', () => {
   const tree = buildCostCenterTree(NODES);
+  const under = (id: string) => Array.from(tree.descendantIds(id));
 
-  it('keeps the lines of a group and of every node below it, disabled ones included', () => {
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: tree.descendantIds('grp'), runBuild: null }))).toEqual(['a', 'b', 'c']);
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: tree.descendantIds('sub'), runBuild: null }))).toEqual(['c']);
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: tree.descendantIds('cc2'), runBuild: null }))).toEqual(['b']);
+  it('keeps the lines of a group and of every node below it, disabled ones included', async () => {
+    expect(keptBy(ROWS, { costCenterIds: under('grp') })).toEqual(['a', 'b', 'c']);
+    expect(keptBy(ROWS, { costCenterIds: under('sub') })).toEqual(['c']);
+    expect(keptBy(ROWS, { costCenterIds: under('cc2') })).toEqual(['b']);
+    expect(reportFilterModels({ costCenterIds: under('sub'), runBuild: null, analytics: [] })).toEqual({
+      cost_center_id: { filterType: 'set', values: ['sub', 'cc3'] },
+    });
   });
 
-  it('reads run, build and not set, alone or with a node', () => {
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: null, runBuild: 'run' }))).toEqual(['a', 'd']);
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: null, runBuild: 'build' }))).toEqual(['b', 'e']);
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: null, runBuild: 'none' }))).toEqual(['c', 'f']);
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: tree.descendantIds('grp'), runBuild: 'none' }))).toEqual(['c']);
+  it('reads run, build and not set, alone or with a node', async () => {
+    expect(keptBy(ROWS, { runBuild: 'run' })).toEqual(['a', 'd']);
+    expect(keptBy(ROWS, { runBuild: 'build' })).toEqual(['b', 'e']);
+    expect(keptBy(ROWS, { runBuild: 'none' })).toEqual(['c', 'f']);
+    expect(keptBy(ROWS, { costCenterIds: under('grp'), runBuild: 'none' })).toEqual(['c']);
+    expect(reportFilterModels({ costCenterIds: null, runBuild: 'none', analytics: [] })).toEqual({ run_build: { filterType: 'set', values: [null] } });
   });
 
-  it('returns the same lines when nothing is picked', () => {
-    expect(filterBudgetRows(ROWS, { costCenterIds: null, runBuild: null })).toBe(ROWS);
-    expect(filterBudgetRows(ROWS, { costCenterIds: null, runBuild: null, analytics: new Map() })).toBe(ROWS);
+  it('filters nothing when nothing is picked', async () => {
+    expect(reportFilterModels({ costCenterIds: null, runBuild: null, analytics: [] })).toEqual({});
+    expect(keptBy(ROWS, {})).toEqual(ids(ROWS));
   });
 
-  it('keeps the lines holding the picked value, or no value, on each picked dimension', () => {
-    const pick = (entries: Array<[string, string]>) => new Map(entries);
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: null, runBuild: null, analytics: pick([['ax-nat', 'n-hw']]) }))).toEqual(['a', 'e']);
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: null, runBuild: null, analytics: pick([['ax-nat', 'none']]) }))).toEqual(['b', 'd', 'f']);
-    expect(ids(filterBudgetRows(ROWS, {
-      costCenterIds: null, runBuild: null, analytics: pick([['ax-def', 'v-lic'], ['ax-nat', 'none']]),
-    }))).toEqual(['b']);
-    expect(ids(filterBudgetRows(ROWS, { costCenterIds: null, runBuild: 'run', analytics: pick([['ax-def', 'v-lic']]) }))).toEqual(['a']);
+  it('keeps the lines holding the picked value, or no value, on each picked dimension', async () => {
+    expect(keptBy(ROWS, { analytics: [['ax-nat', 'n-hw']] })).toEqual(['a', 'e']);
+    expect(keptBy(ROWS, { analytics: [['ax-nat', 'none']] })).toEqual(['b', 'd', 'f']);
+    expect(keptBy(ROWS, { analytics: [['ax-def', 'v-lic'], ['ax-nat', 'none']] })).toEqual(['b']);
+    expect(keptBy(ROWS, { runBuild: 'run', analytics: [['ax-def', 'v-lic']] })).toEqual(['a']);
+    expect(reportFilterModels({ costCenterIds: null, runBuild: null, analytics: [['ax-nat', 'none'], ['ax-def', 'v-lic']] })).toEqual({
+      'analytics_id_ax-nat': { filterType: 'set', values: [null] },
+      'analytics_id_ax-def': { filterType: 'set', values: ['v-lic'] },
+    });
   });
 });
 
 describe('parseAnalyticsParam', () => {
-  it('reads dimension and value pairs, skips malformed ones and keeps the first pair of a dimension', () => {
+  it('reads dimension and value pairs, skips malformed ones and keeps the first pair of a dimension', async () => {
     expect(Array.from(parseAnalyticsParam('a:v1,b:none,:x,c:,d,a:v2'))).toEqual([['a', 'v1'], ['b', 'none']]);
     expect(parseAnalyticsParam(null).size).toBe(0);
   });
@@ -157,22 +168,27 @@ describe('parseAnalyticsParam', () => {
 
 const seen = vi.hoisted(() => ({ search: '', kept: [] as string[], navigation: '' }));
 
+/** The lines the server holds: the bar's options come from them, and the picks keep some of them. */
+const server = vi.hoisted(() => ({ rows: [] as unknown[] }));
+
 function Harness({ rows }: { rows: Row[] }) {
-  const filters = useBudgetReportFilters();
+  const filters = useBudgetReportFilters({ scope: 'opex' });
   const location = useLocation();
   seen.search = location.search;
   seen.navigation = useNavigationType();
-  seen.kept = ids(filters.filterRows(rows));
+  seen.kept = sorted(kept(rows, filters.queryFilters));
   return (
     <div data-testid="bar">
-      <BudgetReportFilters filters={filters} rows={rows} />
+      <BudgetReportFilters filters={filters} />
     </div>
   );
 }
 
-function renderBar(path: string, rows: Row[] = ROWS) {
+/** Renders the bar and waits for its options (the server's aggregates). */
+async function renderBar(path: string, rows: Row[] = ROWS) {
+  server.rows = rows;
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={[path]}>
@@ -181,6 +197,8 @@ function renderBar(path: string, rows: Row[] = ROWS) {
       </ThemeProvider>
     </QueryClientProvider>,
   );
+  for (let i = 0; i < 3; i += 1) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+  return view;
 }
 
 const costCenterInput = () => within(screen.getByTestId('bar')).queryByPlaceholderText('All cost centers') as HTMLInputElement | null;
@@ -198,51 +216,53 @@ beforeEach(() => {
   axesState.ready = true;
   axesState.isError = false;
   get.mockReset();
+  post.mockReset();
+  post.mockImplementation(async (_url: string, body: any) => ({ data: fakeAggregate(server.rows as Row[], body) }));
   seen.search = '';
   seen.kept = [];
   seen.navigation = '';
 });
 
 describe('BudgetReportFilters', () => {
-  it('renders nothing when the tenant has no node and no line says run or build', () => {
+  it('renders nothing when the tenant has no node and no line says run or build', async () => {
     treeState.nodes = [];
-    renderBar('/report', [{ id: 'x', cost_center_id: null, run_build: null }]);
+    await renderBar('/report', [{ id: 'x', cost_center_id: null, run_build: null }]);
     expect(screen.getByTestId('bar')).toBeEmptyDOMElement();
     expect(seen.kept).toEqual(['x']);
   });
 
-  it('shows the run or build picker without nodes when a line has a value, or when the address asks', () => {
+  it('shows the run or build picker without nodes when a line has a value, or when the address asks', async () => {
     treeState.nodes = [];
-    const view = renderBar('/report', [{ id: 'x', run_build: 'build' }]);
+    const view = await renderBar('/report', [{ id: 'x', run_build: 'build' }]);
     expect(runBuildSelect()).toBeInTheDocument();
     expect(costCenterInput()).toBeNull();
     view.unmount();
 
-    renderBar('/report?runBuild=none', [{ id: 'x', run_build: null }]);
+    await renderBar('/report?runBuild=none', [{ id: 'x', run_build: null }]);
     expect(runBuildSelect()?.textContent).toBe('Not set');
   });
 
-  it('shows the node picker, and not the run or build one, when no line has a value', () => {
-    renderBar('/report', [{ id: 'x', cost_center_id: 'cc1', run_build: null }]);
+  it('shows the node picker, and not the run or build one, when no line has a value', async () => {
+    await renderBar('/report', [{ id: 'x', cost_center_id: 'cc1', run_build: null }]);
     expect(costCenterInput()).toBeInTheDocument();
     expect(runBuildSelect()).toBeNull();
   });
 
-  it('reads a group from the address and keeps the lines below it', () => {
-    renderBar('/report?costCenter=grp');
+  it('reads a group from the address and keeps the lines below it', async () => {
+    await renderBar('/report?costCenter=grp');
     expect(costCenterInput()?.value).toBe('GRP · IT department');
     expect(seen.kept).toEqual(['a', 'b', 'c']);
   });
 
-  it('shows no line until the tree is loaded', () => {
+  it('shows no line until the tree is loaded', async () => {
     treeState.ready = false;
-    renderBar('/report?costCenter=grp');
+    await renderBar('/report?costCenter=grp');
     expect(seen.kept).toEqual([]);
     expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('shows no line and says why for a node the tree does not hold, and clears it', async () => {
-    renderBar('/report?costCenter=gone&scope=capex');
+    await renderBar('/report?costCenter=gone&scope=capex');
     expect(costCenterInput()?.value).toBe('');
     expect(seen.kept).toEqual([]);
     expect(screen.getByRole('status').textContent).toContain('This cost center no longer exists or could not be loaded.');
@@ -255,25 +275,25 @@ describe('BudgetReportFilters', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
-  it('shows no line and says why when the tree failed to load, even with nothing else to show', () => {
+  it('shows no line and says why when the tree failed to load, even with nothing else to show', async () => {
     treeState.nodes = [];
     treeState.isError = true;
-    renderBar('/report?costCenter=grp', [{ id: 'x', cost_center_id: 'cc1', run_build: null }]);
+    await renderBar('/report?costCenter=grp', [{ id: 'x', cost_center_id: 'cc1', run_build: null }]);
     expect(seen.kept).toEqual([]);
     expect(costCenterInput()).toBeNull();
     expect(screen.getByRole('status').textContent).toContain('This cost center no longer exists or could not be loaded.');
   });
 
-  it('does not filter or complain about a failed tree when the address names no node', () => {
+  it('does not filter or complain about a failed tree when the address names no node', async () => {
     treeState.nodes = [];
     treeState.isError = true;
-    renderBar('/report', [{ id: 'x', cost_center_id: 'cc1', run_build: null }]);
+    await renderBar('/report', [{ id: 'x', cost_center_id: 'cc1', run_build: null }]);
     expect(seen.kept).toEqual(['x']);
     expect(screen.getByTestId('bar')).toBeEmptyDOMElement();
   });
 
   it('writes both picks to the address and clears them', async () => {
-    renderBar('/report?scope=capex');
+    await renderBar('/report?scope=capex');
 
     const input = costCenterInput() as HTMLInputElement;
     fireEvent.mouseDown(input);
@@ -312,7 +332,7 @@ describe('BudgetReportFilters', () => {
   });
 
   it('lists a disabled node and lets a report pick it', async () => {
-    renderBar('/report');
+    await renderBar('/report');
     const input = costCenterInput() as HTMLInputElement;
     fireEvent.mouseDown(input);
     const option = await screen.findByTestId('cost-center-option-cc2');
@@ -323,9 +343,30 @@ describe('BudgetReportFilters', () => {
   });
 });
 
+describe('BudgetReportFilters options that failed to load', () => {
+  it('says so with a retry instead of hiding the selects, and shows them once read', async () => {
+    treeState.nodes = [];
+    let fail = true;
+    post.mockImplementation(async (_url: string, body: any) => {
+      if (fail) throw Object.assign(new Error('Server busy'), { response: { status: 503 } });
+      return { data: fakeAggregate(server.rows as Row[], body) };
+    });
+    await renderBar('/report');
+    expect(screen.getByRole('status').textContent).toContain('Failed to load data');
+    expect(runBuildSelect()).toBeNull();
+
+    fail = false;
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Retry' })); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(runBuildSelect()).toBeInTheDocument();
+    expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature']);
+  });
+});
+
 describe('BudgetReportFilters dimensions', () => {
-  it('shows one select per enabled dimension a line holds a value on, in dimension order, named after it', () => {
-    renderBar('/report');
+  it('shows one select per enabled dimension a line holds a value on, in dimension order, named after it', async () => {
+    await renderBar('/report');
     // The default dimension has no name: it reads as the translated default label. Old split is
     // disabled, and no line holds an Activity value.
     expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature']);
@@ -333,21 +374,21 @@ describe('BudgetReportFilters dimensions', () => {
   });
 
   it('offers the values the lines hold, by name, then no value', async () => {
-    renderBar('/report', ROWS.filter((row) => row.id !== 'e'));
+    await renderBar('/report', ROWS.filter((row) => row.id !== 'e'));
     fireEvent.mouseDown(dimensionSelect('Nature'));
     const listbox = screen.getByRole('listbox');
     expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['All', 'Hardware', 'Software', 'No value']);
   });
 
-  it('shows a dimension the address names although no line holds a value on it', () => {
-    renderBar('/report?analytics=ax-idle:none');
+  it('shows a dimension the address names although no line holds a value on it', async () => {
+    await renderBar('/report?analytics=ax-idle:none');
     expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature', 'Activity']);
     expect(dimensionSelect('Activity').textContent).toBe('No value');
     expect(seen.kept).toEqual(ids(ROWS));
   });
 
-  it('writes each pick to the address, replacing the entry, and clears them', () => {
-    renderBar('/report?scope=capex');
+  it('writes each pick to the address, replacing the entry, and clears them', async () => {
+    await renderBar('/report?scope=capex');
 
     fireEvent.mouseDown(dimensionSelect('Nature'));
     fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Hardware' }));
@@ -378,30 +419,30 @@ describe('BudgetReportFilters dimensions', () => {
     expect(seen.kept).toEqual(ids(ROWS));
   });
 
-  it('reads the picks from the address and ignores a pair naming an unknown or disabled dimension', () => {
+  it('reads the picks from the address and ignores a pair naming an unknown or disabled dimension', async () => {
     // No line holds x1 on Old split: applied, the pair would keep nothing.
-    renderBar('/report?analytics=ax-off:x1,gone:v-1,ax-nat:none');
+    await renderBar('/report?analytics=ax-off:x1,gone:v-1,ax-nat:none');
     expect(seen.kept).toEqual(['b', 'd', 'f']);
     expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature']);
     expect(dimensionSelect('Nature').textContent).toBe('No value');
   });
 
-  it('shows no line until the dimensions are loaded when the address names one', () => {
+  it('shows no line until the dimensions are loaded when the address names one', async () => {
     axesState.ready = false;
     axesState.list = [];
-    const view = renderBar('/report?analytics=ax-nat:n-hw');
+    const view = await renderBar('/report?analytics=ax-nat:n-hw');
     expect(seen.kept).toEqual([]);
     expect(dimensionSelects()).toEqual([]);
     view.unmount();
 
-    renderBar('/report');
+    await renderBar('/report');
     expect(seen.kept).toEqual(ids(ROWS));
   });
 
   it('shows no line and says why when the dimensions failed to load, and clears the picks', async () => {
     axesState.list = [];
     axesState.isError = true;
-    renderBar('/report?analytics=ax-nat:n-hw,ax-def:none&scope=capex');
+    await renderBar('/report?analytics=ax-nat:n-hw,ax-def:none&scope=capex');
     expect(seen.kept).toEqual([]);
     expect(dimensionSelects()).toEqual([]);
     expect(screen.getByRole('status').textContent).toContain('The analytics filter could not be applied. Clear it or try again.');
@@ -414,24 +455,24 @@ describe('BudgetReportFilters dimensions', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
-  it('says why even with nothing else to show, and stays quiet when the address names no value', () => {
+  it('says why even with nothing else to show, and stays quiet when the address names no value', async () => {
     treeState.nodes = [];
     axesState.list = [];
     axesState.isError = true;
     const plain = [{ id: 'x', cost_center_id: null, run_build: null }];
-    const view = renderBar('/report?analytics=ax-nat:n-hw', plain);
+    const view = await renderBar('/report?analytics=ax-nat:n-hw', plain);
     expect(seen.kept).toEqual([]);
     expect(screen.getByRole('status').textContent).toContain('The analytics filter could not be applied.');
     view.unmount();
 
-    renderBar('/report', plain);
+    await renderBar('/report', plain);
     expect(seen.kept).toEqual(['x']);
     expect(screen.getByTestId('bar')).toBeEmptyDOMElement();
   });
 
   it('names a picked value that no line holds from the value itself', async () => {
     get.mockResolvedValue({ data: { id: 'n-gone', axis_id: 'ax-nat', name: 'Travel' } });
-    renderBar('/report?analytics=ax-nat:n-gone');
+    await renderBar('/report?analytics=ax-nat:n-gone');
     expect(seen.kept).toEqual([]);
     expect(await within(dimensionSelect('Nature')).findByText('Travel')).toBeInTheDocument();
     expect(get).toHaveBeenCalledWith('/analytics-categories/n-gone');

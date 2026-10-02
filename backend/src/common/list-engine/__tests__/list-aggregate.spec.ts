@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
-import { aggregateSql, AggregateSpec, validateAggregateSpec } from '../list-aggregate';
+import { AGGREGATE_LIMITS, aggregateSql, AggregateSpec, validateAggregateSpec } from '../list-aggregate';
 import type { ListState } from '../list-engine.types';
 import { SqlStatement } from '../sql-statement';
 import { BudgetListConfig } from '../../../spend/budget-list/budget-list.config';
@@ -17,8 +17,9 @@ import { SUMMARY_SCOPES } from '../../../spend/spend-summary.builder';
 const TENANT = '11111111-1111-4111-8111-111111111111';
 const Y = 2026;
 
-function runtime(scope: 'opex' | 'capex' = 'opex'): BudgetListRuntime {
+function runtime(scope: 'opex' | 'capex' = 'opex', canReadAccounts = true): BudgetListRuntime {
   return {
+    canReadAccounts,
     scope: SUMMARY_SCOPES[scope],
     tenantId: TENANT,
     currentYear: Y,
@@ -34,9 +35,9 @@ const state = (patch: Partial<ListState> = {}): ListState => ({
 });
 
 /** The statement as built (the tenant is `$1`) and as run (`finalize` numbers the parameters in order of use). */
-function build(spec: AggregateSpec, patch: Partial<ListState> = {}, scope: 'opex' | 'capex' = 'opex') {
+function build(spec: AggregateSpec, patch: Partial<ListState> = {}, scope: 'opex' | 'capex' = 'opex', canReadAccounts = true) {
   const stmt = new SqlStatement(TENANT);
-  const raw = aggregateSql(stmt, new BudgetListConfig(runtime(scope)), state(patch), spec);
+  const raw = aggregateSql(stmt, new BudgetListConfig(runtime(scope, canReadAccounts)), state(patch), spec);
   return { raw, ...stmt.finalize(raw) };
 }
 
@@ -165,8 +166,54 @@ function testParts() {
   assert.ok(/END\) DESC NULLS FIRST, g\.k0/.test(fteOrder('DESC', 'FIRST')), 'unless asked');
 }
 
+/**
+ * PR E (lot 2D): a spec with keys takes at most `groupedMeasures` measures, whatever the keys (one
+ * group per line through `id`, a name, a note or a combination); without keys, `measures`. The
+ * report fields compile and read the tenant.
+ */
+function testGroupedCapAndReportFields() {
+  const sums = (n: number) => Array.from({ length: n }, (_, i) => sum(`m${i}`, 'yBudget'));
+  const refused = isBadRequest(new RegExp(`at most ${AGGREGATE_LIMITS.groupedMeasures} measures with group keys`));
+  for (const groupBy of [['id'], ['item_number'], ['product_name'], ['notes'], ['currency'], ['supplier_name', 'notes']]) {
+    assert.throws(() => validateAggregateSpec({ groupBy, measures: sums(AGGREGATE_LIMITS.groupedMeasures + 1) }), refused, groupBy.join(', '));
+    assert.doesNotThrow(() => build({ groupBy, measures: sums(AGGREGATE_LIMITS.groupedMeasures) }), groupBy.join(', '));
+  }
+  assert.doesNotThrow(() => build({ groupBy: [], measures: sums(AGGREGATE_LIMITS.measures) }), 'one group keeps the cap of 60');
+  assert.throws(() => validateAggregateSpec({ groupBy: [], measures: sums(AGGREGATE_LIMITS.measures + 1) }), isBadRequest(/at most 60 measures/));
+
+  const axis = '22222222-2222-4222-8222-222222222222';
+  const valueId = build({ groupBy: [`analytics_id_${axis}`, `analytics_${axis}`], measures: [] }, { filters: { [`analytics_id_${axis}`]: { filterType: 'set', values: [null] } } }).raw;
+  assert.ok(valueId.includes(`NULLIF((ax0.category_id::text)::text, '') AS k0`), 'the value id of a dimension groups');
+  assert.ok(valueId.includes(`LEFT JOIN spend_item_analytics_values ax0 ON ax0.tenant_id = $1`), 'its link reads the tenant');
+  const unknownAxis = build({ groupBy: ['analytics_id_44444444-4444-4444-8444-444444444444'], measures: [] }).sql;
+  assert.ok(unknownAxis.includes('NULLIF((NULL::text)::text, \'\') AS k0'), 'a dimension the tenant does not have reads null');
+
+  const consolidation = build({ groupBy: ['account_consolidation_key', 'account_consolidation_label'], measures: [sum('b', 'yBudget')] }).raw;
+  assert.ok(consolidation.includes('cons_labels AS (SELECT k.key, min(k.label COLLATE "und-x-icu") AS label'), 'one label per key, the least in the ICU order');
+  assert.ok(/FROM accounts ca\s+WHERE ca\.tenant_id = \$1/.test(consolidation), 'the labels read the tenant\'s accounts');
+  assert.ok(consolidation.includes('LEFT JOIN accounts acc ON acc.tenant_id = $1'), 'the line\'s account reads the tenant');
+  assert.ok(consolidation.includes('AND EXISTS (SELECT 1 FROM spend_items li WHERE li.tenant_id = $1 AND li.account_id = ca.id)'), 'the labels: accounts the lines use only');
+  // A caller who cannot read the accounts page: null keys and labels, as a filter or a sort too, no account read.
+  const hidden = build(
+    { groupBy: ['account_consolidation_key', 'account_consolidation_label'], measures: [sum('b', 'yBudget')], order: [{ by: 'key', index: 0, dir: 'ASC' }] },
+    { filters: { account_consolidation_key: { filterType: 'set', values: ['c_600'] } }, sort: { field: 'account_consolidation_label', direction: 'ASC' } },
+    'opex',
+    false,
+  ).raw;
+  assert.ok(hidden.includes(`NULLIF((NULL::text)::text, '') AS k0`) && hidden.includes(`NULLIF((NULL::text)::text, '') AS k1`), 'keys read as null');
+  assert.equal(/cons_labels|accounts ca|JOIN accounts/.test(hidden), false, 'no account is read for him');
+
+  const local = build({ groupBy: ['id'], measures: [sum('l', 'local_y2026Budget'), sum('r', 'y2026Budget')] }).raw;
+  assert.ok(local.includes('* 100 AS planned_local') && local.includes('* coalesce(fx.rate, 1::float8) * 100 AS planned'), 'a local amount is the same chain at rate 1');
+  assert.ok(local.includes('AS y2026_planned_local') && local.includes('AS y2026_planned'), 'both read from the one amounts table');
+
+  const version = build({ groupBy: ['has_version_yMinus2', 'has_version_y2028'], measures: [] }).raw;
+  assert.ok(version.includes(`(CASE WHEN v2024.id IS NULL THEN NULL ELSE 'yes' END)`) && version.includes('LEFT JOIN spend_versions v2028 ON v2028.tenant_id = $1'), 'a version of the year, within validity');
+}
+
 testSpecChecks();
 testFieldsAGroupOrAMeasureRefuses();
+testGroupedCapAndReportFields();
 testTenantOnEveryTableAndValuesBound();
 testParts();
 console.log('list-aggregate.spec: ok');

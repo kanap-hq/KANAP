@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable, Unauthor
 import { Reflector } from '@nestjs/core';
 import { DataSource, EntityManager } from 'typeorm';
 import {
+  READ_ONLY_ROUTE_KEY,
   REQUIRE_LEVEL_KEY,
   REQUIRE_ANY_LEVEL_KEY,
   RequireAnyLevelMeta,
@@ -128,9 +129,11 @@ export class PermissionGuard implements CanActivate {
     // Skip freeze entirely if Stripe is not configured (on-prem bypass)
     if (!this.stripeConfig.isConfigured()) return;
 
-    // Skip for read-only methods
+    // Skip for read-only methods, and for the POST routes that only read (`@ReadOnlyRoute()`)
     const method = req.method?.toUpperCase();
     if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return;
+    // On the handler only: a controller-wide mark would exempt its writes too.
+    if (this.reflector.get<boolean | undefined>(READ_ONLY_ROUTE_KEY, context.getHandler())) return;
 
     // Skip for platform host requests
     if (req.isPlatformHost) return;

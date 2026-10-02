@@ -159,6 +159,8 @@ export interface SummaryDeps {
     computeForVersions(versions: any[], opts: { manager?: EntityManager; tenantId: string; suppressErrors?: boolean }): Promise<Map<string, AllocationLike>>;
   };
   fxRates: Pick<FxRateService, 'resolveRates' | 'convertValue'>;
+  /** The caller's access beyond the list (the list engine's consolidation fields); none when absent. */
+  access?: { accounts: boolean };
 }
 
 /**
@@ -392,11 +394,40 @@ export function resolveFteField(field: string): ReturnType<typeof resolveAmountF
   return text.startsWith(FTE_FIELD_PREFIX) ? resolveAmountField(text.slice(FTE_FIELD_PREFIX.length)) : null;
 }
 
-/** Years named by `y<YYYY><Suffix>` and `fte_y<YYYY><Suffix>` fields (a sort or a filter key), so their slot is loaded. */
+/**
+ * The amount of an amount field in the line's own currency, not converted:
+ * `local_<slot><Suffix>` (`local_yBudget`, `local_y2028Revision`), what a
+ * row's slot holds under `totals` (the reporting amount is under
+ * `reporting`). The budget operations pages show it.
+ */
+export const LOCAL_AMOUNT_FIELD_PREFIX = 'local_';
+
+/** `local_<slot><Suffix>` to its slot and column, like `resolveAmountField`; null for any other field. */
+export function resolveLocalAmountField(field: string): ReturnType<typeof resolveAmountField> {
+  const text = String(field ?? '');
+  return text.startsWith(LOCAL_AMOUNT_FIELD_PREFIX) ? resolveAmountField(text.slice(LOCAL_AMOUNT_FIELD_PREFIX.length)) : null;
+}
+
+/**
+ * `has_version_<slot>` (`has_version_yMinus2`, `has_version_y2028`): 'yes'
+ * when the line shows a version that year (within its end of validity), else
+ * null. The year pickers of the variance report offer a year a line holds.
+ */
+const HAS_VERSION_FIELD = new RegExp(`^has_version_(${[...FIXED_SLOTS.filter((s) => s.key !== 'y').map((s) => s.key), 'y\\d{4}', 'y'].join('|')})$`);
+
+export function resolveHasVersionField(field: string): { slot: string; year: number | null } | null {
+  const match = HAS_VERSION_FIELD.exec(String(field ?? ''));
+  if (!match) return null;
+  const dynamic = /^y(\d{4})$/.exec(match[1]);
+  if (dynamic) return Number(dynamic[1]) >= 1000 ? { slot: match[1], year: Number(dynamic[1]) } : null;
+  return { slot: match[1], year: null };
+}
+
+/** Years named by `y<YYYY><Suffix>`, `fte_y<YYYY><Suffix>`, `local_y<YYYY><Suffix>` and `has_version_y<YYYY>` fields (a sort or a filter key), so their slot is loaded. */
 export function yearsNamedByFields(fields: string[]): number[] {
   const years = new Set<number>();
   for (const field of fields) {
-    const resolved = resolveAmountField(field) ?? resolveFteField(field);
+    const resolved = resolveAmountField(field) ?? resolveFteField(field) ?? resolveLocalAmountField(field) ?? resolveHasVersionField(field);
     if (resolved?.year != null) years.add(resolved.year);
   }
   return Array.from(years);

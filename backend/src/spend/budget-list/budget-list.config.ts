@@ -12,6 +12,8 @@ import {
   PROJECT_LIST_FIELDS,
   resolveAmountField,
   resolveFteField,
+  resolveHasVersionField,
+  resolveLocalAmountField,
 } from '../spend-summary.builder';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
@@ -125,7 +127,9 @@ export class BudgetListConfig implements ListConfig {
 
   /**
    * The converted cents of one measure of the version of `year` (0 without a
-   * version or without amounts, or after the line's end of validity).
+   * version or without amounts, or after the line's end of validity); with
+   * `local`, the cents in the line's own currency, not converted (a row's
+   * `totals`).
    *
    * One derived table holds every amount the statement reads: the versions of
    * the years in play are read once, joined to their totals and FX rows (which
@@ -136,12 +140,13 @@ export class BudgetListConfig implements ListConfig {
    * totals and FX join per year, the planner fell to nested loops from three
    * years on).
    */
-  private amountCents(stmt: SqlStatement, year: number, measure: string): FieldSql {
+  private amountCents(stmt: SqlStatement, year: number, measure: string, local = false): FieldSql {
     const wanted = stmt.once('amounts:wanted', () => new Map<number, Set<string>>());
     if (!wanted.has(year)) wanted.set(year, new Set());
-    wanted.get(year)!.add(measure);
+    const column = local ? `${measure}_local` : measure;
+    wanted.get(year)!.add(column);
     stmt.joinLazy('am', () => this.amountsJoinSql(stmt, wanted));
-    return { kind: 'money', sql: `coalesce(am.y${year}_${measure}, 0::float8)`, joins: ['am'] };
+    return { kind: 'money', sql: `coalesce(am.y${year}_${column}, 0::float8)`, joins: ['am'] };
   }
 
   private amountsJoinSql(stmt: SqlStatement, wanted: Map<number, Set<string>>): string {
@@ -150,15 +155,22 @@ export class BudgetListConfig implements ListConfig {
     const fx = this.rt.fx;
     if (!fx) throw new Error('FX rates were not loaded for this statement');
     const years = Array.from(wanted.keys()).sort((a, b) => a - b);
-    const measures = Array.from(new Set(Array.from(wanted.values()).flatMap((set) => Array.from(set)))).sort();
+    // Columns: a measure (converted) or `<measure>_local` (the line's own currency).
+    const columns = Array.from(new Set(Array.from(wanted.values()).flatMap((set) => Array.from(set)))).sort();
     // The builder's chain, `Math.round(Number(formatCents(local)) * rate * 100)`: the product once per
     // version below, rounded once per line and year above (at most one version per line and year: `max`
-    // picks it, and the rounding reads the one aggregate).
-    const converted = measures
-      .map((measure) => `${decimal2ToFloat(`at.${measure}`)} * coalesce(fx.rate, 1::float8) * 100 AS ${measure}`)
+    // picks it, and the rounding reads the one aggregate). A local column is the same chain at rate 1.
+    const converted = columns
+      .map((column) => {
+        const local = column.endsWith('_local');
+        const measure = local ? column.slice(0, -'_local'.length) : column;
+        return local
+          ? `${decimal2ToFloat(`at.${measure}`)} * 100 AS ${column}`
+          : `${decimal2ToFloat(`at.${measure}`)} * coalesce(fx.rate, 1::float8) * 100 AS ${column}`;
+      })
       .join(',\n            ');
     const pivot = years
-      .flatMap((year) => Array.from(wanted.get(year)!).sort().map((measure) => `${jsRound(`max(x.${measure}) FILTER (WHERE x.yr = ${year})`)} AS y${year}_${measure}`))
+      .flatMap((year) => Array.from(wanted.get(year)!).sort().map((column) => `${jsRound(`max(x.${column}) FILTER (WHERE x.yr = ${year})`)} AS y${year}_${column}`))
       .join(',\n          ');
     return `LEFT JOIN (
         SELECT x.item_id,
@@ -278,12 +290,71 @@ export class BudgetListConfig implements ListConfig {
     const index = axes.ids.indexOf(axisId);
     // A key naming no dimension of the tenant: the rows have no such key.
     if (index < 0) return { kind: 'text', sql: 'NULL::text', joins: [] };
-    const link = `ax${index}`;
+    const link = this.axisLink(stmt, index);
     const category = `axc${index}`;
-    // The axis id is one of the tenant's dimension ids read from the database (a validated uuid), not request text.
-    this.join(stmt, link, `LEFT JOIN ${this.scope.analyticsLink.table} ${link} ON ${link}.tenant_id = ${stmt.tenant} AND ${link}.item_id = i.id AND ${link}.axis_id = ${sqlLiteral(axes.ids[index])}::uuid`);
     this.join(stmt, category, `LEFT JOIN analytics_categories ${category} ON ${category}.tenant_id = ${stmt.tenant} AND ${category}.id = ${link}.category_id`, [link]);
     return { kind: 'text', sql: `${category}.name`, joins: [category] };
+  }
+
+  /** The line's link on the tenant's dimension of that index (one row at most: the link's primary key). */
+  private axisLink(stmt: SqlStatement, index: number): string {
+    const link = `ax${index}`;
+    // The axis id is one of the tenant's dimension ids read from the database (a validated uuid), not request text.
+    return this.join(stmt, link, `LEFT JOIN ${this.scope.analyticsLink.table} ${link} ON ${link}.tenant_id = ${stmt.tenant} AND ${link}.item_id = i.id AND ${link}.axis_id = ${sqlLiteral(this.rt.axes!.ids[index])}::uuid`);
+  }
+
+  /**
+   * `analytics_id_<axis id>`: the id of the line's value on that dimension
+   * (null without one), what a row holds in `analytics_value_ids[<axis id>]`.
+   * The reports filter and group on it (a value's name need not be unique).
+   */
+  private axisValueId(stmt: SqlStatement, axisId: string): FieldSql {
+    const axes = this.rt.axes;
+    if (!axes) throw new Error('Analytics dimensions were not loaded for this statement');
+    const index = axes.ids.indexOf(axisId);
+    if (index < 0) return { kind: 'uuid', sql: 'NULL::text', joins: [] };
+    const link = this.axisLink(stmt, index);
+    return { kind: 'uuid', sql: `${link}.category_id::text`, joins: [link] };
+  }
+
+  /**
+   * The consolidation line of the line's account (Consolidation report): the
+   * key and the label the report showed, `c_<consolidation number>`, else
+   * `c_<consolidation name as a slug>`, else null ("Unassigned").
+   *
+   * The label is a function of the key, read from one row per key over the
+   * accounts the list's lines use (`min(label)` in the ICU order), never from
+   * the line's own account: accounts sharing a consolidation number may carry
+   * different names, and grouping by the key and a per-account label would
+   * split one consolidation line in two.
+   *
+   * Both read as null for a caller who cannot read the accounts page
+   * (`BudgetListRuntime.canReadAccounts`): every line is "Unassigned" for him,
+   * and a filter or a sort on them sees no value (the engine's unknown-field
+   * rule: a set of values keeps no line, a blank filter every line, a sort
+   * falls to the tie-break). No consolidation number or name reaches him.
+   */
+  private consolidationKey(stmt: SqlStatement): FieldSql {
+    // A caller who cannot read the accounts page sees no consolidation line (null), as before.
+    if (!this.rt.canReadAccounts) return { kind: 'text', sql: 'NULL::text', joins: [] };
+    const acc = this.account(stmt);
+    return { kind: 'text', sql: consolidationKeySql(acc), joins: [acc] };
+  }
+
+  private consolidationLabel(stmt: SqlStatement): FieldSql {
+    if (!this.rt.canReadAccounts) return { kind: 'text', sql: 'NULL::text', joins: [] };
+    const acc = this.account(stmt);
+    const s = this.scope;
+    // The labels of the accounts the list's lines use (any line of the type, whatever its state):
+    // never a name only an account without a line carries.
+    stmt.cte('cons_labels', () => `SELECT k.key, min(k.label COLLATE "und-x-icu") AS label
+      FROM (SELECT ${consolidationKeySql('ca')} AS key, ${consolidationLabelSql('ca')} AS label FROM accounts ca
+        WHERE ca.tenant_id = ${stmt.tenant}
+          AND EXISTS (SELECT 1 FROM ${s.itemTable} li WHERE li.tenant_id = ${stmt.tenant} AND li.account_id = ca.id)) k
+      WHERE k.key IS NOT NULL
+      GROUP BY k.key`);
+    this.join(stmt, 'consl', `LEFT JOIN cons_labels consl ON consl.key = ${consolidationKeySql(acc)}`, [acc]);
+    return { kind: 'text', sql: 'consl.label', joins: ['consl'] };
   }
 
   private defaultAxisLink(stmt: SqlStatement): string | null {
@@ -310,8 +381,20 @@ export class BudgetListConfig implements ListConfig {
       const year = fte.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === fte.slot)!.offset;
       return this.fte(stmt, year, fte.column.measure);
     }
+    const local = resolveLocalAmountField(key);
+    if (local) {
+      const year = local.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === local.slot)!.offset;
+      return this.amountCents(stmt, year, local.column.measure, true);
+    }
+    const hasVersion = resolveHasVersionField(key);
+    if (hasVersion) {
+      const v = this.version(stmt, hasVersion.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === hasVersion.slot)!.offset);
+      return { kind: 'text', sql: `(CASE WHEN ${v}.id IS NULL THEN NULL ELSE 'yes' END)`, joins: [v] };
+    }
     const axisId = parseAnalyticsFieldKey(key);
     if (axisId) return this.axisValue(stmt, axisId);
+    const valueAxisId = parseAnalyticsIdFieldKey(key);
+    if (valueAxisId) return this.axisValueId(stmt, valueAxisId);
 
     // Own keys only: a request key such as `constructor` or `__proto__` names no column.
     if (Object.prototype.hasOwnProperty.call(this.columns, key)) {
@@ -366,6 +449,10 @@ export class BudgetListConfig implements ListConfig {
         const acc = this.account(stmt);
         return { kind: 'int', sql: `${acc}.account_number`, joins: [acc] };
       }
+      case 'account_consolidation_key':
+        return this.consolidationKey(stmt);
+      case 'account_consolidation_label':
+        return this.consolidationLabel(stmt);
       case 'account_warning': {
         const acc = this.account(stmt);
         const pc = this.payingCompany(stmt);
@@ -509,6 +596,55 @@ function displayNameSql(alias: string): string {
   return `coalesce(NULLIF(concat_ws(' ', NULLIF(${jsTrim(`${alias}.first_name`)}, ''), NULLIF(${jsTrim(`${alias}.last_name`)}, '')), ''), ${alias}.email, '')`;
 }
 
+/** `analytics_id_<uuid>`: the dimension whose value id the field reads, else null. */
+export const ANALYTICS_ID_FIELD_PREFIX = 'analytics_id_';
+const UUID_TEXT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function parseAnalyticsIdFieldKey(field: string): string | null {
+  if (typeof field !== 'string' || !field.startsWith(ANALYTICS_ID_FIELD_PREFIX)) return null;
+  const id = field.slice(ANALYTICS_ID_FIELD_PREFIX.length);
+  return UUID_TEXT.test(id) ? id : null;
+}
+
+/**
+ * Decision pending with fried (PR E, lot 2D): a line on an account that is no
+ * longer active (`disabled_at` passed) goes to its account's consolidation
+ * line. The report read the accounts from `GET /accounts` (the 1,000 newest
+ * active ones), so such a line, or a line on an account past those 1,000, fell
+ * into "Unassigned". `false` restores the "Unassigned" rule for inactive
+ * accounts (the 1,000-account cap is not reproduced: it was an accident of
+ * the page size). This constant is the only place the rule lives.
+ */
+export const CONSOLIDATION_COUNTS_INACTIVE_ACCOUNTS = true;
+
+/** Whether an account (alias) names its consolidation line. */
+function consolidationAccountCounts(alias: string): string {
+  return CONSOLIDATION_COUNTS_INACTIVE_ACCOUNTS ? `${alias}.id IS NOT NULL` : `(${alias}.id IS NOT NULL AND (${alias}.disabled_at IS NULL OR ${alias}.disabled_at > NOW()))`;
+}
+
+/**
+ * The report's `makeKey` (JavaScript): `c_<number>`, else `c_` and the trimmed
+ * name with every UTF-16 code unit outside [A-Za-z0-9] as `_`, lowercased
+ * (a character outside the BMP, two code units in JavaScript, gives `__`);
+ * null without a number and a name.
+ */
+function consolidationKeySql(alias: string): string {
+  const name = `NULLIF(${jsTrim(`${alias}.consolidation_account_name`)}, '')`;
+  const slug = `lower(regexp_replace(regexp_replace(${name}, '[\\U00010000-\\U0010FFFF]', '__', 'g'), '[^A-Za-z0-9]', '_', 'g'))`;
+  return `(CASE WHEN NOT ${consolidationAccountCounts(alias)} THEN NULL
+    WHEN ${alias}.consolidation_account_number IS NOT NULL THEN 'c_' || ${alias}.consolidation_account_number::text
+    WHEN ${name} IS NOT NULL THEN 'c_' || ${slug} END)`;
+}
+
+/** The report's label of an account's consolidation line: `[number] name`, `[number]` or the name (trimmed). */
+function consolidationLabelSql(alias: string): string {
+  const name = `NULLIF(${jsTrim(`${alias}.consolidation_account_name`)}, '')`;
+  const number = `${alias}.consolidation_account_number`;
+  return `(CASE WHEN ${number} IS NOT NULL AND ${name} IS NOT NULL THEN '[' || ${number}::text || '] ' || ${name}
+    WHEN ${name} IS NOT NULL THEN ${name}
+    WHEN ${number} IS NOT NULL THEN '[' || ${number}::text || ']' END)`;
+}
+
 /** The runtime pre-reads the fields of a request need. */
 export function budgetRuntimeNeeds(currentYear: number, keys: string[], hasQuickSearch: boolean): RuntimeNeeds {
   const fxYears = new Set<number>();
@@ -517,12 +653,12 @@ export function budgetRuntimeNeeds(currentYear: number, keys: string[], hasQuick
   let costCenters = hasQuickSearch;
   if (hasQuickSearch) ruleYears.add(currentYear);
   for (const key of keys) {
-    const amount = resolveAmountField(key);
+    const amount = resolveAmountField(key) ?? resolveLocalAmountField(key);
     if (amount) {
       fxYears.add(amount.year ?? currentYear + FIXED_SLOTS.find((slot) => slot.key === amount.slot)!.offset);
       continue;
     }
-    if (parseAnalyticsFieldKey(key) || key === 'analytics_category_name' || key === 'analytics_category_id') axes = true;
+    if (parseAnalyticsFieldKey(key) || parseAnalyticsIdFieldKey(key) || key === 'analytics_category_name' || key === 'analytics_category_id') axes = true;
     if (['cost_center_code', 'cost_center_name', 'cost_center_path', 'cost_center_label', 'budget_holder_id', 'budget_holder_name'].includes(key)) costCenters = true;
     if (key === 'allocation_label' || key === 'allocation_method_label') ruleYears.add(currentYear);
     if (key === 'next_year_allocation_method_label') ruleYears.add(currentYear + 1);

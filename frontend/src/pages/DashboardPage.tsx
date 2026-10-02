@@ -15,7 +15,9 @@ import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import type { BudgetScope } from '../services/budgetOperations';
 import { buildItemPath, formatItemRef } from '../utils/item-ref';
 import ItemScopeTabs, { useDefaultBudgetScope } from './operations/ItemScopeTabs';
-import { BudgetSummaryRow, itemName, SUMMARY_ENDPOINT, useBudgetSummaryAll } from './reports/useBudgetSummaryAll';
+import { BudgetSummaryRow, itemName, SUMMARY_ENDPOINT } from './reports/useReportScope';
+import { countRequest, readTopIncreases, topIncreasesRequest } from './reports/reportAggregates';
+import { useBudgetAggregate, useBudgetAggregates } from './reports/useBudgetAggregate';
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
 
@@ -114,13 +116,6 @@ function useNextContractRenewal() {
   });
 }
 
-async function fetchCount(endpoint: string, filterModel: any): Promise<number> {
-  const params: Record<string, any> = { limit: 1 };
-  if (filterModel && Object.keys(filterModel).length > 0) params.filters = JSON.stringify(filterModel);
-  const res = await api.get<ServerListResponse<any>>(endpoint, { params });
-  return res.data?.total ?? 0;
-}
-
 const HYGIENE_CHECKS = [
   { key: 'noItOwner', tone: 'warning', filter: { owner_it_id: { filterType: 'text', type: 'blank' } } },
   { key: 'noBusinessOwner', tone: 'warning', filter: { owner_business_id: { filterType: 'text', type: 'blank' } } },
@@ -129,16 +124,16 @@ const HYGIENE_CHECKS = [
 ] as const;
 type HygieneKey = (typeof HYGIENE_CHECKS)[number]['key'];
 
+const HYGIENE_REQUESTS = HYGIENE_CHECKS.map((check) => countRequest(check.filter));
+
+/** The four hygiene counts of one type: lines of the window (as the list's default) passing each check, no row built. */
 function useHygieneCounts(scope: BudgetScope, enabled: boolean) {
-  return useQuery({
-    queryKey: ['dashboard', 'hygiene', scope],
-    enabled,
-    queryFn: async () => {
-      const counts = await Promise.all(HYGIENE_CHECKS.map((check) => fetchCount(SUMMARY_ENDPOINT[scope], check.filter)));
-      return Object.fromEntries(HYGIENE_CHECKS.map((check, i) => [check.key, counts[i]])) as Record<HygieneKey, number>;
-    },
-    staleTime: 2 * 60 * 1000,
-  });
+  const counts = useBudgetAggregates(scope, HYGIENE_REQUESTS, { enabled });
+  const data = useMemo(
+    () => (counts.data ? Object.fromEntries(HYGIENE_CHECKS.map((check, i) => [check.key, counts.data![i].total.count])) as Record<HygieneKey, number> : undefined),
+    [counts.data],
+  );
+  return { data, isLoading: counts.isLoading, isError: counts.isError, refetch: counts.refetch };
 }
 
 type RecentUpdate = { scope: BudgetScope; id: string; ref: string; name: string; at: string | null };
@@ -191,19 +186,11 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
   });
 }
 
-/** Lines whose default column grew from Y-1 to Y, largest first, computed over every line of the type. */
+/** Lines whose default column grew from Y-1 to Y, largest first, over every line of the type's window (one aggregate). */
 function useTopIncreases(scope: BudgetScope, enabled: boolean, column: AmountColumnKey, columnReady: boolean, limit: number = 5) {
-  // No years: the fixed Y-1 and Y slots are always there, and the reports use the same cache entry.
-  const query = useBudgetSummaryAll(scope, undefined, { enabled });
-  const items = useMemo(() => (columnReady ? query.data ?? [] : [])
-    .map((row) => {
-      const y = getColumnValueFromRow(row, 'y', column);
-      const yMinus1 = getColumnValueFromRow(row, 'yMinus1', column);
-      return { id: row.id, name: itemName(scope, row) || '\u2014', y, yMinus1, delta: y - yMinus1 };
-    })
-    .filter((row) => row.delta > 0)
-    .sort((a, b) => b.delta - a.delta)
-    .slice(0, limit), [query.data, scope, column, columnReady, limit]);
+  const request = useMemo(() => (columnReady ? topIncreasesRequest(scope, column, limit) : null), [scope, column, columnReady, limit]);
+  const query = useBudgetAggregate(scope, request, { enabled });
+  const items = useMemo(() => readTopIncreases(query.data).map((row) => ({ ...row, name: row.name || '\u2014' })), [query.data]);
   return { items, isLoading: enabled && (query.isLoading || !columnReady) };
 }
 

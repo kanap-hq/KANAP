@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Autocomplete, Box, Checkbox, ListItemText, MenuItem, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material';
+import { Box, MenuItem, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material';
 import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
-import { BudgetSummaryRow, itemName, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
+import ReportExclusionPicker from '../../components/reports/ReportExclusionPicker';
+import ReportDataStatus from '../../components/reports/ReportDataStatus';
+import { useReportScope } from './useReportScope';
 import { useTranslation } from 'react-i18next';
 import { isMetricKey, metricFileName, resolveMetric, shownMetricKeys } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
@@ -12,6 +14,9 @@ import { useBudgetColumns, type BudgetColumns } from '../../hooks/useBudgetColum
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { textTabSx, textTabsSx } from '../../theme/formSx';
+import { deltaRequests, deltaYearsRequest, excludedAccountValues, readDelta, readDeltaYears, type MetricKey } from './reportAggregates';
+import { useBudgetAggregate, useBudgetAggregates } from './useBudgetAggregate';
+import { useAccountLabelOptions, useItemOptions } from './useReportOptions';
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -27,15 +32,6 @@ function labelForMetric(metric: string, budgetColumns: BudgetColumns) {
 const NO_METRICS: readonly string[] = [];
 
 type Direction = 'increase' | 'decrease' | 'both';
-
-function inferYearFromVersionKey(key: string, currentYear: number): number | undefined {
-  if (key === 'yMinus1') return currentYear - 1;
-  if (key === 'y') return currentYear;
-  if (key === 'yPlus1') return currentYear + 1;
-  const match = /^y(\d{4})$/i.exec(key);
-  if (match) return Number(match[1]);
-  return undefined;
-}
 
 export default function OpexDeltaReport() {
   const { t } = useTranslation(["ops"]);
@@ -61,50 +57,21 @@ export default function OpexDeltaReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
 
-  const { data: allRows, isLoading } = useBudgetSummaryAll(scope);
-  const reportFilters = useBudgetReportFilters();
-  // Deltas and totals read the kept lines only; the year and exclusion pickers still offer every line.
-  const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
+  const reportFilters = useBudgetReportFilters({ scope });
+  // The exclusion pickers offer every line and account of the window; they load when first opened.
+  const [itemsWanted, setItemsWanted] = useState(false);
+  const [accountsWanted, setAccountsWanted] = useState(false);
+  const itemOptions = useItemOptions(scope, itemsWanted);
+  const accountOptions = useAccountLabelOptions(scope, accountsWanted);
   // Lines and the accounts they use differ between OPEX and CAPEX: a type switch drops both exclusions.
   useEffect(() => {
     setExcludedIds([]);
     setExcludedAccounts([]);
   }, [scope]);
 
-  type ProcessedRow = {
-    id: string;
-    name: string;
-    current: number;
-    previous: number;
-    delta: number;
-    pct_increase: number | null;
-    direction: 'increase' | 'decrease';
-  };
-
-  type RawRow = {
-    id: string;
-    name: string;
-    current: number;
-    previous: number;
-    delta: number;
-    pct_increase: number | null;
-    account_display: string | null;
-  };
-
-  type ItemOption = { id: string; name: string };
-  type AccountOption = { id: string; name: string };
-
-  const yearOptions = useMemo<number[]>(() => {
-    const years = new Set<number>();
-    for (const row of allRows ?? []) {
-      for (const [key, version] of Object.entries(row.versions ?? {})) {
-        if (!version || !(version.reporting ?? version.totals)) continue;
-        const year = typeof version.year === 'number' ? version.year : inferYearFromVersionKey(key, currentYear);
-        if (year) years.add(year);
-      }
-    }
-    return Array.from(years).sort((a, b) => a - b);
-  }, [allRows, currentYear]);
+  // The years a line of the window holds (filters aside): Y-1 to Y+1, and Y-2 or Y+2 when a line has a version then.
+  const yearsQuery = useBudgetAggregate(scope, useMemo(() => deltaYearsRequest(currentYear), [currentYear]));
+  const yearOptions = useMemo<number[]>(() => readDeltaYears(yearsQuery.data, currentYear), [yearsQuery.data, currentYear]);
 
   // Both pickers offer the shown budget columns (no currency or rate keys of the slots) and
   // start on the default column: Y-1 against Y.
@@ -144,115 +111,50 @@ export default function OpexDeltaReport() {
     }
   }, [modes, chartType]);
 
-  const valueForColumn = (row: BudgetSummaryRow, year: number | null, metric: string) => {
-    if (year == null || !metric) return 0;
-    const slot = pickSlot(row, year);
-    const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
-    if (!totals) return 0;
-    const raw = totals[metric];
-    return Number(raw ?? 0);
-  };
-
-  const processed = useMemo<ProcessedRow[]>(() => {
+  // One aggregate per direction: the kept lines whose change goes that way, largest first, and the
+  // totals of every line of the state (net, gross increase, gross decrease).
+  const requests = useMemo(() => {
     if (
-      sourceYear == null
+      reportFilters.queryFilters == null
+      || sourceYear == null
       || !sourceMetric
       || destinationYear == null
       || !destinationMetric
       || modes.length === 0
     ) {
-      return [];
+      return null;
     }
-    const items: RawRow[] = (rows ?? []).map((r: BudgetSummaryRow) => {
-      const curr = valueForColumn(r, destinationYear, destinationMetric);
-      const prev = valueForColumn(r, sourceYear, sourceMetric);
-      const delta = curr - prev;
-      const pct = prev > 0 ? (delta / prev) * 100 : null;
-      return {
-        id: r.id,
-        name: itemName(scope, r),
-        current: curr,
-        previous: prev,
-        delta,
-        pct_increase: pct,
-        account_display: r.account_display ?? null,
-      };
+    return deltaRequests({
+      scope,
+      source: { year: sourceYear, metric: sourceMetric as MetricKey },
+      destination: { year: destinationYear, metric: destinationMetric as MetricKey },
+      modes,
+      topCount,
+      excludedIds,
+      excludedAccounts: excludedAccountValues(excludedAccounts, accountOptions.options ?? []),
+      filters: reportFilters.queryFilters,
     });
-    const filtered = items.filter((item: RawRow) => {
-      if (excludedIds.includes(item.id)) return false;
-      if (item.account_display && excludedAccounts.includes(item.account_display)) return false;
-      return true;
-    });
-    const limit = Number.isFinite(topCount) && topCount > 0 ? Math.floor(topCount) : 1;
-
-    const increases = modes.includes('increase')
-      ? filtered
-        .filter((item) => item.delta > 0)
-        .sort((a, b) => b.delta - a.delta)
-        .slice(0, limit)
-        .map<ProcessedRow>((row) => ({
-          ...row,
-          direction: 'increase',
-        }))
-      : [];
-
-    const decreases = modes.includes('decrease')
-      ? filtered
-        .filter((item) => item.delta < 0)
-        .sort((a, b) => a.delta - b.delta)
-        .slice(0, limit)
-        .map<ProcessedRow>((row) => ({
-          ...row,
-          direction: 'decrease',
-        }))
-      : [];
-
-    return [...increases, ...decreases];
   }, [
-    rows,
+    reportFilters.queryFilters,
     scope,
     sourceYear,
     sourceMetric,
     destinationYear,
     destinationMetric,
     modes,
+    topCount,
     excludedIds,
     excludedAccounts,
-    topCount,
+    accountOptions.options,
   ]);
-
-  const itemOptions = useMemo<ItemOption[]>(() => (allRows ?? [])
-    .map((r: BudgetSummaryRow) => ({ id: r.id, name: itemName(scope, r) }))
-    .sort((a: ItemOption, b: ItemOption) => a.name.localeCompare(b.name)), [allRows, scope]);
-
-  const selectedItemOptions = useMemo<ItemOption[]>(() => {
-    if (excludedIds.length === 0) return [];
-    const lookup = new Map<string, ItemOption>(itemOptions.map((option) => [option.id, option]));
-    return excludedIds
-      .map((id) => lookup.get(id))
-      .filter((option): option is ItemOption => Boolean(option));
-  }, [excludedIds, itemOptions]);
-
-  const accountOptions = useMemo<AccountOption[]>(() => {
-    const seen = new Set<string>();
-    const options: AccountOption[] = [];
-    for (const row of allRows ?? []) {
-      const name = row.account_display?.trim();
-      if (!name || seen.has(name)) continue;
-      seen.add(name);
-      options.push({ id: name, name });
-    }
-    options.sort((a, b) => a.name.localeCompare(b.name));
-    return options;
-  }, [allRows]);
-
-  const selectedAccountOptions = useMemo<AccountOption[]>(() => {
-    if (excludedAccounts.length === 0) return [];
-    const lookup = new Map<string, AccountOption>(accountOptions.map((option) => [option.id, option]));
-    return excludedAccounts
-      .map((id) => lookup.get(id))
-      .filter((option): option is AccountOption => Boolean(option));
-  }, [excludedAccounts, accountOptions]);
+  // No previous answer kept while a new one loads: a direction switch would label the old lines with the new one.
+  const report = useBudgetAggregates(scope, requests);
+  // Loading (the years or the lines), or the filter bar still reading its address.
+  const busy = reportFilters.queryFilters == null || yearsQuery.isLoading || report.isLoading || report.isPlaceholderData;
+  const { processed, allTotals } = useMemo(
+    () => (requests && report.data ? readDelta(modes, report.data) : { processed: [], allTotals: { grossIncrease: 0, grossDecrease: 0, net: 0 } }),
+    [requests, report.data, modes],
+  );
 
   const sourceLabel = sourceYear != null && sourceMetric
     ? `${labelForMetric(sourceMetric, budgetColumns)} (${sourceYear})`
@@ -282,39 +184,6 @@ export default function OpexDeltaReport() {
     })), [processed]);
 
   const totalMagnitude = useMemo(() => chartData.reduce((acc: number, d) => acc + (Number(d.magnitude) || 0), 0), [chartData]);
-
-  const allTotals = useMemo(() => {
-    if (
-      sourceYear == null
-      || !sourceMetric
-      || destinationYear == null
-      || !destinationMetric
-    ) {
-      return { grossIncrease: 0, grossDecrease: 0, net: 0 };
-    }
-    let grossIncrease = 0;
-    let grossDecrease = 0;
-    let net = 0;
-    for (const r of rows ?? []) {
-      if (excludedIds.includes(r.id)) continue;
-      const accountName = r.account_display?.trim();
-      if (accountName && excludedAccounts.includes(accountName)) continue;
-      const curr = valueForColumn(r, destinationYear, destinationMetric);
-      const prev = valueForColumn(r, sourceYear, sourceMetric);
-      const d = curr - prev;
-      net += d;
-      if (d > 0) grossIncrease += d; else grossDecrease += -d;
-    }
-    return { grossIncrease, grossDecrease, net };
-  }, [
-    rows,
-    sourceYear,
-    sourceMetric,
-    destinationYear,
-    destinationMetric,
-    excludedIds,
-    excludedAccounts,
-  ]);
 
   const topTotals = useMemo(() => processed.reduce((acc, row) => {
     if (row.direction === 'increase') acc.increase += row.delta;
@@ -498,6 +367,7 @@ export default function OpexDeltaReport() {
 
   return (
     <ReportLayout
+      busy={busy}
       title={t("reports.opexDelta.title")}
       subtitle={t('reports.opexDelta.subtitle', { type: scopeLabel })}
       filters={(
@@ -510,7 +380,7 @@ export default function OpexDeltaReport() {
         }}
         >
           <ItemScopeTabs value={scope} onChange={setScope} />
-          <BudgetReportFilters filters={reportFilters} rows={allRows} />
+          <BudgetReportFilters filters={reportFilters} />
           <TextField
             select
             size="small"
@@ -607,99 +477,27 @@ export default function OpexDeltaReport() {
             <MenuItem value="pie" disabled={modes.length === 2}>{t("reports.filters.pieChart")}</MenuItem>
             <MenuItem value="bar">{t("reports.filters.horizontalBarChart")}</MenuItem>
           </TextField>
-          <Autocomplete
-            multiple
-            size="small"
-            disableCloseOnSelect
-            options={itemOptions}
-            value={selectedItemOptions}
-            onChange={(_, next) => {
-              setExcludedIds(next.map((option) => option.id));
-            }}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderOption={(props, option, { selected }) => (
-              <li {...props}>
-                <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
-                <ListItemText primary={option.name} />
-              </li>
-            )}
-            renderTags={() => []}
-            renderInput={(params) => {
-              const count = excludedIds.length;
-              return (
-                <TextField
-                  {...params}
-                  label={t("reports.filters.excludeItems")}
-                  placeholder={count === 0 ? t('reports.filters.excludeItemsPlaceholder') : ''}
-                  InputLabelProps={{ shrink: true }}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: count > 0 ? (
-                      <>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ ml: 0.5, mr: 1, whiteSpace: 'nowrap' }}
-                        >
-                          {t('reports.filters.itemSelected', { count })}
-                        </Typography>
-                        {params.InputProps.startAdornment}
-                      </>
-                    ) : params.InputProps.startAdornment,
-                  }}
-                />
-              );
-            }}
-            sx={{ minWidth: 260 }}
-            noOptionsText={t("reports.filters.noMatchingItems")}
+          <ReportExclusionPicker
+            label={t('reports.filters.excludeItems')}
+            placeholder={t('reports.filters.excludeItemsPlaceholder')}
+            selectedText={(count) => t('reports.filters.itemSelected', { count })}
+            noOptionsText={t('reports.filters.noMatchingItems')}
+            options={itemOptions.options}
+            loading={itemOptions.loading}
+            onFirstOpen={() => setItemsWanted(true)}
+            value={excludedIds}
+            onChange={setExcludedIds}
           />
-          <Autocomplete
-            multiple
-            size="small"
-            disableCloseOnSelect
-            options={accountOptions}
-            value={selectedAccountOptions}
-            onChange={(_, next) => {
-              setExcludedAccounts(next.map((option) => option.id));
-            }}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderOption={(props, option, { selected }) => (
-              <li {...props}>
-                <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
-                <ListItemText primary={option.name} />
-              </li>
-            )}
-            renderTags={() => []}
-            renderInput={(params) => {
-              const count = excludedAccounts.length;
-              return (
-                <TextField
-                  {...params}
-                  label={t("reports.filters.excludeAccounts")}
-                  placeholder={count === 0 ? t('reports.filters.excludeAccountsPlaceholder') : ''}
-                  InputLabelProps={{ shrink: true }}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: count > 0 ? (
-                      <>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ ml: 0.5, mr: 1, whiteSpace: 'nowrap' }}
-                        >
-                          {t('reports.filters.accountSelected', { count })}
-                        </Typography>
-                        {params.InputProps.startAdornment}
-                      </>
-                    ) : params.InputProps.startAdornment,
-                  }}
-                />
-              );
-            }}
-            sx={{ minWidth: 260 }}
-            noOptionsText={t("reports.filters.noMatchingAccounts")}
+          <ReportExclusionPicker
+            label={t('reports.filters.excludeAccounts')}
+            placeholder={t('reports.filters.excludeAccountsPlaceholder')}
+            selectedText={(count) => t('reports.filters.accountSelected', { count })}
+            noOptionsText={t('reports.filters.noMatchingAccounts')}
+            options={accountOptions.options?.map((option) => ({ id: option.id, label: option.name }))}
+            loading={accountOptions.loading}
+            onFirstOpen={() => setAccountsWanted(true)}
+            value={excludedAccounts}
+            onChange={setExcludedAccounts}
           />
           <Tabs
             value={direction}
@@ -771,9 +569,7 @@ export default function OpexDeltaReport() {
           </Box>
         </Paper>
       </Stack>
-      {isLoading && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t("reports.shared.loadingData")}</Typography>
-      )}
+      <ReportDataStatus loading={busy} error={report.isError || yearsQuery.isError} onRetry={() => { report.refetch(); void yearsQuery.refetch(); }} />
     </ReportLayout>
   );
 }

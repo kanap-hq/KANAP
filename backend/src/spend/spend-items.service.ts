@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { SUMMARY_SCOPES, SummaryDeps } from './spend-summary.builder';
 import * as budgetList from './budget-list/budget-list.service';
+import type { BudgetListAccess } from './budget-list/budget-list.runtime';
 import type { AggregateSpec } from '../common/list-engine/list-aggregate';
 import { SpendItemsCsvService } from './spend-items-csv.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
@@ -351,8 +352,9 @@ export class SpendItemsService {
   }
 
   /** Dependencies of the list engine and the row builder. */
-  private summaryDeps(): SummaryDeps {
-    return { allocationCalculator: this.allocationCalculator, fxRates: this.fxRates };
+  /** The list engine's dependencies; `access` is the caller's (the consolidation fields), from the controller. */
+  private summaryDeps(access?: BudgetListAccess): SummaryDeps {
+    return { allocationCalculator: this.allocationCalculator, fxRates: this.fxRates, ...(access ? { access } : {}) };
   }
 
   /**
@@ -360,33 +362,38 @@ export class SpendItemsService {
    * AI query asks for the next year's allocation too; `shape=grid` returns
    * the lean rows of the grid.
    */
-  async summary(query: any, opts?: { manager?: EntityManager; includeNextYearAllocation?: boolean }) {
-    return budgetList.budgetListSummary(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager, {
+  async summary(query: any, opts?: { manager?: EntityManager; includeNextYearAllocation?: boolean; access?: BudgetListAccess }) {
+    return budgetList.budgetListSummary(SUMMARY_SCOPES.opex, this.summaryDeps(opts?.access), query, opts?.manager ?? this.repo.manager, {
       includeRecipientDetails: true,
       includeNextYearAllocation: opts?.includeNextYearAllocation ?? false,
     });
   }
 
-  async summaryFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
-    return budgetList.budgetListFilterValues(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+  async summaryFilterValues(query: any, opts?: { manager?: EntityManager; access?: BudgetListAccess }): Promise<Record<string, Array<string | null>>> {
+    return budgetList.budgetListFilterValues(SUMMARY_SCOPES.opex, this.summaryDeps(opts?.access), query, opts?.manager ?? this.repo.manager);
   }
 
   /** Every id of the list in its order (workspace navigation). */
-  async summaryIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; item_numbers: number[]; total: number }> {
-    return budgetList.budgetListIds(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+  async summaryIds(query: any, opts?: { manager?: EntityManager; access?: BudgetListAccess }): Promise<{ ids: string[]; item_numbers: number[]; total: number }> {
+    return budgetList.budgetListIds(SUMMARY_SCOPES.opex, this.summaryDeps(opts?.access), query, opts?.manager ?? this.repo.manager);
   }
 
   /** Where one line stands in the list, with its previous and next lines. */
-  async summaryNeighbors(query: any, id: string, opts?: { manager?: EntityManager }) {
-    return budgetList.budgetListNeighbors(SUMMARY_SCOPES.opex, this.summaryDeps(), query, id, opts?.manager ?? this.repo.manager);
+  async summaryNeighbors(query: any, id: string, opts?: { manager?: EntityManager; access?: BudgetListAccess }) {
+    return budgetList.budgetListNeighbors(SUMMARY_SCOPES.opex, this.summaryDeps(opts?.access), query, id, opts?.manager ?? this.repo.manager);
   }
 
   /**
    * The lines of a list state grouped and measured in one statement
-   * (`budget-list.service.ts`, `budgetListAggregate`): the AI aggregates.
+   * (`budget-list.service.ts`, `budgetListAggregate`): the AI aggregates, the reports and the dashboard.
    */
-  async summaryAggregate(query: any, spec: AggregateSpec, opts?: { manager?: EntityManager }): Promise<budgetList.BudgetListAggregate> {
-    return budgetList.budgetListAggregate(SUMMARY_SCOPES.opex, this.summaryDeps(), query, spec, opts?.manager ?? this.repo.manager);
+  async summaryAggregate(query: any, spec: AggregateSpec, opts?: { manager?: EntityManager; access?: BudgetListAccess }): Promise<budgetList.BudgetListAggregate> {
+    return budgetList.budgetListAggregate(SUMMARY_SCOPES.opex, this.summaryDeps(opts?.access), query, spec, opts?.manager ?? this.repo.manager);
+  }
+
+  /** `POST …/summary/aggregate`: `{ query, spec }` (reports and the dashboard). */
+  async summaryAggregateRequest(body: unknown, opts?: { manager?: EntityManager; access?: BudgetListAccess }): Promise<budgetList.BudgetListAggregate> {
+    return budgetList.budgetListAggregateRequest(SUMMARY_SCOPES.opex, this.summaryDeps(opts?.access), body, opts?.manager ?? this.repo.manager);
   }
 
   async summaryRowsByIds(
@@ -402,8 +409,8 @@ export class SpendItemsService {
     return budgetList.budgetListRowsByIds(SUMMARY_SCOPES.opex, this.summaryDeps(), { ...query, ids: itemIds }, opts?.manager ?? this.repo.manager);
   }
 
-  async summaryTotals(query: any, opts?: { manager?: EntityManager }): Promise<any> {
-    return budgetList.budgetListTotals(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+  async summaryTotals(query: any, opts?: { manager?: EntityManager; access?: BudgetListAccess }): Promise<any> {
+    return budgetList.budgetListTotals(SUMMARY_SCOPES.opex, this.summaryDeps(opts?.access), query, opts?.manager ?? this.repo.manager);
   }
 
   async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }) {

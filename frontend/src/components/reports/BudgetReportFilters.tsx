@@ -6,59 +6,35 @@ import { useTranslation } from 'react-i18next';
 import CostCenterSelect from '../fields/CostCenterSelect';
 import { useCostCenterTree, type CostCenterTree } from '../../hooks/useCostCenterTree';
 import { useAnalyticsAxes, type AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
-import { analyticsFieldKey, getAnalyticsValue } from '../../services/analytics';
+import { getAnalyticsValue } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from './ReportLayout';
+import {
+  axisValuesRequest,
+  NO_ANALYTICS_VALUE,
+  NO_LINE,
+  readAxisValues,
+  readRunBuildPresence,
+  reportFilterModels,
+  runBuildPresenceRequest,
+  type BudgetScope,
+  type ColumnFilters,
+  type LabelledOption,
+  type RunBuildPick,
+} from '../../pages/reports/reportAggregates';
+import { compareNames, useBudgetAggregate, useBudgetAggregates } from '../../pages/reports/useBudgetAggregate';
 
 /** `none` keeps the lines that say neither run nor build. */
-export type RunBuildFilter = 'run' | 'build' | 'none';
+export type RunBuildFilter = RunBuildPick;
 
 const RUN_BUILD_FILTERS: readonly RunBuildFilter[] = ['run', 'build', 'none'];
+
+export { NO_ANALYTICS_VALUE };
 
 export const COST_CENTER_PARAM = 'costCenter';
 export const RUN_BUILD_PARAM = 'runBuild';
 /** `?analytics=<dimension id>:<value id or none>,…`, one pair per narrowed dimension. */
 export const ANALYTICS_PARAM = 'analytics';
-/** The pick that keeps the lines holding no value on a dimension. */
-export const NO_ANALYTICS_VALUE = 'none';
-
-/** The fields of a summary row the bar reads: every budget line of either type carries them. */
-export type BudgetReportFilterRow = {
-  cost_center_id?: string | null;
-  run_build?: string | null;
-  /** The line's value on each dimension it has one on, by dimension id. */
-  analytics_value_ids?: Record<string, string> | null;
-};
-
-export type BudgetRowCriteria = {
-  /** The picked node and everything below it, or null for every line. */
-  costCenterIds: Set<string> | null;
-  runBuild: RunBuildFilter | null;
-  /** By dimension id: the value to keep, or `none`. Empty or absent keeps every line. */
-  analytics?: ReadonlyMap<string, string> | null;
-};
-
-/** Keeps the lines under the picked node, of the picked kind of spend and holding the picked values. */
-export function filterBudgetRows<T extends BudgetReportFilterRow>(rows: T[], criteria: BudgetRowCriteria): T[] {
-  const { costCenterIds, runBuild } = criteria;
-  const analytics = criteria.analytics && criteria.analytics.size > 0 ? Array.from(criteria.analytics) : null;
-  if (!costCenterIds && !runBuild && !analytics) return rows;
-  return rows.filter((row) => {
-    if (costCenterIds && !(row.cost_center_id && costCenterIds.has(row.cost_center_id))) return false;
-    if (runBuild) {
-      const value = row.run_build || null;
-      if (runBuild === 'none' ? value !== null : value !== runBuild) return false;
-    }
-    if (analytics) {
-      for (const [axisId, pick] of analytics) {
-        const value = row.analytics_value_ids?.[axisId] || null;
-        if (pick === NO_ANALYTICS_VALUE ? value !== null : value !== pick) return false;
-      }
-    }
-    return true;
-  });
-}
-
 /** The pairs of `?analytics=`, in address order; a malformed pair is skipped, a repeated dimension keeps its first. */
 export function parseAnalyticsParam(raw: string | null | undefined): Map<string, string> {
   const picks = new Map<string, string>();
@@ -78,6 +54,20 @@ function formatAnalyticsParam(picks: ReadonlyMap<string, string>): string | null
   return parts.length > 0 ? parts.join(',') : null;
 }
 
+export type BudgetReportFilterOptions = {
+  /** False until the lines' run or build values and dimension values are known. */
+  ready: boolean;
+  /** Lines in the report's window (filters aside). */
+  lineCount: number;
+  /** A line of the window says run or build. */
+  hasRunBuild: boolean;
+  /** Per enabled dimension, the values the window's lines hold on it, by name. */
+  analytics: ReadonlyMap<string, LabelledOption[]>;
+  /** The options could not be read: the bar says so, with a retry, instead of hiding its selects. */
+  isError: boolean;
+  retry: () => void;
+};
+
 export type BudgetReportFilterState = {
   tree: CostCenterTree;
   /** The node in the address, once the tree knows it. */
@@ -96,11 +86,17 @@ export type BudgetReportFilterState = {
   setAnalyticsValue: (axisId: string, value: string | null) => void;
   /** Drops every dimension pick from the address. */
   clearAnalytics: () => void;
-  /** Applied before any total: the report then works on the kept lines only. */
-  filterRows: <T extends BudgetReportFilterRow>(rows: T[] | undefined) => T[] | undefined;
+  /**
+   * The picks as column filters of the report's aggregate, applied before any total. Null while the
+   * tree or the dimensions are needed to read the address: no total is shown rather than a partial
+   * one. A node or values that cannot be read keep no line.
+   */
+  queryFilters: ColumnFilters | null;
+  /** What the pickers offer, from every line of the report's window. */
+  options: BudgetReportFilterOptions;
 };
 
-const NO_ROWS: never[] = [];
+const NO_AXIS_VALUES: ReadonlyMap<string, LabelledOption[]> = new Map();
 
 /** A one-line notice in the filter row, and its way out. */
 const filterNoticeSx = { alignSelf: 'center', fontSize: 13, color: 'kanap.text.secondary' } as const;
@@ -113,8 +109,12 @@ const filterNoticeLinkSx = { fontSize: 'inherit', verticalAlign: 'baseline' } as
  * group. A pair naming an unknown or disabled dimension is ignored: the bar has no select to show or
  * clear it. Dimensions that failed to load make every pair unreadable: like a missing cost center, the
  * report then shows nothing and says why.
+ *
+ * `scope` and `years` are the report's: the pickers offer what the lines of its window hold (the
+ * lines still active on 1 January of the earliest year it reads), whatever the picks.
  */
-export function useBudgetReportFilters(): BudgetReportFilterState {
+export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; years?: readonly number[] }): BudgetReportFilterState {
+  const { t } = useTranslation('ops');
   const tree = useCostCenterTree();
   const analyticsAxes = useAnalyticsAxes();
   const [params, setParams] = useSearchParams();
@@ -163,16 +163,46 @@ export function useBudgetReportFilters(): BudgetReportFilterState {
   }, [setParams]);
   const clearAnalytics = useCallback(() => setParam(ANALYTICS_PARAM, null), [setParam]);
 
-  const filterRows = useCallback(<T extends BudgetReportFilterRow>(rows: T[] | undefined): T[] | undefined => {
-    if (!rows) return rows;
+  const descendants = useMemo(
+    () => (costCenterId ? Array.from(tree.descendantIds(costCenterId)) : null),
+    [costCenterId, tree],
+  );
+  const queryFilters = useMemo<ColumnFilters | null>(() => {
     // Until the tree and the dimensions say what the address means, no total is shown rather than a partial one.
-    if (waitingForTree || costCenterMissing || waitingForAxes || analyticsMissing) return NO_ROWS;
-    return filterBudgetRows(rows, {
-      costCenterIds: costCenterId ? tree.descendantIds(costCenterId) : null,
-      runBuild,
-      analytics,
-    });
-  }, [waitingForTree, costCenterMissing, waitingForAxes, analyticsMissing, costCenterId, runBuild, analytics, tree]);
+    if (waitingForTree || waitingForAxes) return null;
+    if (costCenterMissing || analyticsMissing) return NO_LINE;
+    return reportFilterModels({ costCenterIds: descendants, runBuild, analytics: Array.from(analytics) });
+  }, [waitingForTree, waitingForAxes, costCenterMissing, analyticsMissing, descendants, runBuild, analytics]);
+
+  // What the pickers offer: every line of the window, picks aside.
+  const yearsKey = years?.join(',') ?? '';
+  const windowYears = useMemo(() => (yearsKey ? yearsKey.split(',').map(Number) : undefined), [yearsKey]);
+  const presence = useBudgetAggregate(scope, useMemo(() => runBuildPresenceRequest(windowYears), [windowYears]));
+  const enabledAxes = analyticsAxes.ready ? analyticsAxes.enabled : [];
+  const axisIdsKey = enabledAxes.map((axis) => axis.id).join(',');
+  const axisRequests = useMemo(
+    () => (axisIdsKey ? axisIdsKey.split(',').map((axisId) => axisValuesRequest(axisId, windowYears)) : []),
+    [axisIdsKey, windowYears],
+  );
+  const axisValues = useBudgetAggregates(scope, analyticsAxes.ready ? axisRequests : null);
+  const unnamed = t('reports.analyticsCategory.unnamed');
+  const options = useMemo<BudgetReportFilterOptions>(() => {
+    const { lineCount, hasRunBuild } = readRunBuildPresence(presence.data);
+    const byAxis = new Map<string, LabelledOption[]>();
+    const ids = axisIdsKey ? axisIdsKey.split(',') : [];
+    ids.forEach((axisId, i) => byAxis.set(axisId, readAxisValues(axisValues.data?.[i], unnamed, compareNames)));
+    return {
+      ready: presence.data != null && (ids.length === 0 || axisValues.data != null),
+      lineCount,
+      hasRunBuild,
+      analytics: ids.length ? byAxis : NO_AXIS_VALUES,
+      isError: presence.isError || axisValues.isError,
+      retry: () => {
+        if (presence.isError) void presence.refetch();
+        if (axisValues.isError) axisValues.refetch();
+      },
+    };
+  }, [presence.data, presence.isError, presence.refetch, axisValues, axisIdsKey, unnamed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return useMemo(
     () => ({
@@ -187,11 +217,12 @@ export function useBudgetReportFilters(): BudgetReportFilterState {
       setRunBuild,
       setAnalyticsValue,
       clearAnalytics,
-      filterRows,
+      queryFilters,
+      options,
     }),
     [
       tree, costCenterId, costCenterMissing, runBuild, analyticsAxes, analytics, analyticsMissing,
-      setCostCenterId, setRunBuild, setAnalyticsValue, clearAnalytics, filterRows,
+      setCostCenterId, setRunBuild, setAnalyticsValue, clearAnalytics, queryFilters, options,
     ],
   );
 }
@@ -260,43 +291,25 @@ function AnalyticsValueSelect({
  * node; the run/build picker once a line of the report says run or build (or the address asks for it);
  * one select per enabled dimension once a line holds a value on it (or the address names it), offering
  * the values the lines hold. A node the tree cannot resolve, or dimension picks that cannot be read, get
- * a one-line notice with a way out. With none of these, nothing renders. `rows` are the report's lines
- * before any filter.
+ * a one-line notice with a way out. With none of these, nothing renders. The options come from every
+ * line of the report's window, before any filter.
  */
-export function BudgetReportFilters({
-  filters,
-  rows,
-}: {
-  filters: BudgetReportFilterState;
-  rows: BudgetReportFilterRow[] | undefined;
-}) {
-  const { t } = useTranslation('ops');
+export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterState }) {
+  const { t } = useTranslation(['ops', 'common']);
   const showCostCenter = filters.tree.hasAny;
-  const showRunBuild = useMemo(
-    () => filters.runBuild != null || (rows ?? []).some((row) => Boolean(row.run_build)),
-    [filters.runBuild, rows],
-  );
-  const { analyticsAxes, analytics } = filters;
+  const showRunBuild = filters.runBuild != null || filters.options.hasRunBuild;
+  const { analyticsAxes, analytics, options } = filters;
   const analyticsFilters = useMemo<AnalyticsDimensionFilter[]>(() => {
     if (!analyticsAxes.ready) return [];
     const out: AnalyticsDimensionFilter[] = [];
     for (const axis of analyticsAxes.enabled) {
-      const names = new Map<string, string>();
-      const nameKey = analyticsFieldKey(axis.id);
-      for (const row of rows ?? []) {
-        const id = row.analytics_value_ids?.[axis.id];
-        if (!id || names.has(id)) continue;
-        const name = (row as Record<string, unknown>)[nameKey];
-        names.set(id, (typeof name === 'string' ? name.trim() : '') || t('reports.analyticsCategory.unnamed'));
-      }
-      if (names.size === 0 && !analytics.has(axis.id)) continue;
-      const options = Array.from(names, ([id, label]) => ({ id, label }));
-      options.sort((a, b) => a.label.localeCompare(b.label));
-      out.push({ axisId: axis.id, label: analyticsAxes.label(axis), options });
+      const values = options.analytics.get(axis.id) ?? [];
+      if (values.length === 0 && !analytics.has(axis.id)) continue;
+      out.push({ axisId: axis.id, label: analyticsAxes.label(axis), options: values });
     }
     return out;
-  }, [analyticsAxes, analytics, rows, t]);
-  if (!showCostCenter && !showRunBuild && !filters.costCenterMissing && !filters.analyticsMissing && analyticsFilters.length === 0) {
+  }, [analyticsAxes, analytics, options.analytics]);
+  if (!showCostCenter && !showRunBuild && !filters.costCenterMissing && !filters.analyticsMissing && analyticsFilters.length === 0 && !options.isError) {
     return null;
   }
 
@@ -351,6 +364,14 @@ export function BudgetReportFilters({
             ))}
           </TextField>
         </ReportFilter>
+      )}
+      {options.isError && (
+        <Box role="status" sx={filterNoticeSx}>
+          {t('common:messages.loadFailed')}{' '}
+          <MLink component="button" type="button" underline="hover" onClick={options.retry} sx={filterNoticeLinkSx}>
+            {t('common:buttons.retry')}
+          </MLink>
+        </Box>
       )}
       {filters.analyticsMissing && (
         <Box role="status" sx={filterNoticeSx}>

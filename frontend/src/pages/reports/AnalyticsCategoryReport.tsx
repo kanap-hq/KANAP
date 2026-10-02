@@ -1,30 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Autocomplete, Box, Checkbox, ListItemText, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
-import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
-import api from '../../api';
-import { type BudgetSummaryRow, pickSlot, useBudgetSummaryAll, useReportScope } from './useBudgetSummaryAll';
+import ReportExclusionPicker from '../../components/reports/ReportExclusionPicker';
+import ReportDataStatus from '../../components/reports/ReportDataStatus';
+import { useReportScope } from './useReportScope';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
-import { ANALYTICS_VALUES_ENDPOINT, analyticsFieldKey, type AnalyticsAxis } from '../../services/analytics';
-import { drawerAutocompleteListboxSx, drawerMenuItemSx } from '../../theme/formSx';
+import type { AnalyticsAxis } from '../../services/analytics';
+import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
-
-type AnalyticsCategory = {
-  id: string;
-  name: string;
-  status?: string | null;
-};
-
-type CategoryOption = { id: string; label: string };
+import { analyticsRequest, readAnalytics } from './reportAggregates';
+import { useBudgetAggregate } from './useBudgetAggregate';
+import { useAxisValueOptions } from './useReportOptions';
 
 /** `?axis=<dimension id>`: the dimension the report groups on. */
 const AXIS_PARAM = 'axis';
@@ -45,16 +40,6 @@ function useReportAxis(axes: AnalyticsAxes): [AnalyticsAxis | null, (id: string)
     }, { replace: true });
   }, [setParams]);
   return [axis, setAxis];
-}
-
-/**
- * The line's value on the dimension and that value's name. Until the dimensions are known the line's
- * default-dimension value stands in: it is the dimension the report opens on.
- */
-function valueOf(row: BudgetSummaryRow, axisId: string | null): { id: string | null; name: string | null } {
-  if (!axisId) return { id: row.analytics_category_id ?? null, name: row.analytics_category_name ?? null };
-  const name = (row as Record<string, unknown>)[analyticsFieldKey(axisId)];
-  return { id: row.analytics_value_ids?.[axisId] ?? null, name: typeof name === 'string' ? name : null };
 }
 
 function formatNumber(v: any) {
@@ -82,9 +67,7 @@ export default function AnalyticsCategoryReport() {
 
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
-  const { data: allRows, isLoading } = useBudgetSummaryAll(scope);
-  const reportFilters = useBudgetReportFilters();
-  const rows = useMemo(() => reportFilters.filterRows(allRows), [allRows, reportFilters.filterRows]);
+  const reportFilters = useBudgetReportFilters({ scope });
   const analyticsAxes = reportFilters.analyticsAxes;
   const [axis, setAxis] = useReportAxis(analyticsAxes);
   const axisId = axis?.id ?? null;
@@ -96,84 +79,25 @@ export default function AnalyticsCategoryReport() {
   useEffect(() => {
     setExcludedCategories((prev) => (prev.length > 0 ? [] : prev));
   }, [scope, axisId]);
-  const { data: categories } = useQuery<AnalyticsCategory[]>({
-    queryKey: ['analytics-categories', 'reporting', axisId],
-    queryFn: async () => {
-      const res = await api.get<{ items: AnalyticsCategory[] }>(ANALYTICS_VALUES_ENDPOINT, {
-        params: { axis_id: axisId, limit: 1000, sort: 'name:ASC' },
-      });
-      return res.data.items;
-    },
-    enabled: Boolean(axisId),
-  });
+  // The dimension's values and the ones the lines hold, loaded when the picker first opens.
+  const [valuesWanted, setValuesWanted] = useState(false);
+  const categoryOptions = useAxisValueOptions(scope, axisId, valuesWanted);
 
-  const categoryById = useMemo(() => {
-    const map = new Map<string, AnalyticsCategory>();
-    for (const cat of categories ?? []) {
-      map.set(cat.id, cat);
-    }
-    return map;
-  }, [categories]);
-
-  const categoryOptions = useMemo<CategoryOption[]>(() => {
-    const map = new Map<string, CategoryOption>();
-    for (const cat of categories ?? []) {
-      const label = (cat.name ?? '').trim() || t('reports.analyticsCategory.unnamed');
-      map.set(cat.id, { id: cat.id, label });
-    }
-    for (const row of allRows ?? []) {
-      const value = valueOf(row, axisId);
-      if (!value.id || map.has(value.id)) continue;
-      const label = (value.name ?? '').trim() || t('reports.analyticsCategory.unnamed');
-      map.set(value.id, { id: value.id, label });
-    }
-    const list = Array.from(map.values());
-    list.sort((a, b) => a.label.localeCompare(b.label));
-    return list;
-  }, [categories, allRows, axisId, t]);
-
-  const selectedOptions = useMemo<CategoryOption[]>(() => {
-    if (excludedCategories.length === 0) return [];
-    const lookup = new Map(categoryOptions.map((option) => [option.id, option] as const));
-    return excludedCategories
-      .map((id) => lookup.get(id))
-      .filter((option): option is CategoryOption => Boolean(option));
-  }, [excludedCategories, categoryOptions]);
-
-  type Group = {
-    key: string;
-    label: string;
-    values: Record<number, number>;
-  };
-
-  const groups = useMemo<Group[]>(() => {
-    const acc: Map<string, Group> = new Map();
-    const source = rows ?? [];
-    const makeKey = (id: string | null | undefined, fallbackName: string | null | undefined): { key: string; label: string } => {
-      if (!id) return { key: 'uncategorized', label: t('reports.analyticsCategory.unassigned') };
-      const labelFromCatalog = categoryById.get(id)?.name;
-      const label = (labelFromCatalog ?? fallbackName ?? '').trim() || t('reports.analyticsCategory.unnamed');
-      return { key: `cat_${id}`, label };
-    };
-    for (const row of source) {
-      const value = valueOf(row, axisId);
-      const id = value.id;
-      if (id && excludedCategories.includes(id)) continue;
-      const keyInfo = makeKey(id, value.name);
-      let group = acc.get(keyInfo.key);
-      if (!group) { group = { key: keyInfo.key, label: keyInfo.label, values: {} }; acc.set(keyInfo.key, group); }
-      for (const yr of years) {
-        const slot = pickSlot(row, yr);
-        const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
-        const total = Number(totals?.[metric] ?? 0);
-        group.values[yr] = (group.values[yr] || 0) + total;
-      }
-    }
-    return Array.from(acc.values()).sort((a, b) => {
-      const pYear = years[0];
-      return (b.values[pYear] || 0) - (a.values[pYear] || 0);
-    });
-  }, [rows, years, metric, excludedCategories, categoryById, axisId, t]);
+  // The server groups the kept lines by their value on the dimension (none: unassigned), one sum per
+  // year, the first year's largest first. Until the dimensions are known, nothing is asked: the
+  // report would group on the default dimension, then again on the one in the address.
+  const request = useMemo(() => (reportFilters.queryFilters == null || !analyticsAxes.ready ? null : analyticsRequest({
+    axisId,
+    years,
+    metric,
+    excludedIds: excludedCategories,
+    filters: reportFilters.queryFilters,
+  })), [reportFilters.queryFilters, analyticsAxes.ready, axisId, years, metric, excludedCategories]);
+  const report = useBudgetAggregate(scope, request, { keepPrevious: true });
+  // Loading, waiting for the filter bar or the dimensions, or the last answer kept while the new one loads.
+  const busy = reportFilters.queryFilters == null || !analyticsAxes.ready || report.isLoading || report.isPlaceholderData;
+  const labels = useMemo(() => ({ unassigned: t('reports.analyticsCategory.unassigned'), unnamed: t('reports.analyticsCategory.unnamed') }), [t]);
+  const { groups, totals } = useMemo(() => readAnalytics(years, report.data, labels), [years, report.data, labels]);
 
   const tableRows = useMemo(() => groups.map((group) => {
     const row: any = { group: group.label };
@@ -195,11 +119,9 @@ export default function AnalyticsCategoryReport() {
 
   const totalsRow = useMemo(() => {
     const row: any = { group: t('reports.analyticsCategory.totalMetric', { metric: metricLabel }) };
-    for (const yr of years) {
-      row[yr] = groups.reduce((acc, group) => acc + (Number(group.values[yr]) || 0), 0);
-    }
+    for (const yr of years) row[yr] = totals[yr] ?? 0;
     return row;
-  }, [groups, years, metricLabel, t]);
+  }, [totals, years, metricLabel, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -304,6 +226,7 @@ export default function AnalyticsCategoryReport() {
 
   return (
     <ReportLayout
+      busy={busy}
       title={t("reports.analyticsCategory.title")}
       subtitle={t('reports.analyticsCategory.subtitle', { type: scopeLabel, dimension: dimensionInSentence })}
       filters={(
@@ -328,7 +251,7 @@ export default function AnalyticsCategoryReport() {
               </TextField>
             </ReportFilter>
           )}
-          <BudgetReportFilters filters={reportFilters} rows={allRows} />
+          <BudgetReportFilters filters={reportFilters} />
           <ReportFilter label={t('reports.filters.startYear')} width={100}>
             <TextField
               select
@@ -390,53 +313,17 @@ export default function AnalyticsCategoryReport() {
             </TextField>
           </ReportFilter>
           <ReportFilter label={t('reports.filters.excludeCategories')} width={280}>
-            <Autocomplete
-              multiple
-              size="small"
-              disableCloseOnSelect
-              options={categoryOptions}
-              value={selectedOptions}
-              onChange={(_, next) => {
-                setExcludedCategories(next.map((option) => option.id));
-              }}
-              getOptionLabel={(option) => option.label}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-              renderOption={(props, option, { selected }) => (
-                <li {...props}>
-                  <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
-                  <ListItemText primary={option.label} primaryTypographyProps={{ fontSize: 13 }} />
-                </li>
-              )}
-              renderTags={() => []}
-              renderInput={(params) => {
-                const count = excludedCategories.length;
-                return (
-                  <TextField
-                    {...params}
-                    placeholder={count === 0 ? t('reports.filters.excludeCategoriesPlaceholder') : ''}
-                    inputProps={{ ...params.inputProps, 'aria-label': t('reports.filters.excludeCategories') }}
-                    sx={{ '& input': { fontSize: 13 } }}
-                    InputProps={{
-                      ...params.InputProps,
-                      startAdornment: count > 0 ? (
-                        <>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ ml: 0.5, mr: 1, whiteSpace: 'nowrap', fontSize: 13 }}
-                          >
-                            {t('reports.filters.categorySelected', { count })}
-                          </Typography>
-                          {params.InputProps.startAdornment}
-                        </>
-                      ) : params.InputProps.startAdornment,
-                    }}
-                  />
-                );
-              }}
-              sx={{ width: '100%' }}
-              noOptionsText={t("reports.filters.noMatchingCategories")}
+            <ReportExclusionPicker
+              inFilter
+              label={t('reports.filters.excludeCategories')}
+              placeholder={t('reports.filters.excludeCategoriesPlaceholder')}
+              selectedText={(count) => t('reports.filters.categorySelected', { count })}
+              noOptionsText={t('reports.filters.noMatchingCategories')}
+              options={categoryOptions.options}
+              loading={categoryOptions.loading}
+              onFirstOpen={() => setValuesWanted(true)}
+              value={excludedCategories}
+              onChange={setExcludedCategories}
             />
           </ReportFilter>
         </>
@@ -460,9 +347,7 @@ export default function AnalyticsCategoryReport() {
           />
         </Paper>
       </Stack>
-      {isLoading && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t("reports.shared.loadingData")}</Typography>
-      )}
+      <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />
     </ReportLayout>
   );
 }

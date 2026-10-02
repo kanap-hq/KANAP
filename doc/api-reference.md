@@ -913,6 +913,11 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - Distinct filter values for closed-choice columns in the OPEX summary grid.
   - Response: `{ fieldA: Array<string | null>, fieldB: Array<string | null> }`
   - Caller should remove the column’s own filter so values stay discoverable.
+- POST `/spend-items/summary/aggregate` **[Requires: opex:reader]** (and POST `/capex-items/summary/aggregate`, **capex:reader**): the lines of a list state grouped and measured on the server, in one statement. The budget reports and the dashboard's budget tiles use it. A read: a frozen subscription keeps it, as the GET routes
+  - Body `{ query, spec }`. `query` is the list's query: `filters` (an object or its JSON), `q`, `status`, `includeDisabled`, `years` (`2025,2026`: without a status, the lines still active on 1 January of the earliest year, else of last year), and `ctx` (a saved list context, merged as on the GET routes)
+  - `spec`: `groupBy` (0 to 6 fields of the list; `id` gives one group per line), `measures` (0 to 60, each `{ id, fn: sum|min|max|avg, field, minus?, part?: positive|negative }` on an amount `y<YYYY><Suffix>` or `<slot><Suffix>`, an amount in the line's own currency `local_<amount field>`, or an FTE `fte_<amount field>`; at most 8 with group keys, 60 without), `having` (0 to 10 conditions on measures, exact), `order` (0 to 10 terms by `count`, a `measure` or a `key`), `limit` (1 to 10,000) and `others`
+  - Fields the reports read besides the list's: `analytics_id_<axis_id>` (the line's value id on a dimension), `account_consolidation_key` and `account_consolidation_label` (the line's consolidation line: `c_<number>`, else `c_<name>`; one label per key, from the accounts the type's lines use; null for a caller without **accounts:reader**, here and as a filter or sort key of the GET summary routes), `has_version_<slot>` (`yes` when the line shows a version that year)
+  - Response: `{ groups: [{ keys, count, values, unknown }], others, total, groupCount, reportingCurrency }`; amounts exact to the cent in the reporting currency (`local_` amounts in each line's currency), `total` over every line of the state
 
 ## Summary (CAPEX list)
 - GET `/capex-items/summary?status=enabled&page=1&limit=50&sort=yBudget:DESC`

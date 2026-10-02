@@ -1,14 +1,13 @@
 import { useCallback } from 'react';
-import type { UseQueryResult } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import type { BudgetScope } from '../../services/budgetOperations';
 import { useDefaultBudgetScope } from '../operations/ItemScopeTabs';
-import { pickYearSlot, useOpexSummaryAll, type SummaryRow as OpexSummaryRow } from './useOpexSummary';
-import { useCapexSummaryAll } from './useCapexSummary';
 
-/** A summary row of either item type: OPEX lines are named by `product_name`, CAPEX lines by `description`. */
-export type BudgetSummaryRow = Omit<OpexSummaryRow, 'product_name'> & {
+/** The fields of a summary row (`/spend-items/summary`, `/capex-items/summary`) the dashboard lists read. */
+export type BudgetSummaryRow = {
+  id: string;
+  /** OPEX lines are named by `product_name`, CAPEX lines by `description`. */
   product_name?: string;
   description?: string;
   item_number?: number | null;
@@ -25,23 +24,6 @@ export const SUMMARY_ENDPOINT: Record<BudgetScope, string> = {
 /** Display name of a line of the given type. */
 export function itemName(scope: BudgetScope, row: Pick<BudgetSummaryRow, 'product_name' | 'description'>): string {
   return (scope === 'capex' ? row.description : row.product_name) ?? '';
-}
-
-/** Year slot of a line of either type (the slots do not depend on the name field). */
-export function pickSlot(row: BudgetSummaryRow, year: number) {
-  return pickYearSlot(row as OpexSummaryRow, year);
-}
-
-/** Every line of one item type with its year slots; only the active type is fetched. */
-export function useBudgetSummaryAll(
-  scope: BudgetScope,
-  years?: number[],
-  options?: { enabled?: boolean },
-): UseQueryResult<BudgetSummaryRow[]> {
-  const enabled = options?.enabled !== false;
-  const opex = useOpexSummaryAll(years, { enabled: enabled && scope === 'opex' });
-  const capex = useCapexSummaryAll(years, { enabled: enabled && scope === 'capex' });
-  return (scope === 'capex' ? capex : opex) as UseQueryResult<BudgetSummaryRow[]>;
 }
 
 /**
