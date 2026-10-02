@@ -23,7 +23,8 @@ kanap/
 │   └── ...
 ├── infra/
 │   ├── compose.onprem.yml   # On-prem Docker Compose reference
-│   └── .env.onprem.example  # Configuration template
+│   ├── .env.onprem.example  # Configuration template
+│   └── postgres/kanap-pg-tune.sh  # PostgreSQL settings sized from the host's memory (applies nothing)
 ├── doc/
 │   └── on-premise/          # Maintainer docs
 └── doc/help/docs/en/on-premise/  # User docs

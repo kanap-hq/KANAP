@@ -5,7 +5,7 @@ Metadata
 - Audience: Engineers, architects, product, operations
 - Status: current
 - Owner: TBD
-- Last Updated: 2026-09-15
+- Last Updated: 2026-10-02
 
 ## Summary
 KANAP is a NestJS API, a Vite/React single-page app and an Astro marketing site in front of one PostgreSQL 15 database. The same code base ships in two deployment modes selected at runtime: `multi-tenant` (the cloud SaaS, one shared database with row-level security per tenant) and `single-tenant` (on-premise, one tenant, no platform layer). See [Deployment Modes](#deployment-modes).
@@ -100,6 +100,14 @@ flowchart LR
 - Env: `FILES_STORAGE=s3`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
 - There is no local-filesystem backend: `FILES_STORAGE` only resolves to S3. On-premise installs need an S3-compatible service (MinIO or equivalent).
 - Scheduled cleanup jobs remove orphaned attachments and ghost objects (see Scheduled Tasks).
+
+### PostgreSQL Settings
+PostgreSQL ran on its defaults (128 MB shared buffers, 4 MB work memory; the step 0 bench of plan planning/perf-scale saw the amounts aggregate spill its sort to disk). Its configuration belongs to whoever runs the server (the host on QA and prod, the customer on premise), so KANAP ships a sizing script and applies nothing itself, except per-table autovacuum settings through a migration.
+- **`infra/postgres/kanap-pg-tune.sh`** prints an include file sized from the host's memory, for a server shared with the KANAP containers or dedicated (`--dedicated`): `shared_buffers` 25 % of RAM dedicated, 15 % shared, 10 % shared under 6 GB (image builds on the same host need the room), at most 8 GB; `effective_cache_size` 75 % or 50 %; `work_mem` 8 MB under 6 GB, 16 MB up to 24 GB, 32 MB above; `maintenance_work_mem` 5 % between 64 MB and 1 GB; `random_page_cost = 1.1` and `effective_io_concurrency = 200` (SSD); `pg_stat_statements` with `track_io_timing`; `log_min_duration_statement = 500ms` with `log_parameter_max_length = 0`; `log_lock_waits`. The rule is in the script's header.
+- **Statement statistics.** `shared_preload_libraries` is one list, and a value in an included file replaces the one in `postgresql.conf`: the script keeps the server's current libraries when given them (`--preload "$(psql -XAtc 'SHOW shared_preload_libraries')"`) and writes the line commented out otherwise. PostgreSQL does not start when a preloaded library is missing (RHEL and derivatives ship it in `postgresqlNN-contrib`): the script looks for `pg_stat_statements.so` on the host (`pg_config --pkglibdir`, then the usual package paths) and writes the line commented out when it is not there. A deploy then needs a PostgreSQL restart (for `shared_buffers` and the preload) and, once, `CREATE EXTENSION pg_stat_statements` in the KANAP database as a superuser.
+- **Logged parameters.** A statement over 500 ms is logged with its bind parameters, which can carry personal data (names, e-mails, comment text): the script sets `log_parameter_max_length = 0` (PostgreSQL 13+), and the cloud servers should have the same before `log_min_duration_statement` is turned on there.
+- **QA and prod**: nothing is applied by a deploy. QA has 3.8 GB shared with the containers and no swap: the shared rule gives 380 MB of shared buffers and 8 MB of work memory.
+- **Autovacuum of the amounts** (migration `1853820000000`, the only setting a deploy applies): `spend_amounts` and `capex_amounts` are vacuumed after 2 % dead rows instead of 20 %, analysed after 1 % changed instead of 10 %, and on PostgreSQL 13+ vacuumed after 5 % inserted rows. No memory, no restart. A table the KANAP role does not own keeps its settings, and a table busy for more than 5 s (a running VACUUM holds the same lock) is skipped; both cases log the statement to run instead of failing the deploy.
 
 ### Applications Portfolio (IT Landscape)
 - Backend: `ApplicationsModule` provides CRUD and sub-resources; all tables are RLS-protected.
@@ -304,6 +312,7 @@ See also: `doc/frontend-architecture.md` for detailed UI guidelines.
 
 ### Authentication & SSO
 - Local email/password + JWT is the baseline for every user. Access tokens come from `AuthService.signToken`; a refresh token is kept in an `HttpOnly` cookie (`auth-cookie.util.ts`) and feeds `/auth/me`, guards and the SPA's Axios interceptor.
+- `JwtAuthGuard` verifies with a key built once from `JWT_SECRET` (`auth/jwt-key.ts`, rebuilt only if the secret changes). Given the secret as a string, jsonwebtoken first tried it as a public key (a thrown error) then built the key on every authenticated request: about 980 µs of main-thread time per request on Node 20 in the API image, 19 µs with the key built once.
 - Microsoft Entra is the only SSO provider (no SAML, Google or generic OIDC). Each tenant connects one Entra directory via **Admin → Authentication**; the tenant row stores `sso_provider` (`none|entra`), `sso_enabled`, `entra_tenant_id` and `entra_metadata`, enforcing a strict 1:1 mapping.
 - `EntraAuthService` downloads the discovery document and JWKS, builds authorization URLs, exchanges codes and validates `id_token` claims (audience, `nonce`, `tid`, `oid`). The issuer is validated against `https://login.microsoftonline.com/<tid>/v2.0` to support multi-tenant authorities. Env: `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_AUTHORITY` (e.g. `https://login.microsoftonline.com/organizations`), `ENTRA_REDIRECT_URI` (public HTTPS URL of `/auth/entra/callback`). The whole feature is gated by `ENTRA_SSO`.
 - Setup flow: `POST /auth/entra/setup/start` (tenant admin, JWT; a `GET` variant exists for browser redirects) returns `{ url }` with a signed short-lived `state` carrying the OIDC nonce. The URL uses `prompt=consent`. The shared callback validates the nonce, persists the Entra tenant id and redirects to the tenant host's `/admin/auth?setup=success`.
