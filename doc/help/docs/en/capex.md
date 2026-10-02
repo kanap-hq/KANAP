@@ -104,11 +104,13 @@ These columns are hidden by default. Show them from the column chooser (hamburge
 
 ### Quick search
 
-The search box at the top searches the reference, description, supplier, paying company, account, contract, project names, allocation, owners, analytics values, cost center (code, name and path), budget holder, PP&E type, investment type, priority, notes, currency and status. Results update in real time as you type.
+The search box at the top searches the reference, description, supplier, paying company, account, contract, project names, allocation, owners, analytics values, cost center (code, name and path), budget holder, PP&E type, investment type, priority, notes, currency and status. Results update in real time as you type, ignoring accents and case.
 
 ### Column filters
 
 Each filterable column header has a filter icon. **Supplier**, **Paying company**, **Account**, **PP&E type**, **Investment type**, **Priority**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build** and **Enabled** use checkbox set filters with **All**, **None**, and a clear button. The **Enabled** filter offers **Enabled** and **Disabled** and narrows the list when **Show** is set to **All**. Clicking **Clear** in it, or unticking both values, lists nothing, whatever **Show** says. Multiple filters combine with AND logic.
+
+Tick **All**, then untick the values you want to leave out: the filter keeps everything except those (the header reads, for example, **All but 3**), and a value created later is included automatically.
 
 Every amount column has a number filter. A number typed in the box under the header keeps the items with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts.
 
@@ -116,11 +118,11 @@ Every FTE column has a number filter with the same conditions, plus blank and no
 
 **Effective start**, **End of validity**, **Created** and **Updated** have date filters. Pick a date in the box under the header to keep the items on that date, or open the filter menu for before, after, between, blank or not blank.
 
-Text columns use text filters. On **Ref**, type the number or the full reference, for example `12` or `CPX-12`.
+Text columns use text filters, ignoring accents and case. On **Ref**, type the number or the full reference, for example `12` or `CPX-12`.
 
 ### Sorting
 
-Click a column header to sort ascending or descending. Every column sorts, including every amount and FTE column. Items without an FTE come last in ascending order. The default sort is the default column of the current year, highest first (**Budget Y** with the standard settings). **Prev** and **Next** in the workspace follow the same order. The list remembers your last sort when you return.
+Click a column header to sort ascending or descending. Every column sorts, including every amount and FTE column. Items without an FTE come last in ascending order. Text columns sort in natural reading order: an accented name sorts next to its unaccented spelling (for example "Électricité" next to "Electricite"), and lowercase comes before uppercase when letters are otherwise equal. The default sort is the default column of the current year, highest first (**Budget Y** with the standard settings). **Prev** and **Next** in the workspace follow the same order. The list remembers your last sort when you return.
 
 ### Totals row
 
@@ -147,6 +149,8 @@ Use the **Show: All / Enabled / Disabled** toggle above the grid to control life
 
 Your list context -- sort order, search text, and active filters -- is preserved when you open an item and restored when you return to the list. This means you can drill into several items in sequence without losing your place.
 
+The same filters are also kept in the page's web address, so reloading the page or sharing the link reopens the same view. A link whose filters are no longer available shows "The filters of this link are no longer available."
+
 ### Prev/Next navigation
 
 When you open an item, the workspace shows **Prev** and **Next** buttons. These navigate through the list in the current sort order, respecting filters and search, and save your pending edits first. The counter (e.g., "Item 3 of 47") shows your position in the filtered list.
@@ -169,6 +173,16 @@ Click any row in the list to open the workspace. It has four parts:
 - Every change saves automatically. A **Saving...** / **Saved** hint shows in the header
 - Switching tabs, moving to the previous or next item, or closing the workspace saves pending edits first. If a save fails, you stay where you are and an error explains why, so no edit is lost silently
 - **Ctrl+S** (**Cmd+S** on Mac) saves immediately
+- If a save cannot go through right away because another save is in progress on the same data, KANAP retries it for you
+- If a bulk budget operation is running (for example a column copy or reset in Budget Administration), edits here are paused with the message "Another budget operation is running. Try again when it has finished." Try again once it is done
+
+**Editing at the same time**:
+
+- Two people can work on the same item at once without stepping on each other. Editing different fields, different budget months, or different budget columns never conflicts, even on the same item at the same moment
+- When someone else changes the same field, the same budget column, or the allocation while you are editing it, a banner shows their value and yours, with who changed it and when. Choose **Keep their value** to take theirs, or **Apply yours** to keep what you typed. For a budget column, the choices are **Reload the column** or **Overwrite**; for the allocation, **Reload the allocation** or **Overwrite**
+- Only the field, column or allocation that was changed waits for your choice; everything else keeps saving as usual
+- A choice waiting for you is kept when you switch tabs. It is lost, after a warning, if you leave the item or change the year
+- If the earlier change was your own, from another window or tab, the banner says so instead of naming someone else
 
 ### Overview
 
@@ -194,6 +208,7 @@ The Overview tab holds the details of the investment and its tasks.
 - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 - **Created** and **Updated** dates (read only)
 - **Priority** is set in the Properties panel when you create the item, then in the metadata bar
+- Type in **Supplier**, **Paying company**, **Account**, **IT owner**, **Business owner** or an analytics dimension field to search by name. Matches appear as you type, so you can find any value even in a very long list; a line under the list reads "Type to narrow down: more results" when there are more matches than shown
 
 **Cost center**:
 
@@ -254,6 +269,7 @@ A budget administrator can rename the columns, hide some and choose the default 
 - Both tabs show the same columns: Forecast appears in **Flat** too when it is shown.
 - Switch between modes with the **Flat** and **Monthly** tabs
 - Switching modes does not change your amounts: it only changes the view. Flat shows the yearly total of the stored months, and Monthly shows the stored months.
+- Your choice between **Flat** and **Monthly** is kept in your browser, for you only: switching does not change what other users see when they open this item. Until you choose, a column opens in the mode its amounts were last entered in.
 
 **Freeze behavior**:
 
@@ -286,6 +302,13 @@ A budget administrator can rename the columns, hide some and choose the default 
 - **Quantity and price · 3 lines · 1.00 FTE**: the amounts come from lines, with their number and, when the lines count people or days, the column's FTE. The FTE is the full-year average. Hover the label to see the lines, for example "Project manager: 1 person × 1,200 per day, 5 days per month, Feb to Jul"
 - **Edited by hand**: a month was changed in the grid or by a budget rows import
 - A column with no label kept the data it had before periods existed
+
+**When someone else is editing the same column**:
+
+- Two people can fill in different months or different columns of the same item at once with no conflict
+- On a monthly entry, if someone else changed one of the same months, those months wait for your choice; the column's other months save as you typed them
+- If someone else changed the column's total, its spread, or its quantity-and-price lines while you were working on them, the whole column waits: a banner offers **Reload the column** or **Overwrite**. The column's amounts, spread panel and lines stay read-only until you choose
+- Saving reloads the year, so you always see the latest figures for every other column; the cell or column you are editing is not disturbed
 
 **Monthly tools** (Monthly mode only):
 
@@ -446,6 +469,11 @@ The Allocations tab distributes the capital expenditure across your companies an
 
 - **Missing metrics**: One or more companies have zero or missing headcount/IT users/turnover for the selected year. Fill in the metrics in **Master data > Companies** (Details tab).
 - **"Manual percentages must sum to 100%."**: Adjust the rows, or click **Split equally**.
+
+**When someone else is editing the allocation**:
+
+- The method, driver and rows save together. If someone else changed the allocation while you were editing it, a banner offers **Reload the allocation** or **Overwrite**
+- Changing the year while a choice is waiting asks for confirmation first
 
 **Tip**: Use Headcount for most items (it is simplest and updates automatically). Reserve Manual by company for investments that benefit only specific entities (e.g., regional data center). Use Manual by department for highly targeted investments.
 
