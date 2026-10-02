@@ -626,6 +626,34 @@
   "autosave": {
     "leaveTitle": "Modifications non enregistrées",
     "leaveMessage": "Certaines de vos modifications n'ont pas pu être enregistrées. Quittez quand même et perdez-les, ou restez sur cette page et réessayez.",
-    "leaveConfirm": "Quitter sans enregistrer"
+    "leaveConfirm": "Quitter sans enregistrer",
+    "leaveConflictMessage": "Une autre personne a modifié un champ que vous modifiiez, et vous n'avez pas encore choisi la valeur à garder. Quittez quand même et perdez votre valeur, ou restez pour choisir.",
+    "leaveConflictOtherMessage": "Une autre personne a modifié un champ que vous modifiiez sur {{items}}, et vous n'avez pas encore choisi la valeur à garder. Quittez quand même et perdez votre valeur, ou restez pour choisir."
+  },
+  "editConflict": {
+    "title_one": "Une autre personne a modifié un champ que vous modifiiez",
+    "title_other": "Une autre personne a modifié {{count}} champs que vous modifiiez",
+    "titleSelf_one": "Vous avez modifié un champ dans une autre fenêtre",
+    "titleSelf_other": "Vous avez modifié {{count}} champs dans une autre fenêtre",
+    "hint": "Vos modifications sur cet élément attendent votre choix. Elles seront enregistrées dès que vous aurez choisi.",
+    "changedByAt": "{{name}} a modifié ce champ à {{time}} pendant que vous le modifiiez.",
+    "changedByOn": "{{name}} a modifié ce champ le {{date}} à {{time}} pendant que vous le modifiiez.",
+    "changedBy": "{{name}} a modifié ce champ pendant que vous le modifiiez.",
+    "changedAt": "Ce champ a été modifié à {{time}} pendant que vous le modifiiez.",
+    "changedOn": "Ce champ a été modifié le {{date}} à {{time}} pendant que vous le modifiiez.",
+    "changed": "Ce champ a été modifié pendant que vous le modifiiez.",
+    "changedByYouAt": "Vous avez modifié ce champ dans une autre fenêtre à {{time}}.",
+    "changedByYouOn": "Vous avez modifié ce champ dans une autre fenêtre le {{date}} à {{time}}.",
+    "changedByYou": "Vous avez modifié ce champ dans une autre fenêtre.",
+    "theirValue": "Sa valeur",
+    "yourValue": "Votre valeur",
+    "keepTheirs": "Garder sa valeur",
+    "applyMine": "Appliquer la vôtre",
+    "empty": "Vide",
+    "newChoice": "Votre nouveau choix, affiché dans le champ",
+    "unavailable": "Valeur plus disponible",
+    "elsewhere_one": "{{items}} a une modification qui attend votre choix.",
+    "elsewhere_other": "{{items}} ont des modifications qui attendent votre choix.",
+    "open": "Ouvrir {{item}}"
   }
 }

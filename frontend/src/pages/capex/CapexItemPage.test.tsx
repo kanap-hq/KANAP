@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useNavigate, type NavigateFunction } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate, type NavigateFunction } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -25,15 +25,19 @@ vi.mock('../../hooks/useCapexNav', () => ({
   },
 }));
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultCapexCurrency: 'EUR' } }) }));
+// The signed-in user: a conflict with their own change from another window is said so.
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' } }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchCapexRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, onTitleSave }: {
+  default: ({ properties, actions, children, onTitleSave, onTabChange, metadata }: {
     properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
+    onTabChange?: (tab: string) => void; metadata?: React.ReactNode;
   }) => (
     <div>
       <button type="button" onClick={() => onTitleSave('New servers')}>set title</button>
-      {actions}{properties}{children}
+      <button type="button" onClick={() => onTabChange?.('allocations')}>allocations tab</button>
+      {metadata}{actions}{properties}{children}
     </div>
   ),
 }));
@@ -51,6 +55,7 @@ vi.mock('./workspace/CapexPropertiesDrawer', () => ({
     >
       <button type="button" onClick={() => props.onPayingCompanyChange('company-1')}>pick company</button>
       <button type="button" onClick={() => props.onPayingCompanyChange('company-2')}>pick other company</button>
+      <button type="button" onClick={() => props.onPayingCompanyChange('')}>clear company</button>
       <button type="button" onClick={() => props.onAccountChange('account-1')}>pick account</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'category-1')}>pick category</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', null)}>clear category</button>
@@ -74,7 +79,11 @@ vi.mock('../../hooks/useCostCenterTree', () => {
   const tree = { ready: true, nodes, byId: new Map(nodes.map((n) => [n.id, n])), hasAny: true, descendantIds: (id: string) => new Set([id]) };
   return { useCostCenterTree: () => tree };
 });
-vi.mock('./workspace/CapexMetadataBar', () => ({ default: () => null }));
+vi.mock('./workspace/CapexMetadataBar', () => ({
+  default: ({ onStatusChange }: { onStatusChange: (status: string) => void }) => (
+    <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>
+  ),
+}));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/finance/BudgetTab', () => ({ default: () => null }));
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
@@ -83,6 +92,7 @@ vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 
 import api from '../../api';
 import CapexItemPage from './CapexItemPage';
+import { resetSharedPatchBuffers } from '../../hooks/patchBuffer';
 import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 
 const mocked = api as unknown as {
@@ -90,6 +100,9 @@ const mocked = api as unknown as {
 };
 
 const ITEM_ID = '11111111-2222-3333-4444-555555555555';
+
+// The edits a page keeps for the session (lot 3C review): each test starts without any.
+beforeEach(() => resetSharedPatchBuffers());
 
 function renderAt(path = '/ops/capex/new/overview') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -239,7 +252,10 @@ describe('CapexItemPage edit', () => {
     renderAt(`/ops/capex/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
-    expect(mocked.patch).toHaveBeenCalledWith(`/capex-items/${ITEM_ID}`, { paying_company_id: 'company-2', account_id: null });
+    // Each field with the value the screen showed before (its base, lot 3C).
+    expect(mocked.patch).toHaveBeenCalledWith(`/capex-items/${ITEM_ID}`, {
+      paying_company_id: 'company-2', account_id: null, base: { paying_company_id: 'company-1', account_id: 'account-1' },
+    });
     // The Account row now asks for an account on the new chart.
     expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', '');
   });
@@ -249,25 +265,29 @@ describe('CapexItemPage edit', () => {
     renderAt(`/ops/capex/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
-    expect(mocked.patch).toHaveBeenCalledWith(`/capex-items/${ITEM_ID}`, { paying_company_id: 'company-2' });
+    expect(mocked.patch).toHaveBeenCalledWith(`/capex-items/${ITEM_ID}`, { paying_company_id: 'company-2', base: { paying_company_id: 'company-1' } });
   });
 
   it('patches the cost center and run or build, as null when cleared', async () => {
     renderAt(`/ops/capex/${ITEM_ID}/overview`);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/capex-items/${ITEM_ID}`));
-    // Writes wait for the line to load; retry the click until one goes through.
-    await waitFor(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'clear cost center' }));
-      expect(mocked.patch).toHaveBeenCalled();
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'clear run or build' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick run' }));
-    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(3));
-    expect(mocked.patch.mock.calls.map((call) => call[1])).toEqual([
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
+    // One pick at a time (picks made while a save runs go together in the next one).
+    const picks = ['clear cost center', 'clear run or build', 'pick run'];
+    for (const [index, name] of picks.entries()) {
+      fireEvent.click(screen.getByRole('button', { name }));
+      await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(index + 1));
+    }
+    expect(mocked.patch.mock.calls.map((call) => {
+      const { base: _base, ...fields } = call[1];
+      return fields;
+    })).toEqual([
       { cost_center_id: null },
       { run_build: null },
       { run_build: 'run' },
     ]);
+    // The first two started from the stored values.
+    expect(mocked.patch.mock.calls[0][1].base).toEqual({ cost_center_id: 'cc-2' });
+    expect(mocked.patch.mock.calls[1][1].base).toEqual({ run_build: 'build' });
   });
 });
 
@@ -313,7 +333,8 @@ describe('CapexItemPage notes typed during a save', () => {
     // The refetch carries the older 'Renewal A'; the newer text stays in the box.
     expect(notes).toHaveValue('Renewal AB');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
-    expect(mocked.patch.mock.calls[1][1]).toEqual({ notes: 'Renewal AB' });
+    // Started from the text being saved: once that save lands, it is the stored one.
+    expect(mocked.patch.mock.calls[1][1]).toEqual({ notes: 'Renewal AB', base: { notes: 'Renewal A' } });
     saves[1]();
     await waitFor(() => expect(mocked.get.mock.calls.filter(([u]) => u === `/capex-items/${ITEM_ID}`).length).toBeGreaterThanOrEqual(3));
     expect(notes).toHaveValue('Renewal AB');
@@ -355,8 +376,8 @@ describe('CapexItemPage analytics dimensions', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
     // Only the changed dimension is sent, never the old single field.
     expect(mocked.patch.mock.calls.map((call) => call[1])).toEqual([
-      { analytics_values: { 'axis-nature': 'category-2' } },
-      { analytics_values: { 'axis-default': null } },
+      { analytics_values: { 'axis-nature': 'category-2' }, base: { analytics_values: { 'axis-nature': null } } },
+      { analytics_values: { 'axis-default': null }, base: { analytics_values: { 'axis-default': 'category-1' } } },
     ]);
   });
 });
@@ -488,8 +509,157 @@ describe('CapexItemPage autosave across lines', () => {
     fireEvent.change(notesB, { target: { value: 'B edited' } });
     await waitFor(() => expect(mocked.patch.mock.calls.some(([url]) => url === `/capex-items/${LINE_B}`)).toBe(true), { timeout: 3000 });
     const sent = mocked.patch.mock.calls.slice(4);
-    expect(sent).toContainEqual([`/capex-items/${LINE_A}`, { notes: 'A edited' }]);
-    expect(sent).toContainEqual([`/capex-items/${LINE_B}`, { notes: 'B edited' }]);
+    expect(sent).toContainEqual([`/capex-items/${LINE_A}`, { notes: 'A edited', base: { notes: 'Line A notes' } }]);
+    expect(sent).toContainEqual([`/capex-items/${LINE_B}`, { notes: 'B edited', base: { notes: 'Line B notes' } }]);
     expect(sent).toHaveLength(2);
+  });
+});
+
+describe('CapexItemPage edit conflicts (lot 3C)', () => {
+  // What the server holds; Marie moves the line to another cost center after the screen read it.
+  const stored: Record<string, unknown> = {};
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    dialogs.confirm.mockReset();
+    for (const key of Object.keys(stored)) delete stored[key];
+    Object.assign(stored, {
+      id: ITEM_ID, item_number: 7, description: 'New servers', paying_company_id: 'company-1', account_id: 'account-1',
+      currency: 'EUR', effective_start: '2026-01-01', cost_center_id: 'cc-2', run_build: 'build', notes: 'Start',
+    });
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/companies/company-2') return { data: { id: 'company-2', coa_id: 'coa-b' } };
+      if (url === '/accounts/account-1') return { data: { id: 'account-1', coa_id: 'coa-a' } };
+      return url === `/capex-items/${ITEM_ID}` ? { data: { ...stored } } : { data: {} };
+    });
+    mocked.patch.mockImplementation(async (_url: string, body: Record<string, unknown>) => {
+      const { base = {}, ...patch } = body as { base?: Record<string, unknown> } & Record<string, unknown>;
+      // Checked before it is compared, as resolveItemWrite.
+      if ('paying_company_id' in patch && !patch.paying_company_id) {
+        throw Object.assign(new Error('HTTP 400'), { response: { status: 400, headers: {}, data: { message: 'Paying company is required.' } } });
+      }
+      const conflicts = Object.keys(patch)
+        .filter((field) => field in base && base[field] !== (stored[field] ?? null) && patch[field] !== (stored[field] ?? null))
+        .map((field) => ({
+          field, base: base[field], current: stored[field] ?? null, mine: patch[field],
+          labels: { base: 'CC-2 · cc-2', current: 'CC-9 · Marie\'s', mine: null },
+          changed_by: { id: 'marie', name: 'Marie Dupont' }, changed_at: '2026-10-02T12:02:00.000Z',
+        }));
+      if (conflicts.length > 0) {
+        throw Object.assign(new Error('HTTP 409'), { response: { status: 409, headers: {}, data: { code: 'edit_conflict', conflicts, row_version: 3 } } });
+      }
+      Object.assign(stored, patch);
+      return { data: {} };
+    });
+  });
+
+  it('a picker saved at once: the conflict shows the names, and the user\'s choice is applied over theirs', async () => {
+    renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
+    stored.cost_center_id = 'cc-9';
+    fireEvent.click(screen.getByRole('button', { name: 'clear cost center' }));
+    const row = await screen.findByTestId('edit-conflict-cost_center_id');
+    expect(mocked.patch.mock.calls[0][1]).toEqual({ cost_center_id: null, base: { cost_center_id: 'cc-2' } });
+    expect(row).toHaveTextContent('CC-9 · Marie\'s');
+    expect(row).toHaveTextContent('editConflict.empty');
+
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.applyMine: capex.fields.costCenter' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(mocked.patch.mock.calls[1][1]).toEqual({ cost_center_id: null, base: { cost_center_id: 'cc-9' } });
+    await waitFor(() => expect(screen.queryByTestId('edit-conflict-cost_center_id')).toBeNull());
+    expect(stored.cost_center_id).toBeNull();
+  });
+
+  function LocationProbe() {
+    return <div data-testid="location" data-path={useLocation().pathname} />;
+  }
+
+  function renderLine() {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[`/ops/capex/${ITEM_ID}/overview`]}>
+            <LocationProbe />
+            <Routes><Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} /></Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  /** Marie changed the notes after the screen read them; the user's notes wait for a choice. */
+  async function conflictOnNotes() {
+    renderLine();
+    const notes = await screen.findByDisplayValue('Start');
+    stored.notes = 'Notes from Marie';
+    await waitFor(() => {
+      fireEvent.change(notes, { target: { value: 'My notes' } });
+      expect(notes).toHaveValue('My notes');
+    });
+    await screen.findByTestId('edit-conflict-notes', undefined, { timeout: 3000 });
+    return notes;
+  }
+
+  it('a choice waiting on the notes survives a refused edit of the line (B1 of the review)', async () => {
+    const notes = await conflictOnNotes();
+    fireEvent.click(screen.getByRole('button', { name: 'clear company' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(mocked.patch.mock.calls[1][1]).toEqual({ paying_company_id: null, base: { paying_company_id: 'company-1' } });
+    expect(await screen.findByText('Paying company is required.')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-conflict-notes')).toBeInTheDocument();
+    expect(notes).toHaveValue('My notes');
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.applyMine: capex.fields.notes' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(3));
+    expect(mocked.patch.mock.calls[2][1]).toEqual({ notes: 'My notes', base: { notes: 'Notes from Marie' } });
+    expect(stored.notes).toBe('My notes');
+    expect(document.activeElement).toBe(notes);
+  });
+
+  it('a tab change keeps the choice without a question', async () => {
+    await conflictOnNotes();
+    fireEvent.click(screen.getByRole('button', { name: 'allocations tab' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveAttribute('data-path', `/ops/capex/${ITEM_ID}/allocations`));
+    expect(dialogs.confirm).not.toHaveBeenCalled();
+    expect(screen.getByTestId('edit-conflict-notes')).toBeInTheDocument();
+  });
+
+  it('only the account changed: keeping their account drops the user\'s company too, nothing is sent', async () => {
+    renderLine();
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
+    stored.account_id = 'account-3';
+    fireEvent.click(screen.getByRole('button', { name: 'pick other company' }));
+    await screen.findByTestId('edit-conflict-account_id');
+    expect(mocked.patch.mock.calls[0][1]).toEqual({
+      paying_company_id: 'company-2', account_id: null, base: { paying_company_id: 'company-1', account_id: 'account-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.keepTheirs: capex.fields.account' }));
+    const drawer = document.querySelector('[data-mode="edit"]');
+    expect(drawer).toHaveAttribute('data-account', 'account-3');
+    expect(drawer).toHaveAttribute('data-company', 'company-1');
+    expect(screen.queryByTestId('edit-conflict-account_id')).toBeNull();
+    // Nothing left to send: no save is even scheduled.
+    expect(screen.queryByText('common:status.saving')).toBeNull();
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('disabling a line with no end of validity sends the status alone', async () => {
+    renderLine();
+    await screen.findByDisplayValue('Start');
+    fireEvent.click(screen.getByRole('button', { name: 'disable line' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    expect(mocked.patch.mock.calls[0][1]).toEqual({ status: 'disabled' });
+  });
+
+  it('another field of the line saved by someone else is no conflict', async () => {
+    renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
+    stored.notes = 'Notes from Marie';
+    fireEvent.click(screen.getByRole('button', { name: 'clear cost center' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(stored.cost_center_id).toBeNull());
+    expect(screen.queryByTestId('edit-conflict-cost_center_id')).toBeNull();
+    expect(stored.notes).toBe('Notes from Marie');
   });
 });

@@ -626,6 +626,34 @@
   "autosave": {
     "leaveTitle": "Changes not saved",
     "leaveMessage": "Some of your changes could not be saved. Leave anyway and lose them, or stay on this page and try again.",
-    "leaveConfirm": "Leave without saving"
+    "leaveConfirm": "Leave without saving",
+    "leaveConflictMessage": "Someone else changed a field you were editing, and you have not chosen which value to keep. Leave anyway and lose your value, or stay and choose.",
+    "leaveConflictOtherMessage": "Someone else changed a field you were editing on {{items}}, and you have not chosen which value to keep. Leave anyway and lose your value, or stay and choose."
+  },
+  "editConflict": {
+    "title_one": "Someone else changed a field you were editing",
+    "title_other": "Someone else changed {{count}} fields you were editing",
+    "titleSelf_one": "You changed a field in another window",
+    "titleSelf_other": "You changed {{count}} fields in another window",
+    "hint": "Your changes to this item wait for your choice. They are saved as soon as you have chosen.",
+    "changedByAt": "{{name}} changed this field at {{time}} while you were editing it.",
+    "changedByOn": "{{name}} changed this field on {{date}} at {{time}} while you were editing it.",
+    "changedBy": "{{name}} changed this field while you were editing it.",
+    "changedAt": "This field was changed at {{time}} while you were editing it.",
+    "changedOn": "This field was changed on {{date}} at {{time}} while you were editing it.",
+    "changed": "This field was changed while you were editing it.",
+    "changedByYouAt": "You changed this field in another window at {{time}}.",
+    "changedByYouOn": "You changed this field in another window on {{date}} at {{time}}.",
+    "changedByYou": "You changed this field in another window.",
+    "theirValue": "Their value",
+    "yourValue": "Your value",
+    "keepTheirs": "Keep their value",
+    "applyMine": "Apply yours",
+    "empty": "Empty",
+    "newChoice": "Your new choice, shown in the field",
+    "unavailable": "Value no longer available",
+    "elsewhere_one": "{{items}} has a change waiting for your choice.",
+    "elsewhere_other": "{{items}} have changes waiting for your choice.",
+    "open": "Open {{item}}"
   }
 }

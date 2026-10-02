@@ -1,9 +1,10 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import Layout from './Layout';
+import { registerLeaveGuard } from '../hooks/leaveGuard';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
@@ -129,5 +130,25 @@ describe('Layout page scroller', () => {
 
     expect(scroller.scrollTop).toBe(0);
     expect(document.activeElement).toBe(screen.getByTestId('column'));
+  });
+});
+
+describe('Layout links and a page with unsaved edits (lot 3C review)', () => {
+  it('a link of the app asks the page first: stay keeps it, leave follows the link', async () => {
+    const leave = vi.fn(async () => false);
+    const unregister = registerLeaveGuard({ isBusy: () => true, leave });
+    try {
+      renderShell();
+      const link = screen.getByRole('link', { name: 'open item' });
+      fireEvent.click(link);
+      await waitFor(() => expect(leave).toHaveBeenCalledTimes(1));
+      expect(screen.getByTestId('page')).toBeInTheDocument();
+
+      leave.mockResolvedValueOnce(true);
+      fireEvent.click(link);
+      expect(await screen.findByTestId('column')).toBeInTheDocument();
+    } finally {
+      unregister();
+    }
   });
 });

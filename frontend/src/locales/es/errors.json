@@ -28,5 +28,6 @@
   "in_use": "Este cambio eliminaría algo que todavía se usa en otro lugar, por lo que no se ha guardado.",
   "retry": "Otro cambio en los mismos datos se guardó en el mismo momento, por lo que este no se ha aplicado. Vuelva a intentarlo.",
   "busy": "Estos datos están ocupados por otra operación. Vuelva a intentarlo en unos segundos.",
-  "notSavedYet": "Su último cambio aún no se ha guardado porque el servidor está ocupado. Se queda en esta página y se enviará de nuevo con su próximo cambio."
+  "notSavedYet": "Su último cambio aún no se ha guardado porque el servidor está ocupado. Se queda en esta página y se enviará de nuevo con su próximo cambio.",
+  "edit_conflict": "Otra persona modificó este campo mientras usted lo editaba. Elija qué valor conservar."
 }

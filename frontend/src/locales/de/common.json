@@ -626,6 +626,34 @@
   "autosave": {
     "leaveTitle": "Änderungen nicht gespeichert",
     "leaveMessage": "Einige Ihrer Änderungen konnten nicht gespeichert werden. Verlassen Sie die Seite trotzdem und verwerfen Sie sie, oder bleiben Sie auf dieser Seite und versuchen Sie es erneut.",
-    "leaveConfirm": "Ohne Speichern verlassen"
+    "leaveConfirm": "Ohne Speichern verlassen",
+    "leaveConflictMessage": "Eine andere Person hat ein Feld geändert, das Sie bearbeitet haben, und Sie haben noch nicht gewählt, welchen Wert Sie behalten. Verlassen Sie die Seite trotzdem und verwerfen Sie Ihren Wert, oder bleiben Sie und wählen Sie.",
+    "leaveConflictOtherMessage": "Eine andere Person hat ein Feld geändert, das Sie in {{items}} bearbeitet haben, und Sie haben noch nicht gewählt, welchen Wert Sie behalten. Verlassen Sie die Seite trotzdem und verwerfen Sie Ihren Wert, oder bleiben Sie und wählen Sie."
+  },
+  "editConflict": {
+    "title_one": "Eine andere Person hat ein Feld geändert, das Sie bearbeitet haben",
+    "title_other": "Eine andere Person hat {{count}} Felder geändert, die Sie bearbeitet haben",
+    "titleSelf_one": "Sie haben ein Feld in einem anderen Fenster geändert",
+    "titleSelf_other": "Sie haben {{count}} Felder in einem anderen Fenster geändert",
+    "hint": "Ihre Änderungen an diesem Element warten auf Ihre Wahl. Sie werden gespeichert, sobald Sie gewählt haben.",
+    "changedByAt": "{{name}} hat dieses Feld um {{time}} geändert, während Sie es bearbeitet haben.",
+    "changedByOn": "{{name}} hat dieses Feld am {{date}} um {{time}} geändert, während Sie es bearbeitet haben.",
+    "changedBy": "{{name}} hat dieses Feld geändert, während Sie es bearbeitet haben.",
+    "changedAt": "Dieses Feld wurde um {{time}} geändert, während Sie es bearbeitet haben.",
+    "changedOn": "Dieses Feld wurde am {{date}} um {{time}} geändert, während Sie es bearbeitet haben.",
+    "changed": "Dieses Feld wurde geändert, während Sie es bearbeitet haben.",
+    "changedByYouAt": "Sie haben dieses Feld um {{time}} in einem anderen Fenster geändert.",
+    "changedByYouOn": "Sie haben dieses Feld am {{date}} um {{time}} in einem anderen Fenster geändert.",
+    "changedByYou": "Sie haben dieses Feld in einem anderen Fenster geändert.",
+    "theirValue": "Wert der anderen Person",
+    "yourValue": "Ihr Wert",
+    "keepTheirs": "Anderen Wert behalten",
+    "applyMine": "Ihren Wert übernehmen",
+    "empty": "Leer",
+    "newChoice": "Ihre neue Auswahl, im Feld angezeigt",
+    "unavailable": "Wert nicht mehr verfügbar",
+    "elsewhere_one": "{{items}} hat eine Änderung, die auf Ihre Wahl wartet.",
+    "elsewhere_other": "{{items}} haben Änderungen, die auf Ihre Wahl warten.",
+    "open": "{{item}} öffnen"
   }
 }

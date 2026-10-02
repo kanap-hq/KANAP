@@ -626,6 +626,34 @@
   "autosave": {
     "leaveTitle": "Cambios sin guardar",
     "leaveMessage": "Algunos de sus cambios no se han podido guardar. Salga de todos modos y piérdalos, o quédese en esta página y vuelva a intentarlo.",
-    "leaveConfirm": "Salir sin guardar"
+    "leaveConfirm": "Salir sin guardar",
+    "leaveConflictMessage": "Otra persona modificó un campo que usted estaba editando y aún no ha elegido qué valor conservar. Salga de todos modos y pierda su valor, o quédese y elija.",
+    "leaveConflictOtherMessage": "Otra persona modificó un campo que usted estaba editando en {{items}} y aún no ha elegido qué valor conservar. Salga de todos modos y pierda su valor, o quédese y elija."
+  },
+  "editConflict": {
+    "title_one": "Otra persona modificó un campo que usted estaba editando",
+    "title_other": "Otra persona modificó {{count}} campos que usted estaba editando",
+    "titleSelf_one": "Usted modificó un campo en otra ventana",
+    "titleSelf_other": "Usted modificó {{count}} campos en otra ventana",
+    "hint": "Sus cambios en este elemento esperan su elección. Se guardarán en cuanto haya elegido.",
+    "changedByAt": "{{name}} modificó este campo a las {{time}} mientras usted lo editaba.",
+    "changedByOn": "{{name}} modificó este campo el {{date}} a las {{time}} mientras usted lo editaba.",
+    "changedBy": "{{name}} modificó este campo mientras usted lo editaba.",
+    "changedAt": "Este campo se modificó a las {{time}} mientras usted lo editaba.",
+    "changedOn": "Este campo se modificó el {{date}} a las {{time}} mientras usted lo editaba.",
+    "changed": "Este campo se modificó mientras usted lo editaba.",
+    "changedByYouAt": "Usted modificó este campo en otra ventana a las {{time}}.",
+    "changedByYouOn": "Usted modificó este campo en otra ventana el {{date}} a las {{time}}.",
+    "changedByYou": "Usted modificó este campo en otra ventana.",
+    "theirValue": "Valor de la otra persona",
+    "yourValue": "Mi valor",
+    "keepTheirs": "Conservar el otro valor",
+    "applyMine": "Aplicar mi valor",
+    "empty": "Vacío",
+    "newChoice": "Mi nueva elección, visible en el campo",
+    "unavailable": "Valor ya no disponible",
+    "elsewhere_one": "{{items}} tiene un cambio que espera su elección.",
+    "elsewhere_other": "{{items}} tienen cambios que esperan su elección.",
+    "open": "Abrir {{item}}"
   }
 }

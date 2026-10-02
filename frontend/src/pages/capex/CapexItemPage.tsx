@@ -14,10 +14,17 @@ import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
 import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../hooks/useAutosave';
-import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
+import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
+import { ConflictChoice, EditConflict, conflictCompanions, useEditConflicts, useOtherConflictTargets } from '../../hooks/editConflicts';
+import { useLeaveGuard } from '../../hooks/leaveGuard';
+import EditConflictBanner, { OtherConflictsNotice } from '../../components/workspace/EditConflictBanner';
+import { useAuth } from '../../auth/AuthContext';
+import { PRIMARY_SCROLL_ATTR } from '../../components/appScroll';
+import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { useKanapDialogs } from '../../components/design';
 import { formatItemRef } from '../../utils/item-ref';
 import {
+  STATUS_DISABLED,
   StatusValue,
   deriveStatusFromDisabledAt,
   normalizeDisabledAtInput,
@@ -156,6 +163,54 @@ function toForm(data: any): CapexForm {
   };
 }
 
+/** The label of each field the server may name in an edit conflict (lot 3C); analytics dimensions by their name. */
+const CONFLICT_FIELD_LABELS: Record<string, string> = {
+  description: 'capex.fields.description',
+  notes: 'capex.fields.notes',
+  supplier_id: 'capex.fields.supplier',
+  paying_company_id: 'capex.fields.payingCompany',
+  account_id: 'capex.fields.account',
+  currency: 'capex.fields.currency',
+  ppe_type: 'capex.fields.ppeType',
+  investment_type: 'capex.fields.investmentType',
+  priority: 'capex.fields.priority',
+  cost_center_id: 'capex.fields.costCenter',
+  run_build: 'capex.fields.runBuild',
+  effective_start: 'capex.fields.effectiveStart',
+  disabled_at: 'capex.fields.endOfValidity',
+  owner_it_id: 'capex.metadata.itOwner',
+  owner_business_id: 'capex.metadata.businessOwner',
+};
+/** The translation key of each enum value the conflict banner shows. */
+const CONFLICT_ENUM_KEYS: Record<string, string> = {
+  ppe_type: 'capex.ppeTypes',
+  investment_type: 'capex.investmentTypes',
+  priority: 'capex.priorityTypes',
+  run_build: 'opex.runBuild',
+};
+const ANALYTICS_CONFLICT_PREFIX = 'analytics_values.';
+const isLongTextField = (field: string) => field === 'notes';
+/**
+ * User values that go together (`conflictCompanions`): keeping their company drops the account
+ * the user's company cleared, and keeping their account drops the user's company (their account
+ * is on their company's chart); an end of validity goes with the status it sets.
+ */
+const CONFLICT_GROUPS = [['paying_company_id', 'account_id'], ['disabled_at', 'status']] as const;
+/** The CPX reference of each line shown in the session: a choice waiting on another line is named by it. */
+const lineRefs = new Map<string, string>();
+
+/** The form with the stored value the server answered for a conflicting field (`analytics_values.<id>` per dimension). */
+function withTheirValue(form: CapexForm, field: string, value: unknown): CapexForm {
+  if (field.startsWith(ANALYTICS_CONFLICT_PREFIX)) {
+    const axisId = field.slice(ANALYTICS_CONFLICT_PREFIX.length);
+    return { ...form, analytics_values: { ...form.analytics_values, [axisId]: typeof value === 'string' && value ? value : null } };
+  }
+  // The form's own shape for a stored value: '' for empty, capitals for a currency, a date's day.
+  const theirs = toForm({ [field]: value });
+  if (field === 'disabled_at') return { ...form, disabled_at: theirs.disabled_at, status: theirs.status };
+  return field in theirs ? { ...form, [field]: theirs[field as keyof CapexForm] } : form;
+}
+
 const sectionLabelSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1, display: 'block' } as const;
 const composerSx = {
   '& .MuiInputBase-root': {
@@ -171,7 +226,8 @@ const composerSx = {
 } as const;
 
 export default function CapexItemPage() {
-  const { t } = useTranslation(['ops', 'common']);
+  const { t, i18n } = useTranslation(['ops', 'common']);
+  const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
@@ -184,7 +240,7 @@ export default function CapexItemPage() {
   const isCreate = idParam === 'new';
   const routeTab: TabKey = TAB_KEYS.includes(params.tab as TabKey) ? (params.tab as TabKey) : 'overview';
 
-  const { data, error, refetch, isPlaceholderData } = useQuery({
+  const { data, error, isPlaceholderData } = useQuery({
     // Shared with the neighbours' prefetch (previous / next show at once).
     ...capexDetailQuery(idParam),
     enabled: !isCreate,
@@ -347,42 +403,77 @@ export default function CapexItemPage() {
 
   const dialogs = useKanapDialogs();
   const autosaveRegistry = useAutosaveRegistry();
+  const { profile } = useAuth();
+  // Fields edited and not saved yet, each with the line it was edited on (the page
+  // stays mounted from one line to the next): a field only ever goes to its own line.
+  // Each also keeps the value the screen showed when its edit began (its base, lot 3C):
+  // the server refuses a field someone else changed meanwhile (409 edit_conflict).
+  // Kept for the session, not the page: a line left by the browser's back button, or a
+  // save answered once the page went, keeps its choice for the next visit (lot 3C review).
+  const patchBuffer = useSharedPatchBuffer<Partial<CapexForm>>('capex', mergePatch);
   const autosave = useAutosave({
     onError: (e) => setSaveError(autosaveErrorMessage(e, t, t('capex.editor.failedToSave'))),
     registry: autosaveRegistry,
+    // A conflict waiting for the user's choice keeps the page busy: leaving asks first.
+    held: patchBuffer.hasConflicts,
   });
-  // Fields typed and not saved yet, each with the line it was typed on (the page
-  // stays mounted from one line to the next): a field only ever goes to its own line.
-  const patchBuffer = usePatchBuffer<Partial<CapexForm>>(mergePatch);
+  const conflicts = useEditConflicts(patchBuffer, isCreate ? null : uuid);
+  // Lines left with a choice waiting (the browser's back button): named on this one.
+  const otherConflictLines = useOtherConflictTargets(patchBuffer, isCreate ? null : uuid);
+  React.useEffect(() => {
+    if (data?.id && data?.item_number) lineRefs.set(data.id, formatItemRef('capex', data.item_number));
+  }, [data?.id, data?.item_number]);
+  const lineRef = React.useCallback((lineId: string) => lineRefs.get(lineId) ?? t('capex.workspace.capexItem'), [t]);
   const uuidRef = React.useRef(uuid);
   uuidRef.current = uuid;
   const dataRef = React.useRef(data);
   dataRef.current = data;
-  // Resync the form on every refetch. A field typed and not saved yet (buffered,
-  // or being sent) keeps the local text, newer than the server's; every other
-  // field takes the server copy.
+  const formRef = React.useRef(form);
+  formRef.current = form;
+  // The form from the server copy, except the fields edited and not saved yet
+  // (buffered, being sent, or waiting for a conflict choice): they keep the
+  // user's values, newer than the server's.
+  const syncForm = React.useCallback((stored: unknown) => {
+    const next = toForm(stored);
+    const held = next.id ? patchBuffer.held(next.id) : undefined;
+    setForm(held ? mergePatch(next, held) : next);
+  }, [patchBuffer]);
+  // Resync the form on every refetch.
   React.useEffect(() => {
     if (!data || isCreate) return;
-    // The fields typed through patchDebounced.
-    const DEBOUNCED_FIELDS: ReadonlyArray<keyof CapexForm> = ['notes'];
-    setForm((prev) => {
-      const next = toForm(data);
-      if (prev.id !== next.id || !next.id) return next;
-      const kept = Object.fromEntries(
-        DEBOUNCED_FIELDS.filter((field) => patchBuffer.holds(next.id as string, field)).map((field) => [field, prev[field]]),
-      );
-      return { ...next, ...kept };
-    });
-  }, [data, isCreate, patchBuffer]);
+    syncForm(data);
+  }, [data, isCreate, syncForm]);
+
+  // Per field of an edit, the value the screen showed before it: the base the
+  // server compares with what is stored (lot 3C). The status follows the end of
+  // validity and has none of its own.
+  const baseFor = React.useCallback((patch: Partial<CapexForm>): Partial<CapexForm> => {
+    const shown = formRef.current;
+    const base: Record<string, unknown> = {};
+    for (const key of Object.keys(patch) as Array<keyof CapexForm>) {
+      if (key === 'status') continue;
+      base[key] = key === 'analytics_values'
+        ? Object.fromEntries(Object.keys(patch.analytics_values ?? {}).map((axisId) => [axisId, shown.analytics_values[axisId] ?? null]))
+        : shown[key];
+    }
+    return base as Partial<CapexForm>;
+  }, []);
+
+  const invalidateLine = React.useCallback((lineId: string) => queryClient.invalidateQueries({
+    queryKey: ['capex'],
+    predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId,
+  }), [queryClient]);
 
   const flushPending = React.useCallback(() => sendPatchBuffer(
     patchBuffer,
-    async (lineId, patch) => {
-      await api.patch(`/capex-items/${lineId}`, normalizePatch({ ...patch }));
+    async (lineId, patch, base) => {
+      const body = normalizePatch({ ...patch });
+      const baseBody = normalizePatch({ ...base });
+      await api.patch(`/capex-items/${lineId}`, Object.keys(baseBody).length > 0 ? { ...body, base: baseBody } : body);
     },
     {
       onSaved: async (lineId) => {
-        await queryClient.invalidateQueries({ queryKey: ['capex'], predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId });
+        await invalidateLine(lineId);
         queryClient.invalidateQueries({ queryKey: ['capex-summary'] });
       },
       // Refused for good: the screen shows the line's stored values again for those fields.
@@ -396,30 +487,46 @@ export default function CapexItemPage() {
             return fields.length ? { ...prev, ...Object.fromEntries(fields.map((field) => [field, server[field]])) } : prev;
           });
         }
-        void queryClient.invalidateQueries({ queryKey: ['capex'], predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId });
+        void invalidateLine(lineId);
       },
+      // Someone else changed a field meanwhile: the line reloads (their other changes show),
+      // the fields waiting for the user's choice keep the user's values.
+      onConflict: (lineId) => { void invalidateLine(lineId); },
     },
-  ), [patchBuffer, queryClient]);
+  ), [patchBuffer, queryClient, invalidateLine]);
 
   // An edit still pending for the previous line (prev/next, back button) goes to that line now.
   const { flush: flushAutosave } = autosave;
   React.useEffect(() => {
     if (uuid && patchBuffer.holdsOtherThan(uuid)) void flushAutosave();
   }, [uuid, patchBuffer, flushAutosave]);
+  // Edits an earlier visit of the page could not send (busy until it went) go now.
+  const sendLeftovers = React.useRef(() => {
+    if (!patchBuffer.hasUnsent()) return;
+    autosave.schedule(flushPending);
+    void autosave.flush();
+  });
+  React.useEffect(() => { sendLeftovers.current(); }, []);
 
+  // Immediate persist — selects, dates, pickers, status, title-on-blur. Through the same
+  // buffer as typing, sent at once: the field goes to its own line with its base, a busy
+  // answer is retried, a refusal shows the stored value again, a conflict asks the user.
   const patchNow = React.useCallback(async (patch: Partial<CapexForm>) => {
     if (isCreate || !uuid || stale) return;
+    const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
     setSaveError(null);
-    try {
-      await api.patch(`/capex-items/${uuid}`, normalizePatch(patch));
-      await queryClient.invalidateQueries({ queryKey: ['capex', idParam] });
-      queryClient.invalidateQueries({ queryKey: ['capex-summary'] });
-    } catch (e) {
-      setSaveError(getApiErrorMessage(e, t, t('capex.editor.failedToSave')));
-      await refetch();
-    }
-  }, [isCreate, uuid, stale, idParam, queryClient, refetch, t]);
+    // Text still waiting for its typing pause goes first, in a request of its own: a refusal
+    // of one never drops the other (lot 3C review).
+    await autosave.flush();
+    const toSend = patchBuffer.add(uuid, patch, base);
+    // A reload that landed during that save showed the stored value: the pick shows again.
+    setForm((prev) => (prev.id === uuid ? mergePatch(prev, patch) : prev));
+    // A field waiting for a choice keeps the new value with it, unsent.
+    if (!toSend) return;
+    autosave.schedule(flushPending);
+    await autosave.flush();
+  }, [isCreate, uuid, stale, baseFor, patchBuffer, autosave, flushPending]);
 
   // The server refuses a company on another chart of accounts than the line's account, and the
   // account picker only lists the current company's chart: clear the account in the same write,
@@ -445,10 +552,72 @@ export default function CapexItemPage() {
 
   const patchDebounced = React.useCallback((patch: Partial<CapexForm>) => {
     if (isCreate || !uuid || stale) return;
+    const base = baseFor(patch);
     setForm((prev) => mergePatch(prev, patch));
-    patchBuffer.add(uuid, patch);
-    autosave.schedule(flushPending);
-  }, [isCreate, uuid, stale, autosave, flushPending, patchBuffer]);
+    // Typed in a field waiting for a choice: it stays with it, nothing is saved yet.
+    if (patchBuffer.add(uuid, patch, base)) autosave.schedule(flushPending);
+  }, [isCreate, uuid, stale, autosave, flushPending, patchBuffer, baseFor]);
+
+  // ----- Edit conflicts (lot 3C): someone else changed a field being saved -----
+  const resolveConflict = React.useCallback((field: string, choice: ConflictChoice) => {
+    if (!uuid) return;
+    const asked = patchBuffer.conflictsOf(uuid);
+    // Keeping their value of one field of a pair drops the user's value of the other (CONFLICT_GROUPS).
+    const companions = choice === 'theirs' ? conflictCompanions(field, patchBuffer.waiting(uuid), CONFLICT_GROUPS) : [];
+    const send = patchBuffer.resolve(uuid, field, choice, companions);
+    if (choice === 'theirs') {
+      // Their values at once, from the answer (the line reloads for the rest).
+      const stored = dataRef.current ? toForm(dataRef.current) : null;
+      setForm((prev) => {
+        if (prev.id !== uuid) return prev;
+        let next = prev;
+        for (const path of [field, ...companions]) {
+          const conflict = asked.find((entry) => entry.field === path);
+          if (conflict) next = withTheirValue(next, path, conflict.current);
+          else if (stored && path in stored && path !== 'status') next = { ...next, [path]: stored[path as keyof CapexForm] };
+        }
+        return next;
+      });
+    }
+    void invalidateLine(uuid);
+    if (send) {
+      autosave.schedule(flushPending);
+      void autosave.flush();
+    } else {
+      autosave.resetConflict();
+    }
+  }, [uuid, patchBuffer, invalidateLine, autosave, flushPending]);
+
+  // After the last choice the banner goes: the focus moves to the field, or to the workspace's
+  // content column (keyboard scrolling works from there), never to the page's body.
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const notesInputRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const returnFocus = React.useCallback((field: string) => {
+    const input = field === 'notes' ? notesInputRef.current : null;
+    (input ?? rootRef.current?.querySelector<HTMLElement>(`[${PRIMARY_SCROLL_ATTR}]`))?.focus({ preventScroll: true });
+  }, []);
+
+  const conflictFieldLabel = React.useCallback((field: string) => {
+    if (field.startsWith(ANALYTICS_CONFLICT_PREFIX)) {
+      const axisId = field.slice(ANALYTICS_CONFLICT_PREFIX.length);
+      return analyticsAxes.label(analyticsAxes.axes.find((axis) => axis.id === axisId) ?? { name: null });
+    }
+    const key = CONFLICT_FIELD_LABELS[field];
+    return key ? t(key) : field;
+  }, [analyticsAxes, t]);
+
+  const formatConflictValue = React.useCallback((field: string, value: unknown, conflict: EditConflict): string | undefined => {
+    if (field === 'effective_start') return formatShortDate(String(value), locale, { year: 'always' });
+    if (field === 'disabled_at') {
+      // Two ends of validity on the same day differ by their time: show it.
+      const day = (date: unknown) => (date ? formatShortDate(new Date(String(date)), locale, { year: 'always' }) : null);
+      const sameDay = day(conflict.current) !== null && day(conflict.current) === day(conflict.mine);
+      return sameDay ? formatShortDateTime(String(value), locale) : day(value) ?? undefined;
+    }
+    const enumKey = CONFLICT_ENUM_KEYS[field];
+    if (enumKey && typeof value === 'string') return t(`${enumKey}.${value}`, { defaultValue: value });
+    return undefined;
+  }, [locale, t]);
 
   const budgetRef = React.useRef<BudgetTabHandle>(null);
   const allocRef = React.useRef<AllocationsTabHandle>(null);
@@ -468,8 +637,9 @@ export default function CapexItemPage() {
     return null;
   }, [routeTab]);
 
-  const flushAll = React.useCallback(async (): Promise<boolean> => {
-    const overviewOk = await autosave.flush();
+  // `ignoreHeld`: edits waiting for a choice stay (the page and its banner stay too).
+  const flushAll = React.useCallback(async (options?: { ignoreHeld?: boolean }): Promise<boolean> => {
+    const overviewOk = await autosave.flush(options);
     if (!overviewOk) return false;
     if (routeTab === 'budget') return (await budgetRef.current?.flush()) ?? true;
     if (routeTab === 'allocations') return (await allocRef.current?.flush()) ?? true;
@@ -480,36 +650,57 @@ export default function CapexItemPage() {
     return true;
   }, [autosave, activeRefEditor, routeTab]);
 
+  const tabUnsaved = React.useCallback(() => (routeTab === 'budget' && !!budgetRef.current?.isDirty())
+    || (routeTab === 'allocations' && !!allocRef.current?.isDirty())
+    || !!activeRefEditor()?.isDirty?.(), [routeTab, activeRefEditor]);
+  // Something would be lost by leaving: a save not done, a choice not made (on any line).
+  const unsavedWork = React.useCallback(() => autosaveRegistry.isBusy() || tabUnsaved(), [autosaveRegistry, tabUnsaved]);
+
   // A save that still fails once flushed (the server stays busy, a tab keeps its edits) must not
   // trap the user on the line: leaving is offered, and drops what could not be saved.
-  const flushOrLeave = React.useCallback(async (): Promise<boolean> => {
-    if (await flushAll()) return true;
-    const unsaved = autosaveRegistry.isBusy()
-      || (routeTab === 'budget' && !!budgetRef.current?.isDirty())
-      || (routeTab === 'allocations' && !!allocRef.current?.isDirty())
-      || !!activeRefEditor()?.isDirty?.();
+  // `keepChoices` (a tab change, opening the line a choice waits on): the page stays, so an edit
+  // waiting for a choice neither stops the move nor is dropped; only a failed save asks.
+  const flushOrLeave = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => {
+    const keepChoices = !!options?.keepChoices;
+    if (await flushAll({ ignoreHeld: keepChoices })) return true;
+    const unsaved = keepChoices ? autosave.isSaving() || tabUnsaved() : unsavedWork();
     // Nothing left unsaved (the save was refused and the screen reloaded): stay, the message shows why.
     if (!unsaved) return false;
+    const elsewhere = patchBuffer.conflictTargets().filter((lineId) => lineId !== uuid);
+    const message = keepChoices || !patchBuffer.hasConflicts() ? t('common:autosave.leaveMessage')
+      : elsewhere.length > 0 && !(uuid && patchBuffer.conflictsOf(uuid).length > 0)
+        ? t('common:autosave.leaveConflictOtherMessage', { items: elsewhere.map(lineRef).join(', ') })
+        : t('common:autosave.leaveConflictMessage');
     const leave = await dialogs.confirm({
       title: t('common:autosave.leaveTitle'),
-      message: t('common:autosave.leaveMessage'),
+      message,
       confirmLabel: t('common:autosave.leaveConfirm'),
       intent: 'danger',
     });
     if (!leave) return false;
     autosaveRegistry.discardAll();
-    patchBuffer.discard();
+    patchBuffer.discard({ keepChoices });
     setSaveError(null);
-    if (dataRef.current) setForm(toForm(dataRef.current));
+    if (dataRef.current) syncForm(dataRef.current);
     return true;
-  }, [flushAll, autosaveRegistry, routeTab, activeRefEditor, dialogs, t, patchBuffer]);
+  }, [flushAll, autosave, tabUnsaved, unsavedWork, patchBuffer, uuid, t, lineRef, dialogs, autosaveRegistry, syncForm]);
+
+  // A link of the app (left menu, top bar, user menu) asks the same as the close button.
+  useLeaveGuard(unsavedWork, flushOrLeave);
 
   const goToTab = React.useCallback(async (nextTab: TabKey) => {
     if (isCreate && nextTab !== 'overview') return;
-    if (!(await flushOrLeave())) return;
+    if (!(await flushOrLeave({ keepChoices: true }))) return;
     const sp = buildListContextParams();
     navigate(`/ops/capex/${idParam}/${nextTab}?${sp.toString()}`);
   }, [isCreate, flushOrLeave, buildListContextParams, navigate, idParam]);
+
+  // The line a choice waits on: going there keeps the choice.
+  const openConflictLine = React.useCallback(async (lineId: string) => {
+    if (!(await flushOrLeave({ keepChoices: true }))) return;
+    const sp = buildListContextParams();
+    navigate(`/ops/capex/${lineId}/${routeTab}?${sp.toString()}`);
+  }, [flushOrLeave, buildListContextParams, navigate, routeTab]);
 
   const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
     if (!targetId) return;
@@ -588,7 +779,14 @@ export default function CapexItemPage() {
   }, [buildListContextParams, createForm, createSubmitting, navigate, queryClient, t]);
 
   const handleStatusChange = (next: StatusValue) => {
-    const disabled_at = next === 'disabled' ? (form.disabled_at || new Date().toISOString()) : null;
+    // Disabled with no end of validity: the server sets it (now, or keeps one already passed).
+    // Each window sending its own clock's now would make two people disabling the line a
+    // conflict on the end of validity (lot 3C review).
+    if (next === STATUS_DISABLED && !form.disabled_at) {
+      void patchNow({ status: STATUS_DISABLED });
+      return;
+    }
+    const disabled_at = next === STATUS_DISABLED ? form.disabled_at : null;
     void patchNow({ status: deriveStatusFromDisabledAt(disabled_at), disabled_at });
   };
   const handleDisabledAtChange = (next: string | null) => {
@@ -616,9 +814,27 @@ export default function CapexItemPage() {
       : null;
 
   return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+    <Box ref={rootRef} sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('capex.workspace.failedToLoad')}</Alert>}
       {!!saveError && <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={() => setSaveError(null)}>{saveError}</Alert>}
+      {!isCreate && (
+        <EditConflictBanner
+          conflicts={conflicts}
+          fieldLabel={conflictFieldLabel}
+          formatValue={formatConflictValue}
+          isLongText={isLongTextField}
+          onResolve={resolveConflict}
+          busy={autosave.status === 'saving'}
+          currentUserId={profile?.id ?? null}
+          returnFocus={returnFocus}
+        />
+      )}
+      {!isCreate && (
+        <OtherConflictsNotice
+          items={otherConflictLines.map((lineId) => ({ id: lineId, label: lineRef(lineId) }))}
+          onOpen={(lineId) => { void openConflictLine(lineId); }}
+        />
+      )}
 
       <PortfolioDetailWorkspaceShell
         activeTab={routeTab}
@@ -792,6 +1008,7 @@ export default function CapexItemPage() {
                 <Typography component="label" sx={sectionLabelSx}>{t('capex.fields.description')}</Typography>
                 <TextField
                   value={form.notes}
+                  inputRef={notesInputRef}
                   onChange={(e) => patchDebounced({ notes: e.target.value })}
                   multiline minRows={4} fullWidth variant="standard"
                   placeholder={t('capex.fields.notesPlaceholder', 'e.g., approved investment rationale')}

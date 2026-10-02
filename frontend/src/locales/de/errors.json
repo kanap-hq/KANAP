@@ -28,5 +28,6 @@
   "in_use": "Diese Änderung würde etwas entfernen, das noch an anderer Stelle verwendet wird. Sie wurde daher nicht gespeichert.",
   "retry": "Eine andere Änderung an denselben Daten wurde im selben Moment gespeichert, daher wurde diese nicht übernommen. Bitte versuchen Sie es erneut.",
   "busy": "Diese Daten sind gerade durch einen anderen Vorgang belegt. Bitte versuchen Sie es in einigen Sekunden erneut.",
-  "notSavedYet": "Ihre letzte Änderung ist noch nicht gespeichert, weil der Server ausgelastet ist. Sie bleibt auf dieser Seite und wird mit Ihrer nächsten Änderung erneut gesendet."
+  "notSavedYet": "Ihre letzte Änderung ist noch nicht gespeichert, weil der Server ausgelastet ist. Sie bleibt auf dieser Seite und wird mit Ihrer nächsten Änderung erneut gesendet.",
+  "edit_conflict": "Eine andere Person hat dieses Feld geändert, während Sie es bearbeitet haben. Wählen Sie, welchen Wert Sie behalten."
 }

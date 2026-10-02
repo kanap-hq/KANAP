@@ -2,8 +2,10 @@ import { BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { CapexItem } from '../capex/capex-item.entity';
 import { deriveStatusFromDisabledAt, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
+import { splitEditBase } from '../common/edit-conflicts';
 import { lockBudgetLine } from './budget-locks';
 import { ItemAnalyticsValue, loadItemAnalyticsValues, writeItemAnalyticsValues } from './item-analytics.util';
+import { assertNoItemEditConflicts } from './item-edit-conflicts';
 import { ItemWriteScope, resolveItemWrite } from './item-write.util';
 import { SpendItem } from './spend-item.entity';
 
@@ -22,6 +24,11 @@ import { SpendItem } from './spend-item.entity';
  * 2. `resolveItemWrite` checks the body against that locked row (chart of
  *    accounts, cost center), and the end of validity and status are derived
  *    from it;
+ * 2b. when the body carries a `base` (the values the user's edit started
+ *    from, lot 3C), each field it changes is compared with the locked row:
+ *    a field someone else changed meanwhile refuses the whole request with
+ *    409 `edit_conflict`, before anything is written
+ *    (`item-edit-conflicts.ts`, contract in `common/edit-conflicts.ts`);
  * 3. one UPDATE sets only the columns the body supplied, plus `updated_at`
  *    and the derived status and end of validity when they change; every other
  *    column stays as stored, whoever wrote it last;
@@ -77,8 +84,10 @@ export async function updateItemUnderLock(
   if (!before) return null;
   const analyticsBefore = (await loadItemAnalyticsValues(manager, scope, tenantId, [itemId])).get(itemId) ?? [];
 
+  // `base` (lot 3C) is not a column: compared below, never written.
+  const { changes, base } = splitEditBase(body);
   // Writable columns only, every id resolved in this tenant, checked against the locked row; see `item-write.util.ts`.
-  const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, scope, body, before);
+  const { values, lifecycle: input, analytics } = await resolveItemWrite(manager, scope, changes, before);
   let disabledAt: ReturnType<typeof resolveEndOfValidityAlias>;
   try {
     // `disabled_at`, or the deprecated `effective_end` when no end of validity is given (bare date at 12:00 UTC).
@@ -91,6 +100,10 @@ export async function updateItemUnderLock(
     nextStatus: input.status,
     nextDisabledAt: disabledAt,
     nowFactory: () => now,
+  });
+  // Nothing written yet: a conflict refuses the request whole (409 `edit_conflict`).
+  await assertNoItemEditConflicts(manager, scope, tenantId, itemId, base, changes, {
+    before, analyticsBefore, values, disabledAt: lifecycle.disabled_at, analytics,
   });
 
   // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.

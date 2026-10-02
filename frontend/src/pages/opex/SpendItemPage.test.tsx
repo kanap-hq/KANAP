@@ -25,18 +25,22 @@ vi.mock('../../hooks/useSpendNav', () => ({
   },
 }));
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultSpendCurrency: 'EUR' } }) }));
+// The signed-in user: a conflict with their own change from another window is said so.
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' } }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchSpendRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, onTitleSave, onBack }: {
+  default: ({ properties, actions, children, onTitleSave, onBack, onTabChange, metadata }: {
     properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
-    onBack?: () => void;
+    onBack?: () => void; onTabChange?: (tab: string) => void; metadata?: React.ReactNode;
   }) => (
     <div>
       <button type="button" onClick={() => onTitleSave('Monitoring')}>set title</button>
       <button type="button" onClick={() => onBack?.()}>back to list</button>
       <button type="button" onClick={() => onBack?.()}>close workspace</button>
-      {actions}{properties}{children}
+      <button type="button" onClick={() => onTabChange?.('budget')}>budget tab</button>
+      <button type="button" onClick={() => onTabChange?.('overview')}>overview tab</button>
+      {metadata}{actions}{properties}{children}
     </div>
   ),
 }));
@@ -46,7 +50,7 @@ vi.mock('./workspace/SpendPropertiesDrawer', () => ({
     mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
-    onAnalyticsValueChange: (axisId: string, v: string | null) => void;
+    onAnalyticsValueChange: (axisId: string, v: string | null) => void; onDisabledAtChange?: (v: string | null) => void;
   }) => (
     <div
       data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
@@ -54,8 +58,13 @@ vi.mock('./workspace/SpendPropertiesDrawer', () => ({
     >
       <button type="button" onClick={() => props.onPayingCompanyChange('company-1')}>pick company</button>
       <button type="button" onClick={() => props.onPayingCompanyChange('company-2')}>pick other company</button>
+      <button type="button" onClick={() => props.onPayingCompanyChange('')}>clear company</button>
       <button type="button" onClick={() => props.onAccountChange('account-1')}>pick account</button>
+      <button type="button" onClick={() => props.onAccountChange('account-other')}>pick account of another chart</button>
       <button type="button" onClick={() => props.onSupplierChange('')}>clear supplier</button>
+      <button type="button" onClick={() => props.onSupplierChange('supplier-gone')}>pick deleted supplier</button>
+      <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'value-disabled')}>pick disabled value</button>
+      <button type="button" onClick={() => props.onDisabledAtChange?.('2026-12-31T10:00:00.000Z')}>end on 31 December</button>
       <button type="button" onClick={() => props.onCostCenterChange('cc-2')}>pick cost center</button>
       <button type="button" onClick={() => props.onCostCenterChange('cc-3')}>pick third cost center</button>
       <button type="button" onClick={() => props.onCostCenterChange('')}>clear cost center</button>
@@ -79,7 +88,11 @@ vi.mock('../../hooks/useCostCenterTree', () => {
   const tree = { ready: true, nodes, byId: new Map(nodes.map((n) => [n.id, n])), hasAny: true, descendantIds: (id: string) => new Set([id]) };
   return { useCostCenterTree: () => tree };
 });
-vi.mock('./workspace/SpendMetadataBar', () => ({ default: () => null }));
+vi.mock('./workspace/SpendMetadataBar', () => ({
+  default: ({ onStatusChange }: { onStatusChange: (status: string) => void }) => (
+    <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>
+  ),
+}));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/finance/BudgetTab', () => ({ default: () => null }));
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
@@ -88,6 +101,8 @@ vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 
 import api from '../../api';
 import SpendItemPage from './SpendItemPage';
+import { resetSharedPatchBuffers } from '../../hooks/patchBuffer';
+import { confirmLeave } from '../../hooks/leaveGuard';
 import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 import { resetListContextCache } from '../../lib/listContext';
 
@@ -96,6 +111,22 @@ const mocked = api as unknown as {
 };
 
 const ITEM_ID = '11111111-2222-3333-4444-555555555555';
+
+// The edits a page keeps for the session (lot 3C review): each test starts without any.
+beforeEach(() => resetSharedPatchBuffers());
+
+/**
+ * The PATCH bodies without their `base` (lot 3C), checking that each base
+ * names exactly the fields of its body (the status follows the end of
+ * validity and has none).
+ */
+function patchedFields(): Array<Record<string, unknown>> {
+  return mocked.patch.mock.calls.map(([, body]) => {
+    const { base, ...fields } = body as Record<string, unknown>;
+    expect(Object.keys(base as object).sort()).toEqual(Object.keys(fields).filter((key) => key !== 'status').sort());
+    return fields;
+  });
+}
 
 /** Stands for the list page: shows the URL the workspace went back to. */
 function ListPageProbe() {
@@ -268,7 +299,10 @@ describe('SpendItemPage edit', () => {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2', account_id: null });
+    // Each field with the value the screen showed before (its base, lot 3C).
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, {
+      paying_company_id: 'company-2', account_id: null, base: { paying_company_id: 'company-1', account_id: 'account-1' },
+    });
     // The Account row now asks for an account on the new chart.
     expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', '');
   });
@@ -278,7 +312,7 @@ describe('SpendItemPage edit', () => {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
     await clickOnceLoaded('pick other company');
     expect(mocked.patch).toHaveBeenCalledTimes(1);
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2' });
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { paying_company_id: 'company-2', base: { paying_company_id: 'company-1' } });
   });
 
   it('saves cleared notes as null after the typing pause', async () => {
@@ -290,7 +324,7 @@ describe('SpendItemPage edit', () => {
       expect(notes).toHaveValue('');
     });
     await waitFor(() => expect(mocked.patch).toHaveBeenCalled(), { timeout: 3000 });
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { notes: null });
+    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { notes: null, base: { notes: 'Renewal' } });
   });
 
   it('clears the supplier as null, not as an empty string', async () => {
@@ -301,21 +335,19 @@ describe('SpendItemPage edit', () => {
       fireEvent.click(screen.getByRole('button', { name: 'clear supplier' }));
       expect(mocked.patch).toHaveBeenCalled();
     });
-    expect(mocked.patch).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`, { supplier_id: null });
+    expect(mocked.patch.mock.calls[0][1]).toEqual({ supplier_id: null, base: { supplier_id: 'supplier-1' } });
   });
 
   it('patches the cost center and run or build, as null when cleared', async () => {
     renderAt(`/ops/opex/${ITEM_ID}/overview`);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}`));
-    await waitFor(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-      expect(mocked.patch).toHaveBeenCalled();
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'clear cost center' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick build' }));
-    fireEvent.click(screen.getByRole('button', { name: 'clear run or build' }));
-    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(4));
-    expect(mocked.patch.mock.calls.map((call) => call[1])).toEqual([
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
+    // One pick at a time (picks made while a save runs go together in the next one).
+    const picks = ['pick cost center', 'clear cost center', 'pick build', 'clear run or build'];
+    for (const [index, name] of picks.entries()) {
+      fireEvent.click(screen.getByRole('button', { name }));
+      await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(index + 1));
+    }
+    expect(patchedFields()).toEqual([
       { cost_center_id: 'cc-2' },
       { cost_center_id: null },
       { run_build: 'build' },
@@ -366,7 +398,8 @@ describe('SpendItemPage notes typed during a save', () => {
     // The refetch carries the older 'Renewal A'; the newer text stays in the box.
     expect(notes).toHaveValue('Renewal AB');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
-    expect(mocked.patch.mock.calls[1][1]).toEqual({ notes: 'Renewal AB' });
+    // Started from the text being saved: once that save lands, it is the stored one.
+    expect(mocked.patch.mock.calls[1][1]).toEqual({ notes: 'Renewal AB', base: { notes: 'Renewal A' } });
     saves[1]();
     await waitFor(() => expect(mocked.get.mock.calls.filter(([u]) => u === `/spend-items/${ITEM_ID}`).length).toBeGreaterThanOrEqual(3));
     expect(notes).toHaveValue('Renewal AB');
@@ -408,8 +441,8 @@ describe('SpendItemPage analytics dimensions', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
     // Only the changed dimension is sent, never the old single field.
     expect(mocked.patch.mock.calls.map((call) => call[1])).toEqual([
-      { analytics_values: { 'axis-nature': 'value-2' } },
-      { analytics_values: { 'axis-default': null } },
+      { analytics_values: { 'axis-nature': 'value-2' }, base: { analytics_values: { 'axis-nature': null } } },
+      { analytics_values: { 'axis-default': null }, base: { analytics_values: { 'axis-default': 'value-1' } } },
     ]);
   });
 });
@@ -632,8 +665,8 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
     await typeInto('Line B notes', 'Line B notes, edited');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
     expect(mocked.patch.mock.calls).toEqual([
-      [`/spend-items/${LINE_A}`, { description: 'X' }],
-      [`/spend-items/${LINE_B}`, { notes: 'Line B notes, edited' }],
+      [`/spend-items/${LINE_A}`, { description: 'X', base: { description: 'Line A stored' } }],
+      [`/spend-items/${LINE_B}`, { notes: 'Line B notes, edited', base: { notes: 'Line B notes' } }],
     ]);
   });
 
@@ -658,8 +691,8 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
     await typeInto('Line B notes', 'B edited');
     await waitFor(() => expect(mocked.patch.mock.calls.filter(([url]) => url === `/spend-items/${LINE_B}`)).toHaveLength(1), { timeout: 3000 });
     const sent = mocked.patch.mock.calls.slice(4);
-    expect(sent).toContainEqual([`/spend-items/${LINE_A}`, { notes: 'A edited' }]);
-    expect(sent).toContainEqual([`/spend-items/${LINE_B}`, { notes: 'B edited' }]);
+    expect(sent).toContainEqual([`/spend-items/${LINE_A}`, { notes: 'A edited', base: { notes: 'Line A notes' } }]);
+    expect(sent).toContainEqual([`/spend-items/${LINE_B}`, { notes: 'B edited', base: { notes: 'Line B notes' } }]);
     expect(sent).toHaveLength(2);
   });
 
@@ -688,5 +721,381 @@ describe('SpendItemPage autosave across lines, refusals and a busy server', () =
     expect(mocked.patch).toHaveBeenCalledTimes(6);
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     expect(mocked.patch).toHaveBeenCalledTimes(6);
+  });
+});
+
+describe('SpendItemPage edit conflicts (lot 3C)', () => {
+  const LINE_A = 'aaaaaaaa-0000-4000-8000-0000000000a1';
+  const LINE_B = 'bbbbbbbb-0000-4000-8000-0000000000b2';
+  // What the server holds, per line. A PATCH is checked first (400, as resolveItemWrite), then
+  // compared: a field whose base is stale for a value someone else wrote answers 409.
+  const stored: Record<string, Record<string, unknown>> = {};
+  const line = (id: string, n: number, name: string) => ({
+    id, item_number: n, product_name: name, notes: `${name} notes`, supplier_id: 'supplier-1',
+    currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1',
+    cost_center_id: null as string | null,
+  });
+  const idOf = (url: string) => url.split('/').pop() as string;
+  // Who wrote the stored value, for the 409.
+  let author = { id: 'marie', name: 'Marie Dupont' };
+  // Refused for good whatever the base, as the server checks a request before comparing it.
+  const refusalOf = (patch: Record<string, unknown>): string | null => {
+    if ('paying_company_id' in patch && !patch.paying_company_id) return 'Paying company is required.';
+    if (patch.supplier_id === 'supplier-gone') return 'Supplier not found.';
+    if (patch.cost_center_id === 'cc-2') return 'This cost center is disabled.';
+    if ((patch.analytics_values as Record<string, unknown> | undefined)?.['axis-default'] === 'value-disabled') return 'This analytics value is disabled.';
+    if (patch.account_id === 'account-other') return 'Selected account does not belong to the paying company\'s Chart of Accounts';
+    return null;
+  };
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    dialogs.confirm.mockReset();
+    author = { id: 'marie', name: 'Marie Dupont' };
+    stored[LINE_A] = line(LINE_A, 1, 'Line A');
+    stored[LINE_B] = line(LINE_B, 2, 'Line B');
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/companies/company-2') return { data: { id: 'company-2', coa_id: 'coa-b' } };
+      if (url === '/accounts/account-1') return { data: { id: 'account-1', coa_id: 'coa-a' } };
+      return stored[idOf(url)] ? { data: { ...stored[idOf(url)] } } : { data: {} };
+    });
+    mocked.patch.mockImplementation(async (url: string, body: Record<string, unknown>) => {
+      const target = stored[idOf(url)];
+      const { base = {}, ...patch } = body as { base?: Record<string, unknown> } & Record<string, unknown>;
+      const refusal = refusalOf(patch);
+      if (refusal) throw Object.assign(new Error('HTTP 400'), { response: { status: 400, headers: {}, data: { message: refusal } } });
+      const now = (field: string) => target[field] ?? null;
+      const conflicts = Object.keys(patch)
+        .filter((field) => field in base && base[field] !== now(field) && patch[field] !== now(field))
+        .map((field) => ({
+          field, base: base[field], current: now(field), mine: patch[field],
+          labels: { base: null, current: null, mine: null },
+          changed_by: author, changed_at: '2026-10-02T12:02:00.000Z',
+        }));
+      if (conflicts.length > 0) {
+        throw Object.assign(new Error('HTTP 409'), { response: { status: 409, headers: {}, data: { code: 'edit_conflict', conflicts, row_version: 3 } } });
+      }
+      Object.assign(target, patch);
+      return { data: {} };
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Beyond the typing pause and any retry: whatever the page would still send is sent. */
+  async function settleSaves() {
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+  }
+
+  function LocationProbe() {
+    const { pathname } = useLocation();
+    return <div data-testid="location" data-path={pathname} />;
+  }
+
+  function renderLines(path: string) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router: { navigate: NavigateFunction | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = useNavigate();
+      return null;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[path]}>
+            <NavigateProbe />
+            <LocationProbe />
+            <Routes>
+              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+              <Route path="/ops/opex" element={<div>opex list</div>} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    return { navigate: (to: string) => router.navigate!(to) };
+  }
+
+  async function typeInto(currentValue: string, value: string) {
+    const field = await screen.findByDisplayValue(currentValue);
+    await waitFor(() => {
+      fireEvent.change(field, { target: { value } });
+      expect(field).toHaveValue(value);
+    });
+    return field;
+  }
+
+  /** Marie saved other notes on line A after the screen read them; the user's notes are refused. */
+  async function conflictOnNotes() {
+    const router = renderLines(`/ops/opex/${LINE_A}/overview`);
+    await screen.findByDisplayValue('Line A notes');
+    stored[LINE_A].notes = 'Notes from Marie';
+    const notes = await typeInto('Line A notes', 'My notes');
+    await screen.findByTestId('edit-conflict-notes', undefined, { timeout: 3000 });
+    expect(mocked.patch.mock.calls[0]).toEqual([`/spend-items/${LINE_A}`, { notes: 'My notes', base: { notes: 'Line A notes' } }]);
+    return { router, notes };
+  }
+
+  const path = () => screen.getByTestId('location').getAttribute('data-path');
+
+  it('shows the conflict, keeps the user\'s text through the reload, and applies it over theirs on request', async () => {
+    const { notes } = await conflictOnNotes();
+    // The line reloads (Marie's notes are stored), the box keeps the user's text.
+    await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === `/spend-items/${LINE_A}`).length).toBeGreaterThanOrEqual(2));
+    expect(notes).toHaveValue('My notes');
+    expect(screen.queryByText('opex.editor.failedToSave')).toBeNull();
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.applyMine: opex.fields.notes' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(mocked.patch.mock.calls[1]).toEqual([`/spend-items/${LINE_A}`, { notes: 'My notes', base: { notes: 'Notes from Marie' } }]);
+    await waitFor(() => expect(screen.queryByTestId('edit-conflict-notes')).toBeNull());
+    expect(stored[LINE_A].notes).toBe('My notes');
+    // The focus goes back to the field, not to the page's body.
+    expect(document.activeElement).toBe(notes);
+  });
+
+  it('keeping their value shows theirs at once and sends nothing', async () => {
+    const { notes } = await conflictOnNotes();
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.keepTheirs: opex.fields.notes' }));
+    // From the answer, before any reload.
+    expect(notes).toHaveValue('Notes from Marie');
+    expect(screen.queryByTestId('edit-conflict-notes')).toBeNull();
+    await settleSaves();
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(stored[LINE_A].notes).toBe('Notes from Marie');
+  });
+
+  it('text typed again in a waiting field joins it: the banner shows it as the user\'s value, nothing is sent', async () => {
+    const { notes } = await conflictOnNotes();
+    fireEvent.change(notes, { target: { value: 'My notes, longer' } });
+    // Nothing is said to be saving or saved: it waits for the choice.
+    expect(screen.queryByText('common:status.saving')).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.queryByText('common:status.saved')).toBeNull();
+    await settleSaves();
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('edit-conflict-notes')).toHaveTextContent('My notes, longer');
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.applyMine: opex.fields.notes' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(mocked.patch.mock.calls[1][1]).toEqual({ notes: 'My notes, longer', base: { notes: 'Notes from Marie' } });
+  });
+
+  // B1 of the review: a field waiting for a choice is never sent with a later edit of the line,
+  // which the server could refuse for good (it checks a request before comparing it).
+  it.each([
+    ['clear company', { paying_company_id: null }, 'Paying company is required.'],
+    ['pick deleted supplier', { supplier_id: 'supplier-gone' }, 'Supplier not found.'],
+    ['pick cost center', { cost_center_id: 'cc-2' }, 'This cost center is disabled.'],
+    ['pick disabled value', { analytics_values: { 'axis-default': 'value-disabled' } }, 'This analytics value is disabled.'],
+    ['pick account of another chart', { account_id: 'account-other' }, 'Selected account does not belong to the paying company\'s Chart of Accounts'],
+  ])('a choice waiting on the notes survives a refused edit of the line (%s)', async (button, sent, message) => {
+    const { notes } = await conflictOnNotes();
+    fireEvent.click(screen.getByRole('button', { name: button }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    // The refused field goes alone.
+    const { base, ...fields } = mocked.patch.mock.calls[1][1] as Record<string, unknown>;
+    expect(fields).toEqual(sent);
+    expect(Object.keys(base as object)).toEqual(Object.keys(sent));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    // The choice is still asked, with the user's text.
+    expect(screen.getByTestId('edit-conflict-notes')).toBeInTheDocument();
+    expect(notes).toHaveValue('My notes');
+    await settleSaves();
+    expect(mocked.patch).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.applyMine: opex.fields.notes' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(3));
+    expect(mocked.patch.mock.calls[2][1]).toEqual({ notes: 'My notes', base: { notes: 'Notes from Marie' } });
+    expect(stored[LINE_A].notes).toBe('My notes');
+  });
+
+  it('a pick goes after the text still waiting for its typing pause, each in its own request', async () => {
+    renderLines(`/ops/opex/${LINE_A}/overview`);
+    await typeInto('Line A notes', 'Typed just before');
+    // Picked before the pause ends: the server refuses the cost center.
+    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(mocked.patch.mock.calls.map(([, body]) => body)).toEqual([
+      { notes: 'Typed just before', base: { notes: 'Line A notes' } },
+      { cost_center_id: 'cc-2', base: { cost_center_id: null } },
+    ]);
+    expect(await screen.findByText('This cost center is disabled.')).toBeInTheDocument();
+    // One refusal never drops the other edit.
+    expect(stored[LINE_A].notes).toBe('Typed just before');
+  });
+
+  it('disabling a line with no end of validity sends the status alone: two windows doing it are no conflict', async () => {
+    renderLines(`/ops/opex/${LINE_A}/overview`);
+    await screen.findByDisplayValue('Line A notes');
+    // Another window disabled the line meanwhile (its own clock's now).
+    stored[LINE_A].disabled_at = '2026-10-02T12:00:00.000Z';
+    fireEvent.click(screen.getByRole('button', { name: 'disable line' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    expect(mocked.patch.mock.calls[0][1]).toEqual({ status: 'disabled' });
+    await settleSaves();
+    expect(screen.queryByTestId('edit-conflict-disabled_at')).toBeNull();
+  });
+
+  it('two ends of validity on the same day show their time', async () => {
+    renderLines(`/ops/opex/${LINE_A}/overview`);
+    await screen.findByDisplayValue('Line A notes');
+    stored[LINE_A].disabled_at = '2026-12-31T16:00:00.000Z';
+    fireEvent.click(screen.getByRole('button', { name: 'end on 31 December' }));
+    const row = await screen.findByTestId('edit-conflict-disabled_at');
+    expect(row.textContent).toMatch(/31 Dec 2026, \d\d:\d\d.*31 Dec 2026, \d\d:\d\d/);
+  });
+
+  it('a change of the user\'s own, from another window, is said so', async () => {
+    author = { id: 'me', name: 'Me Myself' };
+    await conflictOnNotes();
+    expect(screen.getByTestId('edit-conflict-notes')).toHaveTextContent(/common:editConflict\.changedByYou(At|On)/);
+    expect(screen.getByTestId('edit-conflict-notes')).not.toHaveTextContent('Me Myself');
+  });
+
+  it('a tab change keeps the choice: no question, the banner and the text stay', async () => {
+    const { notes } = await conflictOnNotes();
+    fireEvent.click(screen.getByRole('button', { name: 'budget tab' }));
+    await waitFor(() => expect(path()).toBe(`/ops/opex/${LINE_A}/budget`));
+    expect(dialogs.confirm).not.toHaveBeenCalled();
+    expect(screen.getByTestId('edit-conflict-notes')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
+    await waitFor(() => expect(path()).toBe(`/ops/opex/${LINE_A}/overview`));
+    expect(await screen.findByDisplayValue('My notes')).toBeInTheDocument();
+    expect(notes).toBeDefined();
+  });
+
+  it('asks before leaving with a conflict not decided, then drops the user\'s value', async () => {
+    await conflictOnNotes();
+    dialogs.confirm.mockResolvedValueOnce(false);
+    fireEvent.click(screen.getByRole('button', { name: 'close workspace' }));
+    await waitFor(() => expect(dialogs.confirm).toHaveBeenCalledTimes(1));
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'common:autosave.leaveTitle', message: 'common:autosave.leaveConflictMessage',
+    }));
+    expect(screen.queryByText('opex list')).toBeNull();
+    expect(screen.getByTestId('edit-conflict-notes')).toBeInTheDocument();
+
+    dialogs.confirm.mockResolvedValueOnce(true);
+    fireEvent.click(screen.getByRole('button', { name: 'close workspace' }));
+    expect(await screen.findByText('opex list')).toBeInTheDocument();
+    await settleSaves();
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(stored[LINE_A].notes).toBe('Notes from Marie');
+  });
+
+  it('a link of the app asks the page first (the layout\'s guard), with the same question', async () => {
+    await conflictOnNotes();
+    dialogs.confirm.mockResolvedValueOnce(false);
+    let leave: boolean | undefined;
+    await act(async () => { leave = await confirmLeave(); });
+    expect(leave).toBe(false);
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({ message: 'common:autosave.leaveConflictMessage' }));
+    expect(screen.getByTestId('edit-conflict-notes')).toBeInTheDocument();
+  });
+
+  it('a line left another way keeps its choice for the session: back on it, the banner and the text are there', async () => {
+    const { router } = await conflictOnNotes();
+    // The browser's back button: no question, the page goes.
+    act(() => { router.navigate('/ops/opex'); });
+    expect(await screen.findByText('opex list')).toBeInTheDocument();
+    expect(dialogs.confirm).not.toHaveBeenCalled();
+    act(() => { router.navigate(`/ops/opex/${LINE_A}/overview`); });
+    expect(await screen.findByTestId('edit-conflict-notes')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('My notes')).toBeInTheDocument();
+    await settleSaves();
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('a save answered with a conflict once the page went is kept for the next visit', async () => {
+    const router = renderLines(`/ops/opex/${LINE_A}/overview`);
+    await screen.findByDisplayValue('Line A notes');
+    stored[LINE_A].notes = 'Notes from Marie';
+    await typeInto('Line A notes', 'Typed before leaving');
+    // Gone before the typing pause: the page sends the text as it unmounts, the answer is a 409.
+    act(() => { router.navigate('/ops/opex'); });
+    expect(await screen.findByText('opex list')).toBeInTheDocument();
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    await settleSaves();
+    act(() => { router.navigate(`/ops/opex/${LINE_A}/overview`); });
+    expect(await screen.findByTestId('edit-conflict-notes')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('Typed before leaving')).toBeInTheDocument();
+  });
+
+  it('never carries a conflict of line A to line B, names line A there, and opens it without a question', async () => {
+    const { router } = await conflictOnNotes();
+    // Another way to line B (no flush): no banner there, B's edit goes to B alone.
+    act(() => { router.navigate(`/ops/opex/${LINE_B}/overview`); });
+    await typeInto('Line B notes', 'B edited');
+    expect(screen.queryByTestId('edit-conflict-notes')).toBeNull();
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    expect(mocked.patch.mock.calls[1]).toEqual([`/spend-items/${LINE_B}`, { notes: 'B edited', base: { notes: 'Line B notes' } }]);
+    expect(stored[LINE_A].notes).toBe('Notes from Marie');
+    // Line A's waiting choice is named here, and leaving says which line it is on.
+    expect(screen.getByTestId('edit-conflict-elsewhere')).toHaveTextContent('editConflict.elsewhere');
+    dialogs.confirm.mockResolvedValueOnce(false);
+    await act(async () => { await confirmLeave(); });
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({ message: 'common:autosave.leaveConflictOtherMessage' }));
+
+    // Its link opens line A without a question; the choice is still asked, with the user's text.
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.open' }));
+    expect(await screen.findByTestId('edit-conflict-notes')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('My notes')).toBeInTheDocument();
+    expect(dialogs.confirm).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('edit-conflict-elsewhere')).toBeNull();
+  });
+
+  describe('a company and its account', () => {
+    /** Someone else saves `theirs` after the screen read the line, then the user picks a company on another chart (the account is cleared with it). */
+    async function pickOtherCompany(theirs: Record<string, unknown>) {
+      renderLines(`/ops/opex/${LINE_A}/overview`);
+      await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
+      Object.assign(stored[LINE_A], theirs);
+      fireEvent.click(screen.getByRole('button', { name: 'pick other company' }));
+      await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+      expect(mocked.patch.mock.calls[0][1]).toEqual({
+        paying_company_id: 'company-2', account_id: null, base: { paying_company_id: 'company-1', account_id: 'account-1' },
+      });
+    }
+    const drawer = () => document.querySelector('[data-mode="edit"]');
+
+    it('both changed by someone else: keeping their value of one keeps both, nothing is sent', async () => {
+      await pickOtherCompany({ paying_company_id: 'company-3', account_id: 'account-3' });
+      await screen.findByTestId('edit-conflict-account_id');
+      expect(screen.getByTestId('edit-conflict-paying_company_id')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'editConflict.keepTheirs: opex.fields.payingCompany' }));
+      expect(screen.queryByTestId('edit-conflict-account_id')).toBeNull();
+      expect(screen.queryByTestId('edit-conflict-paying_company_id')).toBeNull();
+      expect(drawer()).toHaveAttribute('data-company', 'company-3');
+      expect(drawer()).toHaveAttribute('data-account', 'account-3');
+      await settleSaves();
+      expect(mocked.patch).toHaveBeenCalledTimes(1);
+    });
+
+    it('only the account changed: keeping their account drops the user\'s company too (no refusal follows)', async () => {
+      await pickOtherCompany({ account_id: 'account-3' });
+      await screen.findByTestId('edit-conflict-account_id');
+      expect(screen.queryByTestId('edit-conflict-paying_company_id')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'editConflict.keepTheirs: opex.fields.account' }));
+      expect(drawer()).toHaveAttribute('data-account', 'account-3');
+      await waitFor(() => expect(drawer()).toHaveAttribute('data-company', 'company-1'));
+      await settleSaves();
+      expect(mocked.patch).toHaveBeenCalledTimes(1);
+      expect(stored[LINE_A]).toMatchObject({ paying_company_id: 'company-1', account_id: 'account-3' });
+    });
+
+    it('only the account changed: applying the user\'s value sends the company with the cleared account', async () => {
+      await pickOtherCompany({ account_id: 'account-3' });
+      await screen.findByTestId('edit-conflict-account_id');
+      fireEvent.click(screen.getByRole('button', { name: 'editConflict.applyMine: opex.fields.account' }));
+      await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+      expect(mocked.patch.mock.calls[1][1]).toEqual({
+        paying_company_id: 'company-2', account_id: null, base: { paying_company_id: 'company-1', account_id: 'account-3' },
+      });
+      expect(stored[LINE_A]).toMatchObject({ paying_company_id: 'company-2', account_id: null });
+    });
   });
 });

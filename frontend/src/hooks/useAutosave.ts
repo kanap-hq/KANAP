@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
+import { EDIT_CONFLICT_CODE } from './editConflicts';
 
-export type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+/** `conflict`: someone else changed a field being saved; the edit waits for the user's choice (lot 3C). */
+export type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'conflict';
 
 /**
  * What a failed save means for the autosave, from the API's answer (the
@@ -14,9 +16,13 @@ export type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
  * - `conflict`: 409 `duplicate`, `parent_gone` or `in_use`. Sending the same
  *   save again fails the same way: it is reported and dropped, and the page
  *   rolls the screen back to the server's values;
+ * - `edit_conflict`: 409 `edit_conflict` (lot 3C): someone else changed a
+ *   field of this save since the user's edit began. Neither retried nor
+ *   dropped: the page keeps the edit for the user's choice (`PatchBuffer.park`)
+ *   and the autosave shows the `conflict` state, without an error message;
  * - `fatal`: anything else. Reported and dropped.
  */
-export type SaveFailure = { kind: 'transient' | 'conflict' | 'fatal'; retryAfterMs?: number };
+export type SaveFailure = { kind: 'transient' | 'conflict' | 'edit_conflict' | 'fatal'; retryAfterMs?: number };
 
 /**
  * Whether a failed save is kept to be sent again (409 `retry`, 503 `busy`).
@@ -52,6 +58,7 @@ export function classifySaveFailure(error: unknown): SaveFailure {
     };
   }
   if (status === 409 && code && CONFLICT_CODES.has(code)) return { kind: 'conflict' };
+  if (status === 409 && code === EDIT_CONFLICT_CODE) return { kind: 'edit_conflict' };
   return { kind: 'fatal' };
 }
 
@@ -98,9 +105,18 @@ export function useAutosaveQueue(): AutosaveQueue {
   return ref.current;
 }
 
+export type FlushOptions = {
+  /**
+   * Edits waiting for the user's choice (`held`) do not make the flush fail:
+   * a move that keeps the page and its conflict banner (a tab change) only
+   * waits for the saves that can go.
+   */
+  ignoreHeld?: boolean;
+};
+
 export interface AutosaveHandle {
   /** See {@link AutosaveController.flush}. */
-  flush: () => Promise<boolean>;
+  flush: (options?: FlushOptions) => Promise<boolean>;
   /** See {@link AutosaveController.isBusy}. */
   isBusy: () => boolean;
   /** See {@link AutosaveController.discard}. */
@@ -182,6 +198,14 @@ export interface UseAutosaveOptions {
   queue?: AutosaveQueue;
   /** Registry an ancestor can use to flush this controller before unmounting it. */
   registry?: AutosaveRegistry;
+  /**
+   * Edits kept outside the controller until the user decides: the page's
+   * unresolved edit conflicts (`PatchBuffer.hasConflicts`, lot 3C). While it
+   * is true the controller is busy (leaving asks for confirmation, a hard
+   * unload warns) and a flush resolves false: nothing can save them without
+   * the user's choice.
+   */
+  held?: () => boolean;
 }
 
 export interface AutosaveController {
@@ -196,11 +220,16 @@ export interface AutosaveController {
    * Cancel the debounce and run any pending/in-flight save now, resolving when
    * fully drained. Use on controlled transitions (tab/year/prev/next/close/Escape)
    * where persistence must complete before navigating. Resolves to false if the
-   * save rejected (caller should abort the navigation to avoid losing the edit).
+   * save rejected (caller should abort the navigation to avoid losing the edit),
+   * or while edits wait for the user's choice (`held`), unless `ignoreHeld`.
    */
-  flush: () => Promise<boolean>;
-  /** True when a save is pending (debouncing, or kept after a transient failure) or currently in flight. */
+  flush: (options?: FlushOptions) => Promise<boolean>;
+  /** True when a save is pending (debouncing, or kept after a transient failure), in flight, or held for the user's choice (`held`). */
   isBusy: () => boolean;
+  /** True when a save is pending or in flight (the edits waiting for a choice aside). */
+  isSaving: () => boolean;
+  /** The user made every choice and nothing was left to send: the `conflict` state ends. */
+  resetConflict: () => void;
   /**
    * Drop the pending save, the one kept after a failure included, without
    * sending it: the user chose to leave without it. A request already in
@@ -233,6 +262,9 @@ export interface AutosaveController {
  *   lets the user leave without it after a confirmation (`discard`). A kept
  *   save must be safe to run again: a caller that takes its payload out of a
  *   buffer puts it back on a transient failure only;
+ * - edit_conflict: neither retried nor reported through `onError`; the save
+ *   function has kept its payload for the user's choice, the status becomes
+ *   `conflict` while `held` says so;
  * - conflict or anything else: reported and dropped. A save scheduled while
  *   it was in flight still runs, the failure is reported once it has.
  */
@@ -241,6 +273,9 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
   const savedLingerMs = options?.savedLingerMs ?? 1500;
   const onError = options?.onError;
   const registry = options?.registry;
+  // Read at call time: the page's buffer may be created after the controller.
+  const heldRef = useRef(options?.held);
+  heldRef.current = options?.held;
 
   const [status, setStatus] = useState<AutosaveStatus>('idle');
 
@@ -282,6 +317,8 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
       await Promise.resolve();
       // A save dropped while a newer one was pending: reported once the loop ends.
       let dropped: unknown = null;
+      // A save kept for the user's choice (409 edit_conflict): the `conflict` state once the loop ends.
+      let conflicted: unknown = null;
       let saved = false;
       try {
         while (pendingRef.current) {
@@ -299,6 +336,10 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
             // Discarded while in flight: nothing to keep, retry or report.
             if (generation !== generationRef.current) continue;
             const failure = classifySaveFailure(error);
+            if (failure.kind === 'edit_conflict') {
+              conflicted ??= error;
+              continue;
+            }
             if (failure.kind !== 'transient') {
               // Dropped; a save scheduled meanwhile carries only newer edits and still goes.
               dropped ??= error;
@@ -315,8 +356,14 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
           }
         }
         if (dropped) throw dropped;
-        // Everything left was discarded: discard() already set the status.
-        if (!saved) return;
+        // Still waiting for a choice (a later save may have carried it already).
+        if (conflicted && (!heldRef.current || heldRef.current())) throw conflicted;
+        if (!saved) {
+          // A conflict already decided, nothing saved since: nothing pending either.
+          if (conflicted) setStatus('idle');
+          // Everything left was discarded: discard() already set the status.
+          return;
+        }
         retriesLeftRef.current = AUTOSAVE_RETRY_DELAYS_MS.length;
         setStatus('saved');
         clearSavedTimer();
@@ -325,8 +372,13 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
           setStatus('idle');
         }, savedLingerMs);
       } catch (error) {
-        setStatus('error');
-        onError?.(error);
+        if (classifySaveFailure(error).kind === 'edit_conflict') {
+          // Kept by the page, shown by its conflict banner: not an error message.
+          setStatus('conflict');
+        } else {
+          setStatus('error');
+          onError?.(error);
+        }
         throw error;
       } finally {
         if (drainingRef.current === run) drainingRef.current = null;
@@ -359,19 +411,23 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
     }, delay);
   }, [delay, drain, onError]);
 
-  const flush = useCallback(async (): Promise<boolean> => {
+  const flush = useCallback(async (options?: FlushOptions): Promise<boolean> => {
     clearTimer();
     if (pendingRef.current || drainingRef.current) {
-      try {
-        await drain();
-        // A save scheduled while the drain was finishing still needs its own run.
-        if (pendingRef.current) await drain();
-      } catch {
-        // Surfaced via status / onError. Report failure so callers can abort navigation.
-        return false;
+      // A save scheduled while the drain was finishing still needs its own run.
+      for (let round = 0; round === 0 || (round === 1 && pendingRef.current); round += 1) {
+        try {
+          await drain();
+        } catch (error) {
+          // An answer kept for the user's choice, when the caller keeps the page and its banner.
+          if (options?.ignoreHeld && classifySaveFailure(error).kind === 'edit_conflict') continue;
+          // Surfaced via status / onError. Report failure so callers can abort navigation.
+          return false;
+        }
       }
     }
-    return true;
+    // Edits waiting for the user's choice cannot be flushed.
+    return !!options?.ignoreHeld || !heldRef.current?.();
   }, [drain]);
 
   const discard = useCallback(() => {
@@ -383,10 +439,11 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
     setStatus('idle');
   }, []);
 
-  const isBusy = useCallback(
-    () => pendingRef.current != null || drainingRef.current != null,
-    [],
-  );
+  const isSaving = useCallback(() => pendingRef.current != null || drainingRef.current != null, []);
+  const isBusy = useCallback(() => isSaving() || !!heldRef.current?.(), [isSaving]);
+  const resetConflict = useCallback(() => {
+    setStatus((current) => (current === 'conflict' && !heldRef.current?.() ? 'idle' : current));
+  }, []);
 
   // Stable handle over the latest closures, so registering/unregistering does
   // not churn every render.
@@ -395,7 +452,7 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
   const handleRef = useRef<AutosaveHandle | null>(null);
   if (!handleRef.current) {
     handleRef.current = {
-      flush: () => latestHandleRef.current.flush(),
+      flush: (options) => latestHandleRef.current.flush(options),
       isBusy: () => latestHandleRef.current.isBusy(),
       discard: () => latestHandleRef.current.discard(),
     };
@@ -421,5 +478,5 @@ export default function useAutosave(options?: UseAutosaveOptions): AutosaveContr
     }
   }, []);
 
-  return { status, schedule, flush, isBusy, discard };
+  return { status, schedule, flush, isBusy, isSaving, resetConflict, discard };
 }

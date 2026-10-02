@@ -42,6 +42,11 @@ const WRITABLE_COLUMNS: Record<ItemWriteScope, readonly string[]> = {
   ],
 };
 
+/** The columns a line update writes as given (after the id and enum checks below). */
+export function itemWritableColumns(scope: ItemWriteScope): readonly string[] {
+  return WRITABLE_COLUMNS[scope];
+}
+
 /** Lifecycle inputs, resolved by the caller (`resolveLifecycleState`), never written as given. */
 const LIFECYCLE_INPUTS = ['status', 'disabled_at', 'effective_end'] as const;
 
