@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
-import { formatCents } from '../../common/amount';
+import { centsToNumber, formatCents } from '../../common/amount';
+import { aggregateSql, AggregateSpec, validateAggregateSpec } from '../../common/list-engine/list-aggregate';
 import { assertListEngineSupport } from '../../common/list-engine/list-engine-support';
 import type { ListState } from '../../common/list-engine/list-engine.types';
 import { fieldOf, filterValuesSql, idsSql, neighborsSql, pageSql, countSql, buildCore } from '../../common/list-engine/list-sql-builder';
@@ -244,7 +245,7 @@ export async function budgetListSummary(
   return { items: rows, total: page.total, page: req.request.page, limit: req.request.limit };
 }
 
-/** The ordered ids of every line of the list (navigation, totals, AI aggregates). Without a status: active lines. */
+/** The ordered ids of every line of the list (workspace navigation). Without a status: active lines. */
 export async function budgetListIds(
   scope: SummaryScopeConfig,
   deps: SummaryDeps,
@@ -425,9 +426,81 @@ export async function budgetListTotals(
   return Object.assign(result, { fte: fteTotals });
 }
 
+/** One row of an aggregate: a group, the others or the total. */
+export interface BudgetListAggregateRow {
+  /** The group's keys, one per `groupBy` field (null for a blank value); none for the others and the total. */
+  keys: Array<string | null>;
+  /** Lines in the row. */
+  count: number;
+  /** Per measure id: an amount in the reporting currency (exact to the cent) or an FTE; null when there is no value. */
+  values: Record<string, number | null>;
+  /** Per FTE measure id: the lines without an FTE (left out of the value). */
+  unknown: Record<string, number>;
+}
+
+export interface BudgetListAggregate {
+  /** The groups in the spec's order (the first `limit` ones with a limit). */
+  groups: BudgetListAggregateRow[];
+  /** With `limit` and `others`: the groups past the limit as one row, null when there are none. */
+  others: BudgetListAggregateRow | null;
+  /** Every line of the list state (`having` aside). */
+  total: BudgetListAggregateRow;
+  /** Groups kept (by `having`), before the limit. */
+  groupCount: number;
+  /** The currency of the amounts (null when the spec reads none). */
+  reportingCurrency: string | null;
+}
+
+/**
+ * The lines of a list state (same query as the page: filters, quick search,
+ * status scope, `years`; without a status, the page's default window)
+ * grouped by fields of the list, with sums, means, lowest and highest of
+ * amounts (exact cents, each line converted to the cent first, as the
+ * footer totals) and of FTE, ordered, optionally a top N with the others
+ * as one row, and the list's total: one statement (`common/list-engine/list-aggregate.ts`).
+ */
+export async function budgetListAggregate(
+  scope: SummaryScopeConfig,
+  deps: SummaryDeps,
+  query: any,
+  spec: AggregateSpec,
+  manager: EntityManager,
+): Promise<BudgetListAggregate> {
+  validateAggregateSpec(spec);
+  const req = await readRequest(query, manager);
+  const specKeys = [...spec.groupBy, ...spec.measures.flatMap((measure) => [measure.field, ...(measure.minus ? [measure.minus] : [])])];
+  assertBudgetYearsWithinBounds([...req.years, ...yearsNamedByFields(specKeys)], req.currentYear);
+  const state = stateOf(req, windowScope(req));
+  const needs = budgetRuntimeNeeds(req.currentYear, [...requestKeys(req, false), ...specKeys], !!state.q);
+  const rt = await runtimeFor(scope, new RequestFxRates(deps.fxRates), manager, req, needs);
+  const config = new BudgetListConfig(rt);
+  const stmt = new SqlStatement(req.tenantId);
+  const rows = await run(manager, stmt, aggregateSql(stmt, config, state, spec));
+
+  const money = spec.measures.map((measure) => stmt.fieldCache.get(measure.field)?.kind === 'money');
+  const shape = (row: any): BudgetListAggregateRow => ({
+    keys: row.part === 'g' ? spec.groupBy.map((_, i) => row[`k${i}`] ?? null) : [],
+    count: Number(row.n),
+    values: Object.fromEntries(spec.measures.map((measure, i) => {
+      const text = row[`m${i}`];
+      return [measure.id, text == null ? null : money[i] ? centsToNumber(BigInt(text)) : Number(text)];
+    })),
+    unknown: Object.fromEntries(spec.measures.flatMap((measure, i) => (money[i] ? [] : [[measure.id, Number(row[`u${i}`])]]))),
+  });
+  const total = rows.find((row: any) => row.part === 't');
+  const others = rows.find((row: any) => row.part === 'o');
+  return {
+    groups: rows.filter((row: any) => row.part === 'g').map(shape),
+    others: others ? shape(others) : null,
+    total: shape(total),
+    groupCount: Number(total.gc),
+    reportingCurrency: money.some(Boolean) ? rt.fx?.reportingCurrency ?? null : null,
+  };
+}
+
 /**
  * Rows of the given lines, in the order given (no lifecycle scope, no list
- * statement): the AI detail and aggregates, which name their lines by id.
+ * statement): the AI detail, which names its line by id.
  */
 export async function budgetListRowsByIds(
   scope: SummaryScopeConfig,

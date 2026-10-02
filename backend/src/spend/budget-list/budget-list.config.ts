@@ -20,8 +20,9 @@ import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
  * The OPEX and CAPEX lists as a list-engine config, built from the scope
  * config of `spend-summary.builder.ts` (tables, name field, link tables,
  * reference prefix). Every field reads what the row builder shows for it
- * (`getSummaryFieldValue`), so sorts, filters, the quick search and the
- * filter values agree with the rows the page draws. Table and column names
+ * (as the oracle reads a row, `__tests__/oracle/summary-field-value.oracle.ts`),
+ * so sorts, filters, the quick search, the filter values and the aggregates
+ * agree with the rows the page draws. Table and column names
  * come from the scope config only; every value from the request is bound.
  */
 

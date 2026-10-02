@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { SUMMARY_SCOPES, SummaryDeps } from './spend-summary.builder';
 import * as budgetList from './budget-list/budget-list.service';
+import type { AggregateSpec } from '../common/list-engine/list-aggregate';
 import { SpendItemsCsvService } from './spend-items-csv.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -370,7 +371,7 @@ export class SpendItemsService {
     return budgetList.budgetListFilterValues(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
   }
 
-  /** Every id of the list in its order (workspace navigation, AI aggregates). */
+  /** Every id of the list in its order (workspace navigation). */
   async summaryIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; item_numbers: number[]; total: number }> {
     return budgetList.budgetListIds(SUMMARY_SCOPES.opex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
   }
@@ -378,6 +379,14 @@ export class SpendItemsService {
   /** Where one line stands in the list, with its previous and next lines. */
   async summaryNeighbors(query: any, id: string, opts?: { manager?: EntityManager }) {
     return budgetList.budgetListNeighbors(SUMMARY_SCOPES.opex, this.summaryDeps(), query, id, opts?.manager ?? this.repo.manager);
+  }
+
+  /**
+   * The lines of a list state grouped and measured in one statement
+   * (`budget-list.service.ts`, `budgetListAggregate`): the AI aggregates.
+   */
+  async summaryAggregate(query: any, spec: AggregateSpec, opts?: { manager?: EntityManager }): Promise<budgetList.BudgetListAggregate> {
+    return budgetList.budgetListAggregate(SUMMARY_SCOPES.opex, this.summaryDeps(), query, spec, opts?.manager ?? this.repo.manager);
   }
 
   async summaryRowsByIds(

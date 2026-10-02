@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../../data-source';
 import { centsToNumber, formatCents, toCents } from '../../amount';
+import { divRoundHalfAway as jsDivRoundHalfAway } from '../../decimal';
 import { compileAgFilterCondition, createParamNameGenerator } from '../../ag-grid-filtering';
 import { FxRateService } from '../../../currency/fx-rate.service';
 import {
@@ -10,8 +11,10 @@ import {
   centsText,
   codePointCompare,
   decimal2ToFloat,
+  divRoundHalfAway,
   epochDay,
   fold,
+  jsCents,
   jsIsoString,
   jsLower,
   jsRound,
@@ -180,6 +183,75 @@ async function testAmountsOfEverySize(runner: QueryRunner) {
   assert.ok(beyond > 100, 'the sample reaches past 10^15 converted cents');
 }
 
+/**
+ * `jsCents(r)`: the cents JavaScript keeps of one converted amount, `toCents(r / 100)`,
+ * for every double holding an integer, from 0 to the largest finite double: exact
+ * below 10^15; beyond, the same double (V8 and PostgreSQL may print a tie of the
+ * shortest form differently, in the 17th digit), counted.
+ */
+async function testJsCents(runner: QueryRunner) {
+  // Its own stream: the samples of the other tests stay those of earlier runs.
+  const r = prng(20261003);
+  const big = (lo: number, hi: number) => Math.floor(lo + r.next() * (hi - lo));
+  const values: number[] = [
+    0, 1, -1, 99, -99, 100, 12345, -12345, 2 ** 53 - 1, -(2 ** 53 - 1), 2 ** 53, 1e15 - 1, -(1e15 - 1), 1e15, -1e15, 1e15 + 2,
+    1e16, 123456789012345680, -123456789012345680, 1e21, 1e22, 1.2e19, -1.2e19, 9.223372036854776e18, 1e100, 1.7976931348623157e308, -1.7976931348623157e308,
+    ...Array.from({ length: 300 }, () => big(0, 1e15) * (r.chance(0.3) ? -1 : 1)),
+    ...Array.from({ length: 300 }, () => big(1e15, 1e18) * (r.chance(0.3) ? -1 : 1)),
+    ...Array.from({ length: 100 }, () => Math.floor(10 ** (15 + r.next() * 293)) * (r.chance(0.3) ? -1 : 1)),
+  ].filter((v) => Number.isFinite(v)).map((v) => (Object.is(v, -0) ? 0 : v));
+  const rows: Array<{ c: string }> = await runner.query(
+    `SELECT (${jsCents('t.r')})::text AS c FROM unnest($1::float8[]) WITH ORDINALITY AS t(r, n) ORDER BY t.n`,
+    [values.map(String)],
+  );
+  let beyond = 0;
+  let printedApart = 0;
+  values.forEach((v, i) => {
+    const expected = toCents(v / 100);
+    const sql = BigInt(rows[i].c);
+    if (Math.abs(v) < 1e15) {
+      assert.equal(sql, expected, `jsCents(${v})`);
+      return;
+    }
+    beyond += 1;
+    if (sql !== expected) printedApart += 1;
+    assert.equal(Number(formatCents(sql)), Number(formatCents(expected)), `jsCents(${v}): the same double`);
+  });
+  assert.ok(beyond > 300, 'the sample reaches past 10^15');
+  assert.ok(printedApart <= beyond / 20, `shortest forms printed apart rarely (${printedApart} of ${beyond})`);
+  console.log(`jsCents: ${values.length} values, ${beyond} past 10^15, ${printedApart} printed apart by V8 and PostgreSQL (same double)`);
+}
+
+/**
+ * `divRoundHalfAway(n, d)` against `common/decimal.ts`: integer numerics up to
+ * 10^30 and beyond, negatives, divisors from 1 to 10^30, every tie (a remainder
+ * of exactly half the divisor) rounded away from zero.
+ */
+async function testDivRoundHalfAway(runner: QueryRunner) {
+  const r = prng(20261004);
+  const bigint = (digits: number) => BigInt(Array.from({ length: digits }, (_, i) => (i === 0 ? r.int(1, 9) : r.int(0, 9))).join(''));
+  const pairs: Array<[bigint, bigint]> = [
+    [0n, 1n], [1n, 2n], [-1n, 2n], [3n, 2n], [-3n, 2n], [5n, 10n], [-5n, 10n], [4n, 10n], [-4n, 10n], [6n, 10n], [-6n, 10n],
+    [7n, 7n], [-7n, 7n], [10n ** 30n, 3n], [-(10n ** 30n), 3n], [10n ** 30n + 1n, 2n], [-(10n ** 30n) - 1n, 2n], [10n ** 30n, 10n ** 30n],
+    [5n * 10n ** 29n, 10n ** 30n], [-5n * 10n ** 29n, 10n ** 30n], [10n ** 30n - 1n, 2n * 10n ** 30n],
+  ];
+  for (let k = 0; k < 600; k++) {
+    const d = r.chance(0.2) ? bigint(r.int(16, 31)) : BigInt(r.int(1, 1_000_000));
+    // A third of the numerators are ties: an odd multiple of half an even divisor.
+    const tie = r.chance(0.33) && d % 2n === 0n;
+    const n = tie ? (bigint(r.int(1, 25)) * 2n + 1n) * (d / 2n) : bigint(r.int(1, 33));
+    pairs.push([r.chance(0.4) ? -n : n, d]);
+  }
+  const rows: Array<{ q: string }> = await runner.query(
+    `SELECT (${divRoundHalfAway('t.n', 't.d')})::text AS q FROM unnest($1::numeric[], $2::numeric[]) WITH ORDINALITY AS t(n, d, k) ORDER BY t.k`,
+    [pairs.map(([n]) => n.toString()), pairs.map(([, d]) => d.toString())],
+  );
+  pairs.forEach(([n, d], i) => assert.equal(BigInt(rows[i].q), jsDivRoundHalfAway(n, d), `divRoundHalfAway(${n}, ${d})`));
+  // Over bigint counts too (a group's line count).
+  const [row] = await runner.query(`SELECT (${divRoundHalfAway('$1::numeric', '$2::bigint')})::text AS q`, ['-25', '10']);
+  assert.equal(row.q, '-3', 'a bigint divisor');
+}
+
 function testSqlLiteralRefusesParameters() {
   assert.equal(sqlLiteral("l'été"), "'l''été'");
   assert.equal(sqlLiteral('cost $ 5'), "'cost $ 5'");
@@ -263,6 +335,8 @@ async function main() {
       ['FX conversion to the cent', () => testFxConversionToTheCent(runner)],
       ['cents as JavaScript numbers', () => testCentsAsJavaScriptNumbers(runner)],
       ['amounts of every size', () => testAmountsOfEverySize(runner)],
+      ['jsCents', () => testJsCents(runner)],
+      ['divRoundHalfAway', () => testDivRoundHalfAway(runner)],
       ['sqlLiteral refuses parameters', async () => testSqlLiteralRefusesParameters()],
       ['timestamps as JavaScript sees them', () => testTimestampsAsJavaScriptSeesThem(runner)],
       ['text order', () => testTextOrder(runner)],
