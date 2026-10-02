@@ -12,6 +12,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { SpendItemContactsService } from './spend-item-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { budgetListAccess } from './budget-list/budget-list.runtime';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
@@ -55,7 +56,7 @@ export class SpendItemsController {
     @Query() query: ListSpendQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summary(query, { manager: ctx.manager });
+    return this.svc.summary(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -65,7 +66,7 @@ export class SpendItemsController {
     @Query() query: any,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryFilterValues(query, { manager: ctx.manager });
+    return this.svc.summaryFilterValues(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -75,7 +76,7 @@ export class SpendItemsController {
     @Query() query: ListSpendQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryIds(query, { manager: ctx.manager });
+    return this.svc.summaryIds(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -86,7 +87,7 @@ export class SpendItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const id = await this.resolveId(String(query?.id ?? ''), ctx.manager as EntityManager);
-    return this.svc.summaryNeighbors(query, id, { manager: ctx.manager });
+    return this.svc.summaryNeighbors(query, id, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   @UseGuards(PermissionGuard)
@@ -96,7 +97,7 @@ export class SpendItemsController {
     @Query() query: ListSpendQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryTotals(query, { manager: ctx.manager });
+    return this.svc.summaryTotals(query, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   /**
@@ -113,7 +114,7 @@ export class SpendItemsController {
     @Body() body: unknown,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.summaryAggregateRequest(body, { manager: ctx.manager });
+    return this.svc.summaryAggregateRequest(body, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
   // Export before parameterized ':id'

@@ -98,7 +98,14 @@ export interface AggregateSpec {
   others?: boolean;
 }
 
-export const AGGREGATE_LIMITS = { groupBy: 6, measures: 60, lineMeasures: 8, having: 10, order: 10, limit: 10_000 } as const;
+/**
+ * `measures` caps a spec without keys (one group: the reports' trends read up to 25 sums);
+ * `groupedMeasures` caps a spec with keys. Each measure costs per group, and a key can give one
+ * group per line (`id`, but also a name, a note or a combination of fields): 5,000 groups × 60
+ * measures took 1 to 2 s and answered 3 to 6 MB. A grouped report reads at most 5 measures, the AI
+ * one.
+ */
+export const AGGREGATE_LIMITS = { groupBy: 6, measures: 60, groupedMeasures: 8, having: 10, order: 10, limit: 10_000 } as const;
 
 const FUNCTIONS: ReadonlySet<string> = new Set(['sum', 'min', 'max', 'avg']);
 const HAVING_OPS: Record<AggregateHavingSpec['op'], string> = { gt: '>', gte: '>=', lt: '<', lte: '<=', eq: '=', ne: '<>' };
@@ -130,6 +137,9 @@ export function validateAggregateSpec(spec: AggregateSpec): void {
   if (spec.groupBy.length > AGGREGATE_LIMITS.groupBy) fail(`at most ${AGGREGATE_LIMITS.groupBy} group fields.`);
   if (!Array.isArray(spec.measures)) fail('measures must be a list.');
   if (spec.measures.length > AGGREGATE_LIMITS.measures) fail(`at most ${AGGREGATE_LIMITS.measures} measures.`);
+  if (spec.groupBy.length > 0 && spec.measures.length > AGGREGATE_LIMITS.groupedMeasures) {
+    fail(`at most ${AGGREGATE_LIMITS.groupedMeasures} measures with group keys (${AGGREGATE_LIMITS.measures} without).`);
+  }
   const ids = new Set<string>();
   for (const measure of spec.measures) {
     if (!measure || typeof measure.id !== 'string' || !MEASURE_ID.test(measure.id)) fail(`invalid measure id ${JSON.stringify(measure?.id)}.`);
@@ -162,23 +172,6 @@ export function validateAggregateSpec(spec: AggregateSpec): void {
     fail(`limit must be an integer from 1 to ${AGGREGATE_LIMITS.limit}.`);
   }
   if (spec.others && spec.limit == null) fail('others needs a limit.');
-}
-
-/**
- * A spec grouped by a key unique to each line (`id`, or a key the list names
- * in `lineKeys`, such as the item number) groups every line on its own:
- * thousands of groups, each measure computed per group. It takes at most
- * `AGGREGATE_LIMITS.lineMeasures` measures (a report reads up to five per
- * line); the general cap of 60 stays for grouped specs. Six keys with `id`
- * and 60 means over twelve years took 1.7 s on 5,000 lines, its sort
- * spilling to disk.
- */
-export function assertLineMeasureCap(config: Pick<ListConfig, 'lineKeys'>, spec: AggregateSpec): void {
-  const lineKeys = new Set(['id', ...(config.lineKeys ?? [])]);
-  const perLine = spec.groupBy.find((key) => lineKeys.has(key));
-  if (perLine && spec.measures.length > AGGREGATE_LIMITS.lineMeasures) {
-    fail(`at most ${AGGREGATE_LIMITS.lineMeasures} measures when grouping by ${perLine} (one group per line).`);
-  }
 }
 
 /** The text a group key reads for a field; refuses the kinds a group cannot read (amounts, timestamps). */
@@ -300,7 +293,6 @@ function havingBound(stmt: SqlStatement, m: CompiledMeasure, value: number): str
  */
 export function aggregateSql(stmt: SqlStatement, config: ListConfig, state: ListState, spec: AggregateSpec): string {
   validateAggregateSpec(spec);
-  assertLineMeasureCap(config, spec);
   const keys = spec.groupBy.map((key) => ({ key, field: fieldOf(stmt, config, key) }));
   const keyColumns = keys.map((k, i) => `${groupKeySql(k.key, k.field)} AS k${i}`);
   const measures = spec.measures.map((measure) => compileMeasure(stmt, config, measure));

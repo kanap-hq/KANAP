@@ -26,18 +26,22 @@ import * as R from '../../../../frontend/src/pages/reports/reportAggregates';
 // - ties: lines or groups of equal value may come in another order (the
 //   browser kept the download order, the server orders by the keys), and a
 //   top N cut inside a run of equal values may keep other members;
-// - amounts: the server sums exact cents, the browser summed doubles: equal
-//   to 1e-6, and rendered the same except on a value within a hair of a half
-//   unit (counted as "rendered differently at a half");
+// - amounts: the server sums exact cents, the browser summed doubles: within
+//   half a cent, and rendered the same except on an exact value at a half
+//   unit (x.50), counted as "rendered differently at a half"; any other
+//   rendering difference fails;
 // - Consolidation (decision pending with fried, `CONSOLIDATION_COUNTS_INACTIVE_ACCOUNTS`):
 //   a line on an account no longer active (or past the 1,000 accounts
 //   `/accounts` returned) goes to its account's consolidation line instead of
 //   "Unassigned", and a consolidation line names itself after the least label
 //   (ICU order) of the accounts sharing its key instead of the first line
 //   read. The report is compared exactly with the former code adapted to
-//   these two rules (adapters A1 and A2 below), and the raw former code's
-//   differences are counted; the exclusion picker also offers the accounts
-//   the lines use (an account the former list did not hold is counted).
+//   these two rules (adapters A1 and A2 below; A2 reads the labels of the
+//   accounts the type's lines use), and the raw former code's differences are
+//   counted; the exclusion picker also offers the accounts the lines use (an
+//   account the former list did not hold is counted). A caller who cannot
+//   read the accounts page sees every line "Unassigned", compared with the
+//   former code without accounts (its `/accounts` answered 403).
 //
 // Both datasets get consolidation accounts in the transaction (rolled back):
 // numbers, names, numbers shared by two names, names sharing a key, padded
@@ -87,15 +91,21 @@ function fail(label: string, message: string) {
   failures.push(`${label}: ${message}`);
 }
 
-/** An old double sum and an exact cents value: equal to 1e-6, rendered the same unless a half unit lies between. */
+/**
+ * An old double sum and an exact cents value: within half a cent, and rendered the same unless the
+ * exact value lies on a half unit (x.50), where the double sum may fall a hair below it.
+ */
 function sameAmount(label: string, old: number, now: number) {
   stats.checks += 1;
   stats.amounts += 1;
-  if (Math.abs(old - now) > 1e-6 * Math.max(1, Math.abs(old))) {
+  if (!(Math.abs(old - now) <= 0.005)) {
     fail(label, `amount ${old} before, ${now} after`);
     return;
   }
-  if (O.formatNumber(old) !== O.formatNumber(now)) stats.renderedAtHalf.push(`${label}: ${old} / ${now}`);
+  if (O.formatNumber(old) !== O.formatNumber(now)) {
+    if (Math.abs(Math.round(now * 100)) % 100 === 50) stats.renderedAtHalf.push(`${label}: ${old} / ${now}`);
+    else fail(label, `rendered ${O.formatNumber(old)} before, ${O.formatNumber(now)} after (${old} / ${now})`);
+  }
 }
 
 /** A percentage the screen rounds (`digits` decimals): equal, or within a hair of the rounding point. */
@@ -267,6 +277,9 @@ type Env = {
   svc: any;
   rows: (years?: number[]) => Promise<Row[]>;
   agg: (request: R.AggregateRequest) => Promise<R.AggregateResult>;
+  aggNoAccounts: (request: R.AggregateRequest) => Promise<R.AggregateResult>;
+  /** Accounts some line of the type uses (the labels of the consolidation lines come from them). */
+  usedAccountIds: Set<string>;
   axes: { all: string[]; enabled: string[]; defaultAxisId: string | null };
   descendants: (id: string) => Set<string>;
   nodeIds: string[];
@@ -286,13 +299,16 @@ async function loadEnv(scope: Scope, m: EntityManager, tenantId: string): Promis
     }
     return rowCache.get(key)!;
   };
-  const agg = async (request: R.AggregateRequest) => {
+  // A reader of the accounts page (the consolidation lines); `aggNoAccounts` for one who is not.
+  const aggWith = async (request: R.AggregateRequest, accounts: boolean) => {
     const started = Date.now();
     // Through JSON, as the request and the answer travel.
-    const answer = await svc.summaryAggregateRequest(JSON.parse(JSON.stringify(request)), { manager: m });
+    const answer = await svc.summaryAggregateRequest(JSON.parse(JSON.stringify(request)), { manager: m, access: { accounts } });
     stats.newMs += Date.now() - started;
     return JSON.parse(JSON.stringify(answer)) as R.AggregateResult;
   };
+  const agg = (request: R.AggregateRequest) => aggWith(request, true);
+  const aggNoAccounts = (request: R.AggregateRequest) => aggWith(request, false);
   const axisRows: Array<{ id: string; is_default: boolean; status: string; disabled_at: Date | null; sort_order: number; name: string | null; code: string }> = await m.query(
     `SELECT id, is_default, status, disabled_at, sort_order, name, code FROM analytics_axes WHERE tenant_id = $1`, [tenantId],
   );
@@ -324,12 +340,16 @@ async function loadEnv(scope: Scope, m: EntityManager, tenantId: string): Promis
     `SELECT id, name FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2 AND (disabled_at IS NULL OR disabled_at > now()) ORDER BY name, id LIMIT 1000`,
     [tenantId, axisId],
   );
+  const itemTable = scope === 'opex' ? 'spend_items' : 'capex_items';
+  const used: Array<{ account_id: string }> = await m.query(`SELECT DISTINCT account_id FROM ${itemTable} WHERE tenant_id = $1 AND account_id IS NOT NULL`, [tenantId]);
   return {
     scope,
     m,
     svc,
     rows,
     agg,
+    aggNoAccounts,
+    usedAccountIds: new Set(used.map((u) => u.account_id)),
     axes: { all: axisRows.map((a) => a.id), enabled: axisRows.filter(active).map((a) => a.id), defaultAxisId: axisRows.find((a) => a.is_default)?.id ?? null },
     descendants,
     nodeIds: nodes.map((node) => node.id).sort(),
@@ -483,6 +503,7 @@ async function runScope(env: Env) {
     ];
     const labelsByKey = new Map<string, string>();
     for (const account of env.allAccounts) {
+      if (!env.usedAccountIds.has(account.id)) continue;
       if (!CONSOLIDATION_COUNTS_INACTIVE_ACCOUNTS && !env.activeAccounts.some((a) => a.id === account.id)) continue;
       const { key, label: accountLabel } = consolidationKeyOf(account);
       if (!key) continue;
@@ -507,6 +528,10 @@ async function runScope(env: Env) {
         if (!n || n.label !== group.label || p.years.some((year) => cents(n.values[year]) !== cents(group.values[year]))) stats.consolidationRawGroupsDiffering += 1;
         if (n && n.label !== group.label) stats.consolidationLabelsChanged += 1;
       }
+      // A caller who cannot read the accounts page: every line "Unassigned", as when `/accounts` answered him 403.
+      const noAccess = R.readConsolidation(p.years, await env.aggNoAccounts(R.consolidationRequest({ years: p.years, metric: p.metric, excludedAccountIds: p.excludedAccounts, filters })), UNASSIGNED);
+      const noAccessBefore = O.consolidation(rows, [], { ...p, unassigned: UNASSIGNED });
+      sameYearGroups(`${name} without accounts access`, noAccessBefore.groups, noAccess.groups, p.years);
       if (state.name === 'no filter' && p === consolidationCases[0]) {
         const activeIds = new Set(env.activeAccounts.map((a) => a.id));
         const byId = new Map(env.allAccounts.map((a) => [a.id, a]));

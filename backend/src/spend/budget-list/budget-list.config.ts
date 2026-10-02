@@ -57,9 +57,6 @@ const ITEM_COLUMNS: Record<string, FieldSql['kind']> = {
 const OPEX_ONLY_COLUMNS: Record<string, FieldSql['kind']> = { product_name: 'text', contract_id: 'uuid' };
 const CAPEX_ONLY_COLUMNS: Record<string, FieldSql['kind']> = { ppe_type: 'enum', investment_type: 'enum', priority: 'enum' };
 
-/** Keys besides `id` unique to each line: an aggregate grouped by one makes a group per line. */
-export const BUDGET_LINE_KEYS: readonly string[] = ['item_number'];
-
 /** The separator of the entries the quick search reads as one text (U+001F), and its SQL literal. */
 const SEP_CHAR = '\u001f';
 const SEP = `E'\\x1f'`;
@@ -69,7 +66,6 @@ export class BudgetListConfig implements ListConfig {
   readonly from: string;
   readonly tieBreak = ['i.created_at DESC', 'i.id DESC'];
   readonly scopeFields = ['disabled_at'] as const;
-  readonly lineKeys = BUDGET_LINE_KEYS;
   private readonly columns: Record<string, FieldSql['kind']>;
 
   constructor(private readonly rt: BudgetListRuntime) {
@@ -327,20 +323,34 @@ export class BudgetListConfig implements ListConfig {
    * `c_<consolidation name as a slug>`, else null ("Unassigned").
    *
    * The label is a function of the key, read from one row per key over the
-   * tenant's accounts (`min(label)` in the ICU order), never from the line's
-   * own account: accounts sharing a consolidation number may carry different
-   * names, and grouping by the key and a per-account label would split one
-   * consolidation line in two.
+   * accounts the list's lines use (`min(label)` in the ICU order), never from
+   * the line's own account: accounts sharing a consolidation number may carry
+   * different names, and grouping by the key and a per-account label would
+   * split one consolidation line in two.
+   *
+   * Both read as null for a caller who cannot read the accounts page
+   * (`BudgetListRuntime.canReadAccounts`): every line is "Unassigned" for him,
+   * and a filter or a sort on them sees no value (the engine's unknown-field
+   * rule: a set of values keeps no line, a blank filter every line, a sort
+   * falls to the tie-break). No consolidation number or name reaches him.
    */
   private consolidationKey(stmt: SqlStatement): FieldSql {
+    // A caller who cannot read the accounts page sees no consolidation line (null), as before.
+    if (!this.rt.canReadAccounts) return { kind: 'text', sql: 'NULL::text', joins: [] };
     const acc = this.account(stmt);
     return { kind: 'text', sql: consolidationKeySql(acc), joins: [acc] };
   }
 
   private consolidationLabel(stmt: SqlStatement): FieldSql {
+    if (!this.rt.canReadAccounts) return { kind: 'text', sql: 'NULL::text', joins: [] };
     const acc = this.account(stmt);
+    const s = this.scope;
+    // The labels of the accounts the list's lines use (any line of the type, whatever its state):
+    // never a name only an account without a line carries.
     stmt.cte('cons_labels', () => `SELECT k.key, min(k.label COLLATE "und-x-icu") AS label
-      FROM (SELECT ${consolidationKeySql('ca')} AS key, ${consolidationLabelSql('ca')} AS label FROM accounts ca WHERE ca.tenant_id = ${stmt.tenant}) k
+      FROM (SELECT ${consolidationKeySql('ca')} AS key, ${consolidationLabelSql('ca')} AS label FROM accounts ca
+        WHERE ca.tenant_id = ${stmt.tenant}
+          AND EXISTS (SELECT 1 FROM ${s.itemTable} li WHERE li.tenant_id = ${stmt.tenant} AND li.account_id = ca.id)) k
       WHERE k.key IS NOT NULL
       GROUP BY k.key`);
     this.join(stmt, 'consl', `LEFT JOIN cons_labels consl ON consl.key = ${consolidationKeySql(acc)}`, [acc]);

@@ -20,6 +20,28 @@ export interface BudgetListRuntime {
   costCenters?: Array<{ id: string; code: string; name: string; path: string; holder_id: string | null; holder_name: string | null }>;
   /** Per year, the label a version on the default method shows (the year's allocation rule). */
   ruleLabels?: Map<number, string>;
+  /**
+   * The caller reads the accounts page (`accounts` reader or more, or an administrator): the
+   * consolidation fields hold values. Without it they read as null, as for a caller who could
+   * not load `/accounts` before the reports moved to the server.
+   */
+  canReadAccounts: boolean;
+}
+
+/**
+ * What the caller may read besides the list itself, from the request's permissions
+ * (`budgetListAccess`). Absent (the AI, internal callers): nothing more.
+ */
+export interface BudgetListAccess {
+  /** Reader of the accounts page or more: the consolidation fields hold values. */
+  accounts: boolean;
+}
+
+const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
+
+/** The access of a request, from what `PermissionGuard` set on it. */
+export function budgetListAccess(ctx: { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined): BudgetListAccess {
+  return { accounts: ctx?.isAdmin === true || (LEVEL_RANK[ctx?.permissions?.accounts ?? ''] ?? 0) >= LEVEL_RANK.reader };
 }
 
 export interface RuntimeNeeds {
@@ -63,8 +85,9 @@ export async function loadBudgetRuntime(
   tenantId: string,
   currentYear: number,
   needs: RuntimeNeeds,
+  access?: BudgetListAccess,
 ): Promise<BudgetListRuntime> {
-  const runtime: BudgetListRuntime = { scope, tenantId, currentYear };
+  const runtime: BudgetListRuntime = { scope, tenantId, currentYear, canReadAccounts: access?.accounts === true };
   const tasks: Array<Promise<void>> = [];
   if (needs.fxYears?.length) {
     tasks.push(buildFxTable(scope, deps.fxRates, manager, tenantId, needs.fxYears).then((fx) => { runtime.fx = fx; }));

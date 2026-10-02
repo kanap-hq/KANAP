@@ -40,7 +40,7 @@ import { seedListFixture } from './oracle/budget-list.fixture';
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 type Level = 'reader' | 'contributor' | 'member' | 'admin';
-type Route = { name: string; controller: any; handler: string; svc: any; method: 'POST' };
+type Route = { name: string; controller: any; handler: string; svc: any; method: 'POST' | 'GET' };
 type Answer = { status: number; body?: any };
 
 function itemService(scope: SummaryScopeConfig): any {
@@ -180,9 +180,10 @@ async function main() {
       ['body is a list', []],
       ['query is a string', { query: 'filters=x', spec: COUNT_ONLY }],
       ['no spec', { query: {} }],
-      [`id with ${AGGREGATE_LIMITS.lineMeasures + 1} measures`, { spec: { groupBy: ['id'], measures: sums(AGGREGATE_LIMITS.lineMeasures + 1) } }],
-      [`item_number with ${AGGREGATE_LIMITS.lineMeasures + 1} measures`, { spec: { groupBy: ['currency', 'item_number'], measures: sums(AGGREGATE_LIMITS.lineMeasures + 1) } }],
-      [`${AGGREGATE_LIMITS.measures + 1} measures`, { spec: { groupBy: ['currency'], measures: sums(AGGREGATE_LIMITS.measures + 1) } }],
+      [`id with ${AGGREGATE_LIMITS.groupedMeasures + 1} measures`, { spec: { groupBy: ['id'], measures: sums(AGGREGATE_LIMITS.groupedMeasures + 1) } }],
+      [`a name with ${AGGREGATE_LIMITS.groupedMeasures + 1} measures`, { spec: { groupBy: ['product_name'], measures: sums(AGGREGATE_LIMITS.groupedMeasures + 1) } }],
+      [`a note and the currency with ${AGGREGATE_LIMITS.groupedMeasures + 1} measures`, { spec: { groupBy: ['notes', 'currency'], measures: sums(AGGREGATE_LIMITS.groupedMeasures + 1) } }],
+      [`no key with ${AGGREGATE_LIMITS.measures + 1} measures`, { spec: { groupBy: [], measures: sums(AGGREGATE_LIMITS.measures + 1) } }],
       [`${AGGREGATE_LIMITS.groupBy + 1} keys`, { spec: { groupBy: ['currency', 'status', 'run_build', 'supplier_name', 'account_display', 'cost_center_code', 'notes'], measures: [] } }],
       ['an amount as a key', { spec: { groupBy: ['yBudget'], measures: [] } }],
       ['a limit past the cap', { spec: { groupBy: ['id'], measures: [], limit: AGGREGATE_LIMITS.limit + 1 } }],
@@ -194,13 +195,13 @@ async function main() {
       assert.equal(answer.status, 400, `${label}: 400 (${JSON.stringify(answer.body)})`);
     }
     for (const groupBy of [['id'], ['item_number', 'product_name']]) {
-      const answer = await call(guard, runner, tenantId, opexReader, opex, { spec: { groupBy, measures: sums(AGGREGATE_LIMITS.lineMeasures) } });
-      assert.equal(answer.status, 200, `${groupBy.join(', ')} with ${AGGREGATE_LIMITS.lineMeasures} measures`);
+      const answer = await call(guard, runner, tenantId, opexReader, opex, { spec: { groupBy, measures: sums(AGGREGATE_LIMITS.groupedMeasures) } });
+      assert.equal(answer.status, 200, `${groupBy.join(', ')} with ${AGGREGATE_LIMITS.groupedMeasures} measures`);
       assert.equal(answer.body.groups.length, pageTotal.opex, 'one group per line');
     }
-    const grouped = await call(guard, runner, tenantId, opexReader, opex, { spec: { groupBy: ['currency'], measures: sums(AGGREGATE_LIMITS.measures) } });
-    assert.equal(grouped.status, 200, `a grouped spec keeps the general cap of ${AGGREGATE_LIMITS.measures}`);
-    console.log(`ok - limits: at most ${AGGREGATE_LIMITS.lineMeasures} measures per line, ${AGGREGATE_LIMITS.measures} grouped; malformed bodies refused`);
+    const single = await call(guard, runner, tenantId, opexReader, opex, { spec: { groupBy: [], measures: sums(AGGREGATE_LIMITS.measures) } });
+    assert.equal(single.status, 200, `a spec without keys keeps the cap of ${AGGREGATE_LIMITS.measures}`);
+    console.log(`ok - limits: at most ${AGGREGATE_LIMITS.groupedMeasures} measures with keys, ${AGGREGATE_LIMITS.measures} without; malformed bodies refused`);
 
     // Filters as an object or as JSON, and the years of the query: the same answer.
     const filters = { currency: { filterType: 'set', values: ['EUR'] } };
@@ -222,6 +223,34 @@ async function main() {
     const inline = await call(guard, runner, tenantId, opexReader, opex, { query: { ctx, filters: {}, years: String(Y - 2) }, spec });
     assert.equal(inline.body.total.count, (await opex.svc.summary({ limit: 1, years: String(Y - 2) }, { manager: m })).total, 'inline filters win over ctx');
     console.log('ok - ctx merged like the GET routes');
+
+    // Consolidation lines: only for a caller who reads the accounts page. The fixture's accounts get
+    // consolidation numbers and names here (rolled back).
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    await runner.query(
+      `UPDATE accounts SET consolidation_account_number = 600 + (account_number % 3), consolidation_account_name = 'Consolidated ' || (account_number % 3) WHERE tenant_id = $1`,
+      [tenantId],
+    );
+    const accountsReader = await identity('opex-accounts-reader', { opex: 'reader', accounts: 'reader' });
+    const byConsolidation = { spec: { groupBy: ['account_consolidation_key', 'account_consolidation_label'], measures: [{ id: 'b', fn: 'sum', field: 'yBudget' }] } };
+    const keysOf = (answer: Answer) => answer.body.groups.map((g: any) => g.keys[0]);
+    const hidden = await call(guard, runner, tenantId, opexReader, opex, byConsolidation);
+    assert.equal(hidden.status, 200);
+    assert.deepEqual(hidden.body.groups.map((g: any) => g.keys), [[null, null]], 'without accounts access: one group, no key, no label');
+    assert.equal(hidden.body.groups[0].count, pageTotal.opex);
+    for (const [who, userId] of [['accounts reader', accountsReader], ['administrator', admin]] as const) {
+      const shown = await call(guard, runner, tenantId, userId, opex, byConsolidation);
+      assert.ok(keysOf(shown).some((key: string | null) => key && key.startsWith('c_60')), `${who}: consolidation lines`);
+      assert.ok(shown.body.groups.every((g: any) => g.keys[0] == null || /^\[60\d\] Consolidated \d$/.test(g.keys[1])), `${who}: labels`);
+    }
+    // The GET routes too: a filter or a sort on the fields sees no value without accounts access.
+    const summaryRoute: Route = { ...opex, name: 'GET /spend-items/summary', handler: 'summary', method: 'GET' };
+    const filtered = (userId: string) => call(guard, runner, tenantId, userId, summaryRoute, {
+      limit: 5, sort: 'account_consolidation_label:ASC', filters: JSON.stringify({ account_consolidation_key: { filterType: 'set', values: ['c_600'] } }),
+    });
+    assert.equal((await filtered(opexReader)).body.total, 0, 'without accounts access: the filter sees no value');
+    assert.ok((await filtered(accountsReader)).body.total > 0, 'with accounts access: the filter keeps the lines of c_600');
+    console.log('ok - consolidation lines only for a reader of the accounts page (aggregate, GET filter and sort)');
 
     // Tenant: the statement reads the session's tenant only (explicit predicates besides RLS).
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [emptyTenantId]);

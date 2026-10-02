@@ -132,7 +132,8 @@ export class PermissionGuard implements CanActivate {
     // Skip for read-only methods, and for the POST routes that only read (`@ReadOnlyRoute()`)
     const method = req.method?.toUpperCase();
     if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return;
-    if (this.reflector.getAllAndOverride<boolean | undefined>(READ_ONLY_ROUTE_KEY, [context.getHandler(), context.getClass()])) return;
+    // On the handler only: a controller-wide mark would exempt its writes too.
+    if (this.reflector.get<boolean | undefined>(READ_ONLY_ROUTE_KEY, context.getHandler())) return;
 
     // Skip for platform host requests
     if (req.isPlatformHost) return;

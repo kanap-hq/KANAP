@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { centsToNumber, formatCents } from '../../common/amount';
-import { aggregateSql, AggregateSpec, assertLineMeasureCap, validateAggregateSpec } from '../../common/list-engine/list-aggregate';
+import { aggregateSql, AggregateSpec, validateAggregateSpec } from '../../common/list-engine/list-aggregate';
 import { mergeListContextQuery } from '../../common/list-context/list-context';
 import { ListContextsService } from '../../common/list-context/list-contexts.service';
 import { assertListEngineSupport } from '../../common/list-engine/list-engine-support';
@@ -26,7 +26,7 @@ import {
   summaryTenantId,
   yearsNamedByFields,
 } from '../spend-summary.builder';
-import { BUDGET_LINE_KEYS, BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
+import { BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 
@@ -134,12 +134,13 @@ function requestKeys(req: BudgetRequest, withSort: boolean): string[] {
 
 async function runtimeFor(
   scope: SummaryScopeConfig,
+  deps: Pick<SummaryDeps, 'access'>,
   fxRates: RequestFxRates,
   manager: EntityManager,
   req: BudgetRequest,
   needs: RuntimeNeeds,
 ): Promise<BudgetListRuntime> {
-  return loadBudgetRuntime(scope, { fxRates }, manager, req.tenantId, req.currentYear, needs);
+  return loadBudgetRuntime(scope, { fxRates }, manager, req.tenantId, req.currentYear, needs, deps.access);
 }
 
 async function run(manager: EntityManager, stmt: SqlStatement, sql: string): Promise<any[]> {
@@ -209,7 +210,7 @@ export async function budgetListPageIds(
   if (opts.allocationLabels) needs.ruleYears = [...(needs.ruleYears ?? []), req.currentYear];
   // The row builder converts every year it reads: resolve those rates once, here, for both.
   if (opts.rowsFollow) needs.fxYears = Array.from(new Set([...(needs.fxYears ?? []), ...req.years]));
-  const rt = await runtimeFor(scope, fxRates, manager, req, needs);
+  const rt = await runtimeFor(scope, deps, fxRates, manager, req, needs);
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const extra = opts.allocationLabels ? [{ name: 'allocation_label', field: fieldOf(stmt, config, 'allocation_method_label') }] : [];
@@ -257,7 +258,7 @@ export async function budgetListIds(
 ): Promise<{ ids: string[]; item_numbers: number[]; total: number }> {
   const req = await readRequest(query, manager);
   const state = stateOf(req, 'active');
-  const rt = await runtimeFor(scope, new RequestFxRates(deps.fxRates), manager, req, budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q));
+  const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q));
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const rows = await run(manager, stmt, idsSql(stmt, config, state, ['id', 'item_number']));
@@ -280,7 +281,7 @@ export async function budgetListNeighbors(
 ): Promise<{ index: number | null; total: number; prev: BudgetListNeighbor; next: BudgetListNeighbor }> {
   const req = await readRequest(query, manager);
   const state = stateOf(req, 'active');
-  const rt = await runtimeFor(scope, new RequestFxRates(deps.fxRates), manager, req, budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q));
+  const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q));
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const rows = await run(manager, stmt, neighborsSql(stmt, config, state, id, ['id', 'item_number']));
@@ -319,7 +320,7 @@ export async function budgetListFilterValues(
     budgetRuntimeNeeds(req.currentYear, requestKeys(req, false), !!state.q),
     budgetRuntimeNeeds(req.currentYear, fields, false),
   );
-  const rt = await runtimeFor(scope, new RequestFxRates(deps.fxRates), manager, req, needs);
+  const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, needs);
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const rows = await run(manager, stmt, filterValuesSql(stmt, config, state, fields));
@@ -368,7 +369,7 @@ export async function budgetListTotals(
   const fteKeys = parseFteKeys(query?.fte, Y);
   // The FX pre-read also gives the reporting currency: one year at least, even without an amount.
   const needs = mergeNeeds(budgetRuntimeNeeds(Y, requestKeys(req, false), !!state.q), { fxYears: slotYears.length ? slotYears : [Y] });
-  const rt = await runtimeFor(scope, new RequestFxRates(deps.fxRates), manager, req, needs);
+  const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, needs);
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const core = buildCore(stmt, config, state);
@@ -470,13 +471,12 @@ export async function budgetListAggregate(
   manager: EntityManager,
 ): Promise<BudgetListAggregate> {
   validateAggregateSpec(spec);
-  assertLineMeasureCap({ lineKeys: BUDGET_LINE_KEYS }, spec);
   const req = await readRequest(query, manager);
   const specKeys = [...spec.groupBy, ...spec.measures.flatMap((measure) => [measure.field, ...(measure.minus ? [measure.minus] : [])])];
   assertBudgetYearsWithinBounds([...req.years, ...yearsNamedByFields(specKeys)], req.currentYear);
   const state = stateOf(req, windowScope(req));
   const needs = budgetRuntimeNeeds(req.currentYear, [...requestKeys(req, false), ...specKeys], !!state.q);
-  const rt = await runtimeFor(scope, new RequestFxRates(deps.fxRates), manager, req, needs);
+  const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, needs);
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const rows = await run(manager, stmt, aggregateSql(stmt, config, state, spec));

@@ -159,6 +159,8 @@ export interface SummaryDeps {
     computeForVersions(versions: any[], opts: { manager?: EntityManager; tenantId: string; suppressErrors?: boolean }): Promise<Map<string, AllocationLike>>;
   };
   fxRates: Pick<FxRateService, 'resolveRates' | 'convertValue'>;
+  /** The caller's access beyond the list (the list engine's consolidation fields); none when absent. */
+  access?: { accounts: boolean };
 }
 
 /**
