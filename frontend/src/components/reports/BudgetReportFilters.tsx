@@ -63,6 +63,9 @@ export type BudgetReportFilterOptions = {
   hasRunBuild: boolean;
   /** Per enabled dimension, the values the window's lines hold on it, by name. */
   analytics: ReadonlyMap<string, LabelledOption[]>;
+  /** The options could not be read: the bar says so, with a retry, instead of hiding its selects. */
+  isError: boolean;
+  retry: () => void;
 };
 
 export type BudgetReportFilterState = {
@@ -193,8 +196,13 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
       lineCount,
       hasRunBuild,
       analytics: ids.length ? byAxis : NO_AXIS_VALUES,
+      isError: presence.isError || axisValues.isError,
+      retry: () => {
+        if (presence.isError) void presence.refetch();
+        if (axisValues.isError) axisValues.refetch();
+      },
     };
-  }, [presence.data, axisValues.data, axisIdsKey, unnamed]);
+  }, [presence.data, presence.isError, presence.refetch, axisValues, axisIdsKey, unnamed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return useMemo(
     () => ({
@@ -287,7 +295,7 @@ function AnalyticsValueSelect({
  * line of the report's window, before any filter.
  */
 export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterState }) {
-  const { t } = useTranslation('ops');
+  const { t } = useTranslation(['ops', 'common']);
   const showCostCenter = filters.tree.hasAny;
   const showRunBuild = filters.runBuild != null || filters.options.hasRunBuild;
   const { analyticsAxes, analytics, options } = filters;
@@ -301,7 +309,7 @@ export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterSt
     }
     return out;
   }, [analyticsAxes, analytics, options.analytics]);
-  if (!showCostCenter && !showRunBuild && !filters.costCenterMissing && !filters.analyticsMissing && analyticsFilters.length === 0) {
+  if (!showCostCenter && !showRunBuild && !filters.costCenterMissing && !filters.analyticsMissing && analyticsFilters.length === 0 && !options.isError) {
     return null;
   }
 
@@ -356,6 +364,14 @@ export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterSt
             ))}
           </TextField>
         </ReportFilter>
+      )}
+      {options.isError && (
+        <Box role="status" sx={filterNoticeSx}>
+          {t('common:messages.loadFailed')}{' '}
+          <MLink component="button" type="button" underline="hover" onClick={options.retry} sx={filterNoticeLinkSx}>
+            {t('common:buttons.retry')}
+          </MLink>
+        </Box>
       )}
       {filters.analyticsMissing && (
         <Box role="status" sx={filterNoticeSx}>

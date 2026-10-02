@@ -149,7 +149,8 @@ export default function OpexDeltaReport() {
   ]);
   // No previous answer kept while a new one loads: a direction switch would label the old lines with the new one.
   const report = useBudgetAggregates(scope, requests);
-  const isLoading = report.isLoading || yearsQuery.isLoading;
+  // Loading (the years or the lines), or the filter bar still reading its address.
+  const busy = reportFilters.queryFilters == null || yearsQuery.isLoading || report.isLoading || report.isPlaceholderData;
   const { processed, allTotals } = useMemo(
     () => (requests && report.data ? readDelta(modes, report.data) : { processed: [], allTotals: { grossIncrease: 0, grossDecrease: 0, net: 0 } }),
     [requests, report.data, modes],
@@ -366,6 +367,7 @@ export default function OpexDeltaReport() {
 
   return (
     <ReportLayout
+      busy={busy}
       title={t("reports.opexDelta.title")}
       subtitle={t('reports.opexDelta.subtitle', { type: scopeLabel })}
       filters={(
@@ -567,7 +569,7 @@ export default function OpexDeltaReport() {
           </Box>
         </Paper>
       </Stack>
-      <ReportDataStatus loading={isLoading} error={report.isError || yearsQuery.isError} onRetry={() => { report.refetch(); void yearsQuery.refetch(); }} />
+      <ReportDataStatus loading={busy} error={report.isError || yearsQuery.isError} onRetry={() => { report.refetch(); void yearsQuery.refetch(); }} />
     </ReportLayout>
   );
 }

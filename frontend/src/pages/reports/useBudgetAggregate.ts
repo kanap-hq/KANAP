@@ -30,16 +30,24 @@ async function fetchAggregate(scope: BudgetScope, request: AggregateRequest, sig
 type Options = {
   enabled?: boolean;
   /**
-   * While another state of the same type loads, keep showing the last answer (a filter or a year
-   * changed) instead of an empty report. Never across item types.
+   * While another state of the same type loads, keep showing the last answer dimmed (a filter, a
+   * year or an exclusion changed) instead of an empty report: only when it has the same measures and
+   * the same group keys, so its numbers never sit under other labels. Never across item types.
    */
   keepPrevious?: boolean;
 };
 
-function placeholder(scope: BudgetScope, keepPrevious?: boolean) {
+/** Same measures (ids, in order) and same group keys: the last answer still fits the labels. */
+function sameShape(a: AggregateRequest | null | undefined, b: AggregateRequest | null | undefined): boolean {
+  if (!a || !b) return false;
+  const ids = (request: AggregateRequest) => request.spec.measures.map((measure) => measure.id).join('\u0000');
+  return ids(a) === ids(b) && a.spec.groupBy.join('\u0000') === b.spec.groupBy.join('\u0000');
+}
+
+function placeholder(scope: BudgetScope, request: AggregateRequest | null, keepPrevious?: boolean) {
   if (!keepPrevious) return undefined;
   return (previous: AggregateResult | undefined, previousQuery: { queryKey: readonly unknown[] } | undefined) => (
-    previousQuery?.queryKey[0] === SUMMARY_QUERY_KEY[scope] ? previous : undefined
+    previousQuery?.queryKey[0] === SUMMARY_QUERY_KEY[scope] && sameShape(previousQuery.queryKey[2] as AggregateRequest | null, request) ? previous : undefined
   );
 }
 
@@ -52,7 +60,7 @@ export function useBudgetAggregate(scope: BudgetScope, request: AggregateRequest
     queryKey: aggregateQueryKey(scope, request),
     queryFn: ({ signal }) => fetchAggregate(scope, request as AggregateRequest, signal),
     enabled: request != null && options.enabled !== false,
-    placeholderData: placeholder(scope, options.keepPrevious) as any,
+    placeholderData: placeholder(scope, request, options.keepPrevious) as any,
   });
 }
 
@@ -61,18 +69,19 @@ export function useBudgetAggregates(
   scope: BudgetScope,
   requests: readonly AggregateRequest[] | null,
   options: Options = {},
-): { data: AggregateResult[] | undefined; isLoading: boolean; isError: boolean; refetch: () => void } {
+): { data: AggregateResult[] | undefined; isLoading: boolean; isPlaceholderData: boolean; isError: boolean; refetch: () => void } {
   const results = useQueries({
     queries: (requests ?? []).map((request) => ({
       queryKey: aggregateQueryKey(scope, request),
       queryFn: ({ signal }: { signal: AbortSignal }) => fetchAggregate(scope, request, signal),
       enabled: options.enabled !== false,
-      placeholderData: placeholder(scope, options.keepPrevious) as any,
+      placeholderData: placeholder(scope, request, options.keepPrevious) as any,
     })),
   });
   const data = requests != null && results.every((result) => result.data !== undefined) ? results.map((result) => result.data as AggregateResult) : undefined;
   const isLoading = requests != null && options.enabled !== false && results.some((result) => result.isLoading);
   const isError = results.some((result) => result.isError);
+  const isPlaceholderData = results.some((result) => result.isPlaceholderData);
   // The same array while the answers do not change, so pages can memoize on it.
   const stable = useRef<AggregateResult[] | undefined>(undefined);
   const previous = stable.current;
@@ -81,6 +90,7 @@ export function useBudgetAggregates(
   return {
     data: stable.current,
     isLoading,
+    isPlaceholderData,
     isError,
     refetch: () => results.forEach((result) => { void result.refetch(); }),
   };

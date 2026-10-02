@@ -63,7 +63,8 @@ export default function TopOpexReport() {
     filters: reportFilters.queryFilters,
   })), [reportFilters.queryFilters, scope, year, metric, topCount, excludedIds, excludedAccounts, accountOptions.options]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
-  const isLoading = report.isLoading;
+  // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
+  const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
   const { processed, totalMetric, topSelectionTotal } = useMemo(() => readTopItems(report.data), [report.data]);
 
   const columns = useMemo<ColDef[]>(() => [
@@ -171,6 +172,7 @@ export default function TopOpexReport() {
 
   return (
     <ReportLayout
+      busy={busy}
       title={t("reports.topOpex.title")}
       subtitle={t('reports.topOpex.subtitle', { type: scopeLabel, metric: metricLabel })}
       filters={(
@@ -279,7 +281,7 @@ export default function TopOpexReport() {
           </Box>
         </Paper>
       </Stack>
-      <ReportDataStatus loading={isLoading} error={report.isError} onRetry={() => void report.refetch()} />
+      <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />
     </ReportLayout>
   );
 }

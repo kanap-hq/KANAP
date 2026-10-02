@@ -57,7 +57,8 @@ export default function ConsolidationReport() {
     filters: reportFilters.queryFilters,
   })), [reportFilters.queryFilters, years, metric, excludedAccounts]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
-  const isLoading = report.isLoading;
+  // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
+  const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
   const unassigned = t('reports.consolidation.unassigned');
   const { groups, totals } = useMemo(() => readConsolidation(years, report.data, unassigned), [years, report.data, unassigned]);
 
@@ -193,6 +194,7 @@ export default function ConsolidationReport() {
 
   return (
     <ReportLayout
+      busy={busy}
       title={t("reports.consolidation.title")}
       subtitle={t('reports.consolidation.subtitle', { type: scopeLabel })}
       filters={(
@@ -271,7 +273,7 @@ export default function ConsolidationReport() {
           />
         </Paper>
       </Stack>
-      <ReportDataStatus loading={isLoading} error={report.isError} onRetry={() => void report.refetch()} />
+      <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />
     </ReportLayout>
   );
 }

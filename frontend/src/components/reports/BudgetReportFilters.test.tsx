@@ -343,6 +343,27 @@ describe('BudgetReportFilters', () => {
   });
 });
 
+describe('BudgetReportFilters options that failed to load', () => {
+  it('says so with a retry instead of hiding the selects, and shows them once read', async () => {
+    treeState.nodes = [];
+    let fail = true;
+    post.mockImplementation(async (_url: string, body: any) => {
+      if (fail) throw Object.assign(new Error('Server busy'), { response: { status: 503 } });
+      return { data: fakeAggregate(server.rows as Row[], body) };
+    });
+    await renderBar('/report');
+    expect(screen.getByRole('status').textContent).toContain('Failed to load data');
+    expect(runBuildSelect()).toBeNull();
+
+    fail = false;
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Retry' })); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(runBuildSelect()).toBeInTheDocument();
+    expect(dimensionSelects()).toEqual(['Analytics dimension', 'Nature']);
+  });
+});
+
 describe('BudgetReportFilters dimensions', () => {
   it('shows one select per enabled dimension a line holds a value on, in dimension order, named after it', async () => {
     await renderBar('/report');

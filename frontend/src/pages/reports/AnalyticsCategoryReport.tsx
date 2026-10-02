@@ -94,7 +94,8 @@ export default function AnalyticsCategoryReport() {
     filters: reportFilters.queryFilters,
   })), [reportFilters.queryFilters, analyticsAxes.ready, axisId, years, metric, excludedCategories]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
-  const isLoading = report.isLoading;
+  // Loading, waiting for the filter bar or the dimensions, or the last answer kept while the new one loads.
+  const busy = reportFilters.queryFilters == null || !analyticsAxes.ready || report.isLoading || report.isPlaceholderData;
   const labels = useMemo(() => ({ unassigned: t('reports.analyticsCategory.unassigned'), unnamed: t('reports.analyticsCategory.unnamed') }), [t]);
   const { groups, totals } = useMemo(() => readAnalytics(years, report.data, labels), [years, report.data, labels]);
 
@@ -225,6 +226,7 @@ export default function AnalyticsCategoryReport() {
 
   return (
     <ReportLayout
+      busy={busy}
       title={t("reports.analyticsCategory.title")}
       subtitle={t('reports.analyticsCategory.subtitle', { type: scopeLabel, dimension: dimensionInSentence })}
       filters={(
@@ -345,7 +347,7 @@ export default function AnalyticsCategoryReport() {
           />
         </Paper>
       </Stack>
-      <ReportDataStatus loading={isLoading} error={report.isError} onRetry={() => void report.refetch()} />
+      <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />
     </ReportLayout>
   );
 }

@@ -63,7 +63,40 @@ describe('ReportExclusionPicker', () => {
     fireEvent.scroll(listbox);
     const moved = within(listbox).getAllByRole('option').map((option) => option.textContent);
     expect(moved).toContain('Line 2000');
-    expect(moved).not.toContain('Line 0000');
+    expect(moved).not.toContain('Line 0100');
+    // The first and the last option stay drawn (Home and End reach them).
+    expect(moved[0]).toBe('Line 0000');
+    expect(moved[moved.length - 1]).toBe('Line 4999');
+  });
+
+  it('keeps the highlighted option drawn: arrow keys past the window, End, Home, PageDown', () => {
+    render(<Harness options={MANY.slice(0, 400)} />);
+    const input = screen.getByRole('combobox', { name: 'Exclude items' });
+    open();
+    const highlighted = () => {
+      const id = input.getAttribute('aria-activedescendant');
+      return id ? document.getElementById(id)?.textContent : null;
+    };
+    // The first ArrowDown opened the list; each next one moves the highlight one row, past the drawn window.
+    for (let i = 0; i < 60; i += 1) fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(highlighted()).toBe('Line 0059');
+    fireEvent.keyDown(input, { key: 'PageDown' });
+    expect(highlighted()).toBe('Line 0064');
+    fireEvent.keyDown(input, { key: 'End' });
+    expect(highlighted()).toBe('Line 0399');
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(highlighted()).toBe('Line 0398');
+    fireEvent.keyDown(input, { key: 'Home' });
+    expect(highlighted()).toBe('Line 0000');
+    // The rows drawn stay a window, not the whole list.
+    expect(within(screen.getByRole('listbox')).getAllByRole('option').length).toBeLessThan(100);
+  });
+
+  it('names a cut option in full on hover', () => {
+    const long = 'A very long line name that a narrow list cuts with an ellipsis';
+    render(<Harness options={[{ id: 'x', label: long }, ...MANY.slice(0, 5)]} />);
+    open();
+    expect(screen.getByRole('option', { name: long })).toHaveAttribute('title', long);
   });
 
   it('searches every option, picks one and counts it', () => {

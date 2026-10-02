@@ -75,6 +75,8 @@ export default function BudgetColumnsCompareReport() {
   );
   const report = useBudgetAggregate(itemType, request, { keepPrevious: true });
   const selectionTotals = useMemo(() => readColumnsCompare(sortedSelections, report.data), [sortedSelections, report.data]);
+  // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
+  const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
 
   type TableRow = { key: string; selection: string; year: number; column: string; total: number };
   const tableRows = useMemo<TableRow[]>(() => {
@@ -200,6 +202,7 @@ export default function BudgetColumnsCompareReport() {
 
   return (
     <ReportLayout
+      busy={busy}
       title={t("reports.budgetColumnsCompare.title")}
       subtitle={t("reports.budgetColumnsCompare.subtitle")}
       filters={(
@@ -285,7 +288,7 @@ export default function BudgetColumnsCompareReport() {
           />
         </Paper>
       </Stack>
-      <ReportDataStatus loading={report.isLoading} error={report.isError} onRetry={() => void report.refetch()} />
+      <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />
     </ReportLayout>
   );
 }

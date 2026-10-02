@@ -46,7 +46,8 @@ export default function CapexBudgetTrendReport() {
     filters: reportFilters.queryFilters,
   })), [reportFilters.queryFilters, years, metrics]); // eslint-disable-line react-hooks/exhaustive-deps
   const report = useBudgetAggregate('capex', request, { keepPrevious: true });
-  const isLoading = report.isLoading;
+  // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
+  const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
   const totalsByMetricAndYear = useMemo(() => readTrend({ years, metrics: metrics as MetricKey[] }, report.data), [years, metrics, report.data]);
 
   const tableRows = useMemo(() => {
@@ -93,6 +94,7 @@ export default function CapexBudgetTrendReport() {
 
   return (
     <ReportLayout
+      busy={busy}
       title={t("reports.budgetTrendCapex.title")}
       subtitle={t("reports.budgetTrendCapex.subtitle")}
       filters={(
@@ -149,7 +151,7 @@ export default function CapexBudgetTrendReport() {
           />
         </Paper>
       </Stack>
-      <ReportDataStatus loading={isLoading} error={report.isError} onRetry={() => void report.refetch()} />
+      <ReportDataStatus loading={busy} error={report.isError} onRetry={() => void report.refetch()} />
     </ReportLayout>
   );
 }

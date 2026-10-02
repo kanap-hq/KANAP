@@ -25,6 +25,12 @@ import { compareNames, SUMMARY_QUERY_KEY, useBudgetAggregate } from './useBudget
 
 type Options<T> = { options: T[] | undefined; loading: boolean };
 
+/** A 4xx answer (a refused or malformed request): asking again changes nothing. */
+function isClientError(error: unknown): boolean {
+  const status = (error as { response?: { status?: number } })?.response?.status;
+  return typeof status === 'number' && status >= 400 && status < 500;
+}
+
 /** Every line, by name (the item exclusion). */
 export function useItemOptions(scope: BudgetScope, wanted: boolean): Options<ExclusionOption> {
   const query = useBudgetAggregate(scope, useMemo(() => itemOptionsRequest(scope), [scope]), { enabled: wanted });
@@ -63,6 +69,8 @@ export function useAccountIdOptions(scope: BudgetScope, wanted: boolean): Option
     queryKey: ['accounts', 'enabled-for-consolidation'],
     queryFn: async () => (await api.get<{ items: AccountRow[] }>('/accounts', { params: { limit: 1000 } })).data.items,
     enabled: wanted,
+    // A caller without the accounts page gets a 403: no retry, the accounts the lines use stand alone.
+    retry: (failures, error) => failures < 2 && !isClientError(error),
   });
   const used = useBudgetAggregate(scope, useMemo(() => accountIdOptionsRequest(), []), { enabled: wanted });
   const unnamed = t('reports.shared.unnamedAccount');
