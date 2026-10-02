@@ -1456,7 +1456,7 @@ export class AiEntityService {
            OR COALESCE(ci.notes, '') ILIKE $1
            OR COALESCE(ci.ppe_type::text, '') ILIKE $1
            OR COALESCE(ci.investment_type::text, '') ILIKE $1
-           OR COALESCE(ci.priority, '') ILIKE $1
+           OR ci.priority::text ILIKE $1
            OR COALESCE(ci.currency, '') ILIKE $1
            OR COALESCE(comp.name, '') ILIKE $1
            OR COALESCE(sup.name, '') ILIKE $1

@@ -9,7 +9,7 @@ import { BusinessProcessesService } from '../../business-processes/business-proc
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ContractsService } from '../../contracts/contracts.service';
-import * as budgetSummary from '../../spend/budget-summary';
+import * as budgetList from '../../spend/budget-list/budget-list.service';
 import { SUMMARY_SCOPES } from '../../spend/spend-summary.builder';
 
 // The master-data lists with a status column checklist: with Show = "all"
@@ -223,15 +223,15 @@ async function testSummaryClearMatchesNothing() {
     for (const kind of ['opex', 'capex'] as const) {
       const config = SUMMARY_SCOPES[kind];
       for (const [label, base] of [['default', {}], ['all', ALL]] as const) {
-        const open = await budgetSummary.summaryIds(config, deps, { ...base }, opts);
+        const open = await budgetList.budgetListIds(config, deps, { ...base }, opts);
         assert.equal(open.total, 1, `${kind} ${label}: the line is listed without the filter`);
         const query = { ...base, filters: CLEARED, fields: 'currency' };
-        const page = await budgetSummary.summary(config, deps, query, opts);
+        const page = await budgetList.budgetListSummary(config, deps, query, opts);
         assert.deepEqual([page.items.length, page.total], [0, 0], `${kind} ${label}: Clear lists nothing`);
-        assert.deepEqual((await budgetSummary.summaryIds(config, deps, query, opts)).ids, [], `${kind} ${label}: no id`);
-        const totals = await budgetSummary.summaryTotals(config, deps, query, opts);
+        assert.deepEqual((await budgetList.budgetListIds(config, deps, query, opts)).ids, [], `${kind} ${label}: no id`);
+        const totals = await budgetList.budgetListTotals(config, deps, query, opts);
         assert.equal(totals.yBudget, 0, `${kind} ${label}: zero totals`);
-        assert.deepEqual(await budgetSummary.summaryFilterValues(config, deps, query, opts), { currency: [] }, `${kind} ${label}: no filter value`);
+        assert.deepEqual(await budgetList.budgetListFilterValues(config, deps, query, opts), { currency: [] }, `${kind} ${label}: no filter value`);
       }
     }
   });

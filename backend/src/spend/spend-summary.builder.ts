@@ -12,7 +12,6 @@ import { User } from '../users/user.entity';
 import { FxLookupKey, FxRateService, FxResolvedRate } from '../currency/fx-rate.service';
 import { ACTIVE_TASK_STATUSES } from '../tasks/task.entity';
 import { centsToNumber, formatCents, toCents } from '../common/amount';
-import { normalizeAgFilterModel, setFilterMode } from '../common/ag-grid-filtering';
 import { StatusState } from '../common/status';
 import { formatAllocationMethodLabel } from './allocation-utils';
 import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center-tree.util';
@@ -23,7 +22,8 @@ import { naturalCompare } from '../common/list-engine/sql-fragments';
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
  * Everything that differs between the two lives in a scope config; the query
- * functions (paging, filters, totals) are in `budget-summary.ts`.
+ * functions (paging, filters, sort, totals) are the SQL list engine's
+ * (`budget-list/`), which builds rows for the lines of one page only.
  */
 
 /**
@@ -79,12 +79,8 @@ export interface SummaryScopeConfig {
   taskObjectType: string;
   refPrefix: string;
   nameField: string;
-  /** Columns of the item table: the only fields a list may filter or sort in SQL. */
+  /** Columns of the item table: the fields the plain item list (`GET /<items>`) filters and sorts on. */
   columns: readonly string[];
-  /** Text columns: a set, text or blank filter on them runs in SQL. */
-  textColumns: readonly string[];
-  /** Enum columns: filtered in SQL as text, sorted in memory (their SQL order is the declaration order). */
-  enumColumns: readonly string[];
   /** Item fields of this type only, searched by the quick search and offered by the filter values. */
   extraFields: readonly string[];
 }
@@ -111,8 +107,6 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
       'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'project_id',
       'contract_id', 'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at',
     ],
-    textColumns: ['product_name', 'description', 'currency', 'notes'],
-    enumColumns: ['status', 'run_build'],
     extraFields: [],
   },
   capex: {
@@ -135,8 +129,6 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
       'currency', 'effective_start', 'disabled_at', 'status', 'owner_it_id', 'owner_business_id', 'project_id',
       'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at',
     ],
-    textColumns: ['description', 'currency', 'notes'],
-    enumColumns: ['ppe_type', 'investment_type', 'priority', 'status', 'run_build'],
     extraFields: ['ppe_type', 'investment_type', 'priority'],
   },
 };
@@ -149,18 +141,22 @@ export interface SummaryDeps {
     computeForVersions(versions: any[], opts: { manager?: EntityManager; tenantId: string; suppressErrors?: boolean }): Promise<Map<string, AllocationLike>>;
   };
   fxRates: Pick<FxRateService, 'resolveRates' | 'convertValue'>;
-  /** Rows the list page and the filter values build at most (default in `budget-summary.ts`). */
-  memoryRowCap?: number;
 }
 
 /**
- * Columns whose order is not alphabetical: the in-memory sort ranks their
- * values like SQL does (`status_state` enum order), so a quick search never
- * changes the order of the list.
+ * Enum columns that sort in their business order, the declaration order of
+ * their database enum, not alphabetically by code: the list engine ranks
+ * their values (a value outside the list sorts as blank). The CAPEX priority,
+ * investment type and PPE type joined status and run or build with lot 2B's
+ * decision Q4 (they sorted by code before: high, low, mandatory, medium). A
+ * spec checks each list against `pg_enum`.
  */
 export const FIXED_SORT_ORDERS: Record<string, readonly string[]> = {
   status: [StatusState.ENABLED, StatusState.DISABLED],
   run_build: ['run', 'build'],
+  priority: ['mandatory', 'high', 'medium', 'low'],
+  investment_type: ['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other'],
+  ppe_type: ['hardware', 'software'],
 };
 
 export type SummarySlotTotals = Record<SlotMetric, number>;
@@ -861,11 +857,12 @@ export async function buildSpendSummaryRows(params: {
 }
 
 /**
- * The value a sort, a filter or a filter-value list reads for `field`: an
- * amount field is the slot's reporting total (item currency when there is no
- * reporting), an FTE field its number or null (unknown), a derived field its
- * row value, anything else the item column. Blank derived text reads as null
- * so blanks sort last ascending.
+ * The value of `field` on a built row, as the list shows it (the AI
+ * aggregates group and measure with it; the list engine's oracle sorts and
+ * filters on it): an amount field is the slot's reporting total (item
+ * currency when there is no reporting), an FTE field its number or null
+ * (unknown), a derived field its row value, anything else the item column.
+ * Blank derived text reads as null so blanks sort last ascending.
  */
 export function getSummaryFieldValue(row: any, field: string): any {
   const amount = resolveAmountField(field);
@@ -913,184 +910,3 @@ export function getSummaryFieldValue(row: any, field: string): any {
 
 /** The OPEX name of the resolver, kept for existing imports. */
 export const getSpendSummaryFieldValue = getSummaryFieldValue;
-
-function valueToString(val: any): string {
-  if (val == null) return '';
-  // A timestamp column comes as a Date: a text filter compares its ISO form (2026-09-27T…).
-  if (val instanceof Date) return Number.isNaN(val.getTime()) ? '' : val.toISOString().toLowerCase();
-  return String(val).toLowerCase();
-}
-
-const COMPARISON_TYPES = new Set(['equals', 'notEqual', 'lessThan', 'lessThanOrEqual', 'greaterThan', 'greaterThanOrEqual', 'inRange']);
-const NEGATIVE_TEXT_TYPES = new Set(['notEqual', 'notContains']);
-
-/** A calendar day as a UTC timestamp: the date part of a string as written, the UTC day of a Date. */
-function parseDay(value: any): number | null {
-  if (value == null || value === '') return null;
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
-  }
-  const text = String(value);
-  const day = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
-  if (day) return Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]));
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? null : Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-}
-
-function compare(type: string, value: number, from: number, to?: number): boolean {
-  switch (type) {
-    case 'equals': return value === from;
-    case 'notEqual': return value !== from;
-    case 'lessThan': return value < from;
-    case 'lessThanOrEqual': return value <= from;
-    case 'greaterThan': return value > from;
-    case 'greaterThanOrEqual': return value >= from;
-    case 'inRange': return to != null && Number.isFinite(to) && value >= from && value <= to;
-    default: return true;
-  }
-}
-
-function textMatches(type: string, value: string, needle: string): boolean {
-  switch (type) {
-    case 'equals': return value === needle;
-    case 'notEqual': return value !== needle;
-    case 'startsWith': return value.startsWith(needle);
-    case 'endsWith': return value.endsWith(needle);
-    case 'notContains': return !value.includes(needle);
-    case 'contains':
-    default:
-      return value.includes(needle);
-  }
-}
-
-/** Whether a row passes one grid filter model (first condition of a combined model). */
-function rowPassesFilter(row: any, field: string, rawModel: any, config: SummaryScopeConfig): boolean {
-  const model = normalizeAgFilterModel(rawModel);
-  if (!model || typeof model !== 'object') return true;
-  const type = String(model.type ?? model.filterType ?? 'contains');
-  const rowVal = getSummaryFieldValue(row, field);
-  const blank = rowVal == null || String(rowVal) === '';
-
-  if (type === 'set' && Array.isArray(model.values)) {
-    const rawValues: any[] = model.values;
-    const values = rawValues.filter((v) => v !== null && v !== undefined && v !== '').map((v) => String(v));
-    const hasNull = values.length < rawValues.length;
-    if (setFilterMode(model) === 'exclude') {
-      // Every value but the listed ones (a value created later shows): a line linked to several
-      // projects stays while one of its names is not listed.
-      if (blank) return !hasNull;
-      if (PROJECT_LIST_FIELDS.includes(field)) return projectNames(row, field).some((name) => !values.includes(name));
-      return !values.includes(String(rowVal ?? ''));
-    }
-    if (rawValues.length === 0) return false;
-    if (hasNull && blank) return true;
-    // A line linked to several projects is kept when any one of its names is selected.
-    const candidates = PROJECT_LIST_FIELDS.includes(field) ? [...projectNames(row, field), String(rowVal ?? '')] : [String(rowVal ?? '')];
-    return candidates.some((candidate) => values.includes(candidate));
-  }
-  if (type === 'blank') return blank;
-  if (type === 'notBlank') return !blank;
-
-  if ((model.filterType === 'date' || model.dateFrom || model.dateTo) && COMPARISON_TYPES.has(type)) {
-    const day = parseDay(rowVal);
-    const from = parseDay(model.dateFrom ?? model.filter ?? model.value);
-    const to = parseDay(model.dateTo ?? model.filterTo ?? model.valueTo);
-    if (day == null || from == null) return false;
-    return compare(type, day, from, to ?? undefined);
-  }
-
-  const valRaw = model.filter ?? model.value ?? (Array.isArray(model.values) ? model.values[0] : undefined);
-  if (valRaw == null || valRaw === '') return true;
-  const needle = String(valRaw);
-
-  const numericModel = model.filterType === 'number' || (typeof rowVal === 'number' && !Number.isNaN(Number(needle)));
-  if (numericModel && COMPARISON_TYPES.has(type)) {
-    if (blank || !Number.isFinite(Number(rowVal)) || !Number.isFinite(Number(needle))) return false;
-    return compare(type, Number(rowVal), Number(needle), Number(model.filterTo ?? model.valueTo));
-  }
-
-  const lowerNeedle = needle.toLowerCase();
-  if (field === 'item_number' && !blank) {
-    // The Ref column matches the bare number and the reference, like the quick search.
-    const candidates = [valueToString(rowVal), `${config.refPrefix}-${valueToString(rowVal)}`];
-    return NEGATIVE_TEXT_TYPES.has(type)
-      ? candidates.every((candidate) => textMatches(type, candidate, lowerNeedle))
-      : candidates.some((candidate) => textMatches(type, candidate, lowerNeedle));
-  }
-  return textMatches(type, valueToString(rowVal), lowerNeedle);
-}
-
-/** Grid filter models evaluated on built rows: set, blank, text, number (7 operators) and date (7 operators). */
-export function applyAgFiltersInMemory<T extends Record<string, any>>(
-  rows: T[],
-  filterModel: any,
-  config: SummaryScopeConfig = SUMMARY_SCOPES.opex,
-): T[] {
-  if (!filterModel || typeof filterModel !== 'object') return rows;
-  const entries = Object.entries(filterModel);
-  if (!entries.length) return rows;
-  return rows.filter((row) => entries.every(([field, model]) => rowPassesFilter(row, field, model, config)));
-}
-
-/** The list's quick search: number and reference, names, labels, notes, currency and status. */
-export function quickSearchSummaryRows<T extends Record<string, any>>(
-  rows: T[],
-  q: string,
-  config: SummaryScopeConfig = SUMMARY_SCOPES.opex,
-): T[] {
-  if (!q) return rows;
-  const needle = String(q).toLowerCase();
-  const take = (value: any) => (value == null ? '' : String(value)).toLowerCase();
-  return rows.filter((row: any) => {
-    const bag: string[] = [];
-    if (row.item_number != null) {
-      bag.push(take(row.item_number), `${config.refPrefix}-${take(row.item_number)}`);
-    }
-    for (const value of [
-      row[config.nameField], row.description, row.supplier_name ?? row.supplier?.name, row.paying_company_name ?? row.company_name,
-      row.account_display, row.account_name, row.account_number, row.project_name, row.project_stream_name, row.project_category_name,
-      row.latest_contract_name, row.allocation_method_label, row.owner_it_name, row.owner_business_name, row.analytics_category_name,
-      row.cost_center_code, row.cost_center_name, row.cost_center_path, row.budget_holder_name, row.notes, row.currency, row.status, ...config.extraFields.map((field) => row[field]),
-    ]) {
-      bag.push(take(value));
-    }
-    // The value names of every dimension the line has a value on.
-    for (const axisId of Object.keys(row.analytics_value_ids ?? {})) bag.push(take(row[analyticsFieldKey(axisId)]));
-    return bag.some((entry) => entry.includes(needle));
-  });
-}
-
-/**
- * Sort in place on any field: numbers, dates chronologically, text
- * case-insensitively, a field of `FIXED_SORT_ORDERS` in its own order; blanks last ascending.
- */
-export function sortSummaryRows<T extends Record<string, any>>(rows: T[], field: string, direction: 'ASC' | 'DESC'): T[] {
-  const dir = direction === 'ASC' ? 1 : -1;
-  const order = Object.prototype.hasOwnProperty.call(FIXED_SORT_ORDERS, field) ? FIXED_SORT_ORDERS[field] : undefined;
-  const valueOf = (row: T) => {
-    const value = getSummaryFieldValue(row, field);
-    if (!order) return value;
-    const rank = order.indexOf(String(value));
-    return rank < 0 ? null : rank;
-  };
-  const values = new Map(rows.map((row) => [row, valueOf(row)]));
-  rows.sort((a, b) => {
-    const av = values.get(a);
-    const bv = values.get(b);
-    const aBlank = av == null || av === '';
-    const bBlank = bv == null || bv === '';
-    if (aBlank && bBlank) return 0;
-    if (aBlank) return dir;
-    if (bBlank) return -dir;
-    if (typeof av === 'number' && typeof bv === 'number') return av === bv ? 0 : (av < bv ? -1 : 1) * dir;
-    // disabled_at comes as a Date: its string form starts with the weekday.
-    if (av instanceof Date && bv instanceof Date) {
-      const diff = av.getTime() - bv.getTime();
-      return diff === 0 ? 0 : (diff < 0 ? -1 : 1) * dir;
-    }
-    const as = String(av).toLowerCase();
-    const bs = String(bv).toLowerCase();
-    return as === bs ? 0 : (as < bs ? -1 : 1) * dir;
-  });
-  return rows;
-}

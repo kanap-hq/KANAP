@@ -28,7 +28,7 @@ import { FxRateService } from '../currency/fx-rate.service';
 import { applyDisabledAtWhere, deriveStatusFromDisabledAt, LifecycleScope, parseEndOfValidityInput, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { loadVersionTotals, SUMMARY_COLUMNS, SUMMARY_SCOPES, SummaryDeps, summaryTenantId } from '../spend/spend-summary.builder';
-import * as budgetSummary from '../spend/budget-summary';
+import * as budgetList from '../spend/budget-list/budget-list.service';
 import { CapexItemUpsertDto } from './dto/capex-item.dto';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
@@ -441,26 +441,35 @@ export class CapexItemsService {
     });
   }
 
-  /** Dependencies of the shared list engine (`spend/budget-summary.ts`). */
+  /** Dependencies of the list engine and the row builder. */
   private summaryDeps(): SummaryDeps {
     return { allocationCalculator: this.allocationCalculator, fxRates: this.fxRates };
   }
 
-  /** One page of the CAPEX list; see `spend/budget-summary.ts`. */
+  /**
+   * One page of the CAPEX list, on the SQL list engine (`spend/budget-list/`),
+   * with the next year's allocation label; `shape=grid` returns the lean rows
+   * of the grid.
+   */
   async summary(query: any, opts?: { manager?: EntityManager }) {
-    return budgetSummary.summary(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager, {
+    return budgetList.budgetListSummary(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager, {
       includeRecipientDetails: true,
       includeNextYearAllocation: true,
     });
   }
 
   async summaryFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
-    return budgetSummary.summaryFilterValues(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+    return budgetList.budgetListFilterValues(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
   }
 
-  // Return ordered list of matching CAPEX item IDs for navigation (reflects sort/filter/q)
+  /** Every id of the list in its order (workspace navigation, AI aggregates). */
   async summaryIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; item_numbers: number[]; total: number }> {
-    return budgetSummary.summaryIds(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+    return budgetList.budgetListIds(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+  }
+
+  /** Where one line stands in the list, with its previous and next lines. */
+  async summaryNeighbors(query: any, id: string, opts?: { manager?: EntityManager }) {
+    return budgetList.budgetListNeighbors(SUMMARY_SCOPES.capex, this.summaryDeps(), query, id, opts?.manager ?? this.repo.manager);
   }
 
   async summaryRowsByIds(
@@ -468,11 +477,11 @@ export class CapexItemsService {
     query?: { years?: number[]; includeRecipientDetails?: boolean; includeLatestTask?: boolean; includeNextYearAllocation?: boolean },
     opts?: { manager?: EntityManager },
   ) {
-    return budgetSummary.summaryRowsByIds(SUMMARY_SCOPES.capex, this.summaryDeps(), { ...query, ids: itemIds }, opts?.manager ?? this.repo.manager);
+    return budgetList.budgetListRowsByIds(SUMMARY_SCOPES.capex, this.summaryDeps(), { ...query, ids: itemIds }, opts?.manager ?? this.repo.manager);
   }
 
   async summaryTotals(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, number | string>> {
-    return budgetSummary.summaryTotals(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
+    return budgetList.budgetListTotals(SUMMARY_SCOPES.capex, this.summaryDeps(), query, opts?.manager ?? this.repo.manager);
   }
 
   csvHeaders() {

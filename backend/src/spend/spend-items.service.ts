@@ -7,7 +7,6 @@ import { parsePagination, buildWhereFromAgFilters } from '../common/pagination';
 import { AuditService } from '../audit/audit.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { SUMMARY_SCOPES, SummaryDeps } from './spend-summary.builder';
-import * as budgetSummary from './budget-summary';
 import * as budgetList from './budget-list/budget-list.service';
 import { SpendItemsCsvService } from './spend-items-csv.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
@@ -376,7 +375,7 @@ export class SpendItemsService {
     },
     opts?: { manager?: EntityManager },
   ) {
-    return budgetSummary.summaryRowsByIds(SUMMARY_SCOPES.opex, this.summaryDeps(), { ...query, ids: itemIds }, opts?.manager ?? this.repo.manager);
+    return budgetList.budgetListRowsByIds(SUMMARY_SCOPES.opex, this.summaryDeps(), { ...query, ids: itemIds }, opts?.manager ?? this.repo.manager);
   }
 
   async summaryTotals(query: any, opts?: { manager?: EntityManager }): Promise<any> {

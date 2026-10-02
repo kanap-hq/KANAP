@@ -7,7 +7,7 @@ import {
   AiSetExcludeFilterValue,
 } from './ai-filter.types';
 
-/** Entities whose list understands a set filter in exclude mode (the SQL list engine and the CAPEX list). */
+/** Entities whose list understands a set filter in exclude mode (the OPEX and CAPEX lists, on the SQL list engine). */
 const EXCLUDE_SET_ENTITIES = new Set(['spend_items', 'capex_items']);
 
 function isExcludeSetValue(value: AiFilterValue): value is AiSetExcludeFilterValue {

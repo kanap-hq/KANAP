@@ -26,11 +26,13 @@ import { fxKeyCurrency, fxSetKeySql, fxTableSql, RequestFxRates } from './budget
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 
 /**
- * The OPEX list endpoints on the SQL list engine (`common/list-engine`):
- * one statement decides the page, the count, the ordered ids, the filter
- * values or the footer totals; the row builder then draws the page's lines
- * only. Same signatures and response shapes as the in-memory functions of
- * `budget-summary.ts` (which CAPEX still uses), without their 10,000-line cap.
+ * The OPEX and CAPEX list endpoints on the SQL list engine
+ * (`common/list-engine`), one scope config each: one statement decides the
+ * page, the count, the ordered ids, a line's neighbours, the filter values or
+ * the footer totals; the row builder then draws the page's lines only. Same
+ * signatures and response shapes as the in-memory functions they replaced
+ * (kept as the test oracle, `__tests__/oracle/`), without their 10,000-line
+ * cap.
  */
 
 /** Fields the column filters can list values for, on both item types (plus each type's own fields and every dimension key). */
@@ -44,6 +46,13 @@ export const FILTER_VALUE_FIELDS = [
 export type BudgetListRowOptions = {
   includeRecipientDetails?: boolean;
   includeNextYearAllocation?: boolean;
+};
+
+export type BudgetListRowsByIdsQuery = BudgetListRowOptions & {
+  ids: string[];
+  /** Years added to the fixed window. */
+  years?: unknown;
+  includeLatestTask?: boolean;
 };
 
 interface BudgetRequest {
@@ -387,4 +396,31 @@ export async function budgetListTotals(
     fteTotals[key] = { total: unknown < lines && entry?.total != null ? Number(entry.total) : null, unknown };
   }
   return Object.assign(result, { fte: fteTotals });
+}
+
+/**
+ * Rows of the given lines, in the order given (no lifecycle scope, no list
+ * statement): the AI detail and aggregates, which name their lines by id.
+ */
+export async function budgetListRowsByIds(
+  scope: SummaryScopeConfig,
+  deps: SummaryDeps,
+  query: BudgetListRowsByIdsQuery,
+  manager: EntityManager,
+): Promise<BudgetSummaryRow[]> {
+  const requested = (query.ids ?? []).filter(Boolean);
+  const ids = Array.from(new Set(requested));
+  if (!ids.length) return [];
+  const tenantId = await summaryTenantId(manager);
+  const currentYear = new Date().getFullYear();
+  const items = await itemsInOrder(scope, manager, tenantId, ids);
+  const rows = await buildBudgetSummaryRows(scope, deps, manager, tenantId, items, {
+    years: Array.from(new Set([...fixedYears(currentYear), ...parseSummaryYears(query.years)])),
+    currentYear,
+    includeLatestTask: query.includeLatestTask ?? false,
+    includeRecipientDetails: query.includeRecipientDetails ?? false,
+    includeNextYearAllocation: query.includeNextYearAllocation ?? false,
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return requested.map((id) => byId.get(id)).filter((row): row is BudgetSummaryRow => !!row);
 }

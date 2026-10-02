@@ -68,6 +68,14 @@ OPEX list, then loops: think time 2 to 5 s, then one scenario drawn from this mi
 | field save | 11 | `PATCH /spend-items/:id {notes}` then detail refetch |
 | budget cell save | 10 | budget tab (company, versions, freeze state, yearly totals, then amounts of the year), then `POST /spend-versions/:id/amounts/bulk-upsert {kind: monthly, months: [{period, forecast}]}` |
 
+`--list capex` (both modes) replays the CAPEX list on `/capex-items` instead: no `/users` request on
+open (the CAPEX page asks for none), the text filter on `description`, the sort toggling between the
+amount sort and `priority:ASC` (an enum in its business order), and no workspace. Its mix: the six
+list actions above with their weights, then `open an item (ordered ids)` (16: `/summary/ids` of the
+list state) and `next (neighbours)` (10: `/summary/neighbors?id=CPX-n` of a line of the first 50).
+In `single` mode it times the CAPEX page (default sort, grid rows, `priority` sort, item number
+sort, quick search, paying company filter), totals, filter values, ids and neighbours.
+
 React Query caching is modelled per virtual user (30 s default stale time, 5 min for settings-like
 hooks). 403 answers (budget members may not read users or currency settings, which the pages ask
 for anyway) are reported apart and not counted as errors.

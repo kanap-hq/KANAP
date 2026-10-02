@@ -38,7 +38,8 @@ import { PortfolioRequest } from '../../portfolio/portfolio-request.entity';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProject } from '../../portfolio/portfolio-project.entity';
 import { PortfolioProjectsListService } from '../../portfolio/services/portfolio-projects-list.service';
-import { applyAgFiltersInMemory } from '../../spend/spend-summary.builder';
+import { SUMMARY_SCOPES } from '../../spend/spend-summary.builder';
+import { BudgetSummaryOracle } from '../../spend/__tests__/oracle/budget-summary.oracle';
 import { TasksService } from '../../spend/tasks.service';
 import { Supplier } from '../../suppliers/supplier.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
@@ -4105,6 +4106,16 @@ async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
   );
 }
 
+/**
+ * The list filters on built rows, as the OPEX list engine applies them: its
+ * oracle (the in-memory engine it replaced, with the decided rules), which
+ * needs no database for set, number and date models.
+ */
+function applySummaryFilters(rows: any[], filters: Record<string, any>): any[] {
+  const oracle = new BudgetSummaryOracle(SUMMARY_SCOPES.opex, {} as any, {} as any, 'tenant-ai', (text) => text.toLowerCase());
+  return oracle.applyFilters(rows, filters);
+}
+
 function spendSummaryDateRows() {
   return [
     {
@@ -4136,7 +4147,7 @@ async function testSpendSummaryFiltersSupportRelativeYearMetricsAndDates() {
   assert.deepEqual(adapted.applied, ['effective_end']);
   assert.deepEqual(adapted.filters, { disabled_at: { filterType: 'date', type: 'lessThan', dateFrom: '2026-07-01' } });
 
-  const filtered = applyAgFiltersInMemory(spendSummaryDateRows(), {
+  const filtered = applySummaryFilters(spendSummaryDateRows(), {
     project_stream_name: { filterType: 'set', values: ['Infrastructure'] },
     yMinus2Budget: { filterType: 'number', type: 'greaterThanOrEqual', filter: 10 },
     yPlus2Budget: { filterType: 'number', type: 'inRange', filter: 40, filterTo: 60 },
@@ -4160,7 +4171,7 @@ async function testSpendAndCapexEndOfValidityQueryField() {
     assert.deepEqual(adapted.filters, { disabled_at: { filterType: 'date', type: 'greaterThan', dateFrom: '2026-07-01' } });
   }
 
-  const filtered = applyAgFiltersInMemory(
+  const filtered = applySummaryFilters(
     spendSummaryDateRows(),
     adaptFilters(getAiEntityRegistry('spend_items'), { end_of_validity: { op: 'after', value: '2026-07-01' } }).filters,
   );
