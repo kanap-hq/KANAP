@@ -4251,7 +4251,7 @@ async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProject
     spec: {
       groupBy: ['project_stream_name'],
       measures: [{ id: 'value', fn: 'sum', field: 'yBudget' }],
-      order: [{ by: 'measure', id: 'value', dir: 'DESC', nulls: 'LAST' }, { by: 'key', index: 0, dir: 'ASC', nulls: 'FIRST' }],
+      order: [{ by: 'measure', id: 'value', dir: 'DESC', nulls: 'LAST' }],
     },
   }], 'one aggregate of the list state: every status, grouped by the stream, the Y budget summed');
 }

@@ -52,7 +52,7 @@ import {
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { resolveAiEntityRegistry } from './registries';
 import { resolveFteField } from '../../spend/spend-summary.builder';
-import type { AggregateOrderSpec, AggregateSpec } from '../../common/list-engine/list-aggregate';
+import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
 
 /** Connection fields grouped on their effective values (see aggregateConnectionsByEffectiveRisk). */
 const CONNECTION_EFFECTIVE_RISK_GROUPS = new Set(['criticality', 'data_class', 'contains_pii']);
@@ -1133,7 +1133,9 @@ export class AiAggregateExecutor {
    * converted to the cent first, as the list's totals), FTE exact with, per
    * group, the lines whose FTE is unknown. Counts largest first; values
    * largest first (smallest first for min), groups without a value last;
-   * ties by key, blank first, in the list's text order.
+   * ties by the key's text, blank first, in the list's text order: the
+   * engine's final tie-break, which never follows an enum's rank, so status,
+   * run or build and the CAPEX enums tie as the former `localeCompare` did.
    */
   private async aggregateBudgetSummary(
     context: AiExecutionContextWithManager,
@@ -1149,11 +1151,10 @@ export class AiAggregateExecutor {
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
     }
-    const byKey: AggregateOrderSpec = { by: 'key', index: 0, dir: 'ASC', nulls: 'FIRST' };
     let spec: AggregateSpec;
     let fte = false;
     if (fn === 'count' || !metric) {
-      spec = { groupBy: [groupField.grid], measures: [], order: [{ by: 'count', dir: 'DESC' }, byKey] };
+      spec = { groupBy: [groupField.grid], measures: [], order: [{ by: 'count', dir: 'DESC' }] };
     } else {
       const metricField = registry.fields[metric.key];
       if (!metricField) {
@@ -1163,7 +1164,7 @@ export class AiAggregateExecutor {
       spec = {
         groupBy: [groupField.grid],
         measures: [{ id: 'value', fn, field: metricField.grid }],
-        order: [{ by: 'measure', id: 'value', dir: getMetricOrderDirection(fn), nulls: 'LAST' }, byKey],
+        order: [{ by: 'measure', id: 'value', dir: getMetricOrderDirection(fn), nulls: 'LAST' }],
       };
     }
 

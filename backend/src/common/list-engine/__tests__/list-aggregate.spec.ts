@@ -63,6 +63,8 @@ function testSpecChecks() {
     [{ groupBy: ['currency'], measures: [], order: [{ by: 'key', index: 1, dir: 'ASC' }] }, /no group key 1/],
     [{ groupBy: [], measures: [], order: [{ by: 'count', dir: 'UP' }] }, /ASC or DESC/],
     [{ groupBy: [], measures: [], order: [{ by: 'count', dir: 'ASC', nulls: 'MIDDLE' }] }, /FIRST or LAST/],
+    [{ groupBy: [], measures: [], order: Array.from({ length: 11 }, () => ({ by: 'count', dir: 'ASC' })) }, /at most 10 order terms/],
+    [{ groupBy: [], measures: [], order: Array.from({ length: 20_000 }, () => ({ by: 'count', dir: 'ASC' })) }, /at most 10 order terms/],
     [{ groupBy: [], measures: [], limit: 0 }, /limit must be an integer/],
     [{ groupBy: [], measures: [], limit: 2.5 }, /limit must be an integer/],
     [{ groupBy: [], measures: [], others: true }, /others needs a limit/],
@@ -111,13 +113,15 @@ function testTenantOnEveryTableAndValuesBound() {
   assert.equal(sql.includes(supplier), false, 'a filter value is never written into the text');
   assert.ok(params.some((p) => Array.isArray(p) && p.includes(supplier)), 'it is bound');
   assert.ok(params.includes('cyber'), 'the quick search is bound');
-  assert.ok(params.includes('123456'), 'a condition on an amount is bound in cents');
+  assert.ok(params.includes('1234.56'), 'a condition on an amount is bound as written');
+  assert.ok(/> \(\$\d+::numeric \* 100\)/.test(raw), 'and compared exactly with the cents');
   assert.ok(params.includes(7), 'the limit is bound');
   assert.equal(new Set((sql.match(/\$\d+/g) ?? []).map((p) => Number(p.slice(1)))).size, params.length, 'every parameter is read, none is left over');
 }
 
 function testParts() {
   const plain = build({ groupBy: ['currency'], measures: [sum('b', 'yBudget')] }).sql;
+  assert.equal(/\b1 AS one\b/.test(plain), false, 'no unused column');
   assert.ok(plain.includes(`NULLIF((i.currency::text)::text, '') AS k0`), 'a text key reads blank as null');
   assert.ok(plain.includes('row_number() OVER (ORDER BY g.n DESC, g.k0 COLLATE "und-x-icu" ASC NULLS FIRST)'), 'default order: count, then the key in the ICU order, blanks first');
   assert.ok(plain.includes("'g' AS part") && plain.includes("'t' AS part"), 'groups and the total');
@@ -146,6 +150,19 @@ function testParts() {
 
   const capex = build({ groupBy: ['priority'], measures: [sum('b', 'yBudget')] }, {}, 'capex').sql;
   assert.ok(capex.includes('FROM capex_items i') && capex.includes('JOIN capex_version_totals at'), 'CAPEX reads its own tables');
+
+  // An explicit key order follows a ranked enum's business order (Q4); the final tie-break stays the key's text.
+  const ranked = build({ groupBy: ['priority'], measures: [], order: [{ by: 'key', index: 0, dir: 'ASC' }] }, {}, 'capex').sql;
+  assert.ok(ranked.includes(`ORDER BY (CASE g.k0 WHEN 'mandatory' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END) ASC, g.k0 COLLATE "und-x-icu" ASC NULLS FIRST)`), 'priority by its rank, then its text');
+  const status = build({ groupBy: ['status'], measures: [], order: [{ by: 'key', index: 0, dir: 'DESC' }] }).sql;
+  assert.ok(status.includes(`(CASE g.k0 WHEN 'enabled' THEN 0 WHEN 'disabled' THEN 1 END) DESC`), 'status by its rank');
+  assert.ok(plain.includes('ORDER BY g.n DESC, g.k0 COLLATE "und-x-icu" ASC NULLS FIRST'), 'without an explicit key order, the text only');
+
+  // A measure order puts groups without a value last in either direction unless asked otherwise.
+  const fteOrder = (dir: 'ASC' | 'DESC', nulls?: 'FIRST' | 'LAST') => build({ groupBy: ['currency'], measures: [{ id: 'f', fn: 'sum', field: 'fte_yBudget' }], order: [{ by: 'measure', id: 'f', dir, ...(nulls ? { nulls } : {}) }] }).sql;
+  assert.ok(/END\) DESC NULLS LAST, g\.k0/.test(fteOrder('DESC')), 'descending: no value last');
+  assert.ok(/END\) ASC NULLS LAST, g\.k0/.test(fteOrder('ASC')), 'ascending: no value last');
+  assert.ok(/END\) DESC NULLS FIRST, g\.k0/.test(fteOrder('DESC', 'FIRST')), 'unless asked');
 }
 
 testSpecChecks();

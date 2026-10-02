@@ -435,7 +435,7 @@ function textMatches(type: string, value: string, needle: string): boolean {
  * enums in their declaration order. Written here, not read from the builder's
  * list the engine uses, so a wrong order on either side shows as a difference.
  */
-const SORT_ORDERS: Record<string, readonly string[]> = {
+export const SORT_ORDERS: Record<string, readonly string[]> = {
   status: ['enabled', 'disabled'],
   run_build: ['run', 'build'],
   // ADAPTER A7: business order of the CAPEX enums (before: sorted by code).

@@ -8,13 +8,13 @@ import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { adaptFilters } from '../../ai/query/ai-filter.adapter';
 import type { AiEntityFilterRegistry } from '../../ai/query/ai-filter.types';
 import { resolveAiEntityRegistry } from '../../ai/query/registries';
-import { centsToNumber, toCents } from '../../common/amount';
+import { centsToNumber, formatCents, toCents } from '../../common/amount';
 import { Decimal, divRoundHalfAway } from '../../common/decimal';
 import type { AggregateMeasureSpec, AggregateOrderSpec, AggregateSpec } from '../../common/list-engine/list-aggregate';
 import { FIXED_SLOTS, resolveAmountField, resolveFteField, SUMMARY_COLUMNS, SUMMARY_SCOPES, SummaryScopeConfig } from '../spend-summary.builder';
 import * as engine from '../budget-list/budget-list.service';
 import { aggregateBudgetSummaryByIds } from './oracle/ai-aggregate.oracle';
-import { oracleTextCompare } from './oracle/budget-summary.oracle';
+import { oracleTextCompare, SORT_ORDERS } from './oracle/budget-summary.oracle';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { prng, seedListFixture } from './oracle/budget-list.fixture';
 import { getSummaryFieldValue, summaryFieldValues } from './oracle/summary-field-value.oracle';
@@ -203,17 +203,52 @@ function output(g: RefGroup, measures: AggregateMeasureSpec[], withKeys: boolean
   };
 }
 
-/** Nulls as PostgreSQL places them by default: last ascending, first descending. */
-function nullsFirst(order: { dir: 'ASC' | 'DESC'; nulls?: 'FIRST' | 'LAST' }): boolean {
-  return order.nulls ? order.nulls === 'FIRST' : order.dir === 'DESC';
+/** Where nulls go: as asked; else last for a measure, and PostgreSQL's default for a key (last ascending, first descending). */
+function nullsFirst(order: AggregateOrderSpec): boolean {
+  if (order.nulls) return order.nulls === 'FIRST';
+  return order.by === 'measure' ? false : order.dir === 'DESC';
 }
 
-function compareKey(a: string | null, b: string | null, field: string, dir: 'ASC' | 'DESC', first: boolean): number {
-  if (a === b) return 0;
+function compareNullable<T>(a: T | null, b: T | null, dir: 'ASC' | 'DESC', first: boolean, cmp: (x: T, y: T) => number): number {
+  if (a == null && b == null) return 0;
   if (a == null) return first ? -1 : 1;
   if (b == null) return first ? 1 : -1;
-  const c = INT_FIELDS.has(field) ? Number(a) - Number(b) : oracleTextCompare(a, b);
+  const c = cmp(a, b);
   return dir === 'ASC' ? c : -c;
+}
+
+/** The tie-break order of keys: their text (numbers as numbers), blanks as placed. */
+function compareKeyText(a: string | null, b: string | null, field: string, dir: 'ASC' | 'DESC', first: boolean): number {
+  if (a === b) return 0;
+  return compareNullable(a, b, dir, first, (x, y) => (INT_FIELDS.has(field) ? Number(x) - Number(y) : oracleTextCompare(x, y)));
+}
+
+/** An explicit key order: a ranked enum in its rank (the oracle's own lists; a value outside is blank), else the text. */
+function compareKeyOrder(a: string | null, b: string | null, field: string, dir: 'ASC' | 'DESC', first: boolean): number {
+  const rank = Object.prototype.hasOwnProperty.call(SORT_ORDERS, field) ? SORT_ORDERS[field] : null;
+  if (!rank) return compareKeyText(a, b, field, dir, first);
+  const ra = a == null || !rank.includes(a) ? null : rank.indexOf(a);
+  const rb = b == null || !rank.includes(b) ? null : rank.indexOf(b);
+  return compareNullable(ra, rb, dir, first, (x, y) => x - y);
+}
+
+/** A decimal written in JavaScript or by `formatCents`/`Decimal` (exponent allowed) as an exact `m × 10^e`. */
+function exactDecimal(text: string): { m: bigint; e: number } {
+  const match = /^([+-]?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(text);
+  if (!match) throw new Error(`not a decimal: ${text}`);
+  const [, sign, int, frac = '', exp] = match;
+  const m = BigInt(`${int}${frac}` || '0');
+  return { m: sign === '-' ? -m : m, e: (exp ? Number(exp) : 0) - frac.length };
+}
+
+/** Two decimals compared exactly (no rounding of either), written independently of the engine. */
+function compareDecimals(a: string, b: string): number {
+  const x = exactDecimal(a);
+  const y = exactDecimal(b);
+  const e = Math.min(x.e, y.e);
+  const xs = x.m * 10n ** BigInt(x.e - e);
+  const ys = y.m * 10n ** BigInt(y.e - e);
+  return xs < ys ? -1 : xs > ys ? 1 : 0;
 }
 
 function referenceAggregate(rows: any[], spec: AggregateSpec): Omit<engine.BudgetListAggregate, 'reportingCurrency'> {
@@ -242,8 +277,8 @@ function referenceAggregate(rows: any[], spec: AggregateSpec): Omit<engine.Budge
     const i = spec.measures.findIndex((measure) => measure.id === having.measure);
     const v = valueOf(g.m[i], spec.measures[i]);
     if (v == null) return false;
-    const bound = isMoney(spec.measures[i].field) ? toCents(having.value) : Decimal.from(having.value);
-    const c = cmpValues(v, bound);
+    // The group's exact value against the bound as JavaScript writes it, never rounded to the cent.
+    const c = compareDecimals(typeof v === 'bigint' ? formatCents(v) : v.toString(), String(having.value));
     return { gt: c > 0, gte: c >= 0, lt: c < 0, lte: c <= 0, eq: c === 0, ne: c !== 0 }[having.op];
   }));
   const orders: AggregateOrderSpec[] = spec.order?.length ? spec.order : [{ by: 'count', dir: 'DESC' }];
@@ -251,7 +286,7 @@ function referenceAggregate(rows: any[], spec: AggregateSpec): Omit<engine.Budge
     for (const order of orders) {
       let c = 0;
       if (order.by === 'count') c = order.dir === 'ASC' ? a.n - b.n : b.n - a.n;
-      else if (order.by === 'key') c = compareKey(a.keys[order.index!], b.keys[order.index!], spec.groupBy[order.index!], order.dir, nullsFirst(order));
+      else if (order.by === 'key') c = compareKeyOrder(a.keys[order.index!], b.keys[order.index!], spec.groupBy[order.index!], order.dir, nullsFirst(order));
       else {
         const i = spec.measures.findIndex((measure) => measure.id === order.id);
         const va = valueOf(a.m[i], spec.measures[i]);
@@ -262,7 +297,7 @@ function referenceAggregate(rows: any[], spec: AggregateSpec): Omit<engine.Budge
       if (c !== 0) return c;
     }
     for (let i = 0; i < spec.groupBy.length; i++) {
-      const c = compareKey(a.keys[i], b.keys[i], spec.groupBy[i], 'ASC', true);
+      const c = compareKeyText(a.keys[i], b.keys[i], spec.groupBy[i], 'ASC', true);
       if (c !== 0) return c;
     }
     return 0;
@@ -289,7 +324,7 @@ function amountKeys(full: boolean): { money: string[]; fte: string[] } {
 
 type Sample = Map<string, Array<string | number>>;
 
-function buildCases(r: ReturnType<typeof prng>, scope: SummaryScopeConfig, registry: AiEntityFilterRegistry, sample: Sample, axisIds: string[]): Case[] {
+function buildCases(r: ReturnType<typeof prng>, scope: SummaryScopeConfig, registry: AiEntityFilterRegistry, sample: Sample, axisIds: string[], sampleRows: any[]): Case[] {
   const entity_type = scope.scope === 'opex' ? 'spend_items' : 'capex_items';
   const cases: Case[] = [];
   const fields = Object.entries(registry.fields);
@@ -370,19 +405,31 @@ function buildCases(r: ReturnType<typeof prng>, scope: SummaryScopeConfig, regis
     'id', 'item_number', 'account_number', 'effective_start', scope.nameField, ...scope.extraFields, 'nonexistent_field',
   ]));
   const gridValues = (field: string) => (sample.get(`grid:${field}`) ?? []) as Array<string | number>;
+  // FTE columns holding values on the tenant (most hold none): random FTE measures draw from them first.
+  const fteWithData = fteAi.filter((key) => values(key).length > 0).map((key) => registry.fields[key].grid);
   for (let k = 0; k < SPECS; k++) {
-    const groupBy = Array.from(new Set(Array.from({ length: r.pick([0, 1, 1, 1, 2, 2, 3]) }, () => r.pick(groupFields))));
-    const measures: AggregateMeasureSpec[] = Array.from({ length: r.int(1, 4) }, (_, i) => {
+    const groupBy = Array.from(new Set(Array.from({ length: r.pick([0, 1, 1, 1, 2, 2, 3, 4, 5, 6]) }, () => r.pick(groupFields))));
+    const measures: AggregateMeasureSpec[] = Array.from({ length: r.int(1, 8) }, (_, i) => {
       const onMoney = r.chance(0.75);
-      const measure: AggregateMeasureSpec = { id: `m${i}`, fn: r.pick(['sum', 'sum', 'avg', 'min', 'max']) as AggregateMeasureSpec['fn'], field: onMoney ? r.pick(money) : r.pick(fte) };
+      const fteField = fteWithData.length && r.chance(0.7) ? r.pick(fteWithData) : r.pick(fte);
+      const measure: AggregateMeasureSpec = { id: `m${i}`, fn: r.pick(['sum', 'sum', 'avg', 'min', 'max']) as AggregateMeasureSpec['fn'], field: onMoney ? r.pick(money) : fteField };
       if (onMoney && r.chance(0.3)) measure.minus = r.pick(money);
       if (onMoney && r.chance(0.2)) measure.part = r.pick(['positive', 'negative']);
       return measure;
     });
     const spec: AggregateSpec = { groupBy, measures };
-    if (r.chance(0.25)) {
-      const m = r.pick(measures);
-      spec.having = [{ measure: m.id, op: r.pick(['gt', 'gte', 'lt', 'lte', 'ne', 'eq']), value: r.pick([0, 0, 100, -50, 1.5, 1000.01]) }];
+    if (r.chance(0.35)) {
+      // 1 to 3 conditions (AND). Bounds near a line's own value, often between two cents (an exact
+      // comparison keeps a group of 1,697,477.00 under `gt 1697476.995`), or constants of every size.
+      spec.having = Array.from({ length: r.pick([1, 1, 2, 3]) }, () => {
+        const m = r.pick(measures);
+        const near = sampleRows.length ? lineValue(r.pick(sampleRows), m) : null;
+        const base = near == null ? 0 : typeof near === 'bigint' ? Number(formatCents(near)) : Number(near.toString());
+        const value = r.chance(0.6)
+          ? base + r.pick([0, 0, 0.005, -0.005, 0.004, -0.004, 0.001, -0.001, 0.0049999])
+          : r.pick([0, 0, 100, -50, 1.5, 1000.01, 0.005, -0.004, 1e-7, 2.675, 1e21, -1e21]);
+        return { measure: m.id, op: r.pick(['gt', 'gte', 'lt', 'lte', 'ne', 'eq']), value };
+      });
     }
     if (r.chance(0.6)) {
       spec.order = Array.from({ length: r.int(1, 2) }, (): AggregateOrderSpec => {
@@ -412,6 +459,35 @@ function buildCases(r: ReturnType<typeof prng>, scope: SummaryScopeConfig, regis
     if (Object.keys(filters).length) query.filters = JSON.stringify(filters);
     if (r.chance(0.15) && qPool.length) query.q = r.pick(qPool);
     cases.push({ id: `spec/${k}`, kind: 'spec', query, spec });
+  }
+  // Deterministic order cases (no draw from the random stream):
+  // - a ranked enum (status, run or build, the CAPEX enums) ordered by its key follows its rank;
+  // - with a measure equal on every group (0), the final tie-break decides: the key's text, never the rank;
+  // - a measure order without `nulls` puts groups without a value (FTE of unknown lines) last, in both directions.
+  const ranked = ['status', 'run_build', ...scope.extraFields];
+  const all = { includeDisabled: 'true' };
+  for (const key of ranked) {
+    for (const dir of ['ASC', 'DESC'] as const) {
+      cases.push({ id: `spec/ranked/${key}/${dir}`, kind: 'spec', query: all, spec: { groupBy: [key], measures: [], order: [{ by: 'key', index: 0, dir }] } });
+    }
+    const zero: AggregateMeasureSpec = { id: 'z', fn: 'sum', field: 'yBudget', minus: 'yBudget' };
+    cases.push({ id: `spec/tie/${key}`, kind: 'spec', query: all, spec: { groupBy: [key], measures: [zero], order: [{ by: 'measure', id: 'z', dir: 'DESC' }] } });
+    cases.push({ id: `spec/tie2/${key}`, kind: 'spec', query: all, spec: { groupBy: [key, 'currency'], measures: [zero], order: [{ by: 'measure', id: 'z', dir: 'ASC' }] } });
+    // The AI: every group ties (the sum of an amount over the lines where it is 0), so its key order decides.
+    if (registry.fields[key]?.groupable) {
+      for (const metric of ['y_plus2_budget', 'y_minus2_landing']) {
+        addAi(`ai/tie/${key}/${metric}`, { group_by: key, function: 'sum', metric, filters: { [metric]: { op: 'eq', value: 0 } } });
+      }
+    }
+  }
+  for (const fteField of fteWithData.slice(0, 3)) {
+    for (const group of ['supplier_name', 'currency', 'status', 'cost_center_path']) {
+      for (const dir of ['ASC', 'DESC'] as const) {
+        for (const fn of ['sum', 'max'] as const) {
+          cases.push({ id: `spec/nulls/${fteField}/${group}/${fn}/${dir}`, kind: 'spec', query: all, spec: { groupBy: [group], measures: [{ id: 'f', fn, field: fteField }], order: [{ by: 'measure', id: 'f', dir }] } });
+        }
+      }
+    }
   }
   // The default scope is the page's (the window): the aggregate's total equals the page count.
   for (const [i, query] of [{}, { years: String(Y + 1) }, { q: r.pick(qPool.length ? qPool : ['en']) }].entries()) {
@@ -537,7 +613,7 @@ async function runScope(scope: SummaryScopeConfig, runner: QueryRunner, tenantId
   const axisRows: Array<{ id: string }> = await m.query(`SELECT id FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order, id`, [tenantId]);
 
   const r = prng(SEED ^ (scope.scope === 'opex' ? 0 : 0x2c1b3c6d));
-  const cases = buildCases(r, scope, registry, sample, axisRows.map((a) => a.id));
+  const cases = buildCases(r, scope, registry, sample, axisRows.map((a) => a.id), sampleRows);
   const digest = createHash('sha256').update(JSON.stringify(cases)).digest('hex').slice(0, 12);
   const env: Env = { scope, runner, deps, svc, executor: executorFor(scope, svc), registry, context, rowsOf, reportingCurrency };
   for (const c of cases) {

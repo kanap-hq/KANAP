@@ -1,9 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
-import { toCents } from '../amount';
 import type { FieldSql, ListConfig, ListState } from './list-engine.types';
 import type { SqlStatement } from './sql-statement';
 import { buildCore, fieldOf } from './list-sql-builder';
-import { divRoundHalfAway, ICU_COLLATION, jsCents, sumJsCents } from './sql-fragments';
+import { divRoundHalfAway, ICU_COLLATION, jsCents, sqlLiteral, sumJsCents } from './sql-fragments';
 
 /**
  * `aggregate(spec)` of the list engine: the lines of a list state (the same
@@ -34,11 +33,16 @@ import { divRoundHalfAway, ICU_COLLATION, jsCents, sumJsCents } from './sql-frag
  * does not know groups every line under null, as every engine path reads it.
  * Grouping by `id` gives one group per line (a top N of lines).
  *
- * Every group carries `count`, its line count. The default order is the
- * count, largest first, then the keys in the list's text order (ICU), blanks
- * first; any order ends with every key, so it is total. `having` keeps the
- * groups whose measures pass it (before the order and the limit); the total
- * always covers every line of the state.
+ * Every group carries `count`, its line count. Order terms: the count; a
+ * measure's value (no value last, whatever the direction, unless `nulls`
+ * says otherwise); a key in the field's own sort order (a ranked enum, such
+ * as the CAPEX priority, in its business order; numbers as numbers; text in
+ * the ICU order; blanks where PostgreSQL puts them unless `nulls` says
+ * otherwise). Any order then ends with every key's text in the ICU order,
+ * blanks first, so it is total; the default order is the count, largest
+ * first, then that tie-break. `having` keeps the groups whose measures pass
+ * it, compared exactly with the bound as written (before the order and the
+ * limit); the total always covers every line of the state.
  */
 
 export type AggregateFn = 'sum' | 'min' | 'max' | 'avg';
@@ -61,11 +65,19 @@ export interface AggregateOrderSpec {
   id?: string;
   index?: number;
   dir: 'ASC' | 'DESC';
-  /** Where null values go; PostgreSQL's default (last ascending, first descending) when absent. */
+  /**
+   * Where null values go. Default: last for a measure (a group without a
+   * value, in either direction); PostgreSQL's default for a key (last
+   * ascending, first descending).
+   */
   nulls?: 'FIRST' | 'LAST';
 }
 
-/** A condition on a group's measure, in the measure's unit (an amount, an FTE). A null value never passes. */
+/**
+ * A condition on a group's measure, in the measure's unit (an amount, an
+ * FTE), compared exactly with the number as written (`1697476.995` is not
+ * rounded to the cent). A null value never passes.
+ */
 export interface AggregateHavingSpec {
   measure: string;
   op: 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'ne';
@@ -78,7 +90,7 @@ export interface AggregateSpec {
   measures: AggregateMeasureSpec[];
   /** Groups kept, every condition applying (the total still covers every line). */
   having?: AggregateHavingSpec[];
-  /** Default: count descending, then each key ascending, blanks first. */
+  /** At most 10 terms. Default: count descending; every order ends with each key's text ascending, blanks first. */
   order?: AggregateOrderSpec[];
   /** Keep the first `limit` groups of the order (a top N). */
   limit?: number;
@@ -86,7 +98,7 @@ export interface AggregateSpec {
   others?: boolean;
 }
 
-export const AGGREGATE_LIMITS = { groupBy: 6, measures: 60, having: 10, limit: 10_000 } as const;
+export const AGGREGATE_LIMITS = { groupBy: 6, measures: 60, having: 10, order: 10, limit: 10_000 } as const;
 
 const FUNCTIONS: ReadonlySet<string> = new Set(['sum', 'min', 'max', 'avg']);
 const HAVING_OPS: Record<AggregateHavingSpec['op'], string> = { gt: '>', gte: '>=', lt: '<', lte: '<=', eq: '=', ne: '<>' };
@@ -136,6 +148,7 @@ export function validateAggregateSpec(spec: AggregateSpec): void {
     if (typeof having.value !== 'number' || !Number.isFinite(having.value)) fail('a condition compares with a finite number.');
   }
   if (spec.order != null && !Array.isArray(spec.order)) fail('order must be a list.');
+  if ((spec.order ?? []).length > AGGREGATE_LIMITS.order) fail(`at most ${AGGREGATE_LIMITS.order} order terms.`);
   for (const order of spec.order ?? []) {
     if (!order || !['count', 'measure', 'key'].includes(order.by)) fail('an order is by count, measure or key.');
     if (order.dir !== 'ASC' && order.dir !== 'DESC') fail('an order direction is ASC or DESC.');
@@ -170,9 +183,22 @@ function groupKeySql(key: string, field: FieldSql): string {
   }
 }
 
-/** The sort expression of a group key column: numbers as numbers, text in the ICU order. */
-function keyOrderSql(column: string, field: FieldSql): string {
+/** The tie-break of a group key column: its text in the ICU order (numbers as numbers). */
+function keyTextOrderSql(column: string, field: FieldSql): string {
   return field.kind === 'int' ? `(${column})::numeric` : `${column} COLLATE ${ICU_COLLATION}`;
+}
+
+/**
+ * An explicit order by a group key: the field's own sort order, as the list
+ * sorts it. A ranked enum (status, run or build, the CAPEX priority,
+ * investment and PPE types) in its rank, a value outside the rank as blank;
+ * otherwise the text order of the tie-break.
+ */
+function keyOrderSql(column: string, field: FieldSql): string {
+  if (field.kind === 'enum' && field.rank) {
+    return `(CASE ${column} ${field.rank.map((value, i) => `WHEN ${sqlLiteral(value)} THEN ${i}`).join(' ')} END)`;
+  }
+  return keyTextOrderSql(column, field);
 }
 
 function compileMeasure(stmt: SqlStatement, config: ListConfig, spec: AggregateMeasureSpec): CompiledMeasure {
@@ -236,9 +262,16 @@ function measureValue(m: CompiledMeasure, i: number, from: string): string {
   }
 }
 
-/** A condition's bound in the measure's unit: an amount as exact cents, an FTE as written. */
+/**
+ * A condition's bound in the measure's unit, exact: the number as JavaScript
+ * writes it (`String(value)`, a shortest decimal, exponent included), read as
+ * a numeric; an amount's bound times 100 against the integer cents. A bound
+ * between two cents is kept as is, never rounded: `gt 1697476.995` keeps a
+ * group of 1,697,477.00 and `lte` drops it.
+ */
 function havingBound(stmt: SqlStatement, m: CompiledMeasure, value: number): string {
-  return m.unit === 'fte' ? stmt.bind(String(value), 'numeric') : stmt.bind(toCents(value).toString(), 'numeric');
+  const bound = stmt.bind(String(value), 'numeric');
+  return m.unit === 'fte' ? bound : `(${bound} * 100)`;
 }
 
 /**
@@ -257,7 +290,8 @@ export function aggregateSql(stmt: SqlStatement, config: ListConfig, state: List
   const measureIndex = (id: string) => measures.findIndex((m) => m.spec.id === id);
 
   const kList = keys.map((_, i) => `k${i}`);
-  const lines = `SELECT ${[...keyColumns, ...measures.map((m, i) => `${m.line} AS v${i}`), '1 AS one'].join(', ')}
+  // No key and no measure: an empty select list (PostgreSQL takes it), one row per line to count.
+  const lines = `SELECT ${[...keyColumns, ...measures.map((m, i) => `${m.line} AS v${i}`)].join(', ')}
 ${core.from}
 ${core.where}`;
   const groups = `SELECT ${[...kList, 'count(*) AS n', ...measures.flatMap((m, i) => measureParts(m, i, `agg_lines.v${i}`))].join(', ')}
@@ -273,10 +307,11 @@ ${kList.length ? `GROUP BY ${kList.join(', ')}\n` : ''}HAVING count(*) > 0`;
     if (order.by === 'count') return `g.n ${order.dir}${nulls}`;
     if (order.by === 'key') return `${keyOrderSql(`g.k${order.index}`, keys[order.index!].field)} ${order.dir}${nulls}`;
     const i = measureIndex(order.id!);
-    return `${measureValue(measures[i], i, 'g')} ${order.dir}${nulls}`;
+    // A group without a value goes last in either direction unless asked otherwise.
+    return `${measureValue(measures[i], i, 'g')} ${order.dir} NULLS ${order.nulls ?? 'LAST'}`;
   });
-  // Every key last, so the order is total (groups are unique on their keys).
-  keys.forEach((k, i) => orderTerms.push(`${keyOrderSql(`g.k${i}`, k.field)} ASC NULLS FIRST`));
+  // Every key's text last, so the order is total (groups are unique on their keys).
+  keys.forEach((k, i) => orderTerms.push(`${keyTextOrderSql(`g.k${i}`, k.field)} ASC NULLS FIRST`));
   const ranked = `SELECT g.*, row_number() OVER (ORDER BY ${orderTerms.join(', ')}) AS rn
 FROM agg_groups g${conditions.length ? `\nWHERE ${conditions.join(' AND ')}` : ''}`;
 
