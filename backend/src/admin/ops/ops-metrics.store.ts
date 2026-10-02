@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { monitorEventLoopDelay } from 'perf_hooks';
+import { bucketIndex, emptyCounts } from './latency-histogram';
 
 export interface RequestEntry {
   ts: number;
@@ -53,12 +54,24 @@ export interface ProcessMetrics {
     heapTotal: number;
     external: number;
   };
+  /**
+   * Event loop lag over the last full minute (the current minute until one has passed): how late
+   * a timer fires beyond its 10 ms resolution, i.e. how long the main thread was busy while
+   * something waited. Every request of the process waits behind it.
+   */
   eventLoopLagMs: {
     min: number;
     max: number;
     mean: number;
     p50: number;
+    p95: number;
     p99: number;
+    windowSeconds: number;
+  };
+  /** Worst minute of the last five. */
+  eventLoopLag5m: {
+    p95: number;
+    max: number;
   };
   cpuUsage: {
     userMs: number;
@@ -66,22 +79,76 @@ export interface ProcessMetrics {
   };
 }
 
+type LoopWindow = { endedAt: number; seconds: number; min: number; max: number; mean: number; p50: number; p95: number; p99: number };
+
 const MAX_AGE_MS = 15 * 60_000; // 15 minutes
 const PRUNE_INTERVAL_MS = 60_000; // prune every 60 seconds
 const MAX_ROUTE_GROUPS = 30;
 const MAX_ERROR_ENTRIES = 15;
+/** Event loop sampling: a timer every 10 ms; its histogram is summed up and reset every minute. */
+const LOOP_RESOLUTION_MS = 10;
+const LOOP_WINDOW_MS = 60_000;
+const LOOP_WINDOWS_KEPT = 15;
 
 @Injectable()
 export class OpsMetricsStore {
   private entries: RequestEntry[] = [];
   private pruneTimer: ReturnType<typeof setInterval>;
+  private loopTimer: ReturnType<typeof setInterval>;
   private eld: ReturnType<typeof monitorEventLoopDelay>;
+  private eldSince = Date.now();
+  private loopWindows: LoopWindow[] = [];
   private startCpu = process.cpuUsage();
 
   constructor() {
     this.pruneTimer = setInterval(() => this.prune(), PRUNE_INTERVAL_MS);
-    this.eld = monitorEventLoopDelay({ resolution: 20 });
+    this.pruneTimer.unref?.();
+    this.eld = monitorEventLoopDelay({ resolution: LOOP_RESOLUTION_MS });
     this.eld.enable();
+    this.loopTimer = setInterval(() => this.rotateLoopWindow(), LOOP_WINDOW_MS);
+    this.loopTimer.unref?.();
+  }
+
+  /** Closes the current event loop minute: keeps its summary, starts a new histogram. */
+  rotateLoopWindow(now = Date.now()): void {
+    this.loopWindows.push(this.summarizeLoop(now));
+    if (this.loopWindows.length > LOOP_WINDOWS_KEPT) this.loopWindows.shift();
+    this.eld.reset();
+    this.eldSince = now;
+  }
+
+  private summarizeLoop(now: number): LoopWindow {
+    // The histogram holds each timer's full interval: the lag is what exceeds the resolution.
+    const lag = (ns: number) => {
+      if (!Number.isFinite(ns) || ns <= 0) return 0;
+      return Math.max(0, Math.round((ns / 1e6 - LOOP_RESOLUTION_MS) * 100) / 100);
+    };
+    const empty = this.eld.count === 0;
+    return {
+      endedAt: now,
+      seconds: Math.round((now - this.eldSince) / 1000),
+      min: empty ? 0 : lag(this.eld.min),
+      max: empty ? 0 : lag(this.eld.max),
+      mean: empty ? 0 : lag(this.eld.mean),
+      p50: empty ? 0 : lag(this.eld.percentile(50)),
+      p95: empty ? 0 : lag(this.eld.percentile(95)),
+      p99: empty ? 0 : lag(this.eld.percentile(99)),
+    };
+  }
+
+  /** Requests of the window, grouped by route, as latency bucket counts (for the cross-process view). */
+  routeHistograms(windowMs = 5 * 60_000): Record<string, number[]> {
+    const now = Date.now();
+    const result: Record<string, { count: number; counts: number[] }> = {};
+    for (const e of this.entries) {
+      if (now - e.ts > windowMs) continue;
+      const key = `${e.method} ${e.route}`;
+      const group = result[key] ?? (result[key] = { count: 0, counts: emptyCounts() });
+      group.count += 1;
+      group.counts[bucketIndex(e.latencyMs)] += 1;
+    }
+    const top = Object.entries(result).sort((a, b) => b[1].count - a[1].count).slice(0, MAX_ROUTE_GROUPS);
+    return Object.fromEntries(top.map(([key, group]) => [key, group.counts]));
   }
 
   record(entry: RequestEntry): void {
@@ -233,9 +300,15 @@ export class OpsMetricsStore {
   private computeProcessMetrics(): ProcessMetrics {
     const mem = process.memoryUsage();
     const toMB = (bytes: number) => Math.round((bytes / 1024 / 1024) * 10) / 10;
-    const nsToMs = (ns: number) => Math.round(ns / 1e6 * 100) / 100;
 
     const cpu = process.cpuUsage(this.startCpu);
+
+    const now = Date.now();
+    const lastWindow = this.loopWindows[this.loopWindows.length - 1];
+    const loop = lastWindow ?? this.summarizeLoop(now);
+    const recent = this.loopWindows.filter((w) => now - w.endedAt <= 5 * LOOP_WINDOW_MS);
+    const current = this.summarizeLoop(now);
+    const fiveMinutes = [...recent, current];
 
     return {
       uptimeSeconds: Math.round(process.uptime()),
@@ -246,11 +319,17 @@ export class OpsMetricsStore {
         external: toMB(mem.external),
       },
       eventLoopLagMs: {
-        min: nsToMs(this.eld.min),
-        max: nsToMs(this.eld.max),
-        mean: nsToMs(this.eld.mean),
-        p50: nsToMs(this.eld.percentile(50)),
-        p99: nsToMs(this.eld.percentile(99)),
+        min: loop.min,
+        max: loop.max,
+        mean: loop.mean,
+        p50: loop.p50,
+        p95: loop.p95,
+        p99: loop.p99,
+        windowSeconds: loop.seconds,
+      },
+      eventLoopLag5m: {
+        p95: Math.max(...fiveMinutes.map((w) => w.p95)),
+        max: Math.max(...fiveMinutes.map((w) => w.max)),
       },
       cpuUsage: {
         userMs: Math.round(cpu.user / 1000),
@@ -261,6 +340,7 @@ export class OpsMetricsStore {
 
   onModuleDestroy() {
     clearInterval(this.pruneTimer);
+    clearInterval(this.loopTimer);
     this.eld.disable();
   }
 }

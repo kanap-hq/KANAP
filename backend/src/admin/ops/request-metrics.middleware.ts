@@ -19,8 +19,8 @@ export function createRequestMetricsMiddleware(store: OpsMetricsStore) {
         ? `${req.baseUrl || ''}${(req as any).route.path}`
         : req.originalUrl?.split('?')[0] || req.path;
 
-      // Skip static/health noise
-      if (route === '/health' || route === '/api/health') return;
+      // Skip static/health noise, and the monitoring probe of the ops metrics
+      if (route === '/health' || route === '/api/health' || route === '/ops/metrics') return;
 
       // Capture error info from NestJS-attached error (if any)
       let errorType: string | undefined;

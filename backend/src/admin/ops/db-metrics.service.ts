@@ -1,5 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { readPoolMax } from '../../common/db-pool-budget';
+import { PoolMetrics, PoolMetricsSnapshot, poolSaturated } from './pool-metrics';
+import { OPS_DB_READ_TIMEOUT_MS, withTimeout } from './with-timeout';
 
 export interface DbActivityStats {
   active: number;
@@ -18,46 +21,76 @@ export interface DbDatabaseStats {
   tempBytes: number;
 }
 
-export interface PoolStats {
-  totalCount: number;
-  idleCount: number;
-  waitingCount: number;
-  maxPool: number;
-  utilizationPct: number;
-}
+/** This process's pool: the five original fields, plus in use over a minute and the wait for a connection. */
+export type PoolStats = PoolMetricsSnapshot;
 
 export interface DbMetricsSnapshot {
   activity: DbActivityStats;
   database: DbDatabaseStats;
   pool: PoolStats;
+  /** When `activity` and `database` were read (0: never). */
   collectedAt: number;
+  /** The last read of the pg_stat views failed or took over 1 s (saturated pool): the values are the last ones read, or zeros. */
+  statsStale?: boolean;
+  statsError?: string;
 }
+
+const EMPTY_ACTIVITY: DbActivityStats = { active: 0, idle: 0, idleInTransaction: 0, waiting: 0, total: 0 };
+const EMPTY_DATABASE: DbDatabaseStats = { xactCommit: 0, xactRollback: 0, deadlocks: 0, conflictsSnapshot: 0, tempFiles: 0, tempBytes: 0 };
 
 const CACHE_TTL_MS = 10_000; // 10 seconds
 
 @Injectable()
-export class DbMetricsService {
-  private cache: DbMetricsSnapshot | null = null;
+export class DbMetricsService implements OnModuleInit, OnModuleDestroy {
+  private cache: Omit<DbMetricsSnapshot, 'pool'> | null = null;
   private cacheTime = 0;
+  readonly poolMetrics = new PoolMetrics(readPoolMax());
 
   constructor(private readonly dataSource: DataSource) {}
 
+  onModuleInit() {
+    // The pg pool TypeORM's postgres driver opened (initialized before any provider runs).
+    const driver = this.dataSource.driver as any;
+    this.poolMetrics.attach(driver?.master ?? driver?.pool);
+  }
+
+  onModuleDestroy() {
+    this.poolMetrics.detach();
+  }
+
+  /**
+   * The pool figures are always current (memory). The pg_stat views are read at most every 10 s,
+   * best effort: not while the pool is saturated (pool-metrics.ts), and a read that fails or takes over
+   * 1 s (database down) is left; the last values read are then served, flagged `statsStale`, and
+   * the read is tried again at the next snapshot.
+   */
   async snapshot(): Promise<DbMetricsSnapshot> {
     const now = Date.now();
-    if (this.cache && now - this.cacheTime < CACHE_TTL_MS) {
-      return this.cache;
+    let stale: { error: string } | null = null;
+    const pool = this.getPoolStats();
+    if (!this.cache || now - this.cacheTime >= CACHE_TTL_MS) {
+      const appName = process.env.DB_APP_NAME || 'cio-api';
+      if (poolSaturated(pool)) {
+        // Every connection is taken and requests wait: the read would only queue behind them.
+        stale = { error: `pool busy (${pool.waitingCount} waiting): not read` };
+      } else try {
+        const [activity, database] = await withTimeout(
+          Promise.all([this.queryActivity(appName), this.queryDatabaseStats()]),
+          OPS_DB_READ_TIMEOUT_MS,
+          'pg_stat views',
+        );
+        this.cache = { activity, database, collectedAt: now };
+        this.cacheTime = now;
+      } catch (error) {
+        stale = { error: (error as Error)?.message ?? String(error) };
+      }
     }
-
-    const appName = process.env.DB_APP_NAME || 'cio-api';
-    const [activity, database, pool] = await Promise.all([
-      this.queryActivity(appName),
-      this.queryDatabaseStats(),
-      this.getPoolStats(),
-    ]);
-
-    this.cache = { activity, database, pool, collectedAt: now };
-    this.cacheTime = now;
-    return this.cache;
+    const read = this.cache ?? { activity: EMPTY_ACTIVITY, database: EMPTY_DATABASE, collectedAt: 0 };
+    return {
+      ...read,
+      pool,
+      ...(stale ? { statsStale: true, statsError: stale.error } : {}),
+    };
   }
 
   private async queryActivity(appName: string): Promise<DbActivityStats> {
@@ -123,26 +156,6 @@ export class DbMetricsService {
   }
 
   private getPoolStats(): PoolStats {
-    const maxPool = parseInt(process.env.DB_POOL_MAX || '20', 10);
-
-    // Access the underlying pg.Pool from TypeORM's postgres driver
-    const driver = (this.dataSource.driver as any);
-    const pool = driver?.master ?? driver?.pool;
-
-    if (pool && typeof pool.totalCount === 'number') {
-      const totalCount = pool.totalCount as number;
-      const idleCount = pool.idleCount as number;
-      const waitingCount = pool.waitingCount as number;
-      return {
-        totalCount,
-        idleCount,
-        waitingCount,
-        maxPool,
-        utilizationPct: maxPool > 0 ? Math.round(((totalCount - idleCount) / maxPool) * 1000) / 10 : 0,
-      };
-    }
-
-    // Fallback if pool not accessible
-    return { totalCount: 0, idleCount: 0, waitingCount: 0, maxPool, utilizationPct: 0 };
+    return this.poolMetrics.snapshot();
   }
 }

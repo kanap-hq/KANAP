@@ -187,6 +187,7 @@ The defaults suit a few dozen users. For more users at once, run several API pro
 | `API_WORKERS` | Number of API processes in the API container (1 to 16). With more than one, a request that computes no longer makes everyone else wait. | `1` |
 | `DB_POOL_MAX` | Database connections per API process (2 at least: a lower value is raised to 2) | `20` |
 | `SHUTDOWN_DRAIN_TIMEOUT_MS` | On stop or upgrade, how long the API lets requests in progress, the notifications they started, running background jobs and queued emails finish (milliseconds, at most 120000). The container is stopped after 30 s whatever happens. | `20000` |
+| `OPS_METRICS_TOKEN` | Enables `GET /api/ops/metrics` for your monitoring tool (24 characters or more, for example `openssl rand -hex 32`; a shorter value leaves it disabled and the API says so at start). See [Operations](operations.md#api-metrics-for-a-monitoring-tool). | *unset (disabled)* |
 
 **What each costs.** Every API process uses about 200 MB of memory at start and up to 300 MB under load (measured with 50 users on 5,000 budget lines); with several, a small supervising process adds about 100 MB. Every API process can open up to `DB_POOL_MAX` connections to PostgreSQL. Count:
 
@@ -263,6 +264,7 @@ S3_FORCE_PATH_STYLE=false   # true for MinIO
 # API_WORKERS=1
 # DB_POOL_MAX=20
 # SHUTDOWN_DRAIN_TIMEOUT_MS=20000
+# OPS_METRICS_TOKEN=
 ```
 
 ## Firewall Rules
