@@ -18,9 +18,6 @@ vi.mock('../components/PageHeader', () => ({ default: ({ title }: { title: strin
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
-// CAPEX on the SQL list engine (lot 2B, PR C): off in the app until PR C; each test picks its mode.
-const engine = vi.hoisted(() => ({ on: false }));
-vi.mock('./capex/capexListEngine', () => ({ get CAPEX_LIST_ON_ENGINE() { return engine.on; } }));
 const grid = vi.fn();
 // The list URL at the time the grid renders, recorded by a probe rendered just before the page.
 const seen = vi.hoisted(() => ({ search: '', searches: [] as string[] }));
@@ -158,7 +155,6 @@ async function renderPage(url = '/ops/capex') {
 
 describe('CapexPage', () => {
   beforeEach(() => {
-    engine.on = false;
     grid.mockReset();
     seen.searches = [];
     columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
@@ -501,28 +497,7 @@ describe('CapexPage', () => {
     for (const [, config] of totals) expect(JSON.parse(config.params.filters)).toEqual(kept);
   });
 
-  it('until CAPEX runs on the list engine: full rows, every footer amount, no exclude mode', async () => {
-    engine.on = false;
-    await renderPage();
-    expect(lastProps().setFilterExcludeMode).toBe(false);
-    // No page parameters: showing or hiding an FTE column does not reload the in-memory list.
-    expect(lastProps().pageParams).toBeUndefined();
-    const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals');
-    act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'yBudget', hide: false }, { colId: 'fte_yBudget', hide: false }] }));
-    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
-    await waitFor(() => expect(totalsCalls().length).toBeGreaterThan(0));
-    const params = totalsCalls().slice(-1)[0][1].params;
-    expect(params.amounts).toBeUndefined();
-    expect(params.fte).toBe('fte_yBudget');
-    // Showing an amount column asks nothing again (the in-memory totals hold every amount).
-    const before = totalsCalls().length;
-    act(() => lastProps().onColumnStateChange([{ colId: 'yBudget', hide: false }, { colId: 'yRevision', hide: false }, { colId: 'fte_yBudget', hide: false }]));
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(totalsCalls()).toHaveLength(before);
-  });
-
-  it('on the list engine: lean rows with the FTE columns shown, exclude mode, footer for the amount columns shown', async () => {
-    engine.on = true;
+  it('lean rows with the FTE columns shown, exclude mode, footer for the amount columns shown', async () => {
     await renderPage();
     expect(lastProps().setFilterExcludeMode).toBe(true);
     expect(lastProps().pageParams?.([{ colId: 'fte_yBudget', hide: false }, { colId: 'fte_yLanding', hide: true }, { colId: 'yBudget' }]))
@@ -533,6 +508,39 @@ describe('CapexPage', () => {
       const totals = get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals');
       expect(totals.slice(-1)[0][1].params.amounts).toBe('yBudget,yPlus1Forecast');
     });
+  });
+
+  it('reads the supplier and the account from the grid rows (names, not objects)', async () => {
+    await renderPage();
+    expect(column('supplier_name')?.valueGetter?.({ data: { supplier_name: 'Acme' } })).toBe('Acme');
+    expect(column('supplier_name')?.valueGetter?.({ data: {} })).toBe('');
+    // The server's text: "6110 - Software", or the number alone for an account without a name.
+    expect(column('account_display')?.valueGetter?.({ data: { account_display: '6110 - Software' } })).toBe('6110 - Software');
+    expect(column('account_display')?.valueGetter?.({ data: { account_display: '6110' } })).toBe('6110');
+    expect(column('account_display')?.valueGetter?.({ data: {} })).toBe('');
+  });
+
+  it('offers the priority, investment type and PPE type values in their business order, blanks last', async () => {
+    await renderPage();
+    const listed: Record<string, Array<string | null>> = {
+      priority: ['low', 'mandatory', null, 'medium', 'high'],
+      investment_type: ['other', 'security', 'replacement', 'business_growth', 'capacity', 'conformity', 'productivity'],
+      ppe_type: ['software', 'hardware'],
+    };
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
+      if (url !== '/capex-items/summary/filter-values') return { data: {} };
+      const field = config?.params?.fields ?? '';
+      return { data: { [field]: listed[field] } };
+    });
+    type GetValues = (p: unknown) => Promise<Array<{ value: string | null; label: string }>>;
+    const noState = { context: { getQueryState: () => ({}) } };
+    const valuesOf = async (id: string) => (await (column(id)!.filterParams!.getValues as GetValues)(noState)).map((o) => o.value);
+    expect(await valuesOf('priority')).toEqual(['mandatory', 'high', 'medium', 'low', null]);
+    expect(await valuesOf('investment_type')).toEqual(['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other']);
+    expect(await valuesOf('ppe_type')).toEqual(['hardware', 'software']);
+    // Labels as translated, order kept.
+    const priority = await (column('priority')!.filterParams!.getValues as GetValues)(noState);
+    expect(priority[0]).toEqual({ value: 'mandatory', label: 'capex.priorityTypes.mandatory' });
   });
 
   it('keeps a linked sort on an enabled dimension', async () => {

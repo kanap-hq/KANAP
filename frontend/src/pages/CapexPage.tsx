@@ -31,7 +31,6 @@ import {
 } from '../components/finance/amountColumns';
 import { compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext } from '../lib/listContext';
 import { snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
-import { CAPEX_LIST_ON_ENGINE } from './capex/capexListEngine';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
 import { analyticsFieldKey } from '../services/analytics';
@@ -40,29 +39,24 @@ import { formatShortDate, formatShortDateTime } from '../lib/dateFormat';
 import { statusColumnProps } from '../components/grid/statusColumn';
 // import StatusSwitch from '../components/fields/StatusSwitch';
 
+/**
+ * A line as the list reads it: the grid shape of `/capex-items/summary` (`shape=grid`), which
+ * carries these keys only (backend `gridRow`), plus `analytics_<axis id>` for the enabled
+ * dimensions and the `fte_*` keys of the FTE columns shown.
+ */
 type SummaryRow = {
   id: string;
   item_number: number;
   description: string;
-  supplier?: { id: string; name: string } | null;
   supplier_name?: string | null;
-  paying_company_id?: string | null;
   paying_company_name?: string | null;
-  account?: { id: string; account_number: number; account_name: string } | null;
   account_display?: string | null;
-  owner_it_id?: string | null;
-  owner_business_id?: string | null;
   owner_it_name?: string | null;
   owner_business_name?: string | null;
-  analytics_category_id?: string | null;
   analytics_category_name?: string | null;
-  analytics_value_ids?: Record<string, string> | null;
   cost_center_id?: string | null;
-  cost_center_code?: string | null;
-  cost_center_name?: string | null;
   cost_center_label?: string | null;
   cost_center_path?: string | null;
-  budget_holder_id?: string | null;
   budget_holder_name?: string | null;
   run_build?: 'run' | 'build' | null;
   ppe_type: 'hardware' | 'software';
@@ -73,17 +67,14 @@ type SummaryRow = {
   disabled_at?: string | null;
   status: string;
   notes?: string | null;
-  company_id?: string | null;
-  company_name?: string | null;
+  created_at: string;
+  updated_at?: string;
   versions?: SummaryVersions;
-  latest_task?: { id: string; title?: string } | null;
+  latest_task?: { title?: string | null } | null;
   latest_contract_id?: string | null;
   latest_contract_name?: string | null;
   project_name?: string | null;
-  spread_mode_for_y?: 'flat' | 'manual' | null;
   allocation_method_label?: string | null;
-  next_year_allocation_method_label?: string | null;
-  allocation_warning?: string | null;
 };
 
 /** The query the footer totals follow: the list state without the sort, plus the amount and FTE columns shown. */
@@ -95,12 +86,10 @@ const TOTALS_ENDPOINT = '/capex-items/summary/totals';
 const VALUES_ENDPOINT = '/capex-items/summary/filter-values';
 
 /**
- * Parameters of the page requests on the SQL list engine (CAPEX_LIST_ON_ENGINE): the lean grid
- * rows, with the FTE keys of the FTE columns shown (showing or hiding one reloads the rows).
- * Without the engine the page requests carry none: the in-memory list would rebuild every line for
- * them and answer its full rows anyway.
+ * Parameters of the page requests: the lean grid rows, with the FTE keys of the FTE columns shown
+ * (showing or hiding one reloads the rows).
  */
-const enginePageParams = (state: Parameters<typeof visibleFteFields>[0]) => ({ shape: 'grid', fte: visibleFteFields(state).join(',') });
+const pageParams = (state: Parameters<typeof visibleFteFields>[0]) => ({ shape: 'grid', fte: visibleFteFields(state).join(',') });
 
 export default function CapexPage() {
   const { hasLevel } = useAuth();
@@ -194,9 +183,12 @@ export default function CapexPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gridCanMount]);
 
-  const getCapexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string> }) => {
+  // `businessOrder`: the options follow the label map's key order (the enum's declaration order, the
+  // order the list sorts them in) instead of their labels' alphabetical order.
+  const getCapexFilterValues = useCallback((field: string, opts?: { emptyLabel?: string; labelMap?: Record<string, string>; businessOrder?: boolean }) => {
     const emptyLabel = opts?.emptyLabel ?? t('shared.blank');
     const labelMap = opts?.labelMap;
+    const rank = opts?.businessOrder && labelMap ? Object.keys(labelMap) : null;
     return async ({ context }: any) => {
       const queryState = context?.getQueryState?.() ?? {};
       const filters = { ...(queryState.filters || {}) };
@@ -219,12 +211,20 @@ export default function CapexPage() {
       options.sort((a, b) => {
         if (a.value == null) return 1;
         if (b.value == null) return -1;
+        if (rank) {
+          // A value the map does not know goes after the known ones.
+          const ra = rank.indexOf(String(a.value));
+          const rb = rank.indexOf(String(b.value));
+          if (ra !== rb) return (ra < 0 ? rank.length : ra) - (rb < 0 ? rank.length : rb);
+        }
         return (a.label || '').localeCompare(b.label || '');
       });
       return options;
     };
   }, [t]);
 
+  // The three enum maps list their values in declaration order: their set filters offer them in that
+  // business order, the order the list sorts them in (decision Q4).
   const PPE_LABELS: Record<string, string> = useMemo(() => ({
     hardware: t('capex.ppeTypes.hardware'),
     software: t('capex.ppeTypes.software'),
@@ -261,11 +261,10 @@ export default function CapexPage() {
   const followTotalsQuery = useCallback((next: Omit<TotalsQuery, 'fte' | 'amounts'>) => {
     setTotalsQuery((prev) => (prev && prev.q === next.q && prev.filters === next.filters && prev.statusScope === next.statusScope ? prev : next));
   }, []);
-  // Showing or hiding an FTE column refetches the footer with the FTE columns now shown; an amount
-  // column too on the SQL list engine (`amounts=`; the in-memory totals answer every amount).
+  // Showing or hiding an amount or FTE column refetches the footer with the columns now shown.
   const followColumns = useCallback((state: Parameters<typeof visibleFteFields>[0]) => {
     const fte = visibleFteFields(state).join(',');
-    const amounts = CAPEX_LIST_ON_ENGINE ? visibleAmountFields(state).join(',') : '';
+    const amounts = visibleAmountFields(state).join(',');
     setColumnFields((prev) => (prev && prev.fte === fte && prev.amounts === amounts ? prev : { fte, amounts }));
   }, []);
   const totals = useQuery({
@@ -277,7 +276,7 @@ export default function CapexPage() {
       Object.assign(params, statusScopeParams(totalsQuery!.statusScope));
       if (columnFields!.fte) params.fte = columnFields!.fte;
       // Only the amount columns shown (none: the reporting currency alone).
-      if (CAPEX_LIST_ON_ENGINE) params.amounts = columnFields!.amounts;
+      params.amounts = columnFields!.amounts;
       const res = await getWithListContext(TOTALS_ENDPOINT, params, { signal });
       return res.data || {};
     },
@@ -293,7 +292,7 @@ export default function CapexPage() {
       description: t('shared.total'),
       versions: totalsToVersions(totals.data),
       ...fteTotalsToRow(totals.data.fte),
-      // A column just shown: its placeholder until its total arrives (asked per column on the engine).
+      // A column just shown: its placeholder until its total arrives, not 0.
       ...pendingAmountsField(totals.data, columnFields?.amounts),
     }];
   }, [totals.data, totals.isError, columnFields?.amounts, t]);
@@ -382,14 +381,6 @@ export default function CapexPage() {
         onNavigate={(href) => navigate(href)}
       />
     );
-    const accountGetter = (p: any) => {
-      const d: any = p.data || {};
-      const a = d?.account;
-      if (a && (a.account_number != null || a.account_name != null)) {
-        return [a.account_number != null ? String(a.account_number) : '', a.account_name != null ? String(a.account_name) : ''].filter(Boolean).join(' - ');
-      }
-      return d.account_display || '';
-    };
     return [
       {
         colId: 'item_number',
@@ -415,7 +406,7 @@ export default function CapexPage() {
       {
         colId: 'supplier_name',
         headerName: t('capex.columns.supplier'),
-        valueGetter: (p: any) => p.data?.supplier?.name ?? p.data?.supplier_name ?? '',
+        valueGetter: (p: any) => p.data?.supplier_name ?? '',
         width: 180,
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
@@ -441,7 +432,9 @@ export default function CapexPage() {
       {
         colId: 'account_display',
         headerName: t('capex.columns.account'),
-        valueGetter: accountGetter,
+        // "6110 - Software", or the number alone for an account without a name (the server's text,
+        // the one the filter values and the sort use).
+        valueGetter: (p: any) => p.data?.account_display ?? '',
         width: 220,
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
@@ -454,7 +447,7 @@ export default function CapexPage() {
         width: 140,
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: { getValues: getCapexFilterValues('ppe_type', { labelMap: PPE_LABELS }), searchable: false },
+        filterParams: { getValues: getCapexFilterValues('ppe_type', { labelMap: PPE_LABELS, businessOrder: true }), searchable: false },
         valueFormatter: (p: any) => p.value != null ? (PPE_LABELS[String(p.value)] || String(p.value)) : '',
         cellRenderer: linkCell('ppe_type'),
       },
@@ -464,7 +457,7 @@ export default function CapexPage() {
         width: 170,
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: { getValues: getCapexFilterValues('investment_type', { labelMap: INVESTMENT_LABELS }), searchable: false },
+        filterParams: { getValues: getCapexFilterValues('investment_type', { labelMap: INVESTMENT_LABELS, businessOrder: true }), searchable: false },
         valueFormatter: (p: any) => p.value != null ? (INVESTMENT_LABELS[String(p.value)] || String(p.value)) : '',
         cellRenderer: linkCell('investment_type'),
       },
@@ -474,7 +467,7 @@ export default function CapexPage() {
         width: 120,
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: { getValues: getCapexFilterValues('priority', { labelMap: PRIORITY_LABELS }), searchable: false },
+        filterParams: { getValues: getCapexFilterValues('priority', { labelMap: PRIORITY_LABELS, businessOrder: true }), searchable: false },
         valueFormatter: (p: any) => p.value != null ? (PRIORITY_LABELS[String(p.value)] || String(p.value)) : '',
         cellRenderer: linkCell('priority'),
       },
@@ -716,8 +709,8 @@ export default function CapexPage() {
         // A saved layout applied before the grid is ready only records the columns: the first
         // totals request comes with the query state, carrying the initial filter.
         onColumnStateChange={followColumns}
-        pageParams={CAPEX_LIST_ON_ENGINE ? enginePageParams : undefined}
-        setFilterExcludeMode={CAPEX_LIST_ON_ENGINE}
+        pageParams={pageParams}
+        setFilterExcludeMode
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};

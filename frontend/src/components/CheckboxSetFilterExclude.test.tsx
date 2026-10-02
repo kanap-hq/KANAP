@@ -71,7 +71,7 @@ describe('CheckboxSetFilter exclude mode', () => {
     expect(applied()).toEqual({ filterType: 'set', values: ['Alpha', 'Charlie', null] });
     expect(JSON.stringify(applied())).not.toContain('mode');
     expect(hint()).toBeNull();
-    // Explicitly off, as the CAPEX list until PR C.
+    // Explicitly off (a list whose set code reads the ticked values only).
     const off = renderFilter({ exclude: false });
     fireEvent.click(screen.getAllByRole('checkbox', { name: 'Alpha' })[1]);
     advance();

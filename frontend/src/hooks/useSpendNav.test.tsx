@@ -9,9 +9,6 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
-// CAPEX on the SQL list engine (lot 2B, PR C): off in the app until PR C; each CAPEX test picks its mode.
-const engine = vi.hoisted(() => ({ on: false }));
-vi.mock('../pages/capex/capexListEngine', () => ({ get CAPEX_LIST_ON_ENGINE() { return engine.on; } }));
 
 import api from '../api';
 import { useSpendNav } from './useSpendNav';
@@ -44,7 +41,6 @@ const idsCalls = () => calls('/spend-items/summary/ids');
 
 describe('useSpendNav (neighbours, lot 1C)', () => {
   beforeEach(() => {
-    engine.on = false;
     setting = DEFAULT_BUDGET_COLUMNS;
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     resetListContextCache();
@@ -158,51 +154,7 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
-  it('CAPEX until it runs on the list engine: the ordered ids, one request per list state, no prefetch', async () => {
-    engine.on = false;
-    mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/budget-columns') return { data: setting };
-      if (url === '/capex-items/summary/ids') return { data: { ids: LINES.map((n) => `uuid-${n}`), item_numbers: LINES, total: LINES.length } };
-      return { data: {} };
-    });
-    const { result, rerender } = renderHook(({ id }) => useCapexNav({ id, sort: 'yBudget:DESC', q: 'pc', statusScope: 'all' }), {
-      wrapper,
-      initialProps: { id: 'CPX-2' },
-    });
-    await waitFor(() => expect(result.current.total).toBe(5));
-    expect(result.current).toMatchObject({ index: 1, hasPrev: true, hasNext: true, prevId: 'CPX-1', nextId: 'CPX-3' });
-    expect(calls('/capex-items/summary/ids')).toHaveLength(1);
-    expect(calls('/capex-items/summary/ids')[0][1].params).toMatchObject({ sort: 'yBudget:DESC', q: 'pc', includeDisabled: '1' });
-    // A step: computed at once from the same ids, nothing asked, nothing prefetched.
-    rerender({ id: 'CPX-3' });
-    expect(result.current).toMatchObject({ index: 2, prevId: 'CPX-2', nextId: 'CPX-4' });
-    // The line's own id (a link with the uuid) is found too.
-    rerender({ id: 'uuid-5' });
-    expect(result.current).toMatchObject({ index: 4, hasNext: false, nextId: null, prevId: 'CPX-4' });
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(calls('/capex-items/summary/ids')).toHaveLength(1);
-    expect(calls('/capex-items/summary/neighbors')).toHaveLength(0);
-    expect(mocked.get.mock.calls.filter(([url]) => /^\/capex-items\/(CPX-|uuid-)/.test(url))).toHaveLength(0);
-  });
-
-  it('CAPEX until the engine: filters too long for a URL go as a saved list context', async () => {
-    engine.on = false;
-    mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/budget-columns') return { data: setting };
-      if (url === '/capex-items/summary/ids') return { data: { ids: ['uuid-1'], item_numbers: [1], total: 1 } };
-      return { data: {} };
-    });
-    const values = Array.from({ length: 1500 }, (_, i) => `Supplier ${i}`);
-    const filters = JSON.stringify({ supplier_name: { filterType: 'set', values } });
-    const { result } = renderHook(() => useCapexNav({ id: 'CPX-1', sort: 'yBudget:DESC', filters, statusScope: 'enabled' }), { wrapper });
-    await waitFor(() => expect(result.current.total).toBe(1));
-    const params = calls('/capex-items/summary/ids')[0][1].params;
-    expect(params.ctx).toBe('Ctx_0123456789abcdefghi');
-    expect(params.filters).toBeUndefined();
-  });
-
-  it('CAPEX on the list engine: same navigation on the CAPEX neighbours, CPX references', async () => {
-    engine.on = true;
+  it('CAPEX: same navigation on the CAPEX neighbours, CPX references', async () => {
     mocked.get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
       if (url === '/budget-columns') return { data: setting };
       if (url === '/capex-items/summary/neighbors') {
@@ -216,5 +168,21 @@ describe('useSpendNav (neighbours, lot 1C)', () => {
     expect(result.current).toMatchObject({ index: 0, total: 5, hasPrev: false, hasNext: true });
     await waitFor(() => expect(calls('/capex-items/CPX-2')).toHaveLength(1));
     expect(calls('/capex-items/summary/ids')).toHaveLength(0);
+  });
+
+  it('CAPEX: filters too long for a URL go as a saved list context of the CAPEX list', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/budget-columns') return { data: setting };
+      if (url === '/capex-items/summary/neighbors') return { data: { index: 0, total: 1, prev: null, next: null } };
+      return { data: {} };
+    });
+    const values = Array.from({ length: 1500 }, (_, i) => `Supplier ${i}`);
+    const filters = JSON.stringify({ supplier_name: { filterType: 'set', values } });
+    const { result } = renderHook(() => useCapexNav({ id: 'CPX-1', sort: 'yBudget:DESC', filters, statusScope: 'enabled' }), { wrapper });
+    await waitFor(() => expect(result.current.total).toBe(1));
+    expect(mocked.post).toHaveBeenCalledWith('/list-contexts', { list: 'capex-items', state: { filters: { supplier_name: { filterType: 'set', values } } } });
+    const params = calls('/capex-items/summary/neighbors')[0][1].params;
+    expect(params.ctx).toBe('Ctx_0123456789abcdefghi');
+    expect(params.filters).toBeUndefined();
   });
 });
