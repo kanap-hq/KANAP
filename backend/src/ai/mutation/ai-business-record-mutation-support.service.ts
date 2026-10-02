@@ -20,6 +20,7 @@ import { SpendItemsService } from '../../spend/spend-items.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
 import { itemAnalyticsFields, ItemAnalyticsScope, loadItemAnalyticsValues } from '../../spend/item-analytics.util';
 import { isActiveAt, parseEndOfValidityInput } from '../../common/status';
+import { sameFieldValue } from '../../common/edit-conflicts';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
@@ -449,20 +450,8 @@ function toJsonValue(value: unknown): unknown {
   return value;
 }
 
-function normalizeComparable(value: unknown): unknown {
-  if (value instanceof Date) return value.toISOString();
-  if (value == null) return null;
-  if (Array.isArray(value) || typeof value === 'object') return JSON.stringify(value ?? null);
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed || null;
-  }
-  return value;
-}
-
-function sameValue(left: unknown, right: unknown): boolean {
-  return normalizeComparable(left) === normalizeComparable(right);
-}
+/** Type-aware equality, shared with the edit conflicts of the PATCH routes (`common/edit-conflicts.ts`). */
+const sameValue = sameFieldValue;
 
 function requireEntityType(value: unknown): AiBusinessRecordEntityType {
   const normalized = String(value || '').trim() as AiBusinessRecordEntityType;

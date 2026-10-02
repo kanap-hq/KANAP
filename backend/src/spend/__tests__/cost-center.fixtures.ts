@@ -18,11 +18,11 @@ const noAllocations = { computeForVersions: async () => new Map() };
 const noContacts = { syncFromSupplier: async () => undefined };
 const noNotifications = { notifyStatusChange: () => undefined, notifyShare: () => undefined };
 
-/** The item service of a type: create, update, summary and (CAPEX) CSV. */
-export function itemService(kind: Kind): any {
+/** The item service of a type: create, update, summary and (CAPEX) CSV. `audit`: an in-memory capture unless given. */
+export function itemService(kind: Kind, audit: unknown = captureAudit()): any {
   if (kind === 'opex') {
     const args: any[] = Array.from({ length: 12 }, () => undefined);
-    args[3] = captureAudit();
+    args[3] = audit;
     args[4] = noAllocations;
     args[7] = identityFx;
     args[9] = noContacts;
@@ -32,7 +32,7 @@ export function itemService(kind: Kind): any {
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);
   args[4] = noAllocations;
-  args[5] = captureAudit();
+  args[5] = audit;
   args[6] = noFreeze;
   args[7] = identityFx;
   args[9] = noContacts;

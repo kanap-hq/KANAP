@@ -61,6 +61,13 @@ export const UpdateSpendItemSchema = z.object({
 
   /** When the item was disabled */
   disabled_at: z.string().nullable().optional(),
+
+  /**
+   * Per changed field, the value the edit started from (lot 3C, `common/edit-conflicts.ts`):
+   * a field someone else changed meanwhile answers 409 `edit_conflict`, nothing written.
+   * Analytics values per dimension: `{ analytics_values: { <dimension id>: <value id or null> } }`.
+   */
+  base: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type UpdateSpendItemInput = z.input<typeof UpdateSpendItemSchema>;
