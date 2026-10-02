@@ -1167,8 +1167,8 @@ export class AiQueryExecutor {
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
-      // A capped list was read from the newest lines only: never complete.
-      const truncated = result.capped === true || (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
+      // The CAPEX list has no cap: the total is every matching line.
+      const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
         items: (result.items || []).map((row: any) => this.mapCapexItem(row, registry)),
         total: result.total ?? 0,

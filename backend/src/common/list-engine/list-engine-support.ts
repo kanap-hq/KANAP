@@ -16,7 +16,7 @@ import type { EntityManager } from 'typeorm';
  */
 
 export const LIST_ENGINE_REQUIREMENT =
-  'PostgreSQL must be built with ICU (collation "und-x-icu") and have the unaccent extension: the OPEX list cannot run without them.';
+  'PostgreSQL must be built with ICU (collation "und-x-icu") and have the unaccent extension: the OPEX and CAPEX lists cannot run without them.';
 
 type SupportState = { ok: true } | { ok: false; missing: string[] };
 

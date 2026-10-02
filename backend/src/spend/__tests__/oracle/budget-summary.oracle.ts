@@ -10,7 +10,6 @@ import {
   buildBudgetSummaryRows,
   BudgetSummaryRow,
   FIXED_SLOTS,
-  FIXED_SORT_ORDERS,
   getSummaryFieldValue,
   loadVersionTotals,
   parseSummaryYears,
@@ -27,16 +26,19 @@ import {
 } from '../../spend-summary.builder';
 
 /**
- * THE ORACLE of the SQL list engine (lot 2B, PR A): the in-memory list engine
- * of `budget-summary.ts` + `spend-summary.builder.ts` as it was before the
- * engine, uncapped, with every column filter evaluated in memory (no SQL fast
- * path), the items read newest first (`created_at DESC, id DESC`), every row
- * built by the unchanged builder, then filtered, searched and sorted.
+ * THE ORACLE of the SQL list engine (lot 2B, PRs A and C): the in-memory list
+ * engine of `budget-summary.ts` + `spend-summary.builder.ts` as it was before
+ * the engine (both gone from the runtime since PR C), uncapped, with every
+ * column filter evaluated in memory (no SQL fast path), the items read newest
+ * first (`created_at DESC, id DESC`), every row built by the unchanged
+ * builder, then filtered, searched and sorted. One oracle for OPEX and CAPEX,
+ * like the engine (the scope config).
  *
- * The functions below are copies of today's `rowPassesFilter`,
- * `quickSearchSummaryRows`, `sortSummaryRows`, `summaryFilterValues` and
- * `summaryTotals`. They differ from them ONLY by these adapters, each marked
- * `ADAPTER` where it applies; every other line is today's behaviour:
+ * The functions below are copies of the former `rowPassesFilter`,
+ * `quickSearchSummaryRows`, `sortSummaryRows` (with the former
+ * `FIXED_SORT_ORDERS`), `summaryFilterValues` and `summaryTotals`. They differ
+ * from them ONLY by these adapters, each marked `ADAPTER` where it applies;
+ * every other line is the former behaviour:
  *
  *  A1 (design 2.13-4) every condition of a combined model applies, joined
  *     by its operator (today: the first condition only).
@@ -53,6 +55,11 @@ import {
  *     number model parsed text with `Number()`, a date model parsed any
  *     string with `Date`).
  *  A6 (design 2.13-5) no cap.
+ *  A7 (Q4, PR C) the CAPEX priority, investment type and PPE type sort in
+ *     their business order, the declaration order of their enums, like
+ *     status and run or build (before: by code, high < low < mandatory <
+ *     medium). Their filter values keep the text order, like status and run
+ *     or build.
  *
  * The 10,000-line cap, the `capped` flag and the SQL fast path are gone (A6);
  * the deterministic tie-breaks of the latest task and contract (2.13-3) live
@@ -271,7 +278,7 @@ export class BudgetSummaryOracle {
     return Object.assign(amounts, { fte });
   }
 
-  // ----- in-memory filters (today's `applyAgFiltersInMemory` / `rowPassesFilter`) -----
+  // ----- in-memory filters (the former `applyAgFiltersInMemory` / `rowPassesFilter`) -----
 
   applyFilters<T extends Record<string, any>>(rows: T[], filterModel: Record<string, any>): T[] {
     const entries = Object.entries(filterModel ?? {});
@@ -346,7 +353,7 @@ export class BudgetSummaryOracle {
     return textMatches(type, this.fold(valueText(rowVal)), lowerNeedle);
   }
 
-  // ----- quick search (today's `quickSearchSummaryRows`) -----
+  // ----- quick search (the former `quickSearchSummaryRows`) -----
 
   quickSearch<T extends Record<string, any>>(rows: T[], q: string): T[] {
     if (!q) return rows;
@@ -424,10 +431,24 @@ function textMatches(type: string, value: string, needle: string): boolean {
   }
 }
 
-/** Today's `sortSummaryRows`, text compared in the natural order (A2). */
+/**
+ * The former `FIXED_SORT_ORDERS` (status, run or build), and A7: the CAPEX
+ * enums in their declaration order. Written here, not read from the builder's
+ * list the engine uses, so a wrong order on either side shows as a difference.
+ */
+const SORT_ORDERS: Record<string, readonly string[]> = {
+  status: ['enabled', 'disabled'],
+  run_build: ['run', 'build'],
+  // ADAPTER A7: business order of the CAPEX enums (before: sorted by code).
+  priority: ['mandatory', 'high', 'medium', 'low'],
+  investment_type: ['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other'],
+  ppe_type: ['hardware', 'software'],
+};
+
+/** The former `sortSummaryRows`, text compared in the natural order (A2), the CAPEX enums ranked (A7). */
 export function sortRows<T extends Record<string, any>>(rows: T[], field: string, direction: 'ASC' | 'DESC'): T[] {
   const dir = direction === 'ASC' ? 1 : -1;
-  const order = Object.prototype.hasOwnProperty.call(FIXED_SORT_ORDERS, field) ? FIXED_SORT_ORDERS[field] : undefined;
+  const order = Object.prototype.hasOwnProperty.call(SORT_ORDERS, field) ? SORT_ORDERS[field] : undefined;
   const valueOf = (row: T) => {
     const value = getSummaryFieldValue(row, field);
     if (!order) return value;
