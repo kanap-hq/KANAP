@@ -185,25 +185,36 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     ).sort((a, b) => a - b);
 
     try {
+      // Only these keys are merged in one statement: the metadata read above
+      // is stale by now, and writing it back would erase a settings save.
+      const refresh = {
+        fx_last_login_refresh_at: now.toISOString(),
+        fx_last_login_refresh_label: this.loginAutoLabel,
+        fx_login_refresh_interval_ms: this.loginAutoIntervalMs,
+        fx_last_login_refresh_years: years,
+      };
+      // Claimed before it is queued: the update lands only if the stored date is still the one
+      // read above. Two logins at once, answered by two API processes (API_WORKERS > 1), both
+      // read the old date; only one of them queues the refresh.
+      const claimed: Array<{ id: string }> = await manager.query(
+        `WITH claimed AS (
+           UPDATE tenants SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+            WHERE id = $1
+              AND CASE WHEN $3::text IS NULL
+                       THEN jsonb_typeof(COALESCE(metadata, '{}'::jsonb) -> 'fx_last_login_refresh_at') IS DISTINCT FROM 'string'
+                       ELSE (COALESCE(metadata, '{}'::jsonb) ->> 'fx_last_login_refresh_at') = $3::text
+                  END
+           RETURNING id
+         )
+         SELECT id FROM claimed`,
+        [tenantId, JSON.stringify(refresh), lastIso],
+      );
+      if (claimed.length === 0) return;
       const status = await this.queueManualRefresh(tenantId, years, { label: this.loginAutoLabel });
-      if (status === 'queued' || status === 'skipped') {
-        // Only these keys are merged in one statement: the metadata read above
-        // is stale by now, and writing it back would erase a settings save.
-        const refresh = {
-          fx_last_login_refresh_at: now.toISOString(),
-          fx_last_login_refresh_label: this.loginAutoLabel,
-          fx_login_refresh_interval_ms: this.loginAutoIntervalMs,
-          fx_last_login_refresh_years: years,
-        };
-        await manager.query(
-          `UPDATE tenants SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb WHERE id = $1`,
-          [tenantId, JSON.stringify(refresh)],
+      if (status === 'queued') {
+        this.logger.log(
+          `[${this.loginAutoLabel}] queued FX refresh for tenant ${tenantId}: years ${years.join(', ')}`,
         );
-        if (status === 'queued') {
-          this.logger.log(
-            `[${this.loginAutoLabel}] queued FX refresh for tenant ${tenantId}: years ${years.join(', ')}`,
-          );
-        }
       }
     } catch (err) {
       this.logger.warn(

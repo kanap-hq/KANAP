@@ -38,6 +38,8 @@ function createService(options: { failTenantTransaction?: boolean } = {}) {
     manager: {
       query: async (sql: string, params: unknown[] = []) => {
         tenantQueries.push({ sql, params });
+        // The dedupe claim (notification-dedupe.ts): every key is new here.
+        if (/INSERT INTO notification_dedupe/.test(sql)) return (params[1] as string[]).map((key) => ({ dedupe_key: key }));
         if (/FROM users u/.test(sql)) return [{ id: IT_LEAD, email: 'lead@example.com', locale: 'en' }];
         if (/FROM portfolio_projects/.test(sql)) return [{ item_ref: 'PRJ-3' }];
         return [];

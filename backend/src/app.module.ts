@@ -61,18 +61,23 @@ import { ScheduledTasksModule } from './admin/scheduled-tasks/scheduled-tasks.mo
 import { CleanupModule } from './cleanup/cleanup.module';
 import { NetboxModule } from './netbox/netbox.module';
 import { ListContextsModule } from './common/list-context/list-contexts.module';
-import { clusterWorkerId } from './common/cluster/process-role';
+import { apiProcessCount, clusterWorkerId } from './common/cluster/process-role';
+import { DatabaseThrottlerStorage } from './common/rate-limit-store';
+import { DataSource } from 'typeorm';
 import { readPoolMax } from './common/db-pool-budget';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60_000,
-        limit: 10,
-      },
-    ]),
+    // Rate limit counts: in this process's memory with one API process, as before; in the
+    // database with several (API_WORKERS > 1), so the limits hold for all of them together.
+    ThrottlerModule.forRootAsync({
+      inject: [DataSource],
+      useFactory: (dataSource: DataSource) => ({
+        throttlers: [{ ttl: 60_000, limit: 10 }],
+        storage: apiProcessCount() > 1 ? new DatabaseThrottlerStorage(dataSource) : undefined,
+      }),
+    }),
     ScheduleModule.forRoot(),
     TenancyModule,
     TypeOrmModule.forRootAsync({

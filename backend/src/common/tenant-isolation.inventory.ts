@@ -153,6 +153,7 @@ export const TENANT_SCOPED_TABLES = [
   'location_sub_items',
   'location_user_contacts',
   'locations',
+  'notification_dedupe',
   'portfolio_activities',
   'portfolio_categories',
   'portfolio_criteria',

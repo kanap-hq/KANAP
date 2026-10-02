@@ -15,6 +15,15 @@ export interface TaskRegistration {
   runOnStartup?: boolean;
 }
 
+/** The next time a cron job fires, or null when it cannot say. */
+function nextScheduledDate(job: CronJob): Date | null {
+  try {
+    return job.nextDate().toJSDate();
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 export class ScheduledTasksService implements OnApplicationBootstrap {
   private readonly logger = new Logger(ScheduledTasksService.name);
@@ -42,12 +51,17 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       // Upsert: preserve user-customized cron/enabled
       const existing = await this.taskRepo.findOne({ where: { name: reg.name } });
       if (!existing) {
-        await this.taskRepo.save({
-          name: reg.name,
-          description: reg.description,
-          cron_expression: reg.defaultCron,
-          enabled: true,
-        });
+        try {
+          await this.taskRepo.save({
+            name: reg.name,
+            description: reg.description,
+            cron_expression: reg.defaultCron,
+            enabled: true,
+          });
+        } catch (err: any) {
+          // Another API process starting at the same time inserted it first (unique name).
+          if (err?.driverError?.code !== '23505' && err?.code !== '23505') throw err;
+        }
       } else {
         // Update description only (preserve user's cron/enabled)
         if (existing.description !== reg.description) {
@@ -86,18 +100,70 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       // Remove existing job if any
       try { this.schedulerRegistry.deleteCronJob(name); } catch {}
 
+      // The scheduled time of the coming tick. Every API process computes the same one from the
+      // same cron expression, so it names the tick they compete for (`claimTick`).
+      let scheduledFor: Date | null = null;
       const job = new CronJob(cronExpression, () => {
-        this.executeTask(name).catch(err => {
+        const tick = scheduledFor ?? new Date();
+        scheduledFor = nextScheduledDate(job);
+        this.runScheduledTick(name, cronExpression, tick).catch(err => {
           this.logger.error(`[${name}] Unhandled execution error: ${err.message}`);
         });
       });
 
       this.schedulerRegistry.addCronJob(name, job);
       job.start();
+      scheduledFor = nextScheduledDate(job);
       this.logger.log(`Cron job '${name}' scheduled: ${cronExpression}`);
     } catch (err: any) {
       this.logger.error(`Failed to create cron job '${name}': ${err.message}`);
     }
+  }
+
+  /**
+   * One cron tick: runs the task if this process wins the tick. Every API process schedules
+   * every task; with several processes (API_WORKERS > 1) they all fire at the same time, and the
+   * advisory lock of `executeTask` alone does not stop a fast task from running once per
+   * process (a run can end before the next process tries the lock).
+   */
+  private async runScheduledTick(name: string, cronExpression: string, tick: Date): Promise<void> {
+    if (!(await this.claimTick(name, cronExpression, tick))) return;
+    await this.executeTask(name);
+  }
+
+  /**
+   * Claims a tick in `scheduled_tasks.last_tick_at`: one process moves it to the tick's
+   * scheduled time and runs; the others find it there and skip. The claim also checks the task
+   * as it is stored: a cron change or a disable made through another process (the admin console
+   * reaches one process only) makes this process reschedule or drop its job instead of running.
+   */
+  async claimTick(name: string, cronExpression: string, tick: Date): Promise<boolean> {
+    const claimed: Array<{ name: string }> = await this.dataSource.query(
+      `WITH claimed AS (
+         UPDATE scheduled_tasks SET last_tick_at = $2
+          WHERE name = $1 AND enabled AND cron_expression = $3
+            AND (last_tick_at IS NULL OR last_tick_at < $2)
+         RETURNING name
+       )
+       SELECT name FROM claimed`,
+      [name, tick, cronExpression],
+    );
+    if (claimed.length > 0) return true;
+
+    const [stored]: Array<{ enabled: boolean; cron_expression: string }> = await this.dataSource.query(
+      `SELECT enabled, cron_expression FROM scheduled_tasks WHERE name = $1`,
+      [name],
+    );
+    if (!stored || !stored.enabled) {
+      try { this.schedulerRegistry.deleteCronJob(name); } catch {}
+      this.logger.log(`[${name}] Disabled in another process: cron job removed here`);
+    } else if (stored.cron_expression !== cronExpression) {
+      this.logger.log(`[${name}] Rescheduled in another process: ${cronExpression} -> ${stored.cron_expression}`);
+      this.createCronJob(name, stored.cron_expression);
+    } else {
+      this.logger.debug(`[${name}] Tick ${tick.toISOString()} taken by another process`);
+    }
+    return false;
   }
 
   async executeTask(name: string): Promise<void> {
