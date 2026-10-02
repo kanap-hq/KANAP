@@ -2,13 +2,13 @@ import { CanActivate, ExecutionContext, Injectable, Logger, UnauthorizedExceptio
 import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
 import { IS_PUBLIC_KEY } from './public.decorator';
-import { requireJwtSecret } from '../common/env';
 import { PROCESS_STARTED_AT } from '../common/process-start';
 import {
   AccessTokenPolicy,
   checkAccessTokenPurpose,
   createAccessTokenPolicyResolver,
 } from './access-token.util';
+import { accessTokenVerifyKey } from './jwt-key';
 
 /** Time seam for specs: the cut-over that ends the legacy window is time-dependent. */
 export type JwtAuthGuardClock = {
@@ -52,8 +52,7 @@ export class JwtAuthGuard implements CanActivate {
     if (!header || !header.startsWith('Bearer ')) throw new UnauthorizedException({ code: 'MISSING_TOKEN', message: 'Missing token' });
     const token = header.slice('Bearer '.length);
     try {
-      const secret = requireJwtSecret();
-      const verified = jwt.verify(token, secret);
+      const verified = jwt.verify(token, accessTokenVerifyKey());
       if (!verified || typeof verified === 'string') {
         throw new UnauthorizedException({ code: 'INVALID_TOKEN', message: 'Invalid token' });
       }
