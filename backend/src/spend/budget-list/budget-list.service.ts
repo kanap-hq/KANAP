@@ -14,6 +14,7 @@ import {
   BudgetSummaryRow,
   FIXED_SLOTS,
   parseSummaryYears,
+  resolveAmountField,
   resolveFteField,
   SUMMARY_COLUMNS,
   SummaryDeps,
@@ -103,7 +104,11 @@ async function readRequest(query: any, manager: EntityManager): Promise<BudgetRe
   const requestedYears = parseSummaryYears(query?.years);
   const namedYears = yearsNamedByFields([request.sort.field, ...Object.keys(request.filters)]);
   const years = Array.from(new Set([...fixedYears(currentYear), ...requestedYears, ...namedYears]));
-  assertBudgetYearsWithinBounds([...years, ...parseFteKeys(query?.fte, currentYear).map((fte) => fte.year)], currentYear);
+  assertBudgetYearsWithinBounds([
+    ...years,
+    ...parseFteKeys(query?.fte, currentYear).map((fte) => fte.year),
+    ...(parseAmountKeys(query?.amounts, currentYear) ?? []).map((amount) => amount.year),
+  ], currentYear);
   return { tenantId, currentYear, request, requestedYears, years };
 }
 
@@ -157,6 +162,24 @@ export function parseFteKeys(raw: unknown, currentYear: number): Array<{ key: st
   const keys = new Map<string, { key: string; year: number; measure: string }>();
   for (const key of parts.map((part) => String(part).trim())) {
     const resolved = resolveFteField(key);
+    if (!resolved) continue;
+    const year = resolved.year ?? currentYear + FIXED_SLOTS.find((slot) => slot.key === resolved.slot)!.offset;
+    keys.set(key, { key, year, measure: resolved.column.measure });
+  }
+  return Array.from(keys.values());
+}
+
+/**
+ * `amounts=yBudget,y2028Revision` (or an array): the footer totals keys asked
+ * for, each with its year and budget column; unknown keys are left out. Null
+ * without the parameter: every key of the fixed slots and of `years=`.
+ */
+export function parseAmountKeys(raw: unknown, currentYear: number): Array<{ key: string; year: number; measure: string }> | null {
+  if (raw === undefined || raw === null) return null;
+  const parts = Array.isArray(raw) ? raw.flatMap((part) => String(part).split(',')) : String(raw).split(',');
+  const keys = new Map<string, { key: string; year: number; measure: string }>();
+  for (const key of parts.map((part) => part.trim()).filter(Boolean)) {
+    const resolved = resolveAmountField(key);
     if (!resolved) continue;
     const year = resolved.year ?? currentYear + FIXED_SLOTS.find((slot) => slot.key === resolved.slot)!.offset;
     keys.set(key, { key, year, measure: resolved.column.measure });
@@ -314,7 +337,9 @@ export type SummaryTotals = Record<string, number | string> & { fte?: Record<str
 /**
  * The footer totals of what the list shows: every `<slot><Suffix>` of the
  * fixed slots and of the requested years, in the reporting currency, masked
- * after each line's end of validity. Each version is converted to the cent
+ * after each line's end of validity. With `amounts=<keys>`, only those keys
+ * (the amount columns the grid shows; their years and columns alone are
+ * read). Each version is converted to the cent
  * once and the sums are exact (numeric cents). With `fte=<keys>`, `fte` sums
  * each FTE key over the lines and counts the lines whose FTE is unknown.
  * Without a status: active lines.
@@ -328,13 +353,17 @@ export async function budgetListTotals(
   const req = await readRequest(query, manager);
   const state = stateOf(req, 'active');
   const Y = req.currentYear;
-  const slots = [
+  // The keys answered: `amounts=` when given (the columns the grid shows), else every column of the
+  // fixed slots and of the requested years.
+  const wanted = parseAmountKeys(query?.amounts, Y) ?? [
     ...FIXED_SLOTS.map((slot) => ({ key: slot.key as string, year: Y + slot.offset })),
     ...req.requestedYears.map((year) => ({ key: `y${year}`, year })),
-  ];
-  const slotYears = Array.from(new Set(slots.map((slot) => slot.year)));
+  ].flatMap((slot) => SUMMARY_COLUMNS.map((column) => ({ key: `${slot.key}${column.suffix}`, year: slot.year, measure: column.measure as string })));
+  const slotYears = Array.from(new Set(wanted.map((amount) => amount.year)));
+  const columns = SUMMARY_COLUMNS.filter((column) => wanted.some((amount) => amount.measure === column.measure));
   const fteKeys = parseFteKeys(query?.fte, Y);
-  const needs = mergeNeeds(budgetRuntimeNeeds(Y, requestKeys(req, false), !!state.q), { fxYears: slotYears });
+  // The FX pre-read also gives the reporting currency: one year at least, even without an amount.
+  const needs = mergeNeeds(budgetRuntimeNeeds(Y, requestKeys(req, false), !!state.q), { fxYears: slotYears.length ? slotYears : [Y] });
   const rt = await runtimeFor(scope, new RequestFxRates(deps.fxRates), manager, req, needs);
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
@@ -345,10 +374,10 @@ export async function budgetListTotals(
   const validity = `(c.disabled_at IS NULL OR v.budget_year <= extract(year FROM c.disabled_at AT TIME ZONE 'UTC'))`;
   // Each version converted once (the builder's chain, `Math.round(Number(formatCents(local)) * rate * 100)`),
   // the products computed once per row (OFFSET 0 keeps the subquery from being flattened into the sums).
-  const products = SUMMARY_COLUMNS.map((column) => `${decimal2ToFloat(`t.${column.measure}`)} * coalesce(fx.rate, 1::float8) * 100 AS ${column.measure}`).join(',\n          ');
-  const rounded = SUMMARY_COLUMNS.map((column) => `${jsRound(`p.${column.measure}`)} AS ${column.measure}`).join(', ');
-  const sums = SUMMARY_COLUMNS.map((column) => `${sumJsCents(`x.${column.measure}`)}::text AS ${column.measure}`).join(',\n        ');
-  const amounts = `SELECT x.yr,
+  const products = columns.map((column) => `${decimal2ToFloat(`t.${column.measure}`)} * coalesce(fx.rate, 1::float8) * 100 AS ${column.measure}`).join(',\n          ');
+  const rounded = columns.map((column) => `${jsRound(`p.${column.measure}`)} AS ${column.measure}`).join(', ');
+  const sums = columns.map((column) => `${sumJsCents(`x.${column.measure}`)}::text AS ${column.measure}`).join(',\n        ');
+  const amounts = columns.length === 0 ? null : `SELECT x.yr,
         ${sums}
       FROM (SELECT p.yr, ${rounded} FROM (
         SELECT v.budget_year AS yr,
@@ -370,19 +399,17 @@ export async function budgetListTotals(
       GROUP BY k.key`
     : null;
   const sql = `${stmt.withClause([['core', `SELECT i.id, i.currency, i.disabled_at\n${core.from}\n${core.where}`]])}SELECT
-  (SELECT coalesce(json_agg(a), '[]'::json) FROM (${amounts}) a) AS amounts,
+  ${amounts ? `(SELECT coalesce(json_agg(a), '[]'::json) FROM (${amounts}) a)` : `'[]'::json`} AS amounts,
   ${fte ? `(SELECT coalesce(json_agg(f), '[]'::json) FROM (${fte}) f)` : `'[]'::json`} AS fte`;
   const [row] = await run(manager, stmt, sql);
 
   const centsByYear = new Map<number, Record<string, bigint>>();
   for (const entry of row.amounts as Array<Record<string, any>>) {
-    centsByYear.set(Number(entry.yr), Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.measure, BigInt(entry[c.measure] ?? '0')])));
+    centsByYear.set(Number(entry.yr), Object.fromEntries(columns.map((c) => [c.measure, BigInt(entry[c.measure] ?? '0')])));
   }
   const result: Record<string, number | string> = {};
-  for (const slot of slots) {
-    for (const column of SUMMARY_COLUMNS) {
-      result[`${slot.key}${column.suffix}`] = Number(formatCents(centsByYear.get(slot.year)?.[column.measure] ?? 0n));
-    }
+  for (const amount of wanted) {
+    result[amount.key] = Number(formatCents(centsByYear.get(amount.year)?.[amount.measure] ?? 0n));
   }
   result.reportingCurrency = fx.reportingCurrency;
   if (!fteKeys.length) return result;
