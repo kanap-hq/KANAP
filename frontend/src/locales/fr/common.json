@@ -70,9 +70,16 @@
     "blank": "(Vide)",
     "selectedCount": "{{count}} sélectionnés",
     "selectedCount_one": "{{count}} sélectionné",
+    "allExcept": "Tous sauf {{count}}",
+    "excludeHint": "Tous sauf {{count}}. Les valeurs ajoutées ensuite s'affichent aussi.",
+    "includeHint": "Seules les {{count}} valeurs cochées s'affichent.",
+    "includeHint_one": "Seule la valeur cochée s'affiche.",
+    "valueCount": "{{formatted}} valeurs",
+    "valueCount_one": "{{formatted}} valeur",
     "clearFilter": "Effacer le filtre",
     "columnPlaceholder": "Filtrer…",
-    "filterColumn": "Filtrer {{column}}"
+    "filterColumn": "Filtrer {{column}}",
+    "linkFiltersLost": "Les filtres de ce lien ne sont plus disponibles."
   },
   "labels": {
     "show": "Afficher",

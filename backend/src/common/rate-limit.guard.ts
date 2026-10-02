@@ -9,3 +9,17 @@ export class RateLimitGuard extends ThrottlerGuard {
     return super.canActivate(context);
   }
 }
+
+/**
+ * Same limits, counted per signed-in user (tenant and user id) rather than per
+ * address: several users behind one company proxy do not share a budget. Runs
+ * after the authentication guard; without a user it counts per address.
+ */
+@Injectable()
+export class UserRateLimitGuard extends RateLimitGuard {
+  protected async getTracker(req: Record<string, any>): Promise<string> {
+    const userId = req?.user?.sub;
+    if (!userId) return super.getTracker(req);
+    return `user:${req?.tenant?.id ?? '-'}:${userId}`;
+  }
+}

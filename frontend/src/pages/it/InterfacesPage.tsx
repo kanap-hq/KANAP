@@ -36,6 +36,7 @@ import api from '../../api';
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { classificationText } from '../../utils/applicationClassification';
+import { setListFiltersParam } from '../../lib/listContext';
 type InterfaceRow = {
   id: string;
   interface_reference: string;
@@ -96,7 +97,7 @@ export default function InterfacesPage() {
     const state = lastQueryRef.current;
     if (state?.sort) sp.set('sort', state.sort);
     if (state?.q) sp.set('q', state.q);
-    if (state?.filters && Object.keys(state.filters).length > 0) sp.set('filters', JSON.stringify(state.filters));
+    setListFiltersParam(sp, '/interfaces', state?.filters);
     const qs = sp.toString();
     return `/it/interfaces/${row.interface_reference || row.id}/overview${qs ? `?${qs}` : ''}`;
   }, []);

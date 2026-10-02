@@ -25,4 +25,10 @@ export const RATE_LIMITS = {
   publicRequestSupportInvoice: { limit: 3, ttl: 10 * 60_000 },
   documentExport: { limit: 5, ttl: 60_000 },
   documentImport: { limit: 5, ttl: 60_000 },
+  /**
+   * Saved list filters, per user (`UserRateLimitGuard`): the grid saves one state per distinct
+   * large filter, clicks batched after 300 ms of quiet, so a minute of continuous clicking stays
+   * under it.
+   */
+  listContextSave: { limit: 60, ttl: 60_000 },
 };

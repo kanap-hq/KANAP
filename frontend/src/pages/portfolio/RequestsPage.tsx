@@ -20,6 +20,8 @@ import { formatShortDate } from '../../lib/dateFormat';
 import { getDotColor, REQUEST_STATUS_COLORS } from '../../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../../components/design';
+import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
+import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 
 type RequestRow = {
   id: string;
@@ -91,19 +93,10 @@ export default function RequestsPage() {
     );
   }, [t, theme.palette.mode]);
 
-  // Read filters from URL to restore state when returning from workspace
-  const urlFilters = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const filtersParam = params.get('filters');
-    if (filtersParam) {
-      try {
-        return JSON.parse(filtersParam);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }, [location.search]);
+  // Read filters from URL to restore state when returning from workspace: inline, or the saved
+  // filters its `ctx` stands for (filters too long for a URL), read before the grid mounts.
+  const urlFilterState = useUrlFilterModel(location.search, '/portfolio/requests');
+  const urlFilters = urlFilterState.model;
   const urlRequestScope = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const scope = params.get('requestScope');
@@ -182,7 +175,7 @@ export default function RequestsPage() {
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters && Object.keys(filters).length > 0) sp.set('filters', JSON.stringify(filters));
+    setListFiltersParam(sp, '/portfolio/requests', filters);
     const scope = requestScopeRef.current;
     const profileId = profileIdRef.current;
     const hasTeamNow = hasTeamRef.current;
@@ -263,7 +256,7 @@ export default function RequestsPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get('/portfolio/requests/filter-values', { params });
+      const res = await getWithListContext('/portfolio/requests/filter-values', params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };
@@ -488,24 +481,27 @@ export default function RequestsPage() {
   return (
     <>
       <PageHeader title={t('requests.title')} actions={actions} />
-      <ServerDataGrid<RequestRow>
-        columns={columns}
-        endpoint="/portfolio/requests"
-        showRowCount
-        queryKey="portfolio-requests"
-        getRowId={(r) => r.id}
-        enableSearch
-        defaultSort={{ field: 'priority_score', direction: 'DESC' }}
-        extraParams={extraParams}
-        columnPreferencesKey="portfolio-requests"
-        initialState={initialGridState}
-        refreshKey={refreshKey}
-        onGridApiReady={(api) => { gridApiRef.current = api; }}
-        onQueryStateChange={(state) => {
-          lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
-        }}
-        toolbarExtras={requestScopeToolbar}
-      />
+      {/* Waits for filters saved as a context (a reload, a link in a new tab). */}
+      {urlFilterState.ready && (
+        <ServerDataGrid<RequestRow>
+          columns={columns}
+          endpoint="/portfolio/requests"
+          showRowCount
+          queryKey="portfolio-requests"
+          getRowId={(r) => r.id}
+          enableSearch
+          defaultSort={{ field: 'priority_score', direction: 'DESC' }}
+          extraParams={extraParams}
+          columnPreferencesKey="portfolio-requests"
+          initialState={initialGridState}
+          refreshKey={refreshKey}
+          onGridApiReady={(api) => { gridApiRef.current = api; }}
+          onQueryStateChange={(state) => {
+            lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
+          }}
+          toolbarExtras={requestScopeToolbar}
+        />
+      )}
       <CsvExportDialogV2
         open={exportOpen}
         onClose={() => setExportOpen(false)}

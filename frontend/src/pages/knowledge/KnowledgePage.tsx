@@ -60,6 +60,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
 import { getDotColor, KNOWLEDGE_STATUS_COLORS } from '../../utils/statusColors';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Draft',
@@ -325,7 +326,7 @@ export default function KnowledgePage() {
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters && Object.keys(filters).length > 0) sp.set('filters', JSON.stringify(filters));
+    setListFiltersParam(sp, '/knowledge', filters);
     sp.set('docScope', docScope);
     if (activeLibrary?.slug) sp.set('library', activeLibrary.slug);
     sp.set('allLibraries', searchAllLibraries ? '1' : '0');
@@ -386,7 +387,7 @@ export default function KnowledgePage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get('/knowledge/filter-values', { params });
+      const res = await getWithListContext('/knowledge/filter-values', params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };

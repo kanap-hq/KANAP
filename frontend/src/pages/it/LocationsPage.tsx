@@ -13,6 +13,7 @@ import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 
 import { useTranslation } from 'react-i18next';
+import { setListFiltersParam } from '../../lib/listContext';
 type LocationRow = {
   id: string;
   location_reference: string;
@@ -55,9 +56,7 @@ export default function LocationsPage() {
     const state = lastQueryRef.current;
     if (state?.sort) sp.set('sort', state.sort);
     if (state?.q) sp.set('q', state.q);
-    if (state?.filters && Object.keys(state.filters || {}).length > 0) {
-      sp.set('filters', JSON.stringify(state.filters));
-    }
+    setListFiltersParam(sp, '/locations', state?.filters);
     return sp;
   }, []);
 

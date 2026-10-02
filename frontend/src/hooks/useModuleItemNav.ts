@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../api';
+import { useLocation } from 'react-router-dom';
 import { statusScopeParams } from '../utils/statusScopeParams';
+import { listKeyOf, loadListContext, getWithListContext } from '../lib/listContext';
 
 type ModuleItemNavData = {
   ids: string[];
@@ -34,6 +35,11 @@ export interface ModuleItemNavParams {
   q?: string | null;
   /** Filters JSON string from URL */
   filters?: string | null;
+  /**
+   * Saved list context (`ctx`) standing for filters too long for a URL. Read from the page URL
+   * when not given and no `filters` are; the server applies it to the id list.
+   */
+  ctx?: string | null;
   /** Optional year parameter */
   year?: number | string | null;
   /**
@@ -100,6 +106,8 @@ export function useModuleItemNav(
 ): ModuleItemNavResult {
   const { id, sort, q, filters, year, statusScope, extraParams: dynamicExtraParams, enabled = true } = params;
   const { endpoint, queryKey, defaultSort, extraParams: staticExtraParams } = config;
+  const location = useLocation();
+  const ctx = filters ? null : (params.ctx !== undefined ? params.ctx : new URLSearchParams(location.search).get('ctx'));
 
   const effectiveSort = sort || defaultSort;
   const effectiveQ = q || '';
@@ -112,12 +120,13 @@ export function useModuleItemNav(
   const extraParamsKey = JSON.stringify(combinedExtraParams);
 
   const { data } = useQuery({
-    queryKey: [queryKey, effectiveSort, effectiveQ, effectiveFilters, effectiveYear, effectiveStatusScope, extraParamsKey],
+    queryKey: [queryKey, effectiveSort, effectiveQ, effectiveFilters, ctx ?? '', effectiveYear, effectiveStatusScope, extraParamsKey],
     queryFn: async () => {
       const apiParams: Record<string, string | number | undefined> = {
         sort: effectiveSort,
         q: effectiveQ || undefined,
         filters: effectiveFilters || undefined,
+        ctx: ctx || undefined,
         // Same scope mapping the grid uses, so the id list matches the visible rows.
         ...statusScopeParams(statusScope),
         ...combinedExtraParams,
@@ -128,7 +137,13 @@ export function useModuleItemNav(
         apiParams.year = year;
       }
 
-      const res = await api.get<{ ids?: string[]; refs?: Array<string | null | undefined> }>(endpoint, { params: apiParams });
+      // A saved list context applies when it is this list's (a link may carry another list's).
+      if (apiParams.ctx) {
+        const saved = await loadListContext(String(apiParams.ctx)).catch(() => null);
+        if (!saved || saved.list !== listKeyOf(endpoint)) delete apiParams.ctx;
+      }
+      // Filters too long for a URL go as a saved list context (saved again if the server lost it).
+      const res = await getWithListContext<{ ids?: string[]; refs?: Array<string | null | undefined> }>(endpoint, apiParams);
       return {
         ids: res.data?.ids || [],
         refs: res.data?.refs || [],

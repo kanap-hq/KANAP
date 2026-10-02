@@ -60,6 +60,7 @@ import { PlatformAiModule } from './ai/platform/platform-ai.module';
 import { ScheduledTasksModule } from './admin/scheduled-tasks/scheduled-tasks.module';
 import { CleanupModule } from './cleanup/cleanup.module';
 import { NetboxModule } from './netbox/netbox.module';
+import { ListContextsModule } from './common/list-context/list-contexts.module';
 
 @Module({
   imports: [
@@ -146,6 +147,7 @@ import { NetboxModule } from './netbox/netbox.module';
     ScheduledTasksModule,
     CleanupModule,
     NetboxModule,
+    ListContextsModule,
   ],
   controllers: [HealthController, PublicController, ConfigController],
   providers: [RateLimitGuard, TurnstileService],

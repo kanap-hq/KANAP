@@ -70,9 +70,16 @@
     "blank": "(Blank)",
     "selectedCount": "{{count}} selected",
     "selectedCount_one": "{{count}} selected",
+    "allExcept": "All but {{count}}",
+    "excludeHint": "All but {{count}}. Values added later show too.",
+    "includeHint": "Only the {{count}} ticked values show.",
+    "includeHint_one": "Only the ticked value shows.",
+    "valueCount": "{{formatted}} values",
+    "valueCount_one": "{{formatted}} value",
     "clearFilter": "Clear filter",
     "columnPlaceholder": "Filter…",
-    "filterColumn": "Filter {{column}}"
+    "filterColumn": "Filter {{column}}",
+    "linkFiltersLost": "The filters of this link are no longer available."
   },
   "labels": {
     "show": "Show",

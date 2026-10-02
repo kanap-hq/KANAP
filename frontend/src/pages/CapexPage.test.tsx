@@ -1,16 +1,20 @@
 import React from 'react';
 import { act, render, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => {
-  const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
+  // The page title shows its currency: `key:currency`.
+  const t = (key: string, options?: { currency?: string }) => (options?.currency ? `${key}:${options.currency}` : key);
+  const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
-vi.mock('../components/PageHeader', () => ({ default: () => null }));
+const header = vi.hoisted(() => ({ title: '' }));
+vi.mock('../components/PageHeader', () => ({ default: ({ title }: { title: string }) => { header.title = title; return null; } }));
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
@@ -118,6 +122,8 @@ type GridProps = {
   onQueryStateChange: (state: { sort: string; filterModel: Record<string, unknown>; q: string; statusScope: string }) => void;
   onGridApiReady: (api: unknown) => void;
   onColumnStateChange: (state: Array<{ colId: string; hide?: boolean }>) => void;
+  pageParams?: (state: Array<{ colId: string; hide?: boolean }>) => Record<string, string | undefined>;
+  setFilterExcludeMode?: boolean;
 };
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
@@ -137,10 +143,12 @@ const DEFAULT_DIMENSION = dimension('default', null, 0, { is_default: true });
 /** Renders the page and waits for the totals footer, the last state update of the first load. */
 async function renderPage(url = '/ops/capex') {
   render(
-    <MemoryRouter initialEntries={[url]}>
-      <LocationProbe />
-      <CapexPage />
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter initialEntries={[url]}>
+        <LocationProbe />
+        <CapexPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
   await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(1));
 }
@@ -298,6 +306,18 @@ describe('CapexPage', () => {
     await waitFor(() => expect(lastProps().pinnedBottomRowData[0].fte_yLanding).toBeUndefined());
   });
 
+  it('keeps the last known currency in the title while the totals reload or when they fail', async () => {
+    await renderPage();
+    expect(header.title).toBe('capex.titleWithCurrency:X');
+    get.mockRejectedValue(new Error('down'));
+    const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals').length;
+    const before = totalsCalls();
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: 'cloud', statusScope: 'enabled' }));
+    await waitFor(() => expect(totalsCalls()).toBe(before + 1));
+    await waitFor(() => expect(lastProps().pinnedBottomRowData).toHaveLength(0));
+    expect(header.title).toBe('capex.titleWithCurrency:X');
+  });
+
   it('fills the footer from the totals keys of the same name', async () => {
     await renderPage();
     const versions = lastProps().pinnedBottomRowData[0].versions!;
@@ -426,10 +446,12 @@ describe('CapexPage', () => {
     dimensions.ready = false;
     dimensions.list = [];
     render(
-      <MemoryRouter initialEntries={['/ops/capex']}>
-        <LocationProbe />
-        <CapexPage />
-      </MemoryRouter>,
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/ops/capex']}>
+          <LocationProbe />
+          <CapexPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
     // The budget columns setting is known from the start (mocked); the grid and the footer totals still wait.
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
@@ -473,6 +495,52 @@ describe('CapexPage', () => {
     const totals = get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals');
     expect(totals.length).toBeGreaterThan(0);
     for (const [, config] of totals) expect(JSON.parse(config.params.filters)).toEqual(kept);
+  });
+
+  it('lean rows with the FTE columns shown, exclude mode, footer for the amount columns shown', async () => {
+    await renderPage();
+    expect(lastProps().setFilterExcludeMode).toBe(true);
+    expect(lastProps().pageParams?.([{ colId: 'fte_yBudget', hide: false }, { colId: 'fte_yLanding', hide: true }, { colId: 'yBudget' }]))
+      .toEqual({ shape: 'grid', fte: 'fte_yBudget' });
+    act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'yBudget', hide: false }, { colId: 'yRevision', hide: true }, { colId: 'yPlus1Forecast' }] }));
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
+    await waitFor(() => {
+      const totals = get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals');
+      expect(totals.slice(-1)[0][1].params.amounts).toBe('yBudget,yPlus1Forecast');
+    });
+  });
+
+  it('reads the supplier and the account from the grid rows (names, not objects)', async () => {
+    await renderPage();
+    expect(column('supplier_name')?.valueGetter?.({ data: { supplier_name: 'Acme' } })).toBe('Acme');
+    expect(column('supplier_name')?.valueGetter?.({ data: {} })).toBe('');
+    // The server's text: "6110 - Software", or the number alone for an account without a name.
+    expect(column('account_display')?.valueGetter?.({ data: { account_display: '6110 - Software' } })).toBe('6110 - Software');
+    expect(column('account_display')?.valueGetter?.({ data: { account_display: '6110' } })).toBe('6110');
+    expect(column('account_display')?.valueGetter?.({ data: {} })).toBe('');
+  });
+
+  it('offers the priority, investment type and PPE type values in their business order, blanks last', async () => {
+    await renderPage();
+    const listed: Record<string, Array<string | null>> = {
+      priority: ['low', 'mandatory', null, 'medium', 'high'],
+      investment_type: ['other', 'security', 'replacement', 'business_growth', 'capacity', 'conformity', 'productivity'],
+      ppe_type: ['software', 'hardware'],
+    };
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
+      if (url !== '/capex-items/summary/filter-values') return { data: {} };
+      const field = config?.params?.fields ?? '';
+      return { data: { [field]: listed[field] } };
+    });
+    type GetValues = (p: unknown) => Promise<Array<{ value: string | null; label: string }>>;
+    const noState = { context: { getQueryState: () => ({}) } };
+    const valuesOf = async (id: string) => (await (column(id)!.filterParams!.getValues as GetValues)(noState)).map((o) => o.value);
+    expect(await valuesOf('priority')).toEqual(['mandatory', 'high', 'medium', 'low', null]);
+    expect(await valuesOf('investment_type')).toEqual(['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other']);
+    expect(await valuesOf('ppe_type')).toEqual(['hardware', 'software']);
+    // Labels as translated, order kept.
+    const priority = await (column('priority')!.filterParams!.getValues as GetValues)(noState);
+    expect(priority[0]).toEqual({ value: 'mandatory', label: 'capex.priorityTypes.mandatory' });
   });
 
   it('keeps a linked sort on an enabled dimension', async () => {

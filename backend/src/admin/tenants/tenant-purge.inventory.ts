@@ -4,6 +4,8 @@ export const TENANT_PURGE_TABLES = [
   // Denormalized AI search index first: row triggers on the source tables
   // below would otherwise delete these rows one by one.
   'search_index',
+  // Saved list states: no reference in or out besides the tenant
+  'list_contexts',
   // Incident register: children first; before documents, assets, applications and users
   'incident_entries',
   'incident_assets',

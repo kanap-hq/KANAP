@@ -38,6 +38,7 @@ import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useInterfaceItemNav } from '../../hooks/useModuleItemNav';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
+import { carryListFilters } from '../../lib/listContext';
 
 type WorkspaceTabKey = 'overview' | 'flow' | 'environments' | 'data-mapping' | 'relations';
 type LegacyTabKey = 'specification' | 'mapping' | 'technical' | 'functional' | 'ownership' | 'compliance';
@@ -604,10 +605,9 @@ export default function InterfaceWorkspacePage() {
     const sp = new URLSearchParams();
     const sort = searchParams.get('sort');
     const q = searchParams.get('q');
-    const filters = searchParams.get('filters');
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters) sp.set('filters', filters);
+    carryListFilters(sp, searchParams);
     return sp;
   }, [searchParams]);
 

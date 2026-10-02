@@ -20,5 +20,6 @@
   "APP_CRASH_BODY": "The page could not be displayed. Reloading usually fixes it.",
   "APP_CRASH_RELOAD": "Reload",
   "APP_CRASH_DETAILS": "Technical details",
-  "APP_UPDATE_AVAILABLE": "A new version is available."
+  "APP_UPDATE_AVAILABLE": "A new version is available.",
+  "list_context_not_found": "The saved filters of this list are no longer available. Set the filters again."
 }

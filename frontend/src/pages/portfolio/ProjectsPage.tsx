@@ -20,6 +20,8 @@ import { formatShortDate } from '../../lib/dateFormat';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../../components/design';
+import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
+import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 
 type ProjectRow = {
   id: string;
@@ -120,19 +122,10 @@ export default function ProjectsPage() {
     );
   }, [t, theme.palette.mode]);
 
-  // Read filters from URL to restore state when returning from workspace
-  const urlFilters = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const filtersParam = params.get('filters');
-    if (filtersParam) {
-      try {
-        return JSON.parse(filtersParam);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }, [location.search]);
+  // Read filters from URL to restore state when returning from workspace: inline, or the saved
+  // filters its `ctx` stands for (filters too long for a URL), read before the grid mounts.
+  const urlFilterState = useUrlFilterModel(location.search, '/portfolio/projects');
+  const urlFilters = urlFilterState.model;
   const urlProjectScope = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const scope = params.get('projectScope');
@@ -205,7 +198,7 @@ export default function ProjectsPage() {
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters && Object.keys(filters).length > 0) sp.set('filters', JSON.stringify(filters));
+    setListFiltersParam(sp, '/portfolio/projects', filters);
     const scope = projectScopeRef.current;
     const profileId = profileIdRef.current;
     const hasTeamNow = hasTeamRef.current;
@@ -286,7 +279,7 @@ export default function ProjectsPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get('/portfolio/projects/filter-values', { params });
+      const res = await getWithListContext('/portfolio/projects/filter-values', params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };
@@ -521,24 +514,27 @@ export default function ProjectsPage() {
   return (
     <>
       <PageHeader title={t('projects.title')} actions={actions} />
-      <ServerDataGrid<ProjectRow>
-        columns={columns}
-        endpoint="/portfolio/projects"
-        showRowCount
-        queryKey="portfolio-projects"
-        getRowId={(r) => r.id}
-        enableSearch
-        defaultSort={{ field: 'priority_score', direction: 'DESC' }}
-        extraParams={extraParams}
-        columnPreferencesKey="portfolio-projects"
-        initialState={initialGridState}
-        refreshKey={refreshKey}
-        onGridApiReady={(api) => { gridApiRef.current = api; }}
-        onQueryStateChange={(state) => {
-          lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
-        }}
-        toolbarExtras={projectScopeToolbar}
-      />
+      {/* Waits for filters saved as a context (a reload, a link in a new tab). */}
+      {urlFilterState.ready && (
+        <ServerDataGrid<ProjectRow>
+          columns={columns}
+          endpoint="/portfolio/projects"
+          showRowCount
+          queryKey="portfolio-projects"
+          getRowId={(r) => r.id}
+          enableSearch
+          defaultSort={{ field: 'priority_score', direction: 'DESC' }}
+          extraParams={extraParams}
+          columnPreferencesKey="portfolio-projects"
+          initialState={initialGridState}
+          refreshKey={refreshKey}
+          onGridApiReady={(api) => { gridApiRef.current = api; }}
+          onQueryStateChange={(state) => {
+            lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
+          }}
+          toolbarExtras={projectScopeToolbar}
+        />
+      )}
       <CsvExportDialogV2
         open={exportOpen}
         onClose={() => setExportOpen(false)}

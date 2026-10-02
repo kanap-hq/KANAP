@@ -47,6 +47,7 @@ import {
   fetchProjectTasksCount,
 } from '../../utils/workspaceTabCounts';
 import { useKanapDialogs } from '../../components/design';
+import { carryListFilters } from '../../lib/listContext';
 
 type TabKey = 'summary' | 'tasks' | 'timeline' | 'effort' | 'scoring' | 'relations' | 'knowledge';
 type LegacyPanelRoute = 'overview' | 'activity' | 'team';
@@ -731,13 +732,12 @@ export default function ProjectWorkspacePage() {
     const sp = new URLSearchParams();
     const sort = searchParams.get('sort');
     const q = searchParams.get('q');
-    const filters = searchParams.get('filters');
     const projectScope = searchParams.get('projectScope');
     const involvedUserId = searchParams.get('involvedUserId');
     const involvedTeamId = searchParams.get('involvedTeamId');
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters) sp.set('filters', filters);
+    carryListFilters(sp, searchParams);
     if (projectScope) sp.set('projectScope', projectScope);
     if (involvedUserId) sp.set('involvedUserId', involvedUserId);
     if (involvedTeamId) sp.set('involvedTeamId', involvedTeamId);

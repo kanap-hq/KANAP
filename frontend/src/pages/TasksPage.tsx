@@ -22,6 +22,8 @@ import { formatShortDate } from '../lib/dateFormat';
 import { getDotColor } from '../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../components/design';
+import { setListFiltersParam, getWithListContext } from '../lib/listContext';
+import { useUrlFilterModel } from '../hooks/useListContextSearch';
 
 type TaskRow = {
   id: string;
@@ -122,19 +124,10 @@ export default function TasksPage() {
     return <ForbiddenPage />;
   }
 
-  // Read filters from URL to restore state when returning from workspace
-  const urlFilters = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const filtersParam = params.get('filters');
-    if (filtersParam) {
-      try {
-        return JSON.parse(filtersParam);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }, [location.search]);
+  // Read filters from URL to restore state when returning from workspace: inline, or the saved
+  // filters its `ctx` stands for (filters too long for a URL), read before the grid mounts.
+  const urlFilterState = useUrlFilterModel(location.search, '/tasks');
+  const urlFilters = urlFilterState.model;
 
   // Use URL filters if present (backend already excludes done/cancelled by default)
   const defaultFilterModel = useMemo(() => ({
@@ -315,7 +308,7 @@ export default function TasksPage() {
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters && Object.keys(filters).length > 0) sp.set('filters', JSON.stringify(filters));
+    setListFiltersParam(sp, '/tasks', filters);
     const scope = taskScopeRef.current;
     const profileId = profileIdRef.current;
     const hasTeamNow = hasTeamRef.current;
@@ -346,7 +339,7 @@ export default function TasksPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get(`/tasks/filter-values`, { params });
+      const res = await getWithListContext(`/tasks/filter-values`, params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };
@@ -648,30 +641,33 @@ export default function TasksPage() {
   return (
     <>
       <PageHeader title={t('tasks.title')} actions={actions} />
-      <ServerDataGrid<TaskRow>
-        columns={columns}
-        endpoint="/tasks"
-        showRowCount
-        queryKey="tasks"
-        getRowId={(r) => r.id}
-        enableSearch
-        defaultSort={{ field: 'priority_score', direction: 'DESC' }}
-        enableRowSelection={canAdmin}
-        onSelectionChanged={(rows) => setSelectedRows(rows)}
-        onGridApiReady={(api) => { gridApiRef.current = api; }}
-        initialState={{
-          filter: {
-            filterModel: initialFilterModel
-          }
-        }}
-        columnPreferencesKey="tasks"
-        refreshKey={refreshKey}
-        onQueryStateChange={(state) => {
-          lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
-        }}
-        extraParams={extraParams}
-        toolbarExtras={taskScopeToolbar}
-      />
+      {/* Waits for filters saved as a context (a reload, a link in a new tab). */}
+      {urlFilterState.ready && (
+        <ServerDataGrid<TaskRow>
+          columns={columns}
+          endpoint="/tasks"
+          showRowCount
+          queryKey="tasks"
+          getRowId={(r) => r.id}
+          enableSearch
+          defaultSort={{ field: 'priority_score', direction: 'DESC' }}
+          enableRowSelection={canAdmin}
+          onSelectionChanged={(rows) => setSelectedRows(rows)}
+          onGridApiReady={(api) => { gridApiRef.current = api; }}
+          initialState={{
+            filter: {
+              filterModel: initialFilterModel
+            }
+          }}
+          columnPreferencesKey="tasks"
+          refreshKey={refreshKey}
+          onQueryStateChange={(state) => {
+            lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
+          }}
+          extraParams={extraParams}
+          toolbarExtras={taskScopeToolbar}
+        />
+      )}
       <CsvExportDialogV2
         open={exportOpen}
         onClose={() => setExportOpen(false)}

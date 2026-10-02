@@ -147,6 +147,7 @@ export const TENANT_SCOPED_TABLES = [
   'interface_owners',
   'interfaces',
   'item_sequences',
+  'list_contexts',
   'location_contacts',
   'location_links',
   'location_sub_items',

@@ -6,6 +6,8 @@ import type { IFloatingFilter, IFloatingFilterParams } from 'ag-grid-community';
 
 type SetFilterModel = {
   filterType: 'set';
+  /** 'exclude': `values` are the values unticked from "All" (lists with exclude mode). */
+  mode?: 'include' | 'exclude';
   values: Array<string | null>;
 };
 
@@ -14,6 +16,7 @@ type FloatingFilterProps = IFloatingFilterParams<SetFilterModel>;
 const CheckboxSetFloatingFilter = React.forwardRef<IFloatingFilter, FloatingFilterProps>((props, ref) => {
   const { t } = useTranslation('common');
   const [selectedCount, setSelectedCount] = useState(0);
+  const [excludedCount, setExcludedCount] = useState(0);
   const [isNone, setIsNone] = useState(false);
   const [isActive, setIsActive] = useState(false);
 
@@ -22,11 +25,21 @@ const CheckboxSetFloatingFilter = React.forwardRef<IFloatingFilter, FloatingFilt
   const syncFromModel = useCallback((model: SetFilterModel | null | undefined) => {
     if (!model) {
       setSelectedCount(0);
+      setExcludedCount(0);
       setIsNone(false);
       setIsActive(false);
       return;
     }
     const count = model.values?.length ?? 0;
+    if (model.mode === 'exclude') {
+      // "All but N": every value except the N unticked ones.
+      setSelectedCount(0);
+      setExcludedCount(count);
+      setIsNone(false);
+      setIsActive(count > 0);
+      return;
+    }
+    setExcludedCount(0);
     setSelectedCount(count);
     setIsNone(count === 0);
     setIsActive(true);
@@ -40,9 +53,10 @@ const CheckboxSetFloatingFilter = React.forwardRef<IFloatingFilter, FloatingFilt
 
   const label = useMemo(() => {
     if (isNone) return t('labels.none');
+    if (excludedCount) return t('filters.allExcept', { count: excludedCount });
     if (!selectedCount) return t('labels.all');
     return t('filters.selectedCount', { count: selectedCount });
-  }, [selectedCount, isNone, t]);
+  }, [selectedCount, excludedCount, isNone, t]);
 
   const handleClear = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();

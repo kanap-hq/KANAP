@@ -20,6 +20,7 @@ import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
+import { getWithListContext } from '../../lib/listContext';
 
 type AuditLogItem = {
   id: string;
@@ -95,7 +96,7 @@ export default function AuditLogsPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get(`/audit-logs/filter-values`, { params });
+      const res = await getWithListContext(`/audit-logs/filter-values`, params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       return values.map((value) => ({ value }));
     };

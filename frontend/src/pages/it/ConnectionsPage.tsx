@@ -15,6 +15,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
+import { setListFiltersParam } from '../../lib/listContext';
 
 type ConnectionRow = {
   id: string;
@@ -87,9 +88,7 @@ export default function ConnectionsPage() {
     const state = lastQueryRef.current;
     if (state?.sort) sp.set('sort', state.sort);
     if (state?.q) sp.set('q', state.q);
-    if (state?.filters && Object.keys(state.filters || {}).length > 0) {
-      sp.set('filters', JSON.stringify(state.filters));
-    }
+    setListFiltersParam(sp, '/connections', state?.filters);
     return sp;
   }, []);
 

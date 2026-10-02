@@ -229,6 +229,27 @@ export function totalsToVersions(
   return versions;
 }
 
+/** Field of the totals row naming the amount keys its totals do not hold yet. */
+const AMOUNTS_PENDING_FIELD = 'amountsPending';
+
+/** Shown while a footer total is on its way (a column just shown), instead of a false 0. */
+export const PENDING_TOTAL = '…';
+
+/**
+ * The totals row's field for the amount columns shown (`shown`: their keys, comma separated, as
+ * the totals request sends them) that the totals at hand do not hold: a column just shown keeps
+ * its placeholder until its total arrives (the previous totals stay on screen meanwhile).
+ */
+export function pendingAmountsField(totals: Record<string, unknown> | null | undefined, shown: string | null | undefined): Record<string, string[]> {
+  const keys = String(shown ?? '').split(',').filter((key) => key && parseAmountField(key) && !(totals && key in totals));
+  return { [AMOUNTS_PENDING_FIELD]: keys };
+}
+
+function isPendingAmount(data: unknown, colId: string): boolean {
+  const pending = (data as Record<string, unknown> | undefined)?.[AMOUNTS_PENDING_FIELD];
+  return Array.isArray(pending) && pending.includes(colId);
+}
+
 /** Year label of a slot with its calendar year, e.g. "Y-1 (2025)". */
 export function yearSlotLabel(t: TFunction, slot: YearSlot, currentYear: number): string {
   return t('ops:shared.yearSlotWithYear', { slot: t(`ops:shared.yearSlots.${slot}`), year: slotYear(slot, currentYear) });
@@ -282,7 +303,8 @@ export function buildAmountColumnDefs<T>({
       colId,
       headerName: amountColumnHeader(t, slot, column.label, currentYear),
       valueGetter: (p) => slotAmount((p.data as { versions?: SummaryVersions } | undefined)?.versions?.[slot], column.key),
-      valueFormatter: (p) => formatAmount(p.value),
+      // The totals row: a placeholder while this column's total is on its way, never a false 0.
+      valueFormatter: (p) => (p.node?.rowPinned && isPendingAmount(p.data, colId) ? PENDING_TOTAL : formatAmount(p.value)),
       type: 'rightAligned',
       width: 180,
       filter: 'agNumberColumnFilter',
@@ -300,12 +322,20 @@ export function fteColumnHeader(t: TFunction, slot: YearSlot, columnName: string
   return t('ops:shared.fteColumnHeader', { column: columnName, year: slotYear(slot, currentYear) });
 }
 
+// One formatter per locale, shared by every cell: building one is far slower than formatting.
+const fteFormatters = new Map<string, Intl.NumberFormat>();
+
 /** FTE with two decimals, as the server rounds it; blank when unknown. */
 export function formatFte(value: unknown, locale: string): string {
   if (value == null || value === '') return '';
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
-  return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  let formatter = fteFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    fteFormatters.set(locale, formatter);
+  }
+  return formatter.format(n);
 }
 
 /**
@@ -343,6 +373,11 @@ export function fteTotalsToRow(fte: unknown): Record<string, unknown> {
 /** Lines of the totals row whose FTE is unknown for a key; 0 on any other row. */
 function unknownLines(data: unknown, colId: string): number {
   return ((data as Record<string, unknown> | undefined)?.[FTE_UNKNOWN_FIELD] as Record<string, number> | undefined)?.[colId] ?? 0;
+}
+
+/** The amount fields the grid shows, in grid order: the footer totals request asks for those only. */
+export function visibleAmountFields(state: ReadonlyArray<{ colId?: string | null; hide?: boolean | null }> | null | undefined): string[] {
+  return (state ?? []).flatMap((col) => (col.colId && !col.hide && parseAmountField(col.colId) ? [col.colId] : []));
 }
 
 /** The FTE fields the grid shows, in grid order: the totals request asks for those only. */

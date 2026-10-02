@@ -49,6 +49,7 @@ import { useTenant } from '../../tenant/TenantContext';
 import { getScoreColor } from '../tasks/theme/taskDetailTokens';
 import { fetchPortfolioRelationsCount } from '../../utils/workspaceTabCounts';
 import { KanapDialog, useKanapDialogs } from '../../components/design';
+import { carryListFilters } from '../../lib/listContext';
 
 type TabKey = 'summary' | 'analysis' | 'scoring' | 'relations' | 'knowledge';
 type LegacyPanelRoute = 'overview' | 'activity' | 'team';
@@ -800,13 +801,12 @@ export default function RequestWorkspacePage() {
     const sp = new URLSearchParams();
     const sort = searchParams.get('sort');
     const q = searchParams.get('q');
-    const filters = searchParams.get('filters');
     const requestScope = searchParams.get('requestScope');
     const involvedUserId = searchParams.get('involvedUserId');
     const involvedTeamId = searchParams.get('involvedTeamId');
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters) sp.set('filters', filters);
+    carryListFilters(sp, searchParams);
     if (requestScope) sp.set('requestScope', requestScope);
     if (involvedUserId) sp.set('involvedUserId', involvedUserId);
     if (involvedTeamId) sp.set('involvedTeamId', involvedTeamId);

@@ -77,6 +77,29 @@ function same(label: string, actual: unknown, expected: unknown): boolean {
   return false;
 }
 
+/** Keys sorted at every level (arrays keep their order): two rows with the same keys and values compare equal. */
+function deepSorted(value: any): any {
+  if (Array.isArray(value)) return value.map(deepSorted);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map((key) => [key, deepSorted(value[key])]));
+  return value;
+}
+
+// The grid shape of a row (lot 2B, PR B2): what each list's grid reads (OpexListPage.tsx,
+// CapexPage.tsx), nothing else; listed here apart from the builder's own lists.
+const GRID_ITEM_KEYS: Record<SummaryScopeConfig['scope'], string[]> = {
+  opex: ['id', 'item_number', 'product_name', 'description', 'status', 'currency', 'effective_start', 'disabled_at', 'notes', 'created_at', 'updated_at'],
+  capex: [
+    'id', 'item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'status', 'currency', 'effective_start', 'disabled_at',
+    'notes', 'created_at', 'updated_at',
+  ],
+};
+const GRID_DERIVED_KEYS = [
+  'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_name', 'supplier_name', 'paying_company_name', 'account_display',
+  'allocation_method_label', 'owner_it_name', 'owner_business_name', 'cost_center_label', 'cost_center_path', 'budget_holder_name',
+  'project_name', 'analytics_category_name',
+];
+const GRID_SLOTS = ['yMinus1', 'y', 'yPlus1', 'yPlus2'];
+
 function sortedObject(value: Record<string, any>): Record<string, any> {
   return Object.fromEntries(Object.keys(value).sort().map((key) => [key, value[key] && typeof value[key] === 'object' && !Array.isArray(value[key]) ? sortedObject(value[key]) : value[key]]));
 }
@@ -380,6 +403,8 @@ interface Engines {
   runner: QueryRunner;
   /** Lines of the tenant, every status. */
   lineCount: number;
+  /** `analytics_<id>` of the dimensions the grid builds a column for (enabled, not the default one). */
+  gridAxisKeys: string[];
 }
 
 async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummaryDeps>): Promise<void> {
@@ -434,18 +459,20 @@ async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummar
       const grid = await engine.budgetListSummary(scope, deps, { ...c.query, shape: 'grid' }, m, ROW_OPTIONS);
       const full = await env.oracle.summary(c.query);
       const fteKeys = engine.parseFteKeys(c.query.fte, Y).map((k) => k.key);
-      const fixedYears = new Set(FIXED_SLOTS.map((slot) => Y + slot.offset));
+      // The keys the list's grid reads, picked from the full row.
       const expected = full.items.map((row: any) => {
-        const copy: any = JSON.parse(JSON.stringify(row));
-        delete copy.main_recipient;
-        delete copy.allocation_warning;
-        delete copy.next_year_allocation_method_label;
-        for (const key of Object.keys(copy.versions)) if (/^y\d{4}$/.test(key) && fixedYears.has(Number(key.slice(1)))) delete copy.versions[key];
-        for (const key of Object.keys(copy)) if (key.startsWith('fte_') && !fteKeys.includes(key)) delete copy[key];
-        if (copy.latest_task) delete copy.latest_task.description;
-        return copy;
+        const lean: any = {};
+        for (const key of [...GRID_ITEM_KEYS[scope.scope], ...GRID_DERIVED_KEYS, ...env.gridAxisKeys]) if (row[key] !== undefined) lean[key] = row[key];
+        if (row.latest_task !== undefined) lean.latest_task = row.latest_task ? { title: row.latest_task.title } : null;
+        lean.versions = Object.fromEntries(GRID_SLOTS.map((slot) => {
+          const v = row.versions[slot];
+          const shown = v?.reporting ?? v?.totals;
+          return [slot, v?.version_id ? { reporting: Object.fromEntries(SUMMARY_COLUMNS.map((col) => [col.key, shown[col.key]])) } : {}];
+        }));
+        for (const key of fteKeys) if (key in row) lean[key] = row[key];
+        return lean;
       });
-      same(label('grid rows'), JSON.parse(JSON.stringify(grid.items)), expected);
+      same(label('grid rows'), deepSorted(JSON.parse(JSON.stringify(grid.items))), deepSorted(JSON.parse(JSON.stringify(expected))));
     }
     if (c.checks.includes('neighbors')) {
       const { ids } = await env.oracle.summaryIds(c.query);
@@ -551,7 +578,12 @@ async function runScope(
   // The list's own allocation calculator: CAPEX shares come from capex_allocations.
   const deps = realSummaryDeps(scope);
   const oracle = new BudgetSummaryOracle(scope, deps, m, tenantId, fold, ROW_OPTIONS);
-  const axisRows: Array<{ id: string }> = await m.query(`SELECT id FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order, id`, [tenantId]);
+  const axisRows: Array<{ id: string; grid: boolean }> = await m.query(
+    `SELECT id, (NOT is_default AND status <> 'disabled' AND (disabled_at IS NULL OR disabled_at > now())) AS grid
+       FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order, id`,
+    [tenantId],
+  );
+  const gridAxisKeys = axisRows.filter((a) => a.grid).map((a) => `analytics_${a.id}`);
 
   // Field values to draw needles from: the first 1,000 lines by item number (a stable order), every field.
   const sampleRows = await oracle.summary({ includeDisabled: 'true', years: String(Y + 3), limit: 1000, sort: 'item_number:ASC' });
@@ -577,7 +609,7 @@ async function runScope(
   const r = prng(SEED);
   const cases = buildCases(r, sample, axisRows.map((a) => a.id), scope);
   const digest = createHash('sha256').update(JSON.stringify(cases)).digest('hex').slice(0, 12);
-  const env: Engines = { scope, oracle, runner, lineCount: allIds.total };
+  const env: Engines = { scope, oracle, runner, lineCount: allIds.total, gridAxisKeys };
   for (const c of cases) await runCase(env, c, deps);
 
   // An empty tenant answers empty everywhere, like the oracle.
@@ -585,7 +617,7 @@ async function runScope(
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [emptyTenantId]);
     const emptyOracle = new BudgetSummaryOracle(scope, deps, m, emptyTenantId, fold, ROW_OPTIONS);
     for (const [i, query] of [{}, { q: 'x', fte: 'fte_yBudget' }, { status: 'enabled', sort: 'supplier_name:ASC' }].entries()) {
-      await runCase({ scope, oracle: emptyOracle, runner, lineCount: 0 }, { id: `empty/${i}`, query, checks: ['ids', 'full', 'neighbors'], fvFields: ['supplier_name', 'project_name'] }, deps);
+      await runCase({ scope, oracle: emptyOracle, runner, lineCount: 0, gridAxisKeys: [] }, { id: `empty/${i}`, query, checks: ['ids', 'full', 'neighbors'], fvFields: ['supplier_name', 'project_name'] }, deps);
     }
   }
   const seconds = ((Date.now() - started) / 1000).toFixed(1);

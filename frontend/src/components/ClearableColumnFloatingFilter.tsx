@@ -1,4 +1,4 @@
-import React, { useCallback, useImperativeHandle, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import { IconButton } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,10 @@ import type {
 export type ClearableColumnFloatingFilterRef = IFloatingFilter;
 
 type FloatingFilterProps = IFloatingFilterParams<TextFilterModel>;
+
+// Quiet time after the last keystroke before the typed text filters the grid. Enter and leaving the
+// box apply it at once.
+export const TEXT_FILTER_APPLY_DELAY_MS = 300;
 
 const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFilterRef, FloatingFilterProps>((props, ref) => {
   const { t } = useTranslation('common');
@@ -27,7 +31,12 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
   const activeTextTypeRef = useRef<string>(defaultTextType);
 
   const [value, setValue] = useState('');
+  const valueRef = useRef('');
+  valueRef.current = value;
   const [hasValue, setHasValue] = useState(false);
+  // The typed text not applied yet, and its timer.
+  const pendingRef = useRef<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const applyTextFilterModel = useCallback((raw: string) => {
     const trimmed = raw?.trim?.() ?? '';
@@ -51,48 +60,92 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
       } as TextFilterModel & { filterType: 'text' };
     }
 
+    // The same model again (text typed back to what is applied, Enter then leaving the box) reloads nothing.
+    if (JSON.stringify(nextModel[colId] ?? null) === JSON.stringify(current[colId] ?? null)) return;
+
     if (typeof api.setFilterModel === 'function') {
       api.setFilterModel(nextModel);
     }
   }, [props.api, props.column, defaultTextType]);
 
-  useImperativeHandle(ref, () => ({
-    onParentModelChanged(model: TextFilterModel | null) {
-      if (!model) {
-        activeTextTypeRef.current = defaultTextType;
-        setValue('');
-        setHasValue(false);
-        return;
-      }
+  const cancelPending = useCallback(() => {
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingRef.current = null;
+  }, []);
 
-      const nextValue = model.filter ?? '';
-      activeTextTypeRef.current = typeof model.type === 'string' ? model.type : defaultTextType;
-      if (nextValue !== '') {
-        setValue(String(nextValue));
-        setHasValue(true);
-      } else {
-        setValue('');
-        setHasValue(false);
-      }
+  const flushPending = useCallback(() => {
+    const pending = pendingRef.current;
+    cancelPending();
+    if (pending != null) applyTextFilterModel(pending);
+  }, [applyTextFilterModel, cancelPending]);
+
+  useEffect(() => cancelPending, [cancelPending]);
+
+  // Shows the column's model: set at the start (a link, the list context), from outside (Reset,
+  // another view) or handed back after this box applied its own text.
+  const followModel = useCallback((model: TextFilterModel | null | undefined) => {
+    // Text typed but not applied yet is newer than the grid's model: keep it in the box.
+    if (pendingRef.current != null) return;
+    if (!model) {
+      activeTextTypeRef.current = defaultTextType;
+      setValue('');
+      setHasValue(false);
+      return;
+    }
+
+    const nextValue = model.filter == null ? '' : String(model.filter);
+    activeTextTypeRef.current = typeof model.type === 'string' ? model.type : defaultTextType;
+    // The box's own text, applied trimmed, keeps its spaces while the user goes on typing.
+    if (nextValue !== '' && nextValue === valueRef.current.trim()) return;
+    setValue(nextValue);
+    setHasValue(nextValue !== '');
+  }, [defaultTextType]);
+
+  useImperativeHandle(ref, () => ({
+    // Legacy (non-reactive) floating filters.
+    onParentModelChanged(model: TextFilterModel | null) {
+      followModel(model);
     },
   }));
+
+  // AG Grid 32 runs this component as a reactive floating filter: it passes `onModelChange` and the
+  // column's model as the `model` prop (left out when the column has no filter) and never calls
+  // onParentModelChanged.
+  const reactive = typeof (props as { onModelChange?: unknown }).onModelChange === 'function';
+  const parentModel = (props as { model?: TextFilterModel | null }).model;
+  useEffect(() => {
+    if (reactive) followModel(parentModel ?? null);
+  }, [reactive, parentModel, followModel]);
 
   const handleInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const next = event.target.value ?? '';
     setValue(next);
     const active = next.trim().length > 0;
     setHasValue(active);
-    applyTextFilterModel(next);
-  }, [applyTextFilterModel]);
+    pendingRef.current = next;
+    if (timerRef.current != null) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      flushPending();
+    }, TEXT_FILTER_APPLY_DELAY_MS);
+  }, [flushPending]);
+
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') flushPending();
+  }, [flushPending]);
 
   const handleClear = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     if (!hasValue) return;
+    cancelPending();
     setValue('');
     setHasValue(false);
     activeTextTypeRef.current = defaultTextType;
     applyTextFilterModel('');
-  }, [applyTextFilterModel, defaultTextType, hasValue]);
+  }, [applyTextFilterModel, cancelPending, defaultTextType, hasValue]);
 
   const inputWrapperStyle: React.CSSProperties = {
     flex: 1,
@@ -107,6 +160,8 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
         <input
           value={value}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onBlur={flushPending}
           aria-label={t('filters.filterColumn', { column: columnDef.headerName ?? columnDef.field ?? '' }).trim()}
           placeholder={t('filters.columnPlaceholder')}
           className="ag-input-field-input ag-text-field-input"
@@ -122,6 +177,8 @@ const ClearableColumnFloatingFilter = React.forwardRef<ClearableColumnFloatingFi
       </div>
       <IconButton
         size="small"
+        // Keeps the focus in the box: leaving it would apply the typed text first, then the clear.
+        onMouseDown={(event) => event.preventDefault()}
         onClick={handleClear}
         aria-label={t('filters.clearFilter')}
         sx={{
