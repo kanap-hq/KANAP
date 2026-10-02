@@ -133,6 +133,7 @@
     "loadFailed": "Échec du chargement des données",
     "saveFailed": "Échec de l'enregistrement des préférences",
     "loadFailedRefresh": "Échec du chargement des données. Veuillez rafraîchir la page.",
+    "tabLoadFailed": "Cet onglet n'a pas pu être chargé.",
     "testEmailSent": "E-mail de test envoyé !",
     "testEmailFailed": "Échec de l'envoi de l'e-mail de test",
     "noContent": "Pas encore de contenu.",
@@ -418,7 +419,9 @@
     "createCostCenter": "En créer un",
     "noCostCentersFound": "Aucun centre de coûts trouvé",
     "costCentersLoadFailed": "Les centres de coûts n'ont pas pu être chargés.",
-    "notSet": "Non défini"
+    "notSet": "Non défini",
+    "moreResults": "Tapez pour affiner : d'autres résultats existent",
+    "valueUnavailable": "Valeur plus disponible"
   },
   "documentEditor": {
     "expandDocument": "Agrandir le document",

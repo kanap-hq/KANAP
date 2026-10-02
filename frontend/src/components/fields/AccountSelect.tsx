@@ -1,18 +1,18 @@
 import React from 'react';
 import { Autocomplete, Box, TextField, CircularProgress } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import api from '../../api';
+import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
-type Account = {
+export type AccountOption = {
   id: string;
   account_number: number;
   account_name: string;
   description?: string | null;
 };
+type Account = AccountOption;
 
 type AccountSelectProps = {
   label?: string;
@@ -26,6 +26,8 @@ type AccountSelectProps = {
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
   disableClearable?: boolean;
+  /** The chosen account's label when the caller holds it (the detail's references): no request to show it. */
+  selectedOption?: AccountOption | null;
 };
 
 function assignRef<T>(target: React.Ref<T | null> | undefined, value: T | null) {
@@ -50,83 +52,34 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
     hideLabel = false,
     textFieldSx,
     disableClearable = false,
+    selectedOption,
   },
   ref,
 ) {
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.account');
   const naked = hideLabel || label === '';
-  const { data: accounts, isLoading } = useQuery({
-    queryKey: ['accounts', 'active', companyId || 'all'],
-    queryFn: async () => {
-      const params: Record<string, any> = { limit: 1000 };
-      if (companyId) params.companyId = companyId;
-      const res = await api.get<{ items: Account[] }>('/accounts', { params });
-      return res.data.items;
-    },
-    enabled: !!companyId, // Only fetch when company is selected
+  // The company's chart of accounts, searched as the user types; nothing before a company is chosen.
+  const picker = useLookupPicker<Account>({
+    endpoint: '/accounts/lookup',
+    scope: { companyId: companyId || null },
+    enabled: !!companyId,
+    value: value ? [value] : [],
+    given: [selectedOption],
   });
-
-  // Ensure currently selected account is ALWAYS present in options, even if from different CoA
-  const [extraOption, setExtraOption] = React.useState<Account | null>(null);
-  const [isFetchingExtra, setIsFetchingExtra] = React.useState(false);
-
-  React.useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!value) {
-        setExtraOption(null);
-        setIsFetchingExtra(false);
-        return;
-      }
-      const exists = (accounts || []).some((a) => a.id === value);
-      if (!exists) {
-        setIsFetchingExtra(true);
-        try {
-          const res = await api.get<Account>(`/accounts/${value}`);
-          if (!alive) return;
-          const acc = res.data as any;
-          if (acc && acc.id) {
-            setExtraOption({
-              id: acc.id,
-              account_number: Number(acc.account_number || 0),
-              account_name: acc.account_name,
-              description: acc.description || null
-            });
-          }
-        } catch {
-          if (!alive) return;
-          setExtraOption(null);
-        } finally {
-          if (alive) setIsFetchingExtra(false);
-        }
-      } else {
-        setExtraOption(null);
-        setIsFetchingExtra(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, [value, accounts]);
-
-  const sortedAccounts = React.useMemo(() => {
-    const list = accounts ? [...accounts] : [];
-    if (extraOption && !list.find((a) => a.id === extraOption.id)) list.unshift(extraOption);
-    return list.sort((a, b) => {
-      const aNum = Number(a.account_number ?? 0);
-      const bNum = Number(b.account_number ?? 0);
-      return aNum - bNum;
-    });
-  }, [accounts, extraOption]);
-
-  const selectedAccount: Account | null = sortedAccounts.find((account: Account) => account.id === value) || null;
+  const selectedAccount: Account | null = value ? picker.selected[0] ?? null : null;
+  const accountLabel = (option: Account) => (option.account_name == null ? '' : `[${option.account_number}] ${option.account_name}`);
 
   const control = (
     <Autocomplete
-      options={sortedAccounts}
+      {...picker.autocomplete}
+      options={picker.options}
       value={selectedAccount}
-      onChange={(_, newValue) => onChange(newValue?.id || null)}
-      getOptionLabel={(option) => `[${option.account_number}] ${option.account_name}`}
-      isOptionEqualToValue={(option, value) => option.id === value.id}
+      onChange={(_, newValue) => {
+        picker.remember([newValue]);
+        onChange(newValue?.id || null);
+      }}
+      getOptionLabel={(option) => picker.label(option, accountLabel)}
       disableClearable={disableClearable}
       blurOnSelect
       renderOption={(props, option) => (
@@ -161,24 +114,15 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
             ...params.InputProps,
             endAdornment: (
               <>
-                {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                {picker.loading ? <CircularProgress color="inherit" size={20} /> : null}
                 {params.InputProps.endAdornment}
               </>
             ),
           }}
         />
       )}
-      disabled={disabled || isLoading}
-      loading={isLoading || isFetchingExtra}
-      filterOptions={(options, { inputValue }) => {
-        const searchTerm = inputValue.toLowerCase();
-        return options.filter(option => 
-          option.account_number.toString().includes(searchTerm) ||
-          option.account_name.toLowerCase().includes(searchTerm) ||
-          (option.description && option.description.toLowerCase().includes(searchTerm))
-        );
-      }}
-      noOptionsText={isLoading ? t('selects.loading') : t('selects.noAccountsFound')}
+      disabled={disabled}
+      noOptionsText={picker.loading ? t('selects.loading') : t('selects.noAccountsFound')}
       fullWidth
     />
   );

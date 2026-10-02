@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireLevel } from '../auth/require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
 import { EntityManager, Repository } from 'typeorm';
@@ -26,9 +26,14 @@ export class CurrencyController {
     return tenantId;
   }
 
+  // The OPEX and CAPEX forms read the default and allowed currencies of their currency picker.
   @Get('settings')
   @UseGuards(PermissionGuard)
-  @RequireLevel('settings', 'reader')
+  @RequireAnyLevel([
+    { resource: 'settings', level: 'reader' },
+    { resource: 'opex', level: 'reader' },
+    { resource: 'capex', level: 'reader' },
+  ])
   async getSettings(@Req() req: any) {
     const tenantId = this.requireTenantId(req);
     return this.settings.getSettings(tenantId, { manager: req?.queryRunner?.manager });

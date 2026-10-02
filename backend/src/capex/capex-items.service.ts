@@ -81,6 +81,7 @@ import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-b
 import { updateItemUnderLock } from '../spend/item-locked-update';
 import { lockBudgetVersions, lockTenantBudgetOperations } from '../spend/budget-locks';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import { countItemRelations, loadItemReferences } from '../spend/item-workspace.util';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
@@ -262,6 +263,20 @@ export class CapexItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const found = await this.findItem(id, mg);
     return this.withAnalyticsValues(found, await this.loadAnalytics(mg, found));
+  }
+
+  /** The workspace's read: the line, plus the labels its pickers show (see spend/item-workspace.util.ts). */
+  async getDetail(id: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const found = await this.findItem(id, mg);
+    const line = this.withAnalyticsValues(found, await this.loadAnalytics(mg, found));
+    return { ...line, references: await loadItemReferences(mg, found) };
+  }
+
+  /** The Relations tab badge: one statement instead of one request per relation. */
+  async relationCounts(id: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return countItemRelations(mg, 'capex', await this.findItem(id, mg));
   }
 
   async yearlyTotals(capexItemId: string, from: number, to: number, opts?: { manager?: EntityManager }) {

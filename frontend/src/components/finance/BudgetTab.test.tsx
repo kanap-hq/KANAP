@@ -78,6 +78,7 @@ import api from '../../api';
 import BudgetTab, { BudgetTabHandle } from './BudgetTab';
 import type { LinePayload, RoundInput, RoundLine } from './roundPeriod';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
+import { allocationsSnapshotKey } from './allocationsCache';
 
 const ALL_SHOWN: BudgetColumnsSettings = {
   ...DEFAULT_BUDGET_COLUMNS,
@@ -188,9 +189,9 @@ function renderTab(
   year = YEAR,
   dates: { effectiveStart?: string; endOfValidity?: string; payingCompanyCountry?: string } = {},
   config: FinanceModuleConfig = OPEX_FINANCE_CONFIG,
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
 ) {
   const ref = React.createRef<BudgetTabHandle>();
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui = (y: number) => (
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
@@ -206,7 +207,7 @@ function renderTab(
     </MemoryRouter>
   );
   const view = render(ui(year));
-  return { ...view, ref, rerenderYear: (y: number) => view.rerender(ui(y)) };
+  return { ...view, ref, queryClient, rerenderYear: (y: number) => view.rerender(ui(y)) };
 }
 
 const bulkCalls = () => mocked.post.mock.calls.filter(([url]) => url === BULK);
@@ -247,6 +248,88 @@ async function flush(ref: React.RefObject<BudgetTabHandle>) {
   await act(async () => { ok = (await ref.current?.flush()) ?? true; });
   return ok;
 }
+
+describe('BudgetTab on the query cache', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+  });
+
+  /** The flat view's Budget total field. */
+  const budgetTotal = () => screen.getAllByRole('textbox')[0] as HTMLInputElement;
+
+  it('shows the year at once when the tab comes back, editable, then refreshes it in the background', async () => {
+    setupApi({ grain: 'annual' });
+    const first = renderTab();
+    await waitForAmounts();
+    // The field formats its value in an effect: wait for it, never read it right after the load.
+    await waitFor(() => expect(budgetTotal()).toHaveValue('12 000'));
+    const loads = amountLoads();
+    first.unmount();
+
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient);
+    // First render: the cached year, no blank grid and no disabled fields while it refreshes.
+    expect(budgetTotal()).toHaveValue('12 000');
+    expect(budgetTotal()).not.toBeDisabled();
+    await waitFor(() => expect(amountLoads()).toBe(loads + 1));
+  });
+
+  it('never shows a cached year after a save: the tab loads it again', async () => {
+    setupApi({ grain: 'annual' });
+    const first = renderTab();
+    await waitForAmounts();
+    fireEvent.change(budgetTotal(), { target: { value: '15000' } });
+    await flush(first.ref);
+    expect(bulkCalls()).toHaveLength(1);
+    first.unmount();
+
+    // The server now holds the saved total; the next load answers it, a little later.
+    let answer: () => void = () => undefined;
+    const served = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === '/spend-versions/v1/amounts') {
+        await new Promise<void>((resolve) => { answer = resolve; });
+        const res = await served(url, config);
+        return { data: { ...res.data, totals: { ...res.data.totals, planned: 15000 } } };
+      }
+      return served(url, config);
+    });
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, first.queryClient);
+    // The pre-save year is not shown meanwhile.
+    expect(screen.queryByDisplayValue('12 000')).toBeNull();
+    await waitFor(() => expect(amountLoads()).toBeGreaterThan(1));
+    await act(async () => { answer(); });
+    await waitFor(() => expect(budgetTotal()).toHaveValue('15 000'));
+  });
+
+  it("a save forgets the line's cached Allocations year, which shows the year's totals", async () => {
+    setupApi({ grain: 'annual' });
+    const first = renderTab();
+    await waitForAmounts();
+    const key = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR);
+    const otherYear = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR + 1);
+    first.queryClient.setQueryData(key, { version: null, computed: [], totals: { planned: 12000 } });
+    first.queryClient.setQueryData(otherYear, { version: null, computed: [], totals: { planned: 1 } });
+    fireEvent.change(budgetTotal(), { target: { value: '15000' } });
+    await flush(first.ref);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(first.queryClient.getQueryData(key)).toBeUndefined();
+    expect(first.queryClient.getQueryData(otherYear)).toBeDefined();
+  });
+
+  it("a spread from the panel forgets the line's cached Allocations year too", async () => {
+    setupApi({ grain: 'monthly' });
+    const first = renderTab();
+    await waitForAmounts();
+    const key = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR);
+    first.queryClient.setQueryData(key, { version: null, computed: [], totals: { planned: 12000 } });
+    typeAmount('6000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    await settle();
+    expect(first.queryClient.getQueryData(key)).toBeUndefined();
+  });
+});
 
 describe('BudgetTab write safety', () => {
   beforeEach(() => {
@@ -980,7 +1063,7 @@ describe('BudgetTab columns from the setting', () => {
     expect(periodLine('forecast')).toHaveTextContent('12 months, January to December');
     const fields = within(container).getAllByRole('textbox');
     // Budget, Revision, Forecast: the third field.
-    expect(fields[2]).toHaveValue('7 200');
+    await waitFor(() => expect(fields[2]).toHaveValue('7 200'));
     fireEvent.change(fields[2], { target: { value: '5000' } });
     await flush(ref);
     expect(bulkCalls()[0][1]).toEqual({
@@ -1005,8 +1088,10 @@ describe('BudgetTab columns from the setting', () => {
     renderTab();
     await waitForAmounts();
 
-    expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Revision');
-    expect(screen.getByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('10 800');
+    await waitFor(() => {
+      expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Revision');
+      expect(screen.getByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('10 800');
+    });
     fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
     typeAmount('5000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
@@ -1479,7 +1564,7 @@ describe('BudgetTab edits while a panel write runs', () => {
     routePosts();
     const { container, ref } = renderTab();
     await waitForAmounts();
-    expect(amountField()).toHaveValue('12 000');
+    await waitFor(() => expect(amountField()).toHaveValue('12 000'));
 
     // March of Budget by hand: 12 500 in all.
     fireEvent.change(cell(gridCells(container), 3, 0), { target: { value: '1500' } });

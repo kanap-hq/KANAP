@@ -5,7 +5,10 @@ import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireLevel } from '../auth/require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
+import { Tenant, TenantRequest } from '../common/decorators';
+import { CONTRACT_LOOKUP_ACCESS, CONTRACT_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
+import { CONTRACT_LOOKUP, lookupReference } from '../common/lookup/reference-lookups';
 import { ContractUpsertDto } from './dto/contract.dto';
 import { StorageService } from '../common/storage/storage.service';
 import { contentDisposition } from '../common/content-disposition';
@@ -31,6 +34,16 @@ export class ContractsController {
   @RequireLevel('contracts', 'reader')
   @Get('ids')
   listIds(@Query() query: any, @Req() req: any) { return this.svc.listIds(query, { manager: req?.queryRunner?.manager }); }
+
+  // Picker search (`q`) and hydration of chosen values (`ids`); see common/lookup.
+  @UseGuards(PermissionGuard)
+  @RequireAnyLevel(CONTRACT_LOOKUP_READERS)
+  @Get('lookup')
+  lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    // A role that only reads a picking page gets the chosen labels (`ids`), not the list.
+    assertLookupSearch(CONTRACT_LOOKUP_ACCESS, ctx, query);
+    return lookupReference({ manager: ctx.manager, tenantId: ctx.tenantId }, CONTRACT_LOOKUP, query);
+  }
 
   // Export route before :id
   @UseGuards(PermissionGuard)

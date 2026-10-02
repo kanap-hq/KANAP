@@ -133,6 +133,7 @@
     "loadFailed": "Daten konnten nicht geladen werden",
     "saveFailed": "Einstellungen konnten nicht gespeichert werden",
     "loadFailedRefresh": "Daten konnten nicht geladen werden. Bitte aktualisieren Sie die Seite.",
+    "tabLoadFailed": "Dieser Tab konnte nicht geladen werden.",
     "testEmailSent": "Test-E-Mail gesendet!",
     "testEmailFailed": "Test-E-Mail konnte nicht gesendet werden",
     "noContent": "Noch kein Inhalt.",
@@ -418,7 +419,9 @@
     "createCostCenter": "Eine anlegen",
     "noCostCentersFound": "Keine Kostenstellen gefunden",
     "costCentersLoadFailed": "Die Kostenstellen konnten nicht geladen werden.",
-    "notSet": "Nicht festgelegt"
+    "notSet": "Nicht festgelegt",
+    "moreResults": "Weiter tippen, um einzugrenzen: es gibt weitere Ergebnisse",
+    "valueUnavailable": "Wert nicht mehr verfügbar"
   },
   "documentEditor": {
     "expandDocument": "Dokument erweitern",

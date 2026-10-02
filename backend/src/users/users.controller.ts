@@ -7,7 +7,10 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireLevel } from '../auth/require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
+import { Tenant, TenantRequest } from '../common/decorators';
+import { USER_LOOKUP_ACCESS, USER_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
+import { lookupReference, USER_LOOKUP } from '../common/lookup/reference-lookups';
 import { resolveAppBaseUrl } from '../common/url';
 import { Features } from '../config/features';
 import { throwFeatureDisabled } from '../common/feature-gates';
@@ -76,6 +79,16 @@ export class UsersController {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
+  }
+
+  // Every person picker: names only (see common/lookup). Readable from every page that picks a person.
+  @Get('lookup')
+  @UseGuards(PermissionGuard)
+  @RequireAnyLevel(USER_LOOKUP_READERS)
+  lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    // A role that only reads a picking page gets the chosen labels (`ids`), not the list.
+    assertLookupSearch(USER_LOOKUP_ACCESS, ctx, query);
+    return lookupReference({ manager: ctx.manager, tenantId: ctx.tenantId }, USER_LOOKUP, query);
   }
 
   @Get(':id')

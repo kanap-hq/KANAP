@@ -31,22 +31,42 @@ import {
 } from '../../constants/status';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import SpendMetadataBar from './workspace/SpendMetadataBar';
 import SpendPropertiesDrawer, { RunBuild } from './workspace/SpendPropertiesDrawer';
 import { useCostCenterTree } from '../../hooks/useCostCenterTree';
-import BudgetTab, { BudgetTabHandle } from '../../components/finance/BudgetTab';
-import AllocationsTab, { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
+import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
+import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { OPEX_FINANCE_CONFIG } from '../../components/finance/config';
-import RelationsPanel, { RelationsPanelHandle } from './editors/RelationsPanel';
+import type { RelationsPanelHandle } from './editors/RelationsPanel';
 import EntityTasksPanel from '../../components/EntityTasksPanel';
 import { readStoredOpexListContext, writeStoredOpexListContext } from './listContextStorage';
 import { fetchSpendRelationsCount } from '../../utils/workspaceTabCounts';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { isoToLocalDateInput } from '../../lib/datetime';
+import { analyticsValueOptions, itemReferences, ownerName } from '../../components/finance/itemReferences';
 import type { ItemAnalyticsValue } from '../../services/analytics';
 
 /** The list this workspace belongs to (its saved list contexts). */
+
+// The Budget, Allocations and Relations tabs load with their tab (the Budget tab brings the charts):
+// opening a line reads the overview's code only. `preloadTabs` fetches them once the line is shown;
+// a tab whose code fails to load shows a retry button in its place (WorkspaceTabBoundary).
+const budgetTab = retryableLazy(() => import('../../components/finance/BudgetTab'));
+const allocationsTab = retryableLazy(() => import('../../components/finance/AllocationsTab'));
+const relationsPanel = retryableLazy(() => import('./editors/RelationsPanel'));
+const BudgetTab = budgetTab.Component;
+const AllocationsTab = allocationsTab.Component;
+const RelationsPanel = relationsPanel.Component;
+const LAZY_TABS = [budgetTab, allocationsTab, relationsPanel];
+function preloadTabs() {
+  LAZY_TABS.forEach((tab) => tab.preload());
+}
+function retryTabs() {
+  LAZY_TABS.forEach((tab) => tab.retry());
+}
+
 const LIST_ENDPOINT = '/spend-items/summary';
 
 type TabKey = 'overview' | 'budget' | 'allocations' | 'relations';
@@ -254,11 +274,21 @@ export default function SpendItemPage() {
     window.history.replaceState(null, '', `/ops/opex/${ref}/${routeTab}${location.search}`);
   }, [data?.item_number, idParam, routeTab, location.search]);
 
+  // The other tabs' code loads in the background once a line is shown, so a tab switch does not wait for it.
+  const lineShown = !!data?.id;
+  React.useEffect(() => {
+    if (!lineShown) return undefined;
+    const timer = window.setTimeout(preloadTabs, 1000);
+    return () => window.clearTimeout(timer);
+  }, [lineShown]);
+
   // Tab badge counts.
   const relationsCountQuery = useQuery({
-    queryKey: ['spend-relations-count', uuid],
-    queryFn: () => fetchSpendRelationsCount(uuid as string),
-    enabled: !!uuid && !isCreate,
+    // Keyed on the route's id or reference (`OPX-12`, which the endpoint resolves): it starts with the
+    // detail, not after it.
+    queryKey: ['spend-relations-count', idParam],
+    queryFn: ({ signal }) => fetchSpendRelationsCount(idParam, signal),
+    enabled: !!idParam && !isCreate,
   });
 
   const { data: currencySettings } = useCurrencySettings();
@@ -800,6 +830,10 @@ export default function SpendItemPage() {
     void patchNow({ status: deriveStatusFromDisabledAt(disabled_at), disabled_at });
   };
 
+  // Labels of the line's references, from the detail: the pickers and the owners show them without any request.
+  const references = React.useMemo(() => itemReferences(data), [data]);
+  const analyticsOptions = React.useMemo(() => analyticsValueOptions(data), [data]);
+
   const reference = data?.item_number ? formatItemRef('opex', data.item_number) : null;
   const { addToRecent } = useRecentlyViewed();
   React.useEffect(() => {
@@ -880,6 +914,8 @@ export default function SpendItemPage() {
         onSaveShortcut={() => { if (isCreate) { void handleCreate(); } else { void flushAll(); } }}
         metadata={!isCreate ? (
           <SpendMetadataBar
+            ownerItName={ownerName(references.owner_it, form.owner_it_id)}
+            ownerBizName={ownerName(references.owner_business, form.owner_business_id)}
             status={form.status}
             ownerItId={form.owner_it_id || null}
             ownerBizId={form.owner_business_id || null}
@@ -950,6 +986,8 @@ export default function SpendItemPage() {
         ) : (
           <SpendPropertiesDrawer
             mode="edit"
+            references={references}
+            analyticsOptions={analyticsOptions}
             supplierId={form.supplier_id}
             payingCompanyId={form.paying_company_id}
             accountId={form.account_id}
@@ -1034,15 +1072,20 @@ export default function SpendItemPage() {
           )
         )}
 
-        {routeTab === 'budget' && !isCreate && uuid && (
-          <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} ref={budgetRef} />
-        )}
-        {routeTab === 'allocations' && !isCreate && uuid && (
-          <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} ref={allocRef} />
-        )}
-        {routeTab === 'relations' && !isCreate && uuid && (
-          <RelationsPanel key={uuid} id={uuid} ref={relationsRef} autoSave onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
-        )}
+        {/* No progress bar while a tab's code loads: the empty tab, then its content. */}
+        <WorkspaceTabBoundary resetKey={routeTab} onRetry={retryTabs}>
+          <React.Suspense fallback={null}>
+            {routeTab === 'budget' && !isCreate && uuid && (
+              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} ref={budgetRef} />
+            )}
+            {routeTab === 'allocations' && !isCreate && uuid && (
+              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} ref={allocRef} />
+            )}
+            {routeTab === 'relations' && !isCreate && uuid && (
+              <RelationsPanel key={uuid} id={uuid} ref={relationsRef} autoSave onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
+            )}
+          </React.Suspense>
+        </WorkspaceTabBoundary>
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

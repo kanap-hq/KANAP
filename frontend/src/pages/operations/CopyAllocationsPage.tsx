@@ -15,6 +15,7 @@ import {
 import { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { forgetAllAllocations } from '../../components/finance/allocationsCache';
 import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx } from '../../components/reports/ReportLayout';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
@@ -199,6 +200,7 @@ export default function CopyAllocationsPage() {
     setIsProcessing(true);
     try {
       const response = await copyAllocations(scope, payload);
+      forgetAllAllocations(queryClient);
       await dialogs.alert(t('operations.copyAllocations.copyCompleted', { processed: response.summary.processed, skipped: response.summary.skipped, errors: response.summary.errors }));
       await queryClient.invalidateQueries({ queryKey: [scope === 'opex' ? 'spend-items-summary' : 'capex-items-summary'] });
       setPreviewData([]);

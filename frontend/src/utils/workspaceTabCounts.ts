@@ -74,33 +74,14 @@ export async function fetchProjectTasksCount(projectId: string): Promise<number>
 }
 
 
-export async function fetchSpendRelationsCount(spendItemId: string): Promise<number> {
-  const [contracts, applications, projects, links, attachments] = await Promise.allSettled([
-    api.get(`/spend-items/${spendItemId}/contracts`),
-    api.get(`/spend-items/${spendItemId}/applications`),
-    api.get(`/spend-items/${spendItemId}/projects`),
-    api.get(`/spend-items/${spendItemId}/links`),
-    api.get(`/spend-items/${spendItemId}/attachments`),
-  ]);
-  return settledItemCount(contracts)
-    + settledItemCount(applications)
-    + settledItemCount(projects)
-    + settledItemCount(links)
-    + settledItemCount(attachments);
+/** The Relations tab badge of an OPEX line: one request (`GET /spend-items/:id/relation-counts`). */
+export async function fetchSpendRelationsCount(spendItemId: string, signal?: AbortSignal): Promise<number> {
+  const res = await api.get<{ total?: number }>(`/spend-items/${spendItemId}/relation-counts`, { signal });
+  return Number(res.data?.total) || 0;
 }
 
-
-export async function fetchCapexRelationsCount(capexItemId: string): Promise<number> {
-  const [contracts, applications, projects, links, attachments] = await Promise.allSettled([
-    api.get(`/capex-items/${capexItemId}/contracts`),
-    api.get(`/capex-items/${capexItemId}/applications`),
-    api.get(`/capex-items/${capexItemId}/projects`),
-    api.get(`/capex-items/${capexItemId}/links`),
-    api.get(`/capex-items/${capexItemId}/attachments`),
-  ]);
-  return settledItemCount(contracts)
-    + settledItemCount(applications)
-    + settledItemCount(projects)
-    + settledItemCount(links)
-    + settledItemCount(attachments);
+/** The Relations tab badge of a CAPEX line: one request (`GET /capex-items/:id/relation-counts`). */
+export async function fetchCapexRelationsCount(capexItemId: string, signal?: AbortSignal): Promise<number> {
+  const res = await api.get<{ total?: number }>(`/capex-items/${capexItemId}/relation-counts`, { signal });
+  return Number(res.data?.total) || 0;
 }

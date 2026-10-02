@@ -39,6 +39,7 @@ import { itemAnalyticsAuditFields, itemAnalyticsFields, loadItemAnalyticsValues,
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import { countItemRelations, loadItemReferences } from './item-workspace.util';
 
 @Injectable()
 export class SpendItemsService {
@@ -152,6 +153,20 @@ export class SpendItemsService {
   async get(id: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     return this.withAnalytics(mg, await this.findItem(id, mg));
+  }
+
+  /** The workspace's read: the line, plus the labels its pickers show (see item-workspace.util.ts). */
+  async getDetail(id: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const item = await this.findItem(id, mg);
+    const line = await this.withAnalytics(mg, item);
+    return { ...line, references: await loadItemReferences(mg, item) };
+  }
+
+  /** The Relations tab badge: one statement instead of one request per relation. */
+  async relationCounts(id: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return countItemRelations(mg, 'opex', await this.findItem(id, mg));
   }
 
   /** Per-year totals of the five columns for one item (multi-year trend chart). */

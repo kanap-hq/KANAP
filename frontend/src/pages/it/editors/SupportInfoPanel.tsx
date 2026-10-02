@@ -18,6 +18,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../../api';
+import { useLookupPicker } from '../../../hooks/useLookupPicker';
 import { useAuth } from '../../../auth/AuthContext';
 import { PropertyRow } from '../../../components/design';
 import DateEUField from '../../../components/fields/DateEUField';
@@ -88,11 +89,9 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
   const [supportContacts, setSupportContacts] = React.useState<SupportContactRow[]>([]);
   const [contactsBaseline, setContactsBaseline] = React.useState<SupportContactRow[]>([]);
 
-  // Options for autocomplete
-  const [vendorOptions, setVendorOptions] = React.useState<VendorOption[]>([]);
-  const [contractOptions, setContractOptions] = React.useState<ContractOption[]>([]);
-  const [vendorsLoading, setVendorsLoading] = React.useState(false);
-  const [contractsLoading, setContractsLoading] = React.useState(false);
+  // Vendors and contracts searched as the user types; the chosen ones keep their labels (read by id).
+  const vendorPicker = useLookupPicker<VendorOption>({ endpoint: '/suppliers/lookup', value: vendorId ? [vendorId] : [] });
+  const contractPicker = useLookupPicker<ContractOption>({ endpoint: '/contracts/lookup', value: contractId ? [contractId] : [] });
 
   const infoDirty = React.useMemo(() => {
     return (
@@ -113,46 +112,6 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
   React.useEffect(() => {
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
-
-  // Load vendors (suppliers)
-  React.useEffect(() => {
-    let alive = true;
-    (async () => {
-      setVendorsLoading(true);
-      try {
-        const res = await api.get('/suppliers', { params: { limit: 500, sort: 'name:ASC' } });
-        if (!alive) return;
-        const items = (res.data?.items || []).map((s: any) => ({ id: s.id, name: s.name }));
-        setVendorOptions(items);
-      } catch {
-        if (!alive) return;
-        setVendorOptions([]);
-      } finally {
-        setVendorsLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, []);
-
-  // Load contracts
-  React.useEffect(() => {
-    let alive = true;
-    (async () => {
-      setContractsLoading(true);
-      try {
-        const res = await api.get('/contracts', { params: { limit: 500, sort: 'name:ASC' } });
-        if (!alive) return;
-        const items = (res.data?.items || []).map((c: any) => ({ id: c.id, name: c.name }));
-        setContractOptions(items);
-      } catch {
-        if (!alive) return;
-        setContractOptions([]);
-      } finally {
-        setContractsLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, []);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -302,8 +261,8 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
     isDirty: () => dirty,
   }), [save, dirty, baseline, contactsBaseline]);
 
-  const selectedVendor = vendorId ? vendorOptions.find((v) => v.id === vendorId) || null : null;
-  const selectedContract = contractId ? contractOptions.find((c) => c.id === contractId) || null : null;
+  const selectedVendor = vendorId ? vendorPicker.selected[0] ?? null : null;
+  const selectedContract = contractId ? contractPicker.selected[0] ?? null : null;
 
   return (
     <Stack spacing={3}>
@@ -312,12 +271,14 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
       <Stack spacing={2} maxWidth={520}>
         <PropertyRow label={t('workspace.asset.support.vendor')}>
           <Autocomplete
-            options={vendorOptions}
+            {...vendorPicker.autocomplete}
+            options={vendorPicker.options}
             value={selectedVendor}
-            onChange={(_, v) => setVendorId(v?.id || null)}
-            getOptionLabel={(o) => o.name}
-            isOptionEqualToValue={(opt, val) => opt.id === val.id}
-            loading={vendorsLoading}
+            onChange={(_, v) => {
+              vendorPicker.remember([v]);
+              setVendorId(v?.id || null);
+            }}
+            getOptionLabel={(o) => vendorPicker.label(o, (vendor) => vendor.name ?? '')}
             disabled={readOnly}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
@@ -332,7 +293,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
                   ...params.InputProps,
                   endAdornment: (
                     <>
-                      {vendorsLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                      {vendorPicker.loading ? <CircularProgress color="inherit" size={16} /> : null}
                       {params.InputProps.endAdornment}
                     </>
                   ),
@@ -347,12 +308,14 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
 
         <PropertyRow label={t('workspace.asset.support.supportContract')}>
           <Autocomplete
-            options={contractOptions}
+            {...contractPicker.autocomplete}
+            options={contractPicker.options}
             value={selectedContract}
-            onChange={(_, v) => setContractId(v?.id || null)}
-            getOptionLabel={(o) => o.name}
-            isOptionEqualToValue={(opt, val) => opt.id === val.id}
-            loading={contractsLoading}
+            onChange={(_, v) => {
+              contractPicker.remember([v]);
+              setContractId(v?.id || null);
+            }}
+            getOptionLabel={(o) => contractPicker.label(o, (contract) => contract.name ?? '')}
             disabled={readOnly}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
@@ -367,7 +330,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
                   ...params.InputProps,
                   endAdornment: (
                     <>
-                      {contractsLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                      {contractPicker.loading ? <CircularProgress color="inherit" size={16} /> : null}
                       {params.InputProps.endAdornment}
                     </>
                   ),

@@ -15,6 +15,9 @@ type Props = {
   priority: CapexPriority;
   ownerItId: string | null;
   ownerBizId: string | null;
+  /** The owners' names from the detail: shown without reading the user records. */
+  ownerItName?: string | null;
+  ownerBizName?: string | null;
   /** The line's current cost center: its budget holder shows after the owners. */
   costCenterId?: string | null;
   disabled?: boolean;
@@ -29,6 +32,8 @@ export default function CapexMetadataBar({
   priority,
   ownerItId,
   ownerBizId,
+  ownerItName = null,
+  ownerBizName = null,
   costCenterId = null,
   disabled = false,
   onStatusChange,
@@ -79,6 +84,7 @@ export default function CapexMetadataBar({
       <PortfolioMetadataItem label={t('capex.metadata.itOwner')}>
         <MetadataUserPicker
           value={ownerItId}
+          displayName={ownerItName}
           placeholder={t('capex.metadata.itOwnerMissing')}
           searchPlaceholder={t('capex.metadata.itOwner')}
           disabled={disabled}
@@ -89,6 +95,7 @@ export default function CapexMetadataBar({
       <PortfolioMetadataItem label={t('capex.metadata.businessOwner')}>
         <MetadataUserPicker
           value={ownerBizId}
+          displayName={ownerBizName}
           placeholder={t('capex.metadata.businessOwnerMissing')}
           searchPlaceholder={t('capex.metadata.businessOwner')}
           disabled={disabled}

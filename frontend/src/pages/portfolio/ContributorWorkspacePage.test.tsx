@@ -109,7 +109,7 @@ function mockGets(
   opts: { subject?: Record<string, unknown>; listItems?: unknown[] } = {},
 ) {
   const subject = contributor(opts.subject);
-  vi.mocked(api.get).mockImplementation(async (url: string) => {
+  vi.mocked(api.get).mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
     if (url === `/portfolio/team-members/${CONTRIBUTOR_ID}` || url === `/portfolio/team-members/${CONTRIBUTOR_REF}`) return { data: subject };
     if (url === '/portfolio/employment-types') {
       return { data: [
@@ -117,11 +117,13 @@ function mockGets(
         { id: 'type-2', name: 'External', is_active: true },
       ] };
     }
-    if (url === '/users') {
-      return { data: { items: [
+    if (url === '/users/lookup') {
+      const people = [
         { id: 'user-3', first_name: 'Grace', last_name: 'Hopper' },
         { id: 'user-9', first_name: 'Antoine', last_name: 'Kandel' },
-      ] } };
+      ];
+      const ids = config?.params?.ids ? String(config.params.ids).split(',') : null;
+      return { data: { items: ids ? people.filter((p) => ids.includes(p.id)) : people, has_more: false } };
     }
     if (url === '/portfolio/team-members/me') {
       if (selfConfig === 'missing') {
@@ -271,6 +273,7 @@ describe('ContributorWorkspacePage manager and employment type', () => {
     mockGets();
     renderAt(`/portfolio/contributors/${CONTRIBUTOR_REF}`);
     const field = await managerField();
+    act(() => { field.focus(); });
     fireEvent.mouseDown(field);
     fireEvent.change(field, { target: { value: 'a' } });
 

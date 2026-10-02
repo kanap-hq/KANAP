@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
-import { AgChartsReact } from 'ag-charts-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -18,6 +17,9 @@ import {
   type LiveBudgetTotals,
   type YearTotals,
 } from './yearlyTotals';
+
+// The chart library (its own vendor chunk) loads with the first chart drawn, not with the workspace.
+const AgChartsReact = React.lazy(() => import('ag-charts-react').then((mod) => ({ default: mod.AgChartsReact })));
 
 /** Series keys are the yearly totals keys, one per column. */
 type SeriesKey = FreezeColumn;
@@ -148,7 +150,9 @@ export default function BudgetTrendChart({
         {t(`${config.i18nPrefix}.budget.multiYearTitle`)}{currency ? ` · ${currency.toUpperCase()}` : ''}
       </Typography>
       <Box sx={{ height: 260 }}>
-        <AgChartsReact options={options as any} />
+        <React.Suspense fallback={null}>
+          <AgChartsReact options={options as any} />
+        </React.Suspense>
       </Box>
     </Box>
   );

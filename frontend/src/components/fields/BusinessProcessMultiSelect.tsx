@@ -1,9 +1,8 @@
 import React from 'react';
 import { Autocomplete, Box, Chip, CircularProgress, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import api from '../../api';
+import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
@@ -37,40 +36,28 @@ export default function BusinessProcessMultiSelect({
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.businessProcesses');
   const naked = hideLabel || label === '';
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['business-processes', 'enabled'],
-    queryFn: async () => {
-      const res = await api.get<{ items: BusinessProcess[] }>('/business-processes', {
-        params: { limit: 1000, sort: 'name:ASC', status: 'enabled' },
-      });
-      return res.data?.items || [];
-    },
-  });
-
-  const options = data || [];
-
-  const selectedOptions = React.useMemo(() => {
-    if (!options.length) return [] as BusinessProcess[];
-    return options.filter((opt) => value.includes(opt.id));
-  }, [options, value]);
+  // Processes searched as the user types; the chosen ones keep their labels (one batch read).
+  const picker = useLookupPicker<BusinessProcess>({ endpoint: '/business-processes/lookup', value });
 
   const control = (
     <Autocomplete<BusinessProcess, true, false, false>
       multiple
-      options={options}
-      value={selectedOptions}
-      disabled={disabled || isLoading}
+      {...picker.autocomplete}
+      options={picker.options}
+      value={picker.selected}
+      // A chosen process whose name is still loading cannot be dropped by an edit meanwhile.
+      disabled={disabled || picker.hydrating}
       onChange={(_, newValue) => {
-        const ids = newValue.map((opt) => opt.id);
-        onChange(ids);
+        picker.remember(newValue);
+        onChange(newValue.map((opt) => opt.id));
       }}
-      getOptionLabel={(option) => option.name}
+      getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
       renderTags={(tagValue, getTagProps) =>
         tagValue.map((option, index) => (
           <Chip
             {...getTagProps({ index })}
             key={option.id}
-            label={option.name}
+            label={picker.label(option, (o) => o.name ?? '')}
             size="small"
           />
         ))
@@ -88,15 +75,14 @@ export default function BusinessProcessMultiSelect({
             ...params.InputProps,
             endAdornment: (
               <>
-                {(isLoading || isFetching) ? <CircularProgress color="inherit" size={16} /> : null}
+                {picker.loading ? <CircularProgress color="inherit" size={16} /> : null}
                 {params.InputProps.endAdornment}
               </>
             ),
           }}
         />
       )}
-      loading={isLoading || isFetching}
-      noOptionsText={isLoading ? t('selects.loading') : t('selects.noBusinessProcessesFound')}
+      noOptionsText={picker.loading ? t('selects.loading') : t('selects.noBusinessProcessesFound')}
       fullWidth
     />
   );

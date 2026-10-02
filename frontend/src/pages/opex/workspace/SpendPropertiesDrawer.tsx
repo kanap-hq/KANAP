@@ -19,6 +19,7 @@ import { useLocale } from '../../../i18n/useLocale';
 import { useCostCenterTree } from '../../../hooks/useCostCenterTree';
 import { useAnalyticsAxes } from '../../../hooks/useAnalyticsAxes';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
+import { matching, type ItemReferences } from '../../../components/finance/itemReferences';
 
 export type RunBuild = 'run' | 'build';
 
@@ -51,6 +52,10 @@ type Props = {
   onDisabledAtChange?: (next: string | null) => void;
   onOwnerItChange?: (next: string) => void;
   onOwnerBusinessChange?: (next: string) => void;
+  /** Labels of the chosen supplier, company and account from the detail: the pickers show them without a request. */
+  references?: Partial<ItemReferences>;
+  /** The chosen value's label per dimension id, from the detail. */
+  analyticsOptions?: Record<string, { id: string; name: string }>;
 };
 
 // Hides the internal MUI label of complex field components so they render
@@ -77,6 +82,8 @@ export default function SpendPropertiesDrawer({
   ownerItId = '',
   ownerBusinessId = '',
   disabled = false,
+  references,
+  analyticsOptions,
   onSupplierChange,
   onPayingCompanyChange,
   onAccountChange,
@@ -125,7 +132,7 @@ export default function SpendPropertiesDrawer({
       <PropertyGroup>
         <PropertyRow label={t('opex.fields.supplier')}>
           <Box sx={hideInnerLabelSx}>
-            <SupplierSelect value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} />
+            <SupplierSelect value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} selectedOption={matching(references?.supplier, supplierId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.costCenter')} helperText={costCenterHint}>
@@ -141,12 +148,12 @@ export default function SpendPropertiesDrawer({
         </PropertyRow>
         <PropertyRow label={t('opex.fields.payingCompany')} required>
           <Box sx={hideInnerLabelSx}>
-            <CompanySelect value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required disableClearable={mode === 'edit'} />
+            <CompanySelect value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.account')} required>
           <Box sx={hideInnerLabelSx}>
-            <AccountSelect value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} />
+            <AccountSelect value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} selectedOption={matching(references?.account, accountId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.currency')} required>
@@ -177,6 +184,7 @@ export default function SpendPropertiesDrawer({
                 value={analyticsValues[axis.id] ?? null}
                 onChange={(v) => onAnalyticsValueChange(axis.id, v)}
                 disabled={disabled}
+                selectedOption={matching(analyticsOptions?.[axis.id], analyticsValues[axis.id])}
               />
             </Box>
           </PropertyRow>

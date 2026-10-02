@@ -146,7 +146,7 @@ describe('CapexItemPage create', () => {
     });
     expect(mocked.post.mock.calls[0][1]).not.toHaveProperty('analytics_category_id');
     // The page moves on to the new line's workspace.
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/capex-items/new-id'));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/capex-items/new-id', expect.objectContaining({ signal: expect.any(AbortSignal) })));
   });
 
   it('sends no analytics value when none is picked', async () => {
@@ -161,7 +161,7 @@ describe('CapexItemPage create', () => {
     // Supplier is optional: none picked, none sent.
     expect(mocked.post.mock.calls[0][1]).toMatchObject({ analytics_values: {}, supplier_id: null });
     // The page moves on to the new line's workspace.
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/capex-items/new-id'));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/capex-items/new-id', expect.objectContaining({ signal: expect.any(AbortSignal) })));
   });
 
   it('fills an empty paying company from the picked cost center and sends both new fields', async () => {
@@ -270,6 +270,7 @@ describe('CapexItemPage edit', () => {
 
   it('patches the cost center and run or build, as null when cleared', async () => {
     renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/capex-items/${ITEM_ID}`, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
     // One pick at a time (picks made while a save runs go together in the next one).
     const picks = ['clear cost center', 'clear run or build', 'pick run'];

@@ -15,6 +15,8 @@ export default defineConfig({
           'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
           'vendor-grid': ['ag-grid-community', 'ag-grid-react'],
           'vendor-query': ['@tanstack/react-query'],
+          // Loaded on demand by the first chart (workspace Budget tab, reports): never with the entry point.
+          'vendor-charts': ['ag-charts-community', 'ag-charts-react'],
         },
       },
     },

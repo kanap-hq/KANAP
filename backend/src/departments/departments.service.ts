@@ -228,44 +228,6 @@ export class DepartmentsService {
     return found;
   }
 
-  async lookup(query: any, opts?: { manager?: EntityManager }): Promise<{ items: DepartmentLookupItem[]; total: number; page: number; limit: number }> {
-    const repo = this.getRepo(opts?.manager);
-    const page = Math.max(1, Number(query?.page) || 1);
-    const limit = Math.min(Math.max(1, Number(query?.limit) || 100), 1000);
-    const skip = (page - 1) * limit;
-    const q = String(query?.q || '').trim();
-    const companyId = String(query?.company_id || query?.companyId || '').trim();
-
-    const qbBase = repo.createQueryBuilder('d').select(['d.id', 'd.name', 'd.company_id']);
-    applyStatusFilter(qbBase, { alias: 'd' });
-    if (companyId) {
-      qbBase.andWhere('d.company_id = :companyId', { companyId });
-    }
-    if (q) {
-      qbBase.andWhere('LOWER(d.name) LIKE :q', { q: `%${q.toLowerCase()}%` });
-    }
-
-    const total = await qbBase.getCount();
-    const items = await qbBase
-      .clone()
-      .orderBy('LOWER(d.name)', 'ASC')
-      .addOrderBy('d.name', 'ASC')
-      .skip(skip)
-      .take(limit)
-      .getMany();
-
-    return {
-      items: items.map((department) => ({
-        id: department.id,
-        name: department.name,
-        company_id: department.company_id,
-      })),
-      total,
-      page,
-      limit,
-    };
-  }
-
   async lookupById(id: string, opts?: { manager?: EntityManager }): Promise<DepartmentLookupItem> {
     const repo = this.getRepo(opts?.manager);
     const found = await repo

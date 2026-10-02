@@ -9,9 +9,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import api from '../../../api';
+import { useLookupHydration, useLookupPicker } from '../../../hooks/useLookupPicker';
+import { USERS_LOOKUP_ENDPOINT, type UserOption } from '../../../components/fields/userLookup';
 import BusinessProcessSelect from '../../../components/fields/BusinessProcessSelect';
 import EnumAutocomplete from '../../../components/fields/EnumAutocomplete';
 import TeamMemberMultiSelect from '../../../components/fields/TeamMemberMultiSelect';
@@ -28,6 +28,7 @@ import type {
   InterfaceDetail,
   InterfaceOwner,
 } from '../components/interface-workspace/types';
+
 
 type CompanyOption = {
   id: string;
@@ -81,28 +82,21 @@ export default function InterfacePropertyPanel({
   const residency = (data?.data_residency || []) as InterfaceDataResidency[];
   const disabled = !canManage;
 
-  const { data: users } = useQuery({
-    queryKey: ['users-for-team-select'],
-    queryFn: async () => {
-      const res = await api.get('/users', { params: { status: 'enabled', limit: 1000 } });
-      return (res.data?.items || []) as Array<{
-        id: string;
-        first_name?: string | null;
-        last_name?: string | null;
-        email: string;
-      }>;
-    },
+  // The owners' names, read by id (no people list): the names already read are kept, so adding or
+  // removing an owner reads only the new one and the others never flash. The companies are searched
+  // as the user types.
+  const ownerIds = React.useMemo(() => owners.map((owner) => owner.user_id).filter(Boolean), [owners]);
+  const knownOwnersRef = React.useRef(new Map<string, UserOption>());
+  const ownerHydration = useLookupHydration<UserOption>({
+    endpoint: USERS_LOOKUP_ENDPOINT,
+    ids: ownerIds,
+    known: knownOwnersRef.current,
     enabled: !isCreate,
   });
-
-  const { data: companyOptionsData = [], isLoading: loadingCompanies } = useQuery({
-    queryKey: ['companies', 'active'],
-    queryFn: async () => {
-      const res = await api.get<{ items: CompanyOption[] }>('/companies', { params: { limit: 1000 } });
-      return res.data.items || [];
-    },
-    enabled: !isCreate,
-  });
+  for (const user of ownerHydration.items) knownOwnersRef.current.set(user.id, user);
+  const unavailableOwners = ownerHydration.unavailable;
+  const companyIds = React.useMemo(() => companies.map((row) => row.company_id).filter(Boolean), [companies]);
+  const companyPicker = useLookupPicker<CompanyOption>({ endpoint: '/companies/lookup', value: companyIds, enabled: !isCreate });
 
   React.useEffect(() => {
     setInterfaceIdDraft(data?.interface_id || '');
@@ -121,19 +115,9 @@ export default function InterfacePropertyPanel({
     }
   }, [t]);
 
-  const companyOptions = React.useMemo(() => (
-    [...companyOptionsData].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-  ), [companyOptionsData]);
+  const userById = knownOwnersRef.current;
 
-  const userById = React.useMemo(() => {
-    const map = new Map<string, { first_name?: string | null; last_name?: string | null; email: string }>();
-    for (const user of users || []) {
-      map.set(user.id, user);
-    }
-    return map;
-  }, [users]);
-
-  const enrichOwners = React.useCallback((ownerType: 'business' | 'it'): TeamMemberValue[] => {
+  const enrichOwners = (ownerType: 'business' | 'it'): TeamMemberValue[] => {
     return owners
       .filter((owner) => owner.owner_type === ownerType)
       .map((owner) => {
@@ -143,13 +127,14 @@ export default function InterfacePropertyPanel({
         const displayName = [firstName, lastName].filter(Boolean).join(' ');
         return {
           user_id: owner.user_id,
-          user_display_name: displayName || user?.email || owner.user_id,
+          // '…' while the name loads, never the raw id; a person no longer readable says so.
+          user_display_name: displayName || user?.email || (unavailableOwners.has(owner.user_id) ? t('common:selects.valueUnavailable') : '…'),
           first_name: firstName || undefined,
           last_name: lastName || undefined,
-          email: user?.email,
+          email: user?.email ?? undefined,
         };
       });
-  }, [owners, userById]);
+  };
 
   const dataClassOptions = React.useMemo(() => {
     const list = classificationCatalog?.dataClasses || [];
@@ -196,13 +181,6 @@ export default function InterfacePropertyPanel({
       .map((code) => ({ code, name: `Unknown (${code})` }));
     return [...COUNTRY_OPTIONS, ...extras];
   }, [residencyCodes]);
-
-  const selectedCompanies = React.useMemo(() => {
-    const companyIds = companies.map((row) => row.company_id).filter(Boolean);
-    return companyIds
-      .map((id) => companyOptions.find((company) => company.id === id) || { id, name: id })
-      .filter(Boolean);
-  }, [companies, companyOptions]);
 
   return (
     <>
@@ -303,14 +281,14 @@ export default function InterfacePropertyPanel({
             <Autocomplete
               multiple
               size="small"
-              options={companyOptions}
-              loading={loadingCompanies}
-              value={selectedCompanies}
+              {...companyPicker.autocomplete}
+              options={companyPicker.options}
+              value={companyPicker.selected}
               onChange={(_, value) => {
+                companyPicker.remember(value);
                 void runPersist(() => onReplaceCompanies(value.map((item) => item.id)));
               }}
-              getOptionLabel={(option) => option.name}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
+              getOptionLabel={(option) => companyPicker.label(option, (company) => company.name ?? '')}
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
                   {option.name}
@@ -324,7 +302,7 @@ export default function InterfacePropertyPanel({
                   placeholder="Add companies"
                 />
               )}
-              disabled={!canManage || loadingCompanies}
+              disabled={!canManage || companyPicker.hydrating}
             />
           </PropertyRow>
         </PropertyGroup>
