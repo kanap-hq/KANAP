@@ -42,6 +42,12 @@ const LISTS = {
 };
 if (!(args.list in LISTS)) throw new Error(`--list: opex or capex, not ${args.list}`);
 const LIST = LISTS[args.list];
+// What the OPEX and CAPEX pages send (OpexListPage.tsx, CapexPage.tsx, lot 2B PR B2): page requests
+// ask for the lean grid rows (`shape=grid`) with the FTE keys of the FTE columns shown (none in the
+// default layout); the footer totals ask for the amount columns shown (`amounts=`: in the default
+// layout, Y's default column and the last enabled one). No `years`: the grid reads the fixed slots only.
+const GRID_SHAPE = 'grid';
+const DEFAULT_AMOUNTS = 'yBudget,yLanding';
 const log = (m) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`);
 
 // ── Seeded random per virtual user ─────────────────────────────────────────
@@ -129,15 +135,15 @@ class VirtualUser {
   filtersParam() { return Object.keys(this.list.filters).length ? JSON.stringify(this.list.filters) : undefined; }
   page(n) {
     // Both lists run every page on the SQL list engine (lot 2B): one name per list.
-    return this.get(`GET ${LIST.base}/summary`, `${LIST.base}/summary${qs({ page: n, limit: 50, sort: this.list.sort, years: YEARS, filters: this.filtersParam(), status: this.list.status, q: this.list.q })}`);
+    return this.get(`GET ${LIST.base}/summary`, `${LIST.base}/summary${qs({ page: n, limit: 50, sort: this.list.sort, shape: GRID_SHAPE, fte: this.list.fte, filters: this.filtersParam(), status: this.list.status, q: this.list.q })}`);
   }
   totals() {
-    return this.get(`GET ${LIST.base}/summary/totals`, `${LIST.base}/summary/totals${qs({ q: this.list.q, filters: this.filtersParam(), status: this.list.status })}`);
+    return this.get(`GET ${LIST.base}/summary/totals`, `${LIST.base}/summary/totals${qs({ q: this.list.q, filters: this.filtersParam(), status: this.list.status, amounts: DEFAULT_AMOUNTS, fte: this.list.fte })}`);
   }
   filterValues(field) {
     const filters = { ...this.list.filters };
     delete filters[field];
-    return this.get(`GET ${LIST.base}/summary/filter-values [${field}]`, `${LIST.base}/summary/filter-values${qs({ fields: field, years: YEARS, q: this.list.q, filters: Object.keys(filters).length ? JSON.stringify(filters) : undefined, status: this.list.status })}`);
+    return this.get(`GET ${LIST.base}/summary/filter-values [${field}]`, `${LIST.base}/summary/filter-values${qs({ fields: field, q: this.list.q, filters: Object.keys(filters).length ? JSON.stringify(filters) : undefined, status: this.list.status })}`);
   }
   summaryIds() {
     return this.get(`GET ${LIST.base}/summary/ids`, `${LIST.base}/summary/ids${qs({ sort: this.list.sort, q: this.list.q, filters: this.filtersParam(), status: this.list.status })}`);
@@ -510,26 +516,27 @@ async function single() {
       log(`${label}: ${name} → p50 ${Math.round(percentile([...ms].sort((a, b) => a - b), 50))} ms, ${bytes} B, ${status}`);
     };
     if (args.list === 'capex') {
-      const page = (params) => `/capex-items/summary${qs({ page: 1, limit: 50, years: YEARS, status: 'enabled', ...params })}`;
+      const page = (params) => `/capex-items/summary${qs({ page: 1, limit: 50, shape: GRID_SHAPE, status: 'enabled', ...params })}`;
       await sample('capex summary default sort (yBudget:DESC)', page({ sort: DEFAULT_SORT }));
-      await sample('capex summary, grid rows (shape=grid)', page({ sort: DEFAULT_SORT, shape: 'grid' }));
+      await sample('capex summary default sort, full shape (AI, reports)', `/capex-items/summary${qs({ page: 1, limit: 50, sort: DEFAULT_SORT, years: YEARS, status: 'enabled' })}`);
       await sample('capex summary sort priority:ASC (Q4)', page({ sort: 'priority:ASC' }));
       await sample('capex summary sort item_number:ASC', page({ sort: 'item_number:ASC' }));
       await sample('capex summary quick search "Licences"', page({ sort: DEFAULT_SORT, q: 'Licences' }));
       await sample('capex summary, set filter paying company (2 values)', page({ sort: DEFAULT_SORT, filters: JSON.stringify({ paying_company_name: { filterType: 'set', values: ['Perf Groupe SA', 'Perf UK Ltd'] } }) }));
-      await sample('capex summary/totals', `/capex-items/summary/totals${qs({ status: 'enabled' })}`);
-      await sample('capex summary/filter-values paying_company_name', `/capex-items/summary/filter-values${qs({ fields: 'paying_company_name', years: YEARS, status: 'enabled' })}`);
-      await sample('capex summary/filter-values priority', `/capex-items/summary/filter-values${qs({ fields: 'priority', years: YEARS, status: 'enabled' })}`);
+      await sample('capex summary/totals', `/capex-items/summary/totals${qs({ status: 'enabled', amounts: DEFAULT_AMOUNTS })}`);
+      await sample('capex summary/filter-values paying_company_name', `/capex-items/summary/filter-values${qs({ fields: 'paying_company_name', status: 'enabled' })}`);
+      await sample('capex summary/filter-values priority', `/capex-items/summary/filter-values${qs({ fields: 'priority', status: 'enabled' })}`);
       await sample('capex summary/ids default sort', `/capex-items/summary/ids${qs({ sort: DEFAULT_SORT, status: 'enabled' })}`);
       await sample('capex summary/neighbors CPX-500', `/capex-items/summary/neighbors${qs({ id: 'CPX-500', sort: DEFAULT_SORT, status: 'enabled' })}`);
       await sample('health (trivial, tenancy query only)', '/health');
       vu.client.close();
       continue;
     }
-    await sample('summary default sort (yBudget:DESC)', `/spend-items/summary${qs({ page: 1, limit: 50, sort: DEFAULT_SORT, years: YEARS, status: 'enabled' })}`);
-    await sample('summary SQL sort (item_number:ASC)', `/spend-items/summary${qs({ page: 1, limit: 50, sort: 'item_number:ASC', years: YEARS, status: 'enabled' })}`);
-    await sample('summary/totals', `/spend-items/summary/totals${qs({ status: 'enabled' })}`);
-    await sample('summary/filter-values supplier_name', `/spend-items/summary/filter-values${qs({ fields: 'supplier_name', years: YEARS, status: 'enabled' })}`);
+    await sample('summary default sort (yBudget:DESC)', `/spend-items/summary${qs({ page: 1, limit: 50, sort: DEFAULT_SORT, shape: GRID_SHAPE, status: 'enabled' })}`);
+    await sample('summary SQL sort (item_number:ASC)', `/spend-items/summary${qs({ page: 1, limit: 50, sort: 'item_number:ASC', shape: GRID_SHAPE, status: 'enabled' })}`);
+    await sample('summary default sort, full shape (AI, reports)', `/spend-items/summary${qs({ page: 1, limit: 50, sort: DEFAULT_SORT, years: YEARS, status: 'enabled' })}`);
+    await sample('summary/totals', `/spend-items/summary/totals${qs({ status: 'enabled', amounts: DEFAULT_AMOUNTS })}`);
+    await sample('summary/filter-values supplier_name', `/spend-items/summary/filter-values${qs({ fields: 'supplier_name', status: 'enabled' })}`);
     await sample('summary/ids default sort', `/spend-items/summary/ids${qs({ sort: DEFAULT_SORT, status: 'enabled' })}`);
     await sample('summary/ids SQL sort', `/spend-items/summary/ids${qs({ sort: 'item_number:ASC', status: 'enabled' })}`);
     await sample('item detail GET /spend-items/OPX-2500', '/spend-items/OPX-2500');

@@ -83,6 +83,14 @@ export interface SummaryScopeConfig {
   columns: readonly string[];
   /** Item fields of this type only, searched by the quick search and offered by the filter values. */
   extraFields: readonly string[];
+  /**
+   * Grid shape: the item columns the list grid reads; the row then carries
+   * those, the derived fields the grid shows (`GRID_DERIVED_FIELDS`) and the
+   * amounts it shows, nothing else. Without it (CAPEX until it runs on the SQL
+   * list engine, lot 2B PR C, which checks its own grid's readers), the grid
+   * shape keeps every key but the ones `BuildRowsOptions.shape` lists.
+   */
+  gridItemColumns?: readonly string[];
 }
 
 // Table and column names come only from here: never from the caller.
@@ -108,6 +116,12 @@ export const SUMMARY_SCOPES: Record<SummaryScope, SummaryScopeConfig> = {
       'contract_id', 'cost_center_id', 'run_build', 'notes', 'created_at', 'updated_at',
     ],
     extraFields: [],
+    // Read by OpexListPage.tsx: the cells, their tooltips and links, the row id and the delete
+    // confirmation (product_name).
+    gridItemColumns: [
+      'id', 'item_number', 'product_name', 'description', 'status', 'currency', 'effective_start', 'disabled_at',
+      'notes', 'created_at', 'updated_at',
+    ],
   },
   capex: {
     scope: 'capex',
@@ -273,6 +287,43 @@ export interface VersionTotals {
 }
 
 const zeroCents = (): Cents => Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, 0n])) as Cents;
+
+/**
+ * The account as the list shows, sorts and filters it: "6110 - Software", or the
+ * number alone when the account has no name (never "6110 - "). The list
+ * statement computes the same text (`budget-list.config.ts`).
+ */
+export function accountDisplayText(accountNumber: unknown, accountName: unknown): string {
+  const name = accountName == null ? '' : String(accountName);
+  return name === '' ? String(accountNumber) : `${accountNumber} - ${name}`;
+}
+
+/** Year slots the list grid shows (Y-1 to Y+2); Y-2 and named years stay in the full shape. */
+const GRID_VERSION_SLOTS = ['yMinus1', 'y', 'yPlus1', 'yPlus2'] as const;
+
+/**
+ * Derived fields the list grid reads (grid shape with `gridItemColumns`): names
+ * and labels its cells, tooltips and links show, besides the item columns, the
+ * default dimension's value name, the enabled other dimensions, the latest
+ * task's title, the amounts and the requested FTE keys.
+ */
+const GRID_DERIVED_FIELDS = [
+  'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_name', 'supplier_name', 'paying_company_name',
+  'account_display', 'allocation_method_label', 'owner_it_name', 'owner_business_name', 'cost_center_label',
+  'cost_center_path', 'budget_holder_name', 'project_name', 'analytics_category_name',
+] as const;
+
+/**
+ * A year slot as the grid reads it: the five amounts the cells show, in the
+ * reporting currency (`reporting`, the key the full shape uses), or nothing
+ * when the line has no version that year (the cells show 0, as for the full
+ * slot's zero totals).
+ */
+function gridSlot(slot: SummarySlot | undefined): { reporting?: SummarySlotTotals } {
+  if (!slot?.version_id) return {};
+  const source: SummarySlotTotals = slot.reporting ?? slot.totals;
+  return { reporting: Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, source[c.key]])) as SummarySlotTotals };
+}
 
 export function centsToNumbers(cents: Cents): SummarySlotTotals {
   return Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, centsToNumber(cents[c.key])])) as SummarySlotTotals;
@@ -578,10 +629,13 @@ async function loadAnalyticsForRows(
   manager: EntityManager,
   tenantId: string,
   itemIds: string[],
-): Promise<{ axisIds: string[]; defaultAxisId: string | null; byItem: Map<string, Map<string, ItemAnalyticsValue>> }> {
-  const rows: Array<{ axis_id: string; is_default: boolean; item_id: string | null; category_id: string | null; category_name: string | null }> =
+): Promise<{ axisIds: string[]; activeAxisIds: Set<string>; defaultAxisId: string | null; byItem: Map<string, Map<string, ItemAnalyticsValue>> }> {
+  const rows: Array<{ axis_id: string; is_default: boolean; active: boolean; item_id: string | null; category_id: string | null; category_name: string | null }> =
     await manager.query(
-      `SELECT ax.id AS axis_id, ax.is_default, v.item_id, v.category_id, c.name AS category_name
+      // `active`: enabled now, as the list builds its dimension columns (isAnalyticsActive in the web app).
+      `SELECT ax.id AS axis_id, ax.is_default,
+              (ax.status <> 'disabled' AND (ax.disabled_at IS NULL OR ax.disabled_at > now())) AS active,
+              v.item_id, v.category_id, c.name AS category_name
        FROM analytics_axes ax
        LEFT JOIN ${config.analyticsLink.table} v
          ON v.tenant_id = $1 AND v.axis_id = ax.id AND v.item_id = ANY($2::uuid[])
@@ -591,10 +645,12 @@ async function loadAnalyticsForRows(
       [tenantId, itemIds],
     );
   const axisIds = new Set<string>();
+  const activeAxisIds = new Set<string>();
   let defaultAxisId: string | null = null;
   const byItem = new Map<string, Map<string, ItemAnalyticsValue>>();
   for (const row of rows) {
     axisIds.add(row.axis_id);
+    if (row.active) activeAxisIds.add(row.axis_id);
     if (row.is_default) defaultAxisId = row.axis_id;
     if (!row.item_id || !row.category_id) continue;
     let values = byItem.get(row.item_id);
@@ -604,7 +660,7 @@ async function loadAnalyticsForRows(
     }
     values.set(row.axis_id, { category_id: row.category_id, name: row.category_name ?? null });
   }
-  return { axisIds: Array.from(axisIds), defaultAxisId, byItem };
+  return { axisIds: Array.from(axisIds), activeAxisIds, defaultAxisId, byItem };
 }
 
 /** One summary row per item (same order), for the years given; slots after the end of validity are empty. */
@@ -729,6 +785,10 @@ export async function buildBudgetSummaryRows(
   };
 
   const fixedYears = new Set(FIXED_SLOTS.map((slot) => Y + slot.offset));
+  // Grid shape: the dimensions the grid builds a column for (enabled, other than the default one).
+  const gridAxisKeys = analytics.axisIds
+    .filter((axisId) => axisId !== analytics.defaultAxisId && analytics.activeAxisIds.has(axisId))
+    .map((axisId) => analyticsFieldKey(axisId));
   return items.map((item) => {
     const perYear = totals.versionsByItemYear.get(item.id);
     const shown = (year: number) => versionWithinValidity(perYear, year, item.disabled_at);
@@ -789,7 +849,7 @@ export async function buildBudgetSummaryRows(
       account: account ? { id: account.id, account_number: (account as any).account_number, account_name: (account as any).account_name } : undefined,
       account_number: account ? (account as any).account_number : undefined,
       account_name: account ? (account as any).account_name : undefined,
-      account_display: account ? `${(account as any).account_number} - ${(account as any).account_name}` : undefined,
+      account_display: account ? accountDisplayText((account as any).account_number, (account as any).account_name) : undefined,
       account_warning: accountWarning,
       owner_it_name: displayName(ownerById.get(item.owner_it_id) || null),
       owner_business_name: displayName(ownerById.get(item.owner_business_id) || null),
@@ -819,6 +879,7 @@ export async function buildBudgetSummaryRows(
       versions,
       ...fte,
     };
+    if (grid && config.gridItemColumns) return gridRow(row, config.gridItemColumns, gridAxisKeys, fte);
     if (grid) {
       delete (row as any).allocation_warning;
     } else if (options.includeRecipientDetails) {
@@ -830,6 +891,27 @@ export async function buildBudgetSummaryRows(
     projectNamesByRow.set(row, projectLists);
     return row;
   });
+}
+
+/**
+ * The grid shape of a built row, for a scope that names its grid columns: the
+ * item columns, the derived fields and dimensions the grid shows, the latest
+ * task's title, the four list year slots (`gridSlot`) and the requested FTE
+ * keys. About a quarter of the full row: no ids the grid does not link to, no
+ * supplier or account objects, no Y-2 or named-year slots, no FX details.
+ */
+function gridRow(
+  row: BudgetSummaryRow,
+  itemColumns: readonly string[],
+  axisKeys: readonly string[],
+  fte: Record<string, number | null>,
+): BudgetSummaryRow {
+  const lean: Record<string, unknown> = {};
+  for (const key of [...itemColumns, ...GRID_DERIVED_FIELDS, ...axisKeys]) lean[key] = row[key];
+  if (row.latest_task !== undefined) lean.latest_task = row.latest_task ? { title: row.latest_task.title } : null;
+  lean.versions = Object.fromEntries(GRID_VERSION_SLOTS.map((key) => [key, gridSlot(row.versions[key])]));
+  Object.assign(lean, fte);
+  return lean as BudgetSummaryRow;
 }
 
 /** The OPEX builder under its former name. */

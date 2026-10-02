@@ -158,6 +158,10 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
     accountIds.push(id);
     accountRows.push([id, t, charts[i % 2], 600000 + i * 7, `${r.pick(WORDS)} ${r.pick(['été', 'hiver', 'Ête', 'base'])} ${i}`]);
   }
+  // An account without a name: the list shows, sorts and filters its number alone.
+  const unnamedAccount = uuid();
+  accountIds.push(unnamedAccount);
+  accountRows.push([unnamedAccount, t, charts[0], 699999, '']);
   await insert(runner, 'accounts', [['id', 'uuid'], ['tenant_id', 'uuid'], ['coa_id', 'uuid'], ['account_number', 'int'], ['account_name', 'text']], accountRows);
 
   const supplierIds: string[] = [];
@@ -194,10 +198,16 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   await insert(runner, 'cost_centers', [['id', 'uuid'], ['tenant_id', 'uuid'], ['code', 'text'], ['name', 'text'], ['kind', 'text'], ['parent_id', 'uuid'], ['company_id', 'uuid'], ['owner_user_id', 'uuid'], ['sort_order', 'int']], ccRows);
   await runner.query(`UPDATE cost_centers SET parent_id = $2 WHERE tenant_id = $1 AND id = $3`, [t, cycleB, cycleA]);
 
-  // Analytics: the default dimension (no name) and two named ones.
-  const axes = [uuid(), uuid(), uuid()];
+  // Analytics: the default dimension (no name), two named ones and a disabled one (its values stay
+  // on the lines; the list grid builds no column for it).
+  const axes = [uuid(), uuid(), uuid(), uuid()];
   await insert(runner, 'analytics_axes', [['id', 'uuid'], ['tenant_id', 'uuid'], ['code', 'text'], ['name', 'text'], ['is_default', 'bool'], ['sort_order', 'int']],
-    [[axes[0], t, 'default', null, true, 0], [axes[1], t, 'nature', 'Nature', false, 1], [axes[2], t, 'region', 'Région', false, 2]]);
+    [[axes[0], t, 'default', null, true, 0], [axes[1], t, 'nature', 'Nature', false, 1], [axes[2], t, 'region', 'Région', false, 2],
+      [axes[3], t, 'retired', 'Retired', false, 3]]);
+  await runner.query(
+    `UPDATE analytics_axes SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE tenant_id = $1 AND id = $2`,
+    [t, axes[3]],
+  );
   const categoriesByAxis = axes.map(() => [] as string[]);
   const categoryRows: unknown[][] = [];
   axes.forEach((axis, a) => {

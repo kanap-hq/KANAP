@@ -350,7 +350,12 @@ export class BudgetListConfig implements ListConfig {
       }
       case 'account_display': {
         const acc = this.account(stmt);
-        return { kind: 'text', sql: `(CASE WHEN ${acc}.id IS NULL THEN NULL ELSE concat(${acc}.account_number::text, ' - ', ${acc}.account_name) END)`, joins: [acc] };
+        // `accountDisplayText`: the number alone when the account has no name.
+        return {
+          kind: 'text',
+          sql: `(CASE WHEN ${acc}.id IS NULL THEN NULL WHEN ${acc}.account_name = '' THEN ${acc}.account_number::text ELSE concat(${acc}.account_number::text, ' - ', ${acc}.account_name) END)`,
+          joins: [acc],
+        };
       }
       case 'account_name': {
         const acc = this.account(stmt);
