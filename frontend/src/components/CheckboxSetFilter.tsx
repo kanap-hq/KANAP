@@ -25,12 +25,22 @@ export type CheckboxSetFilterParams = {
   labelFormatter?: (value: string | null) => string;
   sortComparator?: (a: CheckboxSetFilterOption, b: CheckboxSetFilterOption) => number;
   treatAllAsUnfiltered?: boolean;
+  /**
+   * Overrides the grid's `setFilterExcludeMode` for this column. In exclude mode, "All" then
+   * untick stores the unticked values (`mode: 'exclude'`): values added later show. "Clear" then
+   * tick stores the ticked values, as always.
+   */
+  excludeMode?: boolean;
 };
 
 type SetFilterModel = {
   filterType: 'set';
+  /** Absent or 'include': `values` are the ticked values. 'exclude': the values unticked from "All". */
+  mode?: 'include' | 'exclude';
   values: Array<string | null>;
 };
+
+const isExcludeModel = (model: SetFilterModel | null | undefined): boolean => model?.mode === 'exclude';
 
 type CheckboxSetFilterProps = IFilterParams & CheckboxSetFilterParams;
 
@@ -84,6 +94,14 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   const searchable = props.searchable ?? true;
   const labelFormatter = props.labelFormatter;
   const treatAllAsUnfiltered = props.treatAllAsUnfiltered ?? true;
+  // Exclude mode only on lists whose endpoints honour it (grid opt-in, or the column's own).
+  const excludeAllowed = props.excludeMode ?? (props.context as { setFilterExcludeMode?: boolean } | undefined)?.setFilterExcludeMode === true;
+  const excludeAllowedRef = useRef(excludeAllowed);
+  excludeAllowedRef.current = excludeAllowed;
+  // The selection starts from "All" (true: unticking excludes) or from "None" (false: ticking
+  // includes). The values unticked from "All" are kept, also those the value list no longer shows.
+  const fromAllRef = useRef(true);
+  const excludedRef = useRef<Set<string | null>>(new Set());
 
   const [selectedValues, setSelectedValues] = useState<Set<string | null>>(new Set());
   const selectedRef = useRef<Set<string | null>>(new Set());
@@ -99,6 +117,8 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   // after SEARCH_APPLY_DELAY_MS of quiet.
   const [pending, setPendingState] = useState<Set<string | null> | null>(null);
   const pendingRef = useRef<Set<string | null> | null>(null);
+  // Where the pending clicks start from ("All" or "None"), applied with them.
+  const pendingFromAllRef = useRef(true);
   // One timer for every delayed apply (typed search, checkbox clicks): the latest one wins.
   const applyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // True while this filter pushes its own model to the grid, which calls setModel back on it.
@@ -204,16 +224,34 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
         map.set(value, { value, label: buildLabel({ value }) });
       }
     }
+    // Values unticked from "All" stay listed (unticked) even when the list no longer offers them.
+    if (excludeAllowed && fromAllRef.current) {
+      for (const value of excludedRef.current) {
+        if (!map.has(value)) map.set(value, { value, label: buildLabel({ value }) });
+      }
+    }
     const merged = Array.from(map.values());
     if (props.sortComparator) {
       merged.sort(props.sortComparator);
     }
     return merged;
-  }, [options, selectedValues, snapshot, buildLabel, props.sortComparator]);
+  }, [options, selectedValues, snapshot, buildLabel, props.sortComparator, excludeAllowed]);
 
   const optionValueSet = useMemo(() => {
     return new Set(options.map((opt) => opt.value ?? null));
   }, [options]);
+  const optionValueSetRef = useRef(optionValueSet);
+  optionValueSetRef.current = optionValueSet;
+
+  /** The ticked values of a model: its values, or for an exclude model every listed value but those. */
+  const ticked = useCallback((model: SetFilterModel): Set<string | null> => {
+    const values = (model.values ?? []).map((value) => value ?? null);
+    if (!isExcludeModel(model)) return new Set(values);
+    excludedRef.current = new Set(values);
+    const next = new Set<string | null>();
+    optionValueSet.forEach((value) => { if (!excludedRef.current.has(value)) next.add(value); });
+    return next;
+  }, [optionValueSet]);
 
   const isAllSelected = useCallback((next: Set<string | null>) => {
     if (optionValueSet.size === 0) return false;
@@ -222,6 +260,16 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     }
     return true;
   }, [optionValueSet]);
+
+  // From "All", a value unticked earlier that the list no longer offers (another filter hides it)
+  // stays listed, unticked: ticking every offered value then still excludes it.
+  const excludesHiddenValue = useCallback((next: Set<string | null>) => {
+    if (!excludeAllowedRef.current || !fromAllRef.current) return false;
+    for (const value of excludedRef.current) {
+      if (!next.has(value) && !optionValueSetRef.current.has(value)) return true;
+    }
+    return false;
+  }, []);
 
   const labelMatches = useCallback((option: CheckboxSetFilterOption, trimmed: string) => {
     return buildLabel(option).toLowerCase().includes(trimmed);
@@ -242,7 +290,18 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     if (!next) {
       delete nextModel[colId];
       explicitEmptyRef.current = false;
+      excludedRef.current = new Set();
+    } else if (excludeAllowedRef.current && fromAllRef.current && !snapshotRef.current) {
+      // From "All": the values not ticked, among those the list offers and those unticked before.
+      const known = new Set<string | null>([...optionValueSetRef.current, ...excludedRef.current]);
+      const excluded = Array.from(known).filter((value) => !next.has(value));
+      excludedRef.current = new Set(excluded);
+      nextModel[colId] = { filterType: 'set', mode: 'exclude', values: excluded };
+      explicitEmptyRef.current = false;
     } else {
+      // A search applies the ticked matching values: the values unticked from "All" are kept for
+      // when it ends.
+      if (!snapshotRef.current) excludedRef.current = new Set();
       if (next.size === 0) {
         nextModel[colId] = {
           filterType: 'set',
@@ -280,14 +339,14 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
       updateFilterModel(next);
       return;
     }
-    if (treatAllAsUnfiltered && isAllSelected(next)) {
+    if (treatAllAsUnfiltered && isAllSelected(next) && !excludesHiddenValue(next)) {
       implicitAllRef.current = true;
       updateFilterModel(null);
       return;
     }
     implicitAllRef.current = false;
     updateFilterModel(next);
-  }, [isAllSelected, updateFilterModel, treatAllAsUnfiltered]);
+  }, [isAllSelected, excludesHiddenValue, updateFilterModel, treatAllAsUnfiltered]);
 
   const matchingSubset = useCallback((base: Set<string | null>, trimmed: string) => {
     const labels = new Map<string | null, CheckboxSetFilterOption>();
@@ -349,8 +408,9 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     if (!snap) {
       // Clicks not applied yet are part of the selection the search starts from.
       const clicked = pendingRef.current;
+      const everyValueExcluded = excludeAllowedRef.current && fromAllRef.current && excludedRef.current.size > 0;
       const inactive = !clicked && (implicitAllRef.current
-        || (!explicitEmptyRef.current && selectedRef.current.size === 0));
+        || (!explicitEmptyRef.current && selectedRef.current.size === 0 && !everyValueExcluded));
       snap = clicked
         ? new Set(clicked)
         : inactive
@@ -374,12 +434,16 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     }
     const base = pendingRef.current
       ?? (implicitAllRef.current && selectedValues.size === 0 ? optionValueSet : selectedValues);
+    // Clicks after "All" or "Clear" not applied yet start from that choice.
+    const fromAll = pendingRef.current ? pendingFromAllRef.current : fromAllRef.current;
     const next = new Set(base);
     if (next.has(value)) next.delete(value);
     else next.add(value);
+    pendingFromAllRef.current = fromAll;
     setPending(next);
     scheduleApply(() => {
       setPending(null);
+      fromAllRef.current = fromAll;
       setSelection(next);
     });
   }, [selectedValues, setSelection, optionValueSet, commitSnapshot, setPending, scheduleApply]);
@@ -394,9 +458,12 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     // Outside a search, All waits for the quiet delay like a click: "All, then untick one" reloads once.
     const next = new Set<string | null>();
     mergedOptions.forEach((opt) => next.add(opt.value ?? null));
+    pendingFromAllRef.current = true;
     setPending(next);
     scheduleApply(() => {
       setPending(null);
+      fromAllRef.current = true;
+      excludedRef.current = new Set();
       if (treatAllAsUnfiltered) {
         implicitAllRef.current = true;
         setSelection(next, { skipModelUpdate: true });
@@ -417,10 +484,13 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     }
     // Outside a search, Clear waits for the quiet delay like a click: "Clear, then tick one" reloads once.
     const next = new Set<string | null>();
+    pendingFromAllRef.current = false;
     setPending(next);
     scheduleApply(() => {
       setPending(null);
       implicitAllRef.current = false;
+      fromAllRef.current = false;
+      excludedRef.current = new Set();
       setSelection(next);
     });
   }, [filteredOptions, setSelection, commitSnapshot, setPending, scheduleApply]);
@@ -432,9 +502,10 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
       const current = api.getFilterModel?.() ?? {};
       const model = current[colId] as SetFilterModel | undefined;
       if (model && Array.isArray(model.values)) {
-        explicitEmptyRef.current = model.values.length === 0;
+        const next = ticked(model);
+        if (!pendingRef.current && !snapshotRef.current) fromAllRef.current = isExcludeModel(model);
+        explicitEmptyRef.current = !isExcludeModel(model) && model.values.length === 0;
         implicitAllRef.current = false;
-        const next = new Set((model.values ?? []).map((value) => value ?? null));
         selectedRef.current = next;
         setSelectedValues(next);
         return;
@@ -445,7 +516,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     options.forEach((opt) => next.add(opt.value ?? null));
     selectedRef.current = next;
     setSelectedValues(next);
-  }, [options, props.api, props.column, props.colDef]);
+  }, [options, props.api, props.column, props.colDef, ticked]);
 
   // A model set from outside (list context restore, Reset, the floating filter's clear, another
   // column) ends the search session and drops clicks not applied yet; this filter's own model, handed
@@ -460,18 +531,22 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     if (!model || !Array.isArray(model.values)) {
       explicitEmptyRef.current = false;
       implicitAllRef.current = true;
+      fromAllRef.current = true;
+      excludedRef.current = new Set();
       const next = new Set<string | null>();
       options.forEach((opt) => next.add(opt.value ?? null));
       selectedRef.current = next;
       setSelectedValues(next);
       return;
     }
-    explicitEmptyRef.current = model.values.length === 0;
+    explicitEmptyRef.current = !isExcludeModel(model) && model.values.length === 0;
     implicitAllRef.current = false;
-    const next = new Set((model.values ?? []).map((value) => value ?? null));
+    // A model applied from outside (or this filter's own) sets where the selection starts from.
+    if (!snapshotRef.current) fromAllRef.current = isExcludeModel(model);
+    const next = ticked(model);
     selectedRef.current = next;
     setSelectedValues(next);
-  }, [options, cancelPendingApply, setSnapshot]);
+  }, [options, cancelPendingApply, setSnapshot, ticked]);
   const applyModelRef = useRef(applyModel);
   applyModelRef.current = applyModel;
 
@@ -510,6 +585,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   useImperativeHandle(ref, () => ({
     isFilterActive() {
       if (implicitAllRef.current) return false;
+      if (excludeAllowedRef.current && fromAllRef.current) return excludedRef.current.size > 0;
       return explicitEmptyRef.current || selectedRef.current.size > 0;
     },
     doesFilterPass() {
@@ -517,6 +593,9 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     },
     getModel(): SetFilterModel | null {
       if (implicitAllRef.current) return null;
+      if (excludeAllowedRef.current && fromAllRef.current) {
+        return excludedRef.current.size > 0 ? { filterType: 'set', mode: 'exclude', values: Array.from(excludedRef.current) } : null;
+      }
       if (!explicitEmptyRef.current && selectedRef.current.size === 0) return null;
       return {
         filterType: 'set',
@@ -592,6 +671,19 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     count: rowCount,
     formatted: rowCount.toLocaleString(i18n?.language),
   });
+  // On a list with exclude mode, one line says which values the list keeps: every value but the
+  // unticked ones (values added later too), or only the ticked ones. Not during a search, which
+  // keeps the ticked matching values.
+  let modeHint: string | null = null;
+  if (excludeAllowed && !snapshot && !loading) {
+    const fromAll = pending ? pendingFromAllRef.current : fromAllRef.current;
+    if (fromAll) {
+      const unticked = mergedOptions.filter((opt) => !shownSelection.has(opt.value ?? null)).length;
+      if (unticked > 0) modeHint = t('filters.excludeHint', { count: unticked });
+    } else if (shownSelection.size > 0) {
+      modeHint = t('filters.includeHint', { count: shownSelection.size });
+    }
+  }
 
   return (
     <Box ref={rootRef} sx={{ p: 1, minWidth: 220, maxWidth: 360, width: wide ? 300 : undefined }}>
@@ -668,6 +760,11 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
             })}
           </Box>
         </Box>
+      )}
+      {modeHint && (
+        <Typography data-testid="set-filter-mode-hint" sx={{ fontSize: 12, color: 'kanap.text.tertiary', mt: 1, lineHeight: 1.4 }}>
+          {modeHint}
+        </Typography>
       )}
       <Stack direction="row" spacing={1} sx={{ mt: 1 }} justifyContent="space-between">
         <Button size="small" onClick={handleSelectAll}>

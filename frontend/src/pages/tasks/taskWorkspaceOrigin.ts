@@ -29,6 +29,7 @@ export const ORIGIN_QUERY_KEYS = [
   'projectSort',
   'projectQ',
   'projectFilters',
+  'projectCtx',
   'projectScope',
   'projectInvolvedUserId',
   'projectInvolvedTeamId',
@@ -137,12 +138,14 @@ export function remapProjectListContext(search: URLSearchParams): URLSearchParam
   const projectSort = search.get('projectSort');
   const projectQ = search.get('projectQ');
   const projectFilters = search.get('projectFilters');
+  const projectCtx = projectFilters ? null : search.get('projectCtx');
   const projectScope = search.get('projectScope');
   const projectInvolvedUserId = search.get('projectInvolvedUserId');
   const projectInvolvedTeamId = search.get('projectInvolvedTeamId');
   if (projectSort) sp.set('sort', projectSort);
   if (projectQ) sp.set('q', projectQ);
   if (projectFilters) sp.set('filters', projectFilters);
+  if (projectCtx) sp.set('ctx', projectCtx);
   if (projectScope) sp.set('projectScope', projectScope);
   if (projectInvolvedUserId) sp.set('involvedUserId', projectInvolvedUserId);
   if (projectInvolvedTeamId) sp.set('involvedTeamId', projectInvolvedTeamId);
@@ -222,12 +225,15 @@ export function buildTaskOriginSearchParams(
     const sort = current.get('sort');
     const q = current.get('q');
     const filters = current.get('filters');
+    // Filters too long for a URL travel as a saved list context.
+    const ctx = filters ? null : current.get('ctx');
     const projectScope = current.get('projectScope');
     const involvedUserId = current.get('involvedUserId');
     const involvedTeamId = current.get('involvedTeamId');
     if (sort) sp.set('projectSort', sort);
     if (q) sp.set('projectQ', q);
     if (filters) sp.set('projectFilters', filters);
+    if (ctx) sp.set('projectCtx', ctx);
     if (projectScope) sp.set('projectScope', projectScope);
     if (involvedUserId) sp.set('projectInvolvedUserId', involvedUserId);
     if (involvedTeamId) sp.set('projectInvolvedTeamId', involvedTeamId);

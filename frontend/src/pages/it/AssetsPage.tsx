@@ -17,6 +17,7 @@ import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilte
 import api from '../../api';
 
 import { useTranslation } from 'react-i18next';
+import { setListFiltersParam, withListContext } from '../../lib/listContext';
 type AssetRow = {
   id: string;
   asset_reference: string | null;
@@ -121,7 +122,7 @@ export default function AssetsPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get('/assets/filter-values', { params });
+      const res = await api.get('/assets/filter-values', { params: await withListContext('/assets/filter-values', params) });
       const values = (res.data?.[field] || []) as Array<string | null>;
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };
@@ -160,7 +161,7 @@ export default function AssetsPage() {
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters && Object.keys(filters).length > 0) sp.set('filters', JSON.stringify(filters));
+    setListFiltersParam(sp, '/assets', filters);
     return sp;
   }, []);
 

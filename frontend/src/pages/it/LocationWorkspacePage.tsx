@@ -29,6 +29,7 @@ import { useLocationItemNav } from '../../hooks/useModuleItemNav';
 import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
+import { carryListFilters } from '../../lib/listContext';
 
 type TabKey = 'overview' | 'contacts' | 'relations';
 
@@ -187,10 +188,9 @@ export default function LocationWorkspacePage() {
     const sp = new URLSearchParams();
     const sort = searchParams.get('sort');
     const q = searchParams.get('q');
-    const filters = searchParams.get('filters');
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters) sp.set('filters', filters);
+    carryListFilters(sp, searchParams);
     return sp;
   }, [searchParams]);
 

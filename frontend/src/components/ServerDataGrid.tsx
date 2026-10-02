@@ -35,6 +35,7 @@ import { useTenant } from '../tenant/TenantContext';
 import { useThemeMode } from '../config/ThemeContext';
 import { useLocale } from '../i18n/useLocale';
 import { statusScopeParams } from '../utils/statusScopeParams';
+import { listKeyOf, loadListContext, withListContext } from '../lib/listContext';
 
 const DATE_FILTER_PARAMS = {
   suppressAndOrCondition: true,
@@ -92,6 +93,17 @@ export type ServerDataGridProps<T> = {
   paginationPageSize?: number;
   toolbarExtras?: React.ReactNode;
   showRowCount?: boolean;
+  /**
+   * Parameters of the page requests only (not of the filter values or totals), computed from the
+   * column state, e.g. the FTE columns shown. A change of their value reloads the rows.
+   */
+  pageParams?: (columnState: ColumnState[]) => Record<string, string | undefined>;
+  /**
+   * The list's endpoints honour a set filter in exclude mode (`mode: 'exclude'`, the values left
+   * unticked from "All"). Off by default: a list whose set filter code reads `values` as the ticked
+   * values answers 400 to it.
+   */
+  setFilterExcludeMode?: boolean;
 };
 
 function parseSortParam(sortModel: SortModelItem[] | undefined, fallback: { field: string; direction: 'ASC' | 'DESC' }) {
@@ -309,6 +321,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   paginationPageSize,
   toolbarExtras,
   showRowCount,
+  pageParams,
+  setFilterExcludeMode = false,
 }: ServerDataGridProps<T>) {
   const { t, i18n } = useTranslation(['common', 'grid']);
   const { profile } = useAuth();
@@ -386,6 +400,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
   const sortFromUrl = urlParams.get('sort') || `${defaultSort.field}:${defaultSort.direction}`;
   const qFromUrl = urlParams.get('q') || '';
+  // A list state saved as a context (`ctx`, filters too long for a URL): restored when the grid
+  // starts, unless the page hands its own initial filters.
+  const ctxFromUrlRef = useRef(urlParams.get('ctx'));
 
   const [search, setSearch] = useState(qFromUrl);
   const debouncedSearch = useDebouncedValue(search, 400);
@@ -409,6 +426,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   useEffect(() => {
     statusScopeRef.current = statusScope;
   }, [statusScope]);
+
+  // Set once the page requests' column parameters can be compared (see pageParams).
+  const pageParamsChangedRef = useRef<() => void>(() => undefined);
 
   // Column state management
   const columnStateManager = useColumnState(columnPreferencesKey, columns, requiredColumns, defaultHiddenColumns, tenantSlug ?? undefined, profile?.id);
@@ -446,6 +466,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       if (onColumnStateChange) {
         onColumnStateChange(newColumnState);
       }
+      pageParamsChangedRef.current();
     } catch (e) {
       console.warn('Failed to handle column state change:', e);
     }
@@ -483,6 +504,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       if (onColumnStateChange) {
         onColumnStateChange(newColumnState);
       }
+      pageParamsChangedRef.current();
     } catch (e) {
       console.warn('Failed to toggle column visibility:', e);
     }
@@ -521,6 +543,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       if (onColumnStateChange) {
         onColumnStateChange(defaultState);
       }
+      pageParamsChangedRef.current();
     } catch (e) {
       console.warn('Failed to reset columns:', e);
     }
@@ -574,6 +597,21 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   useEffect(() => { endpointRef.current = endpoint; }, [endpoint]);
   const refreshKeyRef = useRef(refreshKey);
   useEffect(() => { refreshKeyRef.current = refreshKey; }, [refreshKey]);
+  const pageParamsRef = useRef(pageParams);
+  pageParamsRef.current = pageParams;
+  // The page parameters the last block request was sent with: a column change that changes them
+  // reloads the rows (see pageParamsChangedRef).
+  const pageParamsKeyRef = useRef<string | undefined>(undefined);
+  const currentPageParams = useCallback((): Record<string, string> => {
+    const compute = pageParamsRef.current;
+    if (!compute) return {};
+    const state = (gridApiRef.current?.getColumnState?.() ?? []) as ColumnState[];
+    const params: Record<string, string> = {};
+    for (const [key, value] of Object.entries(compute(state) ?? {})) {
+      if (value != null && value !== '') params[key] = value;
+    }
+    return params;
+  }, []);
 
   // Block requests in flight, with the sort and filter each was asked with, and the query generation
   // they belong to. A sort or filter change aborts the requests asked with another sort or filter
@@ -591,6 +629,18 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     inFlightRef.current.clear();
   }, []);
   useEffect(() => supersedeRequests, [supersedeRequests]);
+  // Showing or hiding a column the page requests depend on (pageParams) reloads the rows. Before
+  // the first request nothing is compared: that request reads the column state itself.
+  pageParamsChangedRef.current = () => {
+    if (!pageParamsRef.current || pageParamsKeyRef.current === undefined) return;
+    const key = JSON.stringify(currentPageParams());
+    if (key === pageParamsKeyRef.current) return;
+    pageParamsKeyRef.current = key;
+    supersedeRequests();
+    try {
+      gridApiRef.current?.purgeInfiniteCache?.();
+    } catch {}
+  };
   // Called once AG Grid has applied a sort or filter change. The requests of the new cache carry the
   // grid's current sort and filter, so they are kept even when they already started.
   const abortOtherQueries = useCallback((gridApi: any) => {
@@ -618,12 +668,15 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         const startRow = params.startRow ?? 0;
         const limit = cacheBlockSize;
         const page = Math.floor(startRow / limit) + 1;
+        const columnParams = currentPageParams();
+        pageParamsKeyRef.current = JSON.stringify(columnParams);
         const reqParams: any = {
           page,
           limit,
           // use AG's live sort model for accuracy
           sort: parseSortParam((params as any).sortModel, defaultSort),
           ...extraParamsRef.current,
+          ...columnParams,
         };
         // include AG filter model for server-side filtering
         const fmFromParams = (params as any).filterModel;
@@ -637,7 +690,13 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         // include global quick search (server-side)
         const q = searchRef.current;
         if (enableSearch && q) reqParams.q = q;
-        const res = await api.get<ServerResponse<T>>(endpointRef.current, { params: reqParams, signal: controller.signal });
+        // Filters too long for a URL go as a saved list context (`ctx`).
+        const sentParams = await withListContext(endpointRef.current, reqParams);
+        if (superseded()) {
+          releaseSupersededBlock(params);
+          return;
+        }
+        const res = await api.get<ServerResponse<T>>(endpointRef.current, { params: sentParams, signal: controller.signal });
         if (superseded()) {
           releaseSupersededBlock(params);
           return;
@@ -711,24 +770,44 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       } catch {}
     }
     
-    // finally, provide datasource once
-    (event.api as any).setGridOption?.('datasource', dataSourceRef.current);
+    const start = () => {
+      if ((event.api as any).isDestroyed?.()) return;
+      // finally, provide datasource once
+      (event.api as any).setGridOption?.('datasource', dataSourceRef.current);
 
-    // Call parent callback after initial state has been applied
-    if (onGridApiReady) {
-      onGridApiReady(event.api);
+      // Call parent callback after initial state has been applied
+      if (onGridApiReady) {
+        onGridApiReady(event.api);
+      }
+
+      // Notify parent of initial state (no explicit filter-change trigger; datasource will load with current models)
+      setTimeout(() => {
+        try {
+          if (onQueryStateChange) {
+            const sort = gridSortParam(event.api as any, defaultSort);
+            const fm = (event.api as any).getFilterModel?.() ?? filterModelRef.current;
+            onQueryStateChange({ sort, filterModel: fm, q: searchRef.current, statusScope: statusScopeRef.current });
+          }
+        } catch {}
+      }, 0);
+    };
+
+    // Filters saved as a context (reload, link opened in a new tab): read them before the first
+    // request, so the list loads once, filtered. Only a context of this list applies.
+    const ctxId = ctxFromUrlRef.current;
+    if (!appliedInitialFilterRef.current && ctxId) {
+      appliedInitialFilterRef.current = true;
+      loadListContext(ctxId)
+        .then(({ list, filters }) => {
+          if (!filters || list !== listKeyOf(endpointRef.current) || (event.api as any).isDestroyed?.()) return;
+          (event.api as any).setFilterModel?.(filters);
+          filterModelRef.current = filters;
+        })
+        .catch(() => undefined)
+        .finally(start);
+      return;
     }
-    
-    // Notify parent of initial state (no explicit filter-change trigger; datasource will load with current models)
-    setTimeout(() => {
-      try {
-        if (onQueryStateChange) {
-          const sort = gridSortParam(event.api as any, defaultSort);
-          const fm = (event.api as any).getFilterModel?.() ?? filterModelRef.current;
-          onQueryStateChange({ sort, filterModel: fm, q: searchRef.current, statusScope: statusScopeRef.current });
-        }
-      } catch {}
-    }, 0);
+    start();
   }, [sortModel, initialState, initialFilterModel, columnStateManager, columnPreferencesKey, onGridApiReady, onQueryStateChange]);
 
   const onSortChanged = useCallback((e: any) => {
@@ -837,6 +916,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   }, [enableRowSelection]);
 
   const gridContext = useMemo(() => ({
+    // Read by the set filters: whether "All" then untick may send an exclude model.
+    setFilterExcludeMode,
     getQueryState: () => ({
       q: searchRef.current || '',
       filters: filterModelRef.current || {},
@@ -846,7 +927,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       endpoint: endpointRef.current,
       refreshKey: refreshKeyRef.current ?? null,
     }),
-  }), []);
+  }), [setFilterExcludeMode]);
 
   const handleSelectionChanged = useCallback((event: any) => {
     if (!enableRowSelection || !onSelectionChanged) return;

@@ -21,6 +21,7 @@ import {
 import { COST_CENTER_KINDS } from './cost-centers/costCenterFields';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
+import { setListFiltersParam } from '../lib/listContext';
 
 const DEFAULT_SORT = 'path:ASC';
 
@@ -73,7 +74,7 @@ function CostCentersList() {
     const state = lastQueryRef.current;
     sp.set('sort', state?.sort || DEFAULT_SORT);
     if (state?.q) sp.set('q', state.q);
-    if (state?.filters && Object.keys(state.filters).length > 0) sp.set('filters', JSON.stringify(state.filters));
+    setListFiltersParam(sp, COST_CENTERS_ENDPOINT, state?.filters);
     // The grid's status scope, so prev/next in the workspace walks the same set.
     if (state?.statusScope) sp.set('scope', state.statusScope);
     return sp;

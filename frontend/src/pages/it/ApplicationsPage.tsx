@@ -24,6 +24,8 @@ import { formatDuration } from './components/DurationEditor';
 
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
+import { setListFiltersParam, withListContext } from '../../lib/listContext';
+import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 const ENV_SUMMARY = [
   { value: 'prod', labelKey: 'enums.environment.production', short: 'Prod' },
   { value: 'pre_prod', labelKey: 'enums.environment.preProd', short: 'Pre' },
@@ -117,19 +119,10 @@ export default function ApplicationsPage() {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const [includeFlags, setIncludeFlags] = useState<string>('');
 
-  // Read filters from URL to restore state when returning from workspace
-  const urlFilters = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const filtersParam = params.get('filters');
-    if (filtersParam) {
-      try {
-        return JSON.parse(filtersParam);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }, [location.search]);
+  // Read filters from URL to restore state when returning from workspace: inline, or the saved
+  // filters its `ctx` stands for (filters too long for a URL), read before the grid mounts.
+  const urlFilterState = useUrlFilterModel(location.search, '/applications');
+  const urlFilters = urlFilterState.model;
   const urlAppScope = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const scope = params.get('appScope');
@@ -191,7 +184,7 @@ export default function ApplicationsPage() {
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    if (filters && Object.keys(filters).length > 0) sp.set('filters', JSON.stringify(filters));
+    setListFiltersParam(sp, '/applications', filters);
     sp.set('appScope', appScope);
     if (appScope === 'my' && profile?.id) {
       sp.set('ownerUserId', profile.id);
@@ -342,7 +335,7 @@ export default function ApplicationsPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get(`/applications/filter-values`, { params });
+      const res = await api.get(`/applications/filter-values`, { params: await withListContext(`/applications/filter-values`, params) });
       const values = (res.data?.[field] || []) as Array<any>;
       const options = values.map((raw) => {
         let value = raw;
@@ -926,78 +919,81 @@ export default function ApplicationsPage() {
   return (
     <>
       <PageHeader title={t('pages.applications.title')} actions={actions} />
-      <ServerDataGrid<AppRow>
-        columns={columns}
-        endpoint={'/applications'}
-        showRowCount
-        queryKey={'applications'}
-        defaultSort={{ field: 'name', direction: 'ASC' }}
-        initialState={initialState}
-        extraParams={extraParams}
-        requiredColumns={['name']}
-        onGridApiReady={(api) => {
-          gridApiRef.current = api;
-          try {
-            const state = (api as any).getColumnState?.() || [];
-            const visible = new Set<string>(state.filter((s: any) => !s.hide).map((s: any) => String(s.colId || '')));
-            const needsSupplier = visible.has('supplier_name');
-            const needsOwners = visible.has('owners_business') || visible.has('owners_it');
-            const needsResidency = visible.has('data_residency');
-            const needsHosting = visible.has('hosting_types');
-            const needsCounts = visible.has('spend_count') || visible.has('capex_count') || visible.has('contracts_count');
-            const needsStructure = visible.has('suites_count') || visible.has('components_count');
-            const needsInstances = visible.has('environments');
-            const flags: string[] = [];
-            if (needsSupplier) flags.push('supplier');
-            if (needsOwners) flags.push('owners');
-            if (needsResidency) flags.push('residency');
-            if (needsHosting) flags.push('hosting');
-            if (needsCounts) flags.push('counts');
-            if (needsStructure) flags.push('structure');
-            if (needsInstances) flags.push('instances');
-            setIncludeFlags(flags.join(','));
-            setSuitesColVisible(visible.has('suites_count'));
-          } catch {}
-        }}
-        enableColumnChooser
-        columnPreferencesKey="it-apps-services"
-        refreshKey={refreshKey}
-        enableSearch
-        enableRowSelection={canCreate || canAdmin}
-        onSelectionChanged={setSelectedRows}
-        onQueryStateChange={(state) => {
-          lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
-        }}
-        onColumnStateChange={(state) => {
-          try {
-            // Compute include flags based on visible columns
-            const visible = new Set<string>(
-              (state || [])
-                .filter((s: any) => !s.hide)
-                .map((s: any) => String(s.colId || ''))
-            );
-            const needsSupplier = visible.has('supplier_name');
-            const needsOwners = visible.has('owners_business') || visible.has('owners_it');
-            const needsResidency = visible.has('data_residency');
-            const needsHosting = visible.has('hosting_types');
-            const needsCounts = visible.has('spend_count') || visible.has('capex_count') || visible.has('contracts_count');
-            const needsStructure = visible.has('suites_count') || visible.has('components_count');
-            const needsInstances = visible.has('environments');
-            const flags: string[] = [];
-            if (needsSupplier) flags.push('supplier');
-            if (needsOwners) flags.push('owners');
-            if (needsResidency) flags.push('residency');
-            if (needsHosting) flags.push('hosting');
-            if (needsCounts) flags.push('counts');
-            if (needsStructure) flags.push('structure');
-            if (needsInstances) flags.push('instances');
-            const next = flags.join(',');
-            setIncludeFlags((prev) => (prev === next ? prev : next));
-            setSuitesColVisible(visible.has('suites_count'));
-          } catch {}
-        }}
-        toolbarExtras={appScopeToolbar}
-      />
+      {/* Waits for filters saved as a context (a reload, a link in a new tab). */}
+      {urlFilterState.ready && (
+        <ServerDataGrid<AppRow>
+          columns={columns}
+          endpoint={'/applications'}
+          showRowCount
+          queryKey={'applications'}
+          defaultSort={{ field: 'name', direction: 'ASC' }}
+          initialState={initialState}
+          extraParams={extraParams}
+          requiredColumns={['name']}
+          onGridApiReady={(api) => {
+            gridApiRef.current = api;
+            try {
+              const state = (api as any).getColumnState?.() || [];
+              const visible = new Set<string>(state.filter((s: any) => !s.hide).map((s: any) => String(s.colId || '')));
+              const needsSupplier = visible.has('supplier_name');
+              const needsOwners = visible.has('owners_business') || visible.has('owners_it');
+              const needsResidency = visible.has('data_residency');
+              const needsHosting = visible.has('hosting_types');
+              const needsCounts = visible.has('spend_count') || visible.has('capex_count') || visible.has('contracts_count');
+              const needsStructure = visible.has('suites_count') || visible.has('components_count');
+              const needsInstances = visible.has('environments');
+              const flags: string[] = [];
+              if (needsSupplier) flags.push('supplier');
+              if (needsOwners) flags.push('owners');
+              if (needsResidency) flags.push('residency');
+              if (needsHosting) flags.push('hosting');
+              if (needsCounts) flags.push('counts');
+              if (needsStructure) flags.push('structure');
+              if (needsInstances) flags.push('instances');
+              setIncludeFlags(flags.join(','));
+              setSuitesColVisible(visible.has('suites_count'));
+            } catch {}
+          }}
+          enableColumnChooser
+          columnPreferencesKey="it-apps-services"
+          refreshKey={refreshKey}
+          enableSearch
+          enableRowSelection={canCreate || canAdmin}
+          onSelectionChanged={setSelectedRows}
+          onQueryStateChange={(state) => {
+            lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
+          }}
+          onColumnStateChange={(state) => {
+            try {
+              // Compute include flags based on visible columns
+              const visible = new Set<string>(
+                (state || [])
+                  .filter((s: any) => !s.hide)
+                  .map((s: any) => String(s.colId || ''))
+              );
+              const needsSupplier = visible.has('supplier_name');
+              const needsOwners = visible.has('owners_business') || visible.has('owners_it');
+              const needsResidency = visible.has('data_residency');
+              const needsHosting = visible.has('hosting_types');
+              const needsCounts = visible.has('spend_count') || visible.has('capex_count') || visible.has('contracts_count');
+              const needsStructure = visible.has('suites_count') || visible.has('components_count');
+              const needsInstances = visible.has('environments');
+              const flags: string[] = [];
+              if (needsSupplier) flags.push('supplier');
+              if (needsOwners) flags.push('owners');
+              if (needsResidency) flags.push('residency');
+              if (needsHosting) flags.push('hosting');
+              if (needsCounts) flags.push('counts');
+              if (needsStructure) flags.push('structure');
+              if (needsInstances) flags.push('instances');
+              const next = flags.join(',');
+              setIncludeFlags((prev) => (prev === next ? prev : next));
+              setSuitesColVisible(visible.has('suites_count'));
+            } catch {}
+          }}
+          toolbarExtras={appScopeToolbar}
+        />
+      )}
       <CsvExportDialogV2
         open={exportOpen}
         onClose={() => setExportOpen(false)}

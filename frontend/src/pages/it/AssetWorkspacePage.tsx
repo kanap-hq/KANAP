@@ -62,6 +62,7 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import type { AssetExternalLink } from '../../api/endpoints/assets';
 import { isNetboxAttentionStatus } from '../../api/endpoints/netbox';
 import { NETBOX_LOCKABLE_ASSET_FIELDS, NetboxLockableField, netboxFieldLock } from './netboxManagedFields';
+import { carryListFilters } from '../../lib/listContext';
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 type IpAddressEntry = { type: string; ip: string; subnet_cidr: string | null };
 
@@ -1057,10 +1058,9 @@ export default function AssetWorkspacePage() {
     const sp = new URLSearchParams();
     const sortVal = searchParams.get('sort');
     const qVal = searchParams.get('q');
-    const filtersVal = searchParams.get('filters');
     if (sortVal) sp.set('sort', sortVal);
     if (qVal) sp.set('q', qVal);
-    if (filtersVal) sp.set('filters', filtersVal);
+    carryListFilters(sp, searchParams);
     return sp;
   }, [searchParams]);
 
