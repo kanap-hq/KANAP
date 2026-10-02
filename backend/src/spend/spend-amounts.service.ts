@@ -7,7 +7,8 @@ import { SpendVersion } from './spend-version.entity';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
-import { writeAmountsPayload } from './amounts-write.util';
+import { readYearAmounts, writeAmountsPayload } from './amounts-write.util';
+import { budgetBaseCheck } from './budget-edit-conflicts';
 import { lockVersionWithLine } from './budget-locks';
 import { currentTenantId } from './budget-column-operations';
 import {
@@ -24,6 +25,7 @@ type AnnualPayload = {
   year: number;
   totals: Partial<Record<'planned' | 'forecast' | 'committed' | 'actual' | 'expected_landing', number>>;
   spread_profile_name?: string; // default 'flat' (equal twelfths); a named SpreadProfile applies its 12 weights
+  also_measures?: Array<'planned' | 'forecast' | 'committed' | 'actual' | 'expected_landing'>; // spread the same way from their stored totals
   period_start?: string; // with period_end, 'YYYY-MM-DD' in the year; both omitted = the whole year
   period_end?: string;
 };
@@ -75,20 +77,28 @@ export class SpendAmountsService {
     if (!version) throw new NotFoundException('Version not found');
 
     // Spread profiles (flat, or a named SpreadProfile) are resolved by the writer; an unknown one is a 400.
-    const ctx = { manager: mg, freeze: this.freeze, scope: 'opex' as const, version };
+    // With a base (the budget tab), a cell or column someone else changed since the screen read it
+    // refuses the request with 409 edit_conflict before anything is written (`budget-edit-conflicts.ts`).
+    const beforeWrite = budgetBaseCheck(mg, 'opex', version, (payload as { base?: unknown } | null)?.base);
+    const ctx = { manager: mg, freeze: this.freeze, scope: 'opex' as const, version, beforeWrite };
     // Lines resolve their calendars under the tenant and replace the months of the columns they name.
     const result = isLinesPayload(payload) ? await writeLinesPayload(ctx, payload) : await writeAmountsPayload(ctx, payload);
     const { before, after } = result;
 
     // Removing the lines writes no amount: nothing to audit here.
     if (after.length > 0) {
-      await this.audit.log({ table: 'spend_amounts', recordId: null, action: 'update', before, after, userId }, { manager: mg });
+      // Keyed by the version: the budget tab's conflicts read who changed a column from here.
+      await this.audit.log({ table: 'spend_amounts', recordId: version.id, action: 'update', before, after, userId }, { manager: mg });
     }
     await recordPayloadRoundInputs({ manager: mg, scope: 'opex', version, userId: userId ?? null, audit: this.audit }, result);
 
     const round_inputs = await versionRoundInputs(mg, 'opex', version);
     // A lines write also says when a disabled calendar was kept.
-    return isLinesResult(result) ? { updated: after.length, round_inputs, warnings: result.lines.warnings } : { updated: after.length, round_inputs };
+    // The year's months as stored now: the budget tab's base for the user's next edit of the columns written.
+    const items = await readYearAmounts(mg, 'opex', version);
+    return isLinesResult(result)
+      ? { updated: after.length, round_inputs, items, warnings: result.lines.warnings }
+      : { updated: after.length, round_inputs, items };
   }
 
   async listByYear(versionId: string, year?: number, opts?: { manager?: EntityManager }) {

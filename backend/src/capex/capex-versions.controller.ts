@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
@@ -61,6 +61,18 @@ export class CapexVersionsController {
   upsertAllocations(@Param('id') versionId: string, @Body() body: any, @Req() req: any) {
     const items = Array.isArray(body) ? body : body.items;
     return this.allocations.bulkUpsert(versionId, items, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
+  }
+
+  /**
+   * Method, driver and rows of the version's allocation in one request, compared with
+   * `base_signature` under the version's lock (plan planning/perf-scale lot 3E,
+   * `spend/allocation-save.ts`). The method PATCH and the rows POST stay for other callers.
+   */
+  @Put('capex-versions/:id/allocations')
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'member')
+  putAllocations(@Param('id') versionId: string, @Body() body: any, @Req() req: any) {
+    return this.allocations.put(versionId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 
   @Get('capex-versions/:id/allocations')

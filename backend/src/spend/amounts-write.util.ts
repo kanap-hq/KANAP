@@ -14,6 +14,7 @@ import {
   spreadQuarterlyToMonths,
 } from './spread.util';
 import { lockBudgetVersions } from './budget-locks';
+import type { CostLine } from './costing.util';
 
 /**
  * The one way amounts are written, for OPEX (`spend_amounts`) and CAPEX
@@ -57,6 +58,19 @@ const AMOUNT_TABLE: Record<AmountScope, string> = { opex: 'spend_amounts', capex
 
 export type AmountVersion = { id: string; tenant_id: string; budget_year: number | string };
 
+/**
+ * What a write from the budget tab is about to store, handed to the edit
+ * conflict check (`budget-edit-conflicts.ts`, plan planning/perf-scale lot 3D)
+ * once the line is locked and before anything is written:
+ * - `cells`: a monthly entry, the cells it writes;
+ * - `columns`: a yearly total, quarters or costed lines, the twelve months
+ *   (January first) each column will hold (`null`: left as stored, the removal
+ *   of costed lines) and, for costed lines, the lines it will hold.
+ */
+export type PlannedAmounts =
+  | { kind: 'cells'; rows: AmountRowInput[] }
+  | { kind: 'columns'; columns: Array<{ measure: AmountMeasure; months: readonly bigint[] | null; lines?: readonly CostLine[] }> };
+
 export type AmountsWriteContext = {
   manager: EntityManager;
   freeze: Pick<FreezeService, 'assertNotFrozen'>;
@@ -65,6 +79,14 @@ export type AmountsWriteContext = {
   version: AmountVersion;
   /** Freeze checks already passed in this operation (one per column and year, filled here). */
   checkedFreeze?: Set<string>;
+  /**
+   * Called by `writeAmountsPayload` and `writeLinesPayload` with what they are
+   * about to store, after validation and before the first write; throws to
+   * refuse the request (a 409 when someone else changed a cell or a column
+   * since the user's screen read it). Only the budget tab's requests that
+   * carry a base set it: the other writers compare nothing.
+   */
+  beforeWrite?: (plan: PlannedAmounts) => Promise<void>;
 };
 
 /** Amounts of one month, in cents, for the measures being written. */
@@ -489,11 +511,30 @@ function asObject(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+/** The months of a spread, per column it replaces (what `beforeWrite` compares). */
+function plannedColumns(rows: AmountRowInput[], measures: readonly AmountMeasure[]): PlannedAmounts {
+  return { kind: 'columns', columns: measures.map((measure) => ({ measure, months: rows.map((row) => row[measure] ?? 0n) })) };
+}
+
+/** `also_measures` of a yearly spread: known columns, once each, not already in `totals`. */
+function alsoMeasures(raw: unknown, totals: Partial<Record<AmountMeasure, bigint>>): AmountMeasure[] {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) throw new BadRequestException('also_measures must be a list of columns.');
+  const unknown = raw.find((m) => !isAmountMeasure(m));
+  if (unknown !== undefined) throw unknownMeasure(String(unknown ?? ''));
+  const named = new Set<unknown>(raw);
+  return AMOUNT_MEASURES.filter((m) => named.has(m) && totals[m] === undefined);
+}
+
 /**
  * Apply an amounts payload from the budget tab, the API or the AI:
  * - `annual`: `totals` names one or more measures; each is spread over the
  *   period (flat, or the named spread profile) and replaces the twelve
- *   months of that measure only.
+ *   months of that measure only. `also_measures` ("apply the distribution to
+ *   all columns", plan planning/perf-scale lot 3D) names more columns spread
+ *   the same way from their own stored total, read under the months' lock: the
+ *   screen sends no total for them, so a column someone else changed meanwhile
+ *   keeps its total and only takes the period and distribution.
  * - `quarterly`: one `measure`; `Q1`..`Q4` are spread inside their quarter
  *   over the active months of the period and replace that measure's year, an
  *   omitted quarter being zero.
@@ -520,10 +561,19 @@ async function writePayload(ctx: AmountsWriteContext, rawPayload: unknown): Prom
     if (Object.keys(totals).length === 0) {
       throw new BadRequestException('The yearly totals must name at least one amount.');
     }
+    const also = alsoMeasures(payload.also_measures, totals);
     const period = parsePayloadPeriod(payload, year);
     const profile = await resolveSpreadProfile(ctx.manager, profileName);
+    if (also.length > 0) {
+      // The months' lock first (the lock order of every amounts write), so the totals read
+      // below are the ones the spread replaces: no write of the line can land in between.
+      await lockYearMonths(ctx, year);
+      const stored = (await readVersionMonths(ctx.manager, ctx.scope, ctx.version.tenant_id, [ctx.version])).get(ctx.version.id)!;
+      for (const measure of also) totals[measure] = stored.months[measure].reduce((sum, cents) => sum + cents, 0n);
+    }
     const window = { start: period.period_start, end: period.period_end };
     const rows = asBadRequest(() => spreadAnnualRows(year, totals, profile.weights, window));
+    await ctx.beforeWrite?.(plannedColumns(rows, AMOUNT_MEASURES.filter((m) => totals[m] !== undefined)));
     const result = await replaceAmounts(ctx, year, rows);
     return { ...result, spread: { kind: 'annual', totals, profile, period } };
   }
@@ -540,6 +590,7 @@ async function writePayload(ctx: AmountsWriteContext, rawPayload: unknown): Prom
     const period = parsePayloadPeriod(payload, year);
     const window = { start: period.period_start, end: period.period_end };
     const rows = asBadRequest(() => spreadQuarterlyToMonths(year, measure, quarters, distribution, window));
+    await ctx.beforeWrite?.(plannedColumns(rows, [measure]));
     const result = await replaceAmounts(ctx, year, rows);
     return { ...result, spread: { kind: 'quarterly', measure, quarters, distribution, period } };
   }
@@ -559,6 +610,7 @@ async function writePayload(ctx: AmountsWriteContext, rawPayload: unknown): Prom
       }
       return row;
     });
+    await ctx.beforeWrite?.({ kind: 'cells', rows });
     return { ...(await patchAmounts(ctx, year, rows)), spread: null };
   }
 
@@ -601,4 +653,13 @@ export async function readVersionMonths(
     for (const measure of AMOUNT_MEASURES) entry.months[measure][index] += toCents(row[measure]);
   }
   return result;
+}
+
+/**
+ * The stored months of a version's own year, in period order, as a write
+ * answers them to the budget tab (the cells it now holds): the screen takes
+ * the columns it wrote from here as the base of the user's next edit.
+ */
+export async function readYearAmounts(manager: EntityManager, scope: AmountScope, version: AmountVersion): Promise<StoredAmountRow[]> {
+  return readRows({ manager, scope, version }, yearPeriods(Number(version.budget_year)));
 }

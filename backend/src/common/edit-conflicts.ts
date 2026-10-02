@@ -232,23 +232,35 @@ export async function lastFieldChanges(
       : { user_id: null, created_at: opts.fallbackAt ?? null });
   }
 
-  const userIds = Array.from(new Set(Array.from(picked.values()).map((row) => row.user_id).filter((id): id is string => !!id)));
-  const names = new Map<string, string>();
-  if (userIds.length > 0) {
-    const users: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = await manager.query(
-      `SELECT id::text AS id, first_name, last_name, email FROM users WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
-      [opts.tenantId, userIds],
-    );
-    for (const user of users) names.set(user.id, displayName(user));
-  }
-  for (const [field, row] of picked) {
-    const name = row.user_id ? names.get(row.user_id) : undefined;
-    result.set(field, {
-      changed_by: row.user_id && name ? { id: row.user_id, name } : null,
-      changed_at: row.created_at ? new Date(row.created_at).toISOString() : null,
-    });
-  }
+  const names = await userNames(manager, opts.tenantId, Array.from(picked.values()).map((row) => row.user_id));
+  for (const [field, row] of picked) result.set(field, authorAt(names, row.user_id, row.created_at));
   return result;
+}
+
+/** The display names of users of the tenant, by id (one query; an unknown id is left out). */
+export async function userNames(manager: EntityManager, tenantId: string, ids: ReadonlyArray<string | null | undefined>): Promise<Map<string, string>> {
+  const userIds = Array.from(new Set(ids.filter((id): id is string => !!id)));
+  const names = new Map<string, string>();
+  if (userIds.length === 0) return names;
+  const users: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = await manager.query(
+    `SELECT id::text AS id, first_name, last_name, email FROM users WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+    [tenantId, userIds],
+  );
+  for (const user of users) names.set(user.id, displayName(user));
+  return names;
+}
+
+/** Who and when, as a conflict answers it: nobody when the user is unknown, no time when there is none. */
+export function authorAt(
+  names: ReadonlyMap<string, string>,
+  userId: string | null | undefined,
+  at: Date | string | null | undefined,
+): { changed_by: EditConflictAuthor | null; changed_at: string | null } {
+  const name = userId ? names.get(userId) : undefined;
+  return {
+    changed_by: userId && name ? { id: userId, name } : null,
+    changed_at: at ? new Date(at).toISOString() : null,
+  };
 }
 
 /** A user's name as the pickers show it: first and last name, else the e-mail. */
