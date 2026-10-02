@@ -7,8 +7,8 @@ import { TenancyMiddleware } from '../tenancy.middleware';
 // Retry-After instead of going on without a tenant (fake 401s, "Tenant
 // context is required", a logout in the browser). The other answers are
 // unchanged: unknown tenant 404, apex without tenant, single-tenant not ready
-// 503 TENANT_NOT_READY. The liveness route (/health) is never refused because
-// the lookup failed: it goes on without a tenant.
+// 503 TENANT_NOT_READY. The liveness route (/health) is never looked up (lot 4,
+// review): it goes on without a tenant and costs no database connection.
 
 type Captured = { status?: number; body?: any; headers: Record<string, string>; nextCalled: boolean; tenant?: unknown };
 
@@ -64,27 +64,34 @@ async function testLookupFailureAnswersBusy() {
   }
 }
 
-/** A busy pool never fails the liveness probe: /health goes on without a tenant, in both modes. */
-async function testHealthGoesOnWhenTheLookupFails() {
-  const poolTimeout = async () => { throw new Error('timeout exceeded when trying to connect'); };
+/**
+ * The liveness probe never looks the tenant up, in both modes: no database connection, never
+ * refused because the pool is busy, and 200 even before the single tenant is provisioned (the
+ * process is alive). Any other route is still looked up and refused.
+ */
+async function testHealthIsNeverLookedUp() {
+  let queries = 0;
+  const poolTimeout = async () => { queries += 1; throw new Error('timeout exceeded when trying to connect'); };
   for (const [label, options, host] of [
     ['single tenant', { singleTenant: true }, 'kanap.example.com'],
     ['subdomain', {}, 'acme.kanap.net'],
+    ['platform admin host', {}, 'admin.kanap.net'],
   ] as const) {
-    for (const path of ['/health', '/api/health']) {
+    for (const path of ['/health', '/api/health', '/health/']) {
       const res = await quietly(() => run({ ...options, query: poolTimeout }, host, path));
       assert.equal(res.nextCalled, true, `${label} ${path}: goes on`);
-      assert.equal(res.status, undefined, `${label} ${path}: not answered 503`);
+      assert.equal(res.status, undefined, `${label} ${path}: not answered`);
       assert.equal(res.tenant, null, `${label} ${path}: without a tenant`);
     }
-    // Any other route is still refused.
+    assert.equal(queries, 0, `${label}: no lookup for the liveness route`);
     const other = await quietly(() => run({ ...options, query: poolTimeout }, host, '/health/details'));
     assert.equal(other.status, 503, `${label}: only the liveness route itself is exempt`);
+    queries = 0;
   }
-  // A tenant that is not provisioned yet still answers TENANT_NOT_READY on /health (no lookup failure).
   const notReady = await run({ singleTenant: true, query: async () => [] }, 'x', '/health');
-  assert.equal(notReady.status, 503);
-  assert.equal(notReady.body?.error, 'TENANT_NOT_READY');
+  assert.equal(notReady.nextCalled, true, 'single tenant not provisioned yet: /health still answers');
+  const otherNotReady = await run({ singleTenant: true, query: async () => [] }, 'x', '/spend-items');
+  assert.equal(otherNotReady.body?.error, 'TENANT_NOT_READY', 'the other routes still answer TENANT_NOT_READY');
 }
 
 async function testOtherAnswersUnchanged() {
@@ -161,7 +168,7 @@ async function testClassMiddleware() {
 
 async function main() {
   await testLookupFailureAnswersBusy();
-  await testHealthGoesOnWhenTheLookupFails();
+  await testHealthIsNeverLookedUp();
   await testOtherAnswersUnchanged();
   await testNextErrorIsNotALookupFailure();
   testSlugs();

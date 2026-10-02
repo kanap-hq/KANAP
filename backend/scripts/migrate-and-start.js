@@ -6,6 +6,9 @@
   - Starts the NestJS server
 
   Env toggles:
+  - API_WORKERS=N (default 1): N > 1 runs N API processes with the Node cluster module. This
+    process becomes the cluster primary once the migrations ran, and forks the workers
+    (src/common/cluster/cluster-primary.ts). With 1, the API runs here, as before.
   - SKIP_MIGRATIONS=true to skip running migrations at boot
   - INTEGRATED_DOCS_AUTO_ROLLOUT=if-needed|always|off to control boot-time integrated-doc repair
   - INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT=true to fail startup when integrated-doc repair fails
@@ -239,9 +242,19 @@ async function runMigrationsIfNeeded() {
 }
 
 (async () => {
+  // Migrations run once, here, before any API process starts: TypeORM takes no lock, so two
+  // processes migrating at once would collide.
   await runMigrationsIfNeeded();
   await runIntegratedDocsRolloutIfNeeded();
-  // Start the API (compiled output)
-  // Using require keeps PID 1 as node for proper signal handling in containers
-  require(path.resolve(__dirname, '../dist/main.js'));
+  const mainScript = path.resolve(__dirname, '../dist/main.js');
+  const { parseApiWorkers } = require(path.resolve(__dirname, '../dist/common/cluster/process-role.js'));
+  const workers = parseApiWorkers(process.env.API_WORKERS);
+  if (workers > 1) {
+    const { runClusterPrimary } = require(path.resolve(__dirname, '../dist/common/cluster/cluster-primary.js'));
+    runClusterPrimary({ workers, exec: mainScript });
+    return;
+  }
+  // Start the API (compiled output) in this process. The image starts this script with the
+  // exec form of CMD, so node gets SIGTERM itself; main.ts drains on it (graceful-shutdown.ts).
+  require(mainScript);
 })();

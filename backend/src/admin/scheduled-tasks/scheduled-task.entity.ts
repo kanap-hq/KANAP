@@ -26,6 +26,10 @@ export class ScheduledTask {
   @Column('integer', { nullable: true })
   last_duration_ms!: number | null;
 
+  /** Scheduled time of the last cron tick an API process claimed (see ScheduledTasksService.claimTick). */
+  @Column('timestamptz', { nullable: true })
+  last_tick_at!: Date | null;
+
   @Column('timestamptz', { default: () => 'now()' })
   created_at!: Date;
 

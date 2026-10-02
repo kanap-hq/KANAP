@@ -178,7 +178,11 @@ export class WorldBankClient {
         retryDelayMs: 2000,
       });
       const csvContent = this.extractCsvFromArchive(archive);
-      await fs.promises.writeFile(csvPath, csvContent, 'utf8');
+      // Written aside, then renamed over the cache file (atomic on one file system): the API
+      // processes of a container share this directory, and another one may be reading it.
+      const tmpPath = `${csvPath}.${process.pid}.tmp`;
+      await fs.promises.writeFile(tmpPath, csvContent, 'utf8');
+      await fs.promises.rename(tmpPath, csvPath);
     }
     return csvPath;
   }

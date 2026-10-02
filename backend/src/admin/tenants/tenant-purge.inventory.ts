@@ -6,6 +6,8 @@ export const TENANT_PURGE_TABLES = [
   'search_index',
   // Saved list states: no reference in or out besides the tenant
   'list_contexts',
+  // Notification dedupe window: no reference in or out besides the tenant
+  'notification_dedupe',
   // Incident register: children first; before documents, assets, applications and users
   'incident_entries',
   'incident_assets',

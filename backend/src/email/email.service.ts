@@ -41,7 +41,8 @@ export class EmailService {
   private readonly transport: EmailTransport;
   private readonly emailOverride: string | null;
 
-  // Queue + rate limiting (single-process).
+  // Queue + rate limiting, per API process (with several processes each paces its own queue;
+  // Resend 429 answers are retried). A stop waits for the queue to empty (`drain`).
   private emailQueue: QueuedEmail[] = [];
   private isProcessingQueue = false;
   private nextSendAtMs = 0;
@@ -74,6 +75,26 @@ export class EmailService {
       this.emailQueue.push({ options, resolve, reject });
       void this.processQueue();
     });
+  }
+
+  /** Emails queued or being sent. */
+  pendingCount(): number {
+    return this.emailQueue.length + (this.isProcessingQueue ? 1 : 0);
+  }
+
+  /**
+   * At a stop (main.ts): waits until the queued emails are sent, or `deadlineAt` (ms) passes.
+   * Returns how many were left unsent, logged: the process is about to exit and they are lost.
+   */
+  async drain(deadlineAt: number): Promise<number> {
+    while (this.pendingCount() > 0 && Date.now() < deadlineAt) {
+      await sleep(Math.min(50, Math.max(1, deadlineAt - Date.now())));
+    }
+    const left = this.pendingCount();
+    if (left > 0) {
+      this.logger.warn(`${left} email(s) not sent: the API process stopped before the queue emptied`);
+    }
+    return left;
   }
 
   private async processQueue(): Promise<void> {

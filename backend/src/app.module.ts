@@ -61,16 +61,23 @@ import { ScheduledTasksModule } from './admin/scheduled-tasks/scheduled-tasks.mo
 import { CleanupModule } from './cleanup/cleanup.module';
 import { NetboxModule } from './netbox/netbox.module';
 import { ListContextsModule } from './common/list-context/list-contexts.module';
+import { apiProcessCount, clusterWorkerId } from './common/cluster/process-role';
+import { DatabaseThrottlerStorage } from './common/rate-limit-store';
+import { DataSource } from 'typeorm';
+import { readPoolMax } from './common/db-pool-budget';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60_000,
-        limit: 10,
-      },
-    ]),
+    // Rate limit counts: in this process's memory with one API process, as before; in the
+    // database with several (API_WORKERS > 1), so the limits hold for all of them together.
+    ThrottlerModule.forRootAsync({
+      inject: [DataSource],
+      useFactory: (dataSource: DataSource) => ({
+        throttlers: [{ ttl: 60_000, limit: 10 }],
+        storage: apiProcessCount() > 1 ? new DatabaseThrottlerStorage(dataSource) : undefined,
+      }),
+    }),
     ScheduleModule.forRoot(),
     TenancyModule,
     TypeOrmModule.forRootAsync({
@@ -82,12 +89,16 @@ import { ListContextsModule } from './common/list-context/list-contexts.module';
           autoLoadEntities: true,
           synchronize: false,
           ssl: false,
-          migrationsRun: true,
+          // A cluster worker never runs the migrations: the primary ran them once before forking
+          // (scripts/migrate-and-start.js); TypeORM takes no lock, two runs at once would collide.
+          migrationsRun: clusterWorkerId() === null,
           migrations: [__dirname + '/migrations/*.{ts,js}'],
           logging: ['error', 'warn'],
           applicationName: process.env.DB_APP_NAME || 'cio-api',
           extra: {
-            max: parseInt(process.env.DB_POOL_MAX || '20', 10),
+            // Per API process: with API_WORKERS > 1 the API opens up to workers × DB_POOL_MAX
+            // connections (checked at start against max_connections, db-pool-budget.ts).
+            max: readPoolMax(),
             min: parseInt(process.env.DB_POOL_MIN || '2', 10),
             idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000', 10),
             connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '10000', 10),
