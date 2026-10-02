@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryFunctionContext } from '@tanstack/react-query';
 import { ModuleItemNavParams, ModuleItemNavResult } from './useModuleItemNav';
 import { formatItemRef } from '../utils/item-ref';
 import { statusScopeParams } from '../utils/statusScopeParams';
@@ -18,7 +18,7 @@ export type BudgetItemNavConfig = {
   endpoint: string;
   queryKey: string;
   /** The workspace's detail query of a line, by the id or reference in its route. */
-  detailQuery: (ref: string) => { queryKey: unknown[]; queryFn: () => Promise<unknown> };
+  detailQuery: (ref: string) => { queryKey: unknown[]; queryFn: (context: QueryFunctionContext) => Promise<unknown> };
 };
 
 /** How long a neighbour answer or a prefetched detail is reused without asking again. */

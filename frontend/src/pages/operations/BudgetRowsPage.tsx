@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Button, MenuItem, Paper, Select, Stack, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
+import { forgetAllAllocations } from '../../components/finance/allocationsCache';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../../components/PageHeader';
 import { PropertyRow } from '../../components/design';
@@ -33,6 +34,8 @@ export default function BudgetRowsPage() {
   const onImported = () => {
     void queryClient.invalidateQueries({ queryKey: ['spend-items-summary'] });
     void queryClient.invalidateQueries({ queryKey: ['capex-items-summary'] });
+    // The lines' Allocations tabs show their totals: their cached years are read again.
+    forgetAllAllocations(queryClient);
   };
 
   return (

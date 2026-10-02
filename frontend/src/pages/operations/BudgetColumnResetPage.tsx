@@ -18,6 +18,7 @@ import AgGridBox from '../../components/AgGridBox';
 import { useOpexSummaryAll, pickYearSlot } from '../reports/useOpexSummary';
 import { useCapexSummaryAll } from '../reports/useCapexSummary';
 import { useQueryClient } from '@tanstack/react-query';
+import { forgetAllAllocations } from '../../components/finance/allocationsCache';
 import { clearBudgetColumn, BudgetColumn, BudgetScope } from '../../services/budgetOperations';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
@@ -150,6 +151,8 @@ export default function BudgetColumnResetPage() {
         year,
         column,
       });
+      // The lines' Allocations tabs show their totals: their cached years are read again.
+      forgetAllAllocations(queryClient);
 
       setClearResult({
         ok: true,

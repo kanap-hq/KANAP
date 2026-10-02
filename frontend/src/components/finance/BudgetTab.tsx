@@ -22,6 +22,7 @@ import { useKanapDialogs } from '../design';
 import DateEUField from '../fields/DateEUField';
 import BudgetTrendChart from './BudgetTrendChart';
 import LinesPanel, { LinesSaveResult, PanelField, PanelPeriod } from './LinesPanel';
+import { forgetAllocationsYear } from './allocationsCache';
 import { FinanceModuleConfig } from './config';
 import { patchYearlyTotalsCache } from './yearlyTotals';
 import { AMOUNT_COLUMNS } from './amountColumns';
@@ -360,9 +361,11 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
-  // Every write makes the cached year stale: a later visit loads it again instead of showing it.
+  // Every write makes the cached year stale: a later visit loads it again instead of showing it. The
+  // Allocations tab shows the year's totals: its cached year is forgotten too (no old amounts there).
   const markYearStale = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: budgetYearKey(config.itemsApi, id, year), refetchType: 'none' });
+    forgetAllocationsYear(queryClient, config.itemsApi, id, year);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, id, year]);
   const markYearStaleRef = React.useRef(markYearStale); markYearStaleRef.current = markYearStale;
@@ -431,6 +434,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         keepRoundInputs(res?.data);
         measures.forEach((k) => unsavedTotals.delete(k));
       }
+      // Once written too: an Allocations tab opened while the save ran read the old totals.
+      forgetAllocationsYear(queryClient, config.itemsApi, id, year);
       const savedColumns = flatMode ? totalsSnapshot : new Set([...cellsSnapshot.values()].flatMap((cols) => [...cols]));
       if (savedColumns.has(spreadMeasureRef.current)) followSavedTotal();
     } catch (e) {
@@ -628,6 +633,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       const v = await ensureVersion();
       const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, body);
       keepRoundInputs(res?.data);
+      forgetAllocationsYear(queryClient, config.itemsApi, id, year);
       if (modeRef.current === 'monthly' && v.input_grain !== 'monthly') {
         await api.patch(`${config.itemsApi}/${id}/versions`, { id: v.id, input_grain: 'monthly' });
         versionRef.current = { ...v, input_grain: 'monthly' };

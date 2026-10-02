@@ -278,7 +278,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
               vendorPicker.remember([v]);
               setVendorId(v?.id || null);
             }}
-            getOptionLabel={(o) => o.name ?? ''}
+            getOptionLabel={(o) => vendorPicker.label(o, (vendor) => vendor.name ?? '')}
             disabled={readOnly}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
@@ -315,7 +315,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
               contractPicker.remember([v]);
               setContractId(v?.id || null);
             }}
-            getOptionLabel={(o) => o.name ?? ''}
+            getOptionLabel={(o) => contractPicker.label(o, (contract) => contract.name ?? '')}
             disabled={readOnly}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;

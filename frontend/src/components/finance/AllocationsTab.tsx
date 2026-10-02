@@ -16,6 +16,7 @@ import { PropertyRow } from '../design';
 import { fetchAllocationRule } from '../../services/allocationRules';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import type { AmountMeasure } from './roundPeriod';
+import { allocationsSnapshotKey } from './allocationsCache';
 
 type PickerOption = { id: string; label: string };
 
@@ -115,7 +116,6 @@ const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n
 /** The companies and departments of a year with their metrics, shared by every line (the drivers read them). */
 export const allocationCompaniesKey = (year: number) => ['companies', 'allocation-metrics', year] as const;
 export const allocationDepartmentsKey = (year: number) => ['departments', 'allocation-metrics', year] as const;
-export const allocationsSnapshotKey = (itemsApi: string, id: string, year: number) => ['finance-allocations', itemsApi, id, year] as const;
 const ORGANISATION_STALE_MS = 5 * 60_000;
 
 async function fetchAllocationsSnapshot(config: FinanceModuleConfig, id: string, year: number, signal?: AbortSignal): Promise<AllocationsSnapshot> {
@@ -153,11 +153,13 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     queryFn: async ({ signal }) => (await api.get<{ items: Company[] }>(`/companies`, { params: { year, page: 1, limit: 1000, sort: 'name:ASC' }, signal })).data?.items || [],
     staleTime: ORGANISATION_STALE_MS,
   });
+  // Departments are optional here (a role may not read them): a failed read leaves the list empty for
+  // this visit, and is not cached, so the next visit reads them again.
   const departmentsQuery = useQuery({
     queryKey: allocationDepartmentsKey(year),
-    queryFn: async ({ signal }) => (await api.get<{ items: Department[] }>(`/departments`, { params: { year, page: 1, limit: 1000, sort: 'name:ASC' }, signal })
-      .catch(() => ({ data: { items: [] as Department[] } }))).data?.items || [],
+    queryFn: async ({ signal }) => (await api.get<{ items: Department[] }>(`/departments`, { params: { year, page: 1, limit: 1000, sort: 'name:ASC' }, signal })).data?.items || [],
     staleTime: ORGANISATION_STALE_MS,
+    retry: false,
   });
   const companies = React.useMemo(() => companiesQuery.data ?? [], [companiesQuery.data]);
   const departments = React.useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
@@ -167,7 +169,8 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     queryKey: snapshotKey,
     queryFn: ({ signal }) => fetchAllocationsSnapshot(config, id, year, signal),
   });
-  const loading = !snapshotQuery.data || !companiesQuery.data;
+  // Loading until the allocation and the companies are read, or one of them failed (the error shows).
+  const loading = (!snapshotQuery.data && !snapshotQuery.error) || (!companiesQuery.data && !companiesQuery.error);
   const [autoOpenIdx, setAutoOpenIdx] = React.useState<number | null>(null);
 
   const isManualPct = method === 'manual_pct';
@@ -262,9 +265,10 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
       setRows([]);
     }
   }, [snapshot]);
+  const loadError = snapshotQuery.error ?? (companiesQuery.data ? null : companiesQuery.error);
   React.useEffect(() => {
-    if (snapshotQuery.error) setError(getApiErrorMessage(snapshotQuery.error, t, t(`${config.i18nPrefix}.allocations.failedToLoad`)));
-  }, [snapshotQuery.error, t, config.i18nPrefix]);
+    if (loadError) setError(getApiErrorMessage(loadError, t, t(`${config.i18nPrefix}.allocations.failedToLoad`)));
+  }, [loadError, t, config.i18nPrefix]);
 
   const persist = React.useCallback(async () => {
     const v = await ensureVersion();

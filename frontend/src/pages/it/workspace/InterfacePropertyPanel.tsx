@@ -29,7 +29,6 @@ import type {
   InterfaceOwner,
 } from '../components/interface-workspace/types';
 
-const NO_KNOWN_USERS: ReadonlyMap<string, UserOption> = new Map();
 
 type CompanyOption = {
   id: string;
@@ -83,14 +82,19 @@ export default function InterfacePropertyPanel({
   const residency = (data?.data_residency || []) as InterfaceDataResidency[];
   const disabled = !canManage;
 
-  // The owners' names, read once by id (no people list); the companies searched as the user types.
+  // The owners' names, read by id (no people list): the names already read are kept, so adding or
+  // removing an owner reads only the new one and the others never flash. The companies are searched
+  // as the user types.
   const ownerIds = React.useMemo(() => owners.map((owner) => owner.user_id).filter(Boolean), [owners]);
-  const { items: ownerUsers } = useLookupHydration<UserOption>({
+  const knownOwnersRef = React.useRef(new Map<string, UserOption>());
+  const ownerHydration = useLookupHydration<UserOption>({
     endpoint: USERS_LOOKUP_ENDPOINT,
     ids: ownerIds,
-    known: NO_KNOWN_USERS,
+    known: knownOwnersRef.current,
     enabled: !isCreate,
   });
+  for (const user of ownerHydration.items) knownOwnersRef.current.set(user.id, user);
+  const unavailableOwners = ownerHydration.unavailable;
   const companyIds = React.useMemo(() => companies.map((row) => row.company_id).filter(Boolean), [companies]);
   const companyPicker = useLookupPicker<CompanyOption>({ endpoint: '/companies/lookup', value: companyIds, enabled: !isCreate });
 
@@ -111,9 +115,9 @@ export default function InterfacePropertyPanel({
     }
   }, [t]);
 
-  const userById = React.useMemo(() => new Map(ownerUsers.map((user) => [user.id, user])), [ownerUsers]);
+  const userById = knownOwnersRef.current;
 
-  const enrichOwners = React.useCallback((ownerType: 'business' | 'it'): TeamMemberValue[] => {
+  const enrichOwners = (ownerType: 'business' | 'it'): TeamMemberValue[] => {
     return owners
       .filter((owner) => owner.owner_type === ownerType)
       .map((owner) => {
@@ -123,14 +127,14 @@ export default function InterfacePropertyPanel({
         const displayName = [firstName, lastName].filter(Boolean).join(' ');
         return {
           user_id: owner.user_id,
-          // '…' while the name loads: never the raw id.
-          user_display_name: displayName || user?.email || '…',
+          // '…' while the name loads, never the raw id; a person no longer readable says so.
+          user_display_name: displayName || user?.email || (unavailableOwners.has(owner.user_id) ? t('common:selects.valueUnavailable') : '…'),
           first_name: firstName || undefined,
           last_name: lastName || undefined,
           email: user?.email ?? undefined,
         };
       });
-  }, [owners, userById]);
+  };
 
   const dataClassOptions = React.useMemo(() => {
     const list = classificationCatalog?.dataClasses || [];
@@ -284,7 +288,7 @@ export default function InterfacePropertyPanel({
                 companyPicker.remember(value);
                 void runPersist(() => onReplaceCompanies(value.map((item) => item.id)));
               }}
-              getOptionLabel={(option) => option.name ?? ''}
+              getOptionLabel={(option) => companyPicker.label(option, (company) => company.name ?? '')}
               renderOption={(props, option) => (
                 <li {...props} key={option.id}>
                   {option.name}

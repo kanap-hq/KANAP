@@ -51,13 +51,13 @@ export default function BusinessProcessMultiSelect({
         picker.remember(newValue);
         onChange(newValue.map((opt) => opt.id));
       }}
-      getOptionLabel={(option) => option.name ?? ''}
+      getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
       renderTags={(tagValue, getTagProps) =>
         tagValue.map((option, index) => (
           <Chip
             {...getTagProps({ index })}
             key={option.id}
-            label={option.name}
+            label={picker.label(option, (o) => o.name ?? '')}
             size="small"
           />
         ))

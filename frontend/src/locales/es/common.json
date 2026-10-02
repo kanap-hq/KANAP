@@ -133,6 +133,7 @@
     "loadFailed": "No se pudieron cargar los datos",
     "saveFailed": "No se pudieron guardar las preferencias",
     "loadFailedRefresh": "No se pudieron cargar los datos. Por favor, actualice la página.",
+    "tabLoadFailed": "No se pudo cargar esta pestaña.",
     "testEmailSent": "Correo de prueba enviado.",
     "testEmailFailed": "No se pudo enviar el correo de prueba",
     "noContent": "Aún sin contenido.",
@@ -418,7 +419,9 @@
     "createCostCenter": "Crear uno",
     "noCostCentersFound": "No se encontraron centros de coste",
     "costCentersLoadFailed": "No se pudieron cargar los centros de coste.",
-    "notSet": "Sin definir"
+    "notSet": "Sin definir",
+    "moreResults": "Escriba para acotar: hay más resultados",
+    "valueUnavailable": "Valor ya no disponible"
   },
   "documentEditor": {
     "expandDocument": "Expandir documento",

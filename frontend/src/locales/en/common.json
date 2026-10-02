@@ -133,6 +133,7 @@
     "loadFailed": "Failed to load data",
     "saveFailed": "Failed to save preferences",
     "loadFailedRefresh": "Failed to load data. Please refresh the page.",
+    "tabLoadFailed": "This tab could not be loaded.",
     "testEmailSent": "Test email sent!",
     "testEmailFailed": "Failed to send test email",
     "noContent": "No content yet.",
@@ -418,7 +419,9 @@
     "createCostCenter": "Create one",
     "noCostCentersFound": "No cost centers found",
     "costCentersLoadFailed": "Cost centers could not be loaded.",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "moreResults": "Type to narrow down: more results",
+    "valueUnavailable": "Value no longer available"
   },
   "documentEditor": {
     "expandDocument": "Expand document",

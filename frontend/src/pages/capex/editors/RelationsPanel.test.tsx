@@ -95,18 +95,46 @@ describe('CAPEX RelationsPanel applications', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
-  it('shows the relations again at once when the tab comes back, without reading them again', async () => {
+  it('shows the cached relations at once, reads them again, and edits only the fresh set', async () => {
+    // The server's contracts of the line; the contract page links a second one meanwhile.
+    let contracts = [{ id: 'c-1', name: 'Maintenance' }];
+    let hold = false;
+    let answer: () => void = () => undefined;
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/capex-items/item-1/contracts') {
+        if (hold) await new Promise<void>((resolve) => { answer = resolve; });
+        return { data: { items: contracts } };
+      }
+      if (url.endsWith('/links') || url.endsWith('/attachments')) return { data: [] };
+      return { data: { items: [] } };
+    });
     // The app's default: a query read less than 30 s ago is fresh.
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } });
     const first = renderPanel(React.createRef<RelationsPanelHandle>(), client);
-    await screen.findByRole('button', { name: 'Payroll' });
-    const reads = mocked.get.mock.calls.length;
+    await screen.findByRole('button', { name: 'Maintenance' });
     first.unmount();
 
-    renderPanel(React.createRef<RelationsPanelHandle>(), first.client);
-    // Shown on the first render, from the cache: no blank tab, no second read while fresh.
-    expect(screen.getByRole('button', { name: 'Payroll' })).toBeInTheDocument();
-    expect(mocked.get.mock.calls.length).toBe(reads);
+    contracts = [{ id: 'c-1', name: 'Maintenance' }, { id: 'c-2', name: 'Licences' }];
+    hold = true;
+    const ref = React.createRef<RelationsPanelHandle>();
+    renderPanel(ref, first.client);
+    // First render: the cached set, no blank tab; but no edit on it while it is read again.
+    expect(screen.getByRole('button', { name: 'Maintenance' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('capex.relations.selectContracts')).toBeDisabled();
+    await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === '/capex-items/item-1/contracts')).toHaveLength(2));
+    expect(screen.getByPlaceholderText('capex.relations.selectContracts')).toBeDisabled();
+
+    hold = false;
+    await act(async () => { answer(); });
+    const chip = await screen.findByRole('button', { name: 'Maintenance' });
+    expect(await screen.findByRole('button', { name: 'Licences' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByPlaceholderText('capex.relations.selectContracts')).not.toBeDisabled());
+
+    // Unlink one: the set posted is the fresh one, the contract linked elsewhere stays.
+    fireEvent.click(within(chip).getByTestId('CancelIcon'));
+    await waitFor(() => expect(ref.current?.isDirty()).toBe(true));
+    await act(async () => { await ref.current?.save(); });
+    expect(mocked.post).toHaveBeenCalledWith('/capex-items/item-1/contracts/bulk-replace', { contract_ids: ['c-2'] });
   });
 
   it('searches contracts on the server as the user types, never page by page', async () => {

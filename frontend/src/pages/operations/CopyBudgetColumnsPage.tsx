@@ -21,6 +21,7 @@ import AgGridBox from '../../components/AgGridBox';
 import { useOpexSummaryAll, pickYearSlot } from '../reports/useOpexSummary';
 import { useCapexSummaryAll } from '../reports/useCapexSummary';
 import { useQueryClient } from '@tanstack/react-query';
+import { forgetAllAllocations } from '../../components/finance/allocationsCache';
 import { copyBudgetColumn, BudgetColumn, BudgetOperationResult, BudgetScope } from '../../services/budgetOperations';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
@@ -197,6 +198,8 @@ export default function CopyBudgetColumnsPage() {
         overwrite,
         dryRun: false,
       });
+      // The lines' Allocations tabs show their totals: their cached years are read again.
+      forgetAllAllocations(queryClient);
 
       await dialogs.alert(operationSummary(t, 'operations.copyBudgetColumns.copyDone', result.summary.processed, result.summary.skipped, result.summary.errors));
 

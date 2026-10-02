@@ -14,7 +14,8 @@ import { fieldResetSx } from '../../theme/formSx';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
-import { useLookupHydration, useLookupSearch } from '../../hooks/useLookupPicker';
+import { narrowToText, useLookupHydration, useLookupSearch } from '../../hooks/useLookupPicker';
+import { MoreResultsHint } from '../fields/LookupListPaper';
 import { USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst } from '../fields/userLookup';
 import { taskDetailAvatarSizes, taskDetailTypography, metaItemSx, metaLabelSx } from '../../pages/tasks/theme/taskDetailTokens';
 import { formatUserName, getInitials } from '../../utils/userDisplay';
@@ -81,7 +82,7 @@ export default function MetadataUserPicker({
 
   // People searched as the user types, once the popover is open (names only, server side).
   const search = useLookupSearch<MetadataUserOption>({ endpoint: USERS_LOOKUP_ENDPOINT, open: !!anchorEl, text: searchText });
-  const { items: selectedUsers, isLoading: isLoadingSelected } = useLookupHydration<MetadataUserOption>({
+  const { items: selectedUsers, isLoading: isLoadingSelected, unavailable } = useLookupHydration<MetadataUserOption>({
     endpoint: USERS_LOOKUP_ENDPOINT,
     ids: selectedUserId ? [selectedUserId] : [],
     known: NO_KNOWN_USERS,
@@ -90,10 +91,16 @@ export default function MetadataUserPicker({
   const selectedUser = selectedUsers.find((user) => user.id === selectedUserId) ?? null;
 
   const searching = search.searchedText !== '';
-  const filteredUsers = React.useMemo(() => withMeFirst(search.items, me, searching), [search.items, me, searching]);
+  // While the next page loads, the people listed are the ones that still match the text typed.
+  const filteredUsers = React.useMemo(
+    () => narrowToText(withMeFirst(search.items, me, searching), search.pendingText, (user) => formatMetadataUserName(user) ?? ''),
+    [search.items, me, searching, search.pendingText],
+  );
 
   const selectedName = localSelectedName || normalizedDisplayName || formatMetadataUserName(selectedUser) || null;
-  const displayedName = selectedName || placeholder;
+  // A chosen person whose name cannot be read says so instead of looking unset.
+  const selectedUnavailable = !selectedName && !!selectedUserId && unavailable.has(selectedUserId);
+  const displayedName = selectedName || (selectedUnavailable ? t('selects.valueUnavailable') : placeholder);
   // The previous matches stay listed while the next ones load; the spinner only shows before the first page.
   const loading = (search.isFetching && search.items.length === 0) || isLoadingSelected;
 
@@ -223,6 +230,7 @@ export default function MetadataUserPicker({
               {t('selects.noUsersFound')}
             </Typography>
           )}
+          {!loading && search.hasMore && <MoreResultsHint />}
         </Box>
         {allowClear && selectedUserId && (
           <Box sx={(theme) => ({ mt: 0.5, pt: 0.5, borderTop: `1px solid ${theme.palette.kanap.border.soft}` })}>

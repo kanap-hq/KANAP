@@ -70,6 +70,36 @@ describe('person pickers on the user lookup', () => {
     expect(onChange).toHaveBeenCalledWith('u-2');
   });
 
+  it('while the next search runs, lists only the people that still match, and hints at more results', async () => {
+    let hold = false;
+    let answer: () => void = () => undefined;
+    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      if (hold) await new Promise<void>((resolve) => { answer = resolve; });
+      const fold = (v: string) => v.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+      const q = fold(String(config?.params?.q ?? ''));
+      return { data: { items: PEOPLE.filter((p) => fold(`${p.first_name} ${p.last_name}`).includes(q)), has_more: !q } };
+    });
+    wrap(<MetadataUserPicker value={null} placeholder="Owner missing" onChange={() => undefined} />);
+    fireEvent.click(screen.getByRole('button', { name: /Owner missing/ }));
+    await waitFor(() => expect(screen.getAllByRole('menuitem')).toHaveLength(3));
+    expect(screen.getByText('selects.moreResults')).toBeInTheDocument();
+
+    hold = true;
+    fireEvent.change(screen.getByPlaceholderText('selects.user'), { target: { value: 'helene' } });
+    // At once: only who still matches the text, and no hint from the previous page.
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Hélène Dupré']);
+    expect(screen.queryByText('selects.moreResults')).toBeNull();
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/users/lookup', expect.objectContaining({ params: { q: 'helene', limit: 30 } })));
+    await act(async () => { answer(); });
+  });
+
+  it('says so when the chosen person can no longer be read, instead of looking unset', async () => {
+    apiGet.mockImplementation(async () => ({ data: { items: [], has_more: false } }));
+    wrap(<MetadataUserPicker value="u-gone" placeholder="Owner missing" onChange={() => undefined} />);
+    expect(await screen.findByText('selects.valueUnavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Owner missing')).toBeNull();
+  });
+
   it('the share dialog reads no person while closed, and searches once its recipients list opens', async () => {
     const view = wrap(<ShareDialog open={false} onClose={() => undefined} itemType="opex" itemId="item-1" itemName="Line" />);
     await act(async () => { await new Promise((r) => setTimeout(r, 300)); });

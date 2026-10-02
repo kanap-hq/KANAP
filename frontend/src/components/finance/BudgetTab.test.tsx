@@ -78,6 +78,7 @@ import api from '../../api';
 import BudgetTab, { BudgetTabHandle } from './BudgetTab';
 import type { LinePayload, RoundInput, RoundLine } from './roundPeriod';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
+import { allocationsSnapshotKey } from './allocationsCache';
 
 const ALL_SHOWN: BudgetColumnsSettings = {
   ...DEFAULT_BUDGET_COLUMNS,
@@ -262,7 +263,8 @@ describe('BudgetTab on the query cache', () => {
     setupApi({ grain: 'annual' });
     const first = renderTab();
     await waitForAmounts();
-    expect(budgetTotal()).toHaveValue('12 000');
+    // The field formats its value in an effect: wait for it, never read it right after the load.
+    await waitFor(() => expect(budgetTotal()).toHaveValue('12 000'));
     const loads = amountLoads();
     first.unmount();
 
@@ -299,6 +301,33 @@ describe('BudgetTab on the query cache', () => {
     await waitFor(() => expect(amountLoads()).toBeGreaterThan(1));
     await act(async () => { answer(); });
     await waitFor(() => expect(budgetTotal()).toHaveValue('15 000'));
+  });
+
+  it("a save forgets the line's cached Allocations year, which shows the year's totals", async () => {
+    setupApi({ grain: 'annual' });
+    const first = renderTab();
+    await waitForAmounts();
+    const key = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR);
+    const otherYear = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR + 1);
+    first.queryClient.setQueryData(key, { version: null, computed: [], totals: { planned: 12000 } });
+    first.queryClient.setQueryData(otherYear, { version: null, computed: [], totals: { planned: 1 } });
+    fireEvent.change(budgetTotal(), { target: { value: '15000' } });
+    await flush(first.ref);
+    expect(bulkCalls()).toHaveLength(1);
+    expect(first.queryClient.getQueryData(key)).toBeUndefined();
+    expect(first.queryClient.getQueryData(otherYear)).toBeDefined();
+  });
+
+  it("a spread from the panel forgets the line's cached Allocations year too", async () => {
+    setupApi({ grain: 'monthly' });
+    const first = renderTab();
+    await waitForAmounts();
+    const key = allocationsSnapshotKey(OPEX_FINANCE_CONFIG.itemsApi, 'item-1', YEAR);
+    first.queryClient.setQueryData(key, { version: null, computed: [], totals: { planned: 12000 } });
+    typeAmount('6000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    await settle();
+    expect(first.queryClient.getQueryData(key)).toBeUndefined();
   });
 });
 
@@ -1034,7 +1063,7 @@ describe('BudgetTab columns from the setting', () => {
     expect(periodLine('forecast')).toHaveTextContent('12 months, January to December');
     const fields = within(container).getAllByRole('textbox');
     // Budget, Revision, Forecast: the third field.
-    expect(fields[2]).toHaveValue('7 200');
+    await waitFor(() => expect(fields[2]).toHaveValue('7 200'));
     fireEvent.change(fields[2], { target: { value: '5000' } });
     await flush(ref);
     expect(bulkCalls()[0][1]).toEqual({
@@ -1059,8 +1088,10 @@ describe('BudgetTab columns from the setting', () => {
     renderTab();
     await waitForAmounts();
 
-    expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Revision');
-    expect(screen.getByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('10 800');
+    await waitFor(() => {
+      expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Revision');
+      expect(screen.getByPlaceholderText('opex.budget.spreadPlaceholder')).toHaveValue('10 800');
+    });
     fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
     typeAmount('5000');
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));
@@ -1533,7 +1564,7 @@ describe('BudgetTab edits while a panel write runs', () => {
     routePosts();
     const { container, ref } = renderTab();
     await waitForAmounts();
-    expect(amountField()).toHaveValue('12 000');
+    await waitFor(() => expect(amountField()).toHaveValue('12 000'));
 
     // March of Budget by hand: 12 500 in all.
     fireEvent.change(cell(gridCells(container), 3, 0), { target: { value: '1500' } });

@@ -73,7 +73,7 @@ const DepartmentSelect = React.forwardRef<HTMLInputElement, DepartmentSelectProp
           picker.remember([v]);
           onChange(v?.id || null);
         }}
-        getOptionLabel={(o) => o.name ?? ''}
+        getOptionLabel={(o) => picker.label(o, (d) => d.name ?? '')}
         renderInput={(params) => (
           <TextField
             {...params}

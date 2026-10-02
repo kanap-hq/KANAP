@@ -13,6 +13,7 @@ vi.mock('../api', () => ({ default: { get: vi.fn() } }));
 
 import api from '../api';
 import SupplierSelect from '../components/fields/SupplierSelect';
+import { fetchLookupByIds } from './useLookupPicker';
 
 const apiGet = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 
@@ -134,23 +135,64 @@ describe('useLookupPicker (through SupplierSelect)', () => {
     release();
   });
 
-  it('keeps the previous matches listed while the next ones load', async () => {
+  /** The next searches wait until the test answers them (`answer()`), as on a slow server. */
+  function holdSearches() {
+    const served = apiGet.getMockImplementation()!;
+    let answer: () => void = () => undefined;
+    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown>; signal?: AbortSignal }) => {
+      if (!config?.params?.ids) await new Promise<void>((resolve) => { answer = resolve; });
+      return served(url, config);
+    });
+    return () => answer();
+  }
+  const optionNames = () => screen.queryAllByRole('option').map((option) => option.textContent);
+
+  it('while the next page loads, lists only the previous matches that still hold the typed text', async () => {
     renderSelect();
     const input = screen.getByRole('combobox');
     openList(input);
     fireEvent.change(input, { target: { value: 'supplier 14' } });
-    await waitFor(() => expect(screen.getAllByRole('option').length).toBeGreaterThan(0));
-    let pending: () => void = () => undefined;
-    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown>; signal?: AbortSignal }) => {
-      calls.push({ url, params: config?.params ?? {}, signal: config?.signal });
-      await new Promise<void>((resolve) => { pending = resolve; });
-      return { data: { items: [], has_more: false } };
-    });
-    fireEvent.change(input, { target: { value: 'supplier 149' } });
-    await waitFor(() => expect(searches().some((c) => c.params.q === 'supplier 149')).toBe(true));
-    // The list did not blank out while the next page loads.
-    expect(screen.getAllByRole('option').length).toBeGreaterThan(0);
-    pending();
+    // Supplier 1400 to 1429: the first page of "supplier 14".
+    await waitFor(() => expect(optionNames()).toHaveLength(30));
+    const answer = holdSearches();
+
+    fireEvent.change(input, { target: { value: 'supplier 142' } });
+    // At once, before the pause in typing and while the next page loads: the rows that still match.
+    const expected = Array.from({ length: 10 }, (_, i) => `Supplier ${1420 + i}`);
+    expect(optionNames()).toEqual(expected);
+    // The request is out (held): the rows shown are still the previous page's, narrowed.
+    await waitFor(() => expect(apiGet.mock.calls.some(([, config]) => config?.params?.q === 'supplier 142')).toBe(true));
+    expect(optionNames()).toEqual(expected);
+    answer();
+  });
+
+  it('narrows a pending list the way the server folds the text (accents, case)', async () => {
+    renderSelect();
+    const input = screen.getByRole('combobox');
+    openList(input);
+    fireEvent.change(input, { target: { value: 'soc' } });
+    expect(await screen.findByRole('option', { name: 'Société Générale Informatique' })).toBeInTheDocument();
+    const answer = holdSearches();
+    fireEvent.change(input, { target: { value: 'SOCIETE gen' } });
+    expect(optionNames()).toEqual(['Société Générale Informatique']);
+    // A text it no longer matches: nothing left to pick by mistake (Enter, a click) until the answer.
+    fireEvent.change(input, { target: { value: 'societe x' } });
+    expect(optionNames()).toEqual([]);
+    answer();
+  });
+
+  it('ends a page that does not hold every match with a hint to type more', async () => {
+    renderSelect();
+    const input = screen.getByRole('combobox');
+    openList(input);
+    await waitFor(() => expect(optionNames()).toHaveLength(30));
+    // 1,500 suppliers, 30 shown.
+    expect(screen.getByText('selects.moreResults')).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: 'societe gen' } });
+    // Pending: the hint belongs to the previous page, it goes at once.
+    expect(screen.queryByText('selects.moreResults')).toBeNull();
+    await waitFor(() => expect(optionNames()).toEqual(['Société Générale Informatique']));
+    expect(screen.queryByText('selects.moreResults')).toBeNull();
   });
 
   it("shows the chosen supplier's label from the caller, without any request", async () => {
@@ -164,5 +206,63 @@ describe('useLookupPicker (through SupplierSelect)', () => {
     renderSelect({ value: 'sup-1450' });
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('Supplier 1450'));
     expect(calls).toEqual([expect.objectContaining({ url: '/suppliers/lookup', params: { ids: 'sup-1450' } })]);
+  });
+
+  it('keeps what the user types while the chosen value\'s label is still loading', async () => {
+    let answerLabel: () => void = () => undefined;
+    const served = apiGet.getMockImplementation()!;
+    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown>; signal?: AbortSignal }) => {
+      if (config?.params?.ids) await new Promise<void>((resolve) => { answerLabel = resolve; });
+      return served(url, config);
+    });
+    renderSelect({ value: 'sup-1450' });
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveValue('…');
+    openList(input);
+    fireEvent.change(input, { target: { value: 'supp' } });
+    // Renders follow (the search, its answer): the pending value keeps its identity, the text stays.
+    await waitFor(() => expect(searches().some((c) => c.params.q === 'supp')).toBe(true));
+    await waitFor(() => expect(screen.getAllByRole('option').length).toBeGreaterThan(0));
+    expect(input).toHaveValue('supp');
+    answerLabel();
+  });
+
+  it('says a chosen value is no longer available when the server does not return it, and asks once', async () => {
+    renderSelect({ value: 'sup-gone' });
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('selects.valueUnavailable'));
+    await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
+    expect(calls.filter((c) => c.params.ids)).toHaveLength(1);
+  });
+
+  it('gives up on a label whose read fails twice, instead of loading forever', async () => {
+    const served = apiGet.getMockImplementation()!;
+    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown>; signal?: AbortSignal }) => {
+      if (config?.params?.ids) {
+        calls.push({ url, params: config.params });
+        throw new Error('network');
+      }
+      return served(url, config);
+    });
+    renderSelect({ value: 'sup-1450' });
+    expect(screen.getByRole('combobox')).toHaveValue('…');
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('selects.valueUnavailable'), { timeout: 4000 });
+    // The first read and one retry.
+    expect(calls.filter((c) => c.params.ids)).toHaveLength(2);
+  });
+});
+
+describe('fetchLookupByIds', () => {
+  beforeEach(() => {
+    apiGet.mockReset();
+    apiGet.mockImplementation(async (_url: string, config?: { params?: Record<string, unknown> }) => ({
+      data: { items: String(config?.params?.ids).split(',').map((id) => ({ id })), has_more: false },
+    }));
+  });
+
+  it('reads more than 100 ids in batches of 100 (the server refuses more)', async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `id-${i}`);
+    const rows = await fetchLookupByIds<{ id: string }>('/users/lookup', ids);
+    expect(rows.map((row) => row.id)).toEqual(ids);
+    expect(apiGet.mock.calls.map(([, config]) => String(config.params.ids).split(',').length)).toEqual([100, 100, 50]);
   });
 });

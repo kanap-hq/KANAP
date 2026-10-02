@@ -31,6 +31,7 @@ import {
 } from '../../constants/status';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import SpendMetadataBar from './workspace/SpendMetadataBar';
 import SpendPropertiesDrawer, { RunBuild } from './workspace/SpendPropertiesDrawer';
 import { useCostCenterTree } from '../../hooks/useCostCenterTree';
@@ -50,17 +51,20 @@ import type { ItemAnalyticsValue } from '../../services/analytics';
 /** The list this workspace belongs to (its saved list contexts). */
 
 // The Budget, Allocations and Relations tabs load with their tab (the Budget tab brings the charts):
-// opening a line reads the overview's code only. `preloadTabs` fetches them once the line is shown.
-const loadBudgetTab = () => import('../../components/finance/BudgetTab');
-const loadAllocationsTab = () => import('../../components/finance/AllocationsTab');
-const loadRelationsPanel = () => import('./editors/RelationsPanel');
-const BudgetTab = React.lazy(loadBudgetTab);
-const AllocationsTab = React.lazy(loadAllocationsTab);
-const RelationsPanel = React.lazy(loadRelationsPanel);
+// opening a line reads the overview's code only. `preloadTabs` fetches them once the line is shown;
+// a tab whose code fails to load shows a retry button in its place (WorkspaceTabBoundary).
+const budgetTab = retryableLazy(() => import('../../components/finance/BudgetTab'));
+const allocationsTab = retryableLazy(() => import('../../components/finance/AllocationsTab'));
+const relationsPanel = retryableLazy(() => import('./editors/RelationsPanel'));
+const BudgetTab = budgetTab.Component;
+const AllocationsTab = allocationsTab.Component;
+const RelationsPanel = relationsPanel.Component;
+const LAZY_TABS = [budgetTab, allocationsTab, relationsPanel];
 function preloadTabs() {
-  void loadBudgetTab().catch(() => undefined);
-  void loadAllocationsTab().catch(() => undefined);
-  void loadRelationsPanel().catch(() => undefined);
+  LAZY_TABS.forEach((tab) => tab.preload());
+}
+function retryTabs() {
+  LAZY_TABS.forEach((tab) => tab.retry());
 }
 
 const LIST_ENDPOINT = '/spend-items/summary';
@@ -280,9 +284,11 @@ export default function SpendItemPage() {
 
   // Tab badge counts.
   const relationsCountQuery = useQuery({
-    queryKey: ['spend-relations-count', uuid],
-    queryFn: ({ signal }) => fetchSpendRelationsCount(uuid as string, signal),
-    enabled: !!uuid && !isCreate,
+    // Keyed on the route's id or reference (`OPX-12`, which the endpoint resolves): it starts with the
+    // detail, not after it.
+    queryKey: ['spend-relations-count', idParam],
+    queryFn: ({ signal }) => fetchSpendRelationsCount(idParam, signal),
+    enabled: !!idParam && !isCreate,
   });
 
   const { data: currencySettings } = useCurrencySettings();
@@ -1067,17 +1073,19 @@ export default function SpendItemPage() {
         )}
 
         {/* No progress bar while a tab's code loads: the empty tab, then its content. */}
-        <React.Suspense fallback={null}>
-          {routeTab === 'budget' && !isCreate && uuid && (
-            <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} ref={budgetRef} />
-          )}
-          {routeTab === 'allocations' && !isCreate && uuid && (
-            <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} ref={allocRef} />
-          )}
-          {routeTab === 'relations' && !isCreate && uuid && (
-            <RelationsPanel key={uuid} id={uuid} ref={relationsRef} autoSave onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
-          )}
-        </React.Suspense>
+        <WorkspaceTabBoundary resetKey={routeTab} onRetry={retryTabs}>
+          <React.Suspense fallback={null}>
+            {routeTab === 'budget' && !isCreate && uuid && (
+              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} ref={budgetRef} />
+            )}
+            {routeTab === 'allocations' && !isCreate && uuid && (
+              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={OPEX_FINANCE_CONFIG} ref={allocRef} />
+            )}
+            {routeTab === 'relations' && !isCreate && uuid && (
+              <RelationsPanel key={uuid} id={uuid} ref={relationsRef} autoSave onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
+            )}
+          </React.Suspense>
+        </WorkspaceTabBoundary>
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

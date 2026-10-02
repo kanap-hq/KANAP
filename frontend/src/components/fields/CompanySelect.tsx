@@ -66,7 +66,7 @@ export default function CompanySelect({
           picker.remember([v]);
           onChange(v?.id || null);
         }}
-        getOptionLabel={(o) => o.name ?? ''}
+        getOptionLabel={(o) => picker.label(o, (c) => c.name ?? '')}
         disableClearable={disableClearable}
         renderInput={(params) => (
           <TextField

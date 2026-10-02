@@ -63,7 +63,7 @@ const BusinessProcessSelect = React.forwardRef<HTMLInputElement, BusinessProcess
         picker.remember([newValue]);
         onChange(newValue?.id || null);
       }}
-      getOptionLabel={(option) => option.name ?? ''}
+      getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
       renderOption={(props, option) => (
         <li {...props} key={option.id}>
           {option.name}

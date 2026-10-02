@@ -18,7 +18,8 @@ import {
 import { fieldResetSx } from '../theme/formSx';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import api from '../api';
-import { useLookupSearch } from '../hooks/useLookupPicker';
+import { narrowToText, useLookupSearch } from '../hooks/useLookupPicker';
+import LookupListPaper, { type LookupListPaperProps } from './fields/LookupListPaper';
 import { USERS_LOOKUP_ENDPOINT, type UserOption } from './fields/userLookup';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../config/ThemeContext';
@@ -129,9 +130,15 @@ export default function ShareDialog({
   const itemUrl = `${window.location.origin}${buildItemPath(itemType, refOrId)}`;
 
   // People searched as the user types, once the recipients list opens in an open dialog (names only).
+  // The field is never disabled while a search runs: a disabled field loses the focus, the list
+  // closes and the text typed is lost.
   const [listOpen, setListOpen] = React.useState(false);
   const search = useLookupSearch<User>({ endpoint: USERS_LOOKUP_ENDPOINT, open: open && listOpen, text: inputValue });
   const isLoading = listOpen && search.isFetching;
+  const listPaperProps = React.useMemo(
+    () => ({ moreResults: listOpen && search.hasMore }) as LookupListPaperProps,
+    [listOpen, search.hasMore],
+  );
 
   React.useEffect(() => {
     if (open) {
@@ -269,8 +276,13 @@ export default function ShareDialog({
               getOptionLabel={(option) =>
                 typeof option === 'string' ? option : formatName(option)
               }
-              // The server matched the names already.
-              filterOptions={(options) => options}
+              // The server matched the names; while the next page loads, the rows shown keep only
+              // the names that still match the text typed (no stale person picked by Enter).
+              filterOptions={(options) => narrowToText(options, search.pendingText, (option) => (
+                typeof option === 'string' ? option : formatName(option)
+              ))}
+              PaperComponent={LookupListPaper as React.JSXElementConstructor<React.HTMLAttributes<HTMLElement>>}
+              slotProps={{ paper: listPaperProps }}
               isOptionEqualToValue={(option, value) => {
                 if (typeof option === 'string' || typeof value === 'string') {
                   return option === value;
@@ -310,7 +322,6 @@ export default function ShareDialog({
                   }}
                 />
               )}
-              disabled={isLoading}
               loading={isLoading}
               noOptionsText={isLoading ? t('selects.loading') : t('share.typeEmailAddress')}
               autoHighlight

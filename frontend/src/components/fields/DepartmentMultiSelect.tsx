@@ -64,13 +64,13 @@ export default function DepartmentMultiSelect({
           picker.remember(next);
           onChange(next.map((department) => department.id));
         }}
-        getOptionLabel={(option) => option.name ?? ''}
+        getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
         filterSelectedOptions
         renderTags={(tagValue, getTagProps) => tagValue.map((option, index) => (
           <Chip
             {...getTagProps({ index })}
             key={option.id}
-            label={option.name}
+            label={picker.label(option, (o) => o.name ?? '')}
             size="small"
             sx={(theme) => ({
               height: 20,

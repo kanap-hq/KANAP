@@ -53,7 +53,8 @@ export default function UserMultiSelect({
   const options = React.useMemo(() => withMeFirst(picker.options, me, picker.searching), [picker.options, me, picker.searching]);
   const selected = picker.selected;
 
-  const formatName = (u: User) => formatUserName(u) ?? (picker.isPending(u.id) ? '…' : '');
+  // `…` while a chosen person's name loads, "Value no longer available" when it cannot.
+  const formatName = (u: User) => picker.label(u, (person) => formatUserName(person) ?? '');
 
   const control = (
     <Autocomplete

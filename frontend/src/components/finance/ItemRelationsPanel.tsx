@@ -20,9 +20,9 @@ import { useLookupPicker, type LookupScope } from '../../hooks/useLookupPicker';
  * The Relations tab of an OPEX or CAPEX line: projects, applications and
  * contracts it is linked to, contacts, websites and attachments. The line's
  * relations live in the React Query cache (`itemRelationsKey`), so coming back
- * to the tab shows them at once; each picker searches on the server as the
- * user types (useLookupPicker) instead of reading every project, application
- * or contract page by page.
+ * to the tab shows them at once, read again before they can be edited; each
+ * picker searches on the server as the user types (useLookupPicker) instead of
+ * reading every project, application or contract page by page.
  */
 
 export type RelationsPanelHandle = {
@@ -124,7 +124,7 @@ function RelationPicker({
       {...picker.autocomplete}
       options={picker.options}
       value={picker.selected}
-      getOptionLabel={(o) => o.name ?? ''}
+      getOptionLabel={(o) => picker.label(o, (row) => row.name ?? '')}
       onChange={(_, v) => {
         const next = (v as Named[]).map((o) => ({ id: o.id, name: o.name }));
         picker.remember(next);
@@ -135,7 +135,7 @@ function RelationPicker({
         <Chip
           {...getTagProps({ index })}
           key={option.id}
-          label={option.name}
+          label={picker.label(option, (row) => row.name ?? '')}
           sx={relationTagSx}
           onClick={() => window.open(config.href(option), '_self')}
           clickable
@@ -169,13 +169,18 @@ export default forwardRef<RelationsPanelHandle, Props>(function ItemRelationsPan
   const queryClient = useQueryClient();
   const readOnly = !hasLevel(resource, 'manager');
 
+  // Shown at once from the cache, and always read again when the tab opens: the links may have
+  // changed elsewhere (a contract's page links its lines).
   const relationsQuery = useQuery({
     queryKey: itemRelationsKey(kind, id),
     queryFn: ({ signal }) => fetchRelations(itemsApi, id, signal),
+    staleTime: 0,
   });
   const data = relationsQuery.data;
-  // Fields stay disabled until the line's relations are known (never an edit on an unknown set).
-  const loading = !data;
+  // Fields stay disabled until the line's relations are read for this visit: a set shown from the
+  // cache may be old, and a save replaces the whole set (`bulk-replace`). Only this first read
+  // counts: the reload after a save never disables a field the user is typing in.
+  const loading = !data || !relationsQuery.isFetchedAfterMount;
 
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);

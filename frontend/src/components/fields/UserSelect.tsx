@@ -84,7 +84,7 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
         picker.remember([newValue]);
         onChange(newValue?.id || null, newValue ?? null);
       }}
-      getOptionLabel={(option) => formatName(option)}
+      getOptionLabel={(option) => picker.label(option, formatName)}
       size={size}
       renderOption={(props, option) => (
         <React.Fragment key={option.id}>
