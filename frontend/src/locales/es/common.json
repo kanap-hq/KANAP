@@ -657,6 +657,43 @@
     "unavailable": "Valor ya no disponible",
     "elsewhere_one": "{{items}} tiene un cambio que espera su elección.",
     "elsewhere_other": "{{items}} tienen cambios que esperan su elección.",
-    "open": "Abrir {{item}}"
+    "open": "Abrir {{item}}",
+    "column": {
+      "title_one": "Otra persona modificó una columna que usted estaba editando",
+      "title_other": "Otra persona modificó {{count}} columnas que usted estaba editando",
+      "titleSelf_one": "Usted modificó una columna en otra ventana",
+      "titleSelf_other": "Usted modificó {{count}} columnas en otra ventana",
+      "hint": "Sus entradas en estas columnas esperan su elección. Se guardarán en cuanto haya elegido.",
+      "changedByAt": "{{name}} modificó esta columna a las {{time}} mientras usted la editaba.",
+      "changedByOn": "{{name}} modificó esta columna el {{date}} a las {{time}} mientras usted la editaba.",
+      "changedBy": "{{name}} modificó esta columna mientras usted la editaba.",
+      "changedAt": "Esta columna se modificó a las {{time}} mientras usted la editaba.",
+      "changedOn": "Esta columna se modificó el {{date}} a las {{time}} mientras usted la editaba.",
+      "changed": "Esta columna se modificó mientras usted la editaba.",
+      "changedByYouAt": "Usted modificó esta columna en otra ventana a las {{time}}.",
+      "changedByYouOn": "Usted modificó esta columna en otra ventana el {{date}} a las {{time}}.",
+      "changedByYou": "Usted modificó esta columna en otra ventana.",
+      "keepTheirs": "Recargar la columna",
+      "applyMine": "Sobrescribir"
+    },
+    "allocation": {
+      "field": "Asignación",
+      "title_one": "Otra persona modificó la asignación que usted estaba editando",
+      "title_other": "Otra persona modificó la asignación que usted estaba editando",
+      "titleSelf_one": "Usted modificó esta asignación en otra ventana",
+      "titleSelf_other": "Usted modificó esta asignación en otra ventana",
+      "hint": "Su asignación espera su elección. Se guardará en cuanto haya elegido.",
+      "changedByAt": "{{name}} modificó la asignación a las {{time}} mientras usted la editaba.",
+      "changedByOn": "{{name}} modificó la asignación el {{date}} a las {{time}} mientras usted la editaba.",
+      "changedBy": "{{name}} modificó la asignación mientras usted la editaba.",
+      "changedAt": "La asignación se modificó a las {{time}} mientras usted la editaba.",
+      "changedOn": "La asignación se modificó el {{date}} a las {{time}} mientras usted la editaba.",
+      "changed": "La asignación se modificó mientras usted la editaba.",
+      "changedByYouAt": "Usted modificó esta asignación en otra ventana a las {{time}}.",
+      "changedByYouOn": "Usted modificó esta asignación en otra ventana el {{date}} a las {{time}}.",
+      "changedByYou": "Usted modificó esta asignación en otra ventana.",
+      "keepTheirs": "Recargar la asignación",
+      "applyMine": "Sobrescribir"
+    }
   }
 }

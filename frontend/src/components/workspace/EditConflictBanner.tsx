@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Button, Link, Stack, Typography } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { StatusDot } from '../design/StatusDot';
@@ -11,6 +12,12 @@ import type { ConflictChoice, EditConflict } from '../../hooks/editConflicts';
  * was saving (plan planning/perf-scale, lot 3C, decision D3): one row per
  * field, who changed it and when, their value and the user's, "Keep their
  * value" or "Apply yours". Long texts show both versions side by side.
+ *
+ * `wording` names what changed: a field (lot 3C), a budget column, or a
+ * version's allocation (lots 3D and 3E). A column or an allocation is chosen
+ * as a whole: "Reload the column" (their values) or "Overwrite" (yours, sent
+ * again over theirs), "Marie Dupont changed this column at 14:02 while you
+ * were editing it." The choices map to the same `theirs` and `mine`.
  *
  * Generic: the page gives the field labels and, for values that are not
  * plain text (dates, enums), their display. Id values come with their names
@@ -36,7 +43,16 @@ export type EditConflictBannerProps = {
   currentUserId?: string | null;
   /** Called after the last choice, once the banner goes: the page focuses the field or the workspace. */
   returnFocus?: (field: string) => void;
+  /** What changed: a field (default), a budget column, or an allocation. */
+  wording?: ConflictWording;
+  /** Extra styles of the banner box (its margins fit a workspace's content column by default). */
+  sx?: SxProps<Theme>;
 };
+
+export type ConflictWording = 'field' | 'column' | 'allocation';
+
+/** The key of a banner text for the wording: `editConflict.<key>`, or `editConflict.column.<key>`. */
+const wordingKey = (wording: ConflictWording, key: string) => (wording === 'field' ? `editConflict.${key}` : `editConflict.${wording}.${key}`);
 
 const timeFormatters = new Map<string, Intl.DateTimeFormat>();
 
@@ -57,7 +73,15 @@ function sameDay(a: Date, b: Date): boolean {
  * "Marie Dupont changed this field at 14:02 while you were editing it." and its variants;
  * "You changed this field in another window at 14:02." when the change is the user's own.
  */
-export function conflictMessage(conflict: EditConflict, t: TFunction, locale: string, now = new Date(), currentUserId?: string | null): string {
+export function conflictMessage(
+  conflict: EditConflict,
+  t: TFunction,
+  locale: string,
+  now = new Date(),
+  currentUserId?: string | null,
+  wording: ConflictWording = 'field',
+): string {
+  const key = (name: string) => `common:${wordingKey(wording, name)}`;
   const self = !!currentUserId && conflict.changed_by?.id === currentUserId;
   const name = conflict.changed_by?.name;
   const at = conflict.changed_at ? new Date(conflict.changed_at) : null;
@@ -65,17 +89,17 @@ export function conflictMessage(conflict: EditConflict, t: TFunction, locale: st
   const time = when ? formatTime(when, locale) : '';
   if (when && !sameDay(when, now)) {
     const date = formatShortDate(when, locale);
-    if (self) return t('common:editConflict.changedByYouOn', { date, time });
+    if (self) return t(key('changedByYouOn'), { date, time });
     return name
-      ? t('common:editConflict.changedByOn', { name, date, time })
-      : t('common:editConflict.changedOn', { date, time });
+      ? t(key('changedByOn'), { name, date, time })
+      : t(key('changedOn'), { date, time });
   }
   if (when) {
-    if (self) return t('common:editConflict.changedByYouAt', { time });
-    return name ? t('common:editConflict.changedByAt', { name, time }) : t('common:editConflict.changedAt', { time });
+    if (self) return t(key('changedByYouAt'), { time });
+    return name ? t(key('changedByAt'), { name, time }) : t(key('changedAt'), { time });
   }
-  if (self) return t('common:editConflict.changedByYou');
-  return name ? t('common:editConflict.changedBy', { name }) : t('common:editConflict.changed');
+  if (self) return t(key('changedByYou'));
+  return name ? t(key('changedBy'), { name }) : t(key('changed'));
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -110,6 +134,7 @@ function ConflictRow({
   const { t, i18n } = useTranslation('common');
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const { fieldLabel, formatValue, isLongText, busy, currentUserId } = props;
+  const wording = props.wording ?? 'field';
   const show = (value: unknown, label: string | null, edited = false): { text: string; empty: boolean } => {
     if (label) return { text: label, empty: false };
     if (value == null || value === '') return { text: t('editConflict.empty'), empty: true };
@@ -134,7 +159,7 @@ function ConflictRow({
     >
       <Typography sx={{ fontSize: 13, fontWeight: 500, color: 'kanap.text.primary', lineHeight: 1.4 }}>{label}</Typography>
       <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', lineHeight: 1.5 }}>
-        {conflictMessage(conflict, t, locale, new Date(), currentUserId)}
+        {conflictMessage(conflict, t, locale, new Date(), currentUserId, wording)}
       </Typography>
       {long ? (
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 1.5, mt: 1 }}>
@@ -161,18 +186,18 @@ function ConflictRow({
           size="small"
           disabled={busy}
           onClick={() => onChoose(conflict.field, 'theirs')}
-          aria-label={`${t('editConflict.keepTheirs')}: ${label}`}
+          aria-label={`${t(wordingKey(wording, 'keepTheirs'))}: ${label}`}
         >
-          {t('editConflict.keepTheirs')}
+          {t(wordingKey(wording, 'keepTheirs'))}
         </Button>
         <Button
           variant="action"
           size="small"
           disabled={busy}
           onClick={() => onChoose(conflict.field, 'mine')}
-          aria-label={`${t('editConflict.applyMine')}: ${label}`}
+          aria-label={`${t(wordingKey(wording, 'applyMine'))}: ${label}`}
         >
-          {t('editConflict.applyMine')}
+          {t(wordingKey(wording, 'applyMine'))}
         </Button>
       </Stack>
     </Box>
@@ -183,9 +208,10 @@ export default function EditConflictBanner(props: EditConflictBannerProps) {
   const { t } = useTranslation('common');
   const titleId = React.useId();
   const { conflicts, onResolve, returnFocus, currentUserId } = props;
+  const wording = props.wording ?? 'field';
   // Every change the user's own (another window of theirs): "You changed …", not "Someone else …".
   const own = !!currentUserId && conflicts.every((conflict) => conflict.changed_by?.id === currentUserId);
-  const title = conflicts.length > 0 ? t(own ? 'editConflict.titleSelf' : 'editConflict.title', { count: conflicts.length }) : '';
+  const title = conflicts.length > 0 ? t(wordingKey(wording, own ? 'titleSelf' : 'title'), { count: conflicts.length }) : '';
   const choose = React.useCallback((field: string, choice: ConflictChoice) => {
     const last = conflicts.length === 1;
     onResolve(field, choice);
@@ -201,21 +227,24 @@ export default function EditConflictBanner(props: EditConflictBannerProps) {
         <Box
           role="region"
           aria-labelledby={titleId}
-          sx={{
-            mx: 2,
-            mt: 1,
-            px: 2,
-            py: 1.5,
-            bgcolor: 'kanap.bg.drawer',
-            border: '1px solid',
-            borderColor: 'kanap.border.default',
-            borderRadius: '8px',
-            // Several long texts must not push the line out of the screen: the rows scroll.
-            maxHeight: '40vh',
-            display: 'flex',
-            flexDirection: 'column',
-            flexShrink: 0,
-          }}
+          sx={[
+            {
+              mx: 2,
+              mt: 1,
+              px: 2,
+              py: 1.5,
+              bgcolor: 'kanap.bg.drawer',
+              border: '1px solid',
+              borderColor: 'kanap.border.default',
+              borderRadius: '8px',
+              // Several long texts must not push the line out of the screen: the rows scroll.
+              maxHeight: '40vh',
+              display: 'flex',
+              flexDirection: 'column',
+              flexShrink: 0,
+            },
+            ...(Array.isArray(props.sx) ? props.sx : props.sx ? [props.sx] : []),
+          ]}
         >
           <Stack direction="row" spacing={1} alignItems="center">
             <StatusDot color="warning.main" size={8} />
@@ -224,7 +253,7 @@ export default function EditConflictBanner(props: EditConflictBannerProps) {
             </Typography>
           </Stack>
           <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mt: 0.25, mb: 1.25, pl: 2 }}>
-            {t('editConflict.hint')}
+            {t(wordingKey(wording, 'hint'))}
           </Typography>
           <Box data-testid="edit-conflict-rows" sx={{ minHeight: 0, overflowY: 'auto' }}>
             {conflicts.map((conflict) => (

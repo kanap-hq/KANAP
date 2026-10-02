@@ -657,6 +657,43 @@
     "unavailable": "Valeur plus disponible",
     "elsewhere_one": "{{items}} a une modification qui attend votre choix.",
     "elsewhere_other": "{{items}} ont des modifications qui attendent votre choix.",
-    "open": "Ouvrir {{item}}"
+    "open": "Ouvrir {{item}}",
+    "column": {
+      "title_one": "Une autre personne a modifié une colonne que vous modifiiez",
+      "title_other": "Une autre personne a modifié {{count}} colonnes que vous modifiiez",
+      "titleSelf_one": "Vous avez modifié une colonne dans une autre fenêtre",
+      "titleSelf_other": "Vous avez modifié {{count}} colonnes dans une autre fenêtre",
+      "hint": "Vos saisies dans ces colonnes attendent votre choix. Elles seront enregistrées dès que vous aurez choisi.",
+      "changedByAt": "{{name}} a modifié cette colonne à {{time}} pendant que vous la modifiiez.",
+      "changedByOn": "{{name}} a modifié cette colonne le {{date}} à {{time}} pendant que vous la modifiiez.",
+      "changedBy": "{{name}} a modifié cette colonne pendant que vous la modifiiez.",
+      "changedAt": "Cette colonne a été modifiée à {{time}} pendant que vous la modifiiez.",
+      "changedOn": "Cette colonne a été modifiée le {{date}} à {{time}} pendant que vous la modifiiez.",
+      "changed": "Cette colonne a été modifiée pendant que vous la modifiiez.",
+      "changedByYouAt": "Vous avez modifié cette colonne dans une autre fenêtre à {{time}}.",
+      "changedByYouOn": "Vous avez modifié cette colonne dans une autre fenêtre le {{date}} à {{time}}.",
+      "changedByYou": "Vous avez modifié cette colonne dans une autre fenêtre.",
+      "keepTheirs": "Recharger la colonne",
+      "applyMine": "Écraser"
+    },
+    "allocation": {
+      "field": "Ventilation",
+      "title_one": "Une autre personne a modifié la ventilation que vous modifiiez",
+      "title_other": "Une autre personne a modifié la ventilation que vous modifiiez",
+      "titleSelf_one": "Vous avez modifié cette ventilation dans une autre fenêtre",
+      "titleSelf_other": "Vous avez modifié cette ventilation dans une autre fenêtre",
+      "hint": "Votre ventilation attend votre choix. Elle sera enregistrée dès que vous aurez choisi.",
+      "changedByAt": "{{name}} a modifié la ventilation à {{time}} pendant que vous la modifiiez.",
+      "changedByOn": "{{name}} a modifié la ventilation le {{date}} à {{time}} pendant que vous la modifiiez.",
+      "changedBy": "{{name}} a modifié la ventilation pendant que vous la modifiiez.",
+      "changedAt": "La ventilation a été modifiée à {{time}} pendant que vous la modifiiez.",
+      "changedOn": "La ventilation a été modifiée le {{date}} à {{time}} pendant que vous la modifiiez.",
+      "changed": "La ventilation a été modifiée pendant que vous la modifiiez.",
+      "changedByYouAt": "Vous avez modifié cette ventilation dans une autre fenêtre à {{time}}.",
+      "changedByYouOn": "Vous avez modifié cette ventilation dans une autre fenêtre le {{date}} à {{time}}.",
+      "changedByYou": "Vous avez modifié cette ventilation dans une autre fenêtre.",
+      "keepTheirs": "Recharger la ventilation",
+      "applyMine": "Écraser"
+    }
   }
 }

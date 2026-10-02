@@ -1194,6 +1194,12 @@
     "applyToAllFollow": "{{columns}} follow the same period.",
     "applyToAllOthers_one": "{{columns}} keeps its own period.",
     "applyToAllOthers_other": "{{columns}} keep their own period.",
-    "applyToAllFrozen": "Frozen columns never change."
+    "applyToAllFrozen": "Frozen columns never change.",
+    "conflict": {
+      "waiting": "Choose first, above, whether to reload this column or overwrite it.",
+      "yearTotal": "{{amount}} for the year",
+      "yearTotalLines_one": "{{amount}} for the year, {{count}} line",
+      "yearTotalLines_other": "{{amount}} for the year, {{count}} lines"
+    }
   }
 }

@@ -1194,6 +1194,12 @@
     "applyToAllFollow": "{{columns}} suivent la même période.",
     "applyToAllOthers_one": "{{columns}} garde sa propre période.",
     "applyToAllOthers_other": "{{columns}} gardent leur propre période.",
-    "applyToAllFrozen": "Les colonnes gelées ne changent jamais."
+    "applyToAllFrozen": "Les colonnes gelées ne changent jamais.",
+    "conflict": {
+      "waiting": "Choisissez d'abord, ci-dessus, de recharger cette colonne ou de l'écraser.",
+      "yearTotal": "{{amount}} sur l'année",
+      "yearTotalLines_one": "{{amount}} sur l'année, {{count}} ligne",
+      "yearTotalLines_other": "{{amount}} sur l'année, {{count}} lignes"
+    }
   }
 }

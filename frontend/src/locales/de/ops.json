@@ -1194,6 +1194,12 @@
     "applyToAllFollow": "{{columns}} folgen demselben Zeitraum.",
     "applyToAllOthers_one": "Für {{columns}} gilt weiterhin der eigene Zeitraum.",
     "applyToAllOthers_other": "Für {{columns}} gilt weiterhin der eigene Zeitraum.",
-    "applyToAllFrozen": "Eingefrorene Spalten ändern sich nie."
+    "applyToAllFrozen": "Eingefrorene Spalten ändern sich nie.",
+    "conflict": {
+      "waiting": "Wählen Sie zuerst oben, ob Sie diese Spalte neu laden oder überschreiben.",
+      "yearTotal": "{{amount}} für das Jahr",
+      "yearTotalLines_one": "{{amount}} für das Jahr, {{count}} Zeile",
+      "yearTotalLines_other": "{{amount}} für das Jahr, {{count}} Zeilen"
+    }
   }
 }

@@ -175,3 +175,32 @@ describe('EditConflictBanner', () => {
     expect(onOpen).toHaveBeenCalledWith('a');
   });
 });
+
+describe('EditConflictBanner for a budget column or an allocation (lots 3D, 3E)', () => {
+  beforeEach(async () => { await i18n.changeLanguage('fr'); });
+  afterEach(async () => { await i18n.changeLanguage('en'); });
+
+  it('names the column and offers to reload it or overwrite it', () => {
+    const { onResolve } = renderBanner(
+      [conflict({ field: 'planned', current: 'planned', mine: 'planned', labels: { base: null, current: '12 000 sur l\'année', mine: '15 000 sur l\'année' } })],
+      { wording: 'column', fieldLabel: () => 'Budget' },
+    );
+    const region = screen.getByRole('region', { name: 'Une autre personne a modifié une colonne que vous modifiiez' });
+    expect(within(region).getByText('Marie Dupont a modifié cette colonne à 14:02 pendant que vous la modifiiez.')).toBeInTheDocument();
+    expect(within(region).getByText('12 000 sur l\'année')).toBeInTheDocument();
+    fireEvent.click(within(region).getByRole('button', { name: 'Recharger la colonne: Budget' }));
+    expect(onResolve).toHaveBeenCalledWith('planned', 'theirs');
+    fireEvent.click(within(region).getByRole('button', { name: 'Écraser: Budget' }));
+    expect(onResolve).toHaveBeenCalledWith('planned', 'mine');
+  });
+
+  it('names the allocation, and says so when the change is the user\'s own', () => {
+    renderBanner(
+      [conflict({ field: 'allocations', current: 'x', mine: 'y', labels: { base: null, current: 'Effectif', mine: 'Manuel' }, changed_by: { id: 'me', name: 'Moi' } })],
+      { wording: 'allocation', fieldLabel: () => 'Ventilation', currentUserId: 'me' },
+    );
+    const region = screen.getByRole('region', { name: 'Vous avez modifié cette ventilation dans une autre fenêtre' });
+    expect(within(region).getByText('Vous avez modifié cette ventilation dans une autre fenêtre à 14:02.')).toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: 'Recharger la ventilation: Ventilation' })).toBeInTheDocument();
+  });
+});

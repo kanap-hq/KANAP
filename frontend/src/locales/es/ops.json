@@ -1194,6 +1194,12 @@
     "applyToAllFollow": "{{columns}} siguen el mismo periodo.",
     "applyToAllOthers_one": "{{columns}} conserva su propio periodo.",
     "applyToAllOthers_other": "{{columns}} conservan su propio periodo.",
-    "applyToAllFrozen": "Las columnas congeladas nunca cambian."
+    "applyToAllFrozen": "Las columnas congeladas nunca cambian.",
+    "conflict": {
+      "waiting": "Elija primero, arriba, si recarga esta columna o la sobrescribe.",
+      "yearTotal": "{{amount}} en el año",
+      "yearTotalLines_one": "{{amount}} en el año, {{count}} línea",
+      "yearTotalLines_other": "{{amount}} en el año, {{count}} líneas"
+    }
   }
 }
