@@ -25,25 +25,35 @@ vi.mock('../../../components/fields/AccountSelect', () => ({
 vi.mock('../../../components/fields/UserSelect', () => ({ default: () => null }));
 vi.mock('../../../components/fields/DateEUField', () => ({ default: () => null }));
 vi.mock('../../../components/fields/CostCenterSelect', () => ({
-  default: (p: { value: string | null; selectable?: string; onChange: (v: string | null) => void }) => (
-    <div data-testid="cost-center-select" data-selectable={p.selectable}>
+  default: (p: {
+    value: string | null;
+    selectable?: string;
+    selectedOption?: { code: string } | null;
+    onChange: (v: string | null, node: unknown) => void;
+  }) => (
+    <div data-testid="cost-center-select" data-selectable={p.selectable} data-known={p.selectedOption?.code ?? ''}>
       {p.value ?? ''}
-      <button type="button" onClick={() => p.onChange('cc-2')}>pick cost center</button>
+      <button type="button" onClick={() => p.onChange('cc-2', { id: 'cc-2', company_id: 'company-2' })}>pick cost center</button>
     </div>
   ),
 }));
-// Two cost centers, one per company.
+// Two cost centers, one per company. The node hook as the drawer calls it: the detail's node when it
+// names the id, otherwise the tree's (each such read recorded: it would load the tree).
+const treeReads = vi.hoisted(() => ({ ids: [] as string[] }));
 vi.mock('../../../hooks/useCostCenterTree', () => {
   const node = (id: string, company_id: string, company_name: string) => ({
     id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id, company_name,
-    owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null, sort_order: 0, depth: 0, path: id, path_ids: [id],
+    owner_user_id: null, owner_name: null, status: 'enabled', depth: 0, path: id, path_ids: [id],
   });
-  const nodes = [node('cc-1', 'company-1', 'First company'), node('cc-2', 'company-2', 'Second company')];
-  const tree = {
-    ready: true, nodes, byId: new Map(nodes.map((n) => [n.id, n])), hasAny: true,
-    descendantIds: (id: string) => new Set([id]),
+  const byId = new Map([node('cc-1', 'company-1', 'First company'), node('cc-2', 'company-2', 'Second company')].map((n) => [n.id, n]));
+  return {
+    useCostCenterNode: (id: string | null, known?: { id: string } | null) => {
+      if (!id) return null;
+      if (known?.id === id) return known;
+      treeReads.ids.push(id);
+      return byId.get(id) ?? null;
+    },
   };
-  return { useCostCenterTree: () => tree };
 });
 vi.mock('../../../components/fields/AnalyticsCategorySelect', () => ({
   default: (p: { axisId: string; label?: string; value: string | null; onChange: (v: string | null) => void }) => (
@@ -185,7 +195,19 @@ describe('CapexPropertiesDrawer cost center and run or build', () => {
     const onCostCenterChange = vi.fn();
     renderDrawer('edit', { onCostCenterChange });
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
-    expect(onCostCenterChange).toHaveBeenCalledWith('cc-2');
+    expect(onCostCenterChange).toHaveBeenCalledWith('cc-2', { id: 'cc-2', company_id: 'company-2' });
+  });
+
+  it("reads the line's cost center from the detail: label and company without the tree", () => {
+    treeReads.ids = [];
+    const detail = {
+      id: 'cc-9', code: 'CC-9', name: 'From the detail', kind: 'cost_center' as const, status: 'enabled' as const,
+      company_id: 'company-9', company_name: 'Detail company', owner_user_id: null, owner_name: null,
+    };
+    renderDrawer('edit', { costCenterId: 'cc-9', payingCompanyId: 'company-1', references: { cost_center: detail } });
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-known', 'CC-9');
+    expect(screen.getByText('capex.fields.costCenterCompanyHint')).toBeInTheDocument();
+    expect(treeReads.ids).toEqual([]);
   });
 
   it('says whose cost center it is when the paying company differs, and only then', () => {

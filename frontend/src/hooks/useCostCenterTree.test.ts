@@ -11,8 +11,6 @@ function node(partial: Partial<CostCenterNode> & Pick<CostCenterNode, 'id' | 'co
     owner_user_id: null,
     owner_name: null,
     status: 'enabled',
-    disabled_at: null,
-    sort_order: 0,
     depth: 0,
     path: partial.name,
     path_ids: [partial.id],

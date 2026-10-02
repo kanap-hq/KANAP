@@ -16,7 +16,8 @@ import { STATUS_ENABLED, StatusValue } from '../../../constants/status';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { isoToLocalDateInput, localDateInputToEndOfDayIso } from '../../../lib/datetime';
 import { useLocale } from '../../../i18n/useLocale';
-import { useCostCenterTree } from '../../../hooks/useCostCenterTree';
+import { useCostCenterNode } from '../../../hooks/useCostCenterTree';
+import type { CostCenterNode } from '../../../services/costCenters';
 import { useAnalyticsAxes } from '../../../hooks/useAnalyticsAxes';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { matching, type ItemReferences } from '../../../components/finance/itemReferences';
@@ -46,7 +47,8 @@ type Props = {
   onAccountChange: (next: string) => void;
   onCurrencyChange: (next: string) => void;
   onAnalyticsValueChange: (axisId: string, next: string | null) => void;
-  onCostCenterChange: (next: string) => void;
+  /** `node`: the picked node (from the tree the picker loaded), null when cleared. */
+  onCostCenterChange: (next: string, node: CostCenterNode | null) => void;
   onRunBuildChange: (next: RunBuild | '') => void;
   onEffectiveStartChange: (next: string) => void;
   onDisabledAtChange?: (next: string | null) => void;
@@ -117,8 +119,7 @@ export default function SpendPropertiesDrawer({
   }, [currency, currencyOptions]);
 
   // A paying company other than the cost center's is kept; the hint only says so.
-  const costCenterTree = useCostCenterTree();
-  const costCenter = costCenterId ? costCenterTree.byId.get(costCenterId) : undefined;
+  const costCenter = useCostCenterNode(costCenterId || null, references?.cost_center);
   const costCenterHint = costCenter?.company_id && payingCompanyId && costCenter.company_id !== payingCompanyId
     ? t('opex.fields.costCenterCompanyHint', { company: costCenter.company_name ?? '' })
     : undefined;
@@ -141,7 +142,8 @@ export default function SpendPropertiesDrawer({
               hideLabel
               selectable="cost_centers"
               value={costCenterId || null}
-              onChange={(v) => onCostCenterChange(v ?? '')}
+              selectedOption={matching(references?.cost_center, costCenterId)}
+              onChange={(v, node) => onCostCenterChange(v ?? '', node)}
               disabled={disabled}
             />
           </Box>

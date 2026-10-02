@@ -83,7 +83,7 @@ const Y = new Date().getFullYear();
 function node(id: string, patch: Partial<CostCenterNode>): CostCenterNode {
   return {
     id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id: 'co-1', company_name: 'Company',
-    owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null, sort_order: 0, depth: 0, path: id, path_ids: [id],
+    owner_user_id: null, owner_name: null, status: 'enabled', depth: 0, path: id, path_ids: [id],
     ...patch,
   };
 }

@@ -6,7 +6,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { useCostCenterTree } from '../../hooks/useCostCenterTree';
-import { costCenterLabel, type CostCenterNode } from '../../services/costCenters';
+import { costCenterLabel, type CostCenterNode, type CostCenterRef } from '../../services/costCenters';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
@@ -24,6 +24,11 @@ export type CostCenterSelectProps = {
   label?: string;
   value: string | null | undefined;
   onChange: (id: string | null, node: CostCenterNode | null) => void;
+  /**
+   * The chosen node as the caller already knows it (a line's `references.cost_center`): shown
+   * without loading the tree, which then loads only when the list is opened.
+   */
+  selectedOption?: CostCenterRef | null;
   selectable?: CostCenterSelectable;
   /** Nodes left out of the list (e.g. a node's own subtree when picking its parent). */
   excludeIds?: ReadonlySet<string> | string[];
@@ -38,6 +43,11 @@ export type CostCenterSelectProps = {
 };
 
 export const COST_CENTERS_PAGE = '/master-data/cost-centers';
+
+/** A known node as the select's value until the tree loads: only its id and label are read then. */
+function knownAsNode(known: CostCenterRef): CostCenterNode {
+  return { ...known, parent_id: null, depth: 0, path: known.name, path_ids: [known.id] };
+}
 
 function matches(node: CostCenterNode, needle: string): boolean {
   return (
@@ -103,6 +113,7 @@ export default function CostCenterSelect({
   label: labelProp,
   value,
   onChange,
+  selectedOption,
   selectable = 'cost_centers',
   excludeIds,
   disabled,
@@ -117,7 +128,12 @@ export default function CostCenterSelect({
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.costCenter');
   const naked = hideLabel || label === '';
-  const tree = useCostCenterTree();
+  // The tree (about 90 KB on a large tenant) loads when the list is first opened or focused, or
+  // when the value cannot be named otherwise; a value the caller knows is shown without it.
+  const [opened, setOpened] = React.useState(false);
+  const known = value && selectedOption?.id === value ? selectedOption : null;
+  const needsTree = opened || (!!value && !known);
+  const tree = useCostCenterTree({ enabled: needsTree });
 
   const excluded = React.useMemo(() => {
     if (!excludeIds) return null;
@@ -140,9 +156,11 @@ export default function CostCenterSelect({
     [selectable, value],
   );
 
-  const selected = (value && tree.byId.get(value)) || null;
+  const selectedNode = value ? tree.byId.get(value) : undefined;
+  const fallback = React.useMemo(() => (known && !selectedNode ? knownAsNode(known) : null), [known, selectedNode]);
+  const selected = selectedNode ?? fallback;
   const hasPickable = React.useMemo(() => options.some(isPickable), [isPickable, options]);
-  const loading = !tree.ready;
+  const loading = needsTree && !tree.ready;
   const footer = tree.ready && !tree.isError && options.length > 0 && !hasPickable && selectable === 'cost_centers'
     ? <NoCostCenterLine />
     : null;
@@ -151,6 +169,8 @@ export default function CostCenterSelect({
     <Autocomplete<CostCenterNode, false, boolean, false>
       options={options}
       value={selected}
+      onOpen={() => setOpened(true)}
+      onFocus={() => setOpened(true)}
       onChange={(_, next) => {
         // Disabled options are not clickable in a browser; the guard keeps any other path honest.
         if (next && !isPickable(next)) return;

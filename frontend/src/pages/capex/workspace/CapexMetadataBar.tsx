@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { PortfolioMetadataItem } from '../../portfolio/workspace/PortfolioMetadataBar';
 import MetadataUserPicker from '../../../components/workspace/MetadataUserPicker';
 import BudgetHolderMetadataItem from '../../../components/workspace/BudgetHolderMetadataItem';
+import type { CostCenterRef } from '../../../services/costCenters';
 import { drawerMenuItemSx } from '../../../theme/formSx';
 import { STATUS_ENABLED, STATUS_DISABLED, StatusValue } from '../../../constants/status';
 import { StatusDot } from '../../../components/design';
@@ -20,6 +21,8 @@ type Props = {
   ownerBizName?: string | null;
   /** The line's current cost center: its budget holder shows after the owners. */
   costCenterId?: string | null;
+  /** That cost center from the detail (`references.cost_center`): its budget holder without the tree. */
+  costCenter?: CostCenterRef | null;
   disabled?: boolean;
   onStatusChange: (next: StatusValue) => void;
   onPriorityChange: (next: CapexPriority) => void;
@@ -35,6 +38,7 @@ export default function CapexMetadataBar({
   ownerItName = null,
   ownerBizName = null,
   costCenterId = null,
+  costCenter = null,
   disabled = false,
   onStatusChange,
   onPriorityChange,
@@ -103,7 +107,7 @@ export default function CapexMetadataBar({
         />
       </PortfolioMetadataItem>
 
-      <BudgetHolderMetadataItem costCenterId={costCenterId} />
+      <BudgetHolderMetadataItem costCenterId={costCenterId} known={costCenter} />
 
       <Popover
         open={Boolean(statusAnchor)}

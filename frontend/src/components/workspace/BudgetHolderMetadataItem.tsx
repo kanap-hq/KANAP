@@ -2,24 +2,27 @@ import { Avatar, Box, Tooltip } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { PortfolioMetadataItem } from '../../pages/portfolio/workspace/PortfolioMetadataBar';
 import { metaItemSx, taskDetailAvatarSizes } from '../../pages/tasks/theme/taskDetailTokens';
-import { useCostCenterTree } from '../../hooks/useCostCenterTree';
+import { useCostCenterNode } from '../../hooks/useCostCenterTree';
+import type { CostCenterRef } from '../../services/costCenters';
 import { getInitials } from '../../utils/userDisplay';
 
 type Props = {
   /** The line's current cost center. */
   costCenterId: string | null | undefined;
+  /** That cost center as the line's detail names it: read instead of loading the tree. */
+  known?: CostCenterRef | null;
 };
 
 /**
  * The budget holder of an OPEX or CAPEX line: the owner of its cost center,
- * read from the tree (nothing is stored on the line), so it follows the line's
- * cost center and the cost center's owner. Read only; rendered only when the
+ * read from the line's detail, or from the tree once the line names another
+ * cost center (nothing is stored on the line), so it follows the line's cost
+ * center and the cost center's owner. Read only; rendered only when the
  * line has a cost center whose budget holder is set.
  */
-export default function BudgetHolderMetadataItem({ costCenterId }: Props) {
+export default function BudgetHolderMetadataItem({ costCenterId, known = null }: Props) {
   const { t } = useTranslation(['ops']);
-  const { byId } = useCostCenterTree({ enabled: !!costCenterId });
-  const node = costCenterId ? byId.get(costCenterId) : undefined;
+  const node = useCostCenterNode(costCenterId, known);
   if (!node?.owner_user_id) return null;
   const name = node.owner_name || '';
 

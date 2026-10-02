@@ -34,7 +34,6 @@ import SendLinkButton from '../../components/workspace/SendLinkButton';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import CapexMetadataBar, { CapexPriority } from './workspace/CapexMetadataBar';
 import CapexPropertiesDrawer, { CapexInvestmentType, CapexPpeType, RunBuild } from './workspace/CapexPropertiesDrawer';
-import { useCostCenterTree } from '../../hooks/useCostCenterTree';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
@@ -46,8 +45,9 @@ import { fetchCapexRelationsCount } from '../../utils/workspaceTabCounts';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { isoToLocalDateInput } from '../../lib/datetime';
-import { analyticsValueOptions, itemReferences, ownerName } from '../../components/finance/itemReferences';
+import { analyticsValueOptions, itemReferences, matching, ownerName } from '../../components/finance/itemReferences';
 import type { ItemAnalyticsValue } from '../../services/analytics';
+import type { CostCenterNode } from '../../services/costCenters';
 
 /** The list this workspace belongs to (its saved list contexts). */
 
@@ -327,15 +327,14 @@ export default function CapexItemPage() {
   // A cost center picked while the paying company is empty brings its company, so the
   // account picker opens on that company's chart of accounts. The company keeps following
   // the cost center until the user picks a company or an account.
-  const costCenterTree = useCostCenterTree();
-  const pickCreateCostCenter = React.useCallback((costCenterId: string) => {
-    const companyId = costCenterId ? costCenterTree.byId.get(costCenterId)?.company_id : null;
+  const pickCreateCostCenter = React.useCallback((costCenterId: string, node: CostCenterNode | null) => {
+    const companyId = costCenterId ? node?.company_id : null;
     const follow = !!companyId && (
       !createForm.paying_company_id || (createCompanyFromCostCenter && !createForm.account_id)
     );
     updateCreateForm({ cost_center_id: costCenterId, ...(follow && companyId ? { paying_company_id: companyId } : {}) });
     if (follow) setCreateCompanyFromCostCenter(true);
-  }, [costCenterTree, createCompanyFromCostCenter, createForm.account_id, createForm.paying_company_id, updateCreateForm]);
+  }, [createCompanyFromCostCenter, createForm.account_id, createForm.paying_company_id, updateCreateForm]);
 
   const [createAccountCoaId, setCreateAccountCoaId] = React.useState<string | null>(null);
   const [createCompanyCoaId, setCreateCompanyCoaId] = React.useState<string | null>(null);
@@ -946,6 +945,7 @@ export default function CapexItemPage() {
             ownerItId={form.owner_it_id || null}
             ownerBizId={form.owner_business_id || null}
             costCenterId={form.cost_center_id || null}
+            costCenter={matching(references.cost_center, form.cost_center_id)}
             onStatusChange={handleStatusChange}
             onPriorityChange={(v) => void patchNow({ priority: v })}
             onOwnerItChange={(v) => void patchNow({ owner_it_id: (v || '') as string })}

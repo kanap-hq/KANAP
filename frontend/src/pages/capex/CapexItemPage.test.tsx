@@ -46,7 +46,7 @@ vi.mock('./workspace/CapexPropertiesDrawer', () => ({
   default: (props: {
     mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onAnalyticsValueChange: (axisId: string, v: string | null) => void;
-    onCostCenterChange: (v: string) => void; onRunBuildChange: (v: string) => void;
+    onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void; onRunBuildChange: (v: string) => void;
     analyticsValues: Record<string, string | null>;
   }) => (
     <div
@@ -60,25 +60,14 @@ vi.mock('./workspace/CapexPropertiesDrawer', () => ({
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'category-1')}>pick category</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', null)}>clear category</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-nature', 'category-2')}>pick nature value</button>
-      <button type="button" onClick={() => props.onCostCenterChange('cc-2')}>pick cost center</button>
-      <button type="button" onClick={() => props.onCostCenterChange('cc-3')}>pick third cost center</button>
-      <button type="button" onClick={() => props.onCostCenterChange('')}>clear cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-2', { id: 'cc-2', company_id: 'company-2' })}>pick cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-3', { id: 'cc-3', company_id: 'company-3' })}>pick third cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('', null)}>clear cost center</button>
       <button type="button" onClick={() => props.onRunBuildChange('run')}>pick run</button>
       <button type="button" onClick={() => props.onRunBuildChange('')}>clear run or build</button>
     </div>
   ),
 }));
-// Two cost centers, in the second and the third company.
-vi.mock('../../hooks/useCostCenterTree', () => {
-  const node = (id: string, company_id: string) => ({
-    id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id,
-    company_name: company_id, owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null,
-    sort_order: 0, depth: 0, path: id, path_ids: [id],
-  });
-  const nodes = [node('cc-2', 'company-2'), node('cc-3', 'company-3')];
-  const tree = { ready: true, nodes, byId: new Map(nodes.map((n) => [n.id, n])), hasAny: true, descendantIds: (id: string) => new Set([id]) };
-  return { useCostCenterTree: () => tree };
-});
 vi.mock('./workspace/CapexMetadataBar', () => ({
   default: ({ onStatusChange }: { onStatusChange: (status: string) => void }) => (
     <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>

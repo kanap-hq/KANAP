@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import CostCenterSelect from '../fields/CostCenterSelect';
-import { useCostCenterTree, type CostCenterTree } from '../../hooks/useCostCenterTree';
+import { useCostCenterCount, useCostCenterTree, type CostCenterTree } from '../../hooks/useCostCenterTree';
 import { useAnalyticsAxes, type AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { getAnalyticsValue } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
@@ -69,7 +69,10 @@ export type BudgetReportFilterOptions = {
 };
 
 export type BudgetReportFilterState = {
+  /** Loaded only when the address names a node or the picker was opened (otherwise empty, not ready). */
   tree: CostCenterTree;
+  /** The tenant has a node: the cost center picker shows (known from a count, without the tree). */
+  hasCostCenters: boolean;
   /** The node in the address, once the tree knows it. */
   costCenterId: string | null;
   /** The address names a node the tree failed to load or does not hold: the report shows no line. */
@@ -115,10 +118,14 @@ const filterNoticeLinkSx = { fontSize: 'inherit', verticalAlign: 'baseline' } as
  */
 export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; years?: readonly number[] }): BudgetReportFilterState {
   const { t } = useTranslation('ops');
-  const tree = useCostCenterTree();
   const analyticsAxes = useAnalyticsAxes();
   const [params, setParams] = useSearchParams();
   const rawCostCenter = params.get(COST_CENTER_PARAM) || null;
+  // The tree only for an address that names a node (its subtree and its label); the picker loads
+  // it when opened. Otherwise whether to show the picker comes from the count.
+  const tree = useCostCenterTree({ enabled: rawCostCenter != null });
+  const costCenterCount = useCostCenterCount({ enabled: rawCostCenter == null });
+  const hasCostCenters = tree.hasAny || (costCenterCount.count ?? 0) > 0;
   const rawRunBuild = params.get(RUN_BUILD_PARAM);
   const rawAnalytics = params.get(ANALYTICS_PARAM);
   const runBuild = RUN_BUILD_FILTERS.includes(rawRunBuild as RunBuildFilter) ? (rawRunBuild as RunBuildFilter) : null;
@@ -207,6 +214,7 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
   return useMemo(
     () => ({
       tree,
+      hasCostCenters,
       costCenterId,
       costCenterMissing,
       runBuild,
@@ -221,7 +229,7 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
       options,
     }),
     [
-      tree, costCenterId, costCenterMissing, runBuild, analyticsAxes, analytics, analyticsMissing,
+      tree, hasCostCenters, costCenterId, costCenterMissing, runBuild, analyticsAxes, analytics, analyticsMissing,
       setCostCenterId, setRunBuild, setAnalyticsValue, clearAnalytics, queryFilters, options,
     ],
   );
@@ -296,7 +304,7 @@ function AnalyticsValueSelect({
  */
 export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterState }) {
   const { t } = useTranslation(['ops', 'common']);
-  const showCostCenter = filters.tree.hasAny;
+  const showCostCenter = filters.hasCostCenters;
   const showRunBuild = filters.runBuild != null || filters.options.hasRunBuild;
   const { analyticsAxes, analytics, options } = filters;
   const analyticsFilters = useMemo<AnalyticsDimensionFilter[]>(() => {
