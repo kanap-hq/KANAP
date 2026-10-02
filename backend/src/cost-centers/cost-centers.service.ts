@@ -5,7 +5,7 @@ import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { parsePagination } from '../common/pagination';
 import { isActiveAt, parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
 import { COST_CENTER_KINDS, CostCenterKind } from './cost-center.entity';
-import { CostCenterTreeNode, loadCostCenterTree } from './cost-center-tree.util';
+import { CostCenterOutline, CostCenterTreeNode, loadCostCenterTree, toCostCenterOutline } from './cost-center-tree.util';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 
 /** Every call runs in the caller's tenant transaction; there is no fallback manager. */
@@ -341,8 +341,17 @@ export class CostCentersService {
 
   // Reads ------------------------------------------------------------------
 
-  async tree(ctx: CostCenterContext): Promise<{ items: CostCenterTreeNode[] }> {
-    return { items: await loadCostCenterTree(ctx.manager, ctx.tenantId) };
+  async tree(ctx: CostCenterContext): Promise<CostCenterOutline> {
+    return toCostCenterOutline(await loadCostCenterTree(ctx.manager, ctx.tenantId));
+  }
+
+  /** How many nodes the tenant has: whether a report offers the cost center filter, without the tree. */
+  async count(ctx: CostCenterContext): Promise<{ count: number }> {
+    const [row] = await ctx.manager.query(
+      `SELECT count(*)::int AS count FROM cost_centers WHERE tenant_id = $1`,
+      [ctx.tenantId],
+    );
+    return { count: Number(row?.count ?? 0) };
   }
 
   async list(query: any, ctx: CostCenterContext) {

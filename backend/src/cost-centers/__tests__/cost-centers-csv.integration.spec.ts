@@ -5,6 +5,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { COST_CENTER_CSV_HEADERS } from '../cost-centers-csv.service';
 import { context, seedCompany, seedLine, seedTenant, seedUser, services, withRollback } from './cost-center-test-helpers';
+import { loadCostCenterTree } from '../cost-center-tree.util';
 
 // The cost center CSV: any row order imports (parents resolved in a second
 // pass), the whole resulting tree is checked before anything is written, row
@@ -50,7 +51,7 @@ async function testChildrenBeforeParents() {
     const done = await csv.importCsv({ file: file(lines), dryRun: false }, ctx);
     assert.equal(done.ok, true, JSON.stringify(done.errors));
     assert.equal(done.inserted, 5);
-    const { items } = await svc.tree(ctx);
+    const items = await loadCostCenterTree(runner.manager, tenantId);
     assert.deepEqual(items.map((node) => [node.code, node.depth]), [['GRP', 0], ['IT', 1], ['IT-100', 2], ['IT-200', 2], ['LG-10', 0]]);
     const infra = items.find((node) => node.code === 'IT-100')!;
     assert.equal(infra.path, 'Group IT › IT department › Infrastructure');
@@ -72,7 +73,7 @@ async function testChildrenBeforeParents() {
       dryRun: false,
     }, ctx);
     assert.deepEqual([moved.ok, moved.inserted, moved.updated], [true, 1, 1]);
-    const logistics = (await svc.tree(ctx)).items.find((node) => node.code === 'LG-10')!;
+    const logistics = (await loadCostCenterTree(runner.manager, tenantId)).find((node) => node.code === 'LG-10')!;
     assert.equal(logistics.path, 'Logistics › Logistics IT');
   });
 }

@@ -106,6 +106,54 @@ export function buildCostCenterTree(rows: CostCenterTreeRow[], now: Date = new D
   return out;
 }
 
+/** One node of `GET /cost-centers/tree`. */
+export interface CostCenterOutlineNode {
+  id: string;
+  code: string;
+  name: string;
+  kind: CostCenterKind;
+  parent_id: string | null;
+  company_id: string | null;
+  owner_user_id: string | null;
+  /** The effective status, as in the tree. */
+  status: 'enabled' | 'disabled';
+}
+
+/**
+ * The tree as the item forms, the report filters and the cost centers page read
+ * it (`GET /cost-centers/tree`): the nodes in tree order, and each company and
+ * owner name once, by id. Depth, path and ancestors follow from the order and
+ * `parent_id` (a node whose parent comes before it hangs below it, any other is
+ * a root, as in `buildCostCenterTree`): the client derives them. About half the
+ * bytes of the full nodes on 300 nodes, where the paths and ancestor ids weighed
+ * most.
+ */
+export interface CostCenterOutline {
+  nodes: CostCenterOutlineNode[];
+  companies: Record<string, string>;
+  owners: Record<string, string>;
+}
+
+export function toCostCenterOutline(tree: CostCenterTreeNode[]): CostCenterOutline {
+  const companies: Record<string, string> = {};
+  const owners: Record<string, string> = {};
+  const nodes = tree.map((node) => {
+    if (node.company_id && node.company_name != null) companies[node.company_id] = node.company_name;
+    if (node.owner_user_id && node.owner_name != null) owners[node.owner_user_id] = node.owner_name;
+    return {
+      id: node.id,
+      code: node.code,
+      name: node.name,
+      kind: node.kind,
+      parent_id: node.parent_id,
+      company_id: node.company_id,
+      owner_user_id: node.owner_user_id,
+      status: node.status,
+    };
+  });
+  return { nodes, companies, owners };
+}
+
 /** The tenant's whole tree in tree order, with company and owner names. */
 export async function loadCostCenterTree(manager: EntityManager, tenantId: string): Promise<CostCenterTreeNode[]> {
   const rows: CostCenterTreeRow[] = await manager.query(
