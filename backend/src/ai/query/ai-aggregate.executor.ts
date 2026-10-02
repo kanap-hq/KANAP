@@ -51,9 +51,8 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { resolveAiEntityRegistry } from './registries';
-import { getSpendSummaryFieldValue, resolveFteField } from '../../spend/spend-summary.builder';
-import { formatCents, toCents } from '../../common/amount';
-import { Decimal, divRoundHalfAway } from '../../common/decimal';
+import { resolveFteField } from '../../spend/spend-summary.builder';
+import type { AggregateOrderSpec, AggregateSpec } from '../../common/list-engine/list-aggregate';
 
 /** Connection fields grouped on their effective values (see aggregateConnectionsByEffectiveRisk). */
 const CONNECTION_EFFECTIVE_RISK_GROUPS = new Set(['criticality', 'data_class', 'contains_pii']);
@@ -410,73 +409,6 @@ function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: str
 
 type BudgetValueGroup = { key: string | null; value: number | null; unknown?: number };
 
-/** Largest value first (smallest for min), groups without a value last, then by key. */
-function sortValueGroups<T extends BudgetValueGroup>(groups: T[], fn: AiAggregateFunction): T[] {
-  return groups.sort((a, b) => {
-    const av = a.value;
-    const bv = b.value;
-    if (av == null && bv == null) return (a.key ?? '').localeCompare(b.key ?? '');
-    if (av == null) return 1;
-    if (bv == null) return -1;
-    if (av !== bv) {
-      return fn === 'min' ? av - bv : bv - av;
-    }
-    return (a.key ?? '').localeCompare(b.key ?? '');
-  });
-}
-
-/**
- * An FTE metric of the OPEX and CAPEX aggregates: exact decimal arithmetic on
- * the lines' FTE (2 decimals each, never through cents of money), and per group
- * `unknown`, the lines whose column has no quantity × price lines, left out of the value. A group
- * of unknown lines only has a null value.
- */
-function aggregateFteGroups(rows: any[], groupGrid: string, metricGrid: string, fn: AiAggregateFunction): BudgetValueGroup[] {
-  type FteBucket = { key: string | null; sum: Decimal; count: number; unknown: number; min: Decimal | null; max: Decimal | null };
-  const buckets = new Map<string, FteBucket>();
-  for (const row of rows) {
-    const rawKey = getSpendSummaryFieldValue(row, groupGrid);
-    const key = rawKey == null || rawKey === '' ? null : String(rawKey);
-    const bucketKey = key ?? '__NULL__';
-    const bucket = buckets.get(bucketKey) ?? { key, sum: Decimal.ZERO, count: 0, unknown: 0, min: null, max: null };
-    buckets.set(bucketKey, bucket);
-    const raw = getSpendSummaryFieldValue(row, metricGrid);
-    if (typeof raw !== 'number' || !Number.isFinite(raw)) {
-      bucket.unknown += 1;
-      continue;
-    }
-    const value = Decimal.from(raw);
-    bucket.sum = bucket.sum.add(value);
-    bucket.count += 1;
-    if (bucket.min == null || value.cmp(bucket.min) < 0) bucket.min = value;
-    if (bucket.max == null || value.cmp(bucket.max) > 0) bucket.max = value;
-  }
-  const toNumber = (value: Decimal | null) => (value == null ? null : Number(value.toString()));
-  return Array.from(buckets.values()).map((bucket) => {
-    let value: number | null = null;
-    if (bucket.count > 0) {
-      switch (fn) {
-        case 'sum':
-          value = toNumber(bucket.sum);
-          break;
-        case 'avg':
-          // Rounded once to 2 decimals, like the line values.
-          value = toNumber(bucket.sum.divRound(bucket.count, 2));
-          break;
-        case 'min':
-          value = toNumber(bucket.min);
-          break;
-        case 'max':
-          value = toNumber(bucket.max);
-          break;
-        default:
-          value = null;
-      }
-    }
-    return { key: bucket.key, value, unknown: bucket.unknown };
-  });
-}
-
 function normalizeAggregateValue(value: any, metricType: AiAggregateMetricType): number | string | null {
   if (value == null) return null;
   if (metricType === 'number') {
@@ -677,42 +609,6 @@ export class AiAggregateExecutor {
         ids,
         total: typeof result.total === 'number' ? result.total : ids.length,
         scope: scoped.scope,
-      };
-    }
-
-    if (entityType === 'capex_items') {
-      const result = await this.capexItems.summaryIds(
-        {
-          q,
-          limit: AGGREGATE_ID_COLLECTION_LIMIT,
-          filters: adaptedFilters,
-          includeDisabled: true,
-        },
-        { manager: context.manager },
-      );
-      const ids = result.ids || [];
-      return {
-        ids,
-        total: typeof result.total === 'number' ? result.total : ids.length,
-        scope: null,
-      };
-    }
-
-    if (entityType === 'spend_items') {
-      const result = await this.spendItems.summaryIds(
-        {
-          q,
-          limit: AGGREGATE_ID_COLLECTION_LIMIT,
-          filters: adaptedFilters,
-          includeDisabled: true,
-        },
-        { manager: context.manager },
-      );
-      const ids = result.ids || [];
-      return {
-        ids,
-        total: typeof result.total === 'number' ? result.total : ids.length,
-        scope: null,
       };
     }
 
@@ -1229,107 +1125,56 @@ export class AiAggregateExecutor {
     });
   }
 
-  /** OPEX and CAPEX: rows of every id (no page cap), grouped and measured with the list engine's field values. */
-  private async aggregateBudgetSummaryByIds(
+  /**
+   * OPEX and CAPEX: one aggregate statement of the list engine
+   * (`budgetListAggregate`) over every line the filters and the quick search
+   * keep, every status: the group key as the list reads it (a multi-valued
+   * field groups under its joined names), amounts in exact cents (each line
+   * converted to the cent first, as the list's totals), FTE exact with, per
+   * group, the lines whose FTE is unknown. Counts largest first; values
+   * largest first (smallest first for min), groups without a value last;
+   * ties by key, blank first, in the list's text order.
+   */
+  private async aggregateBudgetSummary(
     context: AiExecutionContextWithManager,
     entityType: 'spend_items' | 'capex_items',
     registry: AiEntityFilterRegistry,
     groupBy: string,
-    ids: string[],
+    q: string | undefined,
+    filters: Record<string, any>,
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
-  ): Promise<Array<{ key: string | null; count: number } | BudgetValueGroup>> {
+  ): Promise<{ groups: Array<{ key: string | null; count: number } | BudgetValueGroup>; total: number }> {
     const groupField = registry.fields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
     }
+    const byKey: AggregateOrderSpec = { by: 'key', index: 0, dir: 'ASC', nulls: 'FIRST' };
+    let spec: AggregateSpec;
+    let fte = false;
+    if (fn === 'count' || !metric) {
+      spec = { groupBy: [groupField.grid], measures: [], order: [{ by: 'count', dir: 'DESC' }, byKey] };
+    } else {
+      const metricField = registry.fields[metric.key];
+      if (!metricField) {
+        throw new BadRequestException('Unsupported metric field.');
+      }
+      fte = resolveFteField(metricField.grid) != null;
+      spec = {
+        groupBy: [groupField.grid],
+        measures: [{ id: 'value', fn, field: metricField.grid }],
+        order: [{ by: 'measure', id: 'value', dir: getMetricOrderDirection(fn), nulls: 'LAST' }, byKey],
+      };
+    }
 
     const items = entityType === 'spend_items' ? this.spendItems : this.capexItems;
-    const rows = await items.summaryRowsByIds(ids, {}, { manager: context.manager });
-
-    if (fn === 'count' || !metric) {
-      const counts = new Map<string, { key: string | null; count: number }>();
-      for (const row of rows) {
-        const rawKey = getSpendSummaryFieldValue(row, groupField.grid);
-        const key = rawKey == null || rawKey === '' ? null : String(rawKey);
-        const bucketKey = key ?? '__NULL__';
-        const current = counts.get(bucketKey) ?? { key, count: 0 };
-        current.count += 1;
-        counts.set(bucketKey, current);
-      }
-      return Array.from(counts.values()).sort((a, b) => {
-        if (b.count !== a.count) return b.count - a.count;
-        return (a.key ?? '').localeCompare(b.key ?? '');
-      });
-    }
-
-    const metricField = registry.fields[metric.key];
-    if (!metricField) {
-      throw new BadRequestException('Unsupported metric field.');
-    }
-    if (resolveFteField(metricField.grid)) {
-      return sortValueGroups(aggregateFteGroups(rows, groupField.grid, metricField.grid, fn), fn);
-    }
-
-    // Amounts are summed in cents and converted once: never money in binary floating point.
-    type AggregateBucket = {
-      key: string | null;
-      sum: bigint;
-      count: number;
-      min: bigint | null;
-      max: bigint | null;
-    };
-    const buckets = new Map<string, AggregateBucket>();
-
-    for (const row of rows) {
-      const rawKey = getSpendSummaryFieldValue(row, groupField.grid);
-      const key = rawKey == null || rawKey === '' ? null : String(rawKey);
-      const rawMetric = getSpendSummaryFieldValue(row, metricField.grid);
-      const number = rawMetric == null || rawMetric === '' ? null : Number(rawMetric);
-      if (number == null || !Number.isFinite(number)) continue;
-      const cents = toCents(number);
-
-      const bucketKey = key ?? '__NULL__';
-      const bucket = buckets.get(bucketKey) ?? {
-        key,
-        sum: 0n,
-        count: 0,
-        min: null,
-        max: null,
-      };
-      bucket.sum += cents;
-      bucket.count += 1;
-      bucket.min = bucket.min == null || cents < bucket.min ? cents : bucket.min;
-      bucket.max = bucket.max == null || cents > bucket.max ? cents : bucket.max;
-      buckets.set(bucketKey, bucket);
-    }
-
-    const toAmount = (cents: bigint | null) => (cents == null ? null : Number(formatCents(cents)));
-    const values = Array.from(buckets.values()).map((bucket) => {
-      let value: number | null = null;
-      switch (fn) {
-        case 'sum':
-          value = toAmount(bucket.sum);
-          break;
-        case 'avg':
-          value = bucket.count > 0 ? toAmount(divRoundHalfAway(bucket.sum, BigInt(bucket.count))) : null;
-          break;
-        case 'min':
-          value = toAmount(bucket.min);
-          break;
-        case 'max':
-          value = toAmount(bucket.max);
-          break;
-        default:
-          value = null;
-      }
-      return {
-        key: bucket.key,
-        value,
-      };
+    const result = await items.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
+    const groups = result.groups.map((group) => {
+      const key = group.keys[0] ?? null;
+      if (!spec.measures.length) return { key, count: group.count };
+      return fte ? { key, value: group.values.value, unknown: group.unknown.value } : { key, value: group.values.value };
     });
-
-    return sortValueGroups(values, fn);
+    return { groups, total: result.total.count };
   }
 
   async execute(
@@ -1466,6 +1311,32 @@ export class AiAggregateExecutor {
       };
     }
 
+    if (input.entity_type === 'spend_items' || input.entity_type === 'capex_items') {
+      const { groups, total } = await this.aggregateBudgetSummary(
+        context,
+        input.entity_type,
+        registry,
+        input.group_by,
+        input.q?.trim(),
+        adapted.filters,
+        fn,
+        metric,
+      );
+      return {
+        group_by: input.group_by,
+        metric: metric?.key ?? null,
+        function: fn,
+        groups,
+        total,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(null),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: null,
+      };
+    }
+
     const scoped = await this.listIdsForEntity(
       context,
       input.entity_type,
@@ -1491,11 +1362,9 @@ export class AiAggregateExecutor {
       };
     }
 
-    const groups = input.entity_type === 'spend_items' || input.entity_type === 'capex_items'
-      ? await this.aggregateBudgetSummaryByIds(context, input.entity_type, registry, input.group_by, ids, fn, metric)
-      : input.entity_type === 'connections' && CONNECTION_EFFECTIVE_RISK_GROUPS.has(input.group_by)
-        ? await this.aggregateConnectionsByEffectiveRisk(context, input.group_by, ids, fn, metric)
-        : await this.aggregateByIds(context, registry, input.group_by, ids, fn, metric);
+    const groups = input.entity_type === 'connections' && CONNECTION_EFFECTIVE_RISK_GROUPS.has(input.group_by)
+      ? await this.aggregateConnectionsByEffectiveRisk(context, input.group_by, ids, fn, metric)
+      : await this.aggregateByIds(context, registry, input.group_by, ids, fn, metric);
     return {
       group_by: input.group_by,
       metric: metric?.key ?? null,

@@ -15,7 +15,7 @@ import { centsToNumber, formatCents, toCents } from '../common/amount';
 import { StatusState } from '../common/status';
 import { formatAllocationMethodLabel } from './allocation-utils';
 import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center-tree.util';
-import { analyticsFieldKey, parseAnalyticsFieldKey } from '../analytics/analytics-axes.util';
+import { analyticsFieldKey } from '../analytics/analytics-axes.util';
 import { Decimal } from '../common/decimal';
 import { naturalCompare } from '../common/list-engine/sql-fragments';
 
@@ -402,14 +402,6 @@ export function yearsNamedByFields(fields: string[]): number[] {
   return Array.from(years);
 }
 
-function slotValue(row: any, slotKey: string, metric: SlotMetric): number {
-  const slot = row?.versions?.[slotKey];
-  if (!slot) return 0;
-  if (slot.reporting && typeof slot.reporting[metric] === 'number') return slot.reporting[metric];
-  if (slot.totals && typeof slot.totals[metric] === 'number') return slot.totals[metric];
-  return 0;
-}
-
 function displayName(user?: User | null): string {
   if (!user) return '';
   const fn = (user as any).first_name ? String((user as any).first_name).trim() : '';
@@ -424,23 +416,19 @@ const joinNames = (names: string[]) => (names.length ? names.join(', ') : null);
 
 /**
  * The project fields join the names of every linked project with ", ". The
- * names themselves are kept per built row, so a filter or a filter-value list
- * can work with one name (a name may itself contain ", ").
+ * names themselves are kept per built row, so the list engine's oracle can
+ * filter and list values on one name (a name may itself contain ", ").
  */
 export const PROJECT_LIST_FIELDS: readonly string[] = ['project_name', 'project_stream_name', 'project_category_name'];
 const projectNamesByRow = new WeakMap<object, Record<string, string[]>>();
 
-function projectNames(row: any, field: string): string[] {
+/** The linked names a built row joins under a project field (the list engine's oracle reads them). */
+export function summaryRowProjectNames(row: any, field: string): string[] {
   const lists = row && typeof row === 'object' ? projectNamesByRow.get(row) : undefined;
   if (lists) return lists[field] ?? [];
   // A row not built here (a copy, a test double) carries the joined value only.
   const joined = row?.[field];
   return joined == null || joined === '' ? [] : String(joined).split(', ').filter(Boolean);
-}
-
-/** Every value a row holds for `field`: each linked name for the project fields, else the one field value. */
-export function summaryFieldValues(row: any, field: string): unknown[] {
-  return PROJECT_LIST_FIELDS.includes(field) ? projectNames(row, field) : [getSummaryFieldValue(row, field)];
 }
 
 /**
@@ -938,58 +926,3 @@ export async function buildSpendSummaryRows(params: {
   );
   return { rows };
 }
-
-/**
- * The value of `field` on a built row, as the list shows it (the AI
- * aggregates group and measure with it; the list engine's oracle sorts and
- * filters on it): an amount field is the slot's reporting total (item
- * currency when there is no reporting), an FTE field its number or null
- * (unknown), a derived field its row value, anything else the item column.
- * Blank derived text reads as null so blanks sort last ascending.
- */
-export function getSummaryFieldValue(row: any, field: string): any {
-  const amount = resolveAmountField(field);
-  if (amount) return slotValue(row, amount.slot, amount.column.key);
-  if (resolveFteField(field)) return typeof row?.[field] === 'number' ? row[field] : null;
-  const blankToNull = (value: unknown) => (value == null || value === '' ? null : value);
-  switch (field) {
-    case 'supplier_name':
-      return blankToNull(row?.supplier_name ?? row?.supplier?.name);
-    case 'paying_company_name':
-      return blankToNull(row?.paying_company_name ?? row?.company_name);
-    case 'company_name':
-      return blankToNull(row?.company_name ?? row?.paying_company_name);
-    case 'account_display':
-    case 'account_name':
-    case 'account_number':
-    case 'owner_it_name':
-    case 'owner_business_name':
-    case 'analytics_category_name':
-    case 'cost_center_code':
-    case 'cost_center_name':
-    case 'cost_center_label':
-    case 'cost_center_path':
-    case 'budget_holder_name':
-    case 'project_name':
-    case 'project_stream_name':
-    case 'project_category_name':
-    case 'account_warning':
-      return blankToNull(row?.[field]);
-    case 'contract_name':
-      return blankToNull(row?.latest_contract_name);
-    case 'allocation_label':
-    case 'allocation_method_label':
-      return blankToNull(row?.allocation_method_label);
-    case 'latest_task_text':
-      return blankToNull(row?.latest_task?.title);
-    default: {
-      // A key the row does not hold itself (`constructor`, `__proto__`…) reads as missing, never as an inherited member.
-      const own = row != null && Object.prototype.hasOwnProperty.call(row, field) ? row[field] : undefined;
-      // A dimension's value name (`analytics_<axis id>`) is derived text like the names above.
-      return parseAnalyticsFieldKey(field) ? blankToNull(own) : own;
-    }
-  }
-}
-
-/** The OPEX name of the resolver, kept for existing imports. */
-export const getSpendSummaryFieldValue = getSummaryFieldValue;

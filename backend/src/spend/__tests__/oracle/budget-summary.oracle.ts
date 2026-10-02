@@ -10,7 +10,6 @@ import {
   buildBudgetSummaryRows,
   BudgetSummaryRow,
   FIXED_SLOTS,
-  getSummaryFieldValue,
   loadVersionTotals,
   parseSummaryYears,
   PROJECT_LIST_FIELDS,
@@ -18,12 +17,12 @@ import {
   resolveFteField,
   SUMMARY_COLUMNS,
   SummaryDeps,
-  summaryFieldValues,
   SummaryScopeConfig,
   versionFte,
   versionWithinValidity,
   yearsNamedByFields,
 } from '../../spend-summary.builder';
+import { getSummaryFieldValue, summaryFieldValues } from './summary-field-value.oracle';
 
 /**
  * THE ORACLE of the SQL list engine (lot 2B, PRs A and C): the in-memory list

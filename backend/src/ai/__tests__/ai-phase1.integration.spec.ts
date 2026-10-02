@@ -4179,6 +4179,7 @@ async function testSpendAndCapexEndOfValidityQueryField() {
 }
 
 async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProjectStreams() {
+  const calls: Array<{ query: any; spec: any }> = [];
   const executor = new AiAggregateExecutor(
     {} as any, // tasks
     {} as any, // projects
@@ -4186,24 +4187,20 @@ async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProject
     {} as any, // applications
     {} as any, // assets
     {
-      summaryIds: async () => ({ ids: ['spend-1', 'spend-2', 'spend-3'], total: 3 }),
-      summaryRowsByIds: async () => ([
-        {
-          id: 'spend-1',
-          project_stream_name: 'Infrastructure',
-          versions: { y: { reporting: { budget: 30, revision: 0, follow_up: 0, landing: 0 } } },
-        },
-        {
-          id: 'spend-2',
-          project_stream_name: 'Infrastructure',
-          versions: { y: { reporting: { budget: 45, revision: 0, follow_up: 0, landing: 0 } } },
-        },
-        {
-          id: 'spend-3',
-          project_stream_name: 'Security',
-          versions: { y: { reporting: { budget: 25, revision: 0, follow_up: 0, landing: 0 } } },
-        },
-      ]),
+      // The OPEX list engine's aggregate (lot 2B, PR D): the executor sends the list state and the spec, and maps the groups.
+      summaryAggregate: async (query: any, spec: any) => {
+        calls.push({ query, spec });
+        return {
+          groups: [
+            { keys: ['Infrastructure'], count: 2, values: { value: 75 }, unknown: {} },
+            { keys: ['Security'], count: 1, values: { value: 25 }, unknown: {} },
+          ],
+          others: null,
+          total: { keys: [], count: 3, values: { value: 100 }, unknown: {} },
+          groupCount: 2,
+          reportingCurrency: 'EUR',
+        };
+      },
     } as any,
     {} as any, // contracts
     {} as any, // companies
@@ -4248,6 +4245,15 @@ async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProject
     { key: 'Infrastructure', value: 75 },
     { key: 'Security', value: 25 },
   ]);
+  assert.equal(result.complete, true);
+  assert.deepEqual(calls, [{
+    query: { q: undefined, filters: {}, includeDisabled: true },
+    spec: {
+      groupBy: ['project_stream_name'],
+      measures: [{ id: 'value', fn: 'sum', field: 'yBudget' }],
+      order: [{ by: 'measure', id: 'value', dir: 'DESC', nulls: 'LAST' }, { by: 'key', index: 0, dir: 'ASC', nulls: 'FIRST' }],
+    },
+  }], 'one aggregate of the list state: every status, grouped by the stream, the Y budget summed');
 }
 
 async function testAiAdminOverviewAggregatesUsageAndIsTenantScoped() {
