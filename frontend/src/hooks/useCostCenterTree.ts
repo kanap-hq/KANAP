@@ -57,7 +57,7 @@ const EMPTY: CostCenterNode[] = [];
 
 /**
  * The tenant's tree. `enabled: false` sends nothing but still reads a tree already loaded by
- * another component (a picker that was opened): the tree is about 90 KB on a large tenant, so the
+ * another component (a picker that was opened): the tree is about 180 KB on a 300-node tenant, so the
  * workspaces and reports load it only when they need it.
  */
 export function useCostCenterTree(options?: { enabled?: boolean }): CostCenterTree {

@@ -46,7 +46,7 @@ export const COST_CENTERS_PAGE = '/master-data/cost-centers';
 
 /** A known node as the select's value until the tree loads: only its id and label are read then. */
 function knownAsNode(known: CostCenterRef): CostCenterNode {
-  return { ...known, parent_id: null, depth: 0, path: known.name, path_ids: [known.id] };
+  return { ...known, parent_id: null, disabled_at: null, sort_order: 0, depth: 0, path: known.name, path_ids: [known.id] };
 }
 
 function matches(node: CostCenterNode, needle: string): boolean {
@@ -128,8 +128,9 @@ export default function CostCenterSelect({
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.costCenter');
   const naked = hideLabel || label === '';
-  // The tree (about 90 KB on a large tenant) loads when the list is first opened or focused, or
-  // when the value cannot be named otherwise; a value the caller knows is shown without it.
+  // The tree (about 180 KB, 18 KB compressed, on a 300-node tenant) loads when the list is first
+  // opened or focused, or when the value cannot be named otherwise; a value the caller knows is
+  // shown without it.
   const [opened, setOpened] = React.useState(false);
   const known = value && selectedOption?.id === value ? selectedOption : null;
   const needsTree = opened || (!!value && !known);
@@ -156,9 +157,12 @@ export default function CostCenterSelect({
     [selectable, value],
   );
 
-  const selectedNode = value ? tree.byId.get(value) : undefined;
-  const fallback = React.useMemo(() => (known && !selectedNode ? knownAsNode(known) : null), [known, selectedNode]);
-  const selected = selectedNode ?? fallback;
+  // The detail's node first (read with the line, fresher than a tree up to 5 minutes old), else the
+  // tree's. One object per node and label: when the tree arrives while the user types, the value
+  // stays the same object, so the Autocomplete does not reset the typed text to the label.
+  const candidate = known ? knownAsNode(known) : (value && tree.byId.get(value)) || null;
+  const candidateKey = candidate ? `${candidate.id}\u0000${costCenterLabel(candidate)}` : '';
+  const selected = React.useMemo(() => candidate, [candidateKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const hasPickable = React.useMemo(() => options.some(isPickable), [isPickable, options]);
   const loading = needsTree && !tree.ready;
   const footer = tree.ready && !tree.isError && options.length > 0 && !hasPickable && selectable === 'cost_centers'

@@ -856,6 +856,10 @@ export default function CapexItemPage() {
 
   // Labels of the line's references, from the detail: the pickers and the owners show them without any request.
   const references = React.useMemo(() => itemReferences(data), [data]);
+  // The cost center shown with that reference, read from the same line: on a line switch the detail
+  // is the new line's one render before the form follows, and the old line's id would not match the
+  // new reference (the pickers would then load the tree to name it).
+  const shownCostCenterId = data?.id && form.id !== data.id ? (data.cost_center_id || '') : form.cost_center_id;
   const analyticsOptions = React.useMemo(() => analyticsValueOptions(data), [data]);
 
   const reference = data?.item_number ? formatItemRef('capex', data.item_number) : null;
@@ -944,8 +948,8 @@ export default function CapexItemPage() {
             priority={form.priority}
             ownerItId={form.owner_it_id || null}
             ownerBizId={form.owner_business_id || null}
-            costCenterId={form.cost_center_id || null}
-            costCenter={matching(references.cost_center, form.cost_center_id)}
+            costCenterId={shownCostCenterId || null}
+            costCenter={matching(references.cost_center, shownCostCenterId)}
             onStatusChange={handleStatusChange}
             onPriorityChange={(v) => void patchNow({ priority: v })}
             onOwnerItChange={(v) => void patchNow({ owner_it_id: (v || '') as string })}
@@ -1029,7 +1033,7 @@ export default function CapexItemPage() {
             investmentType={form.investment_type}
             priority={form.priority}
             analyticsValues={form.analytics_values}
-            costCenterId={form.cost_center_id}
+            costCenterId={shownCostCenterId}
             runBuild={form.run_build}
             effectiveStart={form.effective_start}
             status={form.status}

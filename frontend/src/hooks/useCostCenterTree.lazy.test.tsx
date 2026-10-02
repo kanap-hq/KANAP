@@ -10,13 +10,17 @@ import { COST_CENTER_TREE_QUERY_KEY, useCostCenterCount, useCostCenterNode, useC
 import type { CostCenterRef } from '../services/costCenters';
 
 // The tree's answer: a group and one cost center with its company and budget holder.
-const OUTLINE = {
-  nodes: [
-    { id: 'grp', code: 'GRP', name: 'IT', kind: 'group', parent_id: null, company_id: null, owner_user_id: null, status: 'enabled' },
-    { id: 'cc1', code: 'CC-1', name: 'ERP', kind: 'cost_center', parent_id: 'grp', company_id: 'co-1', owner_user_id: 'u-1', status: 'enabled' },
+const TREE = {
+  items: [
+    {
+      id: 'grp', code: 'GRP', name: 'IT', kind: 'group', parent_id: null, company_id: null, company_name: null,
+      owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null, sort_order: 0, depth: 0, path: 'IT', path_ids: ['grp'],
+    },
+    {
+      id: 'cc1', code: 'CC-1', name: 'ERP', kind: 'cost_center', parent_id: 'grp', company_id: 'co-1', company_name: 'Paris SA',
+      owner_user_id: 'u-1', owner_name: 'Ada Holder', status: 'enabled', disabled_at: null, sort_order: 0, depth: 1, path: 'IT › ERP', path_ids: ['grp', 'cc1'],
+    },
   ],
-  companies: { 'co-1': 'Paris SA' },
-  owners: { 'u-1': 'Ada Holder' },
 };
 
 const KNOWN: CostCenterRef = {
@@ -32,7 +36,7 @@ beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   api.get.mockReset();
   api.get.mockImplementation(async (url: string) => {
-    if (url === '/cost-centers/tree') return { data: OUTLINE };
+    if (url === '/cost-centers/tree') return { data: TREE };
     if (url === '/cost-centers/tree/count') return { data: { count: 2 } };
     throw new Error(`unexpected ${url}`);
   });

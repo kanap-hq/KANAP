@@ -45,15 +45,21 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   ),
 }));
 // The drawer stands in for the pickers: each button sets one field.
-vi.mock('./workspace/SpendPropertiesDrawer', () => ({
-  default: (props: {
+vi.mock('./workspace/SpendPropertiesDrawer', async () => {
+  // The real cost center hook, called as the drawer calls it: a tree request would show in the API calls.
+  const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
+  return { default: (props: {
+    costCenterId?: string;
     mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
     onAnalyticsValueChange: (axisId: string, v: string | null) => void; onDisabledAtChange?: (v: string | null) => void;
     references?: unknown; analyticsOptions?: unknown;
-  }) => (
+  }) => {
+    useCostCenterNode(props.costCenterId || null, ((props as { references?: { cost_center?: unknown } }).references?.cost_center ?? null) as never);
+    return (
     <div
+      data-cost-center={props.costCenterId}
       data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
       data-analytics={JSON.stringify(props.analyticsValues)}
       data-references={JSON.stringify(props.references ?? null)}
@@ -78,13 +84,21 @@ vi.mock('./workspace/SpendPropertiesDrawer', () => ({
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-nature', 'value-2')}>pick nature value</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-nature', null)}>clear nature value</button>
     </div>
-  ),
-}));
-vi.mock('./workspace/SpendMetadataBar', () => ({
-  default: ({ onStatusChange }: { onStatusChange: (status: string) => void }) => (
-    <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>
-  ),
-}));
+    );
+  } };
+});
+vi.mock('./workspace/SpendMetadataBar', async () => {
+  const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
+  return {
+    default: ({ onStatusChange, costCenterId, costCenter }: {
+      onStatusChange: (status: string) => void; costCenterId?: string | null; costCenter?: { id: string } | null;
+    }) => {
+      // The budget holder's read, as the bar makes it.
+      useCostCenterNode(costCenterId ?? null, (costCenter ?? null) as never);
+      return <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>;
+    },
+  };
+});
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 // The Budget tab stands in with its handle and the line's held choices (lot 3D): « budget refused »
 // leaves the Budget column waiting for a choice.
@@ -1206,5 +1220,57 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
       });
       expect(stored[LINE_A]).toMatchObject({ paying_company_id: 'company-2', account_id: null });
     });
+  });
+});
+
+describe('SpendItemPage cost center across lines', () => {
+  const LINE_A = 'aaaaaaaa-0000-4000-8000-0000000000c1';
+  const LINE_B = 'bbbbbbbb-0000-4000-8000-0000000000c2';
+  // Each line names its cost center in the detail (`references.cost_center`).
+  const ref = (id: string, code: string) => ({
+    id, code, name: `Centre ${code}`, kind: 'cost_center', status: 'enabled',
+    company_id: 'company-1', company_name: 'Company', owner_user_id: 'user-1', owner_name: 'Ada Holder',
+  });
+  const line = (id: string, n: number, costCenter: { id: string; code: string }) => ({
+    id, item_number: n, product_name: `Line ${n}`, description: '', notes: '',
+    currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1',
+    cost_center_id: costCenter.id, references: { cost_center: costCenter },
+  });
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/spend-items/${LINE_A}`) return { data: line(LINE_A, 1, ref('cc-a', 'CC-A')) };
+      if (url === `/spend-items/${LINE_B}`) return { data: line(LINE_B, 2, ref('cc-b', 'CC-B')) };
+      return { data: {} };
+    });
+  });
+
+  it('opens line A then line B, each with its own cost center, without loading the tree', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router: { navigate: NavigateFunction | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = useNavigate();
+      return null;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[`/ops/opex/${LINE_A}/overview`]}>
+            <NavigateProbe />
+            <Routes>
+              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const shown = (id: string) => document.querySelector(`[data-mode="edit"][data-cost-center="${id}"]`);
+    await waitFor(() => expect(shown('cc-a')).not.toBeNull());
+    act(() => { router.navigate!(`/ops/opex/${LINE_B}/overview`); });
+    await waitFor(() => expect(shown('cc-b')).not.toBeNull());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/cost-centers'))).toEqual([]);
   });
 });

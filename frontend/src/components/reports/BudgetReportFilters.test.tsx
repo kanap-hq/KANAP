@@ -72,6 +72,8 @@ function node(id: string, patch: Partial<CostCenterNode>): CostCenterNode {
     owner_user_id: null,
     owner_name: null,
     status: 'enabled',
+    disabled_at: null,
+    sort_order: 0,
     depth: 0,
     path: `Node ${id}`,
     path_ids: [id],

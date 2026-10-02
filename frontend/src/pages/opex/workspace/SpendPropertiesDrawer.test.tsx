@@ -59,7 +59,7 @@ const treeReads = vi.hoisted(() => ({ ids: [] as string[] }));
 vi.mock('../../../hooks/useCostCenterTree', () => {
   const node = (id: string, company_id: string, company_name: string) => ({
     id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id, company_name,
-    owner_user_id: null, owner_name: null, status: 'enabled', depth: 0, path: id, path_ids: [id],
+    owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null, sort_order: 0, depth: 0, path: id, path_ids: [id],
   });
   const byId = new Map([node('cc-1', 'company-1', 'First company'), node('cc-2', 'company-2', 'Second company')].map((n) => [n.id, n]));
   return {

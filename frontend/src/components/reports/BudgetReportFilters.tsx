@@ -125,7 +125,8 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
   // it when opened. Otherwise whether to show the picker comes from the count.
   const tree = useCostCenterTree({ enabled: rawCostCenter != null });
   const costCenterCount = useCostCenterCount({ enabled: rawCostCenter == null });
-  const hasCostCenters = tree.hasAny || (costCenterCount.count ?? 0) > 0;
+  // From whichever was asked: a tree cached by an earlier picker may be older than the count.
+  const hasCostCenters = rawCostCenter != null ? tree.hasAny : (costCenterCount.count ?? 0) > 0;
   const rawRunBuild = params.get(RUN_BUILD_PARAM);
   const rawAnalytics = params.get(ANALYTICS_PARAM);
   const runBuild = RUN_BUILD_FILTERS.includes(rawRunBuild as RunBuildFilter) ? (rawRunBuild as RunBuildFilter) : null;

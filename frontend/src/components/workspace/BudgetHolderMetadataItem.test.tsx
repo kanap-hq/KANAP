@@ -23,7 +23,8 @@ vi.mock('../../services/costCenters', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/costCenters')>();
   const node = (id: string, code: string, name: string, owner: [string, string] | null) => ({
     id, code, name, kind: 'cost_center' as const, parent_id: null, company_id: 'company-1', company_name: 'First company',
-    owner_user_id: owner?.[0] ?? null, owner_name: owner?.[1] ?? null, status: 'enabled' as const, depth: 0, path: name, path_ids: [id],
+    owner_user_id: owner?.[0] ?? null, owner_name: owner?.[1] ?? null, status: 'enabled' as const, disabled_at: null,
+    sort_order: 0, depth: 0, path: name, path_ids: [id],
   });
   const nodes = [
     node('cc-200', 'IT-200', 'Applications', ['user-1', 'Ada Holder']),
