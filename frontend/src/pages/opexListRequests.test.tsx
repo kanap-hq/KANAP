@@ -165,7 +165,8 @@ describe('OPEX list requests per action', () => {
     const bravo = Array.from(document.querySelectorAll('label')).find((label) => label.textContent === 'Bravo')!;
     fireEvent.click(bravo.querySelector('input')!);
     await expectCounts({ rows: before.rows + 1, totals: before.totals + 1, values: before.values });
-    expect(JSON.parse(paramsOf(calls(ROWS).slice(-1)[0]).filters)).toEqual({ supplier_name: { filterType: 'set', values: ['Alpha', 'Charlie'] } });
+    // The OPEX list has exclude mode: unticking one value from "All" excludes it (decision Q3).
+    expect(JSON.parse(paramsOf(calls(ROWS).slice(-1)[0]).filters)).toEqual({ supplier_name: { filterType: 'set', mode: 'exclude', values: ['Bravo'] } });
   }, 30_000);
 
   it('typing five characters in a column text filter: one page and one totals request', async () => {

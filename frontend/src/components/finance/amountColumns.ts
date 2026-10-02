@@ -353,6 +353,11 @@ function unknownLines(data: unknown, colId: string): number {
   return ((data as Record<string, unknown> | undefined)?.[FTE_UNKNOWN_FIELD] as Record<string, number> | undefined)?.[colId] ?? 0;
 }
 
+/** The amount fields the grid shows, in grid order: the footer totals request asks for those only. */
+export function visibleAmountFields(state: ReadonlyArray<{ colId?: string | null; hide?: boolean | null }> | null | undefined): string[] {
+  return (state ?? []).flatMap((col) => (col.colId && !col.hide && parseAmountField(col.colId) ? [col.colId] : []));
+}
+
 /** The FTE fields the grid shows, in grid order: the totals request asks for those only. */
 export function visibleFteFields(state: ReadonlyArray<{ colId?: string | null; hide?: boolean | null }> | null | undefined): string[] {
   return (state ?? []).flatMap((col) => (col.colId && !col.hide && parseFteField(col.colId) ? [col.colId] : []));

@@ -22,13 +22,15 @@ import {
   buildAmountColumnDefs,
   buildFteColumnDefs,
   dimensionFieldPredicate,
-  settleListSearch,
   explicitSort,
   fteTotalsToRow,
   SummaryVersions,
   totalsToVersions,
+  visibleAmountFields,
   visibleFteFields,
 } from '../components/finance/amountColumns';
+import { compactListSearchCached, filtersNeedContext, listFiltersOf, withListContext } from '../lib/listContext';
+import { snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
 import { analyticsFieldKey } from '../services/analytics';
@@ -83,10 +85,27 @@ type SummaryRow = {
   allocation_warning?: string | null;
 };
 
-/** The query the footer totals follow: the list state without the sort, plus the FTE columns shown. */
-type TotalsQuery = { q: string; filters: string; statusScope: StatusScope; fte: string };
+/** The query the footer totals follow: the list state without the sort, plus the amount and FTE columns shown. */
+type TotalsQuery = { q: string; filters: string; statusScope: StatusScope; fte: string; amounts: string };
 
 const TOTALS_QUERY_KEY = 'capex-summary-totals';
+const ROWS_ENDPOINT = '/capex-items/summary';
+const TOTALS_ENDPOINT = '/capex-items/summary/totals';
+const VALUES_ENDPOINT = '/capex-items/summary/filter-values';
+
+/**
+ * Parameters of the page requests: the lean grid rows, with the FTE keys of the FTE columns shown
+ * (showing or hiding one reloads the rows). The CAPEX list reads them once it runs on the SQL list
+ * engine (lot 2B, PR C); until then the server answers its full rows.
+ */
+const pageParams = (state: Parameters<typeof visibleFteFields>[0]) => ({ shape: 'grid', fte: visibleFteFields(state).join(',') });
+
+/**
+ * Exclude mode on the set filters ("All" then untick keeps values added later): off until the CAPEX
+ * list runs on the SQL list engine (lot 2B, PR C). Its in-memory endpoints do not honour it on
+ * every column yet.
+ */
+const CAPEX_SET_FILTER_EXCLUDE_MODE = false;
 
 export default function CapexPage() {
   const { hasLevel } = useAuth();
@@ -131,12 +150,21 @@ export default function CapexPage() {
   // has fallen back; null until the setting and the dimensions are loaded. The grid mounts on that
   // URL only, so the first request already uses the tenant's default sort, and a saved layout
   // (applied at mount only) finds the dimension columns.
-  const settledSearch = useMemo(() => {
-    if (!budgetColumns.ready || !analyticsAxes.ready) return null;
+  // Filters saved as a context (`ctx`, too long for a URL) are read first; long ones go back as `ctx`.
+  const readStored = useCallback(() => {
     const stored = storedContextRef.current || readStoredCapexListContext();
     if (stored && !storedContextRef.current) storedContextRef.current = stored;
-    return settleListSearch(location.search, stored, budgetColumns.shown, budgetColumns.defaultSort, isListField);
-  }, [budgetColumns.ready, budgetColumns.shown, budgetColumns.defaultSort, analyticsAxes.ready, isListField, location.search]);
+    return stored;
+  }, []);
+  const settledSearch = useSettledListSearch({
+    endpoint: ROWS_ENDPOINT,
+    search: location.search,
+    readStored,
+    ready: budgetColumns.ready && analyticsAxes.ready,
+    shown: budgetColumns.shown,
+    defaultSort: budgetColumns.defaultSort,
+    isListField,
+  });
   const currentSearch = new URLSearchParams(location.search).toString();
   useEffect(() => {
     if (settledSearch != null && settledSearch !== currentSearch) navigate({ search: settledSearch }, { replace: true });
@@ -147,7 +175,7 @@ export default function CapexPage() {
 
   const initialGridState = useMemo(() => {
     if (!gridCanMount) return undefined;
-    const raw = new URLSearchParams(location.search).get('filters') || '';
+    const raw = listFiltersOf(new URLSearchParams(location.search));
     if (!raw) return undefined;
     try {
       const parsed = JSON.parse(raw);
@@ -174,7 +202,7 @@ export default function CapexPage() {
       if (queryState.q) params.q = queryState.q;
       if (Object.keys(filters).length > 0) params.filters = JSON.stringify(filters);
       Object.assign(params, statusScopeParams(queryState.statusScope));
-      const res = await api.get('/capex-items/summary/filter-values', { params });
+      const res = await api.get(VALUES_ENDPOINT, { params: await withListContext(VALUES_ENDPOINT, params) });
       const values = (res.data?.[field] || []) as Array<string | null>;
       const options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };
@@ -222,27 +250,31 @@ export default function CapexPage() {
   // the FTE columns it shows: one request per distinct query, none on a sort (the key leaves it
   // out). The grid reports the same query several times while it starts (URL sync, initial sort,
   // grid ready); the key stays the same. A superseded request is cancelled through its signal.
-  const [totalsQuery, setTotalsQuery] = useState<Omit<TotalsQuery, 'fte'> | null>(null);
-  const [fteFields, setFteFields] = useState('');
-  const followTotalsQuery = useCallback((next: Omit<TotalsQuery, 'fte'>) => {
+  const [totalsQuery, setTotalsQuery] = useState<Omit<TotalsQuery, 'fte' | 'amounts'> | null>(null);
+  const [columnFields, setColumnFields] = useState<{ fte: string; amounts: string } | null>(null);
+  const followTotalsQuery = useCallback((next: Omit<TotalsQuery, 'fte' | 'amounts'>) => {
     setTotalsQuery((prev) => (prev && prev.q === next.q && prev.filters === next.filters && prev.statusScope === next.statusScope ? prev : next));
   }, []);
-  // Showing or hiding an FTE column refetches the footer with the FTE columns now shown.
-  const followFteColumns = useCallback((state: Parameters<typeof visibleFteFields>[0]) => {
-    setFteFields(visibleFteFields(state).join(','));
+  // Showing or hiding an amount or FTE column refetches the footer with the columns now shown.
+  const followColumns = useCallback((state: Parameters<typeof visibleFteFields>[0]) => {
+    const fte = visibleFteFields(state).join(',');
+    const amounts = visibleAmountFields(state).join(',');
+    setColumnFields((prev) => (prev && prev.fte === fte && prev.amounts === amounts ? prev : { fte, amounts }));
   }, []);
   const totals = useQuery({
-    queryKey: [TOTALS_QUERY_KEY, totalsQuery ? { ...totalsQuery, fte: fteFields } : null],
+    queryKey: [TOTALS_QUERY_KEY, totalsQuery && columnFields ? { ...totalsQuery, ...columnFields } : null],
     queryFn: async ({ signal }) => {
       const params: Record<string, any> = {};
       if (totalsQuery!.q) params.q = totalsQuery!.q;
       if (totalsQuery!.filters) params.filters = totalsQuery!.filters;
       Object.assign(params, statusScopeParams(totalsQuery!.statusScope));
-      if (fteFields) params.fte = fteFields;
-      const res = await api.get('/capex-items/summary/totals', { params, signal });
+      if (columnFields!.fte) params.fte = columnFields!.fte;
+      // Only the amount columns shown (none: the reporting currency alone, once on the engine).
+      params.amounts = columnFields!.amounts;
+      const res = await api.get(TOTALS_ENDPOINT, { params: await withListContext(TOTALS_ENDPOINT, params), signal });
       return res.data || {};
     },
-    enabled: totalsQuery != null,
+    enabled: totalsQuery != null && columnFields != null,
     placeholderData: keepPreviousData,
     staleTime: 0,
     retry: false,
@@ -282,7 +314,7 @@ export default function CapexPage() {
     const gridFilterModel = gridApiRef.current?.getFilterModel?.() || lastQueryRef.current?.filters || {};
     let filters = gridFilterModel && Object.keys(gridFilterModel).length > 0 ? JSON.stringify(gridFilterModel) : '';
     if (!filters && lastQueryRef.current?.filtersString) filters = lastQueryRef.current.filtersString;
-    if (!filters && stored?.filters) filters = stored.filters;
+    if (!filters) filters = snapshotFilters(stored);
     const sp = new URLSearchParams();
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
@@ -291,14 +323,16 @@ export default function CapexPage() {
   }, []);
 
   // The list part of the cell links, built once per list state (each grid report replaces
-  // lastQueryRef.current) rather than once per cell.
-  const gridSearchCacheRef = useRef<{ state: unknown; search: string } | null>(null);
+  // lastQueryRef.current) rather than once per cell. Filters too long for a URL go as `ctx`, once
+  // the list's page request has saved them (before any row shows); until then the link keeps them.
+  const gridSearchCacheRef = useRef<{ state: unknown; search: string; final: boolean } | null>(null);
   const gridSearch = useCallback(() => {
     const state = lastQueryRef.current;
     const cached = gridSearchCacheRef.current;
-    if (state && cached && cached.state === state) return cached.search;
-    const search = buildGridSearch().toString();
-    if (state) gridSearchCacheRef.current = { state, search };
+    if (state && cached && cached.state === state && cached.final) return cached.search;
+    const search = compactListSearchCached(buildGridSearch().toString(), ROWS_ENDPOINT);
+    const sp = new URLSearchParams(search);
+    if (state) gridSearchCacheRef.current = { state, search, final: !filtersNeedContext(sp.get('filters')) };
     return search;
   }, [buildGridSearch]);
 
@@ -615,12 +649,12 @@ export default function CapexPage() {
             if (stored && !storedContextRef.current) storedContextRef.current = stored;
             const sort = listSort(urlParams.get('sort') || stored?.sort);
             const q = urlParams.get('q') || stored?.q || '';
-            const filters = urlParams.get('filters') || stored?.filters || '';
+            const filters = listFiltersOf(urlParams) || snapshotFilters(stored);
             const sp = new URLSearchParams();
             if (sort) sp.set('sort', sort);
             if (q) sp.set('q', q);
             if (filters) sp.set('filters', filters);
-            navigate(`/ops/capex/new?${sp.toString()}`);
+            navigate(`/ops/capex/new?${compactListSearchCached(sp.toString(), ROWS_ENDPOINT)}`);
           }}
         >{t('capex.newButton')}</Button>
       )}
@@ -655,7 +689,7 @@ export default function CapexPage() {
       )}
       {gridCanMount && <ServerDataGrid<SummaryRow>
         columns={columns as any}
-        endpoint="/capex-items/summary"
+        endpoint={ROWS_ENDPOINT}
         queryKey="capex-summary"
         getRowId={(r) => r.id || '__capex_totals__'}
         enableSearch
@@ -668,11 +702,13 @@ export default function CapexPage() {
         onGridApiReady={(gridApi) => {
           gridApiRef.current = gridApi;
           // The saved layout is applied by now; the first totals request follows the query state.
-          followFteColumns(gridApi?.getColumnState?.());
+          followColumns(gridApi?.getColumnState?.());
         }}
-        // A saved layout applied before the grid is ready only records the FTE columns: the first
+        // A saved layout applied before the grid is ready only records the columns: the first
         // totals request comes with the query state, carrying the initial filter.
-        onColumnStateChange={followFteColumns}
+        onColumnStateChange={followColumns}
+        pageParams={pageParams}
+        setFilterExcludeMode={CAPEX_SET_FILTER_EXCLUDE_MODE}
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};
@@ -681,7 +717,7 @@ export default function CapexPage() {
           lastQueryRef.current = { sort: normalizedSort, q: state.q || '', filters: filtersObject, filtersString, statusScope: scope };
           const snapshot = { sort: normalizedSort, q: state.q || '', filters: filtersString, statusScope: scope };
           storedContextRef.current = snapshot;
-          writeStoredCapexListContext(snapshot);
+          writeListSnapshot(ROWS_ENDPOINT, snapshot, readStoredCapexListContext, writeStoredCapexListContext);
           // Before the grid is ready it reports its URL sync without the initial filter yet.
           if (gridApiRef.current) followTotalsQuery({ q: state.q || '', filters: filtersString, statusScope: scope });
         }}

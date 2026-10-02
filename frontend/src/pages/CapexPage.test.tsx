@@ -122,6 +122,8 @@ type GridProps = {
   onQueryStateChange: (state: { sort: string; filterModel: Record<string, unknown>; q: string; statusScope: string }) => void;
   onGridApiReady: (api: unknown) => void;
   onColumnStateChange: (state: Array<{ colId: string; hide?: boolean }>) => void;
+  pageParams?: (state: Array<{ colId: string; hide?: boolean }>) => Record<string, string | undefined>;
+  setFilterExcludeMode?: boolean;
 };
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
@@ -493,6 +495,23 @@ describe('CapexPage', () => {
     const totals = get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals');
     expect(totals.length).toBeGreaterThan(0);
     for (const [, config] of totals) expect(JSON.parse(config.params.filters)).toEqual(kept);
+  });
+
+  it('no exclude mode on the set filters until CAPEX runs on the list engine; lean rows and FTE columns asked', async () => {
+    await renderPage();
+    expect(lastProps().setFilterExcludeMode).toBe(false);
+    expect(lastProps().pageParams?.([{ colId: 'fte_yBudget', hide: false }, { colId: 'fte_yLanding', hide: true }, { colId: 'yBudget' }]))
+      .toEqual({ shape: 'grid', fte: 'fte_yBudget' });
+  });
+
+  it('asks the footer for the amount columns shown only', async () => {
+    await renderPage();
+    act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'yBudget', hide: false }, { colId: 'yRevision', hide: true }, { colId: 'yPlus1Forecast' }] }));
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
+    await waitFor(() => {
+      const totals = get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals');
+      expect(totals.slice(-1)[0][1].params.amounts).toBe('yBudget,yPlus1Forecast');
+    });
   });
 
   it('keeps a linked sort on an enabled dimension', async () => {

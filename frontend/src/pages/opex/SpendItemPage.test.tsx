@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -22,11 +22,13 @@ vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { de
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchSpendRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, onTitleSave }: {
+  default: ({ properties, actions, children, onTitleSave, onBack }: {
     properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
+    onBack?: () => void;
   }) => (
     <div>
       <button type="button" onClick={() => onTitleSave('Monitoring')}>set title</button>
+      <button type="button" onClick={() => onBack?.()}>back to list</button>
       {actions}{properties}{children}
     </div>
   ),
@@ -80,12 +82,19 @@ vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 import api from '../../api';
 import SpendItemPage from './SpendItemPage';
 import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
+import { resetListContextCache } from '../../lib/listContext';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>;
 };
 
 const ITEM_ID = '11111111-2222-3333-4444-555555555555';
+
+/** Stands for the list page: shows the URL the workspace went back to. */
+function ListPageProbe() {
+  const { search } = useLocation();
+  return <div data-testid="list-page" data-search={search} />;
+}
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -95,6 +104,7 @@ function renderAt(path: string) {
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+            <Route path="/ops/opex" element={<ListPageProbe />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -437,6 +447,42 @@ describe('SpendItemPage list context', () => {
     const stored = JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}');
     expect(stored.sort).toBe('');
     expect(stored.filters).not.toContain('yForecast');
+  });
+});
+
+describe('SpendItemPage list context too long for a URL (ctx)', () => {
+  const CTX = 'Opx_allButOne_0123456';
+  const BIG = { supplier_name: { filterType: 'set', values: Array.from({ length: 1152 }, (_, i) => `Fournisseur ${i} Société Générale`) } };
+
+  beforeEach(() => {
+    nav.calls = [];
+    window.sessionStorage.clear();
+    resetListContextCache();
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/budget-columns') return { data: DEFAULT_BUDGET_COLUMNS };
+      if (url === `/list-contexts/${CTX}`) return { data: { id: CTX, list: 'spend-items', state: { filters: BIG } } };
+      if (url === `/spend-items/${ITEM_ID}`) return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', currency: 'EUR' } };
+      return { data: {} };
+    });
+  });
+
+  it('a link opened in a new tab: reads the saved filters, walks prev/next with them, goes back to the list with ctx', async () => {
+    renderAt(`/ops/opex/${ITEM_ID}/overview?sort=product_name:ASC&ctx=${CTX}`);
+    await waitFor(() => expect(nav.calls.some((c) => c.enabled)).toBe(true));
+    // Not enabled before the saved filters are read: prev/next never walks the unfiltered list.
+    for (const call of nav.calls.filter((c) => c.enabled)) expect(JSON.parse(call.filters ?? '{}')).toEqual(BIG);
+    expect(mocked.get.mock.calls.filter(([url]) => url === `/list-contexts/${CTX}`)).toHaveLength(1);
+    expect(mocked.post).not.toHaveBeenCalled();
+    // The stored list context keeps the id, not 31 KB.
+    await waitFor(() => expect(JSON.parse(window.sessionStorage.getItem('opex-list-context') ?? '{}')).toMatchObject({ filters: '', ctx: CTX }));
+    fireEvent.click(screen.getByRole('button', { name: 'back to list' }));
+    const list = await screen.findByTestId('list-page');
+    const search = new URLSearchParams(list.getAttribute('data-search') ?? '');
+    expect(search.get('ctx')).toBe(CTX);
+    expect(search.get('filters')).toBeNull();
+    expect(search.get('sort')).toBe('product_name:ASC');
   });
 });
 

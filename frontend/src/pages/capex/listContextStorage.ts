@@ -8,6 +8,11 @@ export type CapexListContextSnapshot = {
    * and the item page falls back to the endpoint default (enabled only).
    */
   statusScope?: string;
+  /**
+   * Filters too long for a URL, saved as a list context: `filters` is then empty and this id
+   * stands for them (lib/listContext.ts).
+   */
+  ctx?: string;
 };
 
 const STORAGE_KEY = 'capex-list-context';
@@ -18,7 +23,8 @@ function isCapexListContextSnapshot(value: any): value is CapexListContextSnapsh
     && typeof value.q === 'string'
     && typeof value.filters === 'string'
     // Optional: snapshots written before this field existed stay valid.
-    && (value.statusScope === undefined || typeof value.statusScope === 'string');
+    && (value.statusScope === undefined || typeof value.statusScope === 'string')
+    && (value.ctx === undefined || typeof value.ctx === 'string');
 }
 
 export function readStoredCapexListContext(): CapexListContextSnapshot | null {

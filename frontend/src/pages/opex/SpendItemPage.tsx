@@ -7,6 +7,9 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useSpendNav } from '../../hooks/useSpendNav';
+import { spendDetailQuery } from '../../hooks/budgetItemDetailQuery';
+import { useListFilters, writeListSnapshot } from '../../hooks/useListContextSearch';
+import { compactListSearchCached } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { dimensionFieldPredicate, explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
@@ -33,6 +36,9 @@ import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { isoToLocalDateInput } from '../../lib/datetime';
 import type { ItemAnalyticsValue } from '../../services/analytics';
+
+/** The list this workspace belongs to (its saved list contexts). */
+const LIST_ENDPOINT = '/spend-items/summary';
 
 type TabKey = 'overview' | 'budget' | 'allocations' | 'relations';
 const TAB_KEYS: TabKey[] = ['overview', 'budget', 'allocations', 'relations'];
@@ -174,8 +180,8 @@ export default function SpendItemPage() {
   const routeTab: TabKey = TAB_KEYS.includes(params.tab as TabKey) ? (params.tab as TabKey) : 'overview';
 
   const { data, error, refetch, isPlaceholderData } = useQuery({
-    queryKey: ['spend', idParam],
-    queryFn: async () => (await api.get(`/spend-items/${idParam}`)).data,
+    // Shared with the neighbours' prefetch (previous / next show at once).
+    ...spendDetailQuery(idParam),
     enabled: !isCreate,
     // Keep the previous entry on screen while the next one loads (prev/next nav) —
     // no loading flash, the content swaps in place when ready.
@@ -298,27 +304,34 @@ export default function SpendItemPage() {
     () => dimensionFieldPredicate(analyticsAxes.enabled.filter((axis) => !axis.is_default).map((axis) => axis.id)),
     [analyticsAxes],
   );
-  const listContextReady = budgetColumns.ready && analyticsAxes.ready;
+  // Filters saved as a context (`ctx`: a link opened in a new tab, a reload) are read first.
+  const listFilters = useListFilters(searchParams, storedListContext);
+  const listContextReady = budgetColumns.ready && analyticsAxes.ready && listFilters.ready;
   const sort = explicitSort(searchParams.get('sort') || storedListContext?.sort, budgetColumns.shown, budgetColumns.defaultSort, isListField);
   const q = searchParams.get('q') || storedListContext?.q || '';
   // A filter on a column that is not shown falls back like the list's, so prev/next walks the rows on screen.
-  const filters = filtersStringOnShownColumns(searchParams.get('filters') || storedListContext?.filters, budgetColumns.shown, isListField);
+  const filters = filtersStringOnShownColumns(listFilters.filters, budgetColumns.shown, isListField);
   // Status scope of the list we came from. The grid keeps it in local state, so it reaches
   // us through the stored list context; it must be forwarded to prev/next or the navigation
   // walks a different set from the one on screen.
   const statusScope = storedListContext?.statusScope || 'enabled';
   React.useEffect(() => {
-    if (listContextReady) writeStoredOpexListContext({ sort, q, filters, statusScope });
+    if (listContextReady) writeListSnapshot(LIST_ENDPOINT, { sort, q, filters, statusScope }, readStoredOpexListContext, writeStoredOpexListContext);
   }, [listContextReady, sort, q, filters, statusScope]);
   const buildListContextParams = React.useCallback(() => {
     const sp = new URLSearchParams(searchParamsString);
     if (sort) sp.set('sort', sort); else sp.delete('sort');
     if (!sp.get('q') && q) sp.set('q', q);
-    if (!sp.get('filters') && filters) sp.set('filters', filters);
-    return sp;
+    if (!sp.get('filters') && filters) {
+      sp.delete('ctx');
+      sp.set('filters', filters);
+    }
+    // Filters too long for a URL go as `ctx` (saved by the navigation request already).
+    return new URLSearchParams(compactListSearchCached(sp.toString(), LIST_ENDPOINT));
   }, [filters, q, searchParamsString, sort]);
 
-  const nav = useSpendNav({ id: uuid || idParam, sort: sort || null, q, filters, statusScope, enabled: listContextReady });
+  // The route's line, not the loaded detail: the position follows a click at once (fast clicks).
+  const nav = useSpendNav({ id: idParam, sort: sort || null, q, filters, statusScope, enabled: listContextReady && !isCreate });
   const { index, total, hasPrev, hasNext, prevId, nextId } = isCreate
     ? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null as any, nextId: null as any }
     : nav;
@@ -522,7 +535,7 @@ export default function SpendItemPage() {
       const newId = res.data?.id as string | undefined;
       if (!newId) throw new Error(t('opex.editor.failedToCreate'));
       queryClient.invalidateQueries({ queryKey: ['spend-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['spend-items-summary-ids'] });
+      queryClient.invalidateQueries({ queryKey: ['spend-items-summary-neighbors'] });
       const sp = buildListContextParams();
       navigate(`/ops/opex/${newId}/overview?${sp.toString()}`);
     } catch (e) {
