@@ -517,10 +517,8 @@ async function main() {
       tenantId = fixture.tenantId;
       emptyTenantId = fixture.emptyTenantId;
     }
-    const m = runner.manager;
-    const deps = realSummaryDeps();
-    const fold = await loadOracleFold(m);
-    for (const scope of SCOPES) await runScope(scope, runner, deps, fold, tenantId, emptyTenantId);
+    const fold = await loadOracleFold(runner.manager);
+    for (const scope of SCOPES) await runScope(scope, runner, fold, tenantId, emptyTenantId);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
@@ -537,7 +535,6 @@ async function main() {
 async function runScope(
   scope: SummaryScopeConfig,
   runner: QueryRunner,
-  deps: ReturnType<typeof realSummaryDeps>,
   fold: Awaited<ReturnType<typeof loadOracleFold>>,
   tenantId: string,
   emptyTenantId: string | null,
@@ -551,6 +548,8 @@ async function runScope(
   itemNumbers.clear();
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   const m = runner.manager;
+  // The list's own allocation calculator: CAPEX shares come from capex_allocations.
+  const deps = realSummaryDeps(scope);
   const oracle = new BudgetSummaryOracle(scope, deps, m, tenantId, fold, ROW_OPTIONS);
   const axisRows: Array<{ id: string }> = await m.query(`SELECT id FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order, id`, [tenantId]);
 

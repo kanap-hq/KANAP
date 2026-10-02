@@ -45,7 +45,7 @@ async function run() {
   try {
     const { tenantId } = await seedListFixture(runner, SEED);
     const m = runner.manager;
-    const deps = realSummaryDeps();
+    const deps = realSummaryDeps(scope);
     const fold = await loadOracleFold(m);
     const oracle = new BudgetSummaryOracle(scope, deps, m, tenantId, fold, ROW_OPTIONS);
     const all = { includeDisabled: 'true' };
@@ -172,24 +172,25 @@ async function run() {
        SELECT $1, $2, make_date($3, mo, 1), $4::numeric, 0, 0, 0, 0 FROM generate_series(1, 12) AS mo`,
       [tenantId, capexVersion, Y, MAX_MONTH],
     );
-    const capexTotals = await loadVersionTotals(SUMMARY_SCOPES.capex, deps, m, tenantId, [{ id: capexItem, currency: 'EUR' }], [Y], { reporting: false });
+    const capex = SUMMARY_SCOPES.capex;
+    const capexDeps = realSummaryDeps(capex); // CAPEX shares come from capex_allocations
+    const capexTotals = await loadVersionTotals(capex, capexDeps, m, tenantId, [{ id: capexItem, currency: 'EUR' }], [Y], { reporting: false });
     const column = SUMMARY_COLUMNS.find((c) => c.measure === 'planned')!;
     assert.equal(capexTotals.cents.get(capexVersion)?.[column.key], 11999999999999999988n, 'CAPEX version totals read exactly');
     // The CAPEX list (on the engine since PR C) takes it like the oracle.
-    const capex = SUMMARY_SCOPES.capex;
-    const capexOracle = new BudgetSummaryOracle(capex, deps, m, tenantId, fold, ROW_OPTIONS);
+    const capexOracle = new BudgetSummaryOracle(capex, capexDeps, m, tenantId, fold, ROW_OPTIONS);
     for (const query of [
       { ...all, sort: 'yBudget:DESC', limit: 10 },
       { ...all, sort: 'priority:ASC', limit: 10, filters: f({ yBudget: { filterType: 'number', type: 'greaterThan', filter: 1e15 } }) },
       { ...all, sort: 'description:ASC', limit: 10, q: 'absurd' },
     ]) {
-      const e = await engine.budgetListSummary(capex, deps, query, m, ROW_OPTIONS);
+      const e = await engine.budgetListSummary(capex, capexDeps, query, m, ROW_OPTIONS);
       const o = await capexOracle.summary(query);
       assert.deepEqual(JSON.parse(JSON.stringify(e.items)), JSON.parse(JSON.stringify(o.items)), `CAPEX rows ${JSON.stringify(query)}`);
       assert.equal(e.total, o.total);
-      assert.deepEqual(await engine.budgetListTotals(capex, deps, query, m), await capexOracle.summaryTotals(query), `CAPEX totals ${JSON.stringify(query)}`);
+      assert.deepEqual(await engine.budgetListTotals(capex, capexDeps, query, m), await capexOracle.summaryTotals(query), `CAPEX totals ${JSON.stringify(query)}`);
     }
-    const capexTop = await engine.budgetListSummary(capex, deps, { ...all, sort: 'yBudget:DESC', limit: 1 }, m, ROW_OPTIONS);
+    const capexTop = await engine.budgetListSummary(capex, capexDeps, { ...all, sort: 'yBudget:DESC', limit: 1 }, m, ROW_OPTIONS);
     assert.equal(capexTop.items[0].id, capexItem, 'the absurd investment sorts first');
 
     // ----- fixed sort orders against the database enums -----

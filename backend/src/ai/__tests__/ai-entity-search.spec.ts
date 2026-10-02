@@ -73,6 +73,8 @@ async function testLegacySearchAllCastsNonTextFieldsBeforeLike() {
     assert.equal(sqlStatements.some((sql) => sql.includes('ci.ppe_type::text')), true);
     assert.equal(sqlStatements.some((sql) => sql.includes("COALESCE(acc.account_number, '')")), false);
     assert.equal(sqlStatements.some((sql) => sql.includes("COALESCE(ci.ppe_type, '')")), false);
+    assert.equal(sqlStatements.some((sql) => sql.includes('ci.priority::text')), true);
+    assert.equal(sqlStatements.some((sql) => sql.includes("COALESCE(ci.priority, '')")), false);
   });
 }
 

@@ -127,13 +127,9 @@ class VirtualUser {
 
   // ── List: request builders (OpexListPage.tsx + ServerDataGrid.tsx) ───────
   filtersParam() { return Object.keys(this.list.filters).length ? JSON.stringify(this.list.filters) : undefined; }
-  summaryName() {
-    if (args.list !== 'opex') return `GET ${LIST.base}/summary`;
-    const sqlSort = !/^y/.test(this.list.sort) && !this.list.q && Object.keys(this.list.filters).every((k) => ['product_name', 'description', 'currency', 'notes', 'status', 'run_build'].includes(k));
-    return `GET /spend-items/summary [${sqlSort ? 'sql path' : 'memory path'}]`;
-  }
   page(n) {
-    return this.get(this.summaryName(), `${LIST.base}/summary${qs({ page: n, limit: 50, sort: this.list.sort, years: YEARS, filters: this.filtersParam(), status: this.list.status, q: this.list.q })}`);
+    // Both lists run every page on the SQL list engine (lot 2B): one name per list.
+    return this.get(`GET ${LIST.base}/summary`, `${LIST.base}/summary${qs({ page: n, limit: 50, sort: this.list.sort, years: YEARS, filters: this.filtersParam(), status: this.list.status, q: this.list.q })}`);
   }
   totals() {
     return this.get(`GET ${LIST.base}/summary/totals`, `${LIST.base}/summary/totals${qs({ q: this.list.q, filters: this.filtersParam(), status: this.list.status })}`);
@@ -180,7 +176,7 @@ class VirtualUser {
   }
 
   async setFilter() {
-    // Paying company set filter (3 values, evaluated in memory): open, then 3 clicks applied at once.
+    // Paying company set filter (3 values): open, then 3 clicks applied at once.
     const field = 'paying_company_name';
     const res = await this.filterValues(field);
     const values = Array.isArray(res.data?.[field]) ? res.data[field].filter((v) => v != null) : [];

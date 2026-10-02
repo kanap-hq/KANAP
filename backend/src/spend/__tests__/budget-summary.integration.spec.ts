@@ -319,10 +319,8 @@ async function testEngineReadsEveryLine(kind: Kind) {
 async function testBlankOnAnyColumnRunsInSql(kind: Kind) {
   await withFixture(kind, async (runner) => {
     const blank = await engineSummary(kind, { ...ALL, filters: filters({ owner_it_id: { filterType: 'text', type: 'blank' } }) }, runner.manager);
-    assert.equal(blank.capped, undefined, `${kind}: a blank filter on owner_it_id runs in SQL`);
     assert.equal(blank.total, 5);
     const notBlank = await engineSummary(kind, { ...ALL, filters: filters({ owner_it_id: { filterType: 'text', type: 'notBlank' } }) }, runner.manager);
-    assert.equal(notBlank.capped, undefined);
     assert.equal(notBlank.total, 0, `${kind}: no line has an IT owner`);
   });
 }
@@ -333,7 +331,6 @@ async function testStatusSortsTheSameEverywhere(kind: Kind) {
     const expected = ['enabled', 'enabled', 'enabled', 'disabled', 'disabled'];
     // Without a search: the enum order, enabled first.
     const inSql = await engineSummary(kind, { ...ALL, sort: 'status:ASC' }, runner.manager);
-    assert.equal(inSql.capped, undefined, `${kind}: the status sort runs in SQL`);
     assert.deepEqual(statuses(inSql), expected, `${kind}: status ascending, in SQL`);
     // With a search (every name contains "e"): the same order.
     const searched = await itemService(kind).summary({ ...ALL, sort: 'status:ASC', q: 'e' }, { manager: runner.manager });
@@ -589,10 +586,8 @@ async function testCostCenterFields(kind: Kind) {
     assert.deepEqual(byGroup.items.map((row: any) => row.id), [ids.alpha], `${kind}: a group through the path`);
 
     const build = await engineSummary(kind, { ...ALL, filters: filters({ run_build: { filterType: 'set', values: ['build'] } }) }, runner.manager);
-    assert.equal(build.capped, undefined, `${kind}: the run or build filter runs in SQL`);
     assert.deepEqual(build.items.map((row: any) => row.id), [ids.bravo]);
     const blankRunBuild = await engineSummary(kind, { ...ALL, filters: filters({ run_build: { filterType: 'set', values: [null] } }) }, runner.manager);
-    assert.equal(blankRunBuild.capped, undefined);
     assert.equal(blankRunBuild.total, 3, `${kind}: blank run or build`);
 
     const byCode = await svc.summary({ ...ALL, q: 'it-200' }, opts);
@@ -610,7 +605,6 @@ async function testCostCenterFields(kind: Kind) {
 
     const runBuilds = (page: any) => page.items.map((row: any) => row.run_build);
     const inSql = await engineSummary(kind, { ...ALL, sort: 'run_build:ASC' }, runner.manager);
-    assert.equal(inSql.capped, undefined, `${kind}: the run or build sort runs in SQL`);
     assert.deepEqual(runBuilds(inSql), ['run', 'build', null, null, null]);
     const inMemory = await svc.summary({ ...ALL, sort: 'run_build:ASC', q: 'e' }, opts);
     assert.deepEqual(runBuilds(inMemory), ['run', 'build', null, null, null], `${kind}: the same order in memory`);
@@ -774,8 +768,6 @@ async function testAnalyticsDimensions(kind: Kind) {
     assert.deepEqual(natureOf(descending), [null, null, null, 'Subscriptions', 'Maintenance'], `${kind}: sort descending on a dimension`);
 
     // The legacy column is not read: a filter on the default dimension reads the links.
-    const byIdEngine = await engineSummary(kind, { ...ALL, filters: filters({ analytics_category_id: { filterType: 'set', values: [a.licences] } }) }, runner.manager);
-    assert.equal(byIdEngine.capped, undefined, `${kind}: no cap`);
     const byId = await svc.summary({ ...ALL, filters: filters({ analytics_category_id: { filterType: 'set', values: [a.licences] } }) }, opts);
     assert.deepEqual(idsOf(byId), [ids.alpha], `${kind}: filtered on the link, not on the stale column`);
     const blank = await svc.summary({ ...ALL, filters: filters({ analytics_category_id: { filterType: 'text', type: 'blank' } }) }, opts);

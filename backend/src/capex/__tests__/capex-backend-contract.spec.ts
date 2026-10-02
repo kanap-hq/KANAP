@@ -79,11 +79,15 @@ async function testSummaryIdsReturnsAlignedItemNumbers() {
   assert.deepEqual(result.item_numbers, [1, 2]);
   assert.equal(result.total, 2);
   assert.equal(statements.length, 1, 'one statement for the ordered ids');
+  // A smoke check of the statement's shape, whatever its formatting: the exact SQL and the
+  // order are the differential suite's (budget-list-differential.integration.spec.ts).
   const [{ sql, params }] = statements;
-  assert.match(sql, /FROM capex_items i\b/);
-  assert.match(sql, /i\.tenant_id = \$1/, 'the statement names the tenant');
-  assert.equal(params[0], 'tenant-1');
-  assert.match(sql, /ORDER BY \(i\.item_number\) ASC, i\.created_at DESC, i\.id DESC/, 'the item number, then the newest first');
+  const text = sql.replace(/\s+/g, ' ');
+  assert.match(text, /\bFROM capex_items\b/i, 'the statement reads the CAPEX lines');
+  const tenantBind = params.indexOf('tenant-1');
+  assert.ok(tenantBind >= 0, 'the tenant is bound');
+  assert.match(text, new RegExp(`\\btenant_id\\s*=\\s*\\$${tenantBind + 1}(?!\\d)`), 'the statement filters on the bound tenant');
+  assert.match(text, /\bORDER BY\b.*\bitem_number\b/i, 'the order names the item number');
 }
 
 async function testManualPctBulkUpsert() {
