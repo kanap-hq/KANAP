@@ -1,8 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { ZodValidationPipe } from 'nestjs-zod';
 import helmet from 'helmet';
 import * as cors from 'cors';
 import * as express from 'express';
@@ -14,12 +12,7 @@ import { RolePermission } from './permissions/role-permission.entity';
 import { RESOURCES } from './permissions/permissions.service';
 import * as argon2 from 'argon2';
 import { Request, Response, NextFunction } from 'express';
-import { TenantInterceptor } from './common/tenant.interceptor';
-import { ListContextInterceptor } from './common/list-context/list-context.interceptor';
-import { ListContextsService } from './common/list-context/list-contexts.service';
-import { TenantInitGuard } from './common/tenant-init.guard';
-import { HttpAdapterHost, Reflector } from '@nestjs/core';
-import { ReleaseTenantRunnerFilter } from './common/filters/release-tenant-runner.filter';
+import { useRequestPipeline } from './common/request-pipeline';
 import { isProductionEnv, parseBoolean, parseCorsPatterns, matchesCorsOrigin, requireAppBaseUrl, requireEnv } from './common/env';
 import { describeTokenPurposePolicy } from './auth/access-token.util';
 import { describeSecretPolicy } from './auth/token-secret.util';
@@ -86,7 +79,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   validateStartupEnv();
   logTokenSecretPolicy();
-  const reflector = app.get(Reflector);
   if (shouldTrustProxyForRateLimit()) {
     const expressApp = app.getHttpAdapter().getInstance();
     expressApp.set('trust proxy', 1);
@@ -136,12 +128,6 @@ async function bootstrap() {
   // Ops metrics middleware — must be registered before tenancy so it wraps the full pipeline
   const opsMetricsStore = app.get(OpsMetricsStore);
   app.use(createRequestMetricsMiddleware(opsMetricsStore));
-
-  // Use both ValidationPipe (for class-validator DTOs) and ZodValidationPipe (for Zod DTOs)
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, transform: true }),
-    new ZodValidationPipe(),
-  );
 
   // Seed admin user (dev-only convenience). Enable explicitly via SEED_ADMIN=true.
   const ds = app.get(DataSource);
@@ -401,19 +387,15 @@ async function bootstrap() {
     platformAdminHost: process.env.PLATFORM_ADMIN_HOST || '',
     marketingRedirectUrl: (process.env.MARKETING_BASE_URL || 'https://www.kanap.net').replace(/\/$/, ''),
   }));
-  // Initialize tenant DB context before guards
-  app.useGlobalGuards(new TenantInitGuard(ds, reflector));
-  // Bind tenant to DB session (reuse or create) around controller handling. Then, inside that
-  // transaction, a GET carrying `ctx=<id>` gets its saved list state merged into its query.
-  app.useGlobalInterceptors(new TenantInterceptor(ds, reflector), new ListContextInterceptor(app.get(ListContextsService)));
+  // Pipes (ValidationPipe for class-validator DTOs, ZodValidationPipe for Zod DTOs), the tenant
+  // transaction (TenantInitGuard opens it before the other guards, TenantInterceptor finishes it),
+  // saved list filters (`ctx=<id>`, inside that transaction, before the pipes) and the exception
+  // filter that releases a transaction left open: see common/request-pipeline.ts.
+  useRequestPipeline(app, ds);
 
   // Finalizer middleware: ensure any leftover queryRunner is released on finish/close; a client
   // abort rolls back quietly (one warning line). See common/request-finalizer.middleware.ts.
   app.use(createRequestFinalizer());
-
-  // Global exception filter: release queryRunner on errors thrown before interceptors finalize
-  const { httpAdapter } = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new ReleaseTenantRunnerFilter(httpAdapter));
 
   const port = process.env.PORT || 8080;
   await app.listen(port as number);

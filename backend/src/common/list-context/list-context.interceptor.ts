@@ -1,5 +1,5 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
-import { from, Observable } from 'rxjs';
+import { BadRequestException, CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import { from, Observable, throwError } from 'rxjs';
 import { mergeMap } from 'rxjs/operators';
 import type { EntityManager } from 'typeorm';
 import { mergeListContextQuery } from './list-context';
@@ -7,19 +7,21 @@ import { ListContextsService } from './list-contexts.service';
 
 /**
  * The one place every list endpoint reads `ctx=<id>`: a GET carrying it gets
- * its saved list state merged into the request query before the controller
- * runs, explicit parameters first (`mergeListContextQuery`). The list parsers
- * (`parseListRequest` for the SQL list engine, `parsePagination` and
+ * its saved filters merged into the request query before the controller runs
+ * (`mergeListContextQuery`: the filters only, inline filters first). The list
+ * parsers (`parseListRequest` for the SQL list engine, `parsePagination` and
  * `parseExportPagination` for the other lists, services reading
  * `query.filters`) are synchronous and only see the query object they are
  * handed, so the context is resolved here, once, rather than in each of them.
  *
- * Runs after `TenantInterceptor` (registered after it in main.ts), inside the
- * request's tenant transaction: the read is tenant-scoped by RLS and by its
- * own `tenant_id` predicate. A route without a tenant transaction (public,
- * `@SkipTenantTransaction`) reads no context and leaves the query alone. An
- * unknown id answers 400 (`list_context_not_found`): a list silently shown
- * unfiltered would look filtered.
+ * Registered right after `TenantInterceptor` (`request-pipeline.ts`): it runs
+ * inside the request's tenant transaction, and before the pipes, which then
+ * validate the merged query like an inline one. The read is tenant-scoped by
+ * RLS and by its own `tenant_id` predicate. An unknown id answers 400
+ * (`list_context_not_found`): a list silently shown unfiltered would look
+ * filtered. A route without a tenant transaction (public,
+ * `@SkipTenantTransaction`) cannot read a context: `ctx` there answers 400
+ * (`list_context_unavailable`) rather than being ignored.
  */
 @Injectable()
 export class ListContextInterceptor implements NestInterceptor {
@@ -33,7 +35,12 @@ export class ListContextInterceptor implements NestInterceptor {
     if (!query || query.ctx === undefined || query.ctx === '') return next.handle();
     const manager: EntityManager | undefined = req?.queryRunner?.manager;
     const tenantId: string | undefined = req?.tenant?.id;
-    if (!manager || !tenantId) return next.handle();
+    if (!manager || !tenantId) {
+      return throwError(() => new BadRequestException({
+        code: 'list_context_unavailable',
+        message: 'This address does not take saved list filters (ctx).',
+      }));
+    }
     return from(applyListContext(this.contexts, req, manager, tenantId)).pipe(mergeMap(() => next.handle()));
   }
 }

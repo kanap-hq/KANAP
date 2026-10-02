@@ -133,39 +133,41 @@ async function run() {
     assert.ok(encodeURIComponent(JSON.stringify(allButOne)).length > 30_000, 'a state of more than 30 KB in a URL');
     const inline = { ...all, sort: 'supplier_name:ASC', filters: JSON.stringify(allButOne) };
     const contexts = new ListContextsService();
-    const { id } = await contexts.save(m, tenantId, 'spend-items', { filters: allButOne, sort: 'supplier_name:ASC', includeDisabled: 'true' });
-    const viaContext = async (path: string, extra = '') => {
-      const req = expressRequest(`/spend-items/${path}?ctx=${id}${extra}`);
+    // A context holds the filters only; the sort and the scope travel inline, as the grid sends them.
+    const { id } = await contexts.save(m, tenantId, 'spend-items', { filters: allButOne });
+    const viaContext = async (path: string, params: Record<string, string> = {}) => {
+      const sp = new URLSearchParams({ ...all, sort: 'supplier_name:ASC', ...params, ctx: id } as Record<string, string>);
+      const req = expressRequest(`/spend-items/${path}?${sp.toString()}`);
       await applyListContext(contexts, req, m, tenantId);
       return req.query;
     };
     const inlinePage = await engine.budgetListSummary(scope, deps, { ...inline, page: '2', limit: '10', shape: 'grid' }, m);
-    const ctxPage = await engine.budgetListSummary(scope, deps, await viaContext('summary', '&page=2&limit=10&shape=grid'), m);
+    const ctxPage = await engine.budgetListSummary(scope, deps, await viaContext('summary', { page: '2', limit: '10', shape: 'grid' }), m);
     assert.deepEqual(ctxPage, inlinePage, 'page through ctx = inline page');
     const inlineIds = await engine.budgetListIds(scope, deps, inline, m);
     assert.deepEqual(await engine.budgetListIds(scope, deps, await viaContext('summary/ids'), m), inlineIds, 'ids');
     assert.ok(inlineIds.total > 0 && inlineIds.total < (await engine.budgetListIds(scope, deps, all, m)).total, 'the filter selects some lines');
-    assert.deepEqual(await engine.budgetListTotals(scope, deps, await viaContext('summary/totals', '&amounts=yBudget'), m), await engine.budgetListTotals(scope, deps, { ...inline, amounts: 'yBudget' }, m), 'totals');
+    assert.deepEqual(await engine.budgetListTotals(scope, deps, await viaContext('summary/totals', { amounts: 'yBudget' }), m), await engine.budgetListTotals(scope, deps, { ...inline, amounts: 'yBudget' }, m), 'totals');
     assert.deepEqual(
-      await engine.budgetListFilterValues(scope, deps, await viaContext('summary/filter-values', '&fields=currency'), m),
+      await engine.budgetListFilterValues(scope, deps, await viaContext('summary/filter-values', { fields: 'currency' }), m),
       await engine.budgetListFilterValues(scope, deps, { ...inline, fields: 'currency' }, m),
       'filter values',
     );
     const middle = inlineIds.ids[Math.floor(inlineIds.ids.length / 2)];
     assert.deepEqual(
-      await engine.budgetListNeighbors(scope, deps, await viaContext('summary/neighbors', `&id=${middle}`), middle, m),
+      await engine.budgetListNeighbors(scope, deps, await viaContext('summary/neighbors', { id: middle }), middle, m),
       await engine.budgetListNeighbors(scope, deps, inline, middle, m),
       'neighbours',
     );
-    // Explicit parameters override the context: the sort, and the filters.
+    // The request's own sort applies (a context never brings one), and inline filters win over the context's.
     assert.deepEqual(
-      await engine.budgetListIds(scope, deps, await viaContext('summary/ids', '&sort=supplier_name:DESC'), m),
+      await engine.budgetListIds(scope, deps, await viaContext('summary/ids', { sort: 'supplier_name:DESC' }), m),
       await engine.budgetListIds(scope, deps, { ...inline, sort: 'supplier_name:DESC' }, m),
-      'explicit sort wins',
+      'the request sort',
     );
     const ownFilters = JSON.stringify({ supplier_name: { filterType: 'set', values: [left] } });
     assert.deepEqual(
-      await engine.budgetListIds(scope, deps, await viaContext('summary/ids', `&filters=${encodeURIComponent(ownFilters)}`), m),
+      await engine.budgetListIds(scope, deps, await viaContext('summary/ids', { filters: ownFilters }), m),
       await engine.budgetListIds(scope, deps, { ...inline, filters: ownFilters }, m),
       'explicit filters win',
     );

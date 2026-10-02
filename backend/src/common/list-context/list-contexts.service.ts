@@ -19,24 +19,91 @@ export type StoredListContext = { id: string; list: string; state: Record<string
 const TOUCH_AFTER = `interval '1 day'`;
 
 /**
+ * Saved list states a tenant keeps at most; past it, saving a new one deletes
+ * the least recently used. Only filters too long for an address are saved
+ * (over 1,500 characters), one row per distinct filter state: 1,000 rows hold
+ * about 20 live states (current lists, open links, bookmarks) for each of 50
+ * active users. The use date moves once a day, so "least recently used" is
+ * day-grained. Storage stays bounded: about 31 MB at the 31 KB of "every
+ * supplier but one", 256 MB at the 256 KB a state may reach.
+ */
+export const LIST_CONTEXTS_PER_TENANT = 1000;
+
+/**
+ * Moves the use date of a context unused for a day. Never waits: a row another
+ * request is moving right now (its transaction still open, as the touch runs
+ * inside the request's transaction) is left to that request (SKIP LOCKED).
+ * Without that, every request reading the same stale context waited for the
+ * first one's whole request to end.
+ */
+async function touchListContext(manager: EntityManager, tenantId: string, id: string): Promise<void> {
+  await manager.query(
+    `UPDATE list_contexts SET last_used_at = now()
+      WHERE (tenant_id, id) IN (
+        SELECT tenant_id, id FROM list_contexts
+         WHERE tenant_id = $1 AND id = $2 AND last_used_at < now() - ${TOUCH_AFTER}
+         FOR UPDATE SKIP LOCKED
+      )`,
+    [tenantId, id],
+  );
+}
+
+/**
+ * Keeps the tenant's `cap` most recently used contexts and deletes the others.
+ * Rows other requests hold are skipped: the cap is approximate by a few rows
+ * under concurrent saves, never a wait.
+ */
+export async function evictListContexts(manager: EntityManager, tenantId: string, cap = LIST_CONTEXTS_PER_TENANT): Promise<number> {
+  const rows: Array<{ n: number }> = await manager.query(
+    `WITH gone AS (
+       DELETE FROM list_contexts
+        WHERE (tenant_id, id) IN (
+          SELECT tenant_id, id FROM list_contexts
+           WHERE tenant_id = $1
+           ORDER BY last_used_at DESC
+           OFFSET $2
+           FOR UPDATE SKIP LOCKED
+        )
+       RETURNING 1
+     )
+     SELECT count(*)::int AS n FROM gone`,
+    [tenantId, cap],
+  );
+  return Number(rows[0]?.n ?? 0);
+}
+
+/**
  * Saves and reads list contexts (`list-context.ts`). Every statement names the
  * tenant besides row-level security, and runs on the caller's manager: the
  * request's tenant transaction, or a spec's.
  */
 @Injectable()
 export class ListContextsService {
-  /** Saves a state and answers its id; saving the same state again keeps the row and refreshes its use date. */
+  /** Least recently used contexts past this many are deleted when a new one is saved. */
+  protected readonly cap: number = LIST_CONTEXTS_PER_TENANT;
+
+  /**
+   * Saves a state and answers its id. A state already saved keeps its row (its
+   * use date moves, see `touchListContext`); a new one is inserted, then the
+   * tenant's oldest contexts past the cap go. The existence check reads the
+   * committed row, so a save never waits on a request that is touching it; it
+   * waits only on another request inserting the very same state, until that
+   * request ends.
+   */
   async save(manager: EntityManager, tenantId: string, rawList: unknown, rawState: unknown): Promise<{ id: string }> {
     const list = normalizeListKey(rawList);
     const state: ListContextState = normalizeListContextState(rawState);
     const id = listContextId(tenantId, list, state);
-    await manager.query(
+    const inserted: unknown[] = await manager.query(
       `INSERT INTO list_contexts (tenant_id, id, list_key, state)
-       VALUES ($1, $2, $3, $4::jsonb)
-       ON CONFLICT (tenant_id, id) DO UPDATE SET last_used_at = now()
-        WHERE list_contexts.last_used_at < now() - ${TOUCH_AFTER}`,
+       SELECT $1, $2, $3, $4::jsonb
+        WHERE NOT EXISTS (SELECT 1 FROM list_contexts WHERE tenant_id = $1 AND id = $2)
+       ON CONFLICT (tenant_id, id) DO NOTHING
+       RETURNING id`,
       [tenantId, id, list, JSON.stringify(state)],
     );
+    if (inserted.length) await evictListContexts(manager, tenantId, this.cap);
+    else await touchListContext(manager, tenantId, id);
     return { id };
   }
 
@@ -51,13 +118,7 @@ export class ListContextsService {
     );
     const row = rows[0];
     if (!row) return null;
-    if (row.stale) {
-      await manager.query(
-        `UPDATE list_contexts SET last_used_at = now()
-          WHERE tenant_id = $1 AND id = $2 AND last_used_at < now() - ${TOUCH_AFTER}`,
-        [tenantId, id],
-      );
-    }
+    if (row.stale) await touchListContext(manager, tenantId, id);
     return { id: row.id, list: row.list_key, state: row.state ?? {} };
   }
 

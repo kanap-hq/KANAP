@@ -6,7 +6,7 @@ import dataSource from '../../../data-source';
 import { ListContexts1853750000000 } from '../../../migrations/1853750000000-list-contexts';
 import { ListContextPurgeService } from '../../../cleanup/list-context-purge.service';
 import { listContextId, normalizeListContextState } from '../list-context';
-import { ListContextsService, purgeListContexts } from '../list-contexts.service';
+import { evictListContexts, LIST_CONTEXTS_PER_TENANT, ListContextsService, purgeListContexts } from '../list-contexts.service';
 import { inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../../spend/__tests__/round-inputs.fixtures';
 
 // `list_contexts` (lot 2B, PR B2) on a real database, each case in a
@@ -14,8 +14,10 @@ import { inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../
 // - RLS: a tenant reads, saves and purges only its own contexts; a row naming
 //   another tenant is refused (WITH CHECK), and RLS is forced;
 // - content addressing: saving the same state twice keeps one row and the
-//   same id; the id matches `listContextId`;
+//   same id; the id matches `listContextId`; only filters are saved;
 // - a read moves the use date at most once a day;
+// - a tenant keeps at most LIST_CONTEXTS_PER_TENANT contexts: saving a new one
+//   deletes the least recently used, per tenant;
 // - the purge deletes the contexts unused for 90 days, of every tenant, and
 //   keeps the others;
 // - the migration runs again on a migrated database, and repairs a table that
@@ -23,7 +25,14 @@ import { inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const svc = new ListContextsService();
-const FILTERS = { supplier_name: { filterType: 'set', values: Array.from({ length: 1200 }, (_, i) => `Supplier ${i}`) } };
+const FILTERS = { supplier_name: { filterType: 'set', values: Array.from({ length: 1200 }, (_, i) => `Supplier ${String(i).padStart(4, '0')}`) } };
+/** FILTERS plus a text filter: another state per label. */
+const filtersFor = (label: string) => ({ ...FILTERS, product_name: { filterType: 'text', type: 'contains', filter: label } });
+
+/** The service with a small cap, to exercise the eviction without saving a thousand rows. */
+class SmallCapContexts extends ListContextsService {
+  protected readonly cap = 3;
+}
 
 async function count(runner: QueryRunner, tenantId: string): Promise<number> {
   const [row] = await runner.query(`SELECT count(*)::int AS n FROM list_contexts WHERE tenant_id = $1`, [tenantId]);
@@ -88,24 +97,32 @@ async function testRlsIsolation() {
 async function testContentAddressing() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seedTenant(runner, 'ctx-hash');
-    const first = await svc.save(runner.manager, a, 'spend-items', { filters: FILTERS, sort: 'supplier_name:ASC' });
-    assert.equal(first.id, listContextId(a, 'spend-items', normalizeListContextState({ filters: FILTERS, sort: 'supplier_name:ASC' })));
-    // The same state, keys in another order and filters as a string: same id, one row.
-    const again = await svc.save(runner.manager, a, '/spend-items', { sort: 'supplier_name:ASC', filters: JSON.stringify(FILTERS) });
+    const first = await svc.save(runner.manager, a, 'spend-items', { filters: FILTERS });
+    assert.equal(first.id, listContextId(a, 'spend-items', normalizeListContextState({ filters: FILTERS })));
+    // The same filters as a string, or with the set values in another order: same id, one row.
+    const again = await svc.save(runner.manager, a, '/spend-items', { filters: JSON.stringify(FILTERS) });
     assert.equal(again.id, first.id);
+    const shuffled = await svc.save(runner.manager, a, 'spend-items', {
+      filters: { supplier_name: { values: [...FILTERS.supplier_name.values].reverse(), filterType: 'set' } },
+    });
+    assert.equal(shuffled.id, first.id);
     assert.equal(await count(runner, a), 1);
-    // Another state or list: another row.
-    const other = await svc.save(runner.manager, a, 'spend-items', { filters: FILTERS, sort: 'supplier_name:DESC' });
-    const otherList = await svc.save(runner.manager, a, 'capex-items', { filters: FILTERS, sort: 'supplier_name:ASC' });
+    // Other filters or another list: another row.
+    const other = await svc.save(runner.manager, a, 'spend-items', { filters: filtersFor('cloud') });
+    const otherList = await svc.save(runner.manager, a, 'capex-items', { filters: FILTERS });
     assert.notEqual(other.id, first.id);
     assert.notEqual(otherList.id, first.id);
     assert.equal(await count(runner, a), 3);
 
     const stored = await svc.get(runner.manager, a, first.id);
-    assert.deepEqual(stored, { id: first.id, list: 'spend-items', state: { filters: FILTERS, sort: 'supplier_name:ASC' } });
+    assert.deepEqual(stored, { id: first.id, list: 'spend-items', state: { filters: FILTERS } });
     // Requests that are not ids are no context.
     assert.equal(await svc.find(runner.manager, a, 'not-an-id'), null);
-    await assert.rejects(() => svc.save(runner.manager, a, 'spend-items', { ctx: first.id }), BadRequestException);
+    // Only the filters are saved: a state with any other list parameter is refused, nothing stored.
+    for (const extra of [{ ctx: first.id }, { sort: 'supplier_name:ASC' }, { status: 'all' }, { limit: 100000 }, { q: 'x' }]) {
+      await assert.rejects(() => svc.save(runner.manager, a, 'spend-items', { filters: filtersFor('extra'), ...extra }), BadRequestException, JSON.stringify(extra));
+    }
+    assert.equal(await count(runner, a), 3);
   });
 }
 
@@ -135,7 +152,7 @@ async function testPurge() {
     const ids: Record<string, string> = {};
     for (const [tenant, label, days] of [[a, 'a-old', 91], [a, 'a-edge', 89], [a, 'a-new', 0], [b, 'b-old', 120], [b, 'b-new', 3]] as const) {
       await setTenant(runner, tenant);
-      ids[label] = (await svc.save(runner.manager, tenant, 'spend-items', { filters: FILTERS, q: label })).id;
+      ids[label] = (await svc.save(runner.manager, tenant, 'spend-items', { filters: filtersFor(label) })).id;
       await age(runner, tenant, ids[label], days);
     }
     const task = new ListContextPurgeService(dataSource, { register: () => undefined } as any);
@@ -150,6 +167,44 @@ async function testPurge() {
     await setTenant(runner, b);
     assert.equal(await svc.find(runner.manager, b, ids['b-old']), null, 'tenant B, unused 120 days: purged');
     assert.ok(await svc.find(runner.manager, b, ids['b-new']), 'tenant B, used 3 days ago: kept');
+  });
+}
+
+async function testCapEvictsLeastRecentlyUsed() {
+  await inRolledBackTransaction(async (runner) => {
+    assert.equal(LIST_CONTEXTS_PER_TENANT, 1000);
+    const small = new SmallCapContexts();
+    const a = await seedTenant(runner, 'ctx-cap-a');
+    const b = await seedTenant(runner, 'ctx-cap-b');
+    // Tenant B's contexts do not count against tenant A's cap, and are never evicted by it.
+    await setTenant(runner, b);
+    const kept = (await small.save(runner.manager, b, 'spend-items', { filters: filtersFor('b-old') })).id;
+    await age(runner, b, kept, 60);
+    await setTenant(runner, a);
+    const ids: Record<string, string> = {};
+    for (const [label, days] of [['oldest', 30], ['middle', 10], ['recent', 2]] as const) {
+      ids[label] = (await small.save(runner.manager, a, 'spend-items', { filters: filtersFor(label) })).id;
+      await age(runner, a, ids[label], days);
+    }
+    assert.equal(await count(runner, a), 3);
+    // Reading the oldest makes it the most recently used.
+    assert.ok(await small.find(runner.manager, a, ids.oldest));
+    // Saving an existing state adds nothing and evicts nothing.
+    assert.equal((await small.save(runner.manager, a, 'spend-items', { filters: filtersFor('recent') })).id, ids.recent);
+    assert.equal(await count(runner, a), 3);
+    // A fourth state: the least recently used one (middle) goes.
+    ids.fresh = (await small.save(runner.manager, a, 'spend-items', { filters: filtersFor('fresh') })).id;
+    assert.equal(await count(runner, a), 3);
+    assert.equal(await small.find(runner.manager, a, ids.middle), null, 'least recently used: evicted');
+    for (const label of ['oldest', 'recent', 'fresh']) assert.ok(await small.find(runner.manager, a, ids[label]), `${label}: kept`);
+    await setTenant(runner, b);
+    assert.ok(await small.find(runner.manager, b, kept), 'another tenant: untouched');
+    // The eviction itself, at any cap: keeps the most recent rows of the tenant.
+    await age(runner, a, ids.oldest, 5);
+    await age(runner, a, ids.recent, 3);
+    assert.equal(await evictListContexts(runner.manager, a, 1), 2);
+    assert.equal(await count(runner, a), 1);
+    assert.ok(await small.find(runner.manager, a, ids.fresh), 'the most recently used stays');
   });
 }
 
@@ -189,5 +244,6 @@ runSpecs('list contexts', [
   ['content addressing: same state, same id, one row', testContentAddressing],
   ['the use date moves at most once a day', testUseDateMovesOncePerDay],
   ['the purge deletes contexts unused for 90 days, per tenant', testPurge],
+  ['past the cap, saving a new context evicts the least recently used', testCapEvictsLeastRecentlyUsed],
   ['the migration runs again and repairs a broken table', testMigrationHeals],
 ]);
