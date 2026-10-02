@@ -2,16 +2,17 @@ import 'dotenv/config';
 import { createHash } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { FIXED_SLOTS, getSummaryFieldValue, SUMMARY_COLUMNS, SUMMARY_SCOPES, summaryFieldValues } from '../spend-summary.builder';
+import { FIXED_SLOTS, getSummaryFieldValue, SUMMARY_COLUMNS, SUMMARY_SCOPES, summaryFieldValues, SummaryScopeConfig } from '../spend-summary.builder';
 import * as engine from '../budget-list/budget-list.service';
 import { BudgetSummaryOracle, loadOracleFold } from './oracle/budget-summary.oracle';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { prng, seedListFixture } from './oracle/budget-list.fixture';
 
-// Differential test of the SQL list engine (lot 2B, PR A) against its oracle,
-// the in-memory engine it replaces (`oracle/budget-summary.oracle.ts`, with
-// the decided changes as listed adapters). Same lines, same order, same rows,
-// totals to the cent, same filter values, same ids.
+// Differential test of the SQL list engine (lot 2B, PRs A and C) against its
+// oracle, the in-memory engine it replaces (`oracle/budget-summary.oracle.ts`,
+// with the decided changes as listed adapters), on the OPEX and the CAPEX
+// list. Same lines, same order, same rows, totals to the cent, same filter
+// values, same ids.
 //
 // CI (default): a deterministic fixture seeded in a rolled-back transaction
 // (`oracle/budget-list.fixture.ts`), the single-field matrix, every sort, the
@@ -19,7 +20,8 @@ import { prng, seedListFixture } from './oracle/budget-list.fixture';
 // Local, on a loaded tenant (read-only, rolled back):
 //   DATABASE_URL=postgres://app:app@localhost:5432/appdb_perf LIST_DIFF_TENANT=perf \
 //     npx ts-node src/spend/__tests__/budget-list-differential.integration.spec.ts
-// Options: LIST_DIFF_SEED (cases and fixture), LIST_DIFF_CASES (combined cases),
+// Options: LIST_DIFF_SCOPE (opex or capex; both by default, each with its own
+// cases and digest), LIST_DIFF_SEED (cases and fixture), LIST_DIFF_CASES (combined cases),
 // LIST_DIFF_PER_OP (needles per field and operator, default 1), LIST_DIFF_MATRIX=0
 // (skip the single-field matrix), LIST_DIFF_FULL=1 (every amount and FTE column
 // of every slot in the matrix, the default on a loaded tenant; CI reads the five
@@ -41,7 +43,13 @@ const FULL = process.env.LIST_DIFF_FULL === '1' || (process.env.LIST_DIFF_FULL !
 /** A dimension id no tenant has (fixed, so the case id is the same every run). */
 const UNKNOWN_AXIS = '00000000-0000-4000-8000-00000000d1ff';
 const Y = new Date().getFullYear();
-const scope = SUMMARY_SCOPES.opex;
+const SCOPES: SummaryScopeConfig[] = (process.env.LIST_DIFF_SCOPE ?? 'opex,capex')
+  .split(',')
+  .map((key) => {
+    const config = (SUMMARY_SCOPES as Record<string, SummaryScopeConfig>)[key.trim()];
+    if (!config) throw new Error(`LIST_DIFF_SCOPE: unknown list ${key}`);
+    return config;
+  });
 const ROW_OPTIONS = { includeRecipientDetails: true, includeNextYearAllocation: true };
 
 type Query = Record<string, any>;
@@ -75,7 +83,7 @@ function sortedObject(value: Record<string, any>): Record<string, any> {
 
 // ----- fields -----
 
-function fieldCatalogue(axisIds: string[]) {
+function fieldCatalogue(scope: SummaryScopeConfig, axisIds: string[]) {
   const slots = [...FIXED_SLOTS.map((slot) => slot.key as string), `y${Y + 3}`];
   // Every column of every slot compiles the same way: CI reads the five columns of Y and one column
   // (a different one each) of every other slot; a full run reads them all.
@@ -83,19 +91,23 @@ function fieldCatalogue(axisIds: string[]) {
     .filter((_, c) => FULL || slot === 'y' || c === s % SUMMARY_COLUMNS.length)
     .map((column) => `${slot}${column.suffix}`));
   return {
+    // The name field first (OPEX `product_name`; the CAPEX name is `description`), the type's own enums last.
     text: [
-      'product_name', 'description', 'notes', 'currency', 'supplier_name', 'paying_company_name', 'company_name', 'account_display', 'account_name',
+      ...(scope.nameField === 'description' ? [] : [scope.nameField]), 'description', 'notes', 'currency', 'supplier_name', 'paying_company_name', 'company_name', 'account_display', 'account_name',
       'account_warning', 'owner_it_name', 'owner_business_name', 'analytics_category_name', ...axisIds.map((id) => `analytics_${id}`), 'cost_center_code',
       'cost_center_name', 'cost_center_label', 'cost_center_path', 'budget_holder_name', 'contract_name', 'latest_contract_name', 'latest_task_text',
       'allocation_label', 'allocation_method_label', 'next_year_allocation_method_label', 'spread_mode_for_y', 'run_build',
+      ...scope.extraFields,
     ],
-    uuid: ['id', 'supplier_id', 'owner_it_id', 'cost_center_id', 'project_id', 'analytics_category_id', 'budget_holder_id', 'latest_contract_id', 'contract_id', 'account_id'],
+    uuid: ['id', 'supplier_id', 'owner_it_id', 'cost_center_id', 'project_id', 'analytics_category_id', 'budget_holder_id', 'latest_contract_id',
+      ...(scope.scope === 'opex' ? ['contract_id'] : []), 'account_id'],
     multi: ['project_name', 'project_stream_name', 'project_category_name'],
     int: ['item_number', 'account_number'],
     money,
     fte: money.map((key) => `fte_${key}`),
     date: ['effective_start', 'created_at', 'updated_at'],
-    unknown: ['nonexistent_field', `analytics_${UNKNOWN_AXIS}`, 'constructor', '__proto__'],
+    // CAPEX also gets the OPEX-only columns, keys its rows do not hold.
+    unknown: ['nonexistent_field', `analytics_${UNKNOWN_AXIS}`, 'constructor', '__proto__', ...(scope.scope === 'capex' ? ['product_name', 'contract_id'] : [])],
   };
 }
 
@@ -132,8 +144,10 @@ function textNeedle(r: ReturnType<typeof prng>, values: string[], type = 'contai
 
 // ----- the cases -----
 
-function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axisIds: string[]): Case[] {
-  const fields = fieldCatalogue(axisIds);
+function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axisIds: string[], scope: SummaryScopeConfig): Case[] {
+  const fields = fieldCatalogue(scope, axisIds);
+  const ref = scope.refPrefix;
+  const fvAllowed = [...engine.FILTER_VALUE_FIELDS, ...scope.extraFields];
   const cases: Case[] = [];
   const add = (id: string, query: Query, checks: Check[] = ['ids'], fvFields?: string[]) => cases.push({ id, query, checks, ...(fvFields ? { fvFields } : {}) });
   const all = { includeDisabled: 'true' };
@@ -202,7 +216,7 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
       add(`${field}/implicitEquals`, { ...all, filters: f({ [field]: { filterType: 'text', type: 'equals', filter: String(a) } }) });
       add(`${field}/implicitNotEqual`, { ...all, filters: f({ [field]: { type: 'notEqual', filter: String(b) } }) });
       add(`${field}/contains`, { ...all, filters: f({ [field]: { filterType: 'text', type: 'contains', filter: String(a).slice(0, 2) } }) });
-      add(`${field}/opx`, { ...all, filters: f({ [field]: { filterType: 'text', type: r.pick(TEXT_OPS), filter: r.pick(['opx-1', 'OPX-12', 'opx-', '-1']) } }) });
+      add(`${field}/${ref}`, { ...all, filters: f({ [field]: { filterType: 'text', type: r.pick(TEXT_OPS), filter: r.pick([`${ref}-1`, `${ref.toUpperCase()}-12`, `${ref}-`, '-1']) } }) });
       add(`${field}/blank`, { ...all, filters: f({ [field]: { filterType: 'number', type: 'blank' } }) });
       add(`${field}/notBlank`, { ...all, filters: f({ [field]: { filterType: 'number', type: 'notBlank' } }) });
       add(`${field}/set`, { ...all, filters: f({ [field]: { filterType: 'set', values: [String(a), String(b), null] } }) });
@@ -231,15 +245,16 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
     }
     // The quick search: needles from every entry of the bag (each dimension, accounts, owners, cost centres,
     // contracts, projects, allocation labels, references), whole, partial, case-flipped and without accents.
-    const bagFields = [
-      'product_name', 'description', 'notes', 'currency', 'supplier_name', 'paying_company_name', 'account_display', 'account_name',
+    const bagFields = Array.from(new Set([
+      scope.nameField, 'description', 'notes', 'currency', 'supplier_name', 'paying_company_name', 'account_display', 'account_name',
       'owner_it_name', 'owner_business_name', 'analytics_category_name', ...axisIds.map((id) => `analytics_${id}`), 'cost_center_code',
       'cost_center_name', 'cost_center_path', 'budget_holder_name', 'contract_name', 'project_name', 'project_stream_name',
       'project_category_name', 'allocation_method_label', 'item_number', 'status', 'cost_center_label', 'latest_task_text',
-    ];
+      ...scope.extraFields,
+    ]));
     for (const field of bagFields) {
       const values = field === 'item_number'
-        ? (sample.get('item_number') ?? []).flatMap((n) => [String(n), `opx-${n}`, `OPX-${n}`])
+        ? (sample.get('item_number') ?? []).flatMap((n) => [String(n), `${ref}-${n}`, `${ref.toUpperCase()}-${n}`])
         : [...textValues(field), ...(sample.get(`${field}#joined`) ?? [])];
       if (!values.length) continue;
       for (let k = 0; k < PER_OP; k++) {
@@ -253,7 +268,7 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
     }
     // Needles holding U+001F, the separator of the entries the engine reads as one text: never across two entries.
     const firstNumber = (sample.get('item_number') ?? [1])[0];
-    for (const [i, q] of ['\u001f', `${firstNumber}\u001fopx-${firstNumber}`, `${firstNumber}\u001f`, `a\u001fb`].entries()) {
+    for (const [i, q] of ['\u001f', `${firstNumber}\u001f${ref}-${firstNumber}`, `${firstNumber}\u001f`, `a\u001fb`].entries()) {
       add(`q/separator/${i}`, { ...all, q, sort: 'item_number:ASC' });
     }
     // Combined models: every condition applies.
@@ -293,16 +308,24 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
     }
     add('eov/blank', { ...all, filters: f({ disabled_at: { filterType: 'date', type: 'blank' } }) });
     add('eov/text-ignored', { ...all, filters: f({ disabled_at: { filterType: 'text', type: 'contains', filter: '2026' } }) });
+    // The Ref column with the list's own reference (`opx-N`, `cpx-N`), every text operator, no draw from
+    // the case stream (the cases above and the combined ones below stay those of earlier runs).
+    const refNumber = (sample.get('item_number') ?? [1])[0];
+    for (const type of TEXT_OPS.slice(0, 6)) {
+      for (const [i, needle] of [`${ref}-${refNumber}`, `${ref.toUpperCase()}-${refNumber}`, `${ref}-`].entries()) {
+        add(`item_number/ref-${type}${i}`, { ...all, filters: f({ item_number: { filterType: 'text', type, filter: needle } }) });
+      }
+    }
   }
 
   // Seeded combined states: 1 to 3 filters, maybe a quick search, a sort, a scope, maybe years and FTE keys.
   const filterable = [...fields.text, ...fields.uuid, ...fields.multi, ...fields.int, ...fields.money, ...fields.fte, ...fields.date];
   const sortable = [...filterable, 'status', 'disabled_at'];
   const filterableWithData = filterable.filter(hasData);
-  const qPool = [...textValues('product_name'), ...textValues('supplier_name'), ...textValues('cost_center_path'), ...textValues('project_name'),
+  const qPool = [...textValues(scope.nameField), ...textValues('supplier_name'), ...textValues('cost_center_path'), ...textValues('project_name'),
     ...textValues('analytics_category_name'), ...axisIds.flatMap((id) => textValues(`analytics_${id}`)), ...textValues('owner_it_name'),
     ...textValues('account_display'), ...textValues('contract_name'),
-    'cyber', 'Électricité', 'electricite', 'opx-1', '12', 'headcount', 'company', 'en', 'able', '%', '_', 'zz-none', 'ete', 'été'];
+    'cyber', 'Électricité', 'electricite', `${ref}-1`, '12', 'headcount', 'company', 'en', 'able', '%', '_', 'zz-none', 'ete', 'été'];
   for (let k = 0; k < COMBINED; k++) {
     const filters: Record<string, unknown> = {};
     const count = r.pick([1, 1, 2, 2, 3]);
@@ -340,7 +363,7 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
       ...(r.chance(0.4) ? { fte: r.pick([`fte_yBudget,fte_yPlus1Forecast`, `fte_y${Y + 3}Budget,fte_yRevision`, 'fte_nothing']) } : {}),
       filters: f(filters),
     };
-    const fvFields = [r.pick(engine.FILTER_VALUE_FIELDS), r.pick(engine.FILTER_VALUE_FIELDS), ...Object.keys(filters).filter((key) => engine.FILTER_VALUE_FIELDS.includes(key))];
+    const fvFields = [r.pick(fvAllowed), r.pick(fvAllowed), ...Object.keys(filters).filter((key) => fvAllowed.includes(key))];
     const checks: Check[] = ['ids', 'full'];
     if (k % 5 === 0) checks.push('grid');
     if (k % 3 === 0) checks.push('neighbors');
@@ -352,6 +375,7 @@ function buildCases(r: ReturnType<typeof prng>, sample: Map<string, any[]>, axis
 // ----- running a case -----
 
 interface Engines {
+  scope: SummaryScopeConfig;
   oracle: BudgetSummaryOracle;
   runner: QueryRunner;
   /** Lines of the tenant, every status. */
@@ -360,7 +384,8 @@ interface Engines {
 
 async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummaryDeps>): Promise<void> {
   const m = env.runner.manager;
-  const label = (what: string) => `[seed ${SEED}] ${c.id} ${what} ${JSON.stringify(c.query)}`;
+  const scope = env.scope;
+  const label = (what: string) => `[${scope.scope} seed ${SEED}] ${c.id} ${what} ${JSON.stringify(c.query)}`;
   await env.runner.query('SAVEPOINT diff_case');
   try {
     if (c.checks.includes('ids')) {
@@ -480,7 +505,6 @@ async function main() {
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
-  const started = Date.now();
   try {
     let tenantId: string;
     let emptyTenantId: string | null = null;
@@ -488,7 +512,6 @@ async function main() {
       const [tenant] = await runner.query(`SELECT id FROM tenants WHERE slug = $1`, [TENANT_SLUG]);
       if (!tenant) throw new Error(`No tenant ${TENANT_SLUG}`);
       tenantId = tenant.id;
-      await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     } else {
       const fixture = await seedListFixture(runner, SEED);
       tenantId = fixture.tenantId;
@@ -497,48 +520,7 @@ async function main() {
     const m = runner.manager;
     const deps = realSummaryDeps();
     const fold = await loadOracleFold(m);
-    const oracle = new BudgetSummaryOracle(scope, deps, m, tenantId, fold, ROW_OPTIONS);
-    const axisRows: Array<{ id: string }> = await m.query(`SELECT id FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order, id`, [tenantId]);
-
-    // Field values to draw needles from: the first 1,000 lines by item number (a stable order), every field.
-    const sampleRows = await oracle.summary({ includeDisabled: 'true', years: String(Y + 3), limit: 1000, sort: 'item_number:ASC' });
-    const sample = new Map<string, any[]>();
-    const catalogue = fieldCatalogue(axisRows.map((a) => a.id));
-    for (const row of sampleRows.items) itemNumbers.set(row.id, row.item_number);
-    const allIds = await oracle.summaryIds({ includeDisabled: 'true' });
-    allIds.ids.forEach((id, i) => itemNumbers.set(id, allIds.item_numbers[i]));
-    for (const field of Object.values(catalogue).flat()) {
-      const values = new Set<any>();
-      for (const row of sampleRows.items) {
-        const value = getSummaryFieldValue(row, field);
-        if (catalogue.multi.includes(field)) {
-          for (const name of summaryFieldValues(row, field)) values.add(name);
-          const joined = sample.get(`${field}#joined`) ?? [];
-          if (value) joined.push(value);
-          sample.set(`${field}#joined`, joined);
-        } else values.add(value);
-      }
-      sample.set(field, Array.from(values));
-    }
-
-    const r = prng(SEED);
-    const cases = buildCases(r, sample, axisRows.map((a) => a.id));
-    const digest = createHash('sha256').update(JSON.stringify(cases)).digest('hex').slice(0, 12);
-    const env: Engines = { oracle, runner, lineCount: allIds.total };
-    for (const c of cases) await runCase(env, c, deps);
-
-    // An empty tenant answers empty everywhere, like the oracle.
-    if (emptyTenantId && !ONLY) {
-      await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [emptyTenantId]);
-      const emptyOracle = new BudgetSummaryOracle(scope, deps, m, emptyTenantId, fold, ROW_OPTIONS);
-      for (const [i, query] of [{}, { q: 'x', fte: 'fte_yBudget' }, { status: 'enabled', sort: 'supplier_name:ASC' }].entries()) {
-        await runCase({ oracle: emptyOracle, runner, lineCount: 0 }, { id: `empty/${i}`, query, checks: ['ids', 'full', 'neighbors'], fvFields: ['supplier_name', 'project_name'] }, deps);
-      }
-    }
-    const seconds = ((Date.now() - started) / 1000).toFixed(1);
-    console.log(`budget-list-differential (${TENANT_SLUG ?? 'fixture'}, seed ${SEED}${FULL ? ', full' : ''}): ${cases.length} cases (digest ${digest}), ${checksRun} checks, ${failures.length} differences, ${bothFailedChecks.length} checks failed on both sides, ${seconds}s (engine ${(timing.engine / 1000).toFixed(1)}s, oracle ${(timing.oracle / 1000).toFixed(1)}s); filtered id checks selecting no line ${selectivity.empty}, every line ${selectivity.every}, some ${selectivity.some}`);
-    console.log(`  selecting no line, most often: ${Array.from(emptyByKind.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([kind, n]) => `${kind} ${n}`).join(', ')}`);
-    if (bothFailedChecks.length) console.log(`  failed on both sides (same request refused by both):\n  ${bothFailedChecks.slice(0, 20).join('\n  ')}${bothFailedChecks.length > 20 ? `\n  … ${bothFailedChecks.length - 20} more` : ''}`);
+    for (const scope of SCOPES) await runScope(scope, runner, deps, fold, tenantId, emptyTenantId);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
@@ -549,6 +531,69 @@ async function main() {
     process.exit(1);
   }
   console.log('budget-list-differential.integration.spec: ok');
+}
+
+/** Every case of one list (OPEX or CAPEX), drawn from its own sample, and its summary line. */
+async function runScope(
+  scope: SummaryScopeConfig,
+  runner: QueryRunner,
+  deps: ReturnType<typeof realSummaryDeps>,
+  fold: Awaited<ReturnType<typeof loadOracleFold>>,
+  tenantId: string,
+  emptyTenantId: string | null,
+): Promise<void> {
+  const started = Date.now();
+  const at = { failures: failures.length, checks: checksRun, bothFailed: bothFailedChecks.length };
+  timing.engine = 0;
+  timing.oracle = 0;
+  Object.assign(selectivity, { empty: 0, every: 0, some: 0 });
+  emptyByKind.clear();
+  itemNumbers.clear();
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  const m = runner.manager;
+  const oracle = new BudgetSummaryOracle(scope, deps, m, tenantId, fold, ROW_OPTIONS);
+  const axisRows: Array<{ id: string }> = await m.query(`SELECT id FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order, id`, [tenantId]);
+
+  // Field values to draw needles from: the first 1,000 lines by item number (a stable order), every field.
+  const sampleRows = await oracle.summary({ includeDisabled: 'true', years: String(Y + 3), limit: 1000, sort: 'item_number:ASC' });
+  const sample = new Map<string, any[]>();
+  const catalogue = fieldCatalogue(scope, axisRows.map((a) => a.id));
+  for (const row of sampleRows.items) itemNumbers.set(row.id, row.item_number);
+  const allIds = await oracle.summaryIds({ includeDisabled: 'true' });
+  allIds.ids.forEach((id, i) => itemNumbers.set(id, allIds.item_numbers[i]));
+  for (const field of Object.values(catalogue).flat()) {
+    const values = new Set<any>();
+    for (const row of sampleRows.items) {
+      const value = getSummaryFieldValue(row, field);
+      if (catalogue.multi.includes(field)) {
+        for (const name of summaryFieldValues(row, field)) values.add(name);
+        const joined = sample.get(`${field}#joined`) ?? [];
+        if (value) joined.push(value);
+        sample.set(`${field}#joined`, joined);
+      } else values.add(value);
+    }
+    sample.set(field, Array.from(values));
+  }
+
+  const r = prng(SEED);
+  const cases = buildCases(r, sample, axisRows.map((a) => a.id), scope);
+  const digest = createHash('sha256').update(JSON.stringify(cases)).digest('hex').slice(0, 12);
+  const env: Engines = { scope, oracle, runner, lineCount: allIds.total };
+  for (const c of cases) await runCase(env, c, deps);
+
+  // An empty tenant answers empty everywhere, like the oracle.
+  if (emptyTenantId && !ONLY) {
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [emptyTenantId]);
+    const emptyOracle = new BudgetSummaryOracle(scope, deps, m, emptyTenantId, fold, ROW_OPTIONS);
+    for (const [i, query] of [{}, { q: 'x', fte: 'fte_yBudget' }, { status: 'enabled', sort: 'supplier_name:ASC' }].entries()) {
+      await runCase({ scope, oracle: emptyOracle, runner, lineCount: 0 }, { id: `empty/${i}`, query, checks: ['ids', 'full', 'neighbors'], fvFields: ['supplier_name', 'project_name'] }, deps);
+    }
+  }
+  const seconds = ((Date.now() - started) / 1000).toFixed(1);
+  const both = bothFailedChecks.slice(at.bothFailed);
+  console.log(`budget-list-differential (${TENANT_SLUG ?? 'fixture'}, ${scope.scope}, seed ${SEED}${FULL ? ', full' : ''}): ${allIds.total} lines, ${cases.length} cases (digest ${digest}), ${checksRun - at.checks} checks, ${failures.length - at.failures} differences, ${both.length} checks failed on both sides, ${seconds}s (engine ${(timing.engine / 1000).toFixed(1)}s, oracle ${(timing.oracle / 1000).toFixed(1)}s); filtered id checks selecting no line ${selectivity.empty}, every line ${selectivity.every}, some ${selectivity.some}`);
+  console.log(`  selecting no line, most often: ${Array.from(emptyByKind.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([kind, n]) => `${kind} ${n}`).join(', ')}`);
+  if (both.length) console.log(`  failed on both sides (same request refused by both):\n  ${both.slice(0, 20).join('\n  ')}${both.length > 20 ? `\n  … ${both.length - 20} more` : ''}`);
 }
 
 main().catch((err) => {

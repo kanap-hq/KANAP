@@ -1,10 +1,12 @@
 import { QueryRunner } from 'typeorm';
 
 /**
- * The differential fixture of the list engine (lot 2B): a deterministic OPEX
- * tenant seeded by SQL in the caller's transaction, shaped like the perf
- * dataset (`scripts/perf/generate-dataset.mjs`) at a small scale, with the
- * edge rows the parity contract names (design section 3.4):
+ * The differential fixture of the list engine (lot 2B): a deterministic tenant
+ * seeded by SQL in the caller's transaction, 300 OPEX and 100 CAPEX lines
+ * sharing one set of suppliers, owners, cost centres, dimensions, projects,
+ * contracts, rates and rules, shaped like the perf dataset
+ * (`scripts/perf/generate-dataset.mjs`) at a small scale, with the edge rows
+ * the parity contract names (design section 3.4), on both item types:
  * - names equal but for case or accents, `%`, `_`, `\`, `, ` in names,
  *   padded, astral, Turkish and Greek letters, empty descriptions;
  * - currencies EUR, USD, GBP, CHF (one year only) and JPY (no rate), a
@@ -19,10 +21,14 @@ import { QueryRunner } from 'typeorm';
  *   an account from another chart than its paying company;
  * - lines linked to several projects (one named "Alpha, Beta"), a legacy
  *   project, ties on task and contract creation time;
- * - created_at ties and sub-millisecond differences.
+ * - created_at ties and sub-millisecond differences;
+ * - CAPEX: every priority, investment type and PPE type, an empty
+ *   description (the CAPEX name is required, not null).
  *
  * Every id comes from the seed too (`uuidFrom`): the same seed gives the same
- * tenant, rows, order and cases on every run.
+ * tenant, rows, order and cases on every run. The CAPEX lines draw from their
+ * own streams, after the OPEX ones: the OPEX lines are those of the fixture
+ * before CAPEX joined it.
  */
 
 /** mulberry32: the generator of the perf dataset. */
@@ -58,6 +64,8 @@ const SEEDED_TABLES = [
   'analytics_axes', 'analytics_categories', 'portfolio_categories', 'portfolio_streams', 'portfolio_projects', 'contracts',
   'currency_rate_sets', 'allocation_rules', 'spend_items', 'spend_item_analytics_values', 'contract_spend_items',
   'portfolio_project_opex', 'tasks', 'spend_versions', 'spend_amounts', 'spend_version_totals', 'spend_round_inputs',
+  'capex_items', 'capex_item_analytics_values', 'contract_capex_items', 'portfolio_project_capex', 'capex_versions',
+  'capex_amounts', 'capex_version_totals', 'capex_round_inputs',
 ];
 
 type Column = [name: string, type: string];
@@ -94,10 +102,11 @@ export interface ListFixture {
   tenantId: string;
   emptyTenantId: string;
   itemCount: number;
+  capexCount: number;
 }
 
 /** Seeds the fixture tenant (and an empty tenant) in the runner's transaction; leaves the fixture tenant current. */
-export async function seedListFixture(runner: QueryRunner, seed: number, itemCount = 300): Promise<ListFixture> {
+export async function seedListFixture(runner: QueryRunner, seed: number, itemCount = 300, capexCount = 100): Promise<ListFixture> {
   const r = prng(seed);
   // Ids from their own stream: the values drawn from `r` stay those of earlier runs of the same seed.
   const ids = prng(seed ^ 0x5bd1e995);
@@ -365,9 +374,128 @@ export async function seedListFixture(runner: QueryRunner, seed: number, itemCou
   if (emptied.length) await runner.query(`DELETE FROM spend_amounts WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`, [t, emptied]);
   await insert(runner, 'spend_round_inputs', [['tenant_id', 'uuid'], ['version_id', 'uuid'], ['measure', 'text'], ['period_start', 'date'], ['period_end', 'date'],
     ['method', 'text'], ['fte', 'numeric']], roundRows);
+
+  // ----- CAPEX: its own lines, links, versions and months on the same dimensions, from its own streams -----
+  const rc = prng(seed ^ 0x2545f491);
+  const capexIdStream = prng(seed ^ 0x68e31da4);
+  const cuuid = () => uuidFrom(capexIdStream);
+  const capexMoney = () => {
+    const kind = rc.next();
+    if (kind < 0.1) return '0';
+    if (kind < 0.18) return (-rc.int(1, 99999) / 100).toFixed(2);
+    if (kind < 0.2) return (rc.int(1, 999_999_999) / 100 + 9_000_000).toFixed(2);
+    return (rc.int(1, 2_000_000) / 100).toFixed(2);
+  };
+  const capexRows: unknown[][] = [];
+  const capexItems: string[] = [];
+  const capexNumbers = Array.from({ length: capexCount }, (_, i) => i + 1 + (i > capexCount / 2 ? 5 : 0));
+  for (let i = 0; i < capexCount; i++) {
+    const id = cuuid();
+    capexItems.push(id);
+    // The edge names, one of them empty (the CAPEX name is required, not null), then generated ones.
+    const name = i < PRODUCT_NAMES.length ? PRODUCT_NAMES[i]
+      : i === PRODUCT_NAMES.length ? ''
+        : `${rc.pick(WORDS)} ${rc.pick(['été', 'Ete', 'ÉTÉ', 'hiver', '100%', 'a_b'])} ${String(i).padStart(3, '0')}`;
+    const disabled = rc.chance(0.22) ? rc.pick(endsOfValidity) : null;
+    const disabledAt = disabled ? new Date(disabled) : null;
+    let status = disabledAt && disabledAt.getTime() <= Date.now() ? 'disabled' : 'enabled';
+    if (rc.chance(0.04)) status = status === 'enabled' ? 'disabled' : 'enabled';
+    const createdMicros = i % 4 === 0 ? 0 : i % 4 === 1 ? i * 1000 : i % 4 === 2 ? i * 1000 + 250 : Math.floor(i / 8) * 1000;
+    const created = new Date(base + Math.floor(createdMicros / 1000)).toISOString().replace('Z', `${String(createdMicros % 1000).padStart(3, '0')}Z`);
+    capexRows.push([
+      id, t, capexNumbers[i], name,
+      rc.pick(['hardware', 'software']),
+      rc.pick(['replacement', 'capacity', 'productivity', 'security', 'conformity', 'business_growth', 'other']),
+      rc.pick(['mandatory', 'high', 'medium', 'low']),
+      rc.chance(0.5) ? null : `Note ${rc.pick(['urgente', 'Urgente', 'été', 'ete', 'high'])} ${i}`,
+      rc.chance(0.7) ? 'EUR' : rc.pick(['USD', 'USD', 'GBP', 'CHF', 'JPY']),
+      `${rc.int(2019, Y + 1)}-${String(rc.int(1, 12)).padStart(2, '0')}-${String(rc.int(1, 28)).padStart(2, '0')}`,
+      disabled, status,
+      rc.chance(0.8) ? rc.pick(supplierIds) : null,
+      rc.chance(0.8) ? rc.pick(accountIds) : null,
+      rc.chance(0.85) ? rc.pick(companyIds) : null,
+      rc.chance(0.7) ? rc.pick(userIds) : null,
+      rc.chance(0.6) ? rc.pick(userIds) : null,
+      rc.chance(0.7) ? rc.pick([...leaves, ...leaves, groups[1]]) : null,
+      rc.chance(0.6) ? rc.pick(['run', 'build']) : null,
+      rc.chance(0.05) ? rc.pick(projectIds) : null,
+      created,
+      new Date(base + rc.int(0, 300) * 86_400_000 + rc.int(0, 999)).toISOString(),
+    ]);
+  }
+  await insert(runner, 'capex_items', [
+    ['id', 'uuid'], ['tenant_id', 'uuid'], ['item_number', 'int'], ['description', 'text'], ['ppe_type', 'ppe_type'],
+    ['investment_type', 'capex_investment_type'], ['priority', 'priority_level'], ['notes', 'text'], ['currency', 'text'],
+    ['effective_start', 'date'], ['disabled_at', 'timestamptz'], ['status', 'status_state'], ['supplier_id', 'uuid'], ['account_id', 'uuid'],
+    ['paying_company_id', 'uuid'], ['owner_it_id', 'uuid'], ['owner_business_id', 'uuid'], ['cost_center_id', 'uuid'], ['run_build', 'run_build'],
+    ['project_id', 'uuid'], ['created_at', 'timestamptz'], ['updated_at', 'timestamptz'],
+  ], capexRows);
+
+  const capexAnalytics: unknown[][] = [];
+  const capexContracts: unknown[][] = [];
+  const capexProjects: unknown[][] = [];
+  const capexTasks: unknown[][] = [];
+  for (const itemId of capexItems) {
+    axes.forEach((axis, a) => {
+      if (rc.chance(a === 0 ? 0.7 : 0.45)) capexAnalytics.push([t, itemId, axis, rc.pick(categoriesByAxis[a])]);
+    });
+    if (rc.chance(0.4)) {
+      const linked = rc.chance(0.2) ? [rc.pick(contractIds), rc.pick(contractIds)] : [rc.pick(contractIds)];
+      const tie = rc.chance(0.5);
+      Array.from(new Set(linked)).forEach((contract, k) => capexContracts.push([cuuid(), t, contract, itemId, tie ? linkTime : new Date(base + k * 1000).toISOString()]));
+    }
+    if (rc.chance(0.25)) {
+      new Set(Array.from({ length: rc.int(1, 3) }, () => rc.pick(projectIds))).forEach((project) => capexProjects.push([t, project, itemId]));
+    }
+    if (rc.chance(0.2)) {
+      const tie = rc.chance(0.4);
+      for (let k = 0; k < rc.int(1, 3); k++) {
+        capexTasks.push([cuuid(), t, `${rc.pick(TASK_TITLES)} ${k}`, taskNumber++, rc.pick(['open', 'in_progress', 'pending', 'in_testing', 'done', 'cancelled']),
+          'capex_item', itemId, tie ? linkTime : new Date(base + k * 60_000).toISOString()]);
+      }
+    }
+  }
+  await insert(runner, 'capex_item_analytics_values', [['tenant_id', 'uuid'], ['item_id', 'uuid'], ['axis_id', 'uuid'], ['category_id', 'uuid']], capexAnalytics);
+  await insert(runner, 'contract_capex_items', [['id', 'uuid'], ['tenant_id', 'uuid'], ['contract_id', 'uuid'], ['capex_item_id', 'uuid'], ['created_at', 'timestamptz']], capexContracts);
+  await insert(runner, 'portfolio_project_capex', [['tenant_id', 'uuid'], ['project_id', 'uuid'], ['capex_id', 'uuid']], capexProjects);
+  await insert(runner, 'tasks', [['id', 'uuid'], ['tenant_id', 'uuid'], ['title', 'text'], ['item_number', 'int'], ['status', 'text'], ['related_object_type', 'text'], ['related_object_id', 'uuid'], ['created_at', 'timestamptz']], capexTasks);
+
+  const capexVersions: unknown[][] = [];
+  const capexAmounts: unknown[][] = [];
+  const capexRounds: unknown[][] = [];
+  const capexEmptied: string[] = [];
+  for (const itemId of capexItems) {
+    for (const year of [Y - 2, Y - 1, Y, Y + 1, Y + 2, Y + 3]) {
+      if (!rc.chance(year === Y + 3 ? 0.2 : 0.78)) continue;
+      const versionId = cuuid();
+      capexVersions.push([versionId, t, itemId, `Y${year}`, rc.pick(['monthly', 'monthly', 'annual', 'quarterly']), `${year}-01-01`, year,
+        rc.pick(methods), year === Y && rc.chance(0.15) ? snapshot : null]);
+      const shape = rc.next();
+      if (shape < 0.1) continue;
+      const months = shape < 0.2 ? [1] : Array.from({ length: 12 }, (_, m) => m + 1);
+      for (const month of months) {
+        capexAmounts.push([t, versionId, `${year}-${String(month).padStart(2, '0')}-01`, capexMoney(), capexMoney(), capexMoney(), rc.chance(0.5) ? capexMoney() : '0', capexMoney()]);
+      }
+      if (rc.chance(0.03)) capexAmounts.push([t, versionId, `${year + 1}-01-01`, '1000.00', '1000.00', '1000.00', '1000.00', '1000.00']);
+      if (rc.chance(0.04)) capexEmptied.push(versionId);
+      for (const measure of ['planned', 'committed', 'forecast', 'actual', 'expected_landing']) {
+        if (!rc.chance(0.12)) continue;
+        capexRounds.push([t, versionId, measure, `${year}-01-01`, `${year}-12-31`, rc.chance(0.3) ? 'spread' : 'computed',
+          rc.chance(0.25) ? null : rc.chance(0.2) ? '0' : (rc.int(1, 1200) / 100).toFixed(2)]);
+      }
+    }
+  }
+  await insert(runner, 'capex_versions', [['id', 'uuid'], ['tenant_id', 'uuid'], ['capex_item_id', 'uuid'], ['version_name', 'text'], ['input_grain', 'input_grain'],
+    ['as_of_date', 'date'], ['budget_year', 'int'], ['allocation_method', 'text'], ['fx_rate_set_id', 'uuid']], capexVersions);
+  await insert(runner, 'capex_amounts', [['tenant_id', 'uuid'], ['version_id', 'uuid'], ['period', 'date'], ['planned', 'numeric'], ['committed', 'numeric'],
+    ['forecast', 'numeric'], ['actual', 'numeric'], ['expected_landing', 'numeric']], capexAmounts);
+  if (capexEmptied.length) await runner.query(`DELETE FROM capex_amounts WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`, [t, capexEmptied]);
+  await insert(runner, 'capex_round_inputs', [['tenant_id', 'uuid'], ['version_id', 'uuid'], ['measure', 'text'], ['period_start', 'date'], ['period_end', 'date'],
+    ['method', 'text'], ['fte', 'numeric']], capexRounds);
+
   // Statistics, as on a loaded database: without them the planner reads the fixture tenant as unknown
   // (one row per table) and joins by nested loops, slower than at 5,000 lines. ANALYZE sees the
   // transaction's own rows, and its statistics roll back with it.
   await runner.query(`ANALYZE ${SEEDED_TABLES.join(', ')}`);
-  return { tenantId, emptyTenantId, itemCount };
+  return { tenantId, emptyTenantId, itemCount, capexCount };
 }
