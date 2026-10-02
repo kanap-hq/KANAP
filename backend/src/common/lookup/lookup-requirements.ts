@@ -63,15 +63,18 @@ export const ACCOUNT_LOOKUP_READERS: RequireAnyLevelMeta = [
   reader('reporting'),
 ];
 
+/** Business processes: picked on portfolio requests and projects, and on interfaces (applications area). */
 export const BUSINESS_PROCESS_LOOKUP_READERS: RequireAnyLevelMeta = [
   reader('business_processes'),
   reader('portfolio_requests'),
   reader('portfolio_projects'),
+  reader('applications'),
 ];
 
-/** Pages that link a budget line to contracts, applications or projects (the Relations tab). */
-export const budgetRelationLookupReaders = (own: string): RequireAnyLevelMeta => [
-  reader(own),
+/** Contracts: linked from OPEX and CAPEX lines (Relations tab) and from an asset's support panel. */
+export const CONTRACT_LOOKUP_READERS: RequireAnyLevelMeta = [
+  reader('contracts'),
   reader('opex'),
   reader('capex'),
+  reader('infrastructure'),
 ];
