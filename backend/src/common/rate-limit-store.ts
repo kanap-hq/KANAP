@@ -18,9 +18,11 @@ import { DataSource } from 'typeorm';
  * (the window length by default), hits are not counted while it is blocked, and the next hit
  * after the block opens a new window, as in memory.
  *
- * The upsert runs on a pool connection of its own, outside the request's transaction (a refused
- * login rolls the request back: a count written inside it would be lost). If the database cannot
- * answer, the process falls back to its own in-memory counter, with one warning a minute.
+ * The upsert runs on a second pool connection, outside the request's transaction (a refused
+ * login rolls the request back: a count written inside it would be lost): a rate-limited request
+ * holds two connections for a moment, hence the floor of 2 per process (db-pool-budget.ts). When
+ * the database does not answer within 1.5 s (pool exhausted, database down), the hit is counted in
+ * this process's memory instead, with one warning a minute: the limit then holds per process.
  */
 const HIT_SQL = `
   INSERT INTO rate_limit_hits AS r (key, hits, window_ends_at, blocked_until)
@@ -55,6 +57,8 @@ type ThrottlerStorageRecord = Awaited<ReturnType<ThrottlerStorage['increment']>>
 
 const PURGE_EVERY_MS = 10 * 60_000;
 const WARN_EVERY_MS = 60_000;
+/** Longest wait for the database count before counting in memory. */
+export const RATE_LIMIT_DB_WAIT_MS = 1_500;
 
 export class DatabaseThrottlerStorage implements ThrottlerStorage {
   private readonly logger = new Logger('RateLimit');
@@ -62,12 +66,18 @@ export class DatabaseThrottlerStorage implements ThrottlerStorage {
   private lastPurgeAt = Date.now();
   private lastWarnAt = 0;
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource, private readonly waitMs = RATE_LIMIT_DB_WAIT_MS) {}
 
   async increment(key: string, ttl: number, limit: number, blockDuration: number, throttlerName: string): Promise<ThrottlerStorageRecord> {
+    let timer: NodeJS.Timeout | undefined;
     try {
-      const [row]: Array<{ hits: number; expires_in_ms: number; blocked: boolean; block_expires_in_ms: number }> =
-        await this.dataSource.query(HIT_SQL, [key, ttl, limit, blockDuration]);
+      const query = this.dataSource.query(HIT_SQL, [key, ttl, limit, blockDuration]) as Promise<Array<{ hits: number; expires_in_ms: number; blocked: boolean; block_expires_in_ms: number }>>;
+      // A query that loses the race still runs: the hit may then count twice, never zero times.
+      query.catch(() => undefined);
+      const [row] = await Promise.race([
+        query,
+        new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`no answer within ${this.waitMs} ms`)), this.waitMs); }),
+      ]);
       this.purgeNowAndThen();
       return {
         totalHits: Number(row.hits),
@@ -82,6 +92,8 @@ export class DatabaseThrottlerStorage implements ThrottlerStorage {
         this.logger.warn(`Rate limit counts unavailable in the database, counting in this process only: ${(error as Error)?.message ?? error}`);
       }
       return this.fallback.increment(key, ttl, limit, blockDuration, throttlerName);
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 

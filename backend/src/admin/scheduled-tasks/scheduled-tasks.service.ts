@@ -15,6 +15,15 @@ export interface TaskRegistration {
   runOnStartup?: boolean;
 }
 
+/** Recorded on a run still going when its API process stopped. */
+export const INTERRUPTED_BY_STOP = 'Interrupted: the API process stopped before the run finished';
+
+/** Per-tick chatter only with LOG_LEVEL=debug or verbose (Nest prints every level otherwise). */
+function verboseLogging(): boolean {
+  const level = String(process.env.LOG_LEVEL ?? '').trim().toLowerCase();
+  return level === 'debug' || level === 'verbose';
+}
+
 /** The next time a cron job fires, or null when it cannot say. */
 function nextScheduledDate(job: CronJob): Date | null {
   try {
@@ -30,6 +39,11 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
   private readonly handlers = new Map<string, () => Promise<Record<string, any>>>();
   private readonly registrations: TaskRegistration[] = [];
   private startupTaskNames: string[] = [];
+  /** Set by `drain` at a stop: no run starts any more. */
+  private stopping = false;
+  /** Runs of this process: `executeTask` calls in progress, and run rows written as running. */
+  private readonly inFlight = new Set<Promise<void>>();
+  private readonly activeRuns = new Map<string, string>();
 
   constructor(
     @InjectRepository(ScheduledTask)
@@ -138,17 +152,27 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
    * reaches one process only) makes this process reschedule or drop its job instead of running.
    */
   async claimTick(name: string, cronExpression: string, tick: Date): Promise<boolean> {
-    const claimed: Array<{ name: string }> = await this.dataSource.query(
+    // A stored tick more than a day ahead (a clock that was ahead, a VM restored from a snapshot)
+    // would stop the task until that date: it is claimed over, with a warning.
+    // A CTE: TypeORM answers a top-level UPDATE with [rows, count], a SELECT with its rows.
+    const claimed: Array<{ previous: Date | null }> = await this.dataSource.query(
       `WITH claimed AS (
-         UPDATE scheduled_tasks SET last_tick_at = $2
-          WHERE name = $1 AND enabled AND cron_expression = $3
-            AND (last_tick_at IS NULL OR last_tick_at < $2)
-         RETURNING name
+         UPDATE scheduled_tasks t SET last_tick_at = $2
+           FROM (SELECT name, last_tick_at AS previous FROM scheduled_tasks WHERE name = $1 FOR UPDATE) p
+          WHERE t.name = p.name AND t.enabled AND t.cron_expression = $3
+            AND (p.previous IS NULL OR p.previous < $2 OR p.previous > now() + interval '1 day')
+         RETURNING p.previous
        )
-       SELECT name FROM claimed`,
+       SELECT previous FROM claimed`,
       [name, tick, cronExpression],
     );
-    if (claimed.length > 0) return true;
+    if (claimed.length > 0) {
+      const previous = claimed[0].previous ? new Date(claimed[0].previous) : null;
+      if (previous && previous.getTime() > tick.getTime()) {
+        this.logger.warn(`[${name}] The last claimed tick was in the future (${previous.toISOString()}): clock moved back? Claimed again from ${tick.toISOString()}`);
+      }
+      return true;
+    }
 
     const [stored]: Array<{ enabled: boolean; cron_expression: string }> = await this.dataSource.query(
       `SELECT enabled, cron_expression FROM scheduled_tasks WHERE name = $1`,
@@ -160,13 +184,67 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
     } else if (stored.cron_expression !== cronExpression) {
       this.logger.log(`[${name}] Rescheduled in another process: ${cronExpression} -> ${stored.cron_expression}`);
       this.createCronJob(name, stored.cron_expression);
-    } else {
+    } else if (verboseLogging()) {
+      // Every tick in every process but one: logged only when asked (LOG_LEVEL=debug or verbose).
       this.logger.debug(`[${name}] Tick ${tick.toISOString()} taken by another process`);
     }
     return false;
   }
 
   async executeTask(name: string): Promise<void> {
+    if (this.stopping) {
+      this.logger.log(`[${name}] Not started: the API process is stopping`);
+      return;
+    }
+    const run = this.executeTaskNow(name);
+    this.inFlight.add(run);
+    try {
+      await run;
+    } finally {
+      this.inFlight.delete(run);
+    }
+  }
+
+  /**
+   * At a stop (main.ts), once the cron jobs are stopped: no run starts any more, the running ones
+   * get until `deadlineAt` (ms) to finish. A run still going then is recorded as failed,
+   * "interrupted", instead of staying "running" until the stale-run check an hour later; if it
+   * still ends before the process exits, its real outcome replaces that. Returns how many.
+   */
+  async drain(deadlineAt: number): Promise<number> {
+    this.stopping = true;
+    while (this.inFlight.size > 0 && Date.now() < deadlineAt) {
+      let timer: NodeJS.Timeout | undefined;
+      await Promise.race([
+        Promise.allSettled([...this.inFlight]),
+        new Promise<void>((resolve) => { timer = setTimeout(resolve, Math.max(1, deadlineAt - Date.now())); }),
+      ]);
+      if (timer) clearTimeout(timer);
+    }
+    const interrupted = [...this.activeRuns.entries()];
+    if (interrupted.length === 0) return 0;
+    const names = [...new Set(interrupted.map(([, taskName]) => taskName))];
+    try {
+      await this.dataSource.query(
+        `UPDATE scheduled_task_runs
+            SET status = 'failure', error = $2, finished_at = now(),
+                duration_ms = (EXTRACT(EPOCH FROM (now() - started_at)) * 1000)::integer
+          WHERE id = ANY($1::uuid[]) AND status = 'running'`,
+        [interrupted.map(([id]) => id), INTERRUPTED_BY_STOP],
+      );
+      await this.dataSource.query(
+        `UPDATE scheduled_tasks SET last_status = 'failure', updated_at = now()
+          WHERE name = ANY($1::text[]) AND last_status = 'running'`,
+        [names],
+      );
+    } catch (err: any) {
+      this.logger.warn(`Interrupted runs not recorded: ${err?.message ?? err}`);
+    }
+    this.logger.warn(`${names.join(', ')}: still running at the stop, recorded as interrupted`);
+    return interrupted.length;
+  }
+
+  private async executeTaskNow(name: string): Promise<void> {
     const handler = this.handlers.get(name);
     if (!handler) {
       this.logger.warn(`No handler registered for task '${name}'`);
@@ -223,7 +301,21 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       started_at: startedAt,
     });
     await this.runRepo.save(run);
+    this.activeRuns.set(run.id, name);
+    try {
+      await this.runRecorded(name, handler, startedAt, run.id);
+    } finally {
+      this.activeRuns.delete(run.id);
+    }
 
+    // Auto-prune old runs
+    await this.dataSource.query(
+      `DELETE FROM scheduled_task_runs WHERE task_name = $1 AND started_at < now() - interval '90 days'`,
+      [name],
+    );
+  }
+
+  private async runRecorded(name: string, handler: () => Promise<Record<string, any>>, startedAt: Date, runId: string): Promise<void> {
     // Update task status
     await this.taskRepo.update({ name }, {
       last_run_at: startedAt,
@@ -236,7 +328,7 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       const finishedAt = new Date();
       const durationMs = finishedAt.getTime() - startedAt.getTime();
 
-      await this.runRepo.update({ id: run.id }, {
+      await this.runRepo.update({ id: runId }, {
         status: 'success',
         finished_at: finishedAt,
         duration_ms: durationMs,
@@ -254,7 +346,7 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       const finishedAt = new Date();
       const durationMs = finishedAt.getTime() - startedAt.getTime();
 
-      await this.runRepo.update({ id: run.id }, {
+      await this.runRepo.update({ id: runId }, {
         status: 'failure',
         finished_at: finishedAt,
         duration_ms: durationMs,
@@ -270,11 +362,6 @@ export class ScheduledTasksService implements OnApplicationBootstrap {
       this.logger.error(`[${name}] Failed after ${durationMs}ms: ${err.message}`);
     }
 
-    // Auto-prune old runs
-    await this.dataSource.query(
-      `DELETE FROM scheduled_task_runs WHERE task_name = $1 AND started_at < now() - interval '90 days'`,
-      [name],
-    );
   }
 
   // ========== CRUD ==========

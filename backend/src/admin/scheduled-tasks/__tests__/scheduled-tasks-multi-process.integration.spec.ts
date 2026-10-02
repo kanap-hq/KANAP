@@ -123,6 +123,84 @@ async function testConcurrentBootstrapRegistersOnce(other: DataSource) {
   }
 }
 
+/**
+ * A stored tick more than a day ahead (a clock that was ahead, a VM restored from a snapshot)
+ * would stop the task until that date: it is claimed over, with a warning. Less than a day ahead
+ * is left alone (an ordinary tick of another process can be slightly ahead of this one).
+ */
+async function testFutureTickIsClaimedOver(other: DataSource) {
+  const name = `spec-tick-${randomUUID()}`;
+  const cron = '0 * * * *';
+  await dataSource.query(`INSERT INTO scheduled_tasks (name, description, cron_expression, enabled, last_tick_at) VALUES ($1, 'spec', $2, true, now() + interval '3 days')`, [name, cron]);
+  const reg: Registry = { added: [], deleted: [] };
+  const a = service(dataSource, reg);
+  const b = service(other, reg);
+  const warnings: string[] = [];
+  (a as any).logger.warn = (line: string) => warnings.push(line);
+  (b as any).logger.warn = (line: string) => warnings.push(line);
+  let runs = 0;
+  for (const svc of [a, b]) svc.register({ name, description: 'spec', defaultCron: cron, handler: async () => { runs += 1; return {}; } });
+  try {
+    const tickAt = new Date(Math.floor(Date.now() / 3_600_000) * 3_600_000);
+    await Promise.all([tick(a, name, cron, tickAt.toISOString()), tick(b, name, cron, tickAt.toISOString())]);
+    assert.equal(runs, 1, 'a tick stored 3 days ahead no longer stops the task, and it still runs once');
+    assert.equal(await storedTick(name), tickAt.toISOString(), 'the stored tick is back to the real one');
+    assert.equal(warnings.filter((w) => /in the future/.test(w)).length, 1, 'one warning');
+
+    await dataSource.query(`UPDATE scheduled_tasks SET last_tick_at = now() + interval '1 hour' WHERE name = $1`, [name]);
+    await tick(a, name, cron, new Date(tickAt.getTime() + 3_600_000).toISOString());
+    assert.equal(runs, 1, 'a tick less than a day ahead is left alone');
+  } finally {
+    await cleanup([name]);
+  }
+}
+
+/**
+ * At a stop the scheduled tasks get until the deadline: a run that ends in time is recorded as
+ * usual, a run still going is recorded as interrupted (not "running" for an hour), and no run
+ * starts afterwards.
+ */
+async function testStopWaitsThenRecordsInterruptedRuns() {
+  const quick = `spec-stop-${randomUUID()}`;
+  const slow = `spec-stop-${randomUUID()}`;
+  for (const name of [quick, slow]) {
+    await dataSource.query(`INSERT INTO scheduled_tasks (name, description, cron_expression, enabled) VALUES ($1, 'spec', '0 * * * *', false)`, [name]);
+  }
+  const svc = service(dataSource, { added: [], deleted: [] });
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  let quickRuns = 0;
+  svc.register({ name: quick, description: 'spec', defaultCron: '0 * * * *', handler: async () => { await new Promise((r) => setTimeout(r, 300)); quickRuns += 1; return {}; } });
+  svc.register({ name: slow, description: 'spec', defaultCron: '0 * * * *', handler: async () => { await gate; return {}; } });
+  try {
+    const runs = [svc.executeTask(quick), svc.executeTask(slow)];
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const started = Date.now();
+    const interrupted = await svc.drain(Date.now() + 1_000);
+    const waited = Date.now() - started;
+    assert.ok(waited >= 900 && waited < 3_000, `the stop waited until its deadline for the slow run (${waited} ms)`);
+    assert.equal(interrupted, 1);
+    assert.equal(quickRuns, 1, 'the quick run finished during the wait');
+    const rows = await dataSource.query(
+      `SELECT task_name, status, error FROM scheduled_task_runs WHERE task_name = ANY($1) ORDER BY task_name`, [[quick, slow]],
+    );
+    const byName = Object.fromEntries(rows.map((r: any) => [r.task_name, r]));
+    assert.equal(byName[quick].status, 'success');
+    assert.equal(byName[slow].status, 'failure');
+    assert.match(byName[slow].error, /Interrupted: the API process stopped/);
+    const [task] = await dataSource.query(`SELECT last_status FROM scheduled_tasks WHERE name = $1`, [slow]);
+    assert.equal(task.last_status, 'failure', 'the task shows its last run failed, not running');
+
+    await svc.executeTask(quick);
+    assert.equal(quickRuns, 1, 'no run starts once the stop began');
+    release();
+    await Promise.allSettled(runs);
+  } finally {
+    release();
+    await cleanup([quick, slow]);
+  }
+}
+
 async function main() {
   process.exitCode = 1;
   await dataSource.initialize();
@@ -134,6 +212,8 @@ async function main() {
       ['testOneTickRunsOnce', testOneTickRunsOnce],
       ['testRescheduleAndDisableReachOtherProcesses', testRescheduleAndDisableReachOtherProcesses],
       ['testConcurrentBootstrapRegistersOnce', testConcurrentBootstrapRegistersOnce],
+      ['testFutureTickIsClaimedOver', testFutureTickIsClaimedOver],
+      ['testStopWaitsThenRecordsInterruptedRuns', () => testStopWaitsThenRecordsInterruptedRuns()],
     ] as const) {
       try {
         await test(other);

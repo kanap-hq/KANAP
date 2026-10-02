@@ -2,7 +2,7 @@ import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import { DataSource } from 'typeorm';
 import dataSource from '../../../data-source';
-import { checkPoolBudget, evaluatePoolBudget, readPoolMax } from '../../db-pool-budget';
+import { checkPoolBudget, evaluatePoolBudget, poolMaxFloorWarning, readPoolMax } from '../../db-pool-budget';
 import { STARTUP_PROVISIONING_LOCK, withStartupLock } from '../startup-lock';
 
 // Start of several API processes (plan planning/perf-scale lots 4A and 4B):
@@ -28,6 +28,16 @@ function testBudgetRule() {
   assert.equal(readPoolMax({} as NodeJS.ProcessEnv), 20);
   assert.equal(readPoolMax({ DB_POOL_MAX: '12' } as NodeJS.ProcessEnv), 12);
   assert.equal(readPoolMax({ DB_POOL_MAX: 'x' } as NodeJS.ProcessEnv), 20);
+
+  // The floor: never under 2 connections per process, never advised under 2.
+  assert.equal(readPoolMax({ DB_POOL_MAX: '1' } as NodeJS.ProcessEnv), 2, 'DB_POOL_MAX=1 is raised to 2');
+  assert.match(poolMaxFloorWarning({ DB_POOL_MAX: '1' } as NodeJS.ProcessEnv) ?? '', /DB_POOL_MAX=1 raised to 2/);
+  assert.equal(poolMaxFloorWarning({ DB_POOL_MAX: '2' } as NodeJS.ProcessEnv), null);
+  assert.equal(poolMaxFloorWarning({} as NodeJS.ProcessEnv), null);
+  const crowded = evaluatePoolBudget({ processes: 16, poolMax: 10, maxConnections: 40, reserved: 3 });
+  assert.equal(crowded.ok, false);
+  assert.doesNotMatch(crowded.message, /Lower DB_POOL_MAX \(to [01] /, 'never advises a pool under 2');
+  assert.match(crowded.message, /Lower API_WORKERS \(each process needs at least 2 connections\)/);
 }
 
 async function testBudgetReadsTheServer() {

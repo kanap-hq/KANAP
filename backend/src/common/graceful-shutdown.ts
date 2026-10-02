@@ -2,10 +2,14 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 
 /**
  * Stop of an API process (SIGTERM from `docker stop` or from the cluster primary, SIGINT from a
- * terminal): the process stops accepting connections at once, lets the requests in flight
- * finish, then closes the application (scheduled jobs, database pool) and exits 0. A request
- * still running after the drain time (`SHUTDOWN_DRAIN_TIMEOUT_MS`, default 20 s) is cut: the
- * process exits 1.
+ * terminal), within the drain time (`SHUTDOWN_DRAIN_TIMEOUT_MS`, default 20 s):
+ * 1. no new connection; the requests in flight finish;
+ * 2. a short grace (1.5 s after the last response): work a request started without awaiting it
+ *    (a notification chain) gets going;
+ * 3. `close(deadlineAt)` (main.ts): the work after the responses (tracked notification chains,
+ *    running scheduled tasks, the email queue) finishes or is given up at `deadlineAt`, 2 s before
+ *    the end of the drain time; then the application closes (database pool) and the process
+ *    exits 0. Past the drain time it exits 1, whatever is left.
  *
  * Keep-alive connections must not hold the stop, and must not be cut while a response is still
  * being written: Node counts a connection as idle once its response has ended, while a large
@@ -23,6 +27,10 @@ export const DEFAULT_DRAIN_TIMEOUT_MS = 20_000;
 const MAX_DRAIN_TIMEOUT_MS = 120_000;
 /** Keep-alive timeout while draining: a connection whose response went out closes this long after. */
 const KEEP_ALIVE_WHILE_DRAINING_MS = 500;
+/** Time after the last response for the work it started without awaiting to get going. */
+export const AFTER_RESPONSE_GRACE_MS = 1_500;
+/** Kept at the end of the drain time for closing the application (pool, hooks). */
+const CLOSE_RESERVE_MS = 2_000;
 
 export function readDrainTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
   const raw = Number(env.SHUTDOWN_DRAIN_TIMEOUT_MS);
@@ -34,11 +42,16 @@ export function readDrainTimeoutMs(env: NodeJS.ProcessEnv = process.env): number
 
 export type GracefulShutdownOptions = {
   server: Server;
-  /** Closes the application once no request is left (Nest `app.close()`). */
-  close: () => Promise<void>;
+  /**
+   * Once no request is left: lets the work after the responses finish (until `deadlineAt`, a
+   * timestamp in ms), then closes the application (Nest `app.close()`).
+   */
+  close: (deadlineAt: number) => Promise<void>;
   /** Runs first, at the signal: stop starting new background work (cron jobs). */
   beforeDrain?: () => void;
   drainTimeoutMs?: number;
+  /** Grace after the last response (default AFTER_RESPONSE_GRACE_MS). */
+  graceMs?: number;
   log?: (line: string) => void;
   exit?: (code: number) => void;
   /** Signals to handle (default SIGTERM and SIGINT). Empty: none, call `shutdown` yourself. */
@@ -53,14 +66,19 @@ export function installGracefulShutdown(options: GracefulShutdownOptions): { shu
   const log = options.log ?? ((line: string) => console.log(line));
   const exit = options.exit ?? ((code: number) => process.exit(code));
   const label = options.label ? `${options.label} ` : '';
+  const graceMs = options.graceMs ?? AFTER_RESPONSE_GRACE_MS;
   const responses = new Set<ServerResponse>();
   let draining = false;
+  let lastResponseAt = 0;
   let started: Promise<void> | null = null;
 
   server.on('request', (_req: IncomingMessage, res: ServerResponse) => {
     responses.add(res);
     if (draining) res.shouldKeepAlive = false;
-    res.once('close', () => { responses.delete(res); });
+    res.once('close', () => {
+      responses.delete(res);
+      lastResponseAt = Date.now();
+    });
   });
 
   const shutdown = (reason: string): Promise<void> => {
@@ -85,7 +103,10 @@ export function installGracefulShutdown(options: GracefulShutdownOptions): { shu
       try {
         // Stops accepting, closes the connections idle now, calls back once every connection ended.
         await new Promise<void>((resolve) => server.close(() => resolve()));
-        await options.close();
+        const deadlineAt = t0 + Math.max(0, drainTimeoutMs - CLOSE_RESERVE_MS);
+        const graceLeft = Math.min(lastResponseAt + graceMs, deadlineAt) - Date.now();
+        if (graceLeft > 0) await new Promise((resolve) => setTimeout(resolve, graceLeft));
+        await options.close(deadlineAt);
         clearTimeout(force);
         log(`[shutdown] ${label}stopped in ${Date.now() - t0} ms`);
         exit(0);

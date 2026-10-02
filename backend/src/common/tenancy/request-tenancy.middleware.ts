@@ -12,11 +12,12 @@ import { BUSY_RETRY_AFTER_SECONDS } from '../filters/database-error.mapping';
  * - The tenant lookup itself fails (pool exhausted, database down or slow):
  *   503 `busy` with Retry-After. Going on without a tenant would answer later
  *   with fake 401s and "Tenant context is required", and a 401 sends the
- *   browser into a token refresh, even a logout. Except the liveness route
- *   (`/health`), which reads nothing: it goes on without a tenant and still
- *   answers that the process is alive, so a monitor or an orchestrator does
- *   not restart a busy API (in single-tenant mode every request looks the
- *   tenant up, the health check included).
+ *   browser into a token refresh, even a logout.
+ * - The liveness route (`/health`) reads nothing and needs no tenant: it is not
+ *   looked up at all and goes on with `req.tenant = null`, so it costs no
+ *   connection and still answers that the process is alive when the pool is
+ *   exhausted (a monitor or an orchestrator does not restart a busy API), or
+ *   before the single tenant is provisioned.
  */
 export type RequestTenancyOptions = {
   /** Runs one read query (the DataSource's `query`). */
@@ -29,8 +30,13 @@ export type RequestTenancyOptions = {
 
 const TENANT_BY_SLUG = 'SELECT id, slug, name FROM tenants WHERE slug = $1 AND deleted_at IS NULL LIMIT 1';
 
-/** Liveness routes: no tenant needed, never refused because the database is busy. */
+/** Liveness routes: no tenant needed, never looked up. */
 const LIVENESS_PATHS = new Set(['/health', '/api/health']);
+
+/** The request path without a trailing slash (`/health/` is `/health`). */
+function routePath(req: Request): string {
+  return (req.path || '/').replace(/\/+$/, '') || '/';
+}
 
 /** The tenant subdomain of a host, or null for apex, www and unknown hosts. */
 export function tenantSlugFromHost(host: string): string | null {
@@ -82,6 +88,11 @@ export function answerTenantLookupFailed(req: Request, res: Response, error: unk
 export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
   const platformAdminHost = options.platformAdminHost.toLowerCase();
   return async (req: Request, res: Response, next: NextFunction) => {
+    if (LIVENESS_PATHS.has(routePath(req))) {
+      (req as any).tenant = null;
+      next();
+      return;
+    }
     let rows: Array<{ id: string; slug: string; name: string }>;
     try {
       // Single-tenant mode: skip all Host parsing, resolve tenant by slug
@@ -120,11 +131,6 @@ export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
         }
       }
     } catch (error) {
-      if (LIVENESS_PATHS.has(req.path)) {
-        (req as any).tenant = null;
-        next();
-        return;
-      }
       answerTenantLookupFailed(req, res, error);
       return;
     }

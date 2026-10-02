@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { NotificationsService } from '../notifications.service';
+import { backgroundWorkCount } from '../../common/background-work';
 
 /**
  * notifyItLeadOfTeamChange is fired without being awaited by the team endpoints of projects
@@ -99,7 +100,19 @@ async function testLinksTheItemByBusinessReferenceAndFiltersByTenant() {
   assert.deepEqual(userRead!.params, [IT_LEAD, TENANT]);
 }
 
+/** A notification fired without being awaited is tracked: a stop waits for it (background-work.ts). */
+async function testTrackedAsBackgroundWork() {
+  const { svc } = createService();
+  const before = backgroundWorkCount();
+  const pending = svc.notifyItLeadOfTeamChange(PARAMS);
+  assert.equal(backgroundWorkCount(), before + 1, 'tracked while it runs');
+  await pending;
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(backgroundWorkCount(), before, 'forgotten once settled');
+}
+
 async function run() {
+  await testTrackedAsBackgroundWork();
   await testResolvesWhenTheTenantTransactionFails();
   await testLinksTheItemByBusinessReferenceAndFiltersByTenant();
 }

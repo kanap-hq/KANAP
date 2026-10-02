@@ -101,6 +101,40 @@ async function testLargeResponseIsNotCut() {
   agent.destroy();
 }
 
+/**
+ * After the last response, a short grace lets the work it started without awaiting get going
+ * (a notification chain); `close` then gets the deadline for the work left, 2 s before the end of
+ * the drain time. With no recent response there is no grace.
+ */
+async function testGraceAfterLastResponseThenDeadline() {
+  const server = await startServer(100);
+  const port = (server.address() as AddressInfo).port;
+  let closeAt = 0;
+  let deadline = 0;
+  const { shutdown } = installGracefulShutdown({
+    server, signals: [], drainTimeoutMs: 10_000, graceMs: 400, log: () => undefined,
+    exit: () => undefined,
+    close: async (deadlineAt) => { closeAt = Date.now(); deadline = deadlineAt; },
+  });
+  const inFlight = get(port, '/slow');
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const t0 = Date.now();
+  await shutdown('SIGTERM');
+  await inFlight;
+  assert.ok(closeAt - t0 >= 450, `close waits the grace after the last response (${closeAt - t0} ms)`);
+  assert.ok(Math.abs(deadline - (t0 + 8_000)) < 100, 'close gets the drain time minus 2 s as its deadline');
+
+  const idle = await startServer(0);
+  let idleCloseAt = 0;
+  const idleStop = installGracefulShutdown({
+    server: idle, signals: [], drainTimeoutMs: 10_000, graceMs: 2_000, log: () => undefined,
+    exit: () => undefined, close: async () => { idleCloseAt = Date.now(); },
+  });
+  const t1 = Date.now();
+  await idleStop.shutdown('SIGTERM');
+  assert.ok(idleCloseAt - t1 < 300, `no request: no grace (${idleCloseAt - t1} ms)`);
+}
+
 async function testDrainTimeoutExits1() {
   const server = await startServer(2_000);
   const port = (server.address() as AddressInfo).port;
@@ -133,6 +167,7 @@ async function run() {
   testDrainTimeoutSetting();
   await testInFlightRequestFinishesThenExit0();
   await testLargeResponseIsNotCut();
+  await testGraceAfterLastResponseThenDeadline();
   await testDrainTimeoutExits1();
   console.log('graceful-shutdown.spec: ok');
 }

@@ -7,6 +7,7 @@ import { FxRateService } from './fx-rate.service';
 import { Tenant } from '../tenants/tenant.entity';
 import { WorldBankClient } from './world-bank-client';
 import { withTenantExecution } from '../common/tenant-runner';
+import { trackBackgroundWork } from '../common/background-work';
 
 type RateSnapshot = Record<string, number | null>;
 
@@ -146,7 +147,8 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       });
 
     this.manualJobs.set(tenantId, job);
-    void job;
+    // A stop waits for it (background-work.ts) before it closes the pool.
+    void trackBackgroundWork(job);
     return 'queued';
   }
 

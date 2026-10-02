@@ -11,10 +11,27 @@
  */
 export const POOL_BUDGET_MARGIN = 10;
 export const DEFAULT_POOL_MAX = 20;
+/**
+ * The smallest pool that works: a scheduled task holds one connection for its lock while its
+ * queries take another, and with several processes a rate-limited request takes a second one
+ * for its count. `DB_POOL_MAX` below it is raised to it, with a warning at start.
+ */
+export const MIN_POOL_MAX = 2;
 
-export function readPoolMax(env: NodeJS.ProcessEnv = process.env): number {
+function configuredPoolMax(env: NodeJS.ProcessEnv): number {
   const value = parseInt(env.DB_POOL_MAX || String(DEFAULT_POOL_MAX), 10);
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_POOL_MAX;
+}
+
+export function readPoolMax(env: NodeJS.ProcessEnv = process.env): number {
+  return Math.max(MIN_POOL_MAX, configuredPoolMax(env));
+}
+
+/** The warning for a `DB_POOL_MAX` under the minimum, or null. */
+export function poolMaxFloorWarning(env: NodeJS.ProcessEnv = process.env): string | null {
+  const configured = configuredPoolMax(env);
+  if (configured >= MIN_POOL_MAX) return null;
+  return `[DB] DB_POOL_MAX=${configured} raised to ${MIN_POOL_MAX}, the minimum: a scheduled task holds one connection for its lock while its queries need another.`;
 }
 
 export type PoolBudget = {
@@ -46,10 +63,13 @@ export function evaluatePoolBudget(input: {
   const ok = needed <= usable;
   const shape = `${input.processes} process${input.processes > 1 ? 'es' : ''} × ${input.poolMax} connections = ${needed}`;
   const server = `max_connections ${input.maxConnections}, ${input.reserved} reserved, ${margin} kept for migrations, psql and monitoring`;
+  const fitting = Math.floor(usable / input.processes);
+  const advice = fitting >= MIN_POOL_MAX
+    ? `Lower DB_POOL_MAX (to ${fitting} or less) or API_WORKERS, or raise max_connections on the server.`
+    : `Lower API_WORKERS (each process needs at least ${MIN_POOL_MAX} connections) or raise max_connections on the server.`;
   const message = ok
     ? `[DB] pool budget: ${shape} of ${usable} usable (${server})`
-    : `[DB] pool budget exceeded: ${shape}, but only ${usable} usable (${server}). Under load, requests can fail with "too many clients". `
-      + `Lower DB_POOL_MAX (to ${Math.max(1, Math.floor(usable / input.processes))} or less) or API_WORKERS, or raise max_connections on the server.`;
+    : `[DB] pool budget exceeded: ${shape}, but only ${usable} usable (${server}). Under load, requests can fail with "too many clients". ${advice}`;
   return { processes: input.processes, poolMax: input.poolMax, needed, maxConnections: input.maxConnections, reserved: input.reserved, margin, usable, ok, message };
 }
 

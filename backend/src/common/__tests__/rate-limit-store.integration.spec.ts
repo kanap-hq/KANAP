@@ -56,6 +56,18 @@ async function testFallsBackWhenTheDatabaseFails() {
   assert.deepEqual([one.totalHits, one.isBlocked, two.isBlocked], [1, false, true], 'the process counts in memory meanwhile');
 }
 
+/** A saturated pool: the count does not wait past 1.5 s, it falls back to this process's memory. */
+async function testDoesNotWaitForASaturatedPool() {
+  const stuck = { query: () => new Promise(() => undefined) };
+  const storage = new DatabaseThrottlerStorage(stuck as any, 200);
+  (storage as any).logger = { warn: () => undefined };
+  const started = Date.now();
+  const record = await storage.increment(`spec-${randomUUID()}`, TTL, 5, TTL, 'default');
+  const waited = Date.now() - started;
+  assert.ok(waited >= 180 && waited < 1_000, `gave up after the wait (${waited} ms)`);
+  assert.deepEqual([record.totalHits, record.isBlocked], [1, false], 'counted in memory');
+}
+
 async function main() {
   process.exitCode = 1;
   await dataSource.initialize();
@@ -69,6 +81,7 @@ async function main() {
       ['testCountsAddUpAcrossProcesses', () => testCountsAddUpAcrossProcesses(a, b)],
       ['testWindowAndBlockEnd', () => testWindowAndBlockEnd(a, b)],
       ['testFallsBackWhenTheDatabaseFails', () => testFallsBackWhenTheDatabaseFails()],
+      ['testDoesNotWaitForASaturatedPool', () => testDoesNotWaitForASaturatedPool()],
     ] as const) {
       try {
         await test();

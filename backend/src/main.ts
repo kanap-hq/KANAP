@@ -28,9 +28,11 @@ import { createRequestTenancyMiddleware } from './common/tenancy/request-tenancy
 import { createRequestFinalizer } from './common/request-finalizer.middleware';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { installGracefulShutdown } from './common/graceful-shutdown';
+import { waitForBackgroundWork } from './common/background-work';
+import { EmailService } from './email/email.service';
 import { apiProcessCount, clusterWorkerId, isLeadProcess, processLabel } from './common/cluster/process-role';
 import { STARTUP_PROVISIONING_LOCK, withStartupLock } from './common/cluster/startup-lock';
-import { checkPoolBudget, readPoolMax } from './common/db-pool-budget';
+import { checkPoolBudget, poolMaxFloorWarning, readPoolMax } from './common/db-pool-budget';
 
 function validateStartupEnv() {
   requireEnv('DATABASE_URL');
@@ -409,14 +411,28 @@ async function bootstrap() {
   const port = process.env.PORT || 8080;
   await app.listen(port as number);
 
-  // Stop: no new connections, in-flight requests finish, then the app closes (graceful-shutdown.ts).
-  // The cron jobs stop first so no task starts while the pool is about to close.
+  // Stop (graceful-shutdown.ts): the cron jobs stop at once, no new connections, the requests in
+  // flight finish; then, before the pool closes and within the drain time, the work they left:
+  // notification chains, running scheduled tasks (still going at the deadline: recorded as
+  // interrupted), the notifications those tasks started, and the email queue.
   const schedulerRegistry = app.get(SchedulerRegistry);
+  const scheduledTasks = app.get(ScheduledTasksService);
+  const emailService = app.get(EmailService);
   installGracefulShutdown({
     server: app.getHttpServer(),
     label: processLabel(),
     beforeDrain: () => schedulerRegistry.getCronJobs().forEach((job) => job.stop()),
-    close: () => app.close(),
+    close: async (deadlineAt) => {
+      await waitForBackgroundWork(deadlineAt);
+      await scheduledTasks.drain(deadlineAt);
+      const left = await waitForBackgroundWork(deadlineAt);
+      if (left > 0) {
+        // eslint-disable-next-line no-console
+        console.warn(`[shutdown] ${processLabel()}: ${left} notification(s) or background job(s) still running, cut by the stop`);
+      }
+      await emailService.drain(deadlineAt);
+      await app.close();
+    },
   });
 
   if (isLeadProcess()) {
@@ -430,11 +446,14 @@ async function bootstrap() {
       });
       // eslint-disable-next-line no-console
       (budget.ok ? console.log : console.warn)(budget.message);
+      const floor = poolMaxFloorWarning();
+      // eslint-disable-next-line no-console
+      if (floor) console.warn(floor);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn(`[DB] pool budget not checked: ${(err as Error)?.message ?? err}`);
     }
-    app.get(ScheduledTasksService).runStartupTasks();
+    scheduledTasks.runStartupTasks();
   }
   if (clusterWorkerId() !== null) {
     // eslint-disable-next-line no-console
