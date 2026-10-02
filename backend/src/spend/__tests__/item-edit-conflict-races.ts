@@ -113,9 +113,18 @@ function editConflictOf(outcome: Outcome, who: string): { conflicts: EditConflic
 
 async function line(race: Race, kind: Kind, itemId: string) {
   return race.readOne(
-    `SELECT notes, supplier_id, effective_start::text AS effective_start, disabled_at, row_version FROM ${ITEM_TABLE[kind]} WHERE id = $1`,
+    `SELECT notes, supplier_id, paying_company_id, currency, effective_start::text AS effective_start, disabled_at, updated_at, row_version
+       FROM ${ITEM_TABLE[kind]} WHERE id = $1`,
     [itemId],
   );
+}
+
+/** A refused request: its HTTP status and message. */
+function refusalOf(outcome: Outcome, who: string): { status: number; message: string } {
+  assert.ok(!outcome.ok, `${who} must be refused; it succeeded`);
+  const error = outcome.error as any;
+  const body = typeof error?.getResponse === 'function' ? error.getResponse() : null;
+  return { status: httpStatus(error) as number, message: String(body?.message ?? error?.message ?? '') };
 }
 
 /**
@@ -304,6 +313,9 @@ async function equalityEdges(kind: Kind) {
     });
     await ok('an empty dimension', { analytics_values: { [s.nature]: s.licences }, base: { analytics_values: { [s.nature]: null } } });
     await ok('a base for a field the request does not change is ignored', { notes: 'Second notes', base: { notes: 'First notes', supplier_id: s.otherSupplier } });
+    // A currency is a code: its case does not make it another one (the column only stores the
+    // capitals of `currencies`; a client may send its base in small letters).
+    await ok('a currency base in small letters', { currency: 'USD', base: { currency: 'eur' } });
 
     let conflicts = await refused('an older end of validity', { disabled_at: '2028-01-31T12:00:00.000Z', base: { disabled_at: '2027-06-30T12:00:00.000Z' } });
     assert.deepEqual(conflicts.map((c) => c.field), ['disabled_at']);
@@ -317,35 +329,115 @@ async function equalityEdges(kind: Kind) {
     // The status is derived from the end of validity: never compared (enabled clears the date).
     await ok('status carries no base of its own', { status: 'enabled', base: { status: 'disabled' } });
 
+    conflicts = await refused('another currency, whatever its case', { currency: 'GBP', base: { currency: 'eur' } });
+    assert.deepEqual(conflicts.map((c) => c.field), ['currency']);
+
     const stored = await line(race, kind, s.itemId);
     assert.equal(stored.notes, 'Second notes');
     assert.equal(stored.effective_start, '2026-02-01');
     assert.equal(stored.disabled_at, null);
+    assert.equal(stored.currency, 'USD');
   });
 }
 
 /**
- * Who changed it: a field changed outside the audit trail (a script) is
- * attributed to the line's last editor; a request without a base still
- * writes as before (last write wins), for clients that do not send one.
+ * Who changed it: a value no audit row explains was written outside the
+ * audit trail (a script; a supplier deleted, which empties the lines that
+ * name it): nobody is named, never the line's last editor, who did not touch
+ * the field, and the time is the line's last update. A request without a
+ * base still writes as before (last write wins), for clients that do not
+ * send one.
  */
 async function authorFallbackAndNoBase(kind: Kind) {
   await withRace(`${kind}-edit-fallback`, async (race) => {
     const s = await setup(race, kind);
     const party = await race.open('A');
     assertSucceeded(await settle(update(race, party, kind, s, s.marie, { notes: 'Notes from Marie' })), 'Marie, no base');
-    assertSucceeded(await settle(update(race, party, kind, s, s.jean, { supplier_id: s.newSupplier })), 'Jean, no base');
+    assertSucceeded(await settle(update(race, party, kind, s, s.jean, { description: 'Description from Jean' })), 'Jean, no base');
     await race.seedWith((runner) => runner.query(`UPDATE ${ITEM_TABLE[kind]} SET notes = 'From a script' WHERE id = $1`, [s.itemId]));
+    const lastUpdate = new Date((await line(race, kind, s.itemId)).updated_at).toISOString();
 
     const [conflict] = editConflictOf(
       await settle(update(race, party, kind, s, s.marie, { notes: 'Again', base: { notes: 'Notes from Marie' } })),
       'Marie, whose notes a script replaced',
     ).conflicts;
     assert.equal(conflict.current, 'From a script');
-    assert.deepEqual(conflict.changed_by, { id: s.jean, name: 'Jean Martin' }, 'the line\'s last editor, the audit trail cannot say more');
+    assert.equal(conflict.changed_by, null, 'nobody named: Jean, the line\'s last editor, never touched the notes');
+    assert.equal(conflict.changed_at, lastUpdate, 'the line\'s last update');
+
+    // The supplier is deleted: an OPEX line's supplier becomes empty (ON DELETE SET NULL), with no
+    // audit row of the line. (A CAPEX line has no foreign key there: it keeps the deleted id.)
+    if (kind === 'opex') {
+      await race.seedWith((runner) => runner.query(`DELETE FROM suppliers WHERE id = $1`, [s.oldSupplier]));
+      assert.equal((await line(race, kind, s.itemId)).supplier_id, null, 'ON DELETE SET NULL');
+      const [emptied] = editConflictOf(
+        await settle(update(race, party, kind, s, s.jean, { supplier_id: s.newSupplier, base: { supplier_id: s.oldSupplier } })),
+        'Jean, whose supplier was deleted',
+      ).conflicts;
+      assert.equal(emptied.field, 'supplier_id');
+      assert.equal(emptied.current, null);
+      assert.deepEqual(emptied.labels, { base: null, current: null, mine: 'New supplier' }, 'the deleted supplier has no name left');
+      assert.equal(emptied.changed_by, null, 'nobody named for a delete elsewhere');
+      assert.equal(emptied.changed_at, lastUpdate);
+    }
 
     assertSucceeded(await settle(update(race, party, kind, s, s.marie, { notes: 'Without base' })), 'no base: as before');
     assert.equal((await line(race, kind, s.itemId)).notes, 'Without base');
+  });
+}
+
+/**
+ * The author is the latest audit row that changed the field, however many
+ * later rows of the line changed other fields only (one indexed lookup).
+ */
+async function authorBehindOtherChanges(kind: Kind) {
+  await withRace(`${kind}-edit-author-depth`, async (race) => {
+    const s = await setup(race, kind);
+    const party = await race.open('A');
+    assertSucceeded(await settle(update(race, party, kind, s, s.marie, { notes: 'Notes from Marie', base: { notes: 'Start' } })), 'Marie, notes');
+    const marieRow = await race.readOne(
+      `SELECT created_at FROM audit_log WHERE tenant_id = $1 AND record_id = $2 AND user_id = $3 AND action = 'update' ORDER BY created_at DESC LIMIT 1`,
+      [race.tenantId, s.itemId, s.marie],
+    );
+    // 2,000 later audit rows of the line by Jean, each changing the description only.
+    await race.seedWith((runner) => runner.query(
+      `INSERT INTO audit_log (tenant_id, table_name, record_id, action, before_json, after_json, user_id, created_at)
+       SELECT $1, $2, $3, 'update',
+              jsonb_build_object('notes', 'Notes from Marie', 'description', 'd' || g),
+              jsonb_build_object('notes', 'Notes from Marie', 'description', 'd' || (g + 1)),
+              $4, clock_timestamp() + (g || ' ms')::interval
+         FROM generate_series(1, 2000) g`,
+      [race.tenantId, ITEM_TABLE[kind], s.itemId, s.jean],
+    ));
+    const [conflict] = editConflictOf(
+      await settle(update(race, party, kind, s, s.jean, { notes: 'Notes from Jean', base: { notes: 'Start' } })),
+      'Jean, from the first notes',
+    ).conflicts;
+    assert.deepEqual(conflict.changed_by, { id: s.marie, name: 'Marie Dupont' }, 'Marie, behind 2,000 changes of the description');
+    assert.equal(conflict.changed_at, new Date(marieRow.created_at).toISOString());
+  });
+}
+
+/**
+ * A request is checked before it is compared: a field the server refuses
+ * (the paying company cleared) answers 400 even when another field of the
+ * same request conflicts, and nothing is written. The workspace therefore
+ * never sends an edit waiting for a choice with another field (lot 3C
+ * review): a refusal of the other field would drop it.
+ */
+async function refusalBeforeConflict(kind: Kind) {
+  await withRace(`${kind}-edit-refused-first`, async (race) => {
+    const s = await setup(race, kind);
+    const party = await race.open('A');
+    assertSucceeded(await settle(update(race, party, kind, s, s.marie, { notes: 'Notes from Marie', base: { notes: 'Start' } })), 'Marie, notes');
+    const refused = refusalOf(await settle(update(race, party, kind, s, s.jean, {
+      notes: 'Notes from Jean', paying_company_id: null, base: { notes: 'Start', paying_company_id: s.companyId },
+    })), 'Jean, stale notes and no company');
+    assert.equal(refused.status, 400, refused.message);
+    assert.match(refused.message, /Paying company is required/);
+    const stored = await line(race, kind, s.itemId);
+    assert.equal(stored.notes, 'Notes from Marie', 'nothing written');
+    assert.equal(stored.paying_company_id, s.companyId);
   });
 }
 
@@ -359,5 +451,7 @@ export function itemEditConflictRaceTests(kind: Kind): Array<[string, () => Prom
     [`${label} analytics values conflict per dimension (3C)`, () => analyticsPerDimension(kind)],
     [`${label} null, id, date and instant equality edges (3C)`, () => equalityEdges(kind)],
     [`${label} author fallback and requests without base (3C)`, () => authorFallbackAndNoBase(kind)],
+    [`${label} the author is found behind many changes of other fields (3C review)`, () => authorBehindOtherChanges(kind)],
+    [`${label} a refused field answers 400 before any conflict, nothing written (3C review)`, () => refusalBeforeConflict(kind)],
   ];
 }

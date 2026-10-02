@@ -1,5 +1,5 @@
 import { EntityManager } from 'typeorm';
-import { EditBase, EditConflict, EditedField, assertNoEditConflicts, hasBase } from '../common/edit-conflicts';
+import { EditBase, EditConflict, EditedField, assertNoEditConflicts, hasBase, sameFieldValue } from '../common/edit-conflicts';
 import { ItemAnalyticsChange, ItemAnalyticsValue } from './item-analytics.util';
 import { ItemWriteScope, itemWritableColumns } from './item-write.util';
 
@@ -20,6 +20,8 @@ import { ItemWriteScope, itemWritableColumns } from './item-write.util';
  *   dimensions never conflict).
  * The requested value is the resolved one (an id lower-cased, a run or build
  * read, a date parsed), so a request that sets the stored value is no conflict.
+ * A currency compares without case: the screen shows it in capitals, while a
+ * line imported or written by the AI may store it in small letters.
  */
 
 const TABLES: Record<ItemWriteScope, string> = { opex: 'spend_items', capex: 'capex_items' };
@@ -29,6 +31,11 @@ export const ANALYTICS_FIELD_PREFIX = 'analytics_values.';
 type LockedLine = Record<string, any> & { row_version?: number | null; updated_at?: Date | string | null; disabled_at?: Date | string | null };
 
 const LIFECYCLE_INPUTS = ['disabled_at', 'status', 'effective_end'];
+
+/** Columns whose values are codes compared without case (`eur` and `EUR` are one currency). */
+const CASE_INSENSITIVE_COLUMNS = new Set(['currency']);
+const upper = (value: unknown) => (typeof value === 'string' ? value.toUpperCase() : value);
+const sameCode = (left: unknown, right: unknown) => sameFieldValue(upper(left), upper(right));
 
 /** The fields of the request that carry a base, with their stored and requested values. */
 export function itemEditedFields(
@@ -47,7 +54,14 @@ export function itemEditedFields(
   const fields: EditedField[] = [];
   for (const column of itemWritableColumns(scope)) {
     if (!supplied(column) || !(column in resolved.values) || !hasBase(base, column)) continue;
-    fields.push({ field: column, base: base[column], current: resolved.before[column] ?? null, mine: resolved.values[column], auditPath: [column] });
+    fields.push({
+      field: column,
+      base: base[column],
+      current: resolved.before[column] ?? null,
+      mine: resolved.values[column],
+      auditPath: [column],
+      ...(CASE_INSENSITIVE_COLUMNS.has(column) ? { same: sameCode } : {}),
+    });
   }
   if (hasBase(base, 'disabled_at') && LIFECYCLE_INPUTS.some(supplied)) {
     fields.push({

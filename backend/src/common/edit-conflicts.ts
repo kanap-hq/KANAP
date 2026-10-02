@@ -153,6 +153,8 @@ export type EditedField = {
   mine: unknown;
   /** Where the field sits in the audit rows' JSON (`['supplier_id']`, `['analytics_values', '<id>']`). */
   auditPath: string[];
+  /** The field's own equality, when {@link sameFieldValue} is not enough (a code compared without case). */
+  same?: (left: unknown, right: unknown) => boolean;
 };
 
 export type EditConflictAuthor = { id: string; name: string };
@@ -165,7 +167,7 @@ export type EditConflict = {
   mine: unknown;
   /** Display names of id values (a supplier's name for its id), when the entity provides them; null for other values. */
   labels: { base: string | null; current: string | null; mine: string | null };
-  /** Who wrote the current value, null when the audit trail cannot say (a system write). */
+  /** Who wrote the current value, null when the audit trail cannot say (a referenced row deleted, a script). */
   changed_by: EditConflictAuthor | null;
   /** When, ISO timestamp, null when unknown. */
   changed_at: string | null;
@@ -176,7 +178,10 @@ export type EditConflict = {
  * not already the requested value.
  */
 export function conflictingFields(fields: EditedField[]): EditedField[] {
-  return fields.filter((entry) => !sameFieldValue(entry.current, entry.base) && !sameFieldValue(entry.current, entry.mine));
+  return fields.filter((entry) => {
+    const same = entry.same ?? sameFieldValue;
+    return !same(entry.current, entry.base) && !same(entry.current, entry.mine);
+  });
 }
 
 type AuditAuthorRow = { field: string; user_id: string | null; created_at: Date | string | null; after_value: unknown };
@@ -184,9 +189,11 @@ type AuditAuthorRow = { field: string; user_id: string | null; created_at: Date 
 /**
  * Who wrote each field's current value, and when: the latest audit row of
  * the record that changed the field and left the current value (one query,
- * `idx_audit_log_tenant_record_created`). A field changed outside the audit
- * trail (a referenced row deleted, a script) falls back to the record's last
- * audit row; with none, `fallbackAt` (the record's `updated_at`) and no author.
+ * `idx_audit_log_tenant_record_created`). A value no audit row explains was
+ * written outside the audit trail (a referenced row deleted, `ON DELETE SET
+ * NULL`; a script): nobody is named, and the time is `fallbackAt` (the
+ * record's `updated_at`). Naming the record's last editor instead would
+ * accuse someone who never touched the field.
  */
 export async function lastFieldChanges(
   manager: EntityManager,
@@ -216,29 +223,13 @@ export async function lastFieldChanges(
   );
   const byField = new Map(rows.map((row) => [row.field, row]));
 
-  let lastRow: { user_id: string | null; created_at: Date | string | null } | null | undefined;
-  const readLastRow = async () => {
-    if (lastRow !== undefined) return lastRow;
-    const [row] = await manager.query(
-      `SELECT user_id::text AS user_id, created_at FROM audit_log
-        WHERE tenant_id = $1 AND table_name = $2 AND record_id = $3
-        ORDER BY created_at DESC LIMIT 1`,
-      [opts.tenantId, opts.table, opts.recordId],
-    );
-    lastRow = row ?? null;
-    return lastRow;
-  };
-
   const picked = new Map<string, { user_id: string | null; created_at: Date | string | null }>();
   for (const entry of opts.fields) {
     const row = byField.get(entry.field);
     // The row explains the current value only if it wrote it.
-    if (row?.created_at && sameFieldValue(row.after_value, entry.current)) {
-      picked.set(entry.field, row);
-      continue;
-    }
-    const last = await readLastRow();
-    picked.set(entry.field, last ?? { user_id: null, created_at: opts.fallbackAt ?? null });
+    picked.set(entry.field, row?.created_at && (entry.same ?? sameFieldValue)(row.after_value, entry.current)
+      ? row
+      : { user_id: null, created_at: opts.fallbackAt ?? null });
   }
 
   const userIds = Array.from(new Set(Array.from(picked.values()).map((row) => row.user_id).filter((id): id is string => !!id)));

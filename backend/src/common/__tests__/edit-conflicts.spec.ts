@@ -59,6 +59,12 @@ function testConflictingFields() {
   assert.equal(conflictingFields([field('a', 'c', 'b')]).length, 1, 'someone else changed it');
   assert.equal(conflictingFields([field('a', 'b', 'b')]).length, 0, 'someone else made the same change');
   assert.equal(conflictingFields([field(null, '', 'b')]).length, 0, 'empty either way');
+  // A field may bring its own equality (a code compared without case).
+  const code = (base: unknown, current: unknown, mine: unknown) => ({
+    ...field(base, current, mine), same: (a: unknown, b: unknown) => sameFieldValue(String(a ?? '').toUpperCase(), String(b ?? '').toUpperCase()),
+  });
+  assert.equal(conflictingFields([code('eur', 'EUR', 'USD')]).length, 0, 'the same code in small letters');
+  assert.equal(conflictingFields([code('eur', 'GBP', 'USD')]).length, 1);
 }
 
 function testSplitBase() {
