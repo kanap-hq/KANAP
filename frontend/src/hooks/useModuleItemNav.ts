@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
-import api from '../api';
 import { statusScopeParams } from '../utils/statusScopeParams';
-import { listKeyOf, loadListContext, withListContext } from '../lib/listContext';
+import { listKeyOf, loadListContext, getWithListContext } from '../lib/listContext';
 
 type ModuleItemNavData = {
   ids: string[];
@@ -143,9 +142,8 @@ export function useModuleItemNav(
         const saved = await loadListContext(String(apiParams.ctx)).catch(() => null);
         if (!saved || saved.list !== listKeyOf(endpoint)) delete apiParams.ctx;
       }
-      // Filters too long for a URL go as a saved list context.
-      const sent = await withListContext(endpoint, apiParams);
-      const res = await api.get<{ ids?: string[]; refs?: Array<string | null | undefined> }>(endpoint, { params: sent });
+      // Filters too long for a URL go as a saved list context (saved again if the server lost it).
+      const res = await getWithListContext<{ ids?: string[]; refs?: Array<string | null | undefined> }>(endpoint, apiParams);
       return {
         ids: res.data?.ids || [],
         refs: res.data?.refs || [],

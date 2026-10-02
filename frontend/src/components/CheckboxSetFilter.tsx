@@ -110,6 +110,8 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   const [search, setSearch] = useState('');
   // While a search is typed, the grid applies `snapshot ∩ matching values`. The snapshot is the
   // selection effective when the search started; it is restored when the search is cleared.
+  // Not in exclude mode: there a search only narrows the values listed, and the filter stays
+  // "every value but these" (see `excludeModeNow`).
   const [snapshot, setSnapshotState] = useState<Set<string | null> | null>(null);
   const snapshotRef = useRef<Set<string | null> | null>(null);
   const snapshotImplicitAllRef = useRef(false);
@@ -271,6 +273,13 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     return false;
   }, []);
 
+  // Exclude mode in effect: allowed on this list, and the selection (or the clicks not applied yet)
+  // starts from "All". A search then never turns the filter into the ticked matching values: only
+  // the values the user ticks or unticks move, so values added later keep showing.
+  const excludeModeNow = useCallback(() => (
+    excludeAllowedRef.current && (pendingRef.current ? pendingFromAllRef.current : fromAllRef.current)
+  ), []);
+
   const labelMatches = useCallback((option: CheckboxSetFilterOption, trimmed: string) => {
     return buildLabel(option).toLowerCase().includes(trimmed);
   }, [buildLabel]);
@@ -395,6 +404,8 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
+    // Exclude mode: the search narrows the values listed, the filter does not change.
+    if (!snapshotRef.current && excludeModeNow()) return;
     const trimmed = value.trim().toLowerCase();
     let snap = snapshotRef.current;
     if (!trimmed) {
@@ -422,7 +433,25 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     const applied = matchingSubset(snap, trimmed);
     cancelPendingApply();
     scheduleApply(() => setSelection(applied));
-  }, [cancelPendingApply, scheduleApply, restoreSnapshot, mergedOptions, setSnapshot, matchingSubset, setSelection]);
+  }, [cancelPendingApply, scheduleApply, restoreSnapshot, mergedOptions, setSnapshot, matchingSubset, setSelection, excludeModeNow]);
+
+  // Exclude mode with a search typed: "All" ticks and "Clear" unticks the values listed (the
+  // matching ones) and leaves the others as they are; the filter stays an exclude one.
+  const moveListedValues = useCallback((tick: boolean): boolean => {
+    if (snapshotRef.current || !search.trim() || !excludeModeNow()) return false;
+    const base = pendingRef.current
+      ?? (implicitAllRef.current && selectedValues.size === 0 ? optionValueSet : selectedValues);
+    const next = new Set(base);
+    filteredOptions.forEach((opt) => (tick ? next.add(opt.value ?? null) : next.delete(opt.value ?? null)));
+    pendingFromAllRef.current = true;
+    setPending(next);
+    scheduleApply(() => {
+      setPending(null);
+      fromAllRef.current = true;
+      setSelection(next);
+    });
+    return true;
+  }, [search, excludeModeNow, selectedValues, optionValueSet, filteredOptions, setPending, scheduleApply, setSelection]);
 
   const toggleValue = useCallback((value: string | null) => {
     if (snapshotRef.current) {
@@ -449,6 +478,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   }, [selectedValues, setSelection, optionValueSet, commitSnapshot, setPending, scheduleApply]);
 
   const handleSelectAll = useCallback(() => {
+    if (moveListedValues(true)) return;
     if (snapshotRef.current) {
       const next = new Set(snapshotRef.current);
       filteredOptions.forEach((opt) => next.add(opt.value ?? null));
@@ -473,9 +503,10 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
       implicitAllRef.current = false;
       setSelection(next);
     });
-  }, [mergedOptions, filteredOptions, setSelection, updateFilterModel, treatAllAsUnfiltered, commitSnapshot, setPending, scheduleApply]);
+  }, [mergedOptions, filteredOptions, setSelection, updateFilterModel, treatAllAsUnfiltered, commitSnapshot, setPending, scheduleApply, moveListedValues]);
 
   const handleClear = useCallback(() => {
+    if (moveListedValues(false)) return;
     if (snapshotRef.current) {
       const next = new Set(snapshotRef.current);
       filteredOptions.forEach((opt) => next.delete(opt.value ?? null));
@@ -493,7 +524,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
       excludedRef.current = new Set();
       setSelection(next);
     });
-  }, [filteredOptions, setSelection, commitSnapshot, setPending, scheduleApply]);
+  }, [filteredOptions, setSelection, commitSnapshot, setPending, scheduleApply, moveListedValues]);
 
   useEffect(() => {
     const api = props.api;

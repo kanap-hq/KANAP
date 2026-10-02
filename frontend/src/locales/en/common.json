@@ -78,7 +78,8 @@
     "valueCount_one": "{{formatted}} value",
     "clearFilter": "Clear filter",
     "columnPlaceholder": "Filter…",
-    "filterColumn": "Filter {{column}}"
+    "filterColumn": "Filter {{column}}",
+    "linkFiltersLost": "The filters of this link are no longer available."
   },
   "labels": {
     "show": "Show",

@@ -1,11 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../api';
 import { ModuleItemNavParams, ModuleItemNavResult } from './useModuleItemNav';
 import { formatItemRef } from '../utils/item-ref';
 import { statusScopeParams } from '../utils/statusScopeParams';
 import { useBudgetColumns } from './useBudgetColumns';
-import { withListContext } from '../lib/listContext';
+import { getWithListContext } from '../lib/listContext';
 
 type Neighbor = { id: string; item_number: number | null } | null;
 type NeighborsResponse = { index: number | null; total: number; prev: Neighbor; next: Neighbor };
@@ -54,8 +53,7 @@ export function useBudgetItemNav(params: ModuleItemNavParams, config: BudgetItem
   const neighborsQuery = useMemo(() => (at: string) => ({
     queryKey: [queryKey, listKey, at],
     queryFn: async ({ signal }: { signal?: AbortSignal }): Promise<Neighbors> => {
-      const sent = await withListContext(endpoint, { ...listParams, id: at });
-      const res = await api.get<NeighborsResponse>(endpoint, { params: sent, signal });
+      const res = await getWithListContext<NeighborsResponse>(endpoint, { ...listParams, id: at }, { signal });
       const ref = (n: Neighbor) => (n ? (n.item_number != null ? formatItemRef(kind, n.item_number) : n.id) : null);
       return { at, index: res.data?.index ?? null, total: res.data?.total ?? 0, prevRef: ref(res.data?.prev ?? null), nextRef: ref(res.data?.next ?? null) };
     },
@@ -101,4 +99,64 @@ export function useBudgetItemNav(params: ModuleItemNavParams, config: BudgetItem
       nextId: found ? data!.nextRef : null,
     };
   }, [data, id]);
+}
+
+export type BudgetItemIdsNavConfig = {
+  kind: 'opex' | 'capex';
+  /** `/capex-items/summary/ids` */
+  endpoint: string;
+  queryKey: string;
+};
+
+/**
+ * Previous / next from the list's ordered ids (the in-memory lists, before they run on the SQL list
+ * engine): one `summary/ids` request per list state, every step computed in the browser, nothing
+ * prefetched. The line is found by its id or by its reference (`CPX-12`), so the route's line is
+ * placed at once, before its detail loads.
+ */
+export function useBudgetItemIdsNav(params: ModuleItemNavParams, config: BudgetItemIdsNavConfig): ModuleItemNavResult {
+  const { id, sort, q, filters, statusScope, enabled = true } = params;
+  const { kind, endpoint, queryKey } = config;
+  const budgetColumns = useBudgetColumns();
+  // Without a sort from the list, the default column's sort, once the setting is known.
+  const effectiveSort = sort || budgetColumns.defaultSort;
+  const { data } = useQuery({
+    queryKey: [queryKey, effectiveSort, q || '', filters || '', statusScope ?? ''],
+    queryFn: async ({ signal }) => {
+      const res = await getWithListContext<{ ids?: string[]; item_numbers?: number[] }>(endpoint, {
+        sort: effectiveSort,
+        ...(q ? { q } : {}),
+        ...(filters ? { filters } : {}),
+        // The grid's status scope, or prev/next would walk another set than the one on screen.
+        ...statusScopeParams(statusScope),
+      }, { signal });
+      return { ids: res.data?.ids ?? [], itemNumbers: res.data?.item_numbers ?? [] };
+    },
+    enabled: enabled && !!id && (!!sort || budgetColumns.ready),
+    staleTime: NAV_STALE_MS,
+  });
+
+  return useMemo(() => {
+    const ids = data?.ids ?? [];
+    const itemNumbers = data?.itemNumbers ?? [];
+    const refAt = (i: number) => (itemNumbers[i] != null ? formatItemRef(kind, itemNumbers[i]) : ids[i]);
+    let index = ids.indexOf(id);
+    if (index < 0) {
+      const wanted = String(id ?? '').toUpperCase();
+      index = itemNumbers.findIndex((n) => n != null && formatItemRef(kind, n) === wanted);
+    }
+    // A line the list does not hold (filtered out, or not loaded yet) gets no previous / next.
+    const found = index >= 0;
+    const hasPrev = found && index > 0;
+    const hasNext = found && index < ids.length - 1;
+    return {
+      ids,
+      index: found ? index : 0,
+      total: found ? ids.length : 0,
+      hasPrev,
+      hasNext,
+      prevId: hasPrev ? refAt(index - 1) : null,
+      nextId: hasNext ? refAt(index + 1) : null,
+    };
+  }, [data, id, kind]);
 }

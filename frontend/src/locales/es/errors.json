@@ -20,5 +20,6 @@
   "APP_CRASH_BODY": "No se ha podido mostrar la página. Recargarla suele solucionarlo.",
   "APP_CRASH_RELOAD": "Recargar",
   "APP_CRASH_DETAILS": "Detalles técnicos",
-  "APP_UPDATE_AVAILABLE": "Hay una nueva versión disponible."
+  "APP_UPDATE_AVAILABLE": "Hay una nueva versión disponible.",
+  "list_context_not_found": "Los filtros guardados de esta lista ya no están disponibles. Vuelva a definir los filtros."
 }

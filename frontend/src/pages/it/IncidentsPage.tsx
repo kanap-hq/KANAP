@@ -13,13 +13,12 @@ import ForbiddenPage from '../ForbiddenPage';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
-import api from '../../api';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { formatItemRef } from '../../utils/item-ref';
 import { getDotColor, INCIDENT_SEVERITY_COLORS, INCIDENT_STATUS_COLORS } from '../../utils/statusColors';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, type IncidentRow } from '../../api/endpoints/incidents';
-import { setListFiltersParam, withListContext } from '../../lib/listContext';
+import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 
 const DEFAULT_SORT = 'detected_at:DESC';
 
@@ -97,7 +96,7 @@ export default function IncidentsPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get('/incidents/filter-values', { params: await withListContext('/incidents/filter-values', params) });
+      const res = await getWithListContext('/incidents/filter-values', params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       const options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };

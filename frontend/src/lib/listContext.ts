@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import api from '../api';
 
 /**
@@ -75,6 +76,44 @@ const idByState = new Map<string, string>();
 const filtersById = new Map<string, { list: string; filters: ListFilters | null }>();
 const saving = new Map<string, Promise<string>>();
 const loading = new Map<string, Promise<{ list: string; filters: ListFilters | null }>>();
+// Ids the server no longer knows (purged after 90 days unused, evicted past the tenant's cap, or
+// another tenant's): not asked again in this tab.
+const missingIds = new Set<string>();
+// Lists whose link filters could not be read, until the list's grid shows the notice.
+const lostLists = new Set<string>();
+
+/** True for the server's answer to a context it does not know (400 or 404 `list_context_not_found`). */
+export function isListContextNotFound(error: unknown): boolean {
+  return (error as { response?: { data?: { code?: unknown } } } | null)?.response?.data?.code === 'list_context_not_found';
+}
+
+/** True when the server answered that it does not know this id (see `loadListContext`). */
+export function isListContextMissing(id: string | null | undefined): boolean {
+  return !!id && missingIds.has(id);
+}
+
+/**
+ * Forgets an id this tab knew (the server answered it no longer has it): the next request with
+ * the same filters saves them again.
+ */
+export function forgetListContext(id: string): void {
+  filtersById.delete(id);
+  for (const [key, known] of idByState) if (known === id) idByState.delete(key);
+  if (lastLookup?.id === id) lastLookup = null;
+}
+
+/**
+ * The filters of a link could not be read (the saved filters are gone): the list's grid shows a
+ * one-line notice the next time it mounts (`takeLostListFilters`), then the list unfiltered.
+ */
+export function reportLostListFilters(endpoint: string): void {
+  lostLists.add(listKeyOf(endpoint));
+}
+
+/** Whether filters of this list were lost since its grid last looked; forgets it. */
+export function takeLostListFilters(endpoint: string): boolean {
+  return lostLists.delete(listKeyOf(endpoint));
+}
 
 function stateKey(list: string, filters: ListFilters): string {
   return `${list}\n${canonicalJson(filters)}`;
@@ -87,6 +126,8 @@ export function resetListContextCache(): void {
   filtersById.clear();
   saving.clear();
   loading.clear();
+  missingIds.clear();
+  lostLists.clear();
 }
 
 // The last text looked up: the cell links of one list state all ask for the same filters.
@@ -124,6 +165,7 @@ export function saveListContext(endpoint: string, filters: string | ListFilters)
     .then((res) => {
       const id = String(res.data?.id ?? '');
       if (!id) throw new Error('The list filters could not be saved');
+      missingIds.delete(id);
       idByState.set(key, id);
       filtersById.set(id, { list, filters: model });
       return id;
@@ -138,10 +180,14 @@ export function cachedListContext(id: string | null | undefined): { list: string
   return id ? filtersById.get(id) : undefined;
 }
 
-/** Reads the filters saved under an id (once per tab). Rejects when the id is unknown (purged after 90 days unused). */
+/**
+ * Reads the filters saved under an id (once per tab). Rejects when the id is unknown (purged after
+ * 90 days unused, evicted, another tenant's); such an id is not asked again in the tab.
+ */
 export function loadListContext(id: string): Promise<{ list: string; filters: ListFilters | null }> {
   const known = filtersById.get(id);
   if (known) return Promise.resolve(known);
+  if (missingIds.has(id)) return Promise.reject(Object.assign(new Error('list_context_not_found'), { response: { status: 404, data: { code: 'list_context_not_found' } } }));
   const inFlight = loading.get(id);
   if (inFlight) return inFlight;
   const request = api.get<{ id: string; list: string; state?: { filters?: unknown } }>(`/list-contexts/${encodeURIComponent(id)}`)
@@ -152,6 +198,9 @@ export function loadListContext(id: string): Promise<{ list: string; filters: Li
       filtersById.set(id, entry);
       if (filters) idByState.set(stateKey(list, filters), id);
       return entry;
+    }, (error: unknown) => {
+      if (isListContextNotFound(error)) missingIds.add(id);
+      throw error;
     })
     .finally(() => loading.delete(id));
   loading.set(id, request);
@@ -168,6 +217,28 @@ export async function withListContext<T extends Record<string, unknown>>(endpoin
   const ctx = await saveListContext(endpoint, filters!);
   const { filters: _inline, ...rest } = params;
   return { ...rest, ctx };
+}
+
+/**
+ * GET of a list endpoint with its filters as `ctx` when too long for a URL (`withListContext`). A
+ * context this tab saved earlier may be gone on the server since (purged, evicted past the
+ * tenant's cap): on `list_context_not_found` the tab forgets it, saves the filters again and asks
+ * once more. A `ctx` the caller passes itself (from a link) is sent as it is.
+ */
+export async function getWithListContext<T = any>(
+  endpoint: string,
+  params: Record<string, unknown>,
+  config?: Omit<AxiosRequestConfig, 'params'>,
+): Promise<AxiosResponse<T>> {
+  const sent = await withListContext(endpoint, params);
+  try {
+    return await api.get<T>(endpoint, { ...config, params: sent });
+  } catch (error) {
+    const savedHere = typeof sent.ctx === 'string' && sent.ctx !== params.ctx;
+    if (!savedHere || !isListContextNotFound(error)) throw error;
+    forgetListContext(sent.ctx as string);
+    return api.get<T>(endpoint, { ...config, params: await withListContext(endpoint, params) });
+  }
 }
 
 /**

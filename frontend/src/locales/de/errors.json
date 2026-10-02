@@ -20,5 +20,6 @@
   "APP_CRASH_BODY": "Die Seite konnte nicht angezeigt werden. Ein Neuladen behebt das meistens.",
   "APP_CRASH_RELOAD": "Neu laden",
   "APP_CRASH_DETAILS": "Technische Details",
-  "APP_UPDATE_AVAILABLE": "Eine neue Version ist verfügbar."
+  "APP_UPDATE_AVAILABLE": "Eine neue Version ist verfügbar.",
+  "list_context_not_found": "Die gespeicherten Filter dieser Liste sind nicht mehr verfügbar. Legen Sie die Filter erneut fest."
 }

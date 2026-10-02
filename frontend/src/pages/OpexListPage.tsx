@@ -7,7 +7,6 @@ import PageHeader from '../components/PageHeader';
 import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
-import api from '../api';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
@@ -23,11 +22,12 @@ import {
   explicitSort,
   fteTotalsToRow,
   SummaryVersions,
+  pendingAmountsField,
   totalsToVersions,
   visibleAmountFields,
   visibleFteFields,
 } from '../components/finance/amountColumns';
-import { compactListSearchCached, filtersNeedContext, listFiltersOf, withListContext } from '../lib/listContext';
+import { compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext } from '../lib/listContext';
 import { snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
@@ -39,44 +39,36 @@ import { formatShortDate, formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 
+/**
+ * A line as the list reads it: the grid shape of `/spend-items/summary` (`shape=grid`), which
+ * carries these keys only (backend `gridRow`), plus `analytics_<axis id>` for the enabled
+ * dimensions and the `fte_*` keys of the FTE columns shown.
+ */
 type SummaryRow = {
   id: string;
   item_number: number;
   product_name: string;
   description?: string | null;
-  supplier?: { id: string; name: string } | null;
-  account?: { id: string; account_number: number; account_name: string } | null;
+  supplier_name?: string | null;
   currency: string;
   effective_start: string;
   disabled_at?: string | null;
   status: string;
-  owner_it_id?: string | null;
-  owner_business_id?: string | null;
-  analytics_category_id?: string | null;
   analytics_category_name?: string | null;
-  analytics_value_ids?: Record<string, string> | null;
   cost_center_id?: string | null;
-  cost_center_code?: string | null;
-  cost_center_name?: string | null;
   cost_center_label?: string | null;
   cost_center_path?: string | null;
-  budget_holder_id?: string | null;
   budget_holder_name?: string | null;
   run_build?: 'run' | 'build' | null;
-  project_id?: string | null;
   project_name?: string | null;
   notes?: string | null;
   created_at: string;
   updated_at?: string;
-  main_recipient?: { company_id: string; department_id: string; pct: number; label: string } | null;
   versions?: SummaryVersions;
-  latest_task?: { id: string; title?: string; description?: string; status?: string; created_at?: string } | null;
-  spread_mode_for_y?: 'flat' | 'manual' | null;
+  latest_task?: { title?: string | null } | null;
   latest_contract_id?: string | null;
   latest_contract_name?: string | null;
   allocation_method_label?: string | null;
-  allocation_warning?: string | null;
-  paying_company_id?: string | null;
   paying_company_name?: string | null;
   account_display?: string | null;
   owner_it_name?: string | null;
@@ -123,7 +115,7 @@ export default function OpexListPage() {
       if (queryState.q) params.q = queryState.q;
       if (Object.keys(filters).length > 0) params.filters = JSON.stringify(filters);
       Object.assign(params, statusScopeParams(queryState.statusScope));
-      const res = await api.get(VALUES_ENDPOINT, { params: await withListContext(VALUES_ENDPOINT, params) });
+      const res = await getWithListContext(VALUES_ENDPOINT, params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       const options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };
@@ -183,6 +175,16 @@ export default function OpexListPage() {
     if (stored && !storedContextRef.current) storedContextRef.current = stored;
     return stored;
   }, []);
+  // The filters of a link were lost: the stored list context forgets its own too (the list opens
+  // unfiltered, and the next settling of the address must not bring them back).
+  const dropStoredFilters = useCallback(() => {
+    const stored = storedContextRef.current || readStoredOpexListContext();
+    if (!stored) return;
+    const { ctx: _ctx, ...rest } = stored;
+    const next = { ...rest, filters: '' };
+    storedContextRef.current = next;
+    writeStoredOpexListContext(next);
+  }, []);
   const settledSearch = useSettledListSearch({
     endpoint: ROWS_ENDPOINT,
     search: location.search,
@@ -191,6 +193,7 @@ export default function OpexListPage() {
     shown: budgetColumns.shown,
     defaultSort: budgetColumns.defaultSort,
     isListField,
+    dropStoredFilters,
   });
   const currentSearch = new URLSearchParams(location.search).toString();
   useEffect(() => {
@@ -239,7 +242,7 @@ export default function OpexListPage() {
       if (columnFields!.fte) params.fte = columnFields!.fte;
       // Only the amount columns shown (none: the reporting currency alone).
       params.amounts = columnFields!.amounts;
-      const res = await api.get(TOTALS_ENDPOINT, { params: await withListContext(TOTALS_ENDPOINT, params), signal });
+      const res = await getWithListContext(TOTALS_ENDPOINT, params, { signal });
       return res.data;
     },
     enabled: totalsQuery != null && columnFields != null,
@@ -254,8 +257,10 @@ export default function OpexListPage() {
       product_name: t('shared.total'),
       versions: totalsToVersions(totals.data),
       ...fteTotalsToRow(totals.data?.fte),
+      // A column just shown: its placeholder until its total arrives, not 0.
+      ...pendingAmountsField(totals.data, columnFields?.amounts),
     }];
-  }, [totals.data, totals.isError, t]);
+  }, [totals.data, totals.isError, columnFields?.amounts, t]);
 
   // A delete or an import changes the lines without changing the query: ask again for the same one.
   useEffect(() => {
@@ -360,9 +365,6 @@ export default function OpexListPage() {
     } else if (amountYear != null) {
       tab = 'budget';
       next.set('year', String(amountYear));
-    } else if (colId === 'spread_mode_for_y') {
-      tab = 'budget';
-      next.set('year', String(Y));
     } else if (colId === 'latest_task_text') {
       tab = 'overview'; // tasks now live in the overview tab
     }
@@ -410,10 +412,7 @@ export default function OpexListPage() {
     {
       colId: 'supplier_name',
       headerName: t('opex.columns.supplier'),
-      valueGetter: (p) => {
-        const d: any = p.data || {};
-        return d?.supplier?.name ?? d?.supplier_name ?? d?.supplier ?? '';
-      },
+      valueGetter: (p) => p.data?.supplier_name ?? '',
       width: 180,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
@@ -472,23 +471,9 @@ export default function OpexListPage() {
         getValues: getOpexFilterValues('account_display'),
         searchable: false,
       },
-      valueGetter: (p) => {
-        const d: any = p.data || {};
-        const a = d?.account;
-        if (a && (a.account_number != null || a.account_name != null)) {
-          const num = a.account_number != null ? String(a.account_number) : '';
-          const name = a.account_name != null ? String(a.account_name) : '';
-          return [num, name].filter(Boolean).join(' - ');
-        }
-        if (typeof d?.account_display === 'string') return d.account_display;
-        if (typeof d?.account === 'string') return d.account;
-        if (d?.account_number != null || d?.account_name != null) {
-          const num = d.account_number != null ? String(d.account_number) : '';
-          const name = d.account_name != null ? String(d.account_name) : '';
-          return [num, name].filter(Boolean).join(' - ');
-        }
-        return '';
-      },
+      // "6110 - Software", or the number alone for an account without a name (the server's text,
+      // the one the filter values and the sort use).
+      valueGetter: (p) => p.data?.account_display ?? '',
       width: 220,
       cellRenderer: (params: any) => (
         <LinkCellRenderer

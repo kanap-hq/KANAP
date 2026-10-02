@@ -148,18 +148,60 @@ describe('CheckboxSetFilter exclude mode', () => {
     expect(applied()).toEqual({ filterType: 'set', mode: 'exclude', values: ['Bravo'] });
   });
 
-  it('a search keeps the ticked matching values (include), and clearing it restores the exclude filter', () => {
-    const { applied } = renderFilter({ exclude: true, values: Array.from({ length: 25 }, (_, i) => ({ value: `Supplier ${i}` })) });
+  it('a search narrows the values listed: ticking or unticking then moves only those values, the filter stays exclude', async () => {
+    const values = Array.from({ length: 25 }, (_, i) => ({ value: `Supplier ${i}` }));
+    const { applied, api, setValues } = renderFilter({ exclude: true, values });
     fireEvent.click(box('Supplier 3'));
     advance();
     expect(applied()).toEqual({ filterType: 'set', mode: 'exclude', values: ['Supplier 3'] });
+    const calls = api.setFilterModel.mock.calls.length;
+    // Typing a search changes nothing on the list: no model sent, still "All but 1".
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Supplier 2' } });
     advance();
-    expect(applied()?.mode).toBeUndefined();
-    expect(hint()).toBeNull();
+    expect(api.setFilterModel.mock.calls.length).toBe(calls);
+    expect(applied()).toEqual({ filterType: 'set', mode: 'exclude', values: ['Supplier 3'] });
+    expect(hint()).toBe('All but 1. Values added later show too.');
+    // Unticking a value found by the search: that value joins the excluded ones, nothing else moves.
+    fireEvent.click(box('Supplier 20'));
+    advance();
+    expect(applied()?.mode).toBe('exclude');
+    expect([...(applied()?.values ?? [])].sort()).toEqual(['Supplier 20', 'Supplier 3']);
+    expect(label()).toBe('All but 2');
+    // The popup closed with the search still typed: the filter is the exclude one (values added later show).
+    setValues([...values, { value: 'Supplier 99' }]);
+    expect(applied()?.mode).toBe('exclude');
+    expect([...(applied()?.values ?? [])].sort()).toEqual(['Supplier 20', 'Supplier 3']);
+    // "Clear" with a search unticks the values listed only; "All" ticks them back.
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Supplier 1' } });
+    fireEvent.click(screen.getByRole('button', { name: /^clear$/i }));
+    advance();
+    expect(applied()?.mode).toBe('exclude');
+    expect([...(applied()?.values ?? [])].sort()).toEqual(
+      ['Supplier 1', 'Supplier 10', 'Supplier 11', 'Supplier 12', 'Supplier 13', 'Supplier 14', 'Supplier 15', 'Supplier 16', 'Supplier 17', 'Supplier 18', 'Supplier 19', 'Supplier 20', 'Supplier 3'],
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^all$/i }));
+    advance();
+    expect([...(applied()?.values ?? [])].sort()).toEqual(['Supplier 20', 'Supplier 3']);
+    // The search cleared: same filter.
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '' } });
     advance();
-    expect(applied()).toEqual({ filterType: 'set', mode: 'exclude', values: ['Supplier 3'] });
+    expect([...(applied()?.values ?? [])].sort()).toEqual(['Supplier 20', 'Supplier 3']);
+    expect(box('Supplier 99')).toBeChecked();
+  });
+
+  it('after "Clear" (only the ticked values), a search keeps the ticked matching values as before', () => {
+    const { applied } = renderFilter({ exclude: true, values: Array.from({ length: 25 }, (_, i) => ({ value: `Supplier ${i}` })) });
+    fireEvent.click(screen.getByRole('button', { name: /^clear$/i }));
+    fireEvent.click(box('Supplier 2'));
+    fireEvent.click(box('Supplier 5'));
+    advance();
+    expect(applied()).toEqual({ filterType: 'set', values: ['Supplier 2', 'Supplier 5'] });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Supplier 2' } });
+    advance();
+    expect(applied()).toEqual({ filterType: 'set', values: ['Supplier 2'] });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '' } });
+    advance();
+    expect(applied()).toEqual({ filterType: 'set', values: ['Supplier 2', 'Supplier 5'] });
   });
 
   it('a column can turn it off on a list that has it', () => {

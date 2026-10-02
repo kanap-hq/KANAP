@@ -60,7 +60,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
 import { getDotColor, KNOWLEDGE_STATUS_COLORS } from '../../utils/statusColors';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
-import { setListFiltersParam, withListContext } from '../../lib/listContext';
+import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Draft',
@@ -387,7 +387,7 @@ export default function KnowledgePage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get('/knowledge/filter-values', { params: await withListContext('/knowledge/filter-values', params) });
+      const res = await getWithListContext('/knowledge/filter-values', params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };

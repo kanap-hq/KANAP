@@ -9,7 +9,7 @@ import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
-import api from '../api';
+import { getWithListContext } from '../lib/listContext';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
@@ -338,7 +338,8 @@ export default function CompaniesPage() {
       } else if (statusScope === 'all') {
         params.includeDisabled = '1';
       }
-      const res = await api.get('/companies/totals', { params });
+      // Filters too long for a URL go as a saved list context, like the grid's own requests.
+      const res = await getWithListContext('/companies/totals', params);
       const totals = res.data || {};
       const pinned = {
         name: t('companies.pinnedTotal'),

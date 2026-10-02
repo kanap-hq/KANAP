@@ -10,7 +10,6 @@ import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
-import api from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { formatItemRef } from '../utils/item-ref';
@@ -25,12 +24,14 @@ import {
   explicitSort,
   fteTotalsToRow,
   SummaryVersions,
+  pendingAmountsField,
   totalsToVersions,
   visibleAmountFields,
   visibleFteFields,
 } from '../components/finance/amountColumns';
-import { compactListSearchCached, filtersNeedContext, listFiltersOf, withListContext } from '../lib/listContext';
+import { compactListSearchCached, filtersNeedContext, listFiltersOf, getWithListContext } from '../lib/listContext';
 import { snapshotFilters, useSettledListSearch, writeListSnapshot } from '../hooks/useListContextSearch';
+import { CAPEX_LIST_ON_ENGINE } from './capex/capexListEngine';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../hooks/useAnalyticsAxes';
 import { analyticsFieldKey } from '../services/analytics';
@@ -94,18 +95,12 @@ const TOTALS_ENDPOINT = '/capex-items/summary/totals';
 const VALUES_ENDPOINT = '/capex-items/summary/filter-values';
 
 /**
- * Parameters of the page requests: the lean grid rows, with the FTE keys of the FTE columns shown
- * (showing or hiding one reloads the rows). The CAPEX list reads them once it runs on the SQL list
- * engine (lot 2B, PR C); until then the server answers its full rows.
+ * Parameters of the page requests on the SQL list engine (CAPEX_LIST_ON_ENGINE): the lean grid
+ * rows, with the FTE keys of the FTE columns shown (showing or hiding one reloads the rows).
+ * Without the engine the page requests carry none: the in-memory list would rebuild every line for
+ * them and answer its full rows anyway.
  */
-const pageParams = (state: Parameters<typeof visibleFteFields>[0]) => ({ shape: 'grid', fte: visibleFteFields(state).join(',') });
-
-/**
- * Exclude mode on the set filters ("All" then untick keeps values added later): off until the CAPEX
- * list runs on the SQL list engine (lot 2B, PR C). Its in-memory endpoints do not honour it on
- * every column yet.
- */
-const CAPEX_SET_FILTER_EXCLUDE_MODE = false;
+const enginePageParams = (state: Parameters<typeof visibleFteFields>[0]) => ({ shape: 'grid', fte: visibleFteFields(state).join(',') });
 
 export default function CapexPage() {
   const { hasLevel } = useAuth();
@@ -156,6 +151,16 @@ export default function CapexPage() {
     if (stored && !storedContextRef.current) storedContextRef.current = stored;
     return stored;
   }, []);
+  // The filters of a link were lost: the stored list context forgets its own too (the list opens
+  // unfiltered, and the next settling of the address must not bring them back).
+  const dropStoredFilters = useCallback(() => {
+    const stored = storedContextRef.current || readStoredCapexListContext();
+    if (!stored) return;
+    const { ctx: _ctx, ...rest } = stored;
+    const next = { ...rest, filters: '' };
+    storedContextRef.current = next;
+    writeStoredCapexListContext(next);
+  }, []);
   const settledSearch = useSettledListSearch({
     endpoint: ROWS_ENDPOINT,
     search: location.search,
@@ -164,6 +169,7 @@ export default function CapexPage() {
     shown: budgetColumns.shown,
     defaultSort: budgetColumns.defaultSort,
     isListField,
+    dropStoredFilters,
   });
   const currentSearch = new URLSearchParams(location.search).toString();
   useEffect(() => {
@@ -202,7 +208,7 @@ export default function CapexPage() {
       if (queryState.q) params.q = queryState.q;
       if (Object.keys(filters).length > 0) params.filters = JSON.stringify(filters);
       Object.assign(params, statusScopeParams(queryState.statusScope));
-      const res = await api.get(VALUES_ENDPOINT, { params: await withListContext(VALUES_ENDPOINT, params) });
+      const res = await getWithListContext(VALUES_ENDPOINT, params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       const options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };
@@ -255,10 +261,11 @@ export default function CapexPage() {
   const followTotalsQuery = useCallback((next: Omit<TotalsQuery, 'fte' | 'amounts'>) => {
     setTotalsQuery((prev) => (prev && prev.q === next.q && prev.filters === next.filters && prev.statusScope === next.statusScope ? prev : next));
   }, []);
-  // Showing or hiding an amount or FTE column refetches the footer with the columns now shown.
+  // Showing or hiding an FTE column refetches the footer with the FTE columns now shown; an amount
+  // column too on the SQL list engine (`amounts=`; the in-memory totals answer every amount).
   const followColumns = useCallback((state: Parameters<typeof visibleFteFields>[0]) => {
     const fte = visibleFteFields(state).join(',');
-    const amounts = visibleAmountFields(state).join(',');
+    const amounts = CAPEX_LIST_ON_ENGINE ? visibleAmountFields(state).join(',') : '';
     setColumnFields((prev) => (prev && prev.fte === fte && prev.amounts === amounts ? prev : { fte, amounts }));
   }, []);
   const totals = useQuery({
@@ -269,9 +276,9 @@ export default function CapexPage() {
       if (totalsQuery!.filters) params.filters = totalsQuery!.filters;
       Object.assign(params, statusScopeParams(totalsQuery!.statusScope));
       if (columnFields!.fte) params.fte = columnFields!.fte;
-      // Only the amount columns shown (none: the reporting currency alone, once on the engine).
-      params.amounts = columnFields!.amounts;
-      const res = await api.get(TOTALS_ENDPOINT, { params: await withListContext(TOTALS_ENDPOINT, params), signal });
+      // Only the amount columns shown (none: the reporting currency alone).
+      if (CAPEX_LIST_ON_ENGINE) params.amounts = columnFields!.amounts;
+      const res = await getWithListContext(TOTALS_ENDPOINT, params, { signal });
       return res.data || {};
     },
     enabled: totalsQuery != null && columnFields != null,
@@ -286,8 +293,10 @@ export default function CapexPage() {
       description: t('shared.total'),
       versions: totalsToVersions(totals.data),
       ...fteTotalsToRow(totals.data.fte),
+      // A column just shown: its placeholder until its total arrives (asked per column on the engine).
+      ...pendingAmountsField(totals.data, columnFields?.amounts),
     }];
-  }, [totals.data, totals.isError, t]);
+  }, [totals.data, totals.isError, columnFields?.amounts, t]);
   // The title keeps the last currency the totals gave while they reload or when they fail.
   const lastCurrencyRef = useRef<string | null>(null);
   if (typeof totals.data?.reportingCurrency === 'string') lastCurrencyRef.current = totals.data.reportingCurrency;
@@ -707,8 +716,8 @@ export default function CapexPage() {
         // A saved layout applied before the grid is ready only records the columns: the first
         // totals request comes with the query state, carrying the initial filter.
         onColumnStateChange={followColumns}
-        pageParams={pageParams}
-        setFilterExcludeMode={CAPEX_SET_FILTER_EXCLUDE_MODE}
+        pageParams={CAPEX_LIST_ON_ENGINE ? enginePageParams : undefined}
+        setFilterExcludeMode={CAPEX_LIST_ON_ENGINE}
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};

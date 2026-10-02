@@ -26,7 +26,6 @@ import type {
   ColumnState,
 } from 'ag-grid-community';
 import { useTranslation } from 'react-i18next';
-import api from '../api';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import ClearableColumnFloatingFilter from './ClearableColumnFloatingFilter';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -35,7 +34,19 @@ import { useTenant } from '../tenant/TenantContext';
 import { useThemeMode } from '../config/ThemeContext';
 import { useLocale } from '../i18n/useLocale';
 import { statusScopeParams } from '../utils/statusScopeParams';
-import { listKeyOf, loadListContext, withListContext } from '../lib/listContext';
+import {
+  cachedListContextId,
+  filtersNeedContext,
+  getWithListContext,
+  isListContextNotFound,
+  listKeyOf,
+  loadListContext,
+  parseListFilters,
+  saveListContext,
+  setListFiltersParam,
+  takeLostListFilters,
+} from '../lib/listContext';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 
 const DATE_FILTER_PARAMS = {
   suppressAndOrCondition: true,
@@ -400,9 +411,22 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
   const sortFromUrl = urlParams.get('sort') || `${defaultSort.field}:${defaultSort.direction}`;
   const qFromUrl = urlParams.get('q') || '';
-  // A list state saved as a context (`ctx`, filters too long for a URL): restored when the grid
-  // starts, unless the page hands its own initial filters.
+  // The filters of the address (a reload, a link opened in a new tab, back from a workspace): inline
+  // `filters`, or a saved context (`ctx`, filters too long for a URL). Restored when the grid starts,
+  // unless the page hands its own initial filters.
+  const filtersFromUrlRef = useRef(parseListFilters(urlParams.get('filters')));
   const ctxFromUrlRef = useRef(urlParams.get('ctx'));
+  // The address of the page now, for callbacks created once (the filters follow it, see below).
+  const locationSearchRef = useRef(location.search);
+  locationSearchRef.current = location.search;
+  // The filters of the link could not be read (the saved filters are gone): one line says so above
+  // the list, shown unfiltered, until the next filter change or a click on its close button.
+  const [linkFiltersLost, setLinkFiltersLost] = useState(false);
+  useEffect(() => {
+    if (takeLostListFilters(endpoint)) setLinkFiltersLost(true);
+    // Once, when the grid mounts: the page read its address before mounting it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [search, setSearch] = useState(qFromUrl);
   const debouncedSearch = useDebouncedValue(search, 400);
@@ -690,13 +714,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         // include global quick search (server-side)
         const q = searchRef.current;
         if (enableSearch && q) reqParams.q = q;
-        // Filters too long for a URL go as a saved list context (`ctx`).
-        const sentParams = await withListContext(endpointRef.current, reqParams);
-        if (superseded()) {
-          releaseSupersededBlock(params);
-          return;
-        }
-        const res = await api.get<ServerResponse<T>>(endpointRef.current, { params: sentParams, signal: controller.signal });
+        // Filters too long for a URL go as a saved list context (`ctx`), saved again if the server
+        // no longer has it.
+        const res = await getWithListContext<ServerResponse<T>>(endpointRef.current, reqParams, { signal: controller.signal });
         if (superseded()) {
           releaseSupersededBlock(params);
           return;
@@ -792,8 +812,19 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       }, 0);
     };
 
+    // Filters of the address, when the page hands none: inline ones at once.
+    const urlFilters = filtersFromUrlRef.current;
+    if (!appliedInitialFilterRef.current && urlFilters) {
+      appliedInitialFilterRef.current = true;
+      try {
+        (event.api as any).setFilterModel?.(urlFilters);
+        filterModelRef.current = urlFilters;
+      } catch {}
+    }
+
     // Filters saved as a context (reload, link opened in a new tab): read them before the first
-    // request, so the list loads once, filtered. Only a context of this list applies.
+    // request, so the list loads once, filtered. Only a context of this list applies. One the
+    // server no longer has: the list loads unfiltered, a line says so, and the address drops it.
     const ctxId = ctxFromUrlRef.current;
     if (!appliedInitialFilterRef.current && ctxId) {
       appliedInitialFilterRef.current = true;
@@ -803,7 +834,13 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           (event.api as any).setFilterModel?.(filters);
           filterModelRef.current = filters;
         })
-        .catch(() => undefined)
+        .catch((error) => {
+          if (!isListContextNotFound(error) || (event.api as any).isDestroyed?.()) return;
+          setLinkFiltersLost(true);
+          const next = new URLSearchParams(locationSearchRef.current);
+          next.delete('ctx');
+          navigate({ search: next.toString() }, { replace: true });
+        })
         .finally(start);
       return;
     }
@@ -826,10 +863,31 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     } catch {}
   }, [abortOtherQueries, defaultSort, onQueryStateChange, sortModel]);
 
+  // The address follows the filters (history replaced, like the sort and the search): inline
+  // `filters`, or `ctx` once filters too long for a URL are saved (the page request saves them too,
+  // one request for both). A reload or a copied address then shows the latest filters.
+  const filtersUrlTokenRef = useRef(0);
+  const syncFiltersInUrl = useCallback((model: Record<string, unknown>) => {
+    const token = ++filtersUrlTokenRef.current;
+    const write = () => {
+      if (token !== filtersUrlTokenRef.current) return;
+      const current = new URLSearchParams(locationSearchRef.current);
+      const next = new URLSearchParams(current);
+      setListFiltersParam(next, endpointRef.current, model);
+      if (next.toString() !== current.toString()) navigate({ search: next.toString() }, { replace: true });
+    };
+    if (filtersNeedContext(model) && !cachedListContextId(endpointRef.current, model)) {
+      saveListContext(endpointRef.current, model).then(write, () => undefined);
+      return;
+    }
+    write();
+  }, [navigate]);
+
   const onFilterChanged = useCallback((e: any) => {
     const api = e?.api ?? gridApiRef.current;
     const fm = api?.getFilterModel?.() ?? {};
     filterModelRef.current = fm;
+    setLinkFiltersLost(false);
     // AG Grid reloads the rows on a filter change by itself: no purge here, which would load them twice.
     abortOtherQueries(api);
     try {
@@ -845,7 +903,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         onQueryStateChange({ sort, filterModel: fm, q: searchRef.current, statusScope: statusScopeRef.current });
       }
     } catch {}
-  }, [abortOtherQueries, defaultSort, enablePagination, onQueryStateChange]);
+    // After the parent: a page that fills its address from its stored list state reads the new one.
+    syncFiltersInUrl(fm);
+  }, [abortOtherQueries, defaultSort, enablePagination, onQueryStateChange, syncFiltersInUrl]);
 
 
   // Reload when the search, extra params, refreshKey, endpoint or status scope change: AG Grid does
@@ -1105,7 +1165,12 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           )}
           {toolbarExtras}
         </Stack>
-        {!!loadError && <Alert severity="error">{(loadError as any)?.message || t('common:messages.loadFailed')}</Alert>}
+        {linkFiltersLost && (
+          <Alert severity="info" onClose={() => setLinkFiltersLost(false)} sx={{ py: 0 }}>
+            {t('common:filters.linkFiltersLost')}
+          </Alert>
+        )}
+        {!!loadError && <Alert severity="error">{getApiErrorMessage(loadError, t, t('common:messages.loadFailed'))}</Alert>}
         {enableColumnChooser && (
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
             <Button size="small" onClick={handleShowColumnChooser}>

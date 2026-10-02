@@ -11,12 +11,16 @@ import {
   compactListSearchCached,
   expandListSearch,
   filtersNeedContext,
+  getWithListContext,
+  isListContextMissing,
   LIST_CONTEXT_INLINE_LIMIT,
   listFiltersOf,
   listKeyOf,
   loadListContext,
+  reportLostListFilters,
   resetListContextCache,
   saveListContext,
+  takeLostListFilters,
   setListFiltersParam,
   withListContext,
 } from './listContext';
@@ -142,5 +146,59 @@ describe('list contexts (filters too long for a URL)', () => {
     carryListFilters(inline, new URLSearchParams(`filters=${encodeURIComponent(JSON.stringify(SMALL))}&ctx=${ID}`));
     expect(inline.get('filters')).toBe(JSON.stringify(SMALL));
     expect(inline.get('ctx')).toBeNull();
+  });
+  it('a context this tab saved but the server no longer has: forgotten, saved again, asked once more', async () => {
+    const notFound = Object.assign(new Error('Request failed with status code 400'), { response: { status: 400, data: { code: 'list_context_not_found' } } });
+    await saveListContext('/spend-items/summary', BIG);
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+    mocked.get.mockReset();
+    mocked.get.mockRejectedValueOnce(notFound).mockResolvedValueOnce({ data: { items: [], total: 0 } });
+    const res = await getWithListContext('/spend-items/summary', { page: 1, filters: BIG_TEXT });
+    expect(res.data).toEqual({ items: [], total: 0 });
+    // The cached id was used first, then the filters were saved again and the request repeated once.
+    expect(mocked.post).toHaveBeenCalledTimes(2);
+    expect(mocked.get).toHaveBeenCalledTimes(2);
+    for (const [, config] of mocked.get.mock.calls) expect(config.params).toEqual({ page: 1, ctx: ID });
+    // Still gone after saving again: the error goes to the caller, no loop.
+    mocked.get.mockReset();
+    mocked.get.mockRejectedValue(notFound);
+    await expect(getWithListContext('/spend-items/summary', { filters: BIG_TEXT })).rejects.toBe(notFound);
+    expect(mocked.get).toHaveBeenCalledTimes(2);
+    // A ctx the caller passes itself (from a link) is never replaced.
+    mocked.get.mockReset();
+    mocked.get.mockRejectedValue(notFound);
+    mocked.post.mockClear();
+    await expect(getWithListContext('/spend-items/summary/ids', { ctx: ID })).rejects.toBe(notFound);
+    expect(mocked.get).toHaveBeenCalledTimes(1);
+    expect(mocked.post).not.toHaveBeenCalled();
+    // Short filters: inline, no context involved.
+    mocked.get.mockReset();
+    mocked.get.mockResolvedValue({ data: {} });
+    await getWithListContext('/spend-items/summary', { filters: JSON.stringify(SMALL) });
+    expect(mocked.get.mock.calls[0][1].params).toEqual({ filters: JSON.stringify(SMALL) });
+  });
+
+  it('an id the server does not know is not asked again in the tab', async () => {
+    mocked.get.mockRejectedValue(Object.assign(new Error('Not found'), { response: { status: 404, data: { code: 'list_context_not_found' } } }));
+    await expect(loadListContext(ID)).rejects.toBeTruthy();
+    expect(isListContextMissing(ID)).toBe(true);
+    await expect(loadListContext(ID)).rejects.toBeTruthy();
+    expect(mocked.get).toHaveBeenCalledTimes(1);
+    // Saved again (same filters, same id): known again.
+    await saveListContext('/spend-items/summary', BIG);
+    expect(isListContextMissing(ID)).toBe(false);
+    // A network failure is not a missing context.
+    resetListContextCache();
+    mocked.get.mockReset();
+    mocked.get.mockRejectedValue(new Error('Network Error'));
+    await expect(loadListContext(ID)).rejects.toBeTruthy();
+    expect(isListContextMissing(ID)).toBe(false);
+  });
+
+  it('lost link filters are handed to the list once', () => {
+    reportLostListFilters('/spend-items/summary');
+    expect(takeLostListFilters('/capex-items/summary')).toBe(false);
+    expect(takeLostListFilters('/spend-items/summary/totals')).toBe(true);
+    expect(takeLostListFilters('/spend-items/summary')).toBe(false);
   });
 });

@@ -14,10 +14,9 @@ import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
-import api from '../../api';
 
 import { useTranslation } from 'react-i18next';
-import { setListFiltersParam, withListContext } from '../../lib/listContext';
+import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 type AssetRow = {
   id: string;
   asset_reference: string | null;
@@ -122,7 +121,7 @@ export default function AssetsPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get('/assets/filter-values', { params: await withListContext('/assets/filter-values', params) });
+      const res = await getWithListContext('/assets/filter-values', params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };

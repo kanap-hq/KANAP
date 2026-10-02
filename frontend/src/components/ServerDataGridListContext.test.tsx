@@ -1,6 +1,6 @@
 import React from 'react';
-import { act, render, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The real AG Grid: how the shared grid sends a large list state (`ctx`), restores one from its URL,
@@ -30,6 +30,15 @@ const ID = 'Ctx_abcdefghijklmnopqr';
 const BIG = { supplier: { filterType: 'text', type: 'notContains', filter: 'Fournisseur SAS '.repeat(1900) } };
 
 const page = () => ({ data: { items: [{ id: 'a', name: 'A', fte_x: 1 }], total: 1, page: 1, limit: 50 } });
+const notFound = () => Object.assign(new Error('Request failed with status code 400'), {
+  response: { status: 400, data: { code: 'list_context_not_found', message: 'The saved list filters of this link are no longer available.' } },
+});
+// The address the grid writes (history replace), as a reload would read it.
+const address = vi.hoisted(() => ({ search: '' }));
+function LocationProbe() {
+  address.search = useLocation().search;
+  return null;
+}
 const rowCalls = () => mocked.get.mock.calls.filter(([url]) => url === '/things');
 const paramsOf = (call: unknown[]) => (call[1] as Config).params;
 
@@ -49,6 +58,7 @@ function Grid(props: { url?: string; onGridApiReady?: (api: any) => void; pagePa
         pageParams={props.pageParams}
         setFilterExcludeMode={props.context}
       />
+      <LocationProbe />
     </MemoryRouter>
   );
 }
@@ -120,15 +130,72 @@ describe('ServerDataGrid list contexts and page parameters', () => {
     expect(gridApi.getFilterModel()).toEqual({});
   });
 
-  it('a purged context: the list opens without those filters', async () => {
+  it('a purged context: the list opens unfiltered, one line says so, the address drops it', async () => {
     mocked.get.mockImplementation(async (url: string) => {
-      if (url.startsWith('/list-contexts/')) throw Object.assign(new Error('Not found'), { response: { status: 404 } });
+      if (url.startsWith('/list-contexts/')) throw Object.assign(notFound(), { response: { status: 404, data: { code: 'list_context_not_found' } } });
+      return page();
+    });
+    let gridApi: any = null;
+    render(<Grid url={`/things?sort=name:DESC&ctx=${ID}`} onGridApiReady={(a) => { gridApi = a; }} />);
+    await waitFor(() => expect(rowCalls()).toHaveLength(1));
+    expect(paramsOf(rowCalls()[0]).ctx).toBeUndefined();
+    expect(paramsOf(rowCalls()[0]).filters).toBeUndefined();
+    expect(await screen.findByText('common:filters.linkFiltersLost')).toBeInTheDocument();
+    await waitFor(() => expect(new URLSearchParams(address.search).get('ctx')).toBeNull());
+    expect(new URLSearchParams(address.search).get('sort')).toBe('name:DESC');
+    // The next filter change ends the notice.
+    await act(async () => { gridApi.setFilterModel({ name: { filterType: 'text', type: 'contains', filter: 'a' } }); });
+    await waitFor(() => expect(screen.queryByText('common:filters.linkFiltersLost')).toBeNull());
+  });
+
+  it('a context of another error (a network failure) shows no notice', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url.startsWith('/list-contexts/')) throw Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' });
       return page();
     });
     render(<Grid url={`/things?ctx=${ID}`} />);
     await waitFor(() => expect(rowCalls()).toHaveLength(1));
-    expect(paramsOf(rowCalls()[0]).ctx).toBeUndefined();
-    expect(paramsOf(rowCalls()[0]).filters).toBeUndefined();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(screen.queryByText('common:filters.linkFiltersLost')).toBeNull();
+  });
+
+  it('the address follows the filters: change them twice, reload, the second ones are back', async () => {
+    let gridApi: any = null;
+    const { unmount } = render(<Grid url="/things?sort=name:DESC" onGridApiReady={(a) => { gridApi = a; }} />);
+    await waitFor(() => expect(rowCalls()).toHaveLength(1));
+    const first = { name: { filterType: 'text', type: 'contains', filter: 'first' } };
+    const second = { name: { filterType: 'text', type: 'contains', filter: 'second' } };
+    await act(async () => { gridApi.setFilterModel(first); });
+    await waitFor(() => expect(new URLSearchParams(address.search).get('filters')).toBe(JSON.stringify(first)));
+    await act(async () => { gridApi.setFilterModel(second); });
+    await waitFor(() => expect(new URLSearchParams(address.search).get('filters')).toBe(JSON.stringify(second)));
+    expect(new URLSearchParams(address.search).get('sort')).toBe('name:DESC');
+    // Filters too long for an address: ctx once saved, no inline copy.
+    await act(async () => { gridApi.setFilterModel(BIG); });
+    await waitFor(() => expect(new URLSearchParams(address.search).get('ctx')).toBe(ID));
+    expect(new URLSearchParams(address.search).get('filters')).toBeNull();
+    // Back to the second filter, then a reload of that address.
+    await act(async () => { gridApi.setFilterModel(second); });
+    await waitFor(() => expect(new URLSearchParams(address.search).get('filters')).toBe(JSON.stringify(second)));
+    expect(new URLSearchParams(address.search).get('ctx')).toBeNull();
+    const reloaded = address.search;
+    unmount();
+    mocked.get.mockClear();
+    gridApi = null;
+    render(<Grid url={`/things${reloaded}`} onGridApiReady={(a) => { gridApi = a; }} />);
+    await waitFor(() => expect(rowCalls()).toHaveLength(1));
+    expect(paramsOf(rowCalls()[0]).filters).toBe(JSON.stringify(second));
+    expect(gridApi.getFilterModel()).toEqual(second);
+    // Cleared: the address carries no filters.
+    await act(async () => { gridApi.setFilterModel(null); });
+    await waitFor(() => expect(new URLSearchParams(address.search).get('filters')).toBeNull());
+  });
+
+  it('a request error shows its translated message, not the transport text', async () => {
+    mocked.get.mockImplementation(async () => { throw notFound(); });
+    render(<Grid />);
+    expect(await screen.findByText('errors:list_context_not_found')).toBeInTheDocument();
+    expect(screen.queryByText('Request failed with status code 400')).toBeNull();
   });
 
   it('page parameters follow the columns: the first page has them, showing a column they read reloads once', async () => {

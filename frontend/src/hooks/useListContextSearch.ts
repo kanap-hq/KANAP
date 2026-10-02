@@ -8,9 +8,12 @@ import {
   compactListSearchCached,
   expandListSearch,
   filtersNeedContext,
+  isListContextMissing,
+  isListContextNotFound,
   ListFilters,
   listKeyOf,
   loadListContext,
+  reportLostListFilters,
   saveListContext,
 } from '../lib/listContext';
 
@@ -90,6 +93,11 @@ export function useListFilters(searchParams: URLSearchParams, stored?: ListSnaps
  * (`ctx`, in the URL or the stored context) are read first. Filters too long for a URL go back as
  * `ctx`. Null until the column settings and the dimensions are known (`ready`) and any saved
  * filters are read; synchronous when every context is known in this tab.
+ *
+ * Saved filters the server no longer has (a link's `ctx`, or the stored context's): the list opens
+ * unfiltered, never with the stored filters instead of a link's, and its grid says so in one line
+ * (`reportLostListFilters`). The stored context then forgets its filters (`dropStoredFilters`), so
+ * the next settling of the address does not bring them back.
  */
 export function useSettledListSearch(opts: {
   endpoint: string;
@@ -100,8 +108,10 @@ export function useSettledListSearch(opts: {
   shown: ListAmountColumns['shown'];
   defaultSort: string;
   isListField: ListFieldPredicate;
+  /** Clears the filters (and `ctx`) of the stored list context: the link's filters were lost. */
+  dropStoredFilters: () => void;
 }): string | null {
-  const { endpoint, search, readStored, ready, shown, defaultSort, isListField } = opts;
+  const { endpoint, search, readStored, ready, shown, defaultSort, isListField, dropStoredFilters } = opts;
   const settle = (expanded: string, stored: ListSnapshot | null, storedFilters: string) =>
     settleListSearch(expanded, stored ? { ...stored, filters: storedFilters } : stored, shown, defaultSort, isListField);
 
@@ -132,17 +142,27 @@ export function useSettledListSearch(opts: {
     let cancelled = false;
     (async () => {
       const stored = readStored();
+      const urlCtx = new URLSearchParams(search).get('ctx');
       const expanded = await expandListSearch(search);
+      const lostLink = isListContextMissing(urlCtx);
       let storedFilters = stored?.filters || '';
+      let lostStored = false;
       if (!storedFilters && stored?.ctx) {
         try {
           const saved = await loadListContext(stored.ctx);
           storedFilters = saved.filters ? JSON.stringify(saved.filters) : '';
-        } catch {
+        } catch (error) {
           storedFilters = '';
+          lostStored = isListContextNotFound(error);
         }
       }
-      const settled = await compactListSearch(settle(expanded, stored, storedFilters), endpoint);
+      if (cancelled) return;
+      if (lostLink || lostStored) {
+        reportLostListFilters(endpoint);
+        dropStoredFilters();
+      }
+      // A link whose filters are gone opens the list unfiltered, not with the stored filters.
+      const settled = await compactListSearch(settle(expanded, stored, lostLink ? '' : storedFilters), endpoint);
       if (!cancelled) setAsyncResult({ key: asyncKey, settled });
     })();
     return () => { cancelled = true; };
@@ -157,7 +177,9 @@ export function useSettledListSearch(opts: {
  * The filter model a list page restores from its URL (back from a workspace, a reload, a link
  * opened in a new tab): its `filters`, or the saved filters its `ctx` stands for when saved for
  * this list. A context not known in this tab is read first: `ready` is false meanwhile, and the
- * page waits before it mounts its grid, so the list loads once, filtered.
+ * page waits before it mounts its grid, so the list loads once, filtered. A context the server no
+ * longer has gives no model: the grid, which reads the same `ctx`, shows the list unfiltered with
+ * a one-line notice.
  */
 export function useUrlFilterModel(search: string, endpoint: string): { ready: boolean; model: ListFilters | null } {
   const sp = useMemo(() => new URLSearchParams(search), [search]);

@@ -20,7 +20,7 @@ import { formatShortDate } from '../../lib/dateFormat';
 import { getDotColor, REQUEST_STATUS_COLORS } from '../../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../../components/design';
-import { setListFiltersParam, withListContext } from '../../lib/listContext';
+import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 
 type RequestRow = {
@@ -256,7 +256,7 @@ export default function RequestsPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get('/portfolio/requests/filter-values', { params: await withListContext('/portfolio/requests/filter-values', params) });
+      const res = await getWithListContext('/portfolio/requests/filter-values', params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };

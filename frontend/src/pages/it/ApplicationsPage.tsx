@@ -24,7 +24,7 @@ import { formatDuration } from './components/DurationEditor';
 
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
-import { setListFiltersParam, withListContext } from '../../lib/listContext';
+import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 const ENV_SUMMARY = [
   { value: 'prod', labelKey: 'enums.environment.production', short: 'Prod' },
@@ -335,7 +335,7 @@ export default function ApplicationsPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get(`/applications/filter-values`, { params: await withListContext(`/applications/filter-values`, params) });
+      const res = await getWithListContext(`/applications/filter-values`, params);
       const values = (res.data?.[field] || []) as Array<any>;
       const options = values.map((raw) => {
         let value = raw;

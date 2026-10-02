@@ -521,7 +521,9 @@ export default function CapexItemPage() {
       const newId = res.data?.id as string | undefined;
       if (!newId) throw new Error(t('capex.editor.failedToCreate'));
       queryClient.invalidateQueries({ queryKey: ['capex-summary'] });
+      // Previous / next of either navigation (CAPEX_LIST_ON_ENGINE: neighbours, else the ordered ids).
       queryClient.invalidateQueries({ queryKey: ['capex-items-summary-neighbors'] });
+      queryClient.invalidateQueries({ queryKey: ['capex-items-summary-ids'] });
       const sp = buildListContextParams();
       navigate(`/ops/capex/${newId}/overview?${sp.toString()}`);
     } catch (e) {

@@ -18,6 +18,9 @@ vi.mock('../components/PageHeader', () => ({ default: ({ title }: { title: strin
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
+// CAPEX on the SQL list engine (lot 2B, PR C): off in the app until PR C; each test picks its mode.
+const engine = vi.hoisted(() => ({ on: false }));
+vi.mock('./capex/capexListEngine', () => ({ get CAPEX_LIST_ON_ENGINE() { return engine.on; } }));
 const grid = vi.fn();
 // The list URL at the time the grid renders, recorded by a probe rendered just before the page.
 const seen = vi.hoisted(() => ({ search: '', searches: [] as string[] }));
@@ -155,6 +158,7 @@ async function renderPage(url = '/ops/capex') {
 
 describe('CapexPage', () => {
   beforeEach(() => {
+    engine.on = false;
     grid.mockReset();
     seen.searches = [];
     columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
@@ -497,15 +501,32 @@ describe('CapexPage', () => {
     for (const [, config] of totals) expect(JSON.parse(config.params.filters)).toEqual(kept);
   });
 
-  it('no exclude mode on the set filters until CAPEX runs on the list engine; lean rows and FTE columns asked', async () => {
+  it('until CAPEX runs on the list engine: full rows, every footer amount, no exclude mode', async () => {
+    engine.on = false;
     await renderPage();
     expect(lastProps().setFilterExcludeMode).toBe(false);
-    expect(lastProps().pageParams?.([{ colId: 'fte_yBudget', hide: false }, { colId: 'fte_yLanding', hide: true }, { colId: 'yBudget' }]))
-      .toEqual({ shape: 'grid', fte: 'fte_yBudget' });
+    // No page parameters: showing or hiding an FTE column does not reload the in-memory list.
+    expect(lastProps().pageParams).toBeUndefined();
+    const totalsCalls = () => get.mock.calls.filter(([url]) => url === '/capex-items/summary/totals');
+    act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'yBudget', hide: false }, { colId: 'fte_yBudget', hide: false }] }));
+    act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
+    await waitFor(() => expect(totalsCalls().length).toBeGreaterThan(0));
+    const params = totalsCalls().slice(-1)[0][1].params;
+    expect(params.amounts).toBeUndefined();
+    expect(params.fte).toBe('fte_yBudget');
+    // Showing an amount column asks nothing again (the in-memory totals hold every amount).
+    const before = totalsCalls().length;
+    act(() => lastProps().onColumnStateChange([{ colId: 'yBudget', hide: false }, { colId: 'yRevision', hide: false }, { colId: 'fte_yBudget', hide: false }]));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(totalsCalls()).toHaveLength(before);
   });
 
-  it('asks the footer for the amount columns shown only', async () => {
+  it('on the list engine: lean rows with the FTE columns shown, exclude mode, footer for the amount columns shown', async () => {
+    engine.on = true;
     await renderPage();
+    expect(lastProps().setFilterExcludeMode).toBe(true);
+    expect(lastProps().pageParams?.([{ colId: 'fte_yBudget', hide: false }, { colId: 'fte_yLanding', hide: true }, { colId: 'yBudget' }]))
+      .toEqual({ shape: 'grid', fte: 'fte_yBudget' });
     act(() => lastProps().onGridApiReady({ getColumnState: () => [{ colId: 'yBudget', hide: false }, { colId: 'yRevision', hide: true }, { colId: 'yPlus1Forecast' }] }));
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', filterModel: {}, q: '', statusScope: 'enabled' }));
     await waitFor(() => {

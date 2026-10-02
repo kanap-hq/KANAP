@@ -22,7 +22,7 @@ import { formatShortDate } from '../lib/dateFormat';
 import { getDotColor } from '../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../components/design';
-import { setListFiltersParam, withListContext } from '../lib/listContext';
+import { setListFiltersParam, getWithListContext } from '../lib/listContext';
 import { useUrlFilterModel } from '../hooks/useListContextSearch';
 
 type TaskRow = {
@@ -339,7 +339,7 @@ export default function TasksPage() {
       if (Object.keys(filters).length > 0) {
         params.filters = JSON.stringify(filters);
       }
-      const res = await api.get(`/tasks/filter-values`, { params: await withListContext(`/tasks/filter-values`, params) });
+      const res = await getWithListContext(`/tasks/filter-values`, params);
       const values = (res.data?.[field] || []) as Array<string | null>;
       let options = values.map((value) => {
         if (value == null) return { value, label: emptyLabel };

@@ -229,6 +229,27 @@ export function totalsToVersions(
   return versions;
 }
 
+/** Field of the totals row naming the amount keys its totals do not hold yet. */
+const AMOUNTS_PENDING_FIELD = 'amountsPending';
+
+/** Shown while a footer total is on its way (a column just shown), instead of a false 0. */
+export const PENDING_TOTAL = '…';
+
+/**
+ * The totals row's field for the amount columns shown (`shown`: their keys, comma separated, as
+ * the totals request sends them) that the totals at hand do not hold: a column just shown keeps
+ * its placeholder until its total arrives (the previous totals stay on screen meanwhile).
+ */
+export function pendingAmountsField(totals: Record<string, unknown> | null | undefined, shown: string | null | undefined): Record<string, string[]> {
+  const keys = String(shown ?? '').split(',').filter((key) => key && parseAmountField(key) && !(totals && key in totals));
+  return { [AMOUNTS_PENDING_FIELD]: keys };
+}
+
+function isPendingAmount(data: unknown, colId: string): boolean {
+  const pending = (data as Record<string, unknown> | undefined)?.[AMOUNTS_PENDING_FIELD];
+  return Array.isArray(pending) && pending.includes(colId);
+}
+
 /** Year label of a slot with its calendar year, e.g. "Y-1 (2025)". */
 export function yearSlotLabel(t: TFunction, slot: YearSlot, currentYear: number): string {
   return t('ops:shared.yearSlotWithYear', { slot: t(`ops:shared.yearSlots.${slot}`), year: slotYear(slot, currentYear) });
@@ -282,7 +303,8 @@ export function buildAmountColumnDefs<T>({
       colId,
       headerName: amountColumnHeader(t, slot, column.label, currentYear),
       valueGetter: (p) => slotAmount((p.data as { versions?: SummaryVersions } | undefined)?.versions?.[slot], column.key),
-      valueFormatter: (p) => formatAmount(p.value),
+      // The totals row: a placeholder while this column's total is on its way, never a false 0.
+      valueFormatter: (p) => (p.node?.rowPinned && isPendingAmount(p.data, colId) ? PENDING_TOTAL : formatAmount(p.value)),
       type: 'rightAligned',
       width: 180,
       filter: 'agNumberColumnFilter',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -197,5 +197,76 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     expect(paramsOf(calls(TOTALS)[2]).amounts.split(',')).not.toContain(hidden);
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(calls(ROWS)).toHaveLength(2);
+  }, 30_000);
+  it('the address follows the filters: a link\'s filters, then two changes, a reload restores the second change', async () => {
+    const linked = { product_name: { filterType: 'text', type: 'contains', filter: 'linked' } };
+    const first = { product_name: { filterType: 'text', type: 'contains', filter: 'first' } };
+    const second = { product_name: { filterType: 'text', type: 'contains', filter: 'second' } };
+    const view = renderAt(`/ops/opex?filters=${encodeURIComponent(JSON.stringify(linked))}`);
+    await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
+    expect(JSON.parse(paramsOf(calls(ROWS)[0]).filters)).toEqual(linked);
+    await act(async () => { grid.api.setFilterModel(first); });
+    await waitFor(() => expect(JSON.parse(new URLSearchParams(location.search).get('filters') ?? '{}')).toEqual(first));
+    await act(async () => { grid.api.setFilterModel(second); });
+    await waitFor(() => expect(JSON.parse(new URLSearchParams(location.search).get('filters') ?? '{}')).toEqual(second));
+    // A reload of that address (same tab: the stored list context stays).
+    const reloaded = location.search;
+    view.unmount();
+    grid.api = null;
+    mocked.get.mockClear();
+    renderAt(`/ops/opex${reloaded}`);
+    await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
+    expect(JSON.parse(paramsOf(calls(ROWS)[0]).filters)).toEqual(second);
+    expect(grid.api.getFilterModel()).toEqual(second);
+  }, 30_000);
+
+  it('a link whose saved filters are gone: one line says so, the list opens unfiltered, not with the stored filters', async () => {
+    const DEAD = 'Gone_0123456789abcdefg';
+    const storedFilters = JSON.stringify({ product_name: { filterType: 'text', type: 'contains', filter: 'stored' } });
+    window.sessionStorage.setItem('opex-list-context', JSON.stringify({ sort: '', q: '', filters: storedFilters, statusScope: 'enabled' }));
+    const base = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === `/list-contexts/${DEAD}`) {
+        throw Object.assign(new Error('Request failed with status code 404'), { response: { status: 404, data: { code: 'list_context_not_found' } } });
+      }
+      return base(url, config);
+    });
+    renderAt(`/ops/opex?ctx=${DEAD}`);
+    await waitFor(() => expect(calls(ROWS).length).toBeGreaterThan(0), { timeout: 10_000 });
+    expect(paramsOf(calls(ROWS)[0]).filters).toBeUndefined();
+    expect(paramsOf(calls(ROWS)[0]).ctx).toBeUndefined();
+    expect(await screen.findByText('common:filters.linkFiltersLost')).toBeInTheDocument();
+    const url = new URLSearchParams(location.search);
+    expect(url.get('ctx')).toBeNull();
+    expect(url.get('filters')).toBeNull();
+    expect(grid.api.getFilterModel()).toEqual({});
+  }, 30_000);
+
+  it('the footer of an amount column shown again keeps a placeholder until its total arrives, never 0', async () => {
+    let release: () => void = () => undefined;
+    let slow = false;
+    const base = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
+      if (url === TOTALS) {
+        if (slow) await new Promise<void>((resolve) => { release = resolve; });
+        const amounts = String(config?.params?.amounts ?? '').split(',').filter(Boolean);
+        return { data: { ...Object.fromEntries(amounts.map((key) => [key, 1234])), reportingCurrency: 'EUR' } };
+      }
+      return base(url, config);
+    });
+    renderAt('/ops/opex');
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(1), { timeout: 10_000 });
+    const footer = (colId: string) => document.querySelector(`.ag-floating-bottom [col-id="${colId}"]`)?.textContent ?? null;
+    await waitFor(() => expect(footer('yBudget')).toBe('1 234'), { timeout: 10_000 });
+    // A column shown whose total was never asked: the previous totals stay on screen meanwhile,
+    // without it.
+    slow = true;
+    await act(async () => { grid.api.setColumnsVisible(['yRevision'], true); });
+    await waitFor(() => expect(calls(TOTALS)).toHaveLength(2), { timeout: 10_000 });
+    expect(paramsOf(calls(TOTALS)[1]).amounts.split(',')).toContain('yRevision');
+    await waitFor(() => expect(footer('yRevision')).toBe('…'), { timeout: 10_000 });
+    expect(footer('yBudget')).toBe('1 234');
+    await act(async () => { release(); });
+    await waitFor(() => expect(footer('yRevision')).toBe('1 234'), { timeout: 10_000 });
   }, 30_000);
 });
