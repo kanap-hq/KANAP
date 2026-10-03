@@ -7,6 +7,7 @@ import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { getAiEntityRegistry } from '../../ai/query/registries';
 import { FIXED_SLOTS, SUMMARY_COLUMNS, SUMMARY_SCOPES } from '../spend-summary.builder';
 import * as budgetList from '../budget-list/budget-list.service';
+import { exportListQuery } from '../budget-file/export-file';
 import {
   assert,
   findVersion,
@@ -22,12 +23,14 @@ import {
   TABLES,
 } from './round-inputs.fixtures';
 import { seedCompany as seedCostCenterCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
+import { exportBudgetFile, fileRows } from './budget-file.fixtures';
 
 // The OPEX and CAPEX lists on the SQL list engine (`budget-list/`) against the
 // database, with the same assertions for both: five columns in every slot, sort and
 // filters on any year and column, the Ref filter, quick search on contracts
 // and projects, ids and totals aligned with the summary, the lifecycle
-// window, exact money; then the AI query layer on CAPEX and the CAPEX export.
+// window, exact money; then the AI query layer on CAPEX and the CAPEX budget
+// file export.
 // @database-spec: runSpecs opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
 const Y = new Date().getFullYear();
@@ -42,9 +45,9 @@ const noAllocations = { computeForVersions: async () => new Map() };
 
 function itemService(kind: Kind): any {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 12 }, () => undefined);
+    const args: any[] = Array.from({ length: 11 }, () => undefined);
     args[4] = noAllocations;
-    args[7] = identityFx;
+    args[6] = identityFx;
     return new (SpendItemsService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);
@@ -951,15 +954,15 @@ async function testRegistriesExposeEveryAmount() {
   }
 }
 
-async function testCapexExportHasEveryLine() {
-  await withFixture('capex', async (runner, _fixture, svc) => {
-    const { content } = await svc.exportCsv('data', { manager: runner.manager });
-    const [header, ...lines] = content.replace(/^﻿/, '').trim().split('\n');
-    const columns = header.split(';');
-    const rows = lines.map((line: string) => Object.fromEntries(line.split(';').map((value, i) => [columns[i], value])));
-    assert.deepEqual(rows.map((row: any) => row.description).sort(), ['Alpha line', 'Bravo line', 'Charlie line', 'Delta ended', 'Echo ended'], 'export: every line, ended ones included');
-    const alpha = rows.find((row: any) => row.description === 'Alpha line');
-    assert.equal(Number(alpha.y_budget), 1200);
+/** All lines of the list (`all=true`, a search dropped) are every line, ended ones included, in the budget file. */
+async function testCapexBudgetFileHasEveryLine() {
+  await withFixture('capex', async (runner, fixture) => {
+    const listed = await budgetList.budgetListIds(SUMMARY_SCOPES.capex, engineDeps, exportListQuery({ q: 'no-such-line' }, true), runner.manager);
+    const content = await exportBudgetFile(runner.manager, 'capex', fixture.tenantId, listed.ids, { amountYears: String(Y) });
+    const rows = fileRows(content);
+    assert.deepEqual(rows.map((row) => row.name).sort(), ['Alpha line', 'Bravo line', 'Charlie line', 'Delta ended', 'Echo ended'], 'export: every line, ended ones included');
+    const alpha = rows.find((row) => row.name === 'Alpha line')!;
+    assert.equal(alpha[`budget_${Y}`], '1200.00');
   });
 }
 
@@ -992,7 +995,7 @@ void runSpecs('budget-summary.integration.spec', [
   ['AI: CAPEX detail', testAiCapexDetail],
   ['AI: CAPEX aggregate is complete', testAiCapexAggregateIsComplete],
   ['AI: registries expose every amount', testRegistriesExposeEveryAmount],
-  ['CAPEX export has every line', testCapexExportHasEveryLine],
+  ['CAPEX budget file has every line', testCapexBudgetFileHasEveryLine],
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

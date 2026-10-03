@@ -1,5 +1,5 @@
-import { BUDGET_ROWS_HEADERS, BudgetRowsCsvService } from '../budget-rows-csv.service';
 import { copyBudgetColumn } from '../budget-column-operations';
+import { loadBudgetFile } from './budget-file.fixtures';
 import { captureAudit, noFreeze, repeat, seedLine } from './round-inputs.fixtures';
 import { assert, assertClean, Outcome, pgCode, progress, runRaceSpecs, settle, sql, withRace } from './race-harness';
 
@@ -9,8 +9,8 @@ import { assert, assertClean, Outcome, pgCode, progress, runRaceSpecs, settle, s
 //
 // Two operations over several lines lock the months of each line in their
 // own order: the column copy (and the clear) by line creation date, newest
-// first (`budget-column-operations.ts:175`), the budget rows import in file
-// order. A copy holding the newest line's months and an import holding the
+// first (`budget-column-operations.ts:175`), the budget rows import (now the
+// budget file load) in file order. A copy holding the newest line's months and an import holding the
 // oldest line's months each wait for the other: PostgreSQL aborts one with a
 // deadlock (40P01) after `deadlock_timeout`, a 500 and the whole operation
 // rolled back.
@@ -36,15 +36,12 @@ async function copyVersusImport() {
       return { older, newer };
     });
     const copier = await race.open('column copy');
-    const importer = await race.open('budget rows import');
+    const importer = await race.open('budget file load');
 
-    // The file lists the oldest line first.
-    const months = (value: string) => Object.fromEntries(['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((m) => [m, value]));
-    const lines: Array<Record<string, string>> = [
-      { item_type: 'opex', item_number: '1', year: String(YEAR), measure: 'forecast', period_start: '', period_end: '', method: '', ...months('10') },
-      { item_type: 'opex', item_number: '2', year: String(YEAR), measure: 'forecast', period_start: '', period_end: '', method: '', ...months('20') },
-    ];
-    const file = { buffer: Buffer.from(`﻿${BUDGET_ROWS_HEADERS.join(';')}\n${lines.map((l) => BUDGET_ROWS_HEADERS.map((h) => l[h] ?? '').join(';')).join('\n')}\n`, 'utf8') } as any;
+    // The file lists the oldest line first, Forecast month by month.
+    const months = (value: string) => Array.from({ length: 12 }, () => value).join(',');
+    const header = Array.from({ length: 12 }, (_, i) => `forecast_${YEAR}_${String(i + 1).padStart(2, '0')}`).join(',');
+    const file = `item_number,${header}\nOPX-1,${months('10')}\nOPX-2,${months('20')}\n`;
 
     // Each pauses once it holds the months of its first line.
     const copyHolds = race.gate(copier, { label: 'lock the first line\'s months', when: 'after', match: sql.lockOn('spend_amounts') });
@@ -57,10 +54,7 @@ async function copyVersusImport() {
     assert.equal(await progress(copyWork, { party: copier, gate: copyHolds }), 'gated', 'harness: the copy must pause holding its first line');
 
     const importHolds = race.gate(importer, { label: 'lock the first line\'s months', when: 'after', match: sql.lockOn('spend_amounts') });
-    const importWork = race.start(importer, (manager) => new BudgetRowsCsvService(captureAudit() as any, noFreeze as any).importCsv(
-      { file, dryRun: false, userId: null, access: { isAdmin: true, permissions: {} } },
-      { manager, tenantId: race.tenantId },
-    ));
+    const importWork = race.start(importer, (manager) => loadBudgetFile(manager, 'opex', race.tenantId, file));
     // Today: pauses holding the oldest line. With 3F: refused at once (409), or waits for the copy.
     await progress(importWork, { party: importer, gate: importHolds });
 
@@ -70,15 +64,19 @@ async function copyVersusImport() {
     const deadlocked = (o: Outcome) => !o.ok && pgCode(o.error) === '40P01';
     assert.ok(
       !deadlocked(copyDone) && !deadlocked(importDone),
-      `a column copy and a budget rows import over the same two lines deadlocked: the ${deadlocked(copyDone) ? 'copy' : 'import'} `
+      `a column copy and a budget file load over the same two lines deadlocked: the ${deadlocked(copyDone) ? 'copy' : 'import'} `
       + 'was aborted with 40P01 and rolled back entirely',
     );
     assertClean(copyDone, 'the column copy', [409]);
-    assertClean(importDone, 'the budget rows import', [409]);
+    assertClean(importDone, 'the budget file load', [409]);
     assert.ok(copyDone.ok || importDone.ok, 'at least one of the two operations goes through');
-    if (importDone.ok) assert.equal((importDone.value as any)?.ok, true, `the import result: ${JSON.stringify((importDone.value as any)?.errors)}`);
+    if (importDone.ok) assert.equal((importDone.value as any)?.ok, true, `the load result: ${JSON.stringify((importDone.value as any)?.errors)}`);
+    else assert.equal((importDone.error as any).getResponse?.()?.code, 'operation_running', 'the load is refused by the tenant lock, not by its snapshot');
+    // A refused load runs once the copy is done.
+    const importAfter = importDone.ok ? importDone : await settle(race.start(importer, (manager) => loadBudgetFile(manager, 'opex', race.tenantId, file)));
+    assert.equal((importAfter as any).value?.updated, 2, 'the load wrote both lines');
 
-    // What went through is complete: the copy wrote Revision on both lines, the import Forecast on both.
+    // What went through is complete: the copy wrote Revision on both lines, the load Forecast on both.
     const [row] = await race.read(
       `SELECT sum(committed) FILTER (WHERE version_id = $1)::text AS older_revision, sum(committed) FILTER (WHERE version_id = $2)::text AS newer_revision,
               sum(forecast) FILTER (WHERE version_id = $1)::text AS older_forecast, sum(forecast) FILTER (WHERE version_id = $2)::text AS newer_forecast
@@ -86,10 +84,10 @@ async function copyVersusImport() {
       [older.versionId, newer.versionId],
     );
     if (copyDone.ok) assert.deepEqual([Number(row.older_revision), Number(row.newer_revision)], [1200, 2400], 'the copy wrote both lines');
-    if (importDone.ok) assert.deepEqual([Number(row.older_forecast), Number(row.newer_forecast)], [120, 240], 'the import wrote both lines');
+    assert.deepEqual([Number(row.older_forecast), Number(row.newer_forecast)], [120, 240], 'the load wrote both lines');
   });
 }
 
 void runRaceSpecs('Mass budget operation races', [
-  ['Annexe A #16: a column copy and a budget rows import over the same lines do not deadlock (3F)', copyVersusImport],
+  ['Annexe A #16: a column copy and a budget file load over the same lines do not deadlock (3F)', copyVersusImport],
 ]);

@@ -1,8 +1,8 @@
-import { BUDGET_ROWS_HEADERS, BudgetRowsCsvService } from '../budget-rows-csv.service';
 import { copyAllocations } from '../budget-allocation-operations';
 import { clearBudgetColumn, copyBudgetColumn } from '../budget-column-operations';
 import { BUDGET_OPERATION_RUNNING } from '../budget-locks';
-import { csvService, seedCompany } from './cost-center.fixtures';
+import { loadBudgetFile, preflightBudgetFile } from './budget-file.fixtures';
+import { seedCompany } from './cost-center.fixtures';
 import { captureAudit, noFreeze, repeat, seedLine } from './round-inputs.fixtures';
 import {
   assert,
@@ -21,12 +21,12 @@ import {
 
 // The tenant lock of the bulk budget operations (plan planning/perf-scale,
 // lot 3B, moved from 3F): the column copy and clear, the allocation copy, the
-// item CSV imports, the budget rows import and a freeze or unfreeze that pins
-// or unpins FX rates (`budget-freeze-race.integration.spec.ts`) share one
+// OPEX and CAPEX budget file loads, and a freeze or unfreeze that pins or
+// unpins FX rates (`budget-freeze-race.integration.spec.ts`) share one
 // transaction advisory lock per tenant. While one runs, another is refused at
 // once with a 409 (code `operation_running`, never the `retry` a client sends
-// again at once) that says what runs; a dry run takes no lock; another tenant
-// is never held up.
+// again at once) that says what runs; a dry run and a budget file preflight
+// take no lock; another tenant is never held up.
 
 const YEAR = 2026;
 
@@ -37,20 +37,12 @@ const copyColumn = (manager: any, dryRun = false) => copyBudgetColumn(
   null,
 );
 
-const months = (value: string) => Object.fromEntries(['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((m) => [m, value]));
-
-function budgetRowsFile(itemNumber: number) {
-  const row: Record<string, string> = { item_type: 'opex', item_number: String(itemNumber), year: String(YEAR), measure: 'forecast', period_start: '', period_end: '', method: '', ...months('10') };
-  return { buffer: Buffer.from(`﻿${BUDGET_ROWS_HEADERS.join(';')}\n${BUDGET_ROWS_HEADERS.map((h) => row[h] ?? '').join(';')}\n`, 'utf8') } as any;
-}
-
-function itemFile(kind: 'opex' | 'capex') {
-  const csv = csvService(kind);
-  const headers: string[] = csv.csvHeaders();
-  const row: Record<string, string> = kind === 'opex'
-    ? { product_name: 'Imported line', company_name: 'Race company', account_number: '6000', currency: 'EUR', status: 'enabled' }
-    : { description: 'Imported CAPEX line', ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium', company_name: 'Race company', currency: 'EUR', status: 'enabled' };
-  return { csv, file: { buffer: Buffer.from(`${headers.join(';')}\n${headers.map((h) => row[h] ?? '').join(';')}\n`, 'utf8') } as any };
+/** A new line of the race company, the whole file of a budget file load. */
+function newLineFile(kind: 'opex' | 'capex'): string {
+  return kind === 'opex'
+    ? `item_number,name,company_name,account_number,currency,budget_${YEAR}\n,Imported line,Race company,6000,EUR,1200.00\n`
+    : `item_number,name,ppe_type,investment_type,priority,company_name,account_number,currency,budget_${YEAR}\n`
+      + `,Imported CAPEX line,hardware,replacement,medium,Race company,6000,EUR,1200.00\n`;
 }
 
 /** Refused at once with a 409 `operation_running` that names the running operation. */
@@ -81,12 +73,8 @@ async function secondOperationRefused() {
         { manager, audit: captureAudit() as any, calculator: { computeForVersions: async () => new Map() } },
         'opex', { sourceYear: YEAR, destinationYear: YEAR + 1, overwrite: true }, null,
       )],
-      ['a budget rows import', (manager) => new BudgetRowsCsvService(captureAudit() as any, noFreeze as any).importCsv(
-        { file: budgetRowsFile(1), dryRun: false, userId: null, access: { isAdmin: true, permissions: {} } },
-        { manager, tenantId: race.tenantId },
-      )],
-      ['an OPEX line import', (manager) => { const { csv, file } = itemFile('opex'); return csv.importCsv({ file, dryRun: false, userId: null }, { manager }); }],
-      ['a CAPEX line import', (manager) => { const { csv, file } = itemFile('capex'); return csv.importCsv({ file, dryRun: false, userId: null }, { manager }); }],
+      ['an OPEX budget file load', (manager) => loadBudgetFile(manager, 'opex', race.tenantId, newLineFile('opex'))],
+      ['a CAPEX budget file load', (manager) => loadBudgetFile(manager, 'capex', race.tenantId, newLineFile('capex'))],
     ];
     for (const [who, attempt] of attempts) {
       const work = race.start(other, attempt);
@@ -94,12 +82,10 @@ async function secondOperationRefused() {
       assertRefused(await settle(work), who);
     }
 
-    // A dry run takes no lock: it reads and decides only.
-    const dryRows = await settle(race.start(other, (manager) => new BudgetRowsCsvService(captureAudit() as any, noFreeze as any).importCsv(
-      { file: budgetRowsFile(1), dryRun: true, userId: null, access: { isAdmin: true, permissions: {} } },
-      { manager, tenantId: race.tenantId },
-    )));
-    assertSucceeded(dryRows, 'a budget rows dry run');
+    // A dry run and a budget file preflight take no lock: they read and decide only.
+    const preflight = await settle(race.start(other, (manager) => preflightBudgetFile(manager, 'opex', race.tenantId, newLineFile('opex'))));
+    assertSucceeded(preflight, 'a budget file preflight');
+    assert.equal((preflight as any).value?.ok, true, `the preflight report: ${JSON.stringify((preflight as any).value?.errors)}`);
     assertSucceeded(await settle(race.start(other, (manager) => copyColumn(manager, true))), 'a column copy dry run');
 
     copyHolds.release();

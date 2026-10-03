@@ -21,6 +21,7 @@ import {
   BudgetFileSnapshotLine,
 } from './types';
 import { lineImportTables } from '../budget-import-statistics';
+import { lockCsvCostCenters } from '../item-write.util';
 import type { CsvDateOrder, CsvLanguage } from '../../common/csv-sheet';
 
 /** The load refuses the file when a counter moved after the preflight. */
@@ -251,6 +252,9 @@ async function applyPlans(
   stored: Prepared['stored'],
 ): Promise<{ inserted: number; updated: number; createdSuppliers: boolean; createdDimensionValues: boolean }> {
   const audits: AuditRow[] = [];
+  // The cost centers the file assigns, once and in id order: the write gate's per-line
+  // `FOR SHARE` then never waits on a node in file order against a tree write.
+  await lockCsvCostCenters(input.manager, input.tenantId, plans.map((plan) => plan.body.cost_center_id as string | null | undefined));
   const supplierIds = await createSuppliers(input.manager, input.tenantId, plans, audits);
   const dimensionIds = await createDimensionValues(input.manager, input.tenantId, plans, audits);
   const storedById = new Map(stored.map((line) => [line.id, line]));

@@ -10,7 +10,6 @@ import { SUMMARY_SCOPES, SummaryDeps } from './spend-summary.builder';
 import * as budgetList from './budget-list/budget-list.service';
 import type { BudgetListAccess } from './budget-list/budget-list.runtime';
 import type { AggregateSpec } from '../common/list-engine/list-aggregate';
-import { SpendItemsCsvService } from './spend-items-csv.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
 import { FxRateService } from '../currency/fx-rate.service';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
@@ -52,7 +51,6 @@ export class SpendItemsService {
     @InjectRepository(ApplicationSpendItemLink) private readonly appSpendLinks: Repository<ApplicationSpendItemLink>,
     private readonly audit: AuditService,
     private readonly allocationCalculator: AllocationCalculatorService,
-    private readonly csv: SpendItemsCsvService,
     private readonly budgetOps: SpendBudgetOperationsService,
     private readonly fxRates: FxRateService,
     private readonly storage: StorageService,
@@ -422,17 +420,6 @@ export class SpendItemsService {
 
   async summaryTotals(query: any, opts?: { manager?: EntityManager; access?: BudgetListAccess }): Promise<any> {
     return budgetList.budgetListTotals(SUMMARY_SCOPES.opex, this.summaryDeps(opts?.access), query, opts?.manager ?? this.repo.manager);
-  }
-
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }) {
-    return this.csv.exportCsv(scope, { manager: opts?.manager ?? this.repo.manager });
-  }
-
-  async importCsv(
-    params: { file: Express.Multer.File; dryRun: boolean; userId?: string | null },
-    opts?: { manager?: EntityManager },
-  ) {
-    return this.csv.importCsv(params, { manager: opts?.manager ?? this.repo.manager });
   }
 
   async copyBudgetColumn(

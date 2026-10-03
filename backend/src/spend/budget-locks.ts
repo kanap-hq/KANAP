@@ -6,9 +6,9 @@ import type { AmountScope } from './amounts-write.util';
  * The one lock order of every budget writer, OPEX and CAPEX alike (plan
  * planning/perf-scale, lot 3B):
  *
- *   0. a bulk operation (column copy or clear, allocation copy, item CSV
- *      import, budget rows import, and a freeze or unfreeze that pins or
- *      unpins the year's FX rate set): the tenant's budget-operations
+ *   0. a bulk operation (column copy or clear, allocation copy, budget file
+ *      load, and a freeze or unfreeze that pins or unpins the year's FX rate
+ *      set): the tenant's budget-operations
  *      advisory lock (`lockTenantBudgetOperations`), so two of them never run
  *      at once;
  *   1. the line (`spend_items` / `capex_items`) FOR NO KEY UPDATE (FOR UPDATE
@@ -149,8 +149,8 @@ const BUDGET_OPERATIONS_LOCK_NAMESPACE = 0x424f5053;
 
 /**
  * The tenant's budget-operations lock: a transaction advisory lock shared by
- * the column copy and clear, the allocation copy, the item CSV imports, the
- * budget rows import and a freeze or unfreeze that pins or unpins FX rates,
+ * the column copy and clear, the allocation copy, the budget file load and a
+ * freeze or unfreeze that pins or unpins FX rates,
  * held until the request transaction ends. A second operation does not wait:
  * it is refused with a 409 `operation_running` (its own code, not the `retry`
  * of a deadlock that a client may send again at once), whose message says

@@ -9,7 +9,6 @@ import {
   captureAudit,
   freezeColumn,
   inRolledBackTransaction,
-  itemCsvImporter,
   Kind,
   period,
   readMeasure,
@@ -24,7 +23,7 @@ import {
 } from './round-inputs.fixtures';
 
 // Round inputs (period and provenance of each budget column) through the
-// amounts services, the legacy item CSV and the tenant isolation of the two
+// amounts services and the tenant isolation of the two
 // new tables, on OPEX and CAPEX, against the database behind `dataSource`.
 
 const YEAR = 2031;
@@ -260,33 +259,6 @@ async function testRefusalsAndProfiles(kind: Kind) {
   });
 }
 
-/** The legacy item CSV records a whole-year flat spread; a blank cell leaves the column's record alone. */
-async function testItemCsvRecords(kind: Kind) {
-  await withLine(kind, async ({ runner, versionId, tenantId }) => {
-    const version = { id: versionId, tenant_id: tenantId, budget_year: YEAR };
-    const svc = amountsService(kind);
-    await svc.bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(1, YEAR), committed: 10 }] }, null, { manager: runner.manager });
-    const before = (await readRecords(runner, kind, versionId)).committed;
-
-    await itemCsvImporter(kind).writeImportedTotals(runner.manager, version, YEAR, { planned: 2400, actual: 1200, committed: undefined });
-    const records = await readRecords(runner, kind, versionId);
-    assert.deepEqual(
-      [records.planned.method, records.planned.period_start, records.planned.period_end, records.planned.spread_profile_name],
-      ['spread', `${YEAR}-01-01`, `${YEAR}-12-31`, 'flat'],
-    );
-    assert.deepEqual(records.planned.last_calculation, {
-      kind: 'annual', total: '2400.00', profile: 'flat', active_months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], weights: repeat('1', 12), source: 'item_csv',
-    });
-    assert.deepEqual(
-      [records.actual.method, records.actual.period_start, records.actual.period_end, records.actual.last_calculation.source],
-      ['spread', `${YEAR}-01-01`, `${YEAR}-12-31`, 'item_csv'],
-      `${kind}: Actuals get the same whole-year record`,
-    );
-    assert.equal(records.committed.method, 'manual', `${kind}: a blank cell leaves the record`);
-    assert.equal(records.committed.updated_at.getTime(), before.updated_at.getTime());
-  });
-}
-
 /**
  * One negative spec per new table: tenant A cannot write round inputs through
  * tenant B's version id, nor insert a row carrying B's tenant_id.
@@ -410,7 +382,6 @@ void runSpecs(
     [`testMonthlyEditsAndProvenance(${kind})`, () => testMonthlyEditsAndProvenance(kind)],
     [`testActualsBehaveLikeTheOthers(${kind})`, () => testActualsBehaveLikeTheOthers(kind)],
     [`testRefusalsAndProfiles(${kind})`, () => testRefusalsAndProfiles(kind)],
-    [`testItemCsvRecords(${kind})`, () => testItemCsvRecords(kind)],
     [`testCrossTenantIsolation(${kind})`, () => testCrossTenantIsolation(kind)],
     [`testFrozenSpreadWritesNoRecord(${kind})`, () => testFrozenSpreadWritesNoRecord(kind)],
     [`testIdenticalSpreadWritesNoAmounts(${kind})`, () => testIdenticalSpreadWritesNoAmounts(kind)],

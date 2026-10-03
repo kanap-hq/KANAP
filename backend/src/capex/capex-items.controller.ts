@@ -4,7 +4,7 @@ import { CapexItemsService } from './capex-items.service';
 import { CapexItemsDeleteService } from './capex-items-delete.service';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
+import { attachmentMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
 import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
@@ -25,7 +25,7 @@ import {
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
-import { analyzeAfterLargeImport, lineImportTables } from '../spend/budget-import-statistics';
+import { analyzeAfterLargeImport } from '../spend/budget-import-statistics';
 import { BudgetFileService, canCreateSuppliers } from '../spend/budget-file/budget-file.service';
 import { exportListQuery } from '../spend/budget-file/export-file';
 import { importAnalyzeTables } from '../spend/budget-file/import-file';
@@ -124,20 +124,6 @@ export class CapexItemsController {
     @Tenant() ctx: TenantRequest,
   ) {
     return this.svc.summaryAggregateRequest(body, { manager: ctx.manager, access: budgetListAccess(ctx) });
-  }
-
-  @UseGuards(PermissionGuard)
-  @RequireLevel('capex', 'admin')
-  @Get('export')
-  async export(
-    @Query('scope') scope: 'template' | 'data' = 'data',
-    @Res() res: Response,
-    @Tenant() ctx: TenantRequest,
-  ): Promise<void> {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
   }
 
   /** The budget file (C2a). A read: a frozen tenant keeps it. `ctx` is merged on GET. */
@@ -512,24 +498,6 @@ export class CapexItemsController {
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.update(id, body as Record<string, unknown>, ctx.userId || undefined, { manager: ctx.manager });
-  }
-
-  @UseGuards(PermissionGuard)
-  @RequireLevel('capex', 'admin')
-  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
-  @Post('import')
-  @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
-  async import(
-    @UploadedFile() file: Express.Multer.File,
-    @Query('dryRun') dryRunRaw: string,
-    @Tenant() ctx: TenantRequest,
-    @Req() req: any,
-  ) {
-    const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    const result = await this.svc.importCsv({ file, dryRun, userId: ctx.userId || null }, { manager: ctx.manager });
-    // A large import: committed here, then its tables analysed (budget-import-statistics.ts).
-    await analyzeAfterLargeImport(req, lineImportTables('capex'), result);
-    return result;
   }
 
   @UseGuards(PermissionGuard)

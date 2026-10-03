@@ -5,10 +5,8 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { EntityManager, QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendAmountsService } from '../spend-amounts.service';
-import { SpendItemsCsvService } from '../spend-items-csv.service';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
 import { CapexAmountsService } from '../../capex/capex-amounts.service';
-import { CapexItemsService } from '../../capex/capex-items.service';
 import { FreezeService } from '../../freeze/freeze.service';
 
 // Write safety of the amounts services against a real database, on OPEX and
@@ -32,26 +30,6 @@ function service(kind: Kind, freeze: unknown = noFreeze): { bulkUpsert: (...args
 /** The real freeze service: its FX collaborators are only used when freezing, never by the checks. */
 function realFreeze() {
   return new FreezeService(undefined as any, undefined as any, undefined as any, undefined as any);
-}
-
-/** The legacy item CSV importer's amount writing, on the real service class. */
-function importer(kind: Kind): {
-  writeImportedTotals: (...args: any[]) => Promise<void>;
-  importCsv: (...args: any[]) => Promise<any>;
-  csvHeaders: () => string[];
-} {
-  if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 10 }, () => undefined);
-    args[6] = noAudit;
-    args[7] = noFreeze;
-    args[8] = { getSettings: async () => ({ allowedCurrencies: null }) };
-    return new (SpendItemsCsvService as any)(...args);
-  }
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
-  args[5] = noAudit;
-  args[6] = noFreeze;
-  args[7] = { resolveRates: async () => ({ map: new Map(), settings: { allowedCurrencies: null } }) };
-  return new (CapexItemsService as any)(...args);
 }
 
 function budgetOperations() {
@@ -326,23 +304,6 @@ async function testFrozenForecastIsRefused(kind: Kind) {
   });
 }
 
-/** The legacy item CSV import writes only the yearly totals present in the file. */
-async function testCsvImportWritesOnlyTheTotalsInTheFile(kind: Kind) {
-  await withTransaction(kind, 'csv', async (runner, versionId, tenantId) => {
-    const version = { id: versionId, tenant_id: tenantId, budget_year: YEAR };
-    await importer(kind).writeImportedTotals(runner.manager, version, YEAR, { planned: 24000 });
-    let rows = await readMonths(runner, kind, versionId);
-    assertUntouched(rows, ['forecast', 'committed', 'actual', 'expected_landing'], `${kind} CSV Budget only`);
-    rows.forEach((row) => assert.equal(Number(row.planned), 2000, `${kind} CSV Budget only: planned of ${row.period}`));
-
-    // A blank cell (undefined) leaves the measure; an explicit 0 clears it.
-    await importer(kind).writeImportedTotals(runner.manager, version, YEAR, { actual: 0, committed: undefined });
-    rows = await readMonths(runner, kind, versionId);
-    assertUntouched(rows, ['forecast', 'committed', 'expected_landing'], `${kind} CSV zero Actuals`);
-    rows.forEach((row) => assert.equal(Number(row.actual), 0, `${kind} CSV zero Actuals: actual of ${row.period}`));
-  });
-}
-
 /** Clear writes zeros (never NULL) on one measure; copy replaces one measure. OPEX only. */
 async function testBudgetColumnOperations(kind: Kind) {
   if (kind !== 'opex') return;
@@ -587,84 +548,6 @@ async function testConcurrentPatchesCreatingMonths(kind: Kind) {
   }
 }
 
-function csvFile(headers: string[], values: Record<string, string>) {
-  const line = headers.map((h) => values[h] ?? '').join(';');
-  return { buffer: Buffer.from(`${headers.join(';')}\n${line}\n`, 'utf8') } as any;
-}
-
-/** The item row of a legacy CSV file matching the seeded line, without amounts. */
-function csvLine(kind: Kind): Record<string, string> {
-  return kind === 'opex'
-    ? { product_name: 'Write safety line', company_name: 'Csv test company', account_number: '6000', currency: 'EUR', status: 'enabled' }
-    : { description: 'Write safety line', ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium', currency: 'EUR', status: 'enabled', company_name: 'Csv test company' };
-}
-
-/** The company of the CSV line, with account 6000 in its chart of accounts (the OPEX line's). */
-async function seedCompany(runner: QueryRunner, tenantId: string) {
-  const [chart] = await runner.query(
-    `INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, 'CSV', 'Csv test chart', 'FR') RETURNING id`,
-    [tenantId],
-  );
-  await runner.query(
-    `INSERT INTO companies (tenant_id, name, country_iso, city, coa_id) VALUES ($1, 'Csv test company', 'FR', 'Lyon', $2)`,
-    [tenantId, chart.id],
-  );
-  await runner.query(
-    `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES ($1, $2, 6000, 'Csv test account')`,
-    [tenantId, chart.id],
-  );
-}
-
-async function countItems(runner: QueryRunner, kind: Kind) {
-  const [row] = await runner.query(`SELECT count(*)::int AS n FROM ${kind === 'opex' ? 'spend_items' : 'capex_items'}`);
-  return row.n as number;
-}
-
-/**
- * The legacy item CSV import, end to end on the current year: an amount that
- * is not a number is a row error and nothing is written (dry run or not); a
- * blank cell leaves its measure, 0 and -0 clear it, a value replaces it.
- */
-async function testCsvImportEndToEnd(kind: Kind) {
-  const currentYear = new Date().getFullYear();
-  await withTransaction(kind, 'csv-import', async (runner, versionId, tenantId) => {
-    await seedCompany(runner, tenantId);
-    const svc = importer(kind);
-    const headers = svc.csvHeaders.call(svc);
-
-    for (const dryRun of [true, false]) {
-      const result = await svc.importCsv(
-        { file: csvFile(headers, { ...csvLine(kind), y_budget: '1.2.3', y_revision: '100' }), dryRun, userId: null },
-        { manager: runner.manager },
-      );
-      assert.equal(result.ok, false, `${kind} CSV unparsable amount (dry run ${dryRun}): refused`);
-      assert.deepEqual(result.errors, [{ row: 2, message: 'y_budget must be a number' }], `${kind} CSV unparsable amount (dry run ${dryRun}): row error`);
-    }
-    assert.equal(await countItems(runner, kind), 1, `${kind} CSV unparsable amount: no item written`);
-    const seededMonths = (await readMonths(runner, kind, versionId)).map((row, idx) => ({ ...row, idx }));
-    seededMonths.forEach((row) => {
-      for (const measure of MEASURES) {
-        assert.equal(Number(row[measure]), seededValue(measure, row.idx + 1), `${kind} CSV unparsable amount: ${measure} of ${row.period} untouched`);
-      }
-    });
-
-    const result = await svc.importCsv(
-      { file: csvFile(headers, { ...csvLine(kind), y_budget: '', y_follow_up: '0', y_landing: '-0', y_revision: '1 200' }), dryRun: false, userId: null },
-      { manager: runner.manager },
-    );
-    assert.equal(result.ok, true, `${kind} CSV import: accepted (${JSON.stringify(result.errors)})`);
-    assert.equal(await countItems(runner, kind), 1, `${kind} CSV import: the existing line is updated`);
-    const rows = await readMonths(runner, kind, versionId);
-    rows.forEach((row, idx) => {
-      assert.equal(Number(row.planned), seededValue('planned', idx + 1), `${kind} CSV import: blank Budget leaves ${row.period}`);
-      assert.equal(Number(row.forecast), seededValue('forecast', idx + 1), `${kind} CSV import: Forecast of ${row.period} untouched`);
-      assert.equal(row.actual, '0.00', `${kind} CSV import: 0 clears Actuals of ${row.period}`);
-      assert.equal(row.expected_landing, '0.00', `${kind} CSV import: -0 clears Expected landing of ${row.period}`);
-      assert.equal(Number(row.committed), 100, `${kind} CSV import: Revision of ${row.period}`);
-    });
-  }, { year: currentYear });
-}
-
 async function main() {
   await dataSource.initialize();
   const failures: string[] = [];
@@ -677,12 +560,10 @@ async function main() {
         testExplicitZeroClears,
         testInvalidPayloadsAreRefused,
         testFrozenForecastIsRefused,
-        testCsvImportWritesOnlyTheTotalsInTheFile,
         testBudgetColumnOperations,
         testConcurrentPatchesOnDifferentMeasures,
         testMonthlyPatchWithMixedMeasures,
         testConcurrentPatchesCreatingMonths,
-        testCsvImportEndToEnd,
       ]) {
         try {
           await test(kind);

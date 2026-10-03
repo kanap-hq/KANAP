@@ -11,23 +11,18 @@ import { Supplier } from '../suppliers/supplier.entity';
 import { User } from '../users/user.entity';
 import { parsePagination, buildWhereFromAgFilters } from '../common/pagination';
 import { AuditService } from '../audit/audit.service';
-import { AmountMeasure, BudgetColumn } from '../spend/amounts-write.util';
+import { BudgetColumn } from '../spend/amounts-write.util';
 import { clearBudgetColumn, copyBudgetColumn, CopyColumnOperation } from '../spend/budget-column-operations';
 import { copyAllocations, CopyAllocationsOperation } from '../spend/budget-allocation-operations';
-import { writeItemCsvTotals } from '../spend/round-inputs.util';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CapexLink } from './capex-link.entity';
 import { CapexAttachment } from './capex-attachment.entity';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
-import { formatCents, toCents } from '../common/amount';
 import { FreezeService } from '../freeze/freeze.service';
 import { FxRateService } from '../currency/fx-rate.service';
-import { applyDisabledAtWhere, deriveStatusFromDisabledAt, LifecycleScope, parseCsvEndOfValidity, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
+import { applyDisabledAtWhere, LifecycleScope, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
-import { loadVersionTotals, SUMMARY_COLUMNS, SUMMARY_SCOPES, SummaryDeps, summaryTenantId } from '../spend/spend-summary.builder';
+import { SUMMARY_SCOPES, SummaryDeps } from '../spend/spend-summary.builder';
 import * as budgetList from '../spend/budget-list/budget-list.service';
 import type { BudgetListAccess } from '../spend/budget-list/budget-list.runtime';
 import type { AggregateSpec } from '../common/list-engine/list-aggregate';
@@ -36,7 +31,6 @@ import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
 import { CapexItemContactsService } from './capex-item-contacts.service';
 import { listItemApplications, replaceItemApplications } from '../spend/item-applications';
-import { csvDateError, parseCsvDate } from '../spend/csv-date';
 import { PortfolioProjectCapex } from '../portfolio/portfolio-project-capex.entity';
 import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { validateUploadedFile } from '../common/upload-validation';
@@ -45,49 +39,21 @@ import { ItemNumberService } from '../common/item-number.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { resolveToUuid } from '../common/resolve-item-id';
+import { resolveItemWrite } from '../spend/item-write.util';
 import {
-  csvCostCenterDisabledError,
-  CSV_COMPANY_REQUIRED_ERROR,
-  CSV_RUN_BUILD_ERROR,
-  CsvCostCenter,
-  csvItemLifecycle,
-  csvLifecycleConflict,
-  ITEM_CSV_OPTIONAL_HEADERS,
-  loadCostCenterCodes,
-  loadCostCentersByCode,
-  lockCsvCostCenters,
-  parseRunBuild,
-  resolveCsvCostCenter,
-  resolveItemWrite,
-} from '../spend/item-write.util';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
-import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
-import {
-  csvAnalyticsBodyValues,
-  CsvAnalyticsCell,
-  csvAnalyticsDisabledErrors,
-  csvAnalyticsNamesDisabled,
-  isCsvAnalyticsHeader,
   itemAnalyticsAuditFields,
   itemAnalyticsFields,
   ItemAnalyticsValue,
-  loadCsvAnalyticsExport,
   loadItemAnalyticsValues,
-  readCsvAnalyticsCells,
-  readCsvAnalyticsColumns,
   writeItemAnalyticsValues,
 } from '../spend/item-analytics.util';
-import { ensureBudgetVersion } from '../spend/budget-version-ensure';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
 import { updateItemUnderLock } from '../spend/item-locked-update';
-import { lockBudgetVersions, lockTenantBudgetOperations } from '../spend/budget-locks';
+
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { countItemRelations, loadItemReferences } from '../spend/item-workspace.util';
 import { readBudgetLineMeta } from '../spend/item-meta';
-
-// Accepted on import for one release, never exported: the end of validity used to be split in two dates.
-const LEGACY_CSV_HEADERS = ['effective_end'];
 
 function displayName(user?: User | null): string {
   if (!user) return '';
@@ -169,33 +135,6 @@ export class CapexItemsService {
     });
   }
 
-  /**
-   * Spread a year's totals from the file flat over its twelve months. Only the
-   * measures with a value in the file replace that year: a blank cell leaves
-   * the stored months (and the column's period) as they are, an explicit 0
-   * clears them. Each column written gets a whole-year flat spread
-   * record.
-   */
-  async writeImportedTotals(
-    mg: EntityManager,
-    version: CapexVersion,
-    year: number,
-    totals: Partial<Record<'planned' | 'actual' | 'expected_landing' | 'committed', number>>,
-    checkedFreeze?: Set<string>,
-    userId: string | null = null,
-  ) {
-    const annualTotals: Partial<Record<AmountMeasure, bigint>> = {};
-    for (const measure of ['planned', 'actual', 'expected_landing', 'committed'] as const) {
-      const value = totals[measure];
-      if (value != null && !isNaN(Number(value))) annualTotals[measure] = toCents(value);
-    }
-    await writeItemCsvTotals(
-      { manager: mg, freeze: this.freeze, scope: 'capex', version, checkedFreeze },
-      { userId, audit: this.audit },
-      year,
-      annualTotals,
-    );
-  }
 
   /** Copy one CAPEX budget column to another year or column (all or nothing); see `budget-column-operations.ts`. */
   async copyBudgetColumn(operation: CopyColumnOperation, userId: string | null, opts?: { manager?: EntityManager }) {
@@ -410,7 +349,7 @@ export class CapexItemsService {
     return this.withAnalyticsValues(persisted, analyticsValues);
   }
 
-  /** `statusEmail: false` skips the owners' status-change email (the CSV import sends none, like OPEX's). */
+  /** `statusEmail: false` skips the owners' status-change email (the budget file load sends none). */
   async update(id: string, body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string }) {
     const mg = opts?.manager ?? this.repo.manager;
     const itemId = await this.resolveItemId(id, mg);
@@ -524,513 +463,6 @@ export class CapexItemsService {
 
   async summaryTotals(query: any, opts?: { manager?: EntityManager; access?: BudgetListAccess }): Promise<Record<string, number | string>> {
     return budgetList.budgetListTotals(SUMMARY_SCOPES.capex, this.summaryDeps(opts?.access), query, opts?.manager ?? this.repo.manager);
-  }
-
-  csvHeaders() {
-    return [
-      'item_number','description','ppe_type','investment_type','priority','currency','effective_start','status','disabled_at','notes','company_name',
-      'owner_it_email','owner_business_email','analytics_category','cost_center_code','run_build',
-      'y_minus1_budget','y_minus1_landing','y_budget','y_follow_up','y_landing','y_revision','y_plus1_budget','y_plus1_revision','y_plus2_budget'
-    ];
-  }
-
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }): Promise<{ filename: string; content: string }> {
-    const delimiter = ';';
-    const chunks: string[] = [];
-    const mgExport = opts?.manager ?? this.repo.manager;
-    const tenantId = await summaryTenantId(mgExport);
-    if (scope === 'template') {
-      // analytics_category, then one analytics:<code> column per enabled dimension besides the default one.
-      const headerRow = (await loadCsvAnalyticsExport(mgExport, 'capex', tenantId, [])).headers(this.csvHeaders()).join(delimiter);
-      return { filename: 'capex_template.csv', content: '\ufeff' + headerRow + '\n' };
-    }
-
-    // Data export: every item whatever its end of validity, read without the list paging,
-    // with what is stored, as the OPEX item export writes it (a masked 0 would clear that year on re-import).
-    const Y = new Date().getFullYear();
-    const items = await mgExport.getRepository(CapexItem).find({
-      where: { tenant_id: tenantId } as any,
-      order: { created_at: 'DESC', id: 'DESC' } as any,
-    });
-    const analyticsColumns = await loadCsvAnalyticsExport(mgExport, 'capex', tenantId, items.map((it) => it.id));
-    const headers = analyticsColumns.headers(this.csvHeaders());
-    const stored = await loadVersionTotals(SUMMARY_SCOPES.capex, this.summaryDeps(), mgExport, tenantId, items, [Y - 1, Y, Y + 1, Y + 2], { reporting: false });
-    const storedTotals = (itemId: string, year: number): Record<string, number> => {
-      const version = stored.versionsByItemYear.get(itemId)?.get(year);
-      const cents = version ? stored.cents.get(version.id) : undefined;
-      return Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, cents ? Number(formatCents(cents[c.key])) : 0]));
-    };
-
-    // Get company names for items that have company_id
-    const companyIds = Array.from(new Set(items.map((it: any) => it.paying_company_id).filter(Boolean))) as string[];
-    const companies = companyIds.length > 0
-      ? await mgExport.getRepository(Company).find({ where: { tenant_id: tenantId, id: In(companyIds) } as any })
-      : [];
-    const companiesById = new Map(companies.map(c => [c.id, c.name]));
-    const ownerIds = Array.from(new Set(items.flatMap((it: any) => [it.owner_it_id, it.owner_business_id]).filter(Boolean))) as string[];
-    const owners = ownerIds.length > 0 ? await mgExport.getRepository(User).find({ where: { tenant_id: tenantId, id: In(ownerIds) } as any }) : [];
-    const ownerEmailById = new Map(owners.map((u) => [u.id, u.email]));
-    const costCenterCodeById = await loadCostCenterCodes(mgExport, tenantId, items.map((it) => it.cost_center_id));
-
-    const { format } = await import('@fast-csv/format');
-    const toIsoDate = (value: unknown): string => {
-      if (value == null || value === '') return '';
-      if (value instanceof Date) {
-        return value.toISOString().slice(0, 10);
-      }
-      const str = value.toString().trim();
-      if (str === '') return '';
-      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-      const parsed = new Date(str);
-      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
-      return '';
-    };
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      for (const it of items as any[]) {
-        const tMinus1 = storedTotals(it.id, Y - 1);
-        const tY = storedTotals(it.id, Y);
-        const tPlus1 = storedTotals(it.id, Y + 1);
-        const tPlus2 = storedTotals(it.id, Y + 2);
-        stream.write({
-          item_number: (it as any).item_number ?? '',
-          description: (it as any).description ?? '',
-          ppe_type: (it as any).ppe_type ?? '',
-          investment_type: (it as any).investment_type ?? '',
-          priority: (it as any).priority ?? '',
-          currency: (it as any).currency ?? '',
-          effective_start: toIsoDate((it as any).effective_start),
-          // Read from the end of validity: the stored status is not updated when the date passes.
-          status: deriveStatusFromDisabledAt((it as any).disabled_at),
-          disabled_at: (it as any).disabled_at ? toIsoDate((it as any).disabled_at) : '',
-          notes: (it as any).notes ?? '',
-          company_name: (it as any).paying_company_id ? (companiesById.get((it as any).paying_company_id) ?? '') : '',
-          owner_it_email: (it as any).owner_it_id ? (ownerEmailById.get((it as any).owner_it_id) ?? '') : '',
-          owner_business_email: (it as any).owner_business_id ? (ownerEmailById.get((it as any).owner_business_id) ?? '') : '',
-          ...analyticsColumns.cells(it.id),
-          cost_center_code: it.cost_center_id ? (costCenterCodeById.get(it.cost_center_id) ?? '') : '',
-          run_build: it.run_build ?? '',
-          y_minus1_budget: tMinus1.budget,
-          y_minus1_landing: tMinus1.landing,
-          y_budget: tY.budget,
-          y_follow_up: tY.follow_up,
-          y_landing: tY.landing,
-          y_revision: tY.revision,
-          y_plus1_budget: tPlus1.budget,
-          y_plus1_revision: tPlus1.revision,
-          y_plus2_budget: tPlus2.budget,
-        });
-      }
-      stream.end();
-    });
-    return { filename: 'capex.csv', content: '\ufeff' + chunks.join('') };
-  }
-
-  async importCsv({ file, dryRun, userId }: { file: Express.Multer.File; dryRun: boolean; userId?: string | null }, opts?: { manager?: EntityManager }) {
-    const mg = opts?.manager ?? this.repo.manager;
-    if (!file) throw new Error('No file uploaded');
-    const delimiter = ';';
-    const optionalHeaders: readonly string[] = ITEM_CSV_OPTIONAL_HEADERS;
-    const expectedHeaders = this.csvHeaders();
-    const requiredHeaders = expectedHeaders.filter((h) => !optionalHeaders.includes(h));
-    type Row = Record<string, string>;
-    const rows: Row[] = [];
-    const errors: { row: number; message: string }[] = [];
-    let headerOk = false;
-    let fileHeaders: string[] = [];
-    let content = '';
-
-    await new Promise<void>((resolve, reject) => {
-      const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-      if (!buf) { reject(new Error('Empty upload')); return; }
-      try { content = decodeCsvBufferUtf8OrThrow(buf as Buffer); }
-      catch { reject(new Error('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.')); return; }
-      parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
-        .on('headers', (headers: string[]) => {
-          fileHeaders = headers;
-          const missing = requiredHeaders.filter((h) => !headers.includes(h));
-          // analytics:<code> columns are checked against the tenant's dimensions below.
-          const extras = headers.filter((h) => !expectedHeaders.includes(h) && !LEGACY_CSV_HEADERS.includes(h) && !isCsvAnalyticsHeader(h));
-          headerOk = missing.length === 0 && extras.length === 0;
-          if (!headerOk) errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
-        })
-        .on('error', (err) => reject(err))
-        .on('data', (row: Row) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
-    });
-    if (!headerOk) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
-    // Errors name the file's own line, blank lines included.
-    const rowLines = await csvDataRowLines(content, delimiter);
-    // Absent optional columns leave the stored values as they are.
-    const hasCostCenter = fileHeaders.includes('cost_center_code');
-    const hasRunBuild = fileHeaders.includes('run_build');
-
-    const tenantId = await this.resolveTenantId(mg);
-    // One column per dimension (analytics_category is the default one); an unknown or disabled one refuses the file.
-    const analyticsColumns = await readCsvAnalyticsColumns(mg, tenantId, fileHeaders, { create: !dryRun });
-    if (analyticsColumns.errors.length > 0) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors: analyticsColumns.errors.map((message) => ({ row: 0, message })) };
-    }
-
-    // The tenant's allowed currencies, as the OPEX import checks them (none configured: any code).
-    const { settings: currencySettings } = await this.fxRates.resolveRates(tenantId, [], { manager: mg });
-    const allowedCurrencies = new Set(
-      (currencySettings.allowedCurrencies ?? []).map((c) => String(c || '').trim().toUpperCase()).filter((c) => c.length === 3),
-    );
-
-    const now = new Date();
-    const Y = now.getFullYear();
-    // number parsing tolerant to thousand separators and comma decimals
-    const parseAmount = (raw: string): number | undefined => {
-      let s = (raw || '').trim(); if (s === '') return undefined; s = s.replace(/\s+/g, '');
-      const hasComma = s.includes(','); const hasDot = s.includes('.');
-      if (hasComma && hasDot) { s = s.replace(/\./g, ''); s = s.replace(/,/g, '.'); }
-      else if (hasComma && !hasDot) { s = s.replace(/,/g, '.'); }
-      s = s.replace(/[^0-9.-]/g, '');
-      if (s === '' || s === '-' || s === '.' || s === '-.') return undefined;
-      const cents = toCents(s);
-      return Number(formatCents(cents));
-    };
-
-    // Get all companies for name resolution
-    const allCompanies = await mg.getRepository(Company).find({ where: { tenant_id: tenantId } as any });
-    const costCentersByCode = hasCostCenter ? await loadCostCentersByCode(mg, tenantId) : new Map<string, CsvCostCenter>();
-    const companiesByName = new Map(allCompanies.map(c => [c.name.toLowerCase(), c.id]));
-
-    /** A YYYY-MM-DD cell (see `spend/csv-date.ts`): null when blank; any other value is the row's error. */
-    const readDate = (raw: unknown, field: string, line: number): string | null => {
-      const value = parseCsvDate(raw);
-      if (value === undefined) errors.push({ row: line, message: csvDateError(field) });
-      return value ?? null;
-    };
-    const userCache = new Map<string, User | null>();
-    const findUserByEmail = async (email: string): Promise<User | null> => {
-      const key = email.toLowerCase();
-      if (userCache.has(key)) return userCache.get(key) ?? null;
-      const user = await mg.getRepository(User).createQueryBuilder('u')
-        .where('u.tenant_id = :tenantId', { tenantId })
-        .andWhere('LOWER(u.email) = LOWER(:email)', { email })
-        .getOne();
-      userCache.set(key, user ?? null);
-      return user ?? null;
-    };
-    // An owner is an active (enabled) user of this tenant, as on the OPEX import.
-    const resolveOwner = async (email: string, label: string, line: number): Promise<string | null> => {
-      if (!email) return null;
-      const user = await findUserByEmail(email);
-      if (!user) {
-        errors.push({ row: line, message: `${label} email '${email}' not found` });
-        return null;
-      }
-      if (user.status !== 'enabled') {
-        errors.push({ row: line, message: `${label} email '${email}' is not an active user` });
-        return null;
-      }
-      return user.id;
-    };
-
-    const normalized: Array<{
-      line: number;
-      item_number: number | null;
-      description: string; ppe_type: string; investment_type: string; priority: string; currency: string; effective_start: string | null; status: StatusState | null; disabled_at: Date | null; notes: string | null;
-      paying_company_id: string | null;
-      owner_it_id: string | null;
-      owner_business_id: string | null;
-      analytics: CsvAnalyticsCell[];
-      cost_center: CsvCostCenter | null;
-      run_build: 'run' | 'build' | null;
-      totals: { [year: number]: { planned?: number; actual?: number; expected_landing?: number; committed?: number } };
-    }> = [];
-
-    const rowByLine = new Map<string, number>();
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i]; const line = rowLine(rowLines, i);
-      const description = (r['description'] ?? '').toString().trim();
-      const ppe_type = (r['ppe_type'] ?? '').toString().trim().toLowerCase();
-      const investment_type = (r['investment_type'] ?? '').toString().trim().toLowerCase();
-      const priority = (r['priority'] ?? '').toString().trim().toLowerCase();
-      const currency = (r['currency'] ?? '').toString().trim().toUpperCase();
-      // Blank: 1 January of this year for a new line, the stored date on an update.
-      const effective_start = readDate(r['effective_start'], 'effective_start', line);
-      // Blank: enabled for a new line, the stored status on an update (`csvItemLifecycle`).
-      const statusRaw = (r['status'] ?? '').toString().trim().toLowerCase();
-      if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
-        errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
-      }
-      const status = statusRaw === 'disabled' ? StatusState.DISABLED : statusRaw === 'enabled' ? StatusState.ENABLED : null;
-      const disabledAtRaw = (r['disabled_at'] ?? '').toString().trim();
-      let disabled_at: Date | null = null;
-      try {
-        disabled_at = parseCsvEndOfValidity(disabledAtRaw);
-      } catch (err) {
-        errors.push({ row: line, message: (err as Error).message });
-      }
-      // The status cell must agree with the date cell (not with a legacy effective_end below).
-      const lifecycleConflict = csvLifecycleConflict(status, disabled_at);
-      if (lifecycleConflict) errors.push({ row: line, message: lifecycleConflict });
-      // Files from before the single end date carry effective_end: it fills an empty end of validity.
-      if (!disabledAtRaw) {
-        const legacyEnd = readDate(r['effective_end'], 'effective_end', line);
-        if (legacyEnd) {
-          try {
-            disabled_at = parseCsvEndOfValidity(legacyEnd);
-          } catch {
-            errors.push({ row: line, message: 'effective_end must be a valid date in YYYY-MM-DD format' });
-          }
-        }
-      }
-      const notes = ((r['notes'] ?? '').toString().trim()) || null;
-      const company_name = (r['company_name'] ?? '').toString().trim();
-      const itemNumberRaw = (r['item_number'] ?? '').toString().trim();
-      let item_number: number | null = null;
-      if (itemNumberRaw !== '') {
-        const parsedNumber = Number(itemNumberRaw.replace(/^CPX-?/i, ''));
-        if (!Number.isInteger(parsedNumber) || parsedNumber <= 0) {
-          errors.push({ row: line, message: `item_number '${itemNumberRaw}' is invalid` });
-        } else {
-          item_number = parsedNumber;
-        }
-      }
-      // A line is its item number, else its description (the existing-line match): a second row for it is refused, never merged.
-      const lineKey = item_number != null ? `#${item_number}` : itemNumberRaw === '' && description ? `d:${description}` : null;
-      if (lineKey) {
-        const firstRow = rowByLine.get(lineKey);
-        if (firstRow !== undefined) errors.push({ row: line, message: `Same line as row ${firstRow}` });
-        else rowByLine.set(lineKey, line);
-      }
-      const ownerItEmail = (r['owner_it_email'] ?? '').toString().trim();
-      const ownerBizEmail = (r['owner_business_email'] ?? '').toString().trim();
-      const owner_it_id = await resolveOwner(ownerItEmail, 'Owner IT', line);
-      const owner_business_id = await resolveOwner(ownerBizEmail, 'Owner business', line);
-      const { cells: analytics, errors: analyticsErrors } = readCsvAnalyticsCells(analyticsColumns.columns, r);
-      for (const message of analyticsErrors) errors.push({ row: line, message });
-      const costCenterCode = hasCostCenter ? (r['cost_center_code'] ?? '').toString().trim() : '';
-      let cost_center: CsvCostCenter | null = null;
-      if (costCenterCode) {
-        const resolved = resolveCsvCostCenter(costCentersByCode, costCenterCode);
-        if (resolved.error) errors.push({ row: line, message: resolved.error });
-        cost_center = resolved.node;
-      }
-      const run_build = hasRunBuild ? parseRunBuild(r['run_build']) : null;
-      if (run_build === undefined) errors.push({ row: line, message: CSV_RUN_BUILD_ERROR });
-
-      // Resolve company name to ID
-      let paying_company_id: string | null = null;
-      if (company_name) {
-        paying_company_id = companiesByName.get(company_name.toLowerCase()) || null;
-        if (!paying_company_id) {
-          errors.push({ row: line, message: `Company '${company_name}' not found` });
-        }
-      }
-
-      if (!description) errors.push({ row: line, message: 'description is required' });
-      if (currency && currency.length !== 3) errors.push({ row: line, message: 'currency must be 3 letters' });
-      if (allowedCurrencies.size > 0 && currency.length === 3 && !allowedCurrencies.has(currency)) {
-        errors.push({ row: line, message: `currency '${currency}' is not allowed. allowedCurrencies=${Array.from(allowedCurrencies).join(',')}` });
-      }
-      if (!['hardware','software'].includes(ppe_type)) errors.push({ row: line, message: 'ppe_type must be hardware|software' });
-      const invOk = ['replacement','capacity','productivity','security','conformity','business_growth','other'].includes(investment_type);
-      if (!invOk) errors.push({ row: line, message: 'investment_type invalid' });
-      if (!['mandatory','high','medium','low'].includes(priority)) errors.push({ row: line, message: 'priority invalid' });
-
-      // An amount that is not a number is a row error.
-      const amount = (column: string) => {
-        try {
-          return parseAmount((r[column] ?? '').toString());
-        } catch {
-          errors.push({ row: line, message: `${column} must be a number` });
-          return undefined;
-        }
-      };
-      const tMinus1 = { planned: amount('y_minus1_budget'), expected_landing: amount('y_minus1_landing') };
-      const tY = {
-        planned: amount('y_budget'),
-        actual: amount('y_follow_up'),
-        expected_landing: amount('y_landing'),
-        committed: amount('y_revision'),
-      };
-      const tPlus1 = {
-        planned: amount('y_plus1_budget'),
-        committed: amount('y_plus1_revision'),
-      };
-      const tPlus2 = { planned: amount('y_plus2_budget') };
-      const totals: any = {}; totals[Y - 1] = tMinus1; totals[Y] = tY; totals[Y + 1] = tPlus1; totals[Y + 2] = tPlus2;
-      normalized.push({
-        line,
-        item_number,
-        description,
-        ppe_type,
-        investment_type,
-        priority,
-        currency,
-        effective_start,
-        status,
-        disabled_at,
-        notes,
-        paying_company_id,
-        owner_it_id,
-        owner_business_id,
-        analytics,
-        cost_center,
-        run_build: run_build ?? null,
-        totals,
-      });
-    }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
-
-    // Pass 1 refused any repeated line, so every row is its own line.
-    const unique = normalized;
-
-    // Existing items match by item_number when provided, else by description
-    const findExisting = async (item: typeof normalized[number]): Promise<CapexItem | null> => {
-      if (item.item_number != null) {
-        return mg.getRepository(CapexItem).findOne({ where: { tenant_id: tenantId, item_number: item.item_number as any } });
-      }
-      return mg.getRepository(CapexItem).findOne({ where: { tenant_id: tenantId, description: item.description } });
-    };
-
-    let inserted = 0; let updated = 0;
-    if (!dryRun) {
-      // One bulk budget operation at a time per tenant (a second one gets a 409), then the
-      // lines the file names, locked in id order before anything is decided: the lookups
-      // below and every check after them read the locked lines (lock order: `spend/budget-locks.ts`).
-      await lockTenantBudgetOperations(mg, tenantId);
-      await mg.query(
-        `SELECT id FROM capex_items
-          WHERE tenant_id = $1 AND (item_number = ANY($2::int[]) OR description = ANY($3::text[]))
-          ORDER BY id
-            FOR NO KEY UPDATE`,
-        [
-          tenantId,
-          unique.flatMap((item) => (item.item_number != null ? [item.item_number] : [])),
-          unique.flatMap((item) => (item.item_number == null ? [item.description] : [])),
-        ],
-      );
-    }
-    const existingByItem = new Map<typeof normalized[number], CapexItem | null>();
-    for (const item of unique) existingByItem.set(item, await findExisting(item));
-    // A disabled analytics value is accepted only as the line's current one.
-    const currentAnalytics = await loadItemAnalyticsValues(mg, 'capex', tenantId, unique
-      .filter((item) => csvAnalyticsNamesDisabled(item.analytics))
-      .map((item) => existingByItem.get(item)?.id ?? ''));
-    for (const item of unique) {
-      const exists = existingByItem.get(item) ?? null;
-      if (item.item_number != null && !exists) {
-        errors.push({ row: item.line, message: `item_number '${item.item_number}' does not match any CAPEX item` });
-        continue;
-      }
-      const disabledCostCenter = item.cost_center ? csvCostCenterDisabledError(item.cost_center, exists?.cost_center_id) : null;
-      if (disabledCostCenter) errors.push({ row: item.line, message: disabledCostCenter });
-      const disabledValues = csvAnalyticsDisabledErrors(item.analytics, exists ? currentAnalytics.get(exists.id) : undefined);
-      for (const message of disabledValues) errors.push({ row: item.line, message });
-      // A new line needs its paying company (or a cost center, whose company it takes) and its
-      // currency (an update keeps the stored ones).
-      const hasCompany = !!item.paying_company_id || !!item.cost_center;
-      if (!exists && !hasCompany) {
-        errors.push({ row: item.line, message: CSV_COMPANY_REQUIRED_ERROR });
-      }
-      if (!exists && !item.currency) {
-        errors.push({ row: item.line, message: 'currency is required' });
-      }
-      if (disabledCostCenter || disabledValues.length > 0 || (!exists && (!hasCompany || !item.currency))) continue;
-      if (exists) updated += 1; else inserted += 1;
-    }
-    // The file has no account column: a company change keeps the stored account, which must
-    // then be in the new company's chart (the write refuses it otherwise, after a clean dry run).
-    const movedLines = unique.flatMap((item) => {
-      const exists = existingByItem.get(item);
-      return exists?.account_id && item.paying_company_id && item.paying_company_id !== exists.paying_company_id
-        ? [{ item, accountId: exists.account_id }]
-        : [];
-    });
-    if (movedLines.length > 0) {
-      const accounts: Array<{ id: string; account_number: number; coa_id: string | null }> = await mg.query(
-        `SELECT id, account_number, coa_id FROM accounts WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
-        [tenantId, Array.from(new Set(movedLines.map((moved) => moved.accountId)))],
-      );
-      const accountById = new Map(accounts.map((account) => [account.id, account]));
-      const companyById = new Map(allCompanies.map((company) => [company.id, company]));
-      for (const { item, accountId } of movedLines) {
-        const account = accountById.get(accountId);
-        const company = companyById.get(item.paying_company_id!);
-        if (account?.coa_id && company?.coa_id && account.coa_id !== company.coa_id) {
-          errors.push({
-            row: item.line,
-            message: `Account ${account.account_number} is not in ${company.name}'s chart of accounts. Change the line's account first.`,
-          });
-        }
-      }
-    }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
-
-    await lockCsvCostCenters(mg, tenantId, unique.map((item) => {
-      const exists = existingByItem.get(item) ?? null;
-      return item.cost_center && item.cost_center.id !== exists?.cost_center_id ? item.cost_center.id : null;
-    }));
-
-    let processed = 0;
-    const checkedFreeze = new Set<string>();
-    for (const item of unique) {
-      const exists = await findExisting(item);
-      // A value the dimension does not have yet is created in it (enabled, audited).
-      const analyticsValues = await csvAnalyticsBodyValues(mg, tenantId, item.analytics, this.audit, userId);
-      const payload = {
-        description: item.description,
-        ppe_type: item.ppe_type as any,
-        investment_type: item.investment_type as any,
-        priority: item.priority as any,
-        ...(item.currency ? { currency: item.currency } : {}),
-        ...(item.effective_start ? { effective_start: item.effective_start } : exists ? {} : { effective_start: `${Y}-01-01` }),
-        ...csvItemLifecycle(item.status, item.disabled_at, !!exists),
-        notes: item.notes ?? null,
-        // A blank company keeps the stored one (a new line takes its cost center's).
-        ...(item.paying_company_id ? { paying_company_id: item.paying_company_id } : {}),
-        owner_it_id: item.owner_it_id,
-        owner_business_id: item.owner_business_id,
-        ...(analyticsValues ? { analytics_values: analyticsValues } : {}),
-        ...(hasCostCenter ? { cost_center_id: item.cost_center?.id ?? null } : {}),
-        ...(hasRunBuild ? { run_build: item.run_build } : {}),
-      };
-      const target = exists
-        ? await this.update(exists.id, payload as any, userId ?? undefined, { manager: mg, statusEmail: false })
-        : await this.create(payload as any, userId ?? undefined, { manager: mg });
-
-      const years = [Y - 1, Y, Y + 1, Y + 2];
-      for (const yr of years) {
-        const totals = (item.totals as any)[yr] || {};
-        const hasAny = Object.values(totals).some((v: any) => v != null && !isNaN(Number(v)));
-        if (!hasAny) continue;
-        let version = await mg.getRepository(CapexVersion).findOne({ where: { tenant_id: tenantId, capex_item_id: target.id, budget_year: yr as any } as any });
-        if (!version) {
-          // Get-or-create: the budget tab may create the year at the same moment.
-          const ensured = await ensureBudgetVersion(mg, 'capex', {
-            tenantId: target.tenant_id,
-            itemId: target.id,
-            year: yr,
-            versionName: `Auto ${yr}`,
-            inputGrain: 'annual',
-            asOfDate: `${yr}-01-01`,
-            allocationMethod: 'default',
-          });
-          if (!ensured) {
-            throw new BadRequestException(`Another year of "${target.description}" already has a version named "Auto ${yr}": rename it, then import again.`);
-          }
-          version = ensured.version;
-          if (ensured.created) {
-            await this.audit.log({ table: 'capex_versions', recordId: version.id, action: 'create', before: null, after: version, userId }, { manager: mg });
-          }
-        }
-        // Lock order: the line (locked above, or created here), then its version, then the months.
-        await lockBudgetVersions(mg, 'capex', tenantId, [version.id]);
-        await this.writeImportedTotals(mg, version, yr, totals, checkedFreeze, userId ?? null);
-      }
-      processed += 1;
-    }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [] };
   }
 
   // Links

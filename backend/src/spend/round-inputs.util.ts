@@ -13,12 +13,10 @@ import {
   AmountVersion,
   assertMeasuresEditable,
   assertYearMatchesVersion,
-  FLAT_PROFILE,
   isAmountMeasure,
   lockYearMonths,
   PayloadSpread,
   replaceAmounts,
-  spreadAnnualRows,
   yearPeriods,
 } from './amounts-write.util';
 import { Decimal } from '../common/decimal';
@@ -601,32 +599,6 @@ export async function recordPayloadRoundInputs(ctx: RoundInputsContext, result: 
     return toCents(before ? before[measure] : 0) !== toCents(row[measure]);
   }));
   if (changed.length > 0) await markRoundsManual(ctx, changed);
-}
-
-/**
- * Yearly totals of the legacy item CSV: each measure given is spread flat
- * over the whole year and replaces its twelve months; each measure gets a
- * whole-year `spread` record marked as coming from the item file.
- * A measure left out (blank cell) is not written and keeps its record.
- */
-export async function writeItemCsvTotals(
-  ctx: AmountsWriteContext,
-  rounds: Pick<RoundInputsContext, 'userId' | 'audit'>,
-  year: number,
-  totals: Partial<Record<AmountMeasure, bigint>>,
-) {
-  if (Object.keys(totals).length === 0) return;
-  await replaceAmounts(ctx, year, spreadAnnualRows(year, totals));
-  await recordSpread(
-    { manager: ctx.manager, scope: ctx.scope, version: ctx.version, ...rounds },
-    {
-      kind: 'annual',
-      totals,
-      profile: FLAT_PROFILE,
-      period: { ...wholeYear(year), active_months: Array.from({ length: 12 }, (_, i) => i + 1) },
-    },
-    'item_csv',
-  );
 }
 
 /* ── Columns computed from quantity × price lines ─────────────────────────── */

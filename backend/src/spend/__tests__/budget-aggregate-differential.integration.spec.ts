@@ -112,7 +112,7 @@ function failed(label: string, e: Settled, o: Settled): boolean {
 function itemServiceWith(scope: SummaryScopeConfig, deps: ReturnType<typeof realSummaryDeps>): any {
   const args: any[] = Array.from({ length: 12 }, () => undefined);
   args[4] = deps.allocationCalculator;
-  args[7] = deps.fxRates;
+  args[scope.scope === 'opex' ? 6 : 7] = deps.fxRates;
   return scope.scope === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 

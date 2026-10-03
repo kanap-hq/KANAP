@@ -4,12 +4,11 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { SpendAmountsService } from '../spend-amounts.service';
 import { SpendBudgetOperationsService } from '../spend-budget-operations.service';
-import { SpendItemsCsvService } from '../spend-items-csv.service';
 import { CapexAmountsService } from '../../capex/capex-amounts.service';
 import { CapexItemsService } from '../../capex/capex-items.service';
 import { FreezeService } from '../../freeze/freeze.service';
 
-// Shared fixtures of the round-inputs and budget-rows specs (not a spec itself).
+// Shared fixtures of the round-inputs specs (not a spec itself).
 // Every seed runs inside the caller's transaction, which the spec rolls back.
 
 export type Kind = 'opex' | 'capex';
@@ -58,20 +57,6 @@ export function budgetOperations(kind: Kind, audit: unknown = captureAudit(), fr
   const args: any[] = Array.from({ length: 12 }, () => undefined);
   args[5] = audit;
   args[6] = freeze;
-  return new (CapexItemsService as any)(...args);
-}
-
-/** The legacy item CSV importer of each scope, on the real service class. */
-export function itemCsvImporter(kind: Kind, audit: unknown = captureAudit()): { writeImportedTotals: (...args: any[]) => Promise<void> } {
-  if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 10 }, () => undefined);
-    args[6] = audit;
-    args[7] = noFreeze;
-    return new (SpendItemsCsvService as any)(...args);
-  }
-  const args: any[] = Array.from({ length: 12 }, () => undefined);
-  args[5] = audit;
-  args[6] = noFreeze;
   return new (CapexItemsService as any)(...args);
 }
 

@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import { SpendItemsService } from '../spend-items.service';
-import { SpendItemsCsvService } from '../spend-items-csv.service';
 import { CapexItemsService } from '../../capex/capex-items.service';
 import { ItemNumberService } from '../../common/item-number.service';
 import { captureAudit, Kind, noFreeze } from './round-inputs.fixtures';
@@ -21,13 +20,13 @@ const noNotifications = { notifyStatusChange: () => undefined, notifyShare: () =
 /** The item service of a type: create, update, summary and (CAPEX) CSV. `audit`: an in-memory capture unless given. */
 export function itemService(kind: Kind, audit: unknown = captureAudit()): any {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 12 }, () => undefined);
+    const args: any[] = Array.from({ length: 11 }, () => undefined);
     args[3] = audit;
     args[4] = noAllocations;
-    args[7] = identityFx;
-    args[9] = noContacts;
-    args[10] = noNotifications;
-    args[11] = new ItemNumberService();
+    args[6] = identityFx;
+    args[8] = noContacts;
+    args[9] = noNotifications;
+    args[10] = new ItemNumberService();
     return new (SpendItemsService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);
@@ -39,17 +38,6 @@ export function itemService(kind: Kind, audit: unknown = captureAudit()): any {
   args[10] = new ItemNumberService();
   args[11] = noNotifications;
   return new (CapexItemsService as any)(...args);
-}
-
-/** The CSV importer and exporter of a type. */
-export function csvService(kind: Kind): any {
-  if (kind === 'capex') return itemService('capex');
-  const args: any[] = Array.from({ length: 10 }, () => undefined);
-  args[6] = captureAudit();
-  args[7] = noFreeze;
-  args[8] = { getSettings: async () => ({ allowedCurrencies: null }) };
-  args[9] = new ItemNumberService();
-  return new (SpendItemsCsvService as any)(...args);
 }
 
 /** A company with its own chart of accounts and one account in it. */

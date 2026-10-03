@@ -10,12 +10,13 @@ import {
   seedTenant,
   seedVersion,
 } from '../../spend/__tests__/round-inputs.fixtures';
+import { exportBudgetFile, fileRows, preflightBudgetFile } from '../../spend/__tests__/budget-file.fixtures';
 
 // CAPEX hides the years after an item's end of validity, as OPEX does: the
 // year of the end keeps its amounts, later years contribute nothing to the
 // summary slots (fixed and requested), the totals and the sort. Which items
-// are listed does not change, and the item CSV export still writes what is
-// stored (a masked 0 would clear that year on re-import).
+// are listed does not change, and the budget file export still writes what
+// is stored (a masked 0 would clear that year on re-import).
 
 const identityFx = {
   resolveRates: async () => ({ map: new Map(), settings: { reportingCurrency: 'EUR' } }),
@@ -27,7 +28,6 @@ function capexItems(): {
   summary: (...args: any[]) => Promise<any>;
   summaryTotals: (...args: any[]) => Promise<any>;
   summaryIds: (...args: any[]) => Promise<any>;
-  exportCsv: (...args: any[]) => Promise<any>;
 } {
   const args: any[] = Array.from({ length: 12 }, () => undefined);
   args[4] = noAllocations;
@@ -77,14 +77,13 @@ async function testYearsAfterTheEndContributeNothing() {
     const sorted = await svc.summary({ ...query, sort: 'yPlus1Budget:DESC' }, { manager: runner.manager });
     assert.deepEqual(sorted.items.map((row: any) => row.id), [lines.open, lines.ending], 'the list sorts on what is shown');
 
-    // The item CSV export writes what is stored, as the OPEX export does.
-    const { content } = await svc.exportCsv('data', { manager: runner.manager });
-    const [header, ...rows] = content.replace(/^\ufeff/, '').trim().split('\n');
-    const columns = header.split(';');
-    const exported = rows
-      .map((line: string) => Object.fromEntries(line.split(';').map((value, i) => [columns[i], value])))
-      .find((row: Record<string, string>) => row.description === 'Mask ending');
-    assert.equal(Number(exported?.y_plus1_budget), 600, 'the export keeps the stored Y+1 amounts');
+    // The budget file export writes what is stored, as the OPEX export does, and reads back unchanged.
+    const content = await exportBudgetFile(runner.manager, 'capex', tenantId, [lines.ending], { amountYears: `${Y},${Y + 1}` });
+    const [exported] = fileRows(content);
+    assert.equal(exported[`budget_${Y + 1}`], '600.00', 'the export keeps the stored Y+1 amounts');
+    const report = await preflightBudgetFile(runner.manager, 'capex', tenantId, content);
+    assert.equal(report.ok, true, JSON.stringify(report.errors));
+    assert.deepEqual([report.changes.unchanged, report.changes.updated], [1, 0], 'the export reads back unchanged');
 
     // The same line without an end of validity counts in both years.
     await runner.query(`UPDATE capex_items SET disabled_at = NULL WHERE id = $1`, [lines.ending]);
