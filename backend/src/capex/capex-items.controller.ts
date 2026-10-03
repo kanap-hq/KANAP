@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CapexItemsService } from './capex-items.service';
 import { CapexItemsDeleteService } from './capex-items-delete.service';
@@ -24,6 +24,9 @@ import {
 } from './dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { analyzeAfterLargeImport, lineImportTables } from '../spend/budget-import-statistics';
+import { BudgetFileService, canCreateSuppliers } from '../spend/budget-file/budget-file.service';
+import { exportListQuery } from '../spend/budget-file/export-file';
+import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from '../spend/budget-file/upload';
 
 @UseGuards(JwtAuthGuard)
 @Controller('capex-items')
@@ -33,6 +36,7 @@ export class CapexItemsController {
     private readonly deleteSvc: CapexItemsDeleteService,
     private readonly storage: StorageService,
     private readonly contactsSvc: CapexItemContactsService,
+    private readonly budgetFile: BudgetFileService,
   ) {}
 
   private resolveId(id: string, manager: EntityManager): Promise<string> {
@@ -129,6 +133,61 @@ export class CapexItemsController {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
+  }
+
+  /** The budget file (C2a). A read: a frozen tenant keeps it. `ctx` is merged on GET. */
+  @ReadOnlyRoute()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Get('budget-file/export')
+  async exportBudgetFile(
+    @Query() query: Record<string, string>,
+    @Res() res: Response,
+    @Tenant() ctx: TenantRequest,
+  ): Promise<void> {
+    const listQuery = exportListQuery(query, query.all === 'true' || query.all === '1');
+    const { ids } = await this.svc.summaryIds(listQuery, { manager: ctx.manager, access: budgetListAccess(ctx) });
+    const { filename, content } = await this.budgetFile.exportFile('capex', ids, {
+      manager: ctx.manager as EntityManager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId || null,
+    }, {
+      language: query.language,
+      amountYears: query.amountYears,
+      columns: query.columns,
+      detail: query.detail,
+    });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', contentDisposition(filename));
+    res.send(content);
+  }
+
+  @ReadOnlyRoute()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('budget-file/preflight')
+  @HttpCode(200)
+  @UseInterceptors(BudgetFileSizeInterceptor, FileInterceptor('file', budgetFileMulterOptions))
+  preflightBudgetFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('language') language: string,
+    @Query('dateOrder') dateOrder: string,
+    @Query('createSuppliers') createSuppliers: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    if (!file?.buffer) throw new BadRequestException('Choose a CSV file.');
+    return this.budgetFile.preflight('capex', file.buffer, {
+      manager: ctx.manager as EntityManager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId || null,
+    }, {
+      language,
+      dateOrder,
+      createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
+      canCreateSuppliers: canCreateSuppliers(ctx),
+    });
   }
 
   @UseGuards(PermissionGuard)

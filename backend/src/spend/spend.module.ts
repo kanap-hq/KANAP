@@ -55,6 +55,7 @@ import { CommonModule } from '../common/common.module';
 import { CapexVersion } from '../capex/capex-version.entity';
 import { BudgetRowsCsvService } from './budget-rows-csv.service';
 import { BudgetRowsController } from './budget-rows.controller';
+import { BudgetFileModule } from './budget-file/budget-file.module';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 
 @Module({
@@ -70,6 +71,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
     StorageModule,
     NotificationsModule,
     KnowledgeModule,
+    BudgetFileModule,
   ],
   controllers: [SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController, BudgetRowsController],
   providers: [
