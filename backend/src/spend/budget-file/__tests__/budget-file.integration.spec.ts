@@ -8,13 +8,14 @@ import { EntityManager } from 'typeorm';
 import { SpendItemsService } from '../../spend-items.service';
 import { exportListQuery } from '../export-file';
 import { PREFLIGHT_STALE } from '../import-file';
-import { FLAT_PROFILE, spreadAnnualRows } from '../../amounts-write.util';
+import { FLAT_PROFILE, spreadAnnualRows, writeAmountsPayload } from '../../amounts-write.util';
+import { recordPayloadRoundInputs } from '../../round-inputs.util';
 import { toCents } from '../../../common/amount';
 import { BudgetFileService } from '../budget-file.service';
 import * as budgetList from '../../budget-list/budget-list.service';
 import { SUMMARY_SCOPES } from '../../spend-summary.builder';
 import { realSummaryDeps } from '../../__tests__/oracle/oracle-deps';
-import { noFreeze, seedItem, seedTenant, seedVersion, setItemDates, setTenant } from '../../__tests__/round-inputs.fixtures';
+import { noFreeze, seedItem, seedMonths, seedTenant, seedVersion, setItemDates, setTenant } from '../../__tests__/round-inputs.fixtures';
 import { lockTenantBudgetOperations } from '../../budget-locks';
 
 // The loader against the schema. The transaction rolls back, so this writes nothing that stays.
@@ -164,6 +165,183 @@ async function testCapexSpread(runner: { query: Function; manager: EntityManager
   );
   assert.equal('updated' in result && result.updated, 1);
   assert.equal(await amountSum(runner, 'capex_amounts', versionId), '50');
+}
+
+/**
+ * One yearly total, on a stored partial period with the other measures already
+ * filled, written once by the grouped load and once by `writeAmountsPayload`.
+ * The months, the round inputs and `budget_rev` have to match.
+ */
+async function testGroupedMatchesPayload(
+  runner: { query: Function; manager: EntityManager },
+  service: BudgetFileService,
+  audit: ReturnType<typeof dbAudit>,
+) {
+  const tenantId = await seedTenant(runner as any, 'csv-c2b-diff');
+  const year = 2026;
+  const periodStart = '2026-03-01';
+  const periodEnd = '2026-10-31';
+  const filled = {
+    committed: Array.from({ length: 12 }, (_, index) => String(10 + index)),
+    forecast: Array.from({ length: 12 }, (_, index) => String(30 + index)),
+    actual: Array.from({ length: 12 }, (_, index) => String(50 + index)),
+    expected_landing: Array.from({ length: 12 }, (_, index) => String(70 + index)),
+  };
+
+  async function seedCompared(itemNumber: number, name: string) {
+    const itemId = await seedItem(runner as any, 'opex', tenantId, itemNumber, name);
+    const versionId = await seedVersion(runner as any, 'opex', tenantId, itemId, year);
+    await seedMonths(runner as any, 'opex', tenantId, versionId, year, {
+      planned: Array.from({ length: 12 }, () => '100'),
+      ...filled,
+    });
+    await runner.query(
+      `INSERT INTO spend_round_inputs
+         (tenant_id, version_id, measure, period_start, period_end, method, spread_profile_name, last_calculation, fte)
+       VALUES
+         ($1, $2, 'planned', $3, $4, 'spread', 'flat', '{"kind":"annual","total":"1200.00"}'::jsonb, 1.50),
+         ($1, $2, 'committed', $5, $6, 'manual', NULL, NULL, NULL)`,
+      [tenantId, versionId, periodStart, periodEnd, `${year}-01-01`, `${year}-12-31`],
+    );
+    const [rev] = await runner.query(
+      `SELECT budget_rev::int AS budget_rev FROM spend_versions WHERE id = $1`,
+      [versionId],
+    );
+    return { itemId, versionId, budgetRev: rev.budget_rev as number };
+  }
+
+  const grouped = await seedCompared(1, 'Grouped');
+  const payload = await seedCompared(2, 'Payload');
+  assert.equal(grouped.budgetRev, payload.budgetRev, 'the two lines start from the same budget revision');
+
+  const caller = { manager: runner.manager, tenantId, userId: null };
+  const options = { language: 'en', dateOrder: '', createSuppliers: false, canCreateSuppliers: false };
+  const file = 'item_number,name,currency,budget_2026\nOPX-1,Grouped,EUR,2400.00\n';
+  const preflight = await service.preflight('opex', Buffer.from(file), caller, options);
+  assert.equal(preflight.ok, true, JSON.stringify({ errors: preflight.errors, file: preflight.fileErrors, header: preflight.headerErrors }));
+  assert.equal(preflight.changes.updated, 1);
+  const loaded = await service.importFile('opex', Buffer.from(file), preflight.snapshot, caller, options, {
+    items: opexItems(audit), audit, freeze: noFreeze,
+  });
+  assert.equal('updated' in loaded && loaded.updated, 1);
+  const [amountAudit] = await runner.query(
+    `SELECT before_json FROM audit_log
+      WHERE tenant_id = $1 AND table_name = 'spend_amounts' AND record_id = $2`,
+    [tenantId, grouped.versionId],
+  );
+  assert.equal(amountAudit.before_json, null, 'a stored partial period with no costed lines takes the grouped path');
+
+  const version = { id: payload.versionId, tenant_id: tenantId, budget_year: year };
+  const written = await writeAmountsPayload(
+    { manager: runner.manager, freeze: noFreeze, scope: 'opex', version },
+    {
+      kind: 'annual',
+      year,
+      totals: { planned: '2400.00' },
+      spread_profile_name: 'flat',
+      period_start: periodStart,
+      period_end: periodEnd,
+    },
+  );
+  assert.ok(written.after.length > 0, 'the amounts payload wrote the new total');
+  await recordPayloadRoundInputs(
+    { manager: runner.manager, scope: 'opex', version, userId: null, audit },
+    written,
+  );
+
+  const groupedState = await versionState(runner, grouped.versionId);
+  const payloadState = await versionState(runner, payload.versionId);
+  assert.deepEqual(payloadState, groupedState);
+  const spread = spreadAnnualRows(year, { planned: 240000n }, FLAT_PROFILE.weights, { start: periodStart, end: periodEnd });
+  assert.deepEqual(
+    groupedState.months.map((month) => month.planned),
+    spread.map((row) => row.planned),
+    'the shared spread is what both paths stored',
+  );
+  for (const measure of Object.keys(filled) as Array<keyof typeof filled>) {
+    assert.deepEqual(
+      groupedState.months.map((month) => month[measure]),
+      filled[measure].map((value) => toCents(value)),
+      `${measure} stays as it was`,
+    );
+  }
+  assert.ok(groupedState.budgetRev > grouped.budgetRev, 'the write moves budget_rev');
+  const plannedRound = groupedState.rounds.find((round) => round.measure === 'planned');
+  assert.equal(plannedRound?.fte, 1.5);
+  const committedRound = groupedState.rounds.find((round) => round.measure === 'committed');
+  assert.deepEqual(
+    [committedRound?.method, committedRound?.period_start, committedRound?.period_end, committedRound?.spread_profile_name],
+    ['manual', `${year}-01-01`, `${year}-12-31`, null],
+  );
+}
+
+interface ComparedMonth {
+  period: string;
+  planned: bigint;
+  committed: bigint;
+  forecast: bigint;
+  actual: bigint;
+  expected_landing: bigint;
+}
+
+interface ComparedRound {
+  measure: string;
+  period_start: string;
+  period_end: string;
+  method: string;
+  spread_profile_name: string | null;
+  last_calculation: unknown;
+  fte: number | null;
+}
+
+interface ComparedState {
+  months: ComparedMonth[];
+  rounds: ComparedRound[];
+  budgetRev: number;
+}
+
+async function versionState(runner: { query: Function }, versionId: string): Promise<ComparedState> {
+  const months = await runner.query(
+    `SELECT to_char(period, 'YYYY-MM-DD') AS period,
+            planned::text AS planned, committed::text AS committed, forecast::text AS forecast,
+            actual::text AS actual, expected_landing::text AS expected_landing
+       FROM spend_amounts WHERE version_id = $1 ORDER BY period`,
+    [versionId],
+  );
+  const rounds = await runner.query(
+    `SELECT measure, to_char(period_start, 'YYYY-MM-DD') AS period_start,
+            to_char(period_end, 'YYYY-MM-DD') AS period_end, method, spread_profile_name,
+            last_calculation, fte::text AS fte
+       FROM spend_round_inputs WHERE version_id = $1 ORDER BY measure`,
+    [versionId],
+  );
+  const [version] = await runner.query(
+    `SELECT budget_rev::int AS budget_rev FROM spend_versions WHERE id = $1`,
+    [versionId],
+  );
+  return {
+    months: months.map((row: { period: string; planned: string; committed: string; forecast: string; actual: string; expected_landing: string }) => ({
+      period: row.period,
+      planned: toCents(row.planned),
+      committed: toCents(row.committed),
+      forecast: toCents(row.forecast),
+      actual: toCents(row.actual),
+      expected_landing: toCents(row.expected_landing),
+    })),
+    rounds: rounds.map((row: {
+      measure: string; period_start: string; period_end: string; method: string;
+      spread_profile_name: string | null; last_calculation: unknown; fte: string | null;
+    }) => ({
+      measure: row.measure,
+      period_start: row.period_start,
+      period_end: row.period_end,
+      method: row.method,
+      spread_profile_name: row.spread_profile_name,
+      last_calculation: row.last_calculation,
+      fte: row.fte == null ? null : Number(row.fte),
+    })),
+    budgetRev: version.budget_rev as number,
+  };
 }
 
 async function testOperationRunning(
@@ -334,6 +512,7 @@ async function main() {
 
     await testCreateAndSuppliers(runner, service);
     await testCapexSpread(runner, service, audit);
+    await testGroupedMatchesPayload(runner, service, audit);
     await testOperationRunning(service, caller, loadDeps);
 
     console.log('budget-file.integration.spec: ok');
