@@ -63,7 +63,6 @@
     "workspace": {
       "unsavedNavigate": "Tiene cambios no guardados. ¿Desea guardar antes de navegar?",
       "unsavedSwitchTab": "Tiene cambios no guardados. ¿Desea guardar antes de cambiar de pestaña?",
-      "unsavedSwitchYear": "Tiene cambios no guardados. ¿Desea guardar antes de cambiar de año?",
       "itemCountOf": "{{entity}} {{current}} de {{total}}"
     },
     "messages": {
@@ -73,15 +72,9 @@
       "failedToLoadMetrics": "Error al cargar los indicadores",
       "failedToSaveMetrics": "Error al guardar los indicadores",
       "fixValidationErrors": "Corrija los errores de validación antes de guardar.",
-      "fixValidationIssues": "Corrija los problemas de validación antes de guardar.",
       "readOnlyAccess": "Necesita acceso de gestor para editar {{entity}}.",
       "metricsFrozen": "Los indicadores de {{year}} están congelados. Descongélelos desde Administración para realizar cambios.",
-      "metricsFrozenEdit": "Los indicadores están congelados para este año. Descongélelos desde Administración para editarlos.",
-      "metricsYearHint": "El guardado se aplica al año seleccionado. Cambie de año para revisar los datos históricos."
-    },
-    "validation": {
-      "nonNegativeInteger": "Introduzca un número entero no negativo",
-      "max3Decimals": "Máximo 3 decimales, no negativo"
+      "metricsYearHint": "Cada valor se guarda para el año seleccionado al salir de su campo. Cambie de año para revisar los datos anteriores."
     }
   },
   "companies": {
@@ -105,20 +98,57 @@
     "pinnedTotal": "Total",
     "export": "Exportar empresas",
     "import": "Importar empresas",
+    "previous": "Empresa anterior",
+    "next": "Empresa siguiente",
     "fields": {
-      "companyInformation": "Información de la empresa",
-      "address1": "Dirección 1",
-      "address2": "Dirección 2",
-      "postalCode": "Código postal",
-      "city": "Ciudad",
-      "state": "Provincia",
-      "regNumber": "N.º de registro",
-      "vatNumber": "N.º de IVA",
+      "name": "Nombre",
+      "country": "País",
       "baseCurrency": "Moneda base",
       "chartOfAccounts": "Plan de cuentas",
-      "searchCoA": "Buscar plan de cuentas",
+      "lifecycle": "Ciclo de vida",
+      "address1": "Dirección, línea 1",
+      "address2": "Dirección, línea 2",
+      "postalCode": "Código postal",
+      "city": "Ciudad",
+      "state": "Provincia o región",
+      "regNumber": "Número de registro",
+      "vatNumber": "Número de IVA",
+      "notes": "Notas",
+      "year": "Año",
+      "headcount": "Plantilla",
       "itUsers": "Usuarios IT",
       "turnover": "Facturación (M€)"
+    },
+    "sections": {
+      "address": "Dirección",
+      "registration": "Registro"
+    },
+    "placeholders": {
+      "name": "p. ej., Sociedad holding",
+      "country": "p. ej., Francia",
+      "baseCurrency": "p. ej., EUR",
+      "chartOfAccounts": "p. ej., COA-FR",
+      "address1": "p. ej., Calle Mayor 12",
+      "address2": "p. ej., Edificio B",
+      "postalCode": "p. ej., 28001",
+      "city": "p. ej., Madrid",
+      "state": "p. ej., Andalucía",
+      "regNumber": "p. ej., B12345678",
+      "vatNumber": "p. ej., ESB12345678",
+      "notes": "p. ej., Entidad de servicios compartidos del grupo",
+      "itUsers": "p. ej., 120",
+      "turnover": "p. ej., 12.5"
+    },
+    "messages": {
+      "saveFailed": "Error al guardar la empresa.",
+      "createFailed": "Error al crear la empresa.",
+      "nameRequired": "Introduzca un nombre.",
+      "countryRequired": "Elija un país.",
+      "currencyRequired": "Elija una moneda base.",
+      "cityRequired": "Introduzca una ciudad.",
+      "headcountInvalid": "Introduzca un número entero, 0 o más.",
+      "itUsersInvalid": "Introduzca un número entero, 0 o más, o deje el campo vacío.",
+      "turnoverInvalid": "Introduzca un número, 0 o más, con 3 decimales como máximo, o deje el campo vacío."
     }
   },
   "departments": {
@@ -670,14 +700,6 @@
     }
   },
   "formSchemas": {
-    "company": {
-      "nameRequired": "El nombre es obligatorio",
-      "countryIsoRequired": "El código ISO del país es obligatorio",
-      "countryIsoLength": "El código ISO del país debe tener 2 letras",
-      "cityRequired": "La ciudad es obligatoria",
-      "baseCurrencyRequired": "La moneda base es obligatoria",
-      "currencyCodeLength": "El código de moneda debe tener 3 letras"
-    },
     "department": {
       "companyRequired": "La empresa es obligatoria",
       "nameRequired": "El nombre es obligatorio"

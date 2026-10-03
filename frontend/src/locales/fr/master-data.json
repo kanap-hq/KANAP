@@ -63,7 +63,6 @@
     "workspace": {
       "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de naviguer ?",
       "unsavedSwitchTab": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'onglet ?",
-      "unsavedSwitchYear": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'année ?",
       "itemCountOf": "{{entity}} {{current}} sur {{total}}"
     },
     "messages": {
@@ -73,15 +72,9 @@
       "failedToLoadMetrics": "Échec du chargement des indicateurs",
       "failedToSaveMetrics": "Échec de l'enregistrement des indicateurs",
       "fixValidationErrors": "Veuillez corriger les erreurs de validation avant d'enregistrer.",
-      "fixValidationIssues": "Veuillez corriger les problèmes de validation avant d'enregistrer.",
       "readOnlyAccess": "Vous devez disposer d'un accès gestionnaire pour modifier {{entity}}.",
       "metricsFrozen": "Les indicateurs pour {{year}} sont gelés. Dégelez-les depuis l'administration pour effectuer des modifications.",
-      "metricsFrozenEdit": "Les indicateurs sont gelés pour cette année. Dégelez-les depuis l'administration pour les modifier.",
-      "metricsYearHint": "L'enregistrement s'applique à l'année sélectionnée. Changez d'année pour consulter les données historiques."
-    },
-    "validation": {
-      "nonNegativeInteger": "Saisissez un entier non négatif",
-      "max3Decimals": "3 décimales maximum, non négatif"
+      "metricsYearHint": "Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez son champ. Changez d'année pour consulter les données passées."
     }
   },
   "companies": {
@@ -105,20 +98,57 @@
     "pinnedTotal": "Total",
     "export": "Exporter les sociétés",
     "import": "Importer les sociétés",
+    "previous": "Société précédente",
+    "next": "Société suivante",
     "fields": {
-      "companyInformation": "Informations de la société",
-      "address1": "Adresse 1",
-      "address2": "Adresse 2",
-      "postalCode": "Code postal",
-      "city": "Ville",
-      "state": "Région",
-      "regNumber": "N° d'immatriculation",
-      "vatNumber": "N° de TVA",
+      "name": "Nom",
+      "country": "Pays",
       "baseCurrency": "Devise de base",
       "chartOfAccounts": "Plan comptable",
-      "searchCoA": "Rechercher un plan comptable",
+      "lifecycle": "Cycle de vie",
+      "address1": "Adresse ligne 1",
+      "address2": "Adresse ligne 2",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "state": "Région ou État",
+      "regNumber": "Numéro d'immatriculation",
+      "vatNumber": "Numéro de TVA",
+      "notes": "Notes",
+      "year": "Année",
+      "headcount": "Effectif",
       "itUsers": "Utilisateurs IT",
       "turnover": "Chiffre d'affaires (M€)"
+    },
+    "sections": {
+      "address": "Adresse",
+      "registration": "Immatriculation"
+    },
+    "placeholders": {
+      "name": "ex. Société holding",
+      "country": "ex. France",
+      "baseCurrency": "ex. EUR",
+      "chartOfAccounts": "ex. COA-FR",
+      "address1": "ex. 12 rue Principale",
+      "address2": "ex. Bâtiment B",
+      "postalCode": "ex. 75001",
+      "city": "ex. Paris",
+      "state": "ex. Bretagne",
+      "regNumber": "ex. 123 456 789",
+      "vatNumber": "ex. FR12345678901",
+      "notes": "ex. Entité de services partagés du groupe",
+      "itUsers": "ex. 120",
+      "turnover": "ex. 12.5"
+    },
+    "messages": {
+      "saveFailed": "Échec de l'enregistrement de la société.",
+      "createFailed": "Échec de la création de la société.",
+      "nameRequired": "Saisissez un nom.",
+      "countryRequired": "Choisissez un pays.",
+      "currencyRequired": "Choisissez une devise de base.",
+      "cityRequired": "Saisissez une ville.",
+      "headcountInvalid": "Saisissez un nombre entier, 0 ou plus.",
+      "itUsersInvalid": "Saisissez un nombre entier, 0 ou plus, ou laissez le champ vide.",
+      "turnoverInvalid": "Saisissez un nombre, 0 ou plus, avec 3 décimales au plus, ou laissez le champ vide."
     }
   },
   "departments": {
@@ -670,14 +700,6 @@
     }
   },
   "formSchemas": {
-    "company": {
-      "nameRequired": "Le nom est requis",
-      "countryIsoRequired": "Le code ISO du pays est requis",
-      "countryIsoLength": "Le code ISO du pays doit comporter 2 lettres",
-      "cityRequired": "La ville est requise",
-      "baseCurrencyRequired": "La devise de base est requise",
-      "currencyCodeLength": "Le code devise doit comporter 3 lettres"
-    },
     "department": {
       "companyRequired": "La société est requise",
       "nameRequired": "Le nom est requis"

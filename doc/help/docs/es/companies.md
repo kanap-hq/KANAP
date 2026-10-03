@@ -72,50 +72,60 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 ## El espacio de trabajo de la empresa
 
-Haga clic en el nombre de una empresa en la lista para abrir su espacio de trabajo. El espacio de trabajo tiene dos pestañas dispuestas verticalmente a la izquierda: **Visión general** y **Detalles**.
+Haga clic en el nombre de una empresa en la lista para abrir su espacio de trabajo. Tiene dos pestañas: **Visión general** y **Detalles**.
 
-Utilice **Anterior** / **Siguiente** para moverse entre empresas sin volver a la lista. Haga clic en **Cerrar** (X) para volver a la lista con su contexto de búsqueda intacto.
+- **Encabezado**: el nombre de la empresa. Haga clic en él para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
+- **Panel Propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo
 
-Si tiene cambios sin guardar, la aplicación le solicitará que guarde antes de cambiar de pestaña, navegar a otra empresa o cambiar de año.
+**Guardado automático**: Cada cambio se guarda por sí solo al salir del campo. No hay botones Guardar, Restablecer ni Cerrar. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, salvo para el nombre, cuyo rechazo se muestra en la parte superior de la página.
+
+---
+
+### Panel Propiedades
+
+- **País** (obligatorio): código de país ISO, búsqueda por nombre o código. Al cambiar el país, el **Plan de cuentas** también pasa al predeterminado del nuevo país, pero solo si el plan actual pertenece a otro país. Un plan de cuentas global se mantiene
+- **Moneda base** (obligatorio): código de moneda ISO, búsqueda por nombre o código
+- **Plan de cuentas**: el plan de cuentas vinculado a esta empresa (ver [Plan de cuentas](#plan-de-cuentas)). En una empresa existente puede elegir otro plan, pero no puede vaciar el campo, porque volvería el predeterminado del país
+- **Ciclo de vida**: el interruptor de estado, cuya etiqueta indica el estado actual (**Activada** o **Desactivada**), y la fecha de **Fin de validez**. Ver [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 
 ---
 
 ### Visión general
 
-La pestaña Visión general contiene la información general de la empresa.
+La pestaña Visión general contiene la dirección, los datos de registro y las notas. El nombre, el país, la moneda, el plan de cuentas y el ciclo de vida están en el encabezado y en el panel **Propiedades**.
 
 **Qué puede editar**:
 
-- **Nombre** (obligatorio): el nombre visible de la empresa
-- **País** (obligatorio): código de país ISO, búsqueda por nombre o código
-- **Plan de cuentas**: el CoA vinculado a esta empresa (ver más abajo)
-- **Dirección 1**, **Dirección 2**: líneas de dirección
-- **Código postal**: código postal / ZIP
-- **Ciudad** (obligatorio): nombre de la ciudad
-- **Estado/Provincia**: estado o provincia
-- **N.º de registro**: número de registro mercantil
-- **N.º de IVA**: número de identificación fiscal
-- **Moneda base** (obligatorio): código de moneda ISO, búsqueda por nombre o código
-- **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
+- Sección **Dirección**:
+    - **Dirección, línea 1**, **Dirección, línea 2**: líneas de dirección
+    - **Código postal**: código postal
+    - **Ciudad** (obligatorio): nombre de la ciudad. Una ciudad vacía se rechaza con «Introduzca una ciudad.»
+    - **Provincia o región**: provincia o región
+- Sección **Registro**:
+    - **Número de registro**: número de registro de la empresa
+    - **Número de IVA**: número de identificación de IVA
 - **Notas**: notas de texto libre
+
+**Crear una empresa**: **Nuevo** abre un único formulario con el nombre, **País**, **Moneda base**, **Plan de cuentas**, **Ciudad**, los demás campos de dirección, los campos de registro y **Notas**. Al elegir un país se rellena el **Plan de cuentas** por usted: el plan predeterminado del país si existe, y si no un plan global. Puede cambiarlo antes de guardar. Haga clic en **Crear** para guardar la empresa. La pestaña **Detalles** estará disponible después de crear la empresa.
 
 ---
 
 ### Detalles
 
-La pestaña Detalles gestiona las **métricas anuales**. Utilice las pestañas de año en la parte superior para alternar entre años (año actual más dos años antes y después).
+La pestaña Detalles gestiona las **métricas anuales**. Use las pestañas de año en la parte superior para cambiar de año (año en curso más dos años antes y después).
 
 **Qué puede editar**:
 
-- **Plantilla** (obligatorio): conteo total de empleados para el año, debe ser un entero no negativo
-- **Usuarios IT** (opcional): número de usuarios IT, debe ser un entero no negativo
-- **Facturación** (opcional): ingresos en millones de la moneda base de la empresa, hasta 3 decimales
+- **Plantilla** (obligatorio): número total de empleados del año, debe ser un número entero de 0 o más
+- **Usuarios IT** (opcional): número de usuarios IT, debe ser un número entero de 0 o más
+- **Facturación (M€)** (opcional): facturación en millones de la moneda base de la empresa, hasta 3 decimales
 
 **Cómo funciona**:
 
-- Cada guardado se aplica solo al año seleccionado actualmente
-- Si las métricas del año están **congeladas**, los campos son de solo lectura; descongélelos desde **Administración de datos maestros** para realizar cambios
-- Necesita `companies:manager` para editar métricas
+- Cada valor se guarda para el año seleccionado al salir del campo (o al pulsar Intro). Un valor no válido muestra un mensaje bajo el campo, por ejemplo «Introduzca un número entero, 0 o más.»
+- Cada año se guarda por separado: al cambiar de año se cargan los valores de ese año
+- Si las cifras de la empresa para el año están **congeladas**, los campos quedan bloqueados y un aviso explica que un administrador puede descongelarlas desde la **Administración de datos maestros**
+- Necesita `companies:manager` para editar las métricas
 
 ## Plan de cuentas
 
@@ -124,7 +134,9 @@ Cada empresa puede vincularse a un **Plan de cuentas** (CoA), que define el conj
 **Cómo funciona**:
 
 - Cuando crea una empresa, se asigna automáticamente al CoA predeterminado para su país (si existe). Si no existe un predeterminado para el país, se utiliza el CoA predeterminado global.
-- Puede cambiar la asignación de CoA en la pestaña **Visión general** de la empresa usando el selector de **Plan de cuentas**. El selector muestra los CoA que coinciden con el país de la empresa más cualquier CoA de alcance global.
+- Puede cambiar la asignación de CoA en el panel **Propiedades** usando el selector de **Plan de cuentas**. El selector muestra los CoA que coinciden con el país de la empresa más cualquier CoA de alcance global.
+- Cuando cambia el país de la empresa, el CoA lo sigue si el actual pertenece a otro país: pasa al predeterminado del nuevo país. Un CoA global se mantiene.
+- En una empresa existente, el CoA no se puede vaciar. Solo puede sustituirlo por otro.
 - El CoA que seleccione determina qué cuentas aparecen en el desplegable de cuentas al crear o editar partidas de gasto para esta empresa.
 
 **Qué significa para su flujo de trabajo**:
