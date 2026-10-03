@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CapexItemsService } from './capex-items.service';
 import { CapexItemsDeleteService } from './capex-items-delete.service';
@@ -23,6 +23,7 @@ import {
   ListCapexQueryInput,
 } from './dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { analyzeAfterLargeImport, lineImportTables } from '../spend/budget-import-statistics';
 
 @UseGuards(JwtAuthGuard)
 @Controller('capex-items')
@@ -369,6 +370,22 @@ export class CapexItemsController {
     return this.svc.getDetail(id, { manager: ctx.manager });
   }
 
+  /**
+   * What the workspace polls every 30 seconds to learn that someone else changed the line or its
+   * budget (plan planning/perf-scale, lot 3G; `spend/item-meta.ts`): `row_version`, each version's
+   * `budget_rev`, who and when. Same read level as the detail.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'reader')
+  @Get(':id/meta')
+  async meta(
+    @Param('id') idOrRef: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.svc.meta(id, ctx.tenantId, { manager: ctx.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('capex', 'reader')
   @Get(':id/relation-counts')
@@ -411,9 +428,13 @@ export class CapexItemsController {
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string,
     @Tenant() ctx: TenantRequest,
+    @Req() req: any,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importCsv({ file, dryRun, userId: ctx.userId || null }, { manager: ctx.manager });
+    const result = await this.svc.importCsv({ file, dryRun, userId: ctx.userId || null }, { manager: ctx.manager });
+    // A large import: committed here, then its tables analysed (budget-import-statistics.ts).
+    await analyzeAfterLargeImport(req, lineImportTables('capex'), result);
+    return result;
   }
 
   @UseGuards(PermissionGuard)

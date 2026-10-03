@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { OPEX_FINANCE_CONFIG } from './config';
 import { KanapDialogProvider } from '../design';
@@ -26,7 +26,10 @@ const YEAR = 2026;
 let plannedTotal = 1000;
 
 /** The allocation the server holds for the lines, with the signature it was read with (a test replaces it). */
-type Stored = { items: Array<{ company_id: string; department_id: string | null; allocation_pct: number }>; method: string; driver: string; base_signature: string };
+type Stored = {
+  items: Array<{ company_id: string; department_id: string | null; allocation_pct: number }>;
+  method: string; driver: string; base_signature: string; budget_rev?: number; totals?: Record<string, number>;
+};
 let stored: Stored;
 
 /** Two lines, each with a manual split between two companies. */
@@ -186,6 +189,15 @@ function conflictAnswer(signature: string) {
 }
 
 describe('AllocationsTab saves (lot 3E)', () => {
+  // The allocation was changed on 30 September: the banner names the day. Only the date is pinned.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-02T12:04:00.000Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.put.mockReset();
@@ -348,5 +360,136 @@ describe('AllocationsTab saves (lot 3E)', () => {
     expect(await flushTab(ref)).toBe(false);
     expect(await screen.findByRole('alert')).toHaveTextContent('errors:edit_conflict_unreadable');
     expect(screen.queryByRole('region')).toBeNull();
+  });
+});
+
+describe('AllocationsTab others\' changes (lot 3G)', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.put.mockReset();
+    serve();
+    stored = { ...stored, budget_rev: 7 } as Stored;
+  });
+
+  function renderWith(onBudgetRev: (year: number, rev: number | null) => void = () => undefined) {
+    const ref: React.MutableRefObject<AllocationsTabHandle | null> = { current: null };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <KanapDialogProvider>
+            <AllocationsTab ref={ref} id="item-1" year={YEAR} onYearChange={() => undefined} config={OPEX_FINANCE_CONFIG} onBudgetRev={onBudgetRev} />
+          </KanapDialogProvider>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    return ref;
+  }
+  const reload = async (ref: React.RefObject<AllocationsTabHandle>) => {
+    await act(async () => { await ref.current?.reloadFromServer(); });
+  };
+
+  it('gives the version counter it loaded, and the one its own save left', async () => {
+    const onBudgetRev = vi.fn();
+    mocked.put.mockResolvedValue({ data: { items: stored.items, method: 'manual_pct', driver: 'headcount', base_signature: 'sig-2', budget_rev: 9 } });
+    const ref = renderWith(onBudgetRev);
+    expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
+    expect(onBudgetRev).toHaveBeenLastCalledWith(YEAR, 7);
+
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(await screen.findByRole('option', { name: 'opex.allocations.manualByPct' }));
+    expect(ref.current?.isSaving()).toBe(true);
+    await act(async () => { await ref.current?.flush(); });
+    expect(onBudgetRev).toHaveBeenLastCalledWith(YEAR, 9);
+    expect(ref.current?.isSaving()).toBe(false);
+  });
+
+  it('nothing pending: a reload shows the allocation as stored now', async () => {
+    const ref = renderWith();
+    expect(await screen.findByText('600')).toBeInTheDocument();
+    expect(ref.current?.hasPending()).toBe(false);
+    stored = { ...stored, items: [{ company_id: 'c-1', department_id: null, allocation_pct: 30 }, { company_id: 'c-2', department_id: null, allocation_pct: 70 }], base_signature: 'sig-5' };
+    await reload(ref);
+    expect(await screen.findByText('300')).toBeInTheDocument();
+    expect(screen.getByText('700')).toBeInTheDocument();
+  });
+
+  it('a save answers the year\'s totals with its counter: a budget changed elsewhere since shows at once', async () => {
+    const onBudgetRev = vi.fn();
+    mocked.put.mockResolvedValue({ data: { items: stored.items, method: 'manual_pct', driver: 'headcount', base_signature: 'sig-2', budget_rev: 9, totals: { planned: 3000 } } });
+    const ref = renderWith(onBudgetRev);
+    expect(await screen.findByText('600')).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(await screen.findByRole('option', { name: 'opex.allocations.manualByPct' }));
+    await act(async () => { await ref.current?.flush(); });
+    expect(onBudgetRev).toHaveBeenLastCalledWith(YEAR, 9);
+    // 60 % of the 3 000 stored now, not of the 1 000 the tab had read.
+    expect(await screen.findByText('1 800')).toBeInTheDocument();
+    expect(screen.queryByText('600')).toBeNull();
+  });
+
+  it('the totals and the counter come from the allocation answer: no other read of the amounts', async () => {
+    stored = { ...stored, totals: { planned: 2500 } } as Stored;
+    renderWith();
+    expect(await screen.findByText('1 500')).toBeInTheDocument();
+    expect(reads(/^\/spend-versions\/v-item-1\/amounts$/)).toBe(0);
+  });
+
+  it('a copy kept from an earlier visit, older than the counter the page knows, is read again at once', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } });
+    const view = (known?: (year: number) => number | null | undefined) => (
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <KanapDialogProvider>
+            <AllocationsTab id="item-1" year={YEAR} onYearChange={() => undefined} config={OPEX_FINANCE_CONFIG} knownBudgetRev={known} />
+          </KanapDialogProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+    const first = render(view());
+    expect(await screen.findByText('600')).toBeInTheDocument();
+    first.unmount();
+    const before = reads(/^\/spend-versions\/v-item-1\/allocations$/);
+    // The Budget tab showed someone else's change meanwhile (counter 9); the copy kept says 7.
+    stored = { ...stored, budget_rev: 9, items: [{ company_id: 'c-1', department_id: null, allocation_pct: 30 }, { company_id: 'c-2', department_id: null, allocation_pct: 70 }] } as Stored;
+    render(view(() => 9));
+    await waitFor(() => expect(reads(/^\/spend-versions\/v-item-1\/allocations$/)).toBe(before + 1));
+    expect(await screen.findByText('300')).toBeInTheDocument();
+  });
+
+  it('the rows the user pinned stay pinned across their save and a reload', async () => {
+    mocked.put.mockResolvedValue({ data: { items: stored.items, method: 'manual_pct', driver: 'headcount', base_signature: 'sig-2', budget_rev: 9 } });
+    const ref = renderWith();
+    expect(await screen.findByText('600')).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(await screen.findByRole('option', { name: 'opex.allocations.manualByPct' }));
+    const pct = () => screen.getAllByRole('spinbutton') as HTMLInputElement[];
+    // Alpha pinned at 70: Beta takes the rest.
+    fireEvent.change(pct()[0], { target: { value: '70' } });
+    expect(pct()[1]).toHaveValue(30);
+    await act(async () => { await ref.current?.flush(); });
+    expect(ref.current?.hasPending()).toBe(false);
+    stored = { ...stored, method: 'manual_pct', base_signature: 'sig-3', budget_rev: 10, items: [{ company_id: 'c-1', department_id: null, allocation_pct: 70 }, { company_id: 'c-2', department_id: null, allocation_pct: 30 }] } as Stored;
+    await reload(ref);
+    // Beta changed: Alpha, still pinned, keeps its 70.
+    fireEvent.change(pct()[1], { target: { value: '40' } });
+    expect(pct()[0]).toHaveValue(70);
+  });
+
+  it('a row still being picked is pending: a reload keeps the user\'s allocation and shows the year\'s amounts as stored', async () => {
+    const ref = renderWith();
+    expect(await screen.findByText('600')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'opex.allocations.addRow' }));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    expect(ref.current?.hasPending()).toBe(true);
+
+    plannedTotal = 2000;
+    stored = { ...stored, items: [{ company_id: 'c-1', department_id: null, allocation_pct: 30 }, { company_id: 'c-2', department_id: null, allocation_pct: 70 }], base_signature: 'sig-5' };
+    await reload(ref);
+    // The user's split (60 / 40) of the year's new total; their new row is still there.
+    expect(await screen.findByText('1 200')).toBeInTheDocument();
+    expect(screen.queryByText('600')).toBeNull();
+    expect(screen.queryByText('300')).toBeNull();
+    expect(ref.current?.hasPending()).toBe(true);
   });
 });

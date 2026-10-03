@@ -20,7 +20,18 @@ import React, { useCallback, useSyncExternalStore } from 'react';
 
 export const EDIT_CONFLICT_CODE = 'edit_conflict';
 
-export type EditConflictAuthor = { id: string; name: string };
+/**
+ * Who changed a value: a user of the tenant. `name` is their first and last name, null when they
+ * have none (the screens say "a user"; never the e-mail).
+ */
+export type EditConflictAuthor = { id: string; name: string | null };
+
+/** The author of an answer (a conflict, a record's meta): a user id, with a name or none. */
+export function authorOf(value: unknown): EditConflictAuthor | null {
+  const author = value as { id?: unknown; name?: unknown } | null | undefined;
+  if (!author || typeof author !== 'object' || typeof author.id !== 'string' || author.id === '') return null;
+  return { id: author.id, name: typeof author.name === 'string' && author.name.trim() !== '' ? author.name : null };
+}
 
 export type EditConflict = {
   /** The field as the server names it: `notes`, `supplier_id`, `analytics_values.<dimension id>`. */
@@ -68,9 +79,7 @@ export function editConflictsOf(error: unknown): EditConflict[] | null {
         current: textOrNull(entry.labels?.current),
         mine: textOrNull(entry.labels?.mine),
       },
-      changed_by: entry.changed_by && typeof entry.changed_by.name === 'string' && entry.changed_by.name.trim()
-        ? { id: String(entry.changed_by.id ?? ''), name: entry.changed_by.name as string }
-        : null,
+      changed_by: authorOf(entry.changed_by),
       changed_at: textOrNull(entry.changed_at),
     }));
   return conflicts.length > 0 ? conflicts : null;

@@ -180,8 +180,10 @@ function written(body: Record<string, unknown>) {
 }
 
 /** Mocked API; `state.frozen` is read on every freeze-state fetch, so a test can freeze a column midway. */
-function setupApi({ grain, frozen = [], empty = false, noVersion = false, roundInputs, monthValues = {} }: {
+function setupApi({ grain, frozen = [], empty = false, noVersion = false, roundInputs, monthValues = {}, budgetRev }: {
   grain: Grain;
+  /** The version's counter (lot 3G), when a test reads it. */
+  budgetRev?: number;
   /** The item has no version for the year yet. */
   noVersion?: boolean;
   frozen?: FrozenColumn[];
@@ -192,7 +194,7 @@ function setupApi({ grain, frozen = [], empty = false, noVersion = false, roundI
   /** Replaces the stored value of every month for these columns. */
   monthValues?: Partial<Record<'planned' | 'committed' | 'actual' | 'expected_landing' | 'forecast', string>>;
 }) {
-  const version = { id: 'v1', input_grain: grain, budget_year: YEAR };
+  const version = { id: 'v1', input_grain: grain, budget_year: YEAR, ...(budgetRev !== undefined ? { budget_rev: budgetRev } : {}) };
   const items: ServedMonth[] = empty ? [] : Array.from({ length: 12 }, (_, i) => ({
     period: period(i + 1),
     planned: '1000',
@@ -252,7 +254,7 @@ function renderTab(
   dates: { effectiveStart?: string; endOfValidity?: string; payingCompanyCountry?: string } = {},
   config: FinanceModuleConfig = OPEX_FINANCE_CONFIG,
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-  extra: { held?: React.MutableRefObject<HeldBudgetChoices | null>; onYearChange?: (y: number) => void; availableYears?: number[] } = {},
+  extra: { held?: React.MutableRefObject<HeldBudgetChoices | null>; onYearChange?: (y: number) => void; availableYears?: number[]; onBudgetRev?: (year: number, rev: number | null) => void } = {},
 ) {
   const ref = React.createRef<BudgetTabHandle>();
   const ui = (y: number) => (
@@ -262,7 +264,7 @@ function renderTab(
           <KanapDialogProvider>
             <BudgetTab
               ref={ref} id="item-1" year={y} currency="EUR" onYearChange={extra.onYearChange ?? (() => undefined)} config={config}
-              held={extra.held} availableYears={extra.availableYears}
+              held={extra.held} availableYears={extra.availableYears} onBudgetRev={extra.onBudgetRev}
               effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity} payingCompanyCountry={dates.payingCompanyCountry}
             />
           </KanapDialogProvider>
@@ -2378,5 +2380,120 @@ describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
     // The next flush sends it again.
     expect(await flush(ref)).toBe(true);
     expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
+  });
+});
+
+describe('BudgetTab others\' changes (lot 3G)', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+  });
+
+  it('gives the version counter it loaded and the one each of its saves left, not the reload after its own save', async () => {
+    setupApi({ grain: 'monthly', budgetRev: 7 });
+    mocked.post.mockResolvedValue({ data: { updated: 1, budget_rev: 8 } });
+    const onBudgetRev = vi.fn();
+    const { ref, container } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onBudgetRev });
+    await waitForAmounts();
+    expect(onBudgetRev.mock.calls).toEqual([[YEAR, 7]]);
+
+    fireEvent.change(cell(monthCells(container), 3, 0), { target: { value: '1500' } });
+    expect(ref.current?.isSaving()).toBe(true);
+    await flush(ref);
+    await settle();
+    expect(onBudgetRev.mock.calls).toEqual([[YEAR, 7], [YEAR, 8]]);
+    expect(ref.current?.isSaving()).toBe(false);
+  });
+
+  it('a year without a version is given as none', async () => {
+    setupApi({ grain: 'monthly', noVersion: true });
+    const onBudgetRev = vi.fn();
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onBudgetRev });
+    await waitFor(() => expect(onBudgetRev).toHaveBeenCalledWith(YEAR, null));
+  });
+
+  it('pending: a cell typed and not saved, an amount typed in the spread panel; nothing once saved', async () => {
+    setupApi({ grain: 'monthly' });
+    const { ref, container } = renderTab();
+    await waitForAmounts();
+    expect(ref.current?.hasPending()).toBe(false);
+    fireEvent.change(cell(monthCells(container), 3, 0), { target: { value: '1500' } });
+    expect(ref.current?.hasPending()).toBe(true);
+    await flush(ref);
+    await settle();
+    expect(ref.current?.hasPending()).toBe(false);
+    fireEvent.change(amountField(), { target: { value: '5000' } });
+    expect(ref.current?.hasPending()).toBe(true);
+  });
+
+  it('a reload for someone else\'s change shows it; a cell typed and not saved keeps its value and its base', async () => {
+    const server = setupApi({ grain: 'monthly' });
+    const onBudgetRev = vi.fn();
+    const { ref, container } = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { onBudgetRev });
+    await waitForAmounts();
+    // The user types March's Revision (not sent yet); Marie changes April's Forecast.
+    fireEvent.change(cell(monthCells(container), 3, 1), { target: { value: '450' } });
+    server.items[3].forecast = '650';
+    changedByOthers.add(server.items);
+    await act(async () => { await ref.current?.reloadFromServer(); });
+    await settle();
+    expect(cell(monthCells(container), 4, 2)).toHaveValue('650');
+    expect(cell(monthCells(container), 3, 1)).toHaveValue('450');
+    expect(bulkCalls()).toHaveLength(0);
+    // The typed cell still goes from what the screen showed when it was typed.
+    await flush(ref);
+    expect(bulkCalls()[0][1].base).toEqual({ months: [{ period: period(3), committed: '900.00' }] });
+  });
+
+  it('a period and a distribution chosen before the amount are the user\'s: pending, kept by a reload, then written with the amount', async () => {
+    const server = setupApi({ grain: 'monthly', empty: true });
+    const { ref } = renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    await waitForAmounts();
+    expect(ref.current?.hasPending()).toBe(false);
+
+    const [, distribution] = screen.getAllByRole('combobox');
+    fireEvent.mouseDown(distribution);
+    fireEvent.click(await screen.findByRole('option', { name: 'opex.budget.profile445' }));
+    const [from] = screen.getAllByPlaceholderText('labels.datePlaceholder');
+    typeDate(from, '01/07/2026');
+    await settle();
+    // No amount yet: nothing written, the choices wait in the panel.
+    expect(bulkCalls()).toHaveLength(0);
+    expect(ref.current?.hasPending()).toBe(true);
+
+    // Someone else writes June's Forecast; the user reloads: the panel keeps the period and distribution chosen.
+    server.items.push({ period: period(6), forecast: '300' } as ServedMonth);
+    changedByOthers.add(server.items);
+    await act(async () => { await ref.current?.reloadFromServer(); });
+    await settle();
+    typeAmount('12000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1]).toMatchObject({ totals: { planned: '12000.00' }, spread_profile_name: '4-4-5', period_start: '2026-07-01' });
+  });
+
+  it('a reload that fails is not shown: it rejects, so the page does not count it as seen', async () => {
+    setupApi({ grain: 'monthly' });
+    const { ref } = renderTab();
+    await waitForAmounts();
+    const served = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === '/spend-versions/v1/amounts') throw new Error('offline');
+      return served(url, config);
+    });
+    let failure: unknown = null;
+    await act(async () => { await ref.current?.reloadFromServer().catch((error) => { failure = error; }); });
+    expect(failure).toBeInstanceOf(Error);
+  });
+
+  it('nothing typed: the spread panel follows its column\'s new total too', async () => {
+    const server = setupApi({ grain: 'monthly' });
+    const { ref } = renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(amountField()).toHaveValue('12 000'));
+    server.items.forEach((month) => { month.planned = '1100'; });
+    changedByOthers.add(server.items);
+    await act(async () => { await ref.current?.reloadFromServer(); });
+    await waitFor(() => expect(amountField()).toHaveValue('13 200'));
   });
 });

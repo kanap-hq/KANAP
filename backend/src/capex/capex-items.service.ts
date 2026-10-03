@@ -84,6 +84,7 @@ import { updateItemUnderLock } from '../spend/item-locked-update';
 import { lockBudgetVersions, lockTenantBudgetOperations } from '../spend/budget-locks';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { countItemRelations, loadItemReferences } from '../spend/item-workspace.util';
+import { readBudgetLineMeta } from '../spend/item-meta';
 
 // Accepted on import for one release, never exported: the end of validity used to be split in two dates.
 const LEGACY_CSV_HEADERS = ['effective_end'];
@@ -273,6 +274,14 @@ export class CapexItemsService {
     const found = await this.findItem(id, mg);
     const line = this.withAnalyticsValues(found, await this.loadAnalytics(mg, found));
     return { ...line, references: await loadItemReferences(mg, found) };
+  }
+
+  /** The line's meta (lot 3G, `item-meta.ts`): its freshness counters, who changed it and when. */
+  async meta(id: string, tenantId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const meta = await readBudgetLineMeta(mg, 'capex', tenantId, id);
+    if (!meta) throw new NotFoundException('CAPEX item not found');
+    return meta;
   }
 
   /** The Relations tab badge: one statement instead of one request per relation. */

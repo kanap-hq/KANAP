@@ -42,14 +42,20 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   ),
 }));
 // The drawer stands in for the pickers: each button sets one create field.
-vi.mock('./workspace/CapexPropertiesDrawer', () => ({
-  default: (props: {
+vi.mock('./workspace/CapexPropertiesDrawer', async () => {
+  // The real cost center hook, called as the drawer calls it: a tree request would show in the API calls.
+  const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
+  return { default: (props: {
+    costCenterId?: string;
     mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onAnalyticsValueChange: (axisId: string, v: string | null) => void;
-    onCostCenterChange: (v: string) => void; onRunBuildChange: (v: string) => void;
+    onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void; onRunBuildChange: (v: string) => void;
     analyticsValues: Record<string, string | null>;
-  }) => (
+  }) => {
+    useCostCenterNode(props.costCenterId || null, ((props as { references?: { cost_center?: unknown } }).references?.cost_center ?? null) as never);
+    return (
     <div
+      data-cost-center={props.costCenterId}
       data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
       data-analytics={JSON.stringify(props.analyticsValues)}
     >
@@ -60,41 +66,41 @@ vi.mock('./workspace/CapexPropertiesDrawer', () => ({
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'category-1')}>pick category</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', null)}>clear category</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-nature', 'category-2')}>pick nature value</button>
-      <button type="button" onClick={() => props.onCostCenterChange('cc-2')}>pick cost center</button>
-      <button type="button" onClick={() => props.onCostCenterChange('cc-3')}>pick third cost center</button>
-      <button type="button" onClick={() => props.onCostCenterChange('')}>clear cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-2', { id: 'cc-2', company_id: 'company-2' })}>pick cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-3', { id: 'cc-3', company_id: 'company-3' })}>pick third cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('', null)}>clear cost center</button>
       <button type="button" onClick={() => props.onRunBuildChange('run')}>pick run</button>
       <button type="button" onClick={() => props.onRunBuildChange('')}>clear run or build</button>
     </div>
-  ),
-}));
-// Two cost centers, in the second and the third company.
-vi.mock('../../hooks/useCostCenterTree', () => {
-  const node = (id: string, company_id: string) => ({
-    id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id,
-    company_name: company_id, owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null,
-    sort_order: 0, depth: 0, path: id, path_ids: [id],
-  });
-  const nodes = [node('cc-2', 'company-2'), node('cc-3', 'company-3')];
-  const tree = { ready: true, nodes, byId: new Map(nodes.map((n) => [n.id, n])), hasAny: true, descendantIds: (id: string) => new Set([id]) };
-  return { useCostCenterTree: () => tree };
+    );
+  } };
 });
-vi.mock('./workspace/CapexMetadataBar', () => ({
-  default: ({ onStatusChange }: { onStatusChange: (status: string) => void }) => (
-    <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>
-  ),
-}));
+vi.mock('./workspace/CapexMetadataBar', async () => {
+  const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
+  return {
+    default: ({ onStatusChange, costCenterId, costCenter }: {
+      onStatusChange: (status: string) => void; costCenterId?: string | null; costCenter?: { id: string } | null;
+    }) => {
+      // The budget holder's read, as the bar makes it.
+      useCostCenterNode(costCenterId ?? null, (costCenter ?? null) as never);
+      return <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>;
+    },
+  };
+});
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/finance/BudgetTab', () => ({ default: () => null }));
-// The Allocations tab stands in with its handle and the line's held choice (lot 3E).
+// The Allocations tab stands in with its handle and the line's held choice (lot 3E). It reports the
+// version counter it loaded (lot 3G).
+const allocationsStandIn = vi.hoisted(() => ({ rev: 3, reloads: 0, typed: false }));
 vi.mock('../../components/finance/AllocationsTab', async () => {
   const React = await import('react');
   type Held = { current: { lineId: string } | null };
-  const AllocationsTabStandIn = React.forwardRef(({ id, held }: { id: string; held?: Held }, ref) => {
+  const AllocationsTabStandIn = React.forwardRef(({ id, year, held, onBudgetRev }: { id: string; year: number; held?: Held; onBudgetRev?: (year: number, rev: number | null) => void }, ref) => {
     const waiting = React.useRef(held?.current?.lineId === id);
     const [, redraw] = React.useState(0);
     React.useEffect(() => {
       if (held?.current?.lineId === id) held.current = null;
+      onBudgetRev?.(year, allocationsStandIn.rev);
       return () => {
         if (held && waiting.current) held.current = { lineId: id } as never;
       };
@@ -103,8 +109,16 @@ vi.mock('../../components/finance/AllocationsTab', async () => {
       flush: async (options?: { ignoreHeld?: boolean }) => !!options?.ignoreHeld || !waiting.current,
       isDirty: () => waiting.current,
       hasWaitingChoice: () => waiting.current,
+      isSaving: () => false,
+      hasPending: () => waiting.current || allocationsStandIn.typed,
+      reloadFromServer: async () => { allocationsStandIn.reloads += 1; },
     }));
-    return <button type="button" onClick={() => { waiting.current = true; redraw((n) => n + 1); }}>allocation refused</button>;
+    return (
+      <div>
+        <button type="button" onClick={() => { waiting.current = true; redraw((n) => n + 1); }}>allocation refused</button>
+        <button type="button" onClick={() => { allocationsStandIn.typed = true; }}>allocation typed</button>
+      </div>
+    );
   });
   return { default: AllocationsTabStandIn };
 });
@@ -122,6 +136,12 @@ const mocked = api as unknown as {
 };
 
 const ITEM_ID = '11111111-2222-3333-4444-555555555555';
+
+/**
+ * The clock of the specs that say who changed what and when: the day of their `changed_at`
+ * (12:02 to 12:03 UTC), so the message reads « at HH:MM » whatever day and time zone they run in.
+ */
+const CHANGES_DAY = new Date('2026-10-02T12:04:00.000Z');
 
 // The edits a page keeps for the session (lot 3C review): each test starts without any.
 beforeEach(() => resetSharedPatchBuffers());
@@ -542,6 +562,15 @@ describe('CapexItemPage edit conflicts (lot 3C)', () => {
   // What the server holds; Marie moves the line to another cost center after the screen read it.
   const stored: Record<string, unknown> = {};
 
+  // Only the date is pinned: the timers stay real.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(CHANGES_DAY);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     mocked.get.mockReset();
     mocked.patch.mockReset();
@@ -705,5 +734,154 @@ describe('CapexItemPage edit conflicts (lot 3C)', () => {
     expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({
       title: 'common:autosave.leaveTitle', message: 'common:autosave.leaveAllocationMessage',
     }));
+  });
+});
+
+describe('CapexItemPage others\' changes (lot 3G)', () => {
+  const YEAR = new Date().getFullYear();
+  let stored: Record<string, unknown> = {};
+  let author: { id: string; name: string } | null = null;
+  let budgetRev = 3;
+  const MARIE = { id: 'marie', name: 'Marie Dupont' };
+  const metaReads = () => mocked.get.mock.calls.filter(([url]) => url === `/capex-items/${ITEM_ID}/meta`).length;
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    allocationsStandIn.rev = 3;
+    allocationsStandIn.reloads = 0;
+    allocationsStandIn.typed = false;
+    budgetRev = 3;
+    author = null;
+    stored = {
+      id: ITEM_ID, item_number: 7, description: 'New servers', paying_company_id: 'company-1', account_id: 'account-1',
+      currency: 'EUR', effective_start: '2026-01-01', notes: 'Start', row_version: 5,
+    };
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/capex-items/${ITEM_ID}`) return { data: { ...stored } };
+      if (url === `/capex-items/${ITEM_ID}/meta`) {
+        return {
+          data: {
+            id: ITEM_ID, row_version: stored.row_version, changed_by: author, changed_at: '2026-10-02T12:02:00.000Z',
+            versions: [{ id: 'v1', budget_year: YEAR, budget_rev: budgetRev, changed_by: MARIE, changed_at: '2026-10-02T12:03:00.000Z' }],
+          },
+        };
+      }
+      return { data: {} };
+    });
+    mocked.patch.mockImplementation(async (_url: string, body: Record<string, unknown>) => {
+      const { base: _base, ...patch } = body as { base?: Record<string, unknown> } & Record<string, unknown>;
+      Object.assign(stored, patch, { row_version: Number(stored.row_version) + 1 });
+      author = { id: 'me', name: 'Me' };
+      return { data: { ...stored } };
+    });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(CHANGES_DAY);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function poll() {
+    const before = metaReads();
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+    await waitFor(() => expect(metaReads()).toBe(before + 1));
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+  }
+
+  it('idle: someone else\'s change is shown in place, with who changed it; the page\'s own save says nothing', async () => {
+    renderAt(`/ops/capex/${ITEM_ID}/overview`);
+    const notes = await screen.findByDisplayValue('Start');
+    Object.assign(stored, { notes: 'Notes from Marie', row_version: 6 });
+    author = MARIE;
+    await poll();
+    await waitFor(() => expect(notes).toHaveValue('Notes from Marie'));
+    expect(screen.getByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByAt');
+
+    await waitFor(() => {
+      fireEvent.change(notes, { target: { value: 'My notes' } });
+      expect(notes).toHaveValue('My notes');
+    });
+    (document.activeElement as HTMLElement | null)?.blur();
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    await poll();
+    expect(screen.queryByTestId('others-changes-outdated')).toBeNull();
+    expect(screen.getByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByAt');
+  });
+
+  it('Allocations tab: the year\'s version moved, the tab reloads in place; a row being picked gets the badge; an allocation waiting for a choice gets neither', async () => {
+    renderAt(`/ops/capex/${ITEM_ID}/allocations`);
+    await screen.findByRole('button', { name: 'allocation refused' });
+    await waitFor(() => expect(mocked.get.mock.calls.some(([url]) => url === `/capex-items/${ITEM_ID}`)).toBe(true));
+    budgetRev = 4;
+    await poll();
+    await waitFor(() => expect(allocationsStandIn.reloads).toBe(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'allocation typed' }));
+    budgetRev = 5;
+    await poll();
+    expect(await screen.findByTestId('others-changes-outdated')).toBeInTheDocument();
+    expect(allocationsStandIn.reloads).toBe(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'allocation refused' }));
+    budgetRev = 6;
+    await poll();
+    expect(screen.queryByTestId('others-changes-outdated')).toBeNull();
+    expect(allocationsStandIn.reloads).toBe(1);
+  });
+});
+
+
+describe('CapexItemPage cost center across lines', () => {
+  const LINE_A = 'aaaaaaaa-0000-4000-8000-0000000000c1';
+  const LINE_B = 'bbbbbbbb-0000-4000-8000-0000000000c2';
+  // Each line names its cost center in the detail (`references.cost_center`).
+  const ref = (id: string, code: string) => ({
+    id, code, name: `Centre ${code}`, kind: 'cost_center', status: 'enabled',
+    company_id: 'company-1', company_name: 'Company', owner_user_id: 'user-1', owner_name: 'Ada Holder',
+  });
+  const line = (id: string, n: number, costCenter: { id: string; code: string }) => ({
+    id, item_number: n, description: `Line ${n}`, notes: '', ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium',
+    currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1',
+    cost_center_id: costCenter.id, references: { cost_center: costCenter },
+  });
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/capex-items/${LINE_A}`) return { data: line(LINE_A, 1, ref('cc-a', 'CC-A')) };
+      if (url === `/capex-items/${LINE_B}`) return { data: line(LINE_B, 2, ref('cc-b', 'CC-B')) };
+      return { data: {} };
+    });
+  });
+
+  it('opens line A then line B, each with its own cost center, without loading the tree', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router: { navigate: NavigateFunction | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = useNavigate();
+      return null;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[`/ops/capex/${LINE_A}/overview`]}>
+            <NavigateProbe />
+            <Routes>
+              <Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const shown = (id: string) => document.querySelector(`[data-mode="edit"][data-cost-center="${id}"]`);
+    await waitFor(() => expect(shown('cc-a')).not.toBeNull());
+    act(() => { router.navigate!(`/ops/capex/${LINE_B}/overview`); });
+    await waitFor(() => expect(shown('cc-b')).not.toBeNull());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/cost-centers'))).toEqual([]);
   });
 });

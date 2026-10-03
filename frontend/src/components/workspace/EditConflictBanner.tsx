@@ -56,7 +56,8 @@ const wordingKey = (wording: ConflictWording, key: string) => (wording === 'fiel
 
 const timeFormatters = new Map<string, Intl.DateTimeFormat>();
 
-function formatTime(date: Date, locale: string): string {
+/** HH:MM in the user's locale (also the "changed elsewhere" notice's, `OthersChangesNotice`). */
+export function formatTime(date: Date, locale: string): string {
   let formatter = timeFormatters.get(locale);
   if (!formatter) {
     formatter = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
@@ -65,7 +66,8 @@ function formatTime(date: Date, locale: string): string {
   return formatter.format(date);
 }
 
-function sameDay(a: Date, b: Date): boolean {
+/** The same calendar day, in the browser's time zone. */
+export function sameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
@@ -83,7 +85,8 @@ export function conflictMessage(
 ): string {
   const key = (name: string) => `common:${wordingKey(wording, name)}`;
   const self = !!currentUserId && conflict.changed_by?.id === currentUserId;
-  const name = conflict.changed_by?.name;
+  // A user without a name is "a user" (names only, never the e-mail).
+  const name = conflict.changed_by ? conflict.changed_by.name || t('common:editConflict.aUser') : null;
   const at = conflict.changed_at ? new Date(conflict.changed_at) : null;
   const when = at && !Number.isNaN(at.getTime()) ? at : null;
   const time = when ? formatTime(when, locale) : '';

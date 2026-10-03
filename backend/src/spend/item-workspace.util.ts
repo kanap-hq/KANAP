@@ -1,12 +1,15 @@
 import { EntityManager } from 'typeorm';
+import { deriveStatusFromDisabledAt, StatusState } from '../common/status';
+import type { CostCenterKind } from '../cost-centers/cost-center.entity';
 import { AmountScope } from './amounts-write.util';
 
 /**
  * What the OPEX and CAPEX workspaces read besides the line itself, in one
  * statement each instead of one request per picker or per relation:
  * - the labels of the line's references, so the pickers show the chosen
- *   supplier, company, account and owners without loading their lists (and a
- *   member without access to the users page sees the owners' names);
+ *   supplier, company, account, owners and cost center without loading their
+ *   lists (and a member without access to the users page sees the owners'
+ *   names; the cost center brings its company and budget holder);
  * - the number of each relation, for the Relations tab badge.
  * Every statement carries the line's tenant besides RLS.
  */
@@ -36,9 +39,23 @@ export type ItemReferenceIds = {
   account_id?: string | null;
   owner_it_id?: string | null;
   owner_business_id?: string | null;
+  cost_center_id?: string | null;
 };
 
 type UserLabel = { id: string; first_name: string | null; last_name: string | null; email: string | null };
+
+/** The line's cost center as a node of the tree reads (`cost-center-tree.util.ts`): effective status, owner name. */
+export type CostCenterReference = {
+  id: string;
+  code: string;
+  name: string;
+  kind: CostCenterKind;
+  status: 'enabled' | 'disabled';
+  company_id: string | null;
+  company_name: string | null;
+  owner_user_id: string | null;
+  owner_name: string | null;
+};
 
 /** The picker options of the line's references (the shapes of the lookups in common/lookup). */
 export type ItemReferences = {
@@ -47,6 +64,7 @@ export type ItemReferences = {
   account: { id: string; account_number: number; account_name: string; description: string | null; coa_id: string | null } | null;
   owner_it: UserLabel | null;
   owner_business: UserLabel | null;
+  cost_center: CostCenterReference | null;
 };
 
 // The email only for a person without a name, as the user lookup returns it.
@@ -65,7 +83,16 @@ export async function loadItemReferences(manager: EntityManager, item: ItemRefer
                                  'description', a.description, 'coa_id', a.coa_id)
           FROM accounts a WHERE a.tenant_id = $1 AND a.id = $4) AS account,
        (SELECT ${userJson('u')} FROM users u WHERE u.tenant_id = $1 AND u.id = $5) AS owner_it,
-       (SELECT ${userJson('u')} FROM users u WHERE u.tenant_id = $1 AND u.id = $6) AS owner_business`,
+       (SELECT ${userJson('u')} FROM users u WHERE u.tenant_id = $1 AND u.id = $6) AS owner_business,
+       (SELECT json_build_object('id', cc.id, 'code', cc.code, 'name', cc.name, 'kind', cc.kind,
+                                 'disabled_at', cc.disabled_at, 'company_id', cc.company_id, 'company_name', c.name,
+                                 'owner_user_id', cc.owner_user_id,
+                                 'owner_name', CASE WHEN u.id IS NULL THEN NULL
+                                   ELSE COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) END)
+          FROM cost_centers cc
+          LEFT JOIN companies c ON c.tenant_id = cc.tenant_id AND c.id = cc.company_id
+          LEFT JOIN users u ON u.tenant_id = cc.tenant_id AND u.id = cc.owner_user_id
+         WHERE cc.tenant_id = $1 AND cc.id = $7) AS cost_center`,
     [
       item.tenant_id,
       item.supplier_id ?? null,
@@ -73,6 +100,7 @@ export async function loadItemReferences(manager: EntityManager, item: ItemRefer
       item.account_id ?? null,
       item.owner_it_id ?? null,
       item.owner_business_id ?? null,
+      item.cost_center_id ?? null,
     ],
   );
   return {
@@ -81,6 +109,22 @@ export async function loadItemReferences(manager: EntityManager, item: ItemRefer
     account: row?.account ? { ...row.account, account_number: Number(row.account.account_number) } : null,
     owner_it: row?.owner_it ?? null,
     owner_business: row?.owner_business ?? null,
+    cost_center: row?.cost_center ? costCenterReference(row.cost_center) : null,
+  };
+}
+
+function costCenterReference(raw: Record<string, any>): CostCenterReference {
+  return {
+    id: raw.id,
+    code: raw.code,
+    name: raw.name,
+    kind: raw.kind,
+    // The status the tree shows: a node past its end of validity reads as disabled.
+    status: deriveStatusFromDisabledAt(raw.disabled_at) === StatusState.DISABLED ? 'disabled' : 'enabled',
+    company_id: raw.company_id ?? null,
+    company_name: raw.company_name ?? null,
+    owner_user_id: raw.owner_user_id ?? null,
+    owner_name: raw.owner_name ?? null,
   };
 }
 

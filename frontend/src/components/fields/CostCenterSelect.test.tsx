@@ -6,7 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import type { CostCenterNode } from '../../services/costCenters';
 
-const treeState = vi.hoisted(() => ({ nodes: [] as unknown[], isError: false }));
+// `requested`: the `enabled` of every read of the tree; a disabled read gets nothing, as a tree never loaded.
+const treeState = vi.hoisted(() => ({ nodes: [] as unknown[], isError: false, pending: false, requested: [] as boolean[] }));
 const auth = vi.hoisted(() => ({ canCreate: true }));
 
 vi.mock('react-i18next', () => ({
@@ -19,7 +20,13 @@ vi.mock('../../hooks/useCostCenterTree', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useCostCenterTree')>();
   return {
     ...actual,
-    useCostCenterTree: () => actual.buildCostCenterTree(treeState.nodes as CostCenterNode[], true, treeState.isError),
+    useCostCenterTree: (options?: { enabled?: boolean }) => {
+      const enabled = options?.enabled ?? true;
+      treeState.requested.push(enabled);
+      return enabled && !treeState.pending
+        ? actual.buildCostCenterTree(treeState.nodes as CostCenterNode[], true, treeState.isError)
+        : actual.buildCostCenterTree([], false);
+    },
   };
 });
 
@@ -84,6 +91,8 @@ describe('CostCenterSelect', () => {
   beforeEach(() => {
     treeState.nodes = NODES;
     treeState.isError = false;
+    treeState.requested = [];
+    treeState.pending = false;
     auth.canCreate = true;
   });
 
@@ -192,5 +201,62 @@ describe('CostCenterSelect', () => {
     open(input);
     expect(screen.getByText('selects.costCentersLoadFailed')).toBeInTheDocument();
     expect(screen.queryByText('selects.noCostCenterYet')).toBeNull();
+  });
+
+  it('loads nothing until the list is opened', () => {
+    const { input } = renderSelect();
+    expect(treeState.requested.every((enabled) => !enabled)).toBe(true);
+    open(input);
+    expect(treeState.requested[treeState.requested.length - 1]).toBe(true);
+    expect(shownIds()).toEqual(['it', 'it-100', 'it-200', 'grp', 'grp-fr', 'lg-10']);
+  });
+
+  it('shows a value the caller names without the tree, then the tree once opened', () => {
+    const known = {
+      id: 'it-100', code: 'IT-100', name: 'Infrastructure', kind: 'cost_center' as const, status: 'enabled' as const,
+      company_id: 'company-1', company_name: 'Company one', owner_user_id: null, owner_name: null,
+    };
+    const { input } = renderSelect({ value: 'it-100', selectedOption: known });
+    expect(input).toHaveValue('IT-100 · Infrastructure');
+    expect(treeState.requested.every((enabled) => !enabled)).toBe(true);
+    open(input);
+    expect(treeState.requested[treeState.requested.length - 1]).toBe(true);
+    expect(option('it-100')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('loads the tree to name a value the caller does not know', () => {
+    const { input } = renderSelect({
+      value: 'lg-10',
+      // Another node: the caller's label is not this value's.
+      selectedOption: { id: 'it-100', code: 'IT-100', name: 'Infrastructure', kind: 'cost_center', status: 'enabled', company_id: null, company_name: null, owner_user_id: null, owner_name: null },
+    });
+    expect(treeState.requested).toContain(true);
+    expect(input).toHaveValue('LG-10 · Logistics IT');
+  });
+
+  it('keeps the text typed while the tree loads', () => {
+    treeState.pending = true;
+    const known = {
+      id: 'it-100', code: 'IT-100', name: 'Infrastructure', kind: 'cost_center' as const, status: 'enabled' as const,
+      company_id: 'company-1', company_name: 'Company one', owner_user_id: null, owner_name: null,
+    };
+    const ui = () => (
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>
+          <CostCenterSelect value="it-100" selectedOption={known} onChange={vi.fn()} />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+    const view = render(ui());
+    const input = screen.getByRole('combobox');
+    input.focus();
+    open(input);
+    fireEvent.change(input, { target: { value: 'Logis' } });
+    expect(input).toHaveValue('Logis');
+    // The tree answers: the value is the same node, the typed text stays and filters.
+    treeState.pending = false;
+    view.rerender(ui());
+    expect(input).toHaveValue('Logis');
+    expect(shownIds()).toEqual(['lg-10']);
   });
 });

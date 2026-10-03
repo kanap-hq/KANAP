@@ -18,6 +18,8 @@ import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
 import { ConflictChoice, EditConflict, conflictCompanions, useEditConflicts, useOtherConflictTargets } from '../../hooks/editConflicts';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 import EditConflictBanner, { OtherConflictsNotice } from '../../components/workspace/EditConflictBanner';
+import OthersChangesNotice from '../../components/workspace/OthersChangesNotice';
+import { useLineOthersChanges } from '../../components/finance/useLineOthersChanges';
 import { useAuth } from '../../auth/AuthContext';
 import { PRIMARY_SCROLL_ATTR } from '../../components/appScroll';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
@@ -34,7 +36,6 @@ import SendLinkButton from '../../components/workspace/SendLinkButton';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import CapexMetadataBar, { CapexPriority } from './workspace/CapexMetadataBar';
 import CapexPropertiesDrawer, { CapexInvestmentType, CapexPpeType, RunBuild } from './workspace/CapexPropertiesDrawer';
-import { useCostCenterTree } from '../../hooks/useCostCenterTree';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
@@ -46,8 +47,9 @@ import { fetchCapexRelationsCount } from '../../utils/workspaceTabCounts';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { isoToLocalDateInput } from '../../lib/datetime';
-import { analyticsValueOptions, itemReferences, ownerName } from '../../components/finance/itemReferences';
+import { analyticsValueOptions, itemReferences, matching, ownerName } from '../../components/finance/itemReferences';
 import type { ItemAnalyticsValue } from '../../services/analytics';
+import type { CostCenterNode } from '../../services/costCenters';
 
 /** The list this workspace belongs to (its saved list contexts). */
 
@@ -261,10 +263,16 @@ export default function CapexItemPage() {
   const isCreate = idParam === 'new';
   const routeTab: TabKey = TAB_KEYS.includes(params.tab as TabKey) ? (params.tab as TabKey) : 'overview';
 
-  const { data, error, isPlaceholderData } = useQuery({
+  // What others changed (lot 3G): set once the page's parts are known, below.
+  const othersPendingRef = React.useRef<() => boolean>(() => false);
+  const noteRowVersionRef = React.useRef<(lineId: string, rowVersion: unknown) => void>(() => undefined);
+  const { data, error, isPlaceholderData, isFetchedAfterMount, isStale } = useQuery({
     // Shared with the neighbours' prefetch (previous / next show at once).
     ...capexDetailQuery(idParam),
     enabled: !isCreate,
+    // Back on the tab, the line is read again when it is stale, unless something of the user is
+    // pending (lot 3G): the poll below then says it changed elsewhere instead.
+    refetchOnWindowFocus: () => !othersPendingRef.current(),
     placeholderData: (previousData) => previousData,
   });
   const stale = isPlaceholderData;
@@ -327,15 +335,14 @@ export default function CapexItemPage() {
   // A cost center picked while the paying company is empty brings its company, so the
   // account picker opens on that company's chart of accounts. The company keeps following
   // the cost center until the user picks a company or an account.
-  const costCenterTree = useCostCenterTree();
-  const pickCreateCostCenter = React.useCallback((costCenterId: string) => {
-    const companyId = costCenterId ? costCenterTree.byId.get(costCenterId)?.company_id : null;
+  const pickCreateCostCenter = React.useCallback((costCenterId: string, node: CostCenterNode | null) => {
+    const companyId = costCenterId ? node?.company_id : null;
     const follow = !!companyId && (
       !createForm.paying_company_id || (createCompanyFromCostCenter && !createForm.account_id)
     );
     updateCreateForm({ cost_center_id: costCenterId, ...(follow && companyId ? { paying_company_id: companyId } : {}) });
     if (follow) setCreateCompanyFromCostCenter(true);
-  }, [costCenterTree, createCompanyFromCostCenter, createForm.account_id, createForm.paying_company_id, updateCreateForm]);
+  }, [createCompanyFromCostCenter, createForm.account_id, createForm.paying_company_id, updateCreateForm]);
 
   const [createAccountCoaId, setCreateAccountCoaId] = React.useState<string | null>(null);
   const [createCompanyCoaId, setCreateCompanyCoaId] = React.useState<string | null>(null);
@@ -500,7 +507,9 @@ export default function CapexItemPage() {
     async (lineId, patch, base) => {
       const body = normalizePatch({ ...patch });
       const baseBody = normalizePatch({ ...base });
-      await api.patch(`/capex-items/${lineId}`, Object.keys(baseBody).length > 0 ? { ...body, base: baseBody } : body);
+      const res = await api.patch(`/capex-items/${lineId}`, Object.keys(baseBody).length > 0 ? { ...body, base: baseBody } : body);
+      // The counter this save left: not someone else's change (lot 3G).
+      noteRowVersionRef.current(lineId, res?.data?.row_version);
     },
     {
       onSaved: async (lineId) => {
@@ -669,6 +678,45 @@ export default function CapexItemPage() {
     if (routeTab === 'relations') return relationsRef.current;
     return null;
   }, [routeTab]);
+
+  // ----- What others changed (lot 3G): the line, and the year's version on Budget and Allocations -----
+  const others = useLineOthersChanges({
+    itemsApi: '/capex-items',
+    lineId: !isCreate && !stale ? uuid ?? null : null,
+    // The counter the page starts from: a copy read since the page shows the line, or a fresh one
+    // (a copy kept from an earlier visit is read again first: a change made meanwhile is not said).
+    rowVersion: isFetchedAfterMount || !isStale ? data?.row_version : undefined,
+    tab: routeTab,
+    year: currentYear,
+    root: rootRef,
+    lineSaving: autosave.isSaving,
+    linePending: () => !!uuidRef.current && (!!patchBuffer.held(uuidRef.current) || patchBuffer.conflictsOf(uuidRef.current).length > 0),
+    budget: budgetRef,
+    allocations: allocRef,
+    heldChoices,
+    otherTabDirty: () => !!activeRefEditor()?.isDirty?.(),
+    // The detail again, unless a refetch (window focus) already brought that counter. A read that
+    // fails rejects: nothing was shown, the counter stays for the next poll.
+    refreshLine: async (rowVersion) => {
+      const lineId = uuidRef.current;
+      const shown = Number(dataRef.current?.row_version);
+      if (!lineId || (rowVersion !== null && Number.isFinite(shown) && shown >= rowVersion)) return;
+      await queryClient.invalidateQueries({
+        queryKey: ['capex'],
+        predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === lineId,
+      }, { throwOnError: true });
+    },
+  });
+  othersPendingRef.current = others.hasPending;
+  noteRowVersionRef.current = others.noteRowVersion;
+  const noteBudgetRev = React.useCallback((year: number, rev: number | null) => {
+    if (uuid) others.noteBudgetRev(uuid, year, rev);
+  }, [uuid, others]);
+  const knownBudgetRev = React.useCallback((year: number) => (uuid ? others.knownBudgetRev(uuid, year) : undefined), [uuid, others]);
+  // A conflict banner of the line already says someone else changed it: no mark beside it.
+  const conflictBannerShown = conflicts.length > 0
+    || (routeTab === 'budget' && (budgetRef.current?.waitingColumns().length ?? 0) > 0)
+    || (routeTab === 'allocations' && !!allocRef.current?.hasWaitingChoice());
 
   // The Budget and Allocations choices waiting on this line: the tab shown answers, a tab left
   // meanwhile kept its choice in `heldChoices` (lots 3D, 3E).
@@ -857,6 +905,10 @@ export default function CapexItemPage() {
 
   // Labels of the line's references, from the detail: the pickers and the owners show them without any request.
   const references = React.useMemo(() => itemReferences(data), [data]);
+  // The cost center shown with that reference, read from the same line: on a line switch the detail
+  // is the new line's one render before the form follows, and the old line's id would not match the
+  // new reference (the pickers would then load the tree to name it).
+  const shownCostCenterId = data?.id && form.id !== data.id ? (data.cost_center_id || '') : form.cost_center_id;
   const analyticsOptions = React.useMemo(() => analyticsValueOptions(data), [data]);
 
   const reference = data?.item_number ? formatItemRef('capex', data.item_number) : null;
@@ -945,7 +997,8 @@ export default function CapexItemPage() {
             priority={form.priority}
             ownerItId={form.owner_it_id || null}
             ownerBizId={form.owner_business_id || null}
-            costCenterId={form.cost_center_id || null}
+            costCenterId={shownCostCenterId || null}
+            costCenter={matching(references.cost_center, shownCostCenterId)}
             onStatusChange={handleStatusChange}
             onPriorityChange={(v) => void patchNow({ priority: v })}
             onOwnerItChange={(v) => void patchNow({ owner_it_id: (v || '') as string })}
@@ -954,6 +1007,16 @@ export default function CapexItemPage() {
         ) : undefined}
         actions={(
           <>
+            {!isCreate && (
+              <OthersChangesNotice
+                notice={others.notice}
+                gone={others.gone}
+                outdated={conflictBannerShown ? null : others.outdated}
+                reloading={others.reloading}
+                onReload={() => { void others.reload(); }}
+                currentUserId={profile?.id ?? null}
+              />
+            )}
             {savingHint && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>
                 {savingHint}
@@ -1029,7 +1092,7 @@ export default function CapexItemPage() {
             investmentType={form.investment_type}
             priority={form.priority}
             analyticsValues={form.analytics_values}
-            costCenterId={form.cost_center_id}
+            costCenterId={shownCostCenterId}
             runBuild={form.run_build}
             effectiveStart={form.effective_start}
             status={form.status}
@@ -1093,10 +1156,10 @@ export default function CapexItemPage() {
         <WorkspaceTabBoundary resetKey={routeTab} onRetry={retryTabs}>
           <React.Suspense fallback={null}>
             {routeTab === 'budget' && !isCreate && uuid && (
-              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={CAPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} ref={budgetRef} />
+              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={CAPEX_FINANCE_CONFIG} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} onBudgetRev={noteBudgetRev} ref={budgetRef} />
             )}
             {routeTab === 'allocations' && !isCreate && uuid && (
-              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={CAPEX_FINANCE_CONFIG} held={heldChoices.allocation} ref={allocRef} />
+              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={CAPEX_FINANCE_CONFIG} held={heldChoices.allocation} onBudgetRev={noteBudgetRev} knownBudgetRev={knownBudgetRev} ref={allocRef} />
             )}
             {routeTab === 'relations' && !isCreate && uuid && (
               <RelationsPanel key={uuid} id={uuid} ref={relationsRef} autoSave onRelationsChange={() => { void relationsCountQuery.refetch(); }} />

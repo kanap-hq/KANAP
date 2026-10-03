@@ -42,6 +42,7 @@ import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attac
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { countItemRelations, loadItemReferences } from './item-workspace.util';
+import { readBudgetLineMeta } from './item-meta';
 
 @Injectable()
 export class SpendItemsService {
@@ -163,6 +164,14 @@ export class SpendItemsService {
     const item = await this.findItem(id, mg);
     const line = await this.withAnalytics(mg, item);
     return { ...line, references: await loadItemReferences(mg, item) };
+  }
+
+  /** The line's meta (lot 3G, `item-meta.ts`): its freshness counters, who changed it and when. */
+  async meta(id: string, tenantId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const meta = await readBudgetLineMeta(mg, 'opex', tenantId, id);
+    if (!meta) throw new NotFoundException('Spend item not found');
+    return meta;
   }
 
   /** The Relations tab badge: one statement instead of one request per relation. */

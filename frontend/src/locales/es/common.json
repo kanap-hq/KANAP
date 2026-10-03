@@ -651,6 +651,7 @@
     "changedByYouAt": "Usted modificó este campo en otra ventana a las {{time}}.",
     "changedByYouOn": "Usted modificó este campo en otra ventana el {{date}} a las {{time}}.",
     "changedByYou": "Usted modificó este campo en otra ventana.",
+    "aUser": "Un usuario",
     "theirValue": "Valor de la otra persona",
     "yourValue": "Mi valor",
     "keepTheirs": "Conservar el otro valor",
@@ -700,5 +701,21 @@
       "yearChange": "Otra persona modificó la asignación mientras usted la editaba, y no ha elegido cuál conservar. Cambiar de año de todos modos y perder su asignación, o quedarse y elegir."
     },
     "yearChangeConfirm": "Cambiar de año"
+  },
+  "othersChanges": {
+    "changedByAt": "Modificado por {{name}} a las {{time}}",
+    "changedByOn": "Modificado por {{name}} el {{date}} a las {{time}}",
+    "changedBy": "Modificado por {{name}}",
+    "changedAt": "Modificado en otro lugar a las {{time}}",
+    "changedOn": "Modificado en otro lugar el {{date}} a las {{time}}",
+    "changed": "Modificado en otro lugar",
+    "changedByYouAt": "Usted modificó esta partida en otro lugar a las {{time}}",
+    "changedByYouOn": "Usted modificó esta partida en otro lugar el {{date}} a las {{time}}",
+    "changedByYou": "Usted modificó esta partida en otro lugar",
+    "aUser": "un usuario",
+    "badge": "Modificado en otro lugar",
+    "reload": "Recargar",
+    "reloadHint": "Recargar muestra estos cambios. Lo que está modificando se queda en pantalla.",
+    "deleted": "Esta partida se ha eliminado"
   }
 }

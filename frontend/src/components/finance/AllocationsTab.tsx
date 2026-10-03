@@ -99,6 +99,15 @@ export type AllocationsTabHandle = {
   isDirty: () => boolean;
   /** True while the allocation waits for the user's choice (for the leave warning). */
   hasWaitingChoice: () => boolean;
+  /** A save is on its way or about to go (lot 3G: no read of what others changed meanwhile). */
+  isSaving: () => boolean;
+  /** An edit not saved yet, a choice waiting, a row still being picked: a refresh must not move them. */
+  hasPending: () => boolean;
+  /**
+   * Shows the allocation as stored now (someone else changed it, lot 3G). With an edit pending, only
+   * the year's amounts: the user's allocation stays, and meets the conflict check when it is saved.
+   */
+  reloadFromServer: () => Promise<void>;
 };
 
 type Props = {
@@ -110,12 +119,16 @@ type Props = {
   config: FinanceModuleConfig;
   /** The line's choice kept by the item page while the user is on another tab (`heldChoices.ts`). */
   held?: React.MutableRefObject<HeldAllocationChoice | null>;
+  /** The version counter of a year as this tab loaded or wrote it (null: no version), lot 3G. */
+  onBudgetRev?: (year: number, budgetRev: number | null) => void;
+  /** The counter the item page knows for a year: a cached copy older than it is read again. */
+  knownBudgetRev?: (year: number) => number | null | undefined;
 };
 
 type Method = 'default' | 'headcount' | 'it_users' | 'turnover' | 'manual_company' | 'manual_department' | 'manual_pct';
 type Driver = 'headcount' | 'it_users' | 'turnover';
 const METHODS: Method[] = ['default', 'headcount', 'it_users', 'turnover', 'manual_company', 'manual_department', 'manual_pct'];
-type Version = { id: string; budget_year?: number; allocation_method?: Method; allocation_driver?: Driver };
+type Version = { id: string; budget_year?: number; allocation_method?: Method; allocation_driver?: Driver; budget_rev?: number };
 type Row = { company_id: string | null; department_id: string | null; allocation_pct: number; pinned?: boolean };
 type Company = { id: string; name: string; headcount_year?: number; it_users_year?: number; turnover_year?: number };
 type Department = { id: string; name: string; company_id: string };
@@ -127,9 +140,15 @@ type YearTotals = Partial<Record<AmountMeasure, number | string>>;
  * is what a save sends back as `base_signature` (plan planning/perf-scale, lot 3E): read with the
  * method and driver shown, so a save started from them is refused when someone else changed them.
  */
-type AllocationsSnapshot = { version: Version | null; computed: ComputedItem[]; totals: YearTotals; signature: string | null };
-/** `GET` and `PUT …/allocations`: the distribution, the stored method and driver, and the signature they were read with. */
-type AllocationsAnswer = { items?: ComputedItem[]; method?: Method; driver?: Driver; base_signature?: string | null };
+type AllocationsSnapshot = { version: Version | null; computed: ComputedItem[]; totals: YearTotals; signature: string | null; budgetRev: number | null };
+/**
+ * `GET` and `PUT …/allocations`: the distribution, the stored method and driver, and the signature
+ * and version counter (lot 3G) they were read with, then the year's totals (read after the counter,
+ * so never older than it).
+ */
+type AllocationsAnswer = {
+  items?: ComputedItem[]; method?: Method; driver?: Driver; base_signature?: string | null; budget_rev?: number | null; totals?: YearTotals;
+};
 
 /**
  * The signature of an allocation nobody touched (default method, head count, no row): the base of a
@@ -157,13 +176,18 @@ const ORGANISATION_STALE_MS = 5 * 60_000;
 async function fetchAllocationsSnapshot(config: FinanceModuleConfig, id: string, year: number, signal?: AbortSignal): Promise<AllocationsSnapshot> {
   const versRes = await api.get<Version[]>(`${config.itemsApi}/${id}/versions`, { signal });
   const version = (versRes.data || []).find((vv) => Number(vv.budget_year) === year) || null;
-  if (!version) return { version: null, computed: [], totals: {}, signature: UNTOUCHED_ALLOCATION_SIGNATURE };
-  const [answer, totals] = await Promise.all([
-    api.get<AllocationsAnswer>(`${config.versionsApi}/${version.id}/allocations`, { signal }).then((r) => r.data ?? {}),
-    api.get<{ totals?: YearTotals }>(`${config.versionsApi}/${version.id}/amounts`, { params: { year }, signal })
-      .then((r) => r.data?.totals ?? {}).catch(() => ({} as YearTotals)),
-  ]);
-  return { version: withStored(version, answer), computed: answer.items || [], totals, signature: answer.base_signature ?? null };
+  if (!version) return { version: null, computed: [], totals: {}, signature: UNTOUCHED_ALLOCATION_SIGNATURE, budgetRev: null };
+  const answer = (await api.get<AllocationsAnswer>(`${config.versionsApi}/${version.id}/allocations`, { signal })).data ?? {};
+  // The totals and the counter come from the same answer (lot 3G): what the tab knows is never newer than what it shows.
+  const totals = answer.totals ?? await api.get<{ totals?: YearTotals }>(`${config.versionsApi}/${version.id}/amounts`, { params: { year }, signal })
+    .then((r) => r.data?.totals ?? {}).catch(() => ({} as YearTotals));
+  return {
+    version: withStored(version, answer),
+    computed: answer.items || [],
+    totals,
+    signature: answer.base_signature ?? null,
+    budgetRev: answer.budget_rev ?? version.budget_rev ?? null,
+  };
 }
 
 /** The version with the method and driver an allocations answer read with its signature. */
@@ -177,13 +201,16 @@ function withStored(version: Version, answer: AllocationsAnswer): Version {
 const keyOf = (companyId: string | null, departmentId: string | null) => `${companyId ?? ''}|${departmentId ?? ''}`;
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config, held }, ref) {
+export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config, held, onBudgetRev, knownBudgetRev }, ref) {
   const { t } = useTranslation(['ops', 'common']);
   const { defaultColumn } = useBudgetColumns();
   const { profile } = useAuth();
   const dialogs = useKanapDialogs();
 
   const queryClient = useQueryClient();
+  // The counters this tab loaded or wrote (lot 3G).
+  const onBudgetRevRef = React.useRef(onBudgetRev); onBudgetRevRef.current = onBudgetRev;
+  const noteRev = (forYear: number, rev: number | null | undefined) => { if (rev !== undefined) onBudgetRevRef.current?.(forYear, rev); };
   const [error, setError] = React.useState<string | null>(null);
   const [version, setVersion] = React.useState<Version | null>(null);
   const [method, setMethod] = React.useState<Method>('default');
@@ -282,7 +309,10 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
       version_name: `Y${year}`, budget_year: year, as_of_date: `${year}-01-01`, input_grain: 'annual', notes: null,
     });
     setVersion(created.data);
+    noteRev(year, created.data?.budget_rev);
     return created.data;
+    // noteRev only reads a ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, year]);
 
   // The stored distribution after a write; the cache follows, so the tab shows it when it comes back.
@@ -299,9 +329,18 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     // The next save starts from what this one stored.
     baseSignatureRef.current = answer.base_signature ?? null;
     const previous = queryClient.getQueryData<AllocationsSnapshot>(snapshotKey);
-    const next: AllocationsSnapshot = { version, computed: items, totals: previous?.totals ?? {}, signature: baseSignatureRef.current };
-    writtenSnapshotRef.current = next;
-    queryClient.setQueryData<AllocationsSnapshot>(snapshotKey, next);
+    const budgetRev = answer.budget_rev ?? null;
+    // The year's totals as stored with that counter: a budget change made elsewhere since the tab read
+    // them shows here, never hidden behind the save's newer counter (lot 3G).
+    const totals = answer.totals ?? previous?.totals ?? {};
+    if (answer.totals) setYearTotals(answer.totals);
+    const next: AllocationsSnapshot = { version, computed: items, totals, signature: baseSignatureRef.current, budgetRev };
+    // The object the cache keeps (React Query shares the parts equal to the copy before): the
+    // snapshot effect then knows the tab already shows it, and the rows keep their pins.
+    writtenSnapshotRef.current = queryClient.setQueryData<AllocationsSnapshot>(snapshotKey, next) ?? next;
+    noteRev(yearRef.current, budgetRev);
+    // noteRev only reads a ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, snapshotKey]);
 
   // The loaded allocation becomes the tab's state, unless an edit is waiting to be saved (it is newer).
@@ -311,6 +350,8 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   const applySnapshot = React.useCallback((loaded: AllocationsSnapshot) => {
     const v = loaded.version;
     setVersion(v);
+    // What the screen now shows: the counter the item page compares with (lot 3G).
+    noteRev(yearRef.current, loaded.budgetRev);
     baseSignatureRef.current = loaded.signature;
     setYearTotals(loaded.totals);
     const map = new Map<string, number>();
@@ -342,10 +383,18 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     // setWaitingConflict only sets a ref and state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // Before paint: a cached allocation shows on the first frame, never an empty table first.
+  // Before paint: a cached allocation shows on the first frame, never an empty table first. A copy
+  // older than the counter the item page knows for the year (someone else's change, shown on another
+  // tab meanwhile) is read again at once (lot 3G).
+  const knownBudgetRevRef = React.useRef(knownBudgetRev); knownBudgetRevRef.current = knownBudgetRev;
   React.useLayoutEffect(() => {
-    if (!snapshot || snapshot === writtenSnapshotRef.current || busyRef.current()) return;
+    if (!snapshot || snapshot === writtenSnapshotRef.current) return;
+    const known = knownBudgetRevRef.current?.(yearRef.current);
+    if (typeof known === 'number' && (snapshot.budgetRev === null || snapshot.budgetRev < known)) void snapshotQuery.refetch();
+    if (busyRef.current()) return;
     applySnapshot(snapshot);
+    // snapshotQuery.refetch is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot, applySnapshot]);
   const loadError = snapshotQuery.error ?? (companiesQuery.data ? null : companiesQuery.error);
   React.useEffect(() => {
@@ -392,11 +441,33 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
 
   const scheduleSave = React.useCallback(() => { autosave.schedule(persist); }, [autosave, persist]);
 
+  // A row added and not complete yet (no company, or no department by department) is not saved.
+  const hasIncompleteRow = () => (['manual_pct', 'manual_company', 'manual_department'] as Method[]).includes(methodRef.current)
+    && rowsRef.current.some((r) => !r.company_id || (methodRef.current === 'manual_department' && !r.department_id));
+  const hasPending = () => autosave.isBusy() || !!conflictRef.current || !!restoreRef.current || hasIncompleteRow();
+  const hasPendingRef = React.useRef(hasPending); hasPendingRef.current = hasPending;
   useImperativeHandle(ref, () => ({
     flush: (options) => autosave.flush(options),
     isDirty: () => autosave.isBusy(),
     hasWaitingChoice: () => !!conflictRef.current || !!restoreRef.current,
-  }), [autosave]);
+    isSaving: () => autosave.isSaving(),
+    hasPending: () => hasPendingRef.current(),
+    reloadFromServer: async () => {
+      const loaded = await fetchAllocationsSnapshot(config, id, year);
+      // The cache follows; the object it keeps (shared with the one before where equal) is marked as
+      // this tab's, so the snapshot effect does not apply it over an edit pending.
+      writtenSnapshotRef.current = queryClient.setQueryData<AllocationsSnapshot>(snapshotKey, loaded) ?? loaded;
+      if (!hasPendingRef.current()) {
+        // The rows the user pinned (percentages kept by the redistribution) stay pinned.
+        const pinned = new Set(rowsRef.current.filter((row) => row.pinned).map((row) => keyOf(row.company_id, row.department_id)));
+        applySnapshot(loaded);
+        if (pinned.size > 0) setRows((prev) => prev.map((row) => (pinned.has(keyOf(row.company_id, row.department_id)) ? { ...row, pinned: true } : row)));
+        return;
+      }
+      // The user's allocation stays as it is; the amounts it splits are the year's as stored now.
+      setYearTotals(loaded.totals);
+    },
+  }), [autosave, config, id, year, queryClient, snapshotKey, applySnapshot]);
 
   // Leaving the tab with a choice waiting (another tab of the line): the item page keeps it for the line.
   React.useEffect(() => {

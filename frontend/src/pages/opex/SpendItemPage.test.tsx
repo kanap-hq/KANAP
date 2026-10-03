@@ -45,15 +45,21 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   ),
 }));
 // The drawer stands in for the pickers: each button sets one field.
-vi.mock('./workspace/SpendPropertiesDrawer', () => ({
-  default: (props: {
+vi.mock('./workspace/SpendPropertiesDrawer', async () => {
+  // The real cost center hook, called as the drawer calls it: a tree request would show in the API calls.
+  const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
+  return { default: (props: {
+    costCenterId?: string;
     mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
-    onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string) => void;
+    onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
     onAnalyticsValueChange: (axisId: string, v: string | null) => void; onDisabledAtChange?: (v: string | null) => void;
     references?: unknown; analyticsOptions?: unknown;
-  }) => (
+  }) => {
+    useCostCenterNode(props.costCenterId || null, ((props as { references?: { cost_center?: unknown } }).references?.cost_center ?? null) as never);
+    return (
     <div
+      data-cost-center={props.costCenterId}
       data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
       data-analytics={JSON.stringify(props.analyticsValues)}
       data-references={JSON.stringify(props.references ?? null)}
@@ -68,9 +74,9 @@ vi.mock('./workspace/SpendPropertiesDrawer', () => ({
       <button type="button" onClick={() => props.onSupplierChange('supplier-gone')}>pick deleted supplier</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'value-disabled')}>pick disabled value</button>
       <button type="button" onClick={() => props.onDisabledAtChange?.('2026-12-31T10:00:00.000Z')}>end on 31 December</button>
-      <button type="button" onClick={() => props.onCostCenterChange('cc-2')}>pick cost center</button>
-      <button type="button" onClick={() => props.onCostCenterChange('cc-3')}>pick third cost center</button>
-      <button type="button" onClick={() => props.onCostCenterChange('')}>clear cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-2', { id: 'cc-2', company_id: 'company-2' })}>pick cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-3', { id: 'cc-3', company_id: 'company-3' })}>pick third cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('', null)}>clear cost center</button>
       <button type="button" onClick={() => props.onRunBuildChange('build')}>pick build</button>
       <button type="button" onClick={() => props.onRunBuildChange('')}>clear run or build</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'value-1')}>pick default value</button>
@@ -78,35 +84,34 @@ vi.mock('./workspace/SpendPropertiesDrawer', () => ({
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-nature', 'value-2')}>pick nature value</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-nature', null)}>clear nature value</button>
     </div>
-  ),
-}));
-// Two cost centers, in the second and the third company.
-vi.mock('../../hooks/useCostCenterTree', () => {
-  const node = (id: string, company_id: string) => ({
-    id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id,
-    company_name: company_id, owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null,
-    sort_order: 0, depth: 0, path: id, path_ids: [id],
-  });
-  const nodes = [node('cc-2', 'company-2'), node('cc-3', 'company-3')];
-  const tree = { ready: true, nodes, byId: new Map(nodes.map((n) => [n.id, n])), hasAny: true, descendantIds: (id: string) => new Set([id]) };
-  return { useCostCenterTree: () => tree };
+    );
+  } };
 });
-vi.mock('./workspace/SpendMetadataBar', () => ({
-  default: ({ onStatusChange }: { onStatusChange: (status: string) => void }) => (
-    <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>
-  ),
-}));
+vi.mock('./workspace/SpendMetadataBar', async () => {
+  const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
+  return {
+    default: ({ onStatusChange, costCenterId, costCenter }: {
+      onStatusChange: (status: string) => void; costCenterId?: string | null; costCenter?: { id: string } | null;
+    }) => {
+      // The budget holder's read, as the bar makes it.
+      useCostCenterNode(costCenterId ?? null, (costCenter ?? null) as never);
+      return <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>;
+    },
+  };
+});
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 // The Budget tab stands in with its handle and the line's held choices (lot 3D): « budget refused »
-// leaves the Budget column waiting for a choice.
+// leaves the Budget column waiting for a choice. It reports the version counter it loaded (lot 3G).
+const budgetStandIn = vi.hoisted(() => ({ rev: 3, reloads: 0, typed: false, failReload: false }));
 vi.mock('../../components/finance/BudgetTab', async () => {
   const React = await import('react');
   type Held = { current: { lineId: string; labels: string[] } | null };
-  const BudgetTabStandIn = React.forwardRef(({ id, held }: { id: string; held?: Held }, ref) => {
+  const BudgetTabStandIn = React.forwardRef(({ id, year, held, onBudgetRev }: { id: string; year: number; held?: Held; onBudgetRev?: (year: number, rev: number | null) => void }, ref) => {
     const waiting = React.useRef<string[]>(held?.current?.lineId === id ? held.current.labels : []);
     const [, redraw] = React.useState(0);
     React.useEffect(() => {
       if (held?.current?.lineId === id) held.current = null;
+      onBudgetRev?.(year, budgetStandIn.rev);
       return () => {
         if (held && waiting.current.length > 0) held.current = { lineId: id, labels: waiting.current } as never;
       };
@@ -115,11 +120,18 @@ vi.mock('../../components/finance/BudgetTab', async () => {
       flush: async (options?: { ignoreHeld?: boolean }) => !!options?.ignoreHeld || waiting.current.length === 0,
       isDirty: () => waiting.current.length > 0,
       waitingColumns: () => waiting.current,
+      isSaving: () => false,
+      hasPending: () => waiting.current.length > 0 || budgetStandIn.typed,
+      reloadFromServer: async () => {
+        if (budgetStandIn.failReload) throw new Error('offline');
+        budgetStandIn.reloads += 1;
+      },
     }));
     return (
       <div>
         <span data-testid="budget-waiting">{waiting.current.join(',')}</span>
         <button type="button" onClick={() => { waiting.current = ['Budget']; redraw((n) => n + 1); }}>budget refused</button>
+        <button type="button" onClick={() => { budgetStandIn.typed = true; }}>budget typed</button>
       </div>
     );
   });
@@ -142,6 +154,12 @@ const mocked = api as unknown as {
 };
 
 const ITEM_ID = '11111111-2222-3333-4444-555555555555';
+
+/**
+ * The clock of the specs that say who changed what and when: the day of their `changed_at`
+ * (12:02 to 12:03 UTC), so the message reads « at HH:MM » whatever day and time zone they run in.
+ */
+const CHANGES_DAY = new Date('2026-10-02T12:04:00.000Z');
 
 // The edits a page keeps for the session (lot 3C review): each test starts without any.
 beforeEach(() => resetSharedPatchBuffers());
@@ -870,6 +888,7 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
       return { data: {} };
     });
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(CHANGES_DAY);
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -1217,5 +1236,340 @@ describe('SpendItemPage edit conflicts (lot 3C)', () => {
       });
       expect(stored[LINE_A]).toMatchObject({ paying_company_id: 'company-2', account_id: null });
     });
+  });
+});
+
+describe('SpendItemPage others\' changes (lot 3G)', () => {
+  const LINE = 'aaaaaaaa-0000-4000-8000-0000000000a1';
+  const YEAR = new Date().getFullYear();
+  // What the server holds: the line with its counter, who wrote it, and the year's version counter.
+  let stored: Record<string, unknown> = {};
+  let author: { id: string; name: string } | null = null;
+  let budgetRev = 3;
+  const MARIE = { id: 'marie', name: 'Marie Dupont' };
+  /** Someone else's write: the counter moves, the meta names them. */
+  const othersWrite = (fields: Record<string, unknown>, by: { id: string; name: string } | null = MARIE) => {
+    Object.assign(stored, fields, { row_version: Number(stored.row_version) + 1 });
+    author = by;
+  };
+  const detailReads = () => mocked.get.mock.calls.filter(([url]) => url === `/spend-items/${LINE}`).length;
+  const metaReads = () => mocked.get.mock.calls.filter(([url]) => url === `/spend-items/${LINE}/meta`).length;
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    dialogs.confirm.mockReset();
+    budgetStandIn.rev = 3;
+    budgetStandIn.reloads = 0;
+    budgetStandIn.typed = false;
+    budgetStandIn.failReload = false;
+    budgetRev = 3;
+    author = null;
+    stored = {
+      id: LINE, item_number: 1, product_name: 'Line A', notes: 'Start', description: 'About', supplier_id: 'supplier-1',
+      currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1', row_version: 5,
+    };
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/spend-items/${LINE}`) return { data: { ...stored } };
+      if (url === `/spend-items/${LINE}/meta`) {
+        return {
+          data: {
+            id: LINE, row_version: stored.row_version, changed_by: author, changed_at: '2026-10-02T12:02:00.000Z',
+            versions: [{ id: 'v1', budget_year: YEAR, budget_rev: budgetRev, changed_by: MARIE, changed_at: '2026-10-02T12:03:00.000Z' }],
+          },
+        };
+      }
+      return { data: {} };
+    });
+    // A save the server compares with the stored value (lot 3C), and answers with the counter it left.
+    mocked.patch.mockImplementation(async (_url: string, body: Record<string, unknown>) => {
+      const { base = {}, ...patch } = body as { base?: Record<string, unknown> } & Record<string, unknown>;
+      const conflicts = Object.keys(patch)
+        .filter((field) => field in base && base[field] !== (stored[field] ?? null) && patch[field] !== (stored[field] ?? null))
+        .map((field) => ({
+          field, base: base[field], current: stored[field] ?? null, mine: patch[field], labels: { base: null, current: null, mine: null },
+          changed_by: MARIE, changed_at: '2026-10-02T12:02:00.000Z',
+        }));
+      if (conflicts.length > 0) {
+        throw Object.assign(new Error('HTTP 409'), { response: { status: 409, headers: {}, data: { code: 'edit_conflict', conflicts, row_version: stored.row_version } } });
+      }
+      Object.assign(stored, patch, { row_version: Number(stored.row_version) + 1 });
+      author = { id: 'me', name: 'Me' };
+      return { data: { ...stored } };
+    });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(CHANGES_DAY);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The poll's tick: the tab becomes visible again, the meta is read at once. */
+  async function poll() {
+    const before = metaReads();
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+    await waitFor(() => expect(metaReads()).toBe(before + 1));
+    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+  }
+  async function settleSaves() {
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+  }
+  async function typeInto(currentValue: string, value: string) {
+    const field = await screen.findByDisplayValue(currentValue);
+    await waitFor(() => {
+      fireEvent.change(field, { target: { value } });
+      expect(field).toHaveValue(value);
+    });
+    return field;
+  }
+
+  it('reads the meta every 30 seconds while the line is shown', async () => {
+    renderAt(`/ops/opex/${LINE}/overview`);
+    await screen.findByDisplayValue('Start');
+    expect(metaReads()).toBe(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    await waitFor(() => expect(metaReads()).toBe(1));
+  });
+
+  it('idle: someone else\'s change is shown in place, with who changed it', async () => {
+    renderAt(`/ops/opex/${LINE}/overview`);
+    const notes = await screen.findByDisplayValue('Start');
+    othersWrite({ notes: 'Notes from Marie' });
+    const reads = detailReads();
+    await poll();
+    await waitFor(() => expect(notes).toHaveValue('Notes from Marie'));
+    expect(detailReads()).toBe(reads + 1);
+    expect(screen.getByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByAt');
+    expect(screen.queryByTestId('others-changes-outdated')).toBeNull();
+  });
+
+  it('the page\'s own saves say nothing', async () => {
+    renderAt(`/ops/opex/${LINE}/overview`);
+    await typeInto('Start', 'My notes');
+    await settleSaves();
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(stored.row_version).toBe(6);
+    const reads = detailReads();
+    await poll();
+    expect(detailReads()).toBe(reads);
+    expect(screen.queryByTestId('others-changes-notice')).toBeNull();
+    expect(screen.queryByTestId('others-changes-outdated')).toBeNull();
+  });
+
+  it('the user\'s own change in another window says so', async () => {
+    renderAt(`/ops/opex/${LINE}/overview`);
+    await screen.findByDisplayValue('Start');
+    othersWrite({ notes: 'From my other window' }, { id: 'me', name: 'Me' });
+    await poll();
+    expect(await screen.findByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByYouAt');
+  });
+
+  it('typing in a field: nothing is refreshed, the badge shows; Reload shows the change and keeps the text typed', async () => {
+    renderAt(`/ops/opex/${LINE}/overview`);
+    const description = await screen.findByDisplayValue('About');
+    description.focus();
+    othersWrite({ notes: 'Notes from Marie' });
+    const reads = detailReads();
+    await poll();
+    expect(await screen.findByTestId('others-changes-outdated')).toHaveTextContent('othersChanges.badge');
+    expect(detailReads()).toBe(reads);
+    expect(screen.getByDisplayValue('Start')).toBeInTheDocument();
+
+    // The user types on, then reloads: Marie's notes show, the text typed stays.
+    fireEvent.change(description, { target: { value: 'About, typed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'othersChanges.reload' }));
+    await waitFor(() => expect(screen.getByDisplayValue('Notes from Marie')).toBeInTheDocument());
+    expect(description).toHaveValue('About, typed');
+    expect(screen.queryByTestId('others-changes-outdated')).toBeNull();
+    expect(screen.getByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByAt');
+    // Then it is saved, from the value the user started from: it meets the conflict check if needed.
+    await settleSaves();
+    expect(mocked.patch.mock.calls[mocked.patch.mock.calls.length - 1]?.[1]).toEqual({ description: 'About, typed', base: { description: 'About' } });
+  });
+
+  it('a choice waiting: no mark beside its banner, nothing refreshed; once the choice is made, the change is said', async () => {
+    renderAt(`/ops/opex/${LINE}/overview`);
+    await screen.findByDisplayValue('Start');
+    stored.notes = 'Notes from Marie';
+    const notes = await typeInto('Start', 'My notes');
+    await screen.findByTestId('edit-conflict-notes', undefined, { timeout: 3000 });
+    (document.activeElement as HTMLElement | null)?.blur();
+    await settleSaves();
+    othersWrite({ supplier_id: 'supplier-2' });
+    const reads = detailReads();
+    await poll();
+    // The banner already says someone else changed the line: no mark beside it, and nothing moves.
+    expect(screen.queryByTestId('others-changes-outdated')).toBeNull();
+    expect(detailReads()).toBe(reads);
+    expect(notes).toHaveValue('My notes');
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'editConflict.keepTheirs: opex.fields.notes' }));
+    // The focus went back to the notes (lot 3C): the user leaves them.
+    (document.activeElement as HTMLElement | null)?.blur();
+    await poll();
+    expect(await screen.findByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByAt');
+    expect(screen.queryByTestId('others-changes-outdated')).toBeNull();
+  });
+
+  it('Budget tab: the year\'s version moved, the tab reloads in place; a cell typed gets the badge; a column waiting for a choice gets neither', async () => {
+    renderAt(`/ops/opex/${LINE}/budget`);
+    await waitFor(() => expect(screen.getByTestId('budget-waiting')).toBeInTheDocument());
+    budgetRev = 4;
+    await poll();
+    await waitFor(() => expect(budgetStandIn.reloads).toBe(1));
+    expect(await screen.findByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByAt');
+
+    fireEvent.click(screen.getByRole('button', { name: 'budget typed' }));
+    budgetRev = 5;
+    await poll();
+    expect(await screen.findByTestId('others-changes-outdated')).toBeInTheDocument();
+    expect(budgetStandIn.reloads).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: 'othersChanges.reload' }));
+    await waitFor(() => expect(budgetStandIn.reloads).toBe(2));
+    await waitFor(() => expect(screen.queryByTestId('others-changes-outdated')).toBeNull());
+
+    // The column's conflict banner already says it: no mark, nothing reloaded.
+    fireEvent.click(screen.getByRole('button', { name: 'budget refused' }));
+    budgetRev = 6;
+    await poll();
+    expect(screen.queryByTestId('others-changes-outdated')).toBeNull();
+    expect(budgetStandIn.reloads).toBe(2);
+    expect(screen.getByTestId('budget-waiting')).toHaveTextContent('Budget');
+  });
+
+  it('a reload that fails is not counted as shown: the badge stays, and the next read tries again', async () => {
+    renderAt(`/ops/opex/${LINE}/budget`);
+    await waitFor(() => expect(screen.getByTestId('budget-waiting')).toBeInTheDocument());
+    budgetStandIn.failReload = true;
+    budgetRev = 4;
+    await poll();
+    expect(screen.queryByTestId('others-changes-notice')).toBeNull();
+    budgetStandIn.failReload = false;
+    await poll();
+    await waitFor(() => expect(budgetStandIn.reloads).toBe(1));
+    expect(await screen.findByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByAt');
+  });
+
+  it('a detail that cannot be read again is not counted as shown', async () => {
+    renderAt(`/ops/opex/${LINE}/overview`);
+    const notes = await screen.findByDisplayValue('Start');
+    othersWrite({ notes: 'Notes from Marie' });
+    const served = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === `/spend-items/${LINE}`) throw Object.assign(new Error('HTTP 503'), { response: { status: 503, headers: {}, data: { code: 'busy' } } });
+      return served(url, config);
+    });
+    await poll();
+    expect(screen.queryByTestId('others-changes-notice')).toBeNull();
+    mocked.get.mockImplementation(served);
+    await poll();
+    await waitFor(() => expect(notes).toHaveValue('Notes from Marie'));
+    expect(screen.getByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByAt');
+  });
+
+  it('a line deleted elsewhere says so, and is not read again', async () => {
+    renderAt(`/ops/opex/${LINE}/overview`);
+    await screen.findByDisplayValue('Start');
+    const served = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === `/spend-items/${LINE}/meta`) throw Object.assign(new Error('HTTP 404'), { response: { status: 404, headers: {}, data: {} } });
+      return served(url, config);
+    });
+    await poll();
+    expect(await screen.findByTestId('others-changes-gone')).toHaveTextContent('othersChanges.deleted');
+    const reads = metaReads();
+    await act(async () => { await vi.advanceTimersByTimeAsync(65_000); });
+    expect(metaReads()).toBe(reads);
+  });
+
+  it('back on a line kept from an earlier visit: the counter is the one read again, so an older change is not said', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = (path: string) => (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[path]}>
+            <Routes>
+              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+    const first = render(ui(`/ops/opex/${LINE}/overview`));
+    await screen.findByDisplayValue('Start');
+    first.unmount();
+    // Marie changes the line while it is closed; the copy kept goes stale.
+    othersWrite({ notes: 'Notes from Marie' });
+    await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
+    render(ui(`/ops/opex/${LINE}/overview`));
+    await screen.findByDisplayValue('Notes from Marie');
+    await poll();
+    expect(screen.queryByTestId('others-changes-notice')).toBeNull();
+  });
+
+  it('back on the window, a stale line is read again only when nothing is pending', async () => {
+    renderAt(`/ops/opex/${LINE}/overview`);
+    const notes = await screen.findByDisplayValue('Start');
+    await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
+    othersWrite({ notes: 'Notes from Marie' });
+    await poll();
+    await waitFor(() => expect(notes).toHaveValue('Notes from Marie'));
+    // The focus refetch or the poll's refresh: either way, said once.
+    expect(screen.getByTestId('others-changes-notice')).toHaveTextContent('othersChanges.changedByAt');
+  });
+});
+
+
+describe('SpendItemPage cost center across lines', () => {
+  const LINE_A = 'aaaaaaaa-0000-4000-8000-0000000000c1';
+  const LINE_B = 'bbbbbbbb-0000-4000-8000-0000000000c2';
+  // Each line names its cost center in the detail (`references.cost_center`).
+  const ref = (id: string, code: string) => ({
+    id, code, name: `Centre ${code}`, kind: 'cost_center', status: 'enabled',
+    company_id: 'company-1', company_name: 'Company', owner_user_id: 'user-1', owner_name: 'Ada Holder',
+  });
+  const line = (id: string, n: number, costCenter: { id: string; code: string }) => ({
+    id, item_number: n, product_name: `Line ${n}`, description: '', notes: '',
+    currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1',
+    cost_center_id: costCenter.id, references: { cost_center: costCenter },
+  });
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/spend-items/${LINE_A}`) return { data: line(LINE_A, 1, ref('cc-a', 'CC-A')) };
+      if (url === `/spend-items/${LINE_B}`) return { data: line(LINE_B, 2, ref('cc-b', 'CC-B')) };
+      return { data: {} };
+    });
+  });
+
+  it('opens line A then line B, each with its own cost center, without loading the tree', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router: { navigate: NavigateFunction | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = useNavigate();
+      return null;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[`/ops/opex/${LINE_A}/overview`]}>
+            <NavigateProbe />
+            <Routes>
+              <Route path="/ops/opex/:id/:tab" element={<SpendItemPage />} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const shown = (id: string) => document.querySelector(`[data-mode="edit"][data-cost-center="${id}"]`);
+    await waitFor(() => expect(shown('cc-a')).not.toBeNull());
+    act(() => { router.navigate!(`/ops/opex/${LINE_B}/overview`); });
+    await waitFor(() => expect(shown('cc-b')).not.toBeNull());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/cost-centers'))).toEqual([]);
   });
 });

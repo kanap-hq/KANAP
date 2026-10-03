@@ -1,4 +1,4 @@
-import { EDIT_CONFLICT_CODE, type EditConflictAuthor } from '../../hooks/editConflicts';
+import { EDIT_CONFLICT_CODE, authorOf, type EditConflictAuthor } from '../../hooks/editConflicts';
 import { centsToDecimal, linePayloadOf, toCents, type AmountMeasure, type LinePayload } from './roundPeriod';
 
 /**
@@ -49,9 +49,7 @@ export function budgetConflictsOf(error: unknown): BudgetConflict[] | null {
       current,
       mine: twelve(entry.mine) ?? current,
       currentLines: Array.isArray(entry.current_lines) ? entry.current_lines.map((line: LinePayload) => linePayloadOf(line)) : null,
-      changed_by: entry.changed_by && typeof entry.changed_by.name === 'string' && entry.changed_by.name.trim()
-        ? { id: String(entry.changed_by.id ?? ''), name: entry.changed_by.name }
-        : null,
+      changed_by: authorOf(entry.changed_by),
       changed_at: textOrNull(entry.changed_at),
     });
   }

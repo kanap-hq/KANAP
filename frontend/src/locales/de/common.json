@@ -651,6 +651,7 @@
     "changedByYouAt": "Sie haben dieses Feld um {{time}} in einem anderen Fenster geändert.",
     "changedByYouOn": "Sie haben dieses Feld am {{date}} um {{time}} in einem anderen Fenster geändert.",
     "changedByYou": "Sie haben dieses Feld in einem anderen Fenster geändert.",
+    "aUser": "Ein Benutzer",
     "theirValue": "Wert der anderen Person",
     "yourValue": "Ihr Wert",
     "keepTheirs": "Anderen Wert behalten",
@@ -700,5 +701,21 @@
       "yearChange": "Eine andere Person hat die Zuordnung geändert, während Sie sie bearbeitet haben, und Sie haben noch nicht gewählt, welche bleibt. Trotzdem das Jahr wechseln und Ihre Zuordnung verlieren, oder bleiben und wählen."
     },
     "yearChangeConfirm": "Jahr wechseln"
+  },
+  "othersChanges": {
+    "changedByAt": "Geändert von {{name}} um {{time}}",
+    "changedByOn": "Geändert von {{name}} am {{date}} um {{time}}",
+    "changedBy": "Geändert von {{name}}",
+    "changedAt": "Anderswo geändert um {{time}}",
+    "changedOn": "Anderswo geändert am {{date}} um {{time}}",
+    "changed": "Anderswo geändert",
+    "changedByYouAt": "Sie haben diese Position um {{time}} anderswo geändert",
+    "changedByYouOn": "Sie haben diese Position am {{date}} um {{time}} anderswo geändert",
+    "changedByYou": "Sie haben diese Position anderswo geändert",
+    "aUser": "einem Benutzer",
+    "badge": "Anderswo geändert",
+    "reload": "Neu laden",
+    "reloadHint": "Neu laden zeigt diese Änderungen. Was Sie gerade bearbeiten, bleibt auf dem Bildschirm.",
+    "deleted": "Diese Position wurde gelöscht"
   }
 }

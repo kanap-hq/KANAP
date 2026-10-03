@@ -12,15 +12,28 @@ import type { AnalyticsAxis } from '../../services/analytics';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => false }) }));
-const treeState = vi.hoisted(() => ({ nodes: [] as unknown[], ready: true, isError: false }));
+// The tree as each reader asks for it: a disabled read gets nothing (a tree never loaded) and every
+// read's `enabled` is recorded; the count is the number of nodes.
+const treeState = vi.hoisted(() => ({ nodes: [] as unknown[], ready: true, isError: false, requested: [] as boolean[], countRequested: [] as boolean[] }));
 vi.mock('../../hooks/useCostCenterTree', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useCostCenterTree')>();
   return {
     ...actual,
-    useCostCenterTree: () => ({
-      ...actual.buildCostCenterTree(treeState.nodes as CostCenterNode[], treeState.ready),
-      isError: treeState.isError,
-    }),
+    useCostCenterTree: (options?: { enabled?: boolean }) => {
+      const enabled = options?.enabled ?? true;
+      treeState.requested.push(enabled);
+      if (!enabled) return actual.buildCostCenterTree([], false);
+      return {
+        ...actual.buildCostCenterTree(treeState.nodes as CostCenterNode[], treeState.ready),
+        isError: treeState.isError,
+      };
+    },
+    useCostCenterCount: (options?: { enabled?: boolean }) => {
+      treeState.countRequested.push(options?.enabled ?? true);
+      return options?.enabled === false
+        ? { count: null, isError: false }
+        : { count: treeState.isError ? null : treeState.nodes.length, isError: treeState.isError };
+    },
   };
 });
 
@@ -212,6 +225,8 @@ beforeEach(() => {
   treeState.nodes = NODES;
   treeState.ready = true;
   treeState.isError = false;
+  treeState.requested = [];
+  treeState.countRequested = [];
   axesState.list = AXES;
   axesState.ready = true;
   axesState.isError = false;
@@ -246,6 +261,23 @@ describe('BudgetReportFilters', () => {
     await renderBar('/report', [{ id: 'x', cost_center_id: 'cc1', run_build: null }]);
     expect(costCenterInput()).toBeInTheDocument();
     expect(runBuildSelect()).toBeNull();
+  });
+
+  it('shows the node picker from the count, and asks for the tree only for an address naming a node', async () => {
+    const view = await renderBar('/report');
+    expect(costCenterInput()).toBeInTheDocument();
+    expect(treeState.requested.length).toBeGreaterThan(0);
+    expect(treeState.requested.every((enabled) => !enabled)).toBe(true);
+    expect(treeState.countRequested).toContain(true);
+    view.unmount();
+
+    treeState.requested = [];
+    treeState.countRequested = [];
+    await renderBar('/report?costCenter=grp');
+    expect(treeState.requested).toContain(true);
+    // The tree says whether the tenant has a node: no count then.
+    expect(treeState.countRequested.every((enabled) => !enabled)).toBe(true);
+    expect(costCenterInput()).toBeInTheDocument();
   });
 
   it('reads a group from the address and keeps the lines below it', async () => {

@@ -666,3 +666,29 @@ export async function readVersionMonths(
 export async function readYearAmounts(manager: EntityManager, scope: AmountScope, version: AmountVersion): Promise<StoredAmountRow[]> {
   return readRows({ manager, scope, version }, yearPeriods(Number(version.budget_year)));
 }
+
+/**
+ * The yearly totals of a version (its own budget year), as the stored totals of lot 2A keep them:
+ * one row, zeros when the version has no month yet. The Allocations tab shows them (lot 3G: read
+ * after the version's counter, in the answer that carries it, so what the tab knows is never newer
+ * than what it shows).
+ */
+export async function readVersionYearTotals(manager: EntityManager, scope: AmountScope, tenantId: string, versionId: string): Promise<Record<AmountMeasure, number>> {
+  const [row]: Array<Partial<Record<AmountMeasure, string | number>>> = await manager.query(
+    `SELECT ${AMOUNT_MEASURES.join(', ')} FROM ${scope === 'opex' ? 'spend_version_totals' : 'capex_version_totals'} WHERE tenant_id = $1 AND version_id = $2`,
+    [tenantId, versionId],
+  );
+  return Object.fromEntries(AMOUNT_MEASURES.map((measure) => [measure, Number(row?.[measure] ?? 0)])) as Record<AmountMeasure, number>;
+}
+
+/**
+ * The version's `budget_rev` once a write is done (plan planning/perf-scale, lot 3G): the budget
+ * tab keeps it as the counter it knows, so its own saves never read as someone else's change.
+ */
+export async function readVersionBudgetRev(manager: EntityManager, scope: AmountScope, version: AmountVersion): Promise<number | null> {
+  const [row]: Array<{ budget_rev: number | string }> = await manager.query(
+    `SELECT budget_rev FROM ${scope === 'opex' ? 'spend_versions' : 'capex_versions'} WHERE tenant_id = $1 AND id = $2`,
+    [version.tenant_id, version.id],
+  );
+  return row ? Number(row.budget_rev) : null;
+}

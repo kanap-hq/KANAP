@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   InternalServerErrorException,
   Param,
   ParseUUIDPipe,
@@ -19,7 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
+import { RequireAnyLevel, RequireAnyLevelMeta, RequireLevel } from '../auth/require-level.decorator';
 import { contentDisposition } from '../common/content-disposition';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { csvImportMulterOptions } from '../common/upload';
@@ -33,6 +34,14 @@ function context(ctx: TenantRequest): CostCenterContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
   return { manager: ctx.manager, tenantId: ctx.tenantId, userId: ctx.userId || null };
 }
+
+/** Who reads the tree: the page, and the item forms and budget reports that pick or filter on a node. */
+export const TREE_READERS: RequireAnyLevelMeta = [
+  { resource: 'cost_centers', level: 'reader' },
+  { resource: 'opex', level: 'reader' },
+  { resource: 'capex', level: 'reader' },
+  { resource: 'reporting', level: 'reader' },
+];
 
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('cost-centers')
@@ -55,16 +64,22 @@ export class CostCentersController {
     return this.svc.listIds(query, context(ctx));
   }
 
-  // Item forms and budget reports read the tree without access to the page.
-  @RequireAnyLevel([
-    { resource: 'cost_centers', level: 'reader' },
-    { resource: 'opex', level: 'reader' },
-    { resource: 'capex', level: 'reader' },
-    { resource: 'reporting', level: 'reader' },
-  ])
+  // Item forms and budget reports read the tree without access to the page. `no-cache`: the
+  // browser keeps the answer and asks again with its ETag (Express's, over the body), so an
+  // unchanged tree comes back as a bodiless 304.
+  @RequireAnyLevel(TREE_READERS)
+  @Header('Cache-Control', 'private, no-cache')
   @Get('tree')
   tree(@Tenant() ctx: TenantRequest) {
     return this.svc.tree(context(ctx));
+  }
+
+  // Whether a budget report offers the cost center filter, without loading the tree.
+  @RequireAnyLevel(TREE_READERS)
+  @Header('Cache-Control', 'private, no-cache')
+  @Get('tree/count')
+  treeCount(@Tenant() ctx: TenantRequest) {
+    return this.svc.count(context(ctx));
   }
 
   @RequireLevel('cost_centers', 'admin')

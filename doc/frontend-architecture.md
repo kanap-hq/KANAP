@@ -468,21 +468,26 @@ type BudgetColumns = {
 - `resolveBudgetColumns(settings, t)` is the hook's pure core; tests mock `/budget-columns` or the hook.
 
 ### useCostCenterTree
-The tenant's whole cost center tree, for item forms, lists and report filters.
+The tenant's whole cost center tree, for the item pickers, the report filters and the Cost centers page. About 180 KB on a 300-node tenant: the line workspaces and the reports load it only when they need it.
 
-**Location:** `frontend/src/hooks/useCostCenterTree.ts` (service `services/costCenters.ts`, `GET /cost-centers/tree`, readable with `cost_centers`, `opex`, `capex` or `reporting` reader; query key `['cost-centers', 'tree']`, 5 min `staleTime`; the Cost centers page and workspace invalidate it after every write).
+**Location:** `frontend/src/hooks/useCostCenterTree.ts` (service `services/costCenters.ts`, `GET /cost-centers/tree`, readable with `cost_centers`, `opex`, `capex` or `reporting` reader; query key `['cost-centers', 'tree']`, 5 min `staleTime`; the Cost centers page and workspace invalidate everything under `['cost-centers']` after every write). The route sends `Cache-Control: private, no-cache` and an ETag: a reload of an unchanged tree is a 304 without a body.
 
 ```typescript
 type CostCenterTree = {
-  ready: boolean;                          // false until loaded, or while disabled (`useCostCenterTree({ enabled })`)
+  ready: boolean;                          // true once a tree is held (also when disabled, if another reader loaded it), or the enabled load failed
   nodes: CostCenterNode[];                 // tree order: each node after its parent, siblings by sort order then code
   byId: Map<string, CostCenterNode>;
-  hasAny: boolean;                         // false for a tenant without a node (screens then hide cost center filters)
-  isError: boolean;                        // the load failed: `nodes` is empty and proves nothing, so no empty state
+  hasAny: boolean;                         // false for a tenant without a node, or a tree never loaded
+  isError: boolean;                        // the enabled load failed: `nodes` is empty and proves nothing, so no empty state
   descendantIds(id: string): Set<string>;  // the node and everything below it, disabled nodes included
 };
 ```
 
+- `useCostCenterTree({ enabled: false })` sends nothing but reads a tree already loaded by another component.
+- `useCostCenterNode(id, known)`: `known` (a line's `references.cost_center`) when it names `id`, otherwise the tree's node, the tree then loaded. The workspaces' budget holder and company hint read it.
+- `useCostCenterCount()` (`GET /cost-centers/tree/count`, key `['cost-centers', 'tree', 'count']`): the node count, so a report shows its cost center filter without the tree.
+- `CostCenterSelect` takes `selectedOption` (the line's `references.cost_center`): the value shows without the tree, which loads when the list is first opened or focused, or when the value has no known label.
+- Who loads the tree: the Cost centers page and workspace on open; an OPEX or CAPEX line only when its cost center picker opens (or when the line names a node its detail does not, e.g. right after a pick); a budget report only for an address naming a node (`?costCenter=`, for its subtree) or when its picker opens.
 - A node carries `kind` (`group` | `cost_center`), `company_id`/`company_name` (cost centers only), `owner_user_id`/`owner_name`, `status`, `depth` (0 = root), `path` (names root to node, joined with ` › `) and `path_ids`.
 - `buildCostCenterTree(nodes)` is the hook's pure core; tests mock the hook with it.
 
