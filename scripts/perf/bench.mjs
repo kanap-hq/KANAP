@@ -352,7 +352,9 @@ Object.assign(VirtualUser.prototype, {
     const [, axes] = await Promise.all([
       cached(this, 'budget-columns', 300_000, () => this.get('GET /budget-columns', '/budget-columns')),
       cached(this, 'analytics-axes', 300_000, () => this.get('GET /analytics-axes', '/analytics-axes')),
-      cached(this, 'cost-centers-tree', 300_000, () => this.get('GET /cost-centers/tree', '/cost-centers/tree')),
+      // The filter bar knows whether to offer the cost centre picker from a count; the tree loads
+      // only for an address naming a node, or when the picker is opened.
+      cached(this, 'cost-centers-count', 300_000, () => this.get('GET /cost-centers/tree/count', '/cost-centers/tree/count')),
     ]);
     return enabledAxisIds(axes);
   },
@@ -439,7 +441,8 @@ async function openWorkspace(vu, ref, { cold }) {
   if (cold) {
     wave1.push(
       cached(vu, 'currency-settings', 300_000, () => vu.get('GET /currency/settings', '/currency/settings')),
-      cached(vu, 'cost-centers-tree', 300_000, () => vu.get('GET /cost-centers/tree', '/cost-centers/tree')),
+      // No cost-centre tree: the detail names the line's cost center (`references`); the tree loads
+      // only when the picker is opened.
       cached(vu, 'budget-columns', 300_000, () => vu.get('GET /budget-columns', '/budget-columns')),
       cached(vu, 'analytics-axes', 300_000, () => vu.get('GET /analytics-axes', '/analytics-axes')).then(async (axes) => {
         // Wave 1b: one full value list per enabled dimension (drawer).

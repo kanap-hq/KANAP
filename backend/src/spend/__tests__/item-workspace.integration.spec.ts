@@ -45,7 +45,17 @@ async function seed(runner: QueryRunner, tenantId: string) {
      VALUES ($1, 'Workspace capex', 'software', 'other', 'medium', 'EUR', '2026-01-01', 990001, $2) RETURNING id`,
     [tenantId, supplier],
   );
-  return { supplier, company, account, owner, nameless, opex, capex };
+  const group = await one(`INSERT INTO cost_centers (tenant_id, code, kind, name) VALUES ($1, 'IWS-G', 'group', 'Group W') RETURNING id`, [tenantId]);
+  const costCenter = await one(
+    `INSERT INTO cost_centers (tenant_id, code, kind, name, parent_id, company_id, owner_user_id) VALUES ($1, 'IWS-1', 'cost_center', 'Centre W', $2, $3, $4) RETURNING id`,
+    [tenantId, group, company, owner],
+  );
+  // Past its end of validity, its stored status still 'enabled' (the hourly sync has not run).
+  const expired = await one(
+    `INSERT INTO cost_centers (tenant_id, code, kind, name, company_id, owner_user_id, disabled_at) VALUES ($1, 'IWS-2', 'cost_center', 'Old W', $2, $3, now() - interval '1 day') RETURNING id`,
+    [tenantId, company, nameless],
+  );
+  return { supplier, company, account, owner, nameless, opex, capex, costCenter, expired };
 }
 
 async function testReferences() {
@@ -62,6 +72,7 @@ async function testReferences() {
       account_id: ids.account,
       owner_it_id: ids.owner,
       owner_business_id: ids.nameless,
+      cost_center_id: ids.costCenter,
     });
     assert.deepEqual(refs.supplier, { id: ids.supplier, name: 'Société Test', erp_supplier_id: 'ERP-1', status: 'enabled' });
     assert.deepEqual(refs.paying_company, { id: ids.company, name: 'Company W' });
@@ -69,13 +80,21 @@ async function testReferences() {
     assert.equal(refs.account?.account_name, 'Licences');
     assert.deepEqual(refs.owner_it, { id: ids.owner, first_name: 'Anne', last_name: 'Martin', email: null }, 'no email for a person with a name');
     assert.equal(refs.owner_business?.email, 'nameless@example.invalid', 'the email of a nameless owner, the only label it has');
+    assert.deepEqual(refs.cost_center, {
+      id: ids.costCenter, code: 'IWS-1', name: 'Centre W', kind: 'cost_center', status: 'enabled',
+      company_id: ids.company, company_name: 'Company W', owner_user_id: ids.owner, owner_name: 'Anne Martin',
+    }, 'the cost center as the tree shows it: its company and budget holder');
+    const expired = await loadItemReferences(runner.manager, { tenant_id: tenantId, cost_center_id: ids.expired });
+    assert.equal(expired.cost_center?.status, 'disabled', 'the effective status: past its end of validity');
+    assert.equal(expired.cost_center?.owner_name, 'nameless@example.invalid', 'a nameless budget holder reads as the email, as in the tree');
 
     const empty = await loadItemReferences(runner.manager, { tenant_id: tenantId });
-    assert.deepEqual(empty, { supplier: null, paying_company: null, account: null, owner_it: null, owner_business: null });
+    assert.deepEqual(empty, { supplier: null, paying_company: null, account: null, owner_it: null, owner_business: null, cost_center: null });
 
     // Another tenant's session cannot reach these rows through the predicate.
-    const other = await loadItemReferences(runner.manager, { tenant_id: randomUUID(), supplier_id: ids.supplier });
+    const other = await loadItemReferences(runner.manager, { tenant_id: randomUUID(), supplier_id: ids.supplier, cost_center_id: ids.costCenter });
     assert.equal(other.supplier, null, "the line's tenant predicate keeps another tenant's ids out");
+    assert.equal(other.cost_center, null, "nor another tenant's cost center");
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

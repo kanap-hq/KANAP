@@ -345,6 +345,15 @@ export class CostCentersService {
     return { items: await loadCostCenterTree(ctx.manager, ctx.tenantId) };
   }
 
+  /** How many nodes the tenant has: whether a report offers the cost center filter, without the tree. */
+  async count(ctx: CostCenterContext): Promise<{ count: number }> {
+    const [row] = await ctx.manager.query(
+      `SELECT count(*)::int AS count FROM cost_centers WHERE tenant_id = $1`,
+      [ctx.tenantId],
+    );
+    return { count: Number(row?.count ?? 0) };
+  }
+
   async list(query: any, ctx: CostCenterContext) {
     const parsed = parsePagination(query, { field: 'path', direction: 'ASC' });
     const rows = await this.listRows(query, parsed, ctx);

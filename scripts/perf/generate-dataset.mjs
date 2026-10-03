@@ -250,6 +250,14 @@ function lifetime() {
   return { start: `${Y - 4}-01-01`, firstYear: Y - 2, lastYear: Y - 1, end: `${Y - 1}-12-31` };
 }
 
+// The status cell follows the end of validity, as the imports require (a line whose end has passed
+// is disabled; an enabled one is refused). The imports read a bare day as noon UTC. The lines that
+// ended last year are therefore disabled whenever --year is the current year or earlier (the
+// default), so the files do not depend on the day they are written; only a future --year makes them
+// enabled lines with an end still to come.
+const GENERATED_AT = Date.now();
+const lineStatus = (life) => (life.end && Date.parse(`${life.end}T12:00:00Z`) <= GENERATED_AT ? 'disabled' : 'enabled');
+
 function currency() {
   const r = rnd();
   return r < 0.85 ? 'EUR' : r < 0.95 ? 'USD' : 'GBP';
@@ -323,9 +331,8 @@ for (let i = 0; i < P.opex; i += 1) {
   const life = lifetime();
   const cur = currency();
   const annual = Math.round(Math.exp(between(Math.log(2000), Math.log(900000))));
-  const status = life.end ? 'enabled' : 'enabled';
   opexItems.push([
-    name, `Ligne de dépense perf ${i + 1}`, supplier, cc.company, pick(accounts).number, cur, life.start, status, life.end,
+    name, `Ligne de dépense perf ${i + 1}`, supplier, cc.company, pick(accounts).number, cur, life.start, lineStatus(life), life.end,
     pick(owners).email, pick(owners).email, pick(CATEGORIES),
     ...AXES.map((a) => (chance(0.85) ? pick(axisValues[a.code]) : '')),
     cc.code, isStaff || chance(0.6) ? 'run' : 'build', chance(0.3) ? `Note ${i + 1} : renouvellement à prévoir` : '',
@@ -344,7 +351,7 @@ for (let i = 0; i < P.capex; i += 1) {
   const cur = currency();
   const description = `Investissement ${pick(PRODUCTS)} ${pad(i + 1, 5)}`;
   capexItems.push([
-    '', description, pick(['software', 'hardware']), pick(['replacement', 'business_growth']), pick(['mandatory', 'high', 'medium', 'low']), cur, life.start, 'enabled', life.end, 'Projet CAPEX perf',
+    '', description, pick(['software', 'hardware']), pick(['replacement', 'business_growth']), pick(['mandatory', 'high', 'medium', 'low']), cur, life.start, lineStatus(life), life.end, 'Projet CAPEX perf',
     cc.company, pick(owners).email, pick(owners).email, pick(CATEGORIES),
     ...AXES.map((a) => (chance(0.8) ? pick(axisValues[a.code]) : '')),
     cc.code, 'build', '', '', '', '', '', '', '', '', '',

@@ -50,6 +50,21 @@ To start from an empty database again: stop the container, drop and recreate `ap
 extensions `citext, pgcrypto, uuid-ossp, unaccent, pg_trgm` (owner `app`), start the container
 (migrations run at boot and create the tenant and the admin), then steps 2 to 4.
 
+## Line lifecycle in the dataset
+
+About 8 % of the lines ended last year (end of validity `<year - 1>-12-31`). The imports require the
+status cell to follow the end of validity (a line whose end has passed and that says `enabled` is
+refused), so these lines are written `disabled`: 433 of the 5,000 OPEX lines and 77 of the 1,000
+CAPEX lines with the default seed. With `--year` set to the current year or earlier (the default is
+2026) the files do not depend on the day they are generated; with a later `--year` those lines end
+in the future and are written `enabled`. Same seed and parameters, same files.
+
+Load check, 2026-10-02 (branch `perf/cc-tree-light`): an empty database (`CREATE DATABASE` as `app`, the five
+extensions), the migrations run by the API at boot, then `load-tenant.mjs` from the generated files:
+every step passed in 622 s, with only the expected whole-file refusals of the two largest files (413,
+then sent in chunks). Result: 5,000 OPEX (4,567 enabled, 433 disabled, none enabled past its end),
+1,000 CAPEX (923 and 77), 23,209 OPEX versions and 278,508 amount rows, as in the `perf` tenant.
+
 ## What the load mode replays
 
 Each virtual user logs in (VU 0 as the administrator, the others as budget members), opens the
@@ -63,7 +78,7 @@ OPEX list, then loops: think time 2 to 5 s, then one scenario drawn from this mi
 | column text filter (typed) | 7 | 5 characters, 120 to 200 ms apart, 1 block + 1 total per character (no debounce), then clear |
 | quick search | 10 | 1 block + 1 total (400 ms debounce) |
 | scroll 10 blocks | 6 | blocks 2 to 11 in sequence (`maxConcurrentDatasourceRequests = 1`) |
-| open an item | 16 | wave 1: detail, `/summary/ids`, settings, cost-centre tree, suppliers and companies lists (1,000 rows), one value list per dimension; wave 2 on `data.id`: 5 relation counts, tasks, `/users?limit=1000` (share dialog), owner pickers, accounts of the company + account by id (`SpendItemPage.tsx` and children) |
+| open an item | 16 | wave 1: detail (it names the line's cost center: no cost-centre tree), `/summary/ids`, settings, suppliers and companies lists (1,000 rows), one value list per dimension; wave 2 on `data.id`: 5 relation counts, tasks, `/users?limit=1000` (share dialog), owner pickers, accounts of the company + account by id (`SpendItemPage.tsx` and children) |
 | next x10 | 10 | per step: detail, then 5 relation counts + tasks (+ owners and accounts when not cached) |
 | field save | 11 | `PATCH /spend-items/:id {notes}` then detail refetch |
 | budget cell save | 10 | budget tab (company, versions, freeze state, yearly totals, then amounts of the year), then `POST /spend-versions/:id/amounts/bulk-upsert {kind: monthly, months: [{period, forecast}]}` |
@@ -77,8 +92,8 @@ In `single` mode it times the CAPEX page (default sort, grid rows, `priority` so
 sort, quick search, paying company filter), totals, filter values, ids and neighbours.
 
 `--list reports` (both modes) replays the budget reports and the dashboard's budget tiles (lot 2D).
-A report open sends what the page sends: the settings-like reads (budget columns, dimensions, cost
-centre tree, cached 5 min), the filter bar's options (run or build present, the values per enabled
+A report open sends what the page sends: the settings-like reads (budget columns, dimensions, the
+number of cost centres, cached 5 min; the tree itself loads only for a report filtered on a node), the filter bar's options (run or build present, the values per enabled
 dimension) and the report's own `POST …/summary/aggregate`; the item exclusion picker is its own
 scenario (every line by name). Its mix: top items 14, increases 14, consolidation 10, analytics 10,
 OPEX trend 10, CAPEX top items 10, dashboard budget tiles 16 (hygiene counts of both types, top

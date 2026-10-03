@@ -3,6 +3,7 @@ import type { CompanyOption } from '../fields/CompanySelect';
 import type { AccountOption } from '../fields/AccountSelect';
 import type { UserOption } from '../fields/userLookup';
 import type { ItemAnalyticsValue } from '../../services/analytics';
+import type { CostCenterRef } from '../../services/costCenters';
 import { formatUserName } from '../../utils/userDisplay';
 
 /**
@@ -16,6 +17,8 @@ export type ItemReferences = {
   account: AccountOption | null;
   owner_it: UserOption | null;
   owner_business: UserOption | null;
+  /** The line's cost center, with its company and budget holder. */
+  cost_center: CostCenterRef | null;
 };
 
 /** The detail's references, when they still describe the ids the form holds (a pick not saved yet has none). */

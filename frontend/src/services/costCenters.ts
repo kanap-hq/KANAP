@@ -27,6 +27,15 @@ export type CostCenterNode = {
   path_ids: string[];
 };
 
+/**
+ * One node as a line's detail names it (`references.cost_center`): what a picker shows and what
+ * the workspace reads from the chosen node (its company, its budget holder), without the tree.
+ */
+export type CostCenterRef = Pick<
+  CostCenterNode,
+  'id' | 'code' | 'name' | 'kind' | 'status' | 'company_id' | 'company_name' | 'owner_user_id' | 'owner_name'
+>;
+
 export type CostCenterListRow = CostCenterNode & {
   parent_code: string | null;
   parent_name: string | null;
@@ -70,6 +79,12 @@ export function costCenterLabel(node: { code: string; name: string }): string {
 export async function getCostCenterTree(): Promise<CostCenterNode[]> {
   const res = await api.get<{ items: CostCenterNode[] }>(`${COST_CENTERS_ENDPOINT}/tree`);
   return Array.isArray(res.data?.items) ? res.data.items : [];
+}
+
+/** How many nodes the tenant has, without the tree. */
+export async function getCostCenterCount(): Promise<number> {
+  const res = await api.get<{ count: number }>(`${COST_CENTERS_ENDPOINT}/tree/count`);
+  return Number(res.data?.count) || 0;
 }
 
 export async function getCostCenter(id: string): Promise<CostCenterDetail> {

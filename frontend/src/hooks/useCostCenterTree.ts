@@ -1,11 +1,14 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getCostCenterTree, type CostCenterNode } from '../services/costCenters';
+import { getCostCenterCount, getCostCenterTree, type CostCenterNode, type CostCenterRef } from '../services/costCenters';
 
 export const COST_CENTER_TREE_QUERY_KEY = ['cost-centers', 'tree'] as const;
+/** Under the tree's key: whatever refreshes the tree refreshes the count. */
+export const COST_CENTER_COUNT_QUERY_KEY = [...COST_CENTER_TREE_QUERY_KEY, 'count'] as const;
+const TREE_STALE_TIME = 5 * 60_000;
 
 export type CostCenterTree = {
-  /** False until the tree is loaded (or when the hook is disabled). */
+  /** False until the tree is loaded (or while the hook is disabled and the tree was never loaded). */
   ready: boolean;
   /** Tree order: each node follows its parent, siblings by sort order then code. */
   nodes: CostCenterNode[];
@@ -52,16 +55,44 @@ export function buildCostCenterTree(nodes: CostCenterNode[], ready = true, isErr
 
 const EMPTY: CostCenterNode[] = [];
 
+/**
+ * The tenant's tree. `enabled: false` sends nothing but still reads a tree already loaded by
+ * another component (a picker that was opened): the tree is about 180 KB on a 300-node tenant, so the
+ * workspaces and reports load it only when they need it.
+ */
 export function useCostCenterTree(options?: { enabled?: boolean }): CostCenterTree {
   const enabled = options?.enabled ?? true;
   const query = useQuery({
     queryKey: COST_CENTER_TREE_QUERY_KEY,
     queryFn: getCostCenterTree,
     enabled,
-    staleTime: 5 * 60_000,
+    staleTime: TREE_STALE_TIME,
   });
   const nodes = query.data ?? EMPTY;
-  const ready = enabled && (query.isSuccess || query.isError);
+  const ready = query.data !== undefined || (enabled && query.isError);
   const isError = enabled && query.isError;
   return useMemo(() => buildCostCenterTree(nodes, ready, isError), [nodes, ready, isError]);
+}
+
+/**
+ * The node `id` names: `known` when it names that id (the line's detail, `references.cost_center`),
+ * otherwise the node of the tree, which is then loaded. Null without an id, or until the tree
+ * answers, or when it does not hold the id.
+ */
+export function useCostCenterNode(id: string | null | undefined, known?: CostCenterRef | null): CostCenterRef | null {
+  const fromDetail = id && known?.id === id ? known : null;
+  const tree = useCostCenterTree({ enabled: !!id && !fromDetail });
+  if (!id) return null;
+  return fromDetail ?? tree.byId.get(id) ?? null;
+}
+
+/** How many nodes the tenant has (a report shows its cost center filter only when there is one), without the tree. */
+export function useCostCenterCount(options?: { enabled?: boolean }): { count: number | null; isError: boolean } {
+  const query = useQuery({
+    queryKey: COST_CENTER_COUNT_QUERY_KEY,
+    queryFn: getCostCenterCount,
+    enabled: options?.enabled ?? true,
+    staleTime: TREE_STALE_TIME,
+  });
+  return { count: query.data ?? null, isError: query.isError };
 }

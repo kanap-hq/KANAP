@@ -34,7 +34,6 @@ import SendLinkButton from '../../components/workspace/SendLinkButton';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import SpendMetadataBar from './workspace/SpendMetadataBar';
 import SpendPropertiesDrawer, { RunBuild } from './workspace/SpendPropertiesDrawer';
-import { useCostCenterTree } from '../../hooks/useCostCenterTree';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
@@ -46,8 +45,9 @@ import { fetchSpendRelationsCount } from '../../utils/workspaceTabCounts';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { isoToLocalDateInput } from '../../lib/datetime';
-import { analyticsValueOptions, itemReferences, ownerName } from '../../components/finance/itemReferences';
+import { analyticsValueOptions, itemReferences, matching, ownerName } from '../../components/finance/itemReferences';
 import type { ItemAnalyticsValue } from '../../services/analytics';
+import type { CostCenterNode } from '../../services/costCenters';
 
 /** The list this workspace belongs to (its saved list contexts). */
 
@@ -325,15 +325,14 @@ export default function SpendItemPage() {
   // A cost center picked while the paying company is empty brings its company, so the
   // account picker opens on that company's chart of accounts. The company keeps following
   // the cost center until the user picks a company or an account.
-  const costCenterTree = useCostCenterTree();
-  const pickCreateCostCenter = React.useCallback((costCenterId: string) => {
-    const companyId = costCenterId ? costCenterTree.byId.get(costCenterId)?.company_id : null;
+  const pickCreateCostCenter = React.useCallback((costCenterId: string, node: CostCenterNode | null) => {
+    const companyId = costCenterId ? node?.company_id : null;
     const follow = !!companyId && (
       !createForm.paying_company_id || (createCompanyFromCostCenter && !createForm.account_id)
     );
     updateCreateForm({ cost_center_id: costCenterId, ...(follow && companyId ? { paying_company_id: companyId } : {}) });
     if (follow) setCreateCompanyFromCostCenter(true);
-  }, [costCenterTree, createCompanyFromCostCenter, createForm.account_id, createForm.paying_company_id, updateCreateForm]);
+  }, [createCompanyFromCostCenter, createForm.account_id, createForm.paying_company_id, updateCreateForm]);
 
   const [createAccountCoaId, setCreateAccountCoaId] = React.useState<string | null>(null);
   const [createCompanyCoaId, setCreateCompanyCoaId] = React.useState<string | null>(null);
@@ -862,6 +861,10 @@ export default function SpendItemPage() {
 
   // Labels of the line's references, from the detail: the pickers and the owners show them without any request.
   const references = React.useMemo(() => itemReferences(data), [data]);
+  // The cost center shown with that reference, read from the same line: on a line switch the detail
+  // is the new line's one render before the form follows, and the old line's id would not match the
+  // new reference (the pickers would then load the tree to name it).
+  const shownCostCenterId = data?.id && form.id !== data.id ? (data.cost_center_id || '') : form.cost_center_id;
   const analyticsOptions = React.useMemo(() => analyticsValueOptions(data), [data]);
 
   const reference = data?.item_number ? formatItemRef('opex', data.item_number) : null;
@@ -949,7 +952,8 @@ export default function SpendItemPage() {
             status={form.status}
             ownerItId={form.owner_it_id || null}
             ownerBizId={form.owner_business_id || null}
-            costCenterId={form.cost_center_id || null}
+            costCenterId={shownCostCenterId || null}
+            costCenter={matching(references.cost_center, shownCostCenterId)}
             onStatusChange={handleStatusChange}
             onOwnerItChange={(v) => void patchNow({ owner_it_id: (v || '') as string })}
             onOwnerBizChange={(v) => void patchNow({ owner_business_id: (v || '') as string })}
@@ -1023,7 +1027,7 @@ export default function SpendItemPage() {
             accountId={form.account_id}
             currency={form.currency}
             analyticsValues={form.analytics_values}
-            costCenterId={form.cost_center_id}
+            costCenterId={shownCostCenterId}
             runBuild={form.run_build}
             effectiveStart={form.effective_start}
             status={form.status}

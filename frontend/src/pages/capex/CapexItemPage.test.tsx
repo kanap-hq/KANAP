@@ -42,14 +42,20 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   ),
 }));
 // The drawer stands in for the pickers: each button sets one create field.
-vi.mock('./workspace/CapexPropertiesDrawer', () => ({
-  default: (props: {
+vi.mock('./workspace/CapexPropertiesDrawer', async () => {
+  // The real cost center hook, called as the drawer calls it: a tree request would show in the API calls.
+  const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
+  return { default: (props: {
+    costCenterId?: string;
     mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onAnalyticsValueChange: (axisId: string, v: string | null) => void;
-    onCostCenterChange: (v: string) => void; onRunBuildChange: (v: string) => void;
+    onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void; onRunBuildChange: (v: string) => void;
     analyticsValues: Record<string, string | null>;
-  }) => (
+  }) => {
+    useCostCenterNode(props.costCenterId || null, ((props as { references?: { cost_center?: unknown } }).references?.cost_center ?? null) as never);
+    return (
     <div
+      data-cost-center={props.costCenterId}
       data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
       data-analytics={JSON.stringify(props.analyticsValues)}
     >
@@ -60,30 +66,27 @@ vi.mock('./workspace/CapexPropertiesDrawer', () => ({
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', 'category-1')}>pick category</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-default', null)}>clear category</button>
       <button type="button" onClick={() => props.onAnalyticsValueChange('axis-nature', 'category-2')}>pick nature value</button>
-      <button type="button" onClick={() => props.onCostCenterChange('cc-2')}>pick cost center</button>
-      <button type="button" onClick={() => props.onCostCenterChange('cc-3')}>pick third cost center</button>
-      <button type="button" onClick={() => props.onCostCenterChange('')}>clear cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-2', { id: 'cc-2', company_id: 'company-2' })}>pick cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('cc-3', { id: 'cc-3', company_id: 'company-3' })}>pick third cost center</button>
+      <button type="button" onClick={() => props.onCostCenterChange('', null)}>clear cost center</button>
       <button type="button" onClick={() => props.onRunBuildChange('run')}>pick run</button>
       <button type="button" onClick={() => props.onRunBuildChange('')}>clear run or build</button>
     </div>
-  ),
-}));
-// Two cost centers, in the second and the third company.
-vi.mock('../../hooks/useCostCenterTree', () => {
-  const node = (id: string, company_id: string) => ({
-    id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id,
-    company_name: company_id, owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null,
-    sort_order: 0, depth: 0, path: id, path_ids: [id],
-  });
-  const nodes = [node('cc-2', 'company-2'), node('cc-3', 'company-3')];
-  const tree = { ready: true, nodes, byId: new Map(nodes.map((n) => [n.id, n])), hasAny: true, descendantIds: (id: string) => new Set([id]) };
-  return { useCostCenterTree: () => tree };
+    );
+  } };
 });
-vi.mock('./workspace/CapexMetadataBar', () => ({
-  default: ({ onStatusChange }: { onStatusChange: (status: string) => void }) => (
-    <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>
-  ),
-}));
+vi.mock('./workspace/CapexMetadataBar', async () => {
+  const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
+  return {
+    default: ({ onStatusChange, costCenterId, costCenter }: {
+      onStatusChange: (status: string) => void; costCenterId?: string | null; costCenter?: { id: string } | null;
+    }) => {
+      // The budget holder's read, as the bar makes it.
+      useCostCenterNode(costCenterId ?? null, (costCenter ?? null) as never);
+      return <button type="button" onClick={() => onStatusChange('disabled')}>disable line</button>;
+    },
+  };
+});
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/finance/BudgetTab', () => ({ default: () => null }));
 // The Allocations tab stands in with its handle and the line's held choice (lot 3E).
@@ -705,5 +708,57 @@ describe('CapexItemPage edit conflicts (lot 3C)', () => {
     expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({
       title: 'common:autosave.leaveTitle', message: 'common:autosave.leaveAllocationMessage',
     }));
+  });
+});
+
+describe('CapexItemPage cost center across lines', () => {
+  const LINE_A = 'aaaaaaaa-0000-4000-8000-0000000000c1';
+  const LINE_B = 'bbbbbbbb-0000-4000-8000-0000000000c2';
+  // Each line names its cost center in the detail (`references.cost_center`).
+  const ref = (id: string, code: string) => ({
+    id, code, name: `Centre ${code}`, kind: 'cost_center', status: 'enabled',
+    company_id: 'company-1', company_name: 'Company', owner_user_id: 'user-1', owner_name: 'Ada Holder',
+  });
+  const line = (id: string, n: number, costCenter: { id: string; code: string }) => ({
+    id, item_number: n, description: `Line ${n}`, notes: '', ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium',
+    currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1',
+    cost_center_id: costCenter.id, references: { cost_center: costCenter },
+  });
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/capex-items/${LINE_A}`) return { data: line(LINE_A, 1, ref('cc-a', 'CC-A')) };
+      if (url === `/capex-items/${LINE_B}`) return { data: line(LINE_B, 2, ref('cc-b', 'CC-B')) };
+      return { data: {} };
+    });
+  });
+
+  it('opens line A then line B, each with its own cost center, without loading the tree', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router: { navigate: NavigateFunction | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = useNavigate();
+      return null;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[`/ops/capex/${LINE_A}/overview`]}>
+            <NavigateProbe />
+            <Routes>
+              <Route path="/ops/capex/:id/:tab" element={<CapexItemPage />} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const shown = (id: string) => document.querySelector(`[data-mode="edit"][data-cost-center="${id}"]`);
+    await waitFor(() => expect(shown('cc-a')).not.toBeNull());
+    act(() => { router.navigate!(`/ops/capex/${LINE_B}/overview`); });
+    await waitFor(() => expect(shown('cc-b')).not.toBeNull());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/cost-centers'))).toEqual([]);
   });
 });
