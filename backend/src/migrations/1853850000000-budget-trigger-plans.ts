@@ -35,9 +35,11 @@ type Scope = (typeof SCOPES)[number];
  * Pinned on every function below. The search path as in 1853720000000. The plan cache mode
  * makes PostgreSQL plan each statement that reads a variable of the function again on every
  * call, with the variable's value: the arrays of keys are then constants of the plan (their
- * length is known, and `= ANY` over them is hashed), and a plan made while a table was small
- * (a new tenant, before an import in one transaction) never serves it once large. Statements
- * that read only the transition tables keep the plan of their first call: they join nothing.
+ * length is known, and `= ANY` over them is hashed, so a read that the planner serves by one pass
+ * over the tenant's rows tests each row once, not against each key), and a plan made while a
+ * table was small (a new tenant, before an import in one transaction) never serves it once
+ * large. Statements that read only the transition tables keep the plan of their first call: they
+ * join nothing.
  * Planning reuses the parsed statement; `EXECUTE ... USING` gives the same plans but parses,
  * analyses and applies row level security again on every call: 17 % slower on the perf
  * tenant's budget rows import (review of 2026-10-03). The one statement that does not need it
@@ -71,14 +73,22 @@ type Event = (typeof EVENTS)[number];
 
 const textArray = (values: readonly string[]) => `'{${values.join(',')}}'::text[]`;
 
-/* ---- Building blocks: no join anywhere ---- */
+/* ---- Building blocks: no join, no lookup per key ---- */
 
 /**
- * Distinct (tenant, key) pairs of the rows given, into two arrays (NULL when there is none).
- * `rows` yields `tenant_id` and `key`. It reads the transition tables only.
+ * A row's tenant and id as one text value, and a last column when given (a uuid is always 36
+ * characters, so the concatenation is unambiguous): the test of a key's tenant, with `=` or
+ * `= ANY` over such values (hashed from 9 values). No index serves it, so a key's tenant never
+ * becomes an index condition on tenant_id (see the class comment).
  */
-const intoArrays = (tenants: string, keys: string, rows: string) =>
-  `SELECT array_agg(c.tenant_id), array_agg(c.key) INTO ${tenants}, ${keys}
+const keyText = (...columns: string[]) => columns.map((column) => `${column}::text`).join(' || ');
+
+/**
+ * Distinct (tenant, key) pairs of the rows given, into two arrays (NULL when there is none): the
+ * keys, and the pairs as keyText. `rows` yields `tenant_id` and `key`.
+ */
+const intoArrays = (keys: string, pairs: string, rows: string) =>
+  `SELECT array_agg(c.key), array_agg(${keyText('c.tenant_id', 'c.key')}) INTO ${keys}, ${pairs}
          FROM (SELECT DISTINCT x.tenant_id, x.key FROM (${rows}) x) c;`;
 
 /**
@@ -97,22 +107,24 @@ function changedRows(columns: string, compared: string, out: string): string {
 }
 
 /**
- * One more `counter` on each row of `table` named by the (tenant, id) pairs of `tenants` and
- * `keys` (distinct pairs, NULL when there is none), as 1853740000000 did: a row of another tenant
- * than its pair's is left alone. One row: one update through the primary key. Several rows:
- * locked first in id order, each through its primary key (a LATERAL subquery, run for each key
- * in turn), then updated together. The writer already holds them (lock order of
- * `spend/budget-locks.ts`), so this waits for nobody.
+ * One more `counter` on each row of `table` named by the (tenant, id) pairs of `keys` and `pairs`
+ * (intoArrays; NULL when there is none), as 1853740000000 did: a row of another tenant than its
+ * pair's is left alone. One row: one update by id. Several rows: locked first in id order by one
+ * statement over all the keys (`ORDER BY` under `FOR NO KEY UPDATE`: the rows are locked as the
+ * sort returns them, whatever the scan), then updated together. The writer already holds them
+ * (lock order of `spend/budget-locks.ts`), so this waits for nobody.
  */
-function bumpSql(table: string, counter: string, tenants: string, keys: string, locked: string): string {
+function bumpSql(table: string, counter: string, keys: string, pairs: string, locked: string): string {
   return `
       IF ${keys} IS NOT NULL THEN
         IF cardinality(${keys}) = 1 THEN
-          UPDATE ${table} x SET ${counter} = x.${counter} + 1 WHERE x.id = ${keys}[1] AND x.tenant_id = ${tenants}[1];
+          UPDATE ${table} x SET ${counter} = x.${counter} + 1 WHERE x.id = ${keys}[1] AND ${keyText('x.tenant_id', 'x.id')} = ${pairs}[1];
         ELSE
           SELECT array_agg(l.id) INTO ${locked}
-            FROM (SELECT c.tenant_id, c.id FROM unnest(${tenants}, ${keys}) AS c(tenant_id, id) ORDER BY c.id) c,
-                 LATERAL (SELECT x.id FROM ${table} x WHERE x.id = c.id AND x.tenant_id = c.tenant_id FOR NO KEY UPDATE OF x) l;
+            FROM (SELECT x.id FROM ${table} x
+                   WHERE x.id = ANY (${keys}) AND ${keyText('x.tenant_id', 'x.id')} = ANY (${pairs})
+                   ORDER BY x.id
+                     FOR NO KEY UPDATE OF x) l;
           IF ${locked} IS NOT NULL THEN
             UPDATE ${table} x SET ${counter} = x.${counter} + 1 WHERE x.id = ANY (${locked});
           END IF;
@@ -129,8 +141,9 @@ const withoutColumns = (r: string, ignored: readonly string[]) => `(to_jsonb(${r
  * The statement trigger function of a version's child table (round inputs, their costed lines,
  * allocations): one more `budget_rev` on each version with a row inserted, deleted, or updated in
  * a column that counts, as in 1853740000000. A costed line names its version through its round
- * input, found through the round input's primary key; a line deleted with its round input
- * (cascade) finds none, and the round input's own delete counts.
+ * input: the round inputs of the statement's lines are read by one statement over their ids, and
+ * each one whose (tenant, id) pair is a line's names its version. A line deleted with its round
+ * input (cascade) finds none, and the round input's own delete counts.
  */
 function childFunctionSql(scope: Scope, key: ChildTable, ignored: string[]): string {
   const table = scope[key];
@@ -145,26 +158,23 @@ function childFunctionSql(scope: Scope, key: ChildTable, ignored: string[]): str
       's.tenant_id, s.key',
     ),
   };
-  const firstKeys = viaRound ? ['k_tenant_line', 'k_round'] : ['k_tenant', 'k_version'];
+  const firstKeys = viaRound ? ['k_round', 'k_round_pairs'] : ['k_version', 'k_pairs'];
   const toVersions = viaRound
     ? `
       IF k_round IS NOT NULL THEN
-        SELECT array_agg(c.tenant_id), array_agg(c.version_id) INTO k_tenant, k_version
-          FROM (SELECT DISTINCT l.tenant_id,
-                       (SELECT ri.version_id FROM ${scope.rounds} ri WHERE ri.id = l.round_input_id AND ri.tenant_id = l.tenant_id) AS version_id
-                  FROM unnest(k_tenant_line, k_round) AS l(tenant_id, round_input_id)) c
-         WHERE c.version_id IS NOT NULL;
+        ${intoArrays('k_version', 'k_pairs', `SELECT ri.tenant_id, ri.version_id AS key FROM ${scope.rounds} ri
+                 WHERE ri.id = ANY (k_round) AND ${keyText('ri.tenant_id', 'ri.id')} = ANY (k_round_pairs)`)}
       END IF;`
     : '';
   return `
     CREATE OR REPLACE FUNCTION ${table}_budget_rev() RETURNS trigger
     LANGUAGE plpgsql ${FUNCTION_SETTINGS} AS $fn$
     DECLARE
-      k_tenant uuid[];
       k_version uuid[];
+      k_pairs text[];
       k_locked uuid[];${viaRound ? `
-      k_tenant_line uuid[];
-      k_round uuid[];` : ''}
+      k_round uuid[];
+      k_round_pairs text[];` : ''}
     BEGIN
       IF TG_OP = 'INSERT' THEN
         ${intoArrays(firstKeys[0], firstKeys[1], rows.insert)}
@@ -173,7 +183,7 @@ function childFunctionSql(scope: Scope, key: ChildTable, ignored: string[]): str
       ELSE
         ${intoArrays(firstKeys[0], firstKeys[1], rows.update)}
       END IF;${toVersions}
-      ${bumpSql(scope.versions, 'budget_rev', 'k_tenant', 'k_version', 'k_locked')}
+      ${bumpSql(scope.versions, 'budget_rev', 'k_version', 'k_pairs', 'k_locked')}
       RETURN NULL;
     END
     $fn$
@@ -199,18 +209,18 @@ function analyticsFunctionSql(scope: Scope): string {
     CREATE OR REPLACE FUNCTION ${scope.analytics}_row_version() RETURNS trigger
     LANGUAGE plpgsql ${FUNCTION_SETTINGS} AS $fn$
     DECLARE
-      k_tenant uuid[];
       k_item uuid[];
+      k_pairs text[];
       k_locked uuid[];
     BEGIN
       IF TG_OP = 'INSERT' THEN
-        ${intoArrays('k_tenant', 'k_item', rows.insert)}
+        ${intoArrays('k_item', 'k_pairs', rows.insert)}
       ELSIF TG_OP = 'DELETE' THEN
-        ${intoArrays('k_tenant', 'k_item', rows.delete)}
+        ${intoArrays('k_item', 'k_pairs', rows.delete)}
       ELSE
-        ${intoArrays('k_tenant', 'k_item', rows.update)}
+        ${intoArrays('k_item', 'k_pairs', rows.update)}
       END IF;
-      ${bumpSql(scope.items, 'row_version', 'k_tenant', 'k_item', 'k_locked')}
+      ${bumpSql(scope.items, 'row_version', 'k_item', 'k_pairs', 'k_locked')}
       RETURN NULL;
     END
     $fn$
@@ -257,11 +267,13 @@ function groupedSql(rows: string): string {
  *    that holds a value, an updated month moved or changed in a value (NULL as 0).
  * 1. The statement's net change per version over the months of the version's own budget year:
  *    grouped per tenant, version and year from the transition tables (+ after, - before), then
- *    kept when the version, read through its primary key with the months' tenant, has that
- *    budget year. A version "gained" months when the statement brought it own-year rows and
- *    took none away.
- * 2. The totals rows of the versions whose amounts changed: read through the primary key, in
- *    version_id order, and locked (several versions, or an update or delete that adds to them).
+ *    kept when the version with that id and the months' tenant has that budget year (the
+ *    versions read by one statement over their ids, the groups tested against their
+ *    (tenant, id, budget year) as keyText). A version "gained" months when the statement brought
+ *    it own-year rows and took none away.
+ * 2. The totals rows of the versions whose amounts changed: read by one statement over their
+ *    ids and locked in version_id order (several versions, or an update or delete that adds to
+ *    them).
  * 3. Versions that had months before the statement, with a totals row: the change added to the
  *    row, through `INSERT ... ON CONFLICT DO UPDATE` on rows known to exist, like step 4.
  * 4. Versions that gained months, in version_id order: the change upserted when an amount
@@ -289,30 +301,33 @@ function amountsFunctionSql(scope: Scope): string {
     CREATE OR REPLACE FUNCTION ${scope.amounts}_version_totals() RETURNS trigger
     LANGUAGE plpgsql ${FUNCTION_SETTINGS} AS $fn$
     DECLARE
-      r_tenant uuid[];
       r_version uuid[];
+      r_pairs text[];
       r_locked uuid[];
       g_tenant uuid[];
       g_version uuid[];
       g_year numeric[];
       ${groupVars}
       g_gained boolean[];
+      k_own text[];
       k_tenant uuid[];
       k_version uuid[];
       ${deltaVars}
       k_gained boolean[];
       n_changed bigint;
+      k_changed uuid[];
+      k_changed_pairs text[];
       k_existing uuid[];
     BEGIN
       -- 0. budget_rev of the versions whose months really changed (lot 3B).
       IF TG_OP = 'INSERT' THEN
-        ${intoArrays('r_tenant', 'r_version', revRows.insert)}
+        ${intoArrays('r_version', 'r_pairs', revRows.insert)}
       ELSIF TG_OP = 'DELETE' THEN
-        ${intoArrays('r_tenant', 'r_version', revRows.delete)}
+        ${intoArrays('r_version', 'r_pairs', revRows.delete)}
       ELSE
-        ${intoArrays('r_tenant', 'r_version', revRows.update)}
+        ${intoArrays('r_version', 'r_pairs', revRows.update)}
       END IF;
-      ${bumpSql(scope.versions, 'budget_rev', 'r_tenant', 'r_version', 'r_locked')}
+      ${bumpSql(scope.versions, 'budget_rev', 'r_version', 'r_pairs', 'r_locked')}
 
       -- 1. Net change of the statement per version, own-year months only.
       IF TG_OP = 'INSERT' THEN
@@ -325,12 +340,17 @@ function amountsFunctionSql(scope: Scope): string {
       IF g_version IS NULL THEN
         RETURN NULL; -- no month was touched
       END IF;
+      SELECT array_agg(${keyText('v.tenant_id', 'v.id', 'v.budget_year')}) INTO k_own
+        FROM ${scope.versions} v
+       WHERE v.id = ANY (g_version);
       SELECT array_agg(c.tenant_id), array_agg(c.version_id), ${MEASURES.map((m) => `array_agg(c.${m})`).join(', ')},
-             array_agg(c.gained), count(*) FILTER (WHERE ${changedDelta})
-        INTO k_tenant, k_version, ${measureList('d_')}, k_gained, n_changed
+             array_agg(c.gained), count(*) FILTER (WHERE ${changedDelta}),
+             array_agg(c.version_id) FILTER (WHERE ${changedDelta}),
+             array_agg(${keyText('c.tenant_id', 'c.version_id')}) FILTER (WHERE ${changedDelta})
+        INTO k_tenant, k_version, ${measureList('d_')}, k_gained, n_changed, k_changed, k_changed_pairs
         FROM unnest(g_tenant, g_version, g_year, ${measureList('g_')}, g_gained)
              AS c(tenant_id, version_id, year, ${MEASURES.join(', ')}, gained)
-       WHERE c.year = (SELECT v.budget_year FROM ${scope.versions} v WHERE v.id = c.version_id AND v.tenant_id = c.tenant_id);
+       WHERE ${keyText('c.tenant_id', 'c.version_id', 'c.year::integer')} = ANY (k_own);
       IF k_version IS NULL THEN
         RETURN NULL; -- no own-year month of an existing version was touched
       END IF;
@@ -338,10 +358,10 @@ function amountsFunctionSql(scope: Scope): string {
       -- 2. The totals rows of the versions whose amounts changed, locked in version_id order.
       IF n_changed > 1 OR (n_changed = 1 AND TG_OP <> 'INSERT') THEN
         SELECT array_agg(l.version_id) INTO k_existing
-          FROM (SELECT c.tenant_id, c.version_id FROM ${CHANGES} WHERE ${changedDelta} ORDER BY c.version_id) c,
-               LATERAL (SELECT t.version_id FROM ${scope.totals} t
-                         WHERE t.version_id = c.version_id AND t.tenant_id = c.tenant_id
-                           FOR NO KEY UPDATE OF t) l;
+          FROM (SELECT t.version_id FROM ${scope.totals} t
+                 WHERE t.version_id = ANY (k_changed) AND ${keyText('t.tenant_id', 't.version_id')} = ANY (k_changed_pairs)
+                 ORDER BY t.version_id
+                   FOR NO KEY UPDATE OF t) l;
       END IF;
 
       -- 3. Versions that had months before the statement: add the change to their row.
@@ -489,9 +509,17 @@ async function rebuildTotals(queryRunner: QueryRunner): Promise<RebuildRow[]> {
  * and join nothing:
  * - the transition tables are only grouped; an UPDATE's old and new rows are paired by grouping
  *   them, not by a join;
- * - the versions, lines, round inputs and totals are reached one key at a time through their
- *   primary key (a scalar or LATERAL subquery run for each key, locking where 1853740000000
- *   locked), or several rows with `id = ANY` over a constant array;
+ * - the versions, lines, round inputs and totals are read by one statement over all the keys
+ *   (`id = ANY` over a constant array, locking in id order where 1853740000000 locked), never
+ *   by a lookup per key. With those statistics every index access costs about the same, and
+ *   which index PostgreSQL picks depends on index heights, catalog order and the orderings the
+ *   statement can use: a lookup by id that also compared tenant_id with the key's tenant went,
+ *   on a new database (CI on PostgreSQL 16, a new PostgreSQL 15), through
+ *   idx_spend_versions_tenant_year, the tenant's 25,000 versions read for each key; on
+ *   appdb_perf through the primary key. One statement reads each table at most once, whatever
+ *   the plan. A key's tenant is checked as text (keyText), so it is never an index condition;
+ *   a read of a few keys may still be served by one pass over the tenant's rows, as any read by
+ *   id is under such statistics;
  * - a totals row is changed through `INSERT ... ON CONFLICT`, which finds it through the primary
  *   key, instead of an `UPDATE ... FROM` join;
  * - every function plans the statements that read its variables on each call (plan cache mode),

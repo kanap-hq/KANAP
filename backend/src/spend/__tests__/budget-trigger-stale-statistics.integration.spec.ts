@@ -8,14 +8,15 @@ import { assert, inRolledBackTransaction, Kind, repeat, runSpecs, seedLine, seed
 // The budget statement triggers with stale statistics (plan planning/perf-scale, item 4C bis;
 // migration 1853850000000), against the database: a tenant with 25,000 versions, the planner
 // statistics of the versions, round inputs and totals tables taken while they were empty
-// (reltuples 0 over their real pages, so every scan reads as one row), then one statement
-// each: 16,000 round inputs inserted, 24,000 months inserted, updated, half of them deleted.
-// Each must finish in seconds, and give the counters and totals the rows hold. With the bodies
-// of 1853740000000 the first statement alone ran past the 30 s request timeout: run the spec
-// with STALE_STATS_PREVIOUS_FUNCTIONS=1 to install them (inside the rolled-back transaction)
-// and see the statements time out instead. The migration itself: a rerun repairs a missing,
-// disabled or replica-only trigger, leaves the others, rebuilds totals that drifted while an
-// amounts trigger did not fire; down() puts the previous bodies back.
+// (reltuples 0 over their real pages, so every scan reads as one row), every lookup by id
+// given its worst plan (see takeWorstLookups), then one statement each: 16,000 round inputs
+// inserted, 72,000 months inserted, updated, half of them deleted, one costed line inserted
+// per round input. Each must finish in seconds, and give the counters and totals the rows hold.
+// With the bodies of 1853740000000 the first statement alone ran past the 30 s request timeout:
+// run the spec with STALE_STATS_PREVIOUS_FUNCTIONS=1 to install them (inside the rolled-back
+// transaction) and see the statements time out instead. The migration itself: a rerun repairs
+// a missing, disabled or replica-only trigger, leaves the others, rebuilds totals that drifted
+// while an amounts trigger did not fire; down() puts the previous bodies back.
 // Each test runs in a transaction rolled back at the end; the tables' statistics are taken
 // again afterwards (ANALYZE), whatever the outcome.
 // @database-spec: run-ci-tests.js runs this file in its serial database lane.
@@ -25,14 +26,20 @@ const ITEMS = 5000;
 const FIRST_YEAR = 2041;
 const YEARS = 5;
 const ROUND_INPUTS = 16000;
-const VERSIONS_WITH_MONTHS = 2000;
+const VERSIONS_WITH_MONTHS = 6000;
 /** One statement over thousands of rows; the previous bodies took minutes. */
 const LIMIT_MS = 10000;
 const STATEMENT_TIMEOUT = '20s';
 
 const T = {
-  opex: { items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', amounts: 'spend_amounts', rounds: 'spend_round_inputs', totals: 'spend_version_totals' },
-  capex: { items: 'capex_items', itemFk: 'capex_item_id', versions: 'capex_versions', amounts: 'capex_amounts', rounds: 'capex_round_inputs', totals: 'capex_version_totals' },
+  opex: {
+    items: 'spend_items', itemFk: 'spend_item_id', versions: 'spend_versions', amounts: 'spend_amounts',
+    rounds: 'spend_round_inputs', lines: 'spend_round_input_lines', totals: 'spend_version_totals',
+  },
+  capex: {
+    items: 'capex_items', itemFk: 'capex_item_id', versions: 'capex_versions', amounts: 'capex_amounts',
+    rounds: 'capex_round_inputs', lines: 'capex_round_input_lines', totals: 'capex_version_totals',
+  },
 } as const;
 
 const staleTables = (kind: Kind) => [T[kind].versions, T[kind].rounds, T[kind].totals];
@@ -97,6 +104,33 @@ async function makeStatisticsStale(runner: QueryRunner, kind: Kind, tenantId: st
   assert.ok(versions && versions.relpages > 0, `${kind}: the versions table keeps its pages, so it reads as one row`);
 }
 
+/**
+ * Every lookup by id of a version or a round input given its worst plan, on every database.
+ * With statistics that read a table as one row, an index whose first column is tenant_id (the
+ * row level security filter's column) costs about the same as the primary key for a lookup by
+ * id, and PostgreSQL picks one by index heights, catalog order and the orderings a statement can
+ * use: on a new database (CI on PostgreSQL 16, a new PostgreSQL 15) a lookup of a version by id
+ * and tenant went through idx_spend_versions_tenant_year and read the tenant's 25,000 versions,
+ * on appdb_perf through the primary key. Inside the test's transaction the versions lose their primary key, the round
+ * inputs their primary key and (tenant_id, id) key (the foreign keys on them go too), so every
+ * lookup by id reads the tenant's rows: a body that looks up its keys one at a time is then
+ * quadratic wherever the spec runs, and one that reads them in one statement stays linear. The
+ * totals keep theirs: it is the conflict target of their upserts.
+ */
+async function takeWorstLookups(runner: QueryRunner, kind: Kind) {
+  const t = T[kind];
+  for (const [table, constraint] of [[t.versions, `${t.versions}_pkey`], [t.rounds, `${t.rounds}_pkey`], [t.rounds, `${t.rounds}_tenant_id_id_key`]]) {
+    await runner.query(`ALTER TABLE ${table} DROP CONSTRAINT ${constraint} CASCADE`);
+  }
+  const left: Array<{ name: string }> = await runner.query(
+    `SELECT i.indexrelid::regclass::text AS name FROM pg_index i
+       JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY (i.indkey)
+      WHERE i.indrelid = ANY ($1::regclass[]) AND a.attname = 'id'`,
+    [[t.versions, t.rounds]],
+  );
+  assert.deepEqual(left, [], `${kind}: no index on id is left for a lookup by id`);
+}
+
 type Statement = { label: string; sql: string; params: unknown[]; rows: number };
 
 /** The statements timed, in order: each acts on what the ones before it wrote. */
@@ -131,6 +165,17 @@ function statements(kind: Kind, tenantId: string): Statement[] {
       sql: `DELETE FROM ${t.amounts} WHERE tenant_id = $1 AND EXTRACT(MONTH FROM period) > 6`,
       params: [tenantId],
       rows: VERSIONS_WITH_MONTHS * 6,
+    },
+    {
+      // Last: with the previous functions the first statement is cancelled, and this one would
+      // find no round input to cost.
+      label: `one INSERT of ${ROUND_INPUTS} costed lines`,
+      sql: `INSERT INTO ${t.lines} (tenant_id, round_input_id, sort, label, quantity_unit, quantity, unit_price,
+                                    price_basis, frequency, period_start, period_end)
+            SELECT ri.tenant_id, ri.id, 1, 'Stale statistics', 'pieces', 1, 10, 'per_piece', 'once', ri.period_start, ri.period_start
+              FROM ${t.rounds} ri WHERE ri.tenant_id = $1`,
+      params: [tenantId],
+      rows: ROUND_INPUTS,
     },
   ];
 }
@@ -197,6 +242,7 @@ async function testStaleStatistics(kind: Kind) {
       const tenantId = await seedTenant(runner, `stale-stats-${kind}`);
       await seedVersions(runner, kind, tenantId);
       await makeStatisticsStale(runner, kind, tenantId);
+      await takeWorstLookups(runner, kind);
       await runner.query(`SELECT set_config('statement_timeout', $1, true)`, [STATEMENT_TIMEOUT]);
 
       // A session mode other than the two step 4 switches between: a leak would show.
@@ -226,9 +272,9 @@ async function testStaleStatistics(kind: Kind) {
       // Same results as the rows hold: each statement bumped each version it touched once.
       assert.deepEqual(await revisions(runner, kind, tenantId), {
         1: ITEMS * YEARS - ROUND_INPUTS,
-        2: ROUND_INPUTS - VERSIONS_WITH_MONTHS,
-        5: VERSIONS_WITH_MONTHS,
-      }, `${kind}: budget_rev +1 per round input, +1 per months statement`);
+        3: ROUND_INPUTS - VERSIONS_WITH_MONTHS,
+        6: VERSIONS_WITH_MONTHS,
+      }, `${kind}: budget_rev +1 for the round input, +1 for its costed line, +1 per months statement`);
       await assertTotals(runner, kind, tenantId);
     });
   } finally {
