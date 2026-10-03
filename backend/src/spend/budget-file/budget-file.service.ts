@@ -5,6 +5,7 @@ import { CurrencySettingsService } from '../../currency/currency-settings.servic
 import { readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { readBudgetLineMeta } from '../item-meta';
 import { buildBudgetExport, fileNameOfExport, parseAmountYears, parseDetail, parseFileColumns, shownFileColumns } from './export-file';
+import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportResult, BudgetFileItems, parseBudgetSnapshot } from './import-file';
 import { interpretBudgetFile, readBudgetCsv } from './interpret';
 import { loadDimensionCodes, loadExportLines, loadPreflight } from './load';
 import { buildPreflight, changedSinceText } from './preflight';
@@ -25,10 +26,9 @@ export interface BudgetFileCaller {
 }
 
 /**
- * C2a of the budget file: read, match, preflight, export. Nothing here writes.
- * The load is C2b. Its route calls `analyzeAfterLargeImport` last and does
- * not query after that call. `scripts/tenant-import.sh` is also C2b.
- * Contract: planning/sfr/briefs/csv-c2.md.
+ * The budget file: read, match, preflight, export, and the load.
+ * The import route calls `analyzeAfterLargeImport` last and does not query
+ * after that call. Contract: planning/sfr/briefs/csv-c2.md.
  */
 @Injectable()
 export class BudgetFileService {
@@ -88,6 +88,41 @@ export class BudgetFileService {
       scope, language, years, columns, detail, lines: loaded.lines, dimensionCodes: loaded.dimensionCodes,
     });
     return { filename: fileNameOfExport(scope), content: writeCsv({ language, headers: built.headers, rows: built.rows }) };
+  }
+
+  /**
+   * The load. `deps` are the item service of this list, the audit log and the
+   * freeze check. The caller runs `analyzeAfterLargeImport` on the result and
+   * does not query after that.
+   */
+  async importFile(
+    scope: BudgetFileScope,
+    file: Buffer,
+    snapshot: unknown,
+    caller: BudgetFileCaller,
+    options: { language: unknown; dateOrder: unknown; createSuppliers: boolean; canCreateSuppliers: boolean },
+    deps: { items: BudgetFileItems; audit: BudgetFileAudit; freeze: BudgetFileFreeze },
+  ): Promise<BudgetFileImportResult> {
+    const manager = requireManager(caller.manager);
+    const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
+    const dateOrder = parseDateOrder(options.dateOrder);
+    const settings = await this.currencySettings.getSettings(caller.tenantId, { manager });
+    return importBudgetFile({
+      scope,
+      file,
+      snapshot: parseBudgetSnapshot(snapshot),
+      manager,
+      tenantId: caller.tenantId,
+      userId: caller.userId,
+      language,
+      dateOrder,
+      createSuppliers: options.createSuppliers,
+      canCreateSuppliers: options.canCreateSuppliers,
+      allowedCurrencies: settings.allowedCurrencies,
+      items: deps.items,
+      audit: deps.audit,
+      freeze: deps.freeze,
+    });
   }
 }
 

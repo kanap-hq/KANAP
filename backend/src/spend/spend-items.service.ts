@@ -274,7 +274,7 @@ export class SpendItemsService {
     return replaceItemApplications({ manager: mg, audit: this.audit }, 'opex', spend, applicationIds, userId ?? null);
   }
 
-  async create(body: SpendItemUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
+  async create(body: SpendItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; itemNumber?: number; source?: string }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendItem);
     // Writable columns only, every id resolved in this tenant; see `item-write.util.ts`.
@@ -282,7 +282,7 @@ export class SpendItemsService {
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: disabled_at });
     const tenantId = await this.resolveTenantId(mg);
-    const item_number = await this.itemNumbers.nextItemNumber('spend', tenantId, mg);
+    const item_number = opts?.itemNumber ?? await this.itemNumbers.nextItemNumber('spend', tenantId, mg);
     const entity = repo.create({
       ...(values as Partial<SpendItem>),
       // These columns are NOT NULL on the entity while the DTO allows null
@@ -298,12 +298,13 @@ export class SpendItemsService {
     const created = analytics.length > 0 ? await this.withAnalytics(mg, { ...saved, tenant_id: tenantId }) : { ...saved, ...itemAnalyticsFields([]) };
     await this.audit.log({
       table: 'spend_items', recordId: saved.id, action: 'create', before: null,
-      after: { ...saved, ...itemAnalyticsAuditFields(created.analytics_values) }, userId,
+      after: { ...saved, ...itemAnalyticsAuditFields(created.analytics_values), ...(opts?.source ? { source: opts.source } : {}) },
+      userId, source: opts?.source,
     }, { manager: mg });
     return created;
   }
 
-  async update(id: string, body: SpendItemUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
+  async update(id: string, body: SpendItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string }) {
     const mg = opts?.manager ?? this.repo.manager;
     const itemId = await resolveToUuid(id, 'spend', mg);
     const tenantId = await this.resolveTenantId(mg);
@@ -315,7 +316,8 @@ export class SpendItemsService {
     await this.audit.log({
       table: 'spend_items', recordId: saved.id, action: 'update',
       before: { ...before, ...itemAnalyticsAuditFields(analyticsBefore) },
-      after: { ...saved, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
+      after: { ...saved, ...itemAnalyticsAuditFields(analyticsAfter), ...(opts?.source ? { source: opts.source } : {}) },
+      userId, source: opts?.source,
     }, { manager: mg });
 
     // Sync contacts from supplier if supplier changed
@@ -327,7 +329,7 @@ export class SpendItemsService {
     }
 
     // Notify owners on status change
-    if (statusBefore !== saved.status) {
+    if (statusBefore !== saved.status && opts?.statusEmail !== false) {
       const tenantId = saved.tenant_id;
       // IT owner first, then the business owner, read in one query.
       const ownerIds = Array.from(new Set([saved.owner_it_id, saved.owner_business_id].filter((v): v is string => !!v)));

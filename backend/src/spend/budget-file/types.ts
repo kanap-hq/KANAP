@@ -220,3 +220,37 @@ export interface BudgetFileReport {
 }
 
 export const AMOUNT_MEASURE_LIST: readonly AmountMeasure[] = AMOUNT_MEASURES;
+
+/** One amount the load writes. `month` null is a yearly total. */
+export interface BudgetFileAmountChange {
+  year: number;
+  measure: AmountMeasure;
+  month: number | null;
+  cents: bigint;
+}
+
+/** One dimension value the load sets. `createName` is a value that does not exist yet. */
+export interface BudgetFileAnalyticsChange {
+  code: string;
+  categoryId: string | null;
+  createName: string | null;
+}
+
+/**
+ * One line the load writes. `body` holds only the item-service columns that
+ * change (every column a new line sets). Amounts and new suppliers are beside
+ * it: the supplier id and the new dimension values are known only after those
+ * inserts.
+ */
+export interface BudgetFileLinePlan {
+  line: number;
+  creating: boolean;
+  itemId: string | null;
+  itemNumber: number | null;
+  body: Record<string, unknown>;
+  analytics: BudgetFileAnalyticsChange[];
+  amounts: BudgetFileAmountChange[];
+  /** Grain of a version this file creates, per year it writes. */
+  grains: Array<{ year: number; grain: 'annual' | 'monthly' }>;
+  newSupplier: { name: string; erpId: string | null } | null;
+}

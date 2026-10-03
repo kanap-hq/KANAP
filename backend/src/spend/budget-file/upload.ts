@@ -5,10 +5,10 @@ import { csvImportMulterOptions } from '../../common/upload';
 
 /**
  * A monthly row of five columns over three years is about 2 KB (the spec
- * measures the writer). 20,000 such rows, with room for notes and quotes,
- * stay under this. The csv-sheet row cap is still 20,000.
+ * measures the writer). 20,000 such rows are about 40 MB and stay under this.
+ * The csv-sheet row cap is still 20,000. The 413 message does not name the cap.
  */
-export const BUDGET_FILE_MAX_BYTES = 160 * 1024 * 1024;
+export const BUDGET_FILE_MAX_BYTES = 48 * 1024 * 1024;
 
 export const BUDGET_FILE_TOO_LARGE =
   'This file is too large. A budget file can hold 20,000 lines. Export fewer lines or fewer years.';

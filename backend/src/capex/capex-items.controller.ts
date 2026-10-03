@@ -23,9 +23,12 @@ import {
   ListCapexQueryInput,
 } from './dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { AuditService } from '../audit/audit.service';
+import { FreezeService } from '../freeze/freeze.service';
 import { analyzeAfterLargeImport, lineImportTables } from '../spend/budget-import-statistics';
 import { BudgetFileService, canCreateSuppliers } from '../spend/budget-file/budget-file.service';
 import { exportListQuery } from '../spend/budget-file/export-file';
+import { importAnalyzeTables } from '../spend/budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from '../spend/budget-file/upload';
 
 @UseGuards(JwtAuthGuard)
@@ -37,6 +40,8 @@ export class CapexItemsController {
     private readonly storage: StorageService,
     private readonly contactsSvc: CapexItemContactsService,
     private readonly budgetFile: BudgetFileService,
+    private readonly audit: AuditService,
+    private readonly freeze: FreezeService,
   ) {}
 
   private resolveId(id: string, manager: EntityManager): Promise<string> {
@@ -188,6 +193,37 @@ export class CapexItemsController {
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
     });
+  }
+
+  /** The load (C2b). Not a read. `analyzeAfterLargeImport` is the last call. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('capex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('budget-file/import')
+  @HttpCode(200)
+  @UseInterceptors(BudgetFileSizeInterceptor, FileInterceptor('file', budgetFileMulterOptions))
+  async importBudgetFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('snapshot') snapshot: string,
+    @Query('language') language: string,
+    @Query('dateOrder') dateOrder: string,
+    @Query('createSuppliers') createSuppliers: string,
+    @Tenant() ctx: TenantRequest,
+    @Req() req: any,
+  ) {
+    if (!file?.buffer) throw new BadRequestException('Choose a CSV file.');
+    const result = await this.budgetFile.importFile('capex', file.buffer, snapshot, {
+      manager: ctx.manager as EntityManager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId || null,
+    }, {
+      language,
+      dateOrder,
+      createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
+      canCreateSuppliers: canCreateSuppliers(ctx),
+    }, { items: this.svc, audit: this.audit, freeze: this.freeze });
+    await analyzeAfterLargeImport(req, importAnalyzeTables('capex', result), result);
+    return result;
   }
 
   @UseGuards(PermissionGuard)

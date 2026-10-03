@@ -7,6 +7,9 @@ import { firstAmountYear, interpretBudgetFile, InterpretedRow, FieldCell } from 
 import { tokenError } from './token';
 import {
   BudgetCatalog,
+  BudgetFileAmountChange,
+  BudgetFileAnalyticsChange,
+  BudgetFileLinePlan,
   BudgetFileReport,
   BudgetFileScope,
   BudgetFileSnapshotLine,
@@ -47,6 +50,28 @@ const MISSING_LABELS: Record<string, { one: string; many: string; where: string 
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
+/** The write the resolvers record beside the report. Discarded when the row fails. */
+interface LineDraft {
+  body: Record<string, unknown>;
+  analytics: BudgetFileAnalyticsChange[];
+  amounts: BudgetFileAmountChange[];
+  grains: Map<number, 'annual' | 'monthly'>;
+  newSupplier: { name: string; erpId: string | null } | null;
+}
+
+function emptyDraft(): LineDraft {
+  return { body: {}, analytics: [], amounts: [], grains: new Map(), newSupplier: null };
+}
+
+/** A create writes the value; an update writes it only when it differs from the line. */
+function writeField(draft: LineDraft, creating: boolean, changed: boolean, key: string, value: unknown): void {
+  if (creating || changed) draft.body[key] = value;
+}
+
+function nameColumn(scope: BudgetFileScope): 'product_name' | 'description' {
+  return scope === 'opex' ? 'product_name' : 'description';
+}
+
 export interface PreflightInput {
   scope: BudgetFileScope;
   read: CsvReadResult;
@@ -78,12 +103,21 @@ interface Bag {
   created: Array<{ line: number; name: string }>;
   updated: Array<{ line: number; itemNumber: string; fields: string[] }>;
   unchanged: number;
+  plans: BudgetFileLinePlan[];
 }
 
 /** The preflight report. Does not read or write the database. */
 export function buildPreflight(input: PreflightInput): BudgetFileReport {
+  return planBudgetFile(input).report;
+}
+
+/**
+ * The report and, for every line it would write, the columns and amounts.
+ * The same comparison as the report. Does not read or write the database.
+ */
+export function planBudgetFile(input: PreflightInput): { report: BudgetFileReport; plans: BudgetFileLinePlan[] } {
   const rows = interpretBudgetFile(input.scope, input.read);
-  if (input.read.fileErrors.length > 0 || input.read.headerErrors.length > 0) return refused(input, rows);
+  if (input.read.fileErrors.length > 0 || input.read.headerErrors.length > 0) return { report: refused(input, rows), plans: [] };
   return compared(input, rows);
 }
 
@@ -92,7 +126,7 @@ function refused(input: PreflightInput, rows: InterpretedRow[]): BudgetFileRepor
   return finish(input, errors, emptyBag(), null);
 }
 
-function compared(input: PreflightInput, rows: InterpretedRow[]): BudgetFileReport {
+function compared(input: PreflightInput, rows: InterpretedRow[]): { report: BudgetFileReport; plans: BudgetFileLinePlan[] } {
   const bag = emptyBag();
   const storedByNumber = new Map(input.stored.map((line) => [line.itemNumber, line]));
   const seen = new Map<number, number>();
@@ -113,7 +147,7 @@ function compared(input: PreflightInput, rows: InterpretedRow[]): BudgetFileRepo
     }
     resolveRow(input, row, storedByNumber, newKeys, bag);
   }
-  return finish(input, bag.errors, bag, supplierMessage(bag, input));
+  return { report: finish(input, bag.errors, bag, supplierMessage(bag, input)), plans: bag.plans };
 }
 
 function resolveRow(
@@ -156,19 +190,20 @@ function resolveRow(
   if (row.token.kind === 'bad' && row.itemNumber.kind !== 'blank') fail('kanap_token', tokenError(row.token.raw));
 
   const changes: string[] = [];
+  const draft = emptyDraft();
   const live = matched;
-  const costCenter = resolveCostCenter(input, row, live, blocked, fail, bag, changes);
-  const company = resolveCompany(input, row, live, creating, costCenter, blocked, fail, bag, changes);
-  resolveAccount(input, row, live, creating, company, blocked, fail, bag, changes);
-  const supplier = resolveSupplier(input, row, live, creating, blocked, fail, bag, changes);
-  resolveText(input.scope, row, live, creating, blocked, fail, changes);
-  resolveEnums(input.scope, row, live, creating, blocked, fail, changes);
-  resolveCurrency(input, row, live, creating, blocked, fail, changes);
-  resolveOwners(input, row, live, creating, blocked, fail, bag, changes);
-  resolveProject(input, row, live, creating, blocked, fail, bag, changes);
-  resolveAnalytics(input, row, live, blocked, fail, bag, changes);
-  resolveDates(input, row, live, creating, blocked, fail, changes);
-  resolveAmounts(input, row, live, blocked, fail, changes);
+  const costCenter = resolveCostCenter(input, row, live, blocked, fail, bag, changes, draft);
+  const company = resolveCompany(input, row, live, creating, costCenter, blocked, fail, bag, changes, draft);
+  resolveAccount(input, row, live, creating, company, blocked, fail, bag, changes, draft);
+  const supplier = resolveSupplier(input, row, live, creating, blocked, fail, bag, changes, draft);
+  resolveText(input.scope, row, live, creating, blocked, fail, changes, draft);
+  resolveEnums(input.scope, row, live, creating, blocked, fail, changes, draft);
+  resolveCurrency(input, row, live, creating, blocked, fail, changes, draft);
+  resolveOwners(input, row, live, creating, blocked, fail, bag, changes, draft);
+  resolveProject(input, row, live, creating, blocked, fail, bag, changes, draft);
+  resolveAnalytics(input, row, live, creating, blocked, fail, bag, changes, draft);
+  resolveDates(input, row, live, creating, blocked, fail, changes, draft);
+  resolveAmounts(input, row, live, blocked, fail, changes, draft);
 
   if (creating && row.fields.name?.kind === 'value') {
     const hint = duplicateHint(input.scope, row, supplier, input.names, newKeys);
@@ -191,6 +226,7 @@ function resolveRow(
 
   const failed = errors.length > 0;
   if (failed || !creating && !live) return;
+  if (creating || changes.length > 0) bag.plans.push(toPlan(input.scope, row, live, creating, draft));
   if (creating) {
     bag.created.push({ line: row.line, name: textOf(row.fields.name) || '(no name)' });
     return;
@@ -200,6 +236,27 @@ function resolveRow(
     return;
   }
   bag.unchanged += 1;
+}
+
+function toPlan(
+  scope: BudgetFileScope,
+  row: InterpretedRow,
+  live: StoredLine | null,
+  creating: boolean,
+  draft: LineDraft,
+): BudgetFileLinePlan {
+  const years = Array.from(new Set(draft.amounts.map((amount) => amount.year))).sort((a, b) => a - b);
+  return {
+    line: row.line,
+    creating,
+    itemId: live?.id ?? null,
+    itemNumber: live?.itemNumber ?? (row.itemNumber.kind === 'number' ? row.itemNumber.n : null),
+    body: draft.body,
+    analytics: draft.analytics,
+    amounts: draft.amounts,
+    grains: years.map((year) => ({ year, grain: draft.grains.get(year) ?? 'annual' })),
+    newSupplier: draft.newSupplier,
+  };
 }
 
 type CompanyOutcome = { id: string | null; known: boolean };
@@ -212,6 +269,7 @@ function resolveCostCenter(
   fail: (column: string | null, message: string) => void,
   bag: Bag,
   changes: string[],
+  draft: LineDraft,
 ): { id: string | null; companyId: string | null } | null {
   const cell = row.fields.cost_center_code ?? { kind: 'absent' as const };
   if (blocked('cost_center_code')) return live ? { id: live.costCenterId, companyId: null } : null;
@@ -221,7 +279,10 @@ function resolveCostCenter(
     return { id: live.costCenterId, companyId: node?.companyId ?? null };
   }
   if (cell.kind === 'clear') {
-    if (live?.costCenterId) changes.push('cost_center_code');
+    if (live?.costCenterId) {
+      changes.push('cost_center_code');
+      draft.body.cost_center_id = null;
+    }
     return { id: null, companyId: null };
   }
   const node = findCostCenter(input.catalog.costCenters, cell.text);
@@ -242,7 +303,9 @@ function resolveCostCenter(
     fail('cost_center_code', `Cost center ${node.center.code} is disabled.`);
     return null;
   }
-  if (live && node.center.id !== live.costCenterId) changes.push('cost_center_code');
+  const changed = !!(live && node.center.id !== live.costCenterId);
+  if (changed) changes.push('cost_center_code');
+  writeField(draft, !live, changed, 'cost_center_id', node.center.id);
   return { id: node.center.id, companyId: node.center.companyId };
 }
 
@@ -256,6 +319,7 @@ function resolveCompany(
   fail: (column: string | null, message: string) => void,
   bag: Bag,
   changes: string[],
+  draft: LineDraft,
 ): CompanyOutcome {
   const cell = row.fields.company_name ?? { kind: 'absent' as const };
   if (blocked('company_name')) return { id: live?.companyId ?? null, known: false };
@@ -278,7 +342,9 @@ function resolveCompany(
       fail('company_name', `Company '${found.row.name}' is disabled.`);
       return { id: null, known: false };
     }
-    if (live && found.row.id !== live.companyId) changes.push('company_name');
+    const changed = !!(live && found.row.id !== live.companyId);
+    if (changed) changes.push('company_name');
+    writeField(draft, creating, changed, 'paying_company_id', found.row.id);
     return { id: found.row.id, known: true };
   }
   if (creating) {
@@ -287,6 +353,7 @@ function resolveCompany(
       fail('company_name', 'company_name is required.');
       return { id: null, known: false };
     }
+    draft.body.paying_company_id = fromCenter;
     return { id: fromCenter, known: true };
   }
   return { id: live?.companyId ?? null, known: !!live?.companyId };
@@ -302,6 +369,7 @@ function resolveAccount(
   fail: (column: string | null, message: string) => void,
   bag: Bag,
   changes: string[],
+  draft: LineDraft,
 ): void {
   const cell = row.fields.account_number ?? { kind: 'absent' as const };
   if (blocked('account_number')) return;
@@ -338,7 +406,9 @@ function resolveAccount(
     fail('account_number', `Account ${account.number} is disabled.`);
     return;
   }
-  if (live && account.id !== live.accountId) changes.push('account_number');
+  const changed = !!(live && account.id !== live.accountId);
+  if (changed) changes.push('account_number');
+  writeField(draft, creating, changed, 'account_id', account.id);
 }
 
 function resolveSupplier(
@@ -350,6 +420,7 @@ function resolveSupplier(
   fail: (column: string | null, message: string) => void,
   bag: Bag,
   changes: string[],
+  draft: LineDraft,
 ): { id: string | null; createKey: string | null } {
   const nameCell = row.fields.supplier_name ?? { kind: 'absent' as const };
   const erpCell = row.fields.supplier_erp_id ?? { kind: 'absent' as const };
@@ -358,11 +429,17 @@ function resolveSupplier(
   const erp = opinion(erpCell);
   if (name === undefined && erp === undefined) return { id: creating ? null : (live?.supplierId ?? null), createKey: null };
   if (name === null && (erp === undefined || erp === null)) {
-    if (live?.supplierId) changes.push('supplier');
+    if (live?.supplierId) {
+      changes.push('supplier');
+      draft.body.supplier_id = null;
+    }
     return { id: null, createKey: null };
   }
   if (erp === null && name === undefined) {
-    if (live?.supplierId) changes.push('supplier');
+    if (live?.supplierId) {
+      changes.push('supplier');
+      draft.body.supplier_id = null;
+    }
     return { id: null, createKey: null };
   }
   const nameText = name ?? '';
@@ -393,7 +470,9 @@ function resolveSupplier(
       fail('supplier_name', `Supplier '${supplier.name}' is disabled.`);
       return { id: null, createKey: null };
     }
-    if (live && supplier.id !== live.supplierId) changes.push('supplier');
+    const changed = !!(live && supplier.id !== live.supplierId);
+    if (changed) changes.push('supplier');
+    writeField(draft, creating, changed, 'supplier_id', supplier.id);
     return { id: supplier.id, createKey: null };
   }
   if (erpText && byName?.kind === 'one') {
@@ -406,7 +485,9 @@ function resolveSupplier(
       fail('supplier_name', `Supplier '${supplier.name}' is disabled.`);
       return { id: null, createKey: null };
     }
-    if (live && supplier.id !== live.supplierId) changes.push('supplier');
+    const changed = !!(live && supplier.id !== live.supplierId);
+    if (changed) changes.push('supplier');
+    writeField(draft, creating, changed, 'supplier_id', supplier.id);
     return { id: supplier.id, createKey: null };
   }
   if (!nameText) {
@@ -415,8 +496,10 @@ function resolveSupplier(
   }
   const createKey = `${nameText.toLowerCase()}|${erpText.toLowerCase()}`;
   if (input.createSuppliers && input.canCreateSuppliers) {
-    bag.suppliers.set(createKey, { name: nameText, erpId: erpText || null });
+    const created = { name: nameText, erpId: erpText || null };
+    bag.suppliers.set(createKey, created);
     changes.push('supplier');
+    draft.newSupplier = created;
     return { id: null, createKey };
   }
   fail('supplier_name', `Supplier '${nameText}' does not exist.`);
@@ -439,6 +522,7 @@ function resolveText(
   blocked: (column: string) => boolean,
   fail: (column: string | null, message: string) => void,
   changes: string[],
+  draft: LineDraft,
 ): void {
   const fields: Array<{ id: string; stored: string | null; required: boolean }> = [
     { id: 'name', stored: live?.name ?? null, required: true },
@@ -449,16 +533,22 @@ function resolveText(
     if (scope === 'capex' && field.id === 'description') continue;
     const cell = row.fields[field.id] ?? { kind: 'absent' as const };
     if (blocked(field.id)) continue;
+    const key = field.id === 'name' ? nameColumn(scope) : field.id;
     if (cell.kind === 'clear') {
       if (field.required || !CLEARABLE.has(field.id)) fail(field.id, `${field.id} is required.`);
-      else if (field.stored) changes.push(field.id);
+      else if (field.stored) {
+        changes.push(field.id);
+        draft.body[key] = null;
+      }
       continue;
     }
     if (cell.kind === 'absent' || cell.kind === 'blank') {
       if (creating && field.required) fail(field.id, `${field.id} is required.`);
       continue;
     }
-    if ((field.stored ?? '') !== cell.text) changes.push(field.id);
+    const changed = (field.stored ?? '') !== cell.text;
+    if (changed) changes.push(field.id);
+    writeField(draft, creating, changed, key, cell.text);
   }
 }
 
@@ -470,6 +560,7 @@ function resolveEnums(
   blocked: (column: string) => boolean,
   fail: (column: string | null, message: string) => void,
   changes: string[],
+  draft: LineDraft,
 ): void {
   const fields: Array<{ id: string; stored: string | null; required: boolean }> = [
     { id: 'ppe_type', stored: live?.ppeType ?? null, required: scope === 'capex' },
@@ -484,7 +575,10 @@ function resolveEnums(
     const allowed = ENUMS[field.id];
     if (cell.kind === 'clear') {
       if (field.required) fail(field.id, `${field.id} is required.`);
-      else if (field.stored) changes.push(field.id);
+      else if (field.stored) {
+        changes.push(field.id);
+        draft.body[field.id] = null;
+      }
       continue;
     }
     if (cell.kind === 'absent' || cell.kind === 'blank') {
@@ -497,7 +591,9 @@ function resolveEnums(
       fail(field.id, `${field.id} '${cell.text}' is not a value. Use ${list}.`);
       continue;
     }
-    if ((field.stored ?? '') !== value) changes.push(field.id);
+    const changed = (field.stored ?? '') !== value;
+    if (changed) changes.push(field.id);
+    writeField(draft, creating, changed, field.id, value);
   }
 }
 
@@ -509,6 +605,7 @@ function resolveCurrency(
   blocked: (column: string) => boolean,
   fail: (column: string | null, message: string) => void,
   changes: string[],
+  draft: LineDraft,
 ): void {
   const cell = row.fields.currency ?? { kind: 'absent' as const };
   if (blocked('currency')) return;
@@ -530,7 +627,9 @@ function resolveCurrency(
     fail('currency', `currency '${code}' is not allowed.`);
     return;
   }
-  if ((live?.currency ?? '').trim().toUpperCase() !== code) changes.push('currency');
+  const changed = (live?.currency ?? '').trim().toUpperCase() !== code;
+  if (changed) changes.push('currency');
+  writeField(draft, creating, changed, 'currency', code);
 }
 
 function resolveOwners(
@@ -542,17 +641,21 @@ function resolveOwners(
   fail: (column: string | null, message: string) => void,
   bag: Bag,
   changes: string[],
+  draft: LineDraft,
 ): void {
-  const owners: Array<{ id: string; stored: string | null }> = [
-    { id: 'owner_it_email', stored: live?.ownerItEmail ?? null },
-    { id: 'owner_business_email', stored: live?.ownerBusinessEmail ?? null },
+  const owners: Array<{ id: string; column: 'owner_it_id' | 'owner_business_id'; stored: string | null }> = [
+    { id: 'owner_it_email', column: 'owner_it_id', stored: live?.ownerItEmail ?? null },
+    { id: 'owner_business_email', column: 'owner_business_id', stored: live?.ownerBusinessEmail ?? null },
   ];
   for (const owner of owners) {
     const cell = row.fields[owner.id] ?? { kind: 'absent' as const };
     if (blocked(owner.id)) continue;
     if (cell.kind === 'absent' || cell.kind === 'blank') continue;
     if (cell.kind === 'clear') {
-      if (owner.stored) changes.push(owner.id);
+      if (owner.stored) {
+        changes.push(owner.id);
+        draft.body[owner.column] = null;
+      }
       continue;
     }
     if (!EMAIL.test(cell.text)) {
@@ -571,8 +674,8 @@ function resolveOwners(
       continue;
     }
     if (!current) changes.push(owner.id);
+    writeField(draft, creating, !current, owner.column, user.id);
   }
-  void creating;
 }
 
 function resolveProject(
@@ -584,12 +687,16 @@ function resolveProject(
   fail: (column: string | null, message: string) => void,
   bag: Bag,
   changes: string[],
+  draft: LineDraft,
 ): void {
   const cell = row.fields.project ?? { kind: 'absent' as const };
   if (blocked('project')) return;
   if (cell.kind === 'absent' || cell.kind === 'blank') return;
   if (cell.kind === 'clear') {
-    if (live?.projectNumber != null) changes.push('project');
+    if (live?.projectNumber != null) {
+      changes.push('project');
+      draft.body.project_id = null;
+    }
     return;
   }
   const parsed = parseProject(cell.text);
@@ -603,18 +710,21 @@ function resolveProject(
     miss(bag, 'projects', cell.text.trim());
     return;
   }
-  if (live?.projectNumber !== parsed) changes.push('project');
-  void creating;
+  const changed = live?.projectNumber !== parsed;
+  if (changed) changes.push('project');
+  writeField(draft, creating, changed, 'project_id', project.id);
 }
 
 function resolveAnalytics(
   input: PreflightInput,
   row: InterpretedRow,
   live: StoredLine | null,
+  creating: boolean,
   blocked: (column: string) => boolean,
   fail: (column: string | null, message: string) => void,
   bag: Bag,
   changes: string[],
+  draft: LineDraft,
 ): void {
   for (const [code, cell] of Object.entries(row.analytics)) {
     const column = `analytics:${code}`;
@@ -623,7 +733,10 @@ function resolveAnalytics(
     const current = live?.analytics[code] ?? null;
     if (cell.kind === 'absent' || cell.kind === 'blank') continue;
     if (cell.kind === 'clear') {
-      if (current) changes.push(column);
+      if (current) {
+        changes.push(column);
+        draft.analytics.push({ code, categoryId: null, createName: null });
+      }
       continue;
     }
     if (!dimension) continue;
@@ -640,6 +753,7 @@ function resolveAnalytics(
         continue;
       }
       if (!same) changes.push(column);
+      if (creating || !same) draft.analytics.push({ code, categoryId: value.id, createName: null });
       continue;
     }
     try {
@@ -648,6 +762,7 @@ function resolveAnalytics(
       listed.set(name.toLowerCase(), name);
       bag.dimensions.set(code, listed);
       changes.push(column);
+      draft.analytics.push({ code, categoryId: null, createName: name });
     } catch (err) {
       fail(column, analyticsMessage(err));
     }
@@ -662,30 +777,39 @@ function resolveDates(
   blocked: (column: string) => boolean,
   fail: (column: string | null, message: string) => void,
   changes: string[],
+  draft: LineDraft,
 ): void {
   const start = row.fields.effective_start ?? { kind: 'absent' as const };
   if (!blocked('effective_start')) {
     if (start.kind === 'clear') fail('effective_start', 'effective_start cannot be cleared.');
     else if ((start.kind === 'absent' || start.kind === 'blank') && creating) {
-      // The load stores 1 January of the first amount year, or of the current year.
-      void (firstAmountYear(row) ?? input.currentYear);
+      draft.body.effective_start = `${firstAmountYear(row) ?? input.currentYear}-01-01`;
     } else if (start.kind === 'value') {
       const parsedStart = row.dates.effective_start;
-      if (parsedStart?.kind === 'date' && (live?.effectiveStart ?? '') !== parsedStart.isoDate) changes.push('effective_start');
+      if (parsedStart?.kind === 'date') {
+        const changed = (live?.effectiveStart ?? '') !== parsedStart.isoDate;
+        if (changed) changes.push('effective_start');
+        writeField(draft, creating, changed, 'effective_start', parsedStart.isoDate);
+      }
     }
   }
   const end = row.fields.end_of_validity ?? { kind: 'absent' as const };
   if (blocked('end_of_validity')) return;
   if (end.kind === 'absent' || end.kind === 'blank') return;
   if (end.kind === 'clear') {
-    if (live?.endOfValidity) changes.push('end_of_validity');
+    if (live?.endOfValidity) {
+      changes.push('end_of_validity');
+      draft.body.disabled_at = null;
+    }
     return;
   }
   const parsed = row.dates.end_of_validity;
   if (!parsed || parsed.kind === 'clear') return;
   const instant = parsed.kind === 'instant' ? parsed.iso : endOfValidityFromDate(parsed.isoDate).toISOString();
   const stored = live?.endOfValidity ? new Date(live.endOfValidity).toISOString() : null;
-  if (stored !== instant) changes.push('end_of_validity');
+  const changed = stored !== instant;
+  if (changed) changes.push('end_of_validity');
+  writeField(draft, creating, changed, 'disabled_at', instant);
 }
 
 function resolveAmounts(
@@ -695,8 +819,12 @@ function resolveAmounts(
   blocked: (column: string) => boolean,
   fail: (column: string | null, message: string) => void,
   changes: string[],
+  draft: LineDraft,
 ): void {
   for (const amount of row.amounts) {
+    const seen = draft.grains.get(amount.year);
+    if (amount.month != null) draft.grains.set(amount.year, 'monthly');
+    else if (seen !== 'monthly') draft.grains.set(amount.year, 'annual');
     if (blocked(amount.id) || amount.cell.kind === 'blank' || amount.cell.kind === 'invalid' || amount.cell.kind === 'clear') continue;
     const version = live?.versions.find((item) => item.year === amount.year);
     const changed = amount.month == null
@@ -711,6 +839,7 @@ function resolveAmounts(
     }
     const when = amount.month == null ? String(amount.year) : `${amount.year}-${String(amount.month).padStart(2, '0')}`;
     changes.push(`${amount.column} ${when}`);
+    draft.amounts.push({ year: amount.year, measure: amount.measure, month: amount.month, cents: amount.cell.cents });
   }
 }
 
@@ -868,6 +997,7 @@ function emptyBag(): Bag {
     created: [],
     updated: [],
     unchanged: 0,
+    plans: [],
   };
 }
 

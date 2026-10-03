@@ -23,9 +23,12 @@ import {
   ListSpendQueryInput,
 } from './dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { AuditService } from '../audit/audit.service';
+import { FreezeService } from '../freeze/freeze.service';
 import { analyzeAfterLargeImport, lineImportTables } from './budget-import-statistics';
 import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
+import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
 
 @UseGuards(JwtAuthGuard)
@@ -37,6 +40,8 @@ export class SpendItemsController {
     private readonly storage: StorageService,
     private readonly contactsSvc: SpendItemContactsService,
     private readonly budgetFile: BudgetFileService,
+    private readonly audit: AuditService,
+    private readonly freeze: FreezeService,
   ) {}
 
   /** Every `:id` route takes a UUID or an OPX-N reference; a malformed id is a 400. */
@@ -190,6 +195,37 @@ export class SpendItemsController {
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
     });
+  }
+
+  /** The load (C2b). Not a read. `analyzeAfterLargeImport` is the last call. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('opex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('budget-file/import')
+  @HttpCode(200)
+  @UseInterceptors(BudgetFileSizeInterceptor, FileInterceptor('file', budgetFileMulterOptions))
+  async importBudgetFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('snapshot') snapshot: string,
+    @Query('language') language: string,
+    @Query('dateOrder') dateOrder: string,
+    @Query('createSuppliers') createSuppliers: string,
+    @Tenant() ctx: TenantRequest,
+    @Req() req: any,
+  ) {
+    if (!file?.buffer) throw new BadRequestException('Choose a CSV file.');
+    const result = await this.budgetFile.importFile('opex', file.buffer, snapshot, {
+      manager: ctx.manager as EntityManager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId || null,
+    }, {
+      language,
+      dateOrder,
+      createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
+      canCreateSuppliers: canCreateSuppliers(ctx),
+    }, { items: this.svc, audit: this.audit, freeze: this.freeze });
+    await analyzeAfterLargeImport(req, importAnalyzeTables('opex', result), result);
+    return result;
   }
 
   @UseGuards(PermissionGuard)

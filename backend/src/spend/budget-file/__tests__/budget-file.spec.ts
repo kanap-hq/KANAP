@@ -1,8 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { writeCsv } from '../../../common/csv-sheet';
-import { buildBudgetExport, parseAmountYears, parseFileColumns } from '../export-file';
+import { buildBudgetExport, exportListQuery, parseAmountYears, parseFileColumns } from '../export-file';
 import { readBudgetCsv } from '../interpret';
-import { buildPreflight } from '../preflight';
+import { periodForYearlyTotal } from '../period';
+import { buildPreflight, planBudgetFile } from '../preflight';
 import { OLD_BUDGET_FILE_MESSAGE } from '../columns';
 import { BUDGET_FILE_MAX_BYTES } from '../upload';
 import {
@@ -250,9 +251,71 @@ async function testExportShape() {
   const rowBytes = Buffer.byteLength(csv.split('\n')[1] ?? '', 'utf8');
   assert.ok(rowBytes > 0);
   assert.ok(
-    BUDGET_FILE_MAX_BYTES >= rowBytes * 20_000 * 2,
-    `cap ${BUDGET_FILE_MAX_BYTES} is below twice 20,000 rows of ${rowBytes} bytes`,
+    BUDGET_FILE_MAX_BYTES >= rowBytes * 20_000,
+    `cap ${BUDGET_FILE_MAX_BYTES} is below 20,000 rows of ${rowBytes} bytes`,
   );
+  const all = exportListQuery({ filters: '{"q":1}', q: 'widget', ctx: 'abc', status: 'enabled', sort: 'name:ASC', all: 'true' }, true);
+  assert.equal(all.includeDisabled, '1');
+  assert.equal(all.status, undefined);
+  assert.equal(all.filters, undefined);
+  assert.equal(all.q, undefined);
+  assert.equal(all.sort, 'name:ASC');
+  const kept = exportListQuery({ status: 'disabled', sort: 'name:ASC' }, false);
+  assert.equal(kept.status, 'disabled');
+  assert.equal(kept.includeDisabled, undefined);
+}
+
+async function planOf(scope: BudgetFileScope, text: string, stored: StoredLine[], options: { cat?: BudgetCatalog; createSuppliers?: boolean; canCreateSuppliers?: boolean } = {}) {
+  const read = await readBudgetCsv(text, { scope, language: 'en', dimensionCodes: [] });
+  return planBudgetFile({
+    scope, read, catalog: options.cat ?? catalog(), stored,
+    names: stored.map((item) => ({ itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId })),
+    createSuppliers: options.createSuppliers ?? false,
+    canCreateSuppliers: options.canCreateSuppliers ?? false,
+    currentYear: YEAR,
+    labels: { budget: 'Budget' },
+  });
+}
+
+async function testPlan() {
+  const stored = line({ versions: withJanuary(10000n) });
+  const yearly = await planOf('opex', 'item_number,name,currency,budget_2026\nOPX-3,Widget,EUR,200.00\n', [stored]);
+  assert.equal(yearly.plans.length, 1);
+  assert.deepEqual(yearly.plans[0].body, {});
+  assert.equal(yearly.plans[0].amounts[0].month, null);
+  assert.equal(yearly.plans[0].amounts[0].cents, 20000n);
+  assert.deepEqual(yearly.plans[0].grains, [{ year: 2026, grain: 'annual' }]);
+  const same = await planOf('opex', 'item_number,name,currency,budget_2026\nOPX-3,Widget,EUR,100.00\n', [stored]);
+  assert.equal(same.plans.length, 0, 'an unchanged yearly total is not a write');
+
+  const month = await planOf('opex', 'item_number,name,currency,budget_2026_01\nOPX-3,Widget,EUR,0\n', [line()]);
+  assert.equal(month.plans[0].amounts[0].month, 1);
+  assert.equal(month.plans[0].amounts[0].cents, 0n);
+  assert.equal(month.plans[0].grains[0].grain, 'monthly');
+
+  const cat = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: 'chart', disabledAt: null }],
+    accounts: [{ id: 'a1', number: '1200', coaId: 'chart', disabledAt: null }],
+  });
+  const created = await planOf('opex', 'item_number,name,company_name,account_number,currency,supplier_name\n,Widget,Acme,1200,EUR,Newco\n', [], {
+    cat, createSuppliers: true, canCreateSuppliers: true,
+  });
+  assert.equal(created.report.ok, true, JSON.stringify(created.report.errors));
+  assert.equal(created.plans[0].creating, true);
+  assert.equal(created.plans[0].body.product_name, 'Widget');
+  assert.equal(created.plans[0].body.paying_company_id, 'c1');
+  assert.equal(created.plans[0].body.account_id, 'a1');
+  assert.equal(created.plans[0].body.currency, 'EUR');
+  assert.equal(created.plans[0].body.effective_start, '2026-01-01');
+  assert.equal(created.plans[0].body.supplier_id, undefined);
+  assert.deepEqual(created.plans[0].newSupplier, { name: 'Newco', erpId: null });
+
+  const storedPeriod = periodForYearlyTotal(2026, { start: '2026-04-01', end: '2026-09-30' }, true, '2026-01-01', null);
+  assert.deepEqual(storedPeriod, { start: '2026-04-01', end: '2026-09-30' });
+  const clipped = periodForYearlyTotal(2026, null, false, '2026-03-01', '2026-06-30');
+  assert.deepEqual(clipped, { start: '2026-03-01', end: '2026-06-30' });
+  const whole = periodForYearlyTotal(2026, null, true, '2026-03-01', null);
+  assert.deepEqual(whole, { start: '2026-03-01', end: '2026-12-31' });
 }
 
 async function main() {
@@ -263,6 +326,7 @@ async function main() {
   await testSuppliersAndDuplicates();
   await testCreateRules();
   await testExportShape();
+  await testPlan();
   console.log('budget-file.spec: ok');
 }
 

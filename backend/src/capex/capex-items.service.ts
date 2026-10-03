@@ -375,7 +375,7 @@ export class CapexItemsService {
     }
   }
 
-  async create(body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
+  async create(body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; itemNumber?: number; source?: string }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(CapexItem);
     // Writable columns only (company_id is the legacy alias of the paying company),
@@ -384,7 +384,7 @@ export class CapexItemsService {
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: disabled_at });
     const tenantId = await this.resolveTenantId(mg);
-    const item_number = await this.itemNumbers.nextItemNumber('capex', tenantId, mg);
+    const item_number = opts?.itemNumber ?? await this.itemNumbers.nextItemNumber('capex', tenantId, mg);
     const entity = repo.create({
       ...(values as Partial<CapexItem>),
       // These columns are NOT NULL on the entity while the DTO allows null
@@ -404,13 +404,14 @@ export class CapexItemsService {
     const analyticsValues = analytics.length > 0 ? await this.loadAnalytics(mg, { ...persisted, tenant_id: tenantId }) : [];
     await this.audit.log({
       table: 'capex_items', recordId: saved.id, action: 'create', before: null,
-      after: { ...persisted, ...itemAnalyticsAuditFields(analyticsValues) }, userId,
+      after: { ...persisted, ...itemAnalyticsAuditFields(analyticsValues), ...(opts?.source ? { source: opts.source } : {}) },
+      userId, source: opts?.source,
     }, { manager: mg });
     return this.withAnalyticsValues(persisted, analyticsValues);
   }
 
   /** `statusEmail: false` skips the owners' status-change email (the CSV import sends none, like OPEX's). */
-  async update(id: string, body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; statusEmail?: boolean }) {
+  async update(id: string, body: CapexItemUpsertDto, userId?: string, opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string }) {
     const mg = opts?.manager ?? this.repo.manager;
     const itemId = await this.resolveItemId(id, mg);
     const tenantId = await this.resolveTenantId(mg);
@@ -422,7 +423,8 @@ export class CapexItemsService {
     await this.audit.log({
       table: 'capex_items', recordId: itemId, action: 'update',
       before: { ...before, ...itemAnalyticsAuditFields(analyticsBefore) },
-      after: { ...after, ...itemAnalyticsAuditFields(analyticsAfter) }, userId,
+      after: { ...after, ...itemAnalyticsAuditFields(analyticsAfter), ...(opts?.source ? { source: opts.source } : {}) },
+      userId, source: opts?.source,
     }, { manager: mg });
 
     // Detect supplier change for contact sync

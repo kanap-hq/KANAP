@@ -9,7 +9,12 @@ import { BudgetFileDetail, BudgetFileScope, StoredLine, StoredVersion } from './
 
 const FILE_QUERY = new Set(['amountyears', 'columns', 'detail', 'language', 'all', 'dateorder', 'createsuppliers']);
 
-/** The list query, without the budget-file parameters. `all` drops filters and search and keeps status. */
+/**
+ * The list query, without the budget-file parameters.
+ * `all` drops filters, search and status. Ended lines are included: the ids
+ * endpoint's fallback is active lines, and a status set of both values is
+ * discarded before that fallback, so "every status" is `includeDisabled`.
+ */
 export function exportListQuery(query: Record<string, unknown>, all: boolean): Record<string, unknown> {
   const next: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(query)) {
@@ -20,6 +25,11 @@ export function exportListQuery(query: Record<string, unknown>, all: boolean): R
     delete next.filters;
     delete next.q;
     delete next.ctx;
+    for (const key of Object.keys(next)) {
+      const folded = key.toLowerCase();
+      if (folded === 'status' || folded === 'includedisabled') delete next[key];
+    }
+    next.includeDisabled = '1';
   }
   return next;
 }
