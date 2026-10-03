@@ -143,6 +143,22 @@ export class SpendItemsController {
     return this.svc.getDetail(id, { manager: ctx.manager });
   }
 
+  /**
+   * What the workspace polls every 30 seconds to learn that someone else changed the line or its
+   * budget (plan planning/perf-scale, lot 3G; `spend/item-meta.ts`): `row_version`, each version's
+   * `budget_rev`, who and when. Same read level as the detail.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('opex', 'reader')
+  @Get(':id/meta')
+  async meta(
+    @Param('id') idOrRef: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
+    return this.svc.meta(id, ctx.tenantId, { manager: ctx.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'reader')
   @Get(':id/relation-counts')

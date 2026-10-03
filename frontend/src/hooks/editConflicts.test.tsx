@@ -65,6 +65,15 @@ describe('editConflictsOf', () => {
     expect(editConflictsOf(conflictError([]))).toBeNull();
   });
 
+  it('keeps an author without a name (shown as "a user"); an author without an id is nobody', () => {
+    const [nameless] = editConflictsOf(conflictError([{ field: 'notes', changed_by: { id: 'u-9', name: null } }]))!;
+    expect(nameless.changed_by).toEqual({ id: 'u-9', name: null });
+    const [blank] = editConflictsOf(conflictError([{ field: 'notes', changed_by: { id: 'u-9', name: '  ' } }]))!;
+    expect(blank.changed_by).toEqual({ id: 'u-9', name: null });
+    const [none] = editConflictsOf(conflictError([{ field: 'notes', changed_by: { name: 'Marie Dupont' } as never }]))!;
+    expect(none.changed_by).toBeNull();
+  });
+
   it('works on nested paths (analytics values per dimension)', () => {
     const patch = { notes: 'x', analytics_values: { a: '1', b: null } };
     expect(omitPath(patch, 'analytics_values.a')).toEqual({ notes: 'x', analytics_values: { b: null } });

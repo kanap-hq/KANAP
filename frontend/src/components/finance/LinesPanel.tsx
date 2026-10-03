@@ -259,6 +259,11 @@ export type LinesPanelProps = {
   startLines?: LinePayload[];
   /** The paying company's country: its standard calendar is the default of a new line. */
   payingCompanyCountry?: string | null;
+  /**
+   * Filled with a probe the budget tab asks before showing what someone else changed (lot 3G): true
+   * while a line is not complete, not sent, or on its way.
+   */
+  pendingRef?: React.MutableRefObject<(() => boolean) | null>;
   /** The tenant's name of a column, for "copied from". */
   columnName: (measure: AmountMeasure) => string;
   /** "Apply these lines to all columns": offered when the group has other columns that are not frozen. */
@@ -282,7 +287,7 @@ export type LinesPanelProps = {
  */
 export default function LinesPanel({
   year, record, period, itemStart, itemEnd, frozen, frozenHint, waiting = false, reloadSignal = 0, startLines,
-  payingCompanyCountry, columnName, applyToAll, onSave, layout = 'auto',
+  payingCompanyCountry, pendingRef, columnName, applyToAll, onSave, layout = 'auto',
 }: LinesPanelProps) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
@@ -368,6 +373,16 @@ export default function LinesPanel({
     // `update` only sets state and a ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [record, waiting, reloadSignal, year]);
+
+  // The same test as the resync above: nothing here differs from what the server was asked to hold.
+  React.useEffect(() => {
+    if (!pendingRef) return undefined;
+    const probe = () => inFlightRef.current > 0
+      || draftsRef.current.some((d) => lineProblem(year, d))
+      || JSON.stringify(draftsRef.current.map(payloadOf)) !== sentRef.current;
+    pendingRef.current = probe;
+    return () => { if (pendingRef.current === probe) pendingRef.current = null; };
+  }, [pendingRef, year]);
 
   const commit = () => send(draftsRef.current);
   const patchLine = (key: string, patch: Partial<LineDraft>) => update((prev) => prev.map((d) => (d.key === key ? { ...d, ...patch } : d)));

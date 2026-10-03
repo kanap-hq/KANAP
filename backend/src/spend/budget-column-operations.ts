@@ -569,6 +569,19 @@ export async function clearBudgetColumn(
       if (hasRecord) {
         await lockStoredMonths({ manager: mg, scope, version }, year);
         await deleteRoundInput(rctx, measure);
+        // The record and its lines went: the line says who cleared the column, as below (lot 3G:
+        // the line's meta names who changed its budget from this row).
+        await deps.audit.log(
+          {
+            table: SCOPES[scope].items,
+            recordId: item.id,
+            action: 'update',
+            before: { [column]: 0 },
+            after: { [column]: 0, operation: 'budget_column_clear', year, column },
+            userId,
+          },
+          { manager: mg },
+        );
       }
       skipped++;
       continue;

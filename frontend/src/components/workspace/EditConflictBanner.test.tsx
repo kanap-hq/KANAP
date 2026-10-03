@@ -109,6 +109,11 @@ describe('EditConflictBanner', () => {
     expect(screen.queryByText(/Moi Même/)).toBeNull();
   });
 
+  it('a user without a name is "a user", never an e-mail', () => {
+    renderBanner([conflict({ field: 'notes', current: 'a', mine: 'b', changed_by: { id: 'u-9', name: null } })]);
+    expect(screen.getByText('Un utilisateur a modifié ce champ à 14:02 pendant que vous le modifiiez.')).toBeInTheDocument();
+  });
+
   it('names nobody when the server cannot say who, and gives the time of the line\'s last change', () => {
     renderBanner([conflict({ field: 'supplier_id', current: null, mine: 's2', changed_by: null, labels: { base: null, current: null, mine: 'Globex' } })]);
     expect(screen.getByText('Ce champ a été modifié à 14:02 pendant que vous le modifiiez.')).toBeInTheDocument();

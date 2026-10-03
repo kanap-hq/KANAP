@@ -651,6 +651,7 @@
     "changedByYouAt": "You changed this field in another window at {{time}}.",
     "changedByYouOn": "You changed this field in another window on {{date}} at {{time}}.",
     "changedByYou": "You changed this field in another window.",
+    "aUser": "A user",
     "theirValue": "Their value",
     "yourValue": "Your value",
     "keepTheirs": "Keep their value",
@@ -700,5 +701,21 @@
       "yearChange": "Someone else changed the allocation while you were editing it, and you have not chosen which to keep. Change the year anyway and lose your allocation, or stay and choose."
     },
     "yearChangeConfirm": "Change the year"
+  },
+  "othersChanges": {
+    "changedByAt": "Changed by {{name}} at {{time}}",
+    "changedByOn": "Changed by {{name}} on {{date}} at {{time}}",
+    "changedBy": "Changed by {{name}}",
+    "changedAt": "Changed elsewhere at {{time}}",
+    "changedOn": "Changed elsewhere on {{date}} at {{time}}",
+    "changed": "Changed elsewhere",
+    "changedByYouAt": "You changed this item elsewhere at {{time}}",
+    "changedByYouOn": "You changed this item elsewhere on {{date}} at {{time}}",
+    "changedByYou": "You changed this item elsewhere",
+    "aUser": "a user",
+    "badge": "Changed elsewhere",
+    "reload": "Reload",
+    "reloadHint": "Reload shows these changes. What you are editing stays on screen.",
+    "deleted": "This item was deleted"
   }
 }
