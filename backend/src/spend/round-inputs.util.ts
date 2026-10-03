@@ -517,6 +517,31 @@ export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: stri
   );
 }
 
+/** The round-input fields a flat or named yearly spread stores. Shared with the budget-file load. */
+export function annualSpreadFields(
+  total: bigint,
+  profile: { name: string; labels: readonly string[] },
+  period: { period_start: string; period_end: string; active_months: number[] },
+  fte: string | null,
+  source?: 'item_csv',
+): RoundInputFields {
+  return {
+    period_start: period.period_start,
+    period_end: period.period_end,
+    method: 'spread',
+    spread_profile_name: profile.name,
+    last_calculation: {
+      kind: 'annual',
+      total: centsToDecimal(total),
+      profile: profile.name,
+      active_months: period.active_months,
+      weights: period.active_months.map((month) => profile.labels[month - 1]),
+      ...(source ? { source } : {}),
+    },
+    fte,
+  };
+}
+
 /**
  * The records a spread writes: one `spread` record per measure it replaced,
  * with the period, the profile and what was computed. The lines and the FTE
@@ -525,25 +550,16 @@ export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: stri
 export async function recordSpread(ctx: RoundInputsContext, spread: PayloadSpread, source?: 'item_csv') {
   const { period_start, period_end, active_months } = spread.period;
   if (spread.kind === 'annual') {
-    const activeWeights = active_months.map((m) => spread.profile.labels[m - 1]);
     for (const measure of ROUND_MEASURES) {
       const total = spread.totals[measure];
       if (total === undefined) continue;
-      await saveRoundInput(ctx, measure, (stored) => ({
-        period_start,
-        period_end,
-        method: 'spread',
-        spread_profile_name: spread.profile.name,
-        last_calculation: {
-          kind: 'annual',
-          total: centsToDecimal(total),
-          profile: spread.profile.name,
-          active_months,
-          weights: activeWeights,
-          ...(source ? { source } : {}),
-        },
-        fte: stored?.fte ?? null,
-      }));
+      await saveRoundInput(ctx, measure, (stored) => annualSpreadFields(
+        total,
+        spread.profile,
+        { period_start, period_end, active_months },
+        stored?.fte ?? null,
+        source,
+      ));
     }
     return;
   }

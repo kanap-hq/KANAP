@@ -3,10 +3,12 @@ import { EntityManager } from 'typeorm';
 import type { FreezeService } from '../../freeze/freeze.service';
 import { loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import { allocateItemNumbers } from '../../common/item-number.service';
-import { AmountMeasure, AmountsWriteContext, writeAmountsPayload } from '../amounts-write.util';
+import { formatCents } from '../../common/amount';
+import { AmountMeasure, AmountsWriteContext, FLAT_PROFILE, assertMeasuresEditable, spreadAnnualRows, writeAmountsPayload } from '../amounts-write.util';
 import { ensureBudgetVersion } from '../budget-version-ensure';
-import { lockBudgetLine, lockBudgetLines, lockTenantBudgetOperations } from '../budget-locks';
-import { listRoundInputs, markRoundsManual, recordPayloadRoundInputs } from '../round-inputs.util';
+import { lockBudgetLine, lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from '../budget-locks';
+import { activeMonths } from '../spread.util';
+import { annualSpreadFields, listRoundInputs, markRoundsManual, recordPayloadRoundInputs } from '../round-inputs.util';
 import { interpretBudgetFile, moneyText, readBudgetCsv } from './interpret';
 import { loadDimensionCodes, loadPreflight } from './load';
 import { periodForYearlyTotal, wholeYearPeriod } from './period';
@@ -27,9 +29,21 @@ export const PREFLIGHT_STALE = 'Some lines changed since the preflight. Run the 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const TABLES = {
-  opex: { items: 'spend_items', amounts: 'spend_amounts', entity: 'spend' as const },
-  capex: { items: 'capex_items', amounts: 'capex_amounts', entity: 'capex' as const },
+  opex: { items: 'spend_items', amounts: 'spend_amounts', rounds: 'spend_round_inputs', versions: 'spend_versions', entity: 'spend' as const },
+  capex: { items: 'capex_items', amounts: 'capex_amounts', rounds: 'capex_round_inputs', versions: 'capex_versions', entity: 'capex' as const },
 };
+
+/** Column names of an amounts table. Only these are ever interpolated into SQL. */
+const AMOUNT_COLUMNS = ['planned', 'committed', 'forecast', 'actual', 'expected_landing'] as const;
+
+interface FlatSpread {
+  itemId: string;
+  versionId: string;
+  year: number;
+  period: { start: string; end: string };
+  totals: Partial<Record<AmountMeasure, bigint>>;
+  fte: Partial<Record<AmountMeasure, string | null>>;
+}
 
 export interface BudgetFileImportOk {
   ok: true;
@@ -249,13 +263,15 @@ async function applyPlans(
     nextNumber = await allocateItemNumbers(TABLES[input.scope].entity, input.tenantId, creates.length, input.manager);
   }
   const checkedFreeze = new Set<string>();
+  const flats: FlatSpread[] = [];
   for (const plan of updates) {
-    await applyLine(input, plan, storedById.get(plan.itemId ?? ''), supplierIds, dimensionIds, rounds, checkedFreeze, audits);
+    await applyLine(input, plan, storedById.get(plan.itemId ?? ''), supplierIds, dimensionIds, rounds, checkedFreeze, audits, flats);
   }
   for (const plan of creates) {
-    await applyLine(input, plan, undefined, supplierIds, dimensionIds, rounds, checkedFreeze, audits, nextNumber);
+    await applyLine(input, plan, undefined, supplierIds, dimensionIds, rounds, checkedFreeze, audits, flats, nextNumber);
     nextNumber += 1;
   }
+  await writeFlatSpreads(input, flats, checkedFreeze, audits);
   await insertAudits(input.manager, input.userId, audits);
   return {
     inserted: creates.length,
@@ -300,6 +316,7 @@ async function applyLine(
   rounds: Awaited<ReturnType<typeof listRoundInputs>>,
   checkedFreeze: Set<string>,
   audits: AuditRow[],
+  flats: FlatSpread[],
   itemNumber?: number,
 ): Promise<void> {
   const body = lineBody(plan, supplierIds, dimensionIds);
@@ -330,8 +347,9 @@ async function applyLine(
       version,
       checkedFreeze,
     };
-    const wrote = await writeYear(input, ctx, year, amounts, stored, dates, rounds.get(version.id) ?? []);
-    if (!wrote) continue;
+    const outcome = await writeYear(input, ctx, itemId, year, amounts, stored, dates, rounds.get(version.id) ?? []);
+    if (outcome.flat) flats.push(outcome.flat);
+    if (!outcome.wrote) continue;
     audits.push({
       table: TABLES[input.scope].items,
       recordId: itemId,
@@ -391,23 +409,67 @@ async function createVersion(
   }
   if (ensured.created) {
     await input.audit.log(
-      { table: input.scope === 'opex' ? 'spend_versions' : 'capex_versions', recordId: ensured.version.id, action: 'create', before: null, after: ensured.version, userId: input.userId, source: 'budget_file' },
+      { table: TABLES[input.scope].versions, recordId: ensured.version.id, action: 'create', before: null, after: ensured.version, userId: input.userId, source: 'budget_file' },
       { manager: input.manager },
     );
   }
   return { id: ensured.version.id, tenant_id: input.tenantId, budget_year: year };
 }
 
+/**
+ * A yearly flat spread with no costed lines, over the column's stored period
+ * (or the period a new column is given). Those share one set of statements.
+ * Anything else, including a month edit, stays on `writeAmountsPayload`.
+ */
+function flatPeriod(
+  year: number,
+  amounts: BudgetFileAmountChange[],
+  dates: { start: string | null; end: string | null },
+  version: Prepared['stored'][number]['versions'][number] | undefined,
+  rounds: Array<{ measure: AmountMeasure; period_start: string; period_end: string; lines: readonly unknown[]; fte: string | null }>,
+): { start: string; end: string } | null {
+  if (amounts.length === 0 || amounts.some((amount) => amount.month != null)) return null;
+  const periods = new Set<string>();
+  for (const amount of amounts) {
+    const record = rounds.find((round) => round.measure === amount.measure);
+    if (record && record.lines.length > 0) return null;
+    const hasAmounts = !!version?.months[amount.measure].some((month) => month.cents != null && month.cents !== 0n);
+    const period = periodForYearlyTotal(
+      year,
+      record ? { start: record.period_start, end: record.period_end } : null,
+      hasAmounts,
+      dates.start,
+      dates.end,
+    ) ?? wholeYearPeriod(year);
+    if (record && (record.period_start !== period.start || record.period_end !== period.end)) return null;
+    periods.add(`${period.start}|${period.end}`);
+  }
+  if (periods.size !== 1) return null;
+  const [start, end] = Array.from(periods)[0].split('|');
+  return { start, end };
+}
+
 async function writeYear(
   input: { audit: BudgetFileAudit; userId: string | null },
   ctx: AmountsWriteContext,
+  itemId: string,
   year: number,
   amounts: BudgetFileAmountChange[],
   stored: Prepared['stored'][number] | undefined,
   dates: { start: string | null; end: string | null },
-  rounds: Array<{ measure: AmountMeasure; period_start: string; period_end: string }>,
-): Promise<boolean> {
+  rounds: Array<{ measure: AmountMeasure; period_start: string; period_end: string; lines: readonly unknown[]; fte: string | null }>,
+): Promise<{ wrote: boolean; flat: FlatSpread | null }> {
   const version = stored?.versions.find((item) => item.year === year);
+  const period = flatPeriod(year, amounts, dates, version, rounds);
+  if (period) {
+    const totals: Partial<Record<AmountMeasure, bigint>> = {};
+    const fte: Partial<Record<AmountMeasure, string | null>> = {};
+    for (const amount of amounts) {
+      totals[amount.measure] = amount.cents;
+      fte[amount.measure] = rounds.find((round) => round.measure === amount.measure)?.fte ?? null;
+    }
+    return { wrote: false, flat: { itemId, versionId: ctx.version.id, year, period, totals, fte } };
+  }
   let wrote = false;
   const annual = new Map<string, { period: { start: string; end: string }; totals: Partial<Record<AmountMeasure, string>> }>();
   for (const amount of amounts) {
@@ -473,7 +535,182 @@ async function writeYear(
       );
     }
   }
-  return wrote;
+  return { wrote, flat: null };
+}
+
+/** Flat yearly spreads, one statement per measure set. Versions are locked in id order first. */
+async function writeFlatSpreads(
+  input: {
+    scope: BudgetFileScope;
+    manager: EntityManager;
+    tenantId: string;
+    userId: string | null;
+    freeze: BudgetFileFreeze;
+  },
+  flats: FlatSpread[],
+  checkedFreeze: Set<string>,
+  audits: AuditRow[],
+): Promise<void> {
+  if (flats.length === 0) return;
+  await lockBudgetVersions(input.manager, input.scope, input.tenantId, flats.map((flat) => flat.versionId));
+  const seen = new Set<string>();
+  for (const flat of flats) {
+    const measures = AMOUNT_COLUMNS.filter((measure) => flat.totals[measure] !== undefined);
+    const key = `${flat.year}:${measures.join(',')}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    await assertMeasuresEditable({
+      manager: input.manager,
+      freeze: input.freeze,
+      scope: input.scope,
+      version: { id: flat.versionId, tenant_id: input.tenantId, budget_year: flat.year },
+      checkedFreeze,
+    }, flat.year, measures);
+  }
+
+  const groups = new Map<string, { measures: AmountMeasure[]; rows: AmountRow[] }>();
+  const roundRows: RoundRow[] = [];
+  for (const flat of flats) {
+    const measures = AMOUNT_COLUMNS.filter((measure) => flat.totals[measure] !== undefined);
+    const months = activeMonths(flat.year, flat.period.start, flat.period.end);
+    if (months.length === 0) {
+      throw new BadRequestException('No month of the period counts: a month counts when the period covers its 15th.');
+    }
+    const spread = spreadAnnualRows(flat.year, flat.totals, FLAT_PROFILE.weights, flat.period);
+    const key = measures.join(',');
+    const group = groups.get(key) ?? { measures: [...measures], rows: [] };
+    for (const row of spread) {
+      group.rows.push({
+        versionId: flat.versionId,
+        period: row.period,
+        cents: Object.fromEntries(measures.map((measure) => [measure, row[measure] ?? 0n])) as Partial<Record<AmountMeasure, bigint>>,
+      });
+    }
+    groups.set(key, group);
+    for (const measure of measures) {
+      const fields = annualSpreadFields(
+        flat.totals[measure] as bigint,
+        FLAT_PROFILE,
+        { period_start: flat.period.start, period_end: flat.period.end, active_months: months },
+        flat.fte[measure] ?? null,
+      );
+      roundRows.push({
+        versionId: flat.versionId,
+        measure,
+        periodStart: fields.period_start,
+        periodEnd: fields.period_end,
+        profile: fields.spread_profile_name ?? 'flat',
+        calculation: JSON.stringify(fields.last_calculation),
+        fte: fields.fte,
+      });
+    }
+    audits.push(
+      {
+        table: TABLES[input.scope].amounts,
+        recordId: flat.versionId,
+        action: 'update',
+        before: null,
+        after: {
+          source: 'budget_file',
+          year: flat.year,
+          totals: Object.fromEntries(measures.map((measure) => [measure, formatCents(flat.totals[measure] as bigint)])),
+        },
+      },
+      {
+        table: TABLES[input.scope].items,
+        recordId: flat.itemId,
+        action: 'update',
+        before: null,
+        after: { operation: 'budget_file_import', year: flat.year, source: 'budget_file' },
+      },
+    );
+  }
+
+  for (const group of groups.values()) await insertAmountRows(input, group.measures, group.rows);
+  await insertRoundRows(input, roundRows);
+}
+
+interface AmountRow {
+  versionId: string;
+  period: string;
+  cents: Partial<Record<AmountMeasure, bigint>>;
+}
+
+interface RoundRow {
+  versionId: string;
+  measure: AmountMeasure;
+  periodStart: string;
+  periodEnd: string;
+  profile: string;
+  calculation: string;
+  fte: string | null;
+}
+
+async function insertAmountRows(
+  input: { scope: BudgetFileScope; manager: EntityManager; tenantId: string },
+  measures: readonly AmountMeasure[],
+  rows: AmountRow[],
+): Promise<void> {
+  const columns = AMOUNT_COLUMNS.filter((measure) => measures.includes(measure));
+  const chunk = 20000;
+  for (let start = 0; start < rows.length; start += chunk) {
+    const slice = rows.slice(start, start + chunk);
+    const arrays: unknown[] = [
+      input.tenantId,
+      slice.map((row) => row.versionId),
+      slice.map((row) => row.period),
+    ];
+    const valueLists = columns.map((measure) => slice.map((row) => formatCents(row.cents[measure] ?? 0n)));
+    const placeholders = valueLists.map((_, index) => `$${index + 4}::text[]`).join(', ');
+    await input.manager.query(
+      `INSERT INTO ${TABLES[input.scope].amounts} (tenant_id, version_id, period, ${columns.join(', ')})
+       SELECT $1::uuid, u.version_id, u.period, ${columns.map((_, index) => `u.c${index}::numeric`).join(', ')}
+         FROM unnest($2::uuid[], $3::date[], ${placeholders})
+           AS u(version_id, period, ${columns.map((_, index) => `c${index}`).join(', ')})
+       ON CONFLICT (version_id, period) DO UPDATE
+       SET ${columns.map((measure) => `${measure} = EXCLUDED.${measure}`).join(', ')}, updated_at = now()`,
+      [...arrays, ...valueLists],
+    );
+  }
+}
+
+async function insertRoundRows(
+  input: { scope: BudgetFileScope; manager: EntityManager; tenantId: string; userId: string | null },
+  rows: RoundRow[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  const chunk = 20000;
+  for (let start = 0; start < rows.length; start += chunk) {
+    const slice = rows.slice(start, start + chunk);
+    await input.manager.query(
+      `INSERT INTO ${TABLES[input.scope].rounds}
+         (tenant_id, version_id, measure, period_start, period_end, method, spread_profile_name, last_calculation, fte, updated_by)
+       SELECT $1::uuid, u.version_id, u.measure, u.period_start, u.period_end, 'spread', u.profile, u.calculation::jsonb,
+              NULLIF(u.fte, '')::numeric, $9::uuid
+         FROM unnest($2::uuid[], $3::text[], $4::date[], $5::date[], $6::text[], $7::text[], $8::text[])
+           AS u(version_id, measure, period_start, period_end, profile, calculation, fte)
+       ON CONFLICT (tenant_id, version_id, measure) DO UPDATE
+       SET period_start = EXCLUDED.period_start,
+           period_end = EXCLUDED.period_end,
+           method = EXCLUDED.method,
+           spread_profile_name = EXCLUDED.spread_profile_name,
+           last_calculation = EXCLUDED.last_calculation,
+           fte = EXCLUDED.fte,
+           updated_at = now(),
+           updated_by = EXCLUDED.updated_by`,
+      [
+        input.tenantId,
+        slice.map((row) => row.versionId),
+        slice.map((row) => row.measure),
+        slice.map((row) => row.periodStart),
+        slice.map((row) => row.periodEnd),
+        slice.map((row) => row.profile),
+        slice.map((row) => row.calculation),
+        slice.map((row) => row.fte ?? ''),
+        input.userId,
+      ],
+    );
+  }
 }
 
 function lineDates(plan: BudgetFileLinePlan, stored: Prepared['stored'][number] | undefined): { start: string | null; end: string | null } {

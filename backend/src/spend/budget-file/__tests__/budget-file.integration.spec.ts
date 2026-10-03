@@ -8,6 +8,8 @@ import { EntityManager } from 'typeorm';
 import { SpendItemsService } from '../../spend-items.service';
 import { exportListQuery } from '../export-file';
 import { PREFLIGHT_STALE } from '../import-file';
+import { FLAT_PROFILE, spreadAnnualRows } from '../../amounts-write.util';
+import { toCents } from '../../../common/amount';
 import { BudgetFileService } from '../budget-file.service';
 import * as budgetList from '../../budget-list/budget-list.service';
 import { SUMMARY_SCOPES } from '../../spend-summary.builder';
@@ -71,7 +73,7 @@ async function testCreateAndSuppliers(runner: { query: Function; manager: Entity
     [tenantId, chart.id],
   );
   const caller = { manager: runner.manager, tenantId, userId: null };
-  const file = 'item_number,name,company_name,account_number,currency,supplier_name\n,Widget,Acme,6000,EUR,Newco\n,Gadget,Acme,6000,EUR,Newco\n';
+  const file = 'item_number,name,company_name,account_number,currency,supplier_name,budget_2026\n,Widget,Acme,6000,EUR,Newco,120.00\n,Gadget,Acme,6000,EUR,Newco,120.00\n';
   const options = { language: 'en', dateOrder: '', createSuppliers: true, canCreateSuppliers: true };
   const preflight = await service.preflight('opex', Buffer.from(file), caller, options);
   assert.equal(preflight.ok, true, JSON.stringify(preflight.errors));
@@ -100,6 +102,17 @@ async function testCreateAndSuppliers(runner: { query: Function; manager: Entity
     [tenantId],
   );
   assert.equal(sequence.next_val, 3, 'the two numbers were reserved in one update');
+  const pair = spreadAnnualRows(2026, { planned: 12000n }, FLAT_PROFILE.weights);
+  const january = await runner.query(
+    `SELECT a.planned::text AS planned
+       FROM spend_amounts a
+       JOIN spend_versions v ON v.tenant_id = a.tenant_id AND v.id = a.version_id
+       JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id
+      WHERE a.tenant_id = $1 AND i.product_name IN ('Widget', 'Gadget') AND a.period = '2026-01-01'`,
+    [tenantId],
+  );
+  assert.equal(january.length, 2);
+  for (const row of january) assert.equal(toCents(row.planned), pair[0].planned);
 
   await runner.query(
     `INSERT INTO analytics_axes (tenant_id, code, name, status) VALUES ($1, 'nature', 'Nature', 'enabled')`,
@@ -245,6 +258,12 @@ async function main() {
     const changed = await service.importFile('opex', Buffer.from(exported.content.replace('100.00', '200.00')), report.snapshot, caller, options, loadDeps);
     assert.equal('updated' in changed && changed.updated, 1);
     assert.equal(await amountSum(runner, 'spend_amounts', versionId), '200');
+    const spread = spreadAnnualRows(2026, { planned: 20000n }, FLAT_PROFILE.weights);
+    const [januaryPlanned] = await runner.query(
+      `SELECT planned::text AS planned FROM spend_amounts WHERE tenant_id = $1 AND version_id = $2 AND period = '2026-01-01'`,
+      [tenantId, versionId],
+    );
+    assert.equal(toCents(januaryPlanned.planned), spread[0].planned, 'January is the flat spread of the yearly total');
     const [round] = await runner.query(
       `SELECT method, spread_profile_name FROM spend_round_inputs WHERE tenant_id = $1 AND version_id = $2 AND measure = 'planned'`,
       [tenantId, versionId],
