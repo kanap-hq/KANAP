@@ -651,6 +651,7 @@
     "changedByYouAt": "Vous avez modifié ce champ dans une autre fenêtre à {{time}}.",
     "changedByYouOn": "Vous avez modifié ce champ dans une autre fenêtre le {{date}} à {{time}}.",
     "changedByYou": "Vous avez modifié ce champ dans une autre fenêtre.",
+    "aUser": "Un utilisateur",
     "theirValue": "Sa valeur",
     "yourValue": "Votre valeur",
     "keepTheirs": "Garder sa valeur",
@@ -700,5 +701,21 @@
       "yearChange": "Une autre personne a modifié la ventilation pendant que vous la modifiiez, et vous n'avez pas choisi laquelle garder. Changer d'année quand même et perdre votre ventilation, ou rester et choisir."
     },
     "yearChangeConfirm": "Changer d'année"
+  },
+  "othersChanges": {
+    "changedByAt": "Modifié par {{name}} à {{time}}",
+    "changedByOn": "Modifié par {{name}} le {{date}} à {{time}}",
+    "changedBy": "Modifié par {{name}}",
+    "changedAt": "Modifié ailleurs à {{time}}",
+    "changedOn": "Modifié ailleurs le {{date}} à {{time}}",
+    "changed": "Modifié ailleurs",
+    "changedByYouAt": "Vous avez modifié ce poste ailleurs à {{time}}",
+    "changedByYouOn": "Vous avez modifié ce poste ailleurs le {{date}} à {{time}}",
+    "changedByYou": "Vous avez modifié ce poste ailleurs",
+    "aUser": "un utilisateur",
+    "badge": "Modifié ailleurs",
+    "reload": "Recharger",
+    "reloadHint": "Recharger affiche ces modifications. Ce que vous êtes en train de modifier reste à l'écran.",
+    "deleted": "Ce poste a été supprimé"
   }
 }

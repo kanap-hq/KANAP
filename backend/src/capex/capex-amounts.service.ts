@@ -6,7 +6,7 @@ import { CapexVersion } from './capex-version.entity';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { addCents, formatCents } from '../common/amount';
-import { readYearAmounts, writeAmountsPayload } from '../spend/amounts-write.util';
+import { readVersionBudgetRev, readYearAmounts, writeAmountsPayload } from '../spend/amounts-write.util';
 import { budgetBaseCheck } from '../spend/budget-edit-conflicts';
 import { lockVersionWithLine } from '../spend/budget-locks';
 import { currentTenantId } from '../spend/budget-column-operations';
@@ -93,9 +93,11 @@ export class CapexAmountsService {
     // A lines write also says when a disabled calendar was kept.
     // The year's months as stored now: the budget tab's base for the user's next edit of the columns written.
     const items = await readYearAmounts(mg, 'capex', version);
+    // The version's counter after this write: the tab's own save is not "changed elsewhere" (lot 3G).
+    const budget_rev = await readVersionBudgetRev(mg, 'capex', version);
     return isLinesResult(result)
-      ? { updated: after.length, round_inputs, items, warnings: result.lines.warnings }
-      : { updated: after.length, round_inputs, items };
+      ? { updated: after.length, round_inputs, items, budget_rev, warnings: result.lines.warnings }
+      : { updated: after.length, round_inputs, items, budget_rev };
   }
 
   async listByYear(versionId: string, year?: number, opts?: { manager?: EntityManager }) {

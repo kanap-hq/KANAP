@@ -157,7 +157,8 @@ export type EditedField = {
   same?: (left: unknown, right: unknown) => boolean;
 };
 
-export type EditConflictAuthor = { id: string; name: string };
+/** Who changed a value: a user of the tenant, `name` null when they have none (names only, never the e-mail). */
+export type EditConflictAuthor = { id: string; name: string | null };
 
 /** A conflicting field, as the 409 answers it. */
 export type EditConflict = {
@@ -237,36 +238,37 @@ export async function lastFieldChanges(
   return result;
 }
 
-/** The display names of users of the tenant, by id (one query; an unknown id is left out). */
+/** The names of users of the tenant, by id (one query; an unknown id is left out, a user without a name maps to ''). */
 export async function userNames(manager: EntityManager, tenantId: string, ids: ReadonlyArray<string | null | undefined>): Promise<Map<string, string>> {
   const userIds = Array.from(new Set(ids.filter((id): id is string => !!id)));
   const names = new Map<string, string>();
   if (userIds.length === 0) return names;
-  const users: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = await manager.query(
-    `SELECT id::text AS id, first_name, last_name, email FROM users WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+  const users: Array<{ id: string; first_name: string | null; last_name: string | null }> = await manager.query(
+    `SELECT id::text AS id, first_name, last_name FROM users WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
     [tenantId, userIds],
   );
   for (const user of users) names.set(user.id, displayName(user));
   return names;
 }
 
-/** Who and when, as a conflict answers it: nobody when the user is unknown, no time when there is none. */
+/**
+ * Who and when, as a conflict answers it: nobody when the user is unknown (or gone), their name
+ * null when they have none, no time when there is none.
+ */
 export function authorAt(
   names: ReadonlyMap<string, string>,
   userId: string | null | undefined,
   at: Date | string | null | undefined,
 ): { changed_by: EditConflictAuthor | null; changed_at: string | null } {
-  const name = userId ? names.get(userId) : undefined;
   return {
-    changed_by: userId && name ? { id: userId, name } : null,
+    changed_by: userId && names.has(userId) ? { id: userId, name: names.get(userId) || null } : null,
     changed_at: at ? new Date(at).toISOString() : null,
   };
 }
 
-/** A user's name as the pickers show it: first and last name, else the e-mail. */
-export function displayName(user: { first_name?: string | null; last_name?: string | null; email?: string | null }): string {
-  const name = [user.first_name, user.last_name].map((part) => (part ?? '').trim()).filter(Boolean).join(' ');
-  return name || (user.email ?? '').trim();
+/** A user's name as the screens show who changed something: first and last name, '' when they have none (never the e-mail). */
+export function displayName(user: { first_name?: string | null; last_name?: string | null }): string {
+  return [user.first_name, user.last_name].map((part) => (part ?? '').trim()).filter(Boolean).join(' ');
 }
 
 export class EditConflictException extends ConflictException {

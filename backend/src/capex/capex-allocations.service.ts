@@ -5,6 +5,7 @@ import { CapexAllocation } from './capex-allocation.entity';
 import { CapexVersion } from './capex-version.entity';
 import { AuditService } from '../audit/audit.service';
 import { currentTenantId } from '../spend/budget-column-operations';
+import { readVersionYearTotals } from '../spend/amounts-write.util';
 import { CapexAllocationCalculatorService } from './capex-allocation-calculator.service';
 import {
   AllocationInput,
@@ -77,6 +78,10 @@ export class CapexAllocationsService {
       method: state?.method ?? 'default',
       driver: state?.driver ?? 'headcount',
       base_signature: state ? allocationSignature(state) : null,
+      // Read with the signature (lot 3G): the tab knows the version's counter as it shows it.
+      budget_rev: state?.budgetRev ?? null,
+      // The year's totals the tab shows, read after that counter: never older than it.
+      totals: await readVersionYearTotals(manager, 'capex', tenantId, versionId),
     };
   }
 }

@@ -440,6 +440,24 @@ describe('LinesPanel', () => {
     expect(onSave.mock.calls[2][0][0]).toMatchObject({ unit_price: '12' });
   });
 
+  it('tells the budget tab what is pending: a line changed and not sent, a line not complete; nothing once sent (lot 3G)', async () => {
+    const first = storedLine();
+    const second = storedLine({ ...PIECES, id: 'l2', sort: 1, label: 'Licences', quantity: '3.000', unit_price: '10.0000' });
+    const pendingRef: { current: (() => boolean) | null } = { current: null };
+    const { onSave } = renderPanel({ record: roundWith([first, second]), pendingRef });
+    expect(pendingRef.current?.()).toBe(false);
+
+    fireEvent.change(screen.getAllByLabelText('Description')[1], { target: { value: 'Licences, yearly' } });
+    expect(pendingRef.current?.()).toBe(true);
+    fireEvent.blur(screen.getAllByLabelText('Description')[1]);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(pendingRef.current?.()).toBe(false));
+
+    typeAndLeave(screen.getAllByLabelText('Quantity')[0], '');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(pendingRef.current?.()).toBe(true);
+  });
+
   it('a line priced per day waits for a calendar', async () => {
     calendarsState.list = [];
     const { onSave } = renderPanel();

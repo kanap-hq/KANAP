@@ -63,6 +63,18 @@ export type BudgetTabHandle = {
   isDirty: () => boolean;
   /** The columns waiting for the user's choice, as the tenant names them (for the leave warning). */
   waitingColumns: () => string[];
+  /** A save is on its way or about to go (lot 3G: no read of what others changed meanwhile). */
+  isSaving: () => boolean;
+  /**
+   * Something of the user would be lost or moved by a refresh: a cell or total not saved yet, a
+   * choice waiting, an amount typed in the spread panel, a costed line not complete or not sent.
+   */
+  hasPending: () => boolean;
+  /**
+   * Shows the year as stored now (someone else changed it, lot 3G): a quiet reload, so a cell
+   * typed, not saved yet or waiting for a choice keeps its value and its base.
+   */
+  reloadFromServer: () => Promise<void>;
 };
 
 type Props = {
@@ -79,9 +91,14 @@ type Props = {
   payingCompanyCountry?: string | null;
   /** The line's choices kept by the item page while the user is on another tab (`heldChoices.ts`). */
   held?: React.MutableRefObject<HeldBudgetChoices | null>;
+  /**
+   * The version counter of a year as this tab loaded or wrote it (null: the year has no version):
+   * the item page then tells someone else's change from the tab's own saves (lot 3G).
+   */
+  onBudgetRev?: (year: number, budgetRev: number | null) => void;
 };
 
-type Version = { id: string; input_grain: 'annual' | 'quarterly' | 'monthly'; budget_year?: number };
+type Version = { id: string; input_grain: 'annual' | 'quarterly' | 'monthly'; budget_year?: number; budget_rev?: number };
 
 type AmountCol = AmountMeasure;
 
@@ -100,6 +117,8 @@ type BulkUpsertResponse = {
   warnings?: string[];
   /** The year's months as stored after the write. */
   items?: YearAmounts['items'];
+  /** The version's counter after the write. */
+  budget_rev?: number;
 };
 
 /**
@@ -182,7 +201,7 @@ const QUARTERS = [
   { label: 'Q4', months: [9, 10, 11] },
 ];
 
-export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year, currency, availableYears, onYearChange, config, effectiveStart, endOfValidity, payingCompanyCountry, held }, ref) {
+export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year, currency, availableYears, onYearChange, config, effectiveStart, endOfValidity, payingCompanyCountry, held, onBudgetRev }, ref) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const queryClient = useQueryClient();
@@ -192,6 +211,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const { profile } = useAuth();
   const userId = profile?.id ?? null;
   const userIdRef = React.useRef(userId); userIdRef.current = userId;
+  // The counters this tab loaded or wrote (lot 3G).
+  const onBudgetRevRef = React.useRef(onBudgetRev); onBudgetRevRef.current = onBudgetRev;
+  const noteRev = (forYear: number, rev: number | null | undefined) => { if (rev !== undefined) onBudgetRevRef.current?.(forYear, rev); };
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -304,6 +326,22 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const roundInputsRef = React.useRef(roundInputs); roundInputsRef.current = roundInputs;
   const storedAmountsRef = React.useRef(storedAmounts); storedAmountsRef.current = storedAmounts;
   const periodForRef = React.useRef(periodFor); periodForRef.current = periodFor;
+  const spreadDatesRef = React.useRef(spreadDates); spreadDatesRef.current = spreadDates;
+  const spreadProfileRef = React.useRef(spreadProfile); spreadProfileRef.current = spreadProfile;
+  const panelOpenRef = React.useRef(panelOpen); panelOpenRef.current = panelOpen;
+  const panelKindRef = React.useRef(panelKind); panelKindRef.current = panelKind;
+  const suggestionRef = React.useRef(suggestion); suggestionRef.current = suggestion;
+
+  // The spread panel holds a period or a distribution the user chose and that is not the column's
+  // as stored (an amount not typed yet, so nothing written): pending (lot 3G), kept by a refresh.
+  const spreadChoicePending = () => {
+    if ((modeRef.current !== 'monthly' && !panelOpenRef.current) || panelKindRef.current !== 'spread') return false;
+    const measure = spreadMeasureRef.current;
+    const dates = spreadDatesRef.current;
+    const own = periodForEdit(yearRef.current, roundInputsRef.current.find((r) => r.measure === measure), storedAmountsRef.current[measure], suggestionRef.current);
+    const datesChosen = dates !== null && (!own || dates.start !== own.start || dates.end !== own.end);
+    return datesChosen || spreadProfileRef.current !== profileOf(measure, roundInputsRef.current);
+  };
 
   // Every write answers with the version's stored periods: keep them so the
   // column labels follow without reloading the grid.
@@ -349,6 +387,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     // right after a flush that may have just created the version, before re-render.
     versionRef.current = created.data;
     setVersion(created.data);
+    noteRev(year, created.data?.budget_rev);
     return created.data;
   }, [id, year]);
 
@@ -372,8 +411,12 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   // read-only meanwhile, the spread panel keeps what it shows (it is what was just written, or what
   // the user is typing), and a cell or total typed since, not saved yet, or in a column waiting for
   // the user's choice keeps its value; the other cells show the server's, others' changes included.
-  const applyYear = React.useCallback((snapshot: BudgetYear, { quietSince }: { quietSince?: number } = {}) => {
+  // `others`: a reload because someone else changed the year (lot 3G): the spread panel follows its
+  // column's stored total, distribution and period too, unless an amount is typed there.
+  const applyYear = React.useCallback((snapshot: BudgetYear, { quietSince, others = false }: { quietSince?: number; others?: boolean } = {}) => {
     const quiet = quietSince !== undefined;
+    // Read before this reload changes the column's stored period: a choice of the user stays.
+    const followPanel = others && quiet && !spreadChoicePending();
     const typedSince = (key: string) => quiet && (editedAtRef.current.get(key) ?? 0) > quietSince;
     const keepCell = (period: string, col: AmountCol) => quiet && (
       typedSince(`${period}:${col}`) || !!dirtyCellsRef.current.get(period)?.has(col) || isCellWaiting(period, col)
@@ -447,6 +490,11 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     if (!quiet) {
       setSpreadProfile(profileOf(spreadMeasureRef.current, loadedInputs));
       showSpreadAmount(amountOrEmpty(monthsCents(loadedMonths, spreadMeasureRef.current)));
+    } else if (followPanel && !keepTotal(spreadMeasureRef.current)
+      && spreadAmountRef.current === committedAmountRef.current && writesPendingRef.current === 0) {
+      setSpreadDates(null);
+      setSpreadProfile(profileOf(spreadMeasureRef.current, loadedInputs));
+      showSpreadAmount(amountOrEmpty(monthsCents(loadedMonths, spreadMeasureRef.current)));
     }
     // After a panel write, the unsaved edits are the ones typed since: the pending autosave sends them.
     if (!quiet) {
@@ -462,7 +510,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
 
   // `background`: a refresh of the year shown from the cache; nothing turns read-only, and a cell
   // typed since it was shown is kept as after a panel write.
-  const load = React.useCallback(async ({ quietSince, background = false }: { quietSince?: number; background?: boolean } = {}) => {
+  // `others`: someone else changed the year (lot 3G); see applyYear. True once the year read is on
+  // screen; false when it failed (the error shows) or a write sent meanwhile made it out of date.
+  const load = React.useCallback(async ({ quietSince, background = false, others = false }: { quietSince?: number; background?: boolean; others?: boolean } = {}): Promise<boolean> => {
     const quiet = quietSince !== undefined || background;
     if (!quiet) setLoading(true);
     setError(null);
@@ -475,15 +525,20 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         : await queryClient.fetchQuery({ queryKey: key, queryFn: ({ signal }) => fetchBudgetYear(config, id, year, signal), staleTime: 0 });
       if (quiet) {
         // A write sent meanwhile is not in this answer: the write's own reload shows it.
-        if (writeGenRef.current !== generation) return;
+        if (writeGenRef.current !== generation) return false;
         queryClient.setQueryData(key, snapshot);
       }
       if (background && editSeqRef.current === quietSince) applyYear(snapshot);
-      else applyYear(snapshot, { quietSince });
+      else applyYear(snapshot, { quietSince, others });
+      // What the screen now shows of the year: the counter the item page compares with (lot 3G). A
+      // reload after the tab's own write leaves it to that write's answer.
+      if (!quiet || background || others) noteRev(year, snapshot.version ? snapshot.version.budget_rev ?? null : null);
       // The choices given back are on screen now: a later full load starts from the server.
       restoreRef.current = null;
+      return true;
     } catch (e) {
       setError(getApiErrorMessage(e, t, t(`${config.i18nPrefix}.budget.failedToLoad`)));
+      return false;
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -622,6 +677,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         const { body, totals, cells } = bodies[sent];
         writeGenRef.current += 1;
         const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, body);
+        noteRev(year, res?.data?.budget_rev);
         keepRoundInputs(res?.data);
         keepWritten(res?.data, totals, cells);
       }
@@ -757,10 +813,20 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flushAll, onYearChange, waitingLabels, dialogs, t, locale]);
 
+  // A costed line not complete or not sent yet (`LinesPanel`): a refresh must not move it.
+  const linesPendingRef = React.useRef<(() => boolean) | null>(null);
   useImperativeHandle(ref, () => ({
     flush: flushAll,
     isDirty: () => autosave.isBusy() || hasUnsavedEdits() || writesPendingRef.current > 0,
     waitingColumns: waitingLabels,
+    isSaving: () => autosave.isSaving() || writesPendingRef.current > 0,
+    hasPending: () => autosave.isBusy() || hasUnsavedEdits() || writesPendingRef.current > 0
+      || waitingRef.current.length > 0 || !!parkedPanelRef.current || !!restoreRef.current
+      || spreadAmountRef.current !== committedAmountRef.current || spreadChoicePending() || !!linesPendingRef.current?.(),
+    reloadFromServer: async () => {
+      // Not shown (a failed read, a write sent meanwhile): rejected, so the page does not count it as seen.
+      if (!(await loadRef.current({ quietSince: editSeqRef.current, others: true }))) throw new Error('The year was not reloaded.');
+    },
   }), [autosave, flushAll, waitingLabels]);
 
   // Leaving the tab with a choice waiting (another tab of the line): the item page keeps it for the
@@ -937,6 +1003,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       const v = await ensureVersion();
       writeGenRef.current += 1;
       const res = await api.post<BulkUpsertResponse>(`${config.versionsApi}/${v.id}/amounts/bulk-upsert`, body);
+      noteRev(year, res?.data?.budget_rev);
       keepRoundInputs(res?.data);
       keepWritten(res?.data, columns);
       forgetAllocationsYear(queryClient, config.itemsApi, id, year);
@@ -1396,6 +1463,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
               ? parkedPanelRef.current.body.lines as LinePayload[]
               : undefined}
             payingCompanyCountry={payingCompanyCountry}
+            pendingRef={linesPendingRef}
             columnName={labelFor}
             applyToAll={{ offered: offerApplyToAll, on: linesAllColumns, hint: applyToAllHint, onChange: setLinesAllColumns }}
             onSave={(lines, toAllColumns, startedFrom) => saveLines(spreadMeasure, lines, toAllColumns, startedFrom)}
