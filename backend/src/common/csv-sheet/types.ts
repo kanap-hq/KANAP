@@ -144,6 +144,19 @@ export interface CsvDateReading {
   notice: string | null;
 }
 
+/**
+ * What the preflight says about amounts. `notice` is set only when a single
+ * mark followed by three digits could not be settled from another cell.
+ * It is not an error. An export writes no thousands separator, so it never
+ * asks.
+ */
+export interface CsvAmountReading {
+  /** The mark between the whole units and the fractional part. */
+  decimal: ',' | '.';
+  settledByFile: boolean;
+  notice: string | null;
+}
+
 export interface CsvReadResult {
   encoding: 'utf-8' | 'windows-1252';
   separator: CsvSeparator | null;
@@ -162,4 +175,5 @@ export interface CsvReadResult {
   fileErrors: string[];
   rows: CsvDataRow[];
   dates: CsvDateReading | null;
+  amounts: CsvAmountReading | null;
 }

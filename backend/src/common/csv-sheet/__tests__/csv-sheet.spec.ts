@@ -7,6 +7,7 @@ import {
   CsvParsedAmount,
   CsvReadResult,
   CsvReadSchema,
+  amountConventionNotice,
   csvLanguage,
   csvProfile,
   dateOrderNotice,
@@ -39,12 +40,6 @@ function valueOf(parsed: CsvParsedAmount): Decimal {
   assert.equal(parsed.kind, 'value');
   if (parsed.kind !== 'value') throw new Error('unreachable');
   return parsed.decimal;
-}
-
-function assertAmount(text: string, expected: string) {
-  const parsed = parseCsvAmount(text);
-  assert.equal(parsed.kind, 'value', text);
-  if (parsed.kind === 'value') assert.equal(parsed.decimal.cmp(expected), 0, `${text} -> ${parsed.decimal.toString()}`);
 }
 
 function column(result: CsvReadResult, id: string) {
@@ -82,8 +77,8 @@ function testAmounts() {
   assertAmount('12,280.50', '12280.50');
   assertAmount('12, 280.50', '12280.50');
   assertAmount('1.234.567,89', '1234567.89');
-  // A comma on its own is the decimal mark, not a thousands separator.
-  assertAmount('12,280', '12.280');
+  // One or two digits after the mark settle it as the decimal mark.
+  assertAmount('12,5', '12.5');
   assertAmount('0', '0');
   assertAmount('0,00', '0');
   assertAmount('-12280,50', '-12280.50');
@@ -101,6 +96,19 @@ function testAmounts() {
   assert.equal(formatCsvAmount('12280.50', 'de'), '12280,50');
   assert.equal(formatCsvAmount(Decimal.from('12280.50'), 'en'), '12280.5');
   assert.equal(formatCsvAmount('-12280.50', 'fr'), '-12280,50');
+  // Three digits after one mark is not a value until the convention is known.
+  assert.equal(parseCsvAmount('12,280').kind, 'invalid');
+  assertAmount('12,280', '12.280', ',');
+  assertAmount('12,280', '12280', '.');
+  assertAmount('12.280', '12.280', '.');
+  assertAmount('12.280', '12280', ',');
+  assertAmount('-12,280', '-12280', '.');
+}
+
+function assertAmount(text: string, expected: string, convention?: ',' | '.') {
+  const parsed = parseCsvAmount(text, convention);
+  assert.equal(parsed.kind, 'value', text);
+  if (parsed.kind === 'value') assert.equal(parsed.decimal.cmp(expected), 0, `${text} -> ${parsed.decimal.toString()}`);
 }
 
 function testDates() {
@@ -217,6 +225,59 @@ async function testHeaders() {
   assert.deepEqual(master.headerErrors, []);
   assert.deepEqual(master.ignoredColumns, ['budget_2027', 'analytics:foo']);
   assert.equal(master.rows[0].cells.name, 'Ada');
+}
+
+function amountFile(language: CsvLanguage, cells: readonly string[]) {
+  // A semicolon keeps a comma inside an amount from being read as the separator.
+  const body = cells.map((cell) => `${cell};x`).join('\n');
+  return readCsv(`budget_2027;notes\n${body}\n`, schema(language));
+}
+
+async function testAmountConvention() {
+  const dotNotice = amountConventionNotice('.');
+  const commaNotice = amountConventionNotice(',');
+  assert.equal(dotNotice, 'Amounts read with a decimal dot: 12,280 is twelve thousand two hundred eighty.');
+  assert.equal(commaNotice, 'Amounts read with a decimal comma: 12.280 is twelve thousand two hundred eighty.');
+
+  const englishComma = await amountFile('en', ['12,280']);
+  assert.equal(valueOf(englishComma.rows[0].amounts.budget_2027).cmp('12280'), 0);
+  assert.equal(englishComma.amounts?.settledByFile, false);
+  assert.equal(englishComma.amounts?.notice, dotNotice);
+  const englishDot = await amountFile('en', ['12.280']);
+  assert.equal(valueOf(englishDot.rows[0].amounts.budget_2027).cmp('12.280'), 0);
+  assert.equal(englishDot.amounts?.notice, dotNotice);
+
+  for (const language of ['fr', 'de', 'es'] as const) {
+    const withComma = await amountFile(language, ['12,280']);
+    assert.equal(valueOf(withComma.rows[0].amounts.budget_2027).cmp('12.280'), 0, language);
+    assert.equal(withComma.amounts?.notice, commaNotice, language);
+    assert.equal(withComma.amounts?.settledByFile, false);
+    const withDot = await amountFile(language, ['12.280']);
+    assert.equal(valueOf(withDot.rows[0].amounts.budget_2027).cmp('12280'), 0, language);
+    assert.equal(withDot.amounts?.notice, commaNotice, language);
+  }
+
+  // Another cell shows the comma is the decimal mark, so 12.280 is thousands. The language does not override that.
+  const settled = await amountFile('en', ['12,50', '12.280']);
+  assert.deepEqual(settled.fileErrors, []);
+  assert.deepEqual(settled.amounts, { decimal: ',', settledByFile: true, notice: null });
+  assert.equal(valueOf(settled.rows[0].amounts.budget_2027).cmp('12.50'), 0);
+  assert.equal(valueOf(settled.rows[1].amounts.budget_2027).cmp('12280'), 0);
+
+  const settledDot = await amountFile('fr', ['12.50', '12,280']);
+  assert.deepEqual(settledDot.amounts, { decimal: '.', settledByFile: true, notice: null });
+  assert.equal(valueOf(settledDot.rows[1].amounts.budget_2027).cmp('12280'), 0);
+
+  const clash = await amountFile('de', ['12,5', '1,234.56']);
+  assert.deepEqual(clash.fileErrors, ['This file uses both amount conventions (12,5 and 1,234.56).']);
+  assert.equal(clash.amounts, null);
+  assert.equal(clash.rows[0].errors.length, 0);
+
+  // A mark followed by one digit is not the ambiguous form, and it does not ask.
+  const plain = await amountFile('en', ['12,5']);
+  assert.equal(plain.amounts, null);
+  assert.deepEqual(plain.fileErrors, []);
+  assert.equal(valueOf(plain.rows[0].amounts.budget_2027).cmp('12.5'), 0);
 }
 
 async function testDateOrderInAFile() {
@@ -426,6 +487,7 @@ async function main() {
   testCodes();
   testApiParserIsUntouched();
   await testHeaders();
+  await testAmountConvention();
   await testDateOrderInAFile();
   await testReadingShape();
   await testEncodingAndDamage();

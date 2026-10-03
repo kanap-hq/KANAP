@@ -1,11 +1,12 @@
 import { parse } from 'csv-parse';
 import { denormalizeCsvFormulaValue } from '../csv/csv-export.service';
-import { parseCsvAmount } from './amount';
+import { parseCsvAmount, resolveAmountConvention } from './amount';
 import { parseCsvDateCell, resolveDateOrder } from './date';
 import { CsvDecodeError, decodeCsv } from './decode';
 import { classifyHeaders, validateSchema } from './headers';
 import {
   CSV_ROW_CAP,
+  CsvAmountReading,
   CsvColumn,
   CsvDataRow,
   CsvDateReading,
@@ -67,6 +68,7 @@ export async function readCsv(input: Buffer | string, schema: CsvReadSchema): Pr
     fileErrors: built.fileErrors,
     rows: built.rows,
     dates: built.dates,
+    amounts: built.amounts,
   };
 }
 
@@ -106,6 +108,7 @@ function baseResult(
     fileErrors,
     rows: [],
     dates: null,
+    amounts: null,
   };
 }
 
@@ -246,25 +249,40 @@ function buildRows(
   data: readonly RawRow[],
   slots: readonly (CsvColumn | null)[],
   schema: CsvReadSchema,
-): { rows: CsvDataRow[]; fileErrors: string[]; dates: CsvDateReading | null } {
+): { rows: CsvDataRow[]; fileErrors: string[]; dates: CsvDateReading | null; amounts: CsvAmountReading | null } {
   const dateIndexes: number[] = [];
+  const amountIndexes: number[] = [];
   slots.forEach((slot, index) => {
     if (slot?.kind === 'field' && schema.dateFields?.includes(slot.id)) dateIndexes.push(index);
+    if (slot?.kind === 'amount') amountIndexes.push(index);
   });
   const samples: string[] = [];
+  const amountSamples: string[] = [];
   for (const row of data) {
     for (const index of dateIndexes) {
       const cell = row.cells[index] ?? '';
       if (cell !== '') samples.push(cell);
     }
+    for (const index of amountIndexes) {
+      const cell = row.cells[index] ?? '';
+      if (cell !== '') amountSamples.push(cell);
+    }
   }
   const decision = resolveDateOrder(samples, schema.language, schema.dateOrder);
-  const rows = data.map((row) => buildRow(row, slots, schema, decision.order, decision.error !== null));
+  const amountsDecision = resolveAmountConvention(amountSamples, schema.language);
+  const rows = data.map((row) =>
+    buildRow(row, slots, schema, decision.order, decision.error !== null, amountsDecision.decimal, amountsDecision.error !== null),
+  );
   const dates: CsvDateReading | null =
     decision.error || decision.order === null
       ? null
       : { order: decision.order, settledByFile: decision.settledByFile, notice: decision.notice };
-  return { rows, fileErrors: decision.error ? [decision.error] : [], dates };
+  const amounts: CsvAmountReading | null =
+    amountsDecision.error || !amountsDecision.ambiguous || amountsDecision.decimal === null
+      ? null
+      : { decimal: amountsDecision.decimal, settledByFile: amountsDecision.settledByFile, notice: amountsDecision.notice };
+  const fileErrors = [decision.error, amountsDecision.error].filter((error): error is string => error !== null);
+  return { rows, fileErrors, dates, amounts };
 }
 
 function buildRow(
@@ -273,6 +291,8 @@ function buildRow(
   schema: CsvReadSchema,
   order: CsvReadSchema['dateOrder'] | null,
   datesBlocked: boolean,
+  amountConvention: ',' | '.' | null,
+  amountsBlocked: boolean,
 ): CsvDataRow {
   const cells: Record<string, string> = {};
   const amounts: CsvDataRow['amounts'] = {};
@@ -286,9 +306,11 @@ function buildRow(
     const value = index < row.cells.length ? row.cells[index] : '';
     cells[slot.id] = value;
     if (slot.kind === 'amount') {
-      const parsed = parseCsvAmount(value);
+      const parsed = parseCsvAmount(value, amountConvention ?? undefined);
       amounts[slot.id] = parsed;
-      if (parsed.kind === 'invalid') errors.push({ column: slot.id, message: `Invalid amount '${value}'.` });
+      if (parsed.kind === 'invalid' && !amountsBlocked) {
+        errors.push({ column: slot.id, message: `Invalid amount '${value}'.` });
+      }
       return;
     }
     if (slot.kind === 'field' && schema.dateFields?.includes(slot.id)) {

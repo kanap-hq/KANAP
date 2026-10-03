@@ -1,4 +1,4 @@
-export { parseCsvAmount, formatCsvAmount } from './amount';
+export { parseCsvAmount, formatCsvAmount, resolveAmountConvention, amountConventionNotice } from './amount';
 export { matchCode } from './codes';
 export { parseCsvDateCell, formatCsvDate, resolveDateOrder } from './date';
 export { decodeCsv } from './decode';
@@ -17,6 +17,7 @@ export type {
 export type {
   CsvAmountColumn,
   CsvAmountHeader,
+  CsvAmountReading,
   CsvAnalyticsColumn,
   CsvColumn,
   CsvDataRow,
@@ -31,5 +32,6 @@ export type {
   CsvRowError,
   CsvSeparator,
 } from './types';
+export type { AmountConventionDecision, DecimalMark } from './amount';
 export type { CsvWriteRequest } from './write';
 export type { CsvProfile } from './language';
