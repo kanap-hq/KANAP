@@ -11,9 +11,6 @@ const OPERATIONS_BASE: Record<BudgetScope, string> = {
   capex: '/capex-items/budget-operations',
 };
 
-/** Budget rows file: monthly amounts of every OPEX and CAPEX line (CSV dialogs append `/export` and `/import`). */
-export const budgetRowsEndpoint = '/budget-rows';
-
 export type BudgetColumnOperation = {
   sourceYear: number;
   sourceColumn: BudgetColumn;

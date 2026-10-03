@@ -92,6 +92,8 @@ export type ServerDataGridProps<T> = {
   onCellClicked?: (event: any) => void; // optional cell click handler
   onGridApiReady?: (gridApi: any) => void; // callback to provide grid API reference to parent
   onQueryStateChange?: (state: { sort: string; filterModel: any; q: string; statusScope?: StatusScope }) => void; // notify parent when sort/filter/search change
+  /** The filtered row count from the latest page response. */
+  onTotalChange?: (total: number) => void;
   pinnedBottomRowData?: any[]; // optional pinned totals row(s)
   enableRowSelection?: boolean; // enable multi-row selection with checkboxes (default: false)
   onSelectionChanged?: (selectedRows: T[]) => void; // callback when selection changes
@@ -324,6 +326,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   onCellClicked,
   onGridApiReady,
   onQueryStateChange,
+  onTotalChange,
   pinnedBottomRowData,
   enableRowSelection = false,
   onSelectionChanged,
@@ -623,6 +626,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   useEffect(() => { refreshKeyRef.current = refreshKey; }, [refreshKey]);
   const pageParamsRef = useRef(pageParams);
   pageParamsRef.current = pageParams;
+  const onTotalChangeRef = useRef(onTotalChange);
+  onTotalChangeRef.current = onTotalChange;
   // The page parameters the last block request was sent with: a column change that changes them
   // reloads the rows (see pageParamsChangedRef).
   const pageParamsKeyRef = useRef<string | undefined>(undefined);
@@ -724,6 +729,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         const rows = (res.data?.items ?? []) as any[];
         const total = res.data?.total ?? rows.length;
         setTotalRowCount(total);
+        onTotalChangeRef.current?.(total);
         params.successCallback(rows, total);
       } catch (e: any) {
         if (superseded()) {

@@ -7,8 +7,8 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
-import CsvExportDialog from '../components/csv/CsvExportDialog';
-import CsvImportDialog from '../components/csv/CsvImportDialog';
+import BudgetFileExportDialog from '../components/finance/BudgetFileExportDialog';
+import BudgetFileImportDialog from '../components/finance/BudgetFileImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
@@ -105,6 +105,7 @@ export default function CapexPage() {
   const location = useLocation();
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [filteredCount, setFilteredCount] = useState<number | null>(null);
   const [selectedRows, setSelectedRows] = useState<SummaryRow[]>([]);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; filtersString: string; statusScope?: StatusScope } | null>(null);
   const gridApiRef = useRef<any>(null);
@@ -711,6 +712,7 @@ export default function CapexPage() {
         onColumnStateChange={followColumns}
         pageParams={pageParams}
         setFilterExcludeMode
+        onTotalChange={setFilteredCount}
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};
@@ -726,8 +728,27 @@ export default function CapexPage() {
         enableRowSelection={canAdmin}
         onSelectionChanged={setSelectedRows}
       />}
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/capex-items" title={t("capex.exportTitle")} />
-      <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/capex-items" title={t("capex.importTitle")} onImported={() => setRefreshKey((k) => k + 1)} />
+      <BudgetFileExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        scope="capex"
+        columnsReady={budgetColumns.ready}
+        columns={budgetColumns.all.map((column) => ({ key: column.freezeKey, label: column.label, shown: column.enabled }))}
+        filteredCount={filteredCount}
+        list={{
+          sort: lastQueryRef.current?.sort ?? '',
+          q: lastQueryRef.current?.q ?? '',
+          filters: lastQueryRef.current?.filtersString ?? '',
+          statusScope: lastQueryRef.current?.statusScope ?? 'enabled',
+        }}
+      />
+      <BudgetFileImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        scope="capex"
+        canCreateSuppliers={hasLevel('suppliers', 'member')}
+        onImported={() => setRefreshKey((k) => k + 1)}
+      />
     </>
   );
 }

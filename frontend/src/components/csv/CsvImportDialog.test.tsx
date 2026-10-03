@@ -17,7 +17,7 @@ import CsvImportDialog from './CsvImportDialog';
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
 function renderDialog() {
-  const view = render(<CsvImportDialog open onClose={() => undefined} endpoint="/budget-rows" />);
+  const view = render(<CsvImportDialog open onClose={() => undefined} endpoint="/suppliers" />);
   const input = document.querySelector('input[type="file"]') as HTMLInputElement;
   fireEvent.change(input, { target: { files: [new File(['a;b'], 'rows.csv', { type: 'text/csv' })] } });
   return view;
