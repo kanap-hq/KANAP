@@ -221,6 +221,17 @@ S3_FORCE_PATH_STYLE=true
 # SMTP_FROM=KANAP <noreply@company.com>
 ```
 
+### Dimensionar PostgreSQL para este servidor
+
+Los valores predeterminados de PostgreSQL están dimensionados para una máquina pequeña. El repositorio tiene un script que imprime ajustes dimensionados según la memoria de este servidor; no cambia nada por sí mismo. Conserva las bibliotecas que PostgreSQL ya precarga (déle su lista) y añade la biblioteca de estadísticas de consultas cuando la encuentra en este servidor. Lea el archivo que escribe, luego reinicie PostgreSQL y active las estadísticas de consultas:
+
+```bash
+CURRENT=$(sudo -u postgres psql -XAtc 'SHOW shared_preload_libraries')
+sh infra/postgres/kanap-pg-tune.sh --preload "$CURRENT" | sudo tee /etc/postgresql/16/main/conf.d/kanap.conf
+sudo systemctl restart postgresql
+sudo -u postgres psql -d kanap -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
+```
+
 **Importante:** Genere un secreto JWT real (`openssl rand -hex 32`) — no reutilice los valores de ejemplo.
 
 Si accede a KANAP por dirección IP en lugar de un dominio, establezca `APP_BASE_URL` y `CORS_ORIGINS` en `https://YOUR_IP`.
@@ -281,8 +292,10 @@ Cree `/etc/nginx/sites-available/kanap`:
 
 ```nginx
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    # HTTP/2: el navegador envía las decenas de solicitudes de una página por una sola conexión.
+    # nginx 1.25.1 y posteriores: escriba `listen 443 ssl;` y `http2 on;` en su lugar.
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name kanap.company.com;
 
     ssl_certificate     /etc/ssl/kanap/server.crt;
@@ -304,6 +317,15 @@ server {
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host  $host;
+
+        # Comprime las respuestas JSON y CSV de la API (una página de la lista de presupuesto pesa unas 8 veces menos).
+        # Las respuestas de IA en flujo (application/x-ndjson) se dejan fuera a propósito.
+        gzip on;
+        gzip_proxied any;
+        gzip_comp_level 5;
+        gzip_min_length 1024;
+        gzip_vary on;
+        gzip_types application/json text/csv text/plain;
 
         proxy_http_version 1.1;
         proxy_set_header Upgrade    $http_upgrade;

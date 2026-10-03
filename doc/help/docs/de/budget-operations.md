@@ -21,6 +21,8 @@ Die Startseite zeigt sieben Karten, die jeweils zu einem dedizierten Werkzeug f�
 
 Die Budgetspalten sind Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert. Das sind die Standardnamen. Ihre Organisation kann sie umbenennen, einige ausblenden und unter [Budgetspalten](#budgetspalten) eine Standardspalte wählen. Jede der folgenden Seiten zeigt die Namen, die Ihre Organisation gewählt hat.
 
+Solange einer dieser Vorgänge läuft, können OPEX- und CAPEX-Positionen nicht gespeichert werden: Eine Änderung zeigt die Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“, bis der Vorgang abgeschlossen ist.
+
 ---
 
 ## Daten einfrieren / auftauen

@@ -178,6 +178,34 @@ Er behandelt die App-Registrierung, die delegierten Berechtigungen und die Anwen
 | `APP_URL` | Basis-URL für Benachrichtigungs-E-Mail-Links im Multi-Tenant-Modus (Mandanten-Slug ersetzt `app`). **Nicht benötigt für On-Premise** -- `APP_BASE_URL` wird stattdessen verwendet. | `https://app.kanap.net` |
 | `EMAIL_OVERRIDE` | Alle E-Mails an diese Adresse umleiten (nur Dev/QA, **nie in Produktion**) | *nicht gesetzt* |
 
+## Optional: Kapazität und Leistung
+
+Die Standardwerte reichen für einige Dutzend Benutzer. Für mehr gleichzeitige Benutzer führen Sie mehrere API-Prozesse aus und dimensionieren die Datenbankverbindungen.
+
+| Variable | Beschreibung | Standard |
+|----------|-------------|---------|
+| `API_WORKERS` | Anzahl der API-Prozesse im API-Container (1 bis 16). Bei mehr als einem lässt eine rechnende Anfrage nicht mehr alle anderen warten. | `1` |
+| `DB_POOL_MAX` | Datenbankverbindungen pro API-Prozess (mindestens 2: ein niedrigerer Wert wird auf 2 angehoben) | `20` |
+| `SHUTDOWN_DRAIN_TIMEOUT_MS` | Bei Stopp oder Upgrade: wie lange die API laufenden Anfragen, den davon ausgelösten Benachrichtigungen, laufenden Hintergrundjobs und wartenden E-Mails Zeit zum Abschluss lässt (Millisekunden, höchstens 120000). Der Container wird in jedem Fall nach 30 s gestoppt. | `20000` |
+| `OPS_METRICS_TOKEN` | Aktiviert `GET /api/ops/metrics` für Ihr Monitoring-Tool (24 Zeichen oder mehr, zum Beispiel `openssl rand -hex 32`; ein kürzerer Wert lässt es deaktiviert, und die API meldet dies beim Start). Siehe [Betrieb](operations.md#api-metriken-fur-ein-monitoring-tool). | *nicht gesetzt (deaktiviert)* |
+
+**Was jedes kostet.** Jeder API-Prozess benötigt beim Start etwa 200 MB Speicher und unter Last bis zu 300 MB (gemessen mit 50 Benutzern auf 5.000 Budgetzeilen); bei mehreren Prozessen kommt ein kleiner überwachender Prozess mit etwa 100 MB hinzu. Jeder API-Prozess kann bis zu `DB_POOL_MAX` Verbindungen zu PostgreSQL öffnen. Zur Berechnung:
+
+- Speicher: `API_WORKERS` × 0,4 GB für die API, plus was PostgreSQL verbraucht, wenn es auf demselben Server läuft, plus etwa 1 GB Spielraum (Image-Builds brauchen ihn bei Upgrades);
+- Verbindungen: `API_WORKERS` × `DB_POOL_MAX` muss unter `max_connections` von PostgreSQL (standardmäßig 100) minus etwa 15 bleiben. Die API prüft dies beim Start und schreibt eine Warnung ins Protokoll, wenn es nicht passt, mit einem Wert, der passen würde.
+
+**Empfohlene Werte.**
+
+| Gleichzeitig arbeitende Benutzer | `API_WORKERS` | `DB_POOL_MAX` | Serverspeicher (API + PostgreSQL) |
+|---|---|---|---|
+| Bis zu 20 | 1 | 20 | 4 GB |
+| 20 bis 50 | 2 | 15 | 8 GB |
+| 50 und mehr | 4 | 10 | 8 bis 16 GB |
+
+Gemessen auf 5.000 Budgetzeilen: Bei 10 Benutzern antwortet ein Prozess so schnell wie vier. Bei 50 Benutzern dauerte das Öffnen einer Zeile 237 ms (95. Perzentil) mit einem Prozess, 142 ms mit zwei und 82 ms mit vier, und der einzelne Prozess hielt alle seine Datenbankverbindungen ausgelastet.
+
+Halten Sie `API_WORKERS` bei oder unter der Anzahl der CPU-Kerne, die der Server KANAP gibt. Änderungen wirken sich beim Neustart des API-Containers aus (`docker compose -f infra/compose.onprem.yml up -d api`).
+
 ## Vollständiges Beispiel (.env)
 
 ```bash
@@ -231,6 +259,12 @@ S3_FORCE_PATH_STYLE=false   # true für MinIO
 # JWT_REFRESH_TOKEN_TTL=4h
 # RATE_LIMIT_ENABLED=true
 # RATE_LIMIT_TRUST_PROXY=false
+
+# KAPAZITÄT (optional - siehe „Kapazität und Leistung“)
+# API_WORKERS=1
+# DB_POOL_MAX=20
+# SHUTDOWN_DRAIN_TIMEOUT_MS=20000
+# OPS_METRICS_TOKEN=
 ```
 
 ## Firewall-Regeln
@@ -295,5 +329,7 @@ Ein weiterer geplanter Job läuft, wenn Entra SSO konfiguriert ist:
 Ein weiterer Job hält die Status aktuell:
 
 - **`lifecycle-status-sync`**: stündlich und einmal beim Start der API. Setzt Stammdaten, Verträge sowie OPEX- und CAPEX-Positionen auf deaktiviert, sobald ihr Ende der Gültigkeit vorbei ist.
+
+Bei mehreren API-Prozessen (`API_WORKERS`) läuft jeder Job weiterhin nur einmal pro geplantem Zeitpunkt: Die Prozesse einigen sich über die Datenbank darauf, welcher ihn ausführt. Stoppt die API (ein Upgrade), erhält ein laufender Job die Drain-Zeit zum Abschluss; ein dann noch laufender Job wird in der Liste der geplanten Aufgaben als **Fehlgeschlagen** angezeigt und läuft zum nächsten Zeitpunkt erneut.
 
 Diese Jobs erfordern, dass die API als **dauerhaft laufender Prozess** läuft (nicht als Serverless-Funktion). Im On-Premise-Modus wird `APP_BASE_URL` für Benachrichtigungs-E-Mail-Links verwendet (keine Subdomain-Ableitung). Wenn kein ausgehender E-Mail-Transport konfiguriert ist, überspringen diese Jobs das Senden problemlos.

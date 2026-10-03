@@ -104,11 +104,13 @@ Estas columnas están ocultas por defecto. Muéstrelas desde el selector de colu
 
 ### Búsqueda rápida
 
-El cuadro de búsqueda en la parte superior busca en la referencia, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, los valores analíticos, el centro de coste (código, nombre y ruta), el responsable del presupuesto, el tipo de activo fijo, el tipo de inversión, la prioridad, las notas, la moneda y el estado. Los resultados se actualizan en tiempo real mientras escribe.
+El cuadro de búsqueda en la parte superior busca en la referencia, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, los valores analíticos, el centro de coste (código, nombre y ruta), el responsable del presupuesto, el tipo de activo fijo, el tipo de inversión, la prioridad, las notas, la moneda y el estado. Los resultados se actualizan en tiempo real mientras escribe, sin distinguir acentos ni mayúsculas y minúsculas.
 
 ### Filtros de columna
 
 Cada encabezado de columna filtrable tiene un icono de filtro. **Proveedor**, **Empresa pagadora**, **Cuenta**, **Tipo de activo fijo**, **Tipo de inversión**, **Prioridad**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **Habilitado** usan filtros de conjunto de casillas con **Todos**, **Ninguno** y un botón de limpiar. El filtro **Habilitado** ofrece **Activado** y **Desactivado** y restringe la lista cuando **Mostrar** está en **Todos**. Si hace clic en **Limpiar** dentro del filtro, o desmarca ambos valores, la lista no muestra nada, sea cual sea la opción de **Mostrar**. Múltiples filtros se combinan con lógica AND.
+
+Marque **Todos** y luego desmarque los valores que quiera excluir: el filtro conserva todo salvo esos (el encabezado muestra, por ejemplo, **Todos menos 3**), y un valor creado más tarde se incluye automáticamente.
 
 Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las partidas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes.
 
@@ -116,11 +118,11 @@ Cada columna de ETC tiene un filtro numérico con las mismas condiciones, más v
 
 **Inicio efectivo**, **Fin de validez**, **Creado** y **Actualizado** tienen filtros de fecha. Elija una fecha en el cuadro bajo el encabezado para conservar las partidas de esa fecha, o abra el menú del filtro para antes de, después de, entre, vacío o no vacío.
 
-Las columnas de texto usan filtros de texto. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` o `CPX-12`.
+Las columnas de texto usan filtros de texto, sin distinguir acentos ni mayúsculas y minúsculas. En **Ref**, escriba el número o la referencia completa, por ejemplo `12` o `CPX-12`.
 
 ### Ordenación
 
-Haga clic en un encabezado de columna para ordenar ascendente o descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe y de ETC. Las partidas sin ETC van al final en orden ascendente. La ordenación predeterminada es la columna por defecto del año actual, de mayor a menor (**Presupuesto A** con la configuración estándar). **Anterior** y **Siguiente** en el espacio de trabajo siguen el mismo orden. La lista recuerda su última ordenación cuando regresa.
+Haga clic en un encabezado de columna para ordenar ascendente o descendente. Todas las columnas se pueden ordenar, incluida cada columna de importe y de ETC. Las partidas sin ETC van al final en orden ascendente. Las columnas de texto se ordenan en orden de lectura natural: un nombre con tilde se ordena junto a su forma sin tilde (por ejemplo «Électricité» junto a «Electricite»), y las minúsculas van antes que las mayúsculas cuando las letras son iguales. La ordenación predeterminada es la columna por defecto del año actual, de mayor a menor (**Presupuesto A** con la configuración estándar). **Anterior** y **Siguiente** en el espacio de trabajo siguen el mismo orden. La lista recuerda su última ordenación cuando regresa.
 
 ### Fila de totales
 
@@ -147,6 +149,8 @@ Utilice el conmutador **Mostrar: Todos / Activos / Desactivados** encima de la c
 
 Su contexto de lista (orden de clasificación, texto de búsqueda y filtros activos) se preserva cuando abre una partida y se restaura al volver a la lista. Esto significa que puede profundizar en varias partidas en secuencia sin perder su lugar.
 
+Estos mismos filtros también se guardan en la dirección web de la página, de modo que recargar la página o compartir el enlace reabre la misma vista. Un enlace cuyos filtros ya no están disponibles muestra «Los filtros de este enlace ya no están disponibles.»
+
 ### Navegación Anterior/Siguiente
 
 Cuando abre una partida, el espacio de trabajo muestra botones **Ant.** y **Sig.**. Estos navegan por la lista en el orden actual, respetando filtros y búsqueda, y guardan primero sus cambios pendientes. El contador (p. ej., "Partida 3 de 47") muestra su posición en la lista filtrada.
@@ -169,6 +173,16 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Tiene 
 - Cada cambio se guarda automáticamente. La indicación **Guardando...** / **Guardado** aparece en la cabecera
 - Cambiar de pestaña, pasar a la partida anterior o siguiente, o cerrar el espacio de trabajo guarda primero los cambios pendientes. Si un guardado falla, usted se queda donde está y un mensaje explica el motivo, de modo que ningún cambio se pierde sin que lo sepa
 - **Ctrl+S** (**Cmd+S** en Mac) guarda de inmediato
+- Si un guardado no puede completarse de inmediato porque hay otro guardado en curso sobre los mismos datos, KANAP lo reintenta automáticamente
+- Si hay una operación de presupuesto masiva en curso (por ejemplo, una copia o un restablecimiento de columna en la Administración presupuestaria), las ediciones aquí se detienen con el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» Vuelva a intentarlo cuando haya terminado
+
+**Edición simultánea**:
+
+- Dos personas pueden trabajar en la misma partida a la vez sin estorbarse. Editar campos distintos, meses de presupuesto distintos o columnas de presupuesto distintas nunca genera un conflicto, incluso en la misma partida y en el mismo momento
+- Cuando otra persona cambia el mismo campo, la misma columna de presupuesto o la asignación mientras usted la está editando, un aviso muestra su valor y el de usted, con quién lo cambió y cuándo. Elija **Conservar el otro valor** para quedarse con el suyo, o **Aplicar mi valor** para conservar lo que escribió. Para una columna de presupuesto, las opciones son **Recargar la columna** o **Sobrescribir**; para la asignación, **Recargar la asignación** o **Sobrescribir**
+- Solo el campo, la columna o la asignación que cambió espera su decisión; todo lo demás sigue guardándose con normalidad
+- Una decisión pendiente se conserva al cambiar de pestaña. Se pierde, tras un aviso, si sale de la partida o cambia de año
+- Si el cambio anterior fue suyo, desde otra ventana o pestaña, el aviso lo indica así en lugar de nombrar a otra persona
 
 ### Vista general
 
@@ -193,6 +207,7 @@ La pestaña Vista general contiene los detalles de la inversión y sus tareas.
 - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora), **Moneda** (solo las monedas permitidas en su espacio de trabajo), **Tipo de activo fijo**, **Tipo de inversión**, un campo por dimensión analítica, **Run o build** e **Inicio de vigencia**
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 - Fechas **Creado** y **Actualizado** (solo lectura)
+- Escriba en **Proveedor**, **Empresa pagadora**, **Cuenta**, **Responsable IT**, **Responsable de negocio** o un campo de dimensión analítica para buscar por nombre. Las coincidencias aparecen mientras escribe, de modo que puede encontrar cualquier valor incluso en una lista muy larga; una línea bajo la lista muestra «Escriba para acotar: hay más resultados» cuando hay más coincidencias de las que se muestran
 - La **Prioridad** se define en el panel Propiedades al crear la partida y después en la barra de metadatos
 
 **Centro de coste**:
@@ -253,6 +268,7 @@ Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y 
 - **Mensual**: Introduzca importes por mes (enero a diciembre) para cada columna visible, para un seguimiento detallado del gasto del proyecto. Se muestran subtotales trimestrales y un total anual. Solo se guardan los meses que usted modifica.
 - Ambas pestañas muestran las mismas columnas: Previsión también aparece en **Anual** cuando se muestra.
 - Cambie de modo con las pestañas **Anual** y **Mensual**
+- Su elección entre **Anual** y **Mensual** se guarda en su navegador, solo para usted: cambiar de modo no modifica lo que ven otros usuarios que abren esta partida. Hasta que elija, una columna se abre en el modo en que se introdujeron sus importes por última vez.
 - Cambiar de modo no modifica sus importes, solo la vista. Anual muestra el total anual de los meses guardados y Mensual muestra los meses guardados.
 
 **Comportamiento de congelación**:
@@ -286,6 +302,13 @@ Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y 
 - **Cantidad y precio · 3 líneas · 1.00 ETC**: los importes proceden de líneas, con su número y, cuando las líneas cuentan personas o días, el ETC de la columna. El ETC es la media anual. Pase el cursor sobre la etiqueta para ver las líneas, por ejemplo «Jefe de proyecto: 1 persona × 1.200 por día, 5 días por mes, de feb a jul»
 - **Editado a mano**: se modificó un mes en la cuadrícula o mediante una importación del archivo de filas presupuestarias
 - Una columna sin etiqueta conserva los datos que tenía antes de que existieran los periodos
+
+**Cuando otra persona edita la misma columna**:
+
+- Dos personas pueden rellenar meses o columnas distintos de la misma partida a la vez, sin conflicto
+- En una entrada mensual, si otra persona cambió alguno de los mismos meses, esos meses esperan su decisión; los demás meses de la columna se guardan como usted los escribió
+- Si otra persona cambió el total de la columna, su reparto o sus líneas de Cantidad y precio mientras usted trabajaba en ellas, toda la columna espera: un aviso ofrece **Recargar la columna** o **Sobrescribir**. Los importes, el panel de reparto y las líneas de la columna quedan en solo lectura hasta que decida
+- Guardar recarga el año, así que siempre ve las cifras más recientes de cualquier otra columna; la celda o columna que está editando no se ve afectada
 
 **Herramientas del modo mensual** (solo modo Mensual):
 
@@ -446,6 +469,11 @@ La pestaña Asignaciones distribuye el gasto de capital entre sus empresas y dep
 
 - **Métricas faltantes**: Una o más empresas tienen la plantilla, los usuarios IT o la facturación en cero o sin informar para el año seleccionado. Complete las métricas en **Datos maestros > Empresas** (pestaña Detalles).
 - **"Los porcentajes manuales deben sumar 100 %."**: Ajuste las filas o haga clic en **Repartir equitativamente**.
+
+**Cuando otra persona edita la asignación**:
+
+- El método, el inductor y las filas se guardan juntos. Si otra persona cambió la asignación mientras usted la editaba, un aviso ofrece **Recargar la asignación** o **Sobrescribir**
+- Cambiar de año con una decisión pendiente pide confirmación primero
 
 **Consejo**: Use Plantilla para la mayoría de partidas (es lo más sencillo y se actualiza automáticamente). Reserve Manual por empresa para inversiones que solo benefician a entidades concretas (p. ej., un centro de datos regional). Use Manual por departamento para inversiones muy específicas.
 

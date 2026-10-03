@@ -7,7 +7,7 @@
 - Docker Engine 24.0+
 - Docker Compose v2.20+
 - Git
-- Mindestens 4 GB RAM (8 GB empfohlen)
+- Mindestens 4 GB RAM (8 GB empfohlen; mehr API-Prozesse benötigen mehr, siehe [Konfiguration](configuration.md#optional-kapazitat-und-leistung))
 - Mindestens 20 GB Festplatte (+ Build-Cache)
 
 **Vom Kunden bereitgestellte Infrastruktur:**
@@ -77,8 +77,10 @@ Da Container an `127.0.0.1` gebunden sind, läuft nginx auf dem gleichen Host un
 
 ```nginx
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    # HTTP/2: Der Browser sendet die Dutzenden Anfragen einer Seite über eine Verbindung.
+    # nginx 1.25.1 und neuer: Schreiben Sie stattdessen `listen 443 ssl;` und `http2 on;`.
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name kanap.company.com;
 
     ssl_certificate     /path/to/fullchain.pem;
@@ -101,6 +103,15 @@ server {
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host  $host;
+
+        # Komprimiert die JSON- und CSV-Antworten der API (eine Budgetlisten-Seite wird etwa 8-mal kleiner).
+        # Gestreamte KI-Antworten (application/x-ndjson) sind absichtlich ausgenommen.
+        gzip on;
+        gzip_proxied any;
+        gzip_comp_level 5;
+        gzip_min_length 1024;
+        gzip_vary on;
+        gzip_types application/json text/csv text/plain;
 
         # WebSocket-Unterstützung
         proxy_http_version 1.1;
@@ -135,6 +146,8 @@ server {
     return 301 https://$host$request_uri;
 }
 ```
+
+**Kompression und HTTP/2:** Das Beispiel komprimiert die Antworten der API und aktiviert HTTP/2. Behalten Sie beides in Ihrem eigenen Proxy: Eine Seite der Budgetliste wiegt unkomprimiert etwa 390 KB JSON und komprimiert 47 KB. Hat Ihr nginx das Brotli-Modul (`libnginx-mod-http-brotli-filter` unter Debian und Ubuntu), komprimiert `brotli on; brotli_types application/json text/csv text/plain;` im selben `location`-Block etwas besser; gzip reicht aus.
 
 **Selbstsigniertes TLS (keine Domain):** Wenn Sie keine Domain haben und per IP-Adresse auf KANAP zugreifen, erstellen Sie ein selbstsigniertes Zertifikat:
 
@@ -176,7 +189,7 @@ Ersetzen Sie `IHRE_IP` durch die IP-Adresse Ihres Servers und aktualisieren Sie 
                     └─────────────────────────────────────────────────────┘
 ```
 
-**Deployment-Modell:** Nur Single-Container-Deployment. Der Betrieb mehrerer API- oder Web-Replikas wird nicht unterstützt. Für Hochverfügbarkeit verlassen Sie sich auf Docker-Neustart-Richtlinien und Infrastruktur-Redundanz (Datenbank-HA, S3-Haltbarkeit).
+**Deployment-Modell:** ein API-Container und ein Web-Container. Der Betrieb mehrerer API- oder Web-Container wird nicht unterstützt. Für mehr gleichzeitige Benutzer führen Sie mehrere API-Prozesse innerhalb des API-Containers mit `API_WORKERS` aus (siehe [Konfiguration](configuration.md#optional-kapazitat-und-leistung)). Für Hochverfügbarkeit verlassen Sie sich auf Docker-Neustart-Richtlinien und Infrastruktur-Redundanz (Datenbank-HA, S3-Haltbarkeit).
 
 ## Erste Anmeldung
 

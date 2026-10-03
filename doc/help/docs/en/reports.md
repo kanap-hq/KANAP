@@ -342,7 +342,7 @@ View OPEX or CAPEX budget data grouped by consolidation account, with chart type
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (only available when a single year is selected)
-- **Exclude accounts**: Multi-select autocomplete to exclude specific accounts
+- **Exclude accounts**: Multi-select autocomplete to exclude specific accounts. Offers every account used by the report's lines, by name and number, whether or not you can open the chart of accounts
 - **Cost center**, **Run or build** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
@@ -358,7 +358,7 @@ View OPEX or CAPEX budget data grouped by consolidation account, with chart type
 
 **Table**: One row per consolidation account with year columns. A pinned totals row at the bottom sums all groups.
 
-Items without a consolidation account appear as "Unassigned".
+A line on a consolidation account that has since been disabled still counts, under that account's own consolidation line. Account names and numbers show only when you can read the [chart of accounts](chart-of-accounts.md); without that access, every line appears under "Unassigned" instead (the totals are still right, only the breakdown by account is hidden). Items without a consolidation account also appear as "Unassigned".
 
 ---
 

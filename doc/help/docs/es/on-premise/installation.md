@@ -7,7 +7,7 @@
 - Docker Engine 24.0+
 - Docker Compose v2.20+
 - Git
-- 4 GB RAM mínimo (8 GB recomendado)
+- 4 GB RAM mínimo (8 GB recomendado; más procesos de API necesitan más, véase [Configuración](configuration.md#opcional-capacidad-y-rendimiento))
 - 20 GB disco mínimo (+ caché de construcción)
 
 **Infraestructura proporcionada por el cliente:**
@@ -77,8 +77,10 @@ Como los contenedores se vinculan a `127.0.0.1`, nginx se ejecuta en el mismo ho
 
 ```nginx
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
+    # HTTP/2: el navegador envía las decenas de solicitudes de una página por una sola conexión.
+    # nginx 1.25.1 y posteriores: escriba `listen 443 ssl;` y `http2 on;` en su lugar.
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name kanap.company.com;
 
     ssl_certificate     /path/to/fullchain.pem;
@@ -101,6 +103,15 @@ server {
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host  $host;
+
+        # Comprime las respuestas JSON y CSV de la API (una página de la lista de presupuesto pesa unas 8 veces menos).
+        # Las respuestas de IA en flujo (application/x-ndjson) se dejan fuera a propósito.
+        gzip on;
+        gzip_proxied any;
+        gzip_comp_level 5;
+        gzip_min_length 1024;
+        gzip_vary on;
+        gzip_types application/json text/csv text/plain;
 
         # Soporte WebSocket
         proxy_http_version 1.1;
@@ -135,6 +146,8 @@ server {
     return 301 https://$host$request_uri;
 }
 ```
+
+**Compresión y HTTP/2:** el ejemplo comprime las respuestas de la API y activa HTTP/2. Mantenga ambas cosas en su propio proxy: una página de la lista de presupuesto pesa unos 390 KB de JSON sin comprimir y 47 KB comprimida. Si su nginx tiene el módulo brotli (`libnginx-mod-http-brotli-filter` en Debian y Ubuntu), `brotli on; brotli_types application/json text/csv text/plain;` en el mismo `location` comprime un poco mejor; con gzip es suficiente.
 
 **TLS autofirmado (sin dominio):** Si no tiene un dominio y accede a KANAP por dirección IP, genere un certificado autofirmado:
 
@@ -176,7 +189,7 @@ Reemplace `SU_IP` con la IP de su servidor y actualice `server_name`, `APP_BASE_
                     └─────────────────────────────────────────────────────┘
 ```
 
-**Modelo de despliegue:** Solo despliegue de contenedor único. No se soporta la ejecución de múltiples réplicas de API o web. Para alta disponibilidad, confíe en las políticas de reinicio de Docker y la redundancia a nivel de infraestructura (alta disponibilidad de base de datos, durabilidad S3).
+**Modelo de despliegue:** un contenedor de API y un contenedor web. No se admite ejecutar varios contenedores de API o web. Para más usuarios a la vez, ejecute varios procesos de API dentro del contenedor de API con `API_WORKERS` (véase [Configuración](configuration.md#opcional-capacidad-y-rendimiento)). Para alta disponibilidad, confíe en las políticas de reinicio de Docker y la redundancia a nivel de infraestructura (alta disponibilidad de base de datos, durabilidad S3).
 
 ## Primer inicio de sesión
 

@@ -178,6 +178,34 @@ Cubre el registro de aplicación, los permisos delegados y de aplicación, y la 
 | `APP_URL` | URL base para enlaces de correo de notificaciones en modo multi-inquilino (el slug del inquilino reemplaza `app`). **No necesario para local** — se usa `APP_BASE_URL` en su lugar. | `https://app.kanap.net` |
 | `EMAIL_OVERRIDE` | Redirigir todos los correos a esta dirección (solo dev/QA, **nunca en producción**) | *sin establecer* |
 
+## Opcional: Capacidad y rendimiento
+
+Los valores predeterminados sirven para unas pocas decenas de usuarios. Para más usuarios a la vez, ejecute varios procesos de API y dimensione las conexiones a la base de datos.
+
+| Variable | Descripción | Predeterminado |
+|----------|-------------|---------|
+| `API_WORKERS` | Número de procesos de API en el contenedor de API (1 a 16). Con más de uno, una solicitud que calcula ya no hace esperar a todos los demás. | `1` |
+| `DB_POOL_MAX` | Conexiones a la base de datos por proceso de API (2 como mínimo: un valor menor se eleva a 2) | `20` |
+| `SHUTDOWN_DRAIN_TIMEOUT_MS` | Al detenerse o actualizar, cuánto tiempo deja la API que terminen las solicitudes en curso, las notificaciones que iniciaron, los trabajos en segundo plano en curso y los correos en cola (milisegundos, como máximo 120000). El contenedor se detiene a los 30 s en cualquier caso. | `20000` |
+| `OPS_METRICS_TOKEN` | Activa `GET /api/ops/metrics` para su herramienta de monitorización (24 caracteres o más, por ejemplo `openssl rand -hex 32`; un valor más corto lo deja deshabilitado y la API lo indica al iniciar). Consulte [Operaciones](operations.md#metricas-de-api-para-una-herramienta-de-monitorizacion). | *sin definir (deshabilitado)* |
+
+**Qué cuesta cada uno.** Cada proceso de API usa unos 200 MB de memoria al iniciar y hasta 300 MB bajo carga (medido con 50 usuarios sobre 5.000 líneas de presupuesto); con varios procesos, un pequeño proceso supervisor añade unos 100 MB. Cada proceso de API puede abrir hasta `DB_POOL_MAX` conexiones a PostgreSQL. Para calcular:
+
+- memoria: `API_WORKERS` × 0,4 GB para la API, más lo que use PostgreSQL si se ejecuta en el mismo servidor, más alrededor de 1 GB de margen (las compilaciones de imagen lo necesitan durante las actualizaciones);
+- conexiones: `API_WORKERS` × `DB_POOL_MAX` debe quedar por debajo de `max_connections` de PostgreSQL (100 por defecto) menos unas 15. La API comprueba esto al iniciar y escribe un aviso en su registro cuando no cabe, con un valor que sí cabría.
+
+**Valores sugeridos.**
+
+| Usuarios trabajando a la vez | `API_WORKERS` | `DB_POOL_MAX` | Memoria del servidor (API + PostgreSQL) |
+|---|---|---|---|
+| Hasta 20 | 1 | 20 | 4 GB |
+| 20 a 50 | 2 | 15 | 8 GB |
+| 50 o más | 4 | 10 | 8 a 16 GB |
+
+Medido con 5.000 líneas de presupuesto: con 10 usuarios, un proceso responde tan rápido como cuatro. Con 50 usuarios, abrir una línea tardó 237 ms (percentil 95) con un proceso, 142 ms con dos y 82 ms con cuatro, y el proceso único mantenía ocupadas todas sus conexiones a la base de datos.
+
+Mantenga `API_WORKERS` igual o por debajo del número de núcleos de CPU que el servidor da a KANAP. Los cambios surten efecto al reiniciar el contenedor de API (`docker compose -f infra/compose.onprem.yml up -d api`).
+
 ## Ejemplo completo (.env)
 
 ```bash
@@ -231,6 +259,12 @@ S3_FORCE_PATH_STYLE=false   # true para MinIO
 # JWT_REFRESH_TOKEN_TTL=4h
 # RATE_LIMIT_ENABLED=true
 # RATE_LIMIT_TRUST_PROXY=false
+
+# CAPACIDAD (opcional - ver «Capacidad y rendimiento»)
+# API_WORKERS=1
+# DB_POOL_MAX=20
+# SHUTDOWN_DRAIN_TIMEOUT_MS=20000
+# OPS_METRICS_TOKEN=
 ```
 
 ## Reglas de firewall
@@ -295,5 +329,7 @@ Hay un trabajo programado más que se ejecuta cuando el SSO Entra está configur
 Otro trabajo mantiene los estados al día:
 
 - **`lifecycle-status-sync`**: cada hora, y una vez al iniciarse la API. Pasa a desactivado los datos maestros, los contratos y las partidas OPEX y CAPEX cuando su fin de validez ha pasado.
+
+Con varios procesos de API (`API_WORKERS`), cada trabajo sigue ejecutándose solo una vez por horario programado: los procesos se ponen de acuerdo a través de la base de datos sobre cuál lo ejecuta. Cuando la API se detiene (una actualización), un trabajo en curso recibe el tiempo de espera para terminar; uno que siga en curso en ese momento aparece como **Fallida** en la lista de tareas programadas y se ejecuta de nuevo en su próximo horario.
 
 Estos trabajos requieren que la API se ejecute como un **proceso de larga duración** (no una función serverless). En modo local, se usa `APP_BASE_URL` para los enlaces de correo de notificaciones (sin derivación de subdominio). Si no hay transporte de correo saliente configurado, estos trabajos omiten el envío de forma elegante.

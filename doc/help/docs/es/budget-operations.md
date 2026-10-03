@@ -21,6 +21,8 @@ La página principal muestra siete tarjetas, cada una enlazando a una herramient
 
 Las columnas presupuestarias son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto. Son los nombres estándar. Su organización puede renombrarlas, ocultar algunas y elegir una columna por defecto en [Columnas presupuestarias](#columnas-presupuestarias). Cada página a continuación muestra los nombres que eligió su organización.
 
+Mientras una de estas operaciones esté en curso, no se pueden guardar las partidas de OPEX ni de CAPEX: una edición muestra el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» hasta que la operación termine.
+
 ---
 
 ## Congelar / Descongelar datos
