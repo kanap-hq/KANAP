@@ -18,14 +18,14 @@ import { createRequestCommitThenRun } from '../common/import-connection';
  * request's transaction is committed and its connection given back before the answer goes out
  * (`createRequestCommitThenRun`, as the user invitation does), then `ANALYZE` runs on the
  * tables the import writes, on a pooled connection of its own, in the background: the answer
- * does not wait for it, a stop does (`trackBackgroundWork`). ANALYZE reads a sample of each
- * table (30,000 rows at most with the default target), blocks no read or write, and gives up
- * after 5 s waiting for a table's lock (another ANALYZE or VACUUM on it). It runs after the
+ * does not wait for it, a stop does (`trackBackgroundWork`). One short transaction per table:
+ * ANALYZE reads a sample of it (30,000 rows at most with the default target), blocks no read or
+ * write, and gives up after 5 s waiting for its lock (another ANALYZE or VACUUM on it). A table
+ * the KANAP role does not own is skipped and named in the log. It runs after the
  * commit, outside the request transaction: inside it, ANALYZE would hold its table locks until
  * the import commits and delay the answer, and an import that then failed would leave row
  * counts that include its rolled-back rows (ANALYZE writes them in place, whatever becomes of
- * its transaction). A failure is a warning: autovacuum analyses the tables later anyway. A
- * role that does not own the tables gets a warning from PostgreSQL and nothing is analysed.
+ * its transaction). A failure is a warning: autovacuum analyses the tables later anyway.
  *
  * The CSV project rewrites the importers (decision D6); this stays a call at the end of the
  * three import routes (budget rows, OPEX lines, CAPEX lines).
@@ -79,22 +79,54 @@ export async function analyzeAfterLargeImport(req: any, tables: readonly string[
   });
 }
 
-/** ANALYZE of `tables` in one short transaction of its own; never throws. */
-export async function analyzeTables(dataSource: DataSource, tables: readonly string[]): Promise<void> {
+export type AnalyzeReport = { analysed: string[]; notOwned: string[]; missing: string[]; failed: string[] };
+
+const errorCode = (error: unknown) => (error as any)?.driverError?.code ?? (error as any)?.code ?? (error as Error)?.message;
+
+/**
+ * ANALYZE of each of `tables` the current role may analyse, one short transaction per table (a
+ * table's lock is held only while it is sampled). A table the role does not own (the same check
+ * as 1853820000000: owner or member of the owner role) or that does not exist is skipped and
+ * logged; PostgreSQL would only warn and skip it. Never throws.
+ */
+export async function analyzeTables(dataSource: DataSource, tables: readonly string[]): Promise<AnalyzeReport> {
   const started = Date.now();
+  const report: AnalyzeReport = { analysed: [], notOwned: [], missing: [], failed: [] };
   const runner = dataSource.createQueryRunner();
   try {
     await runner.connect();
-    await runner.startTransaction();
-    await runner.query(`SELECT set_config('lock_timeout', $1, true), set_config('statement_timeout', $2, true)`, [LOCK_TIMEOUT, STATEMENT_TIMEOUT]);
-    await runner.query(`ANALYZE ${tables.join(', ')}`);
-    await runner.commitTransaction();
-    logger.log(`ANALYZE after a large import: ${tables.join(', ')} (${Date.now() - started} ms)`);
+    const states: Array<{ name: string; present: boolean; owned: boolean }> = await runner.query(
+      `SELECT t.name, c.oid IS NOT NULL AS present, COALESCE(pg_has_role(current_user, c.relowner, 'USAGE'), false) AS owned
+         FROM unnest($1::text[]) WITH ORDINALITY AS t(name, n)
+         LEFT JOIN pg_class c ON c.oid = to_regclass(t.name)
+        ORDER BY t.n`,
+      [tables],
+    );
+    for (const state of states) {
+      if (!state.present) { report.missing.push(state.name); continue; }
+      if (!state.owned) { report.notOwned.push(state.name); continue; }
+      try {
+        await runner.startTransaction();
+        await runner.query(`SELECT set_config('lock_timeout', $1, true), set_config('statement_timeout', $2, true)`, [LOCK_TIMEOUT, STATEMENT_TIMEOUT]);
+        await runner.query(`ANALYZE ${state.name}`);
+        await runner.commitTransaction();
+        report.analysed.push(state.name);
+      } catch (error) {
+        if (runner.isTransactionActive && !runner.isReleased) await runner.rollbackTransaction().catch(() => undefined);
+        report.failed.push(`${state.name} (${errorCode(error)})`);
+        if (runner.isReleased) break;
+      }
+    }
   } catch (error) {
-    if (runner.isTransactionActive && !runner.isReleased) await runner.rollbackTransaction().catch(() => undefined);
-    const code = (error as any)?.driverError?.code ?? (error as any)?.code;
-    logger.warn(`ANALYZE after a large import did not run (${code ?? (error as Error)?.message}); autovacuum will analyse ${tables.join(', ')}`);
+    report.failed.push(`(${errorCode(error)})`);
   } finally {
     if (!runner.isReleased) await runner.release().catch(() => undefined);
   }
+  if (report.analysed.length) logger.log(`ANALYZE after a large import: ${report.analysed.join(', ')} (${Date.now() - started} ms)`);
+  if (report.notOwned.length) {
+    logger.warn(`ANALYZE after a large import skipped ${report.notOwned.join(', ')}: the KANAP role does not own them (as their owner: ANALYZE ${report.notOwned.join(', ')}); autovacuum will analyse them`);
+  }
+  if (report.missing.length) logger.warn(`ANALYZE after a large import: no table ${report.missing.join(', ')}`);
+  if (report.failed.length) logger.warn(`ANALYZE after a large import did not run for ${report.failed.join(', ')}; autovacuum will analyse them`);
+  return report;
 }

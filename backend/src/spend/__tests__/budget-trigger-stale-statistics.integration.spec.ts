@@ -3,7 +3,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { BudgetFreshnessCounters1853740000000 } from '../../migrations/1853740000000-budget-freshness-counters';
 import { BudgetTriggerPlans1853850000000 } from '../../migrations/1853850000000-budget-trigger-plans';
-import { assert, inRolledBackTransaction, Kind, runSpecs, seedTenant } from './round-inputs.fixtures';
+import { assert, inRolledBackTransaction, Kind, repeat, runSpecs, seedLine, seedTenant } from './round-inputs.fixtures';
 
 // The budget statement triggers with stale statistics (plan planning/perf-scale, item 4C bis;
 // migration 1853850000000), against the database: a tenant with 25,000 versions, the planner
@@ -13,8 +13,9 @@ import { assert, inRolledBackTransaction, Kind, runSpecs, seedTenant } from './r
 // Each must finish in seconds, and give the counters and totals the rows hold. With the bodies
 // of 1853740000000 the first statement alone ran past the 30 s request timeout: run the spec
 // with STALE_STATS_PREVIOUS_FUNCTIONS=1 to install them (inside the rolled-back transaction)
-// and see the statements time out instead. The migration itself: a rerun repairs a missing or
-// disabled trigger and leaves the others, down() puts the previous bodies back.
+// and see the statements time out instead. The migration itself: a rerun repairs a missing,
+// disabled or replica-only trigger, leaves the others, rebuilds totals that drifted while an
+// amounts trigger did not fire; down() puts the previous bodies back.
 // Each test runs in a transaction rolled back at the end; the tables' statistics are taken
 // again afterwards (ANALYZE), whatever the outcome.
 // @database-spec: run-ci-tests.js runs this file in its serial database lane.
@@ -198,6 +199,9 @@ async function testStaleStatistics(kind: Kind) {
       await makeStatisticsStale(runner, kind, tenantId);
       await runner.query(`SELECT set_config('statement_timeout', $1, true)`, [STATEMENT_TIMEOUT]);
 
+      // A session mode other than the two step 4 switches between: a leak would show.
+      const sessionMode = 'force_generic_plan';
+      await runner.query(`SELECT set_config('plan_cache_mode', $1, true)`, [sessionMode]);
       const timings: string[] = [];
       for (const statement of statements(kind, tenantId)) {
         const ms = await timed(runner, statement);
@@ -213,6 +217,8 @@ async function testStaleStatistics(kind: Kind) {
       console.log(`  ${kind}${PREVIOUS ? ' (previous functions)' : ''}: ${timings.join('; ')}`);
       if (PREVIOUS) return;
 
+      // Step 4 sets the plan cache mode inside the function only: the session keeps its own.
+      assert.equal((await runner.query('SHOW plan_cache_mode'))[0].plan_cache_mode, sessionMode, `${kind}: the session's plan cache mode is untouched`);
       // The checks below read with the statistics as they now are (ANALYZE sees this
       // transaction's rows), without the statements' timeout.
       await runner.query(`SELECT set_config('statement_timeout', '0', true)`);
@@ -248,30 +254,54 @@ async function triggers(runner: QueryRunner): Promise<Map<string, TriggerRow>> {
   return new Map(rows.map((row) => [row.name, row]));
 }
 
-/** What each function is set to: the plan cache mode marks the bodies of 1853850000000. */
-async function functionSettings(runner: QueryRunner): Promise<string[]> {
-  const rows: Array<{ config: string[] | null }> = await runner.query(
-    `SELECT proconfig AS config FROM pg_proc WHERE proname = ANY ($1::text[]) AND pronamespace = 'public'::regnamespace`,
+/** Which bodies the functions run: those of 1853850000000 are set to plan each call (plan cache mode). */
+async function bodies(runner: QueryRunner): Promise<string[]> {
+  const rows: Array<{ body: string }> = await runner.query(
+    `SELECT CASE WHEN 'plan_cache_mode=force_custom_plan' = ANY (proconfig) THEN '1853850000000' ELSE '1853740000000' END AS body
+       FROM pg_proc WHERE proname = ANY ($1::text[]) AND pronamespace = 'public'::regnamespace`,
     [FUNCTIONS],
   );
   assert.equal(rows.length, FUNCTIONS.length, 'every function exists');
-  return [...new Set(rows.map((row) => (row.config ?? []).join(' ')))];
+  return [...new Set(rows.map((row) => row.body))];
+}
+
+const RLS_TABLES = ['spend_amounts', 'spend_versions', 'spend_version_totals', 'capex_amounts', 'capex_versions', 'capex_version_totals'];
+
+async function rlsState(runner: QueryRunner): Promise<Record<string, string>> {
+  const rows: Array<{ name: string; enabled: boolean; forced: boolean }> = await runner.query(
+    `SELECT relname::text AS name, relrowsecurity AS enabled, relforcerowsecurity AS forced FROM pg_class
+      WHERE oid = ANY ($1::regclass[]) ORDER BY relname`,
+    [RLS_TABLES],
+  );
+  return Object.fromEntries(rows.map((row) => [row.name, `${row.enabled ? 'enabled' : 'disabled'}${row.forced ? '+forced' : ''}`]));
 }
 
 /**
- * The migration again on a migrated database: the functions are replaced, a trigger found
- * missing or disabled is created again (and named in the log), the others are left as they
- * are. down() puts back the bodies of 1853740000000, up() the new ones.
+ * The migration again on a migrated database: the functions are replaced; a trigger found
+ * missing, disabled or firing in replica sessions only is created again (and named in the log),
+ * the others are left as they are. Months written while an amounts trigger did not fire are
+ * missing from the totals: the rerun rebuilds them, with row level security put back as found,
+ * and says that the counters those writes missed cannot be rebuilt. down() puts back the bodies
+ * of 1853740000000, up() the new ones.
  */
 async function testMigrationRerunAndDown() {
   await inRolledBackTransaction(async (runner) => {
-    const NEW = 'search_path=public, pg_temp plan_cache_mode=force_custom_plan';
-    assert.deepEqual(await functionSettings(runner), [NEW], 'the database runs the bodies of 1853850000000');
+    assert.deepEqual(await bodies(runner), ['1853850000000'], 'the database runs the bodies of 1853850000000');
     const before = await triggers(runner);
     assert.equal(before.size, FUNCTIONS.length * 3, 'three statement triggers per function');
+    const rls = await rlsState(runner);
+
+    // A CAPEX line whose months change while its update trigger is off: its totals drift.
+    const tenantId = await seedTenant(runner, 'stale-stats-rerun');
+    const { versionId } = await seedLine(runner, 'capex', tenantId, FIRST_YEAR, { planned: repeat('10', 12) });
+    await runner.query('ALTER TABLE capex_amounts DISABLE TRIGGER capex_amounts_version_totals_update');
+    await runner.query(`UPDATE capex_amounts SET planned = planned + 5 WHERE version_id = $1`, [versionId]);
+    const planned = async () => (await runner.query(`SELECT planned::text AS planned FROM capex_version_totals WHERE version_id = $1`, [versionId]))[0]?.planned;
+    assert.equal(await planned(), '120.00', 'the totals missed the update');
 
     await runner.query('DROP TRIGGER spend_round_inputs_budget_rev_insert ON spend_round_inputs');
-    await runner.query('ALTER TABLE capex_amounts DISABLE TRIGGER capex_amounts_version_totals_update');
+    await runner.query('ALTER TABLE spend_allocations ENABLE REPLICA TRIGGER spend_allocations_budget_rev_delete');
+    const repairedNames = ['spend_round_inputs_budget_rev_insert', 'spend_allocations_budget_rev_delete', 'capex_amounts_version_totals_update'];
     const logged: string[] = [];
     const log = console.log;
     console.log = (...args: unknown[]) => { logged.push(args.join(' ')); };
@@ -280,33 +310,51 @@ async function testMigrationRerunAndDown() {
     } finally {
       console.log = log;
     }
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     const after = await triggers(runner);
     assert.equal(after.size, before.size, 'every trigger is there again');
     for (const [name, row] of after) {
-      const repaired = name === 'spend_round_inputs_budget_rev_insert' || name === 'capex_amounts_version_totals_update';
-      assert.equal(row.enabled, 'O', `${name} enabled`);
-      if (!repaired) assert.equal(row.oid, before.get(name)!.oid, `${name} left as it was`);
+      assert.equal(row.enabled, 'O', `${name} fires on the app's writes`);
+      if (!repairedNames.includes(name)) assert.equal(row.oid, before.get(name)!.oid, `${name} left as it was`);
     }
-    assert.deepEqual(logged, [
-      '[Migration] BudgetTriggerPlans: budget statement trigger functions replaced; triggers created again: '
-      + 'spend_round_inputs.spend_round_inputs_budget_rev_insert, capex_amounts.capex_amounts_version_totals_update',
-    ], 'the repaired triggers are named');
+    assert.equal(await planned(), '180.00', 'the totals rebuilt from the months');
+    assert.deepEqual(await rlsState(runner), rls, 'RLS back as found after the rebuild');
+    const [{ slug }] = await runner.query(`SELECT slug FROM tenants WHERE id = $1`, [tenantId]);
+    const prefix = '[Migration] BudgetTriggerPlans:';
+    assert.deepEqual(logged.filter((line) => !line.includes('totals rebuilt') || line.includes(tenantId)), [
+      `${prefix} budget statement trigger functions replaced; triggers created again: `
+      + 'spend_round_inputs.spend_round_inputs_budget_rev_insert, spend_allocations.spend_allocations_budget_rev_delete, '
+      + 'capex_amounts.capex_amounts_version_totals_update',
+      `${prefix} totals rebuilt from the months: tenant ${slug} (${tenantId}) CAPEX: 0 row(s) inserted, 1 corrected`,
+      `${prefix} writes made while those triggers did not fire bumped no budget_rev (versions): this cannot be rebuilt, `
+      + 'and a CSV file exported before such a write can still read as current',
+    ], 'the repaired triggers, the rebuild and the missed counters are logged');
+
+    // Nothing to repair: no rebuild, one line.
+    logged.length = 0;
+    console.log = (...args: unknown[]) => { logged.push(args.join(' ')); };
+    try {
+      await new BudgetTriggerPlans1853850000000().up(runner);
+    } finally {
+      console.log = log;
+    }
+    assert.deepEqual(logged, [`${prefix} budget statement trigger functions replaced`], 'a clean rerun changes no trigger and rebuilds nothing');
 
     console.log = () => undefined;
     try {
       await new BudgetTriggerPlans1853850000000().down(runner);
-      assert.deepEqual(await functionSettings(runner), ['search_path=public, pg_temp'], 'down(): the bodies of 1853740000000');
+      assert.deepEqual(await bodies(runner), ['1853740000000'], 'down(): the bodies of 1853740000000');
       assert.equal((await triggers(runner)).size, before.size, 'down(): every trigger is there');
       await new BudgetTriggerPlans1853850000000().up(runner);
     } finally {
       console.log = log;
     }
-    assert.deepEqual(await functionSettings(runner), [NEW], 'up() again: the new bodies');
+    assert.deepEqual(await bodies(runner), ['1853850000000'], 'up() again: the new bodies');
   });
 }
 
 void runSpecs('budget-trigger-stale-statistics.integration.spec', [
   ['opex: one statement over thousands of rows with stale statistics', () => testStaleStatistics('opex')],
   ['capex: one statement over thousands of rows with stale statistics', () => testStaleStatistics('capex')],
-  ...(PREVIOUS ? [] : [['migration rerun, a missing or disabled trigger, down()', testMigrationRerunAndDown] as [string, () => Promise<void>]]),
+  ...(PREVIOUS ? [] : [['migration rerun: triggers repaired, totals rebuilt; down()', testMigrationRerunAndDown] as [string, () => Promise<void>]]),
 ]);

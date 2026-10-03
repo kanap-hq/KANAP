@@ -38,8 +38,24 @@ type Scope = (typeof SCOPES)[number];
  * length is known, and `= ANY` over them is hashed), and a plan made while a table was small
  * (a new tenant, before an import in one transaction) never serves it once large. Statements
  * that read only the transition tables keep the plan of their first call: they join nothing.
+ * Planning reuses the parsed statement; `EXECUTE ... USING` gives the same plans but parses,
+ * analyses and applies row level security again on every call: 17 % slower on the perf
+ * tenant's budget rows import (review of 2026-10-03). The one statement that does not need it
+ * is exempted (step 4 of the amounts function, AUTO_PLANS).
  */
 const FUNCTION_SETTINGS = 'SET search_path = public, pg_temp SET plan_cache_mode = force_custom_plan';
+
+/**
+ * The function-level mode, set back to the server's default around step 4 of the amounts
+ * function (`set_config(..., true)` inside a function with a SET clause lasts until the function
+ * returns, or until set again). Step 4 reads no table: it unnests the function's arrays and finds
+ * the totals rows through the conflict index, so any plan of it is linear. It is the one
+ * statement that creates rows (the totals of versions that gained months), and the foreign key
+ * checks of each created row run inside it: in the function's mode PostgreSQL would plan them
+ * again for every row.
+ */
+const AUTO_PLANS = `PERFORM set_config('plan_cache_mode', 'auto', true);`;
+const CUSTOM_PLANS = `PERFORM set_config('plan_cache_mode', 'force_custom_plan', true);`;
 
 type ChildTable = 'rounds' | 'roundLines' | 'allocations';
 
@@ -250,6 +266,7 @@ function groupedSql(rows: string): string {
  *    row, through `INSERT ... ON CONFLICT DO UPDATE` on rows known to exist, like step 4.
  * 4. Versions that gained months, in version_id order: the change upserted when an amount
  *    changed, then the row created even for months holding only zeros. Never deleted here.
+ *    Planned in the server's plan cache mode (AUTO_PLANS).
  *
  * Every change of a totals row is still an increment computed from the statement's own
  * transition rows, so concurrent writers keep the guarantees 1853720000000 describes. The
@@ -340,6 +357,7 @@ function amountsFunctionSql(scope: Scope): string {
 
       -- 4. Versions that gained months: their row, created when missing. Never deleted here.
       IF true = ANY (k_gained) THEN
+        ${AUTO_PLANS}
         INSERT INTO ${scope.totals} AS t (tenant_id, version_id, ${MEASURES.join(', ')})
         SELECT c.tenant_id, c.version_id, ${measureList('c.')}
           FROM ${CHANGES}
@@ -353,6 +371,7 @@ function amountsFunctionSql(scope: Scope): string {
          WHERE c.gained
          ORDER BY c.version_id
         ON CONFLICT (version_id) DO NOTHING;
+        ${CUSTOM_PLANS}
       END IF;
       RETURN NULL;
     END
@@ -362,15 +381,22 @@ function amountsFunctionSql(scope: Scope): string {
 
 /* ---- The triggers that call them ---- */
 
-type ExpectedTrigger = { table: string; name: string; event: Event; fn: string };
+/** What a trigger keeps: the totals per version (and budget_rev) for the amounts, a counter for the others. */
+type Keeps = 'totals' | 'budget_rev' | 'row_version';
+
+type ExpectedTrigger = { table: string; name: string; event: Event; fn: string; keeps: Keeps };
 
 /** The statement triggers of 1853720000000 and 1853740000000 that call the functions replaced here. */
 function expectedTriggers(): ExpectedTrigger[] {
   return SCOPES.flatMap((scope) => [
-    ...EVENTS.map((event) => ({ table: scope.amounts, name: `${scope.amounts}_version_totals_${event}`, event, fn: `${scope.amounts}_version_totals` })),
-    ...EVENTS.map((event) => ({ table: scope.analytics, name: `${scope.analytics}_row_version_${event}`, event, fn: `${scope.analytics}_row_version` })),
+    ...EVENTS.map((event) => ({
+      table: scope.amounts, name: `${scope.amounts}_version_totals_${event}`, event, fn: `${scope.amounts}_version_totals`, keeps: 'totals' as const,
+    })),
+    ...EVENTS.map((event) => ({
+      table: scope.analytics, name: `${scope.analytics}_row_version_${event}`, event, fn: `${scope.analytics}_row_version`, keeps: 'row_version' as const,
+    })),
     ...CHILDREN.flatMap((child) => EVENTS.map((event) => ({
-      table: scope[child.key], name: `${scope[child.key]}_budget_rev_${event}`, event, fn: `${scope[child.key]}_budget_rev`,
+      table: scope[child.key], name: `${scope[child.key]}_budget_rev_${event}`, event, fn: `${scope[child.key]}_budget_rev`, keeps: 'budget_rev' as const,
     }))),
   ]);
 }
@@ -384,14 +410,66 @@ const transition = (event: Event) => (event === 'insert' ? 'NEW TABLE AS new_row
 
 type TriggerState = { table: string; name: string; fn: string; type: number; old_table: string | null; new_table: string | null; enabled: string };
 
-/** Whether a trigger found in the catalog is the one 1853720000000 / 1853740000000 create, enabled. */
+/**
+ * Whether a trigger found in the catalog is the one 1853720000000 / 1853740000000 create, firing
+ * on the app's writes: `tgenabled` O (origin) or A (always), as verify-version-totals.ts checks.
+ * D is disabled, R fires in replica sessions only.
+ */
 function isExpected(found: TriggerState | undefined, expected: ExpectedTrigger): boolean {
   return !!found
     && found.fn === expected.fn
     && found.type === STATEMENT_TYPE[expected.event]
     && found.old_table === (expected.event === 'insert' ? null : 'old_rows')
     && found.new_table === (expected.event === 'delete' ? null : 'new_rows')
-    && found.enabled !== 'D';
+    && (found.enabled === 'O' || found.enabled === 'A');
+}
+
+type RlsState = { name: string; enabled: boolean; forced: boolean };
+type RebuildRow = { scope: string; tenant_id: string; slug: string | null; inserted: string; corrected: string };
+
+/** The tables 1853720000000's backfill reads and writes with row level security off. */
+const REBUILD_TABLES = SCOPES.flatMap((scope) => [scope.amounts, scope.versions, scope.totals]);
+
+async function restoreRls(queryRunner: QueryRunner, states: RlsState[]) {
+  for (const state of states) {
+    await queryRunner.query(`ALTER TABLE ${state.name} ${state.enabled ? 'ENABLE' : 'DISABLE'} ROW LEVEL SECURITY`);
+    await queryRunner.query(`ALTER TABLE ${state.name} ${state.forced ? 'FORCE' : 'NO FORCE'} ROW LEVEL SECURITY`);
+  }
+}
+
+/**
+ * The totals of every tenant recomputed from the months, as 1853720000000's backfill does: the
+ * months written while an amounts trigger was missing or disabled are not in the totals. The
+ * migration runs without a tenant and these tables FORCE row level security, so RLS is turned
+ * off around the rebuild and put back as it was found; a failure inside the migration
+ * transaction is rethrown as it is (the rollback puts RLS back). The rebuild holds a SHARE lock
+ * on both amounts tables until the migration commits.
+ */
+async function rebuildTotals(queryRunner: QueryRunner): Promise<RebuildRow[]> {
+  const found: RlsState[] = await queryRunner.query(
+    `SELECT c.relname::text AS name, c.relrowsecurity AS enabled, c.relforcerowsecurity AS forced
+       FROM pg_class c WHERE c.oid = ANY ($1::regclass[]) ORDER BY c.relname`,
+    [REBUILD_TABLES],
+  );
+  for (const table of REBUILD_TABLES) await queryRunner.query(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);
+  let rows: RebuildRow[];
+  try {
+    rows = await queryRunner.query(`
+      SELECT r.scope, r.tenant_id::text AS tenant_id, t.slug, r.inserted::text AS inserted, r.corrected::text AS corrected
+        FROM budget_version_totals_rebuild(NULL) r
+        LEFT JOIN tenants t ON t.id = r.tenant_id
+       ORDER BY t.slug NULLS LAST, r.tenant_id, r.scope DESC
+    `);
+  } catch (error) {
+    if (!queryRunner.isTransactionActive) {
+      await restoreRls(queryRunner, found).catch((restoreError) => {
+        console.error('[Migration] BudgetTriggerPlans: RLS could not be restored after the failed totals rebuild', restoreError);
+      });
+    }
+    throw error;
+  }
+  await restoreRls(queryRunner, found);
+  return rows;
 }
 
 /**
@@ -416,12 +494,17 @@ function isExpected(found: TriggerState | undefined, expected: ExpectedTrigger):
  *   locked), or several rows with `id = ANY` over a constant array;
  * - a totals row is changed through `INSERT ... ON CONFLICT`, which finds it through the primary
  *   key, instead of an `UPDATE ... FROM` join;
- * - every function plans the statements that read its variables on each call (plan cache mode).
+ * - every function plans the statements that read its variables on each call (plan cache mode),
+ *   except the totals rows it creates and their foreign key checks.
  *
  * Idempotent and self-healing: every function is replaced. A trigger that calls one of them is
  * left as it is when the catalog shows it as created by 1853720000000 / 1853740000000 (same
- * function, event, transition tables, enabled); one missing, disabled or different is created
- * again, and logged. No data is read or written.
+ * function, event, transition tables, firing on the app's writes); one missing, disabled, set
+ * to fire in replica sessions only or different is created again, and logged. Nothing else is
+ * read or written, except when an amounts trigger had to be created again: the months written
+ * meanwhile are missing from the totals, so every tenant's totals are rebuilt from the months
+ * (1853720000000's backfill, `budget_version_totals_rebuild`, RLS off around it). The
+ * `budget_rev` and `row_version` bumps those writes missed cannot be rebuilt: the log says so.
  *
  * down() runs 1853740000000 again: it puts back its bodies (and 1853720000000's steps inside the
  * amounts function) and creates its triggers again.
@@ -447,7 +530,7 @@ export class BudgetTriggerPlans1853850000000 implements MigrationInterface {
           AND (c.relname, t.tgname) IN (${expected.map((e) => `('${e.table}', '${e.name}')`).join(', ')})`,
     );
     const byName = new Map(found.map((state) => [`${state.table}.${state.name}`, state]));
-    const repaired: string[] = [];
+    const repaired: ExpectedTrigger[] = [];
     for (const trigger of expected) {
       if (isExpected(byName.get(`${trigger.table}.${trigger.name}`), trigger)) continue;
       await queryRunner.query(`DROP TRIGGER IF EXISTS ${trigger.name} ON ${trigger.table}`);
@@ -457,9 +540,24 @@ export class BudgetTriggerPlans1853850000000 implements MigrationInterface {
         REFERENCING ${transition(trigger.event)}
         FOR EACH STATEMENT EXECUTE FUNCTION ${trigger.fn}()
       `);
-      repaired.push(`${trigger.table}.${trigger.name}`);
+      repaired.push(trigger);
     }
-    console.log(`[Migration] BudgetTriggerPlans: budget statement trigger functions replaced${repaired.length ? `; triggers created again: ${repaired.join(', ')}` : ''}`);
+    const prefix = '[Migration] BudgetTriggerPlans:';
+    console.log(`${prefix} budget statement trigger functions replaced${repaired.length ? `; triggers created again: ${repaired.map((t) => `${t.table}.${t.name}`).join(', ')}` : ''}`);
+    if (repaired.length === 0) return;
+
+    if (repaired.some((t) => t.keeps === 'totals')) {
+      const rows = await rebuildTotals(queryRunner);
+      if (rows.length === 0) console.log(`${prefix} totals rebuilt from the months: every version total already matched`);
+      for (const row of rows) {
+        console.log(`${prefix} totals rebuilt from the months: tenant ${row.slug ?? '(unknown)'} (${row.tenant_id}) ${row.scope}: ${row.inserted} row(s) inserted, ${row.corrected} corrected`);
+      }
+    }
+    const missed = [
+      ...(repaired.some((t) => t.keeps !== 'row_version') ? ['budget_rev (versions)'] : []),
+      ...(repaired.some((t) => t.keeps === 'row_version') ? ['row_version (lines)'] : []),
+    ];
+    console.log(`${prefix} writes made while those triggers did not fire bumped no ${missed.join(' or ')}: this cannot be rebuilt, and a CSV file exported before such a write can still read as current`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

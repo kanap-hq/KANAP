@@ -3,6 +3,7 @@ import dataSource from '../../data-source';
 import { waitForBackgroundWork } from '../../common/background-work';
 import {
   analyzeAfterLargeImport,
+  analyzeTables,
   ANALYZE_AFTER_IMPORT_ROWS,
   BUDGET_ROWS_IMPORT_TABLES,
   lineImportTables,
@@ -13,7 +14,9 @@ import { assert, runSpecs } from './round-inputs.fixtures';
 // Statistics after a large budget import (plan planning/perf-scale, item 4C bis;
 // budget-import-statistics.ts), against the database: below the threshold, a dry run or a
 // refused file leave the request's transaction to the interceptor; a large import commits it,
-// gives its connection back, and ANALYZE then runs on the tables it writes, in the background.
+// gives its connection back, and ANALYZE then runs on the tables it writes, in the background,
+// one transaction per table; a table the role does not own or that does not exist is skipped
+// and reported, never logged as analysed.
 // @database-spec: run-ci-tests.js runs this file in its serial database lane.
 
 const written = (rows: number) => ({ ok: true, dryRun: false, inserted: rows - Math.floor(rows / 2), updated: Math.floor(rows / 2) });
@@ -83,8 +86,18 @@ async function testLargeImport() {
   for (const table of tables) assert.ok(after[table] > before[table], `${table} analysed (${before[table]} -> ${after[table]})`);
 }
 
+/** Only the tables the role owns are analysed (one transaction each); the others are reported, not counted as analysed. */
+async function testSkippedTables() {
+  const before = await analyzeCounts(['spend_items']);
+  const report = await analyzeTables(dataSource, ['pg_class', 'spend_items', 'no_such_budget_table']);
+  assert.deepEqual(report, { analysed: ['spend_items'], notOwned: ['pg_class'], missing: ['no_such_budget_table'], failed: [] });
+  const after = await analyzeCounts(['spend_items']);
+  assert.ok(after.spend_items > before.spend_items, 'the owned table is analysed');
+}
+
 void runSpecs('budget-import-statistics.integration.spec', [
   ['rows of the file written', testWrittenRows],
   ['below the threshold, a dry run, a refused file: nothing', testBelowThreshold],
   ['a large import: committed, then its tables analysed', testLargeImport],
+  ['a table the role does not own, a missing table: skipped and reported', testSkippedTables],
 ]);
