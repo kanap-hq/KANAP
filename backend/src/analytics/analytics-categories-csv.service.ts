@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
-import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { parseCsvEndOfValidity, resolveLifecycleState, StatusState } from '../common/status';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { AnalyticsContext, normalizeAnalyticsDescription, normalizeAnalyticsName } from './analytics-context';
 import { analyticsAxisSubject, isAxisActive, loadAnalyticsAxes, resolveDefaultAxisId } from './analytics-axes.util';
@@ -175,7 +175,7 @@ export class AnalyticsCategoriesCsvService {
       const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
       const disabledAtRaw = has('disabled_at') ? cell(raw, 'disabled_at') : '';
       let disabledAt: Date | null = null;
-      if (disabledAtRaw) disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? null;
+      if (disabledAtRaw) disabledAt = attempt(() => parseCsvEndOfValidity(disabledAtRaw)) ?? null;
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
       if (lifecycleConflict) rowErrors.push(lifecycleConflict);
 

@@ -206,6 +206,45 @@ async function testOptionalEndOfValidity() {
  * creation, exported as codes with the edited years only, blank or unchanged
  * on an existing calendar; year rows of a standard calendar are edited years.
  */
+async function testEndOfValidityFormat() {
+  await withRollback(async (runner) => {
+    const { tenantId, csv, ctx } = await seed(runner, 'date');
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    const refused = await csv.importCsv({
+      file: file([
+        row('SLASH', 'Slash', '', noDays, { disabledAt: '01/03/2027' }),
+        row('DAY', 'Day first', '', noDays, { disabledAt: '31/12/2027' }),
+        row('DOT', 'Dotted', '', noDays, { disabledAt: '03.01.2027' }),
+      ]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(refused.ok, false);
+    assert.deepEqual(refused.errors, [
+      { row: 2, message: message('01/03/2027') },
+      { row: 3, message: message('31/12/2027') },
+      { row: 4, message: message('03.01.2027') },
+    ]);
+    assert.equal((await calendars(runner, tenantId)).size, 0);
+
+    const accepted = await csv.importCsv({
+      file: file([
+        row('BARE', 'Bare day', '', noDays, { disabledAt: '2027-03-01' }),
+        row('TS', 'Timestamp', '', noDays, { disabledAt: '2027-03-01T15:04:05.000Z' }),
+      ]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(accepted.ok, true, JSON.stringify(accepted.errors));
+    const rows = await runner.query(
+      `SELECT code, disabled_at FROM working_day_profiles WHERE tenant_id = $1 ORDER BY code`,
+      [tenantId],
+    );
+    assert.deepEqual(
+      rows.map((row: { code: string; disabled_at: Date }) => [row.code, new Date(row.disabled_at).toISOString()]),
+      [['BARE', '2027-03-01T12:00:00.000Z'], ['TS', '2027-03-01T15:04:05.000Z']],
+    );
+  });
+}
+
 async function testStandardCalendars() {
   await withRollback(async (runner) => {
     const { tenantId, svc, csv, ctx } = await seed(runner, 'standard');
@@ -333,6 +372,7 @@ runSpecs('working-day-profiles-csv.integration.spec', [
   testAbsentYearsKept,
   testRowErrors,
   testOptionalEndOfValidity,
+  testEndOfValidityFormat,
   testStandardCalendars,
 ]).catch((err) => {
   console.error(err);

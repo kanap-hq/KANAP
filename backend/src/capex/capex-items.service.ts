@@ -25,7 +25,7 @@ import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { formatCents, toCents } from '../common/amount';
 import { FreezeService } from '../freeze/freeze.service';
 import { FxRateService } from '../currency/fx-rate.service';
-import { applyDisabledAtWhere, deriveStatusFromDisabledAt, LifecycleScope, parseEndOfValidityInput, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
+import { applyDisabledAtWhere, deriveStatusFromDisabledAt, LifecycleScope, parseCsvEndOfValidity, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { loadVersionTotals, SUMMARY_COLUMNS, SUMMARY_SCOPES, SummaryDeps, summaryTenantId } from '../spend/spend-summary.builder';
 import * as budgetList from '../spend/budget-list/budget-list.service';
@@ -762,9 +762,9 @@ export class CapexItemsService {
       const disabledAtRaw = (r['disabled_at'] ?? '').toString().trim();
       let disabled_at: Date | null = null;
       try {
-        disabled_at = parseEndOfValidityInput(disabledAtRaw);
-      } catch {
-        errors.push({ row: line, message: `Invalid disabled_at '${disabledAtRaw}'. Use ISO date format.` });
+        disabled_at = parseCsvEndOfValidity(disabledAtRaw);
+      } catch (err) {
+        errors.push({ row: line, message: (err as Error).message });
       }
       // The status cell must agree with the date cell (not with a legacy effective_end below).
       const lifecycleConflict = csvLifecycleConflict(status, disabled_at);
@@ -774,7 +774,7 @@ export class CapexItemsService {
         const legacyEnd = readDate(r['effective_end'], 'effective_end', line);
         if (legacyEnd) {
           try {
-            disabled_at = parseEndOfValidityInput(legacyEnd);
+            disabled_at = parseCsvEndOfValidity(legacyEnd);
           } catch {
             errors.push({ row: line, message: 'effective_end must be a valid date in YYYY-MM-DD format' });
           }

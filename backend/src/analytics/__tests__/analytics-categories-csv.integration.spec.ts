@@ -184,12 +184,59 @@ async function testNoDimensionYet() {
   });
 }
 
+async function testEndOfValidityFormat() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'csv-date');
+    const { axes, csv } = services(runner.manager);
+    const ctx = context(runner.manager, tenantId);
+    await axes.create({ code: 'nature', name: 'Nature' }, ctx);
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    const refused = await csv.importCsv({
+      file: csvFile([
+        HEADER,
+        'nature;Slash;;enabled;01/03/2027',
+        'nature;Day first;;enabled;31/12/2027',
+        'nature;Dotted;;enabled;03.01.2027',
+      ].join('\n') + '\n'),
+      dryRun: false,
+    }, ctx);
+    assert.equal(refused.ok, false);
+    assert.deepEqual(refused.errors, [
+      { row: 2, message: message('01/03/2027') },
+      { row: 3, message: message('31/12/2027') },
+      { row: 4, message: message('03.01.2027') },
+    ]);
+    const [countRow] = await runner.query(`SELECT count(*)::int AS n FROM analytics_categories WHERE tenant_id = $1`, [tenantId]);
+    assert.equal(countRow.n, 0);
+
+    // A blank status skips the "enabled, but the date has passed" check, so the case still passes after 2027-03-01.
+    const accepted = await csv.importCsv({
+      file: csvFile([
+        HEADER,
+        'nature;Bare day;;;2027-03-01',
+        'nature;Timestamp;;;2027-03-01T15:04:05.000Z',
+      ].join('\n') + '\n'),
+      dryRun: false,
+    }, ctx);
+    assert.equal(accepted.ok, true, JSON.stringify(accepted.errors));
+    const rows = await runner.query(
+      `SELECT name, disabled_at FROM analytics_categories WHERE tenant_id = $1 ORDER BY name`,
+      [tenantId],
+    );
+    assert.deepEqual(
+      rows.map((row: { name: string; disabled_at: Date }) => [row.name, new Date(row.disabled_at).toISOString()]),
+      [['Bare day', '2027-03-01T12:00:00.000Z'], ['Timestamp', '2027-03-01T15:04:05.000Z']],
+    );
+  });
+}
+
 void dataSource;
 
 runSpecs('analytics-categories-csv.integration.spec', [
   testImportRules,
   testExportImportRoundTrip,
   testNoDimensionYet,
+  testEndOfValidityFormat,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

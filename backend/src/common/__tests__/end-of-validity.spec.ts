@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import {
   disabledAtWhere,
   endOfValidityFromDate,
+  parseCsvEndOfValidity,
   parseEndOfValidityInput,
   resolveEndOfValidityAlias,
 } from '../status';
@@ -29,6 +30,39 @@ function testParseEndOfValidityInput() {
   assert.equal(parseEndOfValidityInput(undefined), null);
   assert.throws(() => parseEndOfValidityInput('2026-02-30'), /Invalid date/);
   assert.throws(() => parseEndOfValidityInput('not a date'), /Invalid date/);
+}
+
+function testParseCsvEndOfValidity() {
+  const refused = (value: string) => {
+    assert.throws(
+      () => parseCsvEndOfValidity(value),
+      { message: `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.` },
+      value,
+    );
+  };
+  // A spreadsheet's local form is a row error. It is never read as a date.
+  refused('01/03/2027');
+  refused('31/12/2027');
+  refused('03.01.2027');
+  refused('2027-02-30');
+  refused('2027-02-29');
+  refused('2027-02-30T00:00:00.000Z');
+  refused('2027-03-01T24:00:00.000Z');
+  refused('2027-03-01T15:04:05');
+  refused('2027-03-01 15:04:05Z');
+  refused('0000-01-01');
+  refused('soon');
+
+  assert.equal(parseCsvEndOfValidity('2027-03-01')?.toISOString(), '2027-03-01T12:00:00.000Z', 'bare day at noon UTC');
+  assert.equal(parseCsvEndOfValidity(' 2028-02-29 ')?.toISOString(), '2028-02-29T12:00:00.000Z', 'leap day, trimmed');
+  assert.equal(parseCsvEndOfValidity('2027-03-01T15:04:05.000Z')?.toISOString(), '2027-03-01T15:04:05.000Z', 'full timestamp kept');
+  assert.equal(parseCsvEndOfValidity('2027-03-01T15:04:05Z')?.toISOString(), '2027-03-01T15:04:05.000Z', 'timestamp without milliseconds');
+  assert.equal(parseCsvEndOfValidity('2027-03-01t15:04:05.000z')?.toISOString(), '2027-03-01T15:04:05.000Z', 'lowercase marker');
+  assert.equal(parseCsvEndOfValidity('2027-03-01T15:04:05+02:00')?.toISOString(), '2027-03-01T13:04:05.000Z', 'offset kept as the same instant');
+  assert.equal(parseCsvEndOfValidity(''), null);
+  assert.equal(parseCsvEndOfValidity('   '), null);
+  assert.equal(parseCsvEndOfValidity(null), null);
+  assert.equal(parseCsvEndOfValidity(undefined), null);
 }
 
 function testAlias() {
@@ -117,6 +151,7 @@ function testDisabledAtWhereCombinedModels() {
 function main() {
   testEndOfValidityFromDate();
   testParseEndOfValidityInput();
+  testParseCsvEndOfValidity();
   testAlias();
   testApiDisabledAt();
   testDisabledAtWhereCombinesScopeAndGridFilter();

@@ -233,14 +233,50 @@ async function testConflictsAndExport(pick: number) {
   });
 }
 
+async function testEndOfValidityFormat(pick: number) {
+  await withTenant(`date-${pick}`, async (runner, tenantId) => {
+    const importer = importers(runner.manager, tenantId)[pick];
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    // A blank status skips the "enabled, but the date has passed" check, so the case still passes after 2027-03-01.
+    const refused = await run(importer, [
+      ['Slash', '', '01/03/2027'],
+      ['Day first', '', '31/12/2027'],
+      ['Dotted', '', '03.01.2027'],
+    ]);
+    assert.equal(refused.ok, false, `${importer.label}: a local date is refused`);
+    assert.deepEqual(refused.errors, [
+      { row: 2, message: message('01/03/2027') },
+      { row: 3, message: message('31/12/2027') },
+      { row: 4, message: message('03.01.2027') },
+    ]);
+    const [{ n }] = await runner.query(
+      `SELECT count(*)::int AS n FROM ${importer.table} WHERE tenant_id = $1 AND ${importer.nameColumn} = ANY($2::text[])`,
+      [tenantId, ['Slash', 'Day first', 'Dotted']],
+    );
+    assert.equal(n, 0, `${importer.label}: a refused file writes nothing`);
+
+    const accepted = await run(importer, [
+      ['Bare day', '', '2027-03-01'],
+      ['Timestamp', '', '2027-03-01T15:04:05.000Z'],
+    ]);
+    assert.equal(accepted.ok, true, `${importer.label}: YYYY-MM-DD and a full timestamp import (${JSON.stringify(accepted.errors)})`);
+    assert.equal((await read(runner, importer, tenantId, 'Bare day')).disabled_at, '2027-03-01T12:00:00.000Z', `${importer.label}: a bare day is noon UTC`);
+    assert.equal((await read(runner, importer, tenantId, 'Timestamp')).disabled_at, '2027-03-01T15:04:05.000Z', `${importer.label}: a timestamp is kept`);
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = 0;
   const names = ['companies', 'departments', 'cost centers', 'analytics values'];
-  const tests: Array<[string, () => Promise<void>]> = names.flatMap((name, pick) => [
-    [`testBlankCellsOnUpdate(${name})`, () => testBlankCellsOnUpdate(pick)],
-    [`testConflictsAndExport(${name})`, () => testConflictsAndExport(pick)],
-  ] as Array<[string, () => Promise<void>]>);
+  const tests: Array<[string, () => Promise<void>]> = [
+    ...names.flatMap((name, pick) => [
+      [`testBlankCellsOnUpdate(${name})`, () => testBlankCellsOnUpdate(pick)],
+      [`testConflictsAndExport(${name})`, () => testConflictsAndExport(pick)],
+    ] as Array<[string, () => Promise<void>]>),
+    ['testEndOfValidityFormat(companies)', () => testEndOfValidityFormat(0)],
+    ['testEndOfValidityFormat(departments)', () => testEndOfValidityFormat(1)],
+  ];
   try {
     for (const [name, test] of tests) {
       try {

@@ -17,7 +17,7 @@ import {
   CompiledCondition,
 } from '../common/ag-grid-filtering';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
-import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
+import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, parseCsvEndOfValidity, resolveLifecycleState } from '../common/status';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { DepartmentUpsertDto } from './dto/department.dto';
 import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
@@ -619,12 +619,12 @@ export class DepartmentsService {
         continue;
       }
       if (disabledAtRaw) {
-        const parsed = new Date(disabledAtRaw);
-        if (Number.isNaN(parsed.getTime())) {
-          errors.push({ row: line, message: `Invalid disabled_at '${disabledAtRaw}'. Use ISO 8601 format.` });
+        try {
+          disabled_at_iso = parseCsvEndOfValidity(disabledAtRaw)?.toISOString() ?? null;
+        } catch (err) {
+          errors.push({ row: line, message: (err as Error).message });
           continue;
         }
-        disabled_at_iso = parsed.toISOString();
       }
       const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
       if (lifecycleConflict) {
