@@ -233,9 +233,10 @@ function stemMatch(
   return { kind: 'none' };
 }
 
-/** One insertion, deletion or substitution. A transposition is two edits and does not count. */
+/** One insertion, deletion, substitution, or an adjacent swap (`bugdet` for `budget`). */
 function isOneEdit(a: string, b: string): boolean {
   if (a === b) return false;
+  if (isAdjacentSwap(a, b)) return true;
   const longer = a.length >= b.length ? a : b;
   const shorter = a.length >= b.length ? b : a;
   if (longer.length - shorter.length > 1) return false;
@@ -257,4 +258,16 @@ function isOneEdit(a: string, b: string): boolean {
   if (leftover > 1) return false;
   if (leftover === 1) edits += 1;
   return edits === 1;
+}
+
+function isAdjacentSwap(a: string, b: string): boolean {
+  if (a.length !== b.length || a.length < 2) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i += 1;
+  if (i >= a.length - 1) return false;
+  if (a[i] !== b[i + 1] || a[i + 1] !== b[i]) return false;
+  for (let k = i + 2; k < a.length; k += 1) {
+    if (a[k] !== b[k]) return false;
+  }
+  return true;
 }

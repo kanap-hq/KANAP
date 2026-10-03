@@ -141,6 +141,9 @@ function testDates() {
   }
   assert.equal(parseCsvDateCell('29/02/2028', 'day-first').ok, true);
   assert.equal(parseCsvDateCell('   ', 'day-first').blank, true);
+  const cleared = parseCsvDateCell('-', 'day-first');
+  assert.equal(cleared.ok, false);
+  if (!cleared.ok) assert.equal('clear' in cleared && cleared.clear, true);
 
   assert.equal(formatCsvDate('2027-03-01', 'en'), '2027-03-01');
   assert.equal(formatCsvDate('2027-03-01', 'fr'), '01/03/2027');
@@ -299,8 +302,28 @@ async function testReadingShape() {
   assert.equal(leadingBlank.headerLine, 2);
   assert.equal(leadingBlank.rows[0].line, 3);
 
+  const spaced = await readCsv(' \u00a0 \nname;notes\nAda;hi\n', { fields: ['name', 'notes'], language: 'fr' });
+  assert.deepEqual(spaced.fileErrors, []);
+  assert.equal(spaced.rows[0].cells.name, 'Ada');
+  assert.equal(spaced.rows[0].cells.notes, 'hi');
+
+  const trailingHeader = await readCsv('name;notes;\nAda;hi;\n', { fields: ['name', 'notes'], language: 'fr' });
+  assert.deepEqual(trailingHeader.headerErrors, []);
+  assert.deepEqual(trailingHeader.rawHeaders, ['name', 'notes']);
+  assert.equal(trailingHeader.rows[0].errors.length, 0);
+  assert.equal(trailingHeader.rows[0].cells.notes, 'hi');
+
   const oldYear = await readCsv('budget_1899\n1\n', schema('en'));
   assert.deepEqual(oldYear.headerErrors, ["Column 'budget_1899' is not a valid amount column. A year is 1900 to 2199."]);
+
+  const swapped = await readCsv('bugdet_2027\n10\n', schema('en'));
+  assert.deepEqual(swapped.headerErrors, ["Column 'bugdet_2027' is not a valid amount column."]);
+  assert.deepEqual(swapped.ignoredColumns, []);
+
+  const clearedDate = await readCsv('end_of_validity\n-\n', schema('fr'));
+  assert.deepEqual(clearedDate.rows[0].errors, []);
+  assert.equal(clearedDate.rows[0].dates.end_of_validity.kind, 'clear');
+  assert.equal(clearedDate.rows[0].cells.end_of_validity, '-');
 }
 
 async function testEncodingAndDamage() {

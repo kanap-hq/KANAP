@@ -103,13 +103,19 @@ export type CsvParsedAmount =
   | { kind: 'invalid' };
 
 /**
- * A calendar day, or an absolute instant. `time` is the clock reading written
- * next to a local date (`00:00`), with no time zone. It is not an instant.
- * Callers store a bare day themselves. Only `kind: 'instant'` has a zone.
+ * A calendar day, an absolute instant, or `-` (clear). `time` is the clock
+ * reading written next to a local date (`00:00`), with no time zone. It is
+ * not an instant. Callers store a bare day themselves. Only `kind: 'instant'`
+ * has a zone.
+ *
+ * `clear` is not a row error. The design clears end of validity, and refuses
+ * `-` on a required column and on effective start. Master-data files refuse
+ * it too: their importers do today. The caller decides.
  */
 export type CsvParsedDate =
   | { kind: 'date'; isoDate: string; time: string | null }
-  | { kind: 'instant'; iso: string };
+  | { kind: 'instant'; iso: string }
+  | { kind: 'clear' };
 
 export interface CsvRowError {
   /** Column id, or null when the row itself is wrong. */

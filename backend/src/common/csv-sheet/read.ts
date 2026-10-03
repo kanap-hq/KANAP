@@ -51,13 +51,16 @@ export async function readCsv(input: Buffer | string, schema: CsvReadSchema): Pr
   if (parsed.rows.length === 0) return baseResult(decoded.encoding, separator, ['The file is empty.']);
 
   const headerRow = parsed.rows[0];
-  const classified = classifyHeaders(headerRow.cells, schema);
+  // `name;notes;` is a trailing delimiter, not an empty column.
+  const headerCells = withoutTrailingBlanks(headerRow.cells);
+  if (headerCells.length === 0) return baseResult(decoded.encoding, separator, ['The file is empty.']);
+  const classified = classifyHeaders(headerCells, schema);
   const built = buildRows(parsed.rows.slice(1), classified.slots, schema);
   return {
     encoding: decoded.encoding,
     separator,
     headerLine: headerRow.line,
-    rawHeaders: headerRow.cells,
+    rawHeaders: headerCells,
     columns: classified.columns,
     ignoredColumns: classified.ignoredColumns,
     headerErrors: classified.headerErrors,
@@ -113,50 +116,50 @@ function cleanCell(value: string): string {
 function firstRecord(text: string): { record: string | null; error: string | null } {
   let i = 0;
   while (i < text.length) {
-    if (text[i] === '\n') {
+    while (i < text.length && (text[i] === '\n' || text[i] === '\r')) {
+      if (text[i] === '\r' && text[i + 1] === '\n') i += 2;
+      else i += 1;
+    }
+    if (i >= text.length) return { record: null, error: null };
+
+    let record = '';
+    let inQuotes = false;
+    while (i < text.length) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') {
+            record += '""';
+            i += 2;
+            continue;
+          }
+          inQuotes = false;
+        }
+        record += ch;
+        i += 1;
+        continue;
+      }
+      if (ch === '"') {
+        inQuotes = true;
+        record += ch;
+        i += 1;
+        continue;
+      }
+      if (ch === '\n' || ch === '\r') break;
+      record += ch;
       i += 1;
-      continue;
+    }
+    if (inQuotes) {
+      return { record: null, error: 'This file could not be read as CSV. A quoted cell is not closed.' };
     }
     if (text[i] === '\r') {
       i += 1;
       if (text[i] === '\n') i += 1;
-      continue;
-    }
-    break;
+    } else if (text[i] === '\n') i += 1;
+    // A line of spaces is not the header. Keep going. trim() covers nbsp.
+    if (record.trim() !== '') return { record, error: null };
   }
-  if (i >= text.length) return { record: null, error: null };
-
-  let record = '';
-  let inQuotes = false;
-  while (i < text.length) {
-    const ch = text[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') {
-          record += '""';
-          i += 2;
-          continue;
-        }
-        inQuotes = false;
-      }
-      record += ch;
-      i += 1;
-      continue;
-    }
-    if (ch === '"') {
-      inQuotes = true;
-      record += ch;
-      i += 1;
-      continue;
-    }
-    if (ch === '\n' || ch === '\r') break;
-    record += ch;
-    i += 1;
-  }
-  if (inQuotes) {
-    return { record: null, error: 'This file could not be read as CSV. A quoted cell is not closed.' };
-  }
-  return { record: record.trim() === '' ? null : record, error: null };
+  return { record: null, error: null };
 }
 
 function chooseSeparator(record: string): CsvSeparator | null {
@@ -291,12 +294,19 @@ function buildRow(
     if (slot.kind === 'field' && schema.dateFields?.includes(slot.id)) {
       const parsed = parseCsvDateCell(value, order ?? null);
       if (parsed.ok) dates[slot.id] = parsed.value;
+      else if ('clear' in parsed && parsed.clear) dates[slot.id] = { kind: 'clear' };
       else if (!parsed.blank && !datesBlocked) {
         errors.push({ column: slot.id, message: `Invalid date '${value}'.` });
       }
     }
   });
   return { line: row.line, cells, amounts, dates, errors };
+}
+
+function withoutTrailingBlanks(cells: readonly string[]): string[] {
+  let end = cells.length;
+  while (end > 0 && cells[end - 1] === '') end -= 1;
+  return cells.slice(0, end);
 }
 
 function hasExtra(cells: readonly string[], width: number): boolean {

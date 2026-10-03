@@ -10,6 +10,7 @@ const DAY_MONTH = /^(\d{1,2})([/.\-])(\d{1,2})\2(\d{4})(?: +(\d{1,2}):(\d{2})(?:
 export type ParsedDateCell =
   | { ok: true; blank: false; value: CsvParsedDate }
   | { ok: false; blank: true }
+  | { ok: false; blank: false; clear: true }
   | { ok: false; blank: false };
 
 export interface DateOrderDecision {
@@ -74,6 +75,8 @@ export function resolveDateOrder(
 export function parseCsvDateCell(raw: string, order: CsvDateOrder | null): ParsedDateCell {
   const text = raw.trim();
   if (text === '') return { ok: false, blank: true };
+  // `-` clears a detail that allows it. It is not an invalid date.
+  if (text === '-') return { ok: false, blank: false, clear: true };
   if (text.startsWith('0000')) return { ok: false, blank: false };
 
   const instant = parseInstant(text);
