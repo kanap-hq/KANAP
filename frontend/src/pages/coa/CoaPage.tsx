@@ -360,6 +360,7 @@ export default function CoaPage() {
         onClose={() => setExportOpen(false)}
         endpoint={selectedCoaId ? `/chart-of-accounts/${selectedCoaId}/accounts` : '/accounts'}
         title={t('coa.exportAccounts')}
+        flexibleFormat
       />
       <CsvImportDialog
         open={importOpen}
@@ -367,6 +368,7 @@ export default function CoaPage() {
         endpoint={selectedCoaId ? `/chart-of-accounts/${selectedCoaId}/accounts` : '/accounts'}
         title={t('coa.importAccounts')}
         onImported={() => setAccountsRefreshKey((key) => key + 1)}
+        flexibleFormat
       />
     </>
   );

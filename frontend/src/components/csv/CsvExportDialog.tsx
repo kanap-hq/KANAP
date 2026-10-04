@@ -10,12 +10,19 @@ export default function CsvExportDialog({
   endpoint,
   title: titleProp,
   params,
+  flexibleFormat = false,
 }: {
   open: boolean;
   onClose: () => void;
   endpoint: string; // e.g. '/suppliers'
   title?: string;
   params?: Record<string, string | number | boolean | null | undefined>;
+  /**
+   * The master-data files: the separator, the decimal mark and the dates follow
+   * the screen language. The files that keep the semicolon (contacts, contracts,
+   * business processes, CoA templates) leave this off.
+   */
+  flexibleFormat?: boolean;
 }) {
   const { t, i18n } = useTranslation('common');
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
@@ -49,7 +56,7 @@ export default function CsvExportDialog({
       <DialogTitle>{titleProp || t('csv.exportTitle')}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          {t('csv.exportDescription')}
+          {t(flexibleFormat ? 'csv.exportDescriptionFlexible' : 'csv.exportDescription')}
         </Typography>
         <Button variant="contained" onClick={() => download('data')}>{t('csv.exportData')}</Button>
       </DialogContent>

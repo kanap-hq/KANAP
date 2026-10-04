@@ -154,13 +154,14 @@ export default function SuppliersPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope: scope };
         }}
       />
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/suppliers" title={t("suppliers.export")} />
+      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/suppliers" title={t("suppliers.export")} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint="/suppliers"
         title={t("suppliers.import")}
         onImported={() => setRefreshKey((k) => k + 1)}
+        flexibleFormat
       />
     </>
   );

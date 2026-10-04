@@ -42,6 +42,7 @@ export default function CsvImportDialog({
   onImported,
   params,
   preflight = true,
+  flexibleFormat = false,
 }: {
   // i18n handled below
   open: boolean;
@@ -51,6 +52,13 @@ export default function CsvImportDialog({
   onImported?: () => void; // called after successful non-dryRun import
   params?: Record<string, string | number | boolean | null | undefined>;
   preflight?: boolean; // when false, skip preflight and perform single-step upload
+  /**
+   * The master-data files: the separator, the amount convention and the dates
+   * follow the screen language, and an Excel-saved file imports as it is. The
+   * files that keep the semicolon (contacts, contracts, business processes, CoA
+   * templates) leave this off.
+   */
+  flexibleFormat?: boolean;
 }) {
   const { t, i18n } = useTranslation(['common', 'ops']);
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
@@ -187,7 +195,7 @@ export default function CsvImportDialog({
       <DialogTitle>{titleProp || t('csv.importTitle')}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          {t('csv.uploadDescription')}
+          {t(flexibleFormat ? 'csv.uploadDescriptionFlexible' : 'csv.uploadDescription')}
         </Typography>
         <Button
           variant="text"
