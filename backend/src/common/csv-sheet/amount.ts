@@ -14,6 +14,7 @@ export type DecimalMark = ',' | '.';
 export interface AmountConventionDecision {
   decimal: DecimalMark | null;
   settledByFile: boolean;
+  source: 'file' | 'switch' | 'export' | 'language' | null;
   notice: string | null;
   error: string | null;
   /** At least one cell is a single mark followed by exactly three digits. */
@@ -54,9 +55,10 @@ export function parseCsvAmount(raw: string, convention?: DecimalMark): ParsedAmo
  * mark and one, two, or more than three digits after it, or a cell with both
  * marks, shows the convention. A single mark and exactly three digits does
  * not. Two shown conventions are a file error. When nothing is shown, the
- * language decides and the preflight says so in one line.
+ * export's language hint decides, then the screen language. The preflight
+ * says so in one line.
  */
-export function resolveAmountConvention(texts: readonly string[], language: CsvLanguage): AmountConventionDecision {
+export function resolveAmountConvention(texts: readonly string[], language: CsvLanguage, hint?: CsvLanguage): AmountConventionDecision {
   let comma: string | null = null;
   let dot: string | null = null;
   let ambiguous = false;
@@ -77,16 +79,18 @@ export function resolveAmountConvention(texts: readonly string[], language: CsvL
     return {
       decimal: null,
       settledByFile: false,
+      source: null,
       notice: null,
       error: `This file uses both amount conventions (${comma} and ${dot}).`,
       ambiguous,
     };
   }
   const shown = comma ? ',' : dot ? '.' : null;
-  if (shown) return { decimal: shown, settledByFile: true, notice: null, error: null, ambiguous };
-  if (!ambiguous) return { decimal: null, settledByFile: false, notice: null, error: null, ambiguous: false };
-  const decimal = csvProfile(language).decimal;
-  return { decimal, settledByFile: false, notice: amountConventionNotice(decimal), error: null, ambiguous: true };
+  if (shown) return { decimal: shown, settledByFile: true, source: 'file', notice: null, error: null, ambiguous };
+  if (!ambiguous) return { decimal: null, settledByFile: false, source: null, notice: null, error: null, ambiguous: false };
+  const decimal = csvProfile(hint ?? language).decimal;
+  const source = hint ? 'export' : 'language';
+  return { decimal, settledByFile: false, source, notice: amountConventionNotice(decimal), error: null, ambiguous: true };
 }
 
 export function amountConventionNotice(decimal: DecimalMark): string {

@@ -17,6 +17,8 @@ import {
   parseCsvAmount,
   parseCsvDateCell,
   readCsv,
+  resolveAmountConvention,
+  resolveDateOrder,
   writeCsv,
 } from '../index';
 
@@ -319,6 +321,94 @@ async function testDateOrderInAFile() {
   assert.equal(iso.rows[1].dates.end_of_validity.kind === 'instant' && iso.rows[1].dates.end_of_validity.iso, '2027-03-01T15:04:05.000Z');
 }
 
+/** The hint field belongs to the caller, so csv-sheet does not parse a budget token. */
+function hintSchema(language: CsvLanguage, dateOrder?: CsvReadSchema['dateOrder']): CsvReadSchema {
+  return {
+    ...schema(language, dateOrder),
+    fields: [...FIELDS, 'export_language'],
+    conventionHint: {
+      field: 'export_language',
+      languageOf: (cell) => ['en', 'fr', 'de', 'es'].includes(cell) ? cell as CsvLanguage : null,
+    },
+  };
+}
+
+async function testDateConventionHint() {
+  const text = 'end_of_validity;export_language\n01/03/2027;fr\n05/11/2027;fr\n';
+  const hinted = await readCsv(text, hintSchema('en'));
+  assert.deepEqual(hinted.fileErrors, []);
+  assert.deepEqual(hinted.dates, { order: 'day-first', settledByFile: false, notice: dateOrderNotice('day-first') });
+  assert.deepEqual(hinted.rows.map((row) => row.dates.end_of_validity), [
+    { kind: 'date', isoDate: '2027-03-01', time: null },
+    { kind: 'date', isoDate: '2027-11-05', time: null },
+  ]);
+  assert.equal(resolveDateOrder(['01/03/2027', '05/11/2027'], 'en', undefined, 'fr').source, 'export');
+
+  for (const hint of ['fr', 'en'] as const) {
+    const evidence = await readCsv(`${text}13/01/2027;${hint}\n`.split(';fr').join(`;${hint}`), hintSchema('en'));
+    assert.deepEqual(evidence.fileErrors, []);
+    assert.ok(evidence.rows.every((row) => row.errors.length === 0));
+    assert.deepEqual(evidence.dates, { order: 'day-first', settledByFile: true, notice: null });
+    assert.deepEqual(evidence.rows[2].dates.end_of_validity, { kind: 'date', isoDate: '2027-01-13', time: null });
+    assert.equal(resolveDateOrder(['01/03/2027', '13/01/2027'], 'en', undefined, hint).source, 'file');
+  }
+
+  const switched = await readCsv(text, hintSchema('en', 'month-first'));
+  assert.deepEqual(switched.fileErrors, []);
+  assert.equal(switched.dates?.order, 'month-first');
+  assert.deepEqual(switched.rows[0].dates.end_of_validity, { kind: 'date', isoDate: '2027-01-03', time: null });
+  assert.equal(resolveDateOrder(['01/03/2027'], 'en', 'month-first', 'fr').source, 'switch');
+  assert.ok(resolveDateOrder(['13/01/2027'], 'en', 'month-first', 'fr').error);
+  assert.equal(resolveDateOrder(['2027-03-01'], 'en', undefined, 'fr').source, null);
+  assert.equal(resolveDateOrder(['01/03/2027'], 'en').source, 'language');
+}
+
+async function testAmountConventionHint() {
+  for (const [language, hint, cell, decimal] of [
+    ['en', 'de', '12.280', ','],
+    ['fr', 'en', '12,280', '.'],
+  ] as const) {
+    const hinted = await readCsv(`budget_2027;export_language\n${cell};${hint}\n`, hintSchema(language));
+    assert.deepEqual(hinted.fileErrors, []);
+    assert.equal(valueOf(hinted.rows[0].amounts.budget_2027).cmp('12280'), 0);
+    assert.deepEqual(hinted.amounts, { decimal, settledByFile: false, notice: amountConventionNotice(decimal) });
+    assert.equal(resolveAmountConvention([cell], language, hint).source, 'export');
+  }
+
+  for (const hint of ['en', 'fr', 'de', 'es'] as const) {
+    const evidence = await readCsv(`budget_2027;export_language\n12.280;${hint}\n12,50;${hint}\n`, hintSchema('en'));
+    assert.deepEqual(evidence.fileErrors, []);
+    assert.deepEqual(evidence.amounts, { decimal: ',', settledByFile: true, notice: null });
+    assert.equal(valueOf(evidence.rows[0].amounts.budget_2027).cmp('12280'), 0);
+    assert.equal(valueOf(evidence.rows[1].amounts.budget_2027).cmp('12.50'), 0);
+    assert.equal(resolveAmountConvention(['12.280', '12,50'], 'en', hint).source, 'file');
+  }
+  assert.equal(resolveAmountConvention(['100'], 'en', 'de').source, null);
+  assert.equal(resolveAmountConvention(['12.280'], 'en').source, 'language');
+}
+
+async function testMixedAndMissingHints() {
+  for (const language of ['en', 'fr'] as const) {
+    const mixed = await readCsv('end_of_validity;budget_2027;export_language\n01/03/2027;12.280;fr\n01/03/2027;12.280;en\n', hintSchema(language));
+    assert.deepEqual(mixed.fileErrors, []);
+    assert.equal(mixed.dates?.order, csvProfile(language).dateOrder);
+    assert.equal(mixed.dates?.notice, dateOrderNotice(csvProfile(language).dateOrder));
+    assert.equal(mixed.amounts?.decimal, csvProfile(language).decimal);
+    assert.equal(valueOf(mixed.rows[0].amounts.budget_2027).cmp(language === 'en' ? '12.280' : '12280'), 0);
+  }
+
+  for (const text of [
+    'end_of_validity;export_language\n01/03/2027;\n01/03/2027;unknown\n',
+    'end_of_validity\n01/03/2027\n',
+  ]) {
+    const missing = await readCsv(text, hintSchema('en'));
+    assert.deepEqual(missing.fileErrors, []);
+    assert.equal(missing.dates?.order, 'month-first');
+  }
+  const oneHint = await readCsv('end_of_validity;export_language\n01/03/2027;\n01/03/2027;fr\n01/03/2027;unknown\n', hintSchema('en'));
+  assert.equal(oneHint.dates?.order, 'day-first', 'null hints do not cancel the one distinct language');
+}
+
 async function testReadingShape() {
   const text = 'name;note\r\n\r\n"hello\r\nthere";x\r\nplain;y\r\n';
   const result = await readCsv(text, { fields: ['name', 'note'], language: 'fr' });
@@ -489,6 +579,9 @@ async function main() {
   await testHeaders();
   await testAmountConvention();
   await testDateOrderInAFile();
+  await testDateConventionHint();
+  await testAmountConventionHint();
+  await testMixedAndMissingHints();
   await testReadingShape();
   await testEncodingAndDamage();
   await testRoundTrip();

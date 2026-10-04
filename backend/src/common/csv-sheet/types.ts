@@ -65,6 +65,8 @@ export interface CsvReadSchema {
    * When the file does show it, a switch that disagrees is a file error.
    */
   dateOrder?: CsvDateOrder;
+  /** A caller-owned field that records the export's language. Mixed hints are ignored. */
+  conventionHint?: { field: string; languageOf: (cell: string) => CsvLanguage | null };
 }
 
 export interface CsvFieldColumn {

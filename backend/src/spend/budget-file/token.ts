@@ -1,4 +1,4 @@
-import { BUDGET_YEAR_MAX, BUDGET_YEAR_MIN } from '../../common/csv-sheet';
+import { BUDGET_YEAR_MAX, BUDGET_YEAR_MIN, CsvLanguage } from '../../common/csv-sheet';
 
 export interface TokenYear {
   year: number;
@@ -9,14 +9,14 @@ export type ParsedToken =
   | { kind: 'absent' }
   | { kind: 'blank' }
   | { kind: 'bad'; raw: string }
-  | { kind: 'ok'; raw: string; rowVersion: number; years: TokenYear[] };
+  | { kind: 'ok'; raw: string; rowVersion: number; years: TokenYear[]; language: CsvLanguage | null };
 
-const TOKEN = /^[vV](\d+)((?:\.\d{4}[rR]\d+)*)$/;
+const TOKEN = /^v(\d+)((?:\.\d{4}r\d+)*)(?:\.(en|fr|de|es))?$/i;
 
 /**
- * `v7` or `v7.2026r3.2027r1`. A blank cell is no freshness check. Anything
- * else is a row error. Years are unique and in 1900..2199. `v` and `r` may
- * be upper case. The export writes lower case.
+ * `v7` or `v7.2026r3.2027r1`, optionally ending in `.en`, `.fr`, `.de` or `.es`.
+ * A blank cell is no freshness check. Anything else is a row error. Years
+ * are unique and in 1900..2199. Input ignores case. The export writes lower case.
  */
 export function parseToken(raw: string): ParsedToken {
   const text = raw.trim();
@@ -38,13 +38,14 @@ export function parseToken(raw: string): ParsedToken {
     seen.add(year);
     years.push({ year, rev });
   }
-  return { kind: 'ok', raw: text, rowVersion, years };
+  const language = match[3] ? match[3].toLowerCase() as CsvLanguage : null;
+  return { kind: 'ok', raw: text, rowVersion, years, language };
 }
 
 /** The token the export writes. Years with no version are left out. */
-export function formatToken(rowVersion: number, years: readonly TokenYear[]): string {
+export function formatToken(rowVersion: number, years: readonly TokenYear[], language: CsvLanguage): string {
   const sorted = [...years].sort((a, b) => a.year - b.year);
-  return `v${rowVersion}${sorted.map((year) => `.${year.year}r${year.rev}`).join('')}`;
+  return `v${rowVersion}${sorted.map((year) => `.${year.year}r${year.rev}`).join('')}.${language}`;
 }
 
 export function tokenError(raw: string): string {

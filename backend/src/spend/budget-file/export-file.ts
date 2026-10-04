@@ -129,7 +129,7 @@ function exportRow(
       writeAmount(values, version, column, year, input.detail, input.language);
     }
   }
-  values.set('kanap_token', formatToken(line.rowVersion, tokenYears));
+  values.set('kanap_token', formatToken(line.rowVersion, tokenYears, input.language));
   return headers.map((header) => values.get(header) ?? '');
 }
 

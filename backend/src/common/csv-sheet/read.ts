@@ -10,6 +10,7 @@ import {
   CsvColumn,
   CsvDataRow,
   CsvDateReading,
+  CsvLanguage,
   CsvReadResult,
   CsvReadSchema,
   CsvSeparator,
@@ -256,9 +257,18 @@ function buildRows(
     if (slot?.kind === 'field' && schema.dateFields?.includes(slot.id)) dateIndexes.push(index);
     if (slot?.kind === 'amount') amountIndexes.push(index);
   });
+  const conventionHint = schema.conventionHint;
+  const hintIndex = conventionHint
+    ? slots.findIndex((slot) => slot?.kind === 'field' && slot.id === conventionHint.field)
+    : -1;
+  const hintLanguages = new Set<CsvLanguage>();
   const samples: string[] = [];
   const amountSamples: string[] = [];
   for (const row of data) {
+    if (hintIndex >= 0 && conventionHint) {
+      const language = conventionHint.languageOf(row.cells[hintIndex] ?? '');
+      if (language !== null) hintLanguages.add(language);
+    }
     for (const index of dateIndexes) {
       const cell = row.cells[index] ?? '';
       if (cell !== '') samples.push(cell);
@@ -268,8 +278,9 @@ function buildRows(
       if (cell !== '') amountSamples.push(cell);
     }
   }
-  const decision = resolveDateOrder(samples, schema.language, schema.dateOrder);
-  const amountsDecision = resolveAmountConvention(amountSamples, schema.language);
+  const hint = hintLanguages.size === 1 ? [...hintLanguages][0] : undefined;
+  const decision = resolveDateOrder(samples, schema.language, schema.dateOrder, hint);
+  const amountsDecision = resolveAmountConvention(amountSamples, schema.language, hint);
   const rows = data.map((row) =>
     buildRow(row, slots, schema, decision.order, decision.error !== null, amountsDecision.decimal, amountsDecision.error !== null),
   );

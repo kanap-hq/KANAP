@@ -779,6 +779,42 @@ async function testOwnersAccountsAndCurrency(runner: { query: Function; manager:
   assert.deepEqual(rowErrors(notAllowed), ["2 currency: currency 'USD' is not allowed."], 'a currency outside the tenant\'s allowed list is a row error');
 }
 
+/** An unchanged French export retains its date order on an English import screen. */
+async function testExportLanguageHint(runner: { query: Function; manager: EntityManager }, kind: Kind) {
+  const tenantId = await seedTenant(runner as any, `csv-p1-${kind}`);
+  const itemId = await seedItem(runner as any, kind, tenantId, 1, 'Convention hint');
+  await setItemDates(runner as any, kind, itemId, {
+    effectiveStart: '2027-03-01', disabledAt: '2027-11-05T12:00:00.000Z',
+  });
+  const service = budgetFileService();
+  const caller = { manager: runner.manager, tenantId, userId: null };
+  const exported = await service.exportFile(kind, [itemId], caller, {
+    language: 'fr', amountYears: '2027', columns: 'budget', detail: 'yearly',
+  });
+  assert.ok(exported.content.includes('01/03/2027'));
+  assert.ok(exported.content.includes('05/11/2027'));
+  assert.match(exported.content, /v\d+\.fr/);
+  const report = await service.preflight(kind, Buffer.from(exported.content), caller, BUDGET_FILE_OPTIONS);
+  assert.equal(report.ok, true, JSON.stringify(report));
+  assert.deepEqual(report.errors, []);
+  assert.equal(report.changes.unchanged, 1);
+  assert.equal(report.changes.updated, 0);
+  assert.deepEqual(report.changes.updatedLines, []);
+  assert.deepEqual(report.changedSinceExport, []);
+  assert.equal(report.changedSinceExportCount, 0);
+  assert.equal(report.notices.dates, 'Dates read day first: 01/03/2027 is March 1.');
+
+  // The token is last, so blank it while keeping the exported cells and separator.
+  const blanked = exported.content.replace(/;v\d+(?:\.\d{4}r\d+)*\.fr(?=\r?\n|$)/g, ';');
+  assert.notEqual(blanked, exported.content);
+  const withoutHint = await service.preflight(kind, Buffer.from(blanked), caller, BUDGET_FILE_OPTIONS);
+  assert.equal(withoutHint.ok, true, JSON.stringify(withoutHint));
+  assert.equal(withoutHint.notices.dates, 'Dates read month first: 01/03/2027 is January 3.');
+  assert.equal(withoutHint.changes.updated, 1);
+  assert.deepEqual(withoutHint.changes.updatedLines[0].fields.slice().sort(), ['effective_start', 'end_of_validity']);
+  assert.deepEqual(withoutHint.changedSinceExport, []);
+}
+
 async function main() {
   await dataSource.initialize();
   const runner = dataSource.createQueryRunner();
@@ -922,6 +958,7 @@ async function main() {
     await testMonthCells(runner);
     await testFrozenAndHiddenColumns(runner);
     for (const kind of ['opex', 'capex'] as Kind[]) {
+      await testExportLanguageHint(runner, kind);
       await testCostCenterCells(runner, kind);
       await testDimensionCells(runner, kind);
     }

@@ -4,7 +4,8 @@ import { buildBudgetExport, exportListQuery, parseAmountYears, parseFileColumns 
 import { readBudgetCsv } from '../interpret';
 import { periodForYearlyTotal } from '../period';
 import { buildPreflight, planBudgetFile } from '../preflight';
-import { OLD_BUDGET_FILE_MESSAGE } from '../columns';
+import { budgetFileSchema, OLD_BUDGET_FILE_MESSAGE } from '../columns';
+import { formatToken, parseToken, tokenError } from '../token';
 import { BUDGET_FILE_MAX_BYTES } from '../upload';
 import {
   BudgetCatalog,
@@ -92,6 +93,34 @@ async function preflight(
     currentYear: YEAR,
     labels: options.labels ?? { budget: 'Budget' },
   });
+}
+
+async function testTokenLanguages() {
+  assert.equal(formatToken(7, [{ year: 2027, rev: 1 }, { year: 2026, rev: 3 }], 'fr'), 'v7.2026r3.2027r1.fr');
+  assert.equal(formatToken(7, [], 'fr'), 'v7.fr');
+  for (const language of ['en', 'fr', 'de', 'es'] as const) {
+    const raw = `v7.2026r3.2027r1.${language}`;
+    assert.deepEqual(parseToken(raw), {
+      kind: 'ok', raw, rowVersion: 7, years: [{ year: 2026, rev: 3 }, { year: 2027, rev: 1 }], language,
+    });
+    assert.deepEqual(parseToken(`V7.${language.toUpperCase()}`), {
+      kind: 'ok', raw: `V7.${language.toUpperCase()}`, rowVersion: 7, years: [], language,
+    });
+  }
+  for (const raw of ['v7.2026r3', 'v7']) {
+    const parsed = parseToken(raw);
+    assert.equal(parsed.kind, 'ok');
+    assert.equal(parsed.kind === 'ok' && parsed.language, null);
+  }
+  for (const raw of ['v7.it', 'v7.fr.2026r3', 'v7.fr.fr', 'v7.fr.extra']) {
+    assert.deepEqual(parseToken(raw), { kind: 'bad', raw });
+    assert.equal(tokenError(raw), `kanap_token '${raw}' is not a line token. Export the line again.`);
+  }
+  for (const cell of ['', 'v7', 'v7.it']) {
+    assert.equal(budgetFileSchema('opex', 'en', []).conventionHint!.languageOf(cell), null);
+  }
+  const hinted = budgetFileSchema('opex', 'en', []).conventionHint!.languageOf('V7.FR');
+  assert.equal(hinted, 'fr');
 }
 
 async function testOldFiles() {
@@ -319,6 +348,7 @@ async function testPlan() {
 }
 
 async function main() {
+  await testTokenLanguages();
   await testOldFiles();
   await testRoundTrip();
   await testAmounts();

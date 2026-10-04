@@ -16,19 +16,21 @@ export type ParsedDateCell =
 export interface DateOrderDecision {
   order: CsvDateOrder | null;
   settledByFile: boolean;
+  source: 'file' | 'switch' | 'export' | 'language' | null;
   notice: string | null;
   error: string | null;
 }
 
 /**
  * Settle day or month first. A part above 12 settles it. When both orders
- * appear, the file is refused. When nothing settles it, the language's order
- * applies, or `override` when the preflight switch was used.
+ * appear, the file is refused. Without evidence, use the preflight switch,
+ * then the export's language hint, then the screen language.
  */
 export function resolveDateOrder(
   texts: readonly string[],
   language: CsvLanguage,
   override?: CsvDateOrder,
+  hint?: CsvLanguage,
 ): DateOrderDecision {
   let dayFirst: string | null = null;
   let monthFirst: string | null = null;
@@ -50,6 +52,7 @@ export function resolveDateOrder(
     return {
       order: null,
       settledByFile: false,
+      source: null,
       notice: null,
       error: `This file uses both date orders (${dayFirst} and ${monthFirst}).`,
     };
@@ -61,14 +64,16 @@ export function resolveDateOrder(
     return {
       order: null,
       settledByFile: false,
+      source: null,
       notice: null,
       error: `This file shows dates ${which} (${shown}). The date order cannot be switched.`,
     };
   }
-  if (evidence) return { order: evidence, settledByFile: true, notice: null, error: null };
-  if (!ambiguous) return { order: null, settledByFile: false, notice: null, error: null };
-  const order = override ?? csvProfile(language).dateOrder;
-  return { order, settledByFile: false, notice: dateOrderNotice(order), error: null };
+  if (evidence) return { order: evidence, settledByFile: true, source: 'file', notice: null, error: null };
+  if (!ambiguous) return { order: null, settledByFile: false, source: null, notice: null, error: null };
+  const order = override ?? csvProfile(hint ?? language).dateOrder;
+  const source = override ? 'switch' : hint ? 'export' : 'language';
+  return { order, settledByFile: false, source, notice: dateOrderNotice(order), error: null };
 }
 
 /** One date cell. `order` is required for a local day or month form. Empty is blank, not an error. */

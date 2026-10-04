@@ -2,6 +2,7 @@ import { AmountMeasure } from '../amounts-write.util';
 import { BUDGET_AMOUNT_COLUMNS, CsvDateOrder, CsvLanguage, CsvReadSchema } from '../../common/csv-sheet';
 import { looseKey } from '../../common/csv-sheet/text';
 import { BudgetFileDetail, BudgetFileScope } from './types';
+import { parseToken } from './token';
 
 /**
  * The old files this engine refuses as a whole. Headers are compared with the
@@ -102,6 +103,13 @@ export function budgetFileSchema(
     dateFields: ['effective_start', 'end_of_validity'],
     language,
     dateOrder,
+    conventionHint: {
+      field: 'kanap_token',
+      languageOf: (cell) => {
+        const token = parseToken(cell);
+        return token.kind === 'ok' ? token.language : null;
+      },
+    },
   };
 }
 
