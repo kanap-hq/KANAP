@@ -28,7 +28,11 @@ const OLDER = '2021-05-31';
 const FUTURE = '2031-06-30';
 
 type Lifecycle = { status: string; disabled_at: string | null };
-type Result = { ok: boolean; errors: Array<{ row: number; message: string }> };
+type Result = {
+  ok: boolean;
+  errors: Array<{ row: number; message: string }>;
+  notices: { dates: string | null; amounts: string | null };
+};
 
 type Importer = {
   label: string;
@@ -48,7 +52,9 @@ function auditService(manager: EntityManager) {
 function importers(manager: EntityManager, tenantId: string): Importer[] {
   const audit = auditService(manager);
   const file = (content: string) => ({ buffer: Buffer.from(`﻿${content}\n`, 'utf8') }) as any;
-  const headerOf = (content: string) => content.replace(/^﻿/, '').split('\n')[0].split(';');
+  // The exports go through `writeCsv`: English writes `,`, the input files below stay `;`
+  // (the shared layer detects the separator, so both load).
+  const headerOf = (content: string) => content.replace(/^﻿/, '').split('\n')[0].split(',');
   // No metrics in these files: the export reads none.
   const companies = new CompaniesService(undefined as any, audit, { list: async () => ({ items: [] }) } as any);
   const departments = new DepartmentsService(undefined as any, undefined as any, audit);
@@ -218,8 +224,8 @@ async function testConflictsAndExport(pick: number) {
     assert.equal((await read(runner, importer, tenantId, 'Stale row')).status, 'enabled', 'the stored status is stale');
     const exported = await importer.exportCsv();
     const [header, ...lines] = exported.replace(/^﻿/, '').split('\n').filter((line) => line.trim() !== '');
-    const columns = header.split(';');
-    const stale = lines.map((line) => Object.fromEntries(line.split(';').map((value, i) => [columns[i], value])))
+    const columns = header.split(',');
+    const stale = lines.map((line) => Object.fromEntries(line.split(',').map((value, i) => [columns[i], value])))
       .find((row) => row[importer.nameColumn] === 'Stale row');
     assert.equal(stale?.status, 'disabled', `${label}: the export writes the status read from the end of validity`);
     const reimported = await importer.importCsv(exported.replace(/^﻿/, ''), false);
@@ -236,32 +242,48 @@ async function testConflictsAndExport(pick: number) {
 async function testEndOfValidityFormat(pick: number) {
   await withTenant(`date-${pick}`, async (runner, tenantId) => {
     const importer = importers(runner.manager, tenantId)[pick];
+    const label = importer.label;
     const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
-    // A blank status skips the "enabled, but the date has passed" check, so the case still passes after 2027-03-01.
-    const refused = await run(importer, [
-      ['Slash', '', '01/03/2027'],
+    // C4 replaced the interim ISO-only rule: a local day is read under the file's
+    // order (an English screen reads `01/03/2027` month first, a day above 12
+    // settles day-first on its own), and `-` or an unreadable cell is still refused.
+    const local = await run(importer, [
       ['Day first', '', '31/12/2027'],
-      ['Dotted', '', '03.01.2027'],
+      ['Settled by the file', '', '01/03/2027'],
     ]);
-    assert.equal(refused.ok, false, `${importer.label}: a local date is refused`);
+    assert.equal(local.ok, true, `${label}: local days import (${JSON.stringify(local.errors)})`);
+    assert.equal(local.notices.dates, null, `${label}: 31/12/2027 settles the order, so no notice`);
+    assert.equal((await read(runner, importer, tenantId, 'Day first')).disabled_at, '2027-12-31T12:00:00.000Z', `${label}: 31/12/2027 is December 31`);
+    assert.equal((await read(runner, importer, tenantId, 'Settled by the file')).disabled_at, '2027-03-01T12:00:00.000Z', `${label}: the file's own evidence decides for 01/03/2027`);
+
+    // Nothing in the file shows an order: the screen's language decides, and says so.
+    const ambiguous = await run(importer, [['Ambiguous', '', '01/03/2027']]);
+    assert.equal(ambiguous.ok, true, `${label}: an ambiguous day still imports (${JSON.stringify(ambiguous.errors)})`);
+    assert.equal(ambiguous.notices.dates, 'Dates read month first: 01/03/2027 is January 3.');
+    assert.equal((await read(runner, importer, tenantId, 'Ambiguous')).disabled_at, '2027-01-03T12:00:00.000Z', `${label}: English reads 01/03/2027 as January 3`);
+
+    const refused = await run(importer, [
+      ['Clear dash', '', '-'],
+      ['Unreadable', '', 'not-a-date'],
+    ]);
+    assert.equal(refused.ok, false, `${label}: a clear marker and an unreadable cell are refused`);
     assert.deepEqual(refused.errors, [
-      { row: 2, message: message('01/03/2027') },
-      { row: 3, message: message('31/12/2027') },
-      { row: 4, message: message('03.01.2027') },
+      { row: 2, message: message('-') },
+      { row: 3, message: message('not-a-date') },
     ]);
     const [{ n }] = await runner.query(
       `SELECT count(*)::int AS n FROM ${importer.table} WHERE tenant_id = $1 AND ${importer.nameColumn} = ANY($2::text[])`,
-      [tenantId, ['Slash', 'Day first', 'Dotted']],
+      [tenantId, ['Clear dash', 'Unreadable']],
     );
-    assert.equal(n, 0, `${importer.label}: a refused file writes nothing`);
+    assert.equal(n, 0, `${label}: a refused file writes nothing`);
 
     const accepted = await run(importer, [
       ['Bare day', '', '2027-03-01'],
       ['Timestamp', '', '2027-03-01T15:04:05.000Z'],
     ]);
-    assert.equal(accepted.ok, true, `${importer.label}: YYYY-MM-DD and a full timestamp import (${JSON.stringify(accepted.errors)})`);
-    assert.equal((await read(runner, importer, tenantId, 'Bare day')).disabled_at, '2027-03-01T12:00:00.000Z', `${importer.label}: a bare day is noon UTC`);
-    assert.equal((await read(runner, importer, tenantId, 'Timestamp')).disabled_at, '2027-03-01T15:04:05.000Z', `${importer.label}: a timestamp is kept`);
+    assert.equal(accepted.ok, true, `${label}: YYYY-MM-DD and a full timestamp import (${JSON.stringify(accepted.errors)})`);
+    assert.equal((await read(runner, importer, tenantId, 'Bare day')).disabled_at, '2027-03-01T12:00:00.000Z', `${label}: a bare day is noon UTC`);
+    assert.equal((await read(runner, importer, tenantId, 'Timestamp')).disabled_at, '2027-03-01T15:04:05.000Z', `${label}: a timestamp is kept`);
   });
 }
 

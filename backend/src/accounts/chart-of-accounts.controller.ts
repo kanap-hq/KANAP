@@ -10,6 +10,7 @@ import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { Response } from 'express';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chart-of-accounts')
@@ -79,8 +80,15 @@ export class ChartOfAccountsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @Get(':id/accounts/export')
-  async exportAccounts(@Param('id') id: string, @Query('scope') scope: 'template' | 'data' = 'data', @Req() req: any, @Res() res: Response) {
-    const { filename, content } = await this.svc.exportAccountsCsv(id, { manager: req?.queryRunner?.manager, scope });
+  async exportAccounts(
+    @Param('id') id: string,
+    @Query('scope') scope: 'template' | 'data' = 'data',
+    @Query('language') languageRaw: string | undefined,
+    @Req() req: any,
+    @Res() res: Response,
+  ) {
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    const { filename, content } = await this.svc.exportAccountsCsv(id, { manager: req?.queryRunner?.manager, scope, language });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -92,9 +100,23 @@ export class ChartOfAccountsController {
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post(':id/accounts/import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
-  importAccounts(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Query('dryRun') dryRunRaw: string, @Req() req: any) {
+  async importAccounts(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Query('dryRun') dryRunRaw: string,
+    @Query('language') languageRaw: string | undefined,
+    @Query('dateOrder') dateOrderRaw: string | undefined,
+    @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Req() req: any,
+  ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importAccountsCsv(id, file, dryRun, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    return this.svc.importAccountsCsv(id, file, dryRun, req.user?.sub ?? null, {
+      manager: req?.queryRunner?.manager,
+      language,
+      dateOrder: parseDateOrder(dateOrderRaw),
+      decimalMark: parseDecimalMark(decimalMarkRaw),
+    });
   }
 
   // Load from template into selected CoA

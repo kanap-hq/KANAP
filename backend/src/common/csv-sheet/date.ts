@@ -140,6 +140,22 @@ export function formatCsvDate(value: string, language: CsvLanguage): string {
   return `${dd}/${mm}/${iso[1]}`;
 }
 
+/**
+ * A stored end of validity written for a file: a noon-UTC instant is the
+ * calendar day the user picked, written the language's way. Any other instant
+ * has a real time and stays ISO, as it does in the budget file.
+ */
+export function formatCsvEndOfValidity(iso: string | null, language: CsvLanguage): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const noon = date.getUTCHours() === 12
+    && date.getUTCMinutes() === 0
+    && date.getUTCSeconds() === 0
+    && date.getUTCMilliseconds() === 0;
+  return formatCsvDate(noon ? date.toISOString().slice(0, 10) : date.toISOString(), language);
+}
+
 function parseInstant(text: string): CsvParsedDate | null {
   const match = ISO_TIMESTAMP.exec(text);
   if (!match) return null;

@@ -10,6 +10,7 @@ import { Account } from './account.entity';
 import { AccountsService } from './accounts.service';
 import { parseString } from '@fast-csv/parse';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../common/csv-sheet';
 
 @Injectable()
 export class ChartOfAccountsService {
@@ -326,15 +327,27 @@ export class ChartOfAccountsService {
     return { ok: true, dryRun: true, total, inserted: total, updated: 0, errors: [] };
   }
 
-  async exportAccountsCsv(coaId: string, opts?: { manager?: EntityManager; scope?: 'template' | 'data' }) {
+  async exportAccountsCsv(
+    coaId: string,
+    opts?: { manager?: EntityManager; scope?: 'template' | 'data'; language?: CsvLanguage },
+  ) {
     // Validate CoA belongs to tenant and exists
     await this.get(coaId, { manager: opts?.manager });
     const scope = opts?.scope ?? 'data';
-    return this.accountsSvc.exportCsv(scope, { manager: opts?.manager, coaId, includeCoaCode: false });
+    return this.accountsSvc.exportCsv(scope, { manager: opts?.manager, coaId, includeCoaCode: false, language: opts?.language });
   }
 
-  async importAccountsCsv(coaId: string, file: Express.Multer.File, dryRun: boolean, userId?: string | null, opts?: { manager?: EntityManager }) {
+  async importAccountsCsv(
+    coaId: string,
+    file: Express.Multer.File,
+    dryRun: boolean,
+    userId?: string | null,
+    opts?: { manager?: EntityManager; language?: CsvLanguage; dateOrder?: CsvDateOrder; decimalMark?: DecimalMark },
+  ) {
     await this.get(coaId, { manager: opts?.manager });
-    return this.accountsSvc.importCsv({ file, dryRun, userId: userId ?? null }, { manager: opts?.manager, targetCoaId: coaId, allowCoaCodeColumn: false });
+    return this.accountsSvc.importCsv(
+      { file, dryRun, userId: userId ?? null, language: opts?.language, dateOrder: opts?.dateOrder, decimalMark: opts?.decimalMark },
+      { manager: opts?.manager, targetCoaId: coaId, allowCoaCodeColumn: false },
+    );
   }
 }

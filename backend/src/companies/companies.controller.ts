@@ -3,9 +3,11 @@ import { CompaniesService } from './companies.service';
 import { CompaniesDeleteService } from './companies-delete.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Response } from 'express';
+import { EntityManager } from 'typeorm';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ORGANISATION_LOOKUP_READERS } from '../common/lookup/lookup-requirements';
@@ -64,11 +66,13 @@ export class CompaniesController {
   async export(
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('year') yearRaw: string | undefined,
+    @Query('language') languageRaw: string | undefined,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
     const year = Number.isFinite(Number(yearRaw)) ? Number(yearRaw) : undefined;
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager, year });
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager, year, language });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -104,11 +108,20 @@ export class CompaniesController {
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string,
     @Query('year') yearRaw: string | undefined,
+    @Query('language') languageRaw: string | undefined,
+    @Query('dateOrder') dateOrderRaw: string | undefined,
+    @Query('decimalMark') decimalMarkRaw: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const year = Number.isFinite(Number(yearRaw)) ? Number(yearRaw) : undefined;
-    return this.svc.importCsv({ file, dryRun, userId: ctx.userId || null, year }, { manager: ctx.manager });
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
+    const dateOrder = parseDateOrder(dateOrderRaw);
+    const decimalMark = parseDecimalMark(decimalMarkRaw);
+    return this.svc.importCsv(
+      { file, dryRun, userId: ctx.userId || null, year, language, dateOrder, decimalMark },
+      { manager: ctx.manager },
+    );
   }
 
   @UseGuards(PermissionGuard)

@@ -15,6 +15,7 @@ import { SupplierUpsertDto } from './dto/supplier.dto';
 import { SupplierContactsService } from './supplier-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 
 @UseGuards(JwtAuthGuard)
 @Controller('suppliers')
@@ -49,8 +50,14 @@ export class SuppliersController {
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'admin')
   @Get('export')
-  async export(@Query('scope') scope: 'template' | 'data' = 'data', @Res() res: Response, @Req() req: any) {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager });
+  async export(
+    @Query('scope') scope: 'template' | 'data' = 'data',
+    @Query('language') languageRaw: string | undefined,
+    @Res() res: Response,
+    @Req() req: any,
+  ) {
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, language });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -76,10 +83,24 @@ export class SuppliersController {
   async import(
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string,
+    @Query('language') languageRaw: string | undefined,
+    @Query('dateOrder') dateOrderRaw: string | undefined,
+    @Query('decimalMark') decimalMarkRaw: string | undefined,
     @Req() req: any,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importCsv({ file, dryRun, userId: req.user?.sub ?? null }, { manager: req?.queryRunner?.manager });
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    return this.svc.importCsv(
+      {
+        file,
+        dryRun,
+        userId: req.user?.sub ?? null,
+        language,
+        dateOrder: parseDateOrder(dateOrderRaw),
+        decimalMark: parseDecimalMark(decimalMarkRaw),
+      },
+      { manager: req?.queryRunner?.manager },
+    );
   }
 
   @UseGuards(PermissionGuard)

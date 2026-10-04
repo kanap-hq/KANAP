@@ -13,6 +13,8 @@ import { lookupDepartments } from '../common/lookup/reference-lookups';
 import { DepartmentUpsertDto } from './dto/department.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { EntityManager } from 'typeorm';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 
 @UseGuards(JwtAuthGuard)
 @Controller('departments')
@@ -52,8 +54,14 @@ export class DepartmentsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'admin')
   @Get('export')
-  async export(@Query('scope') scope: 'template' | 'data' = 'data', @Res() res: Response, @Tenant() ctx: TenantRequest) {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager });
+  async export(
+    @Query('scope') scope: 'template' | 'data' = 'data',
+    @Query('language') languageRaw: string | undefined,
+    @Res() res: Response,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager, language });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -82,10 +90,24 @@ export class DepartmentsController {
   async import(
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string,
+    @Query('language') languageRaw: string | undefined,
+    @Query('dateOrder') dateOrderRaw: string | undefined,
+    @Query('decimalMark') decimalMarkRaw: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importCsv({ file, dryRun, userId: ctx.userId || null }, { manager: ctx.manager });
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
+    return this.svc.importCsv(
+      {
+        file,
+        dryRun,
+        userId: ctx.userId || null,
+        language,
+        dateOrder: parseDateOrder(dateOrderRaw),
+        decimalMark: parseDecimalMark(decimalMarkRaw),
+      },
+      { manager: ctx.manager },
+    );
   }
 
   @UseGuards(PermissionGuard)

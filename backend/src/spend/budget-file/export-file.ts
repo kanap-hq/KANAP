@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { CsvLanguage, formatCsvAmount, formatCsvDate } from '../../common/csv-sheet';
+import { CsvLanguage, formatCsvAmount, formatCsvDate, formatCsvEndOfValidity } from '../../common/csv-sheet';
 import { assertBudgetYearsWithinBounds } from '../budget-list/budget-list.service';
 import { exportHeaders, FILE_COLUMNS, isFileColumn, measureOfColumn } from './columns';
 import { formatToken } from './token';
@@ -160,20 +160,7 @@ function yearTotal(months: Array<{ cents: bigint | null }>): bigint {
 }
 
 /** A noon-UTC end of validity is a calendar day. Any other instant stays ISO. */
-export function formatEnd(iso: string | null, language: CsvLanguage): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  const noon = date.getUTCHours() === 12
-    && date.getUTCMinutes() === 0
-    && date.getUTCSeconds() === 0
-    && date.getUTCMilliseconds() === 0;
-  if (noon) {
-    const ymd = date.toISOString().slice(0, 10);
-    return formatCsvDate(ymd, language);
-  }
-  return formatCsvDate(date.toISOString(), language);
-}
+export const formatEnd = formatCsvEndOfValidity;
 
 function asText(raw: unknown): string {
   if (Array.isArray(raw)) return raw.map((part) => String(part)).join(',');

@@ -5,10 +5,7 @@ import { Department } from './department.entity';
 import { parseExportPagination, parsePagination } from '../common/pagination';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Company } from '../companies/company.entity';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
@@ -17,11 +14,20 @@ import {
   CompiledCondition,
 } from '../common/ag-grid-filtering';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
-import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, parseCsvEndOfValidity, resolveLifecycleState } from '../common/status';
+import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { DepartmentUpsertDto } from './dto/department.dto';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
-import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
+import {
+  cellOf,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  endOfValidityCell,
+  endOfValidityOf,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 
 type DepartmentLookupItem = { id: string; name: string; company_id: string };
 
@@ -503,10 +509,13 @@ export class DepartmentsService {
     return ['company_name', 'name', 'description', 'status', 'disabled_at'];
   }
 
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }): Promise<{ filename: string; content: string }> {
+  async exportCsv(
+    scope: 'template' | 'data' = 'data',
+    opts?: { manager?: EntityManager; language?: CsvLanguage },
+  ): Promise<{ filename: string; content: string }> {
+    const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
-    const delimiter = ';';
-    const rows: any[] = [];
+    const rows: string[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       const items = await repo.createQueryBuilder('d')
@@ -515,78 +524,59 @@ export class DepartmentsService {
         .orderBy('d.created_at', 'DESC')
         .getRawMany();
       for (const r of items) {
-        rows.push({
-          company_name: r.company_name ?? '',
-          name: r.d_name ?? r.name ?? '',
-          description: r.d_description ?? r.description ?? '',
+        rows.push([
+          r.company_name ?? '',
+          r.d_name ?? r.name ?? '',
+          r.d_description ?? r.description ?? '',
           // Read from the end of validity: a stored status left stale by a passed date never contradicts its own row.
-          status: deriveStatusFromDisabledAt(r.d_disabled_at ?? null),
-          disabled_at: r.d_disabled_at ? new Date(r.d_disabled_at).toISOString() : '',
-        });
+          String(deriveStatusFromDisabledAt(r.d_disabled_at ?? null)),
+          endOfValidityCell(r.d_disabled_at ?? null, language),
+        ]);
       }
     }
     const filename = scope === 'template' ? 'departments_template.csv' : 'departments.csv';
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      if (scope === 'template') {
-        const headerLine = headers.join(delimiter) + '\n';
-        chunks.push(headerLine);
-        stream.end();
-      } else {
-        for (const row of rows) stream.write(row);
-        stream.end();
-      }
-    });
-    const content = '\ufeff' + chunks.join('');
-    return { filename, content };
+    return { filename, content: writeCsv({ language, headers, rows }) };
   }
 
   async importCsv(
-    { file, dryRun, userId }: { file: Express.Multer.File; dryRun: boolean; userId?: string | null },
+    {
+      file,
+      dryRun,
+      userId,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      userId?: string | null;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     opts?: { manager?: EntityManager },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const delimiter = ';';
+    const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
-    type Row = Record<string, string>;
-    const rows: Row[] = [];
-    const errors: { row: number; message: string }[] = [];
-    let headerOk = false;
-    let content = '';
-    await new Promise<void>((resolve, reject) => {
-      const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-      if (!buf) {
-        reject(new BadRequestException('Empty upload'));
-        return;
-      }
-      try {
-        content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
-      } catch {
-        reject(new BadRequestException('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.'));
-        return;
-      }
-      parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
-        .on('headers', (headers: string[]) => {
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h));
-          headerOk = missing.length === 0 && extras.length === 0;
-          if (!headerOk) {
-            errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
-          }
-        })
-        .on('error', (err) => reject(err))
-        .on('data', (row: Row) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
+    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
+    if (!buf) throw new BadRequestException('Empty upload');
+    const read = await readMasterDataFile({
+      file: buf as Buffer,
+      fields: expectedHeaders,
+      dateFields: ['disabled_at'],
+      language: readLanguage,
+      dateOrder,
+      decimalMark,
     });
-    if (!headerOk) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
+    const errors: { row: number; message: string }[] = [];
+    if (read.headerError) {
+      return {
+        ok: false, dryRun, total: 0, inserted: 0, updated: 0,
+        errors: [{ row: 0, message: read.headerError }],
+        ignoredColumns: read.ignoredColumns, notices: read.notices,
+      };
     }
-    // Errors name the file's own line, blank lines included.
-    const rowLines = await csvDataRowLines(content, delimiter);
     // Lookup companies by name once
     const repo = this.getRepo(opts?.manager);
     const companyRepo = this.getCompanyRepo(opts?.manager);
@@ -600,17 +590,21 @@ export class DepartmentsService {
     };
     // Validate and normalize rows
     const normalized: Array<DepartmentUpsertDto & { company_id: string; name: string; lifecycle: { status: StatusState | null; disabled_at: string | null } }> = [];
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      const line = rowLine(rowLines, i);
-      const company_name = (r['company_name'] ?? '').toString().trim();
-      const name = (r['name'] ?? '').toString().trim();
+    for (const row of read.rows) {
+      const line = row.line;
+      const problems = rowProblems(row, ['disabled_at']);
+      if (problems.length > 0) {
+        errors.push(...problems.map((message) => ({ row: line, message })));
+        continue;
+      }
+      const company_name = cellOf(row, 'company_name');
+      const name = cellOf(row, 'name');
       // Blank: enabled for a new department, the stored status on an update (`csvItemLifecycle`).
-      const statusRaw = (r['status'] ?? '').toString().trim().toLowerCase();
+      const statusRaw = cellOf(row, 'status').toLowerCase();
       const statusValue: StatusState | null = statusRaw
         ? (STATUS_STATES.find((s) => s === statusRaw) ?? null)
         : null;
-      const disabledAtRaw = (r['disabled_at'] ?? '').toString().trim();
+      const disabledAtRaw = cellOf(row, 'disabled_at');
       let disabled_at_iso: string | null = null;
       if (!company_name) errors.push({ row: line, message: 'company_name is required' });
       if (!name) errors.push({ row: line, message: 'name is required' });
@@ -619,12 +613,12 @@ export class DepartmentsService {
         continue;
       }
       if (disabledAtRaw) {
-        try {
-          disabled_at_iso = parseCsvEndOfValidity(disabledAtRaw)?.toISOString() ?? null;
-        } catch (err) {
-          errors.push({ row: line, message: (err as Error).message });
+        const end = endOfValidityOf(row, 'disabled_at');
+        if (end.error) {
+          errors.push({ row: line, message: end.error });
           continue;
         }
+        disabled_at_iso = end.value ? end.value.toISOString() : null;
       }
       const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
       if (lifecycleConflict) {
@@ -638,14 +632,14 @@ export class DepartmentsService {
           normalized.push({
             company_id: comp.id,
             name,
-            description: ((r['description'] ?? '').toString().trim()) || null,
+            description: cellOf(row, 'description') || null,
             lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
           });
         }
       }
     }
     if (errors.length > 0) {
-      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Deduplicate by combination of company_id + name (case-insensitive on name)
     const uniqueMap = new Map<string, (typeof normalized)[number]>();
@@ -662,7 +656,7 @@ export class DepartmentsService {
       if (existing) updated += 1; else inserted += 1;
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -679,6 +673,6 @@ export class DepartmentsService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [] };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

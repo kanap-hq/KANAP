@@ -13,6 +13,8 @@ import { lookupAccounts } from '../common/lookup/reference-lookups';
 import { AccountUpsertDto } from './dto/account.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { EntityManager } from 'typeorm';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 
 @UseGuards(JwtAuthGuard)
 @Controller('accounts')
@@ -49,10 +51,12 @@ export class AccountsController {
   async export(
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('coaId') coaId: string | undefined,
+    @Query('language') languageRaw: string | undefined,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager, coaId, includeCoaCode: !coaId });
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager, coaId, includeCoaCode: !coaId, language });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -83,10 +87,24 @@ export class AccountsController {
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string,
     @Query('coaId') coaId: string | undefined,
+    @Query('language') languageRaw: string | undefined,
+    @Query('dateOrder') dateOrderRaw: string | undefined,
+    @Query('decimalMark') decimalMarkRaw: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importCsv({ file, dryRun, userId: ctx.userId || null }, { manager: ctx.manager, targetCoaId: coaId, allowCoaCodeColumn: !coaId });
+    const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
+    return this.svc.importCsv(
+      {
+        file,
+        dryRun,
+        userId: ctx.userId || null,
+        language,
+        dateOrder: parseDateOrder(dateOrderRaw),
+        decimalMark: parseDecimalMark(decimalMarkRaw),
+      },
+      { manager: ctx.manager, targetCoaId: coaId, allowCoaCodeColumn: !coaId },
+    );
   }
 
   @UseGuards(PermissionGuard)

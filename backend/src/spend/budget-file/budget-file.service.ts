@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { csvLanguage, CsvDateOrder, CsvLanguage, DecimalMark, writeCsv } from '../../common/csv-sheet';
+import { languageOf, parseDateOrder, parseDecimalMark, writeCsv } from '../../common/csv-sheet';
 import { CurrencySettingsService } from '../../currency/currency-settings.service';
 import { readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { readBudgetLineMeta } from '../item-meta';
@@ -155,39 +155,6 @@ async function nameChanges(manager: EntityManager, scope: BudgetFileScope, tenan
 
 function person(author: { name: string | null } | null, at: string | null): { by: string | null; at: string | null } {
   return { by: author?.name || null, at };
-}
-
-export async function languageOf(
-  manager: EntityManager,
-  tenantId: string,
-  userId: string | null,
-  requested: unknown,
-): Promise<CsvLanguage> {
-  if (requested != null && requested !== '') {
-    if (requested !== 'en' && requested !== 'fr' && requested !== 'de' && requested !== 'es') {
-      throw new BadRequestException('language must be en, fr, de or es.');
-    }
-    return requested;
-  }
-  if (!userId) return 'en';
-  const rows: Array<{ locale: string | null }> = await manager.query(
-    `SELECT locale FROM users WHERE tenant_id = $1 AND id = $2`,
-    [tenantId, userId],
-  );
-  return csvLanguage(rows[0]?.locale);
-}
-
-export function parseDateOrder(raw: unknown): CsvDateOrder | undefined {
-  if (raw == null || raw === '') return undefined;
-  if (raw === 'day-first' || raw === 'month-first') return raw;
-  throw new BadRequestException('dateOrder must be day-first or month-first.');
-}
-
-export function parseDecimalMark(raw: unknown): DecimalMark | undefined {
-  if (raw == null || raw === '') return undefined;
-  if (raw === 'comma') return ',';
-  if (raw === 'dot') return '.';
-  throw new BadRequestException('decimalMark must be comma or dot.');
 }
 
 function requireManager(manager: EntityManager | undefined): EntityManager {

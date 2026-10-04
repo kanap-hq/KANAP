@@ -1,9 +1,18 @@
 export { parseCsvAmount, formatCsvAmount, resolveAmountConvention, amountConventionNotice } from './amount';
 export { matchCode } from './codes';
-export { parseCsvDateCell, formatCsvDate, resolveDateOrder } from './date';
+export { parseCsvDateCell, formatCsvDate, formatCsvEndOfValidity, resolveDateOrder } from './date';
 export { decodeCsv } from './decode';
 export { csvLanguage, csvProfile, dateOrderNotice } from './language';
+export {
+  cellOf,
+  endOfValidityCell,
+  endOfValidityOf,
+  invalidEndOfValidity,
+  readMasterDataFile,
+  rowProblems,
+} from './master-data';
 export { readCsv } from './read';
+export { languageOf, parseDateOrder, parseDecimalMark } from './request-options';
 export { writeCsv } from './write';
 export {
   BUDGET_AMOUNT_COLUMNS,
@@ -35,3 +44,4 @@ export type {
 export type { AmountConventionDecision, DecimalMark } from './amount';
 export type { CsvWriteRequest } from './write';
 export type { CsvProfile } from './language';
+export type { MasterDataFileRead, MasterDataFileRequest } from './master-data';

@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
-import { parseDecimalMark } from '../budget-file.service';
+import { parseDecimalMark } from '../../../common/csv-sheet';
 import { writeCsv } from '../../../common/csv-sheet';
 import { buildBudgetExport, exportListQuery, parseAmountYears, parseFileColumns } from '../export-file';
 import { readBudgetCsv } from '../interpret';

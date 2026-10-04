@@ -11,6 +11,12 @@ import { auditCount, context, FR218, runSpecs, seedTenant, services, withRollbac
 // nothing; an export imports back as all unchanged.
 
 const HEADER = WORKING_DAY_PROFILE_CSV_HEADERS.join(';');
+/**
+ * The input files below stay `;` (a `;` file still loads). An English export is
+ * `,`-separated now, so the export assertions below split on `,`; the default
+ * English is also what keeps the day values dot-decimals (`19.083333`).
+ */
+const EXPORT_HEADER = WORKING_DAY_PROFILE_CSV_HEADERS.join(',');
 const DE_OFFICE = ['21', '20', '22', '20', '19', '21', '23', '21', '21', '21', '20', '20'];
 
 function file(lines: string[], header = HEADER): Express.Multer.File {
@@ -68,14 +74,14 @@ async function testMultiYearRoundTrip() {
     const exported = await csv.exportCsv('data', ctx);
     assert.equal(exported.filename, 'working_day_calendars.csv');
     const exportedLines = exported.content.replace(/^﻿/, '').trim().split('\n');
-    assert.equal(exportedLines[0], HEADER);
-    assert.deepEqual(exportedLines.slice(1).map((line) => line.split(';').slice(0, 8).join(';')), [
-      'DE-OFF;Germany office;;;;enabled;;2026',
-      'EMPTY;No years yet;;;;enabled;;',
-      'FR218;France 218;Office staff;;;enabled;;2026',
-      'FR218;France 218;Office staff;;;enabled;;2027',
+    assert.equal(exportedLines[0], EXPORT_HEADER);
+    assert.deepEqual(exportedLines.slice(1).map((line) => line.split(',').slice(0, 8).join(',')), [
+      'DE-OFF,Germany office,,,,enabled,,2026',
+      'EMPTY,No years yet,,,,enabled,,',
+      'FR218,France 218,Office staff,,,enabled,,2026',
+      'FR218,France 218,Office staff,,,enabled,,2027',
     ]);
-    assert.equal(exportedLines[3].split(';')[19], '19.083333');
+    assert.equal(exportedLines[3].split(',')[19], '19.083333');
 
     const again = await csv.importCsv({
       file: { buffer: Buffer.from(exported.content, 'utf8'), originalname: exported.filename } as Express.Multer.File,
@@ -86,7 +92,7 @@ async function testMultiYearRoundTrip() {
     assert.equal(await auditCount(runner, tenantId), 3, 'an unchanged import writes nothing');
 
     const template = await csv.exportCsv('template', ctx);
-    assert.equal(template.content.replace(/^﻿/, '').trim(), HEADER);
+    assert.equal(template.content.replace(/^﻿/, '').trim(), EXPORT_HEADER);
   });
 }
 
@@ -210,21 +216,53 @@ async function testEndOfValidityFormat() {
   await withRollback(async (runner) => {
     const { tenantId, csv, ctx } = await seed(runner, 'date');
     const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    const dates = async (): Promise<Array<[string, string]>> => {
+      const found: Array<{ code: string; disabled_at: Date }> = await runner.query(
+        `SELECT code, disabled_at FROM working_day_profiles WHERE tenant_id = $1 ORDER BY code`,
+        [tenantId],
+      );
+      return found.map((entry) => [entry.code, new Date(entry.disabled_at).toISOString()]);
+    };
+
+    // C4 replaced the interim ISO-only rule: a local day is read under the file's
+    // order, and only a file that shows no evidence asks the screen's language.
+    const local = await csv.importCsv({
+      file: file([
+        row('DAY', 'Day first', '', noDays, { disabledAt: '31/12/2027' }),
+        row('SETTLED', 'Settled by the file', '', noDays, { disabledAt: '01/03/2027' }),
+      ]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(local.ok, true, JSON.stringify(local.errors));
+    assert.equal(local.notices.dates, null, '31/12/2027 settles the order, so no notice');
+    assert.deepEqual(await dates(), [
+      ['DAY', '2027-12-31T12:00:00.000Z'],
+      ['SETTLED', '2027-03-01T12:00:00.000Z'],
+    ]);
+
+    const ambiguous = await csv.importCsv({
+      file: file([row('AMB', 'Ambiguous', '', noDays, { disabledAt: '01/03/2027' })]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(ambiguous.ok, true, JSON.stringify(ambiguous.errors));
+    assert.equal(ambiguous.notices.dates, 'Dates read month first: 01/03/2027 is January 3.');
+    assert.deepEqual((await dates()).map((entry) => entry[0]), ['AMB', 'DAY', 'SETTLED']);
+    assert.equal((await dates())[0][1], '2027-01-03T12:00:00.000Z', 'English reads 01/03/2027 as January 3');
+
+    // `-` clears a detail that allows it, never an end of validity; an unreadable cell stays a row error.
     const refused = await csv.importCsv({
       file: file([
-        row('SLASH', 'Slash', '', noDays, { disabledAt: '01/03/2027' }),
-        row('DAY', 'Day first', '', noDays, { disabledAt: '31/12/2027' }),
-        row('DOT', 'Dotted', '', noDays, { disabledAt: '03.01.2027' }),
+        row('DASH', 'Dash', '', noDays, { disabledAt: '-' }),
+        row('JUNK', 'Junk', '', noDays, { disabledAt: 'not-a-date' }),
       ]),
       dryRun: false,
     }, ctx);
     assert.equal(refused.ok, false);
     assert.deepEqual(refused.errors, [
-      { row: 2, message: message('01/03/2027') },
-      { row: 3, message: message('31/12/2027') },
-      { row: 4, message: message('03.01.2027') },
+      { row: 2, message: message('-') },
+      { row: 3, message: message('not-a-date') },
     ]);
-    assert.equal((await calendars(runner, tenantId)).size, 0);
+    assert.deepEqual((await dates()).map((entry) => entry[0]), ['AMB', 'DAY', 'SETTLED'], 'the refused file writes nothing');
 
     const accepted = await csv.importCsv({
       file: file([
@@ -235,8 +273,8 @@ async function testEndOfValidityFormat() {
     }, ctx);
     assert.equal(accepted.ok, true, JSON.stringify(accepted.errors));
     const rows = await runner.query(
-      `SELECT code, disabled_at FROM working_day_profiles WHERE tenant_id = $1 ORDER BY code`,
-      [tenantId],
+      `SELECT code, disabled_at FROM working_day_profiles WHERE tenant_id = $1 AND code = ANY($2::text[]) ORDER BY code`,
+      [tenantId, ['BARE', 'TS']],
     );
     assert.deepEqual(
       rows.map((row: { code: string; disabled_at: Date }) => [row.code, new Date(row.disabled_at).toISOString()]),
@@ -268,10 +306,10 @@ async function testStandardCalendars() {
 
     const exported = await csv.exportCsv('data', ctx);
     const exportedLines = exported.content.replace(/^\uFEFF/, '').trim().split('\n');
-    assert.deepEqual(exportedLines.slice(1).map((line) => line.split(';').slice(0, 8).join(';')), [
-      'DE-BY;Bavaria;;DE;BY;enabled;;',
-      'FR;France;;FR;;enabled;;',
-      'FR-57;France (Moselle);;FR;57;enabled;;2026',
+    assert.deepEqual(exportedLines.slice(1).map((line) => line.split(',').slice(0, 8).join(',')), [
+      'DE-BY,Bavaria,,DE,BY,enabled,,',
+      'FR,France,,FR,,enabled,,',
+      'FR-57,France (Moselle),,FR,57,enabled,,2026',
     ], 'a standard calendar exports its edited years only');
     const again = await csv.importCsv({
       file: { buffer: Buffer.from(exported.content, 'utf8'), originalname: exported.filename } as Express.Multer.File,

@@ -22,6 +22,7 @@ import { User } from './user.entity';
 import { AuditService } from '../audit/audit.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { createRequestCommitThenRun } from '../common/import-connection';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
@@ -74,8 +75,14 @@ export class UsersController {
   @Get('export')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
-  async export(@Query('scope') scope: 'template' | 'data' = 'data', @Res() res: Response, @Req() req: any) {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager });
+  async export(
+    @Query('scope') scope: 'template' | 'data' = 'data',
+    @Query('language') languageRaw: string | undefined,
+    @Res() res: Response,
+    @Req() req: any,
+  ) {
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, language });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -140,10 +147,24 @@ export class UsersController {
   async import(
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string,
+    @Query('language') languageRaw: string | undefined,
+    @Query('dateOrder') dateOrderRaw: string | undefined,
+    @Query('decimalMark') decimalMarkRaw: string | undefined,
     @Req() req: any,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importCsv({ file, dryRun, userId: req.user?.sub ?? null }, { manager: req?.queryRunner?.manager });
+    const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
+    return this.svc.importCsv(
+      {
+        file,
+        dryRun,
+        userId: req.user?.sub ?? null,
+        language,
+        dateOrder: parseDateOrder(dateOrderRaw),
+        decimalMark: parseDecimalMark(decimalMarkRaw),
+      },
+      { manager: req?.queryRunner?.manager },
+    );
   }
 
   // Seat-controlled status endpoints (Admin only)

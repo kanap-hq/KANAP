@@ -5,10 +5,7 @@ import { Company } from './company.entity';
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
 import { parseExportPagination, parsePagination } from '../common/pagination';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { CompanyMetricsService } from './company-metrics.service';
 import {
   buildQuickSearchConditions,
@@ -18,12 +15,22 @@ import {
   CompiledCondition,
 } from '../common/ag-grid-filtering';
 import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/status-filter';
-import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, parseCsvEndOfValidity, resolveLifecycleState } from '../common/status';
+import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, resolveLifecycleState } from '../common/status';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CompanyUpsertDto } from './dto/company.dto';
 import { createCompanyStandardCalendar } from '../working-day-profiles/company-standard-calendar';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
-import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
+import {
+  cellOf,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  endOfValidityOf,
+  formatCsvAmount,
+  formatCsvEndOfValidity,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
 type CompanyLookupItem = { id: string; name: string };
@@ -773,12 +780,12 @@ export class CompaniesService {
 
   async exportCsv(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; year?: number },
+    opts?: { manager?: EntityManager; year?: number; language?: CsvLanguage },
   ): Promise<{ filename: string; content: string }> {
+    const language = opts?.language ?? 'en';
     const baseYear = this.normalizeYear(opts?.year);
     const headers = this.csvHeaders(baseYear);
-    const delimiter = ';';
-    const rows: any[] = [];
+    const rows: string[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       const items = await repo.find({ order: { created_at: 'DESC' as any } });
@@ -797,143 +804,132 @@ export class CompaniesService {
         );
       }
       for (const c of items) {
-        const row: Record<string, any> = {
-          name: c.name ?? '',
-          country_iso: c.country_iso ?? '',
-          address1: c.address1 ?? '',
-          address2: c.address2 ?? '',
-          postal_code: c.postal_code ?? '',
-          city: c.city ?? '',
-          state: c.state ?? '',
-          reg_number: c.reg_number ?? '',
-          vat_number: c.vat_number ?? '',
-          base_currency: c.base_currency ?? '',
+        const row: string[] = [
+          c.name ?? '',
+          c.country_iso ?? '',
+          c.address1 ?? '',
+          c.address2 ?? '',
+          c.postal_code ?? '',
+          c.city ?? '',
+          c.state ?? '',
+          c.reg_number ?? '',
+          c.vat_number ?? '',
+          c.base_currency ?? '',
           // Read from the end of validity: a stored status left stale by a passed date never contradicts its own row.
-          status: deriveStatusFromDisabledAt(c.disabled_at),
-          disabled_at: c.disabled_at ? new Date(c.disabled_at).toISOString() : '',
-          notes: c.notes ?? '',
-        };
+          deriveStatusFromDisabledAt(c.disabled_at),
+          c.disabled_at ? formatCsvEndOfValidity(new Date(c.disabled_at).toISOString(), language) : '',
+          c.notes ?? '',
+        ];
         years.forEach((year) => {
           const metrics = metricsByYear.get(year)?.get(c.id);
-          row[`headcount_${year}`] = metrics ? metrics.headcount ?? '' : '';
-          row[`it_users_${year}`] = metrics && metrics.it_users != null ? metrics.it_users : '';
-          row[`turnover_${year}`] = metrics && metrics.turnover != null ? metrics.turnover : '';
+          row.push(metrics ? String(metrics.headcount ?? '') : '');
+          row.push(metrics && metrics.it_users != null ? String(metrics.it_users) : '');
+          row.push(metrics && metrics.turnover != null ? formatCsvAmount(String(metrics.turnover), language) : '');
         });
         rows.push(row);
       }
     }
     const filename = scope === 'template' ? `companies_template_${baseYear}.csv` : `companies_${baseYear}.csv`;
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      if (scope === 'template') {
-        const headerLine = headers.join(delimiter) + '\n';
-        chunks.push(headerLine);
-        stream.end();
-      } else {
-        for (const row of rows) stream.write(row);
-        stream.end();
-      }
-    });
-    const content = '\ufeff' + chunks.join('');
-    return { filename, content };
+    return { filename, content: writeCsv({ language, headers, rows }) };
   }
 
   async importCsv(
-    { file, dryRun, userId, year }: { file: Express.Multer.File; dryRun: boolean; userId?: string | null; year?: number },
+    {
+      file,
+      dryRun,
+      userId,
+      year,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      userId?: string | null;
+      year?: number;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     opts?: { manager?: EntityManager },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const delimiter = ';';
+    const readLanguage = language ?? 'en';
     const baseYear = this.normalizeYear(year);
     const expectedHeaders = this.csvHeaders(baseYear);
     const metricYears = this.metricYears(baseYear);
-    type Row = Record<string, string>;
-    const rows: Row[] = [];
-    const errors: { row: number; message: string }[] = [];
-    let headerOk = false;
-    let content = '';
-    await new Promise<void>((resolve, reject) => {
-      const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-      if (!buf) {
-        reject(new BadRequestException('Empty upload'));
-        return;
-      }
-      try {
-        content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
-      } catch {
-        reject(new BadRequestException('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.'));
-        return;
-      }
-      parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
-        .on('headers', (headers: string[]) => {
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h));
-          headerOk = missing.length === 0 && extras.length === 0;
-          if (!headerOk) {
-            errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
-          }
-        })
-        .on('error', (err) => reject(err))
-        .on('data', (row: Row) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
+    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
+    if (!buf) throw new BadRequestException('Empty upload');
+    const read = await readMasterDataFile({
+      file: buf as Buffer,
+      fields: expectedHeaders,
+      amounts: [{ measure: 'turnover', names: ['turnover'] }],
+      dateFields: ['disabled_at'],
+      language: readLanguage,
+      dateOrder,
+      decimalMark,
     });
-    if (!headerOk) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
+    const errors: { row: number; message: string }[] = [];
+    if (read.headerError) {
+      return {
+        ok: false, dryRun, total: 0, inserted: 0, updated: 0,
+        errors: [{ row: 0, message: read.headerError }],
+        ignoredColumns: read.ignoredColumns, notices: read.notices,
+      };
     }
-    // Errors name the file's own line, blank lines included.
-    const rowLines = await csvDataRowLines(content, delimiter);
     // Validate and normalize
     type CsvLifecycle = { status: StatusState | null; disabled_at: string | null };
-    const normalized: { company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: number | null }>; lifecycle: CsvLifecycle }[] = [];
-    rows.forEach((r, idx) => {
-      const line = rowLine(rowLines, idx);
-      const name = (r['name'] ?? '').toString().trim();
-      const country_iso = (r['country_iso'] ?? '').toString().trim();
-      const address1 = (r['address1'] ?? '').toString().trim();
-      const address2 = (r['address2'] ?? '').toString().trim();
-      const postal_code = (r['postal_code'] ?? '').toString().trim();
-      const city = (r['city'] ?? '').toString().trim();
-      const state = (r['state'] ?? '').toString().trim();
+    const normalized: { company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: string | null }>; lifecycle: CsvLifecycle }[] = [];
+    read.rows.forEach((row) => {
+      const line = row.line;
+      const problems = rowProblems(row, ['disabled_at']);
+      if (problems.length > 0) {
+        errors.push(...problems.map((message) => ({ row: line, message })));
+        return;
+      }
+      const name = cellOf(row, 'name');
+      const country_iso = cellOf(row, 'country_iso');
+      const address1 = cellOf(row, 'address1');
+      const address2 = cellOf(row, 'address2');
+      const postal_code = cellOf(row, 'postal_code');
+      const city = cellOf(row, 'city');
+      const state = cellOf(row, 'state');
       // Blank: enabled for a new company, the stored status on an update (`csvItemLifecycle`).
-      const statusRaw = (r['status'] ?? '').toString().trim().toLowerCase();
+      const statusRaw = cellOf(row, 'status').toLowerCase();
       const statusValue: StatusState | null = statusRaw
         ? (STATUS_STATES.find((s) => s === statusRaw) ?? null)
         : null;
-      const disabledAtRaw = (r['disabled_at'] ?? '').toString().trim();
+      const disabledAtRaw = cellOf(row, 'disabled_at');
       let disabled_at_iso: string | null = null;
       if (!name) errors.push({ row: line, message: 'name is required' });
       if (!country_iso || country_iso.length !== 2) errors.push({ row: line, message: 'country_iso is required and must be 2 letters' });
-      const base_currency = (r['base_currency'] ?? '').toString().trim();
+      const base_currency = cellOf(row, 'base_currency');
       if (!base_currency || base_currency.length !== 3) errors.push({ row: line, message: 'base_currency is required and must be 3 letters' });
       if (statusRaw && !statusValue) {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
         return;
       }
       if (disabledAtRaw) {
-        try {
-          disabled_at_iso = parseCsvEndOfValidity(disabledAtRaw)?.toISOString() ?? null;
-        } catch (err) {
-          errors.push({ row: line, message: (err as Error).message });
+        const end = endOfValidityOf(row, 'disabled_at');
+        if (end.error) {
+          errors.push({ row: line, message: end.error });
           return;
         }
+        disabled_at_iso = end.value ? end.value.toISOString() : null;
       }
       const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
       if (lifecycleConflict) {
         errors.push({ row: line, message: lifecycleConflict });
         return;
       }
-      const metrics = new Map<number, { headcount: number; it_users: number | null; turnover: number | null }>();
+      const metrics = new Map<number, { headcount: number; it_users: number | null; turnover: string | null }>();
       for (const fy of metricYears) {
         const headcountKey = `headcount_${fy}`;
         const itUsersKey = `it_users_${fy}`;
         const turnoverKey = `turnover_${fy}`;
-        const headcountRaw = (r[headcountKey] ?? '').toString().trim();
-        const itUsersRaw = (r[itUsersKey] ?? '').toString().trim();
-        const turnoverRaw = (r[turnoverKey] ?? '').toString().trim();
+        const headcountRaw = cellOf(row, headcountKey);
+        const itUsersRaw = cellOf(row, itUsersKey);
+        const turnoverRaw = cellOf(row, turnoverKey);
         const hasAny = headcountRaw !== '' || itUsersRaw !== '' || turnoverRaw !== '';
         if (!hasAny) continue;
         if (headcountRaw === '') {
@@ -954,18 +950,20 @@ export class CompaniesService {
             itUsersVal = parsed;
           }
         }
-        let turnoverVal: number | null = null;
+        let turnoverVal: string | null = null;
         if (turnoverRaw !== '') {
-          const normalizedTurnover = turnoverRaw.replace(',', '.');
-          const parsed = Number(normalizedTurnover);
-          if (!Number.isFinite(parsed) || parsed < 0) {
+          // Read by the shared layer under the file's decimal mark (`read.amounts`).
+          const parsed = row.amounts[turnoverKey];
+          const value = parsed?.kind === 'value' ? parsed.decimal : null;
+          if (!value || value.cmp(0) < 0) {
             errors.push({ row: line, message: `${turnoverKey} must be a non-negative number` });
           } else {
-            const decimals = (normalizedTurnover.split('.')[1] ?? '').length;
+            const written = value.toString();
+            const decimals = (written.split('.')[1] ?? '').length;
             if (decimals > 3) {
               errors.push({ row: line, message: `${turnoverKey} allows up to 3 decimals` });
             } else {
-              turnoverVal = Number(parsed.toFixed(3));
+              turnoverVal = written;
             }
           }
         }
@@ -980,17 +978,18 @@ export class CompaniesService {
           postal_code: postal_code || null,
           city: city || null,
           state: state || null,
-          reg_number: ((r['reg_number'] ?? '').toString().trim()) || null,
-          vat_number: ((r['vat_number'] ?? '').toString().trim()) || null,
+          reg_number: cellOf(row, 'reg_number') || null,
+          vat_number: cellOf(row, 'vat_number') || null,
           base_currency: base_currency.toUpperCase(),
-          notes: ((r['notes'] ?? '').toString().trim()) || null,
+          notes: cellOf(row, 'notes') || null,
         },
         metrics,
         lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
       });
     });
+    const total = read.rows.length;
     if (errors.length > 0) {
-      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
+      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Deduplicate by company name: keep first occurrence
     const uniqueByName = new Map<string, (typeof normalized)[number]>();
@@ -1008,7 +1007,7 @@ export class CompaniesService {
       if (existing) updated += 1; else inserted += 1;
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
+      return { ok: true, dryRun: true, total, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -1029,6 +1028,6 @@ export class CompaniesService {
         }
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [] };
+    return { ok: true, dryRun: false, total, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }
