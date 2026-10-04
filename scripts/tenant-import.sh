@@ -471,7 +471,11 @@ psql_cmd -c "
 "
 
 # Rebuild the derived budget totals: they are not exported, and the triggers
-# that keep them were off while the amounts were loaded (replica mode)
+# that keep them were off while the amounts were loaded (replica mode).
+# ANALYZE first: the rebuild plans from these tables, and a load with the
+# triggers off leaves their statistics stale (budget-import-statistics.ts).
+echo "  Analyzing budget tables before the totals rebuild..."
+psql_cmd -c "ANALYZE spend_items, spend_versions, spend_amounts, spend_round_inputs, spend_version_totals, capex_items, capex_versions, capex_amounts, capex_round_inputs, capex_version_totals"
 echo "  Rebuilding budget totals per version..."
 psql_cmd -c "SELECT count(*) FROM budget_version_totals_rebuild('$SOURCE_TENANT_ID')" > /dev/null
 

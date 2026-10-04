@@ -26,7 +26,7 @@ Cada espacio de trabajo empieza con una dimensión, la dimensión por defecto. M
 La dimensión por defecto tiene un papel especial:
 
 - No se puede desactivar ni eliminar. Su espacio de trabajo no tiene botón **Eliminar**, y una línea bajo **Ciclo de vida** explica el motivo: "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan."
-- Los archivos CSV antiguos y las preguntas a Plaid sobre la categoría analítica la usan. Consulte [Importación/exportación CSV](#importacionexportacion-csv) y [Dimensiones analíticas en Plaid](#dimensiones-analiticas-en-plaid).
+- Las preguntas a Plaid sobre la categoría analítica la usan. Consulte [Dimensiones analíticas en Plaid](#dimensiones-analiticas-en-plaid). En un archivo de presupuesto, cada dimensión tiene su propia columna, la dimensión por defecto incluida: consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
 - Sigue siendo la dimensión por defecto cuando cambia su nombre, su código o su orden.
 - Su etiqueta está reservada: ninguna otra dimensión puede llamarse "Dimensión analítica", en ninguno de los idiomas de la aplicación.
 
@@ -217,15 +217,14 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 
 Cargue o actualice los valores de todas las dimensiones desde un solo archivo. Las dimensiones se crean en la página.
 
-Para definir valores en las líneas de presupuesto desde un archivo, use los archivos CSV de OPEX y CAPEX. En esos archivos, la columna `analytics_category` contiene la dimensión por defecto, y una columna `analytics:<code>` contiene cada una de las demás dimensiones. Consulte [OPEX](opex.md#importacionexportacion-csv) y [CAPEX](capex.md#importacionexportacion-csv).
+Para definir valores en las partidas de presupuesto desde un archivo, use los archivos de presupuesto OPEX y CAPEX. En esos archivos, una columna `analytics:<code>` contiene cada dimensión, la dimensión por defecto incluida. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
 
 **Exportar**: haga clic en **Exportar CSV** y después en **Exportar datos**. El archivo lista los valores de todas las dimensiones, activados o desactivados, dimensión por dimensión. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
 
 **Estructura CSV**:
 
-- Delimitador: punto y coma `;`
-- Codificación: UTF-8 (guarde como "CSV UTF-8" en Excel)
-- Encabezados: `axis_code;name;description;status;disabled_at`
+- Encabezados: `axis_code`, `name`, `description`, `status`, `disabled_at`
+- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 
 | Columna | Contenido |
 |---|---|

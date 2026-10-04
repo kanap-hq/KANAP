@@ -173,9 +173,8 @@ Load or update the whole tree from a file.
 
 **CSV structure**:
 
-- Delimiter: semicolon `;`
-- Encoding: UTF-8 (save as "CSV UTF-8" in Excel)
-- Headers: `code;kind;name;parent_code;company_name;owner_email;description;status;disabled_at`
+- Headers: `code`, `kind`, `name`, `parent_code`, `company_name`, `owner_email`, `description`, `status`, `disabled_at`
+- The export writes the separator of the screen language. See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
 
 | Column | Content |
 |---|---|

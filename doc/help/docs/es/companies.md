@@ -182,29 +182,38 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 
 ## Importación/exportación CSV
 
-Mantenga grandes conjuntos sincronizados con sus sistemas de origen usando CSV (separado por punto y coma `;`).
+**Exportar CSV** descarga todas las empresas con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados, listo para rellenar.
 
-**Exportar**:
+Las columnas, en este orden. Las columnas de métricas siguen el año seleccionado en la barra de herramientas de la lista: el año anterior, ese año y el siguiente.
 
-- **Plantilla**: archivo solo con encabezados que puede rellenar (incluye columnas dinámicas para A-1, A, A+1 basadas en el año seleccionado)
-- **Datos**: empresas actuales más sus métricas para A-1 / A / A+1
+| Columna | Contenido |
+|---|---|
+| `name` | Obligatoria. El nombre de la empresa. Las filas se emparejan por este nombre |
+| `country_iso` | Obligatoria. Dos letras |
+| `address1`, `address2` | Líneas de dirección |
+| `postal_code`, `city`, `state` | Datos de dirección |
+| `reg_number`, `vat_number` | Número de registro y número de IVA |
+| `base_currency` | Obligatoria. Tres letras |
+| `status` | `enabled` o `disabled` |
+| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas |
+| `notes` | Texto libre |
+| `headcount_<año>` | Obligatoria cuando la fila lleva alguna métrica de ese año |
+| `it_users_<año>` | Un número entero |
+| `turnover_<año>` | Hasta 3 decimales, en millones de la moneda base de la empresa |
 
-**Importar**:
+**Importación**:
 
-- Comience con **Verificación previa** (valida encabezados, codificación, campos obligatorios, duplicados y métricas)
-- Si la verificación previa es correcta, **Cargar** aplicará inserciones y actualizaciones
-- La coincidencia es por **nombre** de empresa (dentro de su espacio de trabajo). Los duplicados en el archivo se deduplicar por nombre (gana la primera ocurrencia)
-- **Campos obligatorios**: Nombre, País (2 letras) y Moneda base (3 letras). La ciudad es opcional en el archivo
-- **Campo opcional**: `coa_code` (referencia un plan de cuentas; si se omite, se usa el CoA predeterminado para el país)
-- **Estado y fin de validez**: `status` es `enabled` o `disabled`, y `disabled_at` es el fin de validez, una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe el estado deducido del fin de validez. Una empresa nueva queda activada salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina la empresa hoy
+- Empiece por la **Verificación previa**. Valida los encabezados, la codificación, los campos obligatorios, los duplicados y las métricas. Si la comprobación es correcta, **Cargar** aplica las inserciones y las actualizaciones
+- **Emparejamiento**: por el `name` de la empresa. Un nombre que aparece dos veces en el archivo se conserva una vez, gana la primera fila
+- **Campos obligatorios**: `name`, `country_iso` y `base_currency`
+- **Estado y fin de validez**: la exportación escribe el estado deducido del fin de validez. Una empresa nueva se activa salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, finaliza la empresa hoy
 - Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." o "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
-- **Métricas**: si proporciona alguna métrica para un año, Plantilla es obligatoria para ese año; Usuarios IT y Facturación son opcionales. La facturación admite hasta 3 decimales y debe expresarse en millones de la moneda base de la empresa
+- **Métricas**: si indica métricas de un año, `headcount_<año>` es obligatoria para ese año. `it_users_<año>` y `turnover_<año>` son opcionales
 
 **Notas**:
 
-- Utilice codificación **UTF-8** y **puntos y coma** como separadores
-- La lista se actualiza automáticamente después de una carga exitosa
-- Si importa con `coa_code`, asegúrese de que el plan de cuentas exista primero en su espacio de trabajo
+- Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador, los formatos de fecha e importe y los dos pasos de importación
+- La lista se actualiza automáticamente tras una carga correcta
 
 ## Consejos
 

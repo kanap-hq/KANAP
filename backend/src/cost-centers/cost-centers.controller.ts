@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireAnyLevelMeta, RequireLevel } from '../auth/require-level.decorator';
 import { contentDisposition } from '../common/content-disposition';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { csvImportMulterOptions } from '../common/upload';
 import { CostCentersCsvService } from './cost-centers-csv.service';
@@ -84,10 +85,17 @@ export class CostCentersController {
 
   @RequireLevel('cost_centers', 'admin')
   @Get('export')
-  async export(@Query('scope') scopeRaw: string, @Res() res: Response, @Tenant() ctx: TenantRequest) {
+  async export(
+    @Query('scope') scopeRaw: string,
+    @Query('language') languageRaw: string | undefined,
+    @Res() res: Response,
+    @Tenant() ctx: TenantRequest,
+  ) {
     const scope = scopeRaw === 'template' ? 'template' : scopeRaw == null || scopeRaw === 'data' ? 'data' : null;
     if (!scope) throw new BadRequestException("scope must be 'data' or 'template'.");
-    const { filename, content } = await this.csv.exportCsv(scope, context(ctx));
+    const caller = context(ctx);
+    const language = await languageOf(caller.manager, caller.tenantId, caller.userId ?? null, languageRaw);
+    const { filename, content } = await this.csv.exportCsv(scope, caller, language);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -115,13 +123,27 @@ export class CostCentersController {
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
-  import(
+  async import(
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string,
+    @Query('language') languageRaw: string | undefined,
+    @Query('dateOrder') dateOrderRaw: string | undefined,
+    @Query('decimalMark') decimalMarkRaw: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.csv.importCsv({ file, dryRun }, context(ctx));
+    const caller = context(ctx);
+    const language = await languageOf(caller.manager, caller.tenantId, caller.userId ?? null, languageRaw);
+    return this.csv.importCsv(
+      {
+        file,
+        dryRun,
+        language,
+        dateOrder: parseDateOrder(dateOrderRaw),
+        decimalMark: parseDecimalMark(decimalMarkRaw),
+      },
+      caller,
+    );
   }
 
   @RequireLevel('cost_centers', 'admin')

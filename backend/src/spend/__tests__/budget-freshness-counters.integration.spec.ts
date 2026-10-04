@@ -6,11 +6,11 @@ import { syncTableLifecycleStatus } from '../../cleanup/lifecycle-status-sync.se
 import { FreezeService } from '../../freeze/freeze.service';
 import { copyAllocations, sameAllocationRows, storedAllocationPct } from '../budget-allocation-operations';
 import { clearBudgetColumn, copyBudgetColumn } from '../budget-column-operations';
-import { BUDGET_ROWS_HEADERS, BudgetRowsCsvService } from '../budget-rows-csv.service';
 import { SpendAllocation } from '../spend-allocation.entity';
 import { SpendAllocationsService } from '../spend-allocations.service';
 import { SpendVersionsService } from '../spend-versions.service';
-import { csvService, itemService, lineBody, seedCompany } from './cost-center.fixtures';
+import { exportBudgetFile, fileRows, loadBudgetFile, withCell } from './budget-file.fixtures';
+import { itemService, lineBody, seedCompany } from './cost-center.fixtures';
 import {
   amountsService,
   assert,
@@ -305,59 +305,48 @@ async function columnOperations(kind: Kind) {
   });
 }
 
-async function budgetRowsImport() {
+/** A budget file of month cells: an unchanged month bumps nothing, a changed one bumps. */
+async function budgetFileMonths() {
   await inRolledBackTransaction(async (runner) => {
-    const tenantId = await seedTenant(runner, 'br-rows');
+    const tenantId = await seedTenant(runner, 'br-file-months');
     const { versionId } = await seedLine(runner, 'opex', tenantId, YEAR, { planned: repeat('100', 12) }, 3);
     const br = () => budgetRev(runner, 'opex', versionId);
-    const months = (value: string) => Object.fromEntries(['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((m) => [m, value]));
-    const file = (value: string) => {
-      const row: Record<string, string> = { item_type: 'opex', item_number: '3', year: String(YEAR), measure: 'planned', period_start: '', period_end: '', method: '', ...months(value) };
-      return { buffer: Buffer.from(`﻿${BUDGET_ROWS_HEADERS.join(';')}\n${BUDGET_ROWS_HEADERS.map((h) => row[h] ?? '').join(';')}\n`, 'utf8') } as any;
-    };
+    const header = Array.from({ length: 12 }, (_, i) => `budget_${YEAR}_${String(i + 1).padStart(2, '0')}`).join(',');
+    const file = (value: string) => `item_number,${header}\nOPX-3,${repeat(value, 12).join(',')}\n`;
     const run = async (value: string) => {
-      const result = await new BudgetRowsCsvService(captureAudit() as any, noFreeze as any).importCsv(
-        { file: file(value), dryRun: false, userId: null, access: { isAdmin: true, permissions: {} } },
-        { manager: runner.manager, tenantId },
-      );
-      assert.equal(result.ok, true, `the import result: ${JSON.stringify(result.errors)}`);
+      const result = await loadBudgetFile(runner.manager, 'opex', tenantId, file(value));
+      assert.equal(result.ok, true, `the load result: ${JSON.stringify((result as any).errors)}`);
     };
-    assert.equal(await bumpOf(br, () => run('100')), 0, 'an unchanged budget row bumps nothing');
-    assert.ok(await bumpOf(br, () => run('110')) > 0, 'a changed budget row bumps');
+    assert.equal(await bumpOf(br, () => run('100')), 0, 'an unchanged month bumps nothing');
+    assert.ok(await bumpOf(br, () => run('110')) > 0, 'a changed month bumps');
   });
 }
 
-async function itemCsvReimport() {
+async function budgetFileReimport() {
   await inRolledBackTransaction(async (runner) => {
-    const tenantId = await seedTenant(runner, 'rv-csv');
-    const { companyId, accountId } = await seedCompany(runner, tenantId, 'Counters CSV company');
+    const tenantId = await seedTenant(runner, 'rv-file');
+    const { companyId, accountId } = await seedCompany(runner, tenantId, 'Counters file company');
     const created = await itemService('opex').create(
-      lineBody('opex', 'Counters CSV line', { paying_company_id: companyId, account_id: accountId, notes: 'Start' }), undefined, { manager: runner.manager },
+      lineBody('opex', 'Counters file line', { paying_company_id: companyId, account_id: accountId, notes: 'Start' }), undefined, { manager: runner.manager },
     );
     const itemId = created.id as string;
-    const csv = csvService('opex');
     const year = new Date().getFullYear();
-    const exported = async () => String((await csv.exportCsv('data', { manager: runner.manager })).content);
+    const column = `budget_${year}`;
+    const exported = () => exportBudgetFile(runner.manager, 'opex', tenantId, [itemId], { amountYears: String(year), columns: 'budget', detail: 'yearly' });
     const importFile = async (content: string) => {
-      const result = await csv.importCsv({ file: { buffer: Buffer.from(content, 'utf8') } as any, dryRun: false, userId: null }, { manager: runner.manager });
-      assert.equal(result.ok, true, `the import result: ${JSON.stringify(result.errors)}`);
+      const result = await loadBudgetFile(runner.manager, 'opex', tenantId, content);
+      assert.equal(result.ok, true, `the load result: ${JSON.stringify((result as any).errors)}`);
     };
-    /** The export with this year's budget set to a value. */
-    const withBudget = (content: string, value: string) => {
-      const [header, ...rows] = content.replace(/^\ufeff/, '').trim().split('\n');
-      const column = header.split(';').indexOf('y_budget');
-      return [header, ...rows.map((row) => row.split(';').map((cell, i) => (i === column ? value : cell)).join(';'))].join('\n') + '\n';
-    };
-    await importFile(withBudget(await exported(), '1200'));
+    await importFile(withCell(await exported(), column, '1200'));
     const [{ id: versionId }] = await runner.query(`SELECT id FROM spend_versions WHERE spend_item_id = $1 AND budget_year = $2`, [itemId, year]);
     const rv = () => rowVersion(runner, 'opex', itemId);
     const br = () => budgetRev(runner, 'opex', versionId);
     const again = await exported();
-    assert.match(again, /;1200(\.00)?;/, 'the export carries the imported budget');
+    assert.equal(fileRows(again)[0][column], '1200.00', 'the export carries the imported budget');
     const before = { rv: await rv(), br: await br() };
     await importFile(again);
     assert.deepEqual({ rv: await rv(), br: await br() }, before, 'an export imported back unchanged bumps neither counter');
-    await importFile(withBudget(again, '1300'));
+    await importFile(withCell(again, column, '1300'));
     assert.ok((await br()) > before.br, 'a changed budget in the file bumps the version');
     assert.equal(await rv(), before.rv, 'an amount alone does not bump the line');
   });
@@ -399,7 +388,7 @@ void runSpecs('budget-freshness-counters.integration.spec', [
   ['allocations: a save or a copy bumps, the same split does not', allocations],
   ['allocations: a halfway share compares as PostgreSQL stores it', allocationShareRounding],
   ...KINDS.map((kind): [string, () => Promise<void>] => [`${kind}: column copy and clear bump once, not when repeated`, () => columnOperations(kind)]),
-  ['budget rows import: an unchanged row bumps nothing', budgetRowsImport],
-  ['item CSV: an export imported back bumps nothing', itemCsvReimport],
+  ['budget file months: an unchanged month bumps nothing', budgetFileMonths],
+  ['budget file: an export imported back bumps nothing', budgetFileReimport],
   ...KINDS.map((kind): [string, () => Promise<void>] => [`${kind}: the AI financial plan path bumps`, () => aiFinancialPlan(kind)]),
 ]);

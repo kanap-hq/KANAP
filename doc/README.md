@@ -124,10 +124,11 @@ User-facing on-premise guides are in `/help/docs/en/on-premise/` (published to [
 - **[ui-forms.md](templates/ui-forms.md)**: UI form patterns and conventions
 
 ### `/samples` - CSV Templates
-Sample CSV files for import/export:
-- `accounts.csv`, `companies.csv`, `departments.csv`, `suppliers.csv`, `users.csv`
-- `spend_items.csv`, `spend_versions.csv`, `spend_amounts_*.csv`, `spend_allocations.csv`
-- `capex.csv`, `opex.csv`, `contracts.csv`
+One consistent set of sample files, in the order the manual loads them. English conventions: `,` separator, `.` decimal, `YYYY-MM-DD` dates. Every file matches its importer's headers.
+- Master data: `companies.csv`, `departments.csv`, `suppliers.csv`, `accounts.csv` (imported into a chart of accounts), `cost-centers.csv`, `users.csv`
+- Budget files: `opex.csv`, `capex.csv`, in the budget file layout, with amounts for 2027
+
+`companies.csv` carries metrics for 2025 to 2027: set the Year selector of the Companies list to 2026, or edit the three years in the header. The budget files carry `kanap_token` empty and `item_number` empty, so they add new lines. See [Load a budget from a spreadsheet](help/docs/en/budget-file.md).
 
 ### `/archive` - Historical Documentation
 - **`archive/fixes/`**: Historical fix documentation (connection pool fix, RBAC multi-role fix, etc.)

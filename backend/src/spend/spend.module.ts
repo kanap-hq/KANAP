@@ -12,7 +12,6 @@ import { Supplier } from '../suppliers/supplier.entity';
 import { Account } from '../accounts/account.entity';
 import { SpendItemsService } from './spend-items.service';
 import { ListEngineStartupCheck } from '../common/list-engine/list-engine-startup-check';
-import { SpendItemsCsvService } from './spend-items-csv.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
 import { SpendVersionsService } from './spend-versions.service';
 import { SpendAmountsService } from './spend-amounts.service';
@@ -53,8 +52,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { CommonModule } from '../common/common.module';
 import { CapexVersion } from '../capex/capex-version.entity';
-import { BudgetRowsCsvService } from './budget-rows-csv.service';
-import { BudgetRowsController } from './budget-rows.controller';
+import { BudgetFileModule } from './budget-file/budget-file.module';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 
 @Module({
@@ -70,12 +68,12 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
     StorageModule,
     NotificationsModule,
     KnowledgeModule,
+    BudgetFileModule,
   ],
-  controllers: [SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController, BudgetRowsController],
+  controllers: [SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController],
   providers: [
     ListEngineStartupCheck,
     SpendItemsService,
-    SpendItemsCsvService,
     SpendBudgetOperationsService,
     SpendItemsDeleteService,
     SpendVersionsService,
@@ -87,7 +85,6 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
     AllocationRulesService,
     ChargebackReportService,
     SpendItemContactsService,
-    BudgetRowsCsvService,
     UserTimeAggregateService,
   ],
   exports: [

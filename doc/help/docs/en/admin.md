@@ -148,6 +148,27 @@ Row actions, from the menu at the end of each row:
 | **Send password reset** | Email a password reset link. Shown for enabled local accounts only. |
 | **Delete** | Remove the user permanently. Disable the account instead if other records reference it. |
 
+### Users CSV
+
+**Export CSV** downloads the user list. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
+
+The columns:
+
+| Column | Content |
+|---|---|
+| `email` | Required. Rows are matched on it, so write the address as the workspace holds it |
+| `first_name`, `last_name` | The person's name |
+| `role` | The role to give. A blank cell gives the **Contact** role |
+| `company_name` | The company, by name. Optional |
+| `department_name` | The department, by name. It needs a `company_name` |
+| `status` | `contact`, `invited`, `enabled` or `disabled`. A blank cell gives `contact` |
+
+A role the file names and your workspace does not have is created by the load, with a default description. The check lists it and creates nothing, so a file you only check changes no role. A name that appears twice in the file is kept once, the first row winning.
+
+The file holds no date and no amount. An import sets no password: a new user signs in after an invitation or a password reset.
+
+See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator and the two import steps.
+
 ### Creating a User
 
 1. Click **New**

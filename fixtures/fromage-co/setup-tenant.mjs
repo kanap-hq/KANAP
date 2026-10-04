@@ -16,6 +16,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildLinesFile, buildMonthlyFile, fetchDefaultDimensionCode, loadBudgetFile } from '../../scripts/lib/budget-file.mjs';
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -163,7 +164,7 @@ function lower(value) {
   return normalizeValue(value).toLowerCase();
 }
 
-async function request(method, route, body, { uploadPath, uploadBytes, uploadName, noAuth, publicHost } = {}) {
+async function request(method, route, body, { uploadPath, uploadBytes, uploadName, uploadFields, noAuth, publicHost } = {}) {
   const headers = {};
   const init = { method, headers };
 
@@ -173,6 +174,7 @@ async function request(method, route, body, { uploadPath, uploadBytes, uploadNam
     const bytes = uploadBytes ?? readFileSync(uploadPath);
     const form = new FormData();
     form.append('file', new Blob([bytes], { type: 'text/csv;charset=utf-8' }), uploadName ?? path.basename(uploadPath));
+    for (const [name, value] of Object.entries(uploadFields ?? {})) form.append(name, value);
     init.body = form;
   } else if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
@@ -523,10 +525,14 @@ async function ensureAnalyticsCategories() {
 // ── Budget: analytics dimensions, costed lines, monthly rows ─────────────────
 //
 // The budget files (26-30) come from tools/generate-budget.mjs. Cost centres,
-// dimension values and calendars import like any master data. Costed lines
-// (quantity × price, file 30) and monthly amounts (file 29) are keyed by item
-// name in the files, because item numbers only exist once the items are
-// imported: both steps resolve the names against the tenant first.
+// dimension values and calendars import like any master data. The two item
+// files (14, 15) and the monthly amounts (29) keep their old shape: they are
+// converted at load time by scripts/lib/budget-file.mjs and sent through the
+// budget file routes (preflight, then import), one file per list. Costed lines
+// (quantity × price, file 30) still go through the versions API. The item files
+// and the monthly rows are keyed by item name, because item numbers only exist
+// once the lines are imported: both steps resolve the names against the tenant
+// first.
 
 const ANALYTICS_AXES = [
   { code: 'nature', name: 'Nature de coût', description: 'Ce que la dépense paie : licences, assistance technique, cloud, matériel…', sort_order: 10 },
@@ -543,8 +549,6 @@ async function ensureAnalyticsAxes() {
     ok(`Created analytics dimension '${axis.name}'`);
   }
 }
-
-const CSV_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 async function listAllPages(route) {
   const all = [];
@@ -607,26 +611,93 @@ async function ensureCostedLines(index) {
   ok(`Costed lines written on ${written} item columns`);
 }
 
-async function importBudgetRows(index) {
-  info('Importing monthly budget rows');
-  const header = ['item_type', 'item_number', 'year', 'measure', 'period_start', 'period_end', ...CSV_MONTHS, 'method'];
-  const out = [header.join(';')];
-  let skipped = 0;
-  for (const row of readCsv('29-budget-rows.csv')) {
-    const item = index[row.item_type]?.get(row.item_name);
-    if (!item) { warn(`Budget rows: ${row.item_type} '${row.item_name}' not found`); skipped += 1; continue; }
-    out.push([row.item_type, item.item_number, row.year, row.measure, row.period_start, row.period_end, ...CSV_MONTHS.map((m) => row[m]), ''].join(';'));
+/**
+ * The fixture's HTTP client, reduced to what the budget file helper needs:
+ * `{ status, data }` for every answer. The fixture's `request` throws on a
+ * non-2xx, so its status and payload are turned back into a result.
+ */
+async function budgetRequest(method, route, { bytes, filename, snapshot } = {}) {
+  try {
+    const data = await request(method, route, undefined, {
+      uploadBytes: bytes,
+      uploadName: filename,
+      uploadFields: snapshot === undefined ? undefined : { snapshot: JSON.stringify(snapshot) },
+    });
+    return { status: 200, data };
+  } catch (error) {
+    return { status: error.status ?? 0, data: error.payload ?? null };
   }
-  const bytes = Buffer.from(out.join('\n') + '\n', 'utf8');
-  const result = await request('POST', '/budget-rows/import?dryRun=false', undefined, { uploadBytes: bytes, uploadName: '29-budget-rows.csv' });
-  if (result?.ok === false) throw new Error(`Budget rows import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
-  ok(`Imported budget rows (${out.length - 1} rows${skipped ? `, ${skipped} skipped` : ''})`);
 }
 
-async function runBudget() {
-  const index = await budgetItemIndex();
+/** Y: the calendar year the source files' relative `y_*` columns are read against. */
+const BUDGET_YEAR = new Date().getFullYear();
+
+const BUDGET_ITEM_FILES = { opex: '14-spend-items.csv', capex: '15-capex-items.csv' };
+
+/** Line name -> item_number, for the lines that already exist in the tenant. */
+function numbersByName(index, scope) {
+  const field = scope === 'opex' ? 'product_name' : 'description';
+  return new Map([...index[scope].values()].map((item) => [item[field], String(item.item_number)]));
+}
+
+/** The rows the old files marked disabled without an end date. */
+function disabledWithoutDate(rows) {
+  return rows.filter((row) => lower(row.status) === 'disabled' && !normalizeValue(row.disabled_at));
+}
+
+/** One item file, converted to a lines file and loaded through the two routes. */
+async function importBudgetLines(scope, defaultDimensionCode, existingNumbers) {
+  const name = BUDGET_ITEM_FILES[scope];
+  const rows = readCsv(name);
+  const dated = disabledWithoutDate(rows);
+  if (dated.length) {
+    info(`${name}: ${dated.length} disabled rows without a date are written as ended on ${BUDGET_YEAR - 1}-12-31`);
+  }
+  info(`Importing ${name} as the ${scope === 'opex' ? 'OPEX' : 'CAPEX'} budget file`);
+  const csvText = buildLinesFile(scope, rows, { year: BUDGET_YEAR, defaultDimensionCode, existingNumbers });
+  const result = await loadBudgetFile({ request: budgetRequest, scope, csvText, filename: name });
+  ok(`Imported ${name}: ${result.rows} rows, ${result.created} created, ${result.updated} updated, ${result.unchanged} unchanged ` +
+    `(preflight ${(result.preflightMs / 1000).toFixed(1)} s, import ${(result.importMs / 1000).toFixed(1)} s)`);
+  return result;
+}
+
+/** The OPEX and CAPEX lines through the budget file, then the refreshed index. */
+async function importBudgetItems() {
+  const before = await budgetItemIndex();
+  const defaultDimensionCode = await fetchDefaultDimensionCode(budgetRequest);
+  info(`Default analytics dimension: analytics:${defaultDimensionCode}`);
+  for (const scope of ['opex', 'capex']) {
+    await importBudgetLines(scope, defaultDimensionCode, numbersByName(before, scope));
+  }
+  return budgetItemIndex();
+}
+
+/** The monthly amounts (file 29), one budget file per scope. */
+async function importMonthlyBudgetFiles(index) {
+  info('Importing monthly budget rows');
+  const rows = readCsv('29-budget-rows.csv');
+  const partial = rows.filter((row) => !/^\d{4}-01-01$/.test(row.period_start) || !/^\d{4}-12-31$/.test(row.period_end));
+  if (partial.length) {
+    info(`${partial.length} of ${rows.length} budget rows cover part of the year only (the file has no period column)`);
+  }
+  const counts = {};
+  for (const scope of ['opex', 'capex']) {
+    const scopeRows = rows.filter((row) => row.item_type === scope);
+    const missing = scopeRows.filter((row) => !index[scope].has(row.item_name));
+    if (missing.length) warn(`Budget rows: ${missing.length} ${scope} rows without an item, skipped`);
+    const csvText = buildMonthlyFile(scope, scopeRows, { numbersByName: numbersByName(index, scope) });
+    const result = await loadBudgetFile({ request: budgetRequest, scope, csvText, filename: `29-budget-rows-${scope}.csv` });
+    ok(`Imported monthly ${scope === 'opex' ? 'OPEX' : 'CAPEX'} rows: ${result.rows} rows, ${result.created} created, ` +
+      `${result.updated} updated, ${result.unchanged} unchanged (preflight ${(result.preflightMs / 1000).toFixed(1)} s, ` +
+      `import ${(result.importMs / 1000).toFixed(1)} s)`);
+    counts[scope] = result;
+  }
+  return { rows: rows.length, partial: partial.length, ...counts };
+}
+
+async function runBudget(index) {
   await ensureCostedLines(index);
-  await importBudgetRows(index);
+  await importMonthlyBudgetFiles(index);
 }
 
 // ── Chart of accounts ────────────────────────────────────────────────────────
@@ -1603,9 +1674,8 @@ async function runImports() {
   await importCsv('11-business-processes.csv', '/business-processes/import');
   await importCsv('12-applications.csv', '/applications/import');
   await importCsv('13-contracts.csv', '/contracts/import');
-  await importCsv('14-spend-items.csv', '/spend-items/import');
-  await importCsv('15-capex-items.csv', '/capex-items/import');
-  await runBudget();
+  const budgetIndex = await importBudgetItems();
+  await runBudget(budgetIndex);
   await importCsv('16-portfolio-projects.csv', '/portfolio/projects/import');
   await importCsv('17-portfolio-requests.csv', '/portfolio/requests/import');
   const locationIdByFixtureCode = await ensureLocations();

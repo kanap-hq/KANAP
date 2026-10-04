@@ -231,13 +231,14 @@ function CostCentersList() {
           setSortedByPath(!state.sort || state.sort.startsWith('path:'));
         }}
       />
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint={COST_CENTERS_ENDPOINT} title={t('costCenters.export')} />
+      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint={COST_CENTERS_ENDPOINT} title={t('costCenters.export')} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint={COST_CENTERS_ENDPOINT}
         title={t('costCenters.import')}
         onImported={refresh}
+        flexibleFormat
       />
     </>
   );

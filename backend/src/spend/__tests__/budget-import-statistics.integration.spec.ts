@@ -5,7 +5,6 @@ import {
   analyzeAfterLargeImport,
   analyzeTables,
   ANALYZE_AFTER_IMPORT_ROWS,
-  BUDGET_ROWS_IMPORT_TABLES,
   lineImportTables,
   writtenRows,
 } from '../budget-import-statistics';
@@ -28,7 +27,6 @@ async function testWrittenRows() {
   assert.equal(writtenRows({ ok: true, inserted: 5000, updated: 0 }), 0, 'a result that does not say it was no dry run counts nothing');
   assert.equal(writtenRows(null), 0);
   assert.deepEqual(lineImportTables('capex'), ['capex_items', 'capex_item_analytics_values', 'capex_versions', 'capex_amounts', 'capex_round_inputs', 'capex_version_totals']);
-  assert.equal(BUDGET_ROWS_IMPORT_TABLES.length, 8, 'the budget rows file writes both types');
 }
 
 /** analyze_count of the given tables, read on a connection of its own. */

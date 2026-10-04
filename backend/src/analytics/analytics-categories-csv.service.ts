@@ -1,11 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
-import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
-import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { resolveLifecycleState, StatusState } from '../common/status';
+import {
+  cellOf,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  endOfValidityCell,
+  endOfValidityOf,
+  MasterDataFileRead,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { AnalyticsContext, normalizeAnalyticsDescription, normalizeAnalyticsName } from './analytics-context';
 import { analyticsAxisSubject, isAxisActive, loadAnalyticsAxes, resolveDefaultAxisId } from './analytics-axes.util';
@@ -18,8 +25,7 @@ import {
 
 export const ANALYTICS_VALUE_CSV_HEADERS = ['axis_code', 'name', 'description', 'status', 'disabled_at'] as const;
 /** Only the name is required; an absent column keeps what is stored (a new value gets the default). */
-const REQUIRED_HEADERS = new Set<string>(['name']);
-const DELIMITER = ';';
+const OPTIONAL_HEADERS = ['axis_code', 'description', 'status', 'disabled_at'] as const;
 
 export interface AnalyticsValueImportResult {
   ok: boolean;
@@ -29,6 +35,9 @@ export interface AnalyticsValueImportResult {
   updated: number;
   unchanged: number;
   errors: Array<{ row: number; message: string }>;
+  /** The unknown headers the file carried, and what the shared layer noticed. */
+  ignoredColumns: string[];
+  notices: { dates: string | null; amounts: string | null };
 }
 
 interface ParsedRow {
@@ -36,14 +45,6 @@ interface ParsedRow {
   existing: StoredAnalyticsCategory | null;
   axisName: string | null;
   values: AnalyticsCategoryValues;
-}
-
-const cell = (row: Record<string, string>, key: string) => (row[key] ?? '').toString().trim();
-
-function toIso(value: Date | string | null): string {
-  if (value == null) return '';
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : date.toISOString();
 }
 
 /**
@@ -56,8 +57,13 @@ function toIso(value: Date | string | null): string {
 export class AnalyticsCategoriesCsvService {
   constructor(private readonly categories: AnalyticsCategoriesService) {}
 
-  async exportCsv(scope: 'data' | 'template', ctx: AnalyticsContext): Promise<{ filename: string; content: string }> {
-    const rows: Array<Record<string, string>> = [];
+  async exportCsv(
+    scope: 'data' | 'template',
+    ctx: AnalyticsContext,
+    language: CsvLanguage = 'en',
+  ): Promise<{ filename: string; content: string }> {
+    const headers = [...ANALYTICS_VALUE_CSV_HEADERS];
+    const rows: string[][] = [];
     if (scope === 'data') {
       const axes = await loadAnalyticsAxes(ctx.manager, ctx.tenantId);
       const order = new Map(axes.map((axis, index) => [axis.id, index]));
@@ -68,28 +74,18 @@ export class AnalyticsCategoriesCsvService {
       );
       values.sort((a, b) => (order.get(a.axis_id) ?? 0) - (order.get(b.axis_id) ?? 0));
       for (const value of values) {
-        rows.push({
-          axis_code: codeById.get(value.axis_id) ?? '',
-          name: value.name,
-          description: value.description ?? '',
-          status: isAxisActive(value) ? StatusState.ENABLED : StatusState.DISABLED,
-          disabled_at: toIso(value.disabled_at),
-        });
+        rows.push([
+          codeById.get(value.axis_id) ?? '',
+          value.name,
+          value.description ?? '',
+          isAxisActive(value) ? StatusState.ENABLED : StatusState.DISABLED,
+          endOfValidityCell(value.disabled_at, language),
+        ]);
       }
     }
-    const headers = [...ANALYTICS_VALUE_CSV_HEADERS];
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter: DELIMITER, alwaysWriteHeaders: true, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      for (const row of rows) stream.write(row);
-      stream.end();
-    });
     return {
       filename: scope === 'template' ? 'analytics_values_template.csv' : 'analytics_values.csv',
-      content: '﻿' + chunks.join(''),
+      content: writeCsv({ language, headers, rows }),
     };
   }
 
@@ -99,19 +95,33 @@ export class AnalyticsCategoriesCsvService {
    * value is counted unchanged and writes nothing (no audit row).
    */
   async importCsv(
-    { file, dryRun }: { file: Express.Multer.File; dryRun: boolean },
+    {
+      file,
+      dryRun,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     ctx: AnalyticsContext,
   ): Promise<AnalyticsValueImportResult> {
+    const read = await this.parseFile(file, language ?? 'en', dateOrder, decimalMark);
     const failed = (errors: AnalyticsValueImportResult['errors'], total = 0): AnalyticsValueImportResult => ({
       ok: false, dryRun, total, inserted: 0, updated: 0, unchanged: 0, errors,
+      ignoredColumns: read.ignoredColumns, notices: read.notices,
     });
-    const parsed = await this.parseFile(file);
-    if ('headerError' in parsed) return failed([{ row: 0, message: parsed.headerError }]);
-    const { rows, headers, lines } = parsed;
-    const has = (header: string) => headers.includes(header);
+    if (read.headerError) return failed([{ row: 0, message: read.headerError }]);
+    const { rows } = read;
+    // An absent column is not a blank cell: it keeps what is stored, as it always has.
+    const has = (header: string) => read.present.includes(header);
 
     // Blank dimension codes need the default; a file with none leaves a tenant without dimensions untouched.
-    const needsDefault = !has('axis_code') || rows.some((row) => cell(row, 'axis_code') === '');
+    const needsDefault = !has('axis_code') || rows.some((row) => cellOf(row, 'axis_code') === '');
     const defaultAxisId = needsDefault && rows.length > 0
       ? await resolveDefaultAxisId(ctx.manager, ctx.tenantId, { create: !dryRun })
       : null;
@@ -127,9 +137,10 @@ export class AnalyticsCategoriesCsvService {
     const errors: AnalyticsValueImportResult['errors'] = [];
     const parsedRows: ParsedRow[] = [];
     const lineByKey = new Map<string, number>();
-    rows.forEach((raw, index) => {
-      const line = rowLine(lines, index);
-      const rowErrors: string[] = [];
+    rows.forEach((raw) => {
+      // The physical line Excel shows, blank lines included.
+      const line = raw.line;
+      const rowErrors: string[] = rowProblems(raw, ['disabled_at']);
       const attempt = <T>(fn: () => T): T | undefined => {
         try {
           return fn();
@@ -139,7 +150,7 @@ export class AnalyticsCategoriesCsvService {
         }
       };
 
-      const code = has('axis_code') ? cell(raw, 'axis_code') : '';
+      const code = has('axis_code') ? cellOf(raw, 'axis_code') : '';
       let axisId: string | null = null;
       let axisName: string | null = null;
       // A disabled dimension's rows are checked once the row is resolved: unchanged ones pass (a re-imported export).
@@ -158,7 +169,7 @@ export class AnalyticsCategoriesCsvService {
         axisName = defaultAxisId ? axisById.get(defaultAxisId)?.name ?? null : null;
       }
 
-      const name = attempt(() => normalizeAnalyticsName(cell(raw, 'name')));
+      const name = attempt(() => normalizeAnalyticsName(cellOf(raw, 'name')));
       const key = axisId !== null && name ? `${axisId}|${name.toLowerCase()}` : null;
       if (name && (axisId !== null || !code)) {
         const fileKey = `${axisId ?? '(default)'}|${name.toLowerCase()}`;
@@ -168,14 +179,19 @@ export class AnalyticsCategoriesCsvService {
       }
       const existing = key ? storedByKey.get(key) ?? null : null;
 
-      const statusRaw = has('status') ? cell(raw, 'status').toLowerCase() : '';
+      const statusRaw = has('status') ? cellOf(raw, 'status').toLowerCase() : '';
       if (statusRaw && statusRaw !== StatusState.ENABLED && statusRaw !== StatusState.DISABLED) {
-        rowErrors.push(`Invalid status '${cell(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
+        rowErrors.push(`Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
       }
       const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
-      const disabledAtRaw = has('disabled_at') ? cell(raw, 'disabled_at') : '';
+      const disabledAtRaw = has('disabled_at') ? cellOf(raw, 'disabled_at') : '';
       let disabledAt: Date | null = null;
-      if (disabledAtRaw) disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? null;
+      if (disabledAtRaw) {
+        // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
+        const end = endOfValidityOf(raw, 'disabled_at');
+        if (end.error) rowErrors.push(end.error);
+        else disabledAt = end.value;
+      }
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
       if (lifecycleConflict) rowErrors.push(lifecycleConflict);
 
@@ -195,7 +211,7 @@ export class AnalyticsCategoriesCsvService {
         // The name is the match key: a different case in the file refers to the stored value, it does not rename it.
         name: existing?.name ?? name,
         description: has('description')
-          ? normalizeAnalyticsDescription(cell(raw, 'description'))
+          ? normalizeAnalyticsDescription(cellOf(raw, 'description'))
           : existing?.description ?? null,
         status: lifecycle.status,
         disabled_at: lifecycle.disabled_at,
@@ -226,35 +242,26 @@ export class AnalyticsCategoriesCsvService {
         await this.categories.persist(ctx, row.existing, row.values, { name: row.axisName });
       }
     }
-    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [] };
+    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 
-  private async parseFile(file: Express.Multer.File): Promise<{ rows: Array<Record<string, string>>; headers: string[]; lines: number[] } | { headerError: string }> {
+  private parseFile(
+    file: Express.Multer.File,
+    language: CsvLanguage,
+    dateOrder?: CsvDateOrder,
+    decimalMark?: DecimalMark,
+  ): Promise<MasterDataFileRead> {
     if (!file) throw new BadRequestException('No file uploaded');
     const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
     if (!buf) throw new BadRequestException('Empty upload');
-    let content: string;
-    try {
-      content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
-    } catch {
-      throw new BadRequestException('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.');
-    }
-    const rows: Array<Record<string, string>> = [];
-    let headers: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      parseString(content, { headers: true, delimiter: DELIMITER, ignoreEmpty: true, trim: true })
-        .on('headers', (found: string[]) => { headers = found; })
-        .on('error', (err) => reject(new BadRequestException(`The file could not be read: ${err.message}`)))
-        .on('data', (row: Record<string, string>) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
+    return readMasterDataFile({
+      file: buf as Buffer,
+      fields: ANALYTICS_VALUE_CSV_HEADERS,
+      dateFields: ['disabled_at'],
+      optional: OPTIONAL_HEADERS,
+      language,
+      dateOrder,
+      decimalMark,
     });
-    const expected: readonly string[] = ANALYTICS_VALUE_CSV_HEADERS;
-    const missing = expected.filter((header) => REQUIRED_HEADERS.has(header) && !headers.includes(header));
-    const extras = headers.filter((header) => !expected.includes(header));
-    if (missing.length > 0 || extras.length > 0) {
-      return { headerError: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` };
-    }
-    // Errors name the file's own line, blank lines included.
-    return { rows, headers, lines: await csvDataRowLines(content, DELIMITER) };
   }
 }

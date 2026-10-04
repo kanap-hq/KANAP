@@ -4,11 +4,13 @@ import dataSource from '../../data-source';
 import { CapexItemsService } from '../capex-items.service';
 import { ItemNumberService } from '../../common/item-number.service';
 import { assert, captureAudit, inRolledBackTransaction, noFreeze, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
+import { loadBudgetFile } from '../../spend/__tests__/budget-file.fixtures';
 
 // A CAPEX status change emails the item's owners, as OPEX does: from the item
 // page, the API and the AI, which all go through `update`. The acting user is
-// left out and a disabled owner is never a recipient. The CAPEX CSV import
-// changes statuses without emailing anyone, like the OPEX import.
+// left out and a disabled owner is never a recipient. A budget file load
+// changes statuses (through the end of validity) without emailing anyone, on
+// CAPEX as on OPEX.
 
 function service(sent: any[]) {
   const args: any[] = Array.from({ length: 12 }, () => undefined);
@@ -91,29 +93,29 @@ async function testUpdateEmailsOwners() {
   });
 }
 
-async function testCsvImportSendsNothing() {
+async function testBudgetFileSendsNothing() {
   await inRolledBackTransaction(async (runner) => {
     const seed = await seedCapexWithOwners(runner);
     const sent: any[] = [];
-    const svc = service(sent);
-    const headers = svc.csvHeaders();
-    const values: Record<string, string> = {
-      item_number: 'CPX-7', description: 'Storage array', ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium',
-      currency: 'EUR', status: 'disabled', disabled_at: '2024-06-30', owner_it_email: seed.itOwner.email, owner_business_email: seed.businessOwner.email,
-    };
-    const buffer = Buffer.from(`${headers.join(';')}\n${headers.map((h) => values[h] ?? '').join(';')}\n`, 'utf8');
+    const file = 'item_number,name,end_of_validity,owner_it_email,owner_business_email\n'
+      + `CPX-7,Storage array,2024-06-30,${seed.itOwner.email},${seed.businessOwner.email}\n`;
 
-    const result = await svc.importCsv({ file: { buffer } as any, dryRun: false, userId: seed.actor.id }, { manager: runner.manager });
-    assert.equal(result.ok, true, `import accepted (${JSON.stringify(result.errors)})`);
-    const [row] = await runner.query(`SELECT status, owner_it_id FROM capex_items WHERE id = $1`, [seed.itemId]);
-    assert.deepEqual([row.status, row.owner_it_id], ['disabled', seed.itOwner.id], 'the import changed the status, owners kept');
-    assert.equal(sent.length, 0, 'the CSV import sends no status-change email');
+    const result = await loadBudgetFile(runner.manager, 'capex', seed.tenantId, file, captureAudit() as any, service(sent) as any);
+    assert.equal(result.ok, true, `load accepted (${JSON.stringify((result as any).errors)})`);
+    assert.equal((result as any).updated, 1);
+    const [row] = await runner.query(`SELECT status, owner_it_id, owner_business_id FROM capex_items WHERE id = $1`, [seed.itemId]);
+    assert.deepEqual(
+      [row.status, row.owner_it_id, row.owner_business_id],
+      ['disabled', seed.itOwner.id, seed.businessOwner.id],
+      'the load changed the status, owners kept',
+    );
+    assert.equal(sent.length, 0, 'the budget file load sends no status-change email');
   });
 }
 
 void runSpecs('capex-status-email.integration.spec', [
   ['testUpdateEmailsOwners', testUpdateEmailsOwners],
-  ['testCsvImportSendsNothing', testCsvImportSendsNothing],
+  ['testBudgetFileSendsNothing', testBudgetFileSendsNothing],
 ]);
 
 // `dataSource` is imported so the CI runner schedules this spec on the database lane.

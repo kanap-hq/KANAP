@@ -6,7 +6,6 @@ import dataSource from '../../data-source';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { SpendVersionsController } from '../spend-versions.controller';
 import { CapexVersionsController } from '../../capex/capex-versions.controller';
-import { BudgetRowsCsvService } from '../budget-rows-csv.service';
 import { DISABLED_CALENDAR_WARNING } from '../round-inputs.util';
 import {
   amountsService,
@@ -17,9 +16,7 @@ import {
   FRANCE_218_2026,
   freezeColumn,
   inRolledBackTransaction,
-  itemCsvImporter,
   Kind,
-  noFreeze,
   period,
   readLines,
   readMeasure,
@@ -34,6 +31,7 @@ import {
   setTenant,
   TABLES,
 } from './round-inputs.fixtures';
+import { exportBudgetFile, loadBudgetFile, preflightBudgetFile } from './budget-file.fixtures';
 
 // Columns computed from quantity × price lines through the amounts services
 // (bulk-upsert `kind: 'lines'`), on OPEX and CAPEX, against the database
@@ -42,7 +40,7 @@ import {
 // response), fried's lines on a standard calendar, wholesale replacement,
 // `also_measures`, `[]`, the freeze, calendars (disabled, another tenant's,
 // the key-share lock), another tenant's version, the lines kept by hand
-// edits, spreads and the item CSV, copy and clear.
+// edits and spreads, copy and clear.
 
 const YEAR = 2026;
 const KINDS: Kind[] = ['opex', 'capex'];
@@ -571,7 +569,7 @@ async function testOtherTenant(kind: Kind) {
   });
 }
 
-/** A hand edit, a spread (yearly, quarterly, item CSV) keep the lines and the FTE; sending the lines again computes again. */
+/** A hand edit, a spread (yearly, quarterly) keep the lines and the FTE; sending the lines again computes again. */
 async function testOtherWritesKeepLines(kind: Kind) {
   await withCalendarLine(kind, async ({ runner, tenantId, versionId, calendarId }) => {
     const svc = amountsService(kind);
@@ -592,10 +590,7 @@ async function testOtherWritesKeepLines(kind: Kind) {
     assert.deepEqual(await linesOf(), ids, `${kind}: the lines stay after a spread`);
 
     await svc.bulkUpsert(versionId, { kind: 'quarterly', year: YEAR, measure: 'planned', Q1: 30 }, null, { manager: runner.manager });
-    await itemCsvImporter(kind).writeImportedTotals(runner.manager, { id: versionId, tenant_id: tenantId, budget_year: YEAR }, YEAR, { planned: 2400 });
-    const csv = (await readRecords(runner, kind, versionId)).planned;
-    assert.deepEqual([csv.method, csv.last_calculation.source, csv.fte], ['spread', 'item_csv', '0.75']);
-    assert.deepEqual(await linesOf(), ids, `${kind}: the lines stay after the item CSV`);
+    assert.deepEqual(await linesOf(), ids, `${kind}: the lines stay after a quarterly edit`);
     const listed = await svc.listByYear(versionId, YEAR, { manager: runner.manager });
     assert.deepEqual(listed.round_inputs[0].lines.map((l: any) => l.label), ['Consultant', 'Licences'], `${kind}: returned as the reference`);
 
@@ -681,7 +676,7 @@ async function testCopyAndClear(kind: Kind) {
 /**
  * A piece bought once on a date before the 15th (Budget) or after it
  * (Revision): the line keeps its date, the record covers the whole month, so
- * the budget rows file re-imports it unchanged and a copy shifts it a year.
+ * the budget file re-imports it unchanged and a copy shifts it a year.
  */
 async function testOneDateLineCoversItsMonth(kind: Kind) {
   await withCalendarLine(kind, async ({ runner, tenantId, versionId, itemId }) => {
@@ -703,20 +698,18 @@ async function testOneDateLineCoversItsMonth(kind: Kind) {
     }
     const before = await readRecords(runner, kind, versionId);
 
-    const rows = new BudgetRowsCsvService(captureAudit() as any, noFreeze as any);
-    const access = { isAdmin: true, permissions: {} };
-    const { content } = await rows.exportCsv({ scope: 'data', year: String(YEAR), access }, { manager: runner.manager, tenantId });
-    const exported = content.replace(/^\ufeff/, '').split('\n').filter((l) => l.includes(';planned;') || l.includes(';forecast;'));
-    assert.equal(exported.length, 2, `${kind}: both columns exported`);
-    for (const row of exported) assert.ok(row.includes(`;${YEAR}-03-01;${YEAR}-03-31;`), `${kind}: exported with March as its period: ${row}`);
-    const reimport = await rows.importCsv(
-      { file: { buffer: Buffer.from(content, 'utf8') } as any, dryRun: false, userId: null, access },
-      { manager: runner.manager, tenantId },
-    );
-    assert.deepEqual([reimport.ok, reimport.errors, reimport.updated, reimport.inserted], [true, [], 0, 0], `${kind}: the export re-imports unchanged`);
+    // The budget file of both columns, yearly and month by month, reads back and loads unchanged.
+    for (const detail of ['yearly', 'months'] as const) {
+      const content = await exportBudgetFile(runner.manager, kind, tenantId, [itemId], { amountYears: String(YEAR), columns: 'budget,forecast', detail });
+      const report = await preflightBudgetFile(runner.manager, kind, tenantId, content);
+      assert.deepEqual([report.ok, report.changes.unchanged, report.changes.updated], [true, 1, 0], `${kind} ${detail}: the export reads back unchanged`);
+      const loaded = await loadBudgetFile(runner.manager, kind, tenantId, content);
+      assert.deepEqual([(loaded as any).inserted, (loaded as any).updated], [0, 0], `${kind} ${detail}: the export loads unchanged`);
+    }
     const after = await readRecords(runner, kind, versionId);
     for (const measure of ['planned', 'forecast'] as const) {
       assert.equal(after[measure].updated_at.getTime(), before[measure].updated_at.getTime(), `${kind} ${measure}: record untouched`);
+      assert.equal(after[measure].method, 'computed', `${kind} ${measure}: still computed`);
     }
 
     await budgetOperations(kind).copyBudgetColumn(

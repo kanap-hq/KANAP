@@ -12,6 +12,8 @@ import { context, seedCompany, seedLine, seedTenant, seedUser, services, withRol
 // back as all unchanged.
 
 const HEADER = COST_CENTER_CSV_HEADERS.join(';');
+/** The input files below stay `;` (a `;` file still loads); an English export is `,`-separated now. */
+const EXPORT_HEADER = COST_CENTER_CSV_HEADERS.join(',');
 
 function file(lines: string[], header = HEADER): Express.Multer.File {
   return { buffer: Buffer.from(`\ufeff${header}\n${lines.join('\n')}\n`, 'utf8'), originalname: 'cost_centers.csv' } as Express.Multer.File;
@@ -165,7 +167,7 @@ async function testExportImportIsUnchanged() {
     const exported = await csv.exportCsv('data', ctx);
     assert.equal(exported.filename, 'cost_centers.csv');
     const lines = exported.content.replace(/^\ufeff/, '').trim().split('\n');
-    assert.equal(lines[0], HEADER);
+    assert.equal(lines[0], EXPORT_HEADER);
     assert.equal(lines.length, 4);
     assert.match(exported.content, /'=SUM\(A1\)/, 'formula-like cells are neutralized');
 
@@ -181,7 +183,7 @@ async function testExportImportIsUnchanged() {
     const template = await csv.exportCsv('template', ctx);
     assert.equal(template.filename, 'cost_centers_template.csv');
     assert.ok(template.content.startsWith('\ufeff'));
-    assert.equal(template.content.replace(/^\ufeff/, '').trim(), HEADER);
+    assert.equal(template.content.replace(/^\ufeff/, '').trim(), EXPORT_HEADER);
 
     // The plan's header set without disabled_at still imports.
     const short = COST_CENTER_CSV_HEADERS.filter((header) => header !== 'disabled_at').join(';');
@@ -205,6 +207,75 @@ async function testConversionInFileAgainstLines() {
   });
 }
 
+async function testEndOfValidityFormat() {
+  await withRollback(async (runner) => {
+    const { tenantId, csv, ctx } = await seed(runner, 'date');
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use a date such as 2027-12-31 or 31/12/2027.`;
+    /** One row of the nine columns, so the date lands in `disabled_at`. */
+    const dated = (code: string, name: string, status: string, disabledAt: string) =>
+      [code, 'group', name, '', '', '', '', status, disabledAt].join(';');
+
+    // C4 replaced the interim ISO-only rule: a local day is read under the file's
+    // order, and only a file that shows no evidence asks the screen's language.
+    const local = await csv.importCsv({
+      file: file([
+        dated('DAY', 'Day first', '', '31/12/2027'),
+        dated('SETTLED', 'Settled by the file', '', '01/03/2027'),
+      ]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(local.ok, true, JSON.stringify(local.errors));
+    assert.equal(local.notices.dates, null, '31/12/2027 settles the order, so no notice');
+    const localRows = await runner.query(
+      `SELECT code, disabled_at FROM cost_centers WHERE tenant_id = $1 ORDER BY code`,
+      [tenantId],
+    );
+    assert.deepEqual(
+      localRows.map((row: { code: string; disabled_at: Date }) => [row.code, new Date(row.disabled_at).toISOString()]),
+      [['DAY', '2027-12-31T12:00:00.000Z'], ['SETTLED', '2027-03-01T12:00:00.000Z']],
+    );
+
+    const ambiguous = await csv.importCsv({ file: file([dated('AMB', 'Ambiguous', '', '01/03/2027')]), dryRun: false }, ctx);
+    assert.equal(ambiguous.ok, true, JSON.stringify(ambiguous.errors));
+    assert.equal(ambiguous.notices.dates, 'Dates read month first: 01/03/2027 is January 3.');
+    const [ambiguousRow] = await runner.query(`SELECT disabled_at FROM cost_centers WHERE tenant_id = $1 AND code = 'AMB'`, [tenantId]);
+    assert.equal(new Date(ambiguousRow.disabled_at).toISOString(), '2027-01-03T12:00:00.000Z', 'English reads 01/03/2027 as January 3');
+
+    // `-` clears a detail that allows it, never an end of validity; an unreadable cell stays a row error.
+    const refused = await csv.importCsv({
+      file: file([
+        dated('DASH', 'Dash', '', '-'),
+        dated('JUNK', 'Junk', '', 'not-a-date'),
+      ]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(refused.ok, false);
+    assert.deepEqual(refused.errors, [
+      { row: 2, message: message('-') },
+      { row: 3, message: message('not-a-date') },
+    ]);
+    assert.deepEqual(await codes(runner, tenantId), ['AMB', 'DAY', 'SETTLED'], 'the refused file writes nothing');
+
+    // A blank status skips the "enabled, but the date has passed" check, so the case still passes after 2027-03-01.
+    const accepted = await csv.importCsv({
+      file: file([
+        'BARE;group;Bare day;;;;;;2027-03-01',
+        'TS;group;Timestamp;;;;;;2027-03-01T15:04:05.000Z',
+      ]),
+      dryRun: false,
+    }, ctx);
+    assert.equal(accepted.ok, true, JSON.stringify(accepted.errors));
+    const rows = await runner.query(
+      `SELECT code, disabled_at FROM cost_centers WHERE tenant_id = $1 AND code = ANY($2::text[]) ORDER BY code`,
+      [tenantId, ['BARE', 'TS']],
+    );
+    assert.deepEqual(
+      rows.map((row: { code: string; disabled_at: Date }) => [row.code, new Date(row.disabled_at).toISOString()]),
+      [['BARE', '2027-03-01T12:00:00.000Z'], ['TS', '2027-03-01T15:04:05.000Z']],
+    );
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   const failures: string[] = [];
@@ -215,6 +286,7 @@ async function main() {
       testCycleInsideTheFile,
       testExportImportIsUnchanged,
       testConversionInFileAgainstLines,
+      testEndOfValidityFormat,
     ]) {
       try {
         await test();

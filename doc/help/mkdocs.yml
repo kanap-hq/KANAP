@@ -124,6 +124,7 @@ plugins:
             CAPEX: CAPEX
             Contracts: Contrats
             Budget Administration: Administration
+            Load a budget from a spreadsheet: Charger un budget depuis un tableur
             Reports: Rapports
             Master Data: Données de référence
             Organization: Organisation
@@ -201,6 +202,7 @@ plugins:
             CAPEX: CAPEX
             Contracts: Verträge
             Budget Administration: Administration
+            Load a budget from a spreadsheet: Ein Budget aus einer Tabellenkalkulation laden
             Reports: Berichte
             Master Data: Stammdaten
             Organization: Organisation
@@ -278,6 +280,7 @@ plugins:
             CAPEX: CAPEX
             Contracts: Contratos
             Budget Administration: Administración
+            Load a budget from a spreadsheet: Cargar un presupuesto desde una hoja de cálculo
             Reports: Informes
             Master Data: Datos maestros
             Organization: Organización
@@ -361,6 +364,7 @@ nav:
     - CAPEX: capex.md
     - Contracts: contracts.md
     - Budget Administration: budget-operations.md
+    - Load a budget from a spreadsheet: budget-file.md
     - Reports: reports.md
 
   - Master Data:

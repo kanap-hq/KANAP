@@ -35,6 +35,7 @@ import { PortfolioProject } from '../portfolio/portfolio-project.entity';
 import { CommonModule } from '../common/common.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
+import { BudgetFileModule } from '../spend/budget-file/budget-file.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
     TasksModule,
     StorageModule,
     NotificationsModule,
+    BudgetFileModule,
   ],
   controllers: [CapexItemsController, CapexVersionsController, CapexTasksController],
   providers: [CapexItemsService, CapexItemsDeleteService, CapexVersionsService, CapexAmountsService, CapexAllocationsService, CapexAllocationCalculatorService, CapexItemContactsService, UserTimeAggregateService],

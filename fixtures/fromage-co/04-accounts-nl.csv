@@ -15,3 +15,5 @@ account_number;account_name;native_name;description;consolidation_account_number
 47200;IT Consulting;IT-advies;Strategie- en architectuuradvies;6300;IT Professional Services;;enabled
 48100;IT Training;IT-opleiding en certificering;Opleidingen en professionele certificeringen;6400;IT General Expenses;;enabled
 48200;IT Travel & Events;IT-reizen en evenementen;Reizen, conferenties en beurzen;6400;IT General Expenses;;enabled
+01100;Software Assets;Immateriële vaste activa — software;Intangible fixed assets — acquired software and licences;;;;enabled
+02100;IT Equipment;Materiële vaste activa — IT-apparatuur;Tangible fixed assets — servers, workplaces and network;;;;enabled

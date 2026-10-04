@@ -1,1 +1,3 @@
-email;first_name;last_name;role;company_name;department_name;status
+email,first_name,last_name,role,company_name,department_name,status
+alex.martin@aurora-systems.example,Alex,Martin,Budget Member,Aurora Systems,Infrastructure,enabled
+sam.lee@aurora-systems.example,Sam,Lee,Budget Reader,Aurora Systems,Applications,enabled

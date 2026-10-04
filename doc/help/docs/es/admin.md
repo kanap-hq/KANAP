@@ -148,6 +148,27 @@ Acciones de fila, desde el menú al final de cada fila:
 | **Enviar restablecimiento de contraseña** | Enviar por correo un enlace de restablecimiento de contraseña. Se muestra solo para cuentas locales activadas. |
 | **Eliminar** | Eliminar el usuario permanentemente. Desactive la cuenta en su lugar si otros registros la referencian. |
 
+### Archivo CSV de usuarios
+
+**Exportar CSV** descarga la lista de usuarios. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
+
+Las columnas:
+
+| Columna | Contenido |
+|---|---|
+| `email` | Obligatoria. Las filas se emparejan por esta dirección, así que escríbala tal como la tiene el espacio de trabajo |
+| `first_name`, `last_name` | El nombre de la persona |
+| `role` | El rol que se asignará. Una celda vacía da el rol **Contact** |
+| `company_name` | La empresa, por su nombre. Opcional |
+| `department_name` | El departamento, por su nombre. Necesita un `company_name` |
+| `status` | `contact`, `invited`, `enabled` o `disabled`. Una celda vacía da `contact` |
+
+La carga crea un rol que el archivo nombra y que su espacio de trabajo no tiene, con una descripción por defecto. La verificación lo lista y no crea nada: un archivo que solo comprueba no cambia ningún rol. Un nombre que aparece dos veces en el archivo se conserva una vez, gana la primera fila.
+
+El archivo no contiene ninguna fecha ni ningún importe. Una importación no define ninguna contraseña: un usuario nuevo inicia sesión tras una invitación o un restablecimiento de contraseña.
+
+Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador y los dos pasos de importación.
+
 ### Crear un usuario
 
 1. Haga clic en **Nuevo**

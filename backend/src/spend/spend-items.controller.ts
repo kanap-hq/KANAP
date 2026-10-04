@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SpendItemsService } from './spend-items.service';
 import { SpendItemsDeleteService } from './spend-items-delete.service';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
+import { attachmentMulterOptions } from '../common/upload';
 import { PermissionGuard } from '../auth/permission.guard';
 import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { StorageService } from '../common/storage/storage.service';
@@ -23,7 +23,13 @@ import {
   ListSpendQueryInput,
 } from './dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { analyzeAfterLargeImport, lineImportTables } from './budget-import-statistics';
+import { AuditService } from '../audit/audit.service';
+import { FreezeService } from '../freeze/freeze.service';
+import { analyzeAfterLargeImport } from './budget-import-statistics';
+import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
+import { exportListQuery } from './budget-file/export-file';
+import { importAnalyzeTables } from './budget-file/import-file';
+import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
 
 @UseGuards(JwtAuthGuard)
 @Controller('spend-items')
@@ -33,6 +39,9 @@ export class SpendItemsController {
     private readonly deleteSvc: SpendItemsDeleteService,
     private readonly storage: StorageService,
     private readonly contactsSvc: SpendItemContactsService,
+    private readonly budgetFile: BudgetFileService,
+    private readonly audit: AuditService,
+    private readonly freeze: FreezeService,
   ) {}
 
   /** Every `:id` route takes a UUID or an OPX-N reference; a malformed id is a 400. */
@@ -118,19 +127,94 @@ export class SpendItemsController {
     return this.svc.summaryAggregateRequest(body, { manager: ctx.manager, access: budgetListAccess(ctx) });
   }
 
-  // Export before parameterized ':id'
+  /** The budget file (C2a). A read: a frozen tenant keeps it. `ctx` is merged on GET. */
+  @ReadOnlyRoute()
   @UseGuards(PermissionGuard)
   @RequireLevel('opex', 'admin')
-  @Get('export')
-  async export(
-    @Query('scope') scope: 'template' | 'data' = 'data',
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Get('budget-file/export')
+  async exportBudgetFile(
+    @Query() query: Record<string, string>,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager });
+    const listQuery = exportListQuery(query, query.all === 'true' || query.all === '1');
+    const { ids } = await this.svc.summaryIds(listQuery, { manager: ctx.manager, access: budgetListAccess(ctx) });
+    const { filename, content } = await this.budgetFile.exportFile('opex', ids, {
+      manager: ctx.manager as EntityManager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId || null,
+    }, {
+      language: query.language,
+      amountYears: query.amountYears,
+      columns: query.columns,
+      detail: query.detail,
+    });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
+  }
+
+  @ReadOnlyRoute()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('opex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('budget-file/preflight')
+  @HttpCode(200)
+  @UseInterceptors(BudgetFileSizeInterceptor, FileInterceptor('file', budgetFileMulterOptions))
+  preflightBudgetFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('language') language: string,
+    @Query('dateOrder') dateOrder: string,
+    @Query('decimalMark') decimalMark: string,
+    @Query('createSuppliers') createSuppliers: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    if (!file?.buffer) throw new BadRequestException('Choose a CSV file.');
+    return this.budgetFile.preflight('opex', file.buffer, {
+      manager: ctx.manager as EntityManager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId || null,
+    }, {
+      language,
+      dateOrder,
+      decimalMark,
+      createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
+      canCreateSuppliers: canCreateSuppliers(ctx),
+    });
+  }
+
+  /** The load (C2b). Not a read. `analyzeAfterLargeImport` is the last call. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('opex', 'admin')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('budget-file/import')
+  @HttpCode(200)
+  @UseInterceptors(BudgetFileSizeInterceptor, FileInterceptor('file', budgetFileMulterOptions))
+  async importBudgetFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('snapshot') snapshot: string,
+    @Query('language') language: string,
+    @Query('dateOrder') dateOrder: string,
+    @Query('decimalMark') decimalMark: string,
+    @Query('createSuppliers') createSuppliers: string,
+    @Tenant() ctx: TenantRequest,
+    @Req() req: any,
+  ) {
+    if (!file?.buffer) throw new BadRequestException('Choose a CSV file.');
+    const result = await this.budgetFile.importFile('opex', file.buffer, snapshot, {
+      manager: ctx.manager as EntityManager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId || null,
+    }, {
+      language,
+      dateOrder,
+      decimalMark,
+      createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
+      canCreateSuppliers: canCreateSuppliers(ctx),
+    }, { items: this.svc, audit: this.audit, freeze: this.freeze });
+    await analyzeAfterLargeImport(req, importAnalyzeTables('opex', result), result);
+    return result;
   }
 
   @UseGuards(PermissionGuard)
@@ -419,24 +503,6 @@ export class SpendItemsController {
   ) {
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.update(id, body as Record<string, unknown>, ctx.userId || undefined, { manager: ctx.manager });
-  }
-
-  @UseGuards(PermissionGuard)
-  @RequireLevel('opex', 'admin')
-  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
-  @Post('import')
-  @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
-  async import(
-    @UploadedFile() file: Express.Multer.File,
-    @Query('dryRun') dryRunRaw: string,
-    @Tenant() ctx: TenantRequest,
-    @Req() req: any,
-  ) {
-    const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    const result = await this.svc.importCsv({ file, dryRun, userId: ctx.userId || null }, { manager: ctx.manager });
-    // A large import: committed here, then its tables analysed (budget-import-statistics.ts).
-    await analyzeAfterLargeImport(req, lineImportTables('opex'), result);
-    return result;
   }
 
   @UseGuards(PermissionGuard)

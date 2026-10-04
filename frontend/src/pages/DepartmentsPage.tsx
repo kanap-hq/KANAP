@@ -199,13 +199,14 @@ export default function DepartmentsPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope: scope };
         }}
       />
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/departments" title={t("departments.export")} />
+      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/departments" title={t("departments.export")} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint="/departments"
         title={t("departments.import")}
         onImported={() => setRefreshKey((k) => k + 1)}
+        flexibleFormat
       />
     </>
   );

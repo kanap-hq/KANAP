@@ -15,3 +15,5 @@ account_number;account_name;native_name;description;consolidation_account_number
 6702;IT Consulting;Consulenza IT;Consulenza strategica e architetturale;6300;IT Professional Services;;enabled
 6801;IT Training;Formazione IT;Formazione e certificazioni professionali;6400;IT General Expenses;;enabled
 6802;IT Travel & Events;Viaggi e eventi IT;Viaggi, conferenze e fiere;6400;IT General Expenses;;enabled
+205000;Software Assets;Immobilizzazioni immateriali — software;Intangible assets — acquired software and licences;;;;enabled
+215000;IT Equipment;Immobilizzazioni materiali — attrezzature IT;Tangible assets — servers, workplaces and network;;;;enabled

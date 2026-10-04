@@ -6,15 +6,20 @@ import { ExternalContact } from '../contacts/external-contact.entity';
 import { SupplierContactLink, SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { SupplierUpsertDto } from './dto/supplier.dto';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import {
+  cellOf,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 
 @Injectable()
 export class SuppliersService {
@@ -238,10 +243,13 @@ export class SuppliersService {
     return ['name', 'erp_supplier_id', 'commercial_contact', 'technical_contact', 'support_contact', 'notes', 'status'];
   }
 
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }): Promise<{ filename: string; content: string }> {
+  async exportCsv(
+    scope: 'template' | 'data' = 'data',
+    opts?: { manager?: EntityManager; language?: CsvLanguage },
+  ): Promise<{ filename: string; content: string }> {
+    const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
-    const delimiter = ';';
-    const rows: any[] = [];
+    const rows: string[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       const mg = opts?.manager ?? repo.manager;
@@ -252,80 +260,58 @@ export class SuppliersService {
           const link = await linkRepo.findOne({ where: { supplier_id: s.id, role }, relations: ['contact'], order: { is_primary: 'DESC' as any, created_at: 'ASC' as any } as any });
           return link?.contact?.email ?? '';
         };
-        rows.push({
-          name: s.name ?? '',
-          erp_supplier_id: s.erp_supplier_id ?? '',
-          commercial_contact: await roleEmail(SupplierContactRole.COMMERCIAL),
-          technical_contact: await roleEmail(SupplierContactRole.TECHNICAL),
-          support_contact: await roleEmail(SupplierContactRole.SUPPORT),
-          notes: s.notes ?? '',
-          status: s.status ?? 'enabled',
-        });
+        rows.push([
+          s.name ?? '',
+          s.erp_supplier_id ?? '',
+          await roleEmail(SupplierContactRole.COMMERCIAL),
+          await roleEmail(SupplierContactRole.TECHNICAL),
+          await roleEmail(SupplierContactRole.SUPPORT),
+          s.notes ?? '',
+          String(s.status ?? 'enabled'),
+        ]);
       }
     }
-    // Build CSV text using fast-csv
     const filename = scope === 'template' ? 'suppliers_template.csv' : 'suppliers.csv';
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      // write headers only if template
-      if (scope === 'template') {
-        const headerLine = headers.join(delimiter) + '\n';
-        chunks.push(headerLine);
-        stream.end();
-      } else {
-        for (const row of rows) stream.write(row);
-        stream.end();
-      }
-    });
-    const content = '\ufeff' + chunks.join('');
-    return { filename, content };
+    return { filename, content: writeCsv({ language, headers, rows }) };
   }
 
   async importCsv(
-    { file, dryRun, userId }: { file: Express.Multer.File; dryRun: boolean; userId?: string | null },
+    {
+      file,
+      dryRun,
+      userId,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      userId?: string | null;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     opts?: { manager?: EntityManager },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const delimiter = ';';
+    const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
-    type Row = Record<string, string>;
-    const rows: Row[] = [];
-    const errors: { row: number; message: string }[] = [];
-    let headerOk = false;
-    let headerSet: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-      if (!buf) {
-        reject(new BadRequestException('Empty upload'));
-        return;
-      }
-      let content: string;
-      try {
-        content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
-      } catch {
-        reject(new BadRequestException('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.'));
-        return;
-      }
-      parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
-        .on('headers', (headers: string[]) => {
-          headerSet = headers;
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h));
-          headerOk = missing.length === 0 && extras.length === 0;
-          if (!headerOk) {
-            errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
-          }
-        })
-        .on('error', (err) => reject(err))
-        .on('data', (row: Row) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
+    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
+    if (!buf) throw new BadRequestException('Empty upload');
+    const read = await readMasterDataFile({
+      file: buf as Buffer,
+      fields: expectedHeaders,
+      language: readLanguage,
+      dateOrder,
+      decimalMark,
     });
-    if (!headerOk) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
+    const errors: { row: number; message: string }[] = [];
+    if (read.headerError) {
+      return {
+        ok: false, dryRun, total: 0, inserted: 0, updated: 0,
+        errors: [{ row: 0, message: read.headerError }],
+        ignoredColumns: read.ignoredColumns, notices: read.notices,
+      };
     }
     // Validate rows
     let inserted = 0;
@@ -336,23 +322,28 @@ export class SuppliersService {
       technical_email: string | null;
       support_email: string | null;
     }> = [];
-    rows.forEach((r, idx) => {
-      const line = idx + 2; // account for header
-      const name = (r['name'] ?? '').toString().trim();
-      const statusRaw = (r['status'] ?? 'enabled').toString().trim().toLowerCase();
+    read.rows.forEach((row) => {
+      const line = row.line;
+      const problems = rowProblems(row);
+      if (problems.length > 0) {
+        errors.push(...problems.map((message) => ({ row: line, message })));
+        return;
+      }
+      const name = cellOf(row, 'name');
+      const statusRaw = cellOf(row, 'status').toLowerCase();
       if (!name) errors.push({ row: line, message: 'Name is required' });
       if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.` });
       }
       const body: SupplierUpsertDto = {
         name,
-        erp_supplier_id: (r['erp_supplier_id'] ?? '').toString().trim() || null,
-        notes: (r['notes'] ?? '').toString().trim() || null,
+        erp_supplier_id: cellOf(row, 'erp_supplier_id') || null,
+        notes: cellOf(row, 'notes') || null,
         status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED,
       };
-      const commercial_email = ((r['commercial_contact'] ?? '').toString().trim() || '').toLowerCase() || null;
-      const technical_email = ((r['technical_contact'] ?? '').toString().trim() || '').toLowerCase() || null;
-      const support_email = ((r['support_contact'] ?? '').toString().trim() || '').toLowerCase() || null;
+      const commercial_email = (cellOf(row, 'commercial_contact').toLowerCase()) || null;
+      const technical_email = (cellOf(row, 'technical_contact').toLowerCase()) || null;
+      const support_email = (cellOf(row, 'support_contact').toLowerCase()) || null;
       // Basic email sanity check when provided
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (commercial_email && !emailRegex.test(commercial_email)) errors.push({ row: line, message: 'Invalid commercial_contact email' });
@@ -361,7 +352,7 @@ export class SuppliersService {
       normalized.push({ body, commercial_email, technical_email, support_email });
     });
     if (errors.length > 0) {
-      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Deduplicate identical suppliers (same content) and then determine inserts/updates by name match
     const uniqueMap = new Map<string, { body: SupplierUpsertDto; commercial_email: string | null; technical_email: string | null; support_email: string | null }>();
@@ -377,7 +368,7 @@ export class SuppliersService {
       if (existing) updated += 1; else inserted += 1;
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit changes
     let processed = 0;
@@ -409,6 +400,6 @@ export class SuppliersService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [] };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

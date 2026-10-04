@@ -412,20 +412,16 @@ Vous pouvez exporter la liste de vos CoA (avec des métadonnées comme le code, 
 
 ### Comptes (point d'accès global)
 
-Le CSV global `/accounts` inclut une colonne `coa_code` qui identifie le CoA de chaque compte.
+Le CSV global `/accounts` inclut une colonne `coa_code` qui identifie le CoA de chaque compte. **Exporter CSV** et **Importer CSV** l'utilisent lorsqu'aucun CoA n'est sélectionné sur la page.
 
-  - **Export**
-      - **Modèle** : en-têtes uniquement (utilisez-le pour préparer les imports)
-      - **Données** : tous les comptes avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation et statut
-  - **Import**
-      - Commencez par la **Vérification** (contrôle de la structure, de l'encodage, des champs obligatoires et des doublons)
-      - Si la vérification est correcte, **Charger** applique les insertions et mises à jour
-      - **Correspondance** : par `(coa_code, account_number)` dans votre espace de travail
-      - **Champs obligatoires** : `coa_code`, `account_number`, `account_name`
-      - **Champs facultatifs** : `native_name`, `description`, champs de consolidation, `status`
-      - Les doublons du fichier (même coa_code + account_number) sont dédoublonnés ; la première occurrence l'emporte
+  - **Exporter CSV** : tous les comptes avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation et statut
+  - **Importer CSV** : **Télécharger le modèle** dans la fenêtre donne un fichier avec les seuls en-têtes. Commencez par la **Vérification préalable** pour valider la structure, l'encodage, les champs obligatoires et les doublons, puis **Charger** pour appliquer les insertions et les mises à jour
+  - **Correspondance** : par `(coa_code, account_number)` dans votre espace de travail
+  - **Cellules obligatoires** : `coa_code`, `account_number`, `account_name`. Toutes les lignes d'un fichier doivent porter le même `coa_code`
+  - **Cellules facultatives** : `native_name`, `description`, champs de consolidation, `status`
+  - Les doublons du fichier (même coa_code + account_number) sont dédoublonnés ; la première occurrence l'emporte
 
-**Schéma CSV** (séparateur point-virgule `;`, UTF-8) :
+**Schéma CSV** (l'export écrit le séparateur de la langue de l'écran ; montré ici avec des points-virgules) :
 ```
 coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
 ```
@@ -434,16 +430,16 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 
 Depuis la page Plans comptables, **Import CSV** et **Export CSV** portent automatiquement sur le CoA sélectionné.
 
-  - **Export** : comptes de ce CoA (pas besoin de colonne `coa_code`)
-  - **Import** : les comptes sont insérés ou mis à jour automatiquement dans ce CoA
+  - **Exporter CSV** : comptes de ce CoA (pas besoin de colonne `coa_code`)
+  - **Importer CSV** : les comptes sont insérés ou mis à jour automatiquement dans ce CoA
 
-**Schéma CSV** (limité au CoA, séparateur point-virgule `;`, UTF-8) :
+**Schéma CSV** (limité au CoA ; montré ici avec des points-virgules) :
 ```
 account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
 ```
 
 **Remarques** :
-  - Utilisez l'**encodage UTF-8** et des **points-virgules** comme séparateurs
+  - Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
   - Le `coa_code` doit correspondre à un plan comptable existant de votre espace de travail
   - Les numéros de compte doivent être uniques au sein d'un CoA
   - Valeurs de statut : `enabled` ou `disabled` (enabled par défaut)

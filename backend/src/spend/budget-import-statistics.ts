@@ -27,8 +27,8 @@ import { createRequestCommitThenRun } from '../common/import-connection';
  * counts that include its rolled-back rows (ANALYZE writes them in place, whatever becomes of
  * its transaction). A failure is a warning: autovacuum analyses the tables later anyway.
  *
- * The CSV project rewrites the importers (decision D6); this stays a call at the end of the
- * three import routes (budget rows, OPEX lines, CAPEX lines).
+ * It is the last call of the budget file load routes (`POST /spend-items/budget-file/import`
+ * and the CAPEX twin).
  */
 export const ANALYZE_AFTER_IMPORT_ROWS = 1000;
 
@@ -48,9 +48,6 @@ const LINE_TABLES: Record<Scope, readonly string[]> = {
   opex: ['spend_items', 'spend_item_analytics_values'],
   capex: ['capex_items', 'capex_item_analytics_values'],
 };
-
-/** What the budget rows import writes: versions, months, round inputs and totals of both types. */
-export const BUDGET_ROWS_IMPORT_TABLES: readonly string[] = [...BUDGET_TABLES.opex, ...BUDGET_TABLES.capex];
 
 /** What a line import writes: the lines, their analytics values, and their budget tables. */
 export function lineImportTables(scope: Scope): readonly string[] {

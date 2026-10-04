@@ -237,7 +237,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - **Reparto uniforme**, **Reparto 4-4-5** o **Reparto por trimestre**: los importes proceden de un reparto
   - **Copiado de Presupuesto 2025 +2 %**: los importes proceden de **Copiar columnas presupuestarias** en la Administración presupuestaria, con el porcentaje visible cuando lo hay
   - **Cantidad y precio · 3 líneas · 1.00 ETC**: los importes proceden de líneas, con su número y, cuando las líneas cuentan personas o días, el ETC de la columna. El ETC es la media anual. Pase el cursor sobre la etiqueta para ver las líneas, por ejemplo «Jefe de proyecto: 1 persona × 1.200 por día, 5 días por mes, de feb a jul»
-  - **Editado a mano**: se modificó un mes en la cuadrícula o mediante una importación del archivo de filas presupuestarias
+  - **Editado a mano**: se modificó un mes en la cuadrícula o mediante la importación de un archivo de presupuesto
   - Una columna sin etiqueta conserva los datos que tenía antes de que existieran los periodos
 
 **Cuando otra persona edita la misma columna**:
@@ -324,7 +324,7 @@ Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en 
   - **Copiar columnas presupuestarias** en la Administración presupuestaria: «Los importes se copiaron de Presupuesto 2025. Usar de nuevo las líneas.» La copia lleva las líneas de la columna de origen junto con los importes. Consulte [Copiar una columna calculada](budget-operations.md#copiar-una-columna-calculada)
   - Los días laborables de un calendario cambiaron: «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.» Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**
   - **Restablecer columna presupuestaria** en la Administración presupuestaria quita las líneas junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
-  - Un archivo de filas presupuestarias solo cambia los meses, y las líneas se mantienen. Consulte [Archivo de filas presupuestarias](budget-operations.md#archivo-de-filas-presupuestarias)
+  - Un archivo de presupuesto cambia los meses de una columna y deja sus líneas. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
 
 #### ETC
 
@@ -433,73 +433,11 @@ La pestaña Relaciones vincula esta partida OPEX con objetos relacionados: Proye
 
 ## Importación/exportación CSV
 
-Puede cargar masivamente partidas OPEX vía CSV para acelerar la configuración inicial o sincronizar con sistemas externos.
+**Exportar CSV** e **Importar CSV** están en la barra de herramientas de la lista OPEX. Ambos requieren derechos de administración en OPEX (`opex:admin`).
 
-**Exportar**:
-  1. Haga clic en **Exportar CSV** en la lista OPEX
-  2. Elija:
-     - **Plantilla**: Solo encabezados (úselo para crear un CSV en blanco para rellenar)
-     - **Datos**: Todas las partidas OPEX con presupuestos para A-1, A y A+1
+**Exportar CSV** escribe el archivo de presupuesto OPEX de las partidas que muestra la lista. **Importar CSV** vuelve a leer un archivo: primero se comprueba, y no se escribe nada hasta que haga clic en **Cargar**.
 
-**Estructura del CSV**:
-  - Delimitador: punto y coma `;` (no coma)
-  - Codificación: UTF-8 (guarde como "CSV UTF-8" en Excel)
-  - Encabezados: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
-  - `disabled_at` es el fin de validez: la fecha en que la partida termina. Utilice una fecha (`2026-12-31`) o una fecha y hora completas
-  - `status` es `enabled` o `disabled`. La exportación escribe el estado que se deduce del fin de validez. Una fila cuyo estado contradice su fecha se rechaza con un error de fila, por ejemplo `enabled` con una fecha ya pasada
-  - En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina la partida hoy. Una partida nueva queda activada salvo que la fila indique `disabled`, y `disabled` con una fecha vacía la termina hoy
-  - Los archivos antiguos con una columna `effective_end` se siguen importando: su fecha rellena el fin de validez cuando `disabled_at` está vacío
-  - `analytics_category` contiene el valor de la dimensión analítica por defecto, sea cual sea su nombre. Cada una de las demás dimensiones activadas tiene su propia columna, `analytics:<code>`, donde `<code>` es el código de la dimensión. Las exportaciones y la plantilla incluyen estas columnas justo después de `analytics_category`, en el orden de las dimensiones
-  - `analytics_category`, las columnas `analytics:<code>`, `cost_center_code` y `run_build` son columnas opcionales: las exportaciones y la plantilla siempre las incluyen, y los archivos sin ellas se siguen importando
-
-**Importar**:
-  1. Haga clic en **Importar CSV** en la lista OPEX
-  2. Suba su archivo CSV (arrastrar y soltar o selector de archivos)
-  3. Haga clic en **Verificación previa** para validar:
-     - Todas las columnas obligatorias están presentes y ninguna columna es desconocida. Las columnas se reconocen por su nombre, en cualquier orden
-     - Los campos obligatorios (product_name, account_number) están presentes. Una partida nueva también necesita una moneda, y un company_name salvo que tenga un centro de coste
-     - Cada empresa, proveedor, cuenta, centro de coste y responsable del archivo existe en su espacio de trabajo
-     - Las fechas son válidas y no hay dos filas que describan la misma partida
-     - Las monedas están permitidas en la configuración de monedas de su espacio de trabajo
-     - Los responsables son usuarios activos
-  4. Revise el informe de verificación previa (muestra conteos y hasta 5 errores de ejemplo). Cada error indica su fila con el número de línea del archivo tal como lo muestra un editor de texto, incluidas las líneas vacías y las celdas que ocupan varias líneas. Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa
-  5. Si es correcto, haga clic en **Cargar** para importar
-
-**Notas importantes**:
-  - **Correspondencia**: Una fila se asocia a una partida OPEX por nombre del producto y proveedor. Una fila que coincide con una partida existente la actualiza; cualquier otra fila crea una partida nueva. Una fila con `supplier_name` vacío solo coincide con una partida sin proveedor. Dos filas con el mismo nombre del producto y el mismo proveedor son un error ("Same line as row N"): conserve una sola fila por partida
-  - **Moneda**: Obligatoria para una partida nueva, y debe estar permitida en la configuración de monedas de su espacio de trabajo. En una partida existente, una celda vacía conserva su moneda
-  - **Proveedor**: `supplier_name` es opcional. Si está relleno, se usa el proveedor con exactamente ese nombre. Si no existe, el nombre se compara sin distinguir mayúsculas. Un nombre que no coincide con ningún proveedor es un error, y también lo es un nombre que coincide con varios proveedores que solo difieren en mayúsculas (por ejemplo "Acme" y "ACME" cuando el archivo dice "acme")
-  - **Empresa y cuenta**: `company_name` debe coincidir con una empresa por nombre (sin distinguir mayúsculas). Un `company_name` vacío conserva la empresa de una partida existente; una partida nueva toma la empresa de su centro de coste. Sin ninguna de las dos, la fila se rechaza: "Company is required unless the line has a cost center." `account_number` se busca en el plan de cuentas de esa empresa, o en el plan de cuentas por defecto cuando la empresa no tiene ninguno. Un número de cuenta que solo existe en otro plan es un error
-  - **Responsables**: `owner_it_email` y `owner_business_email` deben coincidir con usuarios activos por correo electrónico: un usuario invitado o un contacto sin cuenta se rechaza
-  - **Fechas**: `effective_start` (y `effective_end` en archivos antiguos) debe ser un día real del calendario en formato `YYYY-MM-DD`, por ejemplo `2026-01-01`. Otros formatos, como `01/03/2026`, son errores. Un `effective_start` vacío conserva la fecha guardada de una partida existente; una partida nueva empieza el 1 de enero del año en curso
-  - **Dimensiones analíticas**: Cada celda analítica nombra un valor de la dimensión de su columna, sin distinguir mayúsculas. Un valor que aún no existe se crea en esa dimensión durante la carga. Un valor desactivado se acepta en una partida que ya lo tiene y se rechaza como valor nuevo. Una celda vacía borra el valor de la partida en esa dimensión. Cuando falta una columna, las partidas conservan su valor en esa dimensión. Una columna de una dimensión desconocida o desactivada rechaza todo el archivo, igual que dos columnas para la misma dimensión (`analytics_category` y el propio código de la dimensión por defecto). Exportar e importar el mismo archivo no cambia nada
-  - **Centro de coste**: `cost_center_code` es el código de un centro de coste, sin distinguir mayúsculas. Un grupo se rechaza. Un centro de coste desactivado se acepta en una partida que ya lo tiene y se rechaza como valor nuevo. Una celda vacía borra el centro de coste de la partida. Cuando falta toda la columna, las partidas conservan su centro de coste
-  - **Run o build**: `run_build` es `run`, `build` o vacío (sin distinguir mayúsculas). Una celda vacía borra el valor. Cuando falta toda la columna, las partidas conservan su valor
-  - **Empresa del centro de coste**: Una partida nueva con `company_name` vacío toma la empresa de su centro de coste, y `account_number` se busca en el plan de cuentas de esa empresa. Un `company_name` informado se conserva, aunque difiera de la empresa del centro de coste
-  - **Presupuestos**: Las columnas presupuestarias rellenan las versiones A-1, A y A+1. Los importes se distribuyen uniformemente en 12 meses (modo Anual) y el periodo de la columna pasa a ser todo el año. Una celda vacía deja la columna como está; `0` la borra. Los encabezados conservan sus nombres técnicos sea cual sea el nombre que su organización da a las columnas, y también cargan las columnas ocultas
-  - **Importes mensuales**: para cargar o revisar los importes mes a mes, con el periodo de cada columna, use el **Archivo de filas presupuestarias** en la Administración presupuestaria
-
-**Errores comunes**:
-  - **"Supplier '...' not found"**: Compruebe la ortografía, o cree el proveedor en **Datos maestros > Proveedores** primero, luego reimporte
-  - **"Supplier '...' matches more than one supplier"**: Varios proveedores solo difieren de este nombre en mayúsculas. Escriba el nombre exactamente como uno de ellos, o cambie el nombre de uno en **Datos maestros > Proveedores**, luego reimporte
-  - **"Same line as row N"**: Dos filas describen la misma partida. Combínelas en una sola fila, luego reimporte
-  - **"Account ... not found in ...'s chart of accounts"**: Use una cuenta del plan de la empresa pagadora, o añada la cuenta en **Datos maestros > Planes de cuentas**, luego reimporte
-  - **"effective_start must be a valid date"**: Use el formato `YYYY-MM-DD`
-  - **"Company is required unless the line has a cost center."**: Complete `company_name` o `cost_center_code` para la partida nueva
-  - **"Cost center ... was not found."**: Compruebe el código o cree el centro de coste en **Datos maestros > Centros de coste** y vuelva a importar
-  - **"... is a group. Choose a cost center."**: Use el código de un centro de coste de ese grupo
-  - **"Cost center ... is disabled."**: Use un centro de coste activado, o vuelva a activarlo en **Datos maestros > Centros de coste**
-  - **"Run or build must be run, build or blank."**: Corrija la celda `run_build`
-  - **"The column analytics:... names no dimension. Check the dimension code or remove the column."**: Use el código que se muestra en el espacio de trabajo de la dimensión en **Datos maestros > Dimensiones analíticas**, o elimine la columna
-  - **"The ... dimension is disabled. Enable it or leave it out."**: Active la dimensión en **Datos maestros > Dimensiones analíticas**, o elimine su columna
-  - **"The file has two columns for ..."**: Dos columnas nombran la misma dimensión, por ejemplo `analytics_category` y el propio código de la dimensión por defecto. Conserve una sola columna
-  - **"... is disabled. Pick an enabled value."**: Use un valor activado de esa dimensión, o vuelva a activar el valor
-  - **"Invalid currency"**: Utilice códigos ISO de 3 letras (USD, EUR, GBP) que estén permitidos en la configuración de monedas de su espacio de trabajo
-  - **"Header mismatch"**: Falta una columna obligatoria o hay una columna desconocida; el mensaje las indica. Las columnas se reconocen por su nombre, en cualquier orden, y las columnas analíticas son opcionales. Compare la primera línea de su archivo con una plantilla nueva
-
-**Consejo**: Comience con la exportación de plantilla, rellene algunas filas y ejecute una verificación previa para detectar problemas temprano. Corrija errores en el CSV y vuelva a subirlo hasta que la verificación previa pase, luego cargue.
-
----
+El archivo contiene una fila por partida, los detalles de la partida, sus importes en columnas y `kanap_token`. [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) describe las columnas, lo que significa una celda y los dos pasos de la importación.
 
 ## Estado y ciclo de vida
 
@@ -552,7 +490,7 @@ Cada partida OPEX tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de
 
 9. **Mantenga actualizadas las métricas de empresa**: Las asignaciones dependen de la plantilla, usuarios IT y facturación de la empresa. Las métricas desactualizadas causan errores de asignación.
 
-10. **Use CSV para configuración masiva**: Si está migrando desde otro sistema o tiene cientos de partidas, comience con importación CSV. Exporte una plantilla, rellénela y haga una verificación previa antes de cargar.
+10. **Use CSV para configuración masiva**: Si está migrando desde otro sistema o tiene cientos de partidas, comience con importación CSV. Exporte un archivo nuevo, rellene sus filas y compruébelo antes de cargar.
 
 11. **Desactive, no elimine**: Preserve el historial desactivando partidas cuando ya no estén activas. Elimine solo si es un error.
 
@@ -582,7 +520,7 @@ Si no puede realizar una acción (p. ej., falta el botón **Importar CSV**, no p
 
 ## ¿Necesita ayuda?
 
-- **Problemas con CSV**: Descargue una plantilla nueva, asegure codificación UTF-8 y ejecute la verificación previa para ver errores detallados
+- **Problemas con CSV**: Exporte un archivo nuevo desde la lista y compruébelo de nuevo. El informe nombra la fila y la columna de cada error, y [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) explica qué significa cada celda
 - **Errores de asignación**: Verifique que todas las empresas tengan las métricas requeridas (plantilla, usuarios IT, facturación) para el año seleccionado
 - **Advertencia de cuenta obsoleta**: La cuenta no pertenece al plan de cuentas de la empresa pagadora; seleccione una cuenta diferente
 - **Faltan botones o pestañas**: Su rol puede no tener el nivel de permiso requerido (gestor o administrador). Contacte a su administrador del espacio de trabajo

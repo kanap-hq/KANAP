@@ -48,6 +48,12 @@ export function normalizeDisabledAtInput(value: DisabledAtInput): Date | null {
 }
 
 const YMD_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+// A full timestamp: calendar day, T, hours to seconds, optional fraction, Z or ±HH:mm.
+const ISO_TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(\.\d{1,9})?([Zz]|[+-]\d{2}:\d{2})$/;
+
+function invalidCsvEndOfValidity(text: string): Error {
+  return new Error(`Invalid disabled_at '${text}'. Use YYYY-MM-DD or a full ISO date and time.`);
+}
 
 /**
  * The end of validity for a bare calendar day: noon UTC of that day, so the
@@ -67,9 +73,13 @@ export function endOfValidityFromDate(ymd: string): Date {
 }
 
 /**
- * Parse an end of validity coming from a file, an API alias or the AI: a bare
- * YYYY-MM-DD becomes noon UTC of that day, a full timestamp is kept as given,
- * empty means no end. Throws on anything else.
+ * Parse an end of validity from an API body or the AI: a bare YYYY-MM-DD
+ * becomes noon UTC of that day, a full timestamp is kept as given, empty
+ * means no end. Throws on anything else.
+ *
+ * CSV cells do not use this. The fallback below is `new Date(text)`, which
+ * reads `01/03/2027` as January 3 and rolls a day that does not exist.
+ * Files call `parseCsvEndOfValidity`.
  */
 export function parseEndOfValidityInput(value: unknown): Date | null {
   if (value == null) return null;
@@ -82,6 +92,49 @@ export function parseEndOfValidityInput(value: unknown): Date | null {
   if (YMD_PATTERN.test(text)) return endOfValidityFromDate(text);
   const parsed = new Date(text);
   if (Number.isNaN(parsed.getTime())) throw new Error(`Invalid date '${text}'. Use YYYY-MM-DD or an ISO date and time.`);
+  return parsed;
+}
+
+/**
+ * An end-of-validity cell from a CSV file. Empty means no end. A bare
+ * YYYY-MM-DD is noon UTC of that day. A full ISO timestamp (Z or ±HH:mm)
+ * is kept. Anything else throws a row error that names the format.
+ */
+export function parseCsvEndOfValidity(value: unknown): Date | null {
+  if (value == null) return null;
+  if (typeof value !== 'string') throw invalidCsvEndOfValidity(String(value));
+  const text = value.trim();
+  if (text === '') return null;
+  // PostgreSQL has no year 0, so a cell of 0000 would fail at load as a database error.
+  if (text.startsWith('0000')) throw invalidCsvEndOfValidity(text);
+  if (YMD_PATTERN.test(text)) {
+    try {
+      return endOfValidityFromDate(text);
+    } catch {
+      throw invalidCsvEndOfValidity(text);
+    }
+  }
+  const match = ISO_TIMESTAMP.exec(text);
+  if (!match) throw invalidCsvEndOfValidity(text);
+  const [, y, m, d, h, min, s, , zone] = match;
+  if (Number(h) > 23 || Number(min) > 59 || Number(s) > 59) throw invalidCsvEndOfValidity(text);
+  if (zone !== 'Z' && zone !== 'z') {
+    const offsetHour = Number(zone.slice(1, 3));
+    const offsetMinute = Number(zone.slice(4, 6));
+    if (offsetHour > 23 || offsetMinute > 59) throw invalidCsvEndOfValidity(text);
+  }
+  // Date rolls 2027-02-30 over to March. Refuse a day that is not real before trusting it.
+  const probe = new Date(`${y}-${m}-${d}T12:00:00.000Z`);
+  if (
+    Number.isNaN(probe.getTime())
+    || probe.getUTCFullYear() !== Number(y)
+    || probe.getUTCMonth() + 1 !== Number(m)
+    || probe.getUTCDate() !== Number(d)
+  ) {
+    throw invalidCsvEndOfValidity(text);
+  }
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) throw invalidCsvEndOfValidity(text);
   return parsed;
 }
 

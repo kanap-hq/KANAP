@@ -10,8 +10,8 @@ import { withCostCenterGroups } from '../components/grid/costCenterFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
-import CsvExportDialog from '../components/csv/CsvExportDialog';
-import CsvImportDialog from '../components/csv/CsvImportDialog';
+import BudgetFileExportDialog from '../components/finance/BudgetFileExportDialog';
+import BudgetFileImportDialog from '../components/finance/BudgetFileImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { formatItemRef } from '../utils/item-ref';
@@ -142,6 +142,7 @@ export default function OpexListPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [filteredCount, setFilteredCount] = useState<number | null>(null);
   const [selectedRows, setSelectedRows] = useState<SummaryRow[]>([]);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; filtersString: string; statusScope?: StatusScope } | null>(null);
   const storedContextRef = useRef(readStoredOpexListContext());
@@ -861,6 +862,7 @@ export default function OpexListPage() {
         pageParams={pageParams}
         // The engine honours "every value but these" on every column (decision Q3).
         setFilterExcludeMode
+        onTotalChange={setFilteredCount}
         onQueryStateChange={(state) => {
           const normalizedSort = listSort(state.sort);
           const filtersObject = state.filterModel || {};
@@ -876,8 +878,27 @@ export default function OpexListPage() {
         enableRowSelection={canAdmin}
         onSelectionChanged={setSelectedRows}
       />}
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/spend-items" title={t("opex.exportTitle")} />
-      <CsvImportDialog open={importOpen} onClose={() => setImportOpen(false)} endpoint="/spend-items" title={t("opex.importTitle")} onImported={() => setRefreshKey((k) => k + 1)} />
+      <BudgetFileExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        scope="opex"
+        columnsReady={budgetColumns.ready}
+        columns={budgetColumns.all.map((column) => ({ key: column.freezeKey, label: column.label, shown: column.enabled }))}
+        filteredCount={filteredCount}
+        list={{
+          sort: lastQueryRef.current?.sort ?? '',
+          q: lastQueryRef.current?.q ?? '',
+          filters: lastQueryRef.current?.filtersString ?? '',
+          statusScope: lastQueryRef.current?.statusScope ?? 'enabled',
+        }}
+      />
+      <BudgetFileImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        scope="opex"
+        canCreateSuppliers={hasLevel('suppliers', 'member')}
+        onImported={() => setRefreshKey((k) => k + 1)}
+      />
     </>
   );
 }

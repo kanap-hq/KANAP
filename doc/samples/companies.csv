@@ -1,1 +1,2 @@
-name;country_iso;address1;address2;postal_code;city;state;reg_number;vat_number;base_currency;status;disabled_at;notes;headcount_2024;it_users_2024;turnover_2024;headcount_2025;it_users_2025;turnover_2025;headcount_2026;it_users_2026;turnover_2026
+name,country_iso,address1,address2,postal_code,city,state,reg_number,vat_number,base_currency,status,disabled_at,notes,headcount_2025,it_users_2025,turnover_2025,headcount_2026,it_users_2026,turnover_2026,headcount_2027,it_users_2027,turnover_2027
+Aurora Systems,FR,1 rue de l'Exemple,,75011,Paris,,,FR12345678901,EUR,enabled,,Sample company for the import samples,118,11,23.4,120,12,24.5,125,13,25.8

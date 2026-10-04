@@ -538,13 +538,14 @@ export default function UsersPage() {
           managedByEntra={tenantAuth?.sso_provider === 'entra' && tenantAuth?.sso_enabled && (defaultValues as any)?.external_auth_provider === 'entra'}
         />
       </FormModal>
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/users" title={t('users.exportTitle')} />
+      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/users" title={t('users.exportTitle')} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint="/users"
         title={t('users.importTitle')}
         onImported={() => setRefreshKey((k) => k + 1)}
+        flexibleFormat
       />
 
       {/* Per-user permissions modal removed */}

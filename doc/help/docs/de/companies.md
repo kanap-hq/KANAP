@@ -182,29 +182,38 @@ Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr
 
 ## CSV-Import/Export
 
-Halten Sie große Datensätze mit Ihren Quellsystemen per CSV synchron (Semikolon `;` getrennt).
+**CSV exportieren** lädt alle Unternehmen mit ihren Kennzahlen herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen, bereit zum Ausfüllen.
 
-**Export**:
+Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbolleiste der Liste gewählten Jahr: das Jahr davor, dieses Jahr und das Jahr danach.
 
-- **Vorlage**: Datei nur mit Kopfzeilen, die Sie ausfüllen können (enthält dynamische Spalten für J-1, J, J+1 basierend auf dem ausgewählten Jahr)
-- **Daten**: Aktuelle Unternehmen plus ihre Kennzahlen für J-1 / J / J+1
+| Spalte | Inhalt |
+|---|---|
+| `name` | Pflicht. Der Name des Unternehmens. Zeilen werden über diesen Namen zugeordnet |
+| `country_iso` | Pflicht. Zwei Buchstaben |
+| `address1`, `address2` | Adresszeilen |
+| `postal_code`, `city`, `state` | Adressangaben |
+| `reg_number`, `vat_number` | Handelsregisternummer und Umsatzsteuer-Identifikationsnummer |
+| `base_currency` | Pflicht. Drei Buchstaben |
+| `status` | `enabled` oder `disabled` |
+| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit |
+| `notes` | Freier Text |
+| `headcount_<Jahr>` | Pflicht, wenn die Zeile für dieses Jahr eine Kennzahl trägt |
+| `it_users_<Jahr>` | Eine ganze Zahl |
+| `turnover_<Jahr>` | Bis zu 3 Nachkommastellen, in Millionen der Basiswährung des Unternehmens |
 
 **Import**:
 
-- Beginnen Sie mit der **Vorprüfung** (validiert Kopfzeilen, Kodierung, Pflichtfelder, Duplikate und Kennzahlen)
-- Wenn die Vorprüfung OK ist, wendet **Laden** Neuanlagen und Aktualisierungen an
-- Zuordnung erfolgt über den **Namen** des Unternehmens (innerhalb Ihres Arbeitsbereichs). Duplikate in der Datei werden nach Name dedupliziert (erstes Vorkommen gewinnt)
-- **Pflichtfelder**: Name, Land (2 Buchstaben) und Basiswährung (3 Buchstaben). Die Stadt ist in der Datei optional
-- **Optionales Feld**: `coa_code` (referenziert einen Kontenplan; wenn weggelassen, wird der Standard-Kontenplan des Landes verwendet)
-- **Status und Ende der Gültigkeit**: `status` ist `enabled` oder `disabled`, und `disabled_at` ist das Ende der Gültigkeit, ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Ein neues Unternehmen ist aktiviert, sofern die Zeile nicht `disabled` angibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet das Unternehmen sonst heute
+- Beginnen Sie mit der **Vorabprüfung**. Sie prüft die Kopfzeilen, die Kodierung, die Pflichtfelder, die Duplikate und die Kennzahlen. Ist die Prüfung sauber, wendet **Laden** die Einfügungen und Aktualisierungen an
+- **Zuordnung**: über den `name` des Unternehmens. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt
+- **Pflichtfelder**: `name`, `country_iso` und `base_currency`
+- **Status und Ende der Gültigkeit**: Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Ein neues Unternehmen ist aktiviert, außer die Zeile sagt `disabled`. Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum, andernfalls beendet es das Unternehmen heute
 - Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“
-- **Kennzahlen**: Wenn Sie Kennzahlen für ein Jahr angeben, ist die Mitarbeiterzahl für dieses Jahr Pflicht; IT-Benutzer und Umsatz sind optional. Umsatz akzeptiert bis zu 3 Dezimalstellen und muss in Millionen der Basiswährung des Unternehmens angegeben werden
+- **Kennzahlen**: Geben Sie für ein Jahr Kennzahlen an, ist `headcount_<Jahr>` für dieses Jahr Pflicht. `it_users_<Jahr>` und `turnover_<Jahr>` sind optional
 
 **Hinweise**:
 
-- Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen
-- Die Liste wird nach einem erfolgreichen Laden automatisch aktualisiert
-- Wenn Sie mit `coa_code` importieren, stellen Sie sicher, dass der Kontenplan in Ihrem Arbeitsbereich zuerst existiert
+- Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datums- und Betragsformen und die beiden Importschritte
+- Die Liste aktualisiert sich nach einem erfolgreichen Laden automatisch
 
 ## Tipps
 

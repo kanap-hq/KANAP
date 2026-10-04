@@ -190,6 +190,16 @@ These endpoints are tenant-scoped and require:
 - Companies include an optional `coa_id` which links the company to a Chart of Accounts.
 - If `coa_id` is not supplied on create/update, the backend auto-assigns the default CoA for the company’s `country_iso` (when available); otherwise it falls back to the tenant’s Global Default CoA (a `GLOBAL`‑scoped CoA).
 
+### Companies CSV
+- GET `/companies/export?scope=template|data&year=YYYY&language=en|fr|de|es` → `text/csv`
+- POST `/companies/import?dryRun=true|false&year=YYYY&language=…&dateOrder=day-first|month-first&decimalMark=comma|dot` (multipart `file`)
+- Headers: `name, country_iso, address1, address2, postal_code, city, state, reg_number, vat_number, base_currency, status, disabled_at, notes, headcount_<Y-1>, it_users_<Y-1>, turnover_<Y-1>, headcount_<Y>, it_users_<Y>, turnover_<Y>, headcount_<Y+1>, it_users_<Y+1>, turnover_<Y+1>`. Upsert on `name`.
+- **Shared master-data CSV contract.** Every master-data route below (companies, departments, users, suppliers, accounts, cost centers, analytics values, working-day calendars) reads through `backend/src/common/csv-sheet/` and shares this contract:
+  - `language` (`en|fr|de|es`) sets the separator, the decimal mark and the date form of an export and the reading conventions of an import. Without it, the user's stored locale, then English.
+  - `dateOrder` (`day-first|month-first`) and `decimalMark` (`comma|dot`) are the switches used when the file itself does not settle the question.
+  - The report carries `notices: { dates: string | null, amounts: string | null }` (the one-line reading, for example "Dates read day first: 01/03/2027 is March 1.") and `ignoredColumns: string[]`, always empty for these files: a column KANAP does not know is a `row: 0` "Header mismatch. Missing: X, Extra: Y".
+  - A file that cannot be read at all (encoding, empty, over 20,000 rows, unclosed quote) is a 400 with the shared layer's message.
+
 ## Charts of Accounts (Tenant)
 - GET `/chart-of-accounts` → list (supports quick search and AG Grid filters)
   - Items include `scope: 'GLOBAL'|'COUNTRY'`, `country_iso` (NULL for GLOBAL), `is_default`, `is_global_default`, `companies_count`, and `accounts_count`.
@@ -244,10 +254,11 @@ Notes
 - The single template with `loaded_by_default=true` (global scope) is applied during tenant provisioning; its accounts are copied into the tenant’s newly created Global Default CoA (editable by the tenant).
 
 ### CoA-scoped Accounts CSV
-- GET `/chart-of-accounts/:id/accounts/export?scope=template|data`
+- GET `/chart-of-accounts/:id/accounts/export?scope=template|data&language=…`
   - `template`: header line only; `data`: rows for this CoA
-- POST `/chart-of-accounts/:id/accounts/import?dryRun=true|false`
-  - Semicolon-delimited UTF‑8 CSV; validates header and rows; returns preflight or applies changes
+- POST `/chart-of-accounts/:id/accounts/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…`
+  - UTF‑8 CSV with the separator of the language (`,`, `;` or a tab are all read); validates header and rows; returns preflight or applies changes
+  - Same shared master-data contract as `/companies/import`
 
 CSV schema (CoA-scoped):
 ```
@@ -286,10 +297,11 @@ Notes
   - Supports CoA scoping via `companyId` (company’s `coa_id`) or explicit `coaId`
   - Items include `coa_code` to display CoA in the grid
 - GET `/accounts/ids?sort=...&q=...&filters=...` → `{ ids, total }` (ordered by current list query)
-- GET `/accounts/export?scope=template|data&coaId=...`
+- GET `/accounts/export?scope=template|data&coaId=...&language=…`
   - Global export includes `coa_code`; when `coaId` is provided, export is scoped
-- POST `/accounts/import?dryRun=true|false&coaId=...`
+- POST `/accounts/import?dryRun=true|false&coaId=...&language=…&dateOrder=…&decimalMark=…`
   - If `coaId` is not provided, the CSV must include a single uniform `coa_code` across all rows
+  - Same shared master-data contract as `/companies/import`
 
 CSV schema (Global):
 ```
@@ -320,6 +332,11 @@ Validation/behavior:
 - POST `/departments` → create
 - PATCH `/departments/:id` → update (no metrics here)
 
+### Departments CSV
+- GET `/departments/export?scope=template|data&language=…` → `text/csv`
+- POST `/departments/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`)
+- Headers: `company_name, name, description, status, disabled_at`. Upsert on `company_id + name`. Same shared master-data contract as `/companies/import`.
+
 ## Cost Centers
 - RBAC: resource `cost_centers` (`reader` to view, `member` to create and edit, `admin` to delete, import and export). `GET /cost-centers/tree` and `GET /cost-centers/tree/count` also answer `opex`, `capex` or `reporting` readers (item forms and budget reports).
 - A node is a `group` or a `cost_center`. A cost center has a company and no children and is what OPEX and CAPEX lines are attached to; a group has no company and may hold nodes of several companies. Codes are trimmed, 1 to 50 characters, unique per tenant case-insensitively.
@@ -334,7 +351,7 @@ Validation/behavior:
   - Refusals are `400 { message, field }`: company required on a cost center and refused on a group; only a group can be a parent, no self-parenting or loop; a cost center used by lines cannot become a group; a group holding nodes cannot become a cost center; company, owner and parent must belong to the tenant (a new company must be enabled, a new owner an enabled user; the stored value is always kept); duplicate code. Turning a node into a group without sending `company_id` drops its company.
 - DELETE `/cost-centers/:id` → 200, or 409 with a readable message when the node is used by lines (`IT-300 is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.`) or still holds nodes.
 - DELETE `/cost-centers/bulk` `{ ids }` → `{ deleted: string[], failed: { id, name, reason }[] }` (each delete under its own savepoint; deeper nodes first, so a group and its content go together).
-- GET `/cost-centers/export?scope=data|template` and POST `/cost-centers/import?dryRun=true|false` (multipart `file`, `;`-separated UTF-8)
+- GET `/cost-centers/export?scope=data|template&language=…` and POST `/cost-centers/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`; the separator follows the language and `,`, `;` and a tab are all read; same shared master-data contract as `/companies/import`)
   - Headers `code;kind;name;parent_code;company_name;owner_email;description;status;disabled_at` (`disabled_at` optional on import). `kind` is `group` or `cost_center`, `status` `enabled` or `disabled`.
   - Upsert matched by code (case-insensitive); parents resolve against the file and the stored tree, so any row order imports; the whole resulting tree is checked before anything is written. → `{ ok, dryRun, total, inserted, updated, unchanged, errors: { row, message }[] }`; an export imported back is all `unchanged`.
 - Every write takes a per-tenant advisory lock (`cost-center:<tenant>`), so concurrent tree edits are serialized.
@@ -364,7 +381,7 @@ Validation/behavior:
 - DELETE `/working-day-profiles/bulk` `{ ids }` (at most 1,000) → `{ deleted: string[], failed: { id, name, reason }[] }` (each delete under its own savepoint: a refused one leaves the others deleted).
 - Create, update and delete write an audit row (`table_name = 'working_day_profiles'`).
 - Company creation (`CompaniesService.create`: the page, the companies CSV import, the AI tools, the trial signup): when the company's `country_iso` is known to the rules and the tenant has no standard calendar for that whole country, the standard calendar `{ code: <ISO>, name: <country name in the creator's language, else English>, country_iso }` is created in the same transaction, audited as the creator. A taken code or name, or any other failure, is logged and never fails the company creation (its own savepoint). Not on update.
-- GET `/working-day-profiles/export?scope=data|template` and POST `/working-day-profiles/import?dryRun=true|false` (multipart `file`, `;`-separated UTF-8)
+- GET `/working-day-profiles/export?scope=data|template&language=…` and POST `/working-day-profiles/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`; the separator follows the language; same shared master-data contract as `/companies/import`)
   - Headers `code;name;description;country;region;status;disabled_at;year;jan;feb;mar;apr;may;jun;jul;aug;sep;oct;nov;dec` (`disabled_at`, `country` and `region` optional on import). One row per calendar and year, years ascending; a calendar without years exports one row with a blank year and blank months. `country` and `region` are the codes of a standard calendar, which exports its edited years only.
   - `country` and `region` are applied when the row creates a calendar (validated against the rules, a region must belong to its country, same sentences as POST); on an existing calendar each is blank (kept) or equal to the stored value, otherwise the row is refused with "The country of a calendar cannot be changed. Create another calendar.". Rows of one code must agree on them too. Year rows of a standard calendar are edited years.
   - Rows match stored calendars on code (case-insensitive) and fold into one calendar per code. The whole file is validated before anything is written: rows of one code must agree on name, description, status and end of validity ("Rows of FR218 disagree on the name."); a year appears once per code ("FR218 has 2026 twice (rows 2 and 4)."); a row with a year gives its twelve months (days rules above); months without a year are refused; names stay unique across the stored calendars and the file. Years absent from the file are kept: an import never removes a year.
@@ -587,7 +604,7 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
 
 A tenant classifies its budget lines along analytics dimensions (`analytics_axes`, "dimensions" in the UI); each dimension holds values (`analytics_categories`). A line holds at most one value per dimension (`spend_item_analytics_values`, `capex_item_analytics_values`). Resource key: `analytics` for every route below.
 
-- **Default dimension.** Every tenant has exactly one dimension with `is_default = true` (created by migration `1853660000000` for existing tenants, by the tenant bootstrap for new ones, and on the first write that needs it for a tenant inserted any other way). The legacy item field `analytics_category_id`, the item CSV header `analytics_category` and the AI key `analytics_category` address it through `is_default`, never through its position, code or name: renaming or reordering dimensions changes nothing for them. Its `name` may be `null` (screens then show the translated "Analytics dimension"). It cannot be disabled or deleted, and no API writes `is_default`.
+- **Default dimension.** Every tenant has exactly one dimension with `is_default = true` (created by migration `1853660000000` for existing tenants, by the tenant bootstrap for new ones, and on the first write that needs it for a tenant inserted any other way). The legacy item field `analytics_category_id` and the AI key `analytics_category` address it through `is_default`, never through its position, code or name: renaming or reordering dimensions changes nothing for them (the budget file addresses every dimension, the default one included, through its own `analytics:<code>` column). Its `name` may be `null` (screens then show the translated "Analytics dimension"). It cannot be disabled or deleted, and no API writes `is_default`.
 - **Values** belong to one dimension, set on create and never changed. Names are unique per dimension (case-insensitive), so two dimensions can each hold "Other".
 - **RLS**: all four tables are tenant-scoped (`tenant_id = app_current_tenant()`, forced). A value references its dimension by `(tenant_id, axis_id)` and a line's value references `(tenant_id, category_id, axis_id)`, so a line can only hold a value of its own tenant that belongs to the named dimension, raw SQL included.
 
@@ -619,8 +636,8 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
 - PATCH `/analytics-categories/:id` (`name`, `description`, `status`, `disabled_at`) → as GET `/:id`. `analytics:member`. `axis_id` is accepted only when equal to the stored one (`400` "A value cannot move to another dimension."). An unchanged body writes nothing.
 - DELETE `/analytics-categories/:id`. `analytics:admin`. `409` while a line holds the value ("Licences is used by 3 OPEX lines and 1 CAPEX line. Disable it instead.").
 - DELETE `/analytics-categories/bulk` `{ ids }` (at most 1,000) → `{ deleted, failed: [{ id, name, reason }] }`. `analytics:admin`. Each value is deleted under its own savepoint: a refused one leaves the others deleted.
-- GET `/analytics-categories/export?scope=data|template`. `analytics:admin`. Semicolon CSV with headers `axis_code;name;description;status;disabled_at`, every value of every dimension (disabled included), in dimension order then by name.
-- POST `/analytics-categories/import?dryRun=true|false` (multipart `file`). `analytics:admin` → `{ ok, dryRun, total, inserted, updated, unchanged, errors: [{ row, message }] }`.
+- GET `/analytics-categories/export?scope=data|template&language=…`. `analytics:admin`. Headers `axis_code, name, description, status, disabled_at` (the separator follows the language), every value of every dimension (disabled included), in dimension order then by name.
+- POST `/analytics-categories/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`). `analytics:admin` → `{ ok, dryRun, total, inserted, updated, unchanged, errors: [{ row, message }] }`, plus `notices` and `ignoredColumns` (same shared master-data contract as `/companies/import`).
   - Only `name` is required; an absent column keeps what is stored. A blank `axis_code` is the default dimension; an unknown code is a row error. In a disabled dimension a row identical to the stored value passes as `unchanged`; a new value or an edit there is a row error ("The Nature dimension is disabled. Enable it or leave it out.").
   - Rows match on (dimension, name), case-insensitively; the same pair twice in the file is a row error.
   - The whole file is validated before any write; nothing is written when a row fails. A row identical to the stored value is counted `unchanged` and writes nothing. Exporting and re-importing the same file reports every row unchanged.
@@ -765,7 +782,7 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
 - PATCH `/budget-columns` with a partial `{ labels?, enabled?, group_spread?, default_column? }` → the full settings
   - The patch is merged onto the stored settings, then the whole is validated: names trimmed (inner whitespace collapsed, blank = `null`, at most 40 characters, no control characters) and distinct after case folding across the five resolved names; at least one column shown; the default column shown. Unknown keys, unknown columns and non-boolean flags are refused. Every refusal is a 400 with a readable message, e.g. `The default column must be shown: choose another default column first.`
   - The write locks the tenant row and replaces only the `budget_columns` key; audited on `tenants` when the settings change
-  - Hidden columns keep their amounts: the summary API, CSV files, budget rows imports, freezes and AI keys still carry every column
+  - Hidden columns keep their amounts: the summary API, CSV files, budget file imports, freezes and AI keys still carry every column
   - Permissions: any authenticated member of the tenant for GET, `budget_ops:admin` for PATCH
 
 ## Spend Items & Versions (OPEX)
@@ -780,7 +797,7 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
 - GET `/spend-items/:id/relation-counts` (same on `/capex-items/:id/relation-counts`) → `{ contracts, applications, projects, links, attachments, total }`: the counts of the Relations tab, in one statement (the tab badge shows `total`)
 - GET `/spend-items/:id/meta` (same on `/capex-items/:id/meta`, the detail's read level) → `{ id, row_version, changed_by: { id, name } | null, changed_at, versions: [{ id, budget_year, budget_rev, changed_by, changed_at }] }` (versions in year order): what the workspace polls every 30 seconds to see that someone else changed the line or its budget (lot 3G). `changed_by` / `changed_at` of the line: the audit row that wrote the current `row_version` (among the line's 50 newest), null when no audit row explains it; of a version: when its `budget_rev` last moved, and the first audit row about it written since (null when nothing logged the change). `changed_by.name`: first and last name, null for a user without one (never the e-mail). One statement, bounded whatever the line's history; `404` when the line is not in the tenant
 - GET `/spend-items` and GET `/capex-items` (the plain lists the pickers use) carry the item columns plus `analytics_category_id` and `analytics_category_name` of the default dimension, read the same way
-- Writable fields and write rules (OPEX and CAPEX alike, `spend/item-write.util.ts`; the UI, the API, the AI and both item CSVs all go through them):
+- Writable fields and write rules (OPEX and CAPEX alike, `spend/item-write.util.ts`; the UI, the API, the AI and the budget files all go through them):
   - OPEX: `product_name, description, supplier_id, paying_company_id, account_id, currency, effective_start, owner_it_id, owner_business_id, analytics_values, analytics_category_id, project_id, contract_id, cost_center_id, run_build, notes`, plus the lifecycle inputs `status`, `disabled_at` and the deprecated `effective_end`
   - CAPEX: `description, ppe_type, investment_type, priority, supplier_id, paying_company_id` (legacy alias `company_id`)`, account_id, currency, effective_start, owner_it_id, owner_business_id, analytics_values, analytics_category_id, project_id, cost_center_id, run_build, notes`, plus the same lifecycle inputs
   - Any other key (`id`, `tenant_id`, `item_number`, timestamps, unknown keys) is dropped, never refused
@@ -792,16 +809,7 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
   - `run_build`: `run`, `build` or `null` (case-insensitive); anything else is a `400`
   - A line with a cost center and no paying company takes the cost center's company (this satisfies "paying company required" on create); an explicit different company is kept. Without either: `400` "Paying company is required."
   - The chart of accounts check (the account must belong to the paying company's chart) runs on create, and on update when the resulting company or account differs from the stored one; a line already mismatched still takes unrelated edits
-- Item CSVs (`GET /spend-items/export`, `POST /spend-items/import`, same on `/capex-items`): export and template always carry the optional columns `cost_center_code` and `run_build`; an import accepts files without them
-  - Column absent: the stored value is untouched on update, `null` on create. Column present and blank: cleared
-  - `cost_center_code` matches a code case-insensitively; an unknown code, a group, or a disabled cost center that is not the line's current one is a row error (reported by the dry run)
-  - `run_build`: `run`, `build` or blank (case-insensitive), anything else a row error
-  - A blank `company_name` keeps an existing line's company; a new line with a blank company takes its cost center's company, and without a cost center the row is refused ("Company is required unless the line has a cost center."). OPEX: the account number resolves in the resulting company's chart
-  - CAPEX (no account column): a company change onto another chart while the line has an account is a row error in the dry run ("Account {number} is not in {company}'s chart of accounts. Change the line's account first.")
-  - Before writing, the import locks every newly assigned cost center once, in id order
-  - Analytics columns (all optional, absent leaves the stored values, present and blank clears): `analytics_category` is the default dimension (older files import unchanged); `analytics:<code>` is any enabled dimension by its code (the default's code works too). Export and template carry `analytics_category`, then one `analytics:<code>` column per enabled non-default dimension in dimension order, right after it
-  - The file is refused (row 0) for an `analytics:<code>` column naming no dimension ("The column analytics:nope names no dimension. Check the dimension code or remove the column."), a disabled dimension ("The Nature dimension is disabled. Enable it or leave it out."), or two columns for one dimension ("The file has two columns for the analytics dimension: analytics_category and analytics:default. Keep one.")
-  - A name matches a value of its column's dimension case-insensitively; an unknown one is created in that dimension during the load (enabled, audited) and follows the value name rules, checked in the dry run as row errors ("Name must be 200 characters or fewer.", "Name cannot contain control or invisible characters."); a disabled value that is not the line's current one is a row error in the dry run ("Retired is disabled. Pick an enabled value.")
+- **Budget file** (`/spend-items/budget-file/*` and `/capex-items/budget-file/*`): one file per list, detailed under [Budget files](#budget-files-opex-and-capex). The old `GET /spend-items/export`, `POST /spend-items/import` and their CAPEX twins are gone.
 - POST `/spend-items/:id/versions` with `{ version_name, as_of_date, input_grain, budget_year?, allocation_method?, allocation_driver? }`
   - `budget_year` defaults to `as_of_date` year; one version per (item, year)
   - `allocation_method` defaults to `default`; `allocation_driver` defaults to `headcount`
@@ -822,7 +830,7 @@ A tenant classifies its budget lines along analytics dimensions (`analytics_axes
     - `lines: []` removes the lines: no month is written, `fte` becomes `null`, a `computed` column becomes `manual` (its explanation cleared), any other method stays; a column without a record is left alone
 - GET `/spend-versions/:id/amounts?year=` (`opex:reader`) → `{ items, totals, year, round_inputs: RoundInput[] }`
 - `RoundInput`: `{ measure, period_start, period_end, method: 'spread'|'copied'|'manual'|'computed', spread_profile_name, last_calculation, fte: string | null, lines: RoundLine[], updated_at, updated_by }`; `RoundLine` = `{ id, sort, label, quantity_unit, quantity, unit_price, price_basis, frequency, days_per_month: string | null, period_start, period_end, working_day_profile_id, working_day_profile_code, working_day_profile_name }` in `sort` order (from 1), decimals as plain strings without trailing zeros; `lines: []` and `fte: null` on a column without lines
-  - The lines are set by a lines payload, deleted with the record by Clear, and kept by a hand edit (the column becomes `manual`), a spread, the item CSV and a budget rows file: they stay as the reference the budget tab shows, `fte` with them. A copy replaces the destination's lines with the source's (how often and days per month included), each period shifted to the destination year (29 February becomes 28 February), with the source's `fte`; a source without lines leaves none and `fte` null
+  - The lines are set by a lines payload, deleted with the record by Clear, and kept by a hand edit (the column becomes `manual`), a spread and a budget file: they stay as the reference the budget tab shows, `fte` with them. A copy replaces the destination's lines with the source's (how often and days per month included), each period shifted to the destination year (29 February becomes 28 February), with the source's `fte`; a source without lines leaves none and `fte` null
   - `last_calculation` of kind `computed`: `{ kind, total, fte, fte_period, month_amounts: string[12], fte_months: string[12], active_months, lines: [{ label, quantity_unit, quantity, unit_price, price_basis, frequency, days_per_month, period_start, period_end, working_day_profile_id, working_day_profile_code, working_day_profile_name, active_months, day_counts: string[12] | null, total_days: string | null, month_amounts: string[12], fte_months: string[12], fte, fte_period, total }] }`: what each line used and gave (`day_counts` = the calendar's days of the year, `total_days` = those of the line's months, per day only), so editing the calendar later never changes it. `copy.source_method` may be `computed`
 
 ## Allocations (OPEX)
@@ -1268,7 +1276,9 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - DELETE `/suppliers/:id/contacts/:linkId` — detach. [Requires: suppliers:manager]
 
 ### Suppliers CSV (contacts columns)
-- Headers still include `commercial_contact;technical_contact;support_contact` for compatibility. Values must be email addresses (one per column). On import, the system links the supplier to contacts by email (creating contacts if needed). On export, these columns contain the primary (or first) linked contact email per role.
+- GET `/suppliers/export?scope=template|data&language=…` and POST `/suppliers/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`). Same shared master-data contract as `/companies/import`.
+- Headers: `name, erp_supplier_id, commercial_contact, technical_contact, support_contact, notes, status`. Upsert on `name`.
+- The contact columns hold one email address each. On import, the system links the supplier to contacts by email (creating contacts if needed). On export, these columns contain the primary (or first) linked contact email per role.
 
 ## Reporting (Phase 1)
 - Frontend reports consume `/spend-items/summary` and `/capex-items/summary` to compute:
@@ -1368,6 +1378,12 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Requires: users:admin level
   - Sends a Resend email with a password setup CTA pointing to `/accept-invite#token=...`. The token reuses the password-reset pipeline and automatically enables the user once a password is set.
 
+### Users CSV
+- GET `/users/export?scope=template|data&language=…` → `text/csv`
+- POST `/users/import?dryRun=true|false&language=…&dateOrder=…&decimalMark=…` (multipart `file`)
+- Headers: `email, first_name, last_name, role, company_name, department_name, status` (`contact|invited|enabled|disabled`, blank means `contact`). Upsert on `email`; `department_name` needs a `company_name`. Same shared master-data contract as `/companies/import`.
+- A role the tenant does not have is created by the **load**, never by the check: a check answers `rolesToCreate` (distinct names) and writes nothing, and a refused file creates no role either.
+
 ## Roles (Admin)
 - GET `/roles` → `{ items: Role[] }` (includes `user_count` and `is_system`)
 - POST `/roles` → create role `{ role_name, role_description }` (admin only)
@@ -1446,21 +1462,21 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
     - Full audit logging for compliance
     - Permanent operation - cannot be undone
 
-### Budget Rows File
-The monthly amounts of every OPEX and CAPEX line, one row per line, year and budget column, with each column's period. The file carries months only: the quantity and price lines of a column stay in the budget tab.
-- GET `/budget-rows/export?scope=data|template&year=YYYY`
-  - Requires `opex:reader` or `capex:reader`; the file holds the item types the user can read (`budget_rows_partial.csv` otherwise, `budget_rows_<year>_partial.csv` with `year`)
-  - Headers (`;`, UTF-8 with BOM): `item_type;item_number;year;measure;period_start;period_end;jan;…;dec;method`
-  - `method`: `spread|copied|manual|computed`, the stored method, blank when the column has no record
-- POST `/budget-rows/import?dryRun=true|false` (multipart `file`, 10 MB)
-  - Requires `opex:admin` or `capex:admin`; each row that writes needs administration of its item type, reading is enough for an identical row
-  - Returns `{ ok, dryRun, total, inserted, updated, unchanged, errors: [{ row, message }] }`; the whole file is checked before anything is written
-  - `item_type` `opex|capex`; `item_number` a number or the reference (`OPX-7`, `CPX-3`); `measure` one of the five columns (aliases `budget`, `revision`, `follow_up`, `landing`); period both or neither (whole year); all twelve months required; `method` optional and never read (`computed` is accepted like any value)
-  - Identical rows are `unchanged` before the administration and freeze checks. A changed row is refused when its column is frozen for the year
-  - Changed months mark the column `manual` with the file's period and keep its spread profile, explanation, quantity and price lines and FTE (as a hand edit in the budget tab); a period-only change keeps the method
-  - Any other header is a header mismatch ("Header mismatch. Missing: -, Extra: quantity, unit_price")
-  - An exported file re-imports as unchanged, columns computed from lines included
-
+### Budget files (OPEX and CAPEX)
+One file per list: the OPEX list exports and imports the OPEX file, the CAPEX list the CAPEX file. Same columns and rules in both; the manual is `doc/help/docs/en/budget-file.md`.
+- GET `/spend-items/budget-file/export?language=en|fr|de|es&amountYears=2026,2027&columns=budget,revision&detail=yearly|months&all=true` (same on `/capex-items/budget-file/export`)
+  - Requires `opex:admin` / `capex:admin` (a read: a frozen tenant keeps it). The other query parameters are the list's own (`sort`, `q`, `filters`, `status`, `includeDisabled`, `ctx`), and the file holds the lines the list engine returns, in its order
+  - `all=true` drops the filters, the search and the status scope and includes ended lines. `amountYears` defaults to the current year ±1, at most twelve years within ten years of the current one. `columns` defaults to the tenant's shown columns, in the fixed order `budget, revision, forecast, actual, landing`. `detail=months` writes `<column>_<year>_<mm>` instead of `<column>_<year>`
+  - `400` for an unknown column, no column at all, an unknown `detail`, or a malformed `amountYears`. Zero lines still write the header row (the template). File names `opex.csv` / `capex.csv`
+- POST `/spend-items/budget-file/preflight?language=…&dateOrder=day-first|month-first&decimalMark=comma|dot&createSuppliers=true|false` (multipart `file`; same on `/capex-items/budget-file/preflight`)
+  - Read-only, no lock, nothing written. Requires `opex:admin` / `capex:admin`. `createSuppliers` is honoured only for a user allowed to create suppliers
+  - Answers `BudgetFileReport`: `{ ok, scope, encoding, separator, notices: { dates, amounts }, fileErrors[], headerErrors[], errors: [{ line, column, message }], errorCount, missing: [{ type, count, examples, where, message }], deleted[], deletedCount, changes: { created, updated, unchanged, createdLines[], updatedLines[] }, changedSinceExport[], changedSinceExportCount, warnings: { duplicates[], ignoredColumns[], supplierNames[] }, creates: { dimensionValues[], suppliers[] }, supplierMessage, snapshot: { lines: [{ id, itemNumber, rowVersion, years: [{ year, versionId, budgetRev }] }] } }`
+  - Header errors: an amount-looking column that does not parse (`budget_27`, `budjet_2027`), an `analytics:<code>` column naming no dimension, a yearly header and a monthly header for the same column and year. Row errors name the physical line: an unknown `item_number`, a number of the other type, a line deleted since the export, a missing reference (company, account, cost center, user, project), a value of a disabled dimension, a cleared amount column, more than two decimals, an amount too large, a changed cell in a frozen column, a malformed `kanap_token`. Old layouts are refused as a whole with one `fileErrors` entry
+- POST `/spend-items/budget-file/import?language=…&dateOrder=…&decimalMark=…&createSuppliers=…` (multipart `file` plus `snapshot`; same on `/capex-items/budget-file/import`)
+  - Not a read. Requires `opex:admin` / `capex:admin`. `snapshot` is the preflight's `snapshot`, sent as JSON
+  - The load re-runs the preflight under the tenant's bulk lock, locks the target lines in id order and writes everything in one transaction: nothing on a row error. Answers `{ ok, scope, inserted, updated, unchanged }` (a `409` when a line moved between the check and the load; a report instead of a result when the second check refuses the file). Runs `ANALYZE` after more than 1,000 rows
+- Refusals and codes: `400` "The preflight snapshot is missing. Run the preflight again." / "The preflight snapshot is not valid."; `409` "Some lines changed since the preflight. Run the preflight again."; `409 operation_running` "Another budget operation is running (copy, clear or import). Try again when it ends." (the per-tenant bulk lock, shared with copy, clear and allocation copy); `503 busy` with `Retry-After` while KANAP is saturated; `413` over 48 MB ("This file is too large. A budget file can hold 20,000 lines. Export fewer lines or fewer years."), then the shared 20,000-row cap
+- File layout, cell rules (`-` clears, `0` zeroes, empty keeps), matching by `item_number`, supplier matching and creation, the `kanap_token` freshness check and the write rules are in `doc/features/patterns/csv-import-export.md`
 ### Freeze / Unfreeze Data
 - GET `/freeze-states?year=YYYY`
   - Returns `{ year, entries: FreezeState[], summary }`

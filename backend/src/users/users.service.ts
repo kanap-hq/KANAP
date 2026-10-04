@@ -19,10 +19,7 @@ import { BillingService } from '../billing/billing.service';
 // import { PermissionsService, PermissionLevel } from '../permissions/permissions.service';
 import { Company } from '../companies/company.entity';
 import { Department } from '../departments/department.entity';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { EmailService } from '../email/email.service';
 import { createPasswordResetToken as buildPasswordResetToken, getPasswordResetExpirationMinutes } from '../auth/password-reset.util';
 import { PasswordResetToken } from '../auth/password-reset-token.entity';
@@ -30,8 +27,16 @@ import { RefreshToken } from '../auth/refresh-token.entity';
 import { RolePermission } from '../permissions/role-permission.entity';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
-import { denormalizeCsvFormulaValue, neutralizeCsvFormulaValue } from '../common/csv/csv-export.service';
 import type { CommitThenRunFn } from '../common/import-connection';
+import {
+  cellOf,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 
 const SUPPORTED_USER_LOCALES = ['en', 'fr', 'de', 'es'] as const;
 const SELF_SERVICE_FIELDS = ['first_name', 'last_name', 'job_title', 'business_phone', 'mobile_phone', 'locale'] as const;
@@ -647,107 +652,90 @@ export class UsersService {
     ];
   }
 
-  async exportCsv(scope: 'template' | 'data' = 'data', opts?: { manager?: EntityManager }): Promise<{ filename: string; content: string }> {
+  async exportCsv(
+    scope: 'template' | 'data' = 'data',
+    opts?: { manager?: EntityManager; language?: CsvLanguage },
+  ): Promise<{ filename: string; content: string }> {
+    const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
-    const delimiter = ';';
-    const rows: any[] = [];
+    const rows: string[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       const items = await repo.find({ order: { created_at: 'DESC' as any }, relations: ['role', 'company', 'department'] });
       for (const u of items) {
-        rows.push({
-          email: neutralizeCsvFormulaValue(u.email ?? ''),
-          first_name: neutralizeCsvFormulaValue(u.first_name ?? ''),
-          last_name: neutralizeCsvFormulaValue(u.last_name ?? ''),
-          role: neutralizeCsvFormulaValue(u.role?.role_name ?? ''),
-          company_name: neutralizeCsvFormulaValue(u.company?.name ?? ''),
-          department_name: neutralizeCsvFormulaValue(u.department?.name ?? ''),
-          status: neutralizeCsvFormulaValue(u.status ?? 'enabled'),
-        });
+        rows.push([
+          u.email ?? '',
+          u.first_name ?? '',
+          u.last_name ?? '',
+          u.role?.role_name ?? '',
+          u.company?.name ?? '',
+          u.department?.name ?? '',
+          String(u.status ?? 'enabled'),
+        ]);
       }
     }
     const filename = scope === 'template' ? 'users_template.csv' : 'users.csv';
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      if (scope === 'template') {
-        const headerLine = headers.join(delimiter) + '\n';
-        chunks.push(headerLine);
-        stream.end();
-      } else {
-        for (const row of rows) stream.write(row);
-        stream.end();
-      }
-    });
-    const content = '\ufeff' + chunks.join('');
-    return { filename, content };
+    return { filename, content: writeCsv({ language, headers, rows }) };
   }
 
   async importCsv(
-    { file, dryRun, userId }: { file: Express.Multer.File; dryRun: boolean; userId?: string | null },
+    {
+      file,
+      dryRun,
+      userId,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      userId?: string | null;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     opts?: { manager?: EntityManager },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const delimiter = ';';
+    const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
-    type Row = Record<string, string>;
-    const rows: Row[] = [];
-    const errors: { row: number; message: string }[] = [];
-    let headerOk = false;
-    await new Promise<void>((resolve, reject) => {
-      const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-      if (!buf) {
-        reject(new BadRequestException('Empty upload'));
-        return;
-      }
-      let content: string;
-      try {
-        content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
-      } catch {
-        reject(new BadRequestException('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.'));
-        return;
-      }
-      parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
-        .on('headers', (headers: string[]) => {
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h));
-          headerOk = missing.length === 0 && extras.length === 0;
-          if (!headerOk) {
-            errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
-          }
-        })
-        .on('error', (err) => reject(err))
-        .on('data', (row: Row) => {
-          // Strip the protective apostrophe exportCsv prepends to formula-like
-          // values so export -> import round-trips cleanly.
-          for (const key of Object.keys(row)) {
-            row[key] = denormalizeCsvFormulaValue(row[key]);
-          }
-          rows.push(row);
-        })
-        .on('end', () => resolve());
+    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
+    if (!buf) throw new BadRequestException('Empty upload');
+    const read = await readMasterDataFile({
+      file: buf as Buffer,
+      fields: expectedHeaders,
+      language: readLanguage,
+      dateOrder,
+      decimalMark,
     });
-    if (!headerOk) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
+    const errors: { row: number; message: string }[] = [];
+    if (read.headerError) {
+      return {
+        ok: false, dryRun, total: 0, inserted: 0, updated: 0,
+        errors: [{ row: 0, message: read.headerError }],
+        rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
+      };
     }
     const repo = this.getRepo(opts?.manager);
     const companiesRepo = opts?.manager ? opts.manager.getRepository(Company) : this.companies;
     const departmentsRepo = opts?.manager ? opts.manager.getRepository(Department) : this.departments;
 
-    // Role lookup/create cache
-    const roleCache = new Map<string, Role | null>();
-    const getRoleByName = async (name: string): Promise<Role | null> => {
+    // The roles of the file. A role the tenant does not have is created by the
+    // load, never by a check: a check lists it in `rolesToCreate` and writes
+    // nothing, so a typo in a role name leaves no trace when the user only
+    // looks at the file.
+    type FileRole = { name: string; id: string | null };
+    const roleByName = new Map<string, FileRole>();
+    const rolesToCreate: string[] = [];
+    const resolveRole = async (name: string): Promise<FileRole> => {
       const key = name.toLowerCase();
-      if (roleCache.has(key)) return roleCache.get(key) ?? null;
-      let r = await this.rolesService.findByName(name, { manager: opts?.manager });
-      if (!r && name) {
-        r = await this.rolesService.createRole({ role_name: name, role_description: `${name} role` }, { manager: opts?.manager });
-      }
-      roleCache.set(key, r ?? null);
-      return r ?? null;
+      const known = roleByName.get(key);
+      if (known) return known;
+      const existing = await this.rolesService.findByName(name, { manager: opts?.manager });
+      const role: FileRole = { name, id: existing ? existing.id : null };
+      if (!existing) rolesToCreate.push(name);
+      roleByName.set(key, role);
+      return role;
     };
     // Company lookup cache
     const companyCache = new Map<string, Company | null>();
@@ -769,18 +757,28 @@ export class UsersService {
     };
 
     // Validate and normalize rows
-    type Normalized = Partial<User> & { email: string; role_id: string; company_id: string | null; department_id: string | null };
+    type Normalized = Omit<Partial<User>, 'role_id' | 'role'> & {
+      email: string;
+      /** The row's role, its id filled once the load has created it. */
+      role: FileRole;
+      company_id: string | null;
+      department_id: string | null;
+    };
     const normalized: Normalized[] = [];
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      const line = i + 2;
-      const email = (r['email'] ?? '').toString().trim();
-      const first_name = ((r['first_name'] ?? '').toString().trim()) || null;
-      const last_name = ((r['last_name'] ?? '').toString().trim()) || null;
-      let roleName = (r['role'] ?? '').toString().trim();
-      const companyName = (r['company_name'] ?? '').toString().trim();
-      const departmentName = (r['department_name'] ?? '').toString().trim();
-      const statusRaw = (r['status'] ?? 'contact').toString().trim().toLowerCase();
+    for (const row of read.rows) {
+      const line = row.line;
+      const problems = rowProblems(row);
+      if (problems.length > 0) {
+        errors.push(...problems.map((message) => ({ row: line, message })));
+        continue;
+      }
+      const email = cellOf(row, 'email');
+      const first_name = cellOf(row, 'first_name') || null;
+      const last_name = cellOf(row, 'last_name') || null;
+      let roleName = cellOf(row, 'role');
+      const companyName = cellOf(row, 'company_name');
+      const departmentName = cellOf(row, 'department_name');
+      const statusRaw = cellOf(row, 'status').toLowerCase();
 
       if (!email) errors.push({ row: line, message: 'email is required' });
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push({ row: line, message: 'email must be valid' });
@@ -788,10 +786,9 @@ export class UsersService {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'contact', 'invited', 'enabled' or 'disabled'.` });
       }
 
-      let role: Role | null = null;
+      let role: FileRole | null = null;
       if (!roleName) roleName = 'Contact';
-      if (roleName) role = await getRoleByName(roleName);
-      if (!role) errors.push({ row: line, message: `Unknown role '${roleName}'` });
+      if (roleName) role = await resolveRole(roleName);
 
       let company: Company | null = null;
       if (companyName) {
@@ -814,7 +811,7 @@ export class UsersService {
           email,
           first_name,
           last_name,
-          role_id: role.id,
+          role,
           company_id: company ? company.id : null,
           department_id: department ? department.id : null,
           status: (['enabled','disabled','contact','invited'].includes(statusRaw) ? (statusRaw as any) : 'contact'),
@@ -823,7 +820,27 @@ export class UsersService {
     }
 
     if (errors.length > 0) {
-      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
+      return {
+        ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors,
+        // Nothing would be written: no role is offered for creation either.
+        rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
+      };
+    }
+
+    // The load creates the roles the file names, once its rows are known good.
+    // A check creates nothing and answers with `rolesToCreate` instead.
+    if (!dryRun) {
+      for (const name of rolesToCreate) {
+        const created = await this.rolesService.createRole({ role_name: name, role_description: `${name} role` }, { manager: opts?.manager });
+        if (!created) {
+          return {
+            ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0,
+            errors: [{ row: 0, message: `Unknown role '${name}'` }],
+            rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
+          };
+        }
+        roleByName.get(name.toLowerCase())!.id = created.id;
+      }
     }
 
     // Deduplicate by email (lowercased)
@@ -842,16 +859,23 @@ export class UsersService {
       if (existing) updated += 1; else inserted += 1;
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
+      return {
+        ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [],
+        rolesToCreate, ignoredColumns: read.ignoredColumns, notices: read.notices,
+      };
     }
 
     // Commit: upsert by email
     let processed = 0;
     for (const item of unique) {
       const existing = await repo.findOne({ where: { email: item.email } });
+      // The role is a lookup of this import, not a column: only its id is written.
+      // A check leaves an id unset and writes nothing; a load resolved them all above.
+      const { role, ...rest } = item;
+      const body = { ...rest, role_id: role.id ?? undefined };
       if (existing) {
         const before = { ...existing };
-        const next = { ...existing, ...item } as User;
+        const next = { ...existing, ...body } as User;
         const saved = await repo.save(next);
         processed += 1;
         if (this.audit) {
@@ -868,7 +892,7 @@ export class UsersService {
           );
         }
       } else {
-        const created = repo.create({ ...item, password_hash: null, mfa_enabled: false });
+        const created = repo.create({ ...body, password_hash: null, mfa_enabled: false });
         const saved = await repo.save(created);
         processed += 1;
         if (this.audit) {
@@ -886,7 +910,10 @@ export class UsersService {
         }
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [] };
+    return {
+      ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [],
+      rolesToCreate, ignoredColumns: read.ignoredColumns, notices: read.notices,
+    };
   }
 
   async enableUser(id: string, actorId?: string | null, opts?: { manager?: EntityManager }) {

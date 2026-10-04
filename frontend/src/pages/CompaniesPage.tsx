@@ -440,6 +440,7 @@ export default function CompaniesPage() {
         endpoint="/companies"
         title={t('companies.export')}
         params={{ year }}
+        flexibleFormat
       />
       <CsvImportDialog
         open={importOpen}
@@ -448,6 +449,7 @@ export default function CompaniesPage() {
         title={t('companies.import')}
         onImported={() => setRefreshKey((k) => k + 1)}
         params={{ year }}
+        flexibleFormat
       />
     </>
   );

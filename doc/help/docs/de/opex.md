@@ -237,7 +237,7 @@ Im Budget-Tab geben Sie Finanzdaten pro Jahr ein. Er unterstützt mehrere Budget
   - **Gleichmäßig verteilt**, **Nach 4-4-5 verteilt** oder **Nach Quartal verteilt**: Die Beträge stammen aus einer Verteilung
   - **Kopiert aus Budget 2025 +2 %**: Die Beträge stammen aus **Budgetspalten kopieren** in der Budgetadministration, mit dem Prozentsatz, falls einer angewendet wurde
   - **Menge und Preis · 3 Zeilen · 1.00 VZÄ**: Die Beträge stammen aus Zeilen, mit ihrer Anzahl und, wenn die Zeilen Personen oder Tage zählen, den VZÄ der Spalte. Die VZÄ sind der Jahresdurchschnitt. Fahren Sie mit der Maus über die Kennzeichnung, um die Zeilen zu sehen, zum Beispiel „Projektleitung: 1 Person × 1.200 pro Tag, 5 Tage pro Monat, Feb. bis Juli“
-  - **Von Hand geändert**: Ein Monat wurde im Raster oder durch einen Import der Datei der Budgetzeilen geändert
+  - **Von Hand geändert**: Ein Monat wurde im Raster oder durch einen Import einer Budgetdatei geändert
   - Eine Spalte ohne Kennzeichnung hat die Daten behalten, die sie vor der Einführung der Zeiträume hatte
 
 **Wenn jemand anderes dieselbe Spalte bearbeitet**:
@@ -324,7 +324,7 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
   - **Budgetspalten kopieren** in der Budgetadministration: „Die Beträge wurden aus Budget 2025 kopiert. Die Zeilen wieder verwenden.“ Die Kopie überträgt die Zeilen der Quellspalte zusammen mit den Beträgen. Siehe [Eine berechnete Spalte kopieren](budget-operations.md#eine-berechnete-spalte-kopieren)
   - Geänderte Arbeitstage eines Kalenders: „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19“. An der Spalte ändert sich nichts, bis Sie auf **Die Zeilen wieder verwenden** klicken
   - **Budgetspalte zurücksetzen** in der Budgetadministration entfernt die Zeilen zusammen mit den Beträgen. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen)
-  - Eine Datei der Budgetzeilen ändert nur die Monate, und die Zeilen bleiben. Siehe [Datei der Budgetzeilen](budget-operations.md#datei-der-budgetzeilen)
+  - Eine Budgetdatei ändert die Monate einer Spalte und lässt ihre Zeilen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
 
 #### VZÄ
 
@@ -433,73 +433,11 @@ Der Tab Verknüpfungen verbindet diese OPEX-Position mit zugehörigen Objekten: 
 
 ## CSV-Import/Export
 
-Sie können OPEX-Positionen per CSV massenimportieren, um die Ersteinrichtung zu beschleunigen oder mit externen Systemen zu synchronisieren.
+**CSV exportieren** und **CSV importieren** befinden sich in der Symbolleiste der OPEX-Liste. Beide erfordern Administrationsrechte auf OPEX (`opex:admin`).
 
-**Export**:
-  1. Klicken Sie in der OPEX-Liste auf **CSV exportieren**
-  2. Wählen Sie:
-     - **Vorlage**: Nur Kopfzeilen (verwenden Sie dies, um eine leere CSV zum Ausfüllen zu erstellen)
-     - **Daten**: Alle OPEX-Positionen mit Budgets für J-1, J und J+1
+**CSV exportieren** schreibt die OPEX-Budgetdatei für die Positionen, die die Liste zeigt. **CSV importieren** liest eine Datei wieder ein: Sie wird zuerst geprüft, und nichts wird geschrieben, bevor Sie auf **Laden** klicken.
 
-**CSV-Struktur**:
-  - Trennzeichen: Semikolon `;` (kein Komma)
-  - Kodierung: UTF-8 (in Excel als „CSV UTF-8" speichern)
-  - Kopfzeilen: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
-  - `disabled_at` ist das Ende der Gültigkeit: das Datum, an dem die Position endet. Verwenden Sie ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit
-  - `status` ist `enabled` oder `disabled`. Der Export schreibt den Status, der sich aus dem Ende der Gültigkeit ergibt. Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt, zum Beispiel `enabled` mit einem bereits vergangenen Datum
-  - Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet die Position sonst heute. Eine neue Position ist aktiviert, sofern die Zeile nicht `disabled` angibt, und `disabled` mit leerem Datum beendet sie heute
-  - Ältere Dateien mit einer Spalte `effective_end` werden weiterhin importiert: Das Datum dieser Spalte füllt das Ende der Gültigkeit, wenn `disabled_at` leer ist
-  - `analytics_category` enthält den Wert der Standarddimension, unabhängig von ihrem Namen. Jede andere aktivierte Dimension hat eine eigene Spalte, `analytics:<code>`, wobei `<code>` der Code der Dimension ist. Exporte und die Vorlage führen diese Spalten direkt nach `analytics_category`, in der Reihenfolge der Dimensionen
-  - `analytics_category`, die Spalten `analytics:<code>`, `cost_center_code` und `run_build` sind optionale Spalten: Exporte und die Vorlage enthalten sie immer, und Dateien ohne sie werden weiterhin importiert
-
-**Import**:
-  1. Klicken Sie in der OPEX-Liste auf **CSV importieren**
-  2. Laden Sie Ihre CSV-Datei hoch (Drag-and-Drop oder Dateiauswahl)
-  3. Klicken Sie auf **Vorabprüfung** zur Validierung:
-     - Jede Pflichtspalte ist vorhanden, und keine Spalte ist unbekannt. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge
-     - Pflichtfelder (product_name, account_number) sind vorhanden. Eine neue Position braucht außerdem eine Währung und einen company_name, sofern sie keine Kostenstelle hat
-     - Jedes Unternehmen, jeder Lieferant, jedes Konto, jede Kostenstelle und jeder Verantwortliche aus der Datei existiert in Ihrem Arbeitsbereich
-     - Datumsangaben sind gültig, und keine zwei Zeilen beschreiben dieselbe Position
-     - Währungen sind in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt
-     - Verantwortliche sind aktive Benutzer
-  4. Überprüfen Sie den Vorabprüfungsbericht (zeigt Zählungen und bis zu 5 Beispielfehler). Jeder Fehler nennt seine Zeile mit der Zeilennummer der Datei, wie ein Texteditor sie anzeigt, einschließlich Leerzeilen und Zellen über mehrere Zeilen. Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus
-  5. Wenn OK, klicken Sie auf **Laden** zum Importieren
-
-**Wichtige Hinweise**:
-  - **Abgleich**: Eine Zeile wird einer OPEX-Position über Produktname und Lieferant zugeordnet. Eine Zeile, die zu einer bestehenden Position passt, aktualisiert sie; jede andere Zeile legt eine neue Position an. Eine Zeile mit leerem `supplier_name` passt nur zu einer Position ohne Lieferant. Zwei Zeilen mit demselben Produktnamen und Lieferanten sind ein Fehler („Same line as row N"): Behalten Sie eine Zeile pro Position
-  - **Währung**: Pflicht für eine neue Position, und sie muss in den Währungseinstellungen Ihres Arbeitsbereichs erlaubt sein. Bei einer bestehenden Position behält eine leere Zelle deren Währung
-  - **Lieferant**: `supplier_name` ist optional. Ist das Feld gefüllt, wird ein Lieferant mit genau diesem Namen verwendet. Andernfalls wird der Name ohne Rücksicht auf Groß-/Kleinschreibung abgeglichen. Ein Name, der zu keinem Lieferanten passt, ist ein Fehler. Ebenso ein Name, der zu mehreren Lieferanten nur über die Groß-/Kleinschreibung passt (zum Beispiel „Acme" und „ACME", wenn die Datei „acme" enthält)
-  - **Unternehmen und Konto**: `company_name` muss einem Unternehmen namentlich entsprechen (Groß-/Kleinschreibung wird ignoriert). Ein leeres `company_name` behält das Unternehmen einer bestehenden Position; eine neue Position erhält das Unternehmen ihrer Kostenstelle. Fehlt beides, wird die Zeile abgelehnt: „Company is required unless the line has a cost center." `account_number` wird im Kontenplan dieses Unternehmens gesucht, oder im Standard-Kontenplan, wenn das Unternehmen keinen hat. Eine Kontonummer, die nur in einem anderen Kontenplan existiert, ist ein Fehler
-  - **Verantwortliche**: `owner_it_email` und `owner_business_email` müssen aktiven Benutzern per E-Mail entsprechen: Ein eingeladener Benutzer oder ein Kontakt ohne Konto wird abgelehnt
-  - **Datumsangaben**: `effective_start` (und `effective_end` in älteren Dateien) muss ein echter Kalendertag im Format `YYYY-MM-DD` sein, zum Beispiel `2026-01-01`. Andere Formate wie `01/03/2026` sind Fehler. Ein leeres `effective_start` behält das gespeicherte Datum einer bestehenden Position; eine neue Position beginnt am 1. Januar des laufenden Jahres
-  - **Analysedimensionen**: Jede Analysezelle nennt einen Wert der Dimension ihrer Spalte, unabhängig von Groß- und Kleinschreibung. Ein Wert, der noch nicht existiert, wird beim Laden in dieser Dimension erstellt. Ein deaktivierter Wert wird auf einer Position akzeptiert, die ihn bereits hat, und als neuer Wert abgelehnt. Eine leere Zelle entfernt den Wert der Position in dieser Dimension. Fehlt eine Spalte, behalten die Positionen ihren Wert in dieser Dimension. Eine Spalte für eine unbekannte oder deaktivierte Dimension lehnt die ganze Datei ab, ebenso zwei Spalten für dieselbe Dimension (`analytics_category` und der eigene Code der Standarddimension). Wenn Sie dieselbe Datei exportieren und importieren, ändert sich nichts
-  - **Kostenstelle**: `cost_center_code` ist der Code einer Kostenstelle, unabhängig von Groß- und Kleinschreibung. Eine Gruppe wird abgelehnt. Eine deaktivierte Kostenstelle wird auf einer Position akzeptiert, die sie bereits hat, und als neuer Wert abgelehnt. Eine leere Zelle entfernt die Kostenstelle der Position. Fehlt die ganze Spalte, behalten die Positionen ihre Kostenstelle
-  - **Run oder Build**: `run_build` ist `run`, `build` oder leer (unabhängig von Groß- und Kleinschreibung). Eine leere Zelle entfernt den Wert. Fehlt die ganze Spalte, behalten die Positionen ihren Wert
-  - **Unternehmen aus der Kostenstelle**: Eine neue Position mit leerem `company_name` erhält das Unternehmen ihrer Kostenstelle, und `account_number` wird im Kontenplan dieses Unternehmens gesucht. Ein gefülltes `company_name` bleibt erhalten, auch wenn es vom Unternehmen der Kostenstelle abweicht
-  - **Budgets**: Budgetspalten füllen J-1, J und J+1 Versionen. Beträge werden gleichmäßig auf 12 Monate verteilt (Modus Jährlich), und der Zeitraum der Spalte wird das ganze Jahr. Eine leere Zelle lässt die Spalte unverändert; `0` leert sie. Die Überschriften behalten ihre technischen Namen, egal wie Ihre Organisation die Spalten nennt, und sie laden auch ausgeblendete Spalten
-  - **Monatsbeträge**: Um Beträge Monat für Monat zu laden oder zu prüfen, mit dem Zeitraum jeder Spalte, verwenden Sie die **Datei der Budgetzeilen** in der Budgetadministration
-
-**Häufige Fehler**:
-  - **„Supplier '...' not found"**: Prüfen Sie die Schreibweise, oder erstellen Sie den Lieferanten zuerst unter **Stammdaten > Lieferanten**, dann importieren Sie erneut
-  - **„Supplier '...' matches more than one supplier"**: Mehrere Lieferanten unterscheiden sich von diesem Namen nur durch die Groß-/Kleinschreibung. Schreiben Sie den Namen genau wie bei einem von ihnen, oder benennen Sie einen unter **Stammdaten > Lieferanten** um, dann importieren Sie erneut
-  - **„Same line as row N"**: Zwei Zeilen beschreiben dieselbe Position. Führen Sie sie zu einer Zeile zusammen und importieren Sie dann erneut
-  - **„Account ... not found in ...'s chart of accounts"**: Verwenden Sie ein Konto aus dem Kontenplan des zahlenden Unternehmens, oder fügen Sie das Konto unter **Stammdaten > Kontenpläne** hinzu, dann importieren Sie erneut
-  - **„effective_start must be a valid date"**: Verwenden Sie das Format `YYYY-MM-DD`
-  - **„Company is required unless the line has a cost center."**: Füllen Sie `company_name` oder `cost_center_code` für die neue Position
-  - **„Cost center ... was not found."**: Prüfen Sie den Code, oder legen Sie die Kostenstelle unter **Stammdaten > Kostenstellen** an, dann importieren Sie erneut
-  - **„... is a group. Choose a cost center."**: Verwenden Sie den Code einer Kostenstelle innerhalb dieser Gruppe
-  - **„Cost center ... is disabled."**: Verwenden Sie eine aktivierte Kostenstelle, oder aktivieren Sie sie unter **Stammdaten > Kostenstellen** wieder
-  - **„Run or build must be run, build or blank."**: Korrigieren Sie die Zelle `run_build`
-  - **„The column analytics:... names no dimension. Check the dimension code or remove the column.“**: Verwenden Sie den Code, der im Arbeitsbereich der Dimension unter **Stammdaten > Analysedimensionen** steht, oder entfernen Sie die Spalte
-  - **„The ... dimension is disabled. Enable it or leave it out.“**: Aktivieren Sie die Dimension unter **Stammdaten > Analysedimensionen**, oder entfernen Sie ihre Spalte
-  - **„The file has two columns for ...“**: Zwei Spalten nennen dieselbe Dimension, zum Beispiel `analytics_category` und der eigene Code der Standarddimension. Behalten Sie eine Spalte
-  - **„... is disabled. Pick an enabled value.“**: Verwenden Sie einen aktivierten Wert dieser Dimension, oder aktivieren Sie den Wert wieder
-  - **„Invalid currency"**: Verwenden Sie 3-stellige ISO-Codes (USD, EUR, GBP), die in Ihren Arbeitsbereich-Währungseinstellungen zugelassen sind
-  - **„Header mismatch“**: Eine Pflichtspalte fehlt, oder eine Spalte ist unbekannt; die Meldung nennt sie. Spalten werden über ihren Namen zugeordnet, in beliebiger Reihenfolge, und die Analysespalten sind optional. Vergleichen Sie Ihre erste Zeile mit einer frischen Vorlage
-
-**Tipp**: Beginnen Sie mit dem Vorlagenexport, füllen Sie einige Zeilen aus und führen Sie eine Vorabprüfung durch, um Probleme frühzeitig zu erkennen. Beheben Sie Fehler in der CSV und laden Sie sie erneut hoch, bis die Vorabprüfung besteht, dann laden Sie.
-
----
+Die Datei enthält eine Zeile pro Position, die Details der Position, ihre Beträge als Spalten und `kanap_token`. [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) beschreibt die Spalten, die Bedeutung einer Zelle und die beiden Importschritte.
 
 ## Status und Lebenszyklus
 
@@ -552,7 +490,7 @@ Jede OPEX-Position hat einen **Status** (Aktiviert oder Deaktiviert) und ein opt
 
 9. **Unternehmenskennzahlen aktuell halten**: Zuordnungen hängen von Mitarbeiterzahl, IT-Benutzern und Umsatz der Unternehmen ab. Veraltete Kennzahlen verursachen Zuordnungsfehler.
 
-10. **CSV für Masseneinrichtung verwenden**: Wenn Sie von einem anderen System migrieren oder Hunderte von Positionen haben, beginnen Sie mit dem CSV-Import. Exportieren Sie eine Vorlage, füllen Sie sie aus und prüfen Sie sie vor dem Laden.
+10. **CSV für Masseneinrichtung verwenden**: Wenn Sie von einem anderen System migrieren oder Hunderte von Positionen haben, beginnen Sie mit dem CSV-Import. Exportieren Sie eine neue Datei, füllen Sie Ihre Zeilen aus und prüfen Sie sie vor dem Laden.
 
 11. **Deaktivieren statt löschen**: Bewahren Sie die Historie, indem Sie Positionen deaktivieren, wenn sie nicht mehr aktiv sind. Löschen Sie nur bei Fehlern.
 
@@ -582,7 +520,7 @@ Wenn Sie eine Aktion nicht ausführen können (z. B. die Schaltfläche **CSV imp
 
 ## Hilfe benötigt?
 
-- **CSV-Probleme**: Laden Sie eine frische Vorlage herunter, stellen Sie UTF-8-Kodierung sicher und führen Sie eine Vorabprüfung durch, um detaillierte Fehler zu sehen
+- **CSV-Probleme**: Exportieren Sie eine neue Datei aus der Liste und prüfen Sie sie erneut. Der Bericht nennt die Zeile und die Spalte jedes Fehlers, und [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) erklärt, was jede Zelle bedeutet
 - **Zuordnungsfehler**: Prüfen Sie, ob alle Unternehmen die erforderlichen Kennzahlen (Mitarbeiterzahl, IT-Benutzer, Umsatz) für das ausgewählte Jahr haben
 - **Warnung „Veraltetes Konto"**: Das Konto gehört nicht zum Kontenplan des zahlenden Unternehmens; wählen Sie ein anderes Konto
 - **Fehlende Schaltflächen oder Tabs**: Ihre Rolle hat möglicherweise nicht die erforderliche Berechtigungsstufe (Manager oder Admin). Kontaktieren Sie Ihren Arbeitsbereich-Administrator

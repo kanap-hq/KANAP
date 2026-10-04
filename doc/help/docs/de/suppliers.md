@@ -91,22 +91,29 @@ Beim Erstellen eines neuen Lieferanten ist der Kontakte-Tab deaktiviert, bis Sie
 
 ## CSV-Import/Export
 
-Verwalten Sie Lieferanten in großen Mengen per CSV.
+**CSV exportieren** lädt alle Lieferanten mit ihren aktuellen Angaben herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
 
-**Export**: Lädt alle Lieferanten mit ihren aktuellen Details herunter.
+Die Spalten:
+
+| Spalte | Inhalt |
+|---|---|
+| `name` | Pflicht. Der Name des Lieferanten. Zeilen werden über diesen Namen zugeordnet |
+| `erp_supplier_id` | Die ID des Lieferanten in Ihrem ERP |
+| `commercial_contact` | Die E-Mail-Adresse eines Kontakts. Das Laden verknüpft den Lieferanten mit dem Kontakt dieser Adresse und legt ihn an, wenn der Arbeitsbereich keinen hat |
+| `technical_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
+| `support_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
+| `notes` | Freier Text |
+| `status` | `enabled` oder `disabled` |
 
 **Import**:
-- Verwenden Sie die **Vorprüfung** zum Validieren der Datei vor dem Anwenden
-- Zeilen werden nach Lieferantenname zugeordnet
-- Kann neue Lieferanten erstellen oder bestehende aktualisieren
 
-**Pflichtfelder**: Name
+- Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
+- Zeilen werden über `name` zugeordnet: Eine Zeile aktualisiert den Lieferanten, den sie nennt, jede andere Zeile legt einen an
+- `name` ist Pflicht. Jede andere Zelle ist optional
 
-**Optionale Felder**: ERP-Lieferanten-ID, Notizen, Status
-
-**Formatierung**:
-- Verwenden Sie **UTF-8**-Kodierung und **Semikolons** als Trennzeichen
-- Importieren Sie Lieferanten vor dem Import von Anwendungen oder Verträgen, die sie referenzieren
+**Hinweise**:
+- Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen und die beiden Importschritte
+- Importieren Sie Lieferanten, bevor Sie Anwendungen oder Verträge importieren, die sie referenzieren. Die Budgetdatei legt einen fehlenden Lieferanten ebenfalls an, wenn **Fehlende Lieferanten anlegen** angehakt ist. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
 
 ---
 

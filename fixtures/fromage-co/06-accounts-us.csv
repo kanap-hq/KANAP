@@ -15,3 +15,5 @@ account_number;account_name;native_name;description;consolidation_account_number
 7320;IT Consulting;;Strategy and architecture advisory;6300;IT Professional Services;;enabled
 7410;IT Training;;Training programs and certifications;6400;IT General Expenses;;enabled
 7420;IT Travel & Events;;Travel, conferences and industry events;6400;IT General Expenses;;enabled
+151000;Software Assets;;Intangible assets — acquired software and licences;;;;enabled
+161000;IT Equipment;;Property and equipment — IT equipment;;;;enabled

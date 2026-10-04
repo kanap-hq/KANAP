@@ -283,7 +283,6 @@ function spendService(sent: any[]): SpendItemsService {
     appSpendLinks: undefined,
     audit: captureAudit(),
     allocationCalculator: undefined,
-    csv: undefined,
     budgetOps: undefined,
     fxRates: undefined,
     storage: undefined,

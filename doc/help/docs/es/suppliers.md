@@ -91,22 +91,29 @@ Cuando crea un nuevo proveedor, la pestaña Contactos está deshabilitada hasta 
 
 ## Importación/exportación CSV
 
-Gestione proveedores de forma masiva usando CSV.
+**Exportar CSV** descarga todos los proveedores con sus datos actuales. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
 
-**Exportar**: Descarga todos los proveedores con sus datos actuales.
+Las columnas:
 
-**Importar**:
-- Utilice **Verificación previa** para validar el archivo antes de aplicar cambios
-- Las filas se emparejan por nombre de proveedor
-- Puede crear nuevos proveedores o actualizar los existentes
+| Columna | Contenido |
+|---|---|
+| `name` | Obligatoria. El nombre del proveedor. Las filas se emparejan por este nombre |
+| `erp_supplier_id` | El ID del proveedor en su ERP |
+| `commercial_contact` | El correo de un contacto. La carga vincula el proveedor con el contacto de ese correo y lo crea cuando el espacio de trabajo no tiene ninguno |
+| `technical_contact` | El correo de un contacto, como arriba |
+| `support_contact` | El correo de un contacto, como arriba |
+| `notes` | Texto libre |
+| `status` | `enabled` o `disabled` |
 
-**Campos obligatorios**: Nombre
+**Importación**:
 
-**Campos opcionales**: ID proveedor ERP, Notas, Estado
+- Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
+- Las filas se emparejan por `name`: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno
+- `name` es obligatorio. Cualquier otra celda es opcional
 
-**Formato**:
-- Utilice codificación **UTF-8** y **puntos y coma** como separadores
-- Importe proveedores antes de importar aplicaciones o contratos que los referencien
+**Notas**:
+- Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador y los dos pasos de importación
+- Importe los proveedores antes que las aplicaciones o los contratos que los referencian. El archivo de presupuesto también crea un proveedor que falta cuando **Crear los proveedores que faltan** está marcada. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
 
 ---
 

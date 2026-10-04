@@ -1,10 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
-import { parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { resolveLifecycleState, StatusState } from '../common/status';
+import {
+  cellOf,
+  CsvDataRow,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  endOfValidityCell,
+  endOfValidityOf,
+  MasterDataFileRead,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 import { mergeDaysByYear } from './working-day-profiles.util';
 import {
   CalendarSource,
@@ -34,8 +43,7 @@ export const WORKING_DAY_PROFILE_CSV_HEADERS = [
  * through `status` alone; without `country` and `region` it creates custom
  * calendars and keeps the source of the existing ones.
  */
-const OPTIONAL_HEADERS = new Set<string>(['disabled_at', 'country', 'region']);
-const DELIMITER = ';';
+const OPTIONAL_HEADERS = ['disabled_at', 'country', 'region'] as const;
 
 export interface WorkingDayProfileImportResult {
   ok: boolean;
@@ -45,6 +53,9 @@ export interface WorkingDayProfileImportResult {
   updated: number;
   unchanged: number;
   errors: Array<{ row: number; message: string }>;
+  /** The unknown headers the file carried, and what the shared layer noticed. */
+  ignoredColumns: string[];
+  notices: { dates: string | null; amounts: string | null };
 }
 
 /** One file row, parsed on its own. */
@@ -70,10 +81,6 @@ interface FileCalendar {
   years: Map<string, number>;
 }
 
-const cell = (row: Record<string, string>, key: string) => (row[key] ?? '').toString().trim();
-
-const iso = (value: Date | string | null | undefined) => (value == null ? '' : new Date(value).toISOString());
-
 @Injectable()
 export class WorkingDayProfilesCsvService {
   constructor(private readonly calendars: WorkingDayProfilesService) {}
@@ -83,45 +90,40 @@ export class WorkingDayProfilesCsvService {
    * is one row with a blank year and months. A standard calendar exports its
    * country and region codes and its edited years only.
    */
-  async exportCsv(scope: 'data' | 'template', ctx: WorkingDayProfileContext): Promise<{ filename: string; content: string }> {
-    const rows: Array<Record<string, string>> = [];
+  async exportCsv(
+    scope: 'data' | 'template',
+    ctx: WorkingDayProfileContext,
+    language: CsvLanguage = 'en',
+  ): Promise<{ filename: string; content: string }> {
+    const headers = [...WORKING_DAY_PROFILE_CSV_HEADERS];
+    const rows: string[][] = [];
     if (scope === 'data') {
       const stored = await this.calendars.loadStored(ctx);
       stored.sort((a, b) => a.code.localeCompare(b.code, 'en', { numeric: true, sensitivity: 'base' }) || a.id.localeCompare(b.id));
       for (const calendar of stored) {
-        const base = {
-          code: calendar.code,
-          name: calendar.name,
-          description: calendar.description ?? '',
-          country: calendar.country_iso ?? '',
-          region: calendar.region_code ?? '',
-          status: effectiveStatus(calendar),
-          disabled_at: iso(calendar.disabled_at),
-        };
+        const base = [
+          calendar.code,
+          calendar.name,
+          calendar.description ?? '',
+          calendar.country_iso ?? '',
+          calendar.region_code ?? '',
+          effectiveStatus(calendar),
+          endOfValidityCell(calendar.disabled_at, language),
+        ];
         const days = sortDays(calendar.days_by_year ?? {});
         const years = Object.keys(days);
         if (years.length === 0) {
-          rows.push({ ...base, year: '', ...Object.fromEntries(CALENDAR_MONTH_HEADERS.map((month) => [month, ''])) });
+          rows.push([...base, '', ...CALENDAR_MONTH_HEADERS.map(() => '')]);
           continue;
         }
         for (const year of years) {
-          rows.push({ ...base, year, ...Object.fromEntries(CALENDAR_MONTH_HEADERS.map((month, index) => [month, days[year][index] ?? ''])) });
+          rows.push([...base, year, ...CALENDAR_MONTH_HEADERS.map((_month, index) => days[year][index] ?? '')]);
         }
       }
     }
-    const headers = [...WORKING_DAY_PROFILE_CSV_HEADERS];
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter: DELIMITER, alwaysWriteHeaders: true, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      for (const row of rows) stream.write(row);
-      stream.end();
-    });
     return {
       filename: scope === 'template' ? 'working_day_calendars_template.csv' : 'working_day_calendars.csv',
-      content: '﻿' + chunks.join(''),
+      content: writeCsv({ language, headers, rows }),
     };
   }
 
@@ -136,15 +138,31 @@ export class WorkingDayProfilesCsvService {
    * blank or its own. The years of a standard calendar are its edited years.
    */
   async importCsv(
-    { file, dryRun }: { file: Express.Multer.File; dryRun: boolean },
+    {
+      file,
+      dryRun,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     ctx: WorkingDayProfileContext,
   ): Promise<WorkingDayProfileImportResult> {
+    const read = await this.parseFile(file, language ?? 'en', dateOrder, decimalMark);
     const failed = (errors: WorkingDayProfileImportResult['errors'], total = 0): WorkingDayProfileImportResult => ({
-      ok: false, dryRun, total, inserted: 0, updated: 0, unchanged: 0, errors: [...errors].sort((a, b) => a.row - b.row),
+      ok: false, dryRun, total, inserted: 0, updated: 0, unchanged: 0,
+      errors: [...errors].sort((a, b) => a.row - b.row),
+      ignoredColumns: read.ignoredColumns, notices: read.notices,
     });
-    const parsed = await this.parseFile(file);
-    if ('headerError' in parsed) return failed([{ row: 0, message: parsed.headerError }]);
-    const { rows, hasDisabledAt } = parsed;
+    if (read.headerError) return failed([{ row: 0, message: read.headerError }]);
+    const { rows } = read;
+    // An absent `disabled_at` column is not a blank cell: the file then sets the lifecycle through `status` alone.
+    const hasDisabledAt = read.present.includes('disabled_at');
 
     const stored = await this.calendars.lockAll(ctx);
     const storedByCode = new Map(stored.map((row) => [row.code.toLowerCase(), row]));
@@ -152,8 +170,9 @@ export class WorkingDayProfilesCsvService {
     // Pass 1: every row on its own, grouped by code.
     const errors: WorkingDayProfileImportResult['errors'] = [];
     const calendars = new Map<string, FileCalendar>();
-    rows.forEach((raw, index) => {
-      const line = index + 2;
+    rows.forEach((raw) => {
+      // The physical line Excel shows, blank lines included.
+      const line = raw.line;
       const row = this.parseRow(raw, line, hasDisabledAt, errors);
       if (!row) return;
       const group = calendars.get(row.key);
@@ -276,17 +295,20 @@ export class WorkingDayProfilesCsvService {
         await this.calendars.persist(ctx, entry.existing, entry.values);
       }
     }
-    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [] };
+    return {
+      ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [],
+      ignoredColumns: read.ignoredColumns, notices: read.notices,
+    };
   }
 
   /** One row on its own; its refusals go to `errors` and it is then left out. */
   private parseRow(
-    raw: Record<string, string>,
+    raw: CsvDataRow,
     line: number,
     hasDisabledAt: boolean,
     errors: WorkingDayProfileImportResult['errors'],
   ): ParsedRow | null {
-    const rowErrors: string[] = [];
+    const rowErrors: string[] = rowProblems(raw, ['disabled_at']);
     const attempt = <T>(fn: () => T): T | undefined => {
       try {
         return fn();
@@ -295,19 +317,24 @@ export class WorkingDayProfilesCsvService {
         return undefined;
       }
     };
-    const code = attempt(() => normalizeCalendarCode(cell(raw, 'code')));
-    const name = attempt(() => normalizeCalendarName(cell(raw, 'name')));
+    const code = attempt(() => normalizeCalendarCode(cellOf(raw, 'code')));
+    const name = attempt(() => normalizeCalendarName(cellOf(raw, 'name')));
 
-    const statusRaw = cell(raw, 'status').toLowerCase();
+    const statusRaw = cellOf(raw, 'status').toLowerCase();
     if (statusRaw && statusRaw !== StatusState.ENABLED && statusRaw !== StatusState.DISABLED) {
-      rowErrors.push(`Invalid status '${cell(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
+      rowErrors.push(`Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
     }
-    const disabledAtRaw = hasDisabledAt ? cell(raw, 'disabled_at') : '';
+    const disabledAtRaw = hasDisabledAt ? cellOf(raw, 'disabled_at') : '';
     let disabledAt: Date | null | undefined;
-    if (disabledAtRaw) disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? undefined;
+    if (disabledAtRaw) {
+      // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
+      const end = endOfValidityOf(raw, 'disabled_at');
+      if (end.error) rowErrors.push(end.error);
+      else disabledAt = end.value;
+    }
 
-    const year = cell(raw, 'year');
-    const months = CALENDAR_MONTH_HEADERS.map((month) => cell(raw, month));
+    const year = cellOf(raw, 'year');
+    const months = CALENDAR_MONTH_HEADERS.map((month) => cellOf(raw, month));
     let normalizedYear: string | null = null;
     let days: string[] | null = null;
     if (!year) {
@@ -327,42 +354,34 @@ export class WorkingDayProfilesCsvService {
       key: code.toLowerCase(),
       code,
       name,
-      description: normalizeCalendarDescription(cell(raw, 'description')),
+      description: normalizeCalendarDescription(cellOf(raw, 'description')),
       status: (statusRaw || StatusState.ENABLED) as StatusState,
       disabledAt,
-      country: cell(raw, 'country') || null,
-      region: cell(raw, 'region') || null,
+      country: cellOf(raw, 'country') || null,
+      region: cellOf(raw, 'region') || null,
       year: normalizedYear,
       days,
     };
   }
 
-  private async parseFile(file: Express.Multer.File): Promise<{ rows: Array<Record<string, string>>; hasDisabledAt: boolean } | { headerError: string }> {
+  private parseFile(
+    file: Express.Multer.File,
+    language: CsvLanguage,
+    dateOrder?: CsvDateOrder,
+    decimalMark?: DecimalMark,
+  ): Promise<MasterDataFileRead> {
     if (!file) throw new BadRequestException('No file uploaded');
     const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
     if (!buf) throw new BadRequestException('Empty upload');
-    let content: string;
-    try {
-      content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
-    } catch {
-      throw new BadRequestException('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.');
-    }
-    const rows: Array<Record<string, string>> = [];
-    let headers: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      parseString(content, { headers: true, delimiter: DELIMITER, ignoreEmpty: true, trim: true })
-        .on('headers', (found: string[]) => { headers = found; })
-        .on('error', (err) => reject(new BadRequestException(`The file could not be read: ${err.message}`)))
-        .on('data', (row: Record<string, string>) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
+    return readMasterDataFile({
+      file: buf as Buffer,
+      fields: WORKING_DAY_PROFILE_CSV_HEADERS,
+      dateFields: ['disabled_at'],
+      optional: OPTIONAL_HEADERS,
+      language,
+      dateOrder,
+      decimalMark,
     });
-    const expected: readonly string[] = WORKING_DAY_PROFILE_CSV_HEADERS;
-    const missing = expected.filter((header) => !headers.includes(header) && !OPTIONAL_HEADERS.has(header));
-    const extras = headers.filter((header) => !expected.includes(header));
-    if (missing.length > 0 || extras.length > 0) {
-      return { headerError: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` };
-    }
-    return { rows, hasDisabledAt: headers.includes('disabled_at') };
   }
 }
 

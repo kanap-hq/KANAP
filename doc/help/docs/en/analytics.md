@@ -26,7 +26,7 @@ Every workspace starts with one dimension, the default dimension. Until you give
 The default dimension has a special role:
 
 - It cannot be disabled or deleted. Its workspace has no **Delete** button, and one line under **Lifecycle** says why: "This dimension cannot be disabled or deleted: older files and AI questions use it."
-- Older CSV files and questions to Plaid about the analytics category use it. See [CSV import/export](#csv-importexport) and [Analytics dimensions in Plaid](#analytics-dimensions-in-plaid).
+- Questions to Plaid about the analytics category use it. See [Analytics dimensions in Plaid](#analytics-dimensions-in-plaid). In a budget file each dimension has its own column, the default one included: see [Load a budget from a spreadsheet](budget-file.md).
 - It stays the default dimension when you rename it, change its code or change its order.
 - Its label is reserved: no other dimension can be named "Analytics dimension", in any of the app's languages.
 
@@ -217,15 +217,14 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 
 Load or update the values of every dimension from one file. Dimensions are created on the page.
 
-To set values on budget lines from a file, use the OPEX and CAPEX CSV files. In those files, the column `analytics_category` holds the default dimension, and one `analytics:<code>` column holds each other dimension. See [OPEX](opex.md#csv-importexport) and [CAPEX](capex.md#csv-importexport).
+To set values on budget lines from a file, use the OPEX and CAPEX budget files. In those files, one `analytics:<code>` column holds each dimension, the default dimension included. See [Load a budget from a spreadsheet](budget-file.md).
 
 **Export**: click **Export CSV**, then **Export data**. The file lists the values of every dimension, enabled or disabled, dimension by dimension. For an empty file with the headers only, use **Download template** in the import dialog.
 
 **CSV structure**:
 
-- Delimiter: semicolon `;`
-- Encoding: UTF-8 (save as "CSV UTF-8" in Excel)
-- Headers: `axis_code;name;description;status;disabled_at`
+- Headers: `axis_code`, `name`, `description`, `status`, `disabled_at`
+- The export writes the separator of the screen language. See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
 
 | Column | Content |
 |---|---|

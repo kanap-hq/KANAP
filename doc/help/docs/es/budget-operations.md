@@ -7,7 +7,7 @@ La Administración presupuestaria le ofrece un conjunto de herramientas para ges
 - Ruta: **Gestión presupuestaria > Administración**
 - Permisos: La mayoría de operaciones requieren `budget_ops:admin`
 
-La página principal muestra siete tarjetas, cada una enlazando a una herramienta dedicada:
+La página principal muestra seis tarjetas, cada una enlazando a una herramienta dedicada:
 
 | Herramienta | Propósito |
 |-------------|-----------|
@@ -16,7 +16,6 @@ La página principal muestra siete tarjetas, cada una enlazando a una herramient
 | **Copiar asignaciones** | Copiar métodos de asignación de un año a otro |
 | **Restablecer columna presupuestaria** | Borrar todos los datos de una columna específica |
 | **Método de asignación por defecto** | Definir el método que las partidas de OPEX y CAPEX siguen por defecto |
-| **Archivo de filas presupuestarias** | Exportar o importar los importes mensuales de cada partida OPEX y CAPEX |
 | **Columnas presupuestarias** | Nombrar las cinco columnas presupuestarias, elegir cuáles se muestran y cuál es la columna por defecto |
 
 Las columnas presupuestarias son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto. Son los nombres estándar. Su organización puede renombrarlas, ocultar algunas y elegir una columna por defecto en [Columnas presupuestarias](#columnas-presupuestarias). Cada página a continuación muestra los nombres que eligió su organización.
@@ -304,61 +303,6 @@ Sin `budget_ops:admin`, puede consultar la configuración actual pero no cambiar
 
 ---
 
-## Archivo de filas presupuestarias
-
-Exporte o importe los importes mensuales de cada partida OPEX y CAPEX en un solo archivo, con una fila por partida, año y columna.
-
-### Cuándo usarlo
-
-- Cargar presupuestos mensuales preparados en una hoja de cálculo
-- Importar el realizado mensual desde su sistema contable
-- Revisar o archivar todas las columnas, incluida la Previsión
-
-### Exportación
-
-1. Elija un año, o mantenga **Todos los años**
-2. Haga clic en **Exportar** y luego en **Exportar datos**
-
-El archivo incluye cada partida OPEX y CAPEX que puede consultar, para cada año que tiene importes. Cada partida y año recibe cinco filas, una por columna presupuestaria en el orden fijo (Presupuesto, Revisión, Previsión, Realizado, Aterrizaje previsto con sus nombres estándar). Las columnas sin importes y las columnas ocultas también se incluyen.
-
-Bajo la introducción, la página indica qué nombre técnico del archivo corresponde a cada una de sus columnas, por ejemplo «`planned` para Presupuesto». Los mismos nombres técnicos aparecen como **En los archivos** en la página [Columnas presupuestarias](#columnas-presupuestarias). Cuando el archivo cubre un solo año, o solo OPEX o solo CAPEX debido a sus permisos, su nombre termina en `partial`.
-
-Se puede importar un archivo de hasta 10 MB. Para un presupuesto más grande, exporte e importe un año cada vez: una exportación limitada a un año genera un archivo más pequeño.
-
-### Columnas
-
-El archivo usa el punto y coma `;` como separador y la codificación UTF-8.
-
-| Columna | Contenido |
-|---------|-----------|
-| `item_type` | `opex` o `capex` |
-| `item_number` | El número de la partida, por ejemplo `7`. Al importar, la referencia también funciona (`OPX-7`, `CPX-7`) |
-| `year` | Cuatro dígitos |
-| `measure` | La columna, por su nombre técnico, sea cual sea el nombre que le da su organización: `planned` (columna 1, nombre estándar Presupuesto), `committed` (columna 2, Revisión), `forecast` (columna 3, Previsión), `actual` (columna 4, Realizado), `expected_landing` (columna 5, Aterrizaje previsto). Al importar, `budget`, `revision`, `follow_up` y `landing` también funcionan |
-| `period_start`, `period_end` | El periodo de la columna en formato `YYYY-MM-DD`, dentro del año de la fila. Al importar, ambos vacíos significan todo el año |
-| `jan` a `dec` | Los doce importes mensuales, con un punto como separador decimal. Al importar, también se aceptan la coma y los espacios |
-| `method` | Cómo se produjo la columna: `spread`, `copied`, `manual` o `computed` (construida a partir de cantidad y precio). Solo informativo, se ignora al importar |
-
-### Reglas de importación
-
-1. Haga clic en **Importar**, elija el archivo y ejecute la **Verificación previa**
-2. Revise el informe y luego haga clic en **Cargar**
-
-- Todo el archivo se verifica antes de guardar nada. Si una fila tiene un error, no se guarda nada y el informe lista los errores por número de línea. El número es la línea del archivo tal como la muestra un editor de texto, incluidas las líneas vacías y las celdas que ocupan varias líneas
-- Cada fila reemplaza los doce meses de su partida, año y columna. Las partidas, años y columnas que no están en el archivo no se modifican
-- Los doce meses son obligatorios. Escriba `0` para un mes sin importe
-- Una fila idéntica a lo guardado no se modifica, incluida la forma en que se produjo la columna. Volver a importar una exportación no cambia nada
-- Una fila cuyos importes cambian marca la columna como **Editado a mano**, con el periodo del archivo. Una columna construida a partir de cantidad y precio conserva sus líneas, y su pestaña Presupuesto ofrece usarlas de nuevo. Consulte [Cantidad y precio](opex.md#cantidad-y-precio)
-- El archivo solo contiene importes. Las líneas de una columna se gestionan en la pestaña Presupuesto
-- Una fila que solo cambia el periodo actualiza el periodo y conserva el resto. En una columna construida a partir de cantidad y precio, también marca la columna como **Editado a mano** y conserva sus líneas, como una fila cuyos importes cambian
-- Las filas de Realizado siguen las mismas reglas, lo que permite importar el realizado mensual
-- Una fila modificada en una columna congelada se rechaza. Una fila idéntica en una columna congelada se acepta
-- Las filas de una columna oculta se importan como cualquier otra fila. Ocultar una columna nunca bloquea sus importaciones, y una columna oculta congelada sigue rechazando las filas modificadas
-- Las filas repetidas (misma partida, año y columna), los números de partida desconocidos y las partidas de un tipo que no puede administrar son errores
-- Importar requiere permisos de administración sobre OPEX o sobre CAPEX. Exportar requiere acceso de lectura a uno de los dos
-
----
-
 ## Columnas presupuestarias
 
 Dé nombre a las cinco columnas presupuestarias, elija cuáles ve todo el mundo y de cuál parten los informes y las listas. La configuración se aplica a toda la organización, tanto para OPEX como para CAPEX.
@@ -377,7 +321,7 @@ Una fila por columna, siempre en el mismo orden, de la columna 1 a la columna 5.
 |-------|-------------|
 | **Columna** | La posición, de 1 a 5. Las columnas no se pueden reordenar |
 | **Nombre** | El nombre que todos ven en las listas, la pestaña Presupuesto, los informes, el panel y la Administración presupuestaria. Déjelo vacío para usar el nombre estándar, que aparece como marcador. Como máximo 40 caracteres, sin caracteres de control ni invisibles. Cada nombre debe ser distinto de los nombres de las demás columnas, incluido el nombre estándar de una columna que no ha renombrado, sin importar las mayúsculas |
-| **En los archivos** | La línea bajo cada nombre. Indica el nombre técnico de la columna en el archivo de filas presupuestarias y sus importaciones, por ejemplo `planned` para la columna 1. Nunca cambia cuando renombra una columna |
+| **En los archivos** | La línea bajo cada nombre. Indica el nombre técnico de la columna en el archivo de presupuesto y sus importaciones, por ejemplo `budget` para la columna 1. Nunca cambia cuando renombra una columna. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) |
 | **Visible** | Si la columna aparece en pantalla. Al menos una columna debe seguir visible |
 | **Sigue el reparto y las líneas** | Si la columna toma lo que se aplica a todas las columnas en la pestaña Presupuesto: la distribución y el periodo de un reparto (**Aplicar el reparto a todas las columnas**), y las líneas de cantidad y precio (**Aplicar estas líneas a todas las columnas**). Una columna que no los sigue conserva los suyos: cuando la reparte o edita sus líneas, cambia sola |
 | **Por defecto** | La columna que preseleccionan los informes y que ordena las listas y el panel. Congelarla fija los tipos de cambio del año. La columna por defecto debe estar visible |
@@ -388,7 +332,7 @@ Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visi
 
 ### Qué cambia la configuración
 
-- **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de filas presupuestarias, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, así que congelar un año las congela junto con las demás
+- **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de presupuesto, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, así que congelar un año las congela junto con las demás
 - **La columna por defecto** está preseleccionada en todos los informes. Ordena las listas OPEX y CAPEX, su navegación anterior y siguiente, y los mosaicos **Top partidas** y **Mayores incrementos** del panel. Las listas la muestran para el año actual, junto a la última columna visible. También es el importe de referencia de la pestaña Asignaciones y la columna en la que se abre el panel de reparto. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
 - **Sigue el reparto y las líneas** decide qué columnas se mueven juntas cuando un reparto se aplica a todas las columnas, y qué columnas reciben las líneas cuando **Aplicar estas líneas a todas las columnas** está activado. Las columnas congeladas nunca cambian, diga lo que diga esta configuración
 

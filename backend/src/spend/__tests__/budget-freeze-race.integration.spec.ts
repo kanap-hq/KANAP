@@ -4,7 +4,8 @@ import { UserTimeAggregateService } from '../../portfolio/services/user-time-agg
 import { BUDGET_OPERATION_RUNNING } from '../budget-locks';
 import { SpendItem } from '../spend-item.entity';
 import { SpendItemsDeleteService } from '../spend-items-delete.service';
-import { csvService, itemService, lineBody, seedCompany } from './cost-center.fixtures';
+import { loadBudgetFile } from './budget-file.fixtures';
+import { itemService, lineBody, seedCompany } from './cost-center.fixtures';
 import { captureAudit, seedVersion } from './round-inputs.fixtures';
 import {
   assert,
@@ -26,9 +27,10 @@ import {
 // default column pins or unpins the FX rate set on every version of the year
 // (`freeze.service.ts`): one UPDATE over many lines. It used to take no lock
 // first, so it locked the versions in the order it scanned them. Against an
-// item CSV import, which holds the tenant's budget-operations lock and then
-// its lines and versions in id order, each ended up holding a version the
-// other wanted: PostgreSQL ended the unfreeze with a deadlock (40P01).
+// item CSV import (now the budget file load), which holds the tenant's
+// budget-operations lock and then its lines and versions in id order, each
+// ended up holding a version the other wanted: PostgreSQL ended the unfreeze
+// with a deadlock (40P01).
 //
 // Fixed: a pin or unpin is a bulk budget operation. It takes the tenant's
 // lock (refused at once with a 409 `operation_running` while another bulk
@@ -76,15 +78,11 @@ async function seedPinnedLines(race: Race) {
   });
 }
 
-/** The OPEX line file naming both lines, line B first, with this year's budget. */
-function importFile() {
-  const csv = csvService('opex');
-  const headers: string[] = csv.csvHeaders();
-  const row = (name: string) => {
-    const r: Record<string, string> = { product_name: name, company_name: 'Race company', account_number: '6000', currency: 'EUR', status: 'enabled', y_budget: '1200' };
-    return headers.map((h) => r[h] ?? '').join(';');
-  };
-  return { csv, file: { buffer: Buffer.from(`${headers.join(';')}\n${row('Line B')}\n${row('Line A')}\n`, 'utf8') } as any };
+/** The OPEX budget file naming both lines, line B first, with this year's budget changed. */
+async function importFile(race: Race, s: { a: string; b: string }): Promise<string> {
+  const rows = await race.read(`SELECT id, item_number::int AS n FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [race.tenantId, [s.a, s.b]]);
+  const number = (id: string) => rows.find((row: any) => row.id === id)!.n;
+  return `item_number,name,currency,budget_${YEAR}\nOPX-${number(s.b)},Line B,EUR,1200.00\nOPX-${number(s.a)},Line A,EUR,1200.00\n`;
 }
 
 async function pinnedVersions(race: Race): Promise<number> {
@@ -92,53 +90,59 @@ async function pinnedVersions(race: Race): Promise<number> {
   return Number(row.n);
 }
 
-/** The reviewer's case: an unfreeze while an OPEX line import holds one of the year's versions. */
+/** The reviewer's case: an unfreeze while an OPEX budget file load holds one of the year's versions. */
 async function unfreezeDuringImport() {
   await withRace('freeze-import', async (race) => {
-    await seedPinnedLines(race);
-    const { csv, file } = importFile();
-    const importer = await race.open('OPEX line import');
+    const s = await seedPinnedLines(race);
+    const file = await importFile(race, s);
+    const importer = await race.open('OPEX budget file load');
     const freezer = await race.open('unfreeze (FX unpin)');
 
-    const importHolds = race.gate(importer, { label: 'lock a version of the year', when: 'after', match: sql.lockOn('spend_versions') });
-    const importWork = race.start(importer, (manager) => csv.importCsv({ file, dryRun: false, userId: null }, { manager }));
-    assert.equal(await progress(importWork, { party: importer, gate: importHolds }), 'gated', 'harness: the import must pause holding a version');
+    const importHolds = race.gate(importer, { label: 'lock the versions of the year', when: 'after', match: sql.lockOn('spend_versions') });
+    const importWork = race.start(importer, (manager) => loadBudgetFile(manager, 'opex', race.tenantId, file));
+    assert.equal(await progress(importWork, { party: importer, gate: importHolds }), 'gated', 'harness: the load must pause holding the versions');
 
     const freezeWork = race.start(freezer, unfreeze);
     const freezeProgress = await progress(freezeWork, { party: freezer });
     importHolds.release();
     const [importDone, freezeDone] = await Promise.all([settle(importWork), settle(freezeWork)]);
-    assert.notEqual(pgCode((importDone as any).error), '40P01', 'the import ended in a deadlock (40P01)');
-    assertSucceeded(importDone, 'the import');
-    assert.equal((importDone as any).value?.ok, true, `the import result: ${JSON.stringify((importDone as any).value?.errors)}`);
+    assert.notEqual(pgCode((importDone as any).error), '40P01', 'the load ended in a deadlock (40P01)');
+    assertSucceeded(importDone, 'the load');
+    assert.equal((importDone as any).value?.ok, true, `the load result: ${JSON.stringify((importDone as any).value?.errors)}`);
+    assert.equal((importDone as any).value?.updated, 2, 'the load wrote both lines');
     assertOperationRunning(freezeDone, 'the unfreeze');
-    assert.equal(freezeProgress, 'settled', 'the unfreeze does not wait for the import: it is refused at once');
+    assert.equal(freezeProgress, 'settled', 'the unfreeze does not wait for the load: it is refused at once');
     assert.equal(await pinnedVersions(race), 2, 'the refused unfreeze unpinned nothing');
 
-    // Once the import is done, the unfreeze runs.
-    assertSucceeded(await settle(race.start(freezer, unfreeze)), 'the unfreeze after the import');
+    // Once the load is done, the unfreeze runs.
+    assertSucceeded(await settle(race.start(freezer, unfreeze)), 'the unfreeze after the load');
     assert.equal(await pinnedVersions(race), 0, 'the unfreeze unpinned the year');
   });
 }
 
-/** The other way round: while an unfreeze unpins the year, an import is refused at once. */
+/** The other way round: while an unfreeze unpins the year, a budget file load is refused at once. */
 async function importDuringUnfreeze() {
   await withRace('import-freeze', async (race) => {
-    await seedPinnedLines(race);
-    const { csv, file } = importFile();
+    const s = await seedPinnedLines(race);
+    const file = await importFile(race, s);
     const freezer = await race.open('unfreeze (FX unpin)');
-    const importer = await race.open('OPEX line import');
+    const importer = await race.open('OPEX budget file load');
 
     const freezeHolds = race.gate(freezer, { label: 'lock the versions of the year', when: 'after', match: sql.lockOn('spend_versions') });
     const freezeWork = race.start(freezer, unfreeze);
     assert.equal(await progress(freezeWork, { party: freezer, gate: freezeHolds }), 'gated', 'harness: the unfreeze must pause holding the versions');
 
-    const importWork = race.start(importer, (manager) => csv.importCsv({ file, dryRun: false, userId: null }, { manager }));
-    assert.equal(await progress(importWork, { party: importer }), 'settled', 'the import does not wait for the unfreeze');
-    assertOperationRunning(await settle(importWork), 'the import');
+    const importWork = race.start(importer, (manager) => loadBudgetFile(manager, 'opex', race.tenantId, file));
+    assert.equal(await progress(importWork, { party: importer }), 'settled', 'the load does not wait for the unfreeze');
+    assertOperationRunning(await settle(importWork), 'the load');
     freezeHolds.release();
     assertSucceeded(await settle(freezeWork), 'the unfreeze');
     assert.equal(await pinnedVersions(race), 0, 'the unfreeze unpinned the year');
+
+    // Once the unfreeze is done, the load runs.
+    const after = await settle(race.start(importer, (manager) => loadBudgetFile(manager, 'opex', race.tenantId, file)));
+    assertSucceeded(after, 'the load after the unfreeze');
+    assert.equal((after as any).value?.updated, 2, 'the load wrote both lines');
   });
 }
 
@@ -177,7 +181,7 @@ async function freezeDuringBulkDelete() {
 }
 
 void runRaceSpecs('Freeze and unfreeze against the bulk budget operations', [
-  ['an unfreeze during an OPEX line import is refused at once, never a deadlock (3B review)', unfreezeDuringImport],
-  ['an OPEX line import during an unfreeze is refused at once (3B review)', importDuringUnfreeze],
+  ['an unfreeze during an OPEX budget file load is refused at once, never a deadlock (3B review)', unfreezeDuringImport],
+  ['an OPEX budget file load during an unfreeze is refused at once (3B review)', importDuringUnfreeze],
   ['a freeze during a bulk line delete waits for it, never a deadlock (3B review)', freezeDuringBulkDelete],
 ]);

@@ -47,7 +47,7 @@ function itemService(scope: SummaryScopeConfig): any {
   const deps = realSummaryDeps(scope);
   const args: any[] = Array.from({ length: 12 }, () => undefined);
   args[4] = deps.allocationCalculator;
-  args[7] = deps.fxRates;
+  args[scope.scope === 'opex' ? 6 : 7] = deps.fxRates;
   return scope.scope === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 

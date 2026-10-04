@@ -31,7 +31,7 @@ L'espace de travail s'ouvre en mode création, avec le panneau **Propriétés** 
 - **Responsable IT** / **Responsable métier** : Qui est en charge
 - **Description** (onglet Vue d'ensemble) : Détails libres sur l'investissement
 
-Une fois renseignés, **Société payeuse** et **Compte** peuvent être modifiés mais pas vidés. **Fournisseur** peut être effacé à tout moment. Lorsque vous changez la société payeuse d'un poste qui a un compte, et que la nouvelle société utilise un autre plan comptable, le compte est effacé dans le même enregistrement : choisissez le nouveau compte sur le plan comptable de la nouvelle société. Les postes créés par un import CSV n'ont pas de compte (le fichier CAPEX n'a pas de colonne de compte) : renseignez-le dans le panneau **Propriétés**.
+Une fois renseignés, **Société payeuse** et **Compte** peuvent être modifiés mais pas vidés. **Fournisseur** peut être effacé à tout moment. Lorsque vous changez la société payeuse d'un poste qui a un compte, et que la nouvelle société utilise un autre plan comptable, le compte est effacé dans le même enregistrement : choisissez le nouveau compte sur le plan comptable de la nouvelle société. Le fichier CAPEX porte aussi le compte, dans la colonne `account_number`, sur le plan comptable de la société payeuse.
 
 Une fois le poste créé, l'espace de travail déverrouille les quatre onglets : **Vue d'ensemble**, **Budget**, **Ventilations** et **Relations**.
 
@@ -190,7 +190,7 @@ L'onglet Vue d'ensemble contient les détails de l'investissement et ses tâches
 
 **Ce que vous pouvez modifier** :
 
-- **Description** : Détails libres sur l'investissement (exportés sous `notes` dans le CSV). Le nom de l'investissement est le titre en haut
+- **Description** : Détails libres sur l'investissement (la colonne `name` du fichier CAPEX). Le nom de l'investissement est le titre en haut
 
 **Panneau des tâches** :
 
@@ -300,7 +300,7 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 - **Répartition linéaire**, **Répartition 4-4-5** ou **Répartition par trimestre** : les montants proviennent d'une répartition
 - **Copié depuis Budget 2025 +2 %** : les montants proviennent de **Copier les colonnes budgétaires** dans l'Administration budgétaire, avec le pourcentage affiché lorsqu'il y en a un
 - **Quantité et prix · 3 lignes · 1.00 ETP** : les montants proviennent de lignes, avec leur nombre et, lorsque les lignes comptent des personnes ou des jours, l'ETP de la colonne. Cet ETP est la moyenne sur l'année. Survolez le libellé pour voir les lignes, par exemple « Chef de projet : 1 personne × 1 200 par jour, 5 jours par mois, févr. à juil. »
-- **Modifié à la main** : un mois a été modifié dans la grille ou par un import du fichier des lignes budgétaires
+- **Modifié à la main** : un mois a été modifié dans la grille ou par un import de fichier budgétaire
 - Une colonne sans libellé a conservé les données qu'elle avait avant l'arrivée des périodes
 
 **Lorsqu'une autre personne modifie la même colonne** :
@@ -397,7 +397,7 @@ Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur
 - **Copier les colonnes budgétaires** dans l'Administration budgétaire : « Les montants ont été copiés depuis Budget 2025. Utiliser à nouveau les lignes. » La copie reporte les lignes de la colonne source avec les montants. Voir [Copier une colonne calculée](budget-operations.md#copier-une-colonne-calculee)
 - Les jours ouvrés d'un calendrier ont changé : « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. » Rien ne change sur la colonne tant que vous ne cliquez pas sur **Utiliser à nouveau les lignes**
 - **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire retire les lignes avec les montants. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
-- Un fichier des lignes budgétaires ne change que les mois, et les lignes restent. Voir [Fichier des lignes budgétaires](budget-operations.md#fichier-des-lignes-budgetaires)
+- Un fichier budgétaire change les mois d'une colonne et laisse ses lignes. Voir [Charger un budget depuis un tableur](budget-file.md)
 
 #### ETP
 
@@ -535,83 +535,11 @@ L'onglet Relations lie ce poste CAPEX aux objets associés : Projets, Applicatio
 
 ## Import/export CSV
 
-Vous pouvez charger en masse les postes CAPEX via CSV pour accélérer la configuration initiale ou la synchronisation avec des systèmes externes.
+**Exporter CSV** et **Importer CSV** se trouvent dans la barre d'outils de la liste CAPEX. Les deux demandent des droits d'administration sur CAPEX (`capex:admin`).
 
-**Export** :
+**Exporter CSV** écrit le fichier budgétaire CAPEX pour les postes affichés par la liste. **Importer CSV** relit un fichier : il est d'abord vérifié, et rien n'est écrit avant que vous cliquiez sur **Charger**.
 
-1. Cliquez sur **Export CSV** dans la liste CAPEX
-2. Choisissez :
-   - **Modèle** : En-têtes uniquement (utilisez-le pour créer un CSV vierge à remplir)
-   - **Données** : Tous les postes CAPEX, y compris ceux arrivés à échéance, avec les budgets de A-1 à A+2
-
-**Structure du CSV** :
-
-- Séparateur : point-virgule `;` (pas de virgule)
-- Encodage : UTF-8 (enregistrez au format « CSV UTF-8 » dans Excel)
-- En-têtes : `item_number;description;ppe_type;investment_type;priority;currency;effective_start;status;disabled_at;notes;company_name;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision;y_plus2_budget`
-- `disabled_at` est la fin de validité : la date à laquelle le poste s'arrête. Indiquez une date (`2026-12-31`) ou une date avec heure
-- `status` vaut `enabled` ou `disabled`. L'export écrit le statut lu dans la fin de validité. Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne, par exemple `enabled` avec une date déjà passée
-- Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le poste aujourd'hui. Un nouveau poste est activé sauf si la ligne indique `disabled`, et `disabled` avec une date vide le termine aujourd'hui
-- Les anciens fichiers avec une colonne `effective_end` s'importent toujours : sa date alimente la fin de validité lorsque `disabled_at` est vide
-- `analytics_category` contient la valeur de la dimension analytique par défaut, quel que soit son nom. Chaque autre dimension activée a sa propre colonne, `analytics:<code>`, où `<code>` est le code de la dimension. Les exports et le modèle placent ces colonnes juste après `analytics_category`, dans l'ordre des dimensions
-- `analytics_category`, les colonnes `analytics:<code>`, `cost_center_code` et `run_build` sont des colonnes facultatives : les exports et le modèle les contiennent toujours, et les fichiers qui ne les ont pas s'importent toujours
-
-**Import** :
-
-1. Cliquez sur **Import CSV** dans la liste CAPEX
-2. Téléversez votre fichier CSV (glisser-déposer ou sélecteur de fichiers)
-3. Cliquez sur **Vérification préalable** pour valider :
-   - Chaque colonne obligatoire est présente et aucune colonne n'est inconnue. Les colonnes sont reconnues par leur nom, dans n'importe quel ordre
-   - Les sociétés, centres de coûts et utilisateurs existent dans votre espace de travail
-   - Les champs obligatoires (description, ppe_type, investment_type, priority) sont présents. Un nouveau poste nécessite aussi une devise, et un company_name sauf s'il a un centre de coûts
-   - Un changement de société sur un poste qui a un compte reste dans le plan comptable de ce compte
-   - Les devises sont autorisées dans les paramètres de devise de votre espace de travail
-   - Les responsables sont des utilisateurs actifs
-   - Un `item_number` correspond à un poste CAPEX existant
-   - Les dates sont valides, et deux lignes ne décrivent pas le même poste
-4. Examinez le rapport de vérification (il affiche les totaux et jusqu'à 5 exemples d'erreurs). Chaque erreur désigne sa ligne par le numéro de ligne du fichier tel qu'un éditeur de texte l'affiche, lignes vides et cellules sur plusieurs lignes comprises. Un fichier qui contient une erreur ne charge rien : corrigez les lignes et relancez la vérification
-5. Si tout est correct, cliquez sur **Charger** pour importer
-
-**Remarques importantes** :
-
-- **Correspondance** : Une ligne avec un `item_number` met à jour ce poste CAPEX ; la vérification signale un numéro qui ne correspond à aucun poste. Une ligne sans numéro est rattachée par `description` : si elle correspond, elle met à jour le poste, sinon elle crée un nouveau poste. Deux lignes avec le même `item_number`, ou avec la même `description` et sans numéro, sont une erreur (« Same line as row N ») : gardez une seule ligne par poste.
-- **Nouveaux postes** : `currency` est obligatoire pour un nouveau poste, de même que `company_name` sauf si la ligne a un `cost_center_code` : un nouveau poste avec un `company_name` vide prend la société de son centre de coûts. Sans l'un ni l'autre, la ligne est refusée : « Company is required unless the line has a cost center. » La devise doit être autorisée dans les paramètres de devise de votre espace de travail. Sur un poste existant, une cellule de devise vide conserve sa devise.
-- **Dates** : `effective_start` (et `effective_end` dans les anciens fichiers) doit être un jour calendaire réel au format `YYYY-MM-DD`, par exemple `2026-01-01`. Les autres formats, comme `01/03/2026`, sont des erreurs. Un `effective_start` vide conserve la date enregistrée d'un poste existant ; un nouveau poste commence le 1er janvier de l'année en cours.
-- **Références** : `company_name` doit correspondre à une Société par nom (insensible à la casse). `owner_it_email` et `owner_business_email` doivent correspondre à des utilisateurs actifs par e-mail : un utilisateur invité ou un contact sans compte est refusé.
-- **Centre de coûts** : `cost_center_code` est le code d'un centre de coûts, sans tenir compte de la casse. Un groupe est refusé. Un centre de coûts désactivé est accepté sur un poste qui l'a déjà, et refusé comme nouvelle valeur. Une cellule vide efface le centre de coûts du poste. Lorsque la colonne entière est absente, les postes conservent leur centre de coûts.
-- **Run ou build** : `run_build` vaut `run`, `build` ou vide (sans tenir compte de la casse). Une cellule vide efface la valeur. Lorsque la colonne entière est absente, les postes conservent leur valeur.
-- **Dimensions analytiques** : Chaque cellule analytique désigne une valeur de la dimension de sa colonne, sans tenir compte de la casse. Une valeur qui n'existe pas encore est créée dans cette dimension pendant le chargement. Une valeur désactivée est acceptée sur un poste qui l'a déjà, et refusée comme nouvelle valeur. Une cellule vide efface la valeur du poste sur cette dimension. Lorsqu'une colonne est absente, les postes conservent leur valeur sur cette dimension. Une colonne pour une dimension inconnue ou désactivée refuse le fichier entier, de même que deux colonnes pour la même dimension (`analytics_category` et le code propre de la dimension par défaut). Exporter puis importer le même fichier ne change rien.
-- **Société des postes existants** : un `company_name` vide conserve la société payeuse du poste. Un `company_name` renseigné est conservé, même s'il diffère de la société du centre de coûts. Lorsqu'un poste a un compte, un nouveau `company_name` doit utiliser le même plan comptable que ce compte ; sinon la vérification refuse la ligne : « Account ... is not in ...'s chart of accounts. Change the line's account first. » Changez le compte dans le panneau **Propriétés** du poste, puis relancez l'import.
-- **Type d'immobilisation** : Doit être `hardware` ou `software` (insensible à la casse).
-- **Type d'investissement** : Doit être l'un des suivants : `replacement`, `capacity`, `productivity`, `security`, `conformity`, `business_growth`, `other` (insensible à la casse).
-- **Priorité** : Doit être `mandatory`, `high`, `medium` ou `low` (insensible à la casse).
-- **Budgets** : Les colonnes budgétaires alimentent les versions A-1, A et A+1. Les montants sont répartis uniformément sur 12 mois (mode Annuel) et la période de la colonne devient l'année entière. Une cellule vide laisse la colonne telle quelle ; `0` l'efface. Les en-têtes gardent leurs noms techniques, quel que soit le nom choisi par votre organisation, et ils chargent aussi les colonnes masquées.
-- **Montants mensuels** : pour charger ou relire les montants mois par mois, avec la période de chaque colonne, utilisez le **Fichier des lignes budgétaires** dans l'Administration budgétaire.
-
-**Erreurs courantes** :
-
-- **« Company not found »** : Créez d'abord la société dans **Données de référence > Sociétés**, puis relancez l'import.
-- **« Invalid ppe_type »** : Utilisez exactement `hardware` ou `software`.
-- **« Invalid investment_type »** : Utilisez l'un des 7 types d'investissement valides (voir la liste ci-dessus).
-- **« Invalid priority »** : Utilisez `mandatory`, `high`, `medium` ou `low`.
-- **« Invalid currency »** : Utilisez des codes ISO à 3 lettres (USD, EUR, GBP) autorisés dans les paramètres de devise de votre espace de travail.
-- **« Header mismatch »** : Une colonne obligatoire manque, ou une colonne est inconnue ; le message les liste. Les colonnes sont reconnues par leur nom, dans n'importe quel ordre, et les colonnes analytiques sont facultatives. Comparez la première ligne de votre fichier avec un nouveau modèle.
-- **« effective_start must be a valid date »** : Utilisez le format `YYYY-MM-DD`.
-- **« Same line as row N »** : Deux lignes décrivent le même poste. Fusionnez-les en une seule ligne, puis relancez l'import.
-- **« Company is required unless the line has a cost center. »** : Renseignez `company_name` ou `cost_center_code` pour le nouveau poste.
-- **« Account ... is not in ...'s chart of accounts. Change the line's account first. »** : Voir **Société des postes existants** ci-dessus.
-- **« Cost center ... was not found. »** : Vérifiez le code, ou créez le centre de coûts dans **Données de référence > Centres de coûts**, puis relancez l'import.
-- **« ... is a group. Choose a cost center. »** : Utilisez le code d'un centre de coûts de ce groupe.
-- **« Cost center ... is disabled. »** : Utilisez un centre de coûts activé, ou réactivez-le dans **Données de référence > Centres de coûts**.
-- **« Run or build must be run, build or blank. »** : Corrigez la cellule `run_build`.
-- **« The column analytics:... names no dimension. Check the dimension code or remove the column. »** : Utilisez le code affiché dans l'espace de travail de la dimension, dans **Données de référence > Dimensions analytiques**, ou retirez la colonne.
-- **« The ... dimension is disabled. Enable it or leave it out. »** : Activez la dimension dans **Données de référence > Dimensions analytiques**, ou retirez sa colonne.
-- **« The file has two columns for ... »** : Deux colonnes désignent la même dimension, par exemple `analytics_category` et le code propre de la dimension par défaut. Gardez une seule colonne.
-- **« ... is disabled. Pick an enabled value. »** : Utilisez une valeur activée de cette dimension, ou réactivez la valeur.
-
-**Conseil** : Commencez par l'export du modèle, remplissez quelques lignes et lancez une vérification pour détecter les erreurs tôt. Corrigez les erreurs dans le CSV et téléversez-le à nouveau jusqu'à ce que la vérification passe, puis chargez.
-
----
+Le fichier contient une ligne par poste, les détails du poste, ses montants en colonnes et `kanap_token`. [Charger un budget depuis un tableur](budget-file.md) décrit les colonnes, ce que signifie une cellule et les deux étapes de l'import.
 
 ## Statut et cycle de vie
 
@@ -673,7 +601,7 @@ Si vous ne pouvez pas effectuer une action (ex. : le bouton **Import CSV** est a
 - **Téléversez la documentation** : Utilisez les pièces jointes pour stocker les devis fournisseur, notes d'approbation et spécifications techniques avec le poste.
 - **Classifiez avec précision** : Utilisez le Type d'investissement et la Priorité de manière cohérente pour permettre une analyse et une priorisation pertinentes des dépenses d'investissement.
 - **Maintenez les métriques des sociétés à jour** : Les ventilations dépendent de l'effectif, des utilisateurs IT et du chiffre d'affaires des sociétés. Des métriques obsolètes causent des erreurs de ventilation.
-- **Utilisez le CSV pour la configuration en masse** : Si vous migrez depuis un autre système ou avez de nombreux postes d'investissement, commencez par l'import CSV.
+- **Utilisez le CSV pour la configuration en masse** : Si vous migrez depuis un autre système ou avez de nombreux postes d'investissement, commencez par l'import CSV. Exportez un fichier récent, remplissez vos lignes et vérifiez-le avant de charger.
 - **Désactivez, ne supprimez pas** : Préservez l'historique en désactivant les postes lorsque les actifs sont cédés ou les projets terminés.
 - **Vérifiez la ligne de totaux** : Avant de finaliser les budgets d'investissement, vérifiez la ligne de totaux épinglée pour vous assurer que vos dépenses s'additionnent comme prévu.
 - **Utilisez les liens profonds** : Cliquez directement sur une colonne de budget ou de ventilation dans la liste pour accéder directement à cet onglet et à cette année.

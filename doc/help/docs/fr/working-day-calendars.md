@@ -176,9 +176,8 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 
 **Structure du CSV** :
 
-- Séparateur : point-virgule `;`
-- Encodage : UTF-8 (enregistrez au format « CSV UTF-8 » dans Excel)
-- En-têtes : `code;name;description;country;region;status;disabled_at;year;jan;feb;mar;apr;may;jun;jul;aug;sep;oct;nov;dec`
+- En-têtes : `code`, `name`, `description`, `country`, `region`, `status`, `disabled_at`, `year`, `jan`, `feb`, `mar`, `apr`, `may`, `jun`, `jul`, `aug`, `sep`, `oct`, `nov`, `dec`
+- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 - Une ligne par calendrier et par année. Un calendrier avec trois années occupe trois lignes. Un calendrier sans aucune année est exporté sur une ligne, avec l'année et les mois vides
 - Un calendrier standard n'exporte que les années que vous avez modifiées. Les autres années suivent les jours fériés et n'ont besoin d'aucune ligne
 - Les colonnes `country`, `region` et `disabled_at` sont facultatives à l'import. Un fichier sans `country` ni `region` crée des calendriers personnalisés

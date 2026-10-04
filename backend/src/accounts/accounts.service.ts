@@ -6,14 +6,19 @@ import { Company } from '../companies/company.entity';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AccountUpsertDto } from './dto/account.dto';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
+import {
+  cellOf,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
 const INT4_MAX = 2147483647;
@@ -448,12 +453,12 @@ export class AccountsService {
 
   async exportCsv(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; coaId?: string; includeCoaCode?: boolean },
+    opts?: { manager?: EntityManager; coaId?: string; includeCoaCode?: boolean; language?: CsvLanguage },
   ): Promise<{ filename: string; content: string }> {
+    const language = opts?.language ?? 'en';
     const includeCoa = !!opts?.includeCoaCode;
     const headers = this.csvHeaders(includeCoa);
-    const delimiter = ';';
-    const rows: any[] = [];
+    const rows: string[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       const where: any = {};
@@ -463,100 +468,87 @@ export class AccountsService {
       if (includeCoa) {
         const ids = Array.from(new Set(items.map((a) => a.coa_id).filter(Boolean))) as string[];
         if (ids.length > 0) {
-          const rows = await repo.manager.query(`SELECT id, code FROM chart_of_accounts WHERE id = ANY($1)`, [ids]);
-          codeById = new Map(rows.map((r: any) => [r.id, r.code]));
+          const coaRows: Array<{ id: string; code: string }> = await repo.manager.query(`SELECT id, code FROM chart_of_accounts WHERE id = ANY($1)`, [ids]);
+          codeById = new Map(coaRows.map((r) => [r.id, r.code]));
         }
       }
       for (const a of items) {
-        const baseRow: any = {
-          account_number: a.account_number ?? '',
-          account_name: a.account_name ?? '',
-          native_name: (a as any).native_name ?? '',
-          description: a.description ?? '',
-          consolidation_account_number: a.consolidation_account_number ?? '',
-          consolidation_account_name: a.consolidation_account_name ?? '',
-          consolidation_account_description: a.consolidation_account_description ?? '',
-          status: a.status ?? 'enabled',
-        };
-        rows.push(includeCoa ? { coa_code: codeById.get(a.coa_id || '') || '', ...baseRow } : baseRow);
+        const baseRow: string[] = [
+          String(a.account_number ?? ''),
+          a.account_name ?? '',
+          (a as any).native_name ?? '',
+          a.description ?? '',
+          a.consolidation_account_number != null ? String(a.consolidation_account_number) : '',
+          a.consolidation_account_name ?? '',
+          a.consolidation_account_description ?? '',
+          String(a.status ?? 'enabled'),
+        ];
+        rows.push(includeCoa ? [codeById.get(a.coa_id || '') || '', ...baseRow] : baseRow);
       }
     }
     const filename = scope === 'template' ? 'accounts_template.csv' : (opts?.coaId ? 'accounts_coa.csv' : 'accounts.csv');
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      if (scope === 'template') {
-        const headerLine = headers.join(delimiter) + '\n';
-        chunks.push(headerLine);
-        stream.end();
-      } else {
-        for (const row of rows) stream.write(row);
-        stream.end();
-      }
-    });
-    const content = '\ufeff' + chunks.join('');
-    return { filename, content };
+    return { filename, content: writeCsv({ language, headers, rows }) };
   }
 
   async importCsv(
-    { file, dryRun, userId }: { file: Express.Multer.File; dryRun: boolean; userId?: string | null },
+    {
+      file,
+      dryRun,
+      userId,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      userId?: string | null;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     opts?: { manager?: EntityManager; targetCoaId?: string | undefined; allowCoaCodeColumn?: boolean; updateExisting?: boolean },
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const delimiter = ';';
+    const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders(!!opts?.allowCoaCodeColumn);
-    type Row = Record<string, string>;
-    const rows: Row[] = [];
-    const errors: { row: number; message: string }[] = [];
-    let headerOk = false;
-    await new Promise<void>((resolve, reject) => {
-      const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
-      if (!buf) {
-        reject(new BadRequestException('Empty upload'));
-        return;
-      }
-      let content: string;
-      try {
-        content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
-      } catch {
-        reject(new BadRequestException('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.'));
-        return;
-      }
-      parseString(content, { headers: true, delimiter, ignoreEmpty: true, trim: true })
-        .on('headers', (headers: string[]) => {
-          const missing = expectedHeaders.filter((h) => !headers.includes(h));
-          const extras = headers.filter((h) => !expectedHeaders.includes(h));
-          headerOk = missing.length === 0 && extras.length === 0;
-          if (!headerOk) {
-            errors.push({ row: 0, message: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` });
-          }
-        })
-        .on('error', (err) => reject(err))
-        .on('data', (row: Row) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
+    const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
+    if (!buf) throw new BadRequestException('Empty upload');
+    const read = await readMasterDataFile({
+      file: buf as Buffer,
+      fields: expectedHeaders,
+      language: readLanguage,
+      dateOrder,
+      decimalMark,
     });
-    if (!headerOk) {
-      return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, errors };
+    const errors: { row: number; message: string }[] = [];
+    if (read.headerError) {
+      return {
+        ok: false, dryRun, total: 0, inserted: 0, updated: 0,
+        errors: [{ row: 0, message: read.headerError }],
+        ignoredColumns: read.ignoredColumns, notices: read.notices,
+      };
     }
     // Validate and normalize
     const repo = this.getRepo(opts?.manager);
     const normalized: (AccountUpsertDto & { account_number: string })[] = [];
     const coaCodes: Set<string> = new Set();
-    rows.forEach((r, idx) => {
-      const line = idx + 2;
+    read.rows.forEach((row) => {
+      const line = row.line;
+      const problems = rowProblems(row);
+      if (problems.length > 0) {
+        errors.push(...problems.map((message) => ({ row: line, message })));
+        return;
+      }
       if (opts?.allowCoaCodeColumn) {
-        const code = (r['coa_code'] ?? '').toString().trim();
+        const code = cellOf(row, 'coa_code');
         if (!opts?.targetCoaId && !code) errors.push({ row: line, message: 'coa_code is required when not importing into a specific CoA' });
         if (code) coaCodes.add(code);
       }
-      const numRaw = (r['account_number'] ?? '').toString().trim();
-      const name = (r['account_name'] ?? '').toString().trim();
-      const nativeName = ((r['native_name'] ?? '').toString().trim()) || null;
-      const statusRaw = (r['status'] ?? 'enabled').toString().trim().toLowerCase();
-      const consolNumRaw = (r['consolidation_account_number'] ?? '').toString().trim();
+      const numRaw = cellOf(row, 'account_number');
+      const name = cellOf(row, 'account_name');
+      const nativeName = cellOf(row, 'native_name') || null;
+      const statusRaw = cellOf(row, 'status').toLowerCase();
+      const consolNumRaw = cellOf(row, 'consolidation_account_number');
       const parseIntStrict = (v: string): number | null => {
         if (v === '') return null;
         const n = Number(v);
@@ -572,15 +564,15 @@ export class AccountsService {
         account_number: String(account_number ?? ''),
         account_name: name,
         native_name: nativeName,
-        description: ((r['description'] ?? '').toString().trim()) || null,
+        description: cellOf(row, 'description') || null,
         consolidation_account_number,
-        consolidation_account_name: ((r['consolidation_account_name'] ?? '').toString().trim()) || null,
-        consolidation_account_description: ((r['consolidation_account_description'] ?? '').toString().trim()) || null,
+        consolidation_account_name: cellOf(row, 'consolidation_account_name') || null,
+        consolidation_account_description: cellOf(row, 'consolidation_account_description') || null,
         status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED,
       });
     });
     if (errors.length > 0) {
-      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors };
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     let targetCoaId: string | undefined = opts?.targetCoaId;
     if (!targetCoaId && opts?.allowCoaCodeColumn) {
@@ -588,17 +580,17 @@ export class AccountsService {
       const codes = Array.from(coaCodes.values()).filter(Boolean);
       const uniqCodes = Array.from(new Set(codes));
       if (uniqCodes.length !== 1) {
-        return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'All rows must specify the same coa_code or provide ?coaId parameter' }] };
+        return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'All rows must specify the same coa_code or provide ?coaId parameter' }], ignoredColumns: read.ignoredColumns, notices: read.notices };
       }
       const code = uniqCodes[0];
       const found = await repo.manager.query(`SELECT id FROM chart_of_accounts WHERE code = $1 AND tenant_id = current_setting('app.current_tenant', true)::uuid LIMIT 1`, [code]);
       if (!found?.[0]?.id) {
-        return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: `Unknown coa_code '${code}' for this tenant` }] };
+        return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: `Unknown coa_code '${code}' for this tenant` }], ignoredColumns: read.ignoredColumns, notices: read.notices };
       }
       targetCoaId = found[0].id;
     }
     if (!targetCoaId) {
-      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'Target CoA is required (use ?coaId or include coa_code column)' }] };
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'Target CoA is required (use ?coaId or include coa_code column)' }], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Deduplicate by account_number: keep first occurrence
     const uniqueByNumber = new Map<string, AccountUpsertDto>();
@@ -615,7 +607,7 @@ export class AccountsService {
       if (existing) updated += 1; else inserted += 1;
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, errors: [] };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -633,6 +625,6 @@ export class AccountsService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, processed, errors: [] };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

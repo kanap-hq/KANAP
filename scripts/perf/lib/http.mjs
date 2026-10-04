@@ -41,7 +41,11 @@ export function createClient({ baseUrl, maxSockets = 6, timeoutMs = 0 } = {}) {
         `Content-Type: text/csv; charset=utf-8\r\n\r\n`,
       );
       const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
-      body = Buffer.concat([head, Buffer.isBuffer(form.bytes) ? form.bytes : Buffer.from(form.bytes), tail]);
+      // Extra text parts, after the file (the budget file route takes `snapshot` beside `file`).
+      const fields = Object.entries(form.fields ?? {}).map(([name, value]) => Buffer.from(
+        `\r\n--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}`,
+      ));
+      body = Buffer.concat([head, Buffer.isBuffer(form.bytes) ? form.bytes : Buffer.from(form.bytes), ...fields, tail]);
       reqHeaders['Content-Type'] = `multipart/form-data; boundary=${boundary}`;
     }
     if (body) reqHeaders['Content-Length'] = body.length;

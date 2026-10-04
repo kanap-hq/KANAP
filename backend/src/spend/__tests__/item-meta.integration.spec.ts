@@ -244,7 +244,7 @@ async function versionCounters(tenantId: string, kind: Kind, s: Setup) {
   assert.equal(afterView.changedAt, afterJean.changed_at);
   console.log(`ok - ${kind}: a budget write that changes nothing moves nothing`);
 
-  // A change nothing logs (a script, an item CSV total): nobody, at the moment it happened.
+  // A change nothing logs (a script): nobody, at the moment it happened.
   await seed(tenantId, (runner) => runner.query(
     `UPDATE ${TABLES[kind].amounts} SET planned = planned + 1 WHERE version_id = $1 AND period = $2`, [s.versionId, period(5, YEAR)],
   ));

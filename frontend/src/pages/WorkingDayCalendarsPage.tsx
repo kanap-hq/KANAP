@@ -250,13 +250,14 @@ function WorkingDayCalendarsList() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope: scope };
         }}
       />
-      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint={WORKING_DAY_PROFILES_ENDPOINT} title={t('workingDayCalendars.export')} />
+      <CsvExportDialog open={exportOpen} onClose={() => setExportOpen(false)} endpoint={WORKING_DAY_PROFILES_ENDPOINT} title={t('workingDayCalendars.export')} flexibleFormat />
       <CsvImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
         endpoint={WORKING_DAY_PROFILES_ENDPOINT}
         title={t('workingDayCalendars.import')}
         onImported={refresh}
+        flexibleFormat
       />
     </>
   );

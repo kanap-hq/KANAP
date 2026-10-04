@@ -217,6 +217,7 @@ function AnalyticsValuesList() {
         onClose={() => setExportOpen(false)}
         endpoint={ANALYTICS_VALUES_ENDPOINT}
         title={t('analytics.export')}
+        flexibleFormat
       />
       <CsvImportDialog
         open={importOpen}
@@ -224,6 +225,7 @@ function AnalyticsValuesList() {
         endpoint={ANALYTICS_VALUES_ENDPOINT}
         title={t('analytics.import')}
         onImported={refresh}
+        flexibleFormat
       />
     </>
   );

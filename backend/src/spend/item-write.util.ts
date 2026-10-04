@@ -6,7 +6,7 @@ import { ItemAnalyticsChange, resolveItemAnalyticsChanges } from './item-analyti
 
 /**
  * The one gate of every OPEX and CAPEX line write (API create and update, the
- * AI mutations and the CAPEX CSV through the services, the OPEX CSV writer).
+ * AI mutations and the budget file, all through the item services).
  *
  * Item bodies reach the services unvalidated, and foreign key checks bypass
  * row level security: without this gate any column could be sent and another
@@ -210,46 +210,7 @@ export async function resolveItemWrite(
   return { values, lifecycle, analytics };
 }
 
-/* ---- Item CSVs (both types) ---- */
-
-/** Accepted when absent (older files): an absent column leaves the stored value; present and blank clears it. */
-export const ITEM_CSV_OPTIONAL_HEADERS = ['analytics_category', 'cost_center_code', 'run_build'] as const;
-
-export type CsvCostCenter = { id: string; code: string; kind: string; company_id: string | null; disabled_at: Date | string | null };
-
-/** The tenant's cost centers by lower-cased code (codes are unique case-insensitively). */
-export async function loadCostCentersByCode(manager: EntityManager, tenantId: string): Promise<Map<string, CsvCostCenter>> {
-  const rows: CsvCostCenter[] = await manager.query(
-    `SELECT id, code, kind, company_id, disabled_at FROM cost_centers WHERE tenant_id = $1`,
-    [tenantId],
-  );
-  return new Map(rows.map((row) => [row.code.trim().toLowerCase(), row]));
-}
-
-/** Codes of the given cost center ids, for an export. */
-export async function loadCostCenterCodes(manager: EntityManager, tenantId: string, ids: Array<string | null | undefined>): Promise<Map<string, string>> {
-  const wanted = Array.from(new Set(ids.filter((id): id is string => !!id)));
-  if (wanted.length === 0) return new Map();
-  const rows: Array<{ id: string; code: string }> = await manager.query(
-    `SELECT id, code FROM cost_centers WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
-    [tenantId, wanted],
-  );
-  return new Map(rows.map((row) => [row.id, row.code]));
-}
-
-/** A `cost_center_code` cell: a cost center of the tenant, never a group. The disabled check needs the line (`csvCostCenterDisabledError`). */
-export function resolveCsvCostCenter(byCode: Map<string, CsvCostCenter>, code: string): { node: CsvCostCenter | null; error: string | null } {
-  const node = byCode.get(code.trim().toLowerCase()) ?? null;
-  if (!node) return { node: null, error: `Cost center ${code} was not found.` };
-  if (node.kind !== 'cost_center') return { node: null, error: `${code} is a group. Choose a cost center.` };
-  return { node, error: null };
-}
-
-/** A disabled cost center stays on the line that already has it, and is refused as a new assignment. */
-export function csvCostCenterDisabledError(node: CsvCostCenter, currentCostCenterId: string | null | undefined): string | null {
-  if (isActiveAt(node.disabled_at) || node.id === (currentCostCenterId ?? null)) return null;
-  return `Cost center ${node.code} is disabled.`;
-}
+/* ---- CSV helpers (master-data files and the budget file) ---- */
 
 /**
  * The status and end of validity an item CSV row writes (`status` null when
@@ -286,9 +247,6 @@ export function csvLifecycleConflict(status: StatusState | null, disabledAt: Dat
     ? 'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.'
     : 'Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.';
 }
-
-export const CSV_RUN_BUILD_ERROR = 'Run or build must be run, build or blank.';
-export const CSV_COMPANY_REQUIRED_ERROR = 'Company is required unless the line has a cost center.';
 
 /**
  * Locks every cost center a file newly assigns, once and in id order, before

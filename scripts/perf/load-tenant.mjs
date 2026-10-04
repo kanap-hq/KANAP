@@ -17,6 +17,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { createClient, pool, parseCsv } from './lib/http.mjs';
+import { buildLinesFile, buildMonthlyFile, fetchDefaultDimensionCode, loadBudgetFile } from '../lib/budget-file.mjs';
 
 const opts = {
   baseUrl: 'http://127.0.0.1:18080',
@@ -146,6 +147,66 @@ async function importCsvText(label, route, text) {
 
 const importFile = (name, route) => step(`import ${name}`, () => importCsvText(name.replace(/\.csv$/, ''), `${route}${route.includes('?') ? '&' : '?'}dryRun=false`, readFileSync(file(name), 'utf8')));
 
+// ── Budget file (lines, then monthly rows) ──────────────────────────────────
+//
+// The item files and the monthly rows keep their old shape: the shared helper
+// (scripts/lib/budget-file.mjs) converts them and runs the two-step budget file
+// route (preflight, then import). One file per scope each time, no chunking:
+// the route's cap is 48 MB and the perf dataset fits in one file per scope.
+
+/** Y: the calendar year the source files' relative `y_*` columns are read against. */
+const BUDGET_YEAR = new Date().getFullYear();
+const BUDGET_ITEM_FILES = { opex: '14-spend-items.csv', capex: '15-capex-items.csv' };
+
+/** The perf client, reduced to what the budget file helper needs. */
+async function budgetRequest(method, route, { bytes, filename, snapshot } = {}) {
+  const options = { token };
+  if (bytes !== undefined) {
+    options.form = { filename, bytes, ...(snapshot === undefined ? {} : { fields: { snapshot: JSON.stringify(snapshot) } }) };
+  }
+  const res = await client.request(method, route, options);
+  return { status: res.status, data: res.data };
+}
+
+/** Line name -> item_number, for the lines that already exist in the tenant. */
+const numbersByName = (index, scope) => new Map(
+  [...index[scope].values()].map((item) => [scope === 'opex' ? item.product_name : item.description, String(item.item_number)]),
+);
+
+const withRate = (result, csvText) => ({
+  ...result,
+  bytes: Buffer.byteLength(csvText),
+  rowsPerSecond: Math.round(result.rows / ((result.preflightMs + result.importMs) / 1000)),
+});
+
+/** One item file, converted to a lines file and loaded through the two routes. */
+async function budgetLines(scope, existing, defaultDimensionCode) {
+  const name = BUDGET_ITEM_FILES[scope];
+  const source = readCsv(name);
+  const disabled = source.filter((row) => lower(row.status) === 'disabled' && !row.disabled_at).length;
+  if (disabled) findings.push({ step: `${name} (budget file)`, kind: 'disabled rows without a date', count: disabled });
+  const csvText = buildLinesFile(scope, source, { year: BUDGET_YEAR, defaultDimensionCode, existingNumbers: numbersByName(existing, scope) });
+  const result = await loadBudgetFile({ request: budgetRequest, scope, csvText, filename: name });
+  return withRate(result, csvText);
+}
+
+/** File 29, one budget file per scope, after the lines exist. */
+async function budgetRowsFile(index) {
+  const rows = readCsv('29-budget-rows.csv');
+  const partial = rows.filter((row) => !/^\d{4}-01-01$/.test(row.period_start) || !/^\d{4}-12-31$/.test(row.period_end)).length;
+  if (partial) findings.push({ step: 'budget rows', kind: 'rows with a partial period', count: partial });
+  const out = {};
+  for (const scope of ['opex', 'capex']) {
+    const scopeRows = rows.filter((row) => row.item_type === scope);
+    const missing = scopeRows.filter((row) => !index[scope].has(row.item_name)).length;
+    if (missing) findings.push({ step: `budget rows ${scope}`, kind: 'rows without item', count: missing });
+    const csvText = buildMonthlyFile(scope, scopeRows, { numbersByName: numbersByName(index, scope) });
+    const result = await loadBudgetFile({ request: budgetRequest, scope, csvText, filename: `29-budget-rows-${scope}.csv` });
+    out[scope] = withRate(result, csvText);
+  }
+  return { rows: rows.length, partial, ...out };
+}
+
 // ── Steps ───────────────────────────────────────────────────────────────────
 
 async function login() {
@@ -213,14 +274,18 @@ async function usersStep() {
   return { created: rows.length, avgMs: Math.round(timings.reduce((a, b) => a + b, 0) / Math.max(1, timings.length)) };
 }
 
-async function itemIndex() {
+async function collectItems() {
   // Page on a unique key: the default order (created_at) ties for every row of one import,
   // and LIMIT/OFFSET over ties returns some rows twice and skips others (seen: 4,288 of 5,000).
   const opex = await getAllPages('/spend-items?status=enabled&sort=item_number:ASC');
   opex.push(...await getAllPages('/spend-items?status=disabled&sort=item_number:ASC'));
   const capex = await getAllPages('/capex-items?status=enabled&sort=item_number:ASC');
   capex.push(...await getAllPages('/capex-items?status=disabled&sort=item_number:ASC'));
-  const index = { opex: new Map(opex.map((i) => [i.product_name, i])), capex: new Map(capex.map((i) => [i.description, i])) };
+  return { opex: new Map(opex.map((i) => [i.product_name, i])), capex: new Map(capex.map((i) => [i.description, i])) };
+}
+
+async function itemIndex() {
+  const index = await collectItems();
   const expected = {
     opex: new Set(readCsv('14-spend-items.csv').map((r) => r.product_name)).size,
     capex: new Set(readCsv('15-capex-items.csv').map((r) => r.description)).size,
@@ -229,19 +294,6 @@ async function itemIndex() {
     throw new Error(`item index incomplete: opex ${index.opex.size}/${expected.opex}, capex ${index.capex.size}/${expected.capex}`);
   }
   return index;
-}
-
-async function budgetRows(index) {
-  const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-  const out = [['item_type', 'item_number', 'year', 'measure', 'period_start', 'period_end', ...MONTHS, 'method'].join(';')];
-  let missing = 0;
-  for (const row of readCsv('29-budget-rows.csv')) {
-    const item = index[row.item_type].get(row.item_name);
-    if (!item) { missing += 1; continue; }
-    out.push([row.item_type, item.item_number, row.year, row.measure, row.period_start, row.period_end, ...MONTHS.map((m) => row[m]), ''].join(';'));
-  }
-  if (missing) findings.push({ step: 'budget rows', kind: 'rows without item', count: missing });
-  return importCsvText('29-budget-rows', '/budget-rows/import?dryRun=false', out.join('\n') + '\n');
 }
 
 const versionCache = new Map();
@@ -369,17 +421,25 @@ async function main() {
     await importFile('28-working-day-calendars.csv', '/working-day-profiles/import');
     await importFile('13-contracts.csv', '/contracts/import');
   }
-  if (want('items')) {
-    await importFile('14-spend-items.csv', '/spend-items/import');
-    await importFile('15-capex-items.csv', '/capex-items/import');
-  }
   let index = null;
   const getIndex = async () => (index ??= await step('item index (list pages)', async () => {
     const i = await itemIndex();
     index = i;
     return { opex: i.opex.size, capex: i.capex.size };
   }).then(() => index));
-  if (want('budget')) await step('import 29-budget-rows.csv', async () => budgetRows(await getIndex()));
+  if (want('items')) {
+    const existing = await step('existing line numbers (list pages)', async () => {
+      index = await collectItems();
+      return { opex: index.opex.size, capex: index.capex.size };
+    }).then(() => index);
+    const defaultDimensionCode = await step('default analytics dimension (analytics-axes)', () => fetchDefaultDimensionCode(budgetRequest));
+    for (const scope of ['opex', 'capex']) {
+      await step(`import ${BUDGET_ITEM_FILES[scope]} (budget file)`, () => budgetLines(scope, existing, defaultDimensionCode));
+    }
+    // The lines changed: the index the budget rows resolve names against is read again.
+    index = null;
+  }
+  if (want('budget')) await step('import 29-budget-rows.csv (budget file)', async () => budgetRowsFile(await getIndex()));
   if (want('costed')) await step('costed lines (bulk-upsert per column)', async () => costedLines(await getIndex()));
   if (want('allocations')) await step('manual allocations (PATCH + bulk-upsert per version)', async () => allocationsStep(await getIndex()));
   if (want('links')) await step('contract ↔ OPEX links', async () => contractLinks(await getIndex()));

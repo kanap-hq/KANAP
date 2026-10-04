@@ -93,30 +93,34 @@ Der Details-Tab verwaltet jahresbezogene Mitarbeiterzahl-Kennzahlen.
 
 ## CSV-Import/Export
 
-Halten Sie Abteilungen mit Ihrem HR-System per CSV synchron.
+**CSV exportieren** lädt alle Abteilungen mit ihrem Unternehmen, Namen, Beschreibung, Status und Ende der Gültigkeit herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
 
-**Export**:
-- Lädt alle Abteilungen mit Unternehmen, Name, Beschreibung, Status und Ende der Gültigkeit herunter
-- Spalten: `company_name;name;description;status;disabled_at`
+Die Spalten:
+
+| Spalte | Inhalt |
+|---|---|
+| `company_name` | Pflicht. Das Unternehmen, zu dem die Abteilung gehört, über seinen Namen |
+| `name` | Pflicht. Der Name der Abteilung |
+| `description` | Freier Text |
+| `status` | `enabled` oder `disabled` |
+| `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit |
 
 **Import**:
-- Verwenden Sie die **Vorprüfung** zum Validieren vor dem Anwenden
-- Zuordnung über Abteilungsname + Unternehmensname
-- Kann neue Abteilungen erstellen oder bestehende aktualisieren
 
-**Pflichtfelder**: `name` und `company_name` (ein vorhandenes Unternehmen)
+- Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
+- Zuordnung über Abteilungsname und Unternehmensname: Eine Zeile aktualisiert die Abteilung, die sie nennt, jede andere Zeile legt eine an
 
-**Optionale Felder**: `description`, `status`, `disabled_at`
+**Pflichtzellen**: `name` und `company_name`, ein bestehendes Unternehmen
 
-**Lebenszyklus-Spalten**:
-- `status` ist `enabled` oder `disabled`, und `disabled_at` ist das Ende der Gültigkeit, ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Eine neue Abteilung ist aktiviert, sofern die Zeile nicht `disabled` angibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet die Abteilung sonst heute
+**Optionale Zellen**: `description`, `status`, `disabled_at`
+
+**Lebenszyklusspalten**:
+- `status` ist `enabled` oder `disabled`, und `disabled_at` ist das Ende der Gültigkeit, ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Eine neue Abteilung ist aktiviert, außer die Zeile sagt `disabled`. Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum, andernfalls beendet es die Abteilung heute
 - Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“
 
 **Hinweise**:
-- Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen
-- Die Mitarbeiterzahl ist nicht in der Datei enthalten. Erfassen Sie sie pro Jahr im Tab **Details** der Abteilung
-
----
+- Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Die Mitarbeiterzahl steht nicht in der Datei. Erfassen Sie sie pro Jahr im **Details-Tab** der Abteilung
 
 ## Tipps
 

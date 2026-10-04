@@ -1,12 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { format } from '@fast-csv/format';
-import { parseString } from '@fast-csv/parse';
 import * as fs from 'fs';
 import { randomUUID } from 'node:crypto';
-import { decodeCsvBufferUtf8OrThrow } from '../common/encoding';
-import { denormalizeCsvRow, neutralizeCsvRow } from '../common/csv/csv-export.service';
-import { csvDataRowLines, rowLine } from '../common/csv/csv-row-lines';
-import { isActiveAt, parseEndOfValidityInput, resolveLifecycleState, StatusState } from '../common/status';
+import { isActiveAt, resolveLifecycleState, StatusState } from '../common/status';
+import {
+  cellOf,
+  CsvDateOrder,
+  CsvLanguage,
+  DecimalMark,
+  endOfValidityCell,
+  endOfValidityOf,
+  MasterDataFileRead,
+  readMasterDataFile,
+  rowProblems,
+  writeCsv,
+} from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CostCenterKind } from './cost-center.entity';
 import { loadCostCenterTree } from './cost-center-tree.util';
@@ -27,8 +34,7 @@ export const COST_CENTER_CSV_HEADERS = [
   'code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status', 'disabled_at',
 ] as const;
 /** Accepted when absent (the file then sets the lifecycle through `status` alone). */
-const OPTIONAL_HEADERS = new Set<string>(['disabled_at']);
-const DELIMITER = ';';
+const OPTIONAL_HEADERS = ['disabled_at'] as const;
 
 export interface CostCenterImportResult {
   ok: boolean;
@@ -38,6 +44,9 @@ export interface CostCenterImportResult {
   updated: number;
   unchanged: number;
   errors: Array<{ row: number; message: string }>;
+  /** The unknown headers the file carried, and what the shared layer noticed. */
+  ignoredColumns: string[];
+  notices: { dates: string | null; amounts: string | null };
 }
 
 interface ParsedRow {
@@ -48,14 +57,17 @@ interface ParsedRow {
   values: CostCenterValues;
 }
 
-const cell = (row: Record<string, string>, key: string) => (row[key] ?? '').toString().trim();
-
 @Injectable()
 export class CostCentersCsvService {
   constructor(private readonly costCenters: CostCentersService) {}
 
-  async exportCsv(scope: 'data' | 'template', ctx: CostCenterContext): Promise<{ filename: string; content: string }> {
-    const rows: Array<Record<string, string>> = [];
+  async exportCsv(
+    scope: 'data' | 'template',
+    ctx: CostCenterContext,
+    language: CsvLanguage = 'en',
+  ): Promise<{ filename: string; content: string }> {
+    const headers = [...COST_CENTER_CSV_HEADERS];
+    const rows: string[][] = [];
     if (scope === 'data') {
       // Tree order: a parent is always written before its children.
       const nodes = await loadCostCenterTree(ctx.manager, ctx.tenantId);
@@ -70,33 +82,23 @@ export class CostCentersCsvService {
       const byId = new Map(nodes.map((node) => [node.id, node]));
       for (const node of nodes) {
         const extra = extraById.get(node.id);
-        rows.push({
-          code: node.code,
-          kind: node.kind,
-          name: node.name,
-          parent_code: node.parent_id ? byId.get(node.parent_id)?.code ?? '' : '',
-          company_name: node.company_name ?? '',
-          owner_email: extra?.owner_email ?? '',
-          description: extra?.description ?? '',
+        rows.push([
+          node.code,
+          node.kind,
+          node.name,
+          node.parent_id ? byId.get(node.parent_id)?.code ?? '' : '',
+          node.company_name ?? '',
+          extra?.owner_email ?? '',
+          extra?.description ?? '',
           // The tree reads it from the end of validity, so it never contradicts its own row.
-          status: node.status,
-          disabled_at: node.disabled_at ?? '',
-        });
+          node.status,
+          endOfValidityCell(node.disabled_at, language),
+        ]);
       }
     }
-    const headers = [...COST_CENTER_CSV_HEADERS];
-    const chunks: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      const stream = format({ headers, delimiter: DELIMITER, alwaysWriteHeaders: true, transform: neutralizeCsvRow });
-      stream.on('data', (chunk) => chunks.push(chunk.toString('utf8')));
-      stream.on('end', () => resolve());
-      stream.on('error', (err) => reject(err));
-      for (const row of rows) stream.write(row);
-      stream.end();
-    });
     return {
       filename: scope === 'template' ? 'cost_centers_template.csv' : 'cost_centers.csv',
-      content: '\ufeff' + chunks.join(''),
+      content: writeCsv({ language, headers, rows }),
     };
   }
 
@@ -108,15 +110,30 @@ export class CostCentersCsvService {
    * the stored node is counted unchanged and writes nothing.
    */
   async importCsv(
-    { file, dryRun }: { file: Express.Multer.File; dryRun: boolean },
+    {
+      file,
+      dryRun,
+      language,
+      dateOrder,
+      decimalMark,
+    }: {
+      file: Express.Multer.File;
+      dryRun: boolean;
+      language?: CsvLanguage;
+      dateOrder?: CsvDateOrder;
+      decimalMark?: DecimalMark;
+    },
     ctx: CostCenterContext,
   ): Promise<CostCenterImportResult> {
+    const read = await this.parseFile(file, language ?? 'en', dateOrder, decimalMark);
     const result = (errors: CostCenterImportResult['errors'], total = 0): CostCenterImportResult => ({
       ok: false, dryRun, total, inserted: 0, updated: 0, unchanged: 0, errors,
+      ignoredColumns: read.ignoredColumns, notices: read.notices,
     });
-    const parsed = await this.parseFile(file);
-    if ('headerError' in parsed) return result([{ row: 0, message: parsed.headerError }]);
-    const { rows, hasDisabledAt, lines } = parsed;
+    if (read.headerError) return result([{ row: 0, message: read.headerError }]);
+    const { rows } = read;
+    // An absent `disabled_at` column is not a blank cell: the file then sets the lifecycle through `status` alone.
+    const hasDisabledAt = read.present.includes('disabled_at');
 
     await this.costCenters.lockTree(ctx);
     const stored = await this.costCenters.loadStored(ctx);
@@ -130,7 +147,7 @@ export class CostCentersCsvService {
       const key = company.name.trim().toLowerCase();
       companiesByName.set(key, [...(companiesByName.get(key) ?? []), company]);
     }
-    const emails = Array.from(new Set(rows.map((row) => cell(row, 'owner_email').toLowerCase()).filter(Boolean)));
+    const emails = Array.from(new Set(rows.map((row) => cellOf(row, 'owner_email').toLowerCase()).filter(Boolean)));
     const users: Array<{ id: string; email: string; status: string }> = emails.length
       ? await ctx.manager.query(
         `SELECT id, email, status FROM users WHERE tenant_id = $1 AND lower(email) = ANY($2::text[])`,
@@ -144,10 +161,11 @@ export class CostCentersCsvService {
     const parsedRows: ParsedRow[] = [];
     const lineByCode = new Map<string, number>();
     const parentCodes: Array<{ line: number; parentCode: string }> = [];
-    rows.forEach((raw, index) => {
-      const line = rowLine(lines, index);
-      const rowErrors: string[] = [];
-      parentCodes.push({ line, parentCode: cell(raw, 'parent_code') });
+    rows.forEach((raw) => {
+      // The physical line Excel shows, blank lines included.
+      const line = raw.line;
+      const rowErrors: string[] = rowProblems(raw, ['disabled_at']);
+      parentCodes.push({ line, parentCode: cellOf(raw, 'parent_code') });
       const attempt = <T>(fn: () => T): T | undefined => {
         try {
           return fn();
@@ -156,9 +174,9 @@ export class CostCentersCsvService {
           return undefined;
         }
       };
-      const code = attempt(() => normalizeCostCenterCode(cell(raw, 'code')));
-      const kind = attempt(() => normalizeCostCenterKind(cell(raw, 'kind')));
-      const name = attempt(() => normalizeCostCenterName(cell(raw, 'name')));
+      const code = attempt(() => normalizeCostCenterCode(cellOf(raw, 'code')));
+      const kind = attempt(() => normalizeCostCenterKind(cellOf(raw, 'kind')));
+      const name = attempt(() => normalizeCostCenterName(cellOf(raw, 'name')));
       const existing = code ? storedByCode.get(code.toLowerCase()) ?? null : null;
       if (code) {
         const firstLine = lineByCode.get(code.toLowerCase());
@@ -167,7 +185,7 @@ export class CostCentersCsvService {
       }
 
       let companyId: string | null = null;
-      const companyName = cell(raw, 'company_name');
+      const companyName = cellOf(raw, 'company_name');
       if (companyName) {
         const matches = companiesByName.get(companyName.toLowerCase()) ?? [];
         const company = matches.find((entry) => entry.name.trim() === companyName) ?? (matches.length === 1 ? matches[0] : undefined);
@@ -181,7 +199,7 @@ export class CostCentersCsvService {
       }
 
       let ownerId: string | null = null;
-      const ownerEmail = cell(raw, 'owner_email');
+      const ownerEmail = cellOf(raw, 'owner_email');
       if (ownerEmail) {
         const user = usersByEmail.get(ownerEmail.toLowerCase());
         if (!user) rowErrors.push(`Unknown budget holder email '${ownerEmail}'.`);
@@ -190,15 +208,18 @@ export class CostCentersCsvService {
         } else ownerId = user.id;
       }
 
-      const statusRaw = cell(raw, 'status').toLowerCase();
+      const statusRaw = cellOf(raw, 'status').toLowerCase();
       if (statusRaw && statusRaw !== StatusState.ENABLED && statusRaw !== StatusState.DISABLED) {
-        rowErrors.push(`Invalid status '${cell(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
+        rowErrors.push(`Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`);
       }
       const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
-      const disabledAtRaw = hasDisabledAt ? cell(raw, 'disabled_at') : '';
+      const disabledAtRaw = hasDisabledAt ? cellOf(raw, 'disabled_at') : '';
       let disabledAt: Date | null = null;
       if (disabledAtRaw) {
-        disabledAt = attempt(() => parseEndOfValidityInput(disabledAtRaw)) ?? null;
+        // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
+        const end = endOfValidityOf(raw, 'disabled_at');
+        if (end.error) rowErrors.push(end.error);
+        else disabledAt = end.value;
       }
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
       if (lifecycleConflict) rowErrors.push(lifecycleConflict);
@@ -218,12 +239,12 @@ export class CostCentersCsvService {
         line,
         id: existing?.id ?? randomUUID(),
         existing,
-        parentCode: cell(raw, 'parent_code'),
+        parentCode: cellOf(raw, 'parent_code'),
         values: {
           code,
           kind: kind as CostCenterKind,
           name,
-          description: cell(raw, 'description') || null,
+          description: cellOf(raw, 'description') || null,
           parent_id: null,
           company_id: companyId,
           owner_user_id: ownerId,
@@ -283,36 +304,30 @@ export class CostCentersCsvService {
         await this.costCenters.persist(ctx, row.existing, row.values, row.id);
       }
     }
-    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [] };
+    return {
+      ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [],
+      ignoredColumns: read.ignoredColumns, notices: read.notices,
+    };
   }
 
-  private async parseFile(file: Express.Multer.File): Promise<{ rows: Array<Record<string, string>>; hasDisabledAt: boolean; lines: number[] } | { headerError: string }> {
+  private parseFile(
+    file: Express.Multer.File,
+    language: CsvLanguage,
+    dateOrder?: CsvDateOrder,
+    decimalMark?: DecimalMark,
+  ): Promise<MasterDataFileRead> {
     if (!file) throw new BadRequestException('No file uploaded');
     const buf = file.buffer ?? ((file as any).path ? fs.readFileSync((file as any).path) : undefined);
     if (!buf) throw new BadRequestException('Empty upload');
-    let content: string;
-    try {
-      content = decodeCsvBufferUtf8OrThrow(buf as Buffer);
-    } catch {
-      throw new BadRequestException('Invalid file encoding. Please export or save the CSV as UTF-8 (CSV UTF-8) and use semicolons as separators.');
-    }
-    const rows: Array<Record<string, string>> = [];
-    let headers: string[] = [];
-    await new Promise<void>((resolve, reject) => {
-      parseString(content, { headers: true, delimiter: DELIMITER, ignoreEmpty: true, trim: true })
-        .on('headers', (found: string[]) => { headers = found; })
-        .on('error', (err) => reject(new BadRequestException(`The file could not be read: ${err.message}`)))
-        .on('data', (row: Record<string, string>) => rows.push(denormalizeCsvRow(row)))
-        .on('end', () => resolve());
+    return readMasterDataFile({
+      file: buf as Buffer,
+      fields: COST_CENTER_CSV_HEADERS,
+      dateFields: ['disabled_at'],
+      optional: OPTIONAL_HEADERS,
+      language,
+      dateOrder,
+      decimalMark,
     });
-    const expected: readonly string[] = COST_CENTER_CSV_HEADERS;
-    const missing = expected.filter((header) => !headers.includes(header) && !OPTIONAL_HEADERS.has(header));
-    const extras = headers.filter((header) => !expected.includes(header));
-    if (missing.length > 0 || extras.length > 0) {
-      return { headerError: `Header mismatch. Missing: ${missing.join(', ') || '-'}, Extra: ${extras.join(', ') || '-'}` };
-    }
-    // Errors name the file's own line, blank lines included.
-    return { rows, hasDisabledAt: headers.includes('disabled_at'), lines: await csvDataRowLines(content, DELIMITER) };
   }
 }
 

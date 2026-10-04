@@ -1,7 +1,9 @@
 import { QueryRunner } from 'typeorm';
+import { PREFLIGHT_STALE } from '../budget-file/import-file';
+import { loadBudgetFile } from './budget-file.fixtures';
 import { itemService, lineBody, seedCompany } from './cost-center.fixtures';
 import { Kind } from './round-inputs.fixtures';
-import { assert, assertClean, assertSucceeded, progress, settle, sql, withRace } from './race-harness';
+import { assert, assertClean, assertSucceeded, describe, httpStatus, progress, Race, settle, sql, withRace } from './race-harness';
 
 // Races of the line update (`SpendItemsService.update`, `CapexItemsService.update`),
 // shared by the OPEX and CAPEX race specs (not a spec itself).
@@ -16,6 +18,10 @@ import { assert, assertClean, assertSucceeded, progress, settle, sql, withRace }
 // Fixed in lot 3B (`item-locked-update.ts`): the line is locked
 // `FOR NO KEY UPDATE`, read again under the lock, and only the columns
 // received are updated; `resolveItemWrite` checks the locked row.
+//
+// The budget file load (Annexe A #3, the OPEX line import before it) writes
+// lines through the same update, after its own line lock, and refuses the
+// whole file when a line changed after the preflight.
 
 const TABLE: Record<Kind, string> = { opex: 'spend_items', capex: 'capex_items' };
 
@@ -166,11 +172,106 @@ async function companyVersusAccount(kind: Kind) {
   });
 }
 
+/** The line's item number, for a budget file row. */
+async function fileRef(race: Race, kind: Kind, itemId: string): Promise<string> {
+  const row = await race.readOne(`SELECT item_number::int AS n FROM ${TABLE[kind]} WHERE tenant_id = $1 AND id = $2`, [race.tenantId, itemId]);
+  return `${kind === 'opex' ? 'OPX' : 'CPX'}-${row.n}`;
+}
+
+/**
+ * Annexe A #3: a budget file load writes only the columns its file changes.
+ * The load holds the line; a user's supplier change waits for it, then
+ * commits over a line whose notes came from the file. Neither is put back.
+ */
+async function budgetFileVersusEdit(kind: Kind) {
+  await withRace(`${kind}-file-edit`, async (race) => {
+    const { itemId, newSupplier } = await race.seedWith(async (runner) => {
+      const { companyId } = await seedCompany(runner, race.tenantId, 'Race company');
+      const oldSupplier = await seedSupplier(runner, race.tenantId, 'Old supplier');
+      const newSupplier = await seedSupplier(runner, race.tenantId, 'New supplier');
+      const itemId = await seedLine(runner, kind, { paying_company_id: companyId, supplier_id: oldSupplier, notes: 'Start' });
+      return { itemId, newSupplier };
+    });
+    const file = `item_number,name,notes\n${await fileRef(race, kind, itemId)},Race line,From the file\n`;
+    const importer = await race.open('budget file load');
+    const user = await race.open('user (supplier)');
+
+    const importHolds = race.gate(importer, { label: 'lock the line', when: 'after', match: sql.lockOn(TABLE[kind]) });
+    const importWork = race.start(importer, (manager) => loadBudgetFile(manager, kind, race.tenantId, file));
+    assert.equal(await progress(importWork, { party: importer, gate: importHolds }), 'gated', 'harness: the load must pause holding the line');
+
+    const userWork = race.start(user, (manager) => itemService(kind).update(itemId, { supplier_id: newSupplier }, undefined, { manager }));
+    assert.equal(await progress(userWork, { party: user }), 'blocked', 'the user\'s save waits for the load\'s line lock');
+    importHolds.release();
+    const [importDone, userDone] = await Promise.all([settle(importWork), settle(userWork)]);
+    assertSucceeded(importDone, 'the load');
+    assert.equal((importDone as any).value?.updated, 1, `the load result: ${JSON.stringify((importDone as any).value?.errors)}`);
+    assertSucceeded(userDone, 'the user\'s supplier change');
+
+    const stored = await race.readOne(`SELECT notes, supplier_id FROM ${TABLE[kind]} WHERE tenant_id = $1 AND id = $2`, [race.tenantId, itemId]);
+    assert.equal(stored?.notes, 'From the file', 'the file\'s notes are loaded');
+    assert.equal(stored?.supplier_id, newSupplier, 'the user\'s supplier stays');
+  });
+}
+
+/**
+ * A line changed after the preflight (3B review, the blank company case of
+ * the old import): a user moves the line to another company while the load
+ * has read the file but not yet locked anything. The load is refused (409,
+ * run the preflight again) and writes nothing; the user's company stays.
+ * Loaded again, a blank company cell keeps that company and the account
+ * resolves in its chart.
+ */
+async function budgetFileAfterChange(kind: Kind) {
+  await withRace(`${kind}-file-stale`, async (race) => {
+    const s = await race.seedWith(async (runner) => {
+      const one = await seedCompany(runner, race.tenantId, 'Company one', 6000);
+      const two = await seedCompany(runner, race.tenantId, 'Company two', 6000);
+      const itemId = await seedLine(runner, kind, { paying_company_id: one.companyId, account_id: one.accountId, notes: 'Start' });
+      return { itemId, two };
+    });
+    // Company cell blank: "keep the line's company".
+    const file = `item_number,name,company_name,account_number,notes\n${await fileRef(race, kind, s.itemId)},Race line,,6000,From the file\n`;
+    const importer = await race.open('budget file load');
+    const user = await race.open('user (company)');
+
+    const beforeLock = race.gate(importer, { label: 'take the tenant lock', when: 'before', match: (text) => /pg_try_advisory_xact_lock/.test(text) });
+    const importWork = race.start(importer, (manager) => loadBudgetFile(manager, kind, race.tenantId, file));
+    assert.equal(await progress(importWork, { party: importer, gate: beforeLock }), 'gated', 'harness: the load must pause after its preflight, before its locks');
+
+    assertSucceeded(await settle(race.start(user, (manager) => itemService(kind).update(
+      s.itemId, { paying_company_id: s.two.companyId, account_id: s.two.accountId }, undefined, { manager },
+    ))), 'the user\'s company change');
+    beforeLock.release();
+    const importDone = await settle(importWork);
+    assert.ok(!importDone.ok && httpStatus(importDone.error) === 409, `the load must be refused with a 409; it ${describe(importDone)}`);
+    assert.equal((importDone.error as Error).message, PREFLIGHT_STALE);
+
+    const read = () => race.readOne(
+      `SELECT c.name AS company, i.account_id, i.notes FROM ${TABLE[kind]} i
+         LEFT JOIN companies c ON c.tenant_id = i.tenant_id AND c.id = i.paying_company_id
+        WHERE i.tenant_id = $1 AND i.id = $2`,
+      [race.tenantId, s.itemId],
+    );
+    assert.deepEqual(await read(), { company: 'Company two', account_id: s.two.accountId, notes: 'Start' }, 'the refused load wrote nothing; the user\'s company stays');
+
+    const again = await settle(race.start(importer, (manager) => loadBudgetFile(manager, kind, race.tenantId, file)));
+    assertSucceeded(again, 'the load after a new preflight');
+    assert.deepEqual(
+      await read(),
+      { company: 'Company two', account_id: s.two.accountId, notes: 'From the file' },
+      'a blank company cell keeps the line\'s company and the account resolves in its chart',
+    );
+  });
+}
+
 export function itemUpdateRaceTests(kind: Kind): Array<[string, () => Promise<void>]> {
   const label = kind.toUpperCase();
   return [
     [`${label} Annexe A #2: a notes save keeps the supplier committed meanwhile (3B)`, () => supplierVersusNotes(kind)],
     [`${label} Annexe A #2: a notes save keeps the end of validity committed meanwhile (3B)`, () => endOfValidityVersusNotes(kind)],
     [`${label} Annexe A #12: company and account always from the same chart (3B)`, () => companyVersusAccount(kind)],
+    [`${label} Annexe A #3: a budget file load keeps a column a user changed meanwhile (3B)`, () => budgetFileVersusEdit(kind)],
+    [`${label} a budget file load refuses a line changed after its preflight; a blank company keeps the user's company (3B review)`, () => budgetFileAfterChange(kind)],
   ];
 }

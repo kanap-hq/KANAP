@@ -3,47 +3,22 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { SpendItemsCsvService } from '../spend-items-csv.service';
 import { SpendItemsService } from '../spend-items.service';
 import { CapexItemsService } from '../../capex/capex-items.service';
 import { ItemNumberService } from '../../common/item-number.service';
+import { exportBudgetFile, loadBudgetFile, preflightBudgetFile } from './budget-file.fixtures';
 
 // One end date per budget item, on OPEX and CAPEX against a real database:
-// the CSV files and the API accept the deprecated effective_end as an alias
-// of the end of validity (disabled_at), and a date filter on the end of
-// validity combines with the default lifecycle filter of the lists.
+// the budget file writes the end of validity (disabled_at) from its
+// end_of_validity cell, the API accepts the deprecated effective_end as an
+// alias of it, and a date filter on the end of validity combines with the
+// default lifecycle filter of the lists.
 
 type Kind = 'opex' | 'capex';
 
 const noAudit = { log: async () => undefined };
 const noFreeze = { assertNotFrozen: async () => undefined };
 const COMPANY = 'End date test company';
-
-// The header row the importers wrote before the single end date (effective_end included).
-const PRE_L_HEADERS: Record<Kind, string[]> = {
-  opex: [
-    'product_name', 'description', 'supplier_name', 'company_name', 'account_number', 'currency', 'effective_start', 'effective_end',
-    'status', 'disabled_at', 'owner_it_email', 'owner_business_email', 'analytics_category', 'notes', 'y_minus1_budget',
-    'y_minus1_landing', 'y_budget', 'y_follow_up', 'y_landing', 'y_revision', 'y_plus1_budget', 'y_plus1_revision',
-  ],
-  capex: [
-    'item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'currency', 'effective_start', 'effective_end', 'status',
-    'disabled_at', 'notes', 'company_name', 'owner_it_email', 'owner_business_email', 'analytics_category', 'y_minus1_budget',
-    'y_minus1_landing', 'y_budget', 'y_follow_up', 'y_landing', 'y_revision', 'y_plus1_budget', 'y_plus1_revision', 'y_plus2_budget',
-  ],
-};
-
-function csvImporter(kind: Kind): any {
-  if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 10 }, () => undefined);
-    args[6] = noAudit;
-    args[7] = noFreeze;
-    args[8] = { getSettings: async () => ({ allowedCurrencies: null }) };
-    args[9] = new ItemNumberService();
-    return new (SpendItemsCsvService as any)(...args);
-  }
-  return itemService('capex');
-}
 
 // The summaries convert amounts to the reporting currency; the seeded items carry no amounts.
 const identityFx = {
@@ -54,13 +29,13 @@ const noAllocations = { computeForVersions: async () => new Map() };
 
 function itemService(kind: Kind): any {
   if (kind === 'opex') {
-    const args: any[] = Array.from({ length: 12 }, () => undefined);
+    const args: any[] = Array.from({ length: 11 }, () => undefined);
     args[3] = noAudit;
     args[4] = noAllocations;
-    args[7] = identityFx;
-    args[9] = { syncFromSupplier: async () => undefined };
-    args[10] = { notifyStatusChange: () => undefined };
-    args[11] = new ItemNumberService();
+    args[6] = identityFx;
+    args[8] = { syncFromSupplier: async () => undefined };
+    args[9] = { notifyStatusChange: () => undefined };
+    args[10] = new ItemNumberService();
     return new (SpendItemsService as any)(...args);
   }
   const args: any[] = Array.from({ length: 12 }, () => undefined);
@@ -110,18 +85,6 @@ async function withTenant(tag: string, fn: (runner: QueryRunner, tenantId: strin
   }
 }
 
-function csvFile(headers: string[], rows: Array<Record<string, string>>) {
-  const lines = rows.map((values) => headers.map((h) => values[h] ?? '').join(';'));
-  return { buffer: Buffer.from(`${headers.join(';')}\n${lines.join('\n')}\n`, 'utf8') } as any;
-}
-
-function csvRow(kind: Kind, name: string, extra: Record<string, string>): Record<string, string> {
-  const base: Record<string, string> = kind === 'opex'
-    ? { product_name: name, company_name: COMPANY, account_number: '6000', currency: 'EUR', effective_start: '2030-01-01', status: 'enabled' }
-    : { description: name, ppe_type: 'hardware', investment_type: 'replacement', priority: 'medium', currency: 'EUR', effective_start: '2030-01-01', status: 'enabled', company_name: COMPANY };
-  return { ...base, ...extra };
-}
-
 async function readItem(runner: QueryRunner, kind: Kind, name: string) {
   const nameColumn = kind === 'opex' ? 'product_name' : 'description';
   const rows = await runner.query(
@@ -132,244 +95,75 @@ async function readItem(runner: QueryRunner, kind: Kind, name: string) {
   return { disabled_at: rows[0].disabled_at ? new Date(rows[0].disabled_at).toISOString() : null, status: rows[0].status as string };
 }
 
-async function testCsvLegacyEndDate(kind: Kind) {
-  await withTenant(`${kind}-csv`, async (runner) => {
-    const svc = csvImporter(kind);
-    const current: string[] = svc.csvHeaders.call(svc);
-    assert.ok(!current.includes('effective_end'), `${kind} CSV headers no longer carry effective_end`);
-    const headers = [...current, 'effective_end'];
-    const result = await svc.importCsv({
-      file: csvFile(headers, [
-        csvRow(kind, 'Fills empty', { effective_end: '2031-06-30' }),
-        csvRow(kind, 'Never overrides', { disabled_at: '2031-03-01', effective_end: '2031-06-30' }),
-        csvRow(kind, 'Empty keeps', { disabled_at: '2031-04-15T08:30:00.000Z', effective_end: '' }),
-        csvRow(kind, 'Past legacy', { effective_end: '2020-01-31' }),
-        csvRow(kind, 'No end', {}),
-      ]),
-      dryRun: false,
-      userId: null,
-    }, { manager: runner.manager });
-    assert.equal(result.ok, true, `${kind} CSV with legacy column: accepted (${JSON.stringify(result.errors)})`);
-
-    assert.deepEqual(await readItem(runner, kind, 'Fills empty'), { disabled_at: '2031-06-30T12:00:00.000Z', status: 'enabled' }, `${kind} CSV: legacy effective_end fills an empty end of validity at noon UTC`);
-    assert.deepEqual(await readItem(runner, kind, 'Never overrides'), { disabled_at: '2031-03-01T12:00:00.000Z', status: 'enabled' }, `${kind} CSV: a set disabled_at wins, a bare day at noon UTC`);
-    assert.deepEqual(await readItem(runner, kind, 'Empty keeps'), { disabled_at: '2031-04-15T08:30:00.000Z', status: 'enabled' }, `${kind} CSV: an empty effective_end clears nothing, a full timestamp is kept`);
-    assert.deepEqual(await readItem(runner, kind, 'Past legacy'), { disabled_at: '2020-01-31T12:00:00.000Z', status: 'disabled' }, `${kind} CSV: a past legacy date disables the item`);
-    assert.deepEqual(await readItem(runner, kind, 'No end'), { disabled_at: null, status: 'enabled' }, `${kind} CSV: no date, no end`);
-
-    const bad = await svc.importCsv({
-      file: csvFile(headers, [csvRow(kind, 'Bad legacy', { effective_end: '2031-02-30' })]),
-      dryRun: true,
-      userId: null,
-    }, { manager: runner.manager });
-    assert.equal(bad.ok, false, `${kind} CSV: an impossible legacy date is a row error`);
-    assert.equal(bad.errors[0]?.row, 2);
-  });
+/** A budget file of the type: detail columns, then one row per line (`item_number` blank for a new line). */
+function budgetFile(kind: Kind, rows: Array<{ item?: number; name: string; end: string }>): string {
+  const prefix = kind === 'opex' ? 'OPX' : 'CPX';
+  const header = kind === 'opex'
+    ? 'item_number,name,company_name,account_number,currency,effective_start,end_of_validity'
+    : 'item_number,name,ppe_type,investment_type,priority,company_name,account_number,currency,effective_start,end_of_validity';
+  const line = (row: { item?: number; name: string; end: string }) => {
+    const number = row.item ? `${prefix}-${row.item}` : '';
+    return kind === 'opex'
+      ? `${number},${row.name},${COMPANY},6000,EUR,2019-01-01,${row.end}`
+      : `${number},${row.name},hardware,replacement,medium,${COMPANY},6000,EUR,2019-01-01,${row.end}`;
+  };
+  return `${header}\n${rows.map(line).join('\n')}\n`;
 }
 
 /**
- * An update through the CSV keeps what a blank cell does not say: both blank
- * keep the status and the date; enabled with a blank date clears it. Disabled
- * with a blank date keeps a date already passed, otherwise the end of validity
- * is now (a stored future date included). A new line with a blank status is
- * enabled; a new disabled line with no date ends now.
+ * The end_of_validity cell of the budget file: a bare day is noon UTC, a full
+ * ISO timestamp is kept, a passed day ends the line, a blank cell keeps the
+ * stored date, `-` clears it, an impossible day is a row error. An export
+ * reads back with no end of validity changed, one set in the app included.
  */
-async function testCsvBlankLifecycleCells(kind: Kind) {
-  await withTenant(`${kind}-csv-blank`, async (runner) => {
-    const svc = csvImporter(kind);
-    const opts = { manager: runner.manager };
-    const headers: string[] = svc.csvHeaders.call(svc);
-    const seeded = await svc.importCsv({
-      file: csvFile(headers, [
-        csvRow(kind, 'Both blank', { status: 'disabled', disabled_at: '2020-03-31' }),
-        csvRow(kind, 'Disabled keeps', { status: 'disabled', disabled_at: '2021-05-31' }),
-        csvRow(kind, 'Disabled now', {}),
-        csvRow(kind, 'Enabled clears', { disabled_at: '2031-06-30' }),
-        csvRow(kind, 'Future disabled', { disabled_at: '2031-06-30' }),
-      ]),
-      dryRun: false,
-      userId: null,
-    }, opts);
-    assert.equal(seeded.ok, true, `${kind} blank cells seed: accepted (${JSON.stringify(seeded.errors)})`);
-    assert.deepEqual(await readItem(runner, kind, 'Both blank'), { disabled_at: '2020-03-31T12:00:00.000Z', status: 'disabled' });
+async function testBudgetFileEndOfValidity(kind: Kind) {
+  await withTenant(`${kind}-file`, async (runner, tenantId) => {
+    const created = await loadBudgetFile(runner.manager, kind, tenantId, budgetFile(kind, [
+      { name: 'Noon day', end: '2031-06-30' },
+      { name: 'Past day', end: '2020-01-31' },
+      { name: 'Instant', end: '2031-04-15T08:30:00.000Z' },
+      { name: 'No end', end: '' },
+    ]));
+    assert.equal((created as any).inserted, 4, `${kind} file: four lines created (${JSON.stringify((created as any).errors)})`);
+    assert.deepEqual(await readItem(runner, kind, 'Noon day'), { disabled_at: '2031-06-30T12:00:00.000Z', status: 'enabled' }, `${kind} file: a bare day is noon UTC`);
+    assert.deepEqual(await readItem(runner, kind, 'Past day'), { disabled_at: '2020-01-31T12:00:00.000Z', status: 'disabled' }, `${kind} file: a passed day ends the line`);
+    assert.deepEqual(await readItem(runner, kind, 'Instant'), { disabled_at: '2031-04-15T08:30:00.000Z', status: 'enabled' }, `${kind} file: a full timestamp is kept`);
+    assert.deepEqual(await readItem(runner, kind, 'No end'), { disabled_at: null, status: 'enabled' }, `${kind} file: no date, no end`);
 
-    const before = Date.now();
-    const updated = await svc.importCsv({
-      file: csvFile(headers, [
-        csvRow(kind, 'Both blank', { status: '', disabled_at: '' }),
-        csvRow(kind, 'Disabled keeps', { status: 'disabled', disabled_at: '' }),
-        csvRow(kind, 'Disabled now', { status: 'disabled', disabled_at: '' }),
-        csvRow(kind, 'Enabled clears', { status: 'enabled', disabled_at: '' }),
-        csvRow(kind, 'New blank', { status: '', disabled_at: '' }),
-        csvRow(kind, 'Future disabled', { status: 'disabled', disabled_at: '' }),
-        csvRow(kind, 'New disabled', { status: 'disabled', disabled_at: '' }),
-      ]),
-      dryRun: false,
-      userId: null,
-    }, opts);
-    const after = Date.now();
-    assert.equal(updated.ok, true, `${kind} blank cells update: accepted (${JSON.stringify(updated.errors)})`);
-    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM ${table(kind)} WHERE tenant_id = current_setting('app.current_tenant')::uuid`);
-    assert.equal(n, 7, `${kind} blank cells: five lines updated, two created`);
+    const numbers: Array<{ n: number; name: string }> = await runner.query(
+      `SELECT item_number::int AS n, ${kind === 'opex' ? 'product_name' : 'description'} AS name FROM ${table(kind)} WHERE tenant_id = $1 ORDER BY item_number`,
+      [tenantId],
+    );
+    const item = (name: string) => numbers.find((row) => row.name === name)!.n;
+    const updated = await loadBudgetFile(runner.manager, kind, tenantId, budgetFile(kind, [
+      { item: item('Noon day'), name: 'Noon day', end: '' },
+      { item: item('Past day'), name: 'Past day', end: '-' },
+      { item: item('No end'), name: 'No end', end: '2032-12-31' },
+    ]));
+    assert.equal(updated.ok, true, `${kind} file update: accepted (${JSON.stringify((updated as any).errors)})`);
+    assert.deepEqual(await readItem(runner, kind, 'Noon day'), { disabled_at: '2031-06-30T12:00:00.000Z', status: 'enabled' }, `${kind} file: a blank cell keeps the date`);
+    assert.deepEqual(await readItem(runner, kind, 'Past day'), { disabled_at: null, status: 'enabled' }, `${kind} file: - clears the date and the line is active again`);
+    assert.deepEqual(await readItem(runner, kind, 'No end'), { disabled_at: '2032-12-31T12:00:00.000Z', status: 'enabled' }, `${kind} file: a day sets the end`);
 
-    assert.deepEqual(await readItem(runner, kind, 'Both blank'), { disabled_at: '2020-03-31T12:00:00.000Z', status: 'disabled' }, `${kind} CSV: blank status and date keep a disabled line disabled with its date`);
-    assert.deepEqual(await readItem(runner, kind, 'Disabled keeps'), { disabled_at: '2021-05-31T12:00:00.000Z', status: 'disabled' }, `${kind} CSV: disabled with a blank date keeps the stored date`);
-    for (const [name, what] of [
-      ['Disabled now', 'disabled with a blank date and none stored'],
-      ['Future disabled', 'disabled with a blank date and a future one stored'],
-      ['New disabled', 'a new disabled line with a blank date'],
-    ]) {
-      const now = await readItem(runner, kind, name);
-      assert.equal(now.status, 'disabled', `${kind} CSV: ${what} disables the line`);
-      const at = Date.parse(now.disabled_at ?? '');
-      assert.ok(at >= before - 1000 && at <= after + 1000, `${kind} CSV: ${what} ends now (${now.disabled_at})`);
-    }
-    assert.deepEqual(await readItem(runner, kind, 'Enabled clears'), { disabled_at: null, status: 'enabled' }, `${kind} CSV: enabled with a blank date clears the date`);
-    assert.deepEqual(await readItem(runner, kind, 'New blank'), { disabled_at: null, status: 'enabled' }, `${kind} CSV: a new line with a blank status is enabled`);
-  });
-}
+    const bad = await preflightBudgetFile(runner.manager, kind, tenantId, budgetFile(kind, [{ item: item('Instant'), name: 'Instant', end: '2031-02-30' }]));
+    assert.equal(bad.ok, false, `${kind} file: an impossible day is refused`);
+    assert.deepEqual(bad.errors.map((error) => [error.line, error.column]), [[2, 'end_of_validity']], `${kind} file: the row error names its line and column`);
 
-/**
- * The export writes the status read from the end of validity, so a fresh
- * export re-imports with no change, a stale stored status included. A row
- * whose status contradicts its date is a row error.
- */
-async function testCsvExportRoundTripAndConflicts(kind: Kind) {
-  await withTenant(`${kind}-csv-conflict`, async (runner) => {
-    const svc = csvImporter(kind);
-    const opts = { manager: runner.manager };
-    const headers: string[] = svc.csvHeaders.call(svc);
-    const seeded = await svc.importCsv({
-      file: csvFile(headers, [
-        csvRow(kind, 'Open line', {}),
-        csvRow(kind, 'Future end', { disabled_at: '2031-06-30' }),
-        csvRow(kind, 'Past end', { status: 'disabled', disabled_at: '2021-06-30' }),
-        csvRow(kind, 'Stale line', { disabled_at: '2031-06-30' }),
-      ]),
-      dryRun: false,
-      userId: null,
-    }, opts);
-    assert.equal(seeded.ok, true, `${kind} round trip seed: accepted (${JSON.stringify(seeded.errors)})`);
-    // A future end date that has since passed: the stored status is still enabled.
-    const nameColumn = kind === 'opex' ? 'product_name' : 'description';
-    await runner.query(`UPDATE ${table(kind)} SET disabled_at = '2022-03-31T12:00:00Z' WHERE ${nameColumn} = 'Stale line'`);
-    const names = ['Open line', 'Future end', 'Past end', 'Stale line'];
-    const read = () => Promise.all(names.map(async (name) => (await readItem(runner, kind, name)).disabled_at));
+    // A date set in the app (not noon UTC) exports as an instant and reads back as it is.
+    await runner.query(
+      `UPDATE ${table(kind)} SET disabled_at = '2031-09-30T21:59:00Z' WHERE tenant_id = $1 AND ${kind === 'opex' ? 'product_name' : 'description'} = 'Instant'`,
+      [tenantId],
+    );
+    const names = ['Noon day', 'Past day', 'Instant', 'No end'];
+    const read = () => Promise.all(names.map((name) => readItem(runner, kind, name)));
     const before = await read();
-
-    const exported = await svc.exportCsv('data', opts);
-    const lines: string[] = exported.content.replace(/^\uFEFF/, '').trim().split('\n');
-    const statusIndex = lines[0].split(';').indexOf('status');
-    const nameIndex = lines[0].split(';').indexOf(nameColumn);
-    const staleRow = lines.find((line) => line.split(';')[nameIndex] === 'Stale line')!;
-    assert.equal(staleRow.split(';')[statusIndex], 'disabled', `${kind} export: the status is read from the end of validity`);
-
-    const reimported = await svc.importCsv({ file: { buffer: Buffer.from(exported.content, 'utf8') }, dryRun: false, userId: null }, opts);
-    assert.equal(reimported.ok, true, `${kind} round trip: accepted (${JSON.stringify(reimported.errors)})`);
+    const ids: Array<{ id: string }> = await runner.query(`SELECT id FROM ${table(kind)} WHERE tenant_id = $1 ORDER BY item_number`, [tenantId]);
+    const content = await exportBudgetFile(runner.manager, kind, tenantId, ids.map((row) => row.id));
+    const report = await preflightBudgetFile(runner.manager, kind, tenantId, content);
+    assert.deepEqual([report.ok, report.changes.unchanged, report.changes.updated], [true, 4, 0], `${kind} round trip: every line unchanged (${JSON.stringify(report.errors)})`);
+    await loadBudgetFile(runner.manager, kind, tenantId, content);
     assert.deepEqual(await read(), before, `${kind} round trip: no end of validity changes`);
-    assert.deepEqual(
-      (await Promise.all(names.map((name) => readItem(runner, kind, name)))).map((item) => item.status),
-      ['enabled', 'enabled', 'disabled', 'disabled'],
-      `${kind} round trip: the status follows the dates`,
-    );
-
-    const conflict = await svc.importCsv({
-      file: csvFile(headers, [
-        csvRow(kind, 'Open line', { status: 'enabled', disabled_at: '2021-06-30' }),
-        csvRow(kind, 'Future end', { status: 'disabled', disabled_at: '2031-06-30' }),
-      ]),
-      dryRun: true,
-      userId: null,
-    }, opts);
-    assert.equal(conflict.ok, false, `${kind} CSV: a status contradicting its date is refused`);
-    assert.deepEqual(conflict.errors, [
-      { row: 2, message: 'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.' },
-      { row: 3, message: 'Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.' },
-    ]);
-  });
-}
-
-async function testCsvExportHasNoEffectiveEnd(kind: Kind) {
-  await withTenant(`${kind}-export`, async (runner) => {
-    const svc = csvImporter(kind);
-    const template = await svc.exportCsv('template', { manager: runner.manager });
-    const header = template.content.replace(/^﻿/, '').split('\n')[0].split(';');
-    assert.ok(!header.includes('effective_end'), `${kind} template export: no effective_end`);
-    assert.ok(header.includes('disabled_at'), `${kind} template export: disabled_at`);
-    if (kind === 'opex') {
-      await svc.importCsv({ file: csvFile(header, [csvRow(kind, 'Exported', { disabled_at: '2031-06-30' })]), dryRun: false, userId: null }, { manager: runner.manager });
-      const data = await svc.exportCsv('data', { manager: runner.manager });
-      const [head, row] = data.content.replace(/^﻿/, '').split('\n');
-      assert.deepEqual(head.split(';'), header, 'opex data export: same header as the template');
-      assert.ok(row.includes('2031-06-30T12:00:00.000Z'), `opex data export: full end of validity timestamp (${row})`);
-    }
-  });
-}
-
-/**
- * CAPEX export then import of the same file: the export writes the UTC day of
- * the end of validity, which re-imports at noon UTC. A noon row (a file, the
- * AI, the migration) comes back identical; a row set in the app keeps its day.
- */
-async function testCapexExportImportRoundTrip(kind: Kind) {
-  if (kind !== 'capex') return;
-  await withTenant('capex-roundtrip', async (runner) => {
-    const svc = itemService('capex');
-    const opts = { manager: runner.manager };
-    const header: string[] = svc.csvHeaders.call(svc);
-    const seeded = await svc.importCsv({
-      file: csvFile(header, [
-        csvRow('capex', 'Noon row', { disabled_at: '2031-06-30' }),
-        csvRow('capex', 'App row', { disabled_at: '2031-09-30T21:59:00.000Z' }),
-        csvRow('capex', 'Open row', {}),
-      ]),
-      dryRun: false,
-      userId: null,
-    }, opts);
-    assert.equal(seeded.ok, true, `capex round trip seed: accepted (${JSON.stringify(seeded.errors)})`);
-    const names = ['Noon row', 'App row', 'Open row'];
-    const before = await Promise.all(names.map((name) => readItem(runner, 'capex', name)));
-
-    const exported = await svc.exportCsv('data', opts);
-    const lines = exported.content.replace(/^\uFEFF/, '').trim().split('\n');
-    assert.deepEqual(lines[0].split(';'), header, 'capex data export: the import header');
-    assert.equal(lines.length, 4, 'capex data export: three rows');
-    const reimported = await svc.importCsv({ file: { buffer: Buffer.from(exported.content, 'utf8') }, dryRun: false, userId: null }, opts);
-    assert.equal(reimported.ok, true, `capex round trip: accepted (${JSON.stringify(reimported.errors)})`);
-    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM capex_items WHERE tenant_id = current_setting('app.current_tenant')::uuid`);
-    assert.equal(n, 3, 'capex round trip: the rows are updated, not duplicated');
-
-    const after = await Promise.all(names.map((name) => readItem(runner, 'capex', name)));
-    assert.deepEqual(after[0], before[0], 'capex round trip: a noon end of validity comes back identical');
-    assert.deepEqual(before[0], { disabled_at: '2031-06-30T12:00:00.000Z', status: 'enabled' });
-    assert.equal(after[1].disabled_at, '2031-09-30T12:00:00.000Z', 'capex round trip: an end of validity set in the app keeps its day');
-    assert.deepEqual(after[2], { disabled_at: null, status: 'enabled' }, 'capex round trip: no end stays no end');
-  });
-}
-
-async function testPreLExportImports(kind: Kind) {
-  await withTenant(`${kind}-prel`, async (runner) => {
-    const svc = csvImporter(kind);
-    // A new line with its amounts, in one go.
-    const values = csvRow(kind, 'Pre-L line', { effective_end: '2031-12-31', y_budget: '1200' });
-    for (const dryRun of [true, false]) {
-      const result = await svc.importCsv({ file: csvFile(PRE_L_HEADERS[kind], [values]), dryRun, userId: null }, { manager: runner.manager });
-      assert.equal(result.ok, true, `${kind} pre-L export (dry run ${dryRun}): accepted (${JSON.stringify(result.errors)})`);
-      assert.deepEqual(result.errors, [], `${kind} pre-L export (dry run ${dryRun}): zero row errors`);
-    }
-    assert.deepEqual(await readItem(runner, kind, 'Pre-L line'), { disabled_at: '2031-12-31T12:00:00.000Z', status: 'enabled' });
-    const [versionTable, amountTable, itemColumn, nameColumn] = kind === 'opex'
-      ? ['spend_versions', 'spend_amounts', 'spend_item_id', 'product_name']
-      : ['capex_versions', 'capex_amounts', 'capex_item_id', 'description'];
-    const [budget] = await runner.query(
-      `SELECT count(a.*)::int AS months, coalesce(sum(a.planned), 0)::numeric AS total
-       FROM ${table(kind)} i
-       JOIN ${versionTable} v ON v.tenant_id = i.tenant_id AND v.${itemColumn} = i.id AND v.budget_year = $2
-       JOIN ${amountTable} a ON a.tenant_id = v.tenant_id AND a.version_id = v.id
-       WHERE i.tenant_id = current_setting('app.current_tenant')::uuid AND i.${nameColumn} = $1`,
-      ['Pre-L line', new Date().getFullYear()],
-    );
-    assert.deepEqual({ months: budget.months, total: Number(budget.total) }, { months: 12, total: 1200 }, `${kind} pre-L export: the Budget of the new line`);
+    assert.equal(before[2].disabled_at, '2031-09-30T21:59:00.000Z');
   });
 }
 
@@ -550,12 +344,7 @@ async function main() {
   try {
     for (const kind of ['opex', 'capex'] as Kind[]) {
       for (const test of [
-        testCsvLegacyEndDate,
-        testCsvBlankLifecycleCells,
-        testCsvExportRoundTripAndConflicts,
-        testCsvExportHasNoEffectiveEnd,
-        testCapexExportImportRoundTrip,
-        testPreLExportImports,
+        testBudgetFileEndOfValidity,
         testApiAlias,
         testListDateFilterKeepsLifecycle,
         testSummarySortsByDate,

@@ -237,7 +237,7 @@ The Budget tab is where you enter financial data per year. It supports multiple 
   - **Spread flat**, **Spread 4-4-5** or **Spread by quarter**: the amounts come from a spread
   - **Copied from Budget 2025 +2%**: the amounts come from **Copy budget columns** in Budget Administration, with the percentage shown when there is one
   - **Quantity and price · 3 lines · 1.00 FTE**: the amounts come from lines, with their number and, when the lines count people or days, the column's FTE. The FTE is the full-year average. Hover the label to see the lines, for example "Project manager: 1 person × 1,200 per day, 5 days per month, Feb to Jul"
-  - **Edited by hand**: a month was changed in the grid or by a budget rows import
+  - **Edited by hand**: a month was changed in the grid or by a budget file import
   - A column with no label kept the data it had before periods existed
 
 **When someone else is editing the same column**:
@@ -324,7 +324,7 @@ Click **Add a line** under the table to add a line, and the cross at the end of 
   - **Copy budget columns** in Budget Administration: "Amounts were copied from Budget 2025. Use the lines again." The copy brings the source column's lines with the amounts. See [Copying a computed column](budget-operations.md#copying-a-computed-column)
   - A calendar's working days changed: "Working days changed since the last computation: March: 20 days, now 19." Nothing changes on the column until you click **Use the lines again**
   - **Reset budget column** in Budget Administration removes the lines with the amounts. See [Reset budget column](budget-operations.md#reset-budget-column)
-  - A budget rows file changes the months only, and the lines stay. See [Budget rows file](budget-operations.md#budget-rows-file)
+  - A budget file changes the months of a column and leaves its lines. See [Load a budget from a spreadsheet](budget-file.md)
 
 #### FTE
 
@@ -433,71 +433,11 @@ The Relations tab links this OPEX item to related objects: Projects, Application
 
 ## CSV import/export
 
-You can bulk-load OPEX items via CSV to speed up initial setup or sync with external systems.
+**Export CSV** and **Import CSV** sit in the toolbar of the OPEX list. Both need administration rights on OPEX (`opex:admin`).
 
-**Export**:
-  1. Click **Export CSV** in the OPEX list
-  2. Choose:
-     - **Template**: Headers only (use this to create a blank CSV to fill in)
-     - **Data**: Every OPEX item with budgets for Y-1, Y, and Y+1
+**Export CSV** writes the OPEX budget file for the lines the list shows. **Import CSV** reads a file back: it is checked first, and nothing is written until you click **Load**.
 
-**CSV structure**:
-  - Delimiter: semicolon `;` (not comma)
-  - Encoding: UTF-8 (save as "CSV UTF-8" in Excel)
-  - Headers: `product_name;description;supplier_name;company_name;account_number;currency;effective_start;status;disabled_at;owner_it_email;owner_business_email;analytics_category;cost_center_code;run_build;notes;y_minus1_budget;y_minus1_landing;y_budget;y_follow_up;y_landing;y_revision;y_plus1_budget;y_plus1_revision`
-  - `disabled_at` is the end of validity: the date the item stops. Use a date (`2026-12-31`) or a full date and time
-  - `status` is `enabled` or `disabled`. The export writes the status read from the end of validity. A row whose status contradicts its date is refused with a row error, for example `enabled` with a date that has passed
-  - On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the item today. A new item is enabled unless the row says `disabled`, and `disabled` with an empty date ends it today
-  - Older files with an `effective_end` column still import: its date fills the end of validity when `disabled_at` is empty
-  - `analytics_category` holds the value of the default analytics dimension, whatever its name. Each other enabled dimension has its own column, `analytics:<code>`, where `<code>` is the dimension's code. Exports and the template carry these columns right after `analytics_category`, in dimension order
-  - `analytics_category`, the `analytics:<code>` columns, `cost_center_code` and `run_build` are optional columns: exports and the template always carry them, and files without them still import
-
-**Import**:
-  1. Click **Import CSV** in the OPEX list
-  2. Upload your CSV file (drag-and-drop or file picker)
-  3. Click **Preflight check** to validate:
-     - Every required column is present and no column is unknown. Columns are matched by name, in any order
-     - Required fields (product_name, account_number) are present. A new item also needs a currency, and a company_name unless it has a cost center
-     - Each company, supplier, account, cost center, and owner in the file exists in your workspace
-     - Dates are valid, and no two rows describe the same item
-     - Currencies are allowed in your workspace currency settings
-     - Owners are active users
-  4. Review the preflight report (shows counts and up to 5 sample errors). Each error names its row by the line of the file as a text editor shows it, blank lines and cells that span several lines included. A file with any error loads nothing: fix the rows and run the preflight again
-  5. If OK, click **Load** to import
-
-**Important notes**:
-  - **Matching**: A row is matched to an OPEX item by product name and supplier. A row that matches an existing item updates it; any other row creates a new item. A row with an empty `supplier_name` matches only an item that has no supplier. Two rows with the same product name and supplier are an error ("Same line as row N"): keep one row per item
-  - **Currency**: Required for a new item, and it must be allowed in your workspace currency settings. On an existing item, an empty cell keeps its currency
-  - **Supplier**: `supplier_name` is optional. When filled, a supplier with exactly this name is used. Otherwise the name is matched without regard to case. A name that matches no supplier is an error, and so is a name that matches several suppliers only by case (for example "Acme" and "ACME" when the file says "acme")
-  - **Company and account**: `company_name` must match a company by name (case-insensitive). An empty `company_name` keeps the company of an existing item; a new item takes the company of its cost center. With neither, the row is refused: "Company is required unless the line has a cost center." `account_number` is looked up in the chart of accounts of that company, or in the default chart of accounts when the company has none. An account number that exists only in another chart is an error
-  - **Owners**: `owner_it_email` and `owner_business_email` must match active users by email: an invited user or a contact without an account is refused
-  - **Dates**: `effective_start` (and `effective_end` in older files) must be a real calendar day in `YYYY-MM-DD` format, for example `2026-01-01`. Other formats, such as `01/03/2026`, are errors. An empty `effective_start` keeps the stored date of an existing item; a new item starts on January 1 of the current year
-  - **Analytics dimensions**: Each analytics cell names a value of its column's dimension, regardless of case. A value that does not exist yet is created in that dimension during the load. A disabled value is accepted on an item that already has it, and refused as a new value. An empty cell clears the item's value on that dimension. When a column is absent, items keep their value on that dimension. A column for an unknown or disabled dimension refuses the whole file, and so do two columns for the same dimension (`analytics_category` and the default dimension's own code). Exporting and importing the same file changes nothing
-  - **Cost center**: `cost_center_code` is the code of a cost center, regardless of case. A group is refused. A disabled cost center is accepted on an item that already has it, and refused as a new value. An empty cell clears the item's cost center. When the whole column is absent, items keep their cost center
-  - **Run or build**: `run_build` is `run`, `build` or empty (regardless of case). An empty cell clears the value. When the whole column is absent, items keep their value
-  - **Company from the cost center**: A new item with an empty `company_name` takes its cost center's company, and `account_number` is looked up in that company's chart of accounts. A filled `company_name` is kept, even when it differs from the cost center's company
-  - **Budgets**: Budget columns populate Y-1, Y, and Y+1 versions. Amounts are spread evenly across 12 months (Flat mode) and the column's period becomes the whole year. An empty cell leaves the column as it is; `0` clears it. The headers keep their technical names whatever your organisation calls the columns, and they also load hidden columns
-  - **Monthly amounts**: to load or review amounts month by month, with the period of each column, use the **Budget rows file** in Budget Administration
-
-**Common errors**:
-  - **"Supplier '...' not found"**: Check the spelling, or create the supplier in **Master data > Suppliers** first, then re-import
-  - **"Supplier '...' matches more than one supplier"**: Several suppliers differ from this name only by case. Write the name exactly as one of them, or rename one in **Master data > Suppliers**, then re-import
-  - **"Same line as row N"**: Two rows describe the same item. Merge them into one row, then re-import
-  - **"Account ... not found in ...'s chart of accounts"**: Use an account of the paying company's chart, or add the account in **Master data > Charts of accounts**, then re-import
-  - **"effective_start must be a valid date"**: Use the `YYYY-MM-DD` format
-  - **"Company is required unless the line has a cost center."**: Fill `company_name` or `cost_center_code` for the new item
-  - **"Cost center ... was not found."**: Check the code, or create the cost center in **Master data > Cost centers**, then re-import
-  - **"... is a group. Choose a cost center."**: Use the code of a cost center inside that group
-  - **"Cost center ... is disabled."**: Use an enabled cost center, or enable it again in **Master data > Cost centers**
-  - **"Run or build must be run, build or blank."**: Fix the `run_build` cell
-  - **"The column analytics:... names no dimension. Check the dimension code or remove the column."**: Use the code shown in the dimension's workspace in **Master data > Analytics dimensions**, or remove the column
-  - **"The ... dimension is disabled. Enable it or leave it out."**: Enable the dimension in **Master data > Analytics dimensions**, or remove its column
-  - **"The file has two columns for ..."**: Two columns name the same dimension, for example `analytics_category` and the default dimension's own code. Keep one column
-  - **"... is disabled. Pick an enabled value."**: Use an enabled value of that dimension, or enable the value again
-  - **"Invalid currency"**: Use 3-letter ISO codes (USD, EUR, GBP) that are allowed in your workspace currency settings
-  - **"Header mismatch"**: A required column is missing, or a column is unknown; the message lists them. Columns are matched by name, in any order, and the analytics columns are optional. Compare your first line with a fresh template
-
-**Tip**: Start with the template export, fill in a few rows, and run a preflight to catch issues early. Fix errors in the CSV and re-upload until preflight passes, then load.
+The file holds one row per line, the line's details, its amounts as columns and `kanap_token`. [Load a budget from a spreadsheet](budget-file.md) describes the columns, what a cell means, and the two import steps.
 
 ---
 
@@ -552,7 +492,7 @@ Every OPEX item has a **status** (Enabled or Disabled) and an optional **End of 
 
 9. **Keep company metrics up to date**: Allocations depend on company headcount, IT users, and turnover. Outdated metrics cause allocation errors.
 
-10. **Use CSV for bulk setup**: If you are migrating from another system or have hundreds of items, start with CSV import. Export a template, fill it in, and preflight before loading.
+10. **Use CSV for bulk setup**: If you are migrating from another system or have hundreds of items, start with CSV import. Export a fresh file, fill in your rows, and check it before loading.
 
 11. **Disable, do not delete**: Preserve history by disabling items when they are no longer active. Delete only if it is a mistake.
 
@@ -582,7 +522,7 @@ If you cannot perform an action (e.g., **Import CSV** button is missing, cannot 
 
 ## Need help?
 
-- **CSV issues**: Download a fresh template, ensure UTF-8 encoding, and run preflight to see detailed errors
+- **CSV issues**: Export a fresh file from the list and check it again. The report names the line and the column of every error, and [Load a budget from a spreadsheet](budget-file.md) explains what each cell means
 - **Allocation errors**: Check that all companies have the required metrics (headcount, IT users, turnover) for the selected year
 - **Obsolete account warning**: The account does not belong to the paying company's chart of accounts; pick a different account
 - **Missing buttons or tabs**: Your role may not have the required permission level (manager or admin). Contact your workspace admin
