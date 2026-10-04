@@ -4,6 +4,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
 
 type ImportReport = {
   ok: boolean;
@@ -15,7 +16,14 @@ type ImportReport = {
   /** Rows identical to what is stored, left untouched (budget rows import only). */
   unchanged?: number;
   errors: { row: number; message: string }[];
+  /** How the server read the dates and the amounts, in English, when it had to choose. */
+  notices?: { dates: string | null; amounts: string | null };
+  /** Headers the importer does not know and left out of the import. */
+  ignoredColumns?: string[];
 };
+
+/** The notice sentences and the switch labels, shared with the budget file import. */
+const K = 'operations.budgetFile.';
 
 /**
  * The heading of a refused file. Every importer numbers the data rows from 2 (row 1 is the header):
@@ -44,37 +52,62 @@ export default function CsvImportDialog({
   params?: Record<string, string | number | boolean | null | undefined>;
   preflight?: boolean; // when false, skip preflight and perform single-step upload
 }) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation(['common', 'ops']);
+  const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const [file, setFile] = useState<File | null>(null);
   const [hover, setHover] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
+  // The reading a switch or an earlier report settled on, pinned for the import that follows.
+  const [dateOrder, setDateOrder] = useState<DateReading | null>(null);
+  const [amountReading, setAmountReading] = useState<AmountReading | null>(null);
   // The request itself failed: the server's message, shown instead of a report.
   const [requestError, setRequestError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const dateNotice = report?.notices?.dates ?? null;
+  const amountNotice = report?.notices?.amounts ?? null;
+  // What the shown report says, when it is one of the sentences the dialog knows.
+  const appliedDates = dateReadingOf(dateNotice);
+  const appliedAmounts = amountReadingOf(amountNotice);
+  const ignoredColumns = report?.ignoredColumns ?? [];
+  // A dry run is re-checked and then loaded; a finished import only reports its outcome.
+  const completed = !!report && report.ok && !report.dryRun;
+
   const reset = useCallback(() => {
     setFile(null);
     setReport(null);
+    setDateOrder(null);
+    setAmountReading(null);
     setRequestError(null);
     setLoading(false);
     setHover(false);
   }, []);
 
+  const chooseFile = (next: File | null | undefined) => {
+    if (!next) return;
+    // A new file decides its own reading: the next check starts from the server's choice.
+    setDateOrder(null);
+    setAmountReading(null);
+    setFile(next);
+  };
+
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setHover(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f) setFile(f);
+    chooseFile(e.dataTransfer.files?.[0]);
   };
 
   const onPick = () => inputRef.current?.click();
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] || null;
-    if (f) setFile(f);
+    chooseFile(e.target.files?.[0] || null);
   };
 
-  const upload = async (dryRun: boolean) => {
+  /** `chosen` carries the reading a switch just picked, before the state has caught up. */
+  const upload = async (
+    dryRun: boolean,
+    chosen: { dateOrder?: DateReading | null; decimalMark?: AmountReading | null } = {},
+  ) => {
     if (!file) return;
     setLoading(true);
     setReport(null);
@@ -82,7 +115,16 @@ export default function CsvImportDialog({
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const queryParams = { ...(params ?? {}), dryRun };
+      const queryParams: Record<string, string | number | boolean | null | undefined> = {
+        ...(params ?? {}),
+        language,
+        dryRun,
+      };
+      // Keep the reading the shown report applied, so the load repeats the dry run.
+      const order = chosen.dateOrder ?? dateOrder ?? appliedDates;
+      const mark = chosen.decimalMark ?? amountReading ?? appliedAmounts;
+      if (order) queryParams.dateOrder = order;
+      if (mark) queryParams.decimalMark = mark;
       const res = await api.post(`${endpoint}/import`, fd, { params: queryParams });
       const data = res.data as ImportReport;
       setReport(data);
@@ -97,11 +139,28 @@ export default function CsvImportDialog({
     }
   };
 
+  // A switch checks the file again, so the report always matches what Load sends.
+  const switchDates = () => {
+    if (!appliedDates) return;
+    const next: DateReading = appliedDates === 'day-first' ? 'month-first' : 'day-first';
+    setDateOrder(next);
+    if (report?.dryRun) void upload(true, { dateOrder: next });
+  };
+  const switchAmounts = () => {
+    if (!appliedAmounts) return;
+    // Keep the date order the check applied when switching amounts.
+    const order = dateOrder ?? appliedDates;
+    if (!dateOrder && order) setDateOrder(order);
+    const next: AmountReading = appliedAmounts === 'comma' ? 'dot' : 'comma';
+    setAmountReading(next);
+    if (report?.dryRun) void upload(true, { dateOrder: order, decimalMark: next });
+  };
+
   const canLoad = useMemo(() => !!report && (report as any).ok && (report as any).dryRun, [report]);
 
   const downloadTemplate = async () => {
     try {
-      const queryParams = { ...(params ?? {}), scope: 'template' };
+      const queryParams = { ...(params ?? {}), language, scope: 'template' };
       const res = await api.get(`${endpoint}/export`, { params: queryParams, responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
@@ -170,6 +229,29 @@ export default function CsvImportDialog({
         </Stack>
         {loading && <LinearProgress sx={{ mt: 2 }} />}
         {requestError && <Alert severity="error" sx={{ mt: 2 }}>{requestError}</Alert>}
+        {report && !completed && (dateNotice || amountNotice || ignoredColumns.length > 0) && (
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {dateNotice && (
+              <NoticeLine
+                text={appliedDates ? t(appliedDates === 'day-first' ? `${K}datesDayFirst` : `${K}datesMonthFirst`) : dateNotice}
+                action={appliedDates && report.dryRun ? t(appliedDates === 'day-first' ? `${K}readMonthFirst` : `${K}readDayFirst`) : null}
+                onAction={switchDates}
+                disabled={loading}
+              />
+            )}
+            {amountNotice && (
+              <NoticeLine
+                text={appliedAmounts ? t(appliedAmounts === 'comma' ? `${K}amountsComma` : `${K}amountsDot`) : amountNotice}
+                action={appliedAmounts && report.dryRun ? t(appliedAmounts === 'comma' ? `${K}readDecimalDot` : `${K}readDecimalComma`) : null}
+                onAction={switchAmounts}
+                disabled={loading}
+              />
+            )}
+            {ignoredColumns.length > 0 && (
+              <NoticeLine text={t('csv.ignoredColumns', { columns: ignoredColumns.join(', ') })} action={null} />
+            )}
+          </Box>
+        )}
         {report && (
           <Box sx={{ mt: 2 }}>
             {(report as any).ok ? (
@@ -207,5 +289,29 @@ export default function CsvImportDialog({
         <Button onClick={onClose}>{t('buttons.close')}</Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+function ActionLink({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
+  return (
+    <Button
+      type="button"
+      variant="text"
+      size="small"
+      onClick={onClick}
+      disabled={disabled}
+      sx={{ p: 0, minWidth: 0, fontSize: 12, fontWeight: 400, textTransform: 'none', lineHeight: 1.4, whiteSpace: 'nowrap', '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' } }}
+    >
+      {children}
+    </Button>
+  );
+}
+
+function NoticeLine({ text, action, onAction, disabled }: { text: string; action: string | null; onAction?: () => void; disabled?: boolean }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.25 }}>
+      <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{text}</Typography>
+      {action && onAction && <ActionLink onClick={onAction} disabled={disabled}>{action}</ActionLink>}
+    </Box>
   );
 }

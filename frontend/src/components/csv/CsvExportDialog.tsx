@@ -2,6 +2,7 @@ import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
+import { screenLanguage } from './readings';
 
 export default function CsvExportDialog({
   open,
@@ -16,10 +17,11 @@ export default function CsvExportDialog({
   title?: string;
   params?: Record<string, string | number | boolean | null | undefined>;
 }) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
+  const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const download = async (scope: 'template' | 'data') => {
     try {
-      const queryParams = { ...(params ?? {}), scope };
+      const queryParams = { ...(params ?? {}), language, scope };
       const res = await api.get(`${endpoint}/export`, { params: queryParams, responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);

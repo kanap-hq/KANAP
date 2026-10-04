@@ -358,6 +358,7 @@
     "fileNotFormatted": "El archivo proporcionado no tiene el formato correcto",
     "rowError": "Fila {{row}}: {{message}}",
     "andMoreErrors": "…y {{count}} más",
+    "ignoredColumns": "Columnas ignoradas: {{columns}}.",
     "importWorkflow": "Flujo de trabajo de importación",
     "advancedOptions": "Opciones avanzadas",
     "overridePresetNote": "Estos ajustes anulan la selección de preconfiguración del flujo de trabajo.",

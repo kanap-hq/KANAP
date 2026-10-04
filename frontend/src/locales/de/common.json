@@ -358,6 +358,7 @@
     "fileNotFormatted": "Die bereitgestellte Datei ist nicht korrekt formatiert",
     "rowError": "Zeile {{row}}: {{message}}",
     "andMoreErrors": "…und {{count}} weitere",
+    "ignoredColumns": "Ignorierte Spalten: {{columns}}.",
     "importWorkflow": "Import-Workflow",
     "advancedOptions": "Erweiterte Optionen",
     "overridePresetNote": "Diese Einstellungen überschreiben die Workflow-Vorlagenauswahl.",

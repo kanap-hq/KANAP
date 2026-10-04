@@ -2,6 +2,20 @@ import type { AxiosResponse } from 'axios';
 import api from '../../api';
 import { withListContext } from '../../lib/listContext';
 import { statusScopeParams } from '../../utils/statusScopeParams';
+import type { AmountReading, DateReading, ScreenLanguage } from '../csv/readings';
+
+// The reading helpers are shared with every other CSV import; they live in
+// `components/csv/readings.ts` and are re-exported here for this dialog.
+export {
+  AMOUNT_COMMA,
+  AMOUNT_DOT,
+  DATE_DAY,
+  DATE_MONTH,
+  amountReadingOf,
+  dateReadingOf,
+  screenLanguage,
+} from '../csv/readings';
+export type { AmountReading, DateReading, ScreenLanguage } from '../csv/readings';
 
 /**
  * The budget file of the OPEX and CAPEX lists: export, preflight and load
@@ -11,7 +25,7 @@ import { statusScopeParams } from '../../utils/statusScopeParams';
 
 export type BudgetFileScope = 'opex' | 'capex';
 
-export type BudgetFileLanguage = 'en' | 'fr' | 'de' | 'es';
+export type BudgetFileLanguage = ScreenLanguage;
 
 export type BudgetListState = {
   sort: string;
@@ -19,13 +33,6 @@ export type BudgetListState = {
   filters: string;
   statusScope: string;
 };
-
-/** The language the screen is shown in. Anything else is sent as English. */
-export function screenLanguage(language: string | undefined): BudgetFileLanguage {
-  const code = (language ?? '').toLowerCase().slice(0, 2);
-  if (code === 'fr' || code === 'de' || code === 'es') return code;
-  return 'en';
-}
 
 export function budgetFileBase(scope: BudgetFileScope): string {
   return scope === 'opex' ? '/spend-items/budget-file' : '/capex-items/budget-file';
@@ -104,34 +111,13 @@ export type BudgetFileLoad = {
   updated: number;
 };
 
-/* ---- Server sentences the dialog says in the screen language ---- */
+/* ---- Server sentences the dialog shows ---- */
 
-const DATE_DAY = 'Dates read day first: 01/03/2027 is March 1.';
-const DATE_MONTH = 'Dates read month first: 01/03/2027 is January 3.';
-const AMOUNT_COMMA = 'Amounts read with a decimal comma: 12.280 is twelve thousand two hundred eighty.';
-const AMOUNT_DOT = 'Amounts read with a decimal dot: 12,280 is twelve thousand two hundred eighty.';
 /** `budget-file/import-file.ts` PREFLIGHT_STALE. */
 export const STALE_SENTENCE = 'Some lines changed since the preflight. Run the preflight again.';
 /** `budget-file/columns.ts`, the one message of a file in an old layout. */
 export const OLD_LAYOUT_SENTENCE = 'This file comes from an earlier version of KANAP. Export a fresh file from this list, copy your changes into it, and import it again.';
 const SUPPLIERS_MISSING = /^(\d+) suppliers? do(?:es)? not exist\./;
-
-export type DateReading = 'day-first' | 'month-first';
-
-/** Which order the server applied, when it had to say so. Null when the file settled it. */
-export function dateReadingOf(notice: string | null): DateReading | null {
-  if (notice === DATE_DAY) return 'day-first';
-  if (notice === DATE_MONTH) return 'month-first';
-  return null;
-}
-
-export type AmountReading = 'comma' | 'dot';
-
-export function amountReadingOf(notice: string | null): AmountReading | null {
-  if (notice === AMOUNT_COMMA) return 'comma';
-  if (notice === AMOUNT_DOT) return 'dot';
-  return null;
-}
 
 /** The count of missing suppliers in the server's sentence, or null when it says something else. */
 export function missingSupplierCount(message: string | null): number | null {
