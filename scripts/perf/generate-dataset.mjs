@@ -106,11 +106,21 @@ for (const base of [Y - 1, Y + 1]) {
 }
 
 // ── Chart of accounts (one chart, shared by the three companies) ───────────
-const accounts = [];
+// Expense accounts first (the OPEX lines pick from them), then the two
+// capitalised accounts the CAPEX lines use: software and licences on the
+// intangible one, hardware on the tangible one. The chart is the one every
+// company of the dataset points at (chartOfAccounts in load-tenant.mjs).
+const expenseAccounts = [];
 for (let i = 0; i < P.accounts; i += 1) {
   const number = 600000 + i * 7 + int(0, 6);
-  accounts.push({ number: String(number), name: `${pick(PRODUCTS)} ${pad(i, 4)}` });
+  expenseAccounts.push({ number: String(number), name: `${pick(PRODUCTS)} ${pad(i, 4)}` });
 }
+const ASSET_ACCOUNT = { intangible: '205000', tangible: '215000' };
+const assetAccounts = [
+  { number: ASSET_ACCOUNT.intangible, name: 'Logiciels et licences (immobilisations incorporelles)' },
+  { number: ASSET_ACCOUNT.tangible, name: 'Matériel informatique (immobilisations corporelles)' },
+];
+const accounts = [...expenseAccounts, ...assetAccounts];
 out('02-accounts.csv', ['account_number', 'account_name', 'native_name', 'description', 'consolidation_account_number', 'consolidation_account_name', 'consolidation_account_description', 'status'],
   accounts.map((a) => [a.number, a.name, '', 'Perf dataset account', '', '', '', 'enabled']));
 
@@ -332,7 +342,7 @@ for (let i = 0; i < P.opex; i += 1) {
   const cur = currency();
   const annual = Math.round(Math.exp(between(Math.log(2000), Math.log(900000))));
   opexItems.push([
-    name, `Ligne de dépense perf ${i + 1}`, supplier, cc.company, pick(accounts).number, cur, life.start, lineStatus(life), life.end,
+    name, `Ligne de dépense perf ${i + 1}`, supplier, cc.company, pick(expenseAccounts).number, cur, life.start, lineStatus(life), life.end,
     pick(owners).email, pick(owners).email, pick(CATEGORIES),
     ...AXES.map((a) => (chance(0.85) ? pick(axisValues[a.code]) : '')),
     cc.code, isStaff || chance(0.6) ? 'run' : 'build', chance(0.3) ? `Note ${i + 1} : renouvellement à prévoir` : '',
@@ -350,15 +360,16 @@ for (let i = 0; i < P.capex; i += 1) {
   const life = lifetime();
   const cur = currency();
   const description = `Investissement ${pick(PRODUCTS)} ${pad(i + 1, 5)}`;
+  const ppe = pick(['software', 'hardware']);
   capexItems.push([
-    '', description, pick(['software', 'hardware']), pick(['replacement', 'business_growth']), pick(['mandatory', 'high', 'medium', 'low']), cur, life.start, lineStatus(life), life.end, 'Projet CAPEX perf',
-    cc.company, pick(owners).email, pick(owners).email, pick(CATEGORIES),
+    '', description, ppe, pick(['replacement', 'business_growth']), pick(['mandatory', 'high', 'medium', 'low']), cur, life.start, lineStatus(life), life.end, 'Projet CAPEX perf',
+    cc.company, ppe === 'hardware' ? ASSET_ACCOUNT.tangible : ASSET_ACCOUNT.intangible, pick(owners).email, pick(owners).email, pick(CATEGORIES),
     ...AXES.map((a) => (chance(0.8) ? pick(axisValues[a.code]) : '')),
     cc.code, 'build', '', '', '', '', '', '', '', '', '',
   ]);
   itemBudget('capex', description, Math.round(Math.exp(between(Math.log(10000), Math.log(2000000)))), life, chance(P.costedShare * 0.5));
 }
-out('15-capex-items.csv', ['item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'currency', 'effective_start', 'status', 'disabled_at', 'notes', 'company_name', 'owner_it_email', 'owner_business_email', 'analytics_category',
+out('15-capex-items.csv', ['item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'currency', 'effective_start', 'status', 'disabled_at', 'notes', 'company_name', 'account_number', 'owner_it_email', 'owner_business_email', 'analytics_category',
   ...AXES.map((a) => `analytics:${a.code}`), 'cost_center_code', 'run_build',
   'y_minus1_budget', 'y_minus1_landing', 'y_budget', 'y_follow_up', 'y_landing', 'y_revision', 'y_plus1_budget', 'y_plus1_revision', 'y_plus2_budget'], capexItems);
 

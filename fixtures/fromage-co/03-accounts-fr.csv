@@ -16,3 +16,5 @@ account_number;account_name;native_name;description;consolidation_account_number
 622200;Software Development Services;Développement logiciel externalisé;Développement d'applications et intégration;6300;IT Professional Services;;enabled
 618100;IT Training & Certification;Formation et certification IT;Programmes de formation et certifications professionnelles;6400;IT General Expenses;;enabled
 625100;IT Travel & Events;Déplacements et événements IT;Déplacements, conférences et salons IT;6400;IT General Expenses;;enabled
+205000;Software Assets;Logiciels et licences;Immobilisations incorporelles — logiciels acquis ou développés;;;;enabled
+218300;IT Equipment;Matériel informatique;Immobilisations corporelles — serveurs, postes de travail et réseau;;;;enabled

@@ -146,6 +146,17 @@ const ACCOUNT = {
   [US]: { saas: '7110', licence: '7120', cloud: '7130', security: '7140', data: '7150', maint: '7210', telecom: '7220', dc: '7230', staff: '7310', consulting: '7320', dev: '7310', training: '7410', travel: '7420' },
 };
 
+// Capitalised accounts of each legal entity, for the CAPEX lines: software and
+// licences go to the intangible one, hardware and infrastructure to equipment.
+// The numbers exist in that entity's chart (02- to 06-accounts-*.csv).
+const ASSET = {
+  [FR]: { intangible: '205000', tangible: '218300' },
+  [NL]: { intangible: '01100', tangible: '02100' },
+  [IT]: { intangible: '205000', tangible: '215000' },
+  [US]: { intangible: '151000', tangible: '161000' },
+};
+const assetAccount = (company, ppe) => ASSET[company][ppe === 'hardware' ? 'tangible' : 'intangible'];
+
 // ── OPEX items ──────────────────────────────────────────────────────────────
 // Existing lines of the fixture, now attached to a cost centre and classified.
 // [product_name, cost centre, run/build, nature, recurrence, reference]
@@ -391,7 +402,7 @@ out('14-spend-items.csv', opexRows);
 
 // ── CAPEX items ──────────────────────────────────────────────────────────────
 const CAPEX_HEADER = ['item_number', 'description', 'ppe_type', 'investment_type', 'priority', 'currency', 'effective_start', 'status', 'disabled_at', 'notes',
-  'company_name', 'owner_it_email', 'owner_business_email', 'analytics_category', 'analytics:nature', 'analytics:reference', 'analytics:recurrence', 'cost_center_code', 'run_build',
+  'company_name', 'account_number', 'owner_it_email', 'owner_business_email', 'analytics_category', 'analytics:nature', 'analytics:reference', 'analytics:recurrence', 'cost_center_code', 'run_build',
   'y_minus1_budget', 'y_minus1_landing', 'y_budget', 'y_follow_up', 'y_landing', 'y_revision', 'y_plus1_budget', 'y_plus1_revision', 'y_plus2_budget'];
 const capexRows = [CAPEX_HEADER];
 // Existing CAPEX lines, re-attached: [description, cost centre, nature, reference, landing ratio]
@@ -407,7 +418,7 @@ for (const [description, cc, nature, reference, ratio] of EXISTING_CAPEX) {
   const budget = Number(r.y_budget);
   const landing = round(budget * ratio, 1000);
   capexRows.push(['', r.description, r.ppe_type, r.investment_type, r.priority, r.currency, r.effective_start, statusFor(r.disabled_at), r.disabled_at, r.notes,
-    r.company_name, OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], r.analytics_category, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, 'build',
+    r.company_name, assetAccount(r.company_name, r.ppe_type), OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], r.analytics_category, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, 'build',
     r.y_minus1_budget, r.y_minus1_landing, budget, '', landing, round(budget * between(0.98, 1.05), 1000), '', '', '']);
   const endMonth = r.disabled_at?.startsWith('2026-') ? Number(r.disabled_at.slice(5, 7)) : 12;
   pushActuals('capex', description, flat(landing, 1, endMonth));
@@ -449,7 +460,7 @@ for (const [description, ppe, inv, prio, cc, domaine, nature, reference, budgetR
     pushActuals('capex', description, flat(landing, 1, endMonth));
   }
   capexRows.push(['', description, ppe, inv, prio, CURRENCY[company], start, statusFor(end), end, '',
-    company, OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domaine, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, 'build',
+    company, assetAccount(company, ppe), OWNER_IT[cc], OWNER_BUSINESS[ccGroup[cc]], domaine, NATURE[nature], reference ? REFERENCE[reference][0] : '', RECURRENCE.no, cc, 'build',
     '', '', budget, '', landing, rnd() < 0.5 ? round(budget * between(0.98, 1.05), 1000) : '', '', '', '']);
 }
 out('15-capex-items.csv', capexRows);
