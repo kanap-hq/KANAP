@@ -1,4 +1,4 @@
-import { Controller, Get, InternalServerErrorException, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, InternalServerErrorException, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { EntityManager } from 'typeorm';
@@ -9,6 +9,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { csvImportMulterOptions } from '../common/upload';
 import { BudgetRowsCsvService } from './budget-rows-csv.service';
+import { analyzeAfterLargeImport, BUDGET_ROWS_IMPORT_TABLES } from './budget-import-statistics';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
 // Five rows per line and year (about 100 to 150 bytes each): the item CSV's
@@ -62,11 +63,15 @@ export class BudgetRowsController {
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string,
     @Tenant() ctx: TenantRequest,
+    @Req() req: any,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    return this.svc.importCsv(
+    const result = await this.svc.importCsv(
       { file, dryRun, userId: ctx.userId || null, access: { isAdmin: ctx.isAdmin, permissions: ctx.permissions } },
       { manager: requestManager(ctx), tenantId: ctx.tenantId },
     );
+    // A large import: committed here, then its tables analysed (budget-import-statistics.ts).
+    await analyzeAfterLargeImport(req, BUDGET_ROWS_IMPORT_TABLES, result);
+    return result;
   }
 }
