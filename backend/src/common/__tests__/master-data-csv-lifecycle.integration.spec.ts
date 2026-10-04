@@ -243,7 +243,7 @@ async function testEndOfValidityFormat(pick: number) {
   await withTenant(`date-${pick}`, async (runner, tenantId) => {
     const importer = importers(runner.manager, tenantId)[pick];
     const label = importer.label;
-    const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use a date such as 2027-12-31 or 31/12/2027.`;
     // C4 replaced the interim ISO-only rule: a local day is read under the file's
     // order (an English screen reads `01/03/2027` month first, a day above 12
     // settles day-first on its own), and `-` or an unreadable cell is still refused.

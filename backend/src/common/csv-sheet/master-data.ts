@@ -107,9 +107,9 @@ export function endOfValidityOf(row: CsvDataRow, field: string): { value: Date |
   return { value: endOfValidityFromDate(parsed.isoDate), error: null };
 }
 
-/** The message `parseCsvEndOfValidity` wrote for a cell it refused, kept as is. */
+/** The message these files write for a cell the shared layer could not read as a date. */
 export function invalidEndOfValidity(field: string, raw: string): string {
-  return `Invalid ${field} '${raw}'. Use YYYY-MM-DD or a full ISO date and time.`;
+  return `Invalid ${field} '${raw}'. Use a date such as 2027-12-31 or 31/12/2027.`;
 }
 
 /**

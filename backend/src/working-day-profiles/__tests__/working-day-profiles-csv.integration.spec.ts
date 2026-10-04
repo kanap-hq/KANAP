@@ -215,7 +215,7 @@ async function testOptionalEndOfValidity() {
 async function testEndOfValidityFormat() {
   await withRollback(async (runner) => {
     const { tenantId, csv, ctx } = await seed(runner, 'date');
-    const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use a date such as 2027-12-31 or 31/12/2027.`;
     const dates = async (): Promise<Array<[string, string]>> => {
       const found: Array<{ code: string; disabled_at: Date }> = await runner.query(
         `SELECT code, disabled_at FROM working_day_profiles WHERE tenant_id = $1 ORDER BY code`,

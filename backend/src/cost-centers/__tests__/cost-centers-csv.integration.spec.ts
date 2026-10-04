@@ -210,7 +210,7 @@ async function testConversionInFileAgainstLines() {
 async function testEndOfValidityFormat() {
   await withRollback(async (runner) => {
     const { tenantId, csv, ctx } = await seed(runner, 'date');
-    const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use a date such as 2027-12-31 or 31/12/2027.`;
     /** One row of the nine columns, so the date lands in `disabled_at`. */
     const dated = (code: string, name: string, status: string, disabledAt: string) =>
       [code, 'group', name, '', '', '', '', status, disabledAt].join(';');

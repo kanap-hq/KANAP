@@ -192,7 +192,7 @@ async function testEndOfValidityFormat() {
     const { axes, csv } = services(runner.manager);
     const ctx = context(runner.manager, tenantId);
     await axes.create({ code: 'nature', name: 'Nature' }, ctx);
-    const message = (value: string) => `Invalid disabled_at '${value}'. Use YYYY-MM-DD or a full ISO date and time.`;
+    const message = (value: string) => `Invalid disabled_at '${value}'. Use a date such as 2027-12-31 or 31/12/2027.`;
     // C4 replaced the interim ISO-only rule: a local day is read under the file's
     // order, and only a file that shows no evidence asks the screen's language.
     const local = await csv.importCsv({

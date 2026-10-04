@@ -713,24 +713,29 @@ export class UsersService {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
         errors: [{ row: 0, message: read.headerError }],
-        ignoredColumns: read.ignoredColumns, notices: read.notices,
+        rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
       };
     }
     const repo = this.getRepo(opts?.manager);
     const companiesRepo = opts?.manager ? opts.manager.getRepository(Company) : this.companies;
     const departmentsRepo = opts?.manager ? opts.manager.getRepository(Department) : this.departments;
 
-    // Role lookup/create cache
-    const roleCache = new Map<string, Role | null>();
-    const getRoleByName = async (name: string): Promise<Role | null> => {
+    // The roles of the file. A role the tenant does not have is created by the
+    // load, never by a check: a check lists it in `rolesToCreate` and writes
+    // nothing, so a typo in a role name leaves no trace when the user only
+    // looks at the file.
+    type FileRole = { name: string; id: string | null };
+    const roleByName = new Map<string, FileRole>();
+    const rolesToCreate: string[] = [];
+    const resolveRole = async (name: string): Promise<FileRole> => {
       const key = name.toLowerCase();
-      if (roleCache.has(key)) return roleCache.get(key) ?? null;
-      let r = await this.rolesService.findByName(name, { manager: opts?.manager });
-      if (!r && name) {
-        r = await this.rolesService.createRole({ role_name: name, role_description: `${name} role` }, { manager: opts?.manager });
-      }
-      roleCache.set(key, r ?? null);
-      return r ?? null;
+      const known = roleByName.get(key);
+      if (known) return known;
+      const existing = await this.rolesService.findByName(name, { manager: opts?.manager });
+      const role: FileRole = { name, id: existing ? existing.id : null };
+      if (!existing) rolesToCreate.push(name);
+      roleByName.set(key, role);
+      return role;
     };
     // Company lookup cache
     const companyCache = new Map<string, Company | null>();
@@ -752,7 +757,13 @@ export class UsersService {
     };
 
     // Validate and normalize rows
-    type Normalized = Partial<User> & { email: string; role_id: string; company_id: string | null; department_id: string | null };
+    type Normalized = Omit<Partial<User>, 'role_id' | 'role'> & {
+      email: string;
+      /** The row's role, its id filled once the load has created it. */
+      role: FileRole;
+      company_id: string | null;
+      department_id: string | null;
+    };
     const normalized: Normalized[] = [];
     for (const row of read.rows) {
       const line = row.line;
@@ -775,10 +786,9 @@ export class UsersService {
         errors.push({ row: line, message: `Invalid status '${statusRaw}'. Use 'contact', 'invited', 'enabled' or 'disabled'.` });
       }
 
-      let role: Role | null = null;
+      let role: FileRole | null = null;
       if (!roleName) roleName = 'Contact';
-      if (roleName) role = await getRoleByName(roleName);
-      if (!role) errors.push({ row: line, message: `Unknown role '${roleName}'` });
+      if (roleName) role = await resolveRole(roleName);
 
       let company: Company | null = null;
       if (companyName) {
@@ -801,7 +811,7 @@ export class UsersService {
           email,
           first_name,
           last_name,
-          role_id: role.id,
+          role,
           company_id: company ? company.id : null,
           department_id: department ? department.id : null,
           status: (['enabled','disabled','contact','invited'].includes(statusRaw) ? (statusRaw as any) : 'contact'),
@@ -810,7 +820,27 @@ export class UsersService {
     }
 
     if (errors.length > 0) {
-      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return {
+        ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors,
+        // Nothing would be written: no role is offered for creation either.
+        rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
+      };
+    }
+
+    // The load creates the roles the file names, once its rows are known good.
+    // A check creates nothing and answers with `rolesToCreate` instead.
+    if (!dryRun) {
+      for (const name of rolesToCreate) {
+        const created = await this.rolesService.createRole({ role_name: name, role_description: `${name} role` }, { manager: opts?.manager });
+        if (!created) {
+          return {
+            ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0,
+            errors: [{ row: 0, message: `Unknown role '${name}'` }],
+            rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
+          };
+        }
+        roleByName.get(name.toLowerCase())!.id = created.id;
+      }
     }
 
     // Deduplicate by email (lowercased)
@@ -829,16 +859,23 @@ export class UsersService {
       if (existing) updated += 1; else inserted += 1;
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return {
+        ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [],
+        rolesToCreate, ignoredColumns: read.ignoredColumns, notices: read.notices,
+      };
     }
 
     // Commit: upsert by email
     let processed = 0;
     for (const item of unique) {
       const existing = await repo.findOne({ where: { email: item.email } });
+      // The role is a lookup of this import, not a column: only its id is written.
+      // A check leaves an id unset and writes nothing; a load resolved them all above.
+      const { role, ...rest } = item;
+      const body = { ...rest, role_id: role.id ?? undefined };
       if (existing) {
         const before = { ...existing };
-        const next = { ...existing, ...item } as User;
+        const next = { ...existing, ...body } as User;
         const saved = await repo.save(next);
         processed += 1;
         if (this.audit) {
@@ -855,7 +892,7 @@ export class UsersService {
           );
         }
       } else {
-        const created = repo.create({ ...item, password_hash: null, mfa_enabled: false });
+        const created = repo.create({ ...body, password_hash: null, mfa_enabled: false });
         const saved = await repo.save(created);
         processed += 1;
         if (this.audit) {
@@ -873,7 +910,10 @@ export class UsersService {
         }
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return {
+      ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [],
+      rolesToCreate, ignoredColumns: read.ignoredColumns, notices: read.notices,
+    };
   }
 
   async enableUser(id: string, actorId?: string | null, opts?: { manager?: EntityManager }) {
