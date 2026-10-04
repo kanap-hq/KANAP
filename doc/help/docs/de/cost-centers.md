@@ -173,9 +173,8 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 
 **CSV-Struktur**:
 
-- Trennzeichen: Semikolon `;`
-- Kodierung: UTF-8 (in Excel als „CSV UTF-8“ speichern)
-- Kopfzeilen: `code;kind;name;parent_code;company_name;owner_email;description;status;disabled_at`
+- Kopfzeilen: `code`, `kind`, `name`, `parent_code`, `company_name`, `owner_email`, `description`, `status`, `disabled_at`
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 
 | Spalte | Inhalt |
 |---|---|

@@ -157,7 +157,7 @@ A column KANAP does not know is ignored, with a warning. A column that looks lik
 
 ## Files from earlier versions
 
-A file exported before the budget file was introduced is refused as a whole, with this message:
+A file in an older layout is refused as a whole: the item files with `y_budget` style columns, and the budget rows file with `measure` and `jan` … `dec` columns. The screen shows this message:
 
 > This file comes from an earlier version of KANAP. Export a fresh file from this list, copy your changes into it, and import it again.
 

@@ -7,7 +7,7 @@ L'administration budgétaire met à votre disposition un ensemble d'outils pour 
 - Chemin : **Gestion budgétaire > Administration**
 - Autorisations : La plupart des opérations nécessitent `budget_ops:admin`
 
-La page d'accueil affiche sept cartes, chacune renvoyant à un outil dédié :
+La page d'accueil affiche six cartes, chacune renvoyant à un outil dédié :
 
 | Outil | Objectif |
 |-------|----------|
@@ -16,7 +16,6 @@ La page d'accueil affiche sept cartes, chacune renvoyant à un outil dédié :
 | **Copier les ventilations** | Copier les méthodes de ventilation d'une année à l'autre |
 | **Réinitialiser une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
 | **Méthode de ventilation par défaut** | Définir la méthode que les postes OPEX et CAPEX suivent par défaut |
-| **Fichier des lignes budgétaires** | Exporter ou importer les montants mensuels de chaque poste OPEX et CAPEX |
 | **Colonnes budgétaires** | Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut |
 
 Les colonnes budgétaires sont Budget, Révision, Prévision, Réalisé et Atterrissage prévu. Ce sont les noms standard. Votre organisation peut les renommer, en masquer certaines et choisir une colonne par défaut dans [Colonnes budgétaires](#colonnes-budgetaires). Chaque page ci-dessous affiche les noms choisis par votre organisation.
@@ -304,61 +303,6 @@ Sans `budget_ops:admin`, vous pouvez consulter le réglage actuel mais pas le mo
 
 ---
 
-## Fichier des lignes budgétaires
-
-Exportez ou importez les montants mensuels de chaque poste OPEX et CAPEX dans un seul fichier, avec une ligne par poste, année et colonne.
-
-### Quand l'utiliser
-
-- Charger des budgets mensuels préparés dans un tableur
-- Importer le réalisé mensuel depuis votre système comptable
-- Relire ou archiver toutes les colonnes, y compris la Prévision
-
-### Export
-
-1. Choisissez une année, ou conservez **Toutes les années**
-2. Cliquez sur **Exporter**, puis sur **Exporter les données**
-
-Le fichier liste chaque poste OPEX et CAPEX que vous pouvez consulter, pour chaque année qui porte des montants. Chaque poste et chaque année reçoivent cinq lignes, une par colonne budgétaire dans l'ordre fixe (Budget, Révision, Prévision, Réalisé, Atterrissage prévu sous leurs noms standard). Les colonnes sans montant et les colonnes masquées sont incluses aussi.
-
-Sous l'introduction, la page indique quel nom technique du fichier correspond à chacune de vos colonnes, par exemple « `planned` pour Budget ». Les mêmes noms techniques apparaissent sous **Dans les fichiers** sur la page [Colonnes budgétaires](#colonnes-budgetaires). Lorsque le fichier couvre une seule année, ou seulement les OPEX ou seulement les CAPEX en raison de vos autorisations, son nom se termine par `partial`.
-
-Un fichier peut être importé jusqu'à 10 Mo. Pour un budget plus volumineux, exportez et importez une année à la fois : un export limité à une année produit un fichier plus petit.
-
-### Colonnes
-
-Le fichier utilise le point-virgule `;` comme séparateur et l'encodage UTF-8.
-
-| Colonne | Contenu |
-|---------|---------|
-| `item_type` | `opex` ou `capex` |
-| `item_number` | Le numéro du poste, par exemple `7`. À l'import, la référence fonctionne aussi (`OPX-7`, `CPX-7`) |
-| `year` | Quatre chiffres |
-| `measure` | La colonne, par son nom technique, quel que soit le nom choisi par votre organisation : `planned` (colonne 1, nom standard Budget), `committed` (colonne 2, Révision), `forecast` (colonne 3, Prévision), `actual` (colonne 4, Réalisé), `expected_landing` (colonne 5, Atterrissage prévu). À l'import, `budget`, `revision`, `follow_up` et `landing` fonctionnent aussi |
-| `period_start`, `period_end` | La période de la colonne au format `YYYY-MM-DD`, à l'intérieur de l'année de la ligne. À l'import, deux valeurs vides signifient toute l'année |
-| `jan` à `dec` | Les douze montants mensuels, avec un point comme séparateur décimal. À l'import, la virgule et les espaces sont aussi acceptés |
-| `method` | La façon dont la colonne a été produite : `spread`, `copied`, `manual` ou `computed` (construite à partir de la quantité et du prix). À titre d'information uniquement, ignorée à l'import |
-
-### Règles d'import
-
-1. Cliquez sur **Importer**, choisissez le fichier et lancez la **Vérification préalable**
-2. Examinez le rapport, puis cliquez sur **Charger**
-
-- Tout le fichier est vérifié avant le moindre enregistrement. Si une ligne contient une erreur, rien n'est enregistré et le rapport liste les erreurs par numéro de ligne. Ce numéro est celui de la ligne du fichier tel qu'un éditeur de texte l'affiche, lignes vides et cellules sur plusieurs lignes comprises
-- Chaque ligne remplace les douze mois de son poste, de son année et de sa colonne. Les postes, années et colonnes absents du fichier ne sont pas modifiés
-- Les douze mois sont obligatoires. Saisissez `0` pour un mois sans montant
-- Une ligne identique à ce qui est enregistré n'est pas modifiée, y compris la façon dont la colonne a été produite. Réimporter un export ne change rien
-- Une ligne dont les montants changent marque la colonne comme **Modifié à la main**, avec la période du fichier. Une colonne construite à partir de la quantité et du prix garde ses lignes, et son onglet Budget propose de les utiliser à nouveau. Voir [Quantité et prix](opex.md#quantite-et-prix)
-- Le fichier ne contient que des montants. Les lignes d'une colonne se gèrent dans l'onglet Budget
-- Une ligne qui ne change que la période met à jour la période et conserve le reste. Sur une colonne construite à partir de la quantité et du prix, elle marque aussi la colonne comme **Modifié à la main** et garde ses lignes, comme une ligne dont les montants changent
-- Les lignes Réalisé suivent les mêmes règles, ce qui permet d'importer le réalisé mensuel
-- Une ligne modifiée sur une colonne gelée est refusée. Une ligne identique sur une colonne gelée est acceptée
-- Les lignes d'une colonne masquée sont importées comme les autres. Masquer une colonne ne bloque jamais ses imports, et une colonne masquée gelée refuse toujours les lignes modifiées
-- Les lignes en double (même poste, même année et même colonne), les numéros de poste inconnus et les postes d'un type que vous ne pouvez pas administrer sont des erreurs
-- L'import nécessite les droits d'administration sur les OPEX ou sur les CAPEX. L'export nécessite l'accès en lecture à l'un des deux
-
----
-
 ## Colonnes budgétaires
 
 Nommez les cinq colonnes budgétaires, choisissez celles que tout le monde voit et celle dont partent les rapports et les listes. Le réglage s'applique à toute l'organisation, pour les OPEX comme pour les CAPEX.
@@ -377,7 +321,7 @@ Une ligne par colonne, toujours dans le même ordre, de la colonne 1 à la colon
 |-------|-------------|
 | **Colonne** | La position, de 1 à 5. Les colonnes ne peuvent pas être réordonnées |
 | **Nom** | Le nom que tout le monde voit dans les listes, l'onglet Budget, les rapports, la vue d'ensemble et l'administration budgétaire. Laissez-le vide pour utiliser le nom standard, affiché en indication. 40 caractères au plus, sans caractère de contrôle ni caractère invisible. Chaque nom doit différer de ceux des autres colonnes, y compris du nom standard d'une colonne que vous n'avez pas renommée, majuscules comprises |
-| **Dans les fichiers** | La ligne sous chaque nom. Elle donne le nom technique de la colonne dans le fichier des lignes budgétaires et ses imports, par exemple `planned` pour la colonne 1. Il ne change jamais quand vous renommez une colonne |
+| **Dans les fichiers** | La ligne sous chaque nom. Elle donne le nom technique de la colonne dans le fichier budgétaire et ses imports, par exemple `budget` pour la colonne 1. Il ne change jamais quand vous renommez une colonne. Voir [Charger un budget depuis un tableur](budget-file.md) |
 | **Affichée** | Indique si la colonne apparaît à l'écran. Au moins une colonne doit rester affichée |
 | **Suit la répartition et les lignes** | Indique si la colonne reprend ce qui est appliqué à toutes les colonnes dans l'onglet Budget : la répartition et la période d'un montant réparti (**Appliquer la répartition à toutes les colonnes**), et les lignes quantité et prix (**Appliquer ces lignes à toutes les colonnes**). Une colonne qui ne suit pas garde les siens : quand vous la répartissez ou modifiez ses lignes, elle change seule |
 | **Par défaut** | La colonne que les rapports présélectionnent et qui trie les listes et la vue d'ensemble. La geler fige les taux de change de l'année. La colonne par défaut doit être affichée |
@@ -388,7 +332,7 @@ Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées
 
 ### Ce que changent les réglages
 
-- **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de réinitialisation et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier des lignes budgétaires, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : geler une année les gèle donc avec les autres
+- **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de réinitialisation et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier budgétaire, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : geler une année les gèle donc avec les autres
 - **La colonne par défaut** est présélectionnée dans chaque rapport. Elle trie les listes OPEX et CAPEX, leur navigation précédent et suivant, et les tuiles **Top postes** et **Plus fortes hausses** de la vue d'ensemble. Les listes l'affichent pour l'année en cours, à côté de la dernière colonne affichée. C'est aussi le montant de référence de l'onglet Ventilations et la colonne sur laquelle s'ouvre le panneau de répartition. La geler pour une année fige les taux de change de cette année (voir [Geler la colonne par défaut fige les taux de change](#geler-la-colonne-par-defaut-fige-les-taux-de-change))
 - **Suit la répartition et les lignes** décide quelles colonnes bougent ensemble quand une répartition est appliquée à toutes les colonnes, et quelles colonnes reçoivent les lignes quand **Appliquer ces lignes à toutes les colonnes** est activé. Les colonnes gelées ne changent jamais, quel que soit ce réglage
 

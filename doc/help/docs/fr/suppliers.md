@@ -91,22 +91,29 @@ Lors de la création d'un nouveau fournisseur, l'onglet Contacts est désactivé
 
 ## Import/export CSV
 
-Gérez les fournisseurs en masse via CSV.
+**Exporter CSV** télécharge tous les fournisseurs avec leurs informations actuelles. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
 
-**Export** : Télécharge tous les fournisseurs avec leurs détails actuels.
+Les colonnes :
+
+| Colonne | Contenu |
+|---|---|
+| `name` | Obligatoire. Le nom du fournisseur. Les lignes sont rapprochées par ce nom |
+| `erp_supplier_id` | L'ID du fournisseur dans votre ERP |
+| `commercial_contact` | L'e-mail d'un contact. Le chargement rattache le fournisseur au contact portant cet e-mail, et le crée lorsque l'espace de travail n'en a aucun |
+| `technical_contact` | L'e-mail d'un contact, comme ci-dessus |
+| `support_contact` | L'e-mail d'un contact, comme ci-dessus |
+| `notes` | Texte libre |
+| `status` | `enabled` ou `disabled` |
 
 **Import** :
-- Utilisez le **Contrôle préalable** pour valider le fichier avant d'appliquer les modifications
-- Les lignes sont mises en correspondance par nom de fournisseur
-- Peut créer de nouveaux fournisseurs ou mettre à jour les existants
 
-**Champs obligatoires** : Nom
+- Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
+- Les lignes sont rapprochées par `name` : une ligne met à jour le fournisseur qu'elle nomme, toute autre ligne en crée un
+- `name` est obligatoire. Toute autre cellule est facultative
 
-**Champs optionnels** : ID Fournisseur ERP, Notes, Statut
-
-**Formatage** :
-- Utilisez l'encodage **UTF-8** et les **points-virgules** comme séparateurs
-- Importez les fournisseurs avant d'importer les applications ou contrats qui les référencent
+**Notes** :
+- Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur et les deux étapes d'import
+- Importez les fournisseurs avant les applications ou les contrats qui les référencent. Le fichier budgétaire crée aussi un fournisseur manquant lorsque **Créer les fournisseurs manquants** est cochée. Voir [Charger un budget depuis un tableur](budget-file.md)
 
 ---
 

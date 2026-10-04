@@ -26,7 +26,7 @@ Chaque espace de travail commence avec une dimension, la dimension par défaut. 
 La dimension par défaut a un rôle particulier :
 
 - Elle ne peut être ni désactivée ni supprimée. Son espace de travail n'a pas de bouton **Supprimer**, et une ligne sous **Cycle de vie** en donne la raison : « Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent. »
-- Les anciens fichiers CSV et les questions posées à Plaid sur la catégorie analytique l'utilisent. Voir [Import/export CSV](#importexport-csv) et [Dimensions analytiques dans Plaid](#dimensions-analytiques-dans-plaid).
+- Les questions posées à Plaid sur la catégorie analytique l'utilisent. Voir [Dimensions analytiques dans Plaid](#dimensions-analytiques-dans-plaid). Dans un fichier budgétaire, chaque dimension a sa propre colonne, dimension par défaut incluse : voir [Charger un budget depuis un tableur](budget-file.md).
 - Elle reste la dimension par défaut quand vous la renommez, changez son code ou changez son ordre.
 - Son libellé est réservé : aucune autre dimension ne peut s'appeler « Dimension analytique », dans aucune des langues de l'application.
 
@@ -217,15 +217,14 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 
 Chargez ou mettez à jour les valeurs de toutes les dimensions depuis un seul fichier. Les dimensions se créent sur la page.
 
-Pour renseigner des valeurs sur les lignes budgétaires depuis un fichier, utilisez les fichiers CSV OPEX et CAPEX. Dans ces fichiers, la colonne `analytics_category` porte la dimension par défaut, et une colonne `analytics:<code>` porte chaque autre dimension. Voir [OPEX](opex.md#importexport-csv) et [CAPEX](capex.md#importexport-csv).
+Pour renseigner des valeurs sur les postes budgétaires depuis un fichier, utilisez les fichiers budgétaires OPEX et CAPEX. Dans ces fichiers, une colonne `analytics:<code>` porte chaque dimension, dimension par défaut incluse. Voir [Charger un budget depuis un tableur](budget-file.md).
 
 **Export** : cliquez sur **Exporter CSV**, puis sur **Exporter les données**. Le fichier liste les valeurs de toutes les dimensions, activées ou désactivées, dimension par dimension. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
 
 **Structure du CSV** :
 
-- Séparateur : point-virgule `;`
-- Encodage : UTF-8 (enregistrez au format « CSV UTF-8 » dans Excel)
-- En-têtes : `axis_code;name;description;status;disabled_at`
+- En-têtes : `axis_code`, `name`, `description`, `status`, `disabled_at`
+- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 
 | Colonne | Contenu |
 |---|---|

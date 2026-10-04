@@ -412,20 +412,16 @@ Sie können eine Liste Ihrer Kontenpläne exportieren (mit Metadaten wie Code, N
 
 ### Konten (globaler Endpunkt)
 
-Der globale `/accounts`-CSV enthält eine `coa_code`-Spalte, um zu identifizieren, zu welchem Kontenplan jedes Konto gehört.
+Der globale `/accounts`-CSV enthält eine `coa_code`-Spalte, um zu identifizieren, zu welchem Kontenplan jedes Konto gehört. **CSV exportieren** und **CSV importieren** nutzen sie, wenn auf der Seite kein Kontenplan ausgewählt ist.
 
-  - **Export**
-      - **Vorlage**: Nur Kopfzeilen (verwenden Sie dies zur Importvorbereitung)
-      - **Daten**: Alle Konten mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen und Status
-  - **Import**
-      - Beginnen Sie mit der **Vorprüfung** (validiert Struktur, Kodierung, Pflichtfelder, Duplikate)
-      - Wenn die Vorprüfung OK ist, wendet **Laden** Neuanlagen/Aktualisierungen an
-      - **Zuordnung**: nach `(coa_code, account_number)` innerhalb Ihres Arbeitsbereichs
-      - **Pflichtfelder**: `coa_code`, `account_number`, `account_name`
-      - **Optionale Felder**: `native_name`, `description`, Konsolidierungsfelder, `status`
-      - Duplikate in der Datei (gleicher coa_code + account_number) werden dedupliziert; erstes Vorkommen gewinnt
+  - **CSV exportieren**: Alle Konten mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen und Status
+  - **CSV importieren**: **Vorlage herunterladen** im Dialog liefert eine Datei nur mit den Kopfzeilen. Beginnen Sie mit der **Vorabprüfung**, um Struktur, Kodierung, Pflichtfelder und Duplikate zu prüfen, und dann **Laden**, um die Einfügungen und Aktualisierungen anzuwenden
+  - **Zuordnung**: nach `(coa_code, account_number)` innerhalb Ihres Arbeitsbereichs
+  - **Pflichtzellen**: `coa_code`, `account_number`, `account_name`. Alle Zeilen einer Datei müssen denselben `coa_code` tragen
+  - **Optionale Zellen**: `native_name`, `description`, Konsolidierungsfelder, `status`
+  - Duplikate in der Datei (gleicher coa_code + account_number) werden dedupliziert; erstes Vorkommen gewinnt
 
-**CSV-Schema** (Semikolon `;` getrennt, UTF-8):
+**CSV-Schema** (der Export schreibt das Trennzeichen der Sprache der Oberfläche; hier mit Semikolons dargestellt):
 ```
 coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
 ```
@@ -434,16 +430,16 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 
 Von der Kontenpläne-Seite aus sind **CSV importieren** und **CSV exportieren** automatisch auf den aktuell ausgewählten Kontenplan bezogen.
 
-  - **Export**: Konten aus diesem Kontenplan (keine `coa_code`-Spalte nötig)
-  - **Import**: Konten werden automatisch in diesen Kontenplan eingefügt/aktualisiert
+  - **CSV exportieren**: Konten aus diesem Kontenplan (keine `coa_code`-Spalte nötig)
+  - **CSV importieren**: Konten werden automatisch in diesen Kontenplan eingefügt oder aktualisiert
 
-**CSV-Schema** (Kontenplan-bezogen, Semikolon `;` getrennt, UTF-8):
+**CSV-Schema** (Kontenplan-bezogen; hier mit Semikolons dargestellt):
 ```
 account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
 ```
 
 **Hinweise**:
-  - Verwenden Sie **UTF-8-Kodierung** und **Semikolons** als Trennzeichen
+  - Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
   - Der `coa_code` muss einem bestehenden Kontenplan in Ihrem Arbeitsbereich entsprechen
   - Kontonummern sollten innerhalb eines Kontenplans eindeutig sein
   - Statuswerte: `enabled` oder `disabled` (Standard ist enabled)

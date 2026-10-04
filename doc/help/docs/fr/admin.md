@@ -148,6 +148,27 @@ Actions de ligne, depuis le menu au bout de chaque ligne :
 | **Envoyer une réinitialisation de mot de passe** | Envoyer un lien de réinitialisation de mot de passe par e-mail. Affiché uniquement pour les comptes locaux activés. |
 | **Supprimer** | Supprimer définitivement l'utilisateur. Désactivez plutôt le compte si d'autres enregistrements le référencent. |
 
+### Fichier CSV des utilisateurs
+
+**Exporter CSV** télécharge la liste des utilisateurs. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
+
+Les colonnes :
+
+| Colonne | Contenu |
+|---|---|
+| `email` | Obligatoire. Les lignes sont rapprochées par cette adresse, écrivez-la donc telle que l'espace de travail la contient |
+| `first_name`, `last_name` | Le nom de la personne |
+| `role` | Le rôle à attribuer. Une cellule vide donne le rôle **Contact** |
+| `company_name` | La société, par son nom. Facultatif |
+| `department_name` | Le département, par son nom. Il nécessite un `company_name` |
+| `status` | `contact`, `invited`, `enabled` ou `disabled`. Une cellule vide donne `contact` |
+
+Un rôle nommé par le fichier et absent de votre espace de travail est créé par le chargement, avec une description par défaut. La vérification le liste et ne crée rien : un fichier que vous vous contentez de vérifier ne change aucun rôle. Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant.
+
+Le fichier ne contient ni date ni montant. Un import ne définit aucun mot de passe : un nouvel utilisateur se connecte après une invitation ou une réinitialisation de mot de passe.
+
+Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur et les deux étapes d'import.
+
 ### Créer un utilisateur
 
 1. Cliquez sur **Nouveau**

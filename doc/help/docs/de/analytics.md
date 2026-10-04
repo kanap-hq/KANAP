@@ -26,7 +26,7 @@ Jeder Arbeitsbereich beginnt mit einer Dimension, der Standarddimension. Solange
 Die Standarddimension hat eine besondere Rolle:
 
 - Sie kann weder deaktiviert noch gelöscht werden. Ihr Arbeitsbereich hat keine Schaltfläche **Löschen**, und eine Zeile unter **Lebenszyklus** nennt den Grund: „Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie.“
-- Ältere CSV-Dateien und Fragen an Plaid zur Analysekategorie verwenden sie. Siehe [CSV-Import/Export](#csv-importexport) und [Analysedimensionen in Plaid](#analysedimensionen-in-plaid).
+- Fragen an Plaid zur Analysekategorie verwenden sie. Siehe [Analysedimensionen in Plaid](#analysedimensionen-in-plaid). In einer Budgetdatei hat jede Dimension ihre eigene Spalte, die Standarddimension eingeschlossen: Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
 - Sie bleibt die Standarddimension, wenn Sie sie umbenennen oder ihren Code oder ihre Reihenfolge ändern.
 - Ihre Bezeichnung ist reserviert: Keine andere Dimension kann „Analysedimension“ heißen, und das gilt für jede Sprache der App.
 
@@ -217,15 +217,14 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 
 Laden oder aktualisieren Sie die Werte aller Dimensionen aus einer Datei. Dimensionen werden auf der Seite erstellt.
 
-Um Werte auf Budgetzeilen aus einer Datei zu setzen, verwenden Sie die OPEX- und CAPEX-CSV-Dateien. In diesen Dateien enthält die Spalte `analytics_category` die Standarddimension, und je eine Spalte `analytics:<code>` enthält jede andere Dimension. Siehe [OPEX](opex.md#csv-importexport) und [CAPEX](capex.md#csv-importexport).
+Um Werte auf Budgetpositionen aus einer Datei zu setzen, verwenden Sie die OPEX- und CAPEX-Budgetdateien. In diesen Dateien enthält je eine Spalte `analytics:<code>` jede Dimension, die Standarddimension eingeschlossen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
 
 **Export**: Klicken Sie auf **CSV exportieren** und dann auf **Daten exportieren**. Die Datei listet die Werte aller Dimensionen, aktiviert oder deaktiviert, Dimension für Dimension. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
 
 **CSV-Struktur**:
 
-- Trennzeichen: Semikolon `;`
-- Kodierung: UTF-8 (in Excel als „CSV UTF-8“ speichern)
-- Kopfzeilen: `axis_code;name;description;status;disabled_at`
+- Kopfzeilen: `axis_code`, `name`, `description`, `status`, `disabled_at`
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 
 | Spalte | Inhalt |
 |---|---|

@@ -173,9 +173,8 @@ Cargue o actualice todo el árbol desde un archivo.
 
 **Estructura CSV**:
 
-- Delimitador: punto y coma `;`
-- Codificación: UTF-8 (guarde como "CSV UTF-8" en Excel)
-- Encabezados: `code;kind;name;parent_code;company_name;owner_email;description;status;disabled_at`
+- Encabezados: `code`, `kind`, `name`, `parent_code`, `company_name`, `owner_email`, `description`, `status`, `disabled_at`
+- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 
 | Columna | Contenido |
 |---|---|

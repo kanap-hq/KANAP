@@ -182,29 +182,38 @@ De nombreuses parties de l'application sont sensibles à l'année. Les société
 
 ## Import/export CSV
 
-Maintenez de grands ensembles synchronisés avec vos systèmes sources en utilisant le CSV (séparateur point-virgule `;`).
+**Exporter CSV** télécharge toutes les sociétés avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes, prêt à remplir.
 
-**Export** :
+Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélectionnée dans la barre d'outils de la liste : l'année précédente, celle-ci et la suivante.
 
-- **Modèle** : fichier d'en-têtes uniquement que vous pouvez remplir (inclut des colonnes dynamiques pour A-1, A, A+1 basées sur l'année sélectionnée)
-- **Données** : sociétés actuelles plus leurs métriques pour A-1 / A / A+1
+| Colonne | Contenu |
+|---|---|
+| `name` | Obligatoire. Le nom de la société. Les lignes sont rapprochées par ce nom |
+| `country_iso` | Obligatoire. Deux lettres |
+| `address1`, `address2` | Lignes d'adresse |
+| `postal_code`, `city`, `state` | Compléments d'adresse |
+| `reg_number`, `vat_number` | Numéro d'immatriculation et numéro de TVA |
+| `base_currency` | Obligatoire. Trois lettres |
+| `status` | `enabled` ou `disabled` |
+| `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes |
+| `notes` | Texte libre |
+| `headcount_<année>` | Obligatoire lorsque la ligne porte une métrique pour cette année |
+| `it_users_<année>` | Un nombre entier |
+| `turnover_<année>` | Jusqu'à 3 décimales, en millions de la devise de base de la société |
 
 **Import** :
 
-- Commencez par la **Vérification préalable** (valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques)
-- Si la vérification est OK, **Charger** applique les insertions et mises à jour
-- La correspondance se fait par **nom** de société (dans votre espace de travail). Les doublons dans le fichier sont dédupliqués par nom (la première occurrence l'emporte)
-- **Champs obligatoires** : Nom, Pays (2 lettres) et Devise de base (3 lettres). La ville est facultative dans le fichier
-- **Champ optionnel** : `coa_code` (référence un plan comptable ; si omis, le CoA par défaut pour le pays est utilisé)
-- **Statut et fin de validité** : `status` vaut `enabled` ou `disabled`, et `disabled_at` est la fin de validité, une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit le statut déduit de la fin de validité. Une nouvelle société est activée sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la société aujourd'hui
+- Commencez par la **Vérification préalable**. Elle valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques. Si la vérification est propre, **Charger** applique les insertions et les mises à jour
+- **Correspondance** : par `name` de société. Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant
+- **Champs obligatoires** : `name`, `country_iso` et `base_currency`
+- **Statut et fin de validité** : l'export écrit le statut déduit de la fin de validité. Une nouvelle société est activée sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la société aujourd'hui
 - Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
-- **Métriques** : si vous fournissez des métriques pour une année, l'Effectif est obligatoire pour cette année ; Utilisateurs IT et Chiffre d'affaires sont optionnels. Le Chiffre d'affaires accepte jusqu'à 3 décimales et doit être exprimé en millions de la devise de base de la société
+- **Métriques** : si vous fournissez des métriques pour une année, `headcount_<année>` est obligatoire pour cette année. `it_users_<année>` et `turnover_<année>` sont facultatifs
 
 **Notes** :
 
-- Utilisez l'**encodage UTF-8** et des **points-virgules** comme séparateurs
+- Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur, les formes de dates et de montants, et les deux étapes d'import
 - La liste se rafraîchit automatiquement après un chargement réussi
-- Si vous importez avec `coa_code`, assurez-vous que le plan comptable existe d'abord dans votre espace de travail
 
 ## Conseils
 

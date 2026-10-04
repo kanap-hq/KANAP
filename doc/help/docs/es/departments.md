@@ -93,30 +93,34 @@ La pestaña Detalles gestiona las métricas de plantilla año a año.
 
 ## Importación/exportación CSV
 
-Mantenga los departamentos sincronizados con su sistema de RRHH usando CSV.
+**Exportar CSV** descarga todos los departamentos con su empresa, su nombre, su descripción, su estado y su fin de validez. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
 
-**Exportar**:
-- Descarga todos los departamentos con su empresa, nombre, descripción, estado y fin de validez
-- Columnas: `company_name;name;description;status;disabled_at`
+Las columnas:
 
-**Importar**:
-- Utilice **Verificación previa** para validar antes de aplicar
-- Coincidencia por nombre de departamento + nombre de empresa
-- Puede crear nuevos departamentos o actualizar los existentes
+| Columna | Contenido |
+|---|---|
+| `company_name` | Obligatoria. La empresa a la que pertenece el departamento, por su nombre |
+| `name` | Obligatoria. El nombre del departamento |
+| `description` | Texto libre |
+| `status` | `enabled` o `disabled` |
+| `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas |
 
-**Campos obligatorios**: `name` y `company_name` (una empresa existente)
+**Importación**:
 
-**Campos opcionales**: `description`, `status`, `disabled_at`
+- Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
+- Emparejamiento por nombre de departamento y nombre de empresa: una fila actualiza el departamento que nombra, cualquier otra fila crea uno
+
+**Celdas obligatorias**: `name` y `company_name`, una empresa existente
+
+**Celdas opcionales**: `description`, `status`, `disabled_at`
 
 **Columnas de ciclo de vida**:
-- `status` es `enabled` o `disabled`, y `disabled_at` es el fin de validez, una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe el estado deducido del fin de validez. Un departamento nuevo queda activado salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el departamento hoy
+- `status` es `enabled` o `disabled`, y `disabled_at` es el fin de validez, una fecha (`2026-12-31`) o una fecha y una hora completas. La exportación escribe el estado deducido del fin de validez. Un departamento nuevo se activa salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, finaliza el departamento hoy
 - Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." o "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 
 **Notas**:
-- Utilice codificación **UTF-8** y **puntos y coma** como separadores
-- La plantilla no figura en el archivo. Introdúzcala por año en la pestaña **Detalles** del departamento
-
----
+- Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
+- La plantilla de personal no está en el archivo. Introdúzcala por año en la pestaña **Detalles** del departamento
 
 ## Consejos
 

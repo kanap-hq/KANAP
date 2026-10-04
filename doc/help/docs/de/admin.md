@@ -148,6 +148,27 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 | **Passwort-Zurücksetzung senden** | Sendet einen Link zum Zurücksetzen des Passworts per E-Mail. Nur für aktive lokale Konten sichtbar. |
 | **Löschen** | Entfernt den Benutzer dauerhaft. Deaktivieren Sie das Konto stattdessen, wenn andere Datensätze darauf verweisen. |
 
+### CSV-Datei der Benutzer
+
+**CSV exportieren** lädt die Benutzerliste herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
+
+Die Spalten:
+
+| Spalte | Inhalt |
+|---|---|
+| `email` | Pflicht. Zeilen werden über diese Adresse zugeordnet, schreiben Sie sie also so, wie der Arbeitsbereich sie führt |
+| `first_name`, `last_name` | Der Name der Person |
+| `role` | Die zuzuweisende Rolle. Eine leere Zelle ergibt die Rolle **Contact** |
+| `company_name` | Das Unternehmen, über seinen Namen. Optional |
+| `department_name` | Die Abteilung, über ihren Namen. Sie benötigt einen `company_name` |
+| `status` | `contact`, `invited`, `enabled` oder `disabled`. Eine leere Zelle ergibt `contact` |
+
+Eine Rolle, die die Datei nennt und die Ihr Arbeitsbereich nicht hat, wird beim Laden angelegt, mit einer Standardbeschreibung. Die Prüfung listet sie auf und legt nichts an: Eine Datei, die Sie nur prüfen, ändert keine Rolle. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt.
+
+Die Datei enthält kein Datum und keinen Betrag. Ein Import setzt kein Passwort: Ein neuer Benutzer meldet sich nach einer Einladung oder einer Passwort-Zurücksetzung an.
+
+Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen und die beiden Importschritte.
+
 ### Benutzer erstellen
 
 1. Klicken Sie auf **Neu**
