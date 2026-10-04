@@ -63,7 +63,6 @@
     "workspace": {
       "unsavedNavigate": "Sie haben nicht gespeicherte Änderungen. Vor dem Navigieren speichern?",
       "unsavedSwitchTab": "Sie haben nicht gespeicherte Änderungen. Vor dem Tab-Wechsel speichern?",
-      "unsavedSwitchYear": "Sie haben nicht gespeicherte Änderungen. Vor dem Jahreswechsel speichern?",
       "itemCountOf": "{{entity}} {{current}} von {{total}}"
     },
     "messages": {
@@ -73,15 +72,9 @@
       "failedToLoadMetrics": "Fehler beim Laden der Kennzahlen",
       "failedToSaveMetrics": "Fehler beim Speichern der Kennzahlen",
       "fixValidationErrors": "Bitte beheben Sie die Validierungsfehler vor dem Speichern.",
-      "fixValidationIssues": "Bitte beheben Sie die Validierungsprobleme vor dem Speichern.",
       "readOnlyAccess": "Sie benötigen Managerrechte, um {{entity}} zu bearbeiten.",
       "metricsFrozen": "Die Kennzahlen für {{year}} sind eingefroren. Heben Sie die Sperre in der Administration auf, um Änderungen vorzunehmen.",
-      "metricsFrozenEdit": "Die Kennzahlen für dieses Jahr sind eingefroren. Heben Sie die Sperre in der Administration auf, um sie zu bearbeiten.",
-      "metricsYearHint": "Das Speichern gilt für das ausgewählte Jahr. Wechseln Sie das Jahr, um historische Daten einzusehen."
-    },
-    "validation": {
-      "nonNegativeInteger": "Geben Sie eine nicht-negative Ganzzahl ein",
-      "max3Decimals": "Maximal 3 Dezimalstellen, nicht negativ"
+      "metricsYearHint": "Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie sein Feld verlassen. Wechseln Sie das Jahr, um frühere Daten einzusehen."
     }
   },
   "companies": {
@@ -105,20 +98,57 @@
     "pinnedTotal": "Gesamt",
     "export": "Unternehmen exportieren",
     "import": "Unternehmen importieren",
+    "previous": "Vorheriges Unternehmen",
+    "next": "Nächstes Unternehmen",
     "fields": {
-      "companyInformation": "Unternehmensinformationen",
-      "address1": "Adresse 1",
-      "address2": "Adresse 2",
-      "postalCode": "Postleitzahl",
-      "city": "Stadt",
-      "state": "Bundesland",
-      "regNumber": "Handelsregisternr.",
-      "vatNumber": "USt-IdNr.",
+      "name": "Name",
+      "country": "Land",
       "baseCurrency": "Basiswährung",
       "chartOfAccounts": "Kontenplan",
-      "searchCoA": "Kontenplan suchen",
+      "lifecycle": "Lebenszyklus",
+      "address1": "Adresszeile 1",
+      "address2": "Adresszeile 2",
+      "postalCode": "Postleitzahl",
+      "city": "Stadt",
+      "state": "Bundesland oder Region",
+      "regNumber": "Handelsregisternummer",
+      "vatNumber": "USt-IdNr.",
+      "notes": "Notizen",
+      "year": "Jahr",
+      "headcount": "Mitarbeiterzahl",
       "itUsers": "IT-Benutzer",
       "turnover": "Umsatz (Mio. €)"
+    },
+    "sections": {
+      "address": "Adresse",
+      "registration": "Registrierung"
+    },
+    "placeholders": {
+      "name": "z. B. Holdinggesellschaft",
+      "country": "z. B. Frankreich",
+      "baseCurrency": "z. B. EUR",
+      "chartOfAccounts": "z. B. COA-FR",
+      "address1": "z. B. Hauptstraße 12",
+      "address2": "z. B. Gebäude B",
+      "postalCode": "z. B. 10115",
+      "city": "z. B. Berlin",
+      "state": "z. B. Bayern",
+      "regNumber": "z. B. HRB 12345",
+      "vatNumber": "z. B. DE123456789",
+      "notes": "z. B. Shared-Services-Gesellschaft der Gruppe",
+      "itUsers": "z. B. 120",
+      "turnover": "z. B. 12.5"
+    },
+    "messages": {
+      "saveFailed": "Das Unternehmen konnte nicht gespeichert werden.",
+      "createFailed": "Das Unternehmen konnte nicht erstellt werden.",
+      "nameRequired": "Geben Sie einen Namen ein.",
+      "countryRequired": "Wählen Sie ein Land.",
+      "currencyRequired": "Wählen Sie eine Basiswährung.",
+      "cityRequired": "Geben Sie eine Stadt ein.",
+      "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr.",
+      "itUsersInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr, oder lassen Sie das Feld leer.",
+      "turnoverInvalid": "Geben Sie eine Zahl ein, 0 oder mehr, mit höchstens 3 Dezimalstellen, oder lassen Sie das Feld leer."
     }
   },
   "departments": {
@@ -670,14 +700,6 @@
     }
   },
   "formSchemas": {
-    "company": {
-      "nameRequired": "Name ist erforderlich",
-      "countryIsoRequired": "Länder-ISO-Code ist erforderlich",
-      "countryIsoLength": "Länder-ISO-Code muss 2 Buchstaben haben",
-      "cityRequired": "Stadt ist erforderlich",
-      "baseCurrencyRequired": "Basiswährung ist erforderlich",
-      "currencyCodeLength": "Währungscode muss 3 Buchstaben haben"
-    },
     "department": {
       "companyRequired": "Unternehmen ist erforderlich",
       "nameRequired": "Name ist erforderlich"

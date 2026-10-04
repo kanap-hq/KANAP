@@ -72,50 +72,60 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 ## Der Unternehmens-Arbeitsbereich
 
-Klicken Sie auf einen Unternehmensnamen in der Liste, um seinen Arbeitsbereich zu öffnen. Der Arbeitsbereich hat zwei Tabs, vertikal links angeordnet: **Übersicht** und **Details**.
+Klicken Sie in der Liste auf einen Unternehmensnamen, um den Arbeitsbereich zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**.
 
-Verwenden Sie **Zurück** / **Weiter**, um zwischen Unternehmen zu wechseln, ohne zur Liste zurückzukehren. Klicken Sie auf **Schließen** (X), um mit intaktem Suchkontext zur Liste zurückzukehren.
+- **Kopfzeile**: der Name des Unternehmens. Klicken Sie darauf, um das Unternehmen umzubenennen. Die Pfeile mit „N von M" wechseln zwischen Unternehmen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren. Der Zurück-Link **Unternehmen** führt mit erhaltenem Suchkontext zur Liste zurück
+- **Bereich Eigenschaften** rechts: **Land**, **Basiswährung**, **Kontenplan** und **Lebenszyklus**. Mit der Schaltfläche daneben klappen Sie den Bereich ein oder wieder aus
 
-Bei nicht gespeicherten Änderungen fordert die App Sie auf, vor dem Tabwechsel, der Navigation zu einem anderen Unternehmen oder dem Jahreswechsel zu speichern.
+**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, außer beim Namen, dessen Ablehnung oben auf der Seite angezeigt wird.
+
+---
+
+### Bereich Eigenschaften
+
+- **Land** (Pflicht): ISO-Ländercode, Suche nach Name oder Code. Wenn Sie das Land ändern, wechselt auch der **Kontenplan** zum Standard des neuen Landes, aber nur, wenn der aktuelle Kontenplan zu einem anderen Land gehört. Ein globaler Kontenplan bleibt bestehen
+- **Basiswährung** (Pflicht): ISO-Währungscode, Suche nach Name oder Code
+- **Kontenplan**: der mit diesem Unternehmen verknüpfte Kontenplan (siehe [Kontenplan](#kontenplan)). Bei einem bestehenden Unternehmen können Sie einen anderen Kontenplan wählen, das Feld aber nicht leeren, weil der Standard des Landes zurückkäme
+- **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
 
 ---
 
 ### Übersicht
 
-Der Übersichts-Tab enthält allgemeine Informationen über das Unternehmen.
+Der Übersichts-Tab enthält die Adresse, die Registrierungsangaben und die Notizen. Name, Land, Währung, Kontenplan und Lebenszyklus befinden sich in der Kopfzeile und im Bereich **Eigenschaften**.
 
 **Was Sie bearbeiten können**:
 
-- **Name** (Pflicht): der Anzeigename des Unternehmens
-- **Land** (Pflicht): ISO-Ländercode, durchsuchbar nach Name oder Code
-- **Kontenplan**: der mit diesem Unternehmen verknüpfte Kontenplan (siehe unten)
-- **Adresse 1**, **Adresse 2**: Adresszeilen
-- **Postleitzahl**: PLZ
-- **Stadt** (Pflicht): Stadtname
-- **Bundesland**: Bundesland oder Kanton
-- **Registrierungsnr.**: Handelsregisternummer
-- **USt-IdNr.**: Umsatzsteuer-Identifikationsnummer
-- **Basiswährung** (Pflicht): ISO-Währungscode, durchsuchbar nach Name oder Code
-- **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
-- **Notizen**: Freitext-Notizen
+- Abschnitt **Adresse**:
+    - **Adresszeile 1**, **Adresszeile 2**: Adresszeilen
+    - **Postleitzahl**: Postleitzahl
+    - **Stadt** (Pflicht): Name der Stadt. Eine leere Stadt wird mit „Geben Sie eine Stadt ein." abgelehnt
+    - **Bundesland oder Region**: Bundesland, Provinz oder Region
+- Abschnitt **Registrierung**:
+    - **Handelsregisternummer**: Registernummer des Unternehmens
+    - **USt-IdNr.**: Umsatzsteuer-Identifikationsnummer
+- **Notizen**: Freitextnotizen
+
+**Ein Unternehmen erstellen**: **Neu** öffnet ein einziges Formular mit dem Namen, **Land**, **Basiswährung**, **Kontenplan**, **Stadt**, den übrigen Adressfeldern, den Registrierungsfeldern und **Notizen**. Mit der Wahl eines Landes wird der **Kontenplan** für Sie ausgefüllt: der Standard-Kontenplan des Landes, falls vorhanden, sonst ein globaler Kontenplan. Sie können ihn vor dem Speichern ändern. Klicken Sie auf **Erstellen**, um das Unternehmen zu speichern. Der Tab **Details** steht nach dem Erstellen des Unternehmens zur Verfügung.
 
 ---
 
 ### Details
 
-Der Details-Tab verwaltet **Jahreskennzahlen**. Verwenden Sie die Jahrreiter oben, um zwischen Jahren zu wechseln (aktuelles Jahr plus zwei Jahre davor und danach).
+Der Details-Tab verwaltet die **Jahreskennzahlen**. Wechseln Sie mit den Jahres-Tabs oben zwischen den Jahren (aktuelles Jahr plus zwei Jahre davor und danach).
 
 **Was Sie bearbeiten können**:
 
-- **Mitarbeiterzahl** (Pflicht): Gesamtzahl der Mitarbeiter für das Jahr, muss eine nicht-negative Ganzzahl sein
-- **IT-Benutzer** (optional): Anzahl der IT-Benutzer, muss eine nicht-negative Ganzzahl sein
-- **Umsatz** (optional): Erlös in Millionen der Basiswährung des Unternehmens, bis zu 3 Dezimalstellen
+- **Mitarbeiterzahl** (Pflicht): Gesamtzahl der Beschäftigten im Jahr, muss eine ganze Zahl von 0 oder mehr sein
+- **IT-Benutzer** (optional): Anzahl der IT-Benutzer, muss eine ganze Zahl von 0 oder mehr sein
+- **Umsatz (Mio. €)** (optional): Umsatz in Millionen der Basiswährung des Unternehmens, bis zu 3 Dezimalstellen
 
-**Funktionsweise**:
+**So funktioniert es**:
 
-- Jedes Speichern gilt nur für das aktuell ausgewählte Jahr
-- Wenn Kennzahlen für das Jahr **eingefroren** sind, sind die Felder schreibgeschützt; geben Sie sie unter **Stammdaten-Administration** frei, um Änderungen vorzunehmen
-- Sie benötigen `companies:manager`, um Kennzahlen zu bearbeiten
+- Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen (oder die Eingabetaste drücken). Ein ungültiger Wert zeigt unter dem Feld eine Meldung, zum Beispiel „Geben Sie eine ganze Zahl ein, 0 oder mehr."
+- Jedes Jahr wird für sich gespeichert: Beim Jahreswechsel werden die Werte dieses Jahres geladen
+- Sind die Unternehmenszahlen des Jahres **eingefroren**, sind die Felder gesperrt, und ein Hinweis erklärt, dass ein Administrator sie in der **Stammdatenverwaltung** wieder freigeben kann
+- Für das Bearbeiten der Kennzahlen benötigen Sie `companies:manager`
 
 ## Kontenplan
 
@@ -124,7 +134,9 @@ Jedes Unternehmen kann mit einem **Kontenplan** (CoA) verknüpft werden, der den
 **Funktionsweise**:
 
 - Wenn Sie ein Unternehmen erstellen, wird es automatisch dem Standard-Kontenplan für sein Land zugewiesen (sofern vorhanden). Existiert kein Länder-Standard, wird der globale Standard-Kontenplan verwendet.
-- Sie können die Kontenplan-Zuordnung im **Übersichts**-Tab des Unternehmens über den **Kontenplan**-Selektor ändern. Der Selektor zeigt Kontenpläne, die zum Land des Unternehmens passen, plus alle global gültigen Kontenpläne.
+- Sie können die Kontenplan-Zuordnung im Bereich **Eigenschaften** über den **Kontenplan**-Selektor ändern. Der Selektor zeigt Kontenpläne, die zum Land des Unternehmens passen, plus alle global gültigen Kontenpläne.
+- Wenn Sie das Land des Unternehmens ändern, folgt der Kontenplan, sofern der aktuelle zu einem anderen Land gehört: Er wechselt zum Standard des neuen Landes. Ein globaler Kontenplan bleibt bestehen.
+- Bei einem bestehenden Unternehmen kann der Kontenplan nicht geleert werden. Sie können ihn nur durch einen anderen ersetzen.
 - Der von Ihnen ausgewählte Kontenplan bestimmt, welche Konten im Konto-Dropdown beim Erstellen oder Bearbeiten von Ausgabenpositionen für dieses Unternehmen erscheinen.
 
 **Was dies für Ihren Workflow bedeutet**:
