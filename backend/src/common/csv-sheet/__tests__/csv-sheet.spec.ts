@@ -372,7 +372,7 @@ async function testAmountConventionHint() {
     assert.deepEqual(hinted.fileErrors, []);
     assert.equal(valueOf(hinted.rows[0].amounts.budget_2027).cmp('12280'), 0);
     assert.deepEqual(hinted.amounts, { decimal, settledByFile: false, notice: amountConventionNotice(decimal) });
-    assert.equal(resolveAmountConvention([cell], language, hint).source, 'export');
+    assert.equal(resolveAmountConvention([cell], language, undefined, hint).source, 'export');
   }
 
   for (const hint of ['en', 'fr', 'de', 'es'] as const) {
@@ -381,10 +381,40 @@ async function testAmountConventionHint() {
     assert.deepEqual(evidence.amounts, { decimal: ',', settledByFile: true, notice: null });
     assert.equal(valueOf(evidence.rows[0].amounts.budget_2027).cmp('12280'), 0);
     assert.equal(valueOf(evidence.rows[1].amounts.budget_2027).cmp('12.50'), 0);
-    assert.equal(resolveAmountConvention(['12.280', '12,50'], 'en', hint).source, 'file');
+    assert.equal(resolveAmountConvention(['12.280', '12,50'], 'en', undefined, hint).source, 'file');
   }
-  assert.equal(resolveAmountConvention(['100'], 'en', 'de').source, null);
+  assert.equal(resolveAmountConvention(['100'], 'en', undefined, 'de').source, null);
   assert.equal(resolveAmountConvention(['12.280'], 'en').source, 'language');
+}
+
+async function testAmountConventionSwitch() {
+  const text = 'budget_2027;export_language\n12,280;de\n';
+  const switched = await readCsv(text, { ...hintSchema('de'), decimalMark: '.' });
+  assert.deepEqual(switched.fileErrors, []);
+  assert.equal(valueOf(switched.rows[0].amounts.budget_2027).cmp('12280'), 0);
+  assert.deepEqual(switched.amounts, { decimal: '.', settledByFile: false, notice: amountConventionNotice('.') });
+  assert.equal(resolveAmountConvention(['12,280'], 'de', '.', 'de').source, 'switch');
+
+  const unchangedHint = await readCsv(text, hintSchema('de'));
+  assert.equal(valueOf(unchangedHint.rows[0].amounts.budget_2027).cmp('12.280'), 0);
+  assert.equal(resolveAmountConvention(['12,280'], 'de', undefined, 'de').source, 'export');
+
+  for (const [evidence, override, which] of [
+    ['1,234.56', ',', 'dot'],
+    ['12,5', '.', 'comma'],
+  ] as const) {
+    const blocked = await readCsv(`budget_2027;export_language\n12,280;de\n${evidence};de\n`, {
+      ...hintSchema('de'), decimalMark: override,
+    });
+    assert.deepEqual(blocked.fileErrors, [
+      `This file shows amounts with a decimal ${which} (${evidence}). The decimal mark cannot be switched.`,
+    ]);
+    assert.equal(blocked.amounts, null);
+    assert.ok(blocked.rows.every((row) => row.errors.length === 0));
+  }
+  const agreeing = resolveAmountConvention(['12,5', '12,280'], 'en', ',', 'en');
+  assert.equal(agreeing.source, 'file');
+  assert.equal(agreeing.error, null);
 }
 
 async function testMixedAndMissingHints() {
@@ -581,6 +611,7 @@ async function main() {
   await testDateOrderInAFile();
   await testDateConventionHint();
   await testAmountConventionHint();
+  await testAmountConventionSwitch();
   await testMixedAndMissingHints();
   await testReadingShape();
   await testEncodingAndDamage();

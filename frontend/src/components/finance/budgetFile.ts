@@ -133,17 +133,6 @@ export function amountReadingOf(notice: string | null): AmountReading | null {
   return null;
 }
 
-/**
- * The contract has no amount parameter: the server reads an amount it cannot
- * settle (`12.280`) with the decimal mark of `language`. To read it the other
- * way the dialog sends a language with that mark: English for a decimal dot,
- * the screen language (or French) for a decimal comma.
- */
-export function languageForAmounts(reading: AmountReading, screen: BudgetFileLanguage): BudgetFileLanguage {
-  if (reading === 'dot') return 'en';
-  return screen === 'en' ? 'fr' : screen;
-}
-
 /** The count of missing suppliers in the server's sentence, or null when it says something else. */
 export function missingSupplierCount(message: string | null): number | null {
   const match = message ? SUPPLIERS_MISSING.exec(message) : null;
@@ -277,6 +266,7 @@ export async function exportBudgetFile(
 export type CheckOptions = {
   language: BudgetFileLanguage;
   dateOrder: DateReading | null;
+  decimalMark: AmountReading | null;
   createSuppliers: boolean;
 };
 
@@ -286,6 +276,7 @@ function checkParams(options: CheckOptions): Record<string, string> {
     createSuppliers: options.createSuppliers ? 'true' : 'false',
   };
   if (options.dateOrder) params.dateOrder = options.dateOrder;
+  if (options.decimalMark) params.decimalMark = options.decimalMark;
   return params;
 }
 

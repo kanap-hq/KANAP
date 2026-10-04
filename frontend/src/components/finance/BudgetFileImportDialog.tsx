@@ -15,7 +15,6 @@ import {
   budgetFileFailure,
   dateReadingOf,
   isBudgetFileReport,
-  languageForAmounts,
   loadBudgetFile,
   missingSupplierCount,
   preflightBudgetFile,
@@ -67,8 +66,11 @@ export default function BudgetFileImportDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
 
-  const language = amountReading ? languageForAmounts(amountReading, screen) : screen;
-  const options = { language, dateOrder, createSuppliers: canCreateSuppliers && createSuppliers };
+  const language = screen;
+  const appliedAmounts = amountReadingOf(report?.notices.amounts ?? null);
+  // Keep the preflight's amount reading for later checks and Load without another request.
+  const decimalMark = amountReading ?? appliedAmounts;
+  const options = { language, dateOrder, decimalMark, createSuppliers: canCreateSuppliers && createSuppliers };
 
   useEffect(() => {
     if (open) return;
@@ -117,7 +119,6 @@ export default function BudgetFileImportDialog({
   };
 
   const appliedDates = dateReadingOf(report?.notices.dates ?? null);
-  const appliedAmounts = amountReadingOf(report?.notices.amounts ?? null);
 
   const switchDates = () => {
     if (!appliedDates) return;
@@ -125,7 +126,7 @@ export default function BudgetFileImportDialog({
   };
   const switchAmounts = () => {
     if (!appliedAmounts) return;
-    // The amount reading follows the language sent: keep the date order the file is read with.
+    // Keep the date order applied by the preflight when switching amounts.
     if (!dateOrder && appliedDates) setDateOrder(appliedDates);
     setAmountReading(appliedAmounts === 'comma' ? 'dot' : 'comma');
   };
@@ -158,7 +159,7 @@ export default function BudgetFileImportDialog({
       if (id === requestId.current) setPhase('idle');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file, report, scope, language, dateOrder, createSuppliers, canCreateSuppliers, queryClient, onImported, t]);
+  }, [file, report, scope, language, dateOrder, decimalMark, createSuppliers, canCreateSuppliers, queryClient, onImported, t]);
 
   const onSave = async () => {
     if (loaded) {

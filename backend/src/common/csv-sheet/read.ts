@@ -280,7 +280,7 @@ function buildRows(
   }
   const hint = hintLanguages.size === 1 ? [...hintLanguages][0] : undefined;
   const decision = resolveDateOrder(samples, schema.language, schema.dateOrder, hint);
-  const amountsDecision = resolveAmountConvention(amountSamples, schema.language, hint);
+  const amountsDecision = resolveAmountConvention(amountSamples, schema.language, schema.decimalMark, hint);
   const rows = data.map((row) =>
     buildRow(row, slots, schema, decision.order, decision.error !== null, amountsDecision.decimal, amountsDecision.error !== null),
   );

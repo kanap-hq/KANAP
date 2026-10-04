@@ -166,6 +166,7 @@ export class SpendItemsController {
     @UploadedFile() file: Express.Multer.File,
     @Query('language') language: string,
     @Query('dateOrder') dateOrder: string,
+    @Query('decimalMark') decimalMark: string,
     @Query('createSuppliers') createSuppliers: string,
     @Tenant() ctx: TenantRequest,
   ) {
@@ -177,6 +178,7 @@ export class SpendItemsController {
     }, {
       language,
       dateOrder,
+      decimalMark,
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
     });
@@ -194,6 +196,7 @@ export class SpendItemsController {
     @Body('snapshot') snapshot: string,
     @Query('language') language: string,
     @Query('dateOrder') dateOrder: string,
+    @Query('decimalMark') decimalMark: string,
     @Query('createSuppliers') createSuppliers: string,
     @Tenant() ctx: TenantRequest,
     @Req() req: any,
@@ -206,6 +209,7 @@ export class SpendItemsController {
     }, {
       language,
       dateOrder,
+      decimalMark,
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
     }, { items: this.svc, audit: this.audit, freeze: this.freeze });

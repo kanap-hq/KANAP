@@ -1,5 +1,5 @@
 import { CENTS_LIMIT } from '../../common/amount';
-import { CsvDateOrder, CsvLanguage, CsvParsedDate, CsvReadResult, readCsv } from '../../common/csv-sheet';
+import { CsvDateOrder, CsvLanguage, CsvParsedDate, CsvReadResult, DecimalMark, readCsv } from '../../common/csv-sheet';
 import { AmountMeasure } from '../amounts-write.util';
 import { budgetFileSchema, isOldBudgetLayout, OLD_BUDGET_FILE_MESSAGE, schemaFields } from './columns';
 import { parseToken, ParsedToken } from './token';
@@ -55,9 +55,10 @@ export async function readBudgetCsv(
     language: CsvLanguage;
     dimensionCodes: readonly string[];
     dateOrder?: CsvDateOrder;
+    decimalMark?: DecimalMark;
   },
 ): Promise<CsvReadResult> {
-  const read = await readCsv(input, budgetFileSchema(options.scope, options.language, options.dimensionCodes, options.dateOrder));
+  const read = await readCsv(input, budgetFileSchema(options.scope, options.language, options.dimensionCodes, options.dateOrder, options.decimalMark));
   if (!isOldBudgetLayout(read.rawHeaders)) return read;
   return {
     ...read,

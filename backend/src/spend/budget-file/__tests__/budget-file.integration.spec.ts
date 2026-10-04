@@ -34,7 +34,8 @@ import {
   setItemDates,
   setTenant,
 } from '../../__tests__/round-inputs.fixtures';
-import { ITEM_TABLE, seedCompany, seedCostCenter, seedUser } from '../../__tests__/cost-center.fixtures';
+import { readBudgetCsv } from '../interpret';
+import { ITEM_TABLE, itemService, seedCompany, seedCostCenter, seedUser } from '../../__tests__/cost-center.fixtures';
 import { BUDGET_FILE_OPTIONS, budgetFileService, exportBudgetFile, fileRows, loadBudgetFile, preflightBudgetFile, withCell } from '../../__tests__/budget-file.fixtures';
 import { upsertRoundInput } from '../../round-inputs.util';
 import { ensureDefaultAnalyticsAxis } from '../../../analytics/analytics-axes.util';
@@ -815,6 +816,51 @@ async function testExportLanguageHint(runner: { query: Function; manager: Entity
   assert.deepEqual(withoutHint.changedSinceExport, []);
 }
 
+/** English Excel can add comma grouping to an export that recorded German conventions. */
+async function testExportAmountSwitch(runner: { query: Function; manager: EntityManager }, kind: Kind) {
+  const tenantId = await seedTenant(runner as any, `csv-p1b-${kind}`);
+  const itemId = await seedItem(runner as any, kind, tenantId, 1, 'Amount switch');
+  const versionId = await seedVersion(runner as any, kind, tenantId, itemId, 2027);
+  const table = kind === 'opex' ? 'spend_amounts' : 'capex_amounts';
+  await runner.query(
+    `INSERT INTO ${table} (tenant_id, version_id, period, planned) VALUES ($1, $2, '2027-01-01', 12280)`,
+    [tenantId, versionId],
+  );
+  const service = budgetFileService();
+  const caller = { manager: runner.manager, tenantId, userId: null };
+  const exported = await service.exportFile(kind, [itemId], caller, {
+    language: 'de', amountYears: '2027', columns: 'budget', detail: 'yearly',
+  });
+  assert.ok(exported.content.includes('12280,00'));
+  assert.match(exported.content, /v\d+\.2027r\d+\.de/);
+  const resaved = exported.content.replace('12280,00', '12,280');
+  const options = { ...BUDGET_FILE_OPTIONS, language: 'de' };
+  const unswitched = await service.preflight(kind, Buffer.from(resaved), caller, options);
+  assert.equal(unswitched.ok, true, JSON.stringify(unswitched));
+  assert.equal(unswitched.notices.amounts, 'Amounts read with a decimal comma: 12.280 is twelve thousand two hundred eighty.');
+  assert.deepEqual(unswitched.changes.updatedLines[0].fields, ['budget 2027']);
+  const interpreted = await readBudgetCsv(resaved, { scope: kind, language: 'de', dimensionCodes: [] });
+  const amount = interpreted.rows[0].amounts.budget_2027;
+  assert.equal(amount.kind === 'value' && amount.decimal.cmp('12.28'), 0);
+
+  const switchedOptions = { ...options, decimalMark: 'dot' };
+  const switched = await service.preflight(kind, Buffer.from(resaved), caller, switchedOptions);
+  assert.equal(switched.ok, true, JSON.stringify(switched));
+  assert.equal(switched.notices.amounts, 'Amounts read with a decimal dot: 12,280 is twelve thousand two hundred eighty.');
+  assert.equal(switched.changes.unchanged, 1);
+  assert.equal(switched.changes.updated, 0);
+  assert.deepEqual(switched.changes.updatedLines, []);
+  assert.deepEqual(switched.changedSinceExport, []);
+
+  const audit = dbAudit(runner.manager);
+  const loaded = await service.importFile(kind, Buffer.from(resaved), switched.snapshot, caller, switchedOptions, {
+    items: itemService(kind, audit), audit, freeze: noFreeze,
+  });
+  assert.equal(loaded.ok, true, JSON.stringify(loaded));
+  assert.equal('updated' in loaded && loaded.updated, 0);
+  assert.equal(await amountSum(runner, table, versionId), '12280', 'the import uses the same explicit decimal mark');
+}
+
 async function main() {
   await dataSource.initialize();
   const runner = dataSource.createQueryRunner();
@@ -959,6 +1005,7 @@ async function main() {
     await testFrozenAndHiddenColumns(runner);
     for (const kind of ['opex', 'capex'] as Kind[]) {
       await testExportLanguageHint(runner, kind);
+      await testExportAmountSwitch(runner, kind);
       await testCostCenterCells(runner, kind);
       await testDimensionCells(runner, kind);
     }

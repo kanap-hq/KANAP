@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { csvLanguage, CsvDateOrder, CsvLanguage, writeCsv } from '../../common/csv-sheet';
+import { csvLanguage, CsvDateOrder, CsvLanguage, DecimalMark, writeCsv } from '../../common/csv-sheet';
 import { CurrencySettingsService } from '../../currency/currency-settings.service';
 import { readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { readBudgetLineMeta } from '../item-meta';
@@ -38,13 +38,14 @@ export class BudgetFileService {
     scope: BudgetFileScope,
     file: Buffer,
     caller: BudgetFileCaller,
-    options: { language: unknown; dateOrder: unknown; createSuppliers: boolean; canCreateSuppliers: boolean },
+    options: { language: unknown; dateOrder: unknown; decimalMark?: unknown; createSuppliers: boolean; canCreateSuppliers: boolean },
   ): Promise<BudgetFileReport> {
     const manager = requireManager(caller.manager);
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
     const dateOrder = parseDateOrder(options.dateOrder);
+    const decimalMark = parseDecimalMark(options.decimalMark);
     const dimensionCodes = await loadDimensionCodes(manager, caller.tenantId);
-    const read = await readBudgetCsv(file, { scope, language, dimensionCodes, dateOrder });
+    const read = await readBudgetCsv(file, { scope, language, dimensionCodes, dateOrder, decimalMark });
     const currentYear = new Date().getFullYear();
     if (read.fileErrors.length > 0 || read.headerErrors.length > 0) {
       return buildPreflight({
@@ -100,12 +101,13 @@ export class BudgetFileService {
     file: Buffer,
     snapshot: unknown,
     caller: BudgetFileCaller,
-    options: { language: unknown; dateOrder: unknown; createSuppliers: boolean; canCreateSuppliers: boolean },
+    options: { language: unknown; dateOrder: unknown; decimalMark?: unknown; createSuppliers: boolean; canCreateSuppliers: boolean },
     deps: { items: BudgetFileItems; audit: BudgetFileAudit; freeze: BudgetFileFreeze },
   ): Promise<BudgetFileImportResult> {
     const manager = requireManager(caller.manager);
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
     const dateOrder = parseDateOrder(options.dateOrder);
+    const decimalMark = parseDecimalMark(options.decimalMark);
     const settings = await this.currencySettings.getSettings(caller.tenantId, { manager });
     return importBudgetFile({
       scope,
@@ -116,6 +118,7 @@ export class BudgetFileService {
       userId: caller.userId,
       language,
       dateOrder,
+      decimalMark,
       createSuppliers: options.createSuppliers,
       canCreateSuppliers: options.canCreateSuppliers,
       allowedCurrencies: settings.allowedCurrencies,
@@ -178,6 +181,13 @@ export function parseDateOrder(raw: unknown): CsvDateOrder | undefined {
   if (raw == null || raw === '') return undefined;
   if (raw === 'day-first' || raw === 'month-first') return raw;
   throw new BadRequestException('dateOrder must be day-first or month-first.');
+}
+
+export function parseDecimalMark(raw: unknown): DecimalMark | undefined {
+  if (raw == null || raw === '') return undefined;
+  if (raw === 'comma') return ',';
+  if (raw === 'dot') return '.';
+  throw new BadRequestException('decimalMark must be comma or dot.');
 }
 
 function requireManager(manager: EntityManager | undefined): EntityManager {

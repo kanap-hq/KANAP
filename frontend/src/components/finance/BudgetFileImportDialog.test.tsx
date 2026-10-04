@@ -95,16 +95,62 @@ describe('BudgetFileImportDialog', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'operations.budgetFile.readMonthFirst' }));
     expect(await screen.findByRole('button', { name: 'operations.budgetFile.readDayFirst' })).toBeInTheDocument();
     expect(lastCall()?.[0]).toBe('/spend-items/budget-file/preflight');
-    expect(lastParams()).toEqual({ language: 'fr', createSuppliers: 'false', dateOrder: 'month-first' });
+    expect(lastParams()).toEqual({ language: 'fr', createSuppliers: 'false', dateOrder: 'month-first', decimalMark: 'comma' });
   });
 
-  it('reads amounts with a decimal point through an English reading, keeping the date order', async () => {
+  it('switches the decimal mark while keeping the screen language and date order', async () => {
     post.mockResolvedValueOnce({ data: report() });
     renderDialog();
     post.mockResolvedValueOnce({ data: report({ notices: { dates: DATES_DAY, amounts: AMOUNTS_DOT } }) });
     fireEvent.click(await screen.findByRole('button', { name: 'operations.budgetFile.readDecimalDot' }));
     expect(await screen.findByText('operations.budgetFile.amountsDot')).toBeInTheDocument();
-    expect(lastParams()).toEqual({ language: 'en', createSuppliers: 'false', dateOrder: 'day-first' });
+    expect(lastParams()).toEqual({ language: 'fr', createSuppliers: 'false', dateOrder: 'day-first', decimalMark: 'dot' });
+  });
+
+  it('pins the amount reading selected by the export hint for import without switching', async () => {
+    post.mockResolvedValueOnce({ data: report({ notices: { dates: null, amounts: AMOUNTS_DOT } }) });
+    renderDialog();
+    await screen.findByText('operations.budgetFile.ready');
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(lastParams()).toEqual({ language: 'fr', createSuppliers: 'false' });
+    post.mockResolvedValueOnce({ data: { ok: true, dryRun: false, inserted: 0, updated: 1 } });
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.load' }));
+    await screen.findByText(/operations.budgetFile.loaded/);
+    expect(lastCall()?.[0]).toBe('/spend-items/budget-file/import');
+    expect(lastParams()).toEqual({ language: 'fr', createSuppliers: 'false', decimalMark: 'dot' });
+  });
+
+  it('loads with the explicitly switched amount reading', async () => {
+    post.mockResolvedValueOnce({ data: report() });
+    renderDialog();
+    await screen.findByText('operations.budgetFile.ready');
+    post.mockResolvedValueOnce({ data: report({ notices: { dates: DATES_DAY, amounts: AMOUNTS_DOT } }) });
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.readDecimalDot' }));
+    await screen.findByText('operations.budgetFile.amountsDot');
+    post.mockResolvedValueOnce({ data: { ok: true, dryRun: false, inserted: 0, updated: 1 } });
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.load' }));
+    await screen.findByText(/operations.budgetFile.loaded/);
+    expect(lastCall()?.[0]).toBe('/spend-items/budget-file/import');
+    expect(lastParams()).toEqual({ language: 'fr', createSuppliers: 'false', dateOrder: 'day-first', decimalMark: 'dot' });
+  });
+
+  it('switches from decimal dot back to comma without changing the screen language', async () => {
+    post.mockResolvedValueOnce({ data: report({ notices: { dates: null, amounts: AMOUNTS_DOT } }) });
+    renderDialog();
+    post.mockResolvedValueOnce({ data: report({ notices: { dates: null, amounts: AMOUNTS_COMMA } }) });
+    fireEvent.click(await screen.findByRole('button', { name: 'operations.budgetFile.readDecimalComma' }));
+    await screen.findByText('operations.budgetFile.amountsComma');
+    expect(lastParams()).toEqual({ language: 'fr', createSuppliers: 'false', decimalMark: 'comma' });
+  });
+
+  it('shows evidence against the amount switch as a blocking file error', async () => {
+    post.mockResolvedValueOnce({ data: report() });
+    renderDialog();
+    const message = 'This file shows amounts with a decimal comma (12,5). The decimal mark cannot be switched.';
+    post.mockResolvedValueOnce({ data: report({ ok: false, notices: { dates: null, amounts: null }, fileErrors: [message] }) });
+    fireEvent.click(await screen.findByRole('button', { name: 'operations.budgetFile.readDecimalDot' }));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'operations.budgetFile.load' })).toBeDisabled();
   });
 
   it('offers Create missing suppliers only to users who may create them, and sends it', async () => {
@@ -117,7 +163,7 @@ describe('BudgetFileImportDialog', () => {
     renderDialog({ canCreateSuppliers: true });
     await screen.findByText('operations.budgetFile.datesDayFirst');
     fireEvent.click(screen.getByRole('checkbox'));
-    await waitFor(() => expect(lastParams()).toEqual({ language: 'fr', createSuppliers: 'true' }));
+    await waitFor(() => expect(lastParams()).toEqual({ language: 'fr', createSuppliers: 'true', decimalMark: 'comma' }));
   });
 
   it('says what is missing in the screen language and shows an old file as one sentence', async () => {
@@ -154,7 +200,7 @@ describe('BudgetFileImportDialog', () => {
     const [url, body, config] = lastCall();
     expect(url).toBe('/spend-items/budget-file/import');
     expect((body as FormData).get('snapshot')).toBe(JSON.stringify({ lines: [{ id: 'line-1' }] }));
-    expect(config).toEqual({ params: { language: 'fr', createSuppliers: 'false' } });
+    expect(config).toEqual({ params: { language: 'fr', createSuppliers: 'false', decimalMark: 'comma' } });
     expect(onImported).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'operations.budgetFile.done' })).toBeEnabled();
   });

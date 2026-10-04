@@ -1,4 +1,6 @@
 import * as assert from 'node:assert/strict';
+import { BadRequestException } from '@nestjs/common';
+import { parseDecimalMark } from '../budget-file.service';
 import { writeCsv } from '../../../common/csv-sheet';
 import { buildBudgetExport, exportListQuery, parseAmountYears, parseFileColumns } from '../export-file';
 import { readBudgetCsv } from '../interpret';
@@ -93,6 +95,20 @@ async function preflight(
     currentYear: YEAR,
     labels: options.labels ?? { budget: 'Budget' },
   });
+}
+
+async function testDecimalMarkParameter() {
+  assert.equal(parseDecimalMark('comma'), ',');
+  assert.equal(parseDecimalMark('dot'), '.');
+  for (const raw of ['', undefined, null]) assert.equal(parseDecimalMark(raw), undefined);
+  for (const raw of ['x', '.', ',', 'COMMA']) {
+    assert.throws(() => parseDecimalMark(raw), (error: unknown) => {
+      assert.ok(error instanceof BadRequestException);
+      assert.equal(error.getStatus(), 400);
+      assert.equal(error.message, 'decimalMark must be comma or dot.');
+      return true;
+    });
+  }
 }
 
 async function testTokenLanguages() {
@@ -349,6 +365,7 @@ async function testPlan() {
 
 async function main() {
   await testTokenLanguages();
+  await testDecimalMarkParameter();
   await testOldFiles();
   await testRoundTrip();
   await testAmounts();

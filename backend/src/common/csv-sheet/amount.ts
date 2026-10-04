@@ -55,10 +55,15 @@ export function parseCsvAmount(raw: string, convention?: DecimalMark): ParsedAmo
  * mark and one, two, or more than three digits after it, or a cell with both
  * marks, shows the convention. A single mark and exactly three digits does
  * not. Two shown conventions are a file error. When nothing is shown, the
- * export's language hint decides, then the screen language. The preflight
- * says so in one line.
+ * switch decides, then the export's language hint, then the screen language.
+ * Conflicting evidence blocks the switch. The preflight says so in one line.
  */
-export function resolveAmountConvention(texts: readonly string[], language: CsvLanguage, hint?: CsvLanguage): AmountConventionDecision {
+export function resolveAmountConvention(
+  texts: readonly string[],
+  language: CsvLanguage,
+  override?: DecimalMark,
+  hint?: CsvLanguage,
+): AmountConventionDecision {
   let comma: string | null = null;
   let dot: string | null = null;
   let ambiguous = false;
@@ -86,10 +91,22 @@ export function resolveAmountConvention(texts: readonly string[], language: CsvL
     };
   }
   const shown = comma ? ',' : dot ? '.' : null;
+  if (shown && override && override !== shown) {
+    const cell = shown === ',' ? comma : dot;
+    const which = shown === ',' ? 'comma' : 'dot';
+    return {
+      decimal: null,
+      settledByFile: false,
+      source: null,
+      notice: null,
+      error: `This file shows amounts with a decimal ${which} (${cell}). The decimal mark cannot be switched.`,
+      ambiguous,
+    };
+  }
   if (shown) return { decimal: shown, settledByFile: true, source: 'file', notice: null, error: null, ambiguous };
   if (!ambiguous) return { decimal: null, settledByFile: false, source: null, notice: null, error: null, ambiguous: false };
-  const decimal = csvProfile(hint ?? language).decimal;
-  const source = hint ? 'export' : 'language';
+  const decimal = override ?? csvProfile(hint ?? language).decimal;
+  const source = override ? 'switch' : hint ? 'export' : 'language';
   return { decimal, settledByFile: false, source, notice: amountConventionNotice(decimal), error: null, ambiguous: true };
 }
 

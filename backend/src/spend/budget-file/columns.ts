@@ -1,5 +1,5 @@
 import { AmountMeasure } from '../amounts-write.util';
-import { BUDGET_AMOUNT_COLUMNS, CsvDateOrder, CsvLanguage, CsvReadSchema } from '../../common/csv-sheet';
+import { BUDGET_AMOUNT_COLUMNS, CsvDateOrder, CsvLanguage, CsvReadSchema, DecimalMark } from '../../common/csv-sheet';
 import { looseKey } from '../../common/csv-sheet/text';
 import { BudgetFileDetail, BudgetFileScope } from './types';
 import { parseToken } from './token';
@@ -95,6 +95,7 @@ export function budgetFileSchema(
   language: CsvLanguage,
   dimensionCodes: readonly string[],
   dateOrder?: CsvDateOrder,
+  decimalMark?: DecimalMark,
 ): CsvReadSchema {
   return {
     fields: schemaFields(scope),
@@ -103,6 +104,7 @@ export function budgetFileSchema(
     dateFields: ['effective_start', 'end_of_validity'],
     language,
     dateOrder,
+    decimalMark,
     conventionHint: {
       field: 'kanap_token',
       languageOf: (cell) => {

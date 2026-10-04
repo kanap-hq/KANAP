@@ -22,7 +22,7 @@ import {
 } from './types';
 import { lineImportTables } from '../budget-import-statistics';
 import { lockCsvCostCenters } from '../item-write.util';
-import type { CsvDateOrder, CsvLanguage } from '../../common/csv-sheet';
+import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sheet';
 
 /** The load refuses the file when a counter moved after the preflight. */
 export const PREFLIGHT_STALE = 'Some lines changed since the preflight. Run the preflight again.';
@@ -116,6 +116,7 @@ export async function importBudgetFile(input: {
   userId: string | null;
   language: CsvLanguage;
   dateOrder?: CsvDateOrder;
+  decimalMark?: DecimalMark;
   createSuppliers: boolean;
   canCreateSuppliers: boolean;
   allowedCurrencies: string[] | null;
@@ -160,6 +161,7 @@ async function prepare(input: {
   tenantId: string;
   language: CsvLanguage;
   dateOrder?: CsvDateOrder;
+  decimalMark?: DecimalMark;
   createSuppliers: boolean;
   canCreateSuppliers: boolean;
   allowedCurrencies: string[] | null;
@@ -170,6 +172,7 @@ async function prepare(input: {
     language: input.language,
     dimensionCodes,
     dateOrder: input.dateOrder,
+    decimalMark: input.decimalMark,
   });
   const numbers = interpretBudgetFile(input.scope, read).flatMap((row) => (row.itemNumber.kind === 'number' ? [row.itemNumber.n] : []));
   const loaded = await loadPreflight(input.manager, input.scope, input.tenantId, numbers, input.allowedCurrencies);
