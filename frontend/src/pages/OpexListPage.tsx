@@ -6,6 +6,7 @@ import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope, gridSo
 import PageHeader from '../components/PageHeader';
 import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
+import { withCostCenterGroups } from '../components/grid/costCenterFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
@@ -709,7 +710,7 @@ export default function OpexListPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getOpexFilterValues('cost_center_label'),
+        getValues: withCostCenterGroups(getOpexFilterValues('cost_center_label'), queryClient),
         searchable: true,
       },
       cellRenderer: (params: any) => (
@@ -823,7 +824,7 @@ export default function OpexListPage() {
         />
       ),
     },
-  ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getOpexFilterValues, getOpexHref, RUN_BUILD_LABELS, locale, navigate, t]);
+  ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getOpexFilterValues, getOpexHref, RUN_BUILD_LABELS, locale, navigate, queryClient, t]);
 
   if (!hasLevel('opex', 'reader')) {
     return <ForbiddenPage />;
