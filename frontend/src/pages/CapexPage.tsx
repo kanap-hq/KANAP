@@ -6,6 +6,7 @@ import ServerDataGrid, { DATE_COLUMN_FILTER, StatusScope, gridSortModel } from '
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
+import { withCostCenterGroups } from '../components/grid/costCenterFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import BudgetFileExportDialog from '../components/finance/BudgetFileExportDialog';
 import BudgetFileImportDialog from '../components/finance/BudgetFileImportDialog';
@@ -561,7 +562,7 @@ export default function CapexPage() {
         tooltipValueGetter: (p: any) => p.data?.cost_center_path ?? '',
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
-        filterParams: { getValues: getCapexFilterValues('cost_center_label'), searchable: true },
+        filterParams: { getValues: withCostCenterGroups(getCapexFilterValues('cost_center_label'), queryClient), searchable: true },
         cellRenderer: linkCell('cost_center_label'),
       },
       {
@@ -636,7 +637,7 @@ export default function CapexPage() {
         cellRenderer: linkCell('updated_at'),
       },
     ];
-  }, [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, RUN_BUILD_LABELS, locale, navigate, t]);
+  }, [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getCapexFilterValues, getCapexHref, INVESTMENT_LABELS, PPE_LABELS, PRIORITY_LABELS, RUN_BUILD_LABELS, locale, navigate, queryClient, t]);
 
   const canCreate = hasLevel('capex','manager');
   const canAdmin = hasLevel('capex','admin');
