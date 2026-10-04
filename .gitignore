@@ -36,7 +36,7 @@ backend/env.dev
 # Docker (local build caches)
 .docker/
 
-CLAUDE.md
+CLAUDE.local.md
 infra/docker-compose.yml
 .obsidian
 
@@ -62,14 +62,14 @@ doc/cheatsheets/__pycache__/
 # beyond going stale and swamping every docs diff.
 doc/help/site/
 # AI tooling
-.claude/
+# Shared agent rules live in AGENTS.md and shared skills in .agents/skills/ (both
+# committed). .claude/skills/ holds committed symlinks to them; the rest of each
+# tool's folder, and CLAUDE.local.md, stays local.
+.claude/*
+!.claude/skills/
+.codex/
+.grok/
 .playwright-mcp/
-.codex/*
-!.codex/skills/
-.codex/skills/*
-!.codex/skills/kanap-design-system/
-!.codex/skills/kanap-design-system/**
-AGENTS.md
 # Translation state. The docs manifest is what detects "English changed, so
 # fr/de/es are now stale", so it has to be shared — the translate-docs skill
 # already documents it as committed. The app-locale manifest stays local.

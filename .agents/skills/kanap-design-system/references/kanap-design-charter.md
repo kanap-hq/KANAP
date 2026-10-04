@@ -1,28 +1,3 @@
----
-name: kanap-design-system
-description: Use this skill whenever you implement, modify, or refactor any UI component or page in the KANAP application. Triggers include any work on React components within KANAP (forms, tables, drawers, headers, dropdowns, dialogs, lists, cards), styling updates, theme tokens, new feature pages, or refactors of legacy MUI-heavy code. Apply these guidelines BEFORE writing JSX, not after — they constrain component choices, MUI usage patterns, typography scale, color usage, spacing, and interaction patterns. Do NOT use for backend work, API design, or non-UI code.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
----
-
-# KANAP Design System — "Refined Density"
-
-Apply this design charter when building or modifying any UI component in KANAP.
-
-## Philosophy
-
-**Every pixel works.** KANAP targets IT governance professionals (CIOs, IT managers, DSI teams). The visual grammar is Linear-grade: sober, dense, monochrome-dominant. The chrome (nav, header) disappears; the content dominates. Color is used to **signify**, not to decorate. The aesthetic favors information density over generous whitespace, and trusts users to navigate dense layouts without hand-holding. Dark mode is mandatory and must be tested for every component.
-
-### Chromatic grammar
-
-- **Teal = interactive elements only.** Primary buttons, focus rings, active nav indicators, prose links, and action links. Teal NEVER appears on permanent content text, table cell text, or status indicators.
-- **Orange = attention.** Strong CTAs, urgent badges, notification counters, critical scores (>=90). Never as background fill. Carried via MUI's `warning` palette slot.
-- **Neutrals = everything else.** Navigation, headers, surfaces, text. The frame is invisible.
----
-name: kanap-design-system
-description: Use this skill whenever you implement, modify, or refactor any UI component or page in the KANAP application. Triggers include any work on React components within KANAP (forms, tables, drawers, headers, dropdowns, dialogs, lists, cards), styling updates, theme tokens, new feature pages, or refactors of legacy MUI-heavy code. Apply these guidelines BEFORE writing JSX, not after — they constrain component choices, MUI usage patterns, typography scale, color usage, spacing, and interaction patterns. Do NOT use for backend work, API design, or non-UI code.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
----
-
 # KANAP Design System — "Refined Density"
 
 Apply this design charter when building or modifying any UI component in KANAP.

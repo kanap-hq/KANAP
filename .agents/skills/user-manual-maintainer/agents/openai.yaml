@@ -1,0 +1,4 @@
+interface:
+  display_name: "User Manual Maintainer"
+  short_description: "Maintain KANAP user docs and stale-doc checks"
+  default_prompt: "Use $user-manual-maintainer to update KANAP user manuals, run the stale-doc detector, or fix in-app help mappings."
