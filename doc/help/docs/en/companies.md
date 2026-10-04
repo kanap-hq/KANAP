@@ -182,29 +182,38 @@ Many parts of the app are year-aware. Companies have metrics per year:
 
 ## CSV import/export
 
-Keep large sets in sync with your source systems using CSV (semicolon `;` separated).
+**Export CSV** downloads every company with its metrics. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only, ready to fill in.
 
-**Export**:
+The columns, in this order. The metric columns follow the year selected in the list toolbar: the year before, that year, and the year after.
 
-- **Template**: header-only file you can fill in (includes dynamic columns for Y-1, Y, Y+1 based on the selected year)
-- **Data**: current companies plus their metrics for Y-1 / Y / Y+1
+| Column | Content |
+|---|---|
+| `name` | Required. The company name. Rows are matched on it |
+| `country_iso` | Required. Two letters |
+| `address1`, `address2` | Address lines |
+| `postal_code`, `city`, `state` | Address details |
+| `reg_number`, `vat_number` | Registration and VAT numbers |
+| `base_currency` | Required. Three letters |
+| `status` | `enabled` or `disabled` |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time |
+| `notes` | Free text |
+| `headcount_<year>` | Required when the row carries any metric for that year |
+| `it_users_<year>` | A whole number |
+| `turnover_<year>` | Up to 3 decimals, in millions of the company's base currency |
 
 **Import**:
 
-- Start with **Preflight** (validates headers, encoding, required fields, duplicates, and metrics)
-- If Preflight is OK, **Load** will apply inserts and updates
-- Matching is by company **name** (within your workspace). Duplicates in the file are deduplicated by name (first occurrence wins)
-- **Required fields**: Name, Country (2 letters) and Base Currency (3 letters). City is optional in the file
-- **Optional field**: `coa_code` (references a Chart of Accounts; if omitted, the default CoA for the country is used)
-- **Status and end of validity**: `status` is `enabled` or `disabled`, and `disabled_at` is the end of validity, a date (`2026-12-31`) or a full date and time. The export writes the status read from the end of validity. A new company is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the company today
+- Start with **Preflight check**. It validates the headers, the encoding, the required fields, the duplicates and the metrics. If the check is clean, **Load** applies the inserts and the updates
+- **Matching**: by company `name`. A name that appears twice in the file is kept once, the first row winning
+- **Required fields**: `name`, `country_iso` and `base_currency`
+- **Status and end of validity**: the export writes the status read from the end of validity. A new company is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the company today
 - A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
-- **Metrics**: if you provide any metrics for a year, Headcount is required for that year; IT users and Turnover are optional. Turnover accepts up to 3 decimals and must be expressed in millions of the company's base currency
+- **Metrics**: if you provide any metrics for a year, `headcount_<year>` is required for that year. `it_users_<year>` and `turnover_<year>` are optional
 
 **Notes**:
 
-- Use **UTF-8 encoding** and **semicolons** as separators
+- See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date and amount forms, and the two import steps
 - The list refreshes automatically after a successful load
-- If importing with `coa_code`, ensure the Chart of Accounts exists in your workspace first
 
 ## Tips
 

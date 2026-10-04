@@ -1,1 +1,3 @@
-company_name;name;description;status;disabled_at
+company_name,name,description,status,disabled_at
+Aurora Systems,Infrastructure,Infrastructure and operations,enabled,
+Aurora Systems,Applications,Business applications,enabled,

@@ -412,20 +412,16 @@ You can export a list of your CoAs (with metadata like code, name, country, defa
 
 ### Accounts (global endpoint)
 
-The global `/accounts` CSV includes a `coa_code` column to identify which CoA each account belongs to.
+The global `/accounts` CSV includes a `coa_code` column to identify which CoA each account belongs to. **Export CSV** and **Import CSV** use it when no CoA is selected on the page.
 
-  - **Export**
-      - **Template**: headers only (use this to prepare imports)
-      - **Data**: all accounts with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, and status
-  - **Import**
-      - Start with **Preflight** (validates structure, encoding, required fields, duplicates)
-      - If Preflight is OK, **Load** applies inserts/updates
-      - **Matching**: by `(coa_code, account_number)` within your workspace
-      - **Required fields**: `coa_code`, `account_number`, `account_name`
-      - **Optional fields**: `native_name`, `description`, consolidation fields, `status`
-      - Duplicates in the file (same coa_code + account_number) are deduplicated; first occurrence wins
+  - **Export CSV**: all accounts with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, and status
+  - **Import CSV**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
+  - **Matching**: by `(coa_code, account_number)` within your workspace
+  - **Required cells**: `coa_code`, `account_number`, `account_name`. All rows of one file must carry the same `coa_code`
+  - **Optional cells**: `native_name`, `description`, consolidation fields, `status`
+  - Duplicates in the file (same coa_code + account_number) are deduplicated; first occurrence wins
 
-**CSV schema** (semicolon `;` separated, UTF-8):
+**CSV schema** (the export writes the separator of the screen language; shown here with semicolons):
 ```
 coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
 ```
@@ -434,16 +430,16 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 
 From the Charts of Accounts page, **Import CSV** and **Export CSV** are automatically scoped to the currently selected CoA.
 
-  - **Export**: accounts from this CoA (no `coa_code` column needed)
-  - **Import**: accounts are inserted/updated into this CoA automatically
+  - **Export CSV**: accounts from this CoA (no `coa_code` column needed)
+  - **Import CSV**: accounts are inserted and updated in this CoA automatically
 
-**CSV schema** (CoA-scoped, semicolon `;` separated, UTF-8):
+**CSV schema** (CoA-scoped; shown here with semicolons):
 ```
 account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
 ```
 
 **Notes**:
-  - Use **UTF-8 encoding** and **semicolons** as separators
+  - See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
   - The `coa_code` must match an existing Chart of Accounts in your workspace
   - Account numbers should be unique within a CoA
   - Status values: `enabled` or `disabled` (defaults to enabled)

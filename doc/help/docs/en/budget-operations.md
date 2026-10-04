@@ -7,7 +7,7 @@ Budget Administration gives you a set of tools for managing and transforming bud
 - Path: **Budget Management > Administration**
 - Permissions: Most operations require `budget_ops:admin`
 
-The landing page shows seven cards, each linking to a dedicated tool:
+The landing page shows six cards, each linking to a dedicated tool:
 
 | Tool | Purpose |
 |------|---------|
@@ -16,7 +16,6 @@ The landing page shows seven cards, each linking to a dedicated tool:
 | **Copy allocations** | Copy allocation methods from one year to another |
 | **Reset budget column** | Clear all data from a specific column |
 | **Default allocation method** | Set the method OPEX and CAPEX items follow by default |
-| **Budget rows file** | Export or import the monthly amounts of every OPEX and CAPEX line |
 | **Budget columns** | Name the five budget columns, choose which ones are shown and which one is the default |
 
 The budget columns are Budget, Revision, Forecast, Actuals and Expected landing. These are the standard names. Your organisation can rename them, hide some and choose a default column in [Budget columns](#budget-columns). Every page below shows the names your organisation chose.
@@ -304,61 +303,6 @@ Without `budget_ops:admin` you can view the current setting but not change it.
 
 ---
 
-## Budget rows file
-
-Export or import the monthly amounts of every OPEX and CAPEX line in one file, with one row per line, year and column.
-
-### When to use it
-
-- Load monthly budgets prepared in a spreadsheet
-- Import monthly actuals from your accounting system
-- Review or archive every column, including Forecast
-
-### Export
-
-1. Choose a year, or keep **All years**
-2. Click **Export**, then **Export data**
-
-The file lists every OPEX and CAPEX line you can read, for every year that has amounts. Each line and year gets five rows, one per budget column in the fixed order (Budget, Revision, Forecast, Actuals, Expected landing under their standard names). Columns without amounts and hidden columns are included too.
-
-Under the intro, the page shows which technical name in the file stands for which of your columns, for example "`planned` for Budget". The same technical names appear as **In files** on the [Budget columns](#budget-columns) page. When the file covers one year, or only OPEX or only CAPEX because of your permissions, its name ends with `partial`.
-
-A file can be imported up to 10 MB. For a larger budget, export and import one year at a time: a year-limited export gives a smaller file.
-
-### Columns
-
-The file uses a semicolon `;` as separator and UTF-8 encoding.
-
-| Column | Content |
-|--------|---------|
-| `item_type` | `opex` or `capex` |
-| `item_number` | The item number, for example `7`. On import, the reference also works (`OPX-7`, `CPX-7`) |
-| `year` | Four digits |
-| `measure` | The column, by its technical name, whatever your organisation calls it: `planned` (column 1, standard name Budget), `committed` (column 2, Revision), `forecast` (column 3, Forecast), `actual` (column 4, Actuals), `expected_landing` (column 5, Expected landing). On import, `budget`, `revision`, `follow_up` and `landing` also work |
-| `period_start`, `period_end` | The column's period as `YYYY-MM-DD`, inside the row's year. On import, both empty means the whole year |
-| `jan` to `dec` | The twelve monthly amounts, with a dot as decimal separator. On import, a comma and spaces are accepted too |
-| `method` | How the column was produced: `spread`, `copied`, `manual` or `computed` (built from quantity and price). For information only, ignored on import |
-
-### Import rules
-
-1. Click **Import**, choose the file and run **Preflight check**
-2. Review the report, then click **Load**
-
-- The whole file is checked before anything is saved. If one row has an error, nothing is saved and the report lists the errors by line number. The number is the line of the file as a text editor shows it, blank lines and cells that span several lines included
-- Each row replaces the twelve months of its line, year and column. Lines, years and columns that are not in the file stay untouched
-- All twelve months are required. Write `0` for a month without an amount
-- A row identical to what is stored is left untouched, including how the column was produced. Re-importing an export changes nothing
-- A row whose amounts change marks the column as **Edited by hand**, with the period from the file. A column built from quantity and price keeps its lines, and its Budget tab offers to use them again. See [Quantity and price](opex.md#quantity-and-price)
-- The file holds amounts only. The lines of a column are managed in the Budget tab
-- A row that only changes the period updates the period and keeps the rest. On a column built from quantity and price, it also marks the column as **Edited by hand** and keeps its lines, like a row whose amounts change
-- Actuals rows follow the same rules, which lets you import monthly actuals
-- A changed row on a frozen column is refused. An identical row on a frozen column is accepted
-- Rows for a hidden column are imported like any other row. Hiding a column never blocks its imports, and a hidden frozen column still refuses changed rows
-- Repeated rows (same item, year and column), unknown item numbers, and items of a type you cannot administer are errors
-- Importing needs administration rights on OPEX or on CAPEX. Exporting needs read access to either
-
----
-
 ## Budget columns
 
 Name the five budget columns, choose which ones everyone sees, and which one reports and lists start from. The setting applies to the whole organisation, for OPEX and CAPEX alike.
@@ -377,7 +321,7 @@ One row per column, always in the same order, from column 1 to column 5. The sta
 |-------|-------------|
 | **Column** | The position, 1 to 5. Columns cannot be reordered |
 | **Name** | The name everyone sees in lists, the Budget tab, reports, the overview and Budget administration. Leave it empty to use the standard name, shown as a placeholder. At most 40 characters, with no control or invisible characters. Each name must differ from the other columns' names, including the standard name of a column you have not renamed, whatever the capitals |
-| **In files** | The line under each name. It gives the technical name of the column in the budget rows file and its imports, for example `planned` for column 1. It never changes when you rename a column |
+| **In files** | The line under each name. It gives the technical name of the column in the budget file and its imports, for example `budget` for column 1. It never changes when you rename a column. See [Load a budget from a spreadsheet](budget-file.md) |
 | **Shown** | Whether the column appears on screen. At least one column must stay shown |
 | **Follows the spread and the lines** | Whether the column takes what is applied to all columns on the Budget tab: the distribution and period of a spread (**Apply the distribution to all columns**), and the quantity and price lines (**Apply these lines to all columns**). A column that does not follow keeps its own: when you spread it or edit its lines, it changes alone |
 | **Default** | The column that reports preselect and that sorts the lists and the overview. Freezing it fixes the year's exchange rates. The default column must be shown |
@@ -388,7 +332,7 @@ By default, Budget, Revision, Actuals and Expected landing are shown and Forecas
 
 ### What the settings change
 
-- **Hidden columns** leave the lists, the column chooser, the Budget tab, the report pickers, the copy and reset pages and the overview. They keep their amounts: hiding a column never clears data, and showing it again brings the amounts back. Hidden columns still accept imports through the budget rows file, and freezes still apply to them. The freeze page lists hidden columns too, marked **Hidden**, so freezing a year freezes them along with the others
+- **Hidden columns** leave the lists, the column chooser, the Budget tab, the report pickers, the copy and reset pages and the overview. They keep their amounts: hiding a column never clears data, and showing it again brings the amounts back. Hidden columns still accept imports through the budget file, and freezes still apply to them. The freeze page lists hidden columns too, marked **Hidden**, so freezing a year freezes them along with the others
 - **The default column** is preselected in every report. It sorts the OPEX and CAPEX lists, their previous and next navigation, and the **Top items** and **Top increases** tiles of the overview. The lists show it for the current year, next to the last shown column. It is also the reference amount of the Allocations tab and the column the spread panel opens on. Freezing it for a year fixes that year's exchange rates (see [Freezing the default column fixes the exchange rates](#freezing-the-default-column-fixes-the-exchange-rates))
 - **Follows the spread and the lines** decides which columns move together when a spread is applied to all columns, and which columns take the lines when **Apply these lines to all columns** is on. Frozen columns never change, whatever this setting says
 

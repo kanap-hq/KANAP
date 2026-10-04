@@ -176,9 +176,8 @@ Load or update calendars and their working days from a file.
 
 **CSV structure**:
 
-- Delimiter: semicolon `;`
-- Encoding: UTF-8 (save as "CSV UTF-8" in Excel)
-- Headers: `code;name;description;country;region;status;disabled_at;year;jan;feb;mar;apr;may;jun;jul;aug;sep;oct;nov;dec`
+- Headers: `code`, `name`, `description`, `country`, `region`, `status`, `disabled_at`, `year`, `jan`, `feb`, `mar`, `apr`, `may`, `jun`, `jul`, `aug`, `sep`, `oct`, `nov`, `dec`
+- The export writes the separator of the screen language. See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
 - One row per calendar and year. A calendar with three years takes three rows. A calendar without any year is exported as one row with the year and the months empty
 - A standard calendar exports the years you edited only. The other years follow the public holidays and need no row
 - The `country`, `region` and `disabled_at` columns are optional on import. A file without `country` and `region` creates custom calendars

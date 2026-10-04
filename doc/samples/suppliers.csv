@@ -1,1 +1,4 @@
-name;erp_supplier_id;commercial_contact;technical_contact;support_contact;notes;status;disabled_at
+name,erp_supplier_id,commercial_contact,technical_contact,support_contact,notes,status
+Nordic Cloud Services,SUP-1001,,,,Cloud hosting and monitoring,enabled
+Helios Hardware,SUP-1002,,,,Servers and network equipment,enabled
+Brightline Consulting,SUP-1003,,,,IT consulting,enabled

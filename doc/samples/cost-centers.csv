@@ -1,0 +1,4 @@
+code,kind,name,parent_code,company_name,owner_email,description,status,disabled_at
+IT,group,IT,,,sam.lee@aurora-systems.example,IT department,enabled,
+IT-OPS,cost_center,IT Operations,IT,Aurora Systems,alex.martin@aurora-systems.example,,enabled,
+IT-APPS,cost_center,IT Applications,IT,Aurora Systems,sam.lee@aurora-systems.example,,enabled,

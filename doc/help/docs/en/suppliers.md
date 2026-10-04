@@ -91,22 +91,29 @@ When creating a new supplier, the Contacts tab is disabled until you save the re
 
 ## CSV import/export
 
-Manage suppliers in bulk using CSV.
+**Export CSV** downloads all suppliers with their current details. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
 
-**Export**: Downloads all suppliers with their current details.
+The columns:
+
+| Column | Content |
+|---|---|
+| `name` | Required. The supplier name. Rows are matched on it |
+| `erp_supplier_id` | The supplier's ID in your ERP |
+| `commercial_contact` | The email of a contact. The load links the supplier to the contact with that email, and creates one when the workspace has none |
+| `technical_contact` | The email of a contact, as above |
+| `support_contact` | The email of a contact, as above |
+| `notes` | Free text |
+| `status` | `enabled` or `disabled` |
 
 **Import**:
-- Use **Preflight** to validate the file before applying changes
-- Rows are matched by supplier name
-- Can create new suppliers or update existing ones
 
-**Required fields**: Name
+- Use **Preflight check** to validate the file before applying it, then **Load**
+- Rows are matched by `name`: a row updates the supplier it names, any other row creates one
+- `name` is required. Every other cell is optional
 
-**Optional fields**: ERP Supplier ID, Notes, Status
-
-**Formatting**:
-- Use **UTF-8** encoding and **semicolons** as separators
-- Import suppliers before importing applications or contracts that reference them
+**Notes**:
+- See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator and the two import steps
+- Import suppliers before importing applications or contracts that reference them. The budget file creates a missing supplier too, when **Create missing suppliers** is ticked. See [Load a budget from a spreadsheet](budget-file.md)
 
 ---
 

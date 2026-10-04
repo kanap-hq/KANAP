@@ -93,27 +93,33 @@ The Details tab manages year-by-year headcount metrics.
 
 ## CSV import/export
 
-Keep departments in sync with your HR system using CSV.
+**Export CSV** downloads every department with its company, name, description, status and end of validity. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
 
-**Export**:
-- Downloads every department with its company, name, description, status and end of validity
-- Columns: `company_name;name;description;status;disabled_at`
+The columns:
+
+| Column | Content |
+|---|---|
+| `company_name` | Required. The company the department belongs to, by name |
+| `name` | Required. The department name |
+| `description` | Free text |
+| `status` | `enabled` or `disabled` |
+| `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time |
 
 **Import**:
-- Use **Preflight** to validate before applying
-- Matched by department name + company name
-- Can create new departments or update existing ones
 
-**Required fields**: `name` and `company_name` (an existing company)
+- Use **Preflight check** to validate the file before applying it, then **Load**
+- Matched by department name and company name: a row updates the department it names, any other row creates one
 
-**Optional fields**: `description`, `status`, `disabled_at`
+**Required cells**: `name` and `company_name`, an existing company
+
+**Optional cells**: `description`, `status`, `disabled_at`
 
 **Lifecycle columns**:
 - `status` is `enabled` or `disabled`, and `disabled_at` is the end of validity, a date (`2026-12-31`) or a full date and time. The export writes the status read from the end of validity. A new department is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the department today
 - A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 
 **Notes**:
-- Use **UTF-8 encoding** and **semicolons** as separators
+- See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
 - Headcount is not in the file. Enter it per year on the department's **Details** tab
 
 ---

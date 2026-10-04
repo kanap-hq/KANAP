@@ -1,1 +1,6 @@
-account_number;account_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
+account_number,account_name,native_name,description,consolidation_account_number,consolidation_account_name,consolidation_account_description,status
+205000,Software,,Intangible assets: software,,,,enabled
+218300,IT equipment,,Tangible assets: servers and network equipment,,,,enabled
+606100,Hardware purchases,,Small hardware bought during the year,,,,enabled
+611000,Software subscriptions,,Recurring software and hosting subscriptions,,,,enabled
+622600,Consulting fees,,External IT consulting,,,,enabled

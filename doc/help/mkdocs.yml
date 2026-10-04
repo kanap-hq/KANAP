@@ -361,6 +361,7 @@ nav:
     - CAPEX: capex.md
     - Contracts: contracts.md
     - Budget Administration: budget-operations.md
+    - Load a budget from a spreadsheet: budget-file.md
     - Reports: reports.md
 
   - Master Data:
