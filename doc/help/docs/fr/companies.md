@@ -72,32 +72,41 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 ## L'espace de travail de la société
 
-Cliquez sur un nom de société dans la liste pour ouvrir son espace de travail. L'espace de travail comporte deux onglets disposés verticalement à gauche : **Vue d'ensemble** et **Détails**.
+Cliquez sur un nom de société dans la liste pour ouvrir son espace de travail. Il comporte deux onglets : **Vue d'ensemble** et **Détails**.
 
-Utilisez **Préc.** / **Suiv.** pour passer d'une société à l'autre sans revenir à la liste. Cliquez sur **Fermer** (X) pour revenir à la liste avec votre contexte de recherche intact.
+- **En-tête** : le nom de la société. Cliquez dessus pour renommer la société. Les flèches avec « N sur M » permettent de passer d'une société à l'autre dans l'ordre et avec les filtres de la liste, sans revenir à la liste. Le lien de retour, **Sociétés**, ramène à la liste avec votre contexte de recherche intact
+- **Panneau Propriétés** à droite : **Pays**, **Devise de base**, **Plan comptable** et **Cycle de vie**. Utilisez le bouton situé à côté pour replier le panneau ou le rouvrir
 
-Si vous avez des modifications non enregistrées, l'application vous invite à enregistrer avant de changer d'onglet, de naviguer vers une autre société ou de changer d'année.
+**Enregistrement automatique** : chaque modification s'enregistre d'elle-même quand vous quittez le champ. Il n'y a ni bouton Enregistrer, ni bouton Réinitialiser, ni bouton Fermer. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, sauf pour le nom, dont le refus s'affiche en haut de la page.
+
+---
+
+### Panneau Propriétés
+
+- **Pays** (obligatoire) : code pays ISO, recherche par nom ou code. Changer le pays fait aussi passer le **Plan comptable** à celui par défaut du nouveau pays, mais seulement si le plan actuel appartient à un autre pays. Un plan comptable global reste en place
+- **Devise de base** (obligatoire) : code devise ISO, recherche par nom ou code
+- **Plan comptable** : le plan comptable lié à cette société (voir [Plan comptable](#plan-comptable)). Sur une société existante, vous pouvez choisir un autre plan, mais vous ne pouvez pas vider le champ, car le plan par défaut du pays reviendrait
+- **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
 
 ---
 
 ### Vue d'ensemble
 
-L'onglet Vue d'ensemble contient les informations générales sur la société.
+L'onglet Vue d'ensemble contient l'adresse, les informations d'immatriculation et les notes. Le nom, le pays, la devise, le plan comptable et le cycle de vie se trouvent dans l'en-tête et le panneau **Propriétés**.
 
 **Ce que vous pouvez modifier** :
 
-- **Nom** (obligatoire) : le nom d'affichage de la société
-- **Pays** (obligatoire) : code pays ISO, recherche par nom ou code
-- **Plan comptable** : le plan comptable (CoA) lié à cette société (voir ci-dessous)
-- **Adresse 1**, **Adresse 2** : lignes d'adresse
-- **Code postal** : code postal
-- **Ville** (obligatoire) : nom de la ville
-- **État** : état ou province
-- **N° d'immatriculation** : numéro d'immatriculation de la société
-- **N° TVA** : numéro d'identification TVA
-- **Devise de base** (obligatoire) : code devise ISO, recherche par nom ou code
-- **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
+- Section **Adresse** :
+    - **Adresse ligne 1**, **Adresse ligne 2** : lignes d'adresse
+    - **Code postal** : code postal
+    - **Ville** (obligatoire) : nom de la ville. Une ville vide est refusée avec « Saisissez une ville. »
+    - **Région ou État** : état, province ou région
+- Section **Immatriculation** :
+    - **Numéro d'immatriculation** : numéro d'immatriculation de la société
+    - **Numéro de TVA** : numéro d'identification TVA
 - **Notes** : notes en texte libre
+
+**Créer une société** : **Nouveau** ouvre un formulaire unique avec le nom, **Pays**, **Devise de base**, **Plan comptable**, **Ville**, les autres champs d'adresse, les champs d'immatriculation et **Notes**. Le choix d'un pays renseigne le **Plan comptable** à votre place : le plan par défaut du pays s'il en existe un, sinon un plan global. Vous pouvez le modifier avant d'enregistrer. Cliquez sur **Créer** pour enregistrer la société. L'onglet **Détails** devient disponible après la création de la société.
 
 ---
 
@@ -107,14 +116,15 @@ L'onglet Détails gère les **métriques annuelles**. Utilisez les onglets d'ann
 
 **Ce que vous pouvez modifier** :
 
-- **Effectif** (obligatoire) : nombre total d'employés pour l'année, doit être un entier non négatif
-- **Utilisateurs IT** (optionnel) : nombre d'utilisateurs IT, doit être un entier non négatif
-- **Chiffre d'affaires** (optionnel) : chiffre d'affaires en millions de la devise de base de la société, jusqu'à 3 décimales
+- **Effectif** (obligatoire) : nombre total d'employés pour l'année, doit être un nombre entier de zéro ou plus
+- **Utilisateurs IT** (optionnel) : nombre d'utilisateurs IT, doit être un nombre entier de zéro ou plus
+- **Chiffre d'affaires (M€)** (optionnel) : chiffre d'affaires en millions de la devise de base de la société, jusqu'à 3 décimales
 
 **Comment ça fonctionne** :
 
-- Chaque enregistrement ne s'applique qu'à l'année actuellement sélectionnée
-- Si les métriques de l'année sont **gelées**, les champs sont en lecture seule ; dégélez-les depuis l'**Administration des données de référence** pour apporter des modifications
+- Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez le champ (ou appuyez sur Entrée). Une valeur non valide affiche un message sous le champ, par exemple « Saisissez un nombre entier, 0 ou plus. »
+- Chaque année est enregistrée séparément : changer d'année charge les valeurs de cette année
+- Si les chiffres de la société pour l'année sont **gelés**, les champs sont verrouillés et un avis explique qu'un administrateur peut les dégeler depuis l'**Administration des données de référence**
 - Vous avez besoin de `companies:manager` pour modifier les métriques
 
 ## Plan comptable
@@ -124,7 +134,9 @@ Chaque société peut être liée à un **Plan comptable** (CoA), qui définit l
 **Comment ça fonctionne** :
 
 - Lorsque vous créez une société, elle est automatiquement assignée au CoA par défaut pour son pays (si un tel CoA existe). S'il n'y a pas de CoA par défaut pour le pays, le CoA par défaut global est utilisé.
-- Vous pouvez changer l'assignation du CoA dans l'onglet **Vue d'ensemble** de la société en utilisant le sélecteur **Plan comptable**. Le sélecteur affiche les CoA correspondant au pays de la société plus les CoA de portée globale.
+- Vous pouvez changer l'assignation du CoA dans le panneau **Propriétés** en utilisant le sélecteur **Plan comptable**. Le sélecteur affiche les CoA correspondant au pays de la société plus les CoA de portée globale.
+- Lorsque vous changez le pays de la société, le CoA suit si l'actuel appartient à un autre pays : il passe à celui par défaut du nouveau pays. Un CoA global reste en place.
+- Sur une société existante, le CoA ne peut pas être vidé. Vous pouvez seulement le remplacer par un autre.
 - Le CoA que vous sélectionnez détermine quels comptes apparaissent dans le menu déroulant des comptes lors de la création ou modification de postes de dépenses pour cette société.
 
 **Ce que cela signifie pour votre flux de travail** :

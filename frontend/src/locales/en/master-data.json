@@ -63,7 +63,6 @@
     "workspace": {
       "unsavedNavigate": "You have unsaved changes. Save before navigating?",
       "unsavedSwitchTab": "You have unsaved changes. Save before switching tabs?",
-      "unsavedSwitchYear": "You have unsaved changes. Save before switching years?",
       "itemCountOf": "{{entity}} {{current}} of {{total}}"
     },
     "messages": {
@@ -73,15 +72,9 @@
       "failedToLoadMetrics": "Failed to load metrics",
       "failedToSaveMetrics": "Failed to save metrics",
       "fixValidationErrors": "Please fix validation errors before saving.",
-      "fixValidationIssues": "Please fix validation issues before saving.",
       "readOnlyAccess": "You need manager access to edit {{entity}}.",
       "metricsFrozen": "Metrics for {{year}} are frozen. Unfreeze them from Administration to make changes.",
-      "metricsFrozenEdit": "Metrics are frozen for this year. Unfreeze them from Administration to edit.",
-      "metricsYearHint": "Save applies to the selected year. Switch years to review historical data."
-    },
-    "validation": {
-      "nonNegativeInteger": "Enter a non-negative integer",
-      "max3Decimals": "Max 3 decimals, non-negative"
+      "metricsYearHint": "Each value is saved for the selected year when you leave its field. Switch years to review past data."
     }
   },
   "companies": {
@@ -105,20 +98,57 @@
     "pinnedTotal": "Total",
     "export": "Export companies",
     "import": "Import companies",
+    "previous": "Previous company",
+    "next": "Next company",
     "fields": {
-      "companyInformation": "Company information",
-      "address1": "Address 1",
-      "address2": "Address 2",
-      "postalCode": "Postal code",
-      "city": "City",
-      "state": "State",
-      "regNumber": "Registration #",
-      "vatNumber": "VAT #",
+      "name": "Name",
+      "country": "Country",
       "baseCurrency": "Base currency",
       "chartOfAccounts": "Chart of accounts",
-      "searchCoA": "Search CoA",
+      "lifecycle": "Lifecycle",
+      "address1": "Address line 1",
+      "address2": "Address line 2",
+      "postalCode": "Postal code",
+      "city": "City",
+      "state": "State or region",
+      "regNumber": "Registration number",
+      "vatNumber": "VAT number",
+      "notes": "Notes",
+      "year": "Year",
+      "headcount": "Headcount",
       "itUsers": "IT users",
       "turnover": "Turnover (M€)"
+    },
+    "sections": {
+      "address": "Address",
+      "registration": "Registration"
+    },
+    "placeholders": {
+      "name": "e.g., Holding company",
+      "country": "e.g., France",
+      "baseCurrency": "e.g., EUR",
+      "chartOfAccounts": "e.g., COA-FR",
+      "address1": "e.g., 12 Main Street",
+      "address2": "e.g., Building B",
+      "postalCode": "e.g., 75001",
+      "city": "e.g., Paris",
+      "state": "e.g., Brittany",
+      "regNumber": "e.g., 123 456 789",
+      "vatNumber": "e.g., FR12345678901",
+      "notes": "e.g., Shared services entity for the group",
+      "itUsers": "e.g., 120",
+      "turnover": "e.g., 12.5"
+    },
+    "messages": {
+      "saveFailed": "Failed to save the company.",
+      "createFailed": "Failed to create the company.",
+      "nameRequired": "Enter a name.",
+      "countryRequired": "Choose a country.",
+      "currencyRequired": "Choose a base currency.",
+      "cityRequired": "Enter a city.",
+      "headcountInvalid": "Enter a whole number, 0 or more.",
+      "itUsersInvalid": "Enter a whole number, 0 or more, or leave it empty.",
+      "turnoverInvalid": "Enter a number, 0 or more, with up to 3 decimals, or leave it empty."
     }
   },
   "departments": {
@@ -670,14 +700,6 @@
     }
   },
   "formSchemas": {
-    "company": {
-      "nameRequired": "Name is required",
-      "countryIsoRequired": "Country ISO is required",
-      "countryIsoLength": "Country ISO must be 2 letters",
-      "cityRequired": "City is required",
-      "baseCurrencyRequired": "Base currency is required",
-      "currencyCodeLength": "Currency code must be 3 letters"
-    },
     "department": {
       "companyRequired": "Company is required",
       "nameRequired": "Name is required"

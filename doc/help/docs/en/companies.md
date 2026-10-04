@@ -13,7 +13,7 @@ Navigate to **Master Data > Companies** to open the list.
 - **Name**: a unique label your teams recognize
 - **Country**: ISO country code (searchable by name or code)
 - **City**: city where the company is based
-- **Base Currency**: ISO currency code (searchable by name or code)
+- **Base currency**: ISO currency code (searchable by name or code)
 
 **Tip**: Keep names unique to avoid confusion in imports and selection lists.
 
@@ -29,7 +29,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 | **Country** | ISO country code |
 | **Currency** | Base currency code |
 | **Headcount (year)** | Headcount for the selected year (click to open the Details tab) |
-| **IT Users (year)** | IT users for the selected year (click to open the Details tab) |
+| **IT users (year)** | IT users for the selected year (click to open the Details tab) |
 | **Turnover (year)** | Turnover for the selected year (click to open the Details tab) |
 | **Status** | Enabled or Disabled |
 
@@ -38,7 +38,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 | Column | What it shows |
 |---|---|
 | **City** | City |
-| **Postal Code** | Postal code |
+| **Postal code** | Postal code |
 | **Address 1** | Primary address line |
 | **Address 2** | Secondary address line |
 | **State** | State or province |
@@ -48,10 +48,10 @@ The list shows all companies for your workspace. Use it to review key informatio
 **Filtering**:
 
 - **Quick search**: free-text search across all visible columns
-- **Column filters**: click any column header to filter by value; numeric columns (Headcount, IT Users, Turnover) support number filters
+- **Column filters**: click any column header to filter by value; numeric columns (Headcount, IT users, Turnover) support number filters
 - **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list controls which companies appear. The list shows enabled companies by default
 
-**Year selector**: use the **Year** field in the toolbar to switch which year's metrics are displayed. The bottom row shows **totals** for Headcount, IT Users, and Turnover across all visible (filtered) companies.
+**Year selector**: use the **Year** field in the toolbar to switch which year's metrics are displayed. The bottom row shows **totals** for Headcount, IT users, and Turnover across all visible (filtered) companies.
 
 **Actions**:
 
@@ -72,32 +72,41 @@ The list shows all companies for your workspace. Use it to review key informatio
 
 ## The company workspace
 
-Click a company name in the list to open its workspace. The workspace has two tabs arranged vertically on the left: **Overview** and **Details**.
+Click a company name in the list to open its workspace. It has two tabs: **Overview** and **Details**.
 
-Use **Prev** / **Next** to move between companies without returning to the list. Click **Close** (X) to return to the list with your search context intact.
+- **Header**: the company name. Click it to rename the company. The arrows with "N of M" move between companies in the list's order and filters without returning to the list. The back link, **Companies**, returns to the list with your search context intact
+- **Properties panel** on the right: **Country**, **Base currency**, **Chart of accounts** and **Lifecycle**. Use the panel toggle next to it to collapse the panel or open it again
 
-If you have unsaved changes, the app prompts you to save before switching tabs, navigating to another company, or changing years.
+**Autosave**: Every change saves on its own when you leave the field. There are no Save, Reset or Close buttons. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it, except for the name, which shows its refusal at the top of the page.
+
+---
+
+### Properties panel
+
+- **Country** (required): ISO country code, searchable by name or code. Changing the country also switches the **Chart of accounts** to the new country's default, but only when the current chart belongs to another country. A global chart stays in place
+- **Base currency** (required): ISO currency code, searchable by name or code
+- **Chart of accounts**: the chart linked to this company (see [Chart of Accounts](#chart-of-accounts)). On an existing company you can pick another chart but you cannot empty the field, because the default for the country would come back
+- **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 
 ---
 
 ### Overview
 
-The Overview tab holds general information about the company.
+The Overview tab holds the address, the registration details and the notes. The company name, country, currency, chart and lifecycle are in the header and the **Properties** panel.
 
 **What you can edit**:
 
-- **Name** (required): the company display name
-- **Country** (required): ISO country code, searchable by name or code
-- **Chart of Accounts**: the CoA linked to this company (see below)
-- **Address 1**, **Address 2**: address lines
-- **Postal Code**: postal / ZIP code
-- **City** (required): city name
-- **State**: state or province
-- **Registration #**: company registration number
-- **VAT #**: VAT identification number
-- **Base Currency** (required): ISO currency code, searchable by name or code
-- **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
+- **Address** section:
+    - **Address line 1**, **Address line 2**: address lines
+    - **Postal code**: postal or ZIP code
+    - **City** (required): city name. An empty city is refused with "Enter a city."
+    - **State or region**: state, province or region
+- **Registration** section:
+    - **Registration number**: company registration number
+    - **VAT number**: VAT identification number
 - **Notes**: free-text notes
+
+**Creating a company**: **New** opens a single form with the name, **Country**, **Base currency**, **Chart of accounts**, **City**, the other address fields, the registration fields and **Notes**. Choosing a country fills in the **Chart of accounts** for you: the country's default chart if there is one, otherwise a global chart. You can change it before you save. Click **Create** to save the company. The **Details** tab becomes available after you create the company.
 
 ---
 
@@ -107,14 +116,15 @@ The Details tab manages **yearly metrics**. Use the year tabs at the top to swit
 
 **What you can edit**:
 
-- **Headcount** (required): total employee count for the year, must be a non-negative integer
-- **IT Users** (optional): number of IT users, must be a non-negative integer
-- **Turnover** (optional): revenue in millions of the company's base currency, up to 3 decimal places
+- **Headcount** (required): total employee count for the year, must be a whole number of zero or more
+- **IT users** (optional): number of IT users, must be a whole number of zero or more
+- **Turnover (M€)** (optional): revenue in millions of the company's base currency, up to 3 decimal places
 
 **How it works**:
 
-- Each save applies only to the currently selected year
-- If metrics for the year are **frozen**, the fields are read-only; unfreeze them from **Master Data Administration** to make changes
+- Each value is saved for the selected year when you leave the field (or press Enter). A value that is not valid shows a message under the field, for example "Enter a whole number, 0 or more."
+- Each year is stored on its own: switching years loads that year's values
+- If the company figures for the year are **frozen**, the fields are locked and a notice explains that an administrator can unfreeze them from **Master Data Administration**
 - You need `companies:manager` to edit metrics
 
 ## Chart of Accounts
@@ -124,7 +134,9 @@ Each company can be linked to a **Chart of Accounts** (CoA), which defines the s
 **How it works**:
 
 - When you create a company, it is automatically assigned to the default CoA for its country (if one exists). If no country default exists, the global default CoA is used.
-- You can change the CoA assignment in the company's **Overview** tab using the **Chart of Accounts** selector. The selector shows CoAs matching the company's country plus any global-scope CoAs.
+- You can change the CoA assignment in the **Properties** panel using the **Chart of accounts** selector. The selector shows CoAs matching the company's country plus any global-scope CoAs.
+- When you change the company's country, the CoA follows if the current one belongs to another country: it switches to the new country's default. A global CoA stays in place.
+- On an existing company, the CoA cannot be emptied. You can only replace it with another one.
 - The CoA you select determines which accounts appear in the account dropdown when creating or editing spend items for this company.
 
 **What this means for your workflow**:
@@ -154,12 +166,12 @@ Use the **End of validity** to control when a company stops being active.
 Many parts of the app are year-aware. Companies have metrics per year:
 
 - **Headcount** (required for the year)
-- **IT Users** (optional)
+- **IT users** (optional)
 - **Turnover** (optional, in millions of the company's base currency)
 
 **Where it matters**:
 
-- Allocations can use Headcount, IT Users, or Turnover to distribute costs across companies for a given year.
+- Allocations can use Headcount, IT users, or Turnover to distribute costs across companies for a given year.
 - Reports use these metrics for KPIs and ratios.
 - Only companies active for a year are considered for that year's allocation and reporting.
 
@@ -186,7 +198,7 @@ Keep large sets in sync with your source systems using CSV (semicolon `;` separa
 - **Optional field**: `coa_code` (references a Chart of Accounts; if omitted, the default CoA for the country is used)
 - **Status and end of validity**: `status` is `enabled` or `disabled`, and `disabled_at` is the end of validity, a date (`2026-12-31`) or a full date and time. The export writes the status read from the end of validity. A new company is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the company today
 - A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
-- **Metrics**: if you provide any metrics for a year, Headcount is required for that year; IT Users and Turnover are optional. Turnover accepts up to 3 decimals and must be expressed in millions of the company's base currency
+- **Metrics**: if you provide any metrics for a year, Headcount is required for that year; IT users and Turnover are optional. Turnover accepts up to 3 decimals and must be expressed in millions of the company's base currency
 
 **Notes**:
 
@@ -202,4 +214,4 @@ Keep large sets in sync with your source systems using CSV (semicolon `;` separa
 - **Headcount** is the most common allocation driver; keep it up to date for the current year.
 - **Frozen metrics**: you can still review them, but edits are blocked until you unfreeze from Administration.
 - **Column chooser**: use it to show or hide columns like City, Address, State, or Created to suit your workflow.
-- **Metric columns link to Details**: clicking a Headcount, IT Users, or Turnover value opens the Details tab directly for that company.
+- **Metric columns link to Details**: clicking a Headcount, IT users, or Turnover value opens the Details tab directly for that company.
