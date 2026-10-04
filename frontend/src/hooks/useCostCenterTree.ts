@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { getCostCenterCount, getCostCenterTree, type CostCenterNode, type CostCenterRef } from '../services/costCenters';
 
 export const COST_CENTER_TREE_QUERY_KEY = ['cost-centers', 'tree'] as const;
@@ -72,6 +72,14 @@ export function useCostCenterTree(options?: { enabled?: boolean }): CostCenterTr
   const ready = query.data !== undefined || (enabled && query.isError);
   const isError = enabled && query.isError;
   return useMemo(() => buildCostCenterTree(nodes, ready, isError), [nodes, ready, isError]);
+}
+
+/**
+ * The tree for code that is not a component (a list filter loading its values when it opens): the
+ * hook's cache entry, read when fresh, loaded otherwise.
+ */
+export function fetchCostCenterTree(queryClient: QueryClient): Promise<CostCenterNode[]> {
+  return queryClient.fetchQuery({ queryKey: COST_CENTER_TREE_QUERY_KEY, queryFn: getCostCenterTree, staleTime: TREE_STALE_TIME });
 }
 
 /**

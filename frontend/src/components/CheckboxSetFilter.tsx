@@ -5,10 +5,54 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useGridFilter } from 'ag-grid-react';
 import type { IFilterParams } from 'ag-grid-community';
 
+/** A heading above some values of a tree-shaped list (a cost center group). It is not a value itself. */
+export type CheckboxSetFilterGroup = {
+  key: string;
+  label: string;
+};
+
 export type CheckboxSetFilterOption = {
   value: string | null;
   label?: string;
+  /**
+   * The groups the value sits under, root first. The list shows each group once as a heading row
+   * above its values, indented by level; its box ticks or unticks every value listed below it, and a
+   * search on its name lists them all. Values come in tree order: each one follows its groups.
+   */
+  groups?: CheckboxSetFilterGroup[];
 };
+
+type FilterRow =
+  | { kind: 'value'; option: CheckboxSetFilterOption; depth: number }
+  | { kind: 'group'; group: CheckboxSetFilterGroup; depth: number; members: Array<string | null> };
+
+/**
+ * The rows the list draws: each value, preceded by the headings of its groups not already open
+ * above it. A group's members are the values listed under it (the matching ones during a search).
+ */
+function buildFilterRows(options: CheckboxSetFilterOption[]): FilterRow[] {
+  const rows: FilterRow[] = [];
+  const members = new Map<string, Array<string | null>>();
+  let open: CheckboxSetFilterGroup[] = [];
+  for (const option of options) {
+    const groups = option.groups ?? [];
+    let shared = 0;
+    while (shared < groups.length && shared < open.length && groups[shared].key === open[shared].key) shared += 1;
+    for (let depth = shared; depth < groups.length; depth += 1) {
+      const group = groups[depth];
+      let list = members.get(group.key);
+      if (!list) {
+        list = [];
+        members.set(group.key, list);
+      }
+      rows.push({ kind: 'group', group, depth, members: list });
+    }
+    for (const group of groups) members.get(group.key)!.push(option.value ?? null);
+    rows.push({ kind: 'value', option, depth: groups.length });
+    open = groups;
+  }
+  return rows;
+}
 
 export type CheckboxSetFilterContext = {
   api: any;
@@ -169,7 +213,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   const normalizeOptions = useCallback((incoming: CheckboxSetFilterOption[]) => {
     const map = new Map<string | null, CheckboxSetFilterOption>();
     for (const opt of incoming) {
-      const normalized = { value: opt.value ?? null, label: buildLabel(opt) };
+      const normalized = { value: opt.value ?? null, label: buildLabel(opt), groups: opt.groups };
       if (!map.has(normalized.value)) map.set(normalized.value, normalized);
     }
     return Array.from(map.values());
@@ -214,7 +258,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   const mergedOptions = useMemo(() => {
     const map = new Map<string | null, CheckboxSetFilterOption>();
     for (const opt of options) {
-      map.set(opt.value ?? null, { value: opt.value ?? null, label: buildLabel(opt) });
+      map.set(opt.value ?? null, { value: opt.value ?? null, label: buildLabel(opt), groups: opt.groups });
     }
     for (const value of selectedValues) {
       if (!map.has(value)) {
@@ -280,8 +324,10 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     excludeAllowedRef.current && (pendingRef.current ? pendingFromAllRef.current : fromAllRef.current)
   ), []);
 
+  // A value under a group matches a search on the group's name too.
   const labelMatches = useCallback((option: CheckboxSetFilterOption, trimmed: string) => {
-    return buildLabel(option).toLowerCase().includes(trimmed);
+    if (buildLabel(option).toLowerCase().includes(trimmed)) return true;
+    return (option.groups ?? []).some((group) => group.label.toLowerCase().includes(trimmed));
   }, [buildLabel]);
 
   const filteredOptions = useMemo(() => {
@@ -453,21 +499,23 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     return true;
   }, [search, excludeModeNow, selectedValues, optionValueSet, filteredOptions, setPending, scheduleApply, setSelection]);
 
-  const toggleValue = useCallback((value: string | null) => {
+  // One value flips. A group's values all follow: ticked when one of them was not, unticked otherwise.
+  const toggleValues = useCallback((values: Array<string | null>) => {
+    const flip = (base: Set<string | null>) => {
+      const tick = values.some((value) => !base.has(value));
+      const next = new Set(base);
+      values.forEach((value) => (tick ? next.add(value) : next.delete(value)));
+      return next;
+    };
     if (snapshotRef.current) {
-      const next = new Set(snapshotRef.current);
-      if (next.has(value)) next.delete(value);
-      else next.add(value);
-      commitSnapshot(next);
+      commitSnapshot(flip(snapshotRef.current));
       return;
     }
     const base = pendingRef.current
       ?? (implicitAllRef.current && selectedValues.size === 0 ? optionValueSet : selectedValues);
     // Clicks after "All" or "Clear" not applied yet start from that choice.
     const fromAll = pendingRef.current ? pendingFromAllRef.current : fromAllRef.current;
-    const next = new Set(base);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
+    const next = flip(base);
     pendingFromAllRef.current = fromAll;
     setPending(next);
     scheduleApply(() => {
@@ -654,7 +702,8 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     setScrollTop(0);
     if (listRef.current) listRef.current.scrollTop = 0;
   }, [search]);
-  const rowCount = filteredOptions.length;
+  const rows = useMemo(() => buildFilterRows(filteredOptions), [filteredOptions]);
+  const rowCount = rows.length;
   const windowed = rowCount > OPTION_WINDOW;
   const firstRow = windowed
     ? Math.min(Math.max(0, Math.floor(scrollTop / OPTION_ROW_HEIGHT) - Math.floor((OPTION_WINDOW - OPTION_VISIBLE_ROWS) / 2)), rowCount - OPTION_WINDOW)
@@ -752,13 +801,31 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
             aria-label={countLabel}
             sx={windowed ? { position: 'relative', height: rowCount * OPTION_ROW_HEIGHT } : undefined}
           >
-            {filteredOptions.slice(firstRow, lastRow).map((opt, index) => {
-              const value = opt.value ?? null;
-              const label = buildLabel(opt);
+            {rows.slice(firstRow, lastRow).map((item, index) => {
               const row = firstRow + index;
+              let key: string;
+              let label: string;
+              let checked: boolean;
+              let indeterminate = false;
+              let onToggle: () => void;
+              if (item.kind === 'group') {
+                // A group reads ticked when every value under it is, partly ticked when some are.
+                const tickedCount = item.members.filter((value) => shownSelection.has(value)).length;
+                key = `group:${item.group.key}`;
+                label = item.group.label;
+                checked = tickedCount > 0 && tickedCount === item.members.length;
+                indeterminate = tickedCount > 0 && !checked;
+                onToggle = () => toggleValues(item.members);
+              } else {
+                const value = item.option.value ?? null;
+                key = `${String(value)}-${buildLabel(item.option)}`;
+                label = buildLabel(item.option);
+                checked = shownSelection.has(value);
+                onToggle = () => toggleValues([value]);
+              }
               return (
                 <Box
-                  key={`${String(value)}-${label}`}
+                  key={key}
                   role="listitem"
                   aria-setsize={rowCount}
                   aria-posinset={row + 1}
@@ -771,16 +838,26 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
                     control={(
                       <Checkbox
                         size="small"
-                        checked={shownSelection.has(value)}
-                        onChange={() => toggleValue(value)}
+                        checked={checked}
+                        indeterminate={indeterminate}
+                        onChange={onToggle}
                         inputProps={{ 'data-option-index': row } as React.InputHTMLAttributes<HTMLInputElement>}
                         sx={{ p: 0.5 }}
                       />
                     )}
-                    label={<Typography noWrap title={label} sx={{ fontSize: 13 }}>{label}</Typography>}
+                    label={(
+                      <Typography
+                        noWrap
+                        title={label}
+                        sx={{ fontSize: 13, fontWeight: item.kind === 'group' ? 500 : undefined }}
+                      >
+                        {label}
+                      </Typography>
+                    )}
                     sx={{
                       height: '100%',
                       m: 0,
+                      pl: item.depth * 1.5,
                       display: 'flex',
                       alignItems: 'center',
                       '& .MuiFormControlLabel-label': { minWidth: 0 },
