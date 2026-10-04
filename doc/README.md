@@ -89,6 +89,7 @@ User-facing on-premise guides are in `/help/docs/en/on-premise/` (published to [
 - **[interface-map-visualization.md](features/components/interface-map-visualization.md)**: Interface Map D3 visualization
 - **[connection-map.md](features/components/connection-map.md)**: Infrastructure Connection Map controls and behavior
 - **[server-clusters.md](features/components/server-clusters.md)**: Server cluster management
+- **[netbox-inventory.md](features/components/netbox-inventory.md)**: Netbox inventory sync: design rules, matching, review flow, traps
 - **[dark-mode-implementation.md](features/components/dark-mode-implementation.md)**: Theme architecture, AG Grid integration, print/export normalization
 - **[user-documentation-system.md](features/components/user-documentation-system.md)**: User documentation generation system
 

@@ -285,6 +285,145 @@ and refuses to run if nothing public-meaningful remains, so no tenant-internal
 data leaves the control plane. Web search is best-effort: any failure yields no
 web results and triage proceeds on knowledge and the model.
 
+### Helpdesk triage pipeline
+
+Each ticket goes through four LLM stages in `runHelpdeskTicketingTriage`
+(`ai-agent-control.service.ts`): need representation, knowledge search
+(planner and interpreter), action planner, and reply synthesis. An optional
+vision step describes requester screenshots first. All stages call
+`AiAgentLlmClient.callJsonModel`. The run produces proposals, not writes.
+
+- **Synthesis** composes the requester reply and a technician brief with
+  `used_sources` and `rejected_sources`. Greeting, footer and signature are
+  deterministic and localized. Citation validation drops references the model
+  invented. The fallback lists titles only and never dumps document bodies.
+  Administrative replies are authored by the action planner and skip synthesis.
+- **Persona and prompt compiler** (`ai-agent-prompt-compiler.service.ts`) uses
+  three trust tiers: an immutable per-task floor, configured guidance as
+  bounded marked JSON, then the untrusted ticket payload. `sliceFor` decides
+  what each task sees. Synthesis gets the full persona, output style and
+  escalation guidance. Planner and interpreter get the mission and shared
+  context only. Shared-context profiles are guidance and are never citable:
+  they travel under `operating_context`, outside `used_sources`.
+- **Behavior and policy never share a field.** Escalation text is prose
+  guidance. Enforcement stays in code.
+
+### Targeting, scheduling and claims
+
+- **Targeting** (`service-desk-targeting.ts`) is a list of declarative
+  predicates combined with AND. Values come from the provider
+  (`describeReferenceEnums`, `searchReferenceCatalog`) and are chosen from a
+  list, never typed. Category and entity predicates are subtree-recursive
+  (`resolveReferenceSubtree`). Ticket records expose normalized keys so the
+  picker, the ticket and the write path use one namespace.
+- **Ingestion** runs on a `*/5` schedule per tenant under a transaction-scoped
+  advisory lock, so a scheduled poll, a manual poll and a second backend
+  instance never overlap. Each item runs inside a savepoint: one failing item
+  rolls back only itself. Detection always completes. Processing stops when
+  `AI_AGENT_INGESTION_PROCESS_BUDGET_MS` is spent (default 3.5 minutes) and the
+  rest waits for the next cycle.
+- **Target state** (`ai_agent_target_states`) holds the review cooldown
+  (`next_review_at`) and wake-on-change. A ticket is reviewed again when its
+  external update time moves past `last_processed_external_updated_at`. The
+  agent's own writes re-baseline that value so they do not wake it.
+- **Claims** prevent two agents from working one ticket. A partial unique
+  index allows one row with `claim_status = 'claimed'` per target. A higher
+  `agent_priority` supersedes the current owner. Equal priority defers unless
+  `on_conflict` is `supersede`. The sweeper reconciles expired claims.
+
+### Approvals and execution
+
+- **One approval window.** Each agent has a single `approval_ttl_seconds`
+  (default 24 hours, bounded between 1 minute and 30 days). A run computes one
+  expiry anchor, `proposal_expires_at`, and stamps it on all its proposals, so
+  they expire together. The sweeper expires lapsed `pending` and `approved`
+  proposals.
+- **Decisions** are approve, reject and dismiss. A dismissal is recorded as its
+  own outcome and tracked separately (`dismissRate`) from rejections.
+- **Execution** starts with an atomic claim: `approved` to `executing` in a
+  single conditional update. A batch executes in order of the capability's
+  `execution_phase`: classification (10), internal note (20), public reply
+  (30), assignment (40), participant (50), status (60). Each action runs in its
+  own transaction, so row locks are released between slow provider writes.
+- **Freshness.** Before writing, the executor re-checks that the ticket did
+  not move. The agent's `on_stale_by_action_class` policy picks `re_review`
+  (default), `cancel`, or `apply_anyway`. A terminal close (`solved` or
+  `closed`) always re-fetches the ticket and is always human-approved.
+- **Retries.** The sweeper (every 10 minutes) resumes approved actions with a
+  backoff of 30, 60, 120 and 240 minutes. After 5 failed attempts the action
+  is flagged for review. An `executing` claim abandoned for 10 minutes returns
+  to `approved`. Frozen or trial-expired tenants keep their approved actions on
+  hold.
+- **Closing tickets** is ordinary status work. An agent with status and reply
+  capabilities, targeting tickets by an `inactivity_age` predicate, writes a
+  closing reply and a terminal transition. No dedicated stale-closure setting
+  exists.
+
+### Budgets
+
+- **Per-run cap.** The run keeps a ledger of the actual usage reported by each
+  LLM stage (`chargeRunLlmUsage`). Before a stage starts, its projected cost is
+  checked against the cap. Over the cap, the stage falls back to a
+  deterministic result and the run records `per_run_cap_exceeded`. The default
+  guardrails are 40,000 tokens and 1 EUR per run.
+- **Daily cap.** Per agent and per UTC day: 25 runs, 500,000 tokens and 10 EUR
+  by default. Reaching a cap stops new runs for the day and records the
+  reason.
+- **Built-in provider.** A run on the built-in provider consumes one message
+  of the tenant's monthly quota. The reservation uses a separate short
+  transaction (`reserveMessageDetached`), so the usage row lock never spans a
+  run. Agents that use a registry model do not consume the quota.
+- **Accounting.** Chat uses the provider's real token counts. Agent runs use
+  the estimate ledger. The two are separate on purpose.
+
+### Do not change without a design
+
+These mechanisms fix real race conditions and failure modes. Change them
+deliberately with a design, never inside a cleanup or refactoring PR.
+
+- `claimApprovedActionForExecution`: the atomic claim of an approved action.
+- `acquireTargetClaim`: the unique-violation (`23505`) handling, and
+  `releaseTargetClaim`: the compare-and-release.
+- The ingestion advisory lock, the per-item savepoints and the two-pass
+  processing budget.
+- The sweeper requeue of an abandoned `executing` action to `approved`.
+- The run-cap ledger ordering: `chargeRunLlmUsage` is called after the usage
+  recorder of the same stage.
+- The controller's per-action transaction topology (`scheduleApprovedActionExecution`).
+- The approval-window anchor and the `stepIndex` threading through a batch.
+- `acquireWorkItem`: a read-then-save lease, serialized by the ingestion
+  advisory lock.
+
+### Lessons and gotchas
+
+- Thread every new targeting mode through all ingestion call sites (poll,
+  enqueue, summary). Otherwise the listing is silently empty.
+- Duplicate suppression must ignore functionally expired proposals. A lapsed
+  `pending` proposal otherwise blocks regeneration for good.
+- "Approve all" collides with itself: the first write changes the ticket, so
+  the next write looks stale. Batches carry a freshness context and re-baseline
+  after their own writes. Bulk UI aggregates on the business status
+  (`action.status === 'executed'`), because a stale guard returns `ok: false`
+  inside a 200 response.
+- Bill the run cap with the actual usage of each stage, never with the size of
+  the serialized snapshot.
+- Classify LLM timeouts as a failure kind. Never parse a partial response. An
+  aborted call looks like an empty JSON body otherwise.
+- Never hold a row lock across LLM calls. A run executes in one transaction,
+  so anything locked before the first call stays locked until the last one.
+- Most triage time is the three sequential LLM stages. Use a non-reasoning
+  model for structured stages and lower `reasoning_effort`.
+  `AI_AGENT_KNOWLEDGE_LLM_PLANNER=0` turns off the LLM planner for knowledge
+  search.
+- GLPI 10 stores `&`, `<` and `>` as numeric entities, including the `>`
+  separator in category paths. Decode at the provider boundary
+  (`decodeNumericHtmlEntities` in `common/html-entities.ts`).
+- One timed-out monitoring call fails the whole diagnosis. The per-request
+  timeout is configurable on the monitoring integration.
+- A frozen or trial-expired tenant must never reach an LLM stage. Both
+  pollers check the subscription first, and the sweeper holds queued
+  executions.
+
 ## External Environment State
 
 There are three different states to keep separate:

@@ -195,3 +195,29 @@ Everything downstream reads the binding: ingestion polling (`listTicketsForScope
 - Do not reuse GLPI's `glpi_*` preview-metadata keys, discriminators, or routes; the generic `ticket_*` metadata and `uat/ticketing-*` routes are the current path.
 - Do not let numeric/raw provider codes appear in `TicketRecord.status`, targeting predicates, or reference items — normalized keys only.
 - Do not ship any write path without the prepare/approve/execute flow, idempotency keys, and a changed-since-prepare freshness check.
+
+## 11. Reference: GLPI onboarding rights and gotchas
+
+GLPI is the first adapter (`providers/glpi-ticketing.provider.ts`, HTTP client in `ai/glpi/glpi.service.ts`). Its onboarding rules apply, in spirit, to any provider whose API profile can be restricted.
+
+### Rights the GLPI API profile needs
+
+The service account behind the tenant's connection needs, on its API profile:
+
+- Read on **ITIL categories** and **entities**. Dropdown rights are separate from ticket rights, so a profile that reads tickets can still fail here. Targeting pickers and classification depend on both.
+- Read on **groups** and **users**, including the group-membership list. Routing to a group and to a named technician needs them.
+- The right to **assign** tickets, for assignment actions.
+- **Update** rights on tickets for every write the agent may be given: followups, classification, status and assignment.
+
+A ticket can be routed only to a group flagged **assignable** in GLPI (`is_assign`). The agent's group catalogue contains only those groups. The technician catalogue is the members of those groups, minus the agent's own account.
+
+A profile without read access to users or group membership still gets group routing. The provider answers with a warning (`glpi_technician_catalogue_unavailable`) and an empty technician list. A missing right is never fatal for the whole read.
+
+### Gotchas
+
+- **Group membership reads.** The bare `Group_User` listing is the cheap path and a restricted profile often refuses it. The client falls back to one `Group/<id>/Group_User` read per group, and every list read is paginated. Keep the pagination: a group with more than one page of members silently loses technicians otherwise.
+- **Dropdown expansion.** With `expand_dropdowns=true`, GLPI replaces `users_id` with the user's login string, so the numeric id is not in the response. Read raw ids first (`expand_dropdowns=false`). Use the expanded read only as a second, best-effort pass to attach a human label.
+- **Time zones.** `date_mod` is a naive local-time string in the GLPI server's time zone, while the API runs in UTC. Never compare it with a KANAP timestamp. Only a value that carries an explicit zone offset may be compared. The freshness guard identifies a ticket we just wrote by value: after each write, the action stores `post_write_ticket_baseline` (ticket hash and update time), and a sibling action in the same batch compares against it.
+- **HTML entities.** GLPI 10 stores `&`, `<` and `>` as numeric entities, including the `>` separator in category paths. Decode at the provider boundary with `decodeNumericHtmlEntities` (`backend/src/common/html-entities.ts`).
+- **Catalogue limits.** The agent's group catalogue is cached for 5 minutes per GLPI instance and acting account. The prompt exposes at most 200 groups, but the cache keeps the whole list so that a technician whose only group falls beyond the cap is still found.
+- **Ambiguous labels.** When an instruction names a group or technician by label and two entries share it, the assignment is dropped with the reason `assignment_target_ambiguous`. A key match always wins over a label match.

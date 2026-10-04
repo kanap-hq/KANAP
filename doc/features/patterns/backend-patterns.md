@@ -378,6 +378,19 @@ async create(data: CreateDto, @Tenant() ctx: TenantRequest) {
 
 ---
 
+## Known Traps
+
+- **TypeORM find options drop `null` and `undefined`.** `where: { fiscal_year: null }` silently matches every row (a budget total once summed every year). Use `IsNull()`.
+- **Nest matches routes in declaration order.** Declare `@Get('export')` and other fixed paths before `@Get(':id')`, or the fixed path is read as an id and the request fails.
+- **The JWT carries the user id in `sub`.** `req.user.id` is `undefined`, and an audit row written with it has no author. Read `req.user.sub`.
+- **Fire-and-forget work must never reject.** The process has no `unhandledRejection` handler and Node exits on one. A method that callers do not await (notifications) is marked `@NeverRejects()` (`notifications/notifications.service.ts`): it logs and resolves. Never hand such a method the request's `EntityManager`: the request can release it first.
+- **A new tenant-scoped table is registered in two inventories**, or CI fails: `TENANT_SCOPED_TABLES` in `common/tenant-isolation.inventory.ts` and `TENANT_PURGE_TABLES` in `admin/tenants/tenant-purge.inventory.ts`. The policy is named `<table>_tenant_isolation` and has both `USING` and `WITH CHECK`.
+- **A migration cannot insert into a table it has just put under FORCE RLS**, because migrations run without a tenant context. Seed first, then enable RLS.
+- **A new `NOT NULL` column or a new numbered reference (`item_number`) breaks raw SQL seed inserts.** Update `backend/scripts/rls-self-test.ts` and `backend/src/ai/__tests__/ai-phase1.integration.spec.ts` (and `item_sequences`).
+- **`count(*)` in `psql` on a FORCE RLS table returns 0 without `app.current_tenant`, even for the table owner.** Count inside a `DO` block that loops over tenants and calls `set_config('app.current_tenant', <id>, true)`.
+
+---
+
 ## File Structure Summary
 
 ```
@@ -483,4 +496,3 @@ async listIds(query: any, opts?: ServiceOpts): Promise<{ ids: string[] }> {
 
 - [architecture.md](../architecture.md) - System architecture
 - [workspace-patterns.md](workspace-patterns.md) - RLS and tenant patterns
-- Planning docs: `/home/fried/cio-assistant/planning/refactoring/`

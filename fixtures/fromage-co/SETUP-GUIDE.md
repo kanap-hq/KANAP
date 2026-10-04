@@ -113,6 +113,12 @@ configuration needed. On-premise installs must configure an LLM endpoint in
 the AI settings before the demo agent can triage tickets; everything else in
 the fixture works without AI.
 
+## Known traps
+
+- **The tenant AI surface is off by default.** Agent triage fails with "AI chat is disabled for this tenant" until `PATCH /ai/settings` receives `{ "chat_enabled": true }`. The runner does this when it sets up the demo agent. If you skip the agent step (`--skip-agents`) or build the agent by hand, enable it yourself.
+- **Users get a password only at creation.** `POST /users` is the one endpoint that accepts an initial password. `PATCH /users/:id` refuses a password (`PASSWORD_UPDATE_NOT_ALLOWED`), so a re-run cannot reset the password of a user that already exists. Use the password reset flow, or delete the user and run the runner again.
+- **The seeded admin password is never updated.** With `SEED_ADMIN=true`, the backend creates the admin user from `ADMIN_EMAIL` and `ADMIN_PASSWORD` only when that user does not exist. Changing `ADMIN_PASSWORD` later has no effect on the existing account. If a platform-admin login stops working after an environment change, the stored password is the one from the first boot.
+
 ## Demo logins
 
 | Who | Email | Role |
