@@ -82,7 +82,7 @@
     "linkFiltersLost": "Los filtros de este enlace ya no están disponibles."
   },
   "columnChooser": {
-    "searchPlaceholder": "Buscar columnas...",
+    "searchPlaceholder": "Buscar columnas",
     "noMatch": "Ninguna columna coincide",
     "clearSearch": "Borrar búsqueda"
   },

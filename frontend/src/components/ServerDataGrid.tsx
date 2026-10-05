@@ -1331,7 +1331,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
               px: 0.75,
               py: 0.375,
               borderRadius: 0.75,
-              bgcolor: 'kanap.bg.composer',
+              bgcolor: 'kanap.bg.hover',
               '& input': { fontSize: 13, py: 0.25 },
             }]}
           />
