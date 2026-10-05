@@ -1282,6 +1282,15 @@
     "applyToAllOthers_one": "{{columns}} garde sa propre période.",
     "applyToAllOthers_other": "{{columns}} gardent leur propre période.",
     "applyToAllFrozen": "Les colonnes gelées ne changent jamais.",
+    "keepLines_one": "{{columns}} garde ses lignes.",
+    "keepLines_other": "{{columns}} gardent leurs lignes.",
+    "spreadLock": {
+      "fromLines_one": "Les montants viennent de {{count}} ligne de Quantité et prix.",
+      "fromLines_other": "Les montants viennent des {{count}} lignes de Quantité et prix.",
+      "unlock": "Répartir un montant à la place",
+      "unlocked": "Une répartition remplace les montants des lignes. Les lignes restent comme référence."
+    },
+    "totalFromLines": "Calculé à partir de ses lignes. Ouvrez Quantité et prix pour le modifier.",
     "conflict": {
       "waiting": "Choisissez d'abord, ci-dessus, de recharger cette colonne ou de l'écraser.",
       "yearTotal": "{{amount}} sur l'année",

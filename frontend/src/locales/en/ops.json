@@ -1281,6 +1281,15 @@
     "applyToAllOthers_one": "{{columns}} keeps its own period.",
     "applyToAllOthers_other": "{{columns}} keep their own period.",
     "applyToAllFrozen": "Frozen columns never change.",
+    "keepLines_one": "{{columns}} keeps its lines.",
+    "keepLines_other": "{{columns}} keep their lines.",
+    "spreadLock": {
+      "fromLines_one": "The amounts come from the {{count}} line of Quantity and price.",
+      "fromLines_other": "The amounts come from the {{count}} lines of Quantity and price.",
+      "unlock": "Spread an amount instead",
+      "unlocked": "A spread replaces the amounts of the lines. The lines stay as a reference."
+    },
+    "totalFromLines": "Calculated from its lines. Open Quantity and price to change it.",
     "conflict": {
       "waiting": "Choose first, above, whether to reload this column or overwrite it.",
       "yearTotal": "{{amount}} for the year",

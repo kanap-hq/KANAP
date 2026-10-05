@@ -179,6 +179,14 @@ export function hasLines(record: RoundInput | null | undefined): record is Round
   return (record?.lines?.length ?? 0) > 0;
 }
 
+/**
+ * True when the column's amounts come from its lines: it has lines and was computed from them. A
+ * spread, a hand edit or a copy keeps the lines as a reference only.
+ */
+export function followsLines(record: RoundInput | null | undefined): boolean {
+  return hasLines(record) && record.method === 'computed';
+}
+
 /** A decimal string without trailing zeros ("1.000" is "1", "400.5000" is "400.5"), so lines compare by value. */
 export function trimDecimal(value: string | number | null | undefined): string {
   const text = String(value ?? '').trim();
