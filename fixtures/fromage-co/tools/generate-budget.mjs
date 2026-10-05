@@ -110,7 +110,7 @@ const CC = [
   ['FR-TRV-400', 'Infrastructure et cloud', 'DIV-TRV', FR, 'marc.petit@fromage-co.com', 'Centres de données, cloud, réseau et télécoms du groupe'],
   ['FR-TRV-500', 'Poste de travail et support', 'DIV-TRV', FR, 'olivier.garnier@fromage-co.com', 'Postes de travail, outils collaboratifs et centre de services'],
   ['FR-TRV-600', 'Sécurité', 'DIV-TRV', FR, 'ines.chevalier@fromage-co.com', 'Sécurité des systèmes d\'information et conformité'],
-  ['FR-TRV-700', 'Pilotage DSI et contrôle de gestion', 'DIV-TRV', FR, 'marie.fontaine@fromage-co.com', 'Pilotage, contrôle de gestion, achats IT, formation'],
+  ['FR-TRV-700', 'Pilotage DSI et contrôle de gestion', 'DIV-TRV', FR, 'maria.casanova@fromage-co.com', 'Pilotage, contrôle de gestion, achats IT, formation'],
 ];
 const ccRows = [['code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status']];
 for (const [code, name, parent, description] of GROUPS) ccRows.push([code, 'group', name, parent, '', '', description, 'enabled']);
@@ -305,7 +305,7 @@ const NEW_LINES = [
 ];
 const OWNER_IT = { 'FR-DIS-100': 'clara.dupont@fromage-co.com', 'FR-DIS-200': 'lucas.bernard@fromage-co.com', 'FR-DIS-300': 'pierre.martin@fromage-co.com', 'NL-DIS-300': 'jan.bakker@kaasmeester.nl',
   'FR-BOU-100': 'amelie.rousseau@fromage-co.com', 'FR-BOU-310': 'nadia.lemaire@fromage-co.com', 'IT-BOU-310': 'luca.ferrari@formaggio-supremo.it', 'US-BOU-310': 'mike.johnson@fromage-co.com',
-  'FR-TRV-400': 'marc.petit@fromage-co.com', 'FR-TRV-500': 'olivier.garnier@fromage-co.com', 'FR-TRV-600': 'ines.chevalier@fromage-co.com', 'FR-TRV-700': 'marie.fontaine@fromage-co.com' };
+  'FR-TRV-400': 'marc.petit@fromage-co.com', 'FR-TRV-500': 'olivier.garnier@fromage-co.com', 'FR-TRV-600': 'ines.chevalier@fromage-co.com', 'FR-TRV-700': 'maria.casanova@fromage-co.com' };
 const OWNER_BUSINESS = { 'DIV-DIS': 'isabelle.moreau@fromage-co.com', 'DIV-BOU': 'isabelle.moreau@fromage-co.com', 'DIV-TRV': 'thomas.berger@fromage-co.com' };
 const ccGroup = Object.fromEntries(CC.map((c) => [c[0], c[2]]));
 

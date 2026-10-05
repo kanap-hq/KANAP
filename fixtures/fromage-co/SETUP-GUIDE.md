@@ -126,7 +126,7 @@ the fixture works without AI.
 | Tenant owner | the `--email` you passed | Administrator |
 | Thomas Berger (CIO) | `thomas.berger@fromage-co.com` | Administrator |
 | Sophie Laurent | `sophie.laurent@fromage-co.com` | IT Landscape Administrator |
-| Marie Fontaine (controller) | `marie.fontaine@fromage-co.com` | Budget Administrator |
+| Maria Casanova (controller) | `maria.casanova@fromage-co.com` | Budget Administrator |
 | Nadia Lemaire (shops and e-commerce operations) | `nadia.lemaire@fromage-co.com` | Budget Member |
 
 All demo users share the `--demo-password` (default `Fromage2026!`).
