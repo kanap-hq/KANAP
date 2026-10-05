@@ -34,6 +34,7 @@ import {
   countsFte,
   dateProblem,
   dayChangeText,
+  followsLines,
   formatFteValue,
   formatMoney,
   hasLines,
@@ -296,6 +297,10 @@ export default function LinesPanel({
   const queryClient = useQueryClient();
 
   const storedLines = React.useMemo(() => record?.lines ?? [], [record]);
+  // Lines kept as a reference (stored lines, amounts from a spread, a hand edit or a copy): read-only
+  // until « Use the lines again » computes the column from them.
+  const reference = hasLines(record) && !followsLines(record);
+  const readOnly = frozen || reference;
   const [drafts, setDrafts] = React.useState<LineDraft[]>(() => (startLines ? startLines.map((line) => draftOf(line as RoundLine)) : storedLines.map(draftOf)));
   const draftsRef = React.useRef(drafts);
   // What the server holds (or was last asked to hold): a commit that would send the same lines writes nothing.
@@ -489,8 +494,9 @@ export default function LinesPanel({
       .map(([id, name]) => calendars.byId.get(id)?.name ?? name)
     : [];
 
-  // The stored explanation: the amount of each line and the column's total.
-  const calc: LinesCalculation | null = record?.last_calculation?.kind === 'computed' ? record.last_calculation : null;
+  // The stored explanation: the amount of each line and the column's total. Only while the column
+  // follows its lines: a hand edit keeps an explanation the amounts no longer match.
+  const calc: LinesCalculation | null = followsLines(record) && record?.last_calculation?.kind === 'computed' ? record.last_calculation : null;
   const amounts = React.useMemo(() => {
     let index = 0;
     return drafts.map((draft) => {
@@ -583,7 +589,7 @@ export default function LinesPanel({
     <TextField
       select size="small" variant="standard" fullWidth={sx === tableCellTextFieldSx} value={value}
       onChange={(e) => onChange(e.target.value)}
-      disabled={frozen}
+      disabled={readOnly}
       inputProps={{ 'aria-label': label }}
       SelectProps={selectKeepsFocus}
       sx={sx}
@@ -603,7 +609,7 @@ export default function LinesPanel({
       size="small" variant="standard" fullWidth value={draft.label}
       onChange={(e) => patchLine(draft.key, { label: e.target.value })}
       onBlur={commit} onKeyDown={onEnter}
-      disabled={frozen}
+      disabled={readOnly}
       inputRef={focusIfTarget(draft.key)}
       placeholder={t('budgetTab.lines.descriptionPlaceholder')}
       inputProps={{ 'aria-label': t('budgetTab.lines.description'), maxLength: 200 }}
@@ -615,7 +621,7 @@ export default function LinesPanel({
       value={draft.quantity} decimals={3} emit="string"
       onChange={(e) => patchLine(draft.key, { quantity: String(e.target.value ?? '') })}
       onBlur={commit} onKeyDown={onEnter}
-      disabled={frozen}
+      disabled={readOnly}
       variant="standard" size="small" fullWidth
       placeholder={t('budgetTab.lines.quantityPlaceholder')}
       inputProps={{ 'aria-label': t('budgetTab.lines.quantity') }}
@@ -636,7 +642,7 @@ export default function LinesPanel({
           value={draft.unitPrice} decimals={4} emit="string"
           onChange={(e) => patchLine(draft.key, { unitPrice: String(e.target.value ?? '') })}
           onBlur={commit} onKeyDown={onEnter}
-          disabled={frozen}
+          disabled={readOnly}
           variant="standard" size="small" fullWidth
           placeholder={t('budgetTab.lines.unitPricePlaceholder')}
           inputProps={{ 'aria-label': t('budgetTab.lines.unitPrice') }}
@@ -660,7 +666,7 @@ export default function LinesPanel({
       <FormControlLabel
         control={(
           <Checkbox
-            size="small" checked={draft.fullTime} disabled={frozen}
+            size="small" checked={draft.fullTime} disabled={readOnly}
             onChange={(e) => patchAndCommit(draft.key, { fullTime: e.target.checked })}
             sx={{ p: '2px', mr: 0.5 }}
           />
@@ -675,7 +681,7 @@ export default function LinesPanel({
               value={draft.daysPerMonth} decimals={3} emit="string"
               onChange={(e) => patchLine(draft.key, { daysPerMonth: String(e.target.value ?? '') })}
               onBlur={commit} onKeyDown={onEnter}
-              disabled={frozen}
+              disabled={readOnly}
               variant="standard" size="small" fullWidth
               placeholder={t('budgetTab.lines.daysPerMonthPlaceholder')}
               inputProps={{ 'aria-label': t('budgetTab.lines.daysPerMonth') }}
@@ -699,7 +705,7 @@ export default function LinesPanel({
   // From and To, or the one date of pieces bought once in the From place (To stays empty).
   const dateFields = (draft: LineDraft): [React.ReactNode, React.ReactNode] => (isDateDraft(draft) ? [
     <DateEUField
-      label={t('budgetTab.lines.date')} hideLabel size="small" disabled={frozen}
+      label={t('budgetTab.lines.date')} hideLabel size="small" disabled={readOnly}
       valueYmd={draft.start}
       onChangeYmd={(value) => patchAndCommit(draft.key, { start: value, end: value })}
       textFieldSx={tableCellTextFieldSx}
@@ -707,13 +713,13 @@ export default function LinesPanel({
     null,
   ] : [
     <DateEUField
-      label={t('budgetTab.from')} hideLabel size="small" disabled={frozen}
+      label={t('budgetTab.from')} hideLabel size="small" disabled={readOnly}
       valueYmd={draft.start}
       onChangeYmd={(value) => patchAndCommit(draft.key, { start: value })}
       textFieldSx={tableCellTextFieldSx}
     />,
     <DateEUField
-      label={t('budgetTab.to')} hideLabel size="small" disabled={frozen}
+      label={t('budgetTab.to')} hideLabel size="small" disabled={readOnly}
       valueYmd={draft.end}
       onChangeYmd={(value) => patchAndCommit(draft.key, { end: value })}
       textFieldSx={tableCellTextFieldSx}
@@ -734,7 +740,7 @@ export default function LinesPanel({
       {amounts[index]}
     </Box>
   );
-  const removeButton = (draft: LineDraft) => !frozen && (
+  const removeButton = (draft: LineDraft) => !readOnly && (
     <Tooltip title={t('budgetTab.lines.remove')}>
       <IconButton
         size="small"
@@ -767,6 +773,8 @@ export default function LinesPanel({
   );
   const fromHead = allDates ? t('budgetTab.lines.date') : t('budgetTab.from');
   const toHead = allDates ? '' : t('budgetTab.to');
+  // Lines kept as a reference have no amount of their own: the column keeps its place, blank.
+  const amountHead = reference ? '' : t('budgetTab.amount');
 
   const oneRowTable = (
     <Box
@@ -784,7 +792,7 @@ export default function LinesPanel({
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.from }}>{fromHead}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.to }}>{toHead}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.calendar }}>{t('budgetTab.lines.calendar')}</Box>
-          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.amount, textAlign: 'right' }}>{t('budgetTab.amount')}</Box>
+          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.amount, textAlign: 'right' }}>{amountHead}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.remove }} />
         </Box>
       </Box>
@@ -823,7 +831,7 @@ export default function LinesPanel({
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.quantity, textAlign: 'right' }}>{t('budgetTab.lines.quantity')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unit }}>{t('budgetTab.lines.unit')}</Box>
           {unitPriceHead}
-          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.amount, textAlign: 'right' }}>{t('budgetTab.amount')}</Box>
+          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.amount, textAlign: 'right' }}>{amountHead}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.remove }} />
         </Box>
         <Box component="tr" data-testid="lines-head-timing">
@@ -872,7 +880,7 @@ export default function LinesPanel({
         {drafts.length === 0 ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Typography sx={captionSx}>{t('budgetTab.lines.empty')}</Typography>
-            {!frozen && (
+            {!readOnly && (
               <Button ref={focusIfTarget(ADD_LINE)} size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, py: 0 }}>
                 {t('budgetTab.lines.add')}
               </Button>
@@ -883,7 +891,7 @@ export default function LinesPanel({
             <Box sx={{ overflowX: 'auto' }}>
               {twoRows ? twoRowsTable : oneRowTable}
             </Box>
-            {!frozen && (
+            {!readOnly && (
               <Button ref={focusIfTarget(ADD_LINE)} size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, mt: 0.5 }}>
                 {t('budgetTab.lines.add')}
               </Button>
@@ -931,7 +939,7 @@ export default function LinesPanel({
         {frozen && <Typography sx={captionSx}>{frozenHint}</Typography>}
       </Box>
 
-      {applyToAll.offered && (
+      {applyToAll.offered && !reference && (
         <Box>
           <FormControlLabel
             control={<Switch size="small" checked={applyToAll.on} disabled={frozen} onChange={(e) => toggleApplyToAll(e.target.checked)} />}

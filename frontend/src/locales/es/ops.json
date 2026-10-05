@@ -1281,6 +1281,15 @@
     "applyToAllOthers_one": "{{columns}} conserva su propio periodo.",
     "applyToAllOthers_other": "{{columns}} conservan su propio periodo.",
     "applyToAllFrozen": "Las columnas congeladas nunca cambian.",
+    "keepLines_one": "{{columns}} conserva sus líneas.",
+    "keepLines_other": "{{columns}} conservan sus líneas.",
+    "spreadLock": {
+      "fromLines_one": "Los importes vienen de {{count}} línea de Cantidad y precio.",
+      "fromLines_other": "Los importes vienen de las {{count}} líneas de Cantidad y precio.",
+      "unlock": "Repartir un importe en su lugar",
+      "unlocked": "Un reparto reemplaza los importes de las líneas. Las líneas se mantienen como referencia."
+    },
+    "totalFromLines": "Calculado a partir de sus líneas. Abra Cantidad y precio para cambiarlo.",
     "conflict": {
       "waiting": "Elija primero, arriba, si recarga esta columna o la sobrescribe.",
       "yearTotal": "{{amount}} en el año",

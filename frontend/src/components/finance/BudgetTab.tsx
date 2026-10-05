@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { Alert, Box, FormControlLabel, IconButton, MenuItem, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, FormControlLabel, IconButton, Link, MenuItem, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -46,6 +46,7 @@ import {
   chipLines,
   chipText,
   columnPeriod,
+  followsLines,
   joinList,
   linePayloadOf,
   periodForEdit,
@@ -228,6 +229,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const [roundInputs, setRoundInputs] = React.useState<RoundInput[]>([]);
   // Columns that held a non-zero month when loaded: without a stored period they read as the whole year.
   const [storedAmounts, setStoredAmounts] = React.useState<Record<AmountCol, boolean>>(NO_STORED_AMOUNTS);
+  // A column's stored record (its period, how it was produced, its lines), as loaded or written.
+  const recordFor = (col: AmountCol) => roundInputs.find((r) => r.measure === col);
 
   // Spread panel state. `spreadDates` is null until the user edits a date: the
   // column's own period is shown until then. The panel starts on the default
@@ -249,6 +252,13 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   const [panelOpen, setPanelOpen] = React.useState(false);
   // The panel box holds one panel at a time: spread an amount, or quantity and price.
   const [panelKind, setPanelKind] = React.useState<'spread' | 'lines'>('spread');
+  // A column that follows its lines locks "Spread an amount"; « Spread an amount instead » unlocks it
+  // for that column until the column, the year or the panel changes.
+  const [unlockedMeasure, setUnlockedMeasure] = React.useState<AmountCol | null>(null);
+  const amountInputRef = React.useRef<HTMLInputElement | null>(null);
+  const focusAmountRef = React.useRef(false);
+  // The year whose first load chose the panel's tab: a later full load (a view change) leaves it alone.
+  const panelSeededYearRef = React.useRef<number | null>(null);
   // Panel writes (spread and lines) run one after the other, so a response never overwrites a newer one.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
   const [writesPending, setWritesPending] = React.useState(0);
@@ -435,6 +445,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     const restoredCell = new Map((restore?.cells ?? []).map((c) => [`${c.period}:${c.col}`, c.value]));
     const restoredTotal = new Map((restore?.totals ?? []).map((c) => [c.col, c.value]));
     const v = snapshot.version;
+    // The year's first load: a panel column that follows its lines opens on "Quantity and price".
+    const seedPanel = !quiet && panelSeededYearRef.current !== year;
+    if (seedPanel) panelSeededYearRef.current = year;
     if (!v) {
       setVersion(null);
       setMode(chosenViewRef.current ?? initialBudgetView(userIdRef.current, null));
@@ -484,6 +497,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     const loadedInputs = Array.isArray(amt?.round_inputs) ? amt!.round_inputs! : [];
     roundInputsRef.current = loadedInputs;
     setRoundInputs(loadedInputs);
+    if (seedPanel && followsLines(loadedInputs.find((r) => r.measure === spreadMeasureRef.current))) setPanelKind('lines');
     ALL_COLS.forEach((col) => {
       if (!(quiet && isColumnWaiting(col))) serverLinesRef.current[col] = (loadedInputs.find((r) => r.measure === col)?.lines ?? []).map(linePayloadOf);
     });
@@ -570,6 +584,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   // A year switch closes the panel: its total belongs to the previous year.
   React.useEffect(() => {
     setPanelOpen(false);
+    setUnlockedMeasure(null);
     showSpreadAmount('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year]);
@@ -932,10 +947,16 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     setSpreadProfile(profileOf(measure, roundInputsRef.current));
     showSpreadAmount(amountOrEmpty(currentCents(measure)));
   };
+  // A column that follows its lines shows them: "Quantity and price". A column without lines leaves the tab as it is.
+  const showLinesOf = (measure: AmountCol) => {
+    setUnlockedMeasure(null);
+    if (followsLines(recordFor(measure))) setPanelKind('lines');
+  };
   const onSpreadMeasureChange = (measure: AmountCol) => {
     setSpreadMeasure(measure);
     syncedMeasureRef.current = measure;
     resetSpreadFields(measure);
+    showLinesOf(measure);
   };
   // The panel's column can also change without a pick: the setting arrives with another
   // default column, or the picked column is hidden. Its total and distribution follow.
@@ -944,7 +965,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     if (syncedMeasureRef.current === spreadMeasure) return;
     syncedMeasureRef.current = spreadMeasure;
     resetSpreadFields(spreadMeasure);
-    // resetSpreadFields reads the latest state of this render.
+    showLinesOf(spreadMeasure);
+    // resetSpreadFields and showLinesOf read the latest state of this render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spreadMeasure]);
 
@@ -958,15 +980,34 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   // The panel's column waits for the user's choice: nothing is written to it until it is made.
   const spreadWaiting = isWaiting(spreadMeasure);
   const offerApplyToAll = groupOthers.length > 0;
-  const alsoSpread = offerApplyToAll && spreadAllColumns ? groupOthers.map((c) => c.measure) : [];
-  // Yearly view: open the panel on one column with its current total.
+  // A spread leaves out the group's columns that follow their lines: they keep their lines' amounts.
+  const spreadOthers = groupOthers.filter((c) => !followsLines(recordFor(c.measure)));
+  const keepLinesOthers = groupOthers.filter((c) => followsLines(recordFor(c.measure)));
+  const offerSpreadToAll = spreadOthers.length > 0;
+  const alsoSpread = offerSpreadToAll && spreadAllColumns ? spreadOthers.map((c) => c.measure) : [];
+  // The panel's column follows its lines: "Spread an amount" is read-only until the user unlocks it.
+  const spreadFollowsLines = followsLines(recordFor(spreadMeasure));
+  const spreadLocked = spreadFollowsLines && unlockedMeasure !== spreadMeasure;
+  const unlockSpread = () => {
+    focusAmountRef.current = true;
+    setUnlockedMeasure(spreadMeasure);
+  };
+  // The amount field takes the focus once unlocked.
+  React.useEffect(() => {
+    const input = amountInputRef.current;
+    if (!focusAmountRef.current || !input || input.disabled) return;
+    focusAmountRef.current = false;
+    input.focus();
+  }, [unlockedMeasure]);
+  // Yearly view: open the panel on one column with its current total; on its lines when it follows them.
   const openSpreadPanel = (measure: AmountCol) => {
     setSpreadMeasure(measure);
     syncedMeasureRef.current = measure;
     setSpreadDates(null);
     setSpreadProfile(profileOf(measure, roundInputs));
     showSpreadAmount(amountOrEmpty(toCents(flat[measure])));
-    setPanelKind('spread');
+    setUnlockedMeasure(null);
+    setPanelKind(followsLines(recordFor(measure)) ? 'lines' : 'spread');
     setPanelOpen(true);
   };
   // Yearly view: open the same box on "Quantity and price" for one column.
@@ -976,12 +1017,14 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   };
   const closeSpreadPanel = () => {
     setPanelOpen(false);
+    setUnlockedMeasure(null);
     setSpreadDates(null);
     showSpreadAmount('');
   };
   // Back on the spread tab, it shows the column as it is now (the lines may have changed it).
   const onPanelKindChange = (kind: 'spread' | 'lines') => {
     if (kind === 'spread') resetSpreadFields(spreadMeasure);
+    setUnlockedMeasure(null);
     setPanelKind(kind);
   };
 
@@ -1046,10 +1089,12 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
     const typed = next.amount !== undefined ? next.amount : spreadAmount;
     const dates = next.dates ?? spreadPeriod;
     const amount = Number(typed || 0);
-    if (!amount || spreadFrozen || spreadWaiting || periodProblem(year, dates.start, dates.end)) return;
+    // A column that follows its lines is not spread until the user unlocks it.
+    if (!amount || spreadLocked || spreadFrozen || spreadWaiting || periodProblem(year, dates.start, dates.end)) return;
     // The total in cents, sent as a two-decimal string: no float sum reaches the server. The other
-    // columns of "apply to all" are spread by the server from their stored totals (never the screen's).
-    const also = next.also ?? alsoSpread;
+    // columns of "apply to all" are spread by the server from their stored totals (never the screen's);
+    // those that follow their lines keep them.
+    const also = (next.also ?? alsoSpread).filter((m) => !followsLines(recordFor(m)));
     committedAmountRef.current = typed;
     setError(null);
     writePanel({
@@ -1086,7 +1131,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
   // Turned on, the spread goes to the group's columns at once; turned off, nothing is written.
   const onSpreadAllColumnsChange = (on: boolean) => {
     setSpreadAllColumns(on);
-    if (on) commitSpread({ also: groupOthers.map((c) => c.measure) });
+    if (on) commitSpread({ also: spreadOthers.map((c) => c.measure) });
   };
 
   // Every complete line of the panel's column, and of the group's columns when asked. `startedFrom`:
@@ -1298,7 +1343,6 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
       changed_at: c.changed_at,
     };
   });
-  const recordFor = (col: AmountCol) => roundInputs.find((r) => r.measure === col);
   const periodTextOf = (period: Period | null) => (period ? periodText(t, locale, activeMonths(year, period.start, period.end)) : '');
 
   const savingHint = writesPending > 0 || autosave.status === 'saving' || autosave.status === 'pending'
@@ -1349,8 +1393,10 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
             onChange={(e) => setSpreadAmount(e.target.value as unknown as number | '')}
             onBlur={commitSpreadAmount}
             onKeyDown={(e) => { if (e.key === 'Enter') commitSpread(); }}
-            // The column waits for a choice: read-only until it is made, as the lines panel.
-            disabled={spreadWaiting}
+            // The column waits for a choice: read-only until it is made, as the lines panel. A column
+            // that follows its lines: read-only until « Spread an amount instead ».
+            disabled={spreadWaiting || spreadLocked}
+            inputRef={amountInputRef}
             variant="standard" size="small" fullWidth
             placeholder={t(`${config.i18nPrefix}.budget.spreadPlaceholder`)}
             inputProps={{ 'aria-label': t('budgetTab.amount') }}
@@ -1359,7 +1405,7 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
         {panelField(t('budgetTab.distribution'), 120, (
           <TextField
             select size="small" variant="standard" value={spreadProfile}
-            disabled={spreadWaiting}
+            disabled={spreadWaiting || spreadLocked}
             onChange={(e) => onSpreadProfileChange(e.target.value as 'flat' | '4-4-5')}
             inputProps={{ 'aria-label': t('budgetTab.distribution') }}
             SelectProps={selectKeepsFocus}
@@ -1370,8 +1416,8 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
           </TextField>
         ))}
         <PanelPeriod>
-          <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} disabled={spreadWaiting} size="small" sx={{ width: 150 }} />
-          <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} disabled={spreadWaiting} size="small" sx={{ width: 150 }} />
+          <DateEUField label={t('budgetTab.from')} valueYmd={spreadPeriod.start} onChangeYmd={(v) => onSpreadDateChange('start', v)} disabled={spreadWaiting || spreadLocked} size="small" sx={{ width: 150 }} />
+          <DateEUField label={t('budgetTab.to')} valueYmd={spreadPeriod.end} onChangeYmd={(v) => onSpreadDateChange('end', v)} disabled={spreadWaiting || spreadLocked} size="small" sx={{ width: 150 }} />
         </PanelPeriod>
       </Box>
       {/* Only the lines that apply: a whole-year period shows none. */}
@@ -1394,10 +1440,10 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
           )}
         </Box>
       )}
-      {offerApplyToAll && (
+      {offerSpreadToAll && (
         <Box>
           <FormControlLabel
-            control={<Switch size="small" checked={spreadAllColumns} disabled={spreadWaiting} onChange={(e) => onSpreadAllColumnsChange(e.target.checked)} />}
+            control={<Switch size="small" checked={spreadAllColumns} disabled={spreadWaiting || spreadLocked} onChange={(e) => onSpreadAllColumnsChange(e.target.checked)} />}
             label={(
               <Tooltip title={applyToAllHint}>
                 <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('budgetTab.applyDistributionToAll')}</Typography>
@@ -1405,7 +1451,26 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
             )}
             sx={{ ml: 0 }}
           />
+          {keepLinesOthers.length > 0 && (
+            <Typography data-testid="spread-keep-lines" sx={captionSx}>
+              {t('budgetTab.keepLines', { count: keepLinesOthers.length, columns: keepLinesOthers.map((c) => labelFor(c.measure)).join(', ') })}
+            </Typography>
+          )}
         </Box>
+      )}
+      {/* The column follows its lines: one source of amounts at a time, the other one step away. */}
+      {spreadFollowsLines && (
+        <Typography data-testid="spread-lock" sx={captionSx}>
+          {spreadLocked ? (
+            <>
+              {t('budgetTab.spreadLock.fromLines', { count: recordFor(spreadMeasure)?.lines.length ?? 0 })}
+              {' '}
+              <Link component="button" type="button" onClick={unlockSpread} sx={{ fontSize: 12, verticalAlign: 'baseline' }}>
+                {t('budgetTab.spreadLock.unlock')}
+              </Link>
+            </>
+          ) : t('budgetTab.spreadLock.unlocked')}
+        </Typography>
       )}
     </>
   );
@@ -1517,6 +1582,9 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
               const chip = loaded ? chipOf(recordFor(m.measure)) : '';
               const isFrozen = frozen[m.freezeKey];
               const waits = waitingSet.has(m.measure);
+              // Computed from its lines: the total is read-only, a click or Enter opens its lines.
+              const fromLines = loaded && followsLines(recordFor(m.measure));
+              const opensLines = fromLines && !isFrozen && !waits && !loading;
               return (
                 <Box
                   key={m.measure}
@@ -1560,14 +1628,21 @@ export default forwardRef<BudgetTabHandle, Props>(function BudgetTab({ id, year,
                       </Box>
                     )}
                   </Box>
-                  <FormattedNumberField
-                    value={flat[m.measure]}
-                    onChange={(e) => onFlatChange(m.measure, (e.target.value as unknown as number | ''))}
-                    variant="standard"
-                    disabled={loading || isFrozen || noMonth}
-                    InputProps={{ readOnly: isFrozen || waits }}
-                    sx={{ maxWidth: 220, '& .MuiInputBase-input': { fontSize: '15px !important', fontWeight: 500 } }}
-                  />
+                  <Tooltip title={opensLines ? t('budgetTab.totalFromLines') : ''} describeChild>
+                    <Box sx={{ maxWidth: 220 }}>
+                      <FormattedNumberField
+                        value={flat[m.measure]}
+                        onChange={(e) => onFlatChange(m.measure, (e.target.value as unknown as number | ''))}
+                        onClick={opensLines ? () => openLinesPanel(m.measure) : undefined}
+                        onKeyDown={opensLines ? (e) => { if (e.key === 'Enter') openLinesPanel(m.measure); } : undefined}
+                        variant="standard"
+                        fullWidth
+                        disabled={loading || isFrozen || noMonth}
+                        InputProps={{ readOnly: isFrozen || waits || fromLines }}
+                        sx={{ '& .MuiInputBase-input': { fontSize: '15px !important', fontWeight: 500 } }}
+                      />
+                    </Box>
+                  </Tooltip>
                   {loaded && (
                     <Tooltip title={linesOf(m.measure)} componentsProps={multilineTooltip}>
                       {/* How the column was produced, then its period: one line each, never run together. */}

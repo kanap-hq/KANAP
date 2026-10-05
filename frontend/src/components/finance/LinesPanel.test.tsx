@@ -535,6 +535,77 @@ describe('LinesPanel', () => {
     }
   });
 
+  it('lines kept as a reference are read-only, without amounts or FTE; Use the lines again stays active', async () => {
+    const line = storedLine();
+    const computed = roundWith([line]).last_calculation;
+    const cases: Array<[Partial<RoundInput>, string]> = [
+      // A hand edit keeps the explanation of the last computation: its amounts no longer hold.
+      [{ method: 'manual', last_calculation: computed }, 'Amounts were entered by hand.'],
+      [{ method: 'spread', last_calculation: { kind: 'annual', total: '1.00', profile: 'flat', active_months: [1], weights: [] } }, 'Amounts come from a spread.'],
+      [{
+        method: 'copied',
+        last_calculation: { kind: 'copy', source_year: 2025, source_measure: 'planned', uplift_pct: '0', source_total: '1.00', total: '1.00', source_method: 'computed' },
+      }, 'Amounts were copied from Budget 2025.'],
+    ];
+    for (const [over, text] of cases) {
+      const { onSave, unmount } = renderPanel({
+        record: roundWith([line], over),
+        applyToAll: { offered: true, on: false, hint: 'hint', onChange: vi.fn() },
+      });
+      // Read-only: no field, no remove, no Add a line, no Apply these lines to all columns.
+      expect(screen.getByLabelText('Description')).toBeDisabled();
+      expect(screen.getByLabelText('Unit price')).toBeDisabled();
+      expect(screen.getByLabelText('days per month')).toBeDisabled();
+      expect(screen.getByRole('checkbox', { name: 'Full time' })).toBeDisabled();
+      for (const date of dates(0)) expect(date).toBeDisabled();
+      expect(combo(0, 'Unit')).toHaveAttribute('aria-disabled', 'true');
+      expect(screen.queryByRole('button', { name: 'Remove the line' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a line' })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Apply these lines to all columns')).not.toBeInTheDocument();
+      // The Amount column keeps its place, blank; no FTE line.
+      expect(heads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', '', '']);
+      expect(screen.getByTestId('line-amount')).toHaveTextContent(/^$/);
+      expect(screen.queryByTestId('lines-fte')).not.toBeInTheDocument();
+      // A field left without a change sends nothing.
+      fireEvent.blur(screen.getByLabelText('Unit price'));
+      expect(onSave).not.toHaveBeenCalled();
+
+      expect(screen.getByTestId('lines-status')).toHaveTextContent(`${text} Use the lines again.`);
+      fireEvent.click(screen.getByRole('button', { name: 'Use the lines again.' }));
+      await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+      expect(onSave.mock.calls[0][0]).toEqual([expect.objectContaining({ label: 'Project manager', unit_price: '900' })]);
+      unmount();
+    }
+  });
+
+  it('once computed from its lines again, the table is editable and shows the amounts', async () => {
+    const line = storedLine();
+    const { rerender } = renderPanel({
+      record: roundWith([line], { method: 'spread', last_calculation: { kind: 'annual', total: '1.00', profile: 'flat', active_months: [1], weights: [] } }),
+      applyToAll: { offered: true, on: false, hint: 'hint', onChange: vi.fn() },
+    });
+    expect(screen.getByLabelText('Unit price')).toBeDisabled();
+
+    rerender({ record: roundWith([line]) });
+    await waitFor(() => expect(screen.getByLabelText('Unit price')).not.toBeDisabled());
+    expect(heads()).toContain('Amount');
+    expect(screen.getByTestId('line-amount')).toHaveTextContent('27 000');
+    expect(screen.getByTestId('lines-fte')).toBeInTheDocument();
+    expect(screen.queryByTestId('lines-status')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove the line' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add a line' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Apply these lines to all columns')).toBeInTheDocument();
+  });
+
+  it('lines typed and not saved yet on a column without stored lines are editable', () => {
+    // A spread column with no stored line: nothing is kept as a reference.
+    renderPanel({ record: roundWith([], { method: 'spread', last_calculation: null }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    expect(screen.getByLabelText('Unit price')).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remove the line' })).toBeInTheDocument();
+    expect(heads()).toContain('Amount');
+  });
+
   it('names the working days that changed since the last computation', async () => {
     const now = [...DAYS_2026]; now[2] = '21';
     yearDays.byId = { fr: now };

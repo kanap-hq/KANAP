@@ -2497,3 +2497,228 @@ describe('BudgetTab others\' changes (lot 3G)', () => {
     await waitFor(() => expect(amountField()).toHaveValue('13 200'));
   });
 });
+
+/* ---- Quantity and price take precedence over a spread ---- */
+
+describe('BudgetTab quantity and price take precedence over a spread', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+    calendarsState.list = [FRANCE, UNITED_STATES];
+  });
+
+  const panelTab = (name: 'Spread an amount' | 'Quantity and price') => screen.getByRole('tab', { name });
+  const pickColumn = async (name: string) => {
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Column' }));
+    fireEvent.click(await screen.findByRole('option', { name }));
+  };
+
+  it('the yearly pencil opens a column that follows its lines on Quantity and price, another on Spread an amount', async () => {
+    setupApi({ grain: 'annual', roundInputs: [linesRecord()] });
+    renderTab();
+    await waitForAmounts();
+
+    fireEvent.click(within(screen.getByTestId('column-title-planned')).getByRole('button', { name: 'Change period' }));
+    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
+    expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.click(within(screen.getByTestId('column-title-committed')).getByRole('button', { name: 'Change period' }));
+    await waitFor(() => expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true'));
+    expect(amountField()).not.toBeDisabled();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+
+  it('the monthly view opens on Quantity and price when its default column follows its lines', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    renderTab();
+    await waitForAmounts();
+
+    await waitFor(() => expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true'));
+    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
+  });
+
+  it('a column picked in either tab that follows its lines takes the panel to them; a column without lines leaves the tab as it is', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
+    renderTab();
+    await waitForAmounts();
+    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
+
+    // The spread tab's picker: Revision follows its lines.
+    await pickColumn('Revision');
+    await waitFor(() => expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true'));
+    expect(screen.getByLabelText('Description')).toHaveValue('US Managed IT Services');
+    // The lines tab's picker: Budget has no line, the tab stays.
+    await pickColumn('Budget');
+    await waitFor(() => expect(screen.getByText('No line yet. A line is a quantity times a unit price.')).toBeInTheDocument());
+    expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+    // Back on Spread an amount, Actuals has no line: the tab stays.
+    fireEvent.click(panelTab('Spread an amount'));
+    await pickColumn('Actuals');
+    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
+    expect(amountField()).not.toBeDisabled();
+  });
+
+  it('a default column changed by the setting while the tab is open takes the panel to its lines', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
+    const { rerenderYear } = renderTab();
+    await waitForAmounts();
+    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
+
+    columnsSetting.current = { ...ALL_SHOWN, default_column: 'committed' };
+    rerenderYear(YEAR);
+    await waitFor(() => expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true'));
+    expect(screen.getByRole('combobox', { name: 'Column' })).toHaveTextContent('Revision');
+  });
+
+  it('a reload, after a save or for someone else\'s change, never switches the tab under the user', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    routePosts();
+    const { ref, container } = renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true'));
+
+    fireEvent.click(panelTab('Spread an amount'));
+    // A grid save reloads the year.
+    const loads = amountLoads();
+    fireEvent.change(cell(gridCells(container), 3, 1), { target: { value: '450' } });
+    await flush(ref);
+    await waitFor(() => expect(amountLoads()).toBe(loads + 1));
+    await settle();
+    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
+    // Someone else's change.
+    await act(async () => { await ref.current?.reloadFromServer(); });
+    await settle();
+    expect(panelTab('Spread an amount')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('Spread an amount is locked on a column that follows its lines: its fields show the column, disabled, and nothing is written', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord()] });
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+    fireEvent.click(panelTab('Spread an amount'));
+
+    expect(amountField()).toHaveValue('12 000');
+    expect(amountField()).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Distribution' })).toHaveAttribute('aria-disabled', 'true');
+    const [from, to] = screen.getAllByPlaceholderText('labels.datePlaceholder');
+    expect(from).toBeDisabled();
+    expect(to).toBeDisabled();
+    expect(screen.getByLabelText('Apply the distribution to all columns')).toBeDisabled();
+    expect(screen.getByTestId('spread-lock')).toHaveTextContent(/^The amounts come from the 1 line of Quantity and price\. Spread an amount instead$/);
+    // The column picker stays.
+    expect(screen.getByRole('combobox', { name: 'Column' })).not.toHaveAttribute('aria-disabled');
+
+    // Whatever reaches the fields, the locked column is never spread: leaving, Enter, a date.
+    fireEvent.change(amountField(), { target: { value: '20000' } });
+    fireEvent.blur(amountField());
+    fireEvent.keyDown(amountField(), { key: 'Enter' });
+    typeDate(from, '01/07/2026');
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+
+  it('Spread an amount instead unlocks the column, focuses the amount and spreads it; the lock comes back with the panel', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord(), linesRecord(undefined, { measure: 'forecast' })] });
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+    fireEvent.click(panelTab('Spread an amount'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Spread an amount instead' }));
+    await waitFor(() => expect(amountField()).not.toBeDisabled());
+    expect(document.activeElement).toBe(amountField());
+    expect(screen.getByTestId('spread-lock')).toHaveTextContent(/^A spread replaces the amounts of the lines\. The lines stay as a reference\.$/);
+    expect(screen.getByRole('combobox', { name: 'Distribution' })).not.toHaveAttribute('aria-disabled');
+
+    // Another panel and back: locked again.
+    fireEvent.click(panelTab('Quantity and price'));
+    fireEvent.click(panelTab('Spread an amount'));
+    expect(amountField()).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Spread an amount instead' }));
+    await waitFor(() => expect(amountField()).not.toBeDisabled());
+
+    typeAmount('20000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    // Forecast follows its lines too: it keeps them.
+    expect(written(bulkCalls()[0][1])).toEqual({
+      kind: 'annual',
+      year: YEAR,
+      totals: { planned: '20000.00' },
+      also_measures: ['committed', 'actual', 'expected_landing'],
+      spread_profile_name: 'flat',
+      period_start: '2026-03-01',
+      period_end: '2026-12-31',
+    });
+  });
+
+  it('Apply the distribution to all columns leaves out the columns that follow their lines, and says so', async () => {
+    setupApi({
+      grain: 'monthly',
+      roundInputs: [linesRecord(undefined, { measure: 'committed' }), linesRecord(undefined, { measure: 'forecast' })],
+    });
+    routePosts();
+    renderTab();
+    await waitForAmounts();
+
+    expect(screen.getByTestId('spread-keep-lines')).toHaveTextContent(/^Revision, Forecast keep their lines\.$/);
+    typeAmount('24000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].also_measures).toEqual(['actual', 'expected_landing']);
+
+    // Off, then on: the spread goes to the same columns at once.
+    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
+    fireEvent.click(screen.getByLabelText('Apply the distribution to all columns'));
+    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    expect(bulkCalls()[1][1].also_measures).toEqual(['actual', 'expected_landing']);
+  });
+
+  it('one column that follows its lines is named alone; when every other column does, no switch is offered', async () => {
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
+    const first = renderTab();
+    await waitForAmounts();
+    expect(screen.getByTestId('spread-keep-lines')).toHaveTextContent(/^Revision keeps its lines\.$/);
+    first.unmount();
+
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, actual: false, expected_landing: false } };
+    setupApi({ grain: 'monthly', roundInputs: [linesRecord(undefined, { measure: 'committed' })] });
+    renderTab();
+    await waitForAmounts(2);
+    expect(screen.queryByText('Apply the distribution to all columns')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('spread-keep-lines')).not.toBeInTheDocument();
+    typeAmount('5000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(bulkCalls()[0][1].totals).toEqual({ planned: '5000.00' });
+    expect(bulkCalls()[0][1].also_measures).toBeUndefined();
+  });
+
+  it('the yearly total of a column that follows its lines is read-only; a click or Enter opens its lines', async () => {
+    setupApi({ grain: 'annual', roundInputs: [linesRecord()] });
+    renderTab();
+    await waitForAmounts();
+
+    const [budget, revision] = screen.getAllByRole('textbox');
+    expect(budget).toHaveAttribute('readonly');
+    expect(revision).not.toHaveAttribute('readonly');
+    fireEvent.mouseOver(budget);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Calculated from its lines. Open Quantity and price to change it.');
+
+    fireEvent.click(budget);
+    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
+    expect(panelTab('Quantity and price')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    await waitFor(() => expect(screen.queryByLabelText('Description')).not.toBeInTheDocument());
+
+    fireEvent.keyDown(screen.getAllByRole('textbox')[0], { key: 'Enter' });
+    expect(await screen.findByLabelText('Description')).toHaveValue('US Managed IT Services');
+    // The pencil and the calculator stay.
+    expect(within(screen.getByTestId('column-title-planned')).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Change period', 'Quantity and price']);
+    // A click on another column's total opens nothing.
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    fireEvent.click(screen.getAllByRole('textbox')[1]);
+    await settle();
+    expect(screen.queryByRole('tab', { name: 'Quantity and price' })).not.toBeInTheDocument();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+});
