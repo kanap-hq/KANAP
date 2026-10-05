@@ -145,7 +145,7 @@ A column can be built from lines, each a quantity times a unit price. See [Quant
 - The months are copied like any other column. The percentage increase applies to the copied amounts only. The lines keep their unit prices
 - A copy from a column without lines leaves the destination without lines, and its FTE becomes blank
 - In the Budget tab, the destination column shows "Copied from Budget 2026", and its **Quantity and price** tab says "Amounts were copied from Budget 2026. Use the lines again."
-- To plan the destination year at its own prices, open the item's Budget tab and change the unit prices on the **Quantity and price** tab: each change computes the column from the lines again. To keep the prices, click **Use the lines again**. A line priced per day needs a calendar that holds the destination year: a standard calendar always does, and a custom one may not, for example "Head office staff has no working days for 2027. Add them on the Working-day calendars page."
+- The copied lines are a read-only reference. In the item's Budget tab, click **Use the lines again** on the **Quantity and price** tab to compute the column from them at their current prices. To plan the destination year at its own prices, change the unit prices after that: each change computes the column again. A line priced per day needs a calendar that holds the destination year: a standard calendar always does, and a custom one may not, for example "Head office staff has no working days for 2027. Add them on the Working-day calendars page."
 
 ### Frozen column protection
 
