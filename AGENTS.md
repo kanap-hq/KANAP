@@ -78,6 +78,10 @@ Tool-specific or private notes live in each tool's local files, never here.
   `curl localhost:5173/src/<path>`) before concluding anything from the browser.
 - Open the app on a tenant subdomain: `http://<tenant-slug>.lvh.me`. The apex / `localhost` serves
   the marketing site.
+- Scripts against the local API: the tenant comes from the `Host` header, and Node's `fetch`
+  silently drops a custom `Host`. Call `http://<tenant-slug>.lvh.me/api/...` instead (curl honours
+  `-H 'Host: ...'`). `POST /auth/login` allows 5 calls per minute: a script that logs in repeatedly
+  gets a 429 and no token, which then surfaces as an "Invalid token" error. Log in once and reuse it.
 - DB: `postgres://app:app@localhost:5432/appdb`. The `app` role is not superuser, so RLS applies:
   run `SET app.current_tenant = '<tenant uuid>'` before reading tenant tables.
 - Reset DB: `bash infra/scripts/db-reset.sh`.
