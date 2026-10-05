@@ -785,6 +785,38 @@ React.useEffect(() => {
 
 ---
 
+## Canonical Item URL and Prev/Next Navigation
+
+A workspace can be opened with the item's UUID (a link from an old bookmark, an API response) or with its business reference (`PRJ-12`, `T-4`, `AST-7`). The address bar always ends up showing the reference.
+
+**Rewrite the URL with `window.history.replaceState`, never with a router `navigate`.**
+
+```tsx
+React.useEffect(() => {
+  if (!data?.item_number) return;
+  const isUuid = /^[0-9a-f]{8}-/.test(params.id || '');
+  // Rewrite only once the loaded item is the one in the route: during a placeholder
+  // navigation `data` is briefly still the previous item.
+  if (isUuid && data.id === params.id) {
+    const ref = formatItemRef('project', data.item_number);
+    window.history.replaceState(null, '', location.pathname.replace(params.id, ref) + location.search);
+  }
+}, [data?.id, data?.item_number, params.id, location.pathname, location.search]);
+```
+
+A router `navigate(..., { replace: true })` changes the route param, which re-keys the query cache. The page mounts a second time, fetches the item again and shows the progress bar twice. `replaceState` is silent: one mount, one fetch.
+
+Related rules for a smooth load:
+
+- Keep `placeholderData` for the detail query across item changes, and do not blank the form when the id changes. Blanking makes the whole page flash on every prev/next click.
+- The canonicalisation effect must check that the loaded data matches the current route (see the guard above), or it rewrites the URL to the previous item's reference.
+
+**Prev/next hooks index with the loaded UUID, not the route parameter.** `useModuleItemNav` (`frontend/src/hooks/useModuleItemNav.ts`) looks the current item up with `ids.indexOf(id)` in the list of UUIDs returned by the module's `/ids` endpoint. If a page passes the route reference (`PRJ-12`) the lookup fails and prev/next and the counter are wrong or missing. Pages pass the loaded item's `id`, gated by a `*MatchesCurrentRoute` check that hides the counter while a placeholder is on screen.
+
+**`/ids` endpoints return a parallel `refs` array.** `GET .../ids` answers `{ ids, refs, total }`, where `refs[i]` is the business reference of `ids[i]` (for projects `PRJ-<n>`). The hook returns `refs[i ± 1]` for prev and next, and falls back to the UUID when a reference is missing. Navigation then lands directly on the canonical URL, with no UUID flash. A module whose endpoint returns no `refs` still works and navigates by UUID. Add the reference column to the endpoint's query when you build a new workspace.
+
+---
+
 ## Filter Preservation Pattern
 
 When navigating between list pages and workspace pages, filters must be preserved bidirectionally.

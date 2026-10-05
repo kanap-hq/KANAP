@@ -110,7 +110,8 @@ Netbox Locations under a mapped site become sub-locations of the mapped KANAP lo
 the top-level ones: a device parked deeper is attached to the top-level Location above it.
 None of these devices carries a rack or an address, so they can sit in any Location. Netbox
 requires a device's rack to belong to the device's own Location, so moving a device into a
-rack's Location moves every device in that rack with it.
+rack's Location moves every device in that rack with it. Only devices with a mapped role take part:
+`PAR-PDU-01` and `PAR-PP-01` are skipped by the import, so they prove nothing in a sub-location case.
 
 | Case | Netbox object | Expected KANAP result |
 | --- | --- | --- |
