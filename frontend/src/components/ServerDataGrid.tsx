@@ -185,6 +185,26 @@ export function mergeSavedColumnState(savedState: ColumnState[], defaultState: C
 }
 
 /**
+ * The filter model without the filters of the given columns, or null when none of them had one.
+ * AG Grid keeps filtering on a hidden column: without this, a list stays narrowed by a filter
+ * nobody can see, clear or link to anymore.
+ */
+export function withoutColumnFilters(
+  model: Record<string, unknown> | null | undefined,
+  colIds: readonly string[],
+): Record<string, unknown> | null {
+  const next = { ...(model ?? {}) };
+  let changed = false;
+  for (const colId of colIds) {
+    if (colId && Object.prototype.hasOwnProperty.call(next, colId)) {
+      delete next[colId];
+      changed = true;
+    }
+  }
+  return changed ? next : null;
+}
+
+/**
  * Frees AG Grid's request slot held by a superseded block request, without touching rows, row count
  * or error. AG Grid counts a block load as running until one of its callbacks is called, and the
  * grid allows one at a time (`maxConcurrentDatasourceRequests`), so a request answered by neither
@@ -525,11 +545,34 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     if (columnListRef.current) columnListRef.current.scrollTop = 0;
   }, []);
 
+  // A column the chooser cannot show exists to carry a filter coming from a link: nothing may take
+  // that filter away, whatever the saved layout says.
+  const filterMayBeDropped = useCallback((columnKey: string) => {
+    const col = columns.find((c) => (c.field || c.colId) === columnKey);
+    return !col?.suppressColumnsToolPanel;
+  }, [columns]);
+
+  /**
+   * Drops the filters of columns that just left the view. Filters are keyed by column id while the
+   * chooser names a column by its field or id, so the ids are resolved first.
+   */
+  const clearFiltersOfHiddenColumns = useCallback((api: any, columnKeys: readonly string[]) => {
+    const keys = columnKeys.filter((key) => filterMayBeDropped(key));
+    if (keys.length === 0) return;
+
+    const colIds = keys.map((key) => api.getColumn?.(key)?.getColId?.() ?? key);
+    const next = withoutColumnFilters(api.getFilterModel?.() ?? {}, colIds);
+    if (next) api.setFilterModel?.(next);
+  }, [filterMayBeDropped]);
+
   const handleColumnToggle = useCallback((field: string, visible: boolean) => {
     const api = gridApiRef.current;
     if (!api) return;
 
     try {
+      // A column leaving the view takes its filter with it (see clearFiltersOfHiddenColumns).
+      if (!visible) clearFiltersOfHiddenColumns(api, [field]);
+
       // Update column visibility
       (api as any).setColumnsVisible?.([field], visible);
       
@@ -548,7 +591,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     } catch (e) {
       console.warn('Failed to toggle column visibility:', e);
     }
-  }, [columnStateManager, columnPreferencesKey, onColumnStateChange]);
+  }, [clearFiltersOfHiddenColumns, columnStateManager, columnPreferencesKey, onColumnStateChange]);
 
   // Get visible columns for the chooser. A column the caller keeps out of the tool panel only
   // exists to carry a filter coming from a link, so it never shows up in the list either.
@@ -580,7 +623,19 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     if (!api) return;
     
     try {
+      // The columns this reset sends from visible back to hidden lose their filters too: same rule
+      // as the chooser, so the list is never narrowed by a filter nobody can see.
+      const hiddenBefore = new Set<string>();
+      for (const state of (api.getColumnState?.() ?? []) as ColumnState[]) {
+        if (state.colId && state.hide) hiddenBefore.add(state.colId);
+      }
       const defaultState = columnStateManager.resetColumnState();
+      clearFiltersOfHiddenColumns(
+        api,
+        defaultState.filter((state) => state.hide && state.colId && !hiddenBefore.has(state.colId))
+          .map((state) => String(state.colId)),
+      );
+
       (api as any).applyColumnState?.({
         state: defaultState,
         applyOrder: true,
@@ -595,7 +650,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     } catch (e) {
       console.warn('Failed to reset columns:', e);
     }
-  }, [columnStateManager, onColumnStateChange]);
+  }, [clearFiltersOfHiddenColumns, columnStateManager, onColumnStateChange]);
 
   // Sync URL when sort/search change (no page/limit with infinite model)
   useEffect(() => {
@@ -1261,6 +1316,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         onCellClicked={onCellClicked as any}
         // Explicitly allow column moving at the grid level
         suppressMovableColumns={false}
+        // Dragging a header out of the grid does not hide its column: the chooser is the only way
+        // to hide one, so a filter never disappears along with a column dragged back in.
+        suppressDragLeaveHidesColumns
         // Preserve user order when column defs update between renders
         maintainColumnOrder
       />

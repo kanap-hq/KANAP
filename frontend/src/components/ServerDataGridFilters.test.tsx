@@ -1,6 +1,6 @@
-import React from 'react';
-import { act, fireEvent, render, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,29 +31,54 @@ const quiet = (ms = 400) => act(async () => { await new Promise((resolve) => set
 type GridProps = {
   onGridApiReady?: (api: any) => void;
   initialFilterModel?: any;
+  initialState?: any;
   getValues?: (ctx: unknown) => Promise<Array<{ value: string }>>;
   refreshKey?: number;
   queryClient: QueryClient;
+  onQueryStateChange?: (state: any) => void;
+  onSearchChange?: (search: string) => void;
+  defaultHiddenColumns?: string[];
+  columnPreferencesKey?: string;
+  /** Adds a column kept out of the chooser, the way a list carries a link filter. */
+  withSuppressedColumn?: boolean;
 };
 
-function Grid({ queryClient, getValues, ...props }: GridProps) {
+type Row = { id: string; name: string; other: string; status: string; secret?: string };
+
+/** The grid's columns: two text ones and a set filter that remembers its values. */
+function columns(withSuppressedColumn: boolean, getValues?: (ctx: unknown) => Promise<Array<{ value: string }>>) {
+  const base = [
+    { field: 'name', headerName: 'Name' },
+    { field: 'other', headerName: 'Other' },
+    {
+      field: 'status',
+      headerName: 'Status',
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: getValues
+        ? { getValues, searchable: false }
+        : { values: VALUES.map((value) => ({ value })), searchable: false },
+    } as any,
+  ];
+  if (!withSuppressedColumn) return base;
+  // Hidden and out of the chooser on purpose: it only exists to carry a filter coming from a link.
+  return [...base, { field: 'secret', headerName: 'Secret', hide: true, defaultHidden: true, suppressColumnsToolPanel: true } as any];
+}
+
+/** Writes the address of the page into a box the test reads. */
+function SearchSpy({ onChange }: { onChange: (search: string) => void }) {
+  const location = useLocation();
+  useEffect(() => { onChange(location.search); }, [location.search, onChange]);
+  return null;
+}
+
+function Grid({ queryClient, getValues, withSuppressedColumn, onSearchChange, ...props }: GridProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <ServerDataGrid<{ id: string; name: string; other: string; status: string }>
-          columns={[
-            { field: 'name', headerName: 'Name' },
-            { field: 'other', headerName: 'Other' },
-            {
-              field: 'status',
-              headerName: 'Status',
-              filter: CheckboxSetFilter,
-              floatingFilterComponent: CheckboxSetFloatingFilter,
-              filterParams: getValues
-                ? { getValues, searchable: false }
-                : { values: VALUES.map((value) => ({ value })), searchable: false },
-            } as any,
-          ]}
+        {onSearchChange && <SearchSpy onChange={onSearchChange} />}
+        <ServerDataGrid<Row>
+          columns={columns(!!withSuppressedColumn, getValues)}
           endpoint="/things"
           queryKey="things"
           defaultSort={{ field: 'name', direction: 'ASC' }}
@@ -86,6 +111,29 @@ async function closeStatusFilter() {
   await quiet(20);
   fireEvent.mouseDown(document.body);
   await waitFor(() => expect(document.querySelector('.ag-popup label')).toBeNull());
+}
+
+/** The filters of the grid's last page request, or null when that request carried none. */
+function lastRequestFilters(): unknown {
+  const call = get.mock.calls[get.mock.calls.length - 1] as any[] | undefined;
+  const params = (call?.[1]?.params ?? {}) as Record<string, unknown>;
+  return 'filters' in params ? params.filters : null;
+}
+
+/** The column chooser's row for a header name, when the popover is open. */
+function chooserRow(headerName: string): HTMLElement | null {
+  return Array.from(document.querySelectorAll('.MuiPopover-root label'))
+    .find((label) => label.textContent === headerName) as HTMLElement ?? null;
+}
+
+/** Unticks or ticks a column in the chooser, opening the popover when it is closed. */
+async function toggleInChooser(headerName: string) {
+  if (!chooserRow(headerName)) {
+    fireEvent.click(screen.getByText('common:buttons.chooseColumns'));
+    await waitFor(() => expect(chooserRow(headerName)).not.toBeNull());
+  }
+  fireEvent.click(chooserRow(headerName)!.querySelector('input')!);
+  await quiet();
 }
 
 async function mount(props: Omit<GridProps, 'queryClient' | 'onGridApiReady'> = {}) {
@@ -219,5 +267,127 @@ describe('ServerDataGrid column filters follow the grid model', () => {
     expect(changes).not.toHaveBeenCalled();
     expect(input.value).toBe('');
     expect(grid.api().getFilterModel()).toEqual({});
+  }, 30_000);
+
+  /*
+   * A column leaving the view takes its filter with it: AG Grid keeps filtering on a hidden column,
+   * so the list would stay narrowed by a filter nobody can see, clear or link to anymore. A filter
+   * on a column that was already hidden (a link filtered by a column out of the chooser) stays.
+   */
+
+  it('unticking a filtered column drops its filter, and the list reloads without it', async () => {
+    const queryStates: any[] = [];
+    const search = { current: '' };
+    const grid = await mount({
+      onQueryStateChange: (state: any) => queryStates.push(state),
+      onSearchChange: (next: string) => { search.current = next; },
+    });
+    await act(async () => {
+      grid.api().setFilterModel({ status: { filterType: 'set', values: ['Alpha'] } });
+    });
+    await quiet();
+    await waitFor(() => expect(String(lastRequestFilters())).toContain('status'));
+    await waitFor(() => expect(search.current).toContain('filters'));
+
+    queryStates.length = 0;
+    await toggleInChooser('Status');
+
+    expect(grid.api().getColumn('status').isVisible()).toBe(false);
+    expect(grid.api().getFilterModel()).toEqual({});
+    await waitFor(() => expect(lastRequestFilters()).toBeNull());
+    expect(queryStates[queryStates.length - 1]?.filterModel).toEqual({});
+    await waitFor(() => expect(search.current).not.toContain('filters'));
+  }, 30_000);
+
+  it('a column unticked and ticked back shows an empty filter box', async () => {
+    const grid = await mount();
+    await act(async () => {
+      grid.api().setFilterModel({ status: { filterType: 'set', values: ['Alpha'] } });
+    });
+    await quiet();
+
+    await toggleInChooser('Status');
+    expect(grid.api().getColumn('status').isVisible()).toBe(false);
+    await toggleInChooser('Status');
+    expect(grid.api().getColumn('status').isVisible()).toBe(true);
+
+    const cell = floatingFilterCell('status');
+    await waitFor(() => expect(cell.querySelector('button[aria-label="filters.clearFilter"]')).toBeNull());
+    expect(cell.textContent).toContain('labels.all');
+  }, 30_000);
+
+  it('Reset columns sending a filtered column back to hidden clears its filter', async () => {
+    const grid = await mount({ defaultHiddenColumns: ['status'], columnPreferencesKey: 'things' });
+    expect(grid.api().getColumn('status').isVisible()).toBe(false);
+
+    await toggleInChooser('Status');
+    expect(grid.api().getColumn('status').isVisible()).toBe(true);
+    await act(async () => {
+      grid.api().setFilterModel({ status: { filterType: 'set', values: ['Alpha'] } });
+    });
+    await quiet();
+
+    fireEvent.click(screen.getByText('common:buttons.resetColumns'));
+    await quiet();
+
+    expect(grid.api().getColumn('status').isVisible()).toBe(false);
+    expect(grid.api().getFilterModel()).toEqual({});
+    await waitFor(() => expect(lastRequestFilters()).toBeNull());
+  }, 30_000);
+
+  it('a filter on an already hidden column survives another column being hidden and a reset', async () => {
+    const grid = await mount({
+      initialState: { filter: { filterModel: { status: { filterType: 'set', values: ['Alpha'] } } } },
+      defaultHiddenColumns: ['status'],
+      columnPreferencesKey: 'things',
+    });
+    await quiet();
+    expect(grid.api().getColumn('status').isVisible()).toBe(false);
+    expect(grid.api().getFilterModel()).toHaveProperty('status');
+
+    await toggleInChooser('Other');
+    expect(grid.api().getColumn('other').isVisible()).toBe(false);
+    expect(grid.api().getFilterModel()).toHaveProperty('status');
+
+    fireEvent.click(screen.getByText('common:buttons.resetColumns'));
+    await quiet();
+    expect(grid.api().getFilterModel()).toHaveProperty('status');
+    await waitFor(() => expect(String(lastRequestFilters())).toContain('status'));
+  }, 30_000);
+
+  it('only the filter of the column leaving the view is dropped', async () => {
+    const grid = await mount();
+    await act(async () => {
+      grid.api().setFilterModel({
+        status: { filterType: 'set', values: ['Alpha'] },
+        other: { filterType: 'text', type: 'contains', filter: 'x' },
+      });
+    });
+    await quiet();
+
+    await toggleInChooser('Status');
+
+    expect(grid.api().getFilterModel()).toEqual({ other: { filterType: 'text', type: 'contains', filter: 'x' } });
+    await waitFor(() => expect(String(lastRequestFilters())).toContain('other'));
+    expect(String(lastRequestFilters())).not.toContain('status');
+  }, 30_000);
+
+  it('a column kept out of the chooser keeps its filter when a saved layout and a reset hide it', async () => {
+    // A saved layout can show a column the chooser never lists; the reset sends it back to hidden.
+    localStorage.setItem('grid-columns:test:u-1:things', JSON.stringify([{ colId: 'secret', hide: false }]));
+    const grid = await mount({
+      withSuppressedColumn: true,
+      columnPreferencesKey: 'things',
+      initialFilterModel: { secret: { filterType: 'text', type: 'contains', filter: 'abc' } },
+    });
+    await quiet();
+    expect(grid.api().getColumn('secret').isVisible()).toBe(true);
+    expect(grid.api().getFilterModel()).toHaveProperty('secret');
+
+    fireEvent.click(screen.getByText('common:buttons.resetColumns'));
+    await quiet();
+
+    expect(grid.api().getColumn('secret').isVisible()).toBe(false);
+    expect(grid.api().getFilterModel()).toHaveProperty('secret');
   }, 30_000);
 });

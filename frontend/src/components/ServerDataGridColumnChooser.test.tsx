@@ -5,16 +5,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /*
  * The column chooser's search box: it filters the list by the label shown, folded like every other
- * search box of the app, and toggling a column keeps working while the list is filtered.
+ * search box of the app, and toggling a column keeps working while the list is filtered. Hiding a
+ * column also drops its filter: AG Grid keeps filtering on a hidden column.
  *
  * The grid itself is not rendered (jsdom has no layout): the fake API answers what the chooser
- * reads and writes, visibility and the column state.
+ * reads and writes, visibility, the column state and the filter model.
  */
 
-const { gridApi, hiddenColumns } = vi.hoisted(() => {
+const { gridApi, gridProps, hiddenColumns, filterModel } = vi.hoisted(() => {
   const hidden = new Set<string>();
+  const model = { filters: {} as Record<string, unknown> };
   return {
     hiddenColumns: hidden,
+    filterModel: model,
+    gridProps: { current: null as any },
     gridApi: {
       setColumnsVisible: vi.fn((fields: string[], visible: boolean) => {
         for (const field of fields) {
@@ -24,6 +28,10 @@ const { gridApi, hiddenColumns } = vi.hoisted(() => {
       }),
       getColumnState: vi.fn(() => Array.from(hidden, (colId) => ({ colId, hide: true }))),
       purgeInfiniteCache: vi.fn(),
+      // Filters are keyed by column id while the chooser names a column by its field or id.
+      getColumn: vi.fn((key: string) => ({ getColId: () => key })),
+      getFilterModel: vi.fn(() => ({ ...model.filters })),
+      setFilterModel: vi.fn((next: Record<string, unknown>) => { model.filters = { ...next }; }),
     },
   };
 });
@@ -40,7 +48,8 @@ vi.mock('react-i18next', () => {
 vi.mock('ag-grid-react', async () => {
   const { useEffect } = await import('react');
   return {
-    AgGridReact: (props: { onGridReady?: (event: { api: unknown }) => void }) => {
+    AgGridReact: (props: any) => {
+      gridProps.current = props;
       useEffect(() => { props.onGridReady?.({ api: gridApi }); });
       return null;
     },
@@ -101,6 +110,7 @@ describe('ServerDataGrid column chooser search', () => {
     // One column hidden, so ticking one has something to change.
     hiddenColumns.clear();
     hiddenColumns.add('budget_fte');
+    filterModel.filters = {};
   });
   afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -190,5 +200,43 @@ describe('ServerDataGrid column chooser search', () => {
     expect(fte).toBeChecked();
     expect(searchBox()).toHaveValue('Budget FTE');
     expect(screen.queryByRole('checkbox', { name: 'Notes' })).toBeNull();
+  });
+
+  it('unchecking a filtered column drops its filter from the model', () => {
+    renderChooser();
+    filterModel.filters = {
+      notes: { filterType: 'text', type: 'contains', filter: 'abc' },
+      budget_y: { filterType: 'text', type: 'contains', filter: '10' },
+    };
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Notes' }));
+
+    expect(gridApi.setFilterModel).toHaveBeenCalledTimes(1);
+    expect(gridApi.setFilterModel).toHaveBeenCalledWith({ budget_y: { filterType: 'text', type: 'contains', filter: '10' } });
+  });
+
+  it('unchecking a column that has no filter leaves the model alone', () => {
+    renderChooser();
+    filterModel.filters = { notes: { filterType: 'text', type: 'contains', filter: 'abc' } };
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Budget Y (2026)' }));
+
+    expect(gridApi.setFilterModel).not.toHaveBeenCalled();
+  });
+
+  it('checking a column never touches the model', () => {
+    renderChooser();
+    filterModel.filters = { notes: { filterType: 'text', type: 'contains', filter: 'abc' } };
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Budget FTE (2026)' }));
+
+    expect(gridApi.setFilterModel).not.toHaveBeenCalled();
+    expect(gridApi.getFilterModel).not.toHaveBeenCalled();
+  });
+
+  it('renders the grid so a header dragged out of it does not hide its column', () => {
+    renderChooser();
+
+    expect(gridProps.current.suppressDragLeaveHidesColumns).toBe(true);
   });
 });
