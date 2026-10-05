@@ -1426,9 +1426,9 @@ const IT_TEAM_EMAILS = new Set([
 const PROJECT_TEAMS = {
   'Fromage-as-a-Service': ['amelie.rousseau@fromage-co.com', 'clara.dupont@fromage-co.com', 'isabelle.moreau@fromage-co.com', 'hugo.mercier@fromage-co.com'],
   'Zero Trust Fromage': ['lucas.bernard@fromage-co.com', 'pierre.martin@fromage-co.com', 'thomas.berger@fromage-co.com'],
-  'Workday Global Rollout': ['sophie.laurent@fromage-co.com', 'jan.bakker@kaasmeester.nl', 'luca.ferrari@formaggio-supremo.it', 'marie.fontaine@fromage-co.com'],
-  'Territory Planning Cockpit': ['isabelle.moreau@fromage-co.com', 'marie.fontaine@fromage-co.com'],
-  'Supplier Contract Workspace': ['marie.fontaine@fromage-co.com', 'isabelle.moreau@fromage-co.com'],
+  'Workday Global Rollout': ['sophie.laurent@fromage-co.com', 'jan.bakker@kaasmeester.nl', 'luca.ferrari@formaggio-supremo.it', 'maria.casanova@fromage-co.com'],
+  'Territory Planning Cockpit': ['isabelle.moreau@fromage-co.com', 'maria.casanova@fromage-co.com'],
+  'Supplier Contract Workspace': ['maria.casanova@fromage-co.com', 'isabelle.moreau@fromage-co.com'],
   'Pricing Rules API Refactor': ['amelie.rousseau@fromage-co.com', 'clara.dupont@fromage-co.com', 'hugo.mercier@fromage-co.com'],
   'Customer 360 Data Contracts': ['clara.dupont@fromage-co.com', 'jan.bakker@kaasmeester.nl', 'luca.ferrari@formaggio-supremo.it'],
   'Branch Network Segmentation': ['lucas.bernard@fromage-co.com', 'pierre.martin@fromage-co.com', 'thomas.berger@fromage-co.com'],

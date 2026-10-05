@@ -6,7 +6,7 @@ SAP S/4HANA access is role-based. Every request goes through ServiceNow under **
 
 | Role | Scope | Approver |
 |---|---|---|
-| SAP FI (Finance) | Journal entries, closing, reporting | Marie Fontaine (Finance & Controlling) |
+| SAP FI (Finance) | Journal entries, closing, reporting | Maria Casanova (Finance & Controlling) |
 | SAP MM (Procurement) | Purchase orders, goods receipt | Head of Procurement |
 | SAP SD (Sales) | Orders, deliveries, invoicing | Sales & Marketing lead |
 | SAP PP (Production) | Production orders, batch records | Jacques Dubois (Production) |
