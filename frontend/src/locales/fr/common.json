@@ -81,6 +81,11 @@
     "filterColumn": "Filtrer {{column}}",
     "linkFiltersLost": "Les filtres de ce lien ne sont plus disponibles."
   },
+  "columnChooser": {
+    "searchPlaceholder": "Rechercher une colonne",
+    "noMatch": "Aucune colonne correspondante",
+    "clearSearch": "Effacer la recherche"
+  },
   "labels": {
     "show": "Afficher",
     "all": "Tous",
