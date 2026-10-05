@@ -43,7 +43,7 @@ vi.mock('../../services/workingDayProfiles', async (importOriginal) => {
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 
 import LinesPanel, {
-  LINE_COLUMN_WIDTHS, LINES_SECOND_ROW_INDENT, LINES_TABLE_MIN_WIDTH, LINES_TWO_ROWS_MIN_WIDTH, LinesPanelProps, UNIT_PRICE_NUMBER_WIDTH, defaultCalendarId, tableLineMessage,
+  LINE_COLUMN_GAP, LINE_COLUMN_WIDTHS, LINE_MUL_WIDTH, LINE_SECOND_ROW_WIDTHS, LINE_TIMING_ROW_WIDTHS, LINES_OFTEN_FIRST_MIN_WIDTH, LINES_TABLE_MIN_WIDTH, LINES_TWO_ROWS_MIN_WIDTH, LinesPanelProps, UNIT_PRICE_NUMBER_WIDTH, defaultCalendarId, tableLineMessage,
 } from './LinesPanel';
 import type { LineCalculation, RoundInput, RoundLine } from './roundPeriod';
 import { buildWorkingDayProfiles } from '../../hooks/useWorkingDayProfiles';
@@ -165,12 +165,16 @@ const noCombo = (row: number, name: string) => within(rows()[row]).queryByRole('
 /** The date fields of a line: From and To, or the one Date of pieces bought once. */
 const dates = (row: number) => within(rows()[row]).queryAllByPlaceholderText('labels.datePlaceholder');
 const heads = () => within(screen.getByTestId('lines-table')).getAllByRole('columnheader').map((th) => th.textContent);
-/** Two rows per line: the first, what is priced; the second, when and how. */
+/** The From and To heads of the one-row table: the line number gutter comes first. */
+const dateHeads = () => heads().slice(6, 8);
+const numbers = () => screen.getAllByTestId('line-number').map((cell) => cell.textContent);
+/** Two rows per line: the first, what is priced; the second, the sentence of when and how. */
 const priced = (row: number) => within(within(rows()[row]).getByTestId('line-priced'));
 const timing = (row: number) => within(within(rows()[row]).getByTestId('line-timing'));
-/** The labels of the two header rows. */
-const pricedHeads = () => within(screen.getByTestId('lines-head-priced')).getAllByRole('columnheader').map((th) => th.textContent);
-const timingHeads = () => Array.from(screen.getByTestId('lines-head-timing').querySelectorAll('th > div > div')).map((label) => label.textContent);
+/** The cells of the single header row of the narrow layout. */
+const pricedHeads = () => within(screen.getByTestId('lines-head')).getAllByRole('columnheader');
+/** The grid of a line's second row: the same tracks for every line. */
+const secondRowGrid = (row: number) => within(rows()[row]).getByTestId('line-sentence');
 async function pick(combobox: HTMLElement, option: string) {
   fireEvent.mouseDown(combobox);
   fireEvent.click(await screen.findByRole('option', { name: option }));
@@ -200,14 +204,19 @@ describe('LinesPanel', () => {
   it('keeps every column at its least width: a narrow panel scrolls the table instead of squeezing the fields', () => {
     renderPanel();
     fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
-    expect(LINES_TABLE_MIN_WIDTH).toBe(1375);
+    expect(LINES_TABLE_MIN_WIDTH).toBe(1467);
     const table = screen.getByTestId('lines-table');
-    expect(table).toHaveStyle({ tableLayout: 'fixed', minWidth: '1375px' });
+    expect(table).toHaveStyle({ tableLayout: 'fixed', minWidth: '1467px' });
     const ths = within(table).getAllByRole('columnheader');
-    const { description, ...fixed } = LINE_COLUMN_WIDTHS;
-    expect(ths[0]).toHaveStyle({ minWidth: `${description}px` });
-    Object.values(fixed).forEach((width, i) => expect(ths[i + 1]).toHaveStyle({ width: `${width}px` }));
-    expect(heads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', 'Amount', '']);
+    // The line number gutter, then the description at its fixed width: the fields stay next to it.
+    expect(ths[0]).toHaveStyle({ width: `${LINE_COLUMN_WIDTHS.number}px` });
+    expect(ths[1]).toHaveStyle({ width: `${LINE_COLUMN_WIDTHS.description}px` });
+    const { quantity, unit, unitPrice, often, from, to, calendar, amount, remove } = LINE_COLUMN_WIDTHS;
+    [quantity, unit, unitPrice, often, from, to, calendar].forEach((width, i) => expect(ths[i + 2]).toHaveStyle({ width: `${width}px` }));
+    // The filler column (no width of its own) takes the free width before Amount.
+    expect(ths[9]).toBeEmptyDOMElement();
+    [amount, remove].forEach((width, i) => expect(ths[i + 10]).toHaveStyle({ width: `${width}px` }));
+    expect(heads()).toEqual(['', 'Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', '', 'Amount', '']);
     // Unit price sits over the number field, right-aligned, not over what the price is for.
     expect(screen.getByTestId('lines-head-unit-price')).toHaveStyle({ width: `${UNIT_PRICE_NUMBER_WIDTH}px`, textAlign: 'right' });
   });
@@ -356,7 +365,7 @@ describe('LinesPanel', () => {
     expect(combo(0, 'How often')).toHaveTextContent('once');
     expect(noCombo(0, 'Calendar')).not.toBeInTheDocument();
     expect(dates(0)).toHaveLength(1);
-    expect(heads().slice(5, 7)).toEqual(['Date', '']);
+    expect(dateHeads()).toEqual(['Date', '']);
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
     expect(onSave.mock.calls[1][0][0]).toMatchObject({
       quantity_unit: 'pieces', price_basis: 'per_piece', frequency: 'once', working_day_profile_id: null,
@@ -370,7 +379,7 @@ describe('LinesPanel', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(3));
     expect(onSave.mock.calls[2][0][0]).toMatchObject({ frequency: 'per_month', period_start: '2026-04-01', period_end: '2026-12-31' });
     expect(dates(0)).toHaveLength(2);
-    expect(heads().slice(5, 7)).toEqual(['From', 'To']);
+    expect(dateHeads()).toEqual(['From', 'To']);
 
     // Back to people: per day each month, and the days are asked for.
     await pick(combo(0, 'Unit'), 'people');
@@ -384,7 +393,7 @@ describe('LinesPanel', () => {
   it('pieces bought once take one date, written as both From and To', async () => {
     const laptop = storedLine({ ...PIECES, label: 'Laptop', unit_price: '2000.0000', frequency: 'once', period_start: '2026-03-15', period_end: '2026-03-15' });
     const { onSave } = renderPanel({ record: roundWith([laptop]) });
-    expect(heads().slice(5, 7)).toEqual(['Date', '']);
+    expect(dateHeads()).toEqual(['Date', '']);
     expect(dates(0)).toHaveLength(1);
     const [date] = dates(0);
     fireEvent.focus(date);
@@ -563,7 +572,7 @@ describe('LinesPanel', () => {
       expect(screen.queryByRole('button', { name: 'Add a line' })).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Apply these lines to all columns')).not.toBeInTheDocument();
       // The Amount column keeps its place, blank; no FTE line.
-      expect(heads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', '', '']);
+      expect(heads()).toEqual(['', 'Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', '', '', '']);
       expect(screen.getByTestId('line-amount')).toHaveTextContent(/^$/);
       expect(screen.queryByTestId('lines-fte')).not.toBeInTheDocument();
       // A field left without a change sends nothing.
@@ -736,24 +745,28 @@ describe('LinesPanel', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  describe('two rows per line, when the panel is narrower than the whole table', () => {
-    it('puts what is priced on the first row, when and how on the second, under two header rows', () => {
+  describe('one block per line, when the panel is narrower than the whole table', () => {
+    it('puts the calculation on the first row, the sentence of when and how on the second, under a single header row', () => {
       const second = storedLine({ id: 'l2', sort: 1, label: 'Second' });
       renderPanel({ record: roundWith([storedLine(), second]), layout: 'narrow' });
 
-      expect(LINES_TWO_ROWS_MIN_WIDTH).toBe(749);
-      expect(screen.getByTestId('lines-table')).toHaveStyle({ tableLayout: 'fixed', minWidth: '749px' });
-      expect(pricedHeads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'Amount', '']);
-      expect(timingHeads()).toEqual(['How often', 'From', 'To', 'Calendar']);
-      const [description, ...fixed] = within(screen.getByTestId('lines-head-priced')).getAllByRole('columnheader');
-      expect(description).toHaveStyle({ minWidth: `${LINE_COLUMN_WIDTHS.description}px` });
+      expect(LINES_TWO_ROWS_MIN_WIDTH).toBe(931);
+      expect(screen.getByTestId('lines-table')).toHaveStyle({ tableLayout: 'fixed', minWidth: '931px' });
+      // One header row only: the words of the second row ("from", "to", "calendar") replace the old one.
+      expect(heads()).toEqual(['', 'Description', 'Quantity', 'Unit', '', 'Unit price', '', 'Amount', '']);
+      expect(screen.queryByTestId('lines-head-timing')).not.toBeInTheDocument();
+      const ths = pricedHeads();
+      expect(ths[0]).toHaveStyle({ width: `${LINE_COLUMN_WIDTHS.number}px` });
+      expect(ths[1]).toHaveStyle({ width: `${LINE_COLUMN_WIDTHS.description}px` });
       const { quantity, unit, unitPrice, amount, remove } = LINE_COLUMN_WIDTHS;
-      [quantity, unit, unitPrice, amount, remove].forEach((width, i) => expect(fixed[i]).toHaveStyle({ width: `${width}px` }));
+      [quantity, unit, LINE_MUL_WIDTH, unitPrice].forEach((width, i) => expect(ths[i + 2]).toHaveStyle({ width: `${width}px` }));
+      [amount, remove].forEach((width, i) => expect(ths[i + 7]).toHaveStyle({ width: `${width}px` }));
       expect(screen.getByTestId('lines-head-unit-price')).toHaveStyle({ width: `${UNIT_PRICE_NUMBER_WIDTH}px`, textAlign: 'right' });
 
-      // One body per line, two rows each: the numbering and the notes count lines.
+      // One body per line, two rows each, numbered like the notes under the table.
       expect(rows()).toHaveLength(2);
       rows().forEach((line) => expect(within(line).getAllByRole('row')).toHaveLength(2));
+      expect(numbers()).toEqual(['1', '2']);
 
       const first = priced(0);
       expect(first.getByLabelText('Description')).toHaveValue('Project manager');
@@ -767,6 +780,7 @@ describe('LinesPanel', () => {
       expect(first.queryAllByPlaceholderText('labels.datePlaceholder')).toHaveLength(0);
       expect(first.queryByRole('combobox', { name: 'Calendar' })).not.toBeInTheDocument();
 
+      // The sentence: how often under the description, then a word before each field.
       const then = timing(0);
       expect(then.getByRole('checkbox', { name: 'Full time' })).not.toBeChecked();
       expect(then.getByLabelText('days per month')).toHaveValue('5');
@@ -774,18 +788,44 @@ describe('LinesPanel', () => {
       expect(then.getByRole('combobox', { name: 'Calendar' })).toHaveTextContent('France');
       expect(then.queryByLabelText('Unit price')).not.toBeInTheDocument();
       expect(then.queryByTestId('line-amount')).not.toBeInTheDocument();
-      // Indented under the description, the header's second row too.
-      expect(within(rows()[0]).getByTestId('line-timing').firstElementChild).toHaveStyle({ paddingLeft: `${LINES_SECOND_ROW_INDENT}px` });
-      expect(screen.getByTestId('lines-head-timing').firstElementChild).toHaveStyle({ paddingLeft: `${LINES_SECOND_ROW_INDENT}px` });
+      expect(then.getByTestId('line-from-word')).toHaveTextContent('from');
+      expect(then.getByTestId('line-to-word')).toHaveTextContent('to');
+      expect(then.getByTestId('line-calendar-word')).toHaveTextContent('calendar');
+      // The same tracks for every line: how often starts under the description, and the dates and the
+      // calendars line up from one line to the next.
+      expect(secondRowGrid(0)).toHaveStyle({
+        display: 'grid',
+        columnGap: `${LINE_COLUMN_GAP}px`,
+        gridTemplateColumns: LINE_SECOND_ROW_WIDTHS.map((w) => `${w}px`).join(' '),
+      });
+      // No padding of its own: the tracks of a line's second row start where those of the first do.
+      expect(within(rows()[0]).getByTestId('line-timing').firstElementChild).toHaveStyle({ paddingLeft: 0 });
 
       typeAndLeave(priced(1).getByLabelText('Quantity'), '');
       expect(notes()).toHaveTextContent('Line 2: Enter a quantity and a unit price to save this line.');
     });
 
+    it('with room for it, how often goes up to the first row and the second keeps the dates and the calendar', () => {
+      renderPanel({ record: roundWith([storedLine()]), layout: 'medium' });
+
+      expect(LINES_OFTEN_FIRST_MIN_WIDTH).toBe(1046);
+      expect(screen.getByTestId('lines-table')).toHaveStyle({ minWidth: '1046px' });
+      expect(heads()).toEqual(['', 'Description', 'Quantity', 'Unit', '', 'Unit price', 'How often', '', 'Amount', '']);
+      expect(pricedHeads()[6]).toHaveStyle({ width: `${LINE_COLUMN_WIDTHS.often}px` });
+
+      expect(priced(0).getByRole('checkbox', { name: 'Full time' })).not.toBeChecked();
+      expect(priced(0).getByLabelText('days per month')).toHaveValue('5');
+      expect(timing(0).queryByRole('checkbox', { name: 'Full time' })).not.toBeInTheDocument();
+      // The second row starts with "from" under the description.
+      expect(timing(0).getAllByPlaceholderText('labels.datePlaceholder')).toHaveLength(2);
+      expect(timing(0).getByRole('combobox', { name: 'Calendar' })).toHaveTextContent('France');
+      expect(secondRowGrid(0)).toHaveStyle({ gridTemplateColumns: LINE_TIMING_ROW_WIDTHS.map((w) => `${w}px`).join(' ') });
+    });
+
     it('a commit from the second row saves what the one-row table saves', async () => {
-      const run = async (layout: 'wide' | 'narrow') => {
+      const run = async (layout: 'wide' | 'medium' | 'narrow') => {
         const { onSave, unmount } = renderPanel({ record: roundWith([storedLine()]), layout });
-        expect(screen.queryAllByTestId('line-timing')).toHaveLength(layout === 'narrow' ? 1 : 0);
+        expect(screen.queryAllByTestId('line-timing')).toHaveLength(layout === 'wide' ? 0 : 1);
         fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
         await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
         typeDate(dates(0)[1], '31/05/2026');
@@ -799,18 +839,22 @@ describe('LinesPanel', () => {
       const wide = await run('wide');
       const narrow = await run('narrow');
       expect(narrow).toEqual(wide);
+      expect(await run('medium')).toEqual(wide);
       expect(narrow[0][0][0]).toMatchObject({ days_per_month: null, period_end: '2026-06-30', working_day_profile_id: 'fr' });
       expect(narrow[1][0][0]).toMatchObject({ days_per_month: null, period_end: '2026-05-31', working_day_profile_id: 'fr' });
       expect(narrow[2][0][0]).toMatchObject({ days_per_month: null, period_end: '2026-05-31', working_day_profile_id: 'us' });
     });
 
-    it('the Date of a piece bought once sits on the second row, To left empty', async () => {
+    it('the Date of a piece bought once sits on the second row, "on" in the From track, To left empty', async () => {
       const laptop = storedLine({ ...PIECES, label: 'Laptop', unit_price: '2000.0000', frequency: 'once', period_start: '2026-03-15', period_end: '2026-03-15' });
       const { onSave } = renderPanel({ record: roundWith([laptop]), layout: 'narrow' });
-      expect(timingHeads()).toEqual(['How often', 'Date', '', 'Calendar']);
       expect(priced(0).queryAllByPlaceholderText('labels.datePlaceholder')).toHaveLength(0);
       expect(priced(0).getByTestId('line-basis')).toHaveTextContent('per piece');
       expect(timing(0).getByRole('combobox', { name: 'How often' })).toHaveTextContent('once');
+      expect(timing(0).getByTestId('line-from-word')).toHaveTextContent('on');
+      expect(timing(0).getByTestId('line-to-word')).toHaveTextContent('');
+      // No calendar word either: a price per piece takes no calendar.
+      expect(timing(0).getByTestId('line-calendar-word')).toHaveTextContent('');
       expect(timing(0).queryByRole('combobox', { name: 'Calendar' })).not.toBeInTheDocument();
       const [date, ...rest] = timing(0).getAllByPlaceholderText('labels.datePlaceholder');
       expect(rest).toHaveLength(0);
@@ -820,8 +864,18 @@ describe('LinesPanel', () => {
       expect(onSave.mock.calls[0][0][0]).toMatchObject({ frequency: 'once', period_start: '2026-05-20', period_end: '2026-05-20' });
     });
 
-    it('follows the width of the panel: two rows below the whole table, one again once it fits', () => {
-      let width = 1300;
+    it('a line with From and To but no calendar keeps "from" and "to", and no "calendar" word', () => {
+      // People priced per month: two dates, no calendar.
+      const monthly = storedLine({ price_basis: 'per_month', days_per_month: null, working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null });
+      renderPanel({ record: roundWith([monthly]), layout: 'narrow' });
+      expect(timing(0).getAllByPlaceholderText('labels.datePlaceholder')).toHaveLength(2);
+      expect(timing(0).getByTestId('line-from-word')).toHaveTextContent('from');
+      expect(timing(0).getByTestId('line-to-word')).toHaveTextContent('to');
+      expect(timing(0).getByTestId('line-calendar-word')).toHaveTextContent('');
+    });
+
+    it('follows the width of the panel: two rows below the whole table, how often first when it fits, one row once the table fits', () => {
+      let width = LINES_OFTEN_FIRST_MIN_WIDTH - 1;
       const resized: Array<() => void> = [];
       vi.stubGlobal('ResizeObserver', class {
         constructor(callback: () => void) { resized.push(callback); }
@@ -835,12 +889,17 @@ describe('LinesPanel', () => {
       const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => width);
       try {
         renderPanel({ record: roundWith([storedLine()]) });
-        expect(screen.getByTestId('line-timing')).toBeInTheDocument();
+        expect(timing(0).getByRole('checkbox', { name: 'Full time' })).toBeInTheDocument();
+
+        width = LINES_OFTEN_FIRST_MIN_WIDTH;
+        act(() => resized.forEach((callback) => callback()));
+        expect(priced(0).getByRole('checkbox', { name: 'Full time' })).toBeInTheDocument();
+        expect(timing(0).queryByRole('checkbox', { name: 'Full time' })).not.toBeInTheDocument();
 
         width = LINES_TABLE_MIN_WIDTH;
         act(() => resized.forEach((callback) => callback()));
         expect(screen.queryByTestId('line-timing')).not.toBeInTheDocument();
-        expect(heads()).toEqual(['Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', 'Amount', '']);
+        expect(heads()).toEqual(['', 'Description', 'Quantity', 'Unit', 'Unit price', 'How often', 'From', 'To', 'Calendar', '', 'Amount', '']);
 
         width = LINES_TABLE_MIN_WIDTH - 1;
         act(() => resized.forEach((callback) => callback()));

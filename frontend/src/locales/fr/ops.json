@@ -1204,6 +1204,10 @@
       "howOften": "Fréquence",
       "date": "Date",
       "calendar": "Calendrier",
+      "fromWord": "du",
+      "toWord": "au",
+      "onWord": "le",
+      "calendarWord": "calendrier",
       "unitNames": {
         "people": "personnes",
         "days": "jours",
