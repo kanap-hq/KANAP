@@ -4,6 +4,22 @@ Shared instructions for every coding agent working on this repository (Claude Co
 DeepSeek and others). This file is public: it holds no credentials, hosts or customer data.
 Tool-specific or private notes live in each tool's local files, never here.
 
+## How agents work on this repository
+
+- **Bounded tasks** (a fix, a small feature, a doc update): the maintainer gives them to you
+  directly. Handle them end to end: analysis, code, tests, user docs if needed, local verification,
+  then hand back to the maintainer for testing.
+- **Large tasks** (several lots, architecture, migrations, cross-cutting refactors): Claude leads,
+  splits the work into lots and writes a brief for each one. Follow the brief. If it contradicts the
+  code or this file, say so before going further.
+- If a bounded task turns out to be large (schema change, several modules, a product decision),
+  stop and ask the maintainer instead of improvising a large change.
+- **Private context.** If `CLAUDE.local.md` exists at the repository root, read it at session start
+  (it is gitignored, so most tools do not load it automatically). It points to the single project
+  memory and explains how to record findings there. Do not keep a separate project memory of your own.
+- When you finish: say what you changed and what you verified (commands and results), list what
+  you could not verify, and hand back to the maintainer.
+
 ## Core principles
 
 - **Simplicity first.** Make every change as simple as possible and touch as little code as possible.
