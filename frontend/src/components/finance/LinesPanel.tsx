@@ -51,13 +51,15 @@ const CALENDARS_PATH = '/master-data/working-day-calendars';
 
 /**
  * The least width of each column of the lines table, in px: what a field needs to read whole
- * ("31 Dec 2026", "United States", a price with "per month" after it). The description takes what
- * is left, at least its own; a narrower panel scrolls the table sideways instead of squeezing the fields.
+ * ("31 Dec 2026", "United States", a price with "per month" after it). The description is fixed:
+ * the fields stay next to it on a wide screen, and the filler column before Amount takes the free
+ * width. A narrower panel scrolls the table sideways instead of squeezing the fields.
  * The unit price is its number field (`UNIT_PRICE_NUMBER_WIDTH`), then what the price is for: the
  * people select needs 83 px for its longest word ("per month", "pro Monat") and its arrow.
  */
 export const LINE_COLUMN_WIDTHS = {
-  description: 150,
+  number: 22,
+  description: 220,
   quantity: 80,
   unit: 125,
   unitPrice: 177,
@@ -69,27 +71,55 @@ export const LINE_COLUMN_WIDTHS = {
   remove: 28,
 } as const;
 export const UNIT_PRICE_NUMBER_WIDTH = 80;
+/** The frequency select ("per month", "une fois", "pro Jahr"): its longest choice and its arrow. */
+export const OFTEN_SELECT_MAX_WIDTH = 160;
+/** The `×` between the quantity and its unit price, on the first row of a line. */
+export const LINE_MUL_WIDTH = 14;
+/** Between two fields of a line: the table's cells carry half of it each, the grid of the second row uses it whole. */
+export const LINE_COLUMN_GAP = 8;
+/**
+ * The connector words of a line's second row ("from", "to", "calendar"): fixed tracks, so the dates
+ * and the calendars start at the same place from one line to the next whatever the word, and the
+ * "on" of a line bought once sits in the "from" track.
+ */
+export const LINE_WORD_WIDTHS = { from: 36, to: 28, calendar: 68 } as const;
+/**
+ * The second row of a line reads as a sentence: how often under the description, then a word and
+ * its field. The gutter track is the line number column less the half gap its cells carry. How
+ * often keeps its `often` width: "Tiempo completo" and "días por mes" together need more than the
+ * description's 220 px, and the track is the same for every line at any length.
+ */
+export const LINE_SECOND_ROW_WIDTHS = [
+  LINE_COLUMN_WIDTHS.number - LINE_COLUMN_GAP / 2,
+  LINE_COLUMN_WIDTHS.often,
+  LINE_WORD_WIDTHS.from, LINE_COLUMN_WIDTHS.from,
+  LINE_WORD_WIDTHS.to, LINE_COLUMN_WIDTHS.to,
+  LINE_WORD_WIDTHS.calendar, LINE_COLUMN_WIDTHS.calendar,
+] as const;
+/** The second row when how often goes up to the first: the dates and the calendar, under the description. */
+export const LINE_TIMING_ROW_WIDTHS = LINE_SECOND_ROW_WIDTHS.filter((_, index) => index !== 1);
 export const LINES_TABLE_MIN_WIDTH = Object.values(LINE_COLUMN_WIDTHS).reduce((sum, width) => sum + width, 0);
+const gridWidth = (tracks: readonly number[]) => tracks.reduce((sum, width) => sum + width, 0) + LINE_COLUMN_GAP * (tracks.length - 1);
+const PRICED_ROW_WIDTH = LINE_COLUMN_WIDTHS.number + LINE_COLUMN_WIDTHS.description + LINE_COLUMN_WIDTHS.quantity
+  + LINE_COLUMN_WIDTHS.unit + LINE_MUL_WIDTH + LINE_COLUMN_WIDTHS.unitPrice + LINE_COLUMN_WIDTHS.amount + LINE_COLUMN_WIDTHS.remove;
 
 /**
- * A panel narrower than `LINES_TABLE_MIN_WIDTH` gives each line two rows, same column widths: what is
- * priced (description, quantity, unit, unit price, amount), then when and how (how often, dates,
- * calendar), indented under the description. The table then needs the wider of the two rows.
+ * A panel narrower than `LINES_TABLE_MIN_WIDTH` gives each line two rows: the calculation (number,
+ * description, quantity, unit, ×, unit price, amount), then the sentence of `LINE_SECOND_ROW_WIDTHS`.
+ * The table then needs the wider of the two rows. With room for it (`LINES_OFTEN_FIRST_MIN_WIDTH`),
+ * how often goes up to the first row, after the unit price: the second row keeps the dates and the
+ * calendar (`LINE_TIMING_ROW_WIDTHS`).
  */
-export const LINES_SECOND_ROW_INDENT = 24;
-export const LINES_TWO_ROWS_MIN_WIDTH = Math.max(
-  LINE_COLUMN_WIDTHS.description + LINE_COLUMN_WIDTHS.quantity + LINE_COLUMN_WIDTHS.unit
-    + LINE_COLUMN_WIDTHS.unitPrice + LINE_COLUMN_WIDTHS.amount + LINE_COLUMN_WIDTHS.remove,
-  LINES_SECOND_ROW_INDENT + LINE_COLUMN_WIDTHS.often + LINE_COLUMN_WIDTHS.from + LINE_COLUMN_WIDTHS.to + LINE_COLUMN_WIDTHS.calendar,
-);
+export const LINES_TWO_ROWS_MIN_WIDTH = Math.max(PRICED_ROW_WIDTH, gridWidth(LINE_SECOND_ROW_WIDTHS));
+export const LINES_OFTEN_FIRST_MIN_WIDTH = Math.max(PRICED_ROW_WIDTH + LINE_COLUMN_WIDTHS.often, gridWidth(LINE_TIMING_ROW_WIDTHS));
 
 /**
- * Whether the box the returned ref is put on is at least `minWidth` wide, followed as it resizes (the
- * window, the properties drawer opened or closed), at most once a frame. A box without layout (not
- * shown yet, or in tests) counts as wide enough.
+ * How many of `minWidths` (ascending) the box the returned ref is put on reaches, followed as it
+ * resizes (the window, the properties drawer opened or closed), at most once a frame. A box without
+ * layout (not shown yet, or in tests) reaches them all.
  */
-function useFitsWidth(minWidth: number): [(node: HTMLElement | null) => void, boolean] {
-  const [fits, setFits] = React.useState(true);
+function useWidthTier(minWidths: readonly number[]): [(node: HTMLElement | null) => void, number] {
+  const [tier, setTier] = React.useState(minWidths.length);
   const stop = React.useRef<(() => void) | null>(null);
   const ref = React.useCallback((node: HTMLElement | null) => {
     stop.current?.();
@@ -97,7 +127,7 @@ function useFitsWidth(minWidth: number): [(node: HTMLElement | null) => void, bo
     if (!node || typeof ResizeObserver === 'undefined') return;
     const measure = () => {
       const width = node.clientWidth;
-      if (width > 0) setFits(width >= minWidth);
+      if (width > 0) setTier(minWidths.filter((min) => width >= min).length);
     };
     measure();
     // A drag of the drawer resizes the box many times a frame: only the last size is measured.
@@ -111,8 +141,8 @@ function useFitsWidth(minWidth: number): [(node: HTMLElement | null) => void, bo
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [minWidth]);
-  return [ref, fits];
+  }, [minWidths]);
+  return [ref, tier];
 }
 
 /**
@@ -275,11 +305,15 @@ export type LinesPanelProps = {
    */
   onSave: (lines: LinePayload[], applyToAll: boolean, startedFrom: LinePayload[]) => Promise<LinesSaveResult>;
   /**
-   * One row per line (`wide`), two (`narrow`), or `auto`: one row when the panel has room for the
-   * whole table, two otherwise. Fixed for the specs, which have no layout.
+   * One row per line (`wide`), two with how often on the first (`medium`), two with how often on the
+   * second (`narrow`), or `auto`: the first of these the panel has room for. Fixed for the specs,
+   * which have no layout.
    */
-  layout?: 'wide' | 'narrow' | 'auto';
+  layout?: 'wide' | 'medium' | 'narrow' | 'auto';
 };
+
+/** The widths `auto` switches at: how often on the first row, then one row per line. */
+const LAYOUT_MIN_WIDTHS = [LINES_OFTEN_FIRST_MIN_WIDTH, LINES_TABLE_MIN_WIDTH] as const;
 
 /**
  * "Quantity and price": the column as a table of lines, each a quantity times a unit price. Every
@@ -568,6 +602,15 @@ export default function LinesPanel({
   const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
   const headSx = { fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'left', px: 0.5, py: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } as const;
   const cellSx = { px: 0.5, py: '2px', verticalAlign: 'middle' } as const;
+  // A line is one block: 8 px above its calculation, 4 px between the two rows, 8 px under the sentence.
+  const pricedCellSx = { ...cellSx, pt: 1, pb: 0.5 } as const;
+  const timingCellSx = { p: 0, pb: 1 } as const;
+  // The line number in the margin: right-aligned, no left padding, the half gap on its right only.
+  const numberCellSx = { px: 0, pr: 0.5, textAlign: 'right', fontSize: 12, color: 'kanap.text.tertiary', fontVariantNumeric: 'tabular-nums' } as const;
+  // The × between the quantity and the unit price, and the words of the second row: never a field.
+  const mulCellSx = { p: 0, verticalAlign: 'middle', textAlign: 'center', fontSize: 14, color: 'kanap.text.tertiary', lineHeight: 1 } as const;
+  const wordSx = { p: 0, fontSize: 12, color: 'kanap.text.secondary', whiteSpace: 'nowrap' } as const;
+  const gridCellSx = { p: 0, minWidth: 0 } as const;
   // What the unit price is for, after the price: plain words, or a select without a box (people).
   const suffixSx = { fontSize: 12, color: 'kanap.text.secondary', whiteSpace: 'nowrap', flex: '0 0 auto' } as const;
   const suffixSelectSx = { ...inlineControlSx, flex: '0 0 auto', '& .MuiInputBase-input': { fontSize: '12px !important', color: 'kanap.text.secondary' } } as const;
@@ -600,8 +643,10 @@ export default function LinesPanel({
   const onEnter = (e: React.KeyboardEvent) => { if (e.key === 'Enter') commit(); };
   // Every row takes one date: the header says Date over the first date column.
   const allDates = drafts.length > 0 && drafts.every(isDateDraft);
-  const [tableBoxRef, fitsOneRow] = useFitsWidth(LINES_TABLE_MIN_WIDTH);
-  const twoRows = layout === 'narrow' || (layout === 'auto' && !fitsOneRow);
+  const [tableBoxRef, widthTier] = useWidthTier(LAYOUT_MIN_WIDTHS);
+  const shape = layout === 'auto' ? (['narrow', 'medium', 'wide'] as const)[widthTier] : layout;
+  // Two rows per line: how often on the first one when the panel has room for it.
+  const oftenFirst = shape === 'medium';
 
   // The fields of a line, laid out in one row or two.
   const descriptionField = (draft: LineDraft) => (
@@ -692,11 +737,16 @@ export default function LinesPanel({
         </>
       )}
     </Box>
-  ) : FREQUENCIES_BY_UNIT[draft.unit].length > 1 ? select(
-    t('budgetTab.lines.howOften'),
-    draft.frequency,
-    FREQUENCIES_BY_UNIT[draft.unit].map((frequency) => ({ value: frequency, label: t(`budgetTab.lines.frequency.${frequency}`) })),
-    (value) => changeFrequency(draft, value as Frequency),
+  ) : FREQUENCIES_BY_UNIT[draft.unit].length > 1 ? (
+    // As wide as its longest choice, not as the whole column.
+    <Box sx={{ maxWidth: OFTEN_SELECT_MAX_WIDTH }}>
+      {select(
+        t('budgetTab.lines.howOften'),
+        draft.frequency,
+        FREQUENCIES_BY_UNIT[draft.unit].map((frequency) => ({ value: frequency, label: t(`budgetTab.lines.frequency.${frequency}`) })),
+        (value) => changeFrequency(draft, value as Frequency),
+      )}
+    </Box>
   ) : (
     <Typography data-testid="line-frequency" sx={{ fontSize: 13, color: 'kanap.text.primary', px: '6px', whiteSpace: 'nowrap' }}>
       {draft.unit === 'days' ? t('budgetTab.lines.overThePeriod') : t(`budgetTab.lines.frequency.${draft.frequency}`)}
@@ -731,14 +781,18 @@ export default function LinesPanel({
     calendarOptions.map((o) => ({ value: o.id, label: o.name })),
     (value) => patchAndCommit(draft.key, { calendarId: value }),
   );
-  const amountCell = (index: number) => (
+  const amountCell = (index: number, cell: object) => (
     <Box
       component="td"
       data-testid="line-amount"
-      sx={{ ...cellSx, textAlign: 'right', fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+      sx={{ ...cell, textAlign: 'right', fontSize: 13, fontWeight: 500, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
     >
       {amounts[index]}
     </Box>
+  );
+  // The line number of the margin: the one the notes under the table call "Line 2".
+  const numberCell = (index: number, cell: object) => (
+    <Box component="td" data-testid="line-number" aria-hidden sx={{ ...cell, ...numberCellSx }}>{index + 1}</Box>
   );
   const removeButton = (draft: LineDraft) => !readOnly && (
     <Tooltip title={t('budgetTab.lines.remove')}>
@@ -754,15 +808,14 @@ export default function LinesPanel({
     </Tooltip>
   );
 
-  // Two rows: the second row is one cell holding a grid of the same widths as the wide columns,
-  // indented under the description.
+  // The second row of a line: the tracks are the same for every line, so the dates and the calendars
+  // of one line start where those of the line above start.
   const secondRowSx = {
     display: 'grid',
     alignItems: 'center',
-    gridTemplateColumns: [LINE_COLUMN_WIDTHS.often, LINE_COLUMN_WIDTHS.from, LINE_COLUMN_WIDTHS.to, LINE_COLUMN_WIDTHS.calendar].map((w) => `${w}px`).join(' '),
+    gridTemplateColumns: (oftenFirst ? LINE_TIMING_ROW_WIDTHS : LINE_SECOND_ROW_WIDTHS).map((w) => `${w}px`).join(' '),
+    columnGap: `${LINE_COLUMN_GAP}px`,
   } as const;
-  const secondRowCellSx = { p: 0, pl: `${LINES_SECOND_ROW_INDENT}px` } as const;
-  const gridCellSx = { px: 0.5, py: '2px', minWidth: 0 } as const;
   // Split like its cells: the label right-aligned over the number field, nothing over what the price is for.
   const unitPriceHead = (
     <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unitPrice }}>
@@ -780,11 +833,21 @@ export default function LinesPanel({
     <Box
       component="table"
       data-testid="lines-table"
-      sx={{ width: '100%', minWidth: LINES_TABLE_MIN_WIDTH, tableLayout: 'fixed', borderCollapse: 'collapse', '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' }, '& td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}
+      sx={{
+        width: '100%',
+        minWidth: LINES_TABLE_MIN_WIDTH,
+        tableLayout: 'fixed',
+        borderCollapse: 'collapse',
+        '& thead > tr > th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' },
+        '& tbody > tr > td': { borderBottom: '1px solid', borderColor: 'kanap.border.default' },
+        // The line being edited, never the one the mouse crosses: dense fields would flicker.
+        '& tbody > tr:focus-within': { bgcolor: 'kanap.bg.hover' },
+      }}
     >
       <Box component="thead">
         <Box component="tr">
-          <Box component="th" sx={{ ...headSx, minWidth: LINE_COLUMN_WIDTHS.description }}>{t('budgetTab.lines.description')}</Box>
+          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.number }} />
+          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.description }}>{t('budgetTab.lines.description')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.quantity, textAlign: 'right' }}>{t('budgetTab.lines.quantity')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unit }}>{t('budgetTab.lines.unit')}</Box>
           {unitPriceHead}
@@ -792,6 +855,8 @@ export default function LinesPanel({
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.from }}>{fromHead}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.to }}>{toHead}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.calendar }}>{t('budgetTab.lines.calendar')}</Box>
+          {/* The free width: it keeps the description at its size and the fields next to it. */}
+          <Box component="th" sx={headSx} />
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.amount, textAlign: 'right' }}>{amountHead}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.remove }} />
         </Box>
@@ -801,6 +866,7 @@ export default function LinesPanel({
           const [fromField, toField] = dateFields(draft);
           return (
             <Box component="tr" key={draft.key} data-testid="line-row">
+              {numberCell(index, cellSx)}
               <Box component="td" sx={cellSx}>{descriptionField(draft)}</Box>
               <Box component="td" sx={cellSx}>{quantityField(draft)}</Box>
               <Box component="td" sx={cellSx}>{unitField(draft)}</Box>
@@ -809,7 +875,8 @@ export default function LinesPanel({
               <Box component="td" sx={cellSx}>{fromField}</Box>
               <Box component="td" sx={cellSx}>{toField}</Box>
               <Box component="td" sx={cellSx}>{calendarField(draft)}</Box>
-              {amountCell(index)}
+              <Box component="td" sx={cellSx} />
+              {amountCell(index, cellSx)}
               <Box component="td" sx={cellSx}>{removeButton(draft)}</Box>
             </Box>
           );
@@ -818,52 +885,66 @@ export default function LinesPanel({
     </Box>
   );
 
-  // One body per line: its two rows stay together, a hairline under the second only.
+  // One body per line, a full separator under each: the calculation, then the sentence of when and
+  // how, on a single header row.
   const twoRowsTable = (
     <Box
       component="table"
       data-testid="lines-table"
-      sx={{ width: '100%', minWidth: LINES_TWO_ROWS_MIN_WIDTH, tableLayout: 'fixed', borderCollapse: 'collapse', '& thead > tr:last-of-type > th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' }, '& tbody > tr:last-of-type > td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}
+      sx={{
+        width: '100%',
+        minWidth: oftenFirst ? LINES_OFTEN_FIRST_MIN_WIDTH : LINES_TWO_ROWS_MIN_WIDTH,
+        tableLayout: 'fixed',
+        borderCollapse: 'collapse',
+        '& thead > tr > th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' },
+        '& tbody > tr:last-of-type > td': { borderBottom: '1px solid', borderColor: 'kanap.border.default' },
+        '& tbody:focus-within': { bgcolor: 'kanap.bg.hover' },
+      }}
     >
       <Box component="thead">
-        <Box component="tr" data-testid="lines-head-priced">
-          <Box component="th" sx={{ ...headSx, minWidth: LINE_COLUMN_WIDTHS.description }}>{t('budgetTab.lines.description')}</Box>
+        <Box component="tr" data-testid="lines-head">
+          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.number }} />
+          <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.description }}>{t('budgetTab.lines.description')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.quantity, textAlign: 'right' }}>{t('budgetTab.lines.quantity')}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.unit }}>{t('budgetTab.lines.unit')}</Box>
+          <Box component="th" sx={{ ...headSx, width: LINE_MUL_WIDTH }} />
           {unitPriceHead}
+          {oftenFirst && <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.often }}>{t('budgetTab.lines.howOften')}</Box>}
+          <Box component="th" sx={headSx} />
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.amount, textAlign: 'right' }}>{amountHead}</Box>
           <Box component="th" sx={{ ...headSx, width: LINE_COLUMN_WIDTHS.remove }} />
-        </Box>
-        <Box component="tr" data-testid="lines-head-timing">
-          <Box component="th" colSpan={6} sx={secondRowCellSx}>
-            <Box sx={secondRowSx}>
-              <Box sx={headSx}>{t('budgetTab.lines.howOften')}</Box>
-              <Box sx={headSx}>{fromHead}</Box>
-              <Box sx={headSx}>{toHead}</Box>
-              <Box sx={headSx}>{t('budgetTab.lines.calendar')}</Box>
-            </Box>
-          </Box>
         </Box>
       </Box>
       {drafts.map((draft, index) => {
         const [fromField, toField] = dateFields(draft);
+        const calendar = calendarField(draft);
+        const once = isDateDraft(draft);
         return (
           <Box component="tbody" key={draft.key} data-testid="line-row">
             <Box component="tr" data-testid="line-priced">
-              <Box component="td" sx={cellSx}>{descriptionField(draft)}</Box>
-              <Box component="td" sx={cellSx}>{quantityField(draft)}</Box>
-              <Box component="td" sx={cellSx}>{unitField(draft)}</Box>
-              <Box component="td" sx={cellSx}>{priceField(draft)}</Box>
-              {amountCell(index)}
-              <Box component="td" sx={cellSx}>{removeButton(draft)}</Box>
+              {numberCell(index, pricedCellSx)}
+              <Box component="td" sx={pricedCellSx}>{descriptionField(draft)}</Box>
+              <Box component="td" sx={pricedCellSx}>{quantityField(draft)}</Box>
+              <Box component="td" sx={pricedCellSx}>{unitField(draft)}</Box>
+              <Box component="td" aria-hidden sx={mulCellSx}>×</Box>
+              <Box component="td" sx={pricedCellSx}>{priceField(draft)}</Box>
+              {oftenFirst && <Box component="td" sx={pricedCellSx}>{oftenField(draft)}</Box>}
+              <Box component="td" sx={pricedCellSx} />
+              {amountCell(index, pricedCellSx)}
+              <Box component="td" sx={pricedCellSx}>{removeButton(draft)}</Box>
             </Box>
             <Box component="tr" data-testid="line-timing">
-              <Box component="td" colSpan={6} sx={secondRowCellSx}>
-                <Box sx={secondRowSx}>
-                  <Box sx={gridCellSx}>{oftenField(draft)}</Box>
+              <Box component="td" colSpan={oftenFirst ? 10 : 9} sx={timingCellSx}>
+                <Box data-testid="line-sentence" sx={secondRowSx}>
+                  {/* Under the line number of the row above. */}
+                  <Box />
+                  {!oftenFirst && <Box sx={gridCellSx}>{oftenField(draft)}</Box>}
+                  <Box data-testid="line-from-word" sx={wordSx}>{t(once ? 'budgetTab.lines.onWord' : 'budgetTab.lines.fromWord')}</Box>
                   <Box sx={gridCellSx}>{fromField}</Box>
+                  <Box data-testid="line-to-word" sx={wordSx}>{once ? '' : t('budgetTab.lines.toWord')}</Box>
                   <Box sx={gridCellSx}>{toField}</Box>
-                  <Box sx={gridCellSx}>{calendarField(draft)}</Box>
+                  <Box data-testid="line-calendar-word" sx={wordSx}>{calendar ? t('budgetTab.lines.calendarWord') : ''}</Box>
+                  <Box sx={gridCellSx}>{calendar}</Box>
                 </Box>
               </Box>
             </Box>
@@ -889,7 +970,7 @@ export default function LinesPanel({
         ) : (
           <>
             <Box sx={{ overflowX: 'auto' }}>
-              {twoRows ? twoRowsTable : oneRowTable}
+              {shape === 'wide' ? oneRowTable : twoRowsTable}
             </Box>
             {!readOnly && (
               <Button ref={focusIfTarget(ADD_LINE)} size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addLine} sx={{ textTransform: 'none', fontSize: 12, mt: 0.5 }}>

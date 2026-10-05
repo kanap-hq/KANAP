@@ -1203,6 +1203,10 @@
       "howOften": "Frecuencia",
       "date": "Fecha",
       "calendar": "Calendario",
+      "fromWord": "del",
+      "toWord": "al",
+      "onWord": "el",
+      "calendarWord": "calendario",
       "unitNames": {
         "people": "personas",
         "days": "días",

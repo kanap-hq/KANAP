@@ -1203,6 +1203,10 @@
       "howOften": "Wie oft",
       "date": "Datum",
       "calendar": "Kalender",
+      "fromWord": "vom",
+      "toWord": "bis",
+      "onWord": "am",
+      "calendarWord": "Kalender",
       "unitNames": {
         "people": "Personen",
         "days": "Tage",
