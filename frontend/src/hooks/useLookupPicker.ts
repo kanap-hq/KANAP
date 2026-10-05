@@ -5,6 +5,7 @@ import type { PaperProps } from '@mui/material';
 import api from '../api';
 import useDebouncedValue from './useDebouncedValue';
 import LookupListPaper, { type LookupListPaperProps } from '../components/fields/LookupListPaper';
+import { foldText } from '../utils/foldText';
 
 /**
  * Reference pickers that search on the server as the user types (backend
@@ -43,21 +44,11 @@ const SEARCH_STALE_MS = 30_000;
 /** The label shown while a chosen value's label loads. */
 const PENDING_LABEL = '…';
 
-const LIGATURES: Record<string, string> = { 'œ': 'oe', 'æ': 'ae', 'ß': 'ss', 'ø': 'o', 'ł': 'l', 'đ': 'd' };
-
-/**
- * The server's folding of a searched text (`lower(unaccent(x))`, list engine decision Q2):
- * accents, case and the common ligatures. "societe" finds "Société".
- */
-function foldLookupText(value: string): string {
-  return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[œæßøłđ]/g, (c) => LIGATURES[c] ?? c);
-}
-
 /** The rows whose label holds the text (folded): the rows a pending search can still show. */
 export function narrowToText<T>(options: T[], text: string | null | undefined, label: (option: T) => string): T[] {
-  const needle = foldLookupText((text ?? '').trim());
+  const needle = foldText((text ?? '').trim());
   if (!needle) return options;
-  return options.filter((option) => foldLookupText(label(option) ?? '').includes(needle));
+  return options.filter((option) => foldText(label(option) ?? '').includes(needle));
 }
 
 /**

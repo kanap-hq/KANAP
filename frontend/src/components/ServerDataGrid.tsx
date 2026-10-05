@@ -47,6 +47,8 @@ import {
   takeLostListFilters,
 } from '../lib/listContext';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
+import { foldText } from '../utils/foldText';
+import { fieldResetSx } from '../theme/formSx';
 
 const DATE_FILTER_PARAMS = {
   suppressAndOrCondition: true,
@@ -502,14 +504,25 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   // Custom column chooser state (Community Edition compatible)
   const [columnChooserAnchor, setColumnChooserAnchor] = useState<HTMLElement | null>(null);
   const columnChooserOpen = Boolean(columnChooserAnchor);
+  // What the chooser's search box holds. It filters the list on screen and is never saved.
+  const [columnSearch, setColumnSearch] = useState('');
+  const columnListRef = useRef<HTMLDivElement | null>(null);
 
-  // Column chooser handlers
+  // Column chooser handlers. The search starts empty on every opening.
   const handleShowColumnChooser = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    setColumnSearch('');
     setColumnChooserAnchor(event.currentTarget);
   }, []);
 
   const handleCloseColumnChooser = useCallback(() => {
     setColumnChooserAnchor(null);
+    setColumnSearch('');
+  }, []);
+
+  // A search lists its matches from the top, never from the scroll position of the longer list before.
+  const applyColumnSearch = useCallback((next: string) => {
+    setColumnSearch(next);
+    if (columnListRef.current) columnListRef.current.scrollTop = 0;
   }, []);
 
   const handleColumnToggle = useCallback((field: string, visible: boolean) => {
@@ -553,6 +566,14 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       };
     });
   }, [columns, currentColumnState, requiredColumns]);
+
+  // The search box filters the list by the label shown, folded like every other search box of the
+  // app: "remuneration" finds "Rémunération". A column without a header name shows its field.
+  const searchedColumns = useMemo(() => {
+    const needle = foldText(columnSearch.trim());
+    if (!needle) return visibleColumns;
+    return visibleColumns.filter((col) => foldText(col.headerName).includes(needle));
+  }, [visibleColumns, columnSearch]);
 
   const handleResetColumns = useCallback(() => {
     const api = gridApiRef.current;
@@ -1278,13 +1299,45 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           horizontal: 'left',
         }}
       >
-        <Box sx={{ p: 2, minWidth: 250, maxWidth: 350 }}>
+        <Box sx={{ p: 2, width: 300 }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
             {t('common:buttons.chooseColumns')}
           </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            variant="standard"
+            value={columnSearch}
+            onChange={(event) => applyColumnSearch(event.target.value)}
+            placeholder={t('common:columnChooser.searchPlaceholder')}
+            inputProps={{ 'aria-label': t('common:columnChooser.searchPlaceholder') }}
+            InputProps={{
+              endAdornment: (
+                <IconButton
+                  size="small"
+                  // Keeps the focus in the box while clearing it.
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => applyColumnSearch('')}
+                  aria-label={t('common:columnChooser.clearSearch')}
+                  sx={{ visibility: columnSearch ? 'visible' : 'hidden' }}
+                >
+                  <CloseIcon fontSize="inherit" />
+                </IconButton>
+              ),
+            }}
+            sx={[fieldResetSx, {
+              mb: 1,
+              px: 0.75,
+              py: 0.375,
+              borderRadius: 0.75,
+              bgcolor: 'kanap.bg.composer',
+              '& input': { fontSize: 13, py: 0.25 },
+            }]}
+          />
           <Divider sx={{ mb: 1 }} />
-          <Stack spacing={0.5} sx={{ maxHeight: 300, overflowY: 'auto' }}>
-            {visibleColumns.map((col) => (
+          <Stack ref={columnListRef} spacing={0.5} sx={{ maxHeight: 300, overflowY: 'auto' }}>
+            {searchedColumns.map((col) => (
               <FormControlLabel
                 key={col.field}
                 control={
@@ -1315,6 +1368,11 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
                 }}
               />
             ))}
+            {searchedColumns.length === 0 && (
+              <Typography sx={{ py: 1, fontSize: 13, color: 'kanap.text.secondary' }}>
+                {t('common:columnChooser.noMatch')}
+              </Typography>
+            )}
           </Stack>
           <Divider sx={{ my: 1 }} />
           <Stack direction="row" spacing={1} justifyContent="flex-end">
