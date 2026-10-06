@@ -971,6 +971,29 @@ describe('LinesPanel and the stored lines (lot 3D, scenario 4)', () => {
     expect(onSave.mock.calls[1][2]).toEqual([expect.objectContaining({ label: 'Lead' })]);
   });
 
+  it('commits made while a save is on its way go once it answered, from the lines it stored', async () => {
+    let answer: (value: { ok: true }) => void = () => undefined;
+    const onSave: LinesPanelProps['onSave'] = vi.fn(() => new Promise<{ ok: true }>((resolve) => { answer = resolve; }));
+    renderPanel({ record: roundWith([storedLine()]), onSave });
+    const calls = (onSave as ReturnType<typeof vi.fn>).mock.calls;
+    typeAndLeave(description(), 'Lead');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    // Quick changes while the first save is on its way (a date's arrows clicked fast): none is sent yet.
+    typeAndLeave(description(), 'Lead, part time');
+    typeAndLeave(description(), 'Lead, half time');
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    await act(async () => { answer({ ok: true }); });
+    // One write for the latest drafts, starting from what the first save stored.
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(calls[1][0][0]).toMatchObject({ label: 'Lead, half time' });
+    expect(calls[1][2]).toEqual([expect.objectContaining({ label: 'Lead' })]);
+    await act(async () => { answer({ ok: true }); });
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(2);
+  });
+
   it('while the column waits for a choice the drafts stay; Reload the column replaces them', async () => {
     const onSave = vi.fn(async () => ({ ok: false as const, conflict: true as const }));
     const { rerender } = renderPanel({ record: roundWith([storedLine()]), onSave });

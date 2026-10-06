@@ -343,6 +343,10 @@ export default function LinesPanel({
   const startedFromRef = React.useRef<LinePayload[]>(storedLines.map(linePayloadOf));
   // Saves on their way: the drafts are not replaced by stored lines meanwhile.
   const inFlightRef = React.useRef(0);
+  // A commit made while a save is on its way (quick clicks on a date's arrows): sent once that save
+  // answered, from the lines it stored. Sent at once, it would start from the lines before that save
+  // and be refused as someone else's change.
+  const queuedRef = React.useRef<{ force?: boolean; applyToAll?: boolean } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const update = (change: (prev: LineDraft[]) => LineDraft[]): LineDraft[] => {
@@ -360,14 +364,23 @@ export default function LinesPanel({
     if (lines.length === 0 && next.length > 0) return;
     const signature = JSON.stringify(lines);
     if (!options.force && signature === sentRef.current) return;
+    if (inFlightRef.current > 0) {
+      const queued = queuedRef.current;
+      queuedRef.current = { force: !!(queued?.force || options.force), applyToAll: options.applyToAll ?? queued?.applyToAll };
+      return;
+    }
     sentRef.current = signature;
     inFlightRef.current += 1;
     void onSave(lines, options.applyToAll ?? applyToAll.on, startedFromRef.current).then((result) => {
       inFlightRef.current -= 1;
+      const queued = queuedRef.current;
+      queuedRef.current = null;
       if (result.ok) {
         setError(null);
         // The column now holds these lines: the next write starts from them.
         startedFromRef.current = lines;
+        // The latest drafts, committed meanwhile, go now with this base.
+        if (queued) sendRef.current(draftsRef.current, queued);
         // The only warning is a disabled calendar: the note under the table comes from the calendars
         // list, refreshed here in case it was disabled since the list was loaded.
         if (result.warnings?.length) void queryClient.invalidateQueries({ queryKey: WORKING_DAY_PROFILES_QUERY_KEY });
@@ -381,6 +394,9 @@ export default function LinesPanel({
       }
     });
   };
+
+  const sendRef = React.useRef(send);
+  sendRef.current = send;
 
   // The stored lines change (a save of this panel, someone else's save shown by a reload, a column
   // reloaded): when nothing is pending here (every line complete and sent, no save on its way, no
