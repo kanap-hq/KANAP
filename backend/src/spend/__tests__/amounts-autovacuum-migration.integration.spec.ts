@@ -68,11 +68,25 @@ async function testBusyTableIsSkippedNotBlocking() {
     await inRolledBackTransaction(async (runner) => {
       await runner.query(`SET LOCAL lock_timeout = '42s'`);
       await runner.query(`ALTER TABLE spend_amounts RESET (autovacuum_vacuum_scale_factor)`);
+      // The lock timeout in force on the session when each ALTER is sent: PostgreSQL itself ends
+      // the wait at that timeout, so this bounds the wait without timing it.
+      const lockTimeouts: Record<string, string> = {};
+      const watched = new Proxy(runner, {
+        get(target, key, receiver) {
+          if (key !== 'query') return Reflect.get(target, key, receiver);
+          return async (sql: string, params?: unknown[]) => {
+            const altered = /^ALTER TABLE (\w+) SET/.exec(sql)?.[1];
+            if (altered) lockTimeouts[altered] = (await target.query(`SELECT current_setting('lock_timeout') AS timeout`))[0].timeout;
+            return target.query(sql, params);
+          };
+        },
+      });
       const lines: string[] = [];
       const started = Date.now();
-      await quiet(() => migration.up(runner), lines);
+      await quiet(() => migration.up(watched), lines);
       const elapsed = Date.now() - started;
-      assert.ok(elapsed >= 4_500 && elapsed < 15_000, `waited about 5 s for the busy table (${elapsed} ms)`);
+      assert.deepEqual(lockTimeouts, { spend_amounts: '5s', capex_amounts: '5s' }, 'each ALTER waits for its lock at most 5 s');
+      assert.ok(elapsed >= 4_500, `waited for the busy table until the lock timeout (${elapsed} ms)`);
       assert.ok(lines.some((l) => /capex_amounts was busy/.test(l)), 'the busy table is named in the log');
       assert.ok((await options(runner, 'spend_amounts')).includes('autovacuum_vacuum_scale_factor=0.02'), 'the free table is set');
       const [{ timeout }] = await runner.query(`SELECT current_setting('lock_timeout') AS timeout`);

@@ -30,14 +30,22 @@ async function testSnapshotAnswersWithoutTheDatabase(waitingCount: number) {
   try {
     store.record({ ts: Date.now(), method: 'GET', route: '/spend-items/summary', statusCode: 503, latencyMs: 10_000, errorType: 'QueryFailedError', errorMessage: 'timeout exceeded when trying to connect' });
     const started = Date.now();
-    const snapshot = await svc.build();
+    const building = svc.build();
+    // Timers fire in the order they expire, however late a loaded machine runs them: the answer
+    // must come before this timer, at once (pool busy) or at the 1 s limit (database stuck).
+    let lateTimer: NodeJS.Timeout | undefined;
+    const late = new Promise<'late'>((resolve) => { lateTimer = setTimeout(() => resolve('late'), waitingCount > 0 ? 500 : 2_500); });
+    const snapshot = await Promise.race([building, late]);
+    clearTimeout(lateTimer);
     const took = Date.now() - started;
+    assert.ok(snapshot !== 'late', waitingCount > 0
+      ? 'requests wait for the pool: nothing read, answered at once'
+      : 'database stuck: answered at the 1 s limit');
     assert.equal(snapshot.db.statsStale, true, 'the pg_stat part is flagged');
     if (waitingCount > 0) {
-      assert.ok(took < 500, `requests wait for the pool: nothing read, answered at once (${took} ms)`);
       assert.match(snapshot.db.statsError ?? '', /pool busy \(7 waiting\): not read/);
     } else {
-      assert.ok(took >= 900 && took < 2_500, `database stuck: answered after the 1 s limit (${took} ms)`);
+      assert.ok(took >= 900, `database stuck: answered after the 1 s limit (${took} ms)`);
       assert.match(snapshot.db.statsError ?? '', /no answer within 1000 ms/);
     }
     assert.equal(snapshot.db.pool.inUse, 20, 'the pool figures are served');

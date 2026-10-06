@@ -15,8 +15,40 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Lists the files a pull request changes and decides which of the three jobs below it can
+  # affect (.github/scripts/ci-changes.sh). A skipped job reports its required check as
+  # passed. A push on main runs every job.
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.decide.outputs.backend }}
+      frontend: ${{ steps.decide.outputs.frontend }}
+      onprem: ${{ steps.decide.outputs.onprem }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history, so `git diff` can find the merge base of the pull request.
+          fetch-depth: 0
+      - name: Decide which jobs run
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = pull_request ]; then
+            bash .github/scripts/ci-changes.sh "$BASE_SHA" "$HEAD_SHA"
+          else
+            bash .github/scripts/ci-changes.sh all
+          fi
+
+  # Each job below fails open: when `changes` did not succeed, the job runs.
   backend:
     name: backend (cloud)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -34,8 +66,8 @@ jobs:
           - 5432:5432
     env:
       DATABASE_URL: postgres://app:app@127.0.0.1:5432/appdb
-      # Types are checked once by `typecheck:ci`; ts-node then only transpiles.
-      TS_NODE_TRANSPILE_ONLY: '1'
+      # Database lanes of the runner: each runs its specs on its own copy of appdb.
+      DB_LANES: 4
     defaults:
       run:
         working-directory: backend
@@ -48,10 +80,13 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - name: Build backend
-        run: npm ci && npm run build
-      - name: Type-check backend sources and specs
-        run: npm run typecheck:ci
+      - name: Install backend dependencies
+        run: npm ci
+      # Type-checks the sources, the specs and the database scripts, and emits them once
+      # into ci-dist/ for the steps below. The production build (`npm run build`) is
+      # checked by the `build (onprem)` job.
+      - name: Type-check and compile backend sources and specs
+        run: npm run build:ci
       - name: Prepare CI PostgreSQL role/database
         env:
           PGPASSWORD: postgres
@@ -63,12 +98,26 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d appdb -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
           psql -h 127.0.0.1 -U postgres -d appdb -v ON_ERROR_STOP=1 -c "GRANT ALL ON SCHEMA public TO app;"
       - name: Prepare backend database
-        run: npm run typeorm -- migration:run
+        run: npx typeorm migration:run -d ci-dist/backend/src/data-source.js
+      # One copy of the migrated database per lane (appdb_1 ... appdb_N), owned by app: RLS
+      # and its FORCE policies come with the copy. A copy needs a template with no open
+      # connection, so it runs after the migrations and before any spec.
+      - name: Copy the database for the parallel lanes
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for n in $(seq 1 "$DB_LANES"); do
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE appdb_$n TEMPLATE appdb OWNER app;"
+          done
       - name: Run backend hardening checks
-        run: npm run test:ci
+        run: node scripts/run-ci-tests.js --no-compile --db-lanes "$DB_LANES"
 
-  frontend:
-    name: frontend (cloud)
+  # The frontend check runs as one build job and three test shards in parallel; the
+  # `frontend (cloud)` job below gathers their results into the required check.
+  frontend-build:
+    name: frontend build
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -84,11 +133,66 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Build frontend
         run: npm ci && npm run build
-      - name: Run frontend tests
-        run: npm test
+
+  frontend-tests:
+    name: frontend tests (${{ matrix.shard }}/3)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
+    runs-on: ubuntu-latest
+    strategy:
+      # Every shard finishes, so one run lists every failing test.
+      fail-fast: false
+      matrix:
+        shard: [ 1, 2, 3 ]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      # Vitest splits the test files by a hash of their path: each file runs in exactly one shard.
+      - name: Run frontend tests (shard ${{ matrix.shard }} of 3)
+        run: npm test -- --shard=${{ matrix.shard }}/3
+
+  # The required check. It always runs, even when the run is cancelled, so it never reports a
+  # skip (which would count as passed) for a frontend change whose build or tests did not pass.
+  frontend:
+    name: frontend (cloud)
+    needs: [ changes, frontend-build, frontend-tests ]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the frontend build and tests
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          AFFECTED: ${{ needs.changes.outputs.frontend }}
+          BUILD: ${{ needs.frontend-build.result }}
+          TESTS: ${{ needs.frontend-tests.result }}
+        run: |
+          echo "changes=$CHANGES frontend affected=$AFFECTED build=$BUILD tests=$TESTS"
+          if [ "$CHANGES" = success ] && [ "$AFFECTED" = false ]; then
+            echo "This pull request does not change the frontend: nothing to check."
+            exit 0
+          fi
+          if [ "$BUILD" = success ] && [ "$TESTS" = success ]; then
+            echo "Frontend build and every test shard passed."
+            exit 0
+          fi
+          echo "::error::Frontend build or tests did not pass (build=$BUILD, tests=$TESTS)."
+          exit 1
 
   onprem:
     name: build (onprem)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.onprem == 'true') }}
     runs-on: ubuntu-latest
     env:
       DEPLOYMENT_MODE: single-tenant

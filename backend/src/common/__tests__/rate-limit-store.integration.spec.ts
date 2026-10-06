@@ -62,9 +62,16 @@ async function testDoesNotWaitForASaturatedPool() {
   const storage = new DatabaseThrottlerStorage(stuck as any, 200);
   (storage as any).logger = { warn: () => undefined };
   const started = Date.now();
-  const record = await storage.increment(`spec-${randomUUID()}`, TTL, 5, TTL, 'default');
+  const counting = storage.increment(`spec-${randomUUID()}`, TTL, 5, TTL, 'default');
+  // Timers fire in the order they expire, however late a loaded machine runs them: the count
+  // must give up at its 200 ms wait, before this timer (and before the 1.5 s default wait).
+  let lateTimer: NodeJS.Timeout | undefined;
+  const late = new Promise<'late'>((resolve) => { lateTimer = setTimeout(() => resolve('late'), 1_000); });
+  const record = await Promise.race([counting, late]);
+  clearTimeout(lateTimer);
   const waited = Date.now() - started;
-  assert.ok(waited >= 180 && waited < 1_000, `gave up after the wait (${waited} ms)`);
+  assert.ok(record !== 'late', 'gave up after its own wait');
+  assert.ok(waited >= 180, `gave up after the wait (${waited} ms)`);
   assert.deepEqual([record.totalHits, record.isBlocked], [1, false], 'counted in memory');
 }
 
