@@ -463,10 +463,6 @@ export default function CopyBudgetColumnsPage() {
       onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
-        <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
-          {t('operations.copyBudgetColumns.linesUpliftHelp')}
-        </Typography>
-
         {destinationFrozen && (
           <Alert severity="error">
             {t('operations.copyBudgetColumns.frozenError', { year: destinationYear, column: columnName(destinationColumn) })}

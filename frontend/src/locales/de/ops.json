@@ -631,7 +631,7 @@
     },
     "copyBudgetColumns": {
       "title": "Budgetspalten kopieren",
-      "subtitle": "Eine Spalte in ein anderes Jahr oder eine andere Spalte kopieren, für OPEX oder CAPEX. Jeder Monat behält seinen Betrag, und der Prozentsatz gilt für jeden Monat. Positionen, die im Zieljahr nicht gültig sind, werden ausgelassen. Positionen, die nur einen Teil des Jahres gültig sind, erhalten nur diese Monate.",
+      "subtitle": "Eine Spalte in ein anderes Jahr oder eine andere Spalte kopieren, für OPEX oder CAPEX. Jeder Monat behält seinen Betrag, und der Prozentsatz gilt für jeden Monat. Bei Spalten, die aus Menge und Preis berechnet werden, erhöht der Prozentsatz die Stückpreise, und die Monate werden mit den Kalendern des Zieljahres neu berechnet. Positionen, die im Zieljahr nicht gültig sind, werden ausgelassen. Positionen, die nur einen Teil des Jahres gültig sind, erhalten nur diese Monate.",
       "sourceYear": "Quelljahr",
       "sourceColumn": "Quellspalte",
       "destinationYear": "Zieljahr",
@@ -659,7 +659,6 @@
       "skipped": "Übersprungen",
       "prorated": "Anteilig",
       "proratedHelp": "Diese Position beginnt oder endet im Jahr {{year}}. Nur die Monate innerhalb ihrer Gültigkeit werden kopiert.",
-      "linesUpliftHelp": "Bei Spalten, die aus Menge und Preis berechnet werden, gilt die Erhöhung für die Stückpreise. Ihre Monate werden mit den Kalendern des Zieljahres neu berechnet.",
       "calendarNote": "Kalender",
       "lineNumber": "Zeile {{n}}",
       "calendarIssue": {

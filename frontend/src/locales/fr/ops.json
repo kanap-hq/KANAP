@@ -631,7 +631,7 @@
     },
     "copyBudgetColumns": {
       "title": "Copier les colonnes budgétaires",
-      "subtitle": "Copier une colonne vers une autre année ou une autre colonne, en OPEX ou en CAPEX. Chaque mois garde son montant et le pourcentage s'applique à chaque mois. Les postes qui ne sont pas valides l'année de destination sont exclus. Un poste valide une partie de l'année ne reçoit que ces mois.",
+      "subtitle": "Copier une colonne vers une autre année ou une autre colonne, en OPEX ou en CAPEX. Chaque mois garde son montant et le pourcentage s'applique à chaque mois. Pour les colonnes calculées à partir de la quantité et du prix, le pourcentage augmente les prix unitaires et les mois sont recalculés avec les calendriers de l'année de destination. Les postes qui ne sont pas valides l'année de destination sont exclus. Un poste valide une partie de l'année ne reçoit que ces mois.",
       "sourceYear": "Année source",
       "sourceColumn": "Colonne source",
       "destinationYear": "Année de destination",
@@ -659,7 +659,6 @@
       "skipped": "Ignoré",
       "prorated": "Au prorata",
       "proratedHelp": "Ce poste commence ou se termine en {{year}}. Seuls les mois de sa période de validité sont copiés.",
-      "linesUpliftHelp": "Pour les colonnes calculées à partir de la quantité et du prix, l'augmentation s'applique aux prix unitaires. Leurs mois sont recalculés avec les calendriers de l'année de destination.",
       "calendarNote": "Calendrier",
       "lineNumber": "Ligne {{n}}",
       "calendarIssue": {

@@ -631,7 +631,7 @@
     },
     "copyBudgetColumns": {
       "title": "Copiar columnas presupuestarias",
-      "subtitle": "Copiar una columna a otro año u otra columna, en OPEX o CAPEX. Cada mes conserva su importe y el porcentaje se aplica a todos los meses. Las partidas que no son válidas en el año de destino se excluyen. Las partidas válidas solo una parte del año reciben únicamente esos meses.",
+      "subtitle": "Copiar una columna a otro año u otra columna, en OPEX o CAPEX. Cada mes conserva su importe y el porcentaje se aplica a todos los meses. En las columnas calculadas a partir de la cantidad y el precio, el porcentaje aumenta los precios unitarios y los meses se recalculan con los calendarios del año de destino. Las partidas que no son válidas en el año de destino se excluyen. Las partidas válidas solo una parte del año reciben únicamente esos meses.",
       "sourceYear": "Año de origen",
       "sourceColumn": "Columna de origen",
       "destinationYear": "Año de destino",
@@ -659,7 +659,6 @@
       "skipped": "Omitida",
       "prorated": "Prorrateada",
       "proratedHelp": "Esta partida empieza o termina en {{year}}. Solo se copian los meses dentro de su periodo de validez.",
-      "linesUpliftHelp": "En las columnas calculadas a partir de la cantidad y el precio, el incremento se aplica a los precios unitarios. Sus meses se recalculan con los calendarios del año de destino.",
       "calendarNote": "Calendario",
       "lineNumber": "Línea {{n}}",
       "calendarIssue": {

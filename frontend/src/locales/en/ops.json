@@ -631,7 +631,7 @@
     },
     "copyBudgetColumns": {
       "title": "Copy budget columns",
-      "subtitle": "Copy a column to another year or column, for OPEX or CAPEX. Each month keeps its amount, and the percentage applies to every month. Lines that are not valid in the destination year are left out. Lines valid for part of it get only those months.",
+      "subtitle": "Copy a column to another year or column, for OPEX or CAPEX. Each month keeps its amount and the percentage applies to every month. For columns calculated from quantity and price, the percentage raises the unit prices and the months are recalculated with the destination year's calendars. Lines that are not valid in the destination year are left out. Lines valid for part of it get only those months.",
       "sourceYear": "Source year",
       "sourceColumn": "Source column",
       "destinationYear": "Destination year",
@@ -659,7 +659,6 @@
       "skipped": "Skipped",
       "prorated": "Prorated",
       "proratedHelp": "This line starts or ends during {{year}}. Only the months within its validity are copied.",
-      "linesUpliftHelp": "Columns calculated from quantity and price get the increase on their unit prices. Their months are recalculated with the destination year's calendars.",
       "calendarNote": "Calendar",
       "lineNumber": "Line {{n}}",
       "calendarIssue": {
