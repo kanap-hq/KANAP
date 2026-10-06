@@ -115,8 +115,8 @@ export function keepValues(values: Array<string | null>): FilterModel {
   return { filterType: 'set', values };
 }
 
-/** A set filter leaving out the listed values: lines without a value are kept. */
-export function dropValues(values: string[]): FilterModel {
+/** A set filter leaving out the listed values; `null` leaves out the lines without a value. */
+export function dropValues(values: Array<string | null>): FilterModel {
   return { filterType: 'set', mode: 'exclude', values };
 }
 
@@ -504,10 +504,15 @@ export interface AnalyticsParams {
   filters: ColumnFilters;
 }
 
-/** By the line's value on the dimension (none: unassigned), one sum per year, the first year's largest first. */
+/**
+ * By the line's value on the dimension (none: unassigned), one sum per year, the first year's largest first.
+ * An excluded `NO_ANALYTICS_VALUE` leaves out the lines without a value.
+ */
 export function analyticsRequest(p: AnalyticsParams): AggregateRequest {
+  const excluded = p.excludedIds.map((id) => (id === NO_ANALYTICS_VALUE ? null : id));
+  const filters = excluded.length ? withFilter(p.filters, analyticsIdField(p.axisId), dropValues(excluded)) : p.filters;
   return {
-    query: { filters: exclusions(p.filters, [], analyticsIdField(p.axisId), p.excludedIds) },
+    query: { filters },
     spec: {
       groupBy: [analyticsIdField(p.axisId), analyticsNameField(p.axisId)],
       measures: yearMeasures(p.years, p.metric),

@@ -17,7 +17,7 @@ import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import type { AnalyticsAxis } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
-import { analyticsRequest, readAnalytics } from './reportAggregates';
+import { NO_ANALYTICS_VALUE, analyticsRequest, readAnalytics } from './reportAggregates';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAxisValueOptions } from './useReportOptions';
 
@@ -82,6 +82,11 @@ export default function AnalyticsCategoryReport() {
   // The dimension's values and the ones the lines hold, loaded when the picker first opens.
   const [valuesWanted, setValuesWanted] = useState(false);
   const categoryOptions = useAxisValueOptions(scope, axisId, valuesWanted);
+  // "Unassigned" first, so the lines without a value can be left out too.
+  const exclusionOptions = useMemo(() => categoryOptions.options && [
+    { id: NO_ANALYTICS_VALUE, label: t('reports.analyticsCategory.unassigned') },
+    ...categoryOptions.options,
+  ], [categoryOptions.options, t]);
 
   // The server groups the kept lines by their value on the dimension (none: unassigned), one sum per
   // year, the first year's largest first. Until the dimensions are known, nothing is asked: the
@@ -319,7 +324,7 @@ export default function AnalyticsCategoryReport() {
               placeholder={t('reports.filters.excludeCategoriesPlaceholder')}
               selectedText={(count) => t('reports.filters.categorySelected', { count })}
               noOptionsText={t('reports.filters.noMatchingCategories')}
-              options={categoryOptions.options}
+              options={exclusionOptions}
               loading={categoryOptions.loading}
               onFirstOpen={() => setValuesWanted(true)}
               value={excludedCategories}
