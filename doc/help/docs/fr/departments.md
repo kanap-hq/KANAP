@@ -119,7 +119,7 @@ Les colonnes :
 - Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
 
 **Notes** :
-- Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 - L'effectif n'est pas dans le fichier. Saisissez-le par année dans l'onglet **Détails** du département
 
 ## Conseils

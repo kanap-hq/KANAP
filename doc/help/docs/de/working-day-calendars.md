@@ -177,7 +177,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 **CSV-Struktur**:
 
 - Kopfzeilen: `code`, `name`, `description`, `country`, `region`, `status`, `disabled_at`, `year`, `jan`, `feb`, `mar`, `apr`, `may`, `jun`, `jul`, `aug`, `sep`, `oct`, `nov`, `dec`
-- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 - Eine Zeile pro Kalender und Jahr. Ein Kalender mit drei Jahren belegt drei Zeilen. Ein Kalender ohne Jahr wird als eine Zeile mit leerem Jahr und leeren Monaten exportiert
 - Ein Standardkalender exportiert nur die Jahre, die Sie geändert haben. Die anderen Jahre folgen den Feiertagen und brauchen keine Zeile
 - Die Spalten `country`, `region` und `disabled_at` sind beim Import optional. Eine Datei ohne `country` und `region` legt individuelle Kalender an

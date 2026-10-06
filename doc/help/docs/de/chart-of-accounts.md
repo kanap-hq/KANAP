@@ -439,7 +439,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 ```
 
 **Hinweise**:
-  - Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+  - Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
   - Der `coa_code` muss einem bestehenden Kontenplan in Ihrem Arbeitsbereich entsprechen
   - Kontonummern sollten innerhalb eines Kontenplans eindeutig sein
   - Statuswerte: `enabled` oder `disabled` (Standard ist enabled)

@@ -112,7 +112,7 @@ Les colonnes :
 - `name` est obligatoire. Toute autre cellule est facultative
 
 **Notes** :
-- Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur et les deux étapes d'import
+- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import
 - Importez les fournisseurs avant les applications ou les contrats qui les référencent. Le fichier budgétaire crée aussi un fournisseur manquant lorsque **Créer les fournisseurs manquants** est cochée. Voir [Charger un budget depuis un tableur](budget-file.md)
 
 ---

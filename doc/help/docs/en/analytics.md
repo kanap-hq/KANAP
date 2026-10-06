@@ -224,7 +224,7 @@ To set values on budget lines from a file, use the OPEX and CAPEX budget files. 
 **CSV structure**:
 
 - Headers: `axis_code`, `name`, `description`, `status`, `disabled_at`
-- The export writes the separator of the screen language. See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
+- The export writes the separator of the screen language. See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 
 | Column | Content |
 |---|---|

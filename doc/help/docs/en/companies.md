@@ -212,7 +212,7 @@ The columns, in this order. The metric columns follow the year selected in the l
 
 **Notes**:
 
-- See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date and amount forms, and the two import steps
+- See [CSV files](csv-files.md) for the encoding, the separator, the date and amount forms, and the two import steps
 - The list refreshes automatically after a successful load
 
 ## Tips

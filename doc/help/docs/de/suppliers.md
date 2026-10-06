@@ -112,7 +112,7 @@ Die Spalten:
 - `name` ist Pflicht. Jede andere Zelle ist optional
 
 **Hinweise**:
-- Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen und die beiden Importschritte
+- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte
 - Importieren Sie Lieferanten, bevor Sie Anwendungen oder Verträge importieren, die sie referenzieren. Die Budgetdatei legt einen fehlenden Lieferanten ebenfalls an, wenn **Fehlende Lieferanten anlegen** angehakt ist. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
 
 ---

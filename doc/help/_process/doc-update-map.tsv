@@ -50,6 +50,8 @@ admin.md	frontend/src/pages/admin/BillingCenter.tsx
 admin.md	frontend/src/pages/admin/AdminAuthPage.tsx
 branding.md	frontend/src/pages/admin/AdminBrandingPage.tsx
 master-data-operations.md	frontend/src/pages/admin/master-data/**/*.tsx
+csv-files.md	frontend/src/components/csv/**/*.tsx
+csv-files.md	frontend/src/components/csv/**/*.ts
 tasks.md	frontend/src/pages/TasksPage.tsx
 tasks.md	frontend/src/pages/tasks/TaskWorkspacePage.tsx
 portfolio-requests.md	frontend/src/pages/portfolio/RequestsPage.tsx

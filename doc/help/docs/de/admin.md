@@ -167,7 +167,7 @@ Eine Rolle, die die Datei nennt und die Ihr Arbeitsbereich nicht hat, wird beim 
 
 Die Datei enthält kein Datum und keinen Betrag. Ein Import setzt kein Passwort: Ein neuer Benutzer meldet sich nach einer Einladung oder einer Passwort-Zurücksetzung an.
 
-Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen und die beiden Importschritte.
+Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte.
 
 ### Benutzer erstellen
 

@@ -212,7 +212,7 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 
 **Notes** :
 
-- Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur, les formes de dates et de montants, et les deux étapes d'import
+- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et de montants, et les deux étapes d'import
 - La liste se rafraîchit automatiquement après un chargement réussi
 
 ## Conseils

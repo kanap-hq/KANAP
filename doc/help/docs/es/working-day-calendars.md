@@ -177,7 +177,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 **Estructura CSV**:
 
 - Encabezados: `code`, `name`, `description`, `country`, `region`, `status`, `disabled_at`, `year`, `jan`, `feb`, `mar`, `apr`, `may`, `jun`, `jul`, `aug`, `sep`, `oct`, `nov`, `dec`
-- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
+- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 - Una fila por calendario y año. Un calendario con tres años ocupa tres filas. Un calendario sin ningún año se exporta como una fila con el año y los meses vacíos
 - Un calendario estándar solo exporta los años que usted modificó. Los demás años siguen los festivos y no necesitan fila
 - Las columnas `country`, `region` y `disabled_at` son opcionales al importar. Un archivo sin `country` ni `region` crea calendarios personalizados

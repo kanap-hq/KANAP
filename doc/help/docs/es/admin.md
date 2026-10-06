@@ -167,7 +167,7 @@ La carga crea un rol que el archivo nombra y que su espacio de trabajo no tiene,
 
 El archivo no contiene ninguna fecha ni ningún importe. Una importación no define ninguna contraseña: un usuario nuevo inicia sesión tras una invitación o un restablecimiento de contraseña.
 
-Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador y los dos pasos de importación.
+Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación.
 
 ### Crear un usuario
 

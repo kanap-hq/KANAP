@@ -224,7 +224,7 @@ Para definir valores en las partidas de presupuesto desde un archivo, use los ar
 **Estructura CSV**:
 
 - Encabezados: `axis_code`, `name`, `description`, `status`, `disabled_at`
-- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
+- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 
 | Columna | Contenido |
 |---|---|

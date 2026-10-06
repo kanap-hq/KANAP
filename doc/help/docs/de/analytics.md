@@ -224,7 +224,7 @@ Um Werte auf Budgetpositionen aus einer Datei zu setzen, verwenden Sie die OPEX-
 **CSV-Struktur**:
 
 - Kopfzeilen: `axis_code`, `name`, `description`, `status`, `disabled_at`
-- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 
 | Spalte | Inhalt |
 |---|---|

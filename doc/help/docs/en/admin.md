@@ -167,7 +167,7 @@ A role the file names and your workspace does not have is created by the load, w
 
 The file holds no date and no amount. An import sets no password: a new user signs in after an invitation or a password reset.
 
-See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator and the two import steps.
+See [CSV files](csv-files.md) for the encoding, the separator and the two import steps.
 
 ### Creating a User
 

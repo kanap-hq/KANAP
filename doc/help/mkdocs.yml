@@ -145,6 +145,7 @@ plugins:
             "Admin & Users": Utilisateurs
             Branding: Personnalisation
             Master data freeze and metrics copy: Gel des données de référence et copie des indicateurs
+            CSV files: Fichiers CSV
             Budget Overview: Vue d'ensemble
             On-Premise: On-Premise
             Overview: Vue d'ensemble
@@ -223,6 +224,7 @@ plugins:
             "Admin & Users": Benutzer
             Branding: Branding
             Master data freeze and metrics copy: Stammdaten einfrieren und Kennzahlen kopieren
+            CSV files: CSV-Dateien
             Budget Overview: Übersicht
             On-Premise: On-Premise
             Overview: Übersicht
@@ -301,6 +303,7 @@ plugins:
             "Admin & Users": Usuarios
             Branding: Personalización
             Master data freeze and metrics copy: Congelar datos maestros y copiar indicadores
+            CSV files: Archivos CSV
             Budget Overview: Vista general
             On-Premise: On-Premise
             Overview: Vista general
@@ -384,6 +387,7 @@ nav:
       - Analytics dimensions: analytics.md
     - Classification:
       - Business Processes: business-processes.md
+    - CSV files: csv-files.md
 
   - Plaid:
     - Plaid: ai-assistant.md
