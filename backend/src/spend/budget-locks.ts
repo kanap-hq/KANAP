@@ -15,6 +15,9 @@ import type { AmountScope } from './amounts-write.util';
  *      for its delete); several lines in id order (`lockBudgetLines`, or
  *      `lockBudgetYear` for every line of a year);
  *   2. its versions FOR NO KEY UPDATE; several in id order (`lockBudgetVersions`);
+ *      then the working-day calendars the written lines name, FOR KEY SHARE
+ *      in id order, in one statement (`loadWorkingDayProfiles`: a lines write
+ *      and a column copy that recomputes lines);
  *   3. the months of a version, created then locked in period order
  *      (`amounts-write.util.ts`, which locks the version again first);
  *   4. the round-input records in column order, then their costed lines

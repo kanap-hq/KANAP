@@ -517,6 +517,7 @@ export class CapexItemsController {
       percentageIncrease: number | string;
       overwrite: boolean;
       dryRun: boolean;
+      acceptCalendarChanges?: boolean;
     },
     @Tenant() ctx: TenantRequest,
   ) {

@@ -604,9 +604,10 @@ async function testOtherWritesKeepLines(kind: Kind) {
 }
 
 /**
- * A copy carries the lines (periods shifted, 29 February to 28 February, how
- * often and the days per month kept) and the FTE; a source without lines
- * leaves none; clear deletes them.
+ * A copy of a column that follows its lines copies the lines (periods
+ * shifted, 29 February to 28 February, cut to the item's validity, how often
+ * and the days per month kept), raises their unit prices and computes the
+ * column again; a source without lines leaves none; clear deletes them.
  */
 async function testCopyAndClear(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
@@ -625,7 +626,7 @@ async function testCopyAndClear(kind: Kind) {
       ],
     }, null, { manager: runner.manager });
     const source = (await readRecords(runner, kind, versionId)).planned;
-    // The item ends mid-2029: the record's period is cut to the validity, the lines keep theirs.
+    // The item ends mid-2029: the lines are cut to the validity.
     await setItemDates(runner, kind, itemId, { disabledAt: '2029-06-30T12:00:00Z' });
 
     await budgetOperations(kind).copyBudgetColumn(
@@ -635,22 +636,27 @@ async function testCopyAndClear(kind: Kind) {
     );
     const destination = (await findVersion(runner, kind, itemId, 2029))!;
     const copied = (await readRecords(runner, kind, destination.id)).planned;
-    assert.deepEqual(
-      [copied.method, copied.period_start, copied.period_end, copied.fte, copied.last_calculation.kind, copied.last_calculation.source_method],
-      ['copied', '2029-01-01', '2029-06-30', source.fte, 'copy', 'computed'],
-      `${kind}: copied, FTE carried`,
-    );
     assert.equal(source.fte, '0.21', `${kind}: 5 days a month ÷ France 218, February to October, ÷ 12`);
+    // Consultant 5 days × 420 = 2 100 a month, February to June; licences 10 × 210 in January and February; the laptop 2 100 in February.
+    assert.deepEqual(
+      [copied.method, copied.period_start, copied.period_end, copied.fte, copied.last_calculation.kind, copied.last_calculation.total],
+      ['computed', '2029-01-01', '2029-06-30', '0.11', 'computed', '16800.00'],
+      `${kind}: computed again from the raised lines, FTE from them`,
+    );
+    assert.deepEqual(
+      await readMeasure(runner, kind, destination.id, 'planned', 2029),
+      ['2100.00', '6300.00', ...repeat('2100.00', 4), ...repeat('0.00', 6)],
+    );
     assert.deepEqual(
       (await readLines(runner, kind, destination.id, 'planned')).map((l) => [
         l.label, l.quantity, l.unit_price, l.frequency, l.days_per_month, l.working_day_profile_id, l.period_start, l.period_end,
       ]),
       [
-        ['Consultant', '1.000', '400.0000', 'per_month', '5.000', calendarId, '2029-02-01', '2029-10-30'],
-        ['Winter licences', '10.000', '200.0000', 'per_month', null, null, '2029-01-01', '2029-02-28'],
-        ['Laptop', '1.000', '2000.0000', 'once', null, null, '2029-02-28', '2029-02-28'],
+        ['Consultant', '1.000', '420.0000', 'per_month', '5.000', calendarId, '2029-02-01', '2029-06-30'],
+        ['Winter licences', '10.000', '210.0000', 'per_month', null, null, '2029-01-01', '2029-02-28'],
+        ['Laptop', '1.000', '2100.0000', 'once', null, null, '2029-02-28', '2029-02-28'],
       ],
-      `${kind}: the lines shifted a year, quantity, price, how often and days per month as they are, 29 February to 28 February`,
+      `${kind}: the lines shifted a year and cut to the validity, prices +5 %, quantity, how often and days per month as they are, 29 February to 28 February`,
     );
 
     // A source without lines leaves the destination without lines and without FTE.
@@ -721,7 +727,7 @@ async function testOneDateLineCoversItsMonth(kind: Kind) {
     const copied = (await readRecords(runner, kind, destination.id)).planned;
     assert.deepEqual(
       [copied.method, copied.period_start, copied.period_end],
-      ['copied', `${YEAR + 1}-03-01`, `${YEAR + 1}-03-31`],
+      ['computed', `${YEAR + 1}-03-01`, `${YEAR + 1}-03-31`],
       `${kind}: the copy shifts the month a year`,
     );
     assert.deepEqual(
