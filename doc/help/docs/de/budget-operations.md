@@ -105,7 +105,7 @@ Erfordert Administrationsrechte für OPEX, bzw. für CAPEX bei CAPEX-Positionen.
 | **Quellspalte** | Jede angezeigte Spalte, auch Prognose, wenn sie angezeigt wird. Beginnt mit der Standardspalte |
 | **Zieljahr** | Jahr, in das kopiert wird (gleicher Bereich) |
 | **Zielspalte** | Jede angezeigte Spalte. Beginnt mit der Standardspalte |
-| **Prozentuale Erhöhung** | Anpassung, die auf jeden kopierten Monat angewendet wird (z. B. `3` = +3 %). Standard ist 0. Dezimalwerte und negative Werte möglich. Ein Prozentsatz von -100 % oder weniger wird abgelehnt. |
+| **Prozentuale Erhöhung** | Anpassung, die auf jeden kopierten Monat angewendet wird (z. B. `3` = +3 %). Bei einer aus Zeilen berechneten Spalte erhöht sie stattdessen den Stückpreis jeder Zeile. Siehe [Eine aus Zeilen aufgebaute Spalte kopieren](#eine-aus-zeilen-aufgebaute-spalte-kopieren). Standard ist 0. Dezimalwerte und negative Werte möglich. Ein Prozentsatz von -100 % oder weniger wird abgelehnt. |
 | **Vorhandene Daten überschreiben** | Umschalter. Wenn aus, werden Elemente die bereits einen Wert im Ziel haben, übersprungen. Wenn ein, werden alle Zielwerte ersetzt. |
 
 Die Seite öffnet mit der Standardspalte des aktuellen Jahres als Quelle und der Standardspalte des nächsten Jahres als Ziel. Ausgeblendete Spalten werden nicht angeboten.
@@ -143,6 +143,7 @@ Unterhalb des Grids zeigt eine Statistikleiste:
 
 ### Wie Beträge kopiert werden
 
+- Dieser Teil beschreibt Spalten, deren Beträge eingegeben, verteilt oder kopiert sind, sowie die Monate von Referenzzeilen. Eine aus Zeilen berechnete Spalte folgt [eigenen Regeln](#eine-aus-zeilen-aufgebaute-spalte-kopieren)
 - Die Kopie behält die monatliche Verteilung bei. Jeder der zwölf Monate wird in denselben Monat des Ziels kopiert: Eine Spalte, die von April bis Dezember verteilt ist, bleibt von April bis Dezember verteilt
 - Nur Positionen, die im Zieljahr gültig sind, werden kopiert. Eine Position zählt für die Monate, deren 15. zwischen ihrem **Beginn der Gültigkeit** und ihrem **Ende der Gültigkeit** liegt. Eine Position ohne solchen Monat wird ausgelassen, da der Budget-Tab sie ebenfalls nicht anzeigt
 - Eine Position, die nur einen Teil des Zieljahres gültig ist, erhält nur diese Monate. Die übrigen Monate behalten ihren Betrag, und der Zeitraum wird auf die Daten der Position gekürzt. Beispiel: Eine Quelle über zwölf Monate, kopiert auf eine Position, die am 30. Juni endet, ergibt Januar bis Juni
@@ -154,16 +155,33 @@ Unterhalb des Grids zeigt eine Statistikleiste:
 - Das Kopieren einer Spalte auf sich selbst (gleiches Jahr und gleiche Spalte) wird abgelehnt
 - Die Kopie gilt ganz oder gar nicht: Schlägt eine Position fehl, wird nichts gespeichert
 
-### Eine berechnete Spalte kopieren
+### Eine aus Zeilen aufgebaute Spalte kopieren
 
-Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis. Siehe [Menge und Preis](opex.md#menge-und-preis).
+Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis. Siehe [Menge und Preis](opex.md#menge-und-preis). Die Kopie behandelt eine solche Spalte auf eine von zwei Arten.
 
-- Die Kopie überträgt die Zeilen der Quellspalte auf das Ziel, mit Beschreibung, Menge, Einheit, Stückpreis, Häufigkeit (Vollzeit oder Tage pro Monat bei Personen, pro Monat oder einmalig bei Stück) und Kalender. Ihre Zeiträume wandern ins Zieljahr, wie der Zeitraum der Spalte: März bis Dezember 2026 wird zu März bis Dezember 2027, und eine Zeile, die am 29. Februar endet, endet in einem Jahr ohne diesen Tag am 28. Februar. Ein am 15. März 2026 einmalig gekauftes Stück wird am 15. März 2027 gekauft
-- Die Kopie überträgt auch die VZÄ der Quellspalte
-- Die Monate werden wie bei jeder anderen Spalte kopiert. Die prozentuale Erhöhung gilt nur für die kopierten Beträge. Die Zeilen behalten ihre Stückpreise
-- Eine Kopie aus einer Spalte ohne Zeilen lässt das Ziel ohne Zeilen, und seine VZÄ bleiben leer
+**Die Beträge werden aus den Zeilen berechnet.** Die Spalte bleibt im Ziel aus ihren Zeilen berechnet.
+
+- Die prozentuale Erhöhung hebt den Stückpreis jeder Zeile an, auf 4 Nachkommastellen gerundet. Die Mengen ändern sich nicht
+- Die Monate werden aus den Zeilen mit den Arbeitstagekalendern des Zieljahres neu berechnet. Die kopierte Summe kann leicht von der Quellsumme mit angewendetem Prozentsatz abweichen, weil sich die Zahl der Arbeitstage von Jahr zu Jahr ändert
+- Die Zeilen wandern ins Zieljahr, mit Beschreibung, Menge, Einheit, Häufigkeit und Kalender. Ihre Zeiträume wandern wie der Zeitraum der Spalte: März bis Dezember 2026 wird zu März bis Dezember 2027, und eine Zeile, die am 29. Februar endet, endet in einem Jahr ohne diesen Tag am 28. Februar. Ein am 15. März 2026 einmalig gekauftes Stück wird am 15. März 2027 gekauft. Die VZÄ werden aus den Zeilen neu berechnet
+- Eine Zeile, die wegen der Gültigkeit der Position nur für einen Teil des Zieljahres bleibt, wird auf diesen Zeitraum gekürzt. Eine Zeile ohne verbleibenden Monat entfällt
+- Die Spalte zeigt ihre Zeilen im Budget-Tab wie gewohnt. Sie hat keinen Hinweis „Kopiert aus“
+
+**Die Zeilen sind nur eine Referenz.** Das ist der Fall, wenn die Quellbeträge von Hand eingegeben, verteilt oder kopiert wurden.
+
+- Die prozentuale Erhöhung gilt für die Monate, wie bei jeder anderen Spalte. Die Zeilen werden unverändert kopiert, mit ihren Stückpreisen und ihren VZÄ
 - Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026“, und ihr Tab **Menge und Preis** meldet „Die Beträge wurden aus Budget 2026 kopiert. Die Zeilen wieder verwenden.“
-- Die kopierten Zeilen sind eine schreibgeschützte Referenz. Klicken Sie im Budget-Tab der Position im Tab **Menge und Preis** auf **Die Zeilen wieder verwenden**, um die Spalte mit ihren aktuellen Preisen aus den Zeilen zu berechnen. Um das Zieljahr zu eigenen Preisen zu planen, ändern Sie danach die Stückpreise: Jede Änderung berechnet die Spalte erneut. Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält: Ein Standardkalender enthält es immer, ein individueller Kalender unter Umständen nicht, zum Beispiel „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“
+- Die kopierten Zeilen sind eine schreibgeschützte Referenz. Klicken Sie im Tab **Menge und Preis** auf **Die Zeilen wieder verwenden**, um die Spalte mit ihren aktuellen Preisen aus den Zeilen zu berechnen. Um das Zieljahr zu eigenen Preisen zu planen, ändern Sie danach die Stückpreise: Jede Änderung berechnet die Spalte erneut
+
+Eine Kopie aus einer Spalte ohne Zeilen lässt das Ziel ohne Zeilen, und seine VZÄ bleiben leer.
+
+#### Kalender ohne Tage für das Zieljahr
+
+Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält. Hat der Kalender einer Zeile für dieses Jahr keine Arbeitstage, verwendet die Kopie stattdessen den Standardkalender des Landes des zahlenden Unternehmens der Position. Das ist der Kalender, der mit dem Unternehmen angelegt wurde. Gibt es keinen, wird die Position auf die übliche Weise kopiert: Monate mal Prozentsatz, die Zeilen bleiben unverändert als Referenz.
+
+Der Testlauf kennzeichnet diese Positionen mit einem Hinweis **Kalender**, mit einem Tooltip je Zeile, und zeigt eine Warnung über der Vorschau. Um trotzdem zu kopieren, haken Sie **Trotzdem mit diesen Kalenderänderungen kopieren** an. Besser ist es, die Tage des Jahres auf der Seite **Arbeitstagekalender** hinzuzufügen und den Testlauf erneut auszuführen.
+
+Ein deaktivierter Kalender wird weiterhin verwendet. Der Testlauf vermerkt ihn und verlangt keine Bestätigung.
 
 ### Schutz eingefrorener Spalten
 

@@ -105,7 +105,7 @@ Needs administration rights on OPEX, or on CAPEX for CAPEX lines.
 | **Source column** | Any shown column, Forecast included when it is shown. Starts on the default column |
 | **Destination year** | Year to copy to (same range) |
 | **Destination column** | Any shown column. Starts on the default column |
-| **Percentage increase** | Adjustment applied to every copied month (e.g., `3` = +3%). Defaults to 0. Accepts decimals and negative values. A percentage of -100% or less is refused. |
+| **Percentage increase** | Adjustment applied to every copied month (e.g., `3` = +3%). On a column calculated from its lines, it raises the unit price of each line instead. See [Copying a column built from lines](#copying-a-column-built-from-lines). Defaults to 0. Accepts decimals and negative values. A percentage of -100% or less is refused. |
 | **Overwrite existing data** | Toggle. When off, items that already have a value in the destination are skipped. When on, all destination values are replaced. |
 
 The page opens on the default column of the current year as the source and the default column of next year as the destination. Hidden columns are not offered.
@@ -144,6 +144,7 @@ Below the grid, a stats bar shows:
 ### How amounts are copied
 
 - The copy keeps the monthly shape. Each of the twelve months is copied to the same month of the destination, so a column spread from April to December stays April to December
+- This part describes columns whose amounts are typed, spread or copied, and the months of reference lines. A column calculated from its lines follows [its own rules](#copying-a-column-built-from-lines)
 - Only items valid in the destination year are copied. An item counts for the months whose 15th falls between its **Effective start** and its **End of validity**. An item without such a month is left out, as the Budget tab does not show it either
 - An item valid for part of the destination year gets only those months. The other months keep their amount, and the period is cut to the item's dates. For example, a twelve-month source copied to an item ending on June 30 gives January to June
 - Without a percentage, amounts are copied exactly, to the cent
@@ -154,16 +155,33 @@ Below the grid, a stats bar shows:
 - Copying a column onto itself (same year and same column) is refused
 - The copy is all or nothing: if one item fails, nothing is saved
 
-### Copying a computed column
+### Copying a column built from lines
 
-A column can be built from lines, each a quantity times a unit price. See [Quantity and price](opex.md#quantity-and-price).
+A column can be built from lines, each a quantity times a unit price. See [Quantity and price](opex.md#quantity-and-price). The copy treats such a column in one of two ways.
 
-- The copy brings the source column's lines to the destination, with their description, quantity, unit, unit price, how often (full time or days per month for people, per month or once for pieces) and calendar. Their periods move to the destination year, like the column's period: March to December 2026 becomes March to December 2027, and a line that ends on February 29 ends on February 28 in a year without one. A piece bought once on March 15, 2026 is bought on March 15, 2027
-- The copy brings the source column's FTE too
-- The months are copied like any other column. The percentage increase applies to the copied amounts only. The lines keep their unit prices
-- A copy from a column without lines leaves the destination without lines, and its FTE becomes blank
+**The amounts are calculated from the lines.** The column stays calculated from its lines in the destination.
+
+- The percentage increase raises the unit price of each line, rounded to 4 decimals. Quantities do not change
+- The months are recalculated from the lines with the working-day calendars of the destination year. The copied total can differ slightly from the source total with the percentage applied, because the number of working days changes from one year to the next
+- The lines move to the destination year with their description, quantity, unit, how often and calendar. Their periods move like the column's period: March to December 2026 becomes March to December 2027, and a line that ends on February 29 ends on February 28 in a year without one. A piece bought once on March 15, 2026 is bought on March 15, 2027. The FTE is recalculated from the lines
+- A line kept for only part of the destination year, because of the item's validity, is cut to that period. A line left with no month is dropped
+- The column shows its lines as usual in the Budget tab. It has no "Copied from" label
+
+**The lines are only a reference.** This is the case when the source amounts were typed by hand, spread, or copied.
+
+- The percentage increase applies to the months, as for any other column. The lines are copied as they are, with their unit prices and their FTE
 - In the Budget tab, the destination column shows "Copied from Budget 2026", and its **Quantity and price** tab says "Amounts were copied from Budget 2026. Use the lines again."
-- The copied lines are a read-only reference. In the item's Budget tab, click **Use the lines again** on the **Quantity and price** tab to compute the column from them at their current prices. To plan the destination year at its own prices, change the unit prices after that: each change computes the column again. A line priced per day needs a calendar that holds the destination year: a standard calendar always does, and a custom one may not, for example "Head office staff has no working days for 2027. Add them on the Working-day calendars page."
+- The copied lines are a read-only reference. Click **Use the lines again** on the **Quantity and price** tab to compute the column from them at their current prices. To plan the destination year at its own prices, change the unit prices after that: each change computes the column again
+
+A copy from a column without lines leaves the destination without lines, and its FTE becomes blank.
+
+#### Calendars without days for the destination year
+
+A line priced per day needs a calendar that holds the destination year. When the calendar of a line has no working days for that year, the copy uses the company standard calendar of the country of the item's paying company instead. This is the calendar created with the company. If there is none, the item is copied the usual way: months times the percentage, with the lines kept unchanged as a reference.
+
+The dry run flags these items with a **Calendar** note, with a tooltip for each line, and shows a warning above the preview. To copy anyway, tick **Copy anyway with these calendar changes**. The better fix is to add the year's days on the **Working-day calendars** page, then run the dry run again.
+
+A disabled calendar is still used. The dry run notes it and asks for no confirmation.
 
 ### Frozen column protection
 
