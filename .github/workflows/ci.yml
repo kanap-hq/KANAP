@@ -34,6 +34,8 @@ jobs:
           - 5432:5432
     env:
       DATABASE_URL: postgres://app:app@127.0.0.1:5432/appdb
+      # Database lanes of the runner: each runs its specs on its own copy of appdb.
+      DB_LANES: 4
     defaults:
       run:
         working-directory: backend
@@ -65,8 +67,18 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d appdb -v ON_ERROR_STOP=1 -c "GRANT ALL ON SCHEMA public TO app;"
       - name: Prepare backend database
         run: npx typeorm migration:run -d ci-dist/backend/src/data-source.js
+      # One copy of the migrated database per lane (appdb_1 ... appdb_N), owned by app: RLS
+      # and its FORCE policies come with the copy. A copy needs a template with no open
+      # connection, so it runs after the migrations and before any spec.
+      - name: Copy the database for the parallel lanes
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for n in $(seq 1 "$DB_LANES"); do
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE appdb_$n TEMPLATE appdb OWNER app;"
+          done
       - name: Run backend hardening checks
-        run: node scripts/run-ci-tests.js --no-compile
+        run: node scripts/run-ci-tests.js --no-compile --db-lanes "$DB_LANES"
 
   frontend:
     name: frontend (cloud)
