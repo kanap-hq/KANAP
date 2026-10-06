@@ -13,16 +13,12 @@
       "suppliersDescription": "Verwalten Sie Lieferanteninformationen",
       "coaTitle": "Kontenpläne",
       "coaDescription": "Verwalten Sie Kontenpläne und Konten",
-      "currencyTitle": "Währung",
-      "currencyDescription": "Konfigurieren Sie Berichts- und Standardwährungen",
       "workingDayCalendarsTitle": "Arbeitstagekalender",
       "workingDayCalendarsDescription": "Legen Sie die Arbeitstage jedes Monats für Zeilen mit Preis pro Tag fest",
       "businessProcessesTitle": "Geschäftsprozesse",
       "businessProcessesDescription": "Verwalten Sie ISO 9001-konforme Geschäftsprozesse",
       "analyticsDimensionsTitle": "Analysedimensionen",
-      "analyticsDimensionsDescription": "Konfigurieren Sie Analysedimensionen",
-      "administrationTitle": "Administration",
-      "administrationDescription": "Einfrieren, Kopieren und Verwalten von Stammdaten über Jahre hinweg"
+      "analyticsDimensionsDescription": "Konfigurieren Sie Analysedimensionen"
     }
   },
   "shared": {
@@ -625,7 +621,7 @@
   },
   "admin": {
     "copy": {
-      "title": "Stammdaten kopieren",
+      "title": "Jahreskennzahlen kopieren",
       "subtitle": "Kopieren Sie Unternehmens- und Abteilungskennzahlen zwischen Jahren mit einer Vorschau im Testlauf",
       "sourceYear": "Quelljahr",
       "destinationYear": "Zieljahr",
@@ -678,7 +674,7 @@
       "copyingBtn": "Wird kopiert…"
     },
     "freeze": {
-      "title": "Daten einfrieren / freigeben",
+      "title": "Stammdaten einfrieren",
       "noPermission": "Sie benötigen die entsprechenden Berechtigungen, um Stammdaten einzufrieren oder freizugeben. Sie können den aktuellen Status unten einsehen.",
       "loadError": "Fehler beim Laden des Einfrierstatus. Versuchen Sie, ein anderes Jahr auszuwählen.",
       "frozenSuccessfully": "Daten erfolgreich eingefroren.",

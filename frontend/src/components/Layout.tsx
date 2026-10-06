@@ -22,10 +22,8 @@ import ApartmentIcon from '@mui/icons-material/Apartment';
 import SecurityIcon from '@mui/icons-material/Security';
 import LanIcon from '@mui/icons-material/Lan';
 import InsightsIcon from '@mui/icons-material/Insights';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import BuildIcon from '@mui/icons-material/Build';
 import StorageIcon from '@mui/icons-material/Storage';
 import HomeIcon from '@mui/icons-material/Home';
 import LocationCityIcon from '@mui/icons-material/LocationCity';
@@ -156,13 +154,10 @@ export default function Layout() {
     { to: '/master-data/contacts', label: t('nav:sidebar.masterData.contacts'), icon: <PeopleIcon />, resource: 'contacts' },
     { divider: t('nav:sidebar.masterData.sections.finance') },
     { to: '/master-data/coa', label: t('nav:sidebar.masterData.chartsOfAccounts'), icon: <StorageIcon />, resource: 'accounts' },
-    { to: '/master-data/currency', label: t('nav:sidebar.masterData.currency'), icon: <AttachMoneyIcon />, resource: 'budget_ops' },
+    { to: '/master-data/analytics', label: t('nav:sidebar.masterData.analyticsDimensions'), icon: <InsightsIcon />, resource: 'analytics' },
     { to: '/master-data/working-day-calendars', label: t('nav:sidebar.masterData.workingDayCalendars'), icon: <DateRangeIcon />, resource: 'working_day_profiles' },
     { divider: t('nav:sidebar.masterData.sections.classification') },
     { to: '/master-data/business-processes', label: t('nav:sidebar.masterData.businessProcesses'), icon: <WorkOutlineIcon />, resource: 'business_processes' },
-    { to: '/master-data/analytics', label: t('nav:sidebar.masterData.analyticsDimensions'), icon: <InsightsIcon />, resource: 'analytics' },
-    { divider: '' },
-    { to: '/master-data/operations', label: t('nav:sidebar.masterData.administration'), icon: <BuildIcon />, resource: 'companies' },
   ];
 
   const itOperations: NavEntry[] = [

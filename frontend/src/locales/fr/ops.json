@@ -489,6 +489,10 @@
   "operations": {
     "title": "Administration",
     "subtitle": "Outils puissants pour gérer et transformer vos données budgétaires sur différentes années et colonnes.",
+    "sections": {
+      "settings": "Paramètres",
+      "operations": "Opérations"
+    },
     "cards": {
       "freezeTitle": "Geler / Dégeler les données",
       "freezeDesc": "Verrouiller les colonnes budgétaires ou les métriques d'effectif pour une année spécifique",
@@ -501,7 +505,13 @@
       "allocationDefaultTitle": "Méthode de ventilation par défaut",
       "allocationDefaultDesc": "Choisir la méthode appliquée aux postes OPEX et CAPEX laissés en ventilation par défaut",
       "budgetColumnsTitle": "Colonnes budgétaires",
-      "budgetColumnsDesc": "Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut"
+      "budgetColumnsDesc": "Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut",
+      "currencyTitle": "Devises",
+      "currencyDesc": "Définissez les devises de reporting et par défaut, et consultez les taux de change",
+      "masterDataFreezeTitle": "Geler les master data",
+      "masterDataFreezeDesc": "Verrouillez les indicateurs des sociétés et des départements pour une année donnée",
+      "metricsCopyTitle": "Copier les indicateurs annuels",
+      "metricsCopyDesc": "Copiez les indicateurs des sociétés et des départements d'une année à l'autre"
     },
     "allocationDefault": {
       "title": "Méthode de ventilation par défaut",
@@ -678,7 +688,8 @@
       "fxRatesTitle": "Dernières captures de taux de change (par exercice fiscal, base devise de reporting du tenant)",
       "loadingRates": "Chargement des taux de change…",
       "loadRatesError": "Impossible de charger l'historique des taux de change.",
-      "noRatesYet": "Aucune capture de taux de change disponible. Lancez « Forcer la synchronisation des taux de change » pour en créer une.",
+      "noRatesYet": "Aucune capture de taux de change disponible.",
+      "noRatesHint": "Lancez « Forcer la synchronisation des taux de change » pour en créer une.",
       "currencyCol": "Devise",
       "liveSpot": "Spot en temps réel",
       "quarterlyAvg": "Moyenne trimestrielle",

@@ -10,11 +10,12 @@ import { createAppTheme } from '../../config/ThemeContext';
 vi.mock('react-i18next', async () => {
   const i18next = (await import('i18next')).default;
   const enOps = (await import('../../locales/en/ops.json')).default;
+  const enCommon = (await import('../../locales/en/common.json')).default;
   const real = i18next.createInstance();
   await real.init({
     lng: 'en',
-    resources: { en: { ops: enOps } },
-    ns: ['ops'], defaultNS: 'ops',
+    resources: { en: { ops: enOps, common: enCommon } },
+    ns: ['ops', 'common'], defaultNS: 'ops',
     interpolation: { escapeValue: false },
   });
   const fixed = real.getFixedT('en');
@@ -86,9 +87,10 @@ describe('CurrencySettingsPage', () => {
     for (const field of screen.getAllByRole('textbox')) {
       expect(field).not.toHaveAttribute('readonly');
     }
-    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Reset' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Force FX rates sync' })).toBeInTheDocument();
+    expect(await screen.findByText('No FX rate snapshots captured yet. Run "Force FX rates sync" to create one.')).toBeInTheDocument();
   });
 
   it('shows the currencies read-only to a budget reader, with nothing to save or sync', async () => {
@@ -103,9 +105,11 @@ describe('CurrencySettingsPage', () => {
       expect(field).toHaveAttribute('readonly');
     }
     expect(screen.getByRole('textbox', { name: /allowed currencies/i })).toHaveValue('GBP');
-    expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Force FX rates sync' })).not.toBeInTheDocument();
+    expect(await screen.findByText('No FX rate snapshots captured yet.')).toBeInTheDocument();
+    expect(screen.queryByText(/Force FX rates sync/)).not.toBeInTheDocument();
     expect(mocked.patch).not.toHaveBeenCalled();
     expect(mocked.post).not.toHaveBeenCalled();
   });

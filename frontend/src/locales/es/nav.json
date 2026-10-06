@@ -46,11 +46,9 @@
       "suppliers": "Proveedores",
       "contacts": "Contactos",
       "chartsOfAccounts": "Planes de cuentas",
-      "currency": "Moneda",
       "workingDayCalendars": "Calendarios laborales",
       "businessProcesses": "Procesos de negocio",
-      "analyticsDimensions": "Dimensiones analíticas",
-      "administration": "Administración"
+      "analyticsDimensions": "Dimensiones analíticas"
     },
     "it": {
       "sections": {

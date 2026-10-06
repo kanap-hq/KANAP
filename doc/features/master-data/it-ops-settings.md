@@ -423,7 +423,6 @@ These settings feed into the IT workspace forms and lists.
 - IT Ops Settings page:
   - Visible when the user has `settings:reader`.
   - Editable when the user has `settings:admin` (backend enforces this on `PATCH /it-ops/settings`).
-- This reuses the same permissions surface as Currency Settings under Master Data.
 
 ## Testing Notes
 

@@ -13,16 +13,12 @@
       "suppliersDescription": "Gérez les informations des fournisseurs",
       "coaTitle": "Plans comptables",
       "coaDescription": "Gérez les plans comptables et les comptes",
-      "currencyTitle": "Devise",
-      "currencyDescription": "Configurez les devises de reporting et par défaut",
       "workingDayCalendarsTitle": "Calendriers de jours ouvrés",
       "workingDayCalendarsDescription": "Définissez les jours ouvrés de chaque mois pour les lignes au prix par jour",
       "businessProcessesTitle": "Processus métier",
       "businessProcessesDescription": "Gérez les processus métier de type ISO 9001",
       "analyticsDimensionsTitle": "Dimensions analytiques",
-      "analyticsDimensionsDescription": "Configurez les dimensions analytiques",
-      "administrationTitle": "Administration",
-      "administrationDescription": "Gelez, copiez et gérez les master data d'année en année"
+      "analyticsDimensionsDescription": "Configurez les dimensions analytiques"
     }
   },
   "shared": {
@@ -625,7 +621,7 @@
   },
   "admin": {
     "copy": {
-      "title": "Copie des master data",
+      "title": "Copier les indicateurs annuels",
       "subtitle": "Copiez les indicateurs des sociétés et des départements entre les années avec un aperçu en simulation",
       "sourceYear": "Année source",
       "destinationYear": "Année de destination",
@@ -678,7 +674,7 @@
       "copyingBtn": "Copie en cours…"
     },
     "freeze": {
-      "title": "Geler / Dégeler les données",
+      "title": "Geler les master data",
       "noPermission": "Vous devez disposer des autorisations appropriées pour geler ou dégeler les master data. Vous pouvez toutefois consulter le statut actuel ci-dessous.",
       "loadError": "Échec du chargement du statut de gel. Essayez de sélectionner une autre année.",
       "frozenSuccessfully": "Données gelées avec succès.",
