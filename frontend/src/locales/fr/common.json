@@ -186,11 +186,26 @@
       "noItOwner": "Sans responsable IT",
       "noBusinessOwner": "Sans responsable métier",
       "noPayingCompany": "Sans société payeuse",
+      "noCostCenter": "Sans centre de coûts",
+      "noBudgetNextYear": "Sans {{column}} l'an prochain",
       "accountOutsideChart": "Compte hors du plan de la société"
     },
     "topItemsY": "Top postes ({{column}}, A)",
     "topIncreasesYvsYminus1": "Plus fortes hausses ({{column}}, A vs A-1)",
     "noIncreases": "Aucune hausse",
+    "myBudget": {
+      "title": "Mon budget ({{column}}, A)",
+      "roles": {
+        "itOwner": "Comme responsable IT",
+        "businessOwner": "Comme responsable métier",
+        "budgetHolder": "Comme responsable budgétaire"
+      },
+      "lineCount_one": "{{count}} ligne",
+      "lineCount_other": "{{count}} lignes",
+      "none": "Aucune ligne budgétaire à votre nom"
+    },
+    "byCostCenterY": "Par centre de coûts ({{column}}, A)",
+    "noCostCenter": "Sans centre de coûts",
     "settings": {
       "title": "Paramètres du tableau de bord",
       "description": "Activez ou désactivez les tuiles, ajustez leurs options et glissez-les pour les réorganiser.",

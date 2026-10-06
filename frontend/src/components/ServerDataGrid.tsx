@@ -89,6 +89,8 @@ export type ServerDataGridProps<T> = {
   enableColumnChooser?: boolean; // default: true
   requiredColumns?: string[]; // columns that cannot be hidden
   defaultHiddenColumns?: string[]; // columns hidden by default
+  /** Shows the hidden columns the starting filters narrow (a link's filter on a column hidden by default). */
+  showFilteredColumns?: boolean;
   columnPreferencesKey?: string; // localStorage key for persistence
   onColumnStateChange?: (columnState: ColumnState[]) => void; // callback for external state management
   onCellClicked?: (event: any) => void; // optional cell click handler
@@ -343,6 +345,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   enableColumnChooser = true,
   requiredColumns = [],
   defaultHiddenColumns = [],
+  showFilteredColumns = false,
   columnPreferencesKey,
   onColumnStateChange,
   onCellClicked,
@@ -564,6 +567,31 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     const next = withoutColumnFilters(api.getFilterModel?.() ?? {}, colIds);
     if (next) api.setFilterModel?.(next);
   }, [filterMayBeDropped]);
+
+  /**
+   * With `showFilteredColumns`: shows the hidden columns the starting filters narrow (a link from
+   * the overview to the lines without an IT owner, a column hidden by default), so the list does not
+   * open narrowed by a filter nobody can see or clear. Columns kept out of the chooser only carry a
+   * link's filter and stay hidden.
+   */
+  const revealFilteredColumns = useCallback((api: any) => {
+    if (!showFilteredColumns) return;
+    const model = (api?.getFilterModel?.() ?? {}) as Record<string, unknown>;
+    const hidden = Object.keys(model).filter((colId) => {
+      const column = api.getColumn?.(colId);
+      return !!column && column.isVisible?.() === false && filterMayBeDropped(colId);
+    });
+    if (hidden.length === 0) return;
+    try {
+      api.setColumnsVisible?.(hidden, true);
+      const newColumnState = (api.getColumnState?.() ?? []) as ColumnState[];
+      setCurrentColumnState(newColumnState);
+      if (columnPreferencesKey) columnStateManager.saveColumnState(newColumnState);
+      onColumnStateChange?.(newColumnState);
+    } catch (e) {
+      console.warn('Failed to show the filtered columns:', e);
+    }
+  }, [showFilteredColumns, filterMayBeDropped, columnPreferencesKey, columnStateManager, onColumnStateChange]);
 
   const handleColumnToggle = useCallback((field: string, visible: boolean) => {
     const api = gridApiRef.current;
@@ -874,6 +902,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     
     const start = () => {
       if ((event.api as any).isDestroyed?.()) return;
+      revealFilteredColumns(event.api);
       // finally, provide datasource once
       (event.api as any).setGridOption?.('datasource', dataSourceRef.current);
 
@@ -927,7 +956,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       return;
     }
     start();
-  }, [sortModel, initialState, initialFilterModel, columnStateManager, columnPreferencesKey, onGridApiReady, onQueryStateChange]);
+  }, [sortModel, initialState, initialFilterModel, columnStateManager, columnPreferencesKey, onGridApiReady, onQueryStateChange, revealFilteredColumns]);
 
   const onSortChanged = useCallback((e: any) => {
     const api = e?.api ?? gridApiRef.current;

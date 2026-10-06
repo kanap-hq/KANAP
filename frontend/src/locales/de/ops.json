@@ -860,6 +860,8 @@
     "total": "Gesamt",
     "yes": "ja",
     "no": "nein",
+    "accountCheck": "Kontoprüfung",
+    "accountOutsideChart": "Konto nicht im Kontenplan des Unternehmens",
     "amountColumnHeader": "{{column}} {{slot}} ({{year}})",
     "fteColumnHeader": "VZÄ {{column}} ({{year}})",
     "fteUnknownLines": "Unbekannt für {{count}} Zeilen",

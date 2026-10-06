@@ -52,6 +52,7 @@ type SummaryRow = {
   supplier_name?: string | null;
   paying_company_name?: string | null;
   account_display?: string | null;
+  account_warning?: string | null;
   owner_it_name?: string | null;
   owner_business_name?: string | null;
   analytics_category_name?: string | null;
@@ -443,6 +444,20 @@ export default function CapexPage() {
         filterParams: { getValues: getCapexFilterValues('account_display'), searchable: false },
         cellRenderer: linkCell('account_display'),
       },
+      // Lines whose account belongs to another chart of accounts than the paying company's: the
+      // filter the overview's data hygiene count opens the list with. Hidden by default.
+      {
+        colId: 'account_warning',
+        headerName: t('shared.accountCheck'),
+        valueGetter: (p: any) => (p.data?.account_warning === 'coa_mismatch' ? t('shared.accountOutsideChart') : ''),
+        width: 220,
+        defaultHidden: true,
+        sortable: false,
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: { values: [{ value: 'coa_mismatch', label: t('shared.accountOutsideChart') }], searchable: false },
+        cellRenderer: linkCell('account_display'),
+      },
       {
         field: 'ppe_type',
         headerName: t('capex.columns.ppeType'),
@@ -699,6 +714,8 @@ export default function CapexPage() {
         enableSearch
         pinnedBottomRowData={pinnedTotals}
         defaultSort={gridDefaultSort}
+        // A link's filter on a hidden column (the overview's hygiene counts) shows that column.
+        showFilteredColumns
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="capex-summary"
         initialState={initialGridState}

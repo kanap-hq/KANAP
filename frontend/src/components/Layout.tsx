@@ -550,6 +550,11 @@ export default function Layout() {
               const next = permitted[idx + 1];
               return next !== undefined && isNavItem(next);
             });
+            // One item selected: the one whose path matches the page most closely, so a section's
+            // home (`/ops`) is not selected on every page under it (`/ops/opex`).
+            const matches = (to: string) => location.pathname === to || location.pathname.startsWith(to + '/');
+            const selectedTo = visible.filter(isNavItem).map((entry) => entry.to).filter(matches)
+              .reduce<string | null>((best, to) => (best == null || to.length > best.length ? to : best), null);
 
             return (
               <List>
@@ -586,7 +591,7 @@ export default function Layout() {
                       key={entry.to}
                       component={Link}
                       to={entry.to}
-                      selected={location.pathname === entry.to || location.pathname.startsWith(entry.to + '/')}
+                      selected={entry.to === selectedTo}
                       sx={{
                         justifyContent: navOpen ? 'initial' : 'center',
                         px: navOpen ? 1.5 : 2.5,

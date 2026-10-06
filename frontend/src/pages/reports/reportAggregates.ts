@@ -39,6 +39,8 @@ export interface AggregateQuery {
   filters?: ColumnFilters;
   /** `2025,2026`: the lines still active on 1 January of the earliest one (the year before this one by default). */
   years?: string;
+  /** `enabled`: the lines enabled today, as the list shows by default (instead of the window of `years`). */
+  status?: 'enabled' | 'disabled';
 }
 
 export interface AggregateMeasure {
@@ -581,7 +583,7 @@ export function topIncreasesRequest(scope: BudgetScope, metric: MetricKey, limit
   return {
     query: {},
     spec: {
-      groupBy: ['id', NAME_FIELD[scope]],
+      groupBy: ['id', NAME_FIELD[scope], 'item_number'],
       measures: [{ id: 'delta', fn: 'sum', field: `y${suffix}`, minus: `yMinus1${suffix}` }],
       having: [{ measure: 'delta', op: 'gt', value: 0 }],
       order: [{ by: 'measure', id: 'delta', dir: 'DESC' }],
@@ -590,13 +592,59 @@ export function topIncreasesRequest(scope: BudgetScope, metric: MetricKey, limit
   };
 }
 
-export function readTopIncreases(result: AggregateResult | undefined): Array<{ id: string; name: string; delta: number }> {
-  return (result?.groups ?? []).map((group) => ({ id: textKey(group, 0), name: textKey(group, 1), delta: valueOf(group, 'delta') }));
+export function readTopIncreases(result: AggregateResult | undefined): Array<{ id: string; name: string; itemNumber: number | null; delta: number }> {
+  return (result?.groups ?? []).map((group) => {
+    const itemNumber = group.keys[2] != null && group.keys[2] !== '' ? Number(group.keys[2]) : null;
+    return { id: textKey(group, 0), name: textKey(group, 1), itemNumber: Number.isFinite(itemNumber) ? itemNumber : null, delta: valueOf(group, 'delta') };
+  });
 }
 
-/** How many lines of the window pass the filters. */
-export function countRequest(filters: ColumnFilters): AggregateRequest {
-  return { query: { filters }, spec: { groupBy: [], measures: [] } };
+/** How many lines pass the filters: of the window, or of the lines enabled today with `status: 'enabled'`. */
+export function countRequest(filters: ColumnFilters, status?: AggregateQuery['status']): AggregateRequest {
+  return { query: status ? { filters, status } : { filters }, spec: { groupBy: [], measures: [] } };
+}
+
+/** This year's amount of a column in the reporting currency, as the list's column id (`yBudget`). */
+export function currentYearField(metric: MetricKey): string {
+  return `y${METRIC_SUFFIX[metric]}`;
+}
+
+/** Next year's amount of a column in the reporting currency, as the list's column id (`yPlus1Budget`). */
+export function nextYearField(metric: MetricKey): string {
+  return `yPlus1${METRIC_SUFFIX[metric]}`;
+}
+
+/** How many lines enabled today (the list's default) pass the filters, and their sum of this year's column. */
+export function lineTotalRequest(filters: ColumnFilters, metric: MetricKey): AggregateRequest {
+  return {
+    query: { filters, status: 'enabled' },
+    spec: { groupBy: [], measures: [{ id: 'value', fn: 'sum', field: currentYearField(metric) }] },
+  };
+}
+
+export function readLineTotal(result: AggregateResult | undefined): { count: number; value: number } {
+  return { count: result?.total.count ?? 0, value: valueOf(result?.total, 'value') };
+}
+
+/**
+ * This year's column by cost center label (`code · name`; lines without one: a null key), over the
+ * lines enabled today, the largest sums above zero first.
+ */
+export function costCenterTotalsRequest(metric: MetricKey, limit: number): AggregateRequest {
+  return {
+    query: { status: 'enabled' },
+    spec: {
+      groupBy: ['cost_center_label'],
+      measures: [{ id: 'value', fn: 'sum', field: currentYearField(metric) }],
+      having: [{ measure: 'value', op: 'gt', value: 0 }],
+      order: [{ by: 'measure', id: 'value', dir: 'DESC' }],
+      limit,
+    },
+  };
+}
+
+export function readCostCenterTotals(result: AggregateResult | undefined): Array<{ label: string | null; value: number }> {
+  return (result?.groups ?? []).map((group) => ({ label: group.keys[0] ?? null, value: valueOf(group, 'value') }));
 }
 
 // ----- budget operations pages -----
