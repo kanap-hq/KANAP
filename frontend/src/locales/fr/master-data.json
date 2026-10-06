@@ -69,7 +69,7 @@
       "failedToSaveMetrics": "Échec de l'enregistrement des indicateurs",
       "fixValidationErrors": "Veuillez corriger les erreurs de validation avant d'enregistrer.",
       "readOnlyAccess": "Vous devez disposer d'un accès gestionnaire pour modifier {{entity}}.",
-      "metricsFrozen": "Les indicateurs pour {{year}} sont gelés. Dégelez-les depuis l'administration pour effectuer des modifications.",
+      "metricsFrozen": "Les indicateurs pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler.",
       "metricsYearHint": "Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez son champ. Changez d'année pour consulter les données passées."
     }
   },
@@ -674,8 +674,8 @@
       "copyingBtn": "Copie en cours…"
     },
     "freeze": {
-      "title": "Geler les master data",
-      "noPermission": "Vous devez disposer des autorisations appropriées pour geler ou dégeler les master data. Vous pouvez toutefois consulter le statut actuel ci-dessous.",
+      "title": "Geler les données de référence",
+      "noPermission": "Vous devez disposer des autorisations appropriées pour geler ou dégeler les données de référence. Vous pouvez toutefois consulter le statut actuel ci-dessous.",
       "loadError": "Échec du chargement du statut de gel. Essayez de sélectionner une autre année.",
       "frozenSuccessfully": "Données gelées avec succès.",
       "unfrozenSuccessfully": "Données dégelées avec succès.",

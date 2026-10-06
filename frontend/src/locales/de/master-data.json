@@ -69,7 +69,7 @@
       "failedToSaveMetrics": "Fehler beim Speichern der Kennzahlen",
       "fixValidationErrors": "Bitte beheben Sie die Validierungsfehler vor dem Speichern.",
       "readOnlyAccess": "Sie benötigen Managerrechte, um {{entity}} zu bearbeiten.",
-      "metricsFrozen": "Die Kennzahlen für {{year}} sind eingefroren. Heben Sie die Sperre in der Administration auf, um Änderungen vorzunehmen.",
+      "metricsFrozen": "Die Kennzahlen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
       "metricsYearHint": "Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie sein Feld verlassen. Wechseln Sie das Jahr, um frühere Daten einzusehen."
     }
   },
