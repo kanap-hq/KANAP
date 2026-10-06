@@ -809,7 +809,7 @@
       "checkFailed": "Die Datei konnte nicht geprüft werden. Versuchen Sie es erneut.",
       "loadFailed": "Die Datei konnte nicht geladen werden. Versuchen Sie es erneut."
     },
-    "budgetAdminOnly": "Nur Budgetadministratoren können diese Seite ändern.",
+    "budgetAdminOnly": "Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.",
     "budgetColumnsSettings": {
       "title": "Budgetspalten",
       "subtitle": "Benennen Sie die Spalten Ihres Budgets, wählen Sie, welche alle sehen und von welcher Berichte und Listen ausgehen.",

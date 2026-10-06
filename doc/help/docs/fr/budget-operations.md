@@ -5,9 +5,9 @@ L'administration budgétaire met à votre disposition un ensemble d'outils pour 
 ## Où trouver cette page
 
 - Chemin : **Gestion budgétaire > Administration**
-- Autorisations : la page s'ouvre aux lecteurs de l'administration budgétaire, de l'OPEX ou du CAPEX. La plupart des opérations nécessitent `budget_ops:admin`.
+- Autorisations : chaque carte s'affiche uniquement pour les utilisateurs qui peuvent l'utiliser (voir le tableau ci-dessous). **Administration** apparaît dans le menu dès que vous pouvez utiliser au moins une carte.
 
-La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédié. Vous ne voyez que les cartes que votre accès permet, et une section vide est masquée.
+La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédié. Une section vide est masquée.
 
 **Paramètres**
 
@@ -28,7 +28,13 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 | **Geler les données de référence** | Verrouiller les indicateurs des sociétés et des départements pour une année. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
 | **Copier les indicateurs annuels** | Copier les indicateurs des sociétés et des départements d'une année à l'autre. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
 
-La carte Devises s'ouvre aux lecteurs de l'administration budgétaire, de l'OPEX ou du CAPEX, qui voient la page en lecture seule. Les autres cartes s'ouvrent aux lecteurs de l'OPEX. Modifier un paramètre ou lancer une opération nécessite un accès administrateur à l'administration budgétaire. Pour **Geler les données de référence** et **Copier les indicateurs annuels**, les administrateurs des sociétés ou des départements peuvent aussi agir sur leur périmètre.
+| Cartes | Qui les voit |
+|---|---|
+| Devises, Colonnes budgétaires, Méthode de ventilation par défaut, Geler / Dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
+| Copier les colonnes budgétaires, Copier les ventilations, Réinitialiser une colonne budgétaire | OPEX ou CAPEX au niveau administrateur. Les onglets OPEX et CAPEX suivent la même règle : un administrateur OPEX travaille uniquement sur les postes OPEX |
+| Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de l'administration budgétaire, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
+
+Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget et Lecteur budget n'en voient aucune : **Administration** ne figure donc pas dans leur menu.
 
 Les colonnes budgétaires sont Budget, Révision, Prévision, Réalisé et Atterrissage prévu. Ce sont les noms standard. Votre organisation peut les renommer, en masquer certaines et choisir une colonne par défaut dans [Colonnes budgétaires](#colonnes-budgetaires). Chaque page ci-dessous affiche les noms choisis par votre organisation.
 
@@ -73,7 +79,7 @@ Sous les contrôles, deux cartes affichent l'état de gel en temps réel des cin
 
 ### Autorisations
 
-Sans `budget_ops:admin`, vous pouvez toujours voir le statut de gel, mais les contrôles sont désactivés. Une bannière indique « Seuls les administrateurs budgétaires peuvent modifier cette page. »
+Geler et dégeler nécessitent `budget_ops:admin`. La carte est masquée pour les autres utilisateurs.
 
 ---
 
@@ -311,7 +317,7 @@ La valeur par défaut est résolue à chaque affichage des ventilations : la mod
 
 ### Autorisations
 
-Sans `budget_ops:admin`, vous pouvez consulter le réglage actuel mais pas le modifier.
+Modifier la méthode par défaut nécessite `budget_ops:admin`. La carte est masquée pour les autres utilisateurs.
 
 ---
 
@@ -354,7 +360,7 @@ Cliquez sur **Enregistrer** pour appliquer vos modifications. Le bouton reste d�
 
 ### Autorisations
 
-Modifier les réglages nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). Les autres utilisateurs peuvent ouvrir la page et voir les réglages, en lecture seule, sous la bannière « Seuls les administrateurs budgétaires peuvent modifier cette page. »
+Modifier les réglages nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). La carte est masquée pour les autres utilisateurs.
 
 Si les réglages ne peuvent pas être chargés, la page affiche une seule ligne, « Les réglages des colonnes n'ont pas pu être chargés. », et aucun contrôle.
 

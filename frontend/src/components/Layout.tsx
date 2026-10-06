@@ -58,6 +58,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '../i18n/useLocale';
 import { useBusinessContributorApplicationVisibility } from '../hooks/useBusinessContributorApplicationVisibility';
 import { useGuardedLeave, useInAppLinkGuard } from '../hooks/leaveGuard';
+import { canUseAnyOperation } from '../pages/operations/operationAccess';
 
 const drawerWidth = 220;
 
@@ -508,6 +509,8 @@ export default function Layout() {
                 if (entry.to === '/admin/billing' && !config.features.billing) return false;
                 if (entry.to === '/admin/auth' && !config.features.sso) return false;
                 if (entry.to === '/admin/integrations') return canShowIntegrations;
+              // Administration shows only when one of its pages can be used.
+              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel);
                 if (aiAdminRoutes.includes(entry.to) && !aiSettingsAvailable) return false;
                 return true;
               });
@@ -533,6 +536,8 @@ export default function Layout() {
             const permitted = entries.filter((entry) => {
               if (!isNavItem(entry)) return true;
               if (entry.to === '/admin/integrations') return canShowIntegrations;
+              // Administration shows only when one of its pages can be used.
+              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel);
               if (['/admin/ai', '/admin/ai-models', '/admin/ai-usage'].includes(entry.to)) {
                 return aiCapabilities.data?.surfaces.settings.available === true;
               }

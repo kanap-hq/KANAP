@@ -8,8 +8,8 @@ Für Hintergrundinformationen zu Währungskonzepten und Umrechnungsmechanismen s
 
 Währungen sind eine Budgeteinstellung. Die Seite steht bei den anderen Budgeteinstellungen in der [Budgetadministration](budget-operations.md).
 
-- **Nur Lesen**: alle mit Leserechten auf die Budgetadministration, OPEX oder CAPEX. Die Felder lassen sich nicht bearbeiten, die Schaltflächen **Speichern**, **Zurücksetzen** und **Wechselkurssynchronisierung erzwingen** sind ausgeblendet, und ein Hinweis nennt, dass nur Budgetadministratoren die Seite ändern können. Die Wechselkurstabelle bleibt sichtbar.
-- **Einstellungen ändern und die Wechselkurssynchronisierung starten**: Budgetadministration auf Administratorebene.
+- **Die Seite öffnen, Einstellungen ändern und die Wechselkurssynchronisierung starten**: Budgetadministration auf Administratorebene. Die Karte ist für andere Benutzer ausgeblendet.
+- **Währungen bei Positionen verwenden**: OPEX- und CAPEX-Benutzer wählen in ihren Positionsformularen aus den erlaubten Währungen, ohne diese Seite zu öffnen.
 
 Das Recht **Einstellungen** der IT-Landschaft gibt keinen Zugriff auf Währungen. Es umfasst nur die Einstellungen der IT-Landschaft.
 

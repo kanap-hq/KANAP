@@ -85,7 +85,7 @@ export default function CopyBudgetColumnsPage() {
   // Generate years from Y-1 to Y+5
   const years = Array.from({ length: 7 }, (_, i) => Y - 1 + i);
 
-  const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope());
+  const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope('admin'));
   const [sourceYear, setSourceYear] = useState<number>(Y);
   const [pickedSource, setSourceColumn] = useState<BudgetColumn | null>(null);
   const sourceColumn = usableColumn(pickedSource);
@@ -354,7 +354,7 @@ export default function CopyBudgetColumnsPage() {
       subtitle={t('operations.copyBudgetColumns.subtitle')}
       filters={
         <>
-          <ItemScopeTabs value={scope} onChange={setScope} />
+          <ItemScopeTabs level="admin" value={scope} onChange={setScope} />
           {yearSelect(t('operations.copyBudgetColumns.sourceYear'), sourceYear, setSourceYear)}
           {columnSelect(t('operations.copyBudgetColumns.sourceColumn'), sourceColumn, setSourceColumn)}
           {yearSelect(t('operations.copyBudgetColumns.destinationYear'), destinationYear, setDestinationYear)}

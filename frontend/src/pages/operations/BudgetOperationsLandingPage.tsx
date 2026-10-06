@@ -4,13 +4,12 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../auth/AuthContext';
+import { canUseOperation } from './operationAccess';
 
 type OperationCard = {
   title: string;
   description: string;
   to: string;
-  /** Shown to a reader of any of these resources, like the sidebar's `anyResource`. */
-  anyResource: string[];
 };
 
 type OperationSection = {
@@ -18,11 +17,6 @@ type OperationSection = {
   title: string;
   cards: OperationCard[];
 };
-
-/** Every `/ops/operations/*` route opens for OPEX readers (ProtectedRoute). */
-const OPS_ROUTE_RESOURCES = ['opex'];
-/** The currency settings follow the currency API: budget, OPEX or CAPEX readers. */
-const CURRENCY_RESOURCES = ['budget_ops', 'opex', 'capex'];
 
 const sectionTitleSx = { fontSize: 16, fontWeight: 500, color: 'kanap.text.primary' } as const;
 
@@ -35,30 +29,30 @@ export default function BudgetOperationsLandingPage() {
       key: 'settings',
       title: t('operations.sections.settings'),
       cards: [
-        { title: t('operations.cards.currencyTitle'), description: t('operations.cards.currencyDesc'), to: '/ops/operations/currency', anyResource: CURRENCY_RESOURCES },
-        { title: t('operations.cards.budgetColumnsTitle'), description: t('operations.cards.budgetColumnsDesc'), to: '/ops/operations/columns', anyResource: OPS_ROUTE_RESOURCES },
-        { title: t('operations.cards.allocationDefaultTitle'), description: t('operations.cards.allocationDefaultDesc'), to: '/ops/operations/allocation-default', anyResource: OPS_ROUTE_RESOURCES },
+        { title: t('operations.cards.currencyTitle'), description: t('operations.cards.currencyDesc'), to: '/ops/operations/currency' },
+        { title: t('operations.cards.budgetColumnsTitle'), description: t('operations.cards.budgetColumnsDesc'), to: '/ops/operations/columns' },
+        { title: t('operations.cards.allocationDefaultTitle'), description: t('operations.cards.allocationDefaultDesc'), to: '/ops/operations/allocation-default' },
       ],
     },
     {
       key: 'operations',
       title: t('operations.sections.operations'),
       cards: [
-        { title: t('operations.cards.freezeTitle'), description: t('operations.cards.freezeDesc'), to: '/ops/operations/freeze', anyResource: OPS_ROUTE_RESOURCES },
-        { title: t('operations.cards.copyBudgetTitle'), description: t('operations.cards.copyBudgetDesc'), to: '/ops/operations/copy-budget-columns', anyResource: OPS_ROUTE_RESOURCES },
-        { title: t('operations.cards.copyAllocTitle'), description: t('operations.cards.copyAllocDesc'), to: '/ops/operations/copy-allocations', anyResource: OPS_ROUTE_RESOURCES },
-        { title: t('operations.cards.resetColumnTitle'), description: t('operations.cards.resetColumnDesc'), to: '/ops/operations/column-reset', anyResource: OPS_ROUTE_RESOURCES },
-        { title: t('operations.cards.masterDataFreezeTitle'), description: t('operations.cards.masterDataFreezeDesc'), to: '/ops/operations/master-data-freeze', anyResource: OPS_ROUTE_RESOURCES },
-        { title: t('operations.cards.metricsCopyTitle'), description: t('operations.cards.metricsCopyDesc'), to: '/ops/operations/metrics-copy', anyResource: OPS_ROUTE_RESOURCES },
+        { title: t('operations.cards.freezeTitle'), description: t('operations.cards.freezeDesc'), to: '/ops/operations/freeze' },
+        { title: t('operations.cards.copyBudgetTitle'), description: t('operations.cards.copyBudgetDesc'), to: '/ops/operations/copy-budget-columns' },
+        { title: t('operations.cards.copyAllocTitle'), description: t('operations.cards.copyAllocDesc'), to: '/ops/operations/copy-allocations' },
+        { title: t('operations.cards.resetColumnTitle'), description: t('operations.cards.resetColumnDesc'), to: '/ops/operations/column-reset' },
+        { title: t('operations.cards.masterDataFreezeTitle'), description: t('operations.cards.masterDataFreezeDesc'), to: '/ops/operations/master-data-freeze' },
+        { title: t('operations.cards.metricsCopyTitle'), description: t('operations.cards.metricsCopyDesc'), to: '/ops/operations/metrics-copy' },
       ],
     },
   ];
 
-  // Tiles follow the reader's rights; a section left without a tile is not shown.
+  // A tile shows only when the user can use its page; a section left without a tile is not shown.
   const visibleSections = sections
     .map((section) => ({
       ...section,
-      cards: section.cards.filter((card) => card.anyResource.some((resource) => hasLevel(resource, 'reader'))),
+      cards: section.cards.filter((card) => canUseOperation(card.to.split('/').pop() ?? '', hasLevel)),
     }))
     .filter((section) => section.cards.length > 0);
 

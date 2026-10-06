@@ -9,9 +9,8 @@ The yearly metrics are the headcount, IT users and turnover of companies and the
 - Workspace: **Budget management**
 - Path: **Budget management > Administration**, section **Operations**, tiles **Freeze master data** and **Copy yearly metrics**
 - Permissions:
-  - Open the pages and view the freeze status: the same access as the rest of Budget Administration (reader access to OPEX, for example)
-  - Freeze / unfreeze: `companies:admin`, `departments:admin`, or `budget_ops:admin`
-  - Copy data: `companies:admin`, `departments:admin`, or `budget_ops:admin`
+  - Access to the budget (reader access to OPEX, CAPEX or Budget administration), plus one of `companies:admin`, `departments:admin` or `budget_ops:admin`
+  - The tiles are hidden from other users
 
 Master data has no Administration entry of its own.
 
@@ -48,7 +47,7 @@ You need admin access on the relevant scope to freeze or unfreeze:
 | Companies | `companies:admin` or `budget_ops:admin` |
 | Departments | `departments:admin` or `budget_ops:admin` |
 
-If you lack the required permissions, the page still lets you review the current freeze status -- you just cannot change it.
+If you are admin of one scope only, the other scope is greyed out. The freeze status of both scopes stays visible.
 
 ---
 
@@ -178,7 +177,7 @@ No. The tool copies all entities for the selected scopes and metrics. For select
 No. It only writes metrics for entities that already exist in both years. If a company exists in the source year but not the destination, that row is skipped.
 
 **Who can see freeze status?**
-Anyone who can open Budget Administration. Only admins on the relevant scope can actually freeze or unfreeze.
+Anyone who can open this page, that is admins of companies, departments or Budget administration. Each admin freezes or unfreezes their own scope.
 
 **Can I freeze future years?**
 Yes. The year picker covers a range from last year through five years ahead. Freezing a future year is useful for locking approved budgets before the fiscal year starts.

@@ -54,7 +54,7 @@ export default function BudgetColumnResetPage() {
   // Generate years from Y-1 to Y+5
   const years = Array.from({ length: 7 }, (_, i) => Y - 1 + i);
 
-  const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope());
+  const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope('admin'));
   const [year, setYear] = useState<number>(Y);
   const [pickedColumn, setColumn] = useState<BudgetColumn | null>(null);
   // A column hidden since it was picked is no longer offered.
@@ -178,7 +178,7 @@ export default function BudgetColumnResetPage() {
       subtitle={t('operations.columnReset.subtitle')}
       filters={
         <>
-          <ItemScopeTabs value={scope} onChange={(next) => { setScope(next); setClearResult(null); }} />
+          <ItemScopeTabs level="admin" value={scope} onChange={(next) => { setScope(next); setClearResult(null); }} />
           <ReportFilter label={t('operations.columnReset.year')} width={120}>
             <TextField
               select

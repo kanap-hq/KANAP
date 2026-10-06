@@ -810,7 +810,7 @@
       "checkFailed": "Le fichier n'a pas pu être vérifié. Réessayez.",
       "loadFailed": "Le fichier n'a pas pu être chargé. Réessayez."
     },
-    "budgetAdminOnly": "Seuls les administrateurs budgétaires peuvent modifier cette page.",
+    "budgetAdminOnly": "Vous devez disposer des droits d'administrateur budgétaire pour utiliser cette page.",
     "budgetColumnsSettings": {
       "title": "Colonnes budgétaires",
       "subtitle": "Nommez les colonnes de votre budget, choisissez celles que tout le monde voit et celle dont partent les rapports et les listes.",

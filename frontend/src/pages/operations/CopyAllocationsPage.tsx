@@ -49,7 +49,7 @@ export default function CopyAllocationsPage() {
   const currentYear = now.getFullYear();
   const years = useMemo(() => Array.from({ length: 7 }, (_, i) => currentYear - 1 + i), [currentYear]);
 
-  const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope());
+  const [scope, setScope] = useState<BudgetScope>(useDefaultBudgetScope('admin'));
   const [sourceYear, setSourceYear] = useState<number>(currentYear);
   const [destinationYear, setDestinationYear] = useState<number>(currentYear + 1);
   const [overwrite, setOverwrite] = useState<boolean>(false);
@@ -222,6 +222,7 @@ export default function CopyAllocationsPage() {
       filters={
         <>
           <ItemScopeTabs
+            level="admin"
             value={scope}
             onChange={(next) => {
               setScope(next);

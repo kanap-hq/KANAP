@@ -5,9 +5,9 @@ La Administración presupuestaria le ofrece un conjunto de herramientas para ges
 ## Dónde encontrarla
 
 - Ruta: **Gestión presupuestaria > Administración**
-- Permisos: la página se abre a los lectores de la administración presupuestaria, de OPEX o de CAPEX. La mayoría de operaciones requieren `budget_ops:admin`.
+- Permisos: cada tarjeta se muestra solo a los usuarios que pueden usarla (consulte la tabla a continuación). **Administración** aparece en el menú cuando puede usar al menos una tarjeta.
 
-La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta dedicada. Solo ve las tarjetas que su acceso permite, y una sección vacía se oculta.
+La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta dedicada. Una sección vacía se oculta.
 
 **Configuración**
 
@@ -28,7 +28,13 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 | **Congelar datos maestros** | Bloquear los indicadores de empresas y departamentos para un año. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
 | **Copiar indicadores anuales** | Copiar los indicadores de empresas y departamentos de un año a otro. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
 
-La tarjeta Monedas se abre a los lectores de la administración presupuestaria, de OPEX o de CAPEX, que ven la página en solo lectura. Las demás tarjetas se abren a los lectores de OPEX. Cambiar un ajuste o lanzar una operación requiere acceso de administrador a la administración presupuestaria. En **Congelar datos maestros** y **Copiar indicadores anuales**, los administradores de empresas o departamentos también pueden actuar sobre su alcance.
+| Tarjetas | Quién las ve |
+|---|---|
+| Monedas, Columnas presupuestarias, Método de asignación por defecto, Congelar / Descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
+| Copiar columnas presupuestarias, Copiar asignaciones, Restablecer columna presupuestaria | OPEX o CAPEX con nivel de administrador. Las pestañas OPEX y CAPEX siguen la misma regla: un administrador de OPEX trabaja solo con partidas de OPEX |
+| Congelar datos maestros, Copiar indicadores anuales | Usuarios con acceso al presupuesto que son administradores de la administración presupuestaria, de empresas o de departamentos. Los administradores de empresas y departamentos actúan sobre su propio alcance |
+
+El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de presupuesto y Lector de presupuesto no ven ninguna, así que **Administración** no aparece en su menú.
 
 Las columnas presupuestarias son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto. Son los nombres estándar. Su organización puede renombrarlas, ocultar algunas y elegir una columna por defecto en [Columnas presupuestarias](#columnas-presupuestarias). Cada página a continuación muestra los nombres que eligió su organización.
 
@@ -73,7 +79,7 @@ Debajo de los controles, dos tarjetas muestran el estado de congelación en tiem
 
 ### Permisos
 
-Sin `budget_ops:admin` puede ver el estado de congelación, pero los controles están deshabilitados. Un banner indica «Solo los administradores de presupuesto pueden cambiar esta página.»
+Congelar y descongelar requieren `budget_ops:admin`. La tarjeta se oculta a los demás usuarios.
 
 ---
 
@@ -311,7 +317,7 @@ El valor por defecto se resuelve cada vez que se muestran las asignaciones, por 
 
 ### Permisos
 
-Sin `budget_ops:admin`, puede consultar la configuración actual pero no cambiarla.
+Cambiar el método por defecto requiere `budget_ops:admin`. La tarjeta se oculta a los demás usuarios.
 
 ---
 
@@ -354,7 +360,7 @@ Haga clic en **Guardar** para aplicar sus cambios. El botón sigue deshabilitado
 
 ### Permisos
 
-Cambiar la configuración requiere derechos de administración de la Administración presupuestaria (`budget_ops:admin`). Los demás usuarios pueden abrir la página y ver la configuración en modo de solo lectura, bajo el banner «Solo los administradores de presupuesto pueden cambiar esta página.»
+Cambiar la configuración requiere derechos de administración de la Administración presupuestaria (`budget_ops:admin`). La tarjeta se oculta a los demás usuarios.
 
 Si la configuración no se puede cargar, la página muestra una sola línea, «No se pudo cargar la configuración de las columnas.», y ningún control.
 

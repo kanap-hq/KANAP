@@ -809,7 +809,7 @@
       "checkFailed": "No se pudo comprobar el archivo. Vuelva a intentarlo.",
       "loadFailed": "No se pudo cargar el archivo. Vuelva a intentarlo."
     },
-    "budgetAdminOnly": "Solo los administradores de presupuesto pueden cambiar esta página.",
+    "budgetAdminOnly": "Necesita derechos de administrador de presupuesto para usar esta página.",
     "budgetColumnsSettings": {
       "title": "Columnas presupuestarias",
       "subtitle": "Dé nombre a las columnas de su presupuesto, elija cuáles ve todo el mundo y de cuál parten los informes y las listas.",
