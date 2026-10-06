@@ -34,8 +34,6 @@ jobs:
           - 5432:5432
     env:
       DATABASE_URL: postgres://app:app@127.0.0.1:5432/appdb
-      # Types are checked once by `typecheck:ci`; ts-node then only transpiles.
-      TS_NODE_TRANSPILE_ONLY: '1'
     defaults:
       run:
         working-directory: backend
@@ -48,10 +46,13 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - name: Build backend
-        run: npm ci && npm run build
-      - name: Type-check backend sources and specs
-        run: npm run typecheck:ci
+      - name: Install backend dependencies
+        run: npm ci
+      # Type-checks the sources, the specs and the database scripts, and emits them once
+      # into ci-dist/ for the steps below. The production build (`npm run build`) is
+      # checked by the `build (onprem)` job.
+      - name: Type-check and compile backend sources and specs
+        run: npm run build:ci
       - name: Prepare CI PostgreSQL role/database
         env:
           PGPASSWORD: postgres
@@ -63,9 +64,9 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d appdb -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
           psql -h 127.0.0.1 -U postgres -d appdb -v ON_ERROR_STOP=1 -c "GRANT ALL ON SCHEMA public TO app;"
       - name: Prepare backend database
-        run: npm run typeorm -- migration:run
+        run: npx typeorm migration:run -d ci-dist/backend/src/data-source.js
       - name: Run backend hardening checks
-        run: npm run test:ci
+        run: node scripts/run-ci-tests.js --no-compile
 
   frontend:
     name: frontend (cloud)
