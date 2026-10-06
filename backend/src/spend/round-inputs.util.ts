@@ -633,6 +633,11 @@ export function isLinesPayload(payload: unknown): payload is LinesAmountsPayload
 
 export const DISABLED_CALENDAR_WARNING = 'This calendar is disabled. The computation still uses it.';
 
+/** The calendars as the computation reads them for `year`: each one's name and working days of that year (null when it has none). */
+export function lineCalendarDays(calendars: ReadonlyMap<string, WorkingDayProfileInfo>, year: number): Map<string, LineCalendar> {
+  return new Map([...calendars.values()].map((calendar) => [calendar.id, { name: calendar.name, days: calendarDaysFor(calendar, year) }]));
+}
+
 /** A lines write, validated and computed. Nothing written yet. */
 export type LinesPlan = {
   year: number;
@@ -715,10 +720,7 @@ export async function writeLinesPayload(ctx: AmountsWriteContext, rawPayload: un
   await assertMeasuresEditable(ctx, year, measures);
   const stored = await versionRoundInputs(ctx.manager, ctx.scope, ctx.version);
   const { calendars, warnings } = await resolveLineCalendars(ctx, lines, measures, stored);
-  const days = new Map<string, LineCalendar>(
-    [...calendars.values()].map((calendar) => [calendar.id, { name: calendar.name, days: calendarDaysFor(calendar, year) }]),
-  );
-  const result = lines.length > 0 ? asBadRequest(() => computeColumn(lines, year, days)) : null;
+  const result = lines.length > 0 ? asBadRequest(() => computeColumn(lines, year, lineCalendarDays(calendars, year))) : null;
   // Each column written: the months the lines give (left as stored when they are removed) and the lines.
   await ctx.beforeWrite?.({
     kind: 'columns',

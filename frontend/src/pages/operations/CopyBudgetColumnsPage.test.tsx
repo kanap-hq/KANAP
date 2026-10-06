@@ -239,6 +239,77 @@ describe('CopyBudgetColumnsPage', () => {
     expect(screen.queryByText('operations.copyBudgetColumns.prorated')).not.toBeInTheDocument();
   });
 
+  it('the item cell notes calendar changes, lists each line on hover, and says Skipped instead on a skipped row', async () => {
+    const issues = [
+      { line: 'Consultant', lineNumber: 1, calendar: 'Custom', kind: 'fallback' as const, fallback: 'France' },
+      { line: 'Line 2', lineNumber: 2, calendar: 'Custom', kind: 'missing' as const },
+    ];
+    const cell = (props: { skipped?: boolean }) => render(
+      <ThemeProvider theme={createAppTheme('light')}><ItemNameCell name="Licences" year={2027} calendarIssues={issues} {...props} /></ThemeProvider>,
+    );
+    const { unmount } = cell({});
+    fireEvent.mouseOver(screen.getByText('operations.copyBudgetColumns.calendarNote'));
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('operations.copyBudgetColumns.calendarIssue.fallback');
+    expect(tooltip).toHaveTextContent('operations.copyBudgetColumns.calendarIssue.missing');
+    unmount();
+
+    cell({ skipped: true });
+    expect(screen.queryByText('operations.copyBudgetColumns.calendarNote')).not.toBeInTheDocument();
+  });
+
+  it('a calendar change waits for the confirmation, which the copy sends and a new dry run resets', async () => {
+    const preview = { data: {
+      success: true, dryRun: true, summary: { totalItems: 1, processed: 1, skipped: 0, errors: 0 },
+      results: [{
+        itemId: 'Licences-1', itemName: 'Licences', sourceValue: 12000, currentDestinationValue: 0, newValue: 12600, skipped: false, fromLines: true,
+        calendarIssues: [{ line: 'Consultant', lineNumber: 1, calendar: 'Custom', kind: 'fallback', fallback: 'France' }],
+      }],
+    } };
+    operation.mockResolvedValue(preview);
+    renderPage();
+    const copy = () => screen.getByRole('button', { name: 'operations.copyBudgetColumns.copyData' });
+    const confirm = () => screen.getByRole('checkbox', { name: 'operations.copyBudgetColumns.acceptCalendarChanges' });
+    await linesLoaded();
+    expect(screen.queryByText('operations.copyBudgetColumns.calendarAlert')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
+    expect(await screen.findByText('operations.copyBudgetColumns.calendarAlert')).toBeInTheDocument();
+    expect(copy()).toBeDisabled();
+    fireEvent.click(confirm());
+    await waitFor(() => expect(copy()).toBeEnabled());
+
+    // A new dry run asks again.
+    fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(confirm()).not.toBeChecked());
+    expect(copy()).toBeDisabled();
+
+    fireEvent.click(confirm());
+    await waitFor(() => expect(copy()).toBeEnabled());
+    fireEvent.click(copy());
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(3));
+    expect(operation.mock.calls[2][1]).toMatchObject({ dryRun: false, acceptCalendarChanges: true });
+  });
+
+  it('a disabled calendar alone needs no confirmation', async () => {
+    operation.mockResolvedValue({ data: {
+      success: true, dryRun: true, summary: { totalItems: 1, processed: 1, skipped: 0, errors: 0 },
+      results: [{
+        itemId: 'Licences-1', itemName: 'Licences', sourceValue: 12000, currentDestinationValue: 0, newValue: 12000, skipped: false, fromLines: true,
+        calendarIssues: [{ line: 'Consultant', lineNumber: 1, calendar: 'Old', kind: 'disabled' }],
+      }],
+    } });
+    renderPage();
+    await linesLoaded();
+    fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.dryRun' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'operations.copyBudgetColumns.copyData' })).toBeEnabled());
+    expect(screen.queryByText('operations.copyBudgetColumns.calendarAlert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'operations.copyBudgetColumns.copyData' }));
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(2));
+    expect(operation.mock.calls[1][1]).toMatchObject({ dryRun: false, acceptCalendarChanges: false });
+  });
+
   it('copies from the default column of Y to the default column of Y+1', async () => {
     columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, default_column: 'committed' };
     renderPage();

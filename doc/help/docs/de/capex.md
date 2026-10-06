@@ -399,7 +399,7 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
 
 - Ein im Tab **Monatlich** eingegebener Monat: „Die Beträge wurden von Hand eingegeben. Die Zeilen wieder verwenden.“
 - Eine Verteilung: „Die Beträge stammen aus einer Verteilung. Die Zeilen wieder verwenden.“
-- **Budgetspalten kopieren** in der Budgetadministration: „Die Beträge wurden aus Budget 2025 kopiert. Die Zeilen wieder verwenden.“ Die Kopie überträgt die Zeilen der Quellspalte zusammen mit den Beträgen. Siehe [Eine berechnete Spalte kopieren](budget-operations.md#eine-berechnete-spalte-kopieren)
+- **Budgetspalten kopieren** in der Budgetadministration: „Die Beträge wurden aus Budget 2025 kopiert. Die Zeilen wieder verwenden.“ Waren die Quellbeträge nicht aus Zeilen berechnet, überträgt die Kopie die Zeilen der Quellspalte als Referenz. Eine aus ihren Zeilen berechnete Spalte bleibt berechnet, mit um den Prozentsatz erhöhten Preisen. Siehe [Eine aus Zeilen aufgebaute Spalte kopieren](budget-operations.md#eine-aus-zeilen-aufgebaute-spalte-kopieren)
 - Geänderte Arbeitstage eines Kalenders: „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19“. An der Spalte ändert sich nichts, bis Sie auf **Die Zeilen wieder verwenden** klicken. Die Zeilen bleiben bis dahin bearbeitbar
 - **Budgetspalte zurücksetzen** in der Budgetadministration entfernt die Zeilen zusammen mit den Beträgen. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen)
 - Eine Budgetdatei ändert die Monate einer Spalte und lässt ihre Zeilen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)

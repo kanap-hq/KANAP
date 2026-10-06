@@ -105,7 +105,7 @@ Requiere permisos de administración sobre OPEX, o sobre CAPEX para las partidas
 | **Columna de origen** | Cualquier columna visible, incluida Previsión cuando se muestra. Empieza en la columna por defecto |
 | **Año de destino** | Año al que copiar (mismo rango) |
 | **Columna de destino** | Cualquier columna visible. Empieza en la columna por defecto |
-| **Incremento porcentual** | Ajuste aplicado a cada mes copiado (p. ej., `3` = +3%). Predeterminado: 0. Acepta decimales y valores negativos. Un porcentaje de -100% o menos se rechaza. |
+| **Incremento porcentual** | Ajuste aplicado a cada mes copiado (p. ej., `3` = +3%). En una columna calculada a partir de sus líneas, aumenta en cambio el precio unitario de cada línea. Consulte [Copiar una columna construida a partir de líneas](#copiar-una-columna-construida-a-partir-de-lineas). Predeterminado: 0. Acepta decimales y valores negativos. Un porcentaje de -100% o menos se rechaza. |
 | **Sobrescribir datos existentes** | Conmutador. Cuando está desactivado, los elementos que ya tienen un valor en el destino se omiten. Cuando está activado, todos los valores de destino se reemplazan. |
 
 La página se abre con la columna por defecto del año actual como origen y la columna por defecto del año siguiente como destino. Las columnas ocultas no se ofrecen.
@@ -143,6 +143,7 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 
 ### Cómo se copian los importes
 
+- Esta parte describe las columnas cuyos importes se escriben, se reparten o se copian, y los meses de las líneas de referencia. Una columna calculada a partir de sus líneas sigue [sus propias reglas](#copiar-una-columna-construida-a-partir-de-lineas)
 - La copia conserva el reparto mensual. Cada uno de los doce meses se copia al mismo mes del destino, de modo que una columna repartida de abril a diciembre sigue repartida de abril a diciembre
 - Solo se copian las partidas válidas en el año de destino. Una partida cuenta para los meses cuyo día 15 cae entre su **Inicio de vigencia** y su **Fin de validez**. Una partida sin ninguno de esos meses se excluye, ya que la pestaña Presupuesto tampoco la muestra
 - Una partida válida solo una parte del año de destino recibe únicamente esos meses. Los demás meses conservan su importe, y el periodo se ajusta a las fechas de la partida. Por ejemplo, un origen de doce meses copiado a una partida que termina el 30 de junio da de enero a junio
@@ -154,16 +155,33 @@ Debajo de la cuadrícula, una barra de estadísticas muestra:
 - Copiar una columna sobre sí misma (mismo año y misma columna) se rechaza
 - La copia es de todo o nada: si una partida falla, no se guarda nada
 
-### Copiar una columna calculada
+### Copiar una columna construida a partir de líneas
 
-Una columna puede construirse a partir de líneas, cada una una cantidad por un precio unitario. Consulte [Cantidad y precio](opex.md#cantidad-y-precio).
+Una columna puede construirse a partir de líneas, cada una una cantidad por un precio unitario. Consulte [Cantidad y precio](opex.md#cantidad-y-precio). La copia trata una columna así de una de dos maneras.
 
-- La copia lleva las líneas de la columna de origen al destino, con su descripción, cantidad, unidad, precio unitario, frecuencia (tiempo completo o días por mes para las personas, por mes o una vez para las piezas) y calendario. Sus periodos pasan al año de destino, igual que el periodo de la columna: de marzo a diciembre de 2026 pasa a ser de marzo a diciembre de 2027, y una línea que termina el 29 de febrero termina el 28 de febrero en un año que no lo tiene. Una pieza comprada una vez el 15 de marzo de 2026 se compra el 15 de marzo de 2027
-- La copia lleva también el ETC de la columna de origen
-- Los meses se copian como en cualquier otra columna. El porcentaje de incremento solo se aplica a los importes copiados. Las líneas conservan sus precios unitarios
-- Una copia desde una columna sin líneas deja el destino sin líneas, y su ETC queda vacío
+**Los importes se calculan a partir de las líneas.** La columna sigue calculada a partir de sus líneas en el destino.
+
+- El porcentaje de incremento sube el precio unitario de cada línea, redondeado a 4 decimales. Las cantidades no cambian
+- Los meses se recalculan a partir de las líneas con los calendarios laborales del año de destino. El total copiado puede diferir ligeramente del total de origen con el porcentaje aplicado, porque el número de días laborables cambia de un año a otro
+- Las líneas pasan al año de destino con su descripción, cantidad, unidad, frecuencia y calendario. Sus periodos se desplazan igual que el periodo de la columna: de marzo a diciembre de 2026 pasa a ser de marzo a diciembre de 2027, y una línea que termina el 29 de febrero termina el 28 de febrero en un año que no lo tiene. Una pieza comprada una vez el 15 de marzo de 2026 se compra el 15 de marzo de 2027. El ETC se recalcula a partir de las líneas
+- Una línea que se conserva solo para una parte del año de destino, por la vigencia de la partida, se ajusta a ese periodo. Una línea que se queda sin ningún mes se elimina
+- La columna muestra sus líneas como de costumbre en la pestaña Presupuesto. No lleva la indicación «Copiado de»
+
+**Las líneas son solo una referencia.** Es el caso cuando los importes de origen se escribieron a mano, se repartieron o se copiaron.
+
+- El porcentaje de incremento se aplica a los meses, como en cualquier otra columna. Las líneas se copian tal cual, con sus precios unitarios y su ETC
 - En la pestaña Presupuesto, la columna de destino muestra «Copiado de Presupuesto 2026», y su pestaña **Cantidad y precio** indica «Los importes se copiaron de Presupuesto 2026. Usar de nuevo las líneas.»
-- Las líneas copiadas son una referencia de solo lectura. En la pestaña Presupuesto de la partida, haga clic en **Usar de nuevo las líneas** en la pestaña **Cantidad y precio** para calcular la columna a partir de ellas, con sus precios actuales. Para planificar el año de destino con sus propios precios, cambie después los precios unitarios: cada cambio vuelve a calcular la columna. Una línea con precio por día necesita un calendario que contenga el año de destino: un calendario estándar siempre lo contiene, y uno personalizado puede no contenerlo, por ejemplo «Personal de la sede has no working days for 2027. Add them on the Working-day calendars page.»
+- Las líneas copiadas son una referencia de solo lectura. Haga clic en **Usar de nuevo las líneas** en la pestaña **Cantidad y precio** para calcular la columna a partir de ellas, con sus precios actuales. Para planificar el año de destino con sus propios precios, cambie después los precios unitarios: cada cambio vuelve a calcular la columna
+
+Una copia desde una columna sin líneas deja el destino sin líneas, y su ETC queda vacío.
+
+#### Calendarios sin días para el año de destino
+
+Una línea con precio por día necesita un calendario que contenga el año de destino. Cuando el calendario de una línea no tiene días laborables para ese año, la copia usa en su lugar el calendario estándar del país de la empresa pagadora de la partida. Es el calendario creado con la empresa. Si no existe ninguno, la partida se copia de la forma habitual: meses por el porcentaje, con las líneas sin cambios como referencia.
+
+La simulación señala estas partidas con una nota **Calendario**, con una información emergente por línea, y muestra una advertencia sobre la vista previa. Para copiar de todos modos, marque **Copiar de todos modos con estos cambios de calendario**. Lo mejor es añadir los días del año en la página **Calendarios laborales** y volver a ejecutar la simulación.
+
+Un calendario desactivado se sigue usando. La simulación lo anota y no pide confirmación.
 
 ### Protección de columnas congeladas
 

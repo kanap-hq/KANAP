@@ -8,6 +8,7 @@ import {
   Paper,
   Typography,
   Switch,
+  Checkbox,
   FormControlLabel,
   Alert,
   Tooltip,
@@ -22,7 +23,7 @@ import { operationLinesRequest, readOperationLines } from '../reports/reportAggr
 import { useBudgetAggregate } from '../reports/useBudgetAggregate';
 import { useQueryClient } from '@tanstack/react-query';
 import { forgetAllAllocations } from '../../components/finance/allocationsCache';
-import { copyBudgetColumn, BudgetColumn, BudgetOperationResult, BudgetScope } from '../../services/budgetOperations';
+import { copyBudgetColumn, BudgetColumn, BudgetOperationResult, BudgetScope, CalendarIssue } from '../../services/budgetOperations';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
@@ -42,15 +43,30 @@ type ProcessedRow = {
   willBeSkipped?: boolean;
   /** The item is valid for part of the destination year: only those months are copied. */
   prorated?: boolean;
+  /** What the copy does with the calendars of the item's lines priced per day. */
+  calendarIssues?: CalendarIssue[];
   /** Present once the dry run has answered for this item. */
   inPreview?: boolean;
 };
 
 const noteSx = { fontSize: 12, color: 'kanap.text.tertiary' } as const;
 
-/** The item name, with what the dry run says about it: skipped, or prorated to its validity. */
-export function ItemNameCell({ name, skipped, prorated, year }: { name: string; skipped?: boolean; prorated?: boolean; year: number }) {
+/** A calendar change the copy needs confirmed: a replacement calendar, or none. */
+export const needsCalendarConfirmation = (issues: CalendarIssue[] | undefined) => !!issues?.some((issue) => issue.kind !== 'disabled');
+
+/** The item name, with what the dry run says about it: skipped, prorated to its validity, or a calendar change on its lines. */
+export function ItemNameCell({ name, skipped, prorated, calendarIssues, year }: {
+  name: string;
+  skipped?: boolean;
+  prorated?: boolean;
+  calendarIssues?: CalendarIssue[];
+  year: number;
+}) {
   const { t } = useTranslation(['ops']);
+  // A line without a description is named by its place, in the user's language.
+  const lineName = (issue: CalendarIssue) => (issue.line === `Line ${issue.lineNumber}`
+    ? t('operations.copyBudgetColumns.lineNumber', { n: issue.lineNumber })
+    : issue.line);
   return (
     <Box component="span" sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
       <span>{name}</span>
@@ -58,6 +74,23 @@ export function ItemNameCell({ name, skipped, prorated, year }: { name: string; 
       {!skipped && prorated && (
         <Tooltip title={t('operations.copyBudgetColumns.proratedHelp', { year })}>
           <Box component="span" sx={noteSx}>{t('operations.copyBudgetColumns.prorated')}</Box>
+        </Tooltip>
+      )}
+      {!skipped && !!calendarIssues?.length && (
+        <Tooltip
+          title={(
+            <Box component="span" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {calendarIssues.map((issue) => (
+                <span key={`${issue.lineNumber}-${issue.kind}`}>
+                  {t(`operations.copyBudgetColumns.calendarIssue.${issue.kind}`, {
+                    line: lineName(issue), calendar: issue.calendar, fallback: issue.fallback, year,
+                  })}
+                </span>
+              ))}
+            </Box>
+          )}
+        >
+          <Box component="span" sx={noteSx}>{t('operations.copyBudgetColumns.calendarNote')}</Box>
         </Tooltip>
       )}
     </Box>
@@ -100,6 +133,8 @@ export default function CopyBudgetColumnsPage() {
   const [previewData, setPreviewData] = useState<ProcessedRow[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showPreview, setShowPreview] = useState<boolean>(false);
+  // Lines whose calendar has no days for the destination year: the user confirms the change after the dry run.
+  const [acceptCalendarChanges, setAcceptCalendarChanges] = useState<boolean>(false);
 
   const { data: freezeData, isLoading: freezeLoading } = useFreezeState(destinationYear);
 
@@ -138,11 +173,14 @@ export default function CopyBudgetColumnsPage() {
   useEffect(() => {
     setPreviewData([]);
     setShowPreview(false);
+    setAcceptCalendarChanges(false);
   }, [paramsKey]);
 
   const handleDryRun = async () => {
     const runKey = paramsKey;
     setIsProcessing(true);
+    // A new dry run asks for the confirmation again.
+    setAcceptCalendarChanges(false);
     try {
       const result = await copyBudgetColumn(scope, {
         sourceYear,
@@ -167,6 +205,7 @@ export default function CopyBudgetColumnsPage() {
           previewValue: apiRow.newValue,
           willBeSkipped,
           prorated: apiRow.prorated,
+          calendarIssues: apiRow.calendarIssues ?? [],
         };
       });
 
@@ -192,6 +231,7 @@ export default function CopyBudgetColumnsPage() {
         percentageIncrease,
         overwrite,
         dryRun: false,
+        acceptCalendarChanges,
       });
       // The lines' Allocations tabs show their totals: their cached years are read again.
       forgetAllAllocations(queryClient);
@@ -204,6 +244,7 @@ export default function CopyBudgetColumnsPage() {
       // Clear the preview state so user can see the updated source data
       setPreviewData([]);
       setShowPreview(false);
+      setAcceptCalendarChanges(false);
     } catch (error) {
       console.error('Copy data failed:', error);
       await dialogs.alert(getApiErrorMessage(error, t, t('operations.copyBudgetColumns.copyFailed')));
@@ -224,6 +265,7 @@ export default function CopyBudgetColumnsPage() {
             name={params.value}
             skipped={showPreview && params.data?.willBeSkipped}
             prorated={showPreview && params.data?.prorated}
+            calendarIssues={showPreview ? params.data?.calendarIssues : undefined}
             year={destinationYear}
           />
         ),
@@ -282,6 +324,7 @@ export default function CopyBudgetColumnsPage() {
         previewValue: preview ? preview.previewValue : row.destinationValue,
         willBeSkipped: preview ? preview.willBeSkipped : true,
         prorated: preview?.prorated,
+        calendarIssues: preview?.calendarIssues,
         inPreview: !!preview,
       };
     });
@@ -299,8 +342,14 @@ export default function CopyBudgetColumnsPage() {
       ? displayData.filter((row: ProcessedRow) => row.inPreview && !row.willBeSkipped).length
       : displayData.filter((row: ProcessedRow) => row.sourceValue !== 0 && (overwrite || row.destinationValue === 0)).length;
 
+    // Items the copy writes whose lines change calendar or cannot be recalculated.
+    const itemsWithCalendarChanges = showPreview
+      ? displayData.filter((row: ProcessedRow) => row.inPreview && !row.willBeSkipped && needsCalendarConfirmation(row.calendarIssues)).length
+      : 0;
+
     return {
       totalItems,
+      itemsWithCalendarChanges,
       totalSource,
       totalDestinationCurrent,
       totalPreview,
@@ -401,7 +450,10 @@ export default function CopyBudgetColumnsPage() {
           <Button
             variant="contained"
             onClick={handleCopyData}
-            disabled={isProcessing || processedData.length === 0 || !showPreview || freezeLoading || destinationFrozen}
+            disabled={
+              isProcessing || processedData.length === 0 || !showPreview || freezeLoading || destinationFrozen
+              || (stats.itemsWithCalendarChanges > 0 && !acceptCalendarChanges)
+            }
             color="primary"
           >
             {isProcessing ? t('operations.copyBudgetColumns.processing') : t('operations.copyBudgetColumns.copyData')}
@@ -426,6 +478,25 @@ export default function CopyBudgetColumnsPage() {
         {showPreview && (
           <Alert severity="info">
             {t('operations.copyBudgetColumns.previewInfo', { count: stats.totalItems, toProcess: stats.itemsToBeProcessed, skipped: stats.totalItems - stats.itemsToBeProcessed })}
+          </Alert>
+        )}
+
+        {stats.itemsWithCalendarChanges > 0 && (
+          <Alert severity="warning">
+            <Typography sx={{ fontSize: 13 }}>
+              {t('operations.copyBudgetColumns.calendarAlert', { count: stats.itemsWithCalendarChanges, year: destinationYear })}
+            </Typography>
+            <FormControlLabel
+              control={(
+                <Checkbox
+                  size="small"
+                  checked={acceptCalendarChanges}
+                  onChange={(e) => setAcceptCalendarChanges(e.target.checked)}
+                />
+              )}
+              label={<Typography sx={{ fontSize: 13 }}>{t('operations.copyBudgetColumns.acceptCalendarChanges')}</Typography>}
+              sx={{ mt: 0.5 }}
+            />
           </Alert>
         )}
 

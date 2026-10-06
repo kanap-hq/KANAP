@@ -399,7 +399,7 @@ Click **Add a line** under the table to add a line, and the cross at the end of 
 
 - A month typed in the **Monthly** tab: "Amounts were entered by hand. Use the lines again."
 - A spread: "Amounts come from a spread. Use the lines again."
-- **Copy budget columns** in Budget Administration: "Amounts were copied from Budget 2025. Use the lines again." The copy brings the source column's lines with the amounts. See [Copying a computed column](budget-operations.md#copying-a-computed-column)
+- **Copy budget columns** in Budget Administration: "Amounts were copied from Budget 2025. Use the lines again." When the source amounts were not calculated from lines, the copy brings the source column's lines as a reference. A column calculated from its lines stays calculated, with its prices raised by the percentage. See [Copying a column built from lines](budget-operations.md#copying-a-column-built-from-lines)
 - A calendar's working days changed: "Working days changed since the last computation: March: 20 days, now 19." Nothing changes on the column until you click **Use the lines again**. The lines stay editable meanwhile
 - **Reset budget column** in Budget Administration removes the lines with the amounts. See [Reset budget column](budget-operations.md#reset-budget-column)
 - A budget file changes the months of a column and leaves its lines. See [Load a budget from a spreadsheet](budget-file.md)
