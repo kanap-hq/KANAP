@@ -96,8 +96,19 @@ Tool-specific or private notes live in each tool's local files, never here.
 ## Tests and checks
 
 - Frontend: `npm test` in `frontend/` (Vitest + Testing Library, `*.test.tsx` next to the code).
-- Backend: `npm run typecheck:ci` and `npm run test:ci` in `backend/`, plus focused suites
-  (`test:rls`, `test:tenant-isolation`, `test:master-data`, `test:portfolio`, ...; see `package.json`).
+- Backend: `npm run test:ci` in `backend/`, plus focused suites (`test:rls`,
+  `test:tenant-isolation`, `test:master-data`, `test:portfolio`, ...; see `package.json`).
+  `npm run typecheck:ci` type-checks only.
+- `test:ci` first empties `backend/ci-dist/` (gitignored) and runs `tsc -p tsconfig.ci.json`
+  once. That call type-checks the sources, the specs and the database scripts and emits
+  JavaScript with source maps. A type error stops the run. Each spec then runs as
+  `node ci-dist/backend/<path>.js`. `--no-compile` reuses the last output (CI compiles in its
+  own step), `--compile-only` (`npm run build:ci`) only compiles, `--jobs N` sets how many specs
+  run at once and `--db-lanes N` the number of database lanes (below).
+- A spec still runs alone from its source: `npx ts-node src/.../__tests__/x.spec.ts`. A spec
+  that reads source files, fixtures or scripts resolves them with `backendPath()`
+  (`src/common/__tests__/backend-root.ts`), not `__dirname`: the compiled tree holds no `.ts`
+  file and no fixture.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
   mode. A failing spec blocks the PR.
 - On a PR, each job runs only when its side changed (`backend/`, `frontend/`; a CI file change runs
@@ -108,8 +119,29 @@ Tool-specific or private notes live in each tool's local files, never here.
   results. To rerun one shard locally: `npm test -- --shard=2/3` in `frontend/`.
 - A new `backend/src/**/__tests__/*.spec.ts` runs in CI from its first commit, nothing to register
   (`backend/scripts/run-ci-tests.js`). Specs that boot Nest or TypeORM (`NestFactory.create`,
-  `createTestingModule`, `TypeOrmModule`, `.initialize()`, `data-source`) run in one serial lane on
-  the shared database; the others run in parallel.
+  `createTestingModule`, `TypeOrmModule`, `.initialize()`, `data-source`, or a `// @database-spec`
+  marker) run on the database lanes; the others run in parallel on every free slot.
+- Database lanes: with `--db-lanes N`, each lane has its own copy of the migrated database,
+  `<db>_1` to `<db>_N`, where `<db>` is the database of `DATABASE_URL`. A lane runs its specs one
+  at a time and reuses its copy, as the specs always shared `appdb`. CI makes the copies after
+  the migrations (`CREATE DATABASE appdb_n TEMPLATE appdb OWNER app`) and runs 4 lanes. When the
+  copies are missing, the runner says so in one line and runs the database specs in series.
+- Lanes locally: the runner makes fresh copies on every run when `CI_ADMIN_DATABASE_URL` names a
+  role that may create databases. A copy needs a template nobody is connected to, so point
+  `DATABASE_URL` at a dedicated migrated database (the dev `appdb` has the API connected):
+  `CI_ADMIN_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres`
+  `DATABASE_URL=postgres://app:app@localhost:5432/appdb_ci npm run test:ci -- --db-lanes 4`.
+  The race specs run on the copies, which are throwaway.
+- Exclusive specs touch what the whole PostgreSQL server shares. They run first, one at a time,
+  while no other lane runs a database spec. The runner finds them by pattern, in the spec and in
+  the `__tests__` helpers it imports: roles, databases, `ALTER SYSTEM`, `pg_reload_conf`,
+  `CHECKPOINT`, `pg_terminate_backend`, `pg_cancel_backend`, `pg_stat_reset`, and reads of
+  `pg_stat_activity` or `pg_locks` that filter neither on a `pid` nor on the current database.
+  Add `// @exclusive-db-spec: <reason>` when a spec depends on the whole server in a way no
+  pattern sees (an assertion that holds only when nothing else runs, a server-wide statement in
+  application code). When a spec fails only in parallel, find the cause first, and mark it only
+  if it truly needs the whole server. Advisory locks are safe on a copy: PostgreSQL keys them by
+  database.
 - Frontend test traps: jsdom has no `localStorage` here (stub it); a `useTranslation` mock that
   returns a new `t` on each render loops effects (hoist a stable `t`); MUI `Select` hides an
   empty-value `MenuItem` without `displayEmpty`, and its `aria-label` goes through `SelectDisplayProps`.

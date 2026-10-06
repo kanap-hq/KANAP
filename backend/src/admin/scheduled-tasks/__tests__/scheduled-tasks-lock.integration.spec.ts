@@ -24,11 +24,17 @@ function service() {
   return svc;
 }
 
-/** Sessions holding the task's advisory lock (low 32 bits of the hashtext key, one-key form). */
+/**
+ * Sessions holding the task's advisory lock (low 32 bits of the hashtext key, one-key form).
+ * Advisory locks are keyed by database and the lock view lists every database of the server: the
+ * count is narrowed to this one, so a lock taken in another database (another lane of
+ * test:ci) never counts.
+ */
 async function lockHolders(name: string): Promise<number> {
   const [row] = await dataSource.query(
     `SELECT count(*)::int AS n FROM pg_locks
       WHERE locktype = 'advisory' AND objsubid = 1 AND granted
+        AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
         AND objid::bigint = (hashtext($1)::bigint & 4294967295)`,
     [name],
   );
