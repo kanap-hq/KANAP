@@ -26,12 +26,18 @@ creating anything.
    DNS domains, connection entities.
 3. **Portfolio classification** (sources, categories, streams) and
    **analytics categories**.
-4. **CSV imports** (01→19 and 26→30): companies, charts of accounts, suppliers,
+4. **CSV imports** (01, 03→19 and 26→30): companies, charts of accounts, suppliers,
    departments, contacts, users, cost centres, analytics dimension values,
    working-day calendars, business processes, applications, contracts,
    spend, CAPEX, portfolio projects and requests, locations, assets, tasks.
    The companies import is pinned to `--year` (default 2026) because year
    columns are relative to the import year.
+   **Charts of accounts**: one local chart per company (France PCG,
+   Netherlands RGS, Italy PDC, US GAAP). Group reporting uses the IFRS chart
+   the tenant is provisioned with: every local account maps to one of its 14
+   consolidation accounts, as in the built-in templates. On a tenant built by
+   an earlier version of the fixture, the runner removes the old
+   `IFRS Group Chart` and its accounts 6100 to 6400 from the local charts.
    **Budget data**: right after the spend and CAPEX imports, the runner writes
    the quantity × price lines of the external staffing items (`30-costed-lines.csv`,
    keyed by item name, resolved to versions) and imports the monthly amounts

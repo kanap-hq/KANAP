@@ -63,6 +63,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 - [Devises](currencies.md) - Devises de reporting et par défaut, taux de change
 - [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) - Verrouillez et reportez les indicateurs des sociétés et des départements
 - [Rapports](reports.md) - Générez des rapports budgétaires et de refacturation
+- [Modèle de données du budget](budget-data-model.md) - Objets, identifiants et fichiers du budget, pour une migration ou un outil de BI
 
 ### Données de référence
 

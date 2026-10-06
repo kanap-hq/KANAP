@@ -1,7 +1,0 @@
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
-6100;IT Software & Cloud Services;;IFRS consolidation — software subscriptions, licenses and cloud services;;;;enabled
-6200;IT Infrastructure & Telecom;;IFRS consolidation — infrastructure, network and telecommunications;;;;enabled
-6300;IT Professional Services;;IFRS consolidation — consulting, staff augmentation and outsourcing;;;;enabled
-6400;IT General Expenses;;IFRS consolidation — training, travel, events and other IT costs;;;;enabled
-205000;Software Assets;;Intangible assets — acquired software and licences;;;;enabled
-215000;IT Equipment;;Property, plant and equipment — IT equipment;;;;enabled
