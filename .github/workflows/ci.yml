@@ -15,8 +15,40 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Lists the files a pull request changes and decides which of the three jobs below it can
+  # affect (.github/scripts/ci-changes.sh). A skipped job reports its required check as
+  # passed. A push on main runs every job.
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.decide.outputs.backend }}
+      frontend: ${{ steps.decide.outputs.frontend }}
+      onprem: ${{ steps.decide.outputs.onprem }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history, so `git diff` can find the merge base of the pull request.
+          fetch-depth: 0
+      - name: Decide which jobs run
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = pull_request ]; then
+            bash .github/scripts/ci-changes.sh "$BASE_SHA" "$HEAD_SHA"
+          else
+            bash .github/scripts/ci-changes.sh all
+          fi
+
+  # Each job below fails open: when `changes` did not succeed, the job runs.
   backend:
     name: backend (cloud)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -69,6 +101,8 @@ jobs:
 
   frontend:
     name: frontend (cloud)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -89,6 +123,8 @@ jobs:
 
   onprem:
     name: build (onprem)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.onprem == 'true') }}
     runs-on: ubuntu-latest
     env:
       DEPLOYMENT_MODE: single-tenant
