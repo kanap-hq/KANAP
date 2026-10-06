@@ -157,6 +157,9 @@ or subscriptions must work in both modes.
 - A hook placed after an early return changes the hook count between renders. Regression tests for
   it need a real `useQuery`, not a mock.
 - Never `git add -A` in a tree with `node_modules` symlinks: add explicit paths.
+- Never `git clean -x`, `-X` or `-fdx`: it deletes gitignored local files (`.env` files,
+  `CLAUDE.local.md`, `planning/`, local agent settings) that git cannot restore. Remove build
+  output by explicit path instead.
 
 ## Product rules
 
