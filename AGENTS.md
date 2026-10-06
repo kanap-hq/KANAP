@@ -45,14 +45,21 @@ Tool-specific or private notes live in each tool's local files, never here.
 
 - The maintainer tests every change personally on the local dev stack before it goes anywhere.
 - Work and commit locally on a dev branch. **Do not push, open a PR or merge until the maintainer
-  has validated on dev and asks for it.** Never `gh pr merge --auto`. Never push to `main`.
+  has validated on dev and asks for it.** Never push to `main`.
 - Once asked: `gh pr create` (problem, changes, testing notes, screenshots for UI). CI must pass
-  (`backend (cloud)`, `frontend (cloud)`, `build (onprem)`). Merge only when asked:
-  `gh pr merge <n> --squash --delete-branch` (squash-only history, the subject keeps `(#NNN)`).
+  (`backend (cloud)`, `frontend (cloud)`, `build (onprem)`); branch protection on `main` requires them.
+- Merge only when asked, with GitHub auto-merge: `gh pr merge <n> --auto --squash --delete-branch`,
+  run once, then stop. GitHub merges as soon as the required checks pass; do not watch or poll CI.
+  The repository allows squash merges only, and the subject keeps `(#NNN)`. Never turn on
+  auto-merge for a PR the maintainer has not asked to merge.
+- A PR behind `main` waits (branch protection requires it to be up to date): run
+  `gh pr update-branch <n>` and auto-merge picks it up after the new CI run. A failed check leaves
+  the PR open with auto-merge still on: fix it, push, and it merges when green.
 - One PR per coherent lot. Keep diffs focused.
 - Stacked PRs: GitHub closes (does not retarget) a PR whose base branch is deleted at merge.
-  Retarget it to `main` first, then delete the base. CI only runs for PRs targeting `main`. After a
-  squash merge of the base: `git rebase --onto origin/main <old-base-tip> <branch>`, then
+  Retarget it to `main` first, then delete the base. Auto-merge deletes the base as soon as it
+  merges, so retarget before turning it on for the base. CI only runs for PRs targeting `main`.
+  After a squash merge of the base: `git rebase --onto origin/main <old-base-tip> <branch>`, then
   `git push --force-with-lease`.
 - When a task is finished, say so and ask the maintainer to test.
 - Commits: imperative mood, short scope prefix when useful (`backend: ...`, `frontend: ...`,
