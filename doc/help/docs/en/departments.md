@@ -119,7 +119,7 @@ The columns:
 - A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 
 **Notes**:
-- See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
+- See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 - Headcount is not in the file. Enter it per year on the department's **Details** tab
 
 ---

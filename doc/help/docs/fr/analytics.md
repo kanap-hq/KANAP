@@ -224,7 +224,7 @@ Pour renseigner des valeurs sur les postes budgétaires depuis un fichier, utili
 **Structure du CSV** :
 
 - En-têtes : `axis_code`, `name`, `description`, `status`, `disabled_at`
-- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 
 | Colonne | Contenu |
 |---|---|

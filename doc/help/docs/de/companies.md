@@ -212,7 +212,7 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 
 **Hinweise**:
 
-- Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datums- und Betragsformen und die beiden Importschritte
+- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datums- und Betragsformen und die beiden Importschritte
 - Die Liste aktualisiert sich nach einem erfolgreichen Laden automatisch
 
 ## Tipps

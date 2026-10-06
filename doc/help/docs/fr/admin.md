@@ -167,7 +167,7 @@ Un rôle nommé par le fichier et absent de votre espace de travail est créé p
 
 Le fichier ne contient ni date ni montant. Un import ne définit aucun mot de passe : un nouvel utilisateur se connecte après une invitation ou une réinitialisation de mot de passe.
 
-Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur et les deux étapes d'import.
+Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import.
 
 ### Créer un utilisateur
 

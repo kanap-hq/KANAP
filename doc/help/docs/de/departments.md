@@ -119,7 +119,7 @@ Die Spalten:
 - Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“
 
 **Hinweise**:
-- Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 - Die Mitarbeiterzahl steht nicht in der Datei. Erfassen Sie sie pro Jahr im **Details-Tab** der Abteilung
 
 ## Tipps

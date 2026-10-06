@@ -212,7 +212,7 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 
 **Notas**:
 
-- Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador, los formatos de fecha e importe y los dos pasos de importación
+- Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha e importe y los dos pasos de importación
 - La lista se actualiza automáticamente tras una carga correcta
 
 ## Consejos

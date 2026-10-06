@@ -174,7 +174,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 **CSV-Struktur**:
 
 - Kopfzeilen: `code`, `kind`, `name`, `parent_code`, `company_name`, `owner_email`, `description`, `status`, `disabled_at`
-- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 
 | Spalte | Inhalt |
 |---|---|

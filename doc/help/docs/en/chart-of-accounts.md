@@ -439,7 +439,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 ```
 
 **Notes**:
-  - See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
+  - See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
   - The `coa_code` must match an existing Chart of Accounts in your workspace
   - Account numbers should be unique within a CoA
   - Status values: `enabled` or `disabled` (defaults to enabled)

@@ -174,7 +174,7 @@ Load or update the whole tree from a file.
 **CSV structure**:
 
 - Headers: `code`, `kind`, `name`, `parent_code`, `company_name`, `owner_email`, `description`, `status`, `disabled_at`
-- The export writes the separator of the screen language. See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
+- The export writes the separator of the screen language. See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 
 | Column | Content |
 |---|---|

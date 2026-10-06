@@ -112,7 +112,7 @@ The columns:
 - `name` is required. Every other cell is optional
 
 **Notes**:
-- See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator and the two import steps
+- See [CSV files](csv-files.md) for the encoding, the separator and the two import steps
 - Import suppliers before importing applications or contracts that reference them. The budget file creates a missing supplier too, when **Create missing suppliers** is ticked. See [Load a budget from a spreadsheet](budget-file.md)
 
 ---
