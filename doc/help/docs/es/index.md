@@ -63,6 +63,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 - [Monedas](currencies.md) - Monedas de reporting y predeterminadas, tipos de cambio
 - [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) - Bloqueo y traslado de los indicadores de empresas y departamentos
 - [Informes](reports.md) - Generación de informes presupuestarios y de contracargo
+- [Modelo de datos del presupuesto](budget-data-model.md) - Objetos, identificadores y archivos del presupuesto, para una migración o una herramienta de BI
 
 ### Datos maestros
 
