@@ -1,19 +1,15 @@
 account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status
-6100;IT Software & Cloud Services;;IFRS consolidation — software and cloud;;;;enabled
-6200;IT Infrastructure & Telecom;;IFRS consolidation — infrastructure and networks;;;;enabled
-6300;IT Professional Services;;IFRS consolidation — consulting and external labor;;;;enabled
-6400;IT General Expenses;;IFRS consolidation — training, travel and other;;;;enabled
-7110;SaaS Subscriptions;;Cloud software subscriptions;6100;IT Software & Cloud Services;;enabled
-7120;Software Licenses;;Perpetual and term licenses;6100;IT Software & Cloud Services;;enabled
-7130;Cloud Hosting;;Cloud infrastructure and PaaS;6100;IT Software & Cloud Services;;enabled
-7140;Cybersecurity Tools;;Endpoint protection and IAM;6100;IT Software & Cloud Services;;enabled
-7150;Data & Analytics Platforms;;Monitoring, BI and data tools;6100;IT Software & Cloud Services;;enabled
-7210;IT Maintenance & Support;;Hardware maintenance and managed services;6200;IT Infrastructure & Telecom;;enabled
-7220;Telecom & Network;;WAN, LAN, internet and telephony;6200;IT Infrastructure & Telecom;;enabled
-7230;Data Center Costs;;Colocation, power and cooling;6200;IT Infrastructure & Telecom;;enabled
-7310;IT Staff Augmentation;;Contract developers and engineers;6300;IT Professional Services;;enabled
-7320;IT Consulting;;Strategy and architecture advisory;6300;IT Professional Services;;enabled
-7410;IT Training;;Training programs and certifications;6400;IT General Expenses;;enabled
-7420;IT Travel & Events;;Travel, conferences and industry events;6400;IT General Expenses;;enabled
-151000;Software Assets;;Intangible assets — acquired software and licences;;;;enabled
-161000;IT Equipment;;Property and equipment — IT equipment;;;;enabled
+7110;SaaS Subscriptions;;Cloud software subscriptions;2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled
+7120;Software Licenses;;Perpetual and term licenses;2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled
+7130;Cloud Hosting;;Cloud infrastructure and PaaS;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled
+7140;Cybersecurity Tools;;Endpoint protection and IAM;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled
+7150;Data & Analytics Platforms;;Monitoring, BI and data tools;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled
+7210;IT Maintenance & Support;;Hardware maintenance and managed services;2300;Maintenance & Support;Software/hardware maintenance contracts;enabled
+7220;Telecom & Network;;WAN, LAN, internet and telephony;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled
+7230;Data Center Costs;;Colocation, power and cooling;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled
+7310;IT Staff Augmentation;;Contract developers and engineers;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled
+7320;IT Consulting;;Strategy and architecture advisory;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled
+7410;IT Training;;Training programs and certifications;2600;Training & Certification;Staff training and certifications;enabled
+7420;IT Travel & Events;;Travel, conferences and industry events;2800;Travel & Mobility (IT Projects);Project-related travel costs;enabled
+151000;Software Assets;;Intangible assets — acquired software and licences;1100;Intangible Assets (CAPEX);Capitalized software and rights — IAS 38;enabled
+161000;IT Equipment;;Property and equipment — IT equipment;1000;Tangible Assets (CAPEX);Purchase of physical IT equipment — IAS 16;enabled

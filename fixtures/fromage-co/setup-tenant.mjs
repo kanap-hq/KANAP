@@ -742,14 +742,47 @@ async function assignCompanyCoa(companyName, coaId) {
   await apiPatch(`/companies/${companyId}`, { coa_id: coaId });
 }
 
+// Earlier versions of the fixture built their own group chart (accounts 6100-6400)
+// and copied those accounts into every local chart. Group reporting now uses the
+// IFRS chart the tenant is provisioned with: each local account maps to one of its
+// 14 consolidation accounts. Remove the old group accounts on tenants built before.
+const LEGACY_GROUP_COA = 'IFRS Group Chart';
+const LEGACY_GROUP_ACCOUNTS = new Set(['6100', '6200', '6300', '6400']);
+
+async function removeLegacyGroupAccounts(coaIds) {
+  const accounts = await getAll('/accounts?limit=1000');
+  const legacy = accounts.filter((account) => coaIds.includes(account.coa_id) && LEGACY_GROUP_ACCOUNTS.has(String(account.account_number)));
+  for (const account of legacy) {
+    try {
+      await apiDelete(`/accounts/${account.id}`);
+    } catch (error) {
+      warn(`Could not remove legacy group account ${account.account_number}: ${error.message}`);
+    }
+  }
+  if (legacy.length) ok(`Removed ${legacy.length} legacy group account(s) from the local charts`);
+
+  const coas = items(await apiGet('/chart-of-accounts?limit=500'));
+  const legacyCoa = coas.find((coa) => coa.name === LEGACY_GROUP_COA);
+  if (legacyCoa) {
+    try {
+      await apiDelete(`/chart-of-accounts/${legacyCoa.id}`);
+      ok(`Removed legacy chart '${LEGACY_GROUP_COA}'`);
+    } catch (error) {
+      warn(`Could not remove legacy chart '${LEGACY_GROUP_COA}': ${error.message}`);
+    }
+  }
+  if (!coas.some((coa) => coa.is_global_default)) {
+    warn('No global default chart of accounts: load the IFRS template so consolidation accounts have a home');
+  }
+}
+
 async function setupCoas() {
-  const ifrs = await ensureCoa('IFRS Group Chart', 'IFRS-GROUP', 'GLOBAL');
   const fr = await ensureCoa('France PCG', 'FR-PCG', 'COUNTRY', 'FR');
   const nl = await ensureCoa('Netherlands RGS', 'NL-RGS', 'COUNTRY', 'NL');
   const it = await ensureCoa('Italy PDC', 'IT-PDC', 'COUNTRY', 'IT');
   const us = await ensureCoa('US GAAP', 'US-GAAP', 'COUNTRY', 'US');
 
-  await importAccounts(ifrs, '02-accounts-ifrs.csv');
+  await removeLegacyGroupAccounts([fr, nl, it, us]);
   await importAccounts(fr, '03-accounts-fr.csv');
   await importAccounts(nl, '04-accounts-nl.csv');
   await importAccounts(it, '05-accounts-it.csv');
