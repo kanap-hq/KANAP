@@ -423,3 +423,4 @@ See also: `doc/frontend-architecture.md` for detailed UI guidelines.
 
 ## References
 - `doc/on-premise/technical-design.md` (feature gate inventory), `doc/plaid-architecture.md`, `doc/frontend-architecture.md`, `doc/adr/`, `doc/database/database-indexes.md`, `doc/api-reference.md`.
+

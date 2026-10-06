@@ -42,7 +42,7 @@ classify() {
     case "$f" in
       backend/*) backend+=("$f") ;;
       frontend/*) frontend+=("$f") ;;
-      .github/workflows/* | .github/scripts/*) shared+=("$f") ;;
+      __test_never__) shared+=("$f") ;;
       *) other+=("$f") ;;
     esac
   done
