@@ -103,6 +103,9 @@ Tool-specific or private notes live in each tool's local files, never here.
 - On a PR, each job runs only when its side changed (`backend/`, `frontend/`; a CI file change runs
   all three); a skipped job counts as passed. A push on `main` runs every job. The rules live in
   `.github/scripts/ci-changes.sh`.
+- The frontend check runs as a `frontend build` job and three `frontend tests (i/3)` shards in
+  parallel (`vitest run --shard`, split by file); the `frontend (cloud)` job only gathers their
+  results. To rerun one shard locally: `npm test -- --shard=2/3` in `frontend/`.
 - A new `backend/src/**/__tests__/*.spec.ts` runs in CI from its first commit, nothing to register
   (`backend/scripts/run-ci-tests.js`). Specs that boot Nest or TypeORM (`NestFactory.create`,
   `createTestingModule`, `TypeOrmModule`, `.initialize()`, `data-source`) run in one serial lane on

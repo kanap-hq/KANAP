@@ -99,8 +99,10 @@ jobs:
       - name: Run backend hardening checks
         run: npm run test:ci
 
-  frontend:
-    name: frontend (cloud)
+  # The frontend check runs as one build job and three test shards in parallel; the
+  # `frontend (cloud)` job below gathers their results into the required check.
+  frontend-build:
+    name: frontend build
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-latest
@@ -118,8 +120,61 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Build frontend
         run: npm ci && npm run build
-      - name: Run frontend tests
-        run: npm test
+
+  frontend-tests:
+    name: frontend tests (${{ matrix.shard }}/3)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
+    runs-on: ubuntu-latest
+    strategy:
+      # Every shard finishes, so one run lists every failing test.
+      fail-fast: false
+      matrix:
+        shard: [ 1, 2, 3 ]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      # Vitest splits the test files by a hash of their path: each file runs in exactly one shard.
+      - name: Run frontend tests (shard ${{ matrix.shard }} of 3)
+        run: npm test -- --shard=${{ matrix.shard }}/3
+
+  # The required check. It always runs, even when the run is cancelled, so it never reports a
+  # skip (which would count as passed) for a frontend change whose build or tests did not pass.
+  frontend:
+    name: frontend (cloud)
+    needs: [ changes, frontend-build, frontend-tests ]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the frontend build and tests
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          AFFECTED: ${{ needs.changes.outputs.frontend }}
+          BUILD: ${{ needs.frontend-build.result }}
+          TESTS: ${{ needs.frontend-tests.result }}
+        run: |
+          echo "changes=$CHANGES frontend affected=$AFFECTED build=$BUILD tests=$TESTS"
+          if [ "$CHANGES" = success ] && [ "$AFFECTED" = false ]; then
+            echo "This pull request does not change the frontend: nothing to check."
+            exit 0
+          fi
+          if [ "$BUILD" = success ] && [ "$TESTS" = success ]; then
+            echo "Frontend build and every test shard passed."
+            exit 0
+          fi
+          echo "::error::Frontend build or tests did not pass (build=$BUILD, tests=$TESTS)."
+          exit 1
 
   onprem:
     name: build (onprem)
