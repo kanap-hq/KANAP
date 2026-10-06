@@ -63,6 +63,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 - [Währungen](currencies.md) - Reporting- und Standardwährungen, Wechselkurse
 - [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) - Kennzahlen von Unternehmen und Abteilungen sperren und fortschreiben
 - [Berichte](reports.md) - Budget- und Leistungsverrechnungsberichte generieren
+- [Datenmodell des Budgets](budget-data-model.md) - Objekte, Kennungen und Dateien des Budgets, für eine Migration oder ein BI-Werkzeug
 
 ### Stammdaten
 

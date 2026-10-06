@@ -63,6 +63,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 - [Currencies](currencies.md) - Reporting and default currencies, FX rates
 - [Freeze master data and copy yearly metrics](master-data-operations.md) - Lock and roll forward company and department metrics
 - [Reports](reports.md) - Generate budget and chargeback reports
+- [Budget data model](budget-data-model.md) - Objects, identifiers and files of the budget, for a migration or a BI tool
 
 ### Master Data
 

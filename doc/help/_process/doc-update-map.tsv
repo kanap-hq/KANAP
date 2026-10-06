@@ -54,6 +54,17 @@ branding.md	frontend/src/pages/admin/AdminBrandingPage.tsx
 master-data-operations.md	frontend/src/pages/admin/master-data/**/*.tsx
 csv-files.md	frontend/src/components/csv/**/*.tsx
 csv-files.md	frontend/src/components/csv/**/*.ts
+budget-data-model.md	backend/src/spend/*.entity.ts
+budget-data-model.md	backend/src/capex/*.entity.ts
+budget-data-model.md	backend/src/spend/budget-file/columns.ts
+budget-data-model.md	backend/src/budget-columns/budget-columns.util.ts
+budget-data-model.md	backend/src/companies/*.entity.ts
+budget-data-model.md	backend/src/departments/*.entity.ts
+budget-data-model.md	backend/src/accounts/*.entity.ts
+budget-data-model.md	backend/src/cost-centers/cost-center.entity.ts
+budget-data-model.md	backend/src/suppliers/supplier.entity.ts
+budget-data-model.md	backend/src/analytics/*.entity.ts
+budget-data-model.md	backend/src/working-day-profiles/working-day-profile.entity.ts
 tasks.md	frontend/src/pages/TasksPage.tsx
 tasks.md	frontend/src/pages/tasks/TaskWorkspacePage.tsx
 portfolio-requests.md	frontend/src/pages/portfolio/RequestsPage.tsx
