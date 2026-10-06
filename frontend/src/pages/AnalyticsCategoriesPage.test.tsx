@@ -136,7 +136,12 @@ describe('AnalyticsCategoriesPage', () => {
 
   it('opens the selected dimension from its edit button, and a new value inside it', () => {
     renderPage('/master-data/analytics?axis=ax-nature');
-    fireEvent.click(screen.getByRole('button', { name: 'analytics.editDimension:Nature' }));
+    const edit = screen.getByRole('button', { name: 'analytics.editDimension:Nature' });
+    // One Edit button on the right of the band acts on the selected dimension, outside the toggles.
+    expect(edit).toHaveTextContent('common:buttons.edit');
+    expect(chips()).not.toContain(edit);
+    expect(screen.queryByRole('button', { name: /analytics\.(edit|open)Dimension:(Analytics dimension|Internal order)/ })).toBeNull();
+    fireEvent.click(edit);
     expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/dimensions/ax-nature/overview');
     fireEvent.click(screen.getByRole('button', { name: 'analytics.newValue' }));
     const target = navigateMock.mock.calls[1][0] as string;
@@ -161,13 +166,14 @@ describe('AnalyticsCategoriesPage', () => {
     expect(screen.queryByRole('button', { name: 'analytics.newValue' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'analytics.newDimension' })).toBeNull();
     // Readers only open the dimension, and the button says so.
-    expect(screen.getByRole('button', { name: 'analytics.openDimension:Analytics dimension' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'analytics.openDimension:Analytics dimension' })).toHaveTextContent('common:buttons.open');
     expect(screen.queryByRole('button', { name: 'analytics.editDimension:Analytics dimension' })).toBeNull();
     first.unmount();
 
     levels.value = 'member';
     const second = renderPage();
     expect(screen.getByRole('button', { name: 'analytics.newValue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'analytics.newDimension' })).toHaveTextContent('coa.chipBar.newChip');
     fireEvent.click(screen.getByRole('button', { name: 'analytics.newDimension' }));
     expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/dimensions/new/overview');
     expect(screen.queryByRole('button', { name: 'shared.labels.importCsv' })).toBeNull();
