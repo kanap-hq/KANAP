@@ -36,9 +36,9 @@ La dimension par défaut a un rôle particulier :
 
 Naviguez vers **Données de référence > Dimensions analytiques** (dans la section **Classification**).
 
-1. **Nommez la dimension par défaut** si « Dimension analytique » ne vous convient pas : cliquez sur le bouton de modification à côté de sa pastille, puis saisissez un nom dans son espace de travail, par exemple **Nature**.
+1. **Nommez la dimension par défaut** si « Dimension analytique » ne vous convient pas : sélectionnez-la dans la barre de sélection, cliquez sur **Modifier**, puis saisissez un nom dans son espace de travail, par exemple **Nature**.
 2. **Ajoutez ses valeurs** : cliquez sur **Nouvelle valeur**.
-3. **Ajoutez une dimension** lorsque vous avez besoin d'une autre façon de lire le budget : cliquez sur **Nouvelle dimension**, puis ajoutez ses valeurs.
+3. **Ajoutez une dimension** lorsque vous avez besoin d'une autre façon de lire le budget : cliquez sur **Nouveau** dans la barre de sélection, puis ajoutez ses valeurs.
 
 **Astuce** : commencez avec une ou deux dimensions et 5 à 10 valeurs chacune. Un nommage cohérent rend les listes plus faciles à parcourir.
 
@@ -46,15 +46,15 @@ Naviguez vers **Données de référence > Dimensions analytiques** (dans la sect
 
 ## La page Dimensions analytiques
 
-### Les pastilles de dimension
+### Le sélecteur de dimension
 
-Sous le titre, une ligne de pastilles affiche vos dimensions dans l'ordre. Une dimension désactivée est marquée **Désactivé**.
+Sous le titre, une bande grise affiche vos dimensions dans l'ordre, avec un bouton carré par dimension. Elle ressemble au sélecteur des plans comptables et fonctionne de la même façon. Une dimension désactivée est marquée **Désactivé**. Avec beaucoup de dimensions, la bande défile latéralement.
 
-- Cliquez sur une pastille pour lister les valeurs de cette dimension. L'adresse de la page conserve votre choix : un lien enregistré en favori s'ouvre sur la même dimension. Sans choix, la page s'ouvre sur la dimension par défaut.
-- La pastille sélectionnée a un bouton de modification (icône crayon). Cliquez dessus pour ouvrir l'espace de travail de la dimension.
-- **Nouvelle dimension**, en fin de ligne, crée une dimension (nécessite `analytics:member`).
+- Cliquez sur un bouton pour lister les valeurs de cette dimension. Le bouton sélectionné est plein. L'adresse de la page conserve votre choix : un lien enregistré en favori s'ouvre sur la même dimension. Sans choix, la page s'ouvre sur la dimension par défaut.
+- À droite de la bande, **Modifier** ouvre l'espace de travail de la dimension sélectionnée. Si vous pouvez seulement consulter les dimensions, le bouton affiche **Ouvrir**.
+- **Nouveau**, à côté, crée une dimension (nécessite `analytics:member`).
 
-Avec une seule dimension, la page affiche une pastille et ses valeurs.
+Avec une seule dimension, la bande affiche un bouton et les valeurs.
 
 ### Liste des valeurs
 
@@ -90,7 +90,7 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 
 ### Créer une dimension
 
-Cliquez sur **Nouvelle dimension**, remplissez les champs, puis cliquez sur **Créer**. L'espace de travail de la nouvelle dimension s'ouvre. Une nouvelle dimension est activée.
+Cliquez sur **Nouveau** dans la barre de sélection, remplissez les champs, puis cliquez sur **Créer**. L'espace de travail de la nouvelle dimension s'ouvre. Une nouvelle dimension est activée.
 
 - Le **Nom** est obligatoire.
 - Le **Code** est proposé à partir du nom : en minuscules, sans accents, les espaces remplacés par `-`. Vous pouvez le modifier avant de créer la dimension.
@@ -101,7 +101,7 @@ Revenez ensuite à la page pour ajouter les valeurs de la nouvelle dimension.
 
 ### L'espace de travail de la dimension
 
-Ouvrez-le avec le bouton de modification de la pastille sélectionnée.
+Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans la barre de sélection, la dimension étant sélectionnée.
 
 - **En-tête** : le nom de la dimension. Cliquez dessus pour renommer la dimension. **Précédent** / **Suivant** parcourent les dimensions dans leur ordre, et le bouton de fermeture ramène à la page sur cette dimension
 - **Zone principale** : une ligne d'utilisation, par exemple « 12 valeurs. Utilisation : 27 lignes OPEX et 2 lignes CAPEX. », puis la **Description**

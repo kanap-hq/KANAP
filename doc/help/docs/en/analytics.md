@@ -36,9 +36,9 @@ The default dimension has a special role:
 
 Navigate to **Master data > Analytics dimensions** (in the **Classification** section).
 
-1. **Name the default dimension** if "Analytics dimension" does not suit you: click the edit button next to its chip, then type a name in its workspace, for example **Nature**.
+1. **Name the default dimension** if "Analytics dimension" does not suit you: select it in the selector bar, click **Edit**, then type a name in its workspace, for example **Nature**.
 2. **Add its values**: click **New value**.
-3. **Add a dimension** when you need another way of reading the budget: click **New dimension**, then add its values.
+3. **Add a dimension** when you need another way of reading the budget: click **New** in the selector bar, then add its values.
 
 **Tip**: Start with one or two dimensions and 5 to 10 values each. Consistent naming makes the lists easier to scan.
 
@@ -46,15 +46,15 @@ Navigate to **Master data > Analytics dimensions** (in the **Classification** se
 
 ## The Analytics dimensions page
 
-### Dimension chips
+### Dimension selector
 
-Under the title, one line of chips shows your dimensions in order. A disabled dimension is marked **Disabled**.
+Under the title, a grey band shows your dimensions in order, with one square toggle each. It looks and works like the selector of the charts of accounts. A disabled dimension is marked **Disabled**. With many dimensions, the band scrolls sideways.
 
-- Click a chip to list the values of that dimension. The page address keeps your choice, so a bookmarked link opens on the same dimension. Without a choice, the page opens on the default dimension.
-- The selected chip has an edit button (pencil icon). Click it to open the dimension's workspace.
-- **New dimension**, at the end of the line, creates a dimension (requires `analytics:member`).
+- Click a toggle to list the values of that dimension. The selected toggle is filled. The page address keeps your choice, so a bookmarked link opens on the same dimension. Without a choice, the page opens on the default dimension.
+- On the right of the band, **Edit** opens the workspace of the selected dimension. If you can only read dimensions, the button reads **Open**.
+- **New**, next to it, creates a dimension (requires `analytics:member`).
 
-With a single dimension, the page shows one chip and its values.
+With a single dimension, the band shows one toggle and the values.
 
 ### Values list
 
@@ -90,7 +90,7 @@ Click any cell to open the value's workspace.
 
 ### Creating a dimension
 
-Click **New dimension**, fill in the fields, then click **Create**. The workspace of the new dimension opens. A new dimension is enabled.
+Click **New** in the selector bar, fill in the fields, then click **Create**. The workspace of the new dimension opens. A new dimension is enabled.
 
 - **Name** is required.
 - **Code** is proposed from the name: lowercase, accents removed, spaces replaced by `-`. You can change it before you create the dimension.
@@ -101,7 +101,7 @@ Then go back to the page to add the values of the new dimension.
 
 ### The dimension workspace
 
-Open it with the edit button of the selected chip.
+Open it with **Edit** (**Open** if you can only read) in the selector bar, with the dimension selected.
 
 - **Header**: the name of the dimension. Click it to rename the dimension. **Prev** / **Next** move through the dimensions in order, and the close button returns to the page on this dimension
 - **Main area**: a usage line, for example "12 values, used by 27 OPEX lines and 2 CAPEX lines.", then the **Description**
