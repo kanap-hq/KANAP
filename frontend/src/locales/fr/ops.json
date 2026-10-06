@@ -508,7 +508,7 @@
       "budgetColumnsDesc": "Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut",
       "currencyTitle": "Devises",
       "currencyDesc": "Définissez les devises de reporting et par défaut, et consultez les taux de change",
-      "masterDataFreezeTitle": "Geler les master data",
+      "masterDataFreezeTitle": "Geler les données de référence",
       "masterDataFreezeDesc": "Verrouillez les indicateurs des sociétés et des départements pour une année donnée",
       "metricsCopyTitle": "Copier les indicateurs annuels",
       "metricsCopyDesc": "Copiez les indicateurs des sociétés et des départements d'une année à l'autre"

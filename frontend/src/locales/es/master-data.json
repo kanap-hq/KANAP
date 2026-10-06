@@ -69,7 +69,7 @@
       "failedToSaveMetrics": "Error al guardar los indicadores",
       "fixValidationErrors": "Corrija los errores de validación antes de guardar.",
       "readOnlyAccess": "Necesita acceso de gestor para editar {{entity}}.",
-      "metricsFrozen": "Los indicadores de {{year}} están congelados. Descongélelos desde Administración para realizar cambios.",
+      "metricsFrozen": "Los indicadores de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
       "metricsYearHint": "Cada valor se guarda para el año seleccionado al salir de su campo. Cambie de año para revisar los datos anteriores."
     }
   },

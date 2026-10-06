@@ -69,7 +69,7 @@
       "failedToSaveMetrics": "Failed to save metrics",
       "fixValidationErrors": "Please fix validation errors before saving.",
       "readOnlyAccess": "You need manager access to edit {{entity}}.",
-      "metricsFrozen": "Metrics for {{year}} are frozen. Unfreeze them from Administration to make changes.",
+      "metricsFrozen": "Metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
       "metricsYearHint": "Each value is saved for the selected year when you leave its field. Switch years to review past data."
     }
   },
