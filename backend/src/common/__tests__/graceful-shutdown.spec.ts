@@ -119,10 +119,12 @@ async function testGraceAfterLastResponseThenDeadline() {
   const inFlight = get(port, '/slow');
   await new Promise((resolve) => setTimeout(resolve, 20));
   const t0 = Date.now();
-  await shutdown('SIGTERM');
+  const stopping = shutdown('SIGTERM');
+  const t0After = Date.now();
+  await stopping;
   await inFlight;
   assert.ok(closeAt - t0 >= 450, `close waits the grace after the last response (${closeAt - t0} ms)`);
-  assert.ok(Math.abs(deadline - (t0 + 8_000)) < 100, 'close gets the drain time minus 2 s as its deadline');
+  assert.ok(deadline >= t0 + 8_000 && deadline <= t0After + 8_000, 'close gets the drain time minus 2 s as its deadline');
 
   const idle = await startServer(0);
   let idleCloseAt = 0;
@@ -130,9 +132,15 @@ async function testGraceAfterLastResponseThenDeadline() {
     server: idle, signals: [], drainTimeoutMs: 10_000, graceMs: 2_000, log: () => undefined,
     exit: () => undefined, close: async () => { idleCloseAt = Date.now(); },
   });
-  const t1 = Date.now();
-  await idleStop.shutdown('SIGTERM');
-  assert.ok(idleCloseAt - t1 < 300, `no request: no grace (${idleCloseAt - t1} ms)`);
+  // Timers fire in the order they expire, however late a loaded machine runs them: a stop that
+  // waited the 2 s grace would end after this 1 s timer.
+  const stopped = idleStop.shutdown('SIGTERM').then(() => 'stopped' as const);
+  let lateTimer: NodeJS.Timeout | undefined;
+  const late = new Promise<'late'>((resolve) => { lateTimer = setTimeout(() => resolve('late'), 1_000); });
+  const first = await Promise.race([stopped, late]);
+  clearTimeout(lateTimer);
+  assert.equal(first, 'stopped', 'no request: no grace');
+  assert.ok(idleCloseAt > 0, 'close was called');
 }
 
 async function testDrainTimeoutExits1() {
