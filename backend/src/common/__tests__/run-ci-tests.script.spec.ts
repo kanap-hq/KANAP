@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import * as path from 'node:path';
+import { backendPath } from './backend-root';
 
 // scripts/run-ci-tests.js (`npm run test:ci`) against a developer's `appdb`:
 // the race specs refuse that database (their harness throws), so the runner
@@ -7,7 +7,7 @@ import * as path from 'node:path';
 // GitHub Actions' `appdb` is a throwaway service container: they run there.
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const runner = require(path.resolve(__dirname, '../../../scripts/run-ci-tests.js')) as {
+const runner = require(backendPath('scripts', 'run-ci-tests.js')) as {
   databaseName: (url?: string) => string | null;
   racesRefused: () => boolean;
   RACE_SPEC: RegExp;

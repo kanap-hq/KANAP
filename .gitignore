@@ -7,6 +7,7 @@ node_modules/
 # Build outputs
 dist/
 backend/dist/
+backend/ci-dist/
 frontend/dist/
 coverage/
 

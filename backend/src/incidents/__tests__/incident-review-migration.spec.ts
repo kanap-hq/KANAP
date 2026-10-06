@@ -60,7 +60,8 @@ function loadMigrationClasses(): Array<{ timestamp: number; migration: Migration
   const loaded: Array<{ timestamp: number; migration: MigrationClass }> = [];
 
   for (const file of fs.readdirSync(directory).sort()) {
-    if (!file.endsWith('.ts') || file.endsWith('.d.ts')) continue;
+    // The migrations of the running tree: .ts under ts-node, .js when compiled (`npm run test:ci`).
+    if (!/\.(ts|js)$/.test(file) || file.endsWith('.d.ts')) continue;
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const module = require(path.join(directory, file));
     for (const exported of Object.values(module)) {

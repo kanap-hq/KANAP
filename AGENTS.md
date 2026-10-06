@@ -89,8 +89,18 @@ Tool-specific or private notes live in each tool's local files, never here.
 ## Tests and checks
 
 - Frontend: `npm test` in `frontend/` (Vitest + Testing Library, `*.test.tsx` next to the code).
-- Backend: `npm run typecheck:ci` and `npm run test:ci` in `backend/`, plus focused suites
-  (`test:rls`, `test:tenant-isolation`, `test:master-data`, `test:portfolio`, ...; see `package.json`).
+- Backend: `npm run test:ci` in `backend/`, plus focused suites (`test:rls`,
+  `test:tenant-isolation`, `test:master-data`, `test:portfolio`, ...; see `package.json`).
+  `npm run typecheck:ci` type-checks only.
+- `test:ci` first empties `backend/ci-dist/` (gitignored) and runs `tsc -p tsconfig.ci.json`
+  once. That call type-checks the sources, the specs and the database scripts and emits
+  JavaScript with source maps. A type error stops the run. Each spec then runs as
+  `node ci-dist/backend/<path>.js`. `--no-compile` reuses the last output (CI compiles in its
+  own step), `--compile-only` (`npm run build:ci`) only compiles, `--jobs N` sets the lanes.
+- A spec still runs alone from its source: `npx ts-node src/.../__tests__/x.spec.ts`. A spec
+  that reads source files, fixtures or scripts resolves them with `backendPath()`
+  (`src/common/__tests__/backend-root.ts`), not `__dirname`: the compiled tree holds no `.ts`
+  file and no fixture.
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
   mode. A failing spec blocks the PR.
 - A new `backend/src/**/__tests__/*.spec.ts` runs in CI from its first commit, nothing to register

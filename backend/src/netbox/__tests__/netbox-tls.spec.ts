@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as https from 'node:https';
 import * as path from 'node:path';
 import { AddressInfo } from 'node:net';
+import { backendPath } from '../../common/__tests__/backend-root';
 import { NetboxClient } from '../netbox.client';
 import { NetboxApiError, NetboxConnection } from '../netbox.types';
 
@@ -16,7 +17,8 @@ import { NetboxApiError, NetboxConnection } from '../netbox.types';
 // mode, so the loopback address is allowlisted the way the PRTG spec does.
 process.env.SSRF_ALLOWED_HOSTS = '127.0.0.1';
 
-const FIXTURES = path.join(__dirname, 'fixtures');
+// Read from src/: the compiled run (`npm run test:ci`) does not copy fixtures.
+const FIXTURES = backendPath('src', 'netbox', '__tests__', 'fixtures');
 const TLS_OPTIONS = {
   key: fs.readFileSync(path.join(FIXTURES, 'netbox-test-key.pem')),
   cert: fs.readFileSync(path.join(FIXTURES, 'netbox-test-cert.pem')),

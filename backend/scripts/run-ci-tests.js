@@ -7,22 +7,28 @@
  * from its first commit, without touching package.json or this file. The
  * `test:*` scripts in package.json remain available for local, targeted runs.
  *
- * Each spec keeps running in its own ts-node process; only the scheduling is
+ * The specs run from JavaScript compiled once: the script first empties
+ * `ci-dist/` and runs `tsc -p tsconfig.ci.json`, which type-checks the sources,
+ * the specs and the EXTRA scripts and emits them (with source maps) under
+ * `ci-dist/backend/` (`rootDir` is the repository root, because one spec
+ * imports a frontend module). A type error stops the run before any spec.
+ * `--no-compile` skips that step when it already ran (CI runs it as its own
+ * step); `--compile-only` runs only that step.
+ *
+ * Each spec then runs in its own `node` process; only the scheduling is
  * parallel:
  *   - specs that never open the database run in parallel (one lane per CPU),
  *   - specs that connect to PostgreSQL share one serial lane, because they all
  *     work on the same `appdb`.
- *
- * Type-checking is done once by `npm run typecheck:ci` before this script, so
- * CI sets TS_NODE_TRANSPILE_ONLY=1 to skip the per-process type-check.
+ * A spec can still be run alone from its source: `npx ts-node <spec>.ts`.
  *
  * The race specs (`*-race.integration.spec.ts`) refuse a developer's `appdb`
  * (race-harness.ts): against `appdb` outside GitHub Actions they are left out
  * of the run, with one line saying how to run them on a dedicated database.
  *
- * Usage: node scripts/run-ci-tests.js [--jobs N]
+ * Usage: node scripts/run-ci-tests.js [--jobs N] [--no-compile | --compile-only]
  */
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -62,6 +68,27 @@ const DB_PATTERN = /NestFactory\.create|createTestingModule|TypeOrmModule|\.init
 
 const root = path.resolve(__dirname, '..');
 
+// Where `tsc -p tsconfig.ci.json` emits (its `outDir`). Its `rootDir` is the
+// repository root, so `src/a.spec.ts` lands in `ci-dist/backend/src/a.spec.js`.
+const OUT_DIR = path.join(root, 'ci-dist');
+
+/** The compiled JavaScript of a backend source file (`src/...ts` or `scripts/...ts`). */
+function compiledPath(file) {
+  return path.join(OUT_DIR, path.basename(root), file.replace(/\.ts$/, '.js'));
+}
+
+/** Empties ci-dist, then type-checks and emits everything once. Exits on a type error. */
+function compile() {
+  const started = Date.now();
+  fs.rmSync(OUT_DIR, { recursive: true, force: true });
+  const tsc = spawnSync(path.join(root, 'node_modules', '.bin', 'tsc'), ['-p', 'tsconfig.ci.json'], { cwd: root, stdio: 'inherit' });
+  if (tsc.status !== 0) {
+    console.log(`tsc -p tsconfig.ci.json failed (exit ${tsc.status ?? tsc.signal}): no spec was run.`);
+    process.exit(tsc.status || 1);
+  }
+  console.log(`Compiled to ci-dist/ in ${((Date.now() - started) / 1000).toFixed(0)}s`);
+}
+
 const RACE_SPEC = /-race\.integration\.spec\.ts$/;
 
 /** The database name of DATABASE_URL, or null (same reading as race-harness.ts). */
@@ -97,7 +124,7 @@ function runSpec(file) {
   return new Promise((resolve) => {
     const started = Date.now();
     const chunks = [];
-    const child = spawn(path.join(root, 'node_modules', '.bin', 'ts-node'), [file], {
+    const child = spawn(process.execPath, ['--enable-source-maps', compiledPath(file)], {
       cwd: root,
       env: { ...process.env, ...(ENV[file] || {}) },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -127,7 +154,16 @@ async function main() {
   const cpus = typeof os.availableParallelism === 'function' ? os.availableParallelism() : os.cpus().length;
   const jobs = Math.max(2, jobsArg >= 0 ? Number(process.argv[jobsArg + 1]) : cpus);
 
+  if (!process.argv.includes('--no-compile')) compile();
+  if (process.argv.includes('--compile-only')) return;
+
   let specs = discover();
+  const notCompiled = specs.filter((f) => !fs.existsSync(compiledPath(f)));
+  if (notCompiled.length) {
+    console.log(`${notCompiled.length} specs have no compiled file in ci-dist/ (run without --no-compile):`);
+    for (const f of notCompiled) console.log(`  - ${f}`);
+    process.exit(1);
+  }
   if (racesRefused()) {
     const races = specs.filter((f) => RACE_SPEC.test(f));
     specs = specs.filter((f) => !RACE_SPEC.test(f));
@@ -160,4 +196,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { databaseName, racesRefused, RACE_SPEC };
+module.exports = { databaseName, racesRefused, RACE_SPEC, compiledPath };
