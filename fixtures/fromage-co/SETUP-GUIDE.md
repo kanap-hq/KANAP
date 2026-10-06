@@ -24,8 +24,9 @@ creating anything.
    "Tenant creation and CAPTCHA" below.
 2. **Settings**: currencies (EUR/USD), IT Ops server kinds, operating systems,
    DNS domains, connection entities.
-3. **Portfolio classification** (sources, categories, streams) and
-   **analytics categories**.
+3. **Portfolio classification** (sources, categories, streams) and the
+   **Domaine** dimension: the default analytics dimension, named `Domaine`,
+   holds the domain each line serves (ERP, E-commerce, Workplace…).
 4. **CSV imports** (01, 03→19 and 26→30): companies, charts of accounts, suppliers,
    departments, contacts, users, cost centres, analytics dimension values,
    working-day calendars, business processes, applications, contracts,
@@ -42,8 +43,11 @@ creating anything.
    the quantity × price lines of the external staffing items (`30-costed-lines.csv`,
    keyed by item name, resolved to versions) and imports the monthly amounts
    (`29-budget-rows.csv`: 2026 actuals January to August for every item, a
-   forecast on some). Three analytics dimensions are created first (Nature de
-   coût, Référence budget, Récurrence). 2027 is left empty on purpose: the
+   forecast on some). Three more analytics dimensions are created first (Nature de
+   coût, Référence budget, Récurrence). What a line pays for is on Nature de
+   coût, so Domaine holds no expense kinds; on a tenant built by an earlier
+   version, the runner removes the old Domaine values Professional Services,
+   Managed Services, Training and General once no line uses them. 2027 is left empty on purpose: the
    budget demo initialises it by copying the 2026 landing. Re-running the
    runner restores the budget data, except on frozen columns: unfreeze them
    first (Budget administration → Freeze).
