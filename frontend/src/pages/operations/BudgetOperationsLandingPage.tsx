@@ -69,7 +69,7 @@ export default function BudgetOperationsLandingPage() {
           </Typography>
           <Grid container spacing={2}>
             {section.cards.map((c) => (
-              <Grid key={c.to} item xs={12} sm={6} md={4} lg={3}>
+              <Grid key={c.to} item xs={12} sm={6} md={4}>
                 <Card variant="outlined" sx={{ height: '100%' }}>
                   <CardActionArea component={RouterLink} to={c.to} sx={{ height: '100%' }}>
                     <CardContent>
