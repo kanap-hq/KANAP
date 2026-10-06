@@ -156,7 +156,7 @@ export default function Layout() {
     { to: '/master-data/contacts', label: t('nav:sidebar.masterData.contacts'), icon: <PeopleIcon />, resource: 'contacts' },
     { divider: t('nav:sidebar.masterData.sections.finance') },
     { to: '/master-data/coa', label: t('nav:sidebar.masterData.chartsOfAccounts'), icon: <StorageIcon />, resource: 'accounts' },
-    { to: '/master-data/currency', label: t('nav:sidebar.masterData.currency'), icon: <AttachMoneyIcon />, resource: 'settings' },
+    { to: '/master-data/currency', label: t('nav:sidebar.masterData.currency'), icon: <AttachMoneyIcon />, resource: 'budget_ops' },
     { to: '/master-data/working-day-calendars', label: t('nav:sidebar.masterData.workingDayCalendars'), icon: <DateRangeIcon />, resource: 'working_day_profiles' },
     { divider: t('nav:sidebar.masterData.sections.classification') },
     { to: '/master-data/business-processes', label: t('nav:sidebar.masterData.businessProcesses'), icon: <WorkOutlineIcon />, resource: 'business_processes' },

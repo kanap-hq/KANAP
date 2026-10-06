@@ -206,7 +206,7 @@ export default function ProtectedRoute() {
       contacts: 'contacts',
       accounts: 'accounts',
       coa: 'accounts',
-      currency: 'settings',
+      currency: 'budget_ops',
       'working-day-calendars': 'working_day_profiles',
       'business-processes': 'business_processes',
       analytics: 'analytics',
@@ -234,7 +234,7 @@ export default function ProtectedRoute() {
         'suppliers',
         'contacts',
         'accounts',
-        'settings',
+        'budget_ops',
         'business_processes',
         'analytics',
       ].some((resource) => hasLevel(resource, 'reader'));

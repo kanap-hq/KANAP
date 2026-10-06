@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { updateCurrencySettings, CurrencySettings, refreshCurrencyRates } from '../../services/currency';
 import useCurrencyRates, { CurrencyRateRow } from '../../hooks/useCurrencyRates';
+import { useAuth } from '../../auth/AuthContext';
 
 function normalizeList(value: string): string[] | null {
   if (!value) return null;
@@ -19,6 +20,8 @@ function normalizeList(value: string): string[] | null {
 export default function CurrencySettingsPage() {
   const { t } = useTranslation(['ops']);
   const queryClient = useQueryClient();
+  const { hasLevel } = useAuth();
+  const canEdit = hasLevel('budget_ops', 'admin');
   const { data, isLoading, isError } = useCurrencySettings();
   const { data: rateRows, isLoading: ratesLoading, isError: ratesError } = useCurrencyRates();
   const [reportingCurrency, setReportingCurrency] = React.useState('EUR');
@@ -72,6 +75,7 @@ export default function CurrencySettingsPage() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!canEdit) return;
     setSuccessMessage('');
     mutation.mutate({
       reportingCurrency: reportingCurrency.trim().toUpperCase(),
@@ -87,6 +91,7 @@ export default function CurrencySettingsPage() {
       <Typography variant="body1" color="text.secondary">
         {t('operations.currency.subtitle')}
       </Typography>
+      {!canEdit && <Alert severity="info" sx={{ maxWidth: 720 }}>{t('operations.budgetAdminOnly')}</Alert>}
       {isError && <Alert severity="error">{t('operations.currency.loadError')}</Alert>}
       {successMessage && <Alert severity="success">{successMessage}</Alert>}
       {syncMutation.isPending && <Alert severity="info">Refreshing FX rates…</Alert>}
@@ -101,6 +106,7 @@ export default function CurrencySettingsPage() {
             inputProps={{ maxLength: 3 }}
             required
             disabled={isLoading || submitting}
+            InputProps={{ readOnly: !canEdit }}
             helperText={t('operations.currency.reportingCurrencyHelp')}
           />
           <TextField
@@ -110,6 +116,7 @@ export default function CurrencySettingsPage() {
             inputProps={{ maxLength: 3 }}
             required
             disabled={isLoading || submitting}
+            InputProps={{ readOnly: !canEdit }}
             helperText={t('operations.currency.defaultOpexCurrencyHelp')}
           />
           <TextField
@@ -119,6 +126,7 @@ export default function CurrencySettingsPage() {
             inputProps={{ maxLength: 3 }}
             required
             disabled={isLoading || submitting}
+            InputProps={{ readOnly: !canEdit }}
             helperText={t('operations.currency.defaultCapexCurrencyHelp')}
           />
           <TextField
@@ -126,38 +134,41 @@ export default function CurrencySettingsPage() {
             value={allowedCurrencies}
             onChange={(e) => setAllowedCurrencies(e.target.value)}
             disabled={isLoading || submitting}
+            InputProps={{ readOnly: !canEdit }}
             helperText={t('operations.currency.allowedCurrenciesHelp')}
           />
-          <Stack direction="row" spacing={1}>
-            <Button type="submit" variant="contained" disabled={isLoading || submitting || syncMutation.isPending}>
-              Save Changes
-            </Button>
-            <Button
-              variant="outlined"
-              disabled={isLoading || submitting || syncMutation.isPending}
-              onClick={() => {
-                if (!data) return;
-                setReportingCurrency(data.reportingCurrency);
-                setDefaultSpendCurrency(data.defaultSpendCurrency);
-                setDefaultCapexCurrency(data.defaultCapexCurrency);
-                setAllowedCurrencies((data.allowedCurrencies ?? []).join(', '));
-                setSuccessMessage('');
-              }}
-            >
-              Reset
-            </Button>
-            <Button
-              variant="text"
-              disabled={isLoading || syncMutation.isPending}
-              onClick={() => {
-                setSuccessMessage('');
-                syncMutation.reset();
-                syncMutation.mutate();
-              }}
-            >
-              Force FX rates sync
-            </Button>
-          </Stack>
+          {canEdit && (
+            <Stack direction="row" spacing={1}>
+              <Button type="submit" variant="contained" disabled={isLoading || submitting || syncMutation.isPending}>
+                Save Changes
+              </Button>
+              <Button
+                variant="outlined"
+                disabled={isLoading || submitting || syncMutation.isPending}
+                onClick={() => {
+                  if (!data) return;
+                  setReportingCurrency(data.reportingCurrency);
+                  setDefaultSpendCurrency(data.defaultSpendCurrency);
+                  setDefaultCapexCurrency(data.defaultCapexCurrency);
+                  setAllowedCurrencies((data.allowedCurrencies ?? []).join(', '));
+                  setSuccessMessage('');
+                }}
+              >
+                Reset
+              </Button>
+              <Button
+                variant="text"
+                disabled={isLoading || syncMutation.isPending}
+                onClick={() => {
+                  setSuccessMessage('');
+                  syncMutation.reset();
+                  syncMutation.mutate();
+                }}
+              >
+                Force FX rates sync
+              </Button>
+            </Stack>
+          )}
         </Stack>
       </Box>
       <CurrencyRatesTable rows={rateRows} loading={ratesLoading} error={ratesError} />

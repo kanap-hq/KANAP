@@ -23,6 +23,8 @@ The page exposes three inputs and an optional list:
 | Default CAPEX currency | Pre-filled in the CAPEX editor. |
 | Allowed currencies (optional) | Comma-separated ISO codes. The OPEX and CAPEX selectors will limit their dropdown to this set plus the reporting/default currencies. Leave blank for the full list of ISO currencies. |
 
+Permissions: budget readers (`budget_ops:reader`) see the page read-only; budget administrators (`budget_ops:admin`) change the settings and run the FX sync. The API also lets OPEX and CAPEX readers read the settings and rates (their forms' currency picker). The page sits under Master Data until it moves to budget administration.
+
 The panel also contains two actions:
 
 1. **Save Changes** – persists the settings to `tenants.metadata`, upserts any missing ISO codes into the shared `currencies` table, and refreshes totals that depend on the reporting currency.
