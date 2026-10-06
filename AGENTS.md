@@ -93,6 +93,9 @@ Tool-specific or private notes live in each tool's local files, never here.
   (`test:rls`, `test:tenant-isolation`, `test:master-data`, `test:portfolio`, ...; see `package.json`).
 - CI runs the backend and frontend suites in the cloud jobs, and builds both sides in on-premise
   mode. A failing spec blocks the PR.
+- On a PR, each job runs only when its side changed (`backend/`, `frontend/`; a CI file change runs
+  all three); a skipped job counts as passed. A push on `main` runs every job. The rules live in
+  `.github/scripts/ci-changes.sh`.
 - A new `backend/src/**/__tests__/*.spec.ts` runs in CI from its first commit, nothing to register
   (`backend/scripts/run-ci-tests.js`). Specs that boot Nest or TypeORM (`NestFactory.create`,
   `createTestingModule`, `TypeOrmModule`, `.initialize()`, `data-source`) run in one serial lane on
