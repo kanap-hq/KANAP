@@ -265,6 +265,7 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 - **Annuel** : Saisissez un total par colonne. Le total est réparti uniformément sur les mois de la période de la colonne, et les mois hors de cette période sont mis à zéro. La période s'affiche sous chaque total avant la saisie, par exemple « 9 mois, avril à décembre ». Seul le total que vous modifiez est enregistré. Les autres colonnes gardent leurs montants mensuels.
 - Cliquez sur l'icône crayon à côté de la période sous un total (**Modifier la période**) pour ouvrir le panneau de répartition sur cette colonne, avec son total actuel. Si les dates du poste ne laissent aucun mois dans l'année, le total est désactivé et indique « Aucun mois de 2026 n'est compris dans les dates du poste. » Cliquez sur l'icône crayon à côté (**Choisir la période**) pour la définir vous-même.
 - Cliquez sur l'icône calculatrice à côté du crayon (**Quantité et prix**) pour ouvrir le même encadré sur les lignes de cette colonne. Voir [Quantité et prix](#quantite-et-prix).
+- Une colonne qui suit ses lignes (ses montants ont été calculés à partir de ses lignes de Quantité et prix) a un total en lecture seule. Cliquez sur le total, ou appuyez sur Entrée dessus, pour ouvrir **Quantité et prix** sur cette colonne. Le crayon fait de même. Survolez le total pour lire « Calculé à partir de ses lignes. Ouvrez Quantité et prix pour le modifier. »
 - **Mensuel** : Saisissez les montants par mois (Jan à Déc) pour chaque colonne affichée, pour un suivi fin des dépenses projet. Des sous-totaux par trimestre et un total annuel sont affichés. Seuls les mois que vous modifiez sont enregistrés.
 - Les deux onglets montrent les mêmes colonnes : Prévision apparaît aussi dans **Annuel** quand elle est affichée.
 - Passez d'un mode à l'autre avec les onglets **Annuel** et **Mensuel**
@@ -286,13 +287,15 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 - **Chaque modification s'enregistre aussitôt** : le montant quand vous quittez le champ ou appuyez sur Entrée, la répartition et les dates dès que vous les modifiez. Il n'y a aucun bouton à cliquer. Un montant vide ou nul n'enregistre rien
 - **Appliquer la répartition à toutes les colonnes** est un interrupteur, activé par défaut : chaque colonne qui le suit reçoit la même répartition et la même période, et chacune garde son propre total actuel. L'activer répartit aussitôt ces colonnes, et il reste activé pour vos modifications suivantes. Le désactiver ne change rien en soi : les modifications suivantes s'appliquent à la seule colonne choisie. Par défaut, toutes les colonnes le suivent. Un administrateur budgétaire choisit lesquelles dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les colonnes gelées ne changent jamais. Survolez l'interrupteur pour voir les colonnes qui suivent et celles qui gardent leur propre période
 - Une colonne qui ne suit pas l'interrupteur est répartie seule : l'interrupteur n'apparaît pas quand vous la répartissez. L'interrupteur est aussi masqué quand aucune autre colonne qui suit ne peut changer
+- Les colonnes qui suivent leurs lignes sont laissées de côté par l'interrupteur : elles gardent les montants de leurs lignes, et une phrase les nomme, par exemple « Prévision garde ses lignes. » Quand toutes les autres colonnes suivent leurs lignes, l'interrupteur n'apparaît pas
 - Pour remettre une colonne en répartition linéaire sur douze mois, choisissez **Linéaire** et réglez les dates sur le 1er janvier et le 31 décembre
 - Les totaux saisis dans l'onglet **Annuel** s'appliquent toujours à leur seule colonne
 - Les dates **Du** et **Au** affichent la période. Quand des mois tombent en dehors, le panneau indique lesquels seront mis à zéro (« Janvier à mars seront mis à zéro. »). Une période sur l'année entière n'affiche aucune ligne. Survolez l'icône d'information à côté du titre du panneau pour voir la règle du 15
 - Avec **4-4-5**, les poids des mois qui comptent sont augmentés pour que tout le montant se répartisse sur eux
 - Un avertissement non bloquant apparaît lorsque la période dépasse les dates du poste. La répartition est tout de même enregistrée
 - Tant qu'une date manque ou qu'aucun mois ne compte, le panneau en indique la raison et n'enregistre rien
-- Une répartition sur une colonne construite à partir de lignes garde ses lignes. Voir [Quantité et prix](#quantite-et-prix)
+- Une colonne qui suit ses lignes affiche ses valeurs actuelles dans les champs, en grisé, sous la phrase « Les montants viennent des 4 lignes de Quantité et prix. » Cliquez sur **Répartir un montant à la place** pour déverrouiller les champs de cette colonne. La phrase indique alors « Une répartition remplace les montants des lignes. Les lignes restent comme référence. » Le verrou revient quand vous changez de colonne, d'année ou d'encadré
+- Une répartition sur une colonne construite à partir de lignes garde ses lignes comme référence. Voir [Quantité et prix](#quantite-et-prix)
 
 **Origine de chaque colonne** :
 
@@ -331,12 +334,12 @@ Un administrateur budgétaire peut renommer les colonnes, en masquer certaines e
 
 #### Quantité et prix
 
-Construisez une colonne à partir de lignes au lieu de saisir ses montants. Chaque ligne se lit comme une phrase : une quantité, une unité, un prix unitaire, une fréquence, une période, et un calendrier. Par exemple, un prestataire sur un projet de build à temps plein à 400 par jour de février à octobre, et 20 ordinateurs portables à 1 200 par pièce, achetés une fois le 15 mars. Les mois de la colonne sont la somme de ses lignes.
+Construisez une colonne à partir de lignes au lieu de saisir ses montants. Chaque ligne se lit comme une phrase : une quantité, une unité, un prix unitaire, une fréquence, une période, et un calendrier. Par exemple, un prestataire sur un projet de build à temps plein à 400 par jour de février à octobre, et 20 ordinateurs portables à 1 200 par pièce, achetés une fois le 15 mars. Les mois de la colonne sont la somme de ses lignes. Les montants d'une colonne n'ont qu'une source à la fois : ses lignes, ou une répartition, un mois saisi à la main ou une copie. L'autre source reste visible comme référence, en lecture seule, avec un lien pour basculer.
 
 **Ouvrir l'onglet** :
 
-- Onglet **Annuel** : cliquez sur l'icône calculatrice à côté de la période sous un total. L'encadré s'ouvre sur **Quantité et prix** pour cette colonne
-- Onglet **Mensuel** : cliquez sur **Quantité et prix** en haut de l'encadré du panneau
+- Onglet **Annuel** : cliquez sur l'icône calculatrice à côté de la période sous un total. L'encadré s'ouvre sur **Quantité et prix** pour cette colonne. Sur une colonne qui suit ses lignes, le crayon et le total l'ouvrent aussi
+- Onglet **Mensuel** : cliquez sur **Quantité et prix** en haut de l'encadré du panneau. Choisir une colonne qui suit ses lignes, ou en avoir une comme colonne par défaut, bascule l'encadré sur **Quantité et prix**
 - Choisissez la **Colonne** en haut de l'onglet. Les colonnes gelées ne peuvent pas être choisies
 
 **Les lignes** :
@@ -352,7 +355,9 @@ Construisez une colonne à partir de lignes au lieu de saisir ses montants. Chaq
 | **Calendrier** | Affiché pour un prix par jour uniquement : les personnes au prix par jour, et les jours. Le calendrier de jours ouvrés dont les jours comptent. La liste propose les calendriers activés, plus le calendrier qu'une ligne utilise déjà s'il a été désactivé depuis, marqué « (désactivé) ». Lorsqu'il n'existe encore aucun calendrier, l'onglet indique « Aucun calendrier de jours ouvrés pour l'instant. », avec un lien **Ajouter un calendrier** pour les personnes qui peuvent créer des calendriers. Voir [Calendriers de jours ouvrés](working-day-calendars.md) |
 | **Montant** | Le total de la ligne, une fois enregistrée. En lecture seule |
 
-Lorsque l'onglet est assez large, chaque ligne tient sur une rangée. Sur un écran plus étroit, ou avec le panneau **Propriétés** ouvert sur un écran 1080p, chaque ligne occupe deux rangées alignées, avec **Description**, **Quantité**, **Unité**, **Prix unitaire** et **Montant** sur la première, et **Fréquence**, **Du** et **Au** (ou **Date**) et **Calendrier** sur la seconde ; fermez le panneau **Propriétés** pour revenir à une rangée par ligne.
+Chaque ligne a un numéro dans la marge. Quand la colonne a plusieurs lignes, les remarques sous le tableau l'utilisent, par exemple « Ligne 2 : Saisissez une quantité et un prix unitaire pour enregistrer cette ligne. »
+
+Lorsque l'onglet est assez large, chaque ligne tient sur une rangée. Sur un panneau plus étroit, chaque ligne occupe deux rangées. La première se lit comme un calcul : **Description**, **Quantité**, **Unité**, × **Prix unitaire** et **Montant**. La seconde se lit comme une phrase : **Fréquence**, « du » une date « au » une date (ou une seule **Date**), « calendrier » et le **Calendrier**. Sur un panneau de largeur moyenne, **Fréquence** passe sur la première rangée. Fermer le panneau **Propriétés** donne plus de place aux lignes.
 
 Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur la croix au bout d'une ligne pour la supprimer. Une colonne contient jusqu'à 50 lignes.
 
@@ -381,7 +386,7 @@ Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur
 - Une ligne est complète lorsqu'elle a une quantité, un prix unitaire, une période ou une date valide, les jours par mois ou **Temps plein** pour les personnes au prix par jour, et un calendrier pour un prix par jour. Jusque-là, elle reste à l'écran avec une indication, par exemple « Saisissez une quantité et un prix unitaire pour enregistrer cette ligne. », « Saisissez les jours par mois, ou cochez Temps plein. » ou « Choisissez un calendrier pour un prix par jour. », et les lignes enregistrées ne changent pas
 - Supprimer la dernière ligne retire les lignes de la colonne, et ses montants restent tels quels. Une colonne calculée à partir de ses lignes compte alors comme des montants saisis à la main. Une colonne répartie ou copiée garde sa répartition ou sa copie
 - Lorsqu'un enregistrement est refusé, la raison s'affiche en rouge sous le tableau, et ce que vous avez saisi reste en place. Par exemple, « Personnel du siège has no working days for 2027. Add them on the Working-day calendars page. » lorsqu'un calendrier personnalisé ne contient pas encore l'année
-- Sur une colonne gelée, les lignes sont en lecture seule
+- Sur une colonne gelée, les lignes sont en lecture seule. Elles sont aussi en lecture seule tant que la colonne les garde comme référence, voir la partie suivante
 
 **Sous le tableau** :
 
@@ -390,12 +395,12 @@ Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur
 - Des remarques lorsqu'elles s'appliquent : « La période dépasse les dates du poste. », un calendrier désactivé depuis, par exemple « Personnel du siège est désactivé. Les lignes l'utilisent encore. », et les jours ouvrés modifiés depuis le dernier enregistrement des lignes
 - **Appliquer ces lignes à toutes les colonnes** : un interrupteur pour les mêmes colonnes que celui de l'onglet de répartition, désactivé par défaut ici. L'activer écrit aussitôt les lignes dans chaque colonne qui suit, et il reste activé : chaque enregistrement suivant écrit aussi les lignes dans ces colonnes. Le désactiver ne change rien en soi
 
-**Lorsque les montants changent autrement** : les lignes restent sur la colonne comme référence, et l'onglet indique d'où viennent désormais les montants, suivi d'un lien **Utiliser à nouveau les lignes**. Le lien enregistre les lignes telles quelles et recalcule la colonne à partir d'elles.
+**Lorsque les montants changent autrement** : les lignes restent sur la colonne comme référence, et l'onglet indique d'où viennent désormais les montants, suivi d'un lien **Utiliser à nouveau les lignes**. Les lignes sont alors en lecture seule : vous ne pouvez ni ajouter, ni supprimer, ni modifier une ligne, et l'onglet n'affiche ni montant par ligne, ni ETP, ni **Appliquer ces lignes à toutes les colonnes**. Le lien enregistre les lignes telles quelles et recalcule la colonne à partir d'elles, et les lignes redeviennent modifiables. Pour modifier une ligne gardée comme référence, cliquez d'abord sur **Utiliser à nouveau les lignes**, puis modifiez-la.
 
 - Un mois saisi dans l'onglet **Mensuel** : « Les montants ont été saisis à la main. Utiliser à nouveau les lignes. »
 - Une répartition : « Les montants viennent d'une répartition. Utiliser à nouveau les lignes. »
 - **Copier les colonnes budgétaires** dans l'Administration budgétaire : « Les montants ont été copiés depuis Budget 2025. Utiliser à nouveau les lignes. » La copie reporte les lignes de la colonne source avec les montants. Voir [Copier une colonne calculée](budget-operations.md#copier-une-colonne-calculee)
-- Les jours ouvrés d'un calendrier ont changé : « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. » Rien ne change sur la colonne tant que vous ne cliquez pas sur **Utiliser à nouveau les lignes**
+- Les jours ouvrés d'un calendrier ont changé : « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. » Rien ne change sur la colonne tant que vous ne cliquez pas sur **Utiliser à nouveau les lignes**. Les lignes restent modifiables entre-temps
 - **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire retire les lignes avec les montants. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
 - Un fichier budgétaire change les mois d'une colonne et laisse ses lignes. Voir [Charger un budget depuis un tableur](budget-file.md)
 

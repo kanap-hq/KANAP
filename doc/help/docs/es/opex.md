@@ -206,6 +206,7 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - **Anual**: Introduzca un total por columna. El total se reparte uniformemente entre los meses del periodo de la columna, y los meses fuera de él se ponen a cero. El periodo aparece bajo cada total antes de escribir, por ejemplo «9 meses, de abril a diciembre». Solo se guarda el total que usted modifica. Las demás columnas conservan sus importes mensuales.
   - Haga clic en el icono de lápiz junto al periodo bajo un total (**Cambiar el periodo**) para abrir el panel de reparto en esa columna, con su total actual. Si las fechas de la partida no dejan ningún mes en el año, el total se deshabilita y muestra «Ningún mes de 2026 está dentro de las fechas de la partida.» Haga clic en el icono de lápiz junto a ese texto (**Elegir el periodo**) para definirlo usted mismo.
   - Haga clic en el icono de calculadora junto al lápiz (**Cantidad y precio**) para abrir el mismo cuadro en las líneas de esa columna. Consulte [Cantidad y precio](#cantidad-y-precio).
+  - Una columna que sigue sus líneas (sus importes se calcularon a partir de sus líneas de Cantidad y precio) tiene un total de solo lectura. Haga clic en el total, o pulse Intro sobre él, para abrir **Cantidad y precio** en esa columna. El lápiz hace lo mismo. Pase el cursor sobre el total para leer «Calculado a partir de sus líneas. Abra Cantidad y precio para cambiarlo.»
   - **Mensual**: Introduzca importes por mes (Ene-Dic) para cada columna visible. Se muestran subtotales trimestrales y un total anual. Solo se guardan los meses que usted modifica.
   - Ambas pestañas muestran las mismas columnas: Previsión también aparece en **Anual** cuando se muestra.
   - Cambie de modo con las pestañas **Anual** y **Mensual**. Cambiar de modo no modifica sus importes.
@@ -224,13 +225,15 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
   - **Cada cambio se guarda de inmediato**: el importe al salir del campo o al pulsar Intro, la distribución y las fechas en cuanto las cambia. No hay ningún botón que pulsar. Un importe vacío o igual a cero no guarda nada
   - **Aplicar el reparto a todas las columnas** es un interruptor, activado por defecto: cada columna que lo sigue recibe la misma distribución y el mismo periodo, y cada una conserva su propio total actual. Activarlo reparte esas columnas de inmediato, y queda activado para sus cambios siguientes. Desactivarlo no cambia nada por sí solo: los cambios siguientes se aplican solo a la columna seleccionada. Por defecto, todas las columnas lo siguen. Un administrador de presupuesto elige cuáles en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Las columnas congeladas nunca cambian. Pase el cursor sobre el interruptor para ver qué columnas siguen y cuáles conservan su propio periodo
   - Una columna que no sigue el interruptor se reparte sola: el interruptor no aparece cuando la reparte. El interruptor también se oculta cuando ninguna otra columna que lo sigue puede cambiar
+  - Las columnas que siguen sus líneas quedan fuera del interruptor: conservan los importes de sus líneas, y una frase las nombra, por ejemplo «Previsión conserva sus líneas.» Cuando todas las demás columnas siguen sus líneas, el interruptor no aparece
   - Para devolver una columna a un reparto uniforme en doce meses, elija **Uniforme** y defina las fechas del 1 de enero al 31 de diciembre
   - Los totales introducidos en la pestaña **Anual** siguen aplicándose solo a su propia columna
   - Las fechas **Desde** y **Hasta** muestran el periodo. Cuando algunos meses quedan fuera, el panel indica cuáles se pondrán a cero («De enero a marzo se pondrán a cero.»). Un periodo de todo el año no muestra ninguna línea. Pase el cursor sobre el icono de información junto al título del panel para ver la regla del día 15
   - Con **4-4-5**, los pesos de los meses que cuentan se amplían para que todo el importe recaiga en ellos
   - Aparece un aviso no bloqueante cuando el periodo va más allá de las fechas de la partida. El reparto se guarda de todos modos
   - Mientras falte una fecha o ningún mes cuente, el panel indica el motivo y no guarda nada
-  - Un reparto sobre una columna construida a partir de líneas conserva sus líneas. Consulte [Cantidad y precio](#cantidad-y-precio)
+  - Una columna que sigue sus líneas muestra sus valores actuales en los campos, en gris, bajo la frase «Los importes vienen de las 4 líneas de Cantidad y precio.» Haga clic en **Repartir un importe en su lugar** para desbloquear los campos de esa columna. La frase pasa a decir «Un reparto reemplaza los importes de las líneas. Las líneas se mantienen como referencia.» El bloqueo vuelve cuando cambia de columna, de año o de cuadro
+  - Un reparto sobre una columna construida a partir de líneas conserva sus líneas como referencia. Consulte [Cantidad y precio](#cantidad-y-precio)
 
 **Cómo se produjo cada columna**:
   - Una etiqueta breve indica de dónde vienen los importes de una columna. En la pestaña **Mensual** aparece bajo el encabezado de la columna (pase el cursor por encima para ver el periodo). En la pestaña **Anual** aparece junto al periodo
@@ -262,11 +265,11 @@ La pestaña Presupuesto es donde introduce datos financieros por año. Admite va
 
 #### Cantidad y precio
 
-Construya una columna a partir de líneas en lugar de escribir sus importes. Cada línea se lee como una frase: una cantidad, una unidad, un precio unitario, una frecuencia, cuándo y con qué calendario. Por ejemplo, un jefe de proyecto 5 días por mes a 1.200 por día de febrero a julio, y 50 licencias a 12 por pieza por mes. Los meses de la columna son la suma de sus líneas.
+Construya una columna a partir de líneas en lugar de escribir sus importes. Cada línea se lee como una frase: una cantidad, una unidad, un precio unitario, una frecuencia, cuándo y con qué calendario. Por ejemplo, un jefe de proyecto 5 días por mes a 1.200 por día de febrero a julio, y 50 licencias a 12 por pieza por mes. Los meses de la columna son la suma de sus líneas. Los importes de una columna tienen una sola fuente a la vez: sus líneas, o un reparto, un mes escrito a mano o una copia. La otra fuente sigue visible como referencia, de solo lectura, con un enlace para cambiar.
 
 **Abrir la pestaña**:
-  - Pestaña **Anual**: haga clic en el icono de calculadora junto al periodo bajo un total. El cuadro se abre en **Cantidad y precio** para esa columna
-  - Pestaña **Mensual**: haga clic en **Cantidad y precio** en la parte superior del cuadro del panel
+  - Pestaña **Anual**: haga clic en el icono de calculadora junto al periodo bajo un total. El cuadro se abre en **Cantidad y precio** para esa columna. En una columna que sigue sus líneas, el lápiz y el total también lo abren
+  - Pestaña **Mensual**: haga clic en **Cantidad y precio** en la parte superior del cuadro del panel. Elegir una columna que sigue sus líneas, o tener una como columna por defecto, cambia el cuadro a **Cantidad y precio**
   - Elija la **Columna** en la parte superior de la pestaña. Las columnas congeladas no se pueden elegir
 
 **Las líneas**:
@@ -282,7 +285,9 @@ Construya una columna a partir de líneas en lugar de escribir sus importes. Cad
 | **Calendario** | Solo se muestra para un precio por día: personas con precio por día, y días. El calendario laboral cuyos días cuentan. La lista ofrece los calendarios activados, más el calendario que ya usa una línea si se desactivó después, marcado «(desactivado)». Cuando aún no hay ningún calendario, la pestaña indica «Aún no hay ningún calendario laboral.», con un enlace **Añadir un calendario** para quienes pueden crear calendarios. Consulte [Calendarios laborales](working-day-calendars.md) |
 | **Importe** | El total de la línea, una vez guardada. Solo lectura |
 
-Cuando la pestaña es lo bastante ancha, cada línea ocupa una sola fila. En una pantalla más estrecha, o con el panel **Propiedades** abierto en una pantalla 1080p, cada línea ocupa dos filas alineadas, con **Descripción**, **Cantidad**, **Unidad**, **Precio unitario** e **Importe** en la primera, y **Frecuencia**, **Desde** y **Hasta** (o **Fecha**) y **Calendario** en la segunda; cierre el panel **Propiedades** para volver a una fila por línea.
+Cada línea tiene un número en el margen. Cuando la columna tiene varias líneas, las notas bajo la tabla lo usan, por ejemplo «Línea 2: Introduzca una cantidad y un precio unitario para guardar esta línea.»
+
+Cuando la pestaña es lo bastante ancha, cada línea ocupa una sola fila. En un panel más estrecho, cada línea ocupa dos filas. La primera se lee como un cálculo: **Descripción**, **Cantidad**, **Unidad**, × **Precio unitario** e **Importe**. La segunda se lee como una frase: **Frecuencia**, «del» una fecha «al» una fecha (o una sola **Fecha**), «calendario» y el **Calendario**. En un panel de anchura media, **Frecuencia** sube a la primera fila. Cerrar el panel **Propiedades** da más espacio a las líneas.
 
 Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en la cruz al final de una línea para quitarla. Una columna admite hasta 50 líneas.
 
@@ -310,7 +315,7 @@ Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en 
   - Una línea está completa cuando tiene una cantidad, un precio unitario, un periodo o una fecha válidos, los días por mes o **Tiempo completo** para las personas con precio por día, y un calendario para un precio por día. Hasta entonces permanece en pantalla con una indicación, por ejemplo «Introduzca una cantidad y un precio unitario para guardar esta línea.», «Introduzca los días por mes o marque Tiempo completo.» o «Elija un calendario para un precio por día.», y las líneas guardadas no cambian
   - Quitar la última línea quita las líneas de la columna, y sus importes se mantienen. Una columna calculada a partir de sus líneas cuenta entonces como importes introducidos a mano. Una columna repartida o copiada conserva su reparto o su copia
   - Cuando se rechaza un guardado, el motivo aparece en rojo bajo la tabla, y lo que escribió se mantiene. Por ejemplo, «Personal de la sede has no working days for 2027. Add them on the Working-day calendars page.» cuando un calendario personalizado aún no contiene el año
-  - En una columna congelada, las líneas son de solo lectura
+  - En una columna congelada, las líneas son de solo lectura. También son de solo lectura mientras la columna las conserva como referencia, vea la parte siguiente
 
 **Bajo la tabla**:
   - El ETC de las líneas, cuando una línea cuenta personas o días, por ejemplo «ETC en el periodo 0.24 · Media anual 0.12». Consulte [ETC](#etc). El total de la columna aparece en la propia columna
@@ -318,11 +323,11 @@ Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en 
   - Notas cuando corresponde: «El periodo va más allá de las fechas de la partida.», un calendario desactivado después, por ejemplo «Personal de la sede está desactivado. Las líneas aún lo usan.», y días laborables modificados desde el último guardado de las líneas
   - **Aplicar estas líneas a todas las columnas**: un interruptor para las mismas columnas que el interruptor de la pestaña de reparto, desactivado por defecto aquí. Activarlo escribe las líneas en cada columna que lo sigue de inmediato, y queda activado: cada guardado posterior escribe también las líneas en esas columnas. Desactivarlo no cambia nada por sí solo
 
-**Cuando los importes cambian de otra forma**: las líneas se quedan en la columna como referencia, y la pestaña indica de dónde vienen ahora los importes, seguido de un enlace **Usar de nuevo las líneas**. El enlace guarda las líneas tal como están y vuelve a calcular la columna a partir de ellas.
+**Cuando los importes cambian de otra forma**: las líneas se quedan en la columna como referencia, y la pestaña indica de dónde vienen ahora los importes, seguido de un enlace **Usar de nuevo las líneas**. Las líneas pasan entonces a solo lectura: no puede añadir, quitar ni editar una línea, y la pestaña no muestra importe por línea, ni ETC, ni **Aplicar estas líneas a todas las columnas**. El enlace guarda las líneas tal como están y vuelve a calcular la columna a partir de ellas, y las líneas vuelven a ser editables. Para cambiar una línea conservada como referencia, haga clic primero en **Usar de nuevo las líneas** y edítela después.
   - Un mes introducido en la pestaña **Mensual**: «Los importes se introdujeron a mano. Usar de nuevo las líneas.»
   - Un reparto: «Los importes vienen de un reparto. Usar de nuevo las líneas.»
   - **Copiar columnas presupuestarias** en la Administración presupuestaria: «Los importes se copiaron de Presupuesto 2025. Usar de nuevo las líneas.» La copia lleva las líneas de la columna de origen junto con los importes. Consulte [Copiar una columna calculada](budget-operations.md#copiar-una-columna-calculada)
-  - Los días laborables de un calendario cambiaron: «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.» Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**
+  - Los días laborables de un calendario cambiaron: «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.» Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**. Las líneas siguen siendo editables mientras tanto
   - **Restablecer columna presupuestaria** en la Administración presupuestaria quita las líneas junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
   - Un archivo de presupuesto cambia los meses de una columna y deja sus líneas. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
 

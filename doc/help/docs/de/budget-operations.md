@@ -145,7 +145,7 @@ Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis.
 - Die Monate werden wie bei jeder anderen Spalte kopiert. Die prozentuale Erhöhung gilt nur für die kopierten Beträge. Die Zeilen behalten ihre Stückpreise
 - Eine Kopie aus einer Spalte ohne Zeilen lässt das Ziel ohne Zeilen, und seine VZÄ bleiben leer
 - Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026“, und ihr Tab **Menge und Preis** meldet „Die Beträge wurden aus Budget 2026 kopiert. Die Zeilen wieder verwenden.“
-- Um das Zieljahr zu eigenen Preisen zu planen, öffnen Sie den Budget-Tab der Position und ändern Sie die Stückpreise im Tab **Menge und Preis**: Jede Änderung berechnet die Spalte erneut aus den Zeilen. Um die Preise zu behalten, klicken Sie auf **Die Zeilen wieder verwenden**. Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält: Ein Standardkalender enthält es immer, ein individueller Kalender unter Umständen nicht, zum Beispiel „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“
+- Die kopierten Zeilen sind eine schreibgeschützte Referenz. Klicken Sie im Budget-Tab der Position im Tab **Menge und Preis** auf **Die Zeilen wieder verwenden**, um die Spalte mit ihren aktuellen Preisen aus den Zeilen zu berechnen. Um das Zieljahr zu eigenen Preisen zu planen, ändern Sie danach die Stückpreise: Jede Änderung berechnet die Spalte erneut. Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält: Ein Standardkalender enthält es immer, ein individueller Kalender unter Umständen nicht, zum Beispiel „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“
 
 ### Schutz eingefrorener Spalten
 
