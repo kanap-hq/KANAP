@@ -399,7 +399,7 @@ Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en 
 
 - Un mes introducido en la pestaña **Mensual**: «Los importes se introdujeron a mano. Usar de nuevo las líneas.»
 - Un reparto: «Los importes vienen de un reparto. Usar de nuevo las líneas.»
-- **Copiar columnas presupuestarias** en la Administración presupuestaria: «Los importes se copiaron de Presupuesto 2025. Usar de nuevo las líneas.» La copia lleva las líneas de la columna de origen junto con los importes. Consulte [Copiar una columna calculada](budget-operations.md#copiar-una-columna-calculada)
+- **Copiar columnas presupuestarias** en la Administración presupuestaria: «Los importes se copiaron de Presupuesto 2025. Usar de nuevo las líneas.» Cuando los importes de origen no se calcularon a partir de líneas, la copia lleva las líneas de la columna de origen como referencia. Una columna calculada a partir de sus líneas sigue calculada, con sus precios aumentados por el porcentaje. Consulte [Copiar una columna construida a partir de líneas](budget-operations.md#copiar-una-columna-construida-a-partir-de-lineas)
 - Los días laborables de un calendario cambiaron: «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.» Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**. Las líneas siguen siendo editables mientras tanto
 - **Restablecer columna presupuestaria** en la Administración presupuestaria quita las líneas junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
 - Un archivo de presupuesto cambia los meses de una columna y deja sus líneas. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)

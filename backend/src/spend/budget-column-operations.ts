@@ -3,7 +3,13 @@ import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { formatCents } from '../common/amount';
-import { Decimal, DECIMAL_SCALE_DIGITS, divRoundHalfAway } from '../common/decimal';
+import { Decimal, DECIMAL_SCALE_DIGITS, DecimalLimitError, divRoundHalfAway, parseLimitedDecimal } from '../common/decimal';
+import {
+  calendarDaysFor,
+  isProfileActive,
+  loadWorkingDayProfiles,
+  WorkingDayProfileInfo,
+} from '../working-day-profiles/working-day-profiles.util';
 import {
   AmountMeasure,
   AmountScope,
@@ -21,13 +27,15 @@ import {
   centsToDecimal,
   costLine,
   deleteRoundInput,
+  lineCalendarDays,
+  linesRound,
   listRoundInputs,
   RoundInput,
   RoundInputsContext,
   upsertRoundInput,
   wholeYear,
 } from './round-inputs.util';
-import { CostLine } from './costing.util';
+import { ColumnResult, computeColumn, CostingInputError, CostLine, UNIT_PRICE_LIMITS } from './costing.util';
 import { activeMonths } from './spread.util';
 import { ensureBudgetVersion } from './budget-version-ensure';
 import { lockBudgetLines, lockBudgetVersions, lockTenantBudgetOperations } from './budget-locks';
@@ -311,6 +319,180 @@ export async function createBudgetVersion(
   };
 }
 
+/* ── Copy of a column that follows its quantity × price lines ─────────────── */
+
+/**
+ * What a copy did with the calendar of one per-day line:
+ * - `disabled`: the calendar is disabled; the copy still uses it;
+ * - `fallback`: it has no working days for the destination year; the copy
+ *   uses the paying company's standard calendar (`fallback`) instead;
+ * - `missing`: neither has days; the item is copied the old way (months ×
+ *   uplift, lines unchanged as a reference).
+ */
+export type CalendarIssue = {
+  /** The line's description, or "Line n" when it has none. */
+  line: string;
+  /** The line's place in the source column, from 1. */
+  lineNumber: number;
+  calendar: string;
+  kind: 'disabled' | 'fallback' | 'missing';
+  fallback?: string;
+};
+
+/** A column follows its lines when it has some and its months are computed from them (the frontend's `followsLines`). */
+export function followsLines(record: Pick<RoundInput, 'lines' | 'method'> | undefined): boolean {
+  return !!record && record.lines.length > 0 && record.method === 'computed';
+}
+
+/**
+ * A unit price raised by `pct` percent: `price × (1 + pct / 100)`, exact,
+ * rounded once, half away from zero, to the 4 decimals of the column.
+ */
+export function upliftedPrice(price: string, pct: Decimal): string {
+  const scale = 10n ** BigInt(DECIMAL_SCALE_DIGITS);
+  // price.units × (100 × scale + pct.units) is the raised price in 10^-20 units, × 100 × scale.
+  const fourDecimals = divRoundHalfAway(
+    Decimal.from(price).units * (100n * scale + pct.units),
+    100n * scale * 10n ** BigInt(DECIMAL_SCALE_DIGITS - 4),
+  );
+  return Decimal.from(`${fourDecimals}e-4`).toString();
+}
+
+/**
+ * A shifted line's period within the item's validity; null when the line no
+ * longer covers an active month (its 15th, or the month of a one-date line
+ * bought once: the rule of `computeLine`).
+ */
+export function lineWithinValidity(line: CostLine, validity: YearValidity): CostLine | null {
+  const start = line.period_start > validity.start ? line.period_start : validity.start;
+  const end = line.period_end < validity.end ? line.period_end : validity.end;
+  if (start > end) return null;
+  const year = Number(validity.start.slice(0, 4));
+  const oneDate = line.frequency === 'once' && start === end;
+  return activeMonths(year, start, end).length > 0 || oneDate ? { ...line, period_start: start, period_end: end } : null;
+}
+
+/** The calendars a copy of lines reads, keyed by id, and the country of each item's paying company. */
+type CopyCalendars = { calendars: Map<string, WorkingDayProfileInfo>; countryOf: Map<string, string> };
+
+/**
+ * The calendars the per-day lines name, and the company standard calendars
+ * (country, no region) of the items' paying companies, which replace a
+ * calendar without days for the destination year. A real copy reads them in
+ * one statement FOR KEY SHARE, after the version locks (`budget-locks.ts`).
+ */
+async function loadCopyCalendars(
+  manager: EntityManager,
+  scope: AmountScope,
+  tenantId: string,
+  itemIds: string[],
+  calendarIds: string[],
+  lock: boolean,
+): Promise<CopyCalendars> {
+  if (itemIds.length === 0) return { calendars: new Map(), countryOf: new Map() };
+  const countries: Array<{ id: string; country_iso: string | null }> = await manager.query(
+    `SELECT i.id, upper(c.country_iso) AS country_iso
+     FROM ${SCOPES[scope].items} i
+     JOIN companies c ON c.tenant_id = i.tenant_id AND c.id = i.paying_company_id
+     WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[])`,
+    [tenantId, itemIds],
+  );
+  const countryOf = new Map(countries.filter((row) => row.country_iso).map((row) => [row.id, row.country_iso as string]));
+  const standard: Array<{ id: string }> = countryOf.size === 0 ? [] : await manager.query(
+    `SELECT id FROM working_day_profiles WHERE tenant_id = $1 AND country_iso = ANY($2::text[]) AND region_code IS NULL`,
+    [tenantId, [...new Set(countryOf.values())]],
+  );
+  const calendars = await loadWorkingDayProfiles(
+    manager,
+    tenantId,
+    [...calendarIds, ...standard.map((row) => row.id)],
+    lock ? { lock: 'key share' } : {},
+  );
+  return { calendars, countryOf };
+}
+
+/** The company standard calendar of `country` that has days for `year`, other than `exclude`; the code then the id decide between several. */
+function standardCalendar(calendars: Map<string, WorkingDayProfileInfo>, country: string | undefined, year: number, exclude: string) {
+  if (!country) return null;
+  return [...calendars.values()]
+    .filter((c) => c.id !== exclude && c.country_iso === country && !c.region_code && isProfileActive(c) && calendarDaysFor(c, year))
+    .sort((a, b) => a.code.localeCompare(b.code) || a.id.localeCompare(b.id))[0] ?? null;
+}
+
+/** The copy of a column that follows its lines, decided: copied from the lines, the old way, or nothing left. */
+type LinesCopy =
+  | { kind: 'lines'; lines: CostLine[]; calendars: Map<string, WorkingDayProfileInfo>; result: ColumnResult; issues: CalendarIssue[] }
+  | { kind: 'reference'; issues: CalendarIssue[] }
+  | { kind: 'empty' };
+
+/**
+ * The lines of a source column copied to the destination year: shifted, cut
+ * to the item's validity (a line left without an active month is dropped),
+ * their unit prices raised by the uplift, their per-day calendars read for
+ * the destination year (see `CalendarIssue`), then computed. A calendar no
+ * line can do without sends the whole item back to the old copy.
+ */
+function planLinesCopy(
+  item: { id: string; name: string; validity: YearValidity },
+  source: RoundInput,
+  year: number,
+  pct: Decimal,
+  context: CopyCalendars,
+): LinesCopy {
+  const kept: Array<{ line: CostLine; name: string; calendar?: WorkingDayProfileInfo }> = [];
+  const issues: CalendarIssue[] = [];
+  const missing: CalendarIssue[] = [];
+  shiftLines(source, year).forEach((shifted, index) => {
+    const line = lineWithinValidity(shifted, item.validity);
+    if (!line) return;
+    const n = index + 1;
+    const name = source.lines[index].label || `Line ${n}`;
+    const id = line.working_day_profile_id;
+    if (!id) {
+      kept.push({ line, name });
+      return;
+    }
+    const own = context.calendars.get(id);
+    const calendarName = own?.name ?? source.lines[index].working_day_profile_name ?? '';
+    if (own && calendarDaysFor(own, year)) {
+      if (!isProfileActive(own)) issues.push({ line: name, lineNumber: n, calendar: calendarName, kind: 'disabled' });
+      kept.push({ line, name, calendar: own });
+      return;
+    }
+    const fallback = standardCalendar(context.calendars, context.countryOf.get(item.id), year, id);
+    if (!fallback) {
+      missing.push({ line: name, lineNumber: n, calendar: calendarName, kind: 'missing' });
+      return;
+    }
+    issues.push({ line: name, lineNumber: n, calendar: calendarName, kind: 'fallback', fallback: fallback.name });
+    kept.push({ line: { ...line, working_day_profile_id: fallback.id }, name, calendar: fallback });
+  });
+  if (missing.length > 0) return { kind: 'reference', issues: missing };
+  if (kept.length === 0) return { kind: 'empty' };
+
+  const lines = kept.map(({ line, name }) => {
+    const unit_price = upliftedPrice(line.unit_price, pct);
+    try {
+      parseLimitedDecimal(unit_price, UNIT_PRICE_LIMITS);
+    } catch (err) {
+      if (err instanceof DecimalLimitError) {
+        throw new BadRequestException(`${item.name}, ${name}: the unit price after the increase is too large.`);
+      }
+      throw err;
+    }
+    return { ...line, unit_price };
+  });
+  const calendars = new Map(kept.flatMap(({ calendar }) => (calendar ? [[calendar.id, calendar] as const] : [])));
+  let result: ColumnResult;
+  try {
+    result = computeColumn(lines, year, lineCalendarDays(calendars, year));
+  } catch (err) {
+    if (err instanceof CostingInputError) throw new BadRequestException(`${item.name}: ${err.message}`);
+    throw err;
+  }
+  return { kind: 'lines', lines, calendars, result, issues };
+}
+
 export type CopyColumnOperation = {
   sourceYear: number;
   sourceColumn: BudgetColumn;
@@ -319,7 +501,12 @@ export type CopyColumnOperation = {
   percentageIncrease: number | string;
   overwrite: boolean;
   dryRun: boolean;
+  /** A real copy whose lines change calendar (`fallback`) or cannot be recomputed (`missing`) needs this, after the preview. */
+  acceptCalendarChanges?: boolean;
 };
+
+export const CALENDAR_CHANGES_MESSAGE = (year: number) =>
+  `Some lines use a calendar with no working days for ${year}. Run the preview, then confirm.`;
 
 /**
  * Copy one column of a year to a column of a year for every item valid in
@@ -333,6 +520,14 @@ export type CopyColumnOperation = {
  * zero and the rounding only moves the months kept. The other months keep
  * their amount (an annual fee billed in January stays whole), and the period
  * is cut to the validity window.
+ *
+ * A source column that follows its quantity × price lines (`followsLines`) is
+ * copied from them instead (`planLinesCopy`): the unit prices take the
+ * uplift, the months are computed again with the destination year's
+ * calendars, and the column is stored like a lines write (`computed`). Lines
+ * that are only a reference are copied as they are. A real copy where a line
+ * changes calendar or cannot be computed (`CalendarIssue`) is refused unless
+ * `acceptCalendarChanges` is set; every item is decided first, then written.
  */
 export async function copyBudgetColumn(
   deps: BudgetOperationDeps,
@@ -379,7 +574,38 @@ export async function copyBudgetColumn(
   const months = await readVersionMonths(mg, scope, tenantId, allVersions);
   const records = await listRoundInputs(mg, scope, tenantId, allVersions.map((v) => v.id));
   const pctText = pct.toString();
+  const sourceRecordOf = (version: BudgetVersionRow) => records.get(version.id)?.find((r) => r.measure === sourceMeasure);
 
+  // Sources that follow their lines: their calendars and the company standard calendars,
+  // read once, after the version locks and before any months (`budget-locks.ts`).
+  const linesSources = items.flatMap((item) => {
+    const version = versions.get(`${item.id}:${sourceYear}`);
+    const record = version ? sourceRecordOf(version) : undefined;
+    return record && followsLines(record) ? [{ itemId: item.id, record }] : [];
+  });
+  const copyCalendars = await loadCopyCalendars(
+    mg,
+    scope,
+    tenantId,
+    linesSources.map((s) => s.itemId),
+    linesSources.flatMap((s) => s.record.lines.flatMap((l) => (l.working_day_profile_id ? [l.working_day_profile_id] : []))),
+    !dryRun,
+  );
+
+  // Plan: every item is decided before anything is written, so a refusal writes nothing.
+  type Planned = {
+    item: (typeof items)[number];
+    sourceVersion: BudgetVersionRow;
+    sourceRecord: RoundInput | undefined;
+    sourceTotal: bigint;
+    currentTotal: bigint;
+    target: bigint[];
+    targetTotal: bigint;
+    prorated: boolean;
+    lines: Extract<LinesCopy, { kind: 'lines' }> | null;
+    issues: CalendarIssue[];
+  };
+  const plans: Planned[] = [];
   const results = [];
   let processed = 0;
   let skipped = 0;
@@ -395,13 +621,21 @@ export async function copyBudgetColumn(
     const valid = (index: number) => item.validity.months.includes(index + 1);
     const source = fullSource.map((v, i) => (valid(i) ? v : 0n));
     const prorated = fullSource.some((v, i) => v !== 0n && !valid(i));
-    let destinationVersion = versions.get(`${item.id}:${destinationYear}`);
+    const destinationVersion = versions.get(`${item.id}:${destinationYear}`);
     const current = destinationVersion ? months.get(destinationVersion.id)!.months[destinationMeasure] : [];
     const sourceTotal = sum(fullSource);
     const currentTotal = sum(current);
-    const target = copiedMonths(source, pct);
+    const sourceRecord = sourceRecordOf(sourceVersion);
+    let skip = source.every((v) => v === 0n) || (!overwrite && current.some((v) => v !== 0n));
+    // A source that follows its lines is copied from them, its prices raised; else its months are.
+    const linesCopy = !skip && followsLines(sourceRecord)
+      ? planLinesCopy(item, sourceRecord!, destinationYear, pct, copyCalendars)
+      : null;
+    if (linesCopy?.kind === 'empty') skip = true;
+    const fromLines = linesCopy?.kind === 'lines' ? linesCopy : null;
+    const issues = linesCopy && linesCopy.kind !== 'empty' ? linesCopy.issues : [];
+    const target = fromLines ? fromLines.result.month_cents : copiedMonths(source, pct);
     const targetTotal = sum(target);
-    const skip = source.every((v) => v === 0n) || (!overwrite && current.some((v) => v !== 0n));
 
     results.push({
       itemId: item.id,
@@ -411,16 +645,33 @@ export async function copyBudgetColumn(
       newValue: toNumber(skip ? currentTotal : targetTotal),
       skipped: skip,
       prorated,
+      fromLines: !skip && !!fromLines,
+      calendarIssues: skip ? [] : issues,
     });
     if (skip) {
       skipped++;
       continue;
     }
-    if (dryRun) {
-      processed++;
-      continue;
-    }
+    plans.push({ item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines: fromLines, issues });
+  }
 
+  if (dryRun) {
+    return {
+      success: true,
+      dryRun,
+      summary: { totalItems: items.length, processed: plans.length, skipped, errors: 0 },
+      results,
+    };
+  }
+  // A calendar replaced or missing changes what the lines give: the user confirms it after the preview.
+  const calendarChanges = plans.some((p) => p.issues.some((issue) => issue.kind !== 'disabled'));
+  if (calendarChanges && operation?.acceptCalendarChanges !== true) {
+    throw new BadRequestException(CALENDAR_CHANGES_MESSAGE(destinationYear));
+  }
+
+  for (const plan of plans) {
+    const { item, sourceVersion, sourceRecord, sourceTotal, currentTotal, target, targetTotal, prorated, lines, issues } = plan;
+    let destinationVersion = versions.get(`${item.id}:${destinationYear}`);
     if (!destinationVersion) {
       const ensured = await createBudgetVersion(
         deps,
@@ -455,33 +706,37 @@ export async function copyBudgetColumn(
       yearPeriods(destinationYear).map((period, i) => ({ period, [destinationMeasure]: target[i] })),
     );
 
-    const sourceRecord = records.get(sourceVersion.id)?.find((r) => r.measure === sourceMeasure);
     const rctx: RoundInputsContext = { manager: mg, scope, version: destinationVersion, userId, audit: deps.audit };
-    const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear);
-    // A copy replaces the whole destination column, lines included: the
-    // source's lines travel with their FTE (same calendar, quantity and price:
-    // the uplift applies to the months only), and a source without lines
-    // leaves none.
-    await upsertRoundInput(
-      rctx,
-      destinationMeasure,
-      {
-        ...periodWithinValidity(copiedPeriod, item.validity),
-        method: 'copied',
-        spread_profile_name: sourceRecord?.spread_profile_name ?? null,
-        last_calculation: {
-          kind: 'copy',
-          source_year: sourceYear,
-          source_measure: sourceMeasure,
-          uplift_pct: pctText,
-          source_total: centsToDecimal(sourceTotal),
-          total: centsToDecimal(targetTotal),
-          source_method: sourceRecord?.method ?? null,
+    if (lines) {
+      // Stored like a lines write: the record follows the new lines (computed, FTE from them).
+      await upsertRoundInput(rctx, destinationMeasure, linesRound(lines.lines, lines.calendars, lines.result), lines.lines);
+    } else {
+      const copiedPeriod = sourceRecord ? shiftPeriod(sourceRecord, destinationYear - sourceYear) : wholeYear(destinationYear);
+      // A copy replaces the whole destination column, lines included: lines
+      // that are only a reference travel with their FTE (same calendar,
+      // quantity and price: the uplift applies to the months only), and a
+      // source without lines leaves none.
+      await upsertRoundInput(
+        rctx,
+        destinationMeasure,
+        {
+          ...periodWithinValidity(copiedPeriod, item.validity),
+          method: 'copied',
+          spread_profile_name: sourceRecord?.spread_profile_name ?? null,
+          last_calculation: {
+            kind: 'copy',
+            source_year: sourceYear,
+            source_measure: sourceMeasure,
+            uplift_pct: pctText,
+            source_total: centsToDecimal(sourceTotal),
+            total: centsToDecimal(targetTotal),
+            source_method: sourceRecord?.method ?? null,
+          },
+          fte: sourceRecord?.lines.length ? sourceRecord.fte : null,
         },
-        fte: sourceRecord?.lines.length ? sourceRecord.fte : null,
-      },
-      shiftLines(sourceRecord, destinationYear),
-    );
+        shiftLines(sourceRecord, destinationYear),
+      );
+    }
 
     await deps.audit.log(
       {
@@ -498,6 +753,9 @@ export async function copyBudgetColumn(
           destinationColumn,
           percentageIncrease: pctText,
           ...(prorated ? { prorated: true } : {}),
+          // The record now reads as computed from lines: the copy origin stays here.
+          ...(lines ? { from_lines: true } : {}),
+          ...(issues.length > 0 ? { calendar_issues: issues } : {}),
         },
         userId,
       },
@@ -510,7 +768,7 @@ export async function copyBudgetColumn(
     success: true,
     dryRun,
     summary: { totalItems: items.length, processed, skipped, errors: 0 },
-    results: dryRun ? results : [],
+    results: [],
   };
 }
 

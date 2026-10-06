@@ -105,7 +105,7 @@ Nécessite les droits d'administration sur les OPEX, ou sur les CAPEX pour les p
 | **Colonne source** | Toute colonne affichée, Prévision comprise quand elle est affichée. Démarre sur la colonne par défaut |
 | **Année destination** | Année vers laquelle copier (même plage) |
 | **Colonne destination** | Toute colonne affichée. Démarre sur la colonne par défaut |
-| **Augmentation en pourcentage** | Ajustement appliqué à chaque mois copié (ex. : `3` = +3 %). Par défaut 0. Accepte les décimales et les valeurs négatives. Un pourcentage de -100 % ou moins est refusé. |
+| **Augmentation en pourcentage** | Ajustement appliqué à chaque mois copié (ex. : `3` = +3 %). Pour une colonne calculée à partir de ses lignes, il augmente à la place le prix unitaire de chaque ligne. Voir [Copier une colonne construite à partir de lignes](#copier-une-colonne-construite-a-partir-de-lignes). Par défaut 0. Accepte les décimales et les valeurs négatives. Un pourcentage de -100 % ou moins est refusé. |
 | **Écraser les données existantes** | Bascule. Désactivé : les postes qui ont déjà une valeur dans la destination sont ignorés. Activé : toutes les valeurs destination sont remplacées. |
 
 La page s'ouvre avec la colonne par défaut de l'année en cours comme source et la colonne par défaut de l'année suivante comme destination. Les colonnes masquées ne sont pas proposées.
@@ -143,6 +143,7 @@ Sous la grille, une barre de statistiques affiche :
 
 ### Comment les montants sont copiés
 
+- Cette partie décrit les colonnes dont les montants sont saisis, répartis ou copiés, ainsi que les mois des lignes de référence. Une colonne calculée à partir de ses lignes suit [ses propres règles](#copier-une-colonne-construite-a-partir-de-lignes)
 - La copie conserve la répartition mensuelle. Chacun des douze mois est copié vers le même mois de la destination : une colonne répartie d'avril à décembre reste répartie d'avril à décembre
 - Seuls les postes valides l'année de destination sont copiés. Un poste compte pour les mois dont le 15 tombe entre son **Début d'effet** et sa **Fin de validité**. Un poste sans aucun de ces mois est exclu, car l'onglet Budget ne l'affiche pas non plus
 - Un poste valide une partie de l'année de destination ne reçoit que ces mois. Les autres mois gardent leur montant, et la période est ramenée aux dates du poste. Par exemple, une source sur douze mois copiée vers un poste qui se termine le 30 juin donne janvier à juin
@@ -154,16 +155,33 @@ Sous la grille, une barre de statistiques affiche :
 - La copie d'une colonne sur elle-même (même année et même colonne) est refusée
 - La copie se fait en tout ou rien : si un poste échoue, rien n'est enregistré
 
-### Copier une colonne calculée
+### Copier une colonne construite à partir de lignes
 
-Une colonne peut être construite à partir de lignes, chacune étant une quantité multipliée par un prix unitaire. Voir [Quantité et prix](opex.md#quantite-et-prix).
+Une colonne peut être construite à partir de lignes, chacune étant une quantité multipliée par un prix unitaire. Voir [Quantité et prix](opex.md#quantite-et-prix). La copie traite une telle colonne de l'une des deux façons suivantes.
 
-- La copie reporte les lignes de la colonne source sur la destination, avec leur description, leur quantité, leur unité, leur prix unitaire, leur fréquence (temps plein ou jours par mois pour les personnes, par mois ou une fois pour les pièces) et leur calendrier. Leurs périodes passent à l'année de destination, comme la période de la colonne : mars à décembre 2026 devient mars à décembre 2027, et une ligne qui se termine le 29 février se termine le 28 février dans une année qui n'en a pas. Une pièce achetée une fois le 15 mars 2026 est achetée le 15 mars 2027
-- La copie reporte aussi l'ETP de la colonne source
-- Les mois sont copiés comme pour toute autre colonne. Le pourcentage d'augmentation s'applique uniquement aux montants copiés. Les lignes gardent leurs prix unitaires
-- Une copie depuis une colonne sans ligne laisse la destination sans ligne, et son ETP devient vide
+**Les montants sont calculés à partir des lignes.** La colonne reste calculée à partir de ses lignes dans la destination.
+
+- Le pourcentage d'augmentation relève le prix unitaire de chaque ligne, arrondi à 4 décimales. Les quantités ne changent pas
+- Les mois sont recalculés à partir des lignes avec les calendriers de jours ouvrés de l'année de destination. Le total copié peut différer légèrement du total source auquel on applique le pourcentage, car le nombre de jours ouvrés change d'une année à l'autre
+- Les lignes passent à l'année de destination avec leur description, leur quantité, leur unité, leur fréquence et leur calendrier. Leurs périodes suivent la période de la colonne : mars à décembre 2026 devient mars à décembre 2027, et une ligne qui se termine le 29 février se termine le 28 février dans une année qui n'en a pas. Une pièce achetée une fois le 15 mars 2026 est achetée le 15 mars 2027. L'ETP est recalculé à partir des lignes
+- Une ligne conservée seulement pour une partie de l'année de destination, à cause de la validité du poste, est ramenée à cette période. Une ligne qui n'a plus aucun mois est supprimée
+- La colonne affiche ses lignes comme d'habitude dans l'onglet Budget. Elle n'a pas de mention « Copié depuis »
+
+**Les lignes ne sont qu'une référence.** C'est le cas lorsque les montants source ont été saisis à la main, répartis ou copiés.
+
+- Le pourcentage d'augmentation s'applique aux mois, comme pour toute autre colonne. Les lignes sont copiées telles quelles, avec leurs prix unitaires et leur ETP
 - Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 », et son onglet **Quantité et prix** indique « Les montants ont été copiés depuis Budget 2026. Utiliser à nouveau les lignes. »
-- Les lignes copiées sont une référence en lecture seule. Dans l'onglet Budget du poste, cliquez sur **Utiliser à nouveau les lignes** dans l'onglet **Quantité et prix** pour calculer la colonne à partir d'elles, à leurs prix actuels. Pour planifier l'année de destination à ses propres prix, modifiez ensuite les prix unitaires : chaque modification recalcule la colonne. Une ligne au prix par jour a besoin d'un calendrier qui contient l'année de destination : un calendrier standard la contient toujours, un calendrier personnalisé peut ne pas la contenir, par exemple « Personnel du siège has no working days for 2027. Add them on the Working-day calendars page. »
+- Les lignes copiées sont une référence en lecture seule. Cliquez sur **Utiliser à nouveau les lignes** dans l'onglet **Quantité et prix** pour calculer la colonne à partir d'elles, à leurs prix actuels. Pour planifier l'année de destination à ses propres prix, modifiez ensuite les prix unitaires : chaque modification recalcule la colonne
+
+Une copie depuis une colonne sans ligne laisse la destination sans ligne, et son ETP devient vide.
+
+#### Calendriers sans jours pour l'année de destination
+
+Une ligne au prix par jour a besoin d'un calendrier qui contient l'année de destination. Lorsque le calendrier d'une ligne n'a aucun jour ouvré pour cette année, la copie utilise à la place le calendrier standard de la société payeuse du poste, celui du pays de la société. C'est le calendrier créé avec la société. S'il n'en existe pas, le poste est copié de la façon habituelle : mois multipliés par le pourcentage, lignes conservées telles quelles comme référence.
+
+La simulation signale ces postes par une note **Calendrier**, avec une infobulle pour chaque ligne, et affiche un avertissement au-dessus de l'aperçu. Pour copier malgré tout, cochez **Copier quand même avec ces changements de calendrier**. La meilleure solution est d'ajouter les jours de l'année dans la page **Calendriers de jours ouvrés**, puis de relancer la simulation.
+
+Un calendrier désactivé reste utilisé. La simulation le signale et ne demande aucune confirmation.
 
 ### Protection des colonnes gelées
 

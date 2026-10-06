@@ -631,7 +631,7 @@
     },
     "copyBudgetColumns": {
       "title": "Copiar columnas presupuestarias",
-      "subtitle": "Copiar una columna a otro año u otra columna, en OPEX o CAPEX. Cada mes conserva su importe y el porcentaje se aplica a todos los meses. Las partidas que no son válidas en el año de destino se excluyen. Las partidas válidas solo una parte del año reciben únicamente esos meses.",
+      "subtitle": "Copiar una columna a otro año u otra columna, en OPEX o CAPEX. Cada mes conserva su importe y el porcentaje se aplica a todos los meses. En las columnas calculadas a partir de la cantidad y el precio, el porcentaje aumenta los precios unitarios y los meses se recalculan con los calendarios del año de destino. Las partidas que no son válidas en el año de destino se excluyen. Las partidas válidas solo una parte del año reciben únicamente esos meses.",
       "sourceYear": "Año de origen",
       "sourceColumn": "Columna de origen",
       "destinationYear": "Año de destino",
@@ -659,12 +659,22 @@
       "skipped": "Omitida",
       "prorated": "Prorrateada",
       "proratedHelp": "Esta partida empieza o termina en {{year}}. Solo se copian los meses dentro de su periodo de validez.",
+      "calendarNote": "Calendario",
+      "lineNumber": "Línea {{n}}",
+      "calendarIssue": {
+        "fallback": "{{line}}: {{calendar}} no tiene días laborables para {{year}}, se usa {{fallback}} en su lugar.",
+        "missing": "{{line}}: {{calendar}} no tiene días laborables para {{year}} y ningún calendario puede sustituirlo. Los importes se copian sin recalcular.",
+        "disabled": "{{line}}: {{calendar}} está desactivado y se sigue usando."
+      },
       "previewInfo_one": "{{count}} partida en la vista previa: {{toProcess}} por copiar y {{skipped}} por omitir. Las partidas omitidas conservan su valor actual.",
       "previewInfo_other": "{{count}} partidas en la vista previa: {{toProcess}} por copiar y {{skipped}} por omitir. Las partidas omitidas conservan su valor actual.",
       "existingDataWarning_one": "{{count}} partida ya tiene un importe en la columna de destino y se omitirá. Active «Sobrescribir datos existentes» para reemplazarlo.",
       "existingDataWarning_other": "{{count}} partidas ya tienen un importe en la columna de destino y se omitirán. Active «Sobrescribir datos existentes» para reemplazarlos.",
       "copyDone_one": "{{count}} partida copiada.",
-      "copyDone_other": "{{count}} partidas copiadas."
+      "copyDone_other": "{{count}} partidas copiadas.",
+      "calendarAlert_one": "{{count}} partida tiene líneas en un calendario sin días laborables para {{year}}. Para recalcularla con su propio calendario, añada los días del año en la página Calendarios laborales y vuelva a ejecutar la simulación.",
+      "calendarAlert_other": "{{count}} partidas tienen líneas en un calendario sin días laborables para {{year}}. Para recalcularlas con sus propios calendarios, añada los días del año en la página Calendarios laborales y vuelva a ejecutar la simulación.",
+      "acceptCalendarChanges": "Copiar de todos modos con estos cambios de calendario"
     },
     "currency": {
       "title": "Configuración de moneda",

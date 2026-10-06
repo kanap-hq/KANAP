@@ -16,17 +16,21 @@ import {
   freezeColumn,
   inRolledBackTransaction,
   Kind,
+  period,
+  readLines,
   readMeasure,
   readRecords,
   realFreeze,
   repeat,
   runSpecs,
+  seedCalendar,
   seedLine,
   seedMonths,
   seedTenant,
   seedVersion,
   setBudgetColumns,
   setItemDates,
+  TABLES,
   underSavepoint,
 } from './round-inputs.fixtures';
 
@@ -48,6 +52,7 @@ type CopyOp = {
   percentageIncrease: number | string;
   overwrite?: boolean;
   dryRun?: boolean;
+  acceptCalendarChanges?: boolean;
 };
 
 function copy(kind: Kind, runner: QueryRunner, op: CopyOp, audit = captureAudit(), freeze?: unknown) {
@@ -635,6 +640,255 @@ async function testCopyAllocationsIsAllOrNothing() {
   });
 }
 
+/* ── Columns that follow their quantity × price lines ─────────────────────── */
+
+const NEXT_DAYS = ['20', '19', '21', '20', '18', '21', '22', '20', '21', '22', '20', '19'];
+
+/** People full time on `calendarId` and licences each month, over the source year. */
+function consultantLine(calendarId: string, overrides: Record<string, unknown> = {}) {
+  return {
+    label: 'Consultant', quantity_unit: 'people', quantity: '2', unit_price: '333.33', price_basis: 'per_day', frequency: 'per_month',
+    days_per_month: null, period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`, working_day_profile_id: calendarId, ...overrides,
+  };
+}
+function licenceLine(overrides: Record<string, unknown> = {}) {
+  return {
+    label: 'Licences', quantity_unit: 'pieces', quantity: '10', unit_price: '199.99', price_basis: 'per_piece', frequency: 'per_month',
+    days_per_month: null, period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`, working_day_profile_id: null, ...overrides,
+  };
+}
+
+async function writeLines(runner: QueryRunner, kind: Kind, versionId: string, lines: unknown[], year = YEAR) {
+  await amountsService(kind).bulkUpsert(versionId, { kind: 'lines', year, measure: 'planned', lines }, null, { manager: runner.manager });
+}
+
+/** A paying company in `country` for the item, and the tenant's standard calendar of that country; returns the calendar id. */
+async function payingCompanyWithStandardCalendar(runner: QueryRunner, kind: Kind, tenantId: string, itemId: string, country: string | null) {
+  const [{ id: companyId }] = await runner.query(
+    `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Paying company', 'FR', 'Lyon') RETURNING id`,
+    [tenantId],
+  );
+  await runner.query(`UPDATE ${TABLES[kind].items} SET paying_company_id = $2 WHERE id = $1`, [itemId, companyId]);
+  if (!country) return null;
+  const [{ id }] = await runner.query(
+    `INSERT INTO working_day_profiles (tenant_id, code, name, days_by_year, status, country_iso)
+     VALUES ($1, $2, 'France', '{}'::jsonb, 'enabled', $2) RETURNING id`,
+    [tenantId, country],
+  );
+  return id as string;
+}
+
+const itemAudit = (kind: Kind, audit: ReturnType<typeof captureAudit>, itemId: string) =>
+  audit.entries.find((e) => e.table === TABLES[kind].items && e.recordId === itemId)?.after;
+
+/**
+ * A source that follows its lines: the prices take the uplift (exact, 4
+ * decimals, half away from zero), the months are computed again with the
+ * destination year's days, the column is computed with the FTE of its lines.
+ */
+async function testCopyRaisesLinePrices(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-lines-uplift`);
+    const calendarId = await seedCalendar(runner, tenantId, { code: 'C', name: 'Custom', days_by_year: { [YEAR]: repeat('20', 12), [YEAR + 1]: NEXT_DAYS } });
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR);
+    await writeLines(runner, kind, versionId, [consultantLine(calendarId), licenceLine()]);
+    const op = { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: '2.5' };
+
+    // 333.33 × 1.025 = 341.66325 → 341.6633; 199.99 × 1.025 = 204.98975 → 204.9898. January: 20 days × 2 × 341.6633 + 10 × 204.9898.
+    const january = 13666.53 + 2049.9;
+    const months = NEXT_DAYS.map((d) => Decimal.from(d).mul('683.3266').toCents() + 204990n);
+    const total = Number(months.reduce((a, b) => a + b, 0n)) / 100;
+    const preview = await copy(kind, runner, { ...op, dryRun: true });
+    assert.deepEqual(
+      preview.results.map((r: any) => [r.newValue, r.fromLines, r.calendarIssues, r.skipped]),
+      [[total, true, [], false]],
+      `${kind}: the preview gives the recomputed total`,
+    );
+    assert.equal(await findVersion(runner, kind, itemId, YEAR + 1), undefined, `${kind}: dry run writes nothing`);
+
+    const audit = captureAudit();
+    await copy(kind, runner, op, audit);
+    const destination = (await findVersion(runner, kind, itemId, YEAR + 1))!;
+    const stored = await readMeasure(runner, kind, destination.id, 'planned', YEAR + 1);
+    assert.equal(stored[0], january.toFixed(2));
+    assert.deepEqual(stored, months.map((c) => (Number(c) / 100).toFixed(2)), `${kind}: months from the raised prices and next year's days`);
+    assert.deepEqual(
+      (await readLines(runner, kind, destination.id, 'planned')).map((l) => [l.label, l.quantity, l.unit_price, l.working_day_profile_id, l.period_start, l.period_end]),
+      [
+        ['Consultant', '2.000', '341.6633', calendarId, `${YEAR + 1}-01-01`, `${YEAR + 1}-12-31`],
+        ['Licences', '10.000', '204.9898', null, `${YEAR + 1}-01-01`, `${YEAR + 1}-12-31`],
+      ],
+    );
+    const { planned } = await readRecords(runner, kind, destination.id);
+    assert.deepEqual(
+      [planned.method, planned.fte, planned.last_calculation.kind, planned.last_calculation.total, planned.period_start, planned.period_end],
+      ['computed', '2.00', 'computed', total.toFixed(2), `${YEAR + 1}-01-01`, `${YEAR + 1}-12-31`],
+      `${kind}: the column follows its lines`,
+    );
+    const after = itemAudit(kind, audit, itemId);
+    assert.deepEqual([after.from_lines, after.operation, after.calendar_issues], [true, 'budget_column_copy', undefined], `${kind}: the audit keeps the copy origin`);
+  });
+}
+
+/** A calendar without days for the destination year: the paying company's standard calendar replaces it, after confirmation. */
+async function testCopyLinesCalendarFallback(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-lines-fallback`);
+    const calendarId = await seedCalendar(runner, tenantId, { code: 'C', name: 'Custom', days_by_year: { [YEAR]: repeat('20', 12) } });
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR);
+    await writeLines(runner, kind, versionId, [consultantLine(calendarId, { quantity: '1', unit_price: '100' })]);
+    const franceId = await payingCompanyWithStandardCalendar(runner, kind, tenantId, itemId, 'FR');
+    const op = { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0 };
+
+    const issue = { line: 'Consultant', lineNumber: 1, calendar: 'Custom', kind: 'fallback', fallback: 'France' };
+    const preview = await copy(kind, runner, { ...op, dryRun: true });
+    assert.deepEqual(preview.results.map((r: any) => [r.fromLines, r.calendarIssues]), [[true, [issue]]], `${kind}: the preview names the fallback`);
+
+    await assert.rejects(
+      () => copy(kind, runner, op),
+      (err: any) => err instanceof BadRequestException
+        && err.message === `Some lines use a calendar with no working days for ${YEAR + 1}. Run the preview, then confirm.`,
+      `${kind}: refused without the confirmation`,
+    );
+    assert.equal(await findVersion(runner, kind, itemId, YEAR + 1), undefined, `${kind}: the refusal wrote nothing`);
+
+    const audit = captureAudit();
+    await copy(kind, runner, { ...op, acceptCalendarChanges: true }, audit);
+    const destination = (await findVersion(runner, kind, itemId, YEAR + 1))!;
+    const [line] = await readLines(runner, kind, destination.id, 'planned');
+    assert.equal(line.working_day_profile_id, franceId, `${kind}: the line takes the standard calendar`);
+    const [france] = await runner.query(`SELECT days_by_year FROM working_day_profiles WHERE id = $1`, [franceId]);
+    assert.deepEqual(france.days_by_year, {}, 'harness: the standard calendar follows the public holidays');
+    const { planned } = await readRecords(runner, kind, destination.id);
+    assert.deepEqual([planned.method, planned.last_calculation.lines[0].working_day_profile_name], ['computed', 'France']);
+    const days = planned.last_calculation.lines[0].day_counts as string[];
+    assert.deepEqual(
+      await readMeasure(runner, kind, destination.id, 'planned', YEAR + 1),
+      days.map((d) => (Number(d) * 100).toFixed(2)),
+      `${kind}: months from the standard calendar's days`,
+    );
+    assert.deepEqual(itemAudit(kind, audit, itemId).calendar_issues, [issue], `${kind}: the audit keeps the calendar change`);
+  });
+}
+
+/** No replacement calendar: refused without the confirmation; with it, the item is copied the old way. */
+async function testCopyLinesMissingCalendar(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-lines-missing`);
+    const calendarId = await seedCalendar(runner, tenantId, { code: 'C', name: 'Custom', days_by_year: { [YEAR]: repeat('20', 12) } });
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR);
+    await writeLines(runner, kind, versionId, [consultantLine(calendarId, { quantity: '1', unit_price: '100' }), licenceLine({ label: '' })]);
+    // A paying company without a standard calendar of its country.
+    await payingCompanyWithStandardCalendar(runner, kind, tenantId, itemId, null);
+    const op = { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 5 };
+
+    const preview = await copy(kind, runner, { ...op, dryRun: true });
+    // 2 000 + 1 999.90 a month, +5 %: 4 199.895 a month, whole units.
+    assert.deepEqual(
+      preview.results.map((r: any) => [r.newValue, r.fromLines, r.calendarIssues]),
+      [[50399, false, [{ line: 'Consultant', lineNumber: 1, calendar: 'Custom', kind: 'missing' }]]],
+      `${kind}: the preview says the item is copied without recalculation`,
+    );
+    await assert.rejects(() => copy(kind, runner, op), BadRequestException, `${kind}: refused without the confirmation`);
+
+    await copy(kind, runner, { ...op, acceptCalendarChanges: true });
+    const destination = (await findVersion(runner, kind, itemId, YEAR + 1))!;
+    const { planned } = await readRecords(runner, kind, destination.id);
+    assert.deepEqual([planned.method, planned.last_calculation.kind, planned.last_calculation.total], ['copied', 'copy', '50399.00']);
+    assert.deepEqual(
+      (await readLines(runner, kind, destination.id, 'planned')).map((l) => [l.unit_price, l.working_day_profile_id]),
+      [['100.0000', calendarId], ['199.9900', null]],
+      `${kind}: the lines stay as they are, a reference`,
+    );
+  });
+}
+
+/** A disabled calendar that has the days is still used: the copy goes through with the issue, no confirmation needed. */
+async function testCopyLinesDisabledCalendar(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-lines-disabled`);
+    const calendarId = await seedCalendar(runner, tenantId, { code: 'C', name: 'Old calendar', days_by_year: { [YEAR]: repeat('20', 12), [YEAR + 1]: NEXT_DAYS } });
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR);
+    await writeLines(runner, kind, versionId, [consultantLine(calendarId, { quantity: '1', unit_price: '100' })]);
+    await runner.query(`UPDATE working_day_profiles SET status = 'disabled', disabled_at = '2020-01-01T12:00:00Z' WHERE id = $1`, [calendarId]);
+    const op = { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0 };
+
+    const issue = { line: 'Consultant', lineNumber: 1, calendar: 'Old calendar', kind: 'disabled' };
+    const preview = await copy(kind, runner, { ...op, dryRun: true });
+    assert.deepEqual(preview.results.map((r: any) => [r.fromLines, r.calendarIssues]), [[true, [issue]]]);
+
+    const audit = captureAudit();
+    await copy(kind, runner, op, audit);
+    const destination = (await findVersion(runner, kind, itemId, YEAR + 1))!;
+    assert.deepEqual(await readMeasure(runner, kind, destination.id, 'planned', YEAR + 1), NEXT_DAYS.map((d) => `${d}00.00`));
+    assert.equal((await readRecords(runner, kind, destination.id)).planned.method, 'computed');
+    assert.deepEqual(itemAudit(kind, audit, itemId).calendar_issues, [issue]);
+  });
+}
+
+/** Lines that are only a reference (the column was edited by hand) are copied as they are: months × uplift, prices untouched. */
+async function testCopyReferenceLinesUnchanged(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-lines-reference`);
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR);
+    await writeLines(runner, kind, versionId, [licenceLine({ unit_price: '100', quantity: '1' })]);
+    await amountsService(kind).bulkUpsert(versionId, { kind: 'monthly', year: YEAR, months: [{ period: period(1, YEAR), planned: 300 }] }, null, { manager: runner.manager });
+    assert.equal((await readRecords(runner, kind, versionId)).planned.method, 'manual', 'harness: the lines are a reference');
+
+    const preview = await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 10, dryRun: true });
+    assert.deepEqual(preview.results.map((r: any) => [r.newValue, r.fromLines, r.calendarIssues]), [[1540, false, []]]);
+    await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 10 });
+    const destination = (await findVersion(runner, kind, itemId, YEAR + 1))!;
+    assert.deepEqual(await readMeasure(runner, kind, destination.id, 'planned', YEAR + 1), ['330.00', ...repeat('110.00', 11)]);
+    assert.equal((await readRecords(runner, kind, destination.id)).planned.method, 'copied');
+    assert.deepEqual((await readLines(runner, kind, destination.id, 'planned')).map((l) => l.unit_price), ['100.0000'], `${kind}: the reference price is untouched`);
+  });
+}
+
+/**
+ * The item ends during the destination year: each line is cut to its
+ * validity, a line left without a month is dropped, a bundle bought once
+ * keeps its whole quantity on the months left. A price over the limit after
+ * the increase fails the request, naming the item.
+ */
+async function testCopyLinesWithinValidity(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, `${kind}-lines-validity`);
+    const calendarId = await seedCalendar(runner, tenantId, { code: 'C', name: 'Custom', days_by_year: { [YEAR]: repeat('20', 12), [YEAR + 1]: NEXT_DAYS } });
+    const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR);
+    await writeLines(runner, kind, versionId, [
+      licenceLine({ quantity: '1', unit_price: '100' }),
+      licenceLine({ label: 'Summer interns', quantity: '1', unit_price: '50', period_start: `${YEAR}-07-01`, period_end: `${YEAR}-08-31` }),
+      { label: 'Audit', quantity_unit: 'days', quantity: '12', unit_price: '100', price_basis: 'per_day', frequency: 'once',
+        period_start: `${YEAR}-01-01`, period_end: `${YEAR}-12-31`, working_day_profile_id: calendarId },
+    ]);
+    await setItemDates(runner, kind, itemId, { disabledAt: `${YEAR + 1}-03-31T12:00:00Z` });
+
+    await copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 1, destinationColumn: 'budget', percentageIncrease: 0 });
+    const destination = (await findVersion(runner, kind, itemId, YEAR + 1))!;
+    assert.deepEqual(
+      (await readLines(runner, kind, destination.id, 'planned')).map((l) => [l.label, l.quantity, l.period_start, l.period_end]),
+      [['Licences', '1.000', `${YEAR + 1}-01-01`, `${YEAR + 1}-03-31`], ['Audit', '12.000', `${YEAR + 1}-01-01`, `${YEAR + 1}-03-31`]],
+      `${kind}: cut to the validity, the summer line dropped, the bundle keeps its 12 days`,
+    );
+    assert.deepEqual(
+      await readMeasure(runner, kind, destination.id, 'planned', YEAR + 1),
+      [...repeat('500.00', 3), ...repeat('0.00', 9)],
+      `${kind}: 100 a month and the 1 200 bundle over January to March`,
+    );
+    const { planned } = await readRecords(runner, kind, destination.id);
+    assert.deepEqual([planned.period_start, planned.period_end], [`${YEAR + 1}-01-01`, `${YEAR + 1}-03-31`]);
+
+    // 90 000 000 000 000 + 20 % is over the unit price limit (below 100 000 000 000 000).
+    const big = await seedLine(runner, kind, tenantId, YEAR, {}, 2);
+    await writeLines(runner, kind, big.versionId, [licenceLine({ label: 'Mainframe', quantity: '0.001', unit_price: '90000000000000' })]);
+    await assert.rejects(
+      () => copy(kind, runner, { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR + 2, destinationColumn: 'budget', percentageIncrease: 20, dryRun: true }),
+      (err: any) => err instanceof BadRequestException && err.message === 'Round inputs line, Mainframe: the unit price after the increase is too large.',
+    );
+  });
+}
+
 void runSpecs('budget-column-operations.integration.spec', [
   ['testCopyArithmetic', testCopyArithmetic],
   ['testValidityInYear', testValidityInYear],
@@ -653,6 +907,12 @@ void runSpecs('budget-column-operations.integration.spec', [
     [`testCopyProratesTheStart(${kind})`, () => testCopyProratesTheStart(kind)],
     [`testCopyIntoAPastYear(${kind})`, () => testCopyIntoAPastYear(kind)],
     [`testClearEndedLine(${kind})`, () => testClearEndedLine(kind)],
+    [`testCopyRaisesLinePrices(${kind})`, () => testCopyRaisesLinePrices(kind)],
+    [`testCopyLinesCalendarFallback(${kind})`, () => testCopyLinesCalendarFallback(kind)],
+    [`testCopyLinesMissingCalendar(${kind})`, () => testCopyLinesMissingCalendar(kind)],
+    [`testCopyLinesDisabledCalendar(${kind})`, () => testCopyLinesDisabledCalendar(kind)],
+    [`testCopyReferenceLinesUnchanged(${kind})`, () => testCopyReferenceLinesUnchanged(kind)],
+    [`testCopyLinesWithinValidity(${kind})`, () => testCopyLinesWithinValidity(kind)],
   ] as Array<[string, () => Promise<void>]>),
 ]);
 

@@ -19,6 +19,24 @@ export type BudgetColumnOperation = {
   percentageIncrease: number;
   overwrite: boolean;
   dryRun: boolean;
+  /** Confirms a copy whose lines change calendar or cannot be recalculated (see `CalendarIssue`). */
+  acceptCalendarChanges?: boolean;
+};
+
+/**
+ * What the copy does with the calendar of one line priced per day:
+ * - `disabled`: the calendar is disabled and still used;
+ * - `fallback`: it has no working days for the destination year, `fallback` (the company standard calendar) replaces it;
+ * - `missing`: no replacement: the item's amounts are copied without recalculation.
+ */
+export type CalendarIssue = {
+  /** The line's description, or "Line n" when it has none. */
+  line: string;
+  /** The line's place in the source column, from 1. */
+  lineNumber: number;
+  calendar: string;
+  kind: 'disabled' | 'fallback' | 'missing';
+  fallback?: string;
 };
 
 export type BudgetOperationResult = {
@@ -31,6 +49,9 @@ export type BudgetOperationResult = {
   skipped: boolean;
   /** The item is valid for part of the destination year: the months outside its validity are not copied. */
   prorated?: boolean;
+  /** The source column follows its quantity and price lines: the copy raises their unit prices and recalculates the months. */
+  fromLines?: boolean;
+  calendarIssues?: CalendarIssue[];
 };
 
 export type BudgetOperationResponse = {

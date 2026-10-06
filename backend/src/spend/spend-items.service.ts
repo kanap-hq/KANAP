@@ -431,6 +431,7 @@ export class SpendItemsService {
       percentageIncrease: number | string;
       overwrite: boolean;
       dryRun: boolean;
+      acceptCalendarChanges?: boolean;
     },
     userId: string | null,
     opts?: { manager?: EntityManager }
