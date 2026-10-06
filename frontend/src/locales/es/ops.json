@@ -860,6 +860,8 @@
     "total": "Total",
     "yes": "sí",
     "no": "no",
+    "accountCheck": "Control de la cuenta",
+    "accountOutsideChart": "Cuenta fuera del plan de la empresa",
     "amountColumnHeader": "{{column}} {{slot}} ({{year}})",
     "fteColumnHeader": "ETC {{column}} ({{year}})",
     "fteUnknownLines": "Desconocido para {{count}} líneas",

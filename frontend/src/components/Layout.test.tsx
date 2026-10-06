@@ -168,14 +168,16 @@ describe('Layout budget management sidebar', () => {
     access.grants = null;
   });
 
-  function renderSidebar() {
+  function renderSidebar(path = '/ops/opex') {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/ops/opex']}>
+        <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route element={<Layout />}>
+              <Route path="/ops" element={<div>overview</div>} />
               <Route path="/ops/opex" element={<div>opex</div>} />
+              <Route path="/ops/opex/:id" element={<div>opex item</div>} />
             </Route>
           </Routes>
         </MemoryRouter>
@@ -196,5 +198,23 @@ describe('Layout budget management sidebar', () => {
 
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.administration' })).not.toBeInTheDocument();
+  });
+
+  it('selects OPEX, not Overview, on an OPEX item', () => {
+    renderSidebar('/ops/opex/OPX-1');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).toHaveClass('Mui-selected');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toHaveClass('Mui-selected');
+  });
+
+  it('selects Overview on the overview page itself', () => {
+    renderSidebar('/ops');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).toHaveClass('Mui-selected');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).not.toHaveClass('Mui-selected');
+  });
+
+  it('does not select Overview on the OPEX list', () => {
+    renderSidebar('/ops/opex');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).toHaveClass('Mui-selected');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toHaveClass('Mui-selected');
   });
 });

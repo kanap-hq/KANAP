@@ -72,6 +72,7 @@ type SummaryRow = {
   allocation_method_label?: string | null;
   paying_company_name?: string | null;
   account_display?: string | null;
+  account_warning?: string | null;
   owner_it_name?: string | null;
   owner_business_name?: string | null;
 };
@@ -486,6 +487,27 @@ export default function OpexListPage() {
         />
       ),
     },
+    // Lines whose account belongs to another chart of accounts than the paying company's: the
+    // filter the overview's data hygiene count opens the list with. Hidden by default.
+    {
+      colId: 'account_warning',
+      headerName: t('shared.accountCheck'),
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { values: [{ value: 'coa_mismatch', label: t('shared.accountOutsideChart') }], searchable: false },
+      valueGetter: (p) => (p.data?.account_warning === 'coa_mismatch' ? t('shared.accountOutsideChart') : ''),
+      width: 220,
+      defaultHidden: true,
+      sortable: false,
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getOpexHref(row, 'account_display')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
     {
       colId: 'allocation_label',
       headerName: t('opex.columns.allocation'),
@@ -847,6 +869,8 @@ export default function OpexListPage() {
         enableSearch
         pinnedBottomRowData={pinnedTotals}
         defaultSort={gridDefaultSort}
+        // A link's filter on a hidden column (the overview's hygiene counts) shows that column.
+        showFilteredColumns
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="opex-summary"
         initialState={initialGridState}

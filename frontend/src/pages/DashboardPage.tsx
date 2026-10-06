@@ -16,10 +16,14 @@ import type { BudgetScope } from '../services/budgetOperations';
 import { buildItemPath, formatItemRef } from '../utils/item-ref';
 import ItemScopeTabs, { useDefaultBudgetScope } from './operations/ItemScopeTabs';
 import { BudgetSummaryRow, itemName, SUMMARY_ENDPOINT } from './reports/useReportScope';
-import { countRequest, readTopIncreases, topIncreasesRequest } from './reports/reportAggregates';
+import { type ColumnFilters, countRequest, readTopIncreases, topIncreasesRequest } from './reports/reportAggregates';
+import { ACTIVE_TASK_STATUSES } from './tasks/task.constants';
 import { useBudgetAggregate, useBudgetAggregates } from './reports/useBudgetAggregate';
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
+
+/** A tile row that opens what it names: neutral text, the hover background only. */
+const ROW_LINK_SX = { color: 'inherit', textDecoration: 'none', borderRadius: '5px', mx: -0.5, px: 0.5, '&:hover': { bgcolor: 'kanap.bg.hover' } } as const;
 
 function formatNumber(v: any) {
   const n = Number(v ?? 0);
@@ -75,31 +79,35 @@ function useCapexTotals(enabled: boolean) {
   });
 }
 
-function useMyTasksSummary(userId?: string | null) {
+type MyTask = { id: string; item_number: number | null; title: string | null; due_date: string | null };
+
+/**
+ * The open tasks assigned to the user: their count (`total`) and the next five by due date. The
+ * list sorts a missing due date last (PostgreSQL's default for an ascending sort), so the tasks
+ * with a due date come first.
+ */
+function useMyTasksSummary(userId: string | null | undefined, enabled: boolean) {
   return useQuery({
-    enabled: !!userId,
+    enabled: enabled && !!userId,
     queryKey: ['dashboard', 'my-tasks', userId],
     queryFn: async () => {
-      const filters = {
-        status: { filterType: 'text', type: 'notContains', filter: 'done' },
-        assignee_user_id: userId ? { filterType: 'text', type: 'equals', filter: userId } : undefined,
-        due_date: { filterType: 'text', type: 'notBlank' },
-      } as any;
       const params: Record<string, any> = {
         limit: 5,
         sort: 'due_date:ASC',
-        filters: JSON.stringify(filters),
+        assigneeUserId: userId,
+        filters: JSON.stringify({ status: { filterType: 'set', values: ACTIVE_TASK_STATUSES } }),
       };
-      const res = await api.get<ServerListResponse<{ id: string; title: string | null; due_date: string | null }>>('/tasks', { params });
+      const res = await api.get<ServerListResponse<MyTask>>('/tasks', { params });
       return res.data;
     },
     staleTime: 60 * 1000,
   });
 }
 
-function useNextContractRenewal() {
+function useNextContractRenewal(enabled: boolean) {
   return useQuery({
     queryKey: ['dashboard', 'next-contract-renewal'],
+    enabled,
     queryFn: async () => {
       const filters = {
         cancellation_deadline: { filterType: 'text', type: 'notBlank' },
@@ -116,17 +124,27 @@ function useNextContractRenewal() {
   });
 }
 
+/**
+ * The hygiene checks. One filter, keyed by column ids of the OPEX and CAPEX lists, drives both the
+ * count and the link to the list, so the number on the tile is the number of rows the list shows.
+ */
 const HYGIENE_CHECKS = [
-  { key: 'noItOwner', tone: 'warning', filter: { owner_it_id: { filterType: 'text', type: 'blank' } } },
-  { key: 'noBusinessOwner', tone: 'warning', filter: { owner_business_id: { filterType: 'text', type: 'blank' } } },
-  { key: 'noPayingCompany', tone: 'warning', filter: { paying_company_id: { filterType: 'text', type: 'blank' } } },
-  { key: 'accountOutsideChart', tone: 'error', filter: { account_warning: { filterType: 'text', type: 'notBlank' } } },
+  { key: 'noItOwner', tone: 'warning', filter: { owner_it_name: { filterType: 'set', values: [null] } } },
+  { key: 'noBusinessOwner', tone: 'warning', filter: { owner_business_name: { filterType: 'set', values: [null] } } },
+  { key: 'noPayingCompany', tone: 'warning', filter: { paying_company_name: { filterType: 'set', values: [null] } } },
+  { key: 'accountOutsideChart', tone: 'error', filter: { account_warning: { filterType: 'set', values: ['coa_mismatch'] } } },
 ] as const;
 type HygieneKey = (typeof HYGIENE_CHECKS)[number]['key'];
 
-const HYGIENE_REQUESTS = HYGIENE_CHECKS.map((check) => countRequest(check.filter));
+// The lines the list shows by default: enabled today.
+const HYGIENE_REQUESTS = HYGIENE_CHECKS.map((check) => countRequest(check.filter as unknown as ColumnFilters, 'enabled'));
 
-/** The four hygiene counts of one type: lines of the window (as the list's default) passing each check, no row built. */
+/** The list filtered to the lines a hygiene check counts. */
+function hygieneHref(scope: BudgetScope, filter: (typeof HYGIENE_CHECKS)[number]['filter']): string {
+  return `/ops/${scope}?${new URLSearchParams({ filters: JSON.stringify(filter) }).toString()}`;
+}
+
+/** The four hygiene counts of one type: lines enabled today (as the list's default) passing each check, no row built. */
 function useHygieneCounts(scope: BudgetScope, enabled: boolean) {
   const counts = useBudgetAggregates(scope, HYGIENE_REQUESTS, { enabled });
   const data = useMemo(
@@ -177,6 +195,7 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
       const items = res.data.items || [];
       return items.map((row) => ({
         id: row.id,
+        path: buildItemPath(scope, row.item_number != null ? formatItemRef(scope, row.item_number) : row.id),
         name: itemName(scope, row) || '\u2014',
         y: getColumnValueFromRow(row, 'y', column),
         yMinus1: getColumnValueFromRow(row, 'yMinus1', column),
@@ -190,7 +209,12 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
 function useTopIncreases(scope: BudgetScope, enabled: boolean, column: AmountColumnKey, columnReady: boolean, limit: number = 5) {
   const request = useMemo(() => (columnReady ? topIncreasesRequest(scope, column, limit) : null), [scope, column, columnReady, limit]);
   const query = useBudgetAggregate(scope, request, { enabled });
-  const items = useMemo(() => readTopIncreases(query.data).map((row) => ({ ...row, name: row.name || '\u2014' })), [query.data]);
+  const items = useMemo(() => readTopIncreases(query.data).map((row) => ({
+    ...row,
+    name: row.name || '\u2014',
+    // The line's reference; its id only when it has none (the page opens either).
+    path: buildItemPath(scope, row.itemNumber != null ? formatItemRef(scope, row.itemNumber) : row.id),
+  })), [query.data, scope]);
   return { items, isLoading: enabled && (query.isLoading || !columnReady) };
 }
 
@@ -231,8 +255,10 @@ export default function DashboardPage() {
   const canCapex = hasLevel('capex', 'reader');
   const { data: opexTotals, isLoading: opexLoading } = useOpexTotals(canOpex);
   const { data: capexTotals, isLoading: capexLoading } = useCapexTotals(canCapex);
-  const { data: myTasks, isLoading: tasksLoading } = useMyTasksSummary(profile?.id);
-  const { data: nextContract, isLoading: contractsLoading } = useNextContractRenewal();
+  const canTasks = hasLevel('tasks', 'reader');
+  const canContracts = hasLevel('contracts', 'reader');
+  const { data: myTasks, isLoading: tasksLoading } = useMyTasksSummary(profile?.id, canTasks);
+  const { data: nextContract, isLoading: contractsLoading } = useNextContractRenewal(canContracts);
   const readableScopes = (['opex', 'capex'] as const).filter((scope) => (scope === 'opex' ? canOpex : canCapex));
   const scopeLabel = (scope: BudgetScope) => t(`ops:operations.scope.${scope}`);
   const budgetColumns = useBudgetColumns();
@@ -362,45 +388,57 @@ export default function DashboardPage() {
           </Grid>
         )}
 
-        {/* My Tasks */}
-        <Grid item xs={12} md={6} lg={4}>
-          <DashboardTile icon="Assignment" title={t('dashboard.myTasks')} isLoading={tasksLoading} action={<Button size="small" onClick={() => navigate('/portfolio/tasks')}>{t('buttons.viewAll')}</Button>}>
-            <Typography variant="h5">{openTasks}</Typography>
-            <Stack spacing={0.75} sx={{ mt: 1.5 }}>
-              {taskItems.map((tk) => {
-                const due = tk.due_date ? new Date(tk.due_date) : null;
-                const today = new Date();
-                const overdue = due ? due < new Date(today.getFullYear(), today.getMonth(), today.getDate()) : false;
-                return (
-                  <Stack key={tk.id} direction="row" spacing={1} alignItems="center">
-                    <Typography variant="body2" sx={{ color: overdue ? getDotColor('error', mode) : 'text.secondary', fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{due ? new Date(due).toLocaleDateString(locale) : '\u2014'}</Typography>
-                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{tk.title || t('labels.task')}</Typography>
-                  </Stack>
-                );
-              })}
-              {(!tasksLoading && taskItems.length === 0) && (
-                <Typography variant="body1" color="text.secondary">{t('dashboard.noTasksWithDueDate')}</Typography>
-              )}
-            </Stack>
-          </DashboardTile>
-        </Grid>
+        {/* My tasks: the open tasks assigned to the user, the next ones by due date */}
+        {canTasks && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile icon="Assignment" title={t('dashboard.myTasks')} isLoading={tasksLoading} action={<Button size="small" onClick={() => navigate('/portfolio/tasks?taskScope=my')}>{t('buttons.viewAll')}</Button>}>
+              <Typography variant="h5">{openTasks}</Typography>
+              <Stack spacing={0.5} sx={{ mt: 1.5 }}>
+                {taskItems.map((tk) => {
+                  const due = tk.due_date ? new Date(tk.due_date) : null;
+                  const today = new Date();
+                  const overdue = due ? due < new Date(today.getFullYear(), today.getMonth(), today.getDate()) : false;
+                  return (
+                    <Stack
+                      key={tk.id}
+                      component={RouterLink}
+                      to={buildItemPath('task', tk.item_number != null ? formatItemRef('task', tk.item_number) : tk.id)}
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      sx={ROW_LINK_SX}
+                    >
+                      <Typography variant="body2" sx={{ color: overdue ? getDotColor('error', mode) : 'text.secondary', fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{due ? due.toLocaleDateString(locale) : '\u2014'}</Typography>
+                      <Typography variant="body1" noWrap sx={{ flex: 1 }}>{tk.title || t('labels.task')}</Typography>
+                    </Stack>
+                  );
+                })}
+                {(!tasksLoading && taskItems.length === 0) && (
+                  <Typography variant="body1" color="text.secondary">{t('dashboard.tiles.noTasksAssigned')}</Typography>
+                )}
+              </Stack>
+            </DashboardTile>
+          </Grid>
+        )}
 
-        {/* Next Contract Renewal */}
-        <Grid item xs={12} md={6} lg={4}>
-          <DashboardTile icon="EventAvailable" title={t('dashboard.nextRenewals')} isLoading={contractsLoading} action={<Button size="small" onClick={() => navigate('/ops/contracts')}>{t('buttons.viewAll')}</Button>}>
-            <Stack spacing={0.75}>
-              {upcomingRenewals.map((r) => (
-                <Stack key={r.id} direction="row" spacing={1} alignItems="center">
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.cancellation_deadline ? new Date(r.cancellation_deadline).toLocaleDateString(locale) : '\u2014'}</Typography>
-                  <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                </Stack>
-              ))}
-              {upcomingRenewals.length === 0 && (
-                <Typography variant="body1" color="text.secondary">{t('dashboard.noUpcomingRenewals')}</Typography>
-              )}
-            </Stack>
-          </DashboardTile>
-        </Grid>
+        {/* Next contract renewals */}
+        {canContracts && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile icon="EventAvailable" title={t('dashboard.nextRenewals')} isLoading={contractsLoading} action={<Button size="small" onClick={() => navigate('/ops/contracts')}>{t('buttons.viewAll')}</Button>}>
+              <Stack spacing={0.5}>
+                {upcomingRenewals.map((r) => (
+                  <Stack key={r.id} component={RouterLink} to={`/ops/contracts/${r.id}/overview`} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.cancellation_deadline ? new Date(r.cancellation_deadline).toLocaleDateString(locale) : '\u2014'}</Typography>
+                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                  </Stack>
+                ))}
+                {upcomingRenewals.length === 0 && (
+                  <Typography variant="body1" color="text.secondary">{t('dashboard.noUpcomingRenewals')}</Typography>
+                )}
+              </Stack>
+            </DashboardTile>
+          </Grid>
+        )}
 
         {/* Data hygiene: the same four checks for each type the user reads */}
         {readableScopes.length > 0 && (
@@ -422,15 +460,21 @@ export default function DashboardPage() {
                     <Typography variant="body2">{t(`dashboard.hygiene.${check.key}`)}</Typography>
                     {readableScopes.map((scope) => {
                       const count = hygieneByScope[scope].data?.[check.key] ?? 0;
-                      return (
+                      const label = `${t(`dashboard.hygiene.${check.key}`)}, ${scopeLabel(scope)}: ${count}`;
+                      // A count opens the list filtered to exactly the lines it counts; none, nothing to open.
+                      return count ? (
                         <Typography
                           key={scope}
                           component={RouterLink}
-                          to={`/ops/${scope}`}
+                          to={hygieneHref(scope, check.filter)}
                           variant="body2"
-                          aria-label={`${t(`dashboard.hygiene.${check.key}`)}, ${scopeLabel(scope)}: ${count}`}
-                          sx={{ textAlign: 'right', fontWeight: 500, textDecoration: 'none', color: count ? getDotColor(check.tone, mode) : 'text.secondary' }}
+                          aria-label={label}
+                          sx={{ textAlign: 'right', fontWeight: 500, textDecoration: 'none', color: getDotColor(check.tone, mode), borderRadius: '5px', '&:hover': { bgcolor: 'kanap.bg.hover' } }}
                         >
+                          {count}
+                        </Typography>
+                      ) : (
+                        <Typography key={scope} variant="body2" aria-label={label} sx={{ textAlign: 'right', fontWeight: 500, color: 'text.secondary' }}>
                           {count}
                         </Typography>
                       );
@@ -466,7 +510,7 @@ export default function DashboardPage() {
                         direction="row"
                         spacing={1}
                         alignItems="center"
-                        sx={{ color: 'inherit', textDecoration: 'none', borderRadius: '5px', mx: -0.5, px: 0.5, '&:hover': { bgcolor: 'kanap.bg.hover' } }}
+                        sx={ROW_LINK_SX}
                       >
                         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.at ? new Date(r.at).toLocaleDateString(locale) : '\u2014'}</Typography>
                         <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
@@ -498,7 +542,7 @@ export default function DashboardPage() {
             >
               <Stack spacing={0.5} sx={{ mt: 1 }}>
                 {(topItems || []).map((r) => (
-                  <Stack key={r.id} direction="row" spacing={1} alignItems="center">
+                  <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
                     <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
                     <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsK(r.y)}</Typography>
                   </Stack>
@@ -526,7 +570,7 @@ export default function DashboardPage() {
             >
               <Stack spacing={0.5} sx={{ mt: 1 }}>
                 {topIncreases.map((r) => (
-                  <Stack key={r.id} direction="row" spacing={1} alignItems="center">
+                  <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
                     <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
                     <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompact(r.delta)}</Typography>
                   </Stack>

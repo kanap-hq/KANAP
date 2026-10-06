@@ -39,6 +39,8 @@ export interface AggregateQuery {
   filters?: ColumnFilters;
   /** `2025,2026`: the lines still active on 1 January of the earliest one (the year before this one by default). */
   years?: string;
+  /** `enabled`: the lines enabled today, as the list shows by default (instead of the window of `years`). */
+  status?: 'enabled' | 'disabled';
 }
 
 export interface AggregateMeasure {
@@ -581,7 +583,7 @@ export function topIncreasesRequest(scope: BudgetScope, metric: MetricKey, limit
   return {
     query: {},
     spec: {
-      groupBy: ['id', NAME_FIELD[scope]],
+      groupBy: ['id', NAME_FIELD[scope], 'item_number'],
       measures: [{ id: 'delta', fn: 'sum', field: `y${suffix}`, minus: `yMinus1${suffix}` }],
       having: [{ measure: 'delta', op: 'gt', value: 0 }],
       order: [{ by: 'measure', id: 'delta', dir: 'DESC' }],
@@ -590,13 +592,16 @@ export function topIncreasesRequest(scope: BudgetScope, metric: MetricKey, limit
   };
 }
 
-export function readTopIncreases(result: AggregateResult | undefined): Array<{ id: string; name: string; delta: number }> {
-  return (result?.groups ?? []).map((group) => ({ id: textKey(group, 0), name: textKey(group, 1), delta: valueOf(group, 'delta') }));
+export function readTopIncreases(result: AggregateResult | undefined): Array<{ id: string; name: string; itemNumber: number | null; delta: number }> {
+  return (result?.groups ?? []).map((group) => {
+    const itemNumber = group.keys[2] != null && group.keys[2] !== '' ? Number(group.keys[2]) : null;
+    return { id: textKey(group, 0), name: textKey(group, 1), itemNumber: Number.isFinite(itemNumber) ? itemNumber : null, delta: valueOf(group, 'delta') };
+  });
 }
 
-/** How many lines of the window pass the filters. */
-export function countRequest(filters: ColumnFilters): AggregateRequest {
-  return { query: { filters }, spec: { groupBy: [], measures: [] } };
+/** How many lines pass the filters: of the window, or of the lines enabled today with `status: 'enabled'`. */
+export function countRequest(filters: ColumnFilters, status?: AggregateQuery['status']): AggregateRequest {
+  return { query: status ? { filters, status } : { filters }, spec: { groupBy: [], measures: [] } };
 }
 
 // ----- budget operations pages -----

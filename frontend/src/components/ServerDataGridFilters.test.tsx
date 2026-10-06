@@ -41,6 +41,7 @@ type GridProps = {
   columnPreferencesKey?: string;
   /** Adds a column kept out of the chooser, the way a list carries a link filter. */
   withSuppressedColumn?: boolean;
+  showFilteredColumns?: boolean;
 };
 
 type Row = { id: string; name: string; other: string; status: string; secret?: string };
@@ -370,6 +371,35 @@ describe('ServerDataGrid column filters follow the grid model', () => {
     expect(grid.api().getFilterModel()).toEqual({ other: { filterType: 'text', type: 'contains', filter: 'x' } });
     await waitFor(() => expect(String(lastRequestFilters())).toContain('other'));
     expect(String(lastRequestFilters())).not.toContain('status');
+  }, 30_000);
+
+  it('with showFilteredColumns, a starting filter on a hidden column shows that column, saved', async () => {
+    const grid = await mount({
+      initialState: { filter: { filterModel: { status: { filterType: 'set', values: [null] } } } },
+      defaultHiddenColumns: ['status'],
+      columnPreferencesKey: 'things',
+      showFilteredColumns: true,
+    });
+    await quiet();
+    expect(grid.api().getColumn('status').isVisible()).toBe(true);
+    expect(grid.api().getFilterModel()).toEqual({ status: { filterType: 'set', values: [null] } });
+    // The filter shows in its box, with the cross that clears it.
+    await waitFor(() => expect(floatingFilterCell('status').querySelector('button[aria-label="filters.clearFilter"]')).not.toBeNull());
+    expect(String(lastRequestFilters())).toContain('status');
+    const saved = JSON.parse(localStorage.getItem('grid-columns:test:u-1:things') ?? '[]') as Array<{ colId: string; hide?: boolean }>;
+    expect(saved.find((state) => state.colId === 'status')?.hide).toBe(false);
+  }, 30_000);
+
+  it('with showFilteredColumns, a column kept out of the chooser stays hidden with its filter', async () => {
+    const grid = await mount({
+      withSuppressedColumn: true,
+      columnPreferencesKey: 'things',
+      initialFilterModel: { secret: { filterType: 'text', type: 'contains', filter: 'abc' } },
+      showFilteredColumns: true,
+    });
+    await quiet();
+    expect(grid.api().getColumn('secret').isVisible()).toBe(false);
+    expect(grid.api().getFilterModel()).toHaveProperty('secret');
   }, 30_000);
 
   it('a column kept out of the chooser keeps its filter when a saved layout and a reset hide it', async () => {

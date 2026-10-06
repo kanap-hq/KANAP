@@ -861,6 +861,8 @@
     "total": "Total",
     "yes": "oui",
     "no": "non",
+    "accountCheck": "Contrôle du compte",
+    "accountOutsideChart": "Compte hors du plan de la société",
     "amountColumnHeader": "{{column}} {{slot}} ({{year}})",
     "fteColumnHeader": "ETP {{column}} ({{year}})",
     "fteUnknownLines": "Inconnu pour {{count}} lignes",

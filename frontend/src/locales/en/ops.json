@@ -860,6 +860,8 @@
     "total": "Total",
     "yes": "yes",
     "no": "no",
+    "accountCheck": "Account check",
+    "accountOutsideChart": "Account not in the company's chart",
     "amountColumnHeader": "{{column}} {{slot}} ({{year}})",
     "fteColumnHeader": "{{column}} FTE ({{year}})",
     "fteUnknownLines": "Unknown for {{count}} lines",
