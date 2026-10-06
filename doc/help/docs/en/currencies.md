@@ -1,6 +1,15 @@
 # Currency Settings
 
-The Currency Settings page (**Master Data → Currency**) is where you configure how currencies are stored, displayed, and converted across your workspace. It controls the tenant-wide reporting currency, default currencies for new items, and optional restrictions on which currencies can be used.
+The Currency Settings page (**Budget management > Administration > Currencies**) is where you configure how currencies are stored, displayed, and converted across your workspace. It controls the tenant-wide reporting currency, default currencies for new items, and optional restrictions on which currencies can be used.
+
+## Who can see and change it
+
+Currencies are a budget setting. The page sits with the other budget settings in [Budget Administration](budget-operations.md).
+
+- **Read only**: anyone with reader access to Budget administration, OPEX or CAPEX. The fields cannot be edited, the **Save**, **Reset** and **Force FX rates sync** buttons are hidden, and a message says that only budget administrators can change the page. The FX rate table is visible.
+- **Change settings and run the FX rates sync**: Budget administration at admin level.
+
+The **Settings** permission of the IT landscape does not give access to currencies. It covers the IT landscape settings only.
 
 For background on currency concepts and conversion mechanics, see the Currency Management guide.
 
@@ -44,7 +53,7 @@ Limiting allowed currencies helps when:
 
 ## Saving changes
 
-Click **Save Changes** to apply your updates. The system will:
+Click **Save** to apply your updates. The system will:
   1. Validate all currency codes (must be 3-letter ISO codes)
   2. Update your tenant settings
   3. Automatically trigger a background FX rate refresh for the current year and any years with budget data
@@ -166,9 +175,9 @@ Reuse the current year's rate as a forward estimate. This provides budget planni
 Your group switches from EUR-based to USD-based reporting.
 
 **Steps**:
-  1. Go to **Master Data → Currency**
+  1. Go to **Budget management > Administration > Currencies**
   2. Change Reporting Currency from `EUR` to `USD`
-  3. Click **Save Changes** (automatically triggers FX refresh)
+  3. Click **Save** (automatically triggers FX refresh)
   4. Verify the FX Rate Snapshots table shows USD as the base (all rates should now be relative to USD)
   5. Check OPEX and CAPEX lists—totals and yearly columns now display in USD
 
@@ -178,9 +187,9 @@ Your group switches from EUR-based to USD-based reporting.
 Your finance team requires all spend to be recorded in EUR, USD, or GBP only.
 
 **Steps**:
-  1. Go to **Master Data → Currency**
+  1. Go to **Budget management > Administration > Currencies**
   2. Set Allowed Currencies to `EUR, USD, GBP`
-  3. Click **Save Changes**
+  3. Click **Save**
   4. Run **Force FX sync** to ensure rates are available for all three currencies
 
 **Result**: Users can only select EUR, USD, or GBP when creating or editing items. Attempts to import other currencies will fail with a clear error message.
@@ -189,9 +198,9 @@ Your finance team requires all spend to be recorded in EUR, USD, or GBP only.
 Your company starts operations in Switzerland and needs to track CHF spend.
 
 **Steps**:
-  1. Go to **Master Data → Currency**
+  1. Go to **Budget management > Administration > Currencies**
   2. Add `CHF` to Allowed Currencies (e.g., `EUR, USD, GBP, CHF`)
-  3. Click **Save Changes**
+  3. Click **Save**
   4. Click **Force FX sync** to fetch CHF rates immediately
   5. Verify CHF appears in the FX Rate Snapshots table with valid rates
 
@@ -201,7 +210,7 @@ Your company starts operations in Switzerland and needs to track CHF spend.
 It's December, and you're preparing for next year's budget planning.
 
 **Steps**:
-  1. Go to **Master Data → Currency**
+  1. Go to **Budget management > Administration > Currencies**
   2. Click **Force FX sync** to refresh rates for the upcoming year
   3. Check the FX Rate Snapshots table to see the forward estimates for the next year
   4. Note that future year rates are forward estimates (reusing current year's rate)—review them as the year approaches

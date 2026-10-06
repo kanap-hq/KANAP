@@ -85,7 +85,7 @@ The Details tab manages year-by-year headcount metrics.
 - Headcount is saved for the selected year when you leave the field (or press Enter). Anything other than a whole number of zero or more shows "Enter a whole number, 0 or more." under the field
 - Headcount feeds into audience calculations for applications
 - Each year is stored on its own: switching years loads that year's value
-- If metrics for the selected year have been **frozen** (by an administrator), the field is locked and a notice explains how to unfreeze
+- If metrics for the selected year have been **frozen** (by an administrator), the field is locked and a notice says that a budget administrator can unfreeze them (**Budget management > Administration > Freeze master data**)
 
 **Tip**: Update headcount annually during your budget planning cycle. Use the year tabs to review or pre-fill future years.
 

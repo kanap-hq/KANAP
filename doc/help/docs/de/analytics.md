@@ -34,7 +34,7 @@ Die Standarddimension hat eine besondere Rolle:
 
 ## Erste Schritte
 
-Navigieren Sie zu **Stammdaten > Analysedimensionen** (im Abschnitt **Klassifizierung**).
+Navigieren Sie zu **Stammdaten > Analysedimensionen** (im Abschnitt **Finanzen**).
 
 1. **Benennen Sie die Standarddimension**, wenn „Analysedimension“ nicht passt: Klicken Sie auf die Bearbeiten-Schaltfläche neben ihrem Chip und geben Sie dann in ihrem Arbeitsbereich einen Namen ein, zum Beispiel **Nature**.
 2. **Fügen Sie ihre Werte hinzu**: Klicken Sie auf **Neuer Wert**.

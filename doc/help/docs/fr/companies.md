@@ -124,7 +124,7 @@ L'onglet Détails gère les **métriques annuelles**. Utilisez les onglets d'ann
 
 - Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez le champ (ou appuyez sur Entrée). Une valeur non valide affiche un message sous le champ, par exemple « Saisissez un nombre entier, 0 ou plus. »
 - Chaque année est enregistrée séparément : changer d'année charge les valeurs de cette année
-- Si les chiffres de la société pour l'année sont **gelés**, les champs sont verrouillés et un avis explique qu'un administrateur peut les dégeler depuis l'**Administration des données de référence**
+- Si les chiffres de la société pour l'année sont **gelés**, les champs sont verrouillés et un avis indique qu'un administrateur budgétaire peut les dégeler (**Gestion budgétaire > Administration > Geler les données de référence**)
 - Vous avez besoin de `companies:manager` pour modifier les métriques
 
 ## Plan comptable
@@ -178,7 +178,7 @@ De nombreuses parties de l'application sont sensibles à l'année. Les société
 **Gel et copie** :
 
 - Vous pouvez **geler** une année une fois finalisée pour empêcher les modifications.
-- Utilisez l'**Administration des données de référence** pour copier les métriques d'une année à l'autre (choisissez quelles métriques copier). Les années gelées ne peuvent pas être écrasées.
+- Utilisez **Copier les indicateurs annuels** dans **Gestion budgétaire > Administration** pour copier les métriques d'une année à l'autre (choisissez quelles métriques copier). Les années gelées ne peuvent pas être écrasées.
 
 ## Import/export CSV
 
@@ -221,6 +221,6 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 - **Plan comptable** : assignez des CoA aux sociétés pour garantir une utilisation cohérente des comptes dans les postes OPEX/CAPEX.
 - **Chiffre d'affaires** : saisissez les valeurs en millions de la devise de base de la société (ex. : 2,5 = 2,5 millions dans cette devise).
 - **Effectif** est le driver de ventilation le plus courant ; maintenez-le à jour pour l'année en cours.
-- **Métriques gelées** : vous pouvez toujours les consulter, mais les modifications sont bloquées tant que vous ne dégélez pas depuis l'Administration.
+- **Métriques gelées** : vous pouvez toujours les consulter, mais les modifications sont bloquées tant qu'un administrateur budgétaire ne dégèle pas l'année dans **Gestion budgétaire > Administration > Geler les données de référence**.
 - **Sélecteur de colonnes** : utilisez-le pour afficher ou masquer les colonnes comme Ville, Adresse, État ou Créé selon votre flux de travail.
 - **Les colonnes de métriques renvoient aux Détails** : cliquer sur une valeur d'Effectif, d'Utilisateurs IT ou de Chiffre d'affaires ouvre directement l'onglet Détails pour cette société.

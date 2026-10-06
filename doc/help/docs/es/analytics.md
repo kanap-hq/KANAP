@@ -34,7 +34,7 @@ La dimensión por defecto tiene un papel especial:
 
 ## Primeros pasos
 
-Navegue a **Datos maestros > Dimensiones analíticas** (en la sección **Clasificación**).
+Navegue a **Datos maestros > Dimensiones analíticas** (en la sección **Finanzas**).
 
 1. **Dé un nombre a la dimensión por defecto** si "Dimensión analítica" no le conviene: haga clic en el botón de edición junto a su chip y escriba un nombre en su espacio de trabajo, por ejemplo **Nature**.
 2. **Añada sus valores**: haga clic en **Nuevo valor**.

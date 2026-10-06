@@ -252,7 +252,7 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 |-----------|-----------------|
 | `opex` | Betriebsausgaben |
 | `capex` | Investitionsausgaben |
-| `budget_ops` | Budget-Administrationswerkzeuge |
+| `budget_ops` | Budget-Administrationswerkzeuge, einschließlich der Währungseinstellungen |
 | `contracts` | Lieferantenverträge |
 | `analytics` | Analysedimensionen |
 | `reporting` | Berichtszugriff |
@@ -272,7 +272,7 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 | `applications` | Anwendungen |
 | `infrastructure` | Server und Infrastruktur |
 | `locations` | Standort-Stammdaten |
-| `settings` | Anwendungseinstellungen |
+| `settings` | Nur die Einstellungen der IT-Landschaft |
 
 **Stammdaten**
 | Ressource | Was sie steuert |

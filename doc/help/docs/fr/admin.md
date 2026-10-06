@@ -252,7 +252,7 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 |-----------|---------------------|
 | `opex` | Dépenses opérationnelles |
 | `capex` | Dépenses d'investissement |
-| `budget_ops` | Outils d'administration budgétaire |
+| `budget_ops` | Outils d'administration budgétaire, dont les paramètres de devises |
 | `contracts` | Contrats fournisseurs |
 | `analytics` | Dimensions analytiques |
 | `reporting` | Accès aux rapports |
@@ -272,7 +272,7 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 | `applications` | Applications |
 | `infrastructure` | Serveurs et infrastructure |
 | `locations` | Données de référence des sites |
-| `settings` | Paramètres des applications |
+| `settings` | Paramètres de la cartographie SI uniquement |
 
 **Données de référence**
 | Ressource | Ce qu'elle contrôle |

@@ -85,7 +85,7 @@ La pestaña Detalles gestiona las métricas de plantilla año a año.
 - La plantilla se guarda para el año seleccionado al salir del campo (o al pulsar Intro). Cualquier valor que no sea un número entero igual o superior a cero muestra "Introduzca un número entero, 0 o más." bajo el campo
 - La plantilla alimenta los cálculos de audiencia para aplicaciones
 - Cada año se guarda por separado: cambiar de año carga el valor de ese año
-- Si las métricas del año seleccionado han sido **congeladas** (por un administrador), el campo está bloqueado y un aviso explica cómo descongelar
+- Si las métricas del año seleccionado han sido **congeladas** (por un administrador), el campo está bloqueado y un aviso indica que un administrador de presupuesto puede descongelarlas (**Gestión presupuestaria > Administración > Congelar datos maestros**)
 
 **Consejo**: Actualice la plantilla anualmente durante su ciclo de planificación presupuestaria. Utilice las pestañas de año para revisar o prerellenar años futuros.
 

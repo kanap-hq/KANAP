@@ -54,7 +54,7 @@ Ces montants saisis à la main ne risquent rien : la copie automatique de l'épi
 
 ## Astuce : les devises d'abord
 
-KANAP gère les budgets multi-devises, mais il faut y penser avant ! Dans Données de référence → Finance → **Devise**, définissez la devise de reporting, les devises par défaut OPEX et CAPEX et la liste des devises autorisées. Les taux de change se synchronisent automatiquement par exercice. Chaque poste garde sa devise ; totaux et rapports convertissent en devise de reporting.
+KANAP gère les budgets multi-devises, mais il faut y penser avant ! Dans Gestion budgétaire → Administration → **Devises**, définissez la devise de reporting, les devises par défaut OPEX et CAPEX et la liste des devises autorisées. Les taux de change se synchronisent automatiquement par exercice. Chaque poste garde sa devise ; totaux et rapports convertissent en devise de reporting.
 
 ![Les paramètres de devise : devise de reporting, devises autorisées et taux de change](/screenshots/blog/currency-settings.png)
 

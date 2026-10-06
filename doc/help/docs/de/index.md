@@ -59,7 +59,9 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 - [OPEX](opex.md) - Wiederkehrende IT-Kosten und Zuordnungen verwalten
 - [CAPEX](capex.md) - Investitionsprojekte verfolgen
 - [Verträge](contracts.md) - Lieferantenverträge und Verlängerungen verwalten
-- [Budgetadministration](budget-operations.md) - Budgetdaten einfrieren, kopieren und verwalten
+- [Budgetadministration](budget-operations.md) - Budgeteinstellungen sowie Vorgänge zum Einfrieren, Kopieren und Zurücksetzen
+- [Währungen](currencies.md) - Reporting- und Standardwährungen, Wechselkurse
+- [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) - Kennzahlen von Unternehmen und Abteilungen sperren und fortschreiben
 - [Berichte](reports.md) - Budget- und Leistungsverrechnungsberichte generieren
 
 ### Stammdaten
@@ -78,13 +80,12 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 **Finanzen**
 
 - [Kontenplan](chart-of-accounts.md) - Finanzkonten konfigurieren
-- [Währungen](currencies.md) - Währungseinstellungen konfigurieren
 - [Arbeitstagekalender](working-day-calendars.md) - Arbeitstage jedes Monats, aus den Feiertagen eines Landes oder von Hand eingegeben, für Zeilen mit Preis pro Tag
+- [Analysedimensionen](analytics.md) - Berichtsdimensionen einrichten
 
 **Klassifizierung**
 
 - [Geschäftsprozesse](business-processes.md) - Geschäftsprozesshierarchie dokumentieren
-- [Analysedimensionen](analytics.md) - Berichtsdimensionen einrichten
 
 ### Plaid
 
@@ -108,7 +109,6 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 - [Nutzung & Kosten](ai-usage.md) - KI-Nutzung und reale Kosten über Chat und Agenten hinweg, pro Agent und pro Modell
 - [Integrationen](integrations.md) - GLPI für Ticketimport und für Agenten verbinden
 - [Geplante Aufgaben](scheduled-tasks.md) - Wiederkehrende Hintergrundjobs prüfen und verwalten
-- [Stammdatenadministration](master-data-operations.md) - Stammdaten einfrieren und kopieren
 - [Budgetverwaltung: Übersicht](operations-dashboard.md) - OPEX- und CAPEX-Überblick, Fristen und Schnellaktionen
 
 ### Bereitstellung & Betrieb

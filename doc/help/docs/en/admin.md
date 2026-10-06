@@ -252,7 +252,7 @@ Resources are organized into groups for easier management:
 |----------|------------------|
 | `opex` | Operating Expenses |
 | `capex` | Capital Expenses |
-| `budget_ops` | Budget Administration tools |
+| `budget_ops` | Budget Administration tools, including the currency settings |
 | `contracts` | Vendor contracts |
 | `analytics` | Analytics dimensions |
 | `reporting` | Reports access |
@@ -272,7 +272,7 @@ Resources are organized into groups for easier management:
 | `applications` | Applications |
 | `infrastructure` | Servers and infrastructure |
 | `locations` | Location master data |
-| `settings` | Application settings |
+| `settings` | IT landscape settings only |
 
 **Master Data**
 | Resource | What it controls |

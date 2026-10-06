@@ -136,7 +136,7 @@ plugins:
             Contacts: Contacts
             Finance: Finance
             Chart of Accounts: Plans comptables
-            Currencies: Devise
+            Currencies: Devises
             Working-day calendars: Calendriers de jours ouvrés
             Classification: Classification
             Business Processes: Processus métier
@@ -144,7 +144,7 @@ plugins:
             Administration: Administration
             "Admin & Users": Utilisateurs
             Branding: Personnalisation
-            Master Data Administration: Administration des données de référence
+            Master data freeze and metrics copy: Gel des données de référence et copie des indicateurs
             Budget Overview: Vue d'ensemble
             On-Premise: On-Premise
             Overview: Vue d'ensemble
@@ -214,7 +214,7 @@ plugins:
             Contacts: Kontakte
             Finance: Finanzen
             Chart of Accounts: Kontenpläne
-            Currencies: Währung
+            Currencies: Währungen
             Working-day calendars: Arbeitstagekalender
             Classification: Klassifizierung
             Business Processes: Geschäftsprozesse
@@ -222,7 +222,7 @@ plugins:
             Administration: Administration
             "Admin & Users": Benutzer
             Branding: Branding
-            Master Data Administration: Stammdatenadministration
+            Master data freeze and metrics copy: Stammdaten einfrieren und Kennzahlen kopieren
             Budget Overview: Übersicht
             On-Premise: On-Premise
             Overview: Übersicht
@@ -292,7 +292,7 @@ plugins:
             Contacts: Contactos
             Finance: Finanzas
             Chart of Accounts: Planes de cuentas
-            Currencies: Moneda
+            Currencies: Monedas
             Working-day calendars: Calendarios laborales
             Classification: Clasificación
             Business Processes: Procesos de negocio
@@ -300,7 +300,7 @@ plugins:
             Administration: Administración
             "Admin & Users": Usuarios
             Branding: Personalización
-            Master Data Administration: Administración de datos maestros
+            Master data freeze and metrics copy: Congelar datos maestros y copiar indicadores
             Budget Overview: Vista general
             On-Premise: On-Premise
             Overview: Vista general
@@ -363,7 +363,10 @@ nav:
     - OPEX: opex.md
     - CAPEX: capex.md
     - Contracts: contracts.md
-    - Budget Administration: budget-operations.md
+    - Budget Administration:
+      - Overview: budget-operations.md
+      - Currencies: currencies.md
+      - Master data freeze and metrics copy: master-data-operations.md
     - Load a budget from a spreadsheet: budget-file.md
     - Reports: reports.md
 
@@ -377,11 +380,10 @@ nav:
       - Contacts: contacts.md
     - Finance:
       - Chart of Accounts: chart-of-accounts.md
-      - Currencies: currencies.md
       - Working-day calendars: working-day-calendars.md
+      - Analytics dimensions: analytics.md
     - Classification:
       - Business Processes: business-processes.md
-      - Analytics dimensions: analytics.md
 
   - Plaid:
     - Plaid: ai-assistant.md
@@ -401,7 +403,6 @@ nav:
     - "Usage & costs": ai-usage.md
     - Integrations: integrations.md
     - Scheduled Tasks: scheduled-tasks.md
-    - Master Data Administration: master-data-operations.md
     - Budget Overview: operations-dashboard.md
 
   - On-Premise:

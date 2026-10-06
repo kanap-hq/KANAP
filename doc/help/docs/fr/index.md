@@ -59,7 +59,9 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 - [OPEX](opex.md) - Gérez les coûts IT récurrents et les ventilations
 - [CAPEX](capex.md) - Suivez les projets de dépenses d'investissement
 - [Contrats](contracts.md) - Gérez les contrats fournisseurs et les renouvellements
-- [Administration budgétaire](budget-operations.md) - Gelez, copiez et gérez les données budgétaires
+- [Administration budgétaire](budget-operations.md) - Paramètres budgétaires, opérations de gel, de copie et de réinitialisation
+- [Devises](currencies.md) - Devises de reporting et par défaut, taux de change
+- [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) - Verrouillez et reportez les indicateurs des sociétés et des départements
 - [Rapports](reports.md) - Générez des rapports budgétaires et de refacturation
 
 ### Données de référence
@@ -78,13 +80,12 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 **Finance**
 
 - [Plan comptable](chart-of-accounts.md) - Configurez les comptes financiers
-- [Devises](currencies.md) - Configurez les paramètres de devise
 - [Calendriers de jours ouvrés](working-day-calendars.md) - Jours ouvrés de chaque mois, à partir des jours fériés d'un pays ou saisis à la main, pour les lignes au prix par jour
+- [Dimensions analytiques](analytics.md) - Configurez les dimensions de reporting
 
 **Classification**
 
 - [Processus métier](business-processes.md) - Documentez la hiérarchie des processus métier
-- [Dimensions analytiques](analytics.md) - Configurez les dimensions de reporting
 
 ### Plaid
 
@@ -108,7 +109,6 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 - [Utilisation & coûts](ai-usage.md) - L'utilisation de l'IA et les coûts réels du chat et des agents, par agent et par modèle
 - [Intégrations](integrations.md) - Connectez GLPI pour l'import de tickets et pour les agents
 - [Tâches planifiées](scheduled-tasks.md) - Consultez et gérez les tâches d'arrière-plan récurrentes
-- [Administration des données de référence](master-data-operations.md) - Gelez et copiez les données de référence
 - [Vue d'ensemble de la gestion budgétaire](operations-dashboard.md) - Aperçus OPEX et CAPEX, échéances et actions rapides
 
 ### Déploiement et opérations
