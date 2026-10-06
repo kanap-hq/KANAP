@@ -36,9 +36,9 @@ La dimensión por defecto tiene un papel especial:
 
 Navegue a **Datos maestros > Dimensiones analíticas** (en la sección **Finanzas**).
 
-1. **Dé un nombre a la dimensión por defecto** si "Dimensión analítica" no le conviene: haga clic en el botón de edición junto a su chip y escriba un nombre en su espacio de trabajo, por ejemplo **Nature**.
+1. **Dé un nombre a la dimensión por defecto** si "Dimensión analítica" no le conviene: selecciónela en la barra de selección, haga clic en **Editar** y escriba un nombre en su espacio de trabajo, por ejemplo **Nature**.
 2. **Añada sus valores**: haga clic en **Nuevo valor**.
-3. **Añada una dimensión** cuando necesite otra forma de leer el presupuesto: haga clic en **Nueva dimensión** y añada sus valores.
+3. **Añada una dimensión** cuando necesite otra forma de leer el presupuesto: haga clic en **Nuevo** en la barra de selección y añada sus valores.
 
 **Consejo**: Empiece con una o dos dimensiones y de 5 a 10 valores en cada una. Una denominación coherente hace que las listas sean más fáciles de recorrer.
 
@@ -46,15 +46,15 @@ Navegue a **Datos maestros > Dimensiones analíticas** (en la sección **Finanza
 
 ## La página Dimensiones analíticas
 
-### Chips de dimensión
+### Selector de dimensión
 
-Bajo el título, una línea de chips muestra sus dimensiones en orden. Una dimensión desactivada aparece marcada como **Desactivado**.
+Bajo el título, una banda gris muestra sus dimensiones en orden, con un botón cuadrado por dimensión. Se parece al selector de los planes de cuentas y funciona igual. Una dimensión desactivada aparece marcada como **Desactivado**. Con muchas dimensiones, la banda se desplaza lateralmente.
 
-- Haga clic en un chip para listar los valores de esa dimensión. La dirección de la página conserva su elección, de modo que un enlace guardado se abre en la misma dimensión. Sin elección, la página se abre en la dimensión por defecto.
-- El chip seleccionado tiene un botón de edición (icono de lápiz). Haga clic en él para abrir el espacio de trabajo de la dimensión.
-- **Nueva dimensión**, al final de la línea, crea una dimensión (requiere `analytics:member`).
+- Haga clic en un botón para listar los valores de esa dimensión. El botón seleccionado aparece relleno. La dirección de la página conserva su elección, de modo que un enlace guardado se abre en la misma dimensión. Sin elección, la página se abre en la dimensión por defecto.
+- A la derecha de la banda, **Editar** abre el espacio de trabajo de la dimensión seleccionada. Si solo puede consultar las dimensiones, el botón dice **Abrir**.
+- **Nuevo**, a su lado, crea una dimensión (requiere `analytics:member`).
 
-Con una sola dimensión, la página muestra un chip y sus valores.
+Con una sola dimensión, la banda muestra un botón y los valores.
 
 ### Lista de valores
 
@@ -90,7 +90,7 @@ Haga clic en cualquier celda para abrir el espacio de trabajo del valor.
 
 ### Crear una dimensión
 
-Haga clic en **Nueva dimensión**, complete los campos y haga clic en **Crear**. Se abre el espacio de trabajo de la nueva dimensión. Una dimensión nueva está activada.
+Haga clic en **Nuevo** en la barra de selección, complete los campos y haga clic en **Crear**. Se abre el espacio de trabajo de la nueva dimensión. Una dimensión nueva está activada.
 
 - **Nombre** es obligatorio.
 - **Código** se propone a partir del nombre: en minúsculas, sin acentos y con los espacios sustituidos por `-`. Puede cambiarlo antes de crear la dimensión.
@@ -101,7 +101,7 @@ Después vuelva a la página para añadir los valores de la nueva dimensión.
 
 ### El espacio de trabajo de la dimensión
 
-Ábralo con el botón de edición del chip seleccionado.
+Ábralo con **Editar** (**Abrir** si solo puede consultar) en la barra de selección, con la dimensión seleccionada.
 
 - **Encabezado**: el nombre de la dimensión. Haga clic en él para cambiar el nombre de la dimensión. **Ant.** / **Sig.** recorren las dimensiones en orden, y el botón de cierre vuelve a la página en esta dimensión
 - **Zona principal**: una línea de uso, por ejemplo "12 valores. Uso: 27 líneas OPEX y 2 líneas CAPEX.", y después la **Descripción**
