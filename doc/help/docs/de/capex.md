@@ -265,6 +265,7 @@ Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die S
 - **Jährlich**: Geben Sie eine Summe pro Spalte ein. Die Summe wird gleichmäßig auf die Monate des Zeitraums der Spalte verteilt, und die Monate außerhalb des Zeitraums werden auf null gesetzt. Der Zeitraum wird unter jeder Summe angezeigt, bevor Sie etwas eingeben, zum Beispiel „9 Monate, April bis Dezember“. Nur die Summe, die Sie bearbeiten, wird gespeichert. Die anderen Spalten behalten ihre Monatsbeträge.
 - Klicken Sie auf das Stiftsymbol neben dem Zeitraum unter einer Summe (**Zeitraum ändern**), um das Verteilungsfeld für diese Spalte mit ihrer aktuellen Summe zu öffnen. Lassen die Daten der Position keinen Monat im Jahr übrig, ist die Summe deaktiviert und zeigt „Kein Monat von 2026 liegt innerhalb der Daten der Position.“ Klicken Sie auf das Stiftsymbol daneben (**Zeitraum wählen**), um selbst einen festzulegen.
 - Klicken Sie auf das Rechnersymbol neben dem Stift (**Menge und Preis**), um dasselbe Feld mit den Zeilen dieser Spalte zu öffnen. Siehe [Menge und Preis](#menge-und-preis).
+- Eine Spalte, die ihren Zeilen folgt (ihre Beträge wurden aus ihren Zeilen von Menge und Preis berechnet), hat eine schreibgeschützte Summe. Klicken Sie auf die Summe oder drücken Sie darauf Enter, um **Menge und Preis** für diese Spalte zu öffnen. Der Stift tut dasselbe. Zeigen Sie mit der Maus auf die Summe, um „Aus den Zeilen berechnet. Öffnen Sie Menge und Preis, um den Betrag zu ändern.“ zu lesen
 - **Monatlich**: Geben Sie Beträge pro Monat (Januar bis Dezember) für jede angezeigte Spalte ein, für eine genaue Verfolgung der Projektausgaben. Quartalszwischensummen und eine Jahressumme werden angezeigt. Nur die Monate, die Sie ändern, werden gespeichert.
 - Beide Tabs zeigen dieselben Spalten: Prognose erscheint auch in **Jährlich**, wenn sie angezeigt wird.
 - Wechseln Sie mit den Tabs **Jährlich** und **Monatlich** zwischen den Modi
@@ -286,13 +287,15 @@ Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die S
 - **Jede Änderung wird sofort gespeichert**: der Betrag, wenn Sie das Feld verlassen oder Enter drücken, die Verteilung und die Daten, sobald Sie sie ändern. Es gibt keine Schaltfläche zum Klicken. Ein leerer Betrag oder null speichert nichts
 - **Die Verteilung auf alle Spalten anwenden** ist ein Schalter, standardmäßig eingeschaltet: Jede Spalte, die ihm folgt, erhält dieselbe Verteilung und denselben Zeitraum, und jede behält ihre eigene aktuelle Summe. Das Einschalten verteilt diese Spalten sofort, und der Schalter bleibt für Ihre nächsten Änderungen eingeschaltet. Das Ausschalten allein ändert nichts: Die nächsten Änderungen gelten nur für die gewählte Spalte. Standardmäßig folgt jede Spalte. Ein Budgetadministrator legt unter [Budgetspalten](budget-operations.md#budgetspalten) fest, welche folgen. Eingefrorene Spalten ändern sich nie. Fahren Sie mit der Maus über den Schalter, um zu sehen, welche Spalten folgen und welche ihren eigenen Zeitraum behalten
 - Eine Spalte, die dem Schalter nicht folgt, wird allein verteilt: Der Schalter erscheint nicht, wenn Sie sie verteilen. Der Schalter ist auch ausgeblendet, wenn sich keine andere folgende Spalte ändern kann
+- Spalten, die ihren Zeilen folgen, lässt der Schalter aus: Sie behalten die Beträge ihrer Zeilen, und ein Satz nennt sie, zum Beispiel „Die Spalte Prognose behält ihre Zeilen.“ Folgen alle anderen Spalten ihren Zeilen, erscheint der Schalter nicht
 - Um eine Spalte auf eine gleichmäßige Verteilung über zwölf Monate zurückzusetzen, wählen Sie **Gleichmäßig** und setzen Sie die Daten auf den 1. Januar und den 31. Dezember
 - Summen, die Sie im Tab **Jährlich** eingeben, gelten weiterhin nur für ihre eigene Spalte
 - Die Felder **Von** und **Bis** zeigen den Zeitraum. Fallen Monate heraus, nennt das Feld die Monate, die auf null gesetzt werden („Januar bis März werden auf null gesetzt.“). Ein Zeitraum über das ganze Jahr zeigt keine Zeile. Fahren Sie mit der Maus über das Info-Symbol neben dem Titel des Felds, um die Regel zum 15. zu sehen
 - Mit **4-4-5** werden die Gewichte der zählenden Monate hochskaliert, sodass der gesamte Betrag auf sie entfällt
 - Ein Hinweis erscheint, wenn der Zeitraum über die Daten der Position hinausgeht. Die Verteilung wird trotzdem gespeichert
 - Solange ein Datum fehlt oder kein Monat zählt, nennt das Feld den Grund und speichert nichts
-- Eine Verteilung über eine aus Zeilen aufgebaute Spalte behält ihre Zeilen. Siehe [Menge und Preis](#menge-und-preis)
+- Eine Spalte, die ihren Zeilen folgt, zeigt ihre aktuellen Werte in den Feldern ausgegraut, unter dem Satz „Die Beträge stammen aus den 4 Zeilen von Menge und Preis.“ Klicken Sie auf **Stattdessen Betrag verteilen**, um die Felder dieser Spalte freizugeben. Der Satz lautet dann „Eine Verteilung ersetzt die Beträge der Zeilen. Die Zeilen bleiben als Referenz erhalten.“ Die Sperre kehrt zurück, wenn Sie die Spalte, das Jahr oder das Feld wechseln
+- Eine Verteilung über eine aus Zeilen aufgebaute Spalte behält ihre Zeilen als Referenz. Siehe [Menge und Preis](#menge-und-preis)
 
 **Wie jede Spalte entstanden ist**:
 
@@ -331,12 +334,12 @@ Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die S
 
 #### Menge und Preis
 
-Bauen Sie eine Spalte aus Zeilen auf, statt ihre Beträge einzugeben. Jede Zeile liest sich wie ein Satz: eine Menge, eine Einheit, ein Stückpreis, wie oft, wann und nach welchem Kalender. Zum Beispiel ein externer Mitarbeiter in einem Build-Projekt in Vollzeit zu 400 pro Tag von Februar bis Oktober und 20 Laptops zu 1.200 pro Stück, einmalig gekauft am 15. März. Die Monate der Spalte sind die Summe ihrer Zeilen.
+Bauen Sie eine Spalte aus Zeilen auf, statt ihre Beträge einzugeben. Jede Zeile liest sich wie ein Satz: eine Menge, eine Einheit, ein Stückpreis, wie oft, wann und nach welchem Kalender. Zum Beispiel ein externer Mitarbeiter in einem Build-Projekt in Vollzeit zu 400 pro Tag von Februar bis Oktober und 20 Laptops zu 1.200 pro Stück, einmalig gekauft am 15. März. Die Monate der Spalte sind die Summe ihrer Zeilen. Die Beträge einer Spalte haben jeweils nur eine Quelle: ihre Zeilen, eine Verteilung, einen von Hand eingegebenen Monat oder eine Kopie. Die andere Quelle bleibt als schreibgeschützte Referenz sichtbar, mit einem Link zum Wechseln.
 
 **Den Tab öffnen**:
 
-- Tab **Jährlich**: Klicken Sie auf das Rechnersymbol neben dem Zeitraum unter einer Summe. Das Feld öffnet sich auf **Menge und Preis** für diese Spalte
-- Tab **Monatlich**: Klicken Sie oben im Feld auf **Menge und Preis**
+- Tab **Jährlich**: Klicken Sie auf das Rechnersymbol neben dem Zeitraum unter einer Summe. Das Feld öffnet sich auf **Menge und Preis** für diese Spalte. Bei einer Spalte, die ihren Zeilen folgt, öffnen auch der Stift und die Summe es
+- Tab **Monatlich**: Klicken Sie oben im Feld auf **Menge und Preis**. Wenn Sie eine Spalte wählen, die ihren Zeilen folgt, oder wenn die Standardspalte eine solche ist, wechselt das Feld auf **Menge und Preis**
 - Wählen Sie oben im Tab die **Spalte**. Eingefrorene Spalten können nicht gewählt werden
 
 **Die Zeilen**:
@@ -352,7 +355,9 @@ Bauen Sie eine Spalte aus Zeilen auf, statt ihre Beträge einzugeben. Jede Zeile
 | **Kalender** | Nur bei einem Preis pro Tag sichtbar: bei Personen mit Preis pro Tag und bei Tagen. Der Arbeitstagekalender, dessen Tage zählen. Die Liste bietet die aktivierten Kalender an, dazu den Kalender, den eine Zeile bereits verwendet, falls er inzwischen deaktiviert wurde, mit dem Zusatz „(deaktiviert)“. Gibt es noch keinen Kalender, zeigt der Tab „Noch kein Arbeitstagekalender vorhanden.“, mit einem Link **Kalender hinzufügen** für alle, die Kalender anlegen dürfen. Siehe [Arbeitstagekalender](working-day-calendars.md) |
 | **Betrag** | Die Summe der Zeile, sobald sie gespeichert ist. Schreibgeschützt |
 
-Ist der Tab breit genug, steht jede Zeile in einer Reihe. Auf einem schmaleren Bildschirm oder bei geöffnetem Bereich **Eigenschaften** auf einem 1080p-Bildschirm belegt jede Zeile zwei ausgerichtete Reihen, mit **Beschreibung**, **Menge**, **Einheit**, **Stückpreis** und **Betrag** in der ersten und **Wie oft**, **Von** und **Bis** (oder **Datum**) und **Kalender** in der zweiten; schließen Sie den Bereich **Eigenschaften**, um wieder eine Reihe pro Zeile zu erhalten.
+Jede Zeile hat am Rand eine Nummer. Hat die Spalte mehrere Zeilen, nennen die Hinweise unter der Tabelle sie, zum Beispiel „Zeile 2: Geben Sie Menge und Stückpreis ein, um diese Zeile zu speichern.“
+
+Ist der Tab breit genug, steht jede Zeile in einer Reihe. Auf einem schmaleren Bereich belegt jede Zeile zwei Reihen. Die erste liest sich wie eine Rechnung: **Beschreibung**, **Menge**, **Einheit**, × **Stückpreis** und **Betrag**. Die zweite liest sich wie ein Satz: **Wie oft**, „vom“ Datum „bis“ Datum (oder ein einzelnes **Datum**), „Kalender“ und der **Kalender**. Bei mittlerer Breite rückt **Wie oft** in die erste Reihe. Wenn Sie den Bereich **Eigenschaften** schließen, haben die Zeilen mehr Platz.
 
 Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzufügen, und auf das Kreuz am Ende einer Zeile, um sie zu entfernen. Eine Spalte enthält bis zu 50 Zeilen.
 
@@ -381,7 +386,7 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
 - Eine Zeile ist vollständig, wenn sie eine Menge, einen Stückpreis, einen gültigen Zeitraum oder ein gültiges Datum, bei Personen mit Preis pro Tag die Tage pro Monat oder **Vollzeit** und bei einem Preis pro Tag einen Kalender hat. Bis dahin bleibt sie mit einem Hinweis auf dem Bildschirm, zum Beispiel „Geben Sie Menge und Stückpreis ein, um diese Zeile zu speichern.“, „Geben Sie die Tage pro Monat ein oder wählen Sie Vollzeit.“ oder „Wählen Sie für einen Preis pro Tag einen Kalender.“, und die gespeicherten Zeilen ändern sich nicht
 - Das Entfernen der letzten Zeile entfernt die Zeilen der Spalte, und ihre Beträge bleiben unverändert. Eine aus ihren Zeilen berechnete Spalte gilt dann als von Hand eingegeben. Eine verteilte oder kopierte Spalte behält ihre Verteilung oder Kopie
 - Wird eine Speicherung abgelehnt, erscheint der Grund rot unter der Tabelle, und Ihre Eingabe bleibt stehen. Zum Beispiel „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“, wenn ein individueller Kalender das Jahr noch nicht enthält
-- Bei einer eingefrorenen Spalte sind die Zeilen schreibgeschützt
+- Bei einer eingefrorenen Spalte sind die Zeilen schreibgeschützt. Sie sind auch schreibgeschützt, solange die Spalte sie als Referenz behält, siehe nächster Teil
 
 **Unter der Tabelle**:
 
@@ -390,12 +395,12 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
 - Hinweise, wenn sie zutreffen: „Der Zeitraum reicht über die Daten der Position hinaus.“, ein inzwischen deaktivierter Kalender, zum Beispiel „Mitarbeitende am Hauptsitz ist deaktiviert. Die Zeilen verwenden ihn weiterhin.“, und seit der letzten Speicherung der Zeilen geänderte Arbeitstage
 - **Diese Zeilen auf alle Spalten anwenden**: ein Schalter für dieselben Spalten wie der Schalter im Tab für die Verteilung, hier standardmäßig ausgeschaltet. Das Einschalten schreibt die Zeilen sofort in jede folgende Spalte, und der Schalter bleibt eingeschaltet: Jede spätere Speicherung schreibt die Zeilen auch in diese Spalten. Das Ausschalten allein ändert nichts
 
-**Wenn sich die Beträge auf anderem Weg ändern**: Die Zeilen bleiben als Referenz bei der Spalte, und der Tab nennt, woher die Beträge jetzt stammen, gefolgt vom Link **Die Zeilen wieder verwenden**. Der Link speichert die Zeilen, wie sie sind, und berechnet die Spalte erneut aus ihnen.
+**Wenn sich die Beträge auf anderem Weg ändern**: Die Zeilen bleiben als Referenz bei der Spalte, und der Tab nennt, woher die Beträge jetzt stammen, gefolgt vom Link **Die Zeilen wieder verwenden**. Die Zeilen sind dann schreibgeschützt: Sie können keine Zeile hinzufügen, entfernen oder ändern, und der Tab zeigt weder einen Betrag pro Zeile noch VZÄ noch **Diese Zeilen auf alle Spalten anwenden**. Der Link speichert die Zeilen, wie sie sind, und berechnet die Spalte erneut aus ihnen, und die Zeilen sind wieder bearbeitbar. Um eine als Referenz behaltene Zeile zu ändern, klicken Sie zuerst auf **Die Zeilen wieder verwenden** und ändern Sie sie dann.
 
 - Ein im Tab **Monatlich** eingegebener Monat: „Die Beträge wurden von Hand eingegeben. Die Zeilen wieder verwenden.“
 - Eine Verteilung: „Die Beträge stammen aus einer Verteilung. Die Zeilen wieder verwenden.“
 - **Budgetspalten kopieren** in der Budgetadministration: „Die Beträge wurden aus Budget 2025 kopiert. Die Zeilen wieder verwenden.“ Die Kopie überträgt die Zeilen der Quellspalte zusammen mit den Beträgen. Siehe [Eine berechnete Spalte kopieren](budget-operations.md#eine-berechnete-spalte-kopieren)
-- Geänderte Arbeitstage eines Kalenders: „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19“. An der Spalte ändert sich nichts, bis Sie auf **Die Zeilen wieder verwenden** klicken
+- Geänderte Arbeitstage eines Kalenders: „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19“. An der Spalte ändert sich nichts, bis Sie auf **Die Zeilen wieder verwenden** klicken. Die Zeilen bleiben bis dahin bearbeitbar
 - **Budgetspalte zurücksetzen** in der Budgetadministration entfernt die Zeilen zusammen mit den Beträgen. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen)
 - Eine Budgetdatei ändert die Monate einer Spalte und lässt ihre Zeilen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
 

@@ -59,6 +59,9 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/ops\/tasks\/\d+/, 'tasks'],
   [/^\/ops\/tasks/, 'tasks'],
   [/^\/ops\/reports/, 'reports'],
+  [/^\/ops\/operations\/currency/, 'currencies'],
+  [/^\/ops\/operations\/master-data-freeze/, 'master-data-operations'],
+  [/^\/ops\/operations\/metrics-copy/, 'master-data-operations'],
   [/^\/ops\/operations/, 'budget-operations'],
   [/^\/ops$/, 'operations-dashboard'],
 
@@ -78,9 +81,7 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/master-data\/accounts/, 'chart-of-accounts'],
   [/^\/master-data\/coa/, 'chart-of-accounts'],
   [/^\/master-data\/analytics/, 'analytics'],
-  [/^\/master-data\/currency/, 'currencies'],
   [/^\/master-data\/working-day-calendars/, 'working-day-calendars'],
-  [/^\/master-data\/operations/, 'master-data-operations'],
 
   // Admin
   [/^\/admin\/users/, 'admin'],

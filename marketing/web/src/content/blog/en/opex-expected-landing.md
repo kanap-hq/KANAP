@@ -54,7 +54,7 @@ These hand-entered amounts are safe: part 2's automatic copy only fills empty ce
 
 ## Pro tip: currencies first
 
-KANAP handles multi-currency budgets, but set them up beforehand. In Master data → Finance → **Currency**, define the reporting currency, the default OPEX and CAPEX currencies and the list of allowed currencies. FX rates sync automatically per fiscal year. Each item keeps its currency; totals and reports convert to the reporting currency.
+KANAP handles multi-currency budgets, but set them up beforehand. In Budget management → Administration → **Currencies**, define the reporting currency, the default OPEX and CAPEX currencies and the list of allowed currencies. FX rates sync automatically per fiscal year. Each item keeps its currency; totals and reports convert to the reporting currency.
 
 ![Currency settings: reporting currency, allowed currencies and FX rates](/screenshots/blog/currency-settings.png)
 

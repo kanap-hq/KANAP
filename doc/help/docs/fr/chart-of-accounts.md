@@ -439,7 +439,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 ```
 
 **Remarques** :
-  - Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+  - Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
   - Le `coa_code` doit correspondre à un plan comptable existant de votre espace de travail
   - Les numéros de compte doivent être uniques au sein d'un CoA
   - Valeurs de statut : `enabled` ou `disabled` (enabled par défaut)

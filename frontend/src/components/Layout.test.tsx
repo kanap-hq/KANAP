@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Layout from './Layout';
 import { registerLeaveGuard } from '../hooks/leaveGuard';
 
@@ -10,11 +10,13 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
 }));
 
+// Every right by default; a test may narrow it to a set of readable resources.
+const access = vi.hoisted(() => ({ readable: null as Set<string> | null }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
     logout: vi.fn(),
     token: 'token',
-    hasLevel: () => true,
+    hasLevel: (resource: string) => access.readable === null || access.readable.has(resource),
     claims: { isGlobalAdmin: false, isPlatformAdmin: false, isBillingAdmin: false },
     profile: { first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.com' },
     // A trial in progress: the subscription banner shows.
@@ -150,5 +152,30 @@ describe('Layout links and a page with unsaved edits (lot 3C review)', () => {
     } finally {
       unregister();
     }
+  });
+});
+
+describe('Layout budget management sidebar', () => {
+  afterEach(() => {
+    access.readable = null;
+  });
+
+  it('shows the administration entry to a budget-only reader', () => {
+    access.readable = new Set(['budget_ops']);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/ops/operations']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/ops/operations" element={<div>landing</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.administration' })).toHaveAttribute('href', '/ops/operations');
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.opex' })).not.toBeInTheDocument();
   });
 });

@@ -1,11 +1,14 @@
 import React from 'react';
-import { Alert, Box, Button, Stack, TextField, Typography, Paper, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { Alert, Box, Button, Stack, TextField, Typography, Paper } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
 import { useTranslation } from 'react-i18next';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { updateCurrencySettings, CurrencySettings, refreshCurrencyRates } from '../../services/currency';
 import useCurrencyRates, { CurrencyRateRow } from '../../hooks/useCurrencyRates';
+import { useAuth } from '../../auth/AuthContext';
+import { PropertyRow } from '../../components/design/PropertyRow';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 function normalizeList(value: string): string[] | null {
   if (!value) return null;
@@ -17,8 +20,10 @@ function normalizeList(value: string): string[] | null {
 }
 
 export default function CurrencySettingsPage() {
-  const { t } = useTranslation(['ops']);
+  const { t } = useTranslation(['ops', 'common']);
   const queryClient = useQueryClient();
+  const { hasLevel } = useAuth();
+  const canEdit = hasLevel('budget_ops', 'admin');
   const { data, isLoading, isError } = useCurrencySettings();
   const { data: rateRows, isLoading: ratesLoading, isError: ratesError } = useCurrencyRates();
   const [reportingCurrency, setReportingCurrency] = React.useState('EUR');
@@ -53,9 +58,9 @@ export default function CurrencySettingsPage() {
     mutationFn: () => refreshCurrencyRates(),
     onSuccess: (result) => {
       if (result.alreadyQueued && !result.queued) {
-        setSuccessMessage('FX rates sync is already running in the background.');
+        setSuccessMessage(t('operations.currency.fxSyncRunning'));
       } else {
-        setSuccessMessage(`FX rates sync started for fiscal years ${result.years.join(', ')}. Rates will update shortly.`);
+        setSuccessMessage(t('operations.currency.fxSyncStarted', { years: result.years.join(', ') }));
       }
       queryClient.invalidateQueries({ queryKey: ['currency-rates'] });
       if (!result.alreadyQueued) {
@@ -67,11 +72,12 @@ export default function CurrencySettingsPage() {
   });
 
   const submitting = mutation.isPending;
-  const errorMessage = mutation.error instanceof Error ? mutation.error.message : mutation.error ? 'Failed to update settings' : null;
-  const syncError = syncMutation.error instanceof Error ? syncMutation.error.message : syncMutation.error ? 'Failed to refresh FX rates' : null;
+  const errorMessage = mutation.error ? getApiErrorMessage(mutation.error, t, t('operations.currency.failedToUpdate')) : null;
+  const syncError = syncMutation.error ? getApiErrorMessage(syncMutation.error, t, t('operations.currency.failedToRefreshFx')) : null;
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!canEdit) return;
     setSuccessMessage('');
     mutation.mutate({
       reportingCurrency: reportingCurrency.trim().toUpperCase(),
@@ -81,59 +87,82 @@ export default function CurrencySettingsPage() {
     });
   };
 
+  const fieldDisabled = isLoading || submitting;
+  const C = 'operations.currency';
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader title={t("operations.currency.title")} />
-      <Typography variant="body1" color="text.secondary">
-        {t('operations.currency.subtitle')}
+      <PageHeader title={t(`${C}.title`)} breadcrumbTitle={t(`${C}.title`)} />
+      <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 720 }}>
+        {t(`${C}.subtitle`)}
       </Typography>
-      {isError && <Alert severity="error">{t('operations.currency.loadError')}</Alert>}
+      {!canEdit && <Alert severity="info" sx={{ maxWidth: 720 }}>{t('operations.budgetAdminOnly')}</Alert>}
+      {isError && <Alert severity="error">{t(`${C}.loadError`)}</Alert>}
       {successMessage && <Alert severity="success">{successMessage}</Alert>}
-      {syncMutation.isPending && <Alert severity="info">Refreshing FX rates…</Alert>}
+      {syncMutation.isPending && <Alert severity="info">{t(`${C}.refreshingFx`)}</Alert>}
       {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
       {syncError && <Alert severity="error">{syncError}</Alert>}
-      <Box component="form" onSubmit={handleSubmit} noValidate>
-        <Stack spacing={2} sx={{ maxWidth: 520 }}>
-          <TextField
-            label="Reporting Currency"
-            value={reportingCurrency}
-            onChange={(e) => setReportingCurrency(e.target.value)}
-            inputProps={{ maxLength: 3 }}
-            required
-            disabled={isLoading || submitting}
-            helperText={t('operations.currency.reportingCurrencyHelp')}
-          />
-          <TextField
-            label="Default OPEX Currency"
-            value={defaultSpendCurrency}
-            onChange={(e) => setDefaultSpendCurrency(e.target.value)}
-            inputProps={{ maxLength: 3 }}
-            required
-            disabled={isLoading || submitting}
-            helperText={t('operations.currency.defaultOpexCurrencyHelp')}
-          />
-          <TextField
-            label="Default CAPEX Currency"
-            value={defaultCapexCurrency}
-            onChange={(e) => setDefaultCapexCurrency(e.target.value)}
-            inputProps={{ maxLength: 3 }}
-            required
-            disabled={isLoading || submitting}
-            helperText={t('operations.currency.defaultCapexCurrencyHelp')}
-          />
-          <TextField
-            label="Allowed Currencies"
-            value={allowedCurrencies}
-            onChange={(e) => setAllowedCurrencies(e.target.value)}
-            disabled={isLoading || submitting}
-            helperText={t('operations.currency.allowedCurrenciesHelp')}
-          />
-          <Stack direction="row" spacing={1}>
+      <Paper variant="outlined" component="form" onSubmit={handleSubmit} noValidate sx={{ p: 2, maxWidth: 640 }}>
+        <Stack spacing={1}>
+          <PropertyRow label={t(`${C}.reportingCurrency`)} helperText={t(`${C}.reportingCurrencyHelp`)} required>
+            <TextField
+              variant="standard"
+              value={reportingCurrency}
+              onChange={(e) => setReportingCurrency(e.target.value)}
+              inputProps={{ maxLength: 3, 'aria-label': t(`${C}.reportingCurrency`) }}
+              required
+              disabled={fieldDisabled}
+              InputProps={{ readOnly: !canEdit }}
+              placeholder="EUR"
+              sx={{ width: 120 }}
+            />
+          </PropertyRow>
+          <PropertyRow label={t(`${C}.defaultOpexCurrency`)} helperText={t(`${C}.defaultOpexCurrencyHelp`)} required>
+            <TextField
+              variant="standard"
+              value={defaultSpendCurrency}
+              onChange={(e) => setDefaultSpendCurrency(e.target.value)}
+              inputProps={{ maxLength: 3, 'aria-label': t(`${C}.defaultOpexCurrency`) }}
+              required
+              disabled={fieldDisabled}
+              InputProps={{ readOnly: !canEdit }}
+              placeholder="EUR"
+              sx={{ width: 120 }}
+            />
+          </PropertyRow>
+          <PropertyRow label={t(`${C}.defaultCapexCurrency`)} helperText={t(`${C}.defaultCapexCurrencyHelp`)} required>
+            <TextField
+              variant="standard"
+              value={defaultCapexCurrency}
+              onChange={(e) => setDefaultCapexCurrency(e.target.value)}
+              inputProps={{ maxLength: 3, 'aria-label': t(`${C}.defaultCapexCurrency`) }}
+              required
+              disabled={fieldDisabled}
+              InputProps={{ readOnly: !canEdit }}
+              placeholder="EUR"
+              sx={{ width: 120 }}
+            />
+          </PropertyRow>
+          <PropertyRow label={t(`${C}.allowedCurrencies`)} helperText={t(`${C}.allowedCurrenciesHelp`)}>
+            <TextField
+              variant="standard"
+              value={allowedCurrencies}
+              onChange={(e) => setAllowedCurrencies(e.target.value)}
+              inputProps={{ 'aria-label': t(`${C}.allowedCurrencies`) }}
+              disabled={fieldDisabled}
+              InputProps={{ readOnly: !canEdit }}
+              placeholder="EUR, USD, GBP"
+              fullWidth
+            />
+          </PropertyRow>
+        </Stack>
+        {canEdit && (
+          <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
             <Button type="submit" variant="contained" disabled={isLoading || submitting || syncMutation.isPending}>
-              Save Changes
+              {t('common:buttons.save')}
             </Button>
             <Button
-              variant="outlined"
+              variant="action"
               disabled={isLoading || submitting || syncMutation.isPending}
               onClick={() => {
                 if (!data) return;
@@ -144,10 +173,10 @@ export default function CurrencySettingsPage() {
                 setSuccessMessage('');
               }}
             >
-              Reset
+              {t('common:buttons.reset')}
             </Button>
             <Button
-              variant="text"
+              variant="action"
               disabled={isLoading || syncMutation.isPending}
               onClick={() => {
                 setSuccessMessage('');
@@ -155,12 +184,12 @@ export default function CurrencySettingsPage() {
                 syncMutation.mutate();
               }}
             >
-              Force FX rates sync
+              {t(`${C}.forceFxSync`)}
             </Button>
           </Stack>
-        </Stack>
-      </Box>
-      <CurrencyRatesTable rows={rateRows} loading={ratesLoading} error={ratesError} />
+        )}
+      </Paper>
+      <CurrencyRatesTable rows={rateRows} loading={ratesLoading} error={ratesError} canSync={canEdit} />
     </Box>
   );
 }
@@ -169,17 +198,34 @@ type RatesTableProps = {
   rows: CurrencyRateRow[] | undefined;
   loading: boolean;
   error: boolean;
+  /** The empty state points at the sync action only for those who can run it. */
+  canSync: boolean;
 };
 
-function CurrencyRatesTable({ rows, loading, error }: RatesTableProps) {
+const SOURCE_LABEL_KEYS: Record<string, string> = {
+  'exchangerateapi-spot': 'liveSpot',
+  'world-bank-quarterly': 'quarterlyAvg',
+  'world-bank-forward': 'forwardEstimate',
+};
+
+const headSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', px: 1, py: 0.75, whiteSpace: 'nowrap', verticalAlign: 'bottom' } as const;
+const cellSx = { px: 1, py: 0.75, fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums' } as const;
+
+function CurrencyRatesTable({ rows, loading, error, canSync }: RatesTableProps) {
+  const { t } = useTranslation(['ops']);
+  const C = 'operations.currency';
   if (loading) {
-    return <Alert severity="info">Loading FX rates…</Alert>;
+    return <Alert severity="info">{t(`${C}.loadingRates`)}</Alert>;
   }
   if (error) {
-    return <Alert severity="error">Failed to load FX rate history.</Alert>;
+    return <Alert severity="error">{t(`${C}.loadRatesError`)}</Alert>;
   }
   if (!rows || rows.length === 0) {
-    return <Alert severity="warning">No FX rate snapshots captured yet. Run “Force FX rates sync” to create one.</Alert>;
+    return (
+      <Alert severity="warning">
+        {canSync ? `${t(`${C}.noRatesYet`)} ${t(`${C}.noRatesHint`)}` : t(`${C}.noRatesYet`)}
+      </Alert>
+    );
   }
 
   const years = Array.from(new Set(rows.map((r) => r.fiscalYear))).sort((a, b) => a - b);
@@ -198,54 +244,52 @@ function CurrencyRatesTable({ rows, loading, error }: RatesTableProps) {
   });
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, maxWidth: '100%', overflowX: 'auto' }}>
-      <Typography variant="subtitle2" sx={{ mb: 1 }}>
-        Latest FX Rate Snapshots (per fiscal year, tenant reporting currency basis)
+    <Paper variant="outlined" sx={{ p: 2, maxWidth: '100%' }}>
+      <Typography component="h2" sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary', mb: 1 }}>
+        {t(`${C}.fxRatesTitle`)}
       </Typography>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ fontWeight: 600 }}>Currency</TableCell>
-            {years.map((year) => {
-              const source = rows.find((r) => r.fiscalYear === year)?.source ?? 'world-bank';
-              const sourceLabel =
-                source === 'exchangerateapi-spot'
-                  ? 'Live spot'
-                  : source === 'world-bank-quarterly'
-                    ? 'Quarterly avg'
-                    : source === 'world-bank-forward'
-                      ? 'Forward estimate'
-                      : 'Annual avg';
-              return (
-                <TableCell key={year} align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                  <Stack spacing={0.5} alignItems="flex-end">
-                    <span>{year}</span>
-                    <Typography variant="caption" color="text.secondary">
-                      {sourceLabel}
-                    </Typography>
-                  </Stack>
-                </TableCell>
-              );
-            })}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {matrix.map((row) => (
-            <TableRow key={row.code}>
-              <TableCell sx={{ fontFamily: 'monospace' }}>{row.code}</TableCell>
+      <Box sx={{ overflowX: 'auto' }}>
+        <Box
+          component="table"
+          sx={{
+            borderCollapse: 'collapse',
+            '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' },
+            '& tbody td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' },
+          }}
+        >
+          <Box component="thead">
+            <Box component="tr">
+              <Box component="th" sx={{ ...headSx, textAlign: 'left' }}>{t(`${C}.currencyCol`)}</Box>
               {years.map((year) => {
-                const value = row.entries[year];
-                const display = value != null ? value.toFixed(6) : '—';
+                const source = rows.find((r) => r.fiscalYear === year)?.source ?? 'world-bank';
+                const sourceLabel = t(`${C}.${SOURCE_LABEL_KEYS[source] ?? 'annualAvg'}`);
                 return (
-                  <TableCell key={year} align="right">
-                    {display}
-                  </TableCell>
+                  <Box component="th" key={year} sx={{ ...headSx, textAlign: 'right' }}>
+                    <Box sx={{ color: 'kanap.text.secondary', fontVariantNumeric: 'tabular-nums' }}>{year}</Box>
+                    <Box sx={{ fontSize: 11, fontWeight: 400 }}>{sourceLabel}</Box>
+                  </Box>
                 );
               })}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+            </Box>
+          </Box>
+          <Box component="tbody">
+            {matrix.map((row) => (
+              <Box component="tr" key={row.code}>
+                <Box component="td" sx={{ ...cellSx, fontFamily: 'monospace', color: 'kanap.text.secondary' }}>{row.code}</Box>
+                {years.map((year) => {
+                  const value = row.entries[year];
+                  const display = value != null ? value.toFixed(6) : '—';
+                  return (
+                    <Box component="td" key={year} sx={{ ...cellSx, textAlign: 'right' }}>
+                      {display}
+                    </Box>
+                  );
+                })}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      </Box>
     </Paper>
   );
 }

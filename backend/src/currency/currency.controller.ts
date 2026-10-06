@@ -1,12 +1,21 @@
 import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
-import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
+import { RequireAnyLevel, RequireLevel, RequireAnyLevelMeta } from '../auth/require-level.decorator';
 import { CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
 import { EntityManager, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CurrencyRateSet } from './currency-rate-set.entity';
+
+// Currencies are a budget setting: every budget reader sees them (the OPEX and
+// CAPEX forms read the default and allowed currencies of their currency picker),
+// budget administrators change them.
+const CURRENCY_READERS: RequireAnyLevelMeta = [
+  { resource: 'budget_ops', level: 'reader' },
+  { resource: 'opex', level: 'reader' },
+  { resource: 'capex', level: 'reader' },
+];
 
 @UseGuards(JwtAuthGuard)
 @Controller('currency')
@@ -26,14 +35,9 @@ export class CurrencyController {
     return tenantId;
   }
 
-  // The OPEX and CAPEX forms read the default and allowed currencies of their currency picker.
   @Get('settings')
   @UseGuards(PermissionGuard)
-  @RequireAnyLevel([
-    { resource: 'settings', level: 'reader' },
-    { resource: 'opex', level: 'reader' },
-    { resource: 'capex', level: 'reader' },
-  ])
+  @RequireAnyLevel(CURRENCY_READERS)
   async getSettings(@Req() req: any) {
     const tenantId = this.requireTenantId(req);
     return this.settings.getSettings(tenantId, { manager: req?.queryRunner?.manager });
@@ -41,7 +45,7 @@ export class CurrencyController {
 
   @Patch('settings')
   @UseGuards(PermissionGuard)
-  @RequireLevel('settings', 'admin')
+  @RequireLevel('budget_ops', 'admin')
   async updateSettings(@Body() body: any, @Req() req: any) {
     const tenantId = this.requireTenantId(req);
     const payload: any = {};
@@ -63,7 +67,7 @@ export class CurrencyController {
 
   @Get('rates')
   @UseGuards(PermissionGuard)
-  @RequireLevel('settings', 'reader')
+  @RequireAnyLevel(CURRENCY_READERS)
   async listRates(@Req() req: any) {
     const tenantId = this.requireTenantId(req);
     const entityManager = req?.queryRunner?.manager ?? this.rateSets.manager;
@@ -95,7 +99,7 @@ export class CurrencyController {
 
   @Post('rates/refresh')
   @UseGuards(PermissionGuard)
-  @RequireLevel('settings', 'admin')
+  @RequireLevel('budget_ops', 'admin')
   async refreshRates(@Body() body: { years?: number[]; year?: number } | undefined, @Req() req: any) {
     const tenantId = this.requireTenantId(req);
     const requested = Array.isArray(body?.years) && body?.years.length

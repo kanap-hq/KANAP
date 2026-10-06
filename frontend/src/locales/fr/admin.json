@@ -521,20 +521,6 @@
     },
     "title": "Administration"
   },
-  "masterDataOperations": {
-    "cards": {
-      "copy": {
-        "description": "Copier les master data entre espaces de travail.",
-        "title": "Copier"
-      },
-      "freeze": {
-        "description": "Geler les master data pour empêcher les modifications.",
-        "title": "Geler"
-      }
-    },
-    "subtitle": "Exécuter des opérations de master data à l'échelle de la plateforme.",
-    "title": "Opérations sur les master data"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",

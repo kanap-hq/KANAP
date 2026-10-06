@@ -85,7 +85,7 @@ Der Details-Tab verwaltet jahresbezogene Mitarbeiterzahl-Kennzahlen.
 - Die Mitarbeiterzahl wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen (oder Enter drücken). Alles andere als eine ganze Zahl von 0 oder mehr zeigt „Geben Sie eine ganze Zahl ein, 0 oder mehr." unter dem Feld
 - Die Mitarbeiterzahl fließt in Zielgruppenberechnungen für Anwendungen ein
 - Jedes Jahr wird für sich gespeichert: Ein Jahreswechsel lädt den Wert dieses Jahres
-- Wenn die Kennzahlen für das ausgewählte Jahr von einem Administrator **eingefroren** wurden, ist das Feld gesperrt und ein Hinweis erklärt, wie die Sperre aufgehoben werden kann
+- Wenn die Kennzahlen für das ausgewählte Jahr von einem Administrator **eingefroren** wurden, ist das Feld gesperrt und ein Hinweis besagt, dass ein Budgetadministrator die Sperre aufheben kann (**Budgetverwaltung > Administration > Stammdaten einfrieren**)
 
 **Tipp**: Aktualisieren Sie die Mitarbeiterzahl jährlich während Ihres Budgetplanungszyklus. Verwenden Sie die Jahrreiter, um zukünftige Jahre zu überprüfen oder vorzufüllen.
 
@@ -119,7 +119,7 @@ Die Spalten:
 - Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“
 
 **Hinweise**:
-- Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 - Die Mitarbeiterzahl steht nicht in der Datei. Erfassen Sie sie pro Jahr im **Details-Tab** der Abteilung
 
 ## Tipps

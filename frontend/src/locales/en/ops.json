@@ -489,6 +489,10 @@
   "operations": {
     "title": "Administration",
     "subtitle": "Powerful tools to manage and transform your budget data across different years and columns.",
+    "sections": {
+      "settings": "Settings",
+      "operations": "Operations"
+    },
     "cards": {
       "freezeTitle": "Freeze / unfreeze data",
       "freezeDesc": "Lock budget columns or headcount metrics for a specific year",
@@ -501,7 +505,13 @@
       "allocationDefaultTitle": "Default allocation method",
       "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX items left on the default allocation",
       "budgetColumnsTitle": "Budget columns",
-      "budgetColumnsDesc": "Name the five budget columns, choose which ones are shown and which one is the default"
+      "budgetColumnsDesc": "Name the five budget columns, choose which ones are shown and which one is the default",
+      "currencyTitle": "Currencies",
+      "currencyDesc": "Set the reporting and default currencies, and review the FX rates",
+      "masterDataFreezeTitle": "Freeze master data",
+      "masterDataFreezeDesc": "Lock company and department metrics for a specific year",
+      "metricsCopyTitle": "Copy yearly metrics",
+      "metricsCopyDesc": "Copy company and department metrics from one year to another"
     },
     "allocationDefault": {
       "title": "Default allocation method",
@@ -678,7 +688,8 @@
       "fxRatesTitle": "Latest FX rate snapshots (per fiscal year, tenant reporting currency basis)",
       "loadingRates": "Loading FX rates…",
       "loadRatesError": "Failed to load FX rate history.",
-      "noRatesYet": "No FX rate snapshots captured yet. Run \"Force FX rates sync\" to create one.",
+      "noRatesYet": "No FX rate snapshots captured yet.",
+      "noRatesHint": "Run \"Force FX rates sync\" to create one.",
       "currencyCol": "Currency",
       "liveSpot": "Live spot",
       "quarterlyAvg": "Quarterly avg",

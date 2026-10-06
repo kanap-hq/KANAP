@@ -167,7 +167,7 @@ Un rôle nommé par le fichier et absent de votre espace de travail est créé p
 
 Le fichier ne contient ni date ni montant. Un import ne définit aucun mot de passe : un nouvel utilisateur se connecte après une invitation ou une réinitialisation de mot de passe.
 
-Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur et les deux étapes d'import.
+Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import.
 
 ### Créer un utilisateur
 
@@ -252,7 +252,7 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 |-----------|---------------------|
 | `opex` | Dépenses opérationnelles |
 | `capex` | Dépenses d'investissement |
-| `budget_ops` | Outils d'administration budgétaire |
+| `budget_ops` | Outils d'administration budgétaire, dont les paramètres de devises |
 | `contracts` | Contrats fournisseurs |
 | `analytics` | Dimensions analytiques |
 | `reporting` | Accès aux rapports |
@@ -272,7 +272,7 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 | `applications` | Applications |
 | `infrastructure` | Serveurs et infrastructure |
 | `locations` | Données de référence des sites |
-| `settings` | Paramètres des applications |
+| `settings` | Paramètres de la cartographie SI uniquement |
 
 **Données de référence**
 | Ressource | Ce qu'elle contrôle |

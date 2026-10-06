@@ -12,7 +12,7 @@
 
 ## Currency Settings (UI)
 
-Path: **Master Data → Currency**
+Path: **Budget management → Administration → Settings → Currencies** (`/ops/operations/currency`; the old `/master-data/currency` redirects there)
 
 The page exposes three inputs and an optional list:
 
@@ -23,9 +23,11 @@ The page exposes three inputs and an optional list:
 | Default CAPEX currency | Pre-filled in the CAPEX editor. |
 | Allowed currencies (optional) | Comma-separated ISO codes. The OPEX and CAPEX selectors will limit their dropdown to this set plus the reporting/default currencies. Leave blank for the full list of ISO currencies. |
 
+Permissions: budget readers (`budget_ops:reader`) see the page read-only; budget administrators (`budget_ops:admin`) change the settings and run the FX sync. The API also lets OPEX and CAPEX readers read the settings and rates (their forms' currency picker), and the page opens for them read-only. The empty FX rates table suggests the sync only to budget administrators.
+
 The panel also contains two actions:
 
-1. **Save Changes** – persists the settings to `tenants.metadata`, upserts any missing ISO codes into the shared `currencies` table, and refreshes totals that depend on the reporting currency.
+1. **Save** – persists the settings to `tenants.metadata`, upserts any missing ISO codes into the shared `currencies` table, and refreshes totals that depend on the reporting currency.
 2. **Force FX rates sync** – downloads the latest World Bank FX dataset (`PA.NUS.FCRF`) for historical averages, fetches a live spot quote for the current year (via `FX_SPOT_BASE_URL`/`FX_SPOT_API_KEY`), computes cross‑rates for every tenant currency (plus the reporting currency, EUR, and USD), and stores them in `currency_rate_sets`. Historic fiscal years use the published annual average; the current year uses the live spot rate and falls back to the latest annual value; future years reuse the current‑year value and mark the snapshot as a forward estimate. Run this after changing the reporting currency or before freezing a new budget year. The sync automatically backfills the earliest budget year with non‑zero spend/CAPEX data alongside the requested horizon. If upstream feeds do not return a value we log a warning and capture `null` for that currency so downstream conversions fall back to identity until data is available.
    - Environment overrides: set `WB_BASE_URL` to route through a proxy and `WB_CACHE_TTL_MS` (milliseconds) to adjust the in-memory cache window (defaults to 6 hours).
    - CSV cache overrides: `WB_CSV_URL` (alternate download host), `WB_CSV_CACHE_TTL_MS` (milliseconds, defaults to 30 days), `WB_CACHE_DIR` (directory for the extracted CSV).
@@ -65,7 +67,7 @@ Snapshot rules:
 
 | Task | Command/UI |
 |------|------------|
-| Change reporting/default currencies | Budget Management → Currency Settings → Save Changes |
+| Change reporting/default currencies | Budget management → Administration → Currencies → Save |
 | Force refresh FX rates | Budget Management → Currency Settings → Force FX rates sync <br> *(backend: `POST /currency/rates/refresh` with optional `{ "years": [2026, 2027] }`)* |
 | Verify rate sets | `SET LOCAL app.current_tenant = '<tenant_id>'; SELECT fiscal_year, base_currency, rates FROM currency_rate_sets ORDER BY captured_at DESC;` *(Basis of the table shown on the Currency Settings page)* |
 | Freeze workflow | 1. Force sync (optional). <br> 2. Freeze year via Budget Management → Freeze Data or API. <br> 3. Confirm `spend_versions.fx_rate_set_id` (or `capex_versions`) is populated for the frozen year. |

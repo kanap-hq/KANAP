@@ -59,7 +59,9 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 - [OPEX](opex.md) - Manage recurring IT costs and allocations
 - [CAPEX](capex.md) - Track capital expenditure projects
 - [Contracts](contracts.md) - Manage vendor contracts and renewals
-- [Budget Administration](budget-operations.md) - Freeze, copy, and manage budget data
+- [Budget Administration](budget-operations.md) - Budget settings, freeze, copy, and reset operations
+- [Currencies](currencies.md) - Reporting and default currencies, FX rates
+- [Freeze master data and copy yearly metrics](master-data-operations.md) - Lock and roll forward company and department metrics
 - [Reports](reports.md) - Generate budget and chargeback reports
 
 ### Master Data
@@ -78,13 +80,12 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 **Finance**
 
 - [Chart of Accounts](chart-of-accounts.md) - Configure financial accounts
-- [Currencies](currencies.md) - Configure currency settings
 - [Working-day calendars](working-day-calendars.md) - Working days of each month, from a country's public holidays or entered by hand, for lines priced per day
+- [Analytics dimensions](analytics.md) - Set up reporting dimensions
 
 **Classification**
 
 - [Business Processes](business-processes.md) - Document business process hierarchy
-- [Analytics dimensions](analytics.md) - Set up reporting dimensions
 
 ### Plaid
 
@@ -108,7 +109,6 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 - [Usage & costs](ai-usage.md) - AI usage and real costs across chat and agents, by agent and by model
 - [Integrations](integrations.md) - Connect GLPI for ticket import and for agents
 - [Scheduled Tasks](scheduled-tasks.md) - Review and manage recurring background jobs
-- [Master Data Administration](master-data-operations.md) - Freeze and copy master data
 - [Budget management overview](operations-dashboard.md) - OPEX and CAPEX snapshots, deadlines and quick actions
 
 ### Deployment & Operations

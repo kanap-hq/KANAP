@@ -5,9 +5,19 @@ Die Budget-Administration bietet Ihnen eine Reihe von Werkzeugen zur Verwaltung 
 ## Wo Sie es finden
 
 - Pfad: **Budgetverwaltung > Administration**
-- Berechtigungen: Die meisten Operationen erfordern `budget_ops:admin`
+- Berechtigungen: Die Seite öffnet sich für Leser der Budgetadministration, von OPEX oder CAPEX. Die meisten Vorgänge erfordern `budget_ops:admin`.
 
-Die Startseite zeigt sechs Karten, die jeweils zu einem dedizierten Werkzeug führen:
+Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug. Sie sehen nur die Karten, die Ihr Zugriff erlaubt, und ein leerer Abschnitt wird ausgeblendet.
+
+**Einstellungen**
+
+| Werkzeug | Zweck |
+|----------|-------|
+| **Währungen** | Die Reporting- und Standardwährungen festlegen und die Wechselkurse prüfen. Siehe [Währungseinstellungen](currencies.md) |
+| **Budgetspalten** | Die fünf Budgetspalten benennen, die angezeigten Spalten und die Standardspalte wählen |
+| **Standard-Zuordnungsmethode** | Die Methode festlegen, der OPEX- und CAPEX-Positionen standardmäßig folgen |
+
+**Vorgänge**
 
 | Werkzeug | Zweck |
 |----------|-------|
@@ -15,8 +25,10 @@ Die Startseite zeigt sechs Karten, die jeweils zu einem dedizierten Werkzeug fü
 | **Budgetspalten kopieren** | Daten zwischen Jahren und Spalten mit Anpassungen kopieren |
 | **Zuordnungen kopieren** | Zuordnungsmethoden von einem Jahr in ein anderes kopieren |
 | **Budgetspalte zurücksetzen** | Alle Daten einer bestimmten Spalte löschen |
-| **Standard-Zuordnungsmethode** | Die Methode festlegen, der OPEX- und CAPEX-Positionen standardmäßig folgen |
-| **Budgetspalten** | Die fünf Budgetspalten benennen, die angezeigten Spalten und die Standardspalte wählen |
+| **Stammdaten einfrieren** | Die Kennzahlen der Unternehmen und Abteilungen für ein Jahr sperren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
+| **Jahreskennzahlen kopieren** | Die Kennzahlen der Unternehmen und Abteilungen von einem Jahr in ein anderes kopieren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
+
+Die Karte Währungen öffnet sich für Leser der Budgetadministration, von OPEX oder CAPEX, die die Seite schreibgeschützt sehen. Die anderen Karten öffnen sich für OPEX-Leser. Eine Einstellung zu ändern oder einen Vorgang zu starten erfordert Administratorzugriff auf die Budgetadministration. Bei **Stammdaten einfrieren** und **Jahreskennzahlen kopieren** können auch Administratoren von Unternehmen oder Abteilungen für ihren Bereich handeln.
 
 Die Budgetspalten sind Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert. Das sind die Standardnamen. Ihre Organisation kann sie umbenennen, einige ausblenden und unter [Budgetspalten](#budgetspalten) eine Standardspalte wählen. Jede der folgenden Seiten zeigt die Namen, die Ihre Organisation gewählt hat.
 
@@ -145,7 +157,7 @@ Eine Spalte kann aus Zeilen aufgebaut sein, jede eine Menge mal ein Stückpreis.
 - Die Monate werden wie bei jeder anderen Spalte kopiert. Die prozentuale Erhöhung gilt nur für die kopierten Beträge. Die Zeilen behalten ihre Stückpreise
 - Eine Kopie aus einer Spalte ohne Zeilen lässt das Ziel ohne Zeilen, und seine VZÄ bleiben leer
 - Im Budget-Tab zeigt die Zielspalte „Kopiert aus Budget 2026“, und ihr Tab **Menge und Preis** meldet „Die Beträge wurden aus Budget 2026 kopiert. Die Zeilen wieder verwenden.“
-- Um das Zieljahr zu eigenen Preisen zu planen, öffnen Sie den Budget-Tab der Position und ändern Sie die Stückpreise im Tab **Menge und Preis**: Jede Änderung berechnet die Spalte erneut aus den Zeilen. Um die Preise zu behalten, klicken Sie auf **Die Zeilen wieder verwenden**. Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält: Ein Standardkalender enthält es immer, ein individueller Kalender unter Umständen nicht, zum Beispiel „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“
+- Die kopierten Zeilen sind eine schreibgeschützte Referenz. Klicken Sie im Budget-Tab der Position im Tab **Menge und Preis** auf **Die Zeilen wieder verwenden**, um die Spalte mit ihren aktuellen Preisen aus den Zeilen zu berechnen. Um das Zieljahr zu eigenen Preisen zu planen, ändern Sie danach die Stückpreise: Jede Änderung berechnet die Spalte erneut. Eine Zeile mit Preis pro Tag braucht einen Kalender, der das Zieljahr enthält: Ein Standardkalender enthält es immer, ein individueller Kalender unter Umständen nicht, zum Beispiel „Mitarbeitende am Hauptsitz has no working days for 2027. Add them on the Working-day calendars page.“
 
 ### Schutz eingefrorener Spalten
 

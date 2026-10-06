@@ -13,16 +13,12 @@
       "suppliersDescription": "Manage supplier information",
       "coaTitle": "Charts of accounts",
       "coaDescription": "Manage charts of accounts and accounts",
-      "currencyTitle": "Currency",
-      "currencyDescription": "Configure reporting and default currencies",
       "workingDayCalendarsTitle": "Working-day calendars",
       "workingDayCalendarsDescription": "Set the working days of each month for lines priced per day",
       "businessProcessesTitle": "Business processes",
       "businessProcessesDescription": "Manage core ISO 9001-style business processes",
       "analyticsDimensionsTitle": "Analytics dimensions",
-      "analyticsDimensionsDescription": "Configure analytics dimensions",
-      "administrationTitle": "Administration",
-      "administrationDescription": "Freeze, copy, and manage master data across years"
+      "analyticsDimensionsDescription": "Configure analytics dimensions"
     }
   },
   "shared": {
@@ -73,7 +69,7 @@
       "failedToSaveMetrics": "Failed to save metrics",
       "fixValidationErrors": "Please fix validation errors before saving.",
       "readOnlyAccess": "You need manager access to edit {{entity}}.",
-      "metricsFrozen": "Metrics for {{year}} are frozen. Unfreeze them from Administration to make changes.",
+      "metricsFrozen": "Metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
       "metricsYearHint": "Each value is saved for the selected year when you leave its field. Switch years to review past data."
     }
   },
@@ -625,7 +621,7 @@
   },
   "admin": {
     "copy": {
-      "title": "Master data copy",
+      "title": "Copy yearly metrics",
       "subtitle": "Copy company and department metrics between years with a dry run preview",
       "sourceYear": "Source year",
       "destinationYear": "Destination year",
@@ -678,7 +674,7 @@
       "copyingBtn": "Copying…"
     },
     "freeze": {
-      "title": "Freeze / unfreeze data",
+      "title": "Freeze master data",
       "noPermission": "You need the appropriate permissions to freeze or unfreeze master data. You can still review the current status below.",
       "loadError": "Failed to load freeze status. Try selecting a different year.",
       "frozenSuccessfully": "Data frozen successfully.",

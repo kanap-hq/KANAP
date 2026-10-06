@@ -85,7 +85,7 @@ L'onglet Détails gère les métriques d'effectif année par année.
 - L'effectif est enregistré pour l'année sélectionnée quand vous quittez le champ (ou appuyez sur Entrée). Toute valeur autre qu'un nombre entier de zéro ou plus affiche « Saisissez un nombre entier, 0 ou plus. » sous le champ
 - L'effectif alimente les calculs d'audience pour les applications
 - Chaque année est enregistrée séparément : changer d'année charge la valeur de cette année
-- Si les métriques pour l'année sélectionnée ont été **gelées** (par un administrateur), le champ est verrouillé et un avis explique comment dégeler
+- Si les métriques pour l'année sélectionnée ont été **gelées** (par un administrateur), le champ est verrouillé et un avis indique qu'un administrateur budgétaire peut les dégeler (**Gestion budgétaire > Administration > Geler les données de référence**)
 
 **Conseil** : Mettez à jour l'effectif annuellement lors de votre cycle de planification budgétaire. Utilisez les onglets d'année pour consulter ou pré-remplir les années futures.
 
@@ -119,7 +119,7 @@ Les colonnes :
 - Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
 
 **Notes** :
-- Voir [Fichiers CSV](master-data-operations.md#fichiers-csv) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 - L'effectif n'est pas dans le fichier. Saisissez-le par année dans l'onglet **Détails** du département
 
 ## Conseils

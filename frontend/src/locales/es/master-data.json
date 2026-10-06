@@ -13,16 +13,12 @@
       "suppliersDescription": "Gestione la información de proveedores",
       "coaTitle": "Planes de cuentas",
       "coaDescription": "Gestione los planes de cuentas y las cuentas",
-      "currencyTitle": "Moneda",
-      "currencyDescription": "Configure las monedas de reporte y por defecto",
       "workingDayCalendarsTitle": "Calendarios laborales",
       "workingDayCalendarsDescription": "Defina los días laborables de cada mes para las líneas con precio por día",
       "businessProcessesTitle": "Procesos de negocio",
       "businessProcessesDescription": "Gestione los procesos de negocio de tipo ISO 9001",
       "analyticsDimensionsTitle": "Dimensiones analíticas",
-      "analyticsDimensionsDescription": "Configure las dimensiones analíticas",
-      "administrationTitle": "Administración",
-      "administrationDescription": "Congele, copie y gestione los datos maestros entre años"
+      "analyticsDimensionsDescription": "Configure las dimensiones analíticas"
     }
   },
   "shared": {
@@ -73,7 +69,7 @@
       "failedToSaveMetrics": "Error al guardar los indicadores",
       "fixValidationErrors": "Corrija los errores de validación antes de guardar.",
       "readOnlyAccess": "Necesita acceso de gestor para editar {{entity}}.",
-      "metricsFrozen": "Los indicadores de {{year}} están congelados. Descongélelos desde Administración para realizar cambios.",
+      "metricsFrozen": "Los indicadores de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
       "metricsYearHint": "Cada valor se guarda para el año seleccionado al salir de su campo. Cambie de año para revisar los datos anteriores."
     }
   },
@@ -625,7 +621,7 @@
   },
   "admin": {
     "copy": {
-      "title": "Copia de datos maestros",
+      "title": "Copiar indicadores anuales",
       "subtitle": "Copie los indicadores de empresas y departamentos entre años con una vista previa de simulación",
       "sourceYear": "Año de origen",
       "destinationYear": "Año de destino",
@@ -678,7 +674,7 @@
       "copyingBtn": "Copiando…"
     },
     "freeze": {
-      "title": "Congelar / Descongelar datos",
+      "title": "Congelar datos maestros",
       "noPermission": "Necesita los permisos adecuados para congelar o descongelar los datos maestros. Aún puede revisar el estado actual a continuación.",
       "loadError": "Error al cargar el estado de congelación. Intente seleccionar un año diferente.",
       "frozenSuccessfully": "Datos congelados correctamente.",

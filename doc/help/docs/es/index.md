@@ -59,7 +59,9 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 - [OPEX](opex.md) - Gestión de costes recurrentes de IT y asignaciones
 - [CAPEX](capex.md) - Seguimiento de proyectos de inversión de capital
 - [Contratos](contracts.md) - Gestión de contratos con proveedores y renovaciones
-- [Administración presupuestaria](budget-operations.md) - Congelación, copia y gestión de datos presupuestarios
+- [Administración presupuestaria](budget-operations.md) - Ajustes presupuestarios y operaciones de congelación, copia y restablecimiento
+- [Monedas](currencies.md) - Monedas de reporting y predeterminadas, tipos de cambio
+- [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) - Bloqueo y traslado de los indicadores de empresas y departamentos
 - [Informes](reports.md) - Generación de informes presupuestarios y de contracargo
 
 ### Datos maestros
@@ -78,13 +80,12 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 **Finanzas**
 
 - [Plan de cuentas](chart-of-accounts.md) - Configuración de cuentas contables
-- [Monedas](currencies.md) - Configuración de divisas
 - [Calendarios laborales](working-day-calendars.md) - Días laborables de cada mes, a partir de los festivos de un país o introducidos a mano, para las líneas con precio por día
+- [Dimensiones analíticas](analytics.md) - Configuración de dimensiones de informes
 
 **Clasificación**
 
 - [Procesos de negocio](business-processes.md) - Documentación de la jerarquía de procesos de negocio
-- [Dimensiones analíticas](analytics.md) - Configuración de dimensiones de informes
 
 ### Plaid
 
@@ -108,7 +109,6 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 - [Uso y costes](ai-usage.md) - Uso de la IA y costes reales en chat y agentes, por agente y por modelo
 - [Integraciones](integrations.md) - Conexión de GLPI para importar tickets y para los agentes
 - [Tareas programadas](scheduled-tasks.md) - Revisión y gestión de trabajos recurrentes en segundo plano
-- [Administración de datos maestros](master-data-operations.md) - Congelación y copia de datos maestros
 - [Vista general de la gestión presupuestaria](operations-dashboard.md) - Resúmenes de OPEX y CAPEX, plazos y acciones rápidas
 
 ### Despliegue y operaciones

@@ -206,11 +206,9 @@ export default function ProtectedRoute() {
       contacts: 'contacts',
       accounts: 'accounts',
       coa: 'accounts',
-      currency: 'settings',
       'working-day-calendars': 'working_day_profiles',
       'business-processes': 'business_processes',
       analytics: 'analytics',
-      operations: 'companies',
     };
     const portfolioAliases: Record<string, string> = {
       requests: 'portfolio_requests',
@@ -234,7 +232,6 @@ export default function ProtectedRoute() {
         'suppliers',
         'contacts',
         'accounts',
-        'settings',
         'business_processes',
         'analytics',
       ].some((resource) => hasLevel(resource, 'reader'));
@@ -249,6 +246,18 @@ export default function ProtectedRoute() {
       requirement = { resource: 'ai_chat', level: 'reader' };
     } else if (path === '/agents' || path.startsWith('/agents/')) {
       requirement = { resource: 'ai_agents', level: 'reader' };
+    } else if (path === '/ops/operations' || path === '/ops/operations/') {
+      // The administration landing opens for every budget reader; its tiles filter themselves.
+      if (!['opex', 'capex', 'budget_ops'].some((resource) => hasLevel(resource, 'reader'))) {
+        return <Navigate to="/403" replace />;
+      }
+      requirement = null;
+    } else if (path === '/ops/operations/currency' || path.startsWith('/ops/operations/currency/')) {
+      // Currency settings follow the currency API: budget, OPEX or CAPEX readers.
+      if (!['budget_ops', 'opex', 'capex'].some((resource) => hasLevel(resource, 'reader'))) {
+        return <Navigate to="/403" replace />;
+      }
+      requirement = null;
     } else if (path.startsWith('/ops/')) {
       const seg = path.split('/')[2] || null;
       requirement = seg ? { resource: opsAliases[seg] || seg, level: 'reader' } : null;

@@ -167,7 +167,7 @@ A role the file names and your workspace does not have is created by the load, w
 
 The file holds no date and no amount. An import sets no password: a new user signs in after an invitation or a password reset.
 
-See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator and the two import steps.
+See [CSV files](csv-files.md) for the encoding, the separator and the two import steps.
 
 ### Creating a User
 
@@ -252,7 +252,7 @@ Resources are organized into groups for easier management:
 |----------|------------------|
 | `opex` | Operating Expenses |
 | `capex` | Capital Expenses |
-| `budget_ops` | Budget Administration tools |
+| `budget_ops` | Budget Administration tools, including the currency settings |
 | `contracts` | Vendor contracts |
 | `analytics` | Analytics dimensions |
 | `reporting` | Reports access |
@@ -272,7 +272,7 @@ Resources are organized into groups for easier management:
 | `applications` | Applications |
 | `infrastructure` | Servers and infrastructure |
 | `locations` | Location master data |
-| `settings` | Application settings |
+| `settings` | IT landscape settings only |
 
 **Master Data**
 | Resource | What it controls |

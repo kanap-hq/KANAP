@@ -1,21 +1,23 @@
-# Master Data Administration
+# Freeze master data and copy yearly metrics
 
-Master Data Administration gives you the tools to manage company and department metrics across fiscal years. Whether you need to lock down finalized numbers, copy a baseline forward for next year's planning, or simply check what is frozen and what is not, this is where you do it.
+Two tools of [Budget Administration](budget-operations.md) manage company and department metrics across fiscal years: **Freeze master data** and **Copy yearly metrics**. Use them to lock finalized numbers, to carry a baseline forward into next year's planning, or to check what is frozen and what is not.
+
+The yearly metrics are the headcount, IT users and turnover of companies and the headcount of departments. They are master data, and the budget cycle freezes and rolls them forward, so the two tools sit with the other budget operations.
 
 ## Where to find it
 
-- Workspace: **Master Data**
-- Path: **Master Data → Administration**
+- Workspace: **Budget management**
+- Path: **Budget management > Administration**, section **Operations**, tiles **Freeze master data** and **Copy yearly metrics**
 - Permissions:
-  - View freeze status: any authenticated user
+  - Open the pages and view the freeze status: the same access as the rest of Budget Administration (reader access to OPEX, for example)
   - Freeze / unfreeze: `companies:admin`, `departments:admin`, or `budget_ops:admin`
   - Copy data: `companies:admin`, `departments:admin`, or `budget_ops:admin`
 
-The landing page shows two operation cards. Click one to open the corresponding tool.
+Master data has no Administration entry of its own.
 
 ---
 
-## Freeze / Unfreeze Data
+## Freeze master data
 
 Use this tool to lock or unlock company and department metrics for a specific year. Freezing prevents accidental edits after data has been finalized -- useful at year-end close, during audits, or before kicking off next year's budget cycle.
 
@@ -50,7 +52,7 @@ If you lack the required permissions, the page still lets you review the current
 
 ---
 
-## Master Data Copy
+## Copy yearly metrics
 
 Copy company and department metrics from one fiscal year to another. A built-in dry run lets you preview every row before committing, so you always know what will be overwritten.
 
@@ -93,11 +95,11 @@ Below the grid, four summary cards give you a quick count:
 
 ### Frozen data protection
 
-You cannot copy data into a frozen year. If the destination year is frozen for Companies or Departments, an error banner appears and the action buttons are disabled. Unfreeze the destination year first using the Freeze / Unfreeze tool.
+You cannot copy data into a frozen year. If the destination year is frozen for Companies or Departments, an error banner appears and the action buttons are disabled. Unfreeze the destination year first with **Freeze master data**.
 
 ### CSV export
 
-You can export the preview table to CSV using the export button in the toolbar. This is handy for offline review or sharing with colleagues before committing. This export writes the table as it is shown. The files the master data pages import are described in [CSV files](#csv-files).
+You can export the preview table to CSV using the export button in the toolbar. This is handy for offline review or sharing with colleagues before committing. This export writes the table as it is shown. The files the master data pages import are described in [CSV files](csv-files.md).
 
 ### Permissions
 
@@ -112,37 +114,13 @@ If you only have access to one scope, the other is greyed out in the Data Source
 
 ---
 
-## CSV files
-
-Every master data page has **Export CSV** and **Import CSV** in its toolbar, and documents its own columns. This section describes what those files have in common.
-
-**Check, then load.** An import has two steps. **Preflight check** reads the file and reports what a load would change: the rows to create, the rows to update and the rows that change nothing. **Load** writes it. Nothing is written before that, and a file with one error loads nothing. Errors name the line of the file as a text editor shows it, blank lines and cells that span several lines included.
-
-**Columns are matched by name**, in any order, whatever the case, the spaces and the underscores. These files are strict: a column KANAP does not know refuses the whole file, and the message names the unknown and the missing ones. The budget file is the one that ignores the columns it does not know. See [Load a budget from a spreadsheet](budget-file.md).
-
-**Encoding and separator.** Save the file as UTF-8 ("CSV UTF-8" in Excel). A file Excel saved as plain CSV, in Windows-1252, imports too, accents included. The separator is read from the header line: `,`, `;` or a tab. The export writes the separator of the language the screen is shown in.
-
-**Amounts and dates follow the screen language** on export, and an import reads both forms:
-
-| Language | Separator | Amounts | Dates |
-|---|---|---|---|
-| English | `,` | `12280.50` | `2027-03-01` |
-| French, Spanish | `;` | `12280,50` | `01/03/2027` |
-| German | `;` | `12280,50` | `01.03.2027` |
-
-A date the file cannot settle on its own, such as `01/03/2027`, is read in the order of the language the screen is shown in: day first in French, German and Spanish, month first in English. The check says how it read the file, with a button to change the reading. A date with a day above 12 settles the question on its own, and the file carries no record of the language it was exported in.
-
-**Size.** A file holds up to 20,000 rows.
-
----
-
 ## Common scenarios
 
 ### Protecting finalized year-end data
 
 Your 2025 budget is approved. Lock it so no one accidentally changes the numbers.
 
-1. Open **Master Data → Administration → Freeze / Unfreeze Data**
+1. Open **Budget management > Administration > Freeze master data**
 2. Select year **2025**
 3. Check **Companies** and **Departments**
 4. Click **Freeze Data**
@@ -153,7 +131,7 @@ All company and department metrics for 2025 are now read-only until you unfreeze
 
 You want to start 2026 planning using 2025 headcount and turnover as a baseline.
 
-1. Open **Master Data → Administration → Master Data Copy**
+1. Open **Budget management > Administration > Copy yearly metrics**
 2. Set **Source Year** to **2025** and **Destination Year** to **2026**
 3. Under **Data Sources**, select **Companies**
 4. Under **Company Metrics**, select **Headcount** and **Turnover** (deselect IT Users if you do not need it)
@@ -166,10 +144,10 @@ All companies now carry 2025's headcount and turnover into 2026. Adjust individu
 
 You froze 2025 but spotted an error in one company's headcount.
 
-1. Open **Master Data → Administration → Freeze / Unfreeze Data**
+1. Open **Budget management > Administration > Freeze master data**
 2. Select year **2025**, check **Companies**, and click **Unfreeze Data**
 3. Edit the company's headcount in **Master Data → Companies → Details**
-4. Return to the Freeze tool and re-freeze 2025 Companies
+4. Return to **Freeze master data** and re-freeze 2025 Companies
 
 ---
 
@@ -200,7 +178,7 @@ No. The tool copies all entities for the selected scopes and metrics. For select
 No. It only writes metrics for entities that already exist in both years. If a company exists in the source year but not the destination, that row is skipped.
 
 **Who can see freeze status?**
-Anyone with access to the Master Data workspace. Only admins on the relevant scope can actually freeze or unfreeze.
+Anyone who can open Budget Administration. Only admins on the relevant scope can actually freeze or unfreeze.
 
 **Can I freeze future years?**
 Yes. The year picker covers a range from last year through five years ahead. Freezing a future year is useful for locking approved budgets before the fiscal year starts.

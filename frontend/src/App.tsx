@@ -12,6 +12,7 @@ const OpexListPage = React.lazy(() => import('./pages/OpexListPage'));
 const SpendItemPage = React.lazy(() => import('./pages/opex/SpendItemPage'));
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import { legacyBudgetRedirectRoutes } from './legacyBudgetRedirects';
 const CompaniesPage = React.lazy(() => import('./pages/CompaniesPage'));
 const CompanyWorkspacePage = React.lazy(() => import('./pages/companies/CompanyWorkspacePage'));
 const DepartmentsPage = React.lazy(() => import('./pages/DepartmentsPage'));
@@ -62,7 +63,6 @@ const AdminTenantsPage = React.lazy(() => import('./pages/admin/AdminTenantsPage
 const AdminCoaTemplatesPage = React.lazy(() => import('./pages/admin/AdminCoaTemplatesPage'));
 const AdminStandardAccountsPage = React.lazy(() => import('./pages/admin/AdminStandardAccountsPage'));
 const AdminStandardAccountWorkspacePage = React.lazy(() => import('./pages/admin/AdminStandardAccountWorkspacePage'));
-const MasterDataOperationsPage = React.lazy(() => import('./pages/admin/MasterDataOperationsPage'));
 const MasterDataFreezePage = React.lazy(() => import('./pages/admin/master-data/MasterDataFreezePage'));
 const MasterDataCopyPage = React.lazy(() => import('./pages/admin/master-data/MasterDataCopyPage'));
 const MasterDataHomePage = React.lazy(() => import('./pages/admin/MasterDataHomePage'));
@@ -240,6 +240,8 @@ function AppRoutes() {
         <Route path="/forgot-password" element={config.features.email ? <ForgotPasswordPage /> : <Navigate to="/login" replace />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
+        {/* Budget settings and operations formerly under Master data: redirect before the permission check. */}
+        {legacyBudgetRedirectRoutes()}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
           <Route path="/" element={<HomeRoute />} />
@@ -282,7 +284,9 @@ function AppRoutes() {
           <Route path="/ops/operations/freeze" element={<BudgetFreezePage />} />
           <Route path="/ops/operations/allocation-default" element={<AllocationDefaultPage />} />
           <Route path="/ops/operations/columns" element={<BudgetColumnsSettingsPage />} />
-          {/* Currency Settings moved under Master Data */}
+          <Route path="/ops/operations/currency" element={<CurrencySettingsPage />} />
+          <Route path="/ops/operations/master-data-freeze" element={<MasterDataFreezePage />} />
+          <Route path="/ops/operations/metrics-copy" element={<MasterDataCopyPage />} />
           <Route path="/master-data" element={<MasterDataHomePage />} />
           <Route path="/master-data/coa" element={<CoaPage />} />
           <Route path="/master-data/companies" element={<CompaniesPage />} />
@@ -309,16 +313,12 @@ function AppRoutes() {
           <Route path="/master-data/analytics/dimensions/:id/:tab" element={<AnalyticsDimensionWorkspacePage />} />
           <Route path="/master-data/analytics/:id" element={<AnalyticsWorkspacePage />} />
           <Route path="/master-data/analytics/:id/:tab" element={<AnalyticsWorkspacePage />} />
-          <Route path="/master-data/currency" element={<CurrencySettingsPage />} />
           <Route path="/master-data/working-day-calendars" element={<WorkingDayCalendarsPage />} />
           <Route path="/master-data/working-day-calendars/:id" element={<WorkingDayCalendarWorkspacePage />} />
           <Route path="/master-data/working-day-calendars/:id/:tab" element={<WorkingDayCalendarWorkspacePage />} />
           <Route path="/master-data/business-processes" element={<BusinessProcessesPage />} />
           <Route path="/master-data/business-processes/:id" element={<BusinessProcessWorkspacePage />} />
           <Route path="/master-data/business-processes/:id/:tab" element={<BusinessProcessWorkspacePage />} />
-          <Route path="/master-data/operations" element={<MasterDataOperationsPage />} />
-          <Route path="/master-data/operations/freeze" element={<MasterDataFreezePage />} />
-          <Route path="/master-data/operations/copy" element={<MasterDataCopyPage />} />
           <Route path="/admin" element={<AdminDefaultRedirect />} />
           <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin/roles" element={<RolesPage />} />

@@ -85,7 +85,7 @@ The Details tab manages year-by-year headcount metrics.
 - Headcount is saved for the selected year when you leave the field (or press Enter). Anything other than a whole number of zero or more shows "Enter a whole number, 0 or more." under the field
 - Headcount feeds into audience calculations for applications
 - Each year is stored on its own: switching years loads that year's value
-- If metrics for the selected year have been **frozen** (by an administrator), the field is locked and a notice explains how to unfreeze
+- If metrics for the selected year have been **frozen** (by an administrator), the field is locked and a notice says that a budget administrator can unfreeze them (**Budget management > Administration > Freeze master data**)
 
 **Tip**: Update headcount annually during your budget planning cycle. Use the year tabs to review or pre-fill future years.
 
@@ -119,7 +119,7 @@ The columns:
 - A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 
 **Notes**:
-- See [CSV files](master-data-operations.md#csv-files) for the encoding, the separator, the date forms and the two import steps
+- See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 - Headcount is not in the file. Enter it per year on the department's **Details** tab
 
 ---

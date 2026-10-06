@@ -265,6 +265,7 @@ A budget administrator can rename the columns, hide some and choose the default 
 - **Flat**: Enter one total per column. The total is spread evenly over the months of the column's period, and the months outside it are set to zero. The period shows under each total before you type, for example "9 months, April to December". Only the total you edit is saved. The other columns keep their monthly amounts.
 - Click the pencil icon next to the period under a total (**Change period**) to open the spread panel on that column, with its current total. If the item's dates leave no month in the year, the total is disabled and reads "No month of 2026 is within the item's dates." Click the pencil icon next to it (**Choose the period**) to set one yourself.
 - Click the calculator icon next to the pencil (**Quantity and price**) to open the same box on the lines of that column. See [Quantity and price](#quantity-and-price).
+- A column that follows its lines (its amounts were computed from its Quantity and price lines) has a read-only total. Click the total, or press Enter on it, to open **Quantity and price** on that column. The pencil does the same. Hover the total to read "Calculated from its lines. Open Quantity and price to change it."
 - **Monthly**: Enter amounts per month (Jan through Dec) for each shown column, for granular project spend tracking. Quarter subtotals and a yearly total are shown. Only the months you change are saved.
 - Both tabs show the same columns: Forecast appears in **Flat** too when it is shown.
 - Switch between modes with the **Flat** and **Monthly** tabs
@@ -286,13 +287,15 @@ A budget administrator can rename the columns, hide some and choose the default 
 - **Every change saves at once**: the amount when you leave the field or press Enter, the distribution and the dates as soon as you change them. There is no button to click. A blank or zero amount saves nothing
 - **Apply the distribution to all columns** is a switch, on by default: every column that follows it gets the same distribution and period, and each keeps its own current total. Turning it on spreads those columns at once, and it stays on for your next changes. Turning it off changes nothing by itself: the next changes apply to the selected column only. By default every column follows. A budget administrator chooses which ones in [Budget columns](budget-operations.md#budget-columns). Frozen columns never change. Hover the switch to see which columns follow and which keep their own period
 - A column that does not follow the switch spreads alone: the switch does not appear when you spread it. The switch is also hidden when no other following column can change
+- Columns that follow their lines are left out of the switch: they keep the amounts of their lines, and a sentence names them, for example "Forecast keeps its lines." When every other column follows its lines, the switch does not appear
 - To bring a column back to a flat spread over twelve months, choose **Flat** and set the dates to January 1 and December 31
 - Totals typed in the **Flat** tab still apply to their own column only
 - The **From** and **To** dates show the period. When some months fall outside it, the panel says which ones will be set to zero ("January to March will be set to zero."). A whole-year period shows no line. Hover the info icon next to the panel title to see the 15th rule
 - With **4-4-5**, the weights of the months that count are scaled up so the whole amount lands on them
 - A soft warning appears when the period goes beyond the item's dates. The spread is still saved
 - While a date is missing or no month counts, the panel says why and saves nothing
-- A spread over a column built from lines keeps its lines. See [Quantity and price](#quantity-and-price)
+- A column that follows its lines shows its current values in the fields, greyed, under the sentence "The amounts come from the 4 lines of Quantity and price." Click **Spread an amount instead** to unlock the fields for that column. The sentence then reads "A spread replaces the amounts of the lines. The lines stay as a reference." The lock comes back when you change the column, the year or the box
+- A spread over a column built from lines keeps its lines as a reference. See [Quantity and price](#quantity-and-price)
 
 **How each column was produced**:
 
@@ -331,12 +334,12 @@ A budget administrator can rename the columns, hide some and choose the default 
 
 #### Quantity and price
 
-Build a column from lines instead of typing its amounts. Each line reads as a sentence: a quantity, a unit, a unit price, how often, when, and on which calendar. For example, one contractor on a build project full time at 400 a day from February to October, and 20 laptops at 1,200 per piece, bought once on March 15. The months of the column are the sum of its lines.
+Build a column from lines instead of typing its amounts. Each line reads as a sentence: a quantity, a unit, a unit price, how often, when, and on which calendar. For example, one contractor on a build project full time at 400 a day from February to October, and 20 laptops at 1,200 per piece, bought once on March 15. The months of the column are the sum of its lines. The amounts of a column have one source at a time: its lines, or a spread, a month typed by hand, or a copy. The other source stays visible as a reference and is read only, with a link to switch.
 
 **Opening the tab**:
 
-- **Flat** tab: click the calculator icon next to the period under a total. The box opens on **Quantity and price** for that column
-- **Monthly** tab: click **Quantity and price** at the top of the panel box
+- **Flat** tab: click the calculator icon next to the period under a total. The box opens on **Quantity and price** for that column. On a column that follows its lines, the pencil and the total open it too
+- **Monthly** tab: click **Quantity and price** at the top of the panel box. Choosing a column that follows its lines, or having one as the default column, switches the box to **Quantity and price**
 - Choose the **Column** at the top of the tab. Frozen columns cannot be picked
 
 **The lines**:
@@ -352,7 +355,9 @@ Build a column from lines instead of typing its amounts. Each line reads as a se
 | **Calendar** | Shown for a price per day only: people priced per day, and days. The working-day calendar whose days count. The list offers the enabled calendars, plus the calendar a line already uses if it was disabled since, marked "(disabled)". When there is no calendar yet, the tab reads "No working-day calendar yet.", with an **Add a calendar** link for those who can create calendars. See [Working-day calendars](working-day-calendars.md) |
 | **Amount** | The total of the line, once it is saved. Read only |
 
-When the tab is wide enough, each line fits on one row. On a narrower screen, or with the **Properties** panel open on a 1080p screen, each line takes two aligned rows, with **Description**, **Quantity**, **Unit**, **Unit price** and **Amount** on the first, and **How often**, **From** and **To** (or **Date**) and **Calendar** on the second; close the **Properties** panel to bring back one row per line.
+Each line has a number in the margin. When the column has several lines, the notes under the table use it, for example "Line 2: Enter a quantity and a unit price to save this line."
+
+When the tab is wide enough, each line fits on one row. On a narrower panel, each line takes two rows. The first reads as a calculation: **Description**, **Quantity**, **Unit**, × **Unit price** and **Amount**. The second reads as a sentence: **How often**, "from" a date "to" a date (or one **Date**), "calendar" and the **Calendar**. On a medium-width panel, **How often** moves up to the first row. Closing the **Properties** panel gives the lines more room.
 
 Click **Add a line** under the table to add a line, and the cross at the end of a line to remove it. A column holds up to 50 lines.
 
@@ -381,7 +386,7 @@ Click **Add a line** under the table to add a line, and the cross at the end of 
 - A line is complete when it has a quantity, a unit price, a valid period or date, the days per month or **Full time** for people priced per day, and a calendar for a price per day. Until then it stays on screen with a hint, for example "Enter a quantity and a unit price to save this line.", "Enter the days per month, or tick Full time." or "Choose a calendar for a price per day.", and the saved lines do not change
 - Removing the last line removes the lines of the column, and its amounts stay as they are. A column computed from its lines then counts as amounts entered by hand. A spread or copied column keeps its spread or copy
 - When a save is refused, the reason shows under the table in red, and what you typed stays in place. For example, "Head office staff has no working days for 2027. Add them on the Working-day calendars page." when a custom calendar does not hold the year yet
-- On a frozen column, the lines are read only
+- On a frozen column, the lines are read only. They are also read only while the column keeps them as a reference, see the next part
 
 **Under the table**:
 
@@ -390,12 +395,12 @@ Click **Add a line** under the table to add a line, and the cross at the end of 
 - Notes when they apply: "The period goes beyond the item's dates.", a calendar disabled since, for example "Head office staff is disabled. The lines still use it.", and working days changed since the last save of the lines
 - **Apply these lines to all columns**: a switch for the same columns as the spread tab's switch, off by default here. Turning it on writes the lines to every column that follows at once, and it stays on: each later save writes the lines to those columns too. Turning it off changes nothing by itself
 
-**When the amounts change another way**: the lines stay with the column as a reference, and the tab says where the amounts come from now, followed by a **Use the lines again** link. The link saves the lines as they are and computes the column from them again.
+**When the amounts change another way**: the lines stay with the column as a reference, and the tab says where the amounts come from now, followed by a **Use the lines again** link. The lines are then read only: you cannot add, remove or edit a line, and the tab shows no amount per line, no FTE and no **Apply these lines to all columns**. The link saves the lines as they are and computes the column from them again, and the lines become editable again. To change a line kept as a reference, click **Use the lines again** first, then edit it.
 
 - A month typed in the **Monthly** tab: "Amounts were entered by hand. Use the lines again."
 - A spread: "Amounts come from a spread. Use the lines again."
 - **Copy budget columns** in Budget Administration: "Amounts were copied from Budget 2025. Use the lines again." The copy brings the source column's lines with the amounts. See [Copying a computed column](budget-operations.md#copying-a-computed-column)
-- A calendar's working days changed: "Working days changed since the last computation: March: 20 days, now 19." Nothing changes on the column until you click **Use the lines again**
+- A calendar's working days changed: "Working days changed since the last computation: March: 20 days, now 19." Nothing changes on the column until you click **Use the lines again**. The lines stay editable meanwhile
 - **Reset budget column** in Budget Administration removes the lines with the amounts. See [Reset budget column](budget-operations.md#reset-budget-column)
 - A budget file changes the months of a column and leaves its lines. See [Load a budget from a spreadsheet](budget-file.md)
 

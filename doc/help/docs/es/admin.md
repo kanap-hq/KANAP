@@ -167,7 +167,7 @@ La carga crea un rol que el archivo nombra y que su espacio de trabajo no tiene,
 
 El archivo no contiene ninguna fecha ni ningún importe. Una importación no define ninguna contraseña: un usuario nuevo inicia sesión tras una invitación o un restablecimiento de contraseña.
 
-Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador y los dos pasos de importación.
+Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación.
 
 ### Crear un usuario
 
@@ -252,7 +252,7 @@ Los recursos están organizados en grupos para facilitar la gestión:
 |---------|--------------|
 | `opex` | Gastos operativos |
 | `capex` | Gastos de capital |
-| `budget_ops` | Herramientas de administración presupuestaria |
+| `budget_ops` | Herramientas de administración presupuestaria, incluida la configuración de monedas |
 | `contracts` | Contratos con proveedores |
 | `analytics` | Dimensiones analíticas |
 | `reporting` | Acceso a informes |
@@ -272,7 +272,7 @@ Los recursos están organizados en grupos para facilitar la gestión:
 | `applications` | Aplicaciones |
 | `infrastructure` | Servidores e infraestructura |
 | `locations` | Datos maestros de ubicaciones |
-| `settings` | Configuración de aplicaciones |
+| `settings` | Solo la configuración del panorama IT |
 
 **Datos maestros**
 | Recurso | Qué controla |

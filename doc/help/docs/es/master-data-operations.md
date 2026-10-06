@@ -1,21 +1,23 @@
-# Administración de datos maestros
+# Congelar datos maestros y copiar indicadores anuales
 
-La Administración de datos maestros le ofrece las herramientas para gestionar métricas de empresas y departamentos a lo largo de los ejercicios fiscales. Ya sea que necesite bloquear cifras finalizadas, copiar una línea base para la planificación del próximo año o simplemente verificar qué está congelado y qué no, aquí es donde lo hace.
+Dos herramientas de la [administración presupuestaria](budget-operations.md) gestionan los indicadores de empresas y departamentos a lo largo de los ejercicios fiscales: **Congelar datos maestros** y **Copiar indicadores anuales**. Úselas para bloquear cifras finalizadas, para trasladar una línea base a la planificación del próximo año o para comprobar qué está congelado y qué no.
+
+Los indicadores anuales son la plantilla, los usuarios IT y la facturación de las empresas, y la plantilla de los departamentos. Son datos maestros, y el ciclo presupuestario los congela y los traslada de un año a otro. Por eso las dos herramientas están junto a las demás operaciones presupuestarias.
 
 ## Dónde encontrarla
 
-- Espacio de trabajo: **Datos maestros**
-- Ruta: **Datos maestros > Administración**
+- Espacio de trabajo: **Gestión presupuestaria**
+- Ruta: **Gestión presupuestaria > Administración**, sección **Operaciones**, tarjetas **Congelar datos maestros** y **Copiar indicadores anuales**
 - Permisos:
-  - Ver estado de congelación: cualquier usuario autenticado
+  - Abrir las páginas y ver el estado de congelación: el mismo acceso que el resto de la administración presupuestaria (por ejemplo, acceso de lector a OPEX)
   - Congelar / descongelar: `companies:admin`, `departments:admin` o `budget_ops:admin`
   - Copiar datos: `companies:admin`, `departments:admin` o `budget_ops:admin`
 
-La página principal muestra dos tarjetas de operación. Haga clic en una para abrir la herramienta correspondiente.
+Los datos maestros no tienen una entrada de Administración propia.
 
 ---
 
-## Congelar / Descongelar datos
+## Congelar datos maestros
 
 Utilice esta herramienta para bloquear o desbloquear métricas de empresas y departamentos para un año específico. La congelación previene ediciones accidentales después de que los datos hayan sido finalizados -- útil al cierre de año, durante auditorías o antes de iniciar el ciclo presupuestario del próximo año.
 
@@ -50,7 +52,7 @@ Si no tiene los permisos requeridos, la página aún le permite revisar el estad
 
 ---
 
-## Copia de datos maestros
+## Copiar indicadores anuales
 
 Copie métricas de empresas y departamentos de un ejercicio fiscal a otro. Una simulación integrada le permite previsualizar cada fila antes de confirmar, para que siempre sepa qué se sobrescribirá.
 
@@ -93,11 +95,11 @@ Debajo de la cuadrícula, cuatro tarjetas de resumen ofrecen un conteo rápido:
 
 ### Protección de datos congelados
 
-No puede copiar datos a un año congelado. Si el año de destino está congelado para Empresas o Departamentos, aparece un banner de error y los botones de acción se deshabilitan. Descongele primero el año de destino usando la herramienta Congelar / Descongelar.
+No puede copiar datos a un año congelado. Si el año de destino está congelado para Empresas o Departamentos, aparece un banner de error y los botones de acción se deshabilitan. Descongele primero el año de destino con **Congelar datos maestros**.
 
 ### Exportación CSV
 
-Puede exportar la tabla de vista previa a CSV usando el botón de exportación en la barra de herramientas. Esto es práctico para revisión fuera de línea o para compartir con colegas antes de confirmar. Esta exportación escribe la tabla tal como se muestra. Los archivos que importan las páginas de datos maestros se describen en [Archivos CSV](#archivos-csv).
+Puede exportar la tabla de vista previa a CSV usando el botón de exportación en la barra de herramientas. Esto es práctico para revisión fuera de línea o para compartir con colegas antes de confirmar. Esta exportación escribe la tabla tal como se muestra. Los archivos que importan las páginas de datos maestros se describen en [Archivos CSV](csv-files.md).
 
 ### Permisos
 
@@ -112,37 +114,13 @@ Si solo tiene acceso a un alcance, el otro está en gris en el selector de Fuent
 
 ---
 
-## Archivos CSV
-
-Cada página de datos maestros tiene **Exportar CSV** e **Importar CSV** en su barra de herramientas, y documenta sus propias columnas. Esta sección describe lo que esos archivos tienen en común.
-
-**Comprobar y después cargar.** Una importación tiene dos pasos. La **Verificación previa** lee el archivo e indica qué cambiaría una carga: las filas que se crearán, las que se actualizarán y las que no cambian nada. **Cargar** escribe el archivo. Antes no se escribe nada, y un archivo con un solo error no carga nada. Los errores nombran la fila del archivo tal como la muestra un editor de texto, incluidas las líneas vacías y las celdas que ocupan varias líneas.
-
-**Las columnas se emparejan por su nombre**, en cualquier orden, sin distinguir mayúsculas y minúsculas, espacios ni guiones bajos. Estos archivos son estrictos: una columna que KANAP no conoce rechaza el archivo entero, y el mensaje nombra las columnas desconocidas y las que faltan. El archivo de presupuesto es el que ignora las columnas que no conoce. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
-
-**Codificación y separador.** Guarde el archivo en UTF-8 ("CSV UTF-8" en Excel). Un archivo guardado por Excel como CSV simple, en Windows-1252, también se importa, acentos incluidos. El separador se lee en la fila de encabezados: `,`, `;` o un tabulador. La exportación escribe el separador del idioma en que se muestra la pantalla.
-
-**Los importes y las fechas siguen el idioma de la pantalla** en la exportación, y una importación lee ambas formas:
-
-| Idioma | Separador | Importes | Fechas |
-|---|---|---|---|
-| Inglés | `,` | `12280.50` | `2027-03-01` |
-| Francés, español | `;` | `12280,50` | `01/03/2027` |
-| Alemán | `;` | `12280,50` | `01.03.2027` |
-
-Una fecha que el archivo no puede decidir por sí solo, como `01/03/2027`, se lee en el orden del idioma en que se muestra la pantalla: día primero en francés, alemán y español, mes primero en inglés. La verificación indica cómo ha leído el archivo, con un botón para cambiar la lectura. Una fecha con un día superior a 12 decide la cuestión por sí sola, y el archivo no guarda ninguna constancia del idioma en que se exportó.
-
-**Tamaño.** Un archivo contiene hasta 20.000 filas.
-
----
-
 ## Escenarios comunes
 
 ### Proteger datos finalizados de fin de año
 
 Su presupuesto 2025 está aprobado. Bloquéelo para que nadie cambie accidentalmente las cifras.
 
-1. Abra **Datos maestros > Administración > Congelar / Descongelar datos**
+1. Abra **Gestión presupuestaria > Administración > Congelar datos maestros**
 2. Seleccione el año **2025**
 3. Marque **Empresas** y **Departamentos**
 4. Haga clic en **Congelar datos**
@@ -153,7 +131,7 @@ Todas las métricas de empresas y departamentos para 2025 son ahora de solo lect
 
 Desea comenzar la planificación de 2026 usando la plantilla y facturación de 2025 como línea base.
 
-1. Abra **Datos maestros > Administración > Copia de datos maestros**
+1. Abra **Gestión presupuestaria > Administración > Copiar indicadores anuales**
 2. Establezca **Año de origen** en **2025** y **Año de destino** en **2026**
 3. En **Fuentes de datos**, seleccione **Empresas**
 4. En **Métricas de empresa**, seleccione **Plantilla** y **Facturación** (deseleccione Usuarios IT si no lo necesita)
@@ -166,10 +144,10 @@ Todas las empresas ahora llevan la plantilla y facturación de 2025 a 2026. Ajus
 
 Congeló 2025 pero detectó un error en la plantilla de una empresa.
 
-1. Abra **Datos maestros > Administración > Congelar / Descongelar datos**
+1. Abra **Gestión presupuestaria > Administración > Congelar datos maestros**
 2. Seleccione el año **2025**, marque **Empresas** y haga clic en **Descongelar datos**
 3. Edite la plantilla de la empresa en **Datos maestros > Empresas > Detalles**
-4. Vuelva a la herramienta de Congelación y vuelva a congelar Empresas 2025
+4. Vuelva a **Congelar datos maestros** y vuelva a congelar Empresas 2025
 
 ---
 
@@ -200,7 +178,7 @@ No. La herramienta copia todas las entidades para los alcances y métricas selec
 No. Solo escribe métricas para entidades que ya existen en ambos años. Si una empresa existe en el año de origen pero no en el de destino, esa fila se omite.
 
 **¿Quién puede ver el estado de congelación?**
-Cualquier persona con acceso al espacio de trabajo de Datos maestros. Solo los administradores del alcance relevante pueden realmente congelar o descongelar.
+Cualquier persona que pueda abrir la administración presupuestaria. Solo los administradores del alcance relevante pueden realmente congelar o descongelar.
 
 **¿Puedo congelar años futuros?**
 Sí. El selector de año cubre un rango desde el año pasado hasta cinco años adelante. Congelar un año futuro es útil para bloquear presupuestos aprobados antes de que comience el ejercicio fiscal.

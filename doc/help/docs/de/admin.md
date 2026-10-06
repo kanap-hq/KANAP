@@ -167,7 +167,7 @@ Eine Rolle, die die Datei nennt und die Ihr Arbeitsbereich nicht hat, wird beim 
 
 Die Datei enthält kein Datum und keinen Betrag. Ein Import setzt kein Passwort: Ein neuer Benutzer meldet sich nach einer Einladung oder einer Passwort-Zurücksetzung an.
 
-Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen und die beiden Importschritte.
+Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte.
 
 ### Benutzer erstellen
 
@@ -252,7 +252,7 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 |-----------|-----------------|
 | `opex` | Betriebsausgaben |
 | `capex` | Investitionsausgaben |
-| `budget_ops` | Budget-Administrationswerkzeuge |
+| `budget_ops` | Budget-Administrationswerkzeuge, einschließlich der Währungseinstellungen |
 | `contracts` | Lieferantenverträge |
 | `analytics` | Analysedimensionen |
 | `reporting` | Berichtszugriff |
@@ -272,7 +272,7 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 | `applications` | Anwendungen |
 | `infrastructure` | Server und Infrastruktur |
 | `locations` | Standort-Stammdaten |
-| `settings` | Anwendungseinstellungen |
+| `settings` | Nur die Einstellungen der IT-Landschaft |
 
 **Stammdaten**
 | Ressource | Was sie steuert |

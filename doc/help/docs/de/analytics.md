@@ -34,11 +34,11 @@ Die Standarddimension hat eine besondere Rolle:
 
 ## Erste Schritte
 
-Navigieren Sie zu **Stammdaten > Analysedimensionen** (im Abschnitt **Klassifizierung**).
+Navigieren Sie zu **Stammdaten > Analysedimensionen** (im Abschnitt **Finanzen**).
 
-1. **Benennen Sie die Standarddimension**, wenn „Analysedimension“ nicht passt: Klicken Sie auf die Bearbeiten-Schaltfläche neben ihrem Chip und geben Sie dann in ihrem Arbeitsbereich einen Namen ein, zum Beispiel **Nature**.
+1. **Benennen Sie die Standarddimension**, wenn „Analysedimension“ nicht passt: Wählen Sie sie in der Auswahlleiste aus, klicken Sie auf **Bearbeiten** und geben Sie dann in ihrem Arbeitsbereich einen Namen ein, zum Beispiel **Nature**.
 2. **Fügen Sie ihre Werte hinzu**: Klicken Sie auf **Neuer Wert**.
-3. **Fügen Sie eine Dimension hinzu**, wenn Sie das Budget aus einem weiteren Blickwinkel lesen möchten: Klicken Sie auf **Neue Dimension** und fügen Sie dann ihre Werte hinzu.
+3. **Fügen Sie eine Dimension hinzu**, wenn Sie das Budget aus einem weiteren Blickwinkel lesen möchten: Klicken Sie in der Auswahlleiste auf **Neu** und fügen Sie dann ihre Werte hinzu.
 
 **Tipp**: Beginnen Sie mit ein oder zwei Dimensionen und jeweils 5 bis 10 Werten. Eine einheitliche Benennung macht die Listen übersichtlicher.
 
@@ -46,15 +46,15 @@ Navigieren Sie zu **Stammdaten > Analysedimensionen** (im Abschnitt **Klassifizi
 
 ## Die Seite Analysedimensionen
 
-### Dimensions-Chips
+### Dimensionsauswahl
 
-Unter dem Titel zeigt eine Zeile mit Chips Ihre Dimensionen in ihrer Reihenfolge. Eine deaktivierte Dimension ist als **Deaktiviert** markiert.
+Unter dem Titel zeigt ein graues Band Ihre Dimensionen in ihrer Reihenfolge, mit je einer quadratischen Schaltfläche. Es sieht aus wie die Auswahl der Kontenpläne und funktioniert genauso. Eine deaktivierte Dimension ist als **Deaktiviert** markiert. Bei vielen Dimensionen scrollt das Band seitlich.
 
-- Klicken Sie auf einen Chip, um die Werte dieser Dimension aufzulisten. Die Seitenadresse speichert Ihre Wahl, sodass ein gespeicherter Link mit derselben Dimension öffnet. Ohne Wahl öffnet die Seite mit der Standarddimension.
-- Der ausgewählte Chip hat eine Bearbeiten-Schaltfläche (Stiftsymbol). Klicken Sie darauf, um den Arbeitsbereich der Dimension zu öffnen.
-- **Neue Dimension** am Ende der Zeile erstellt eine Dimension (erfordert `analytics:member`).
+- Klicken Sie auf eine Schaltfläche, um die Werte dieser Dimension aufzulisten. Die ausgewählte Schaltfläche ist gefüllt. Die Seitenadresse speichert Ihre Wahl, sodass ein gespeicherter Link mit derselben Dimension öffnet. Ohne Wahl öffnet die Seite mit der Standarddimension.
+- Rechts im Band öffnet **Bearbeiten** den Arbeitsbereich der ausgewählten Dimension. Wenn Sie Dimensionen nur lesen dürfen, heißt die Schaltfläche **Öffnen**.
+- **Neu** daneben erstellt eine Dimension (erfordert `analytics:member`).
 
-Mit einer einzigen Dimension zeigt die Seite einen Chip und seine Werte.
+Mit einer einzigen Dimension zeigt das Band eine Schaltfläche und die Werte.
 
 ### Werteliste
 
@@ -90,7 +90,7 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 
 ### Eine Dimension erstellen
 
-Klicken Sie auf **Neue Dimension**, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Der Arbeitsbereich der neuen Dimension öffnet sich. Eine neue Dimension ist aktiviert.
+Klicken Sie in der Auswahlleiste auf **Neu**, füllen Sie die Felder aus und klicken Sie dann auf **Erstellen**. Der Arbeitsbereich der neuen Dimension öffnet sich. Eine neue Dimension ist aktiviert.
 
 - **Name** ist Pflicht.
 - **Code** wird aus dem Namen vorgeschlagen: Kleinbuchstaben, ohne Akzente, Leerzeichen durch `-` ersetzt. Sie können ihn ändern, bevor Sie die Dimension erstellen.
@@ -101,7 +101,7 @@ Kehren Sie dann zur Seite zurück, um die Werte der neuen Dimension hinzuzufüge
 
 ### Der Dimensions-Arbeitsbereich
 
-Öffnen Sie ihn mit der Bearbeiten-Schaltfläche des ausgewählten Chips.
+Öffnen Sie ihn mit **Bearbeiten** (**Öffnen**, wenn Sie nur lesen dürfen) in der Auswahlleiste, bei ausgewählter Dimension.
 
 - **Kopfzeile**: der Name der Dimension. Klicken Sie darauf, um die Dimension umzubenennen. **Zurück** / **Weiter** bewegen sich durch die Dimensionen in ihrer Reihenfolge, und die Schließen-Schaltfläche führt zur Seite mit dieser Dimension zurück
 - **Hauptbereich**: eine Nutzungszeile, zum Beispiel „12 Werte, verwendet von 27 OPEX-Zeilen und 2 CAPEX-Zeilen.“, dann die **Beschreibung**
@@ -224,7 +224,7 @@ Um Werte auf Budgetpositionen aus einer Datei zu setzen, verwenden Sie die OPEX-
 **CSV-Struktur**:
 
 - Kopfzeilen: `axis_code`, `name`, `description`, `status`, `disabled_at`
-- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](master-data-operations.md#csv-dateien) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 
 | Spalte | Inhalt |
 |---|---|

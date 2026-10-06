@@ -5,9 +5,19 @@ L'administration budgétaire met à votre disposition un ensemble d'outils pour 
 ## Où trouver cette page
 
 - Chemin : **Gestion budgétaire > Administration**
-- Autorisations : La plupart des opérations nécessitent `budget_ops:admin`
+- Autorisations : la page s'ouvre aux lecteurs de l'administration budgétaire, de l'OPEX ou du CAPEX. La plupart des opérations nécessitent `budget_ops:admin`.
 
-La page d'accueil affiche six cartes, chacune renvoyant à un outil dédié :
+La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédié. Vous ne voyez que les cartes que votre accès permet, et une section vide est masquée.
+
+**Paramètres**
+
+| Outil | Objectif |
+|-------|----------|
+| **Devises** | Définir les devises de reporting et par défaut, et consulter les taux de change. Voir [Paramètres de devises](currencies.md) |
+| **Colonnes budgétaires** | Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut |
+| **Méthode de ventilation par défaut** | Définir la méthode que les postes OPEX et CAPEX suivent par défaut |
+
+**Opérations**
 
 | Outil | Objectif |
 |-------|----------|
@@ -15,8 +25,10 @@ La page d'accueil affiche six cartes, chacune renvoyant à un outil dédié :
 | **Copier les colonnes budgétaires** | Copier des données entre années et colonnes avec des ajustements |
 | **Copier les ventilations** | Copier les méthodes de ventilation d'une année à l'autre |
 | **Réinitialiser une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
-| **Méthode de ventilation par défaut** | Définir la méthode que les postes OPEX et CAPEX suivent par défaut |
-| **Colonnes budgétaires** | Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut |
+| **Geler les données de référence** | Verrouiller les indicateurs des sociétés et des départements pour une année. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
+| **Copier les indicateurs annuels** | Copier les indicateurs des sociétés et des départements d'une année à l'autre. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
+
+La carte Devises s'ouvre aux lecteurs de l'administration budgétaire, de l'OPEX ou du CAPEX, qui voient la page en lecture seule. Les autres cartes s'ouvrent aux lecteurs de l'OPEX. Modifier un paramètre ou lancer une opération nécessite un accès administrateur à l'administration budgétaire. Pour **Geler les données de référence** et **Copier les indicateurs annuels**, les administrateurs des sociétés ou des départements peuvent aussi agir sur leur périmètre.
 
 Les colonnes budgétaires sont Budget, Révision, Prévision, Réalisé et Atterrissage prévu. Ce sont les noms standard. Votre organisation peut les renommer, en masquer certaines et choisir une colonne par défaut dans [Colonnes budgétaires](#colonnes-budgetaires). Chaque page ci-dessous affiche les noms choisis par votre organisation.
 
@@ -145,7 +157,7 @@ Une colonne peut être construite à partir de lignes, chacune étant une quanti
 - Les mois sont copiés comme pour toute autre colonne. Le pourcentage d'augmentation s'applique uniquement aux montants copiés. Les lignes gardent leurs prix unitaires
 - Une copie depuis une colonne sans ligne laisse la destination sans ligne, et son ETP devient vide
 - Dans l'onglet Budget, la colonne de destination affiche « Copié depuis Budget 2026 », et son onglet **Quantité et prix** indique « Les montants ont été copiés depuis Budget 2026. Utiliser à nouveau les lignes. »
-- Pour planifier l'année de destination à ses propres prix, ouvrez l'onglet Budget du poste et modifiez les prix unitaires dans l'onglet **Quantité et prix** : chaque modification recalcule la colonne à partir des lignes. Pour garder les prix, cliquez sur **Utiliser à nouveau les lignes**. Une ligne au prix par jour a besoin d'un calendrier qui contient l'année de destination : un calendrier standard la contient toujours, un calendrier personnalisé peut ne pas la contenir, par exemple « Personnel du siège has no working days for 2027. Add them on the Working-day calendars page. »
+- Les lignes copiées sont une référence en lecture seule. Dans l'onglet Budget du poste, cliquez sur **Utiliser à nouveau les lignes** dans l'onglet **Quantité et prix** pour calculer la colonne à partir d'elles, à leurs prix actuels. Pour planifier l'année de destination à ses propres prix, modifiez ensuite les prix unitaires : chaque modification recalcule la colonne. Une ligne au prix par jour a besoin d'un calendrier qui contient l'année de destination : un calendrier standard la contient toujours, un calendrier personnalisé peut ne pas la contenir, par exemple « Personnel du siège has no working days for 2027. Add them on the Working-day calendars page. »
 
 ### Protection des colonnes gelées
 

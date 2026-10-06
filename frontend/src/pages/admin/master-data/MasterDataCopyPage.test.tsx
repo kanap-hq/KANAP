@@ -23,14 +23,14 @@ vi.mock('../../../components/reports/ReportLayout', () => ({
 import MasterDataCopyPage from './MasterDataCopyPage';
 
 describe('MasterDataCopyPage breadcrumb', () => {
-  it('roots at the master data administration page, with its sidebar label', () => {
+  it('roots at the budget administration page, with its label', () => {
     render(
       <ThemeProvider theme={createAppTheme('light')}>
         <MasterDataCopyPage />
       </ThemeProvider>,
     );
     const root = screen.getByTestId('breadcrumb-root');
-    expect(root).toHaveAttribute('href', '/master-data/operations');
-    expect(root).toHaveTextContent('nav:sidebar.masterData.administration');
+    expect(root).toHaveAttribute('href', '/ops/operations');
+    expect(root).toHaveTextContent('ops:operations.title');
   });
 });

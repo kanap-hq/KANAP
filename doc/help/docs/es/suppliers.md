@@ -112,7 +112,7 @@ Las columnas:
 - `name` es obligatorio. Cualquier otra celda es opcional
 
 **Notas**:
-- Consulte [Archivos CSV](master-data-operations.md#archivos-csv) para la codificación, el separador y los dos pasos de importación
+- Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación
 - Importe los proveedores antes que las aplicaciones o los contratos que los referencian. El archivo de presupuesto también crea un proveedor que falta cuando **Crear los proveedores que faltan** está marcada. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
 
 ---

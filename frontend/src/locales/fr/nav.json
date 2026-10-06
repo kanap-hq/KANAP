@@ -33,7 +33,7 @@
       "administration": "Administration"
     },
     "masterData": {
-      "home": "Accueil master data",
+      "home": "Accueil des données de référence",
       "sections": {
         "organization": "Organisation",
         "externalParties": "Parties externes",
@@ -46,11 +46,9 @@
       "suppliers": "Fournisseurs",
       "contacts": "Contacts",
       "chartsOfAccounts": "Plans comptables",
-      "currency": "Devise",
       "workingDayCalendars": "Calendriers de jours ouvrés",
       "businessProcesses": "Processus métier",
-      "analyticsDimensions": "Dimensions analytiques",
-      "administration": "Administration"
+      "analyticsDimensions": "Dimensions analytiques"
     },
     "it": {
       "sections": {
