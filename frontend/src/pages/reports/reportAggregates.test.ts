@@ -13,6 +13,7 @@ import {
   localAmountField,
   METRIC_SUFFIX,
   NO_ANALYTICS_VALUE,
+  NO_CONSOLIDATION_LINE,
   NO_LINE,
   readAccountIdOptions,
   readAnalytics,
@@ -151,6 +152,13 @@ describe('per year groups', () => {
       { key: 'cat_v1', label: 'N', values: { 2026: 3 } },
       { key: 'uncategorized', label: 'U', values: { 2026: 2 } },
     ]);
+  });
+
+  it('Consolidation: an excluded "unassigned" leaves out the lines without a consolidation line', () => {
+    const request = consolidationRequest({ years: [2026], metric: 'budget' as any, excludedAccountIds: ['a1', NO_CONSOLIDATION_LINE], filters: {} });
+    expect(request.query.filters).toEqual({ account_id: dropValues(['a1']), account_consolidation_key: dropValues([null]) });
+    expect(consolidationRequest({ years: [2026], metric: 'budget' as any, excludedAccountIds: [NO_CONSOLIDATION_LINE], filters: {} }).query.filters)
+      .toEqual({ account_consolidation_key: dropValues([null]) });
   });
 
   it('Analytics: an excluded "unassigned" leaves out the lines without a value', () => {

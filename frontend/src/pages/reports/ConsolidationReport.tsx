@@ -13,7 +13,7 @@ import { MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
-import { consolidationRequest, readConsolidation } from './reportAggregates';
+import { NO_CONSOLIDATION_LINE, consolidationRequest, readConsolidation } from './reportAggregates';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAccountIdOptions } from './useReportOptions';
 
@@ -47,6 +47,11 @@ export default function ConsolidationReport() {
   // in their consolidation line), loaded when the picker first opens.
   const [accountsWanted, setAccountsWanted] = useState(false);
   const accountOptions = useAccountIdOptions(scope, accountsWanted);
+  // "Unassigned" first, so the lines without a consolidation line can be left out too.
+  const exclusionOptions = useMemo(() => accountOptions.options && [
+    { id: NO_CONSOLIDATION_LINE, label: t('reports.consolidation.unassigned') },
+    ...accountOptions.options,
+  ], [accountOptions.options, t]);
 
   // The server groups the kept lines by the consolidation line of their account, one sum per year,
   // the first year's largest first; lines without one are unassigned.
@@ -245,7 +250,7 @@ export default function ConsolidationReport() {
             placeholder={t('reports.filters.excludeAccountsPlaceholder')}
             selectedText={(count) => t('reports.filters.accountSelected', { count })}
             noOptionsText={t('reports.filters.noMatchingAccounts')}
-            options={accountOptions.options}
+            options={exclusionOptions}
             loading={accountOptions.loading}
             onFirstOpen={() => setAccountsWanted(true)}
             value={excludedAccounts}

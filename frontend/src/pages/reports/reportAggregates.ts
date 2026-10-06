@@ -462,6 +462,9 @@ function yearValues(row: AggregateRow | null | undefined, years: readonly number
   return Object.fromEntries(years.map((year) => [year, valueOf(row, `y${year}`)]));
 }
 
+/** The Consolidation exclusion option for the lines without a consolidation line (unassigned). */
+export const NO_CONSOLIDATION_LINE = 'none';
+
 export interface ConsolidationParams {
   years: readonly number[];
   metric: MetricKey;
@@ -476,8 +479,11 @@ export interface ConsolidationParams {
  * per key).
  */
 export function consolidationRequest(p: ConsolidationParams): AggregateRequest {
+  const accountIds = p.excludedAccountIds.filter((id) => id !== NO_CONSOLIDATION_LINE);
+  let filters = exclusions(p.filters, [], 'account_id', accountIds);
+  if (accountIds.length < p.excludedAccountIds.length) filters = withFilter(filters, 'account_consolidation_key', dropValues([null]));
   return {
-    query: { filters: exclusions(p.filters, [], 'account_id', p.excludedAccountIds) },
+    query: { filters },
     spec: {
       groupBy: ['account_consolidation_key', 'account_consolidation_label'],
       measures: yearMeasures(p.years, p.metric),
