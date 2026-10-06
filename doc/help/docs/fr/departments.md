@@ -85,7 +85,7 @@ L'onglet Détails gère les métriques d'effectif année par année.
 - L'effectif est enregistré pour l'année sélectionnée quand vous quittez le champ (ou appuyez sur Entrée). Toute valeur autre qu'un nombre entier de zéro ou plus affiche « Saisissez un nombre entier, 0 ou plus. » sous le champ
 - L'effectif alimente les calculs d'audience pour les applications
 - Chaque année est enregistrée séparément : changer d'année charge la valeur de cette année
-- Si les métriques pour l'année sélectionnée ont été **gelées** (par un administrateur), le champ est verrouillé et un avis explique comment dégeler
+- Si les métriques pour l'année sélectionnée ont été **gelées** (par un administrateur), le champ est verrouillé et un avis indique qu'un administrateur budgétaire peut les dégeler (**Gestion budgétaire > Administration > Geler les données de référence**)
 
 **Conseil** : Mettez à jour l'effectif annuellement lors de votre cycle de planification budgétaire. Utilisez les onglets d'année pour consulter ou pré-remplir les années futures.
 

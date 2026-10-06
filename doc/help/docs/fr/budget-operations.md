@@ -5,9 +5,19 @@ L'administration budgétaire met à votre disposition un ensemble d'outils pour 
 ## Où trouver cette page
 
 - Chemin : **Gestion budgétaire > Administration**
-- Autorisations : La plupart des opérations nécessitent `budget_ops:admin`
+- Autorisations : la page s'ouvre aux lecteurs de l'administration budgétaire, de l'OPEX ou du CAPEX. La plupart des opérations nécessitent `budget_ops:admin`.
 
-La page d'accueil affiche six cartes, chacune renvoyant à un outil dédié :
+La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédié. Vous ne voyez que les cartes que votre accès permet, et une section vide est masquée.
+
+**Paramètres**
+
+| Outil | Objectif |
+|-------|----------|
+| **Devises** | Définir les devises de reporting et par défaut, et consulter les taux de change. Voir [Paramètres de devises](currencies.md) |
+| **Colonnes budgétaires** | Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut |
+| **Méthode de ventilation par défaut** | Définir la méthode que les postes OPEX et CAPEX suivent par défaut |
+
+**Opérations**
 
 | Outil | Objectif |
 |-------|----------|
@@ -15,8 +25,10 @@ La page d'accueil affiche six cartes, chacune renvoyant à un outil dédié :
 | **Copier les colonnes budgétaires** | Copier des données entre années et colonnes avec des ajustements |
 | **Copier les ventilations** | Copier les méthodes de ventilation d'une année à l'autre |
 | **Réinitialiser une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
-| **Méthode de ventilation par défaut** | Définir la méthode que les postes OPEX et CAPEX suivent par défaut |
-| **Colonnes budgétaires** | Nommer les cinq colonnes budgétaires, choisir celles qui sont affichées et la colonne par défaut |
+| **Geler les données de référence** | Verrouiller les indicateurs des sociétés et des départements pour une année. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
+| **Copier les indicateurs annuels** | Copier les indicateurs des sociétés et des départements d'une année à l'autre. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
+
+La carte Devises s'ouvre aux lecteurs de l'administration budgétaire, de l'OPEX ou du CAPEX, qui voient la page en lecture seule. Les autres cartes s'ouvrent aux lecteurs de l'OPEX. Modifier un paramètre ou lancer une opération nécessite un accès administrateur à l'administration budgétaire. Pour **Geler les données de référence** et **Copier les indicateurs annuels**, les administrateurs des sociétés ou des départements peuvent aussi agir sur leur périmètre.
 
 Les colonnes budgétaires sont Budget, Révision, Prévision, Réalisé et Atterrissage prévu. Ce sont les noms standard. Votre organisation peut les renommer, en masquer certaines et choisir une colonne par défaut dans [Colonnes budgétaires](#colonnes-budgetaires). Chaque page ci-dessous affiche les noms choisis par votre organisation.
 

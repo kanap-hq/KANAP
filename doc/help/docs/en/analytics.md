@@ -34,7 +34,7 @@ The default dimension has a special role:
 
 ## Getting started
 
-Navigate to **Master data > Analytics dimensions** (in the **Classification** section).
+Navigate to **Master data > Analytics dimensions** (in the **Finance** section).
 
 1. **Name the default dimension** if "Analytics dimension" does not suit you: click the edit button next to its chip, then type a name in its workspace, for example **Nature**.
 2. **Add its values**: click **New value**.

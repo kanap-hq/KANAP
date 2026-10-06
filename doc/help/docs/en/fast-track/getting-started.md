@@ -26,8 +26,8 @@ KANAP is organized around a simple structure. The top bar shows the sections you
 | **Portfolio** | Tasks, Requests, Projects, Planning, Reporting, Contributors |
 | **IT Landscape** | Applications, Interfaces, Interface Map, Assets, Connections, Connection Map, Locations |
 | **Knowledge** | Documents and templates with review workflows |
-| **Budget Management** | OPEX, CAPEX, Contracts, Reporting, Administration |
-| **Master Data** | Companies, Departments, Cost centers, Suppliers, Contacts, Charts of Accounts, Currency, Business Processes, Analytics Dimensions |
+| **Budget Management** | OPEX, CAPEX, Contracts, Reporting, Administration (currencies, budget columns, freeze and copy operations) |
+| **Master Data** | Companies, Departments, Cost centers, Suppliers, Contacts, Charts of Accounts, Working-day calendars, Analytics Dimensions, Business Processes |
 | **Admin** | Users, Roles, Audit Log, Billing, Authentication, Branding (admin-only) |
 
 You don't need access to everything. Your role determines which sections and actions are available to you. If something is missing from your menu, ask your administrator.

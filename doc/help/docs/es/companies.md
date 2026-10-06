@@ -124,7 +124,7 @@ La pestaña Detalles gestiona las **métricas anuales**. Use las pestañas de a�
 
 - Cada valor se guarda para el año seleccionado al salir del campo (o al pulsar Intro). Un valor no válido muestra un mensaje bajo el campo, por ejemplo «Introduzca un número entero, 0 o más.»
 - Cada año se guarda por separado: al cambiar de año se cargan los valores de ese año
-- Si las cifras de la empresa para el año están **congeladas**, los campos quedan bloqueados y un aviso explica que un administrador puede descongelarlas desde la **Administración de datos maestros**
+- Si las cifras de la empresa para el año están **congeladas**, los campos quedan bloqueados y un aviso indica que un administrador de presupuesto puede descongelarlas (**Gestión presupuestaria > Administración > Congelar datos maestros**)
 - Necesita `companies:manager` para editar las métricas
 
 ## Plan de cuentas
@@ -178,7 +178,7 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 **Congelación y copia**:
 
 - Puede **congelar** un año una vez finalizado para prevenir ediciones.
-- Utilice **Administración de datos maestros** para copiar métricas de un año a otro (elija qué métricas copiar). Los años congelados no pueden sobrescribirse.
+- Utilice **Copiar indicadores anuales** en **Gestión presupuestaria > Administración** para copiar métricas de un año a otro (elija qué métricas copiar). Los años congelados no pueden sobrescribirse.
 
 ## Importación/exportación CSV
 
@@ -221,6 +221,6 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 - **Plan de cuentas**: asigne CoA a las empresas para garantizar un uso consistente de cuentas en las partidas OPEX/CAPEX.
 - **Facturación**: introduzca valores en millones de la moneda base de la empresa (p. ej., 2,5 = 2,5 millones en esa moneda).
 - **Plantilla** es el factor de asignación más común; manténgalo actualizado para el año en curso.
-- **Métricas congeladas**: aún puede revisarlas, pero las ediciones están bloqueadas hasta que descongele desde Administración.
+- **Métricas congeladas**: aún puede revisarlas, pero las ediciones están bloqueadas hasta que un administrador de presupuesto descongele el año en **Gestión presupuestaria > Administración > Congelar datos maestros**.
 - **Selector de columnas**: utilícelo para mostrar u ocultar columnas como Ciudad, Dirección, Estado/Provincia o Creado para adaptarse a su flujo de trabajo.
 - **Las columnas de métricas enlazan con Detalles**: hacer clic en un valor de Plantilla, Usuarios IT o Facturación abre la pestaña Detalles directamente para esa empresa.

@@ -34,7 +34,7 @@ La dimension par défaut a un rôle particulier :
 
 ## Premiers pas
 
-Naviguez vers **Données de référence > Dimensions analytiques** (dans la section **Classification**).
+Naviguez vers **Données de référence > Dimensions analytiques** (dans la section **Finance**).
 
 1. **Nommez la dimension par défaut** si « Dimension analytique » ne vous convient pas : cliquez sur le bouton de modification à côté de sa pastille, puis saisissez un nom dans son espace de travail, par exemple **Nature**.
 2. **Ajoutez ses valeurs** : cliquez sur **Nouvelle valeur**.

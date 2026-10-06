@@ -1,8 +1,17 @@
 # Configuración de monedas
 
-La página de Configuración de monedas (**Datos maestros > Moneda**) es donde configura cómo se almacenan, muestran y convierten las monedas en su espacio de trabajo. Controla la moneda de reporte de todo el espacio de trabajo, las monedas predeterminadas para nuevos elementos y restricciones opcionales sobre qué monedas pueden utilizarse.
+La página de Configuración de monedas (**Gestión presupuestaria > Administración > Monedas**) es donde configura cómo se almacenan, muestran y convierten las monedas en su espacio de trabajo. Controla la moneda de reporte de todo el espacio de trabajo, las monedas predeterminadas para nuevos elementos y restricciones opcionales sobre qué monedas pueden utilizarse.
 
 Para información sobre conceptos de moneda y mecánicas de conversión, consulte la guía de Gestión de monedas.
+
+## Quién puede verla y modificarla
+
+Las monedas son un ajuste presupuestario. La página está junto a los demás ajustes presupuestarios, en la [Administración presupuestaria](budget-operations.md).
+
+- **Solo lectura**: cualquier persona con acceso de lector a la administración presupuestaria, a OPEX o a CAPEX. Los campos no se pueden editar, los botones **Guardar**, **Restablecer** y **Forzar sincronización de tipos de cambio** están ocultos, y un mensaje indica que solo los administradores de presupuesto pueden cambiar la página. La tabla de tipos de cambio sigue visible.
+- **Cambiar los ajustes y lanzar la sincronización de tipos de cambio**: administración presupuestaria con nivel de administrador.
+
+El permiso **Configuración** del panorama IT no da acceso a las monedas. Solo cubre la configuración del panorama IT.
 
 ## El formulario de Configuración de monedas
 
@@ -44,7 +53,7 @@ Limitar las monedas permitidas ayuda cuando:
 
 ## Guardar cambios
 
-Haga clic en **Guardar cambios** para aplicar sus actualizaciones. El sistema:
+Haga clic en **Guardar** para aplicar sus actualizaciones. El sistema:
   1. Validará todos los códigos de moneda (deben ser códigos ISO de 3 letras)
   2. Actualizará la configuración de su espacio de trabajo
   3. Desencadenará automáticamente una actualización en segundo plano de las tasas FX para el año actual y cualquier año con datos presupuestarios
@@ -166,9 +175,9 @@ Se reutiliza la tasa del año actual como estimación futura. Esto proporciona o
 Su grupo cambia de reporte basado en EUR a basado en USD.
 
 **Pasos**:
-  1. Vaya a **Datos maestros > Moneda**
+  1. Vaya a **Gestión presupuestaria > Administración > Monedas**
   2. Cambie la Moneda de reporte de `EUR` a `USD`
-  3. Haga clic en **Guardar cambios** (desencadena automáticamente la actualización FX)
+  3. Haga clic en **Guardar** (desencadena automáticamente la actualización FX)
   4. Verifique que la tabla de Instantáneas de tasas FX muestre USD como base (todas las tasas ahora deben ser relativas a USD)
   5. Compruebe las listas OPEX y CAPEX -- los totales y columnas anuales ahora se muestran en USD
 
@@ -178,9 +187,9 @@ Su grupo cambia de reporte basado en EUR a basado en USD.
 Su equipo financiero requiere que todo el gasto se registre solo en EUR, USD o GBP.
 
 **Pasos**:
-  1. Vaya a **Datos maestros > Moneda**
+  1. Vaya a **Gestión presupuestaria > Administración > Monedas**
   2. Establezca Monedas permitidas como `EUR, USD, GBP`
-  3. Haga clic en **Guardar cambios**
+  3. Haga clic en **Guardar**
   4. Ejecute **Forzar sincronización FX** para asegurar que las tasas estén disponibles para las tres monedas
 
 **Resultado**: Los usuarios solo pueden seleccionar EUR, USD o GBP al crear o editar elementos. Los intentos de importar otras monedas fallarán con un mensaje de error claro.
@@ -189,9 +198,9 @@ Su equipo financiero requiere que todo el gasto se registre solo en EUR, USD o G
 Su empresa inicia operaciones en Suiza y necesita registrar gasto en CHF.
 
 **Pasos**:
-  1. Vaya a **Datos maestros > Moneda**
+  1. Vaya a **Gestión presupuestaria > Administración > Monedas**
   2. Añada `CHF` a Monedas permitidas (p. ej., `EUR, USD, GBP, CHF`)
-  3. Haga clic en **Guardar cambios**
+  3. Haga clic en **Guardar**
   4. Haga clic en **Forzar sincronización FX** para obtener las tasas CHF inmediatamente
   5. Verifique que CHF aparezca en la tabla de Instantáneas de tasas FX con tasas válidas
 
@@ -201,7 +210,7 @@ Su empresa inicia operaciones en Suiza y necesita registrar gasto en CHF.
 Es diciembre y está preparando la planificación presupuestaria del próximo año.
 
 **Pasos**:
-  1. Vaya a **Datos maestros > Moneda**
+  1. Vaya a **Gestión presupuestaria > Administración > Monedas**
   2. Haga clic en **Forzar sincronización FX** para actualizar las tasas del próximo año
   3. Verifique la tabla de Instantáneas de tasas FX para ver las estimaciones futuras del próximo año
   4. Tenga en cuenta que las tasas de años futuros son estimaciones futuras (reutilizando la tasa del año actual) -- revíselas a medida que el año se acerque

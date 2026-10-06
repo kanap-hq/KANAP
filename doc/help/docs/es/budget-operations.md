@@ -5,9 +5,19 @@ La Administración presupuestaria le ofrece un conjunto de herramientas para ges
 ## Dónde encontrarla
 
 - Ruta: **Gestión presupuestaria > Administración**
-- Permisos: La mayoría de operaciones requieren `budget_ops:admin`
+- Permisos: la página se abre a los lectores de la administración presupuestaria, de OPEX o de CAPEX. La mayoría de operaciones requieren `budget_ops:admin`.
 
-La página principal muestra seis tarjetas, cada una enlazando a una herramienta dedicada:
+La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta dedicada. Solo ve las tarjetas que su acceso permite, y una sección vacía se oculta.
+
+**Configuración**
+
+| Herramienta | Propósito |
+|-------------|-----------|
+| **Monedas** | Definir las monedas de reporting y predeterminadas, y consultar los tipos de cambio. Consulte [Configuración de monedas](currencies.md) |
+| **Columnas presupuestarias** | Nombrar las cinco columnas presupuestarias, elegir cuáles se muestran y cuál es la columna por defecto |
+| **Método de asignación por defecto** | Definir el método que las partidas de OPEX y CAPEX siguen por defecto |
+
+**Operaciones**
 
 | Herramienta | Propósito |
 |-------------|-----------|
@@ -15,8 +25,10 @@ La página principal muestra seis tarjetas, cada una enlazando a una herramienta
 | **Copiar columnas presupuestarias** | Copiar datos entre años y columnas con ajustes |
 | **Copiar asignaciones** | Copiar métodos de asignación de un año a otro |
 | **Restablecer columna presupuestaria** | Borrar todos los datos de una columna específica |
-| **Método de asignación por defecto** | Definir el método que las partidas de OPEX y CAPEX siguen por defecto |
-| **Columnas presupuestarias** | Nombrar las cinco columnas presupuestarias, elegir cuáles se muestran y cuál es la columna por defecto |
+| **Congelar datos maestros** | Bloquear los indicadores de empresas y departamentos para un año. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
+| **Copiar indicadores anuales** | Copiar los indicadores de empresas y departamentos de un año a otro. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
+
+La tarjeta Monedas se abre a los lectores de la administración presupuestaria, de OPEX o de CAPEX, que ven la página en solo lectura. Las demás tarjetas se abren a los lectores de OPEX. Cambiar un ajuste o lanzar una operación requiere acceso de administrador a la administración presupuestaria. En **Congelar datos maestros** y **Copiar indicadores anuales**, los administradores de empresas o departamentos también pueden actuar sobre su alcance.
 
 Las columnas presupuestarias son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto. Son los nombres estándar. Su organización puede renombrarlas, ocultar algunas y elegir una columna por defecto en [Columnas presupuestarias](#columnas-presupuestarias). Cada página a continuación muestra los nombres que eligió su organización.
 

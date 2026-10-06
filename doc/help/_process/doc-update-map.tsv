@@ -19,6 +19,13 @@ contacts.md	frontend/src/pages/contacts/**/*.tsx
 chart-of-accounts.md	frontend/src/pages/coa/CoaPage.tsx
 chart-of-accounts.md	frontend/src/pages/accounts/**/*.tsx
 currencies.md	frontend/src/pages/operations/CurrencySettingsPage.tsx
+budget-operations.md	frontend/src/pages/operations/BudgetOperationsLandingPage.tsx
+budget-operations.md	frontend/src/pages/operations/BudgetFreezePage.tsx
+budget-operations.md	frontend/src/pages/operations/CopyBudgetColumnsPage.tsx
+budget-operations.md	frontend/src/pages/operations/CopyAllocationsPage.tsx
+budget-operations.md	frontend/src/pages/operations/BudgetColumnResetPage.tsx
+budget-operations.md	frontend/src/pages/operations/AllocationDefaultPage.tsx
+budget-operations.md	frontend/src/pages/operations/BudgetColumnsSettingsPage.tsx
 business-processes.md	frontend/src/pages/BusinessProcessesPage.tsx
 business-processes.md	frontend/src/pages/business-processes/**/*.tsx
 analytics.md	frontend/src/pages/AnalyticsCategoriesPage.tsx
@@ -42,7 +49,6 @@ admin.md	frontend/src/pages/admin/AuditLogsPage.tsx
 admin.md	frontend/src/pages/admin/BillingCenter.tsx
 admin.md	frontend/src/pages/admin/AdminAuthPage.tsx
 branding.md	frontend/src/pages/admin/AdminBrandingPage.tsx
-master-data-operations.md	frontend/src/pages/admin/MasterDataOperationsPage.tsx
 master-data-operations.md	frontend/src/pages/admin/master-data/**/*.tsx
 tasks.md	frontend/src/pages/TasksPage.tsx
 tasks.md	frontend/src/pages/tasks/TaskWorkspacePage.tsx

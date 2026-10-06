@@ -1,8 +1,17 @@
 # Währungseinstellungen
 
-Die Seite Währungseinstellungen (**Stammdaten > Währungen**) ist der Ort, an dem Sie konfigurieren, wie Währungen in Ihrem Arbeitsbereich gespeichert, angezeigt und umgerechnet werden. Sie steuert die mandantenweite Berichtswährung, Standardwährungen für neue Positionen und optionale Einschränkungen, welche Währungen verwendet werden können.
+Die Seite Währungseinstellungen (**Budgetverwaltung > Administration > Währungen**) ist der Ort, an dem Sie konfigurieren, wie Währungen in Ihrem Arbeitsbereich gespeichert, angezeigt und umgerechnet werden. Sie steuert die mandantenweite Berichtswährung, Standardwährungen für neue Positionen und optionale Einschränkungen, welche Währungen verwendet werden können.
 
 Für Hintergrundinformationen zu Währungskonzepten und Umrechnungsmechanismen siehe den Leitfaden zur Währungsverwaltung.
+
+## Wer sie sehen und ändern kann
+
+Währungen sind eine Budgeteinstellung. Die Seite steht bei den anderen Budgeteinstellungen in der [Budgetadministration](budget-operations.md).
+
+- **Nur Lesen**: alle mit Leserechten auf die Budgetadministration, OPEX oder CAPEX. Die Felder lassen sich nicht bearbeiten, die Schaltflächen **Speichern**, **Zurücksetzen** und **Wechselkurssynchronisierung erzwingen** sind ausgeblendet, und ein Hinweis nennt, dass nur Budgetadministratoren die Seite ändern können. Die Wechselkurstabelle bleibt sichtbar.
+- **Einstellungen ändern und die Wechselkurssynchronisierung starten**: Budgetadministration auf Administratorebene.
+
+Das Recht **Einstellungen** der IT-Landschaft gibt keinen Zugriff auf Währungen. Es umfasst nur die Einstellungen der IT-Landschaft.
 
 ## Das Formular für Währungseinstellungen
 
@@ -44,7 +53,7 @@ Die Einschränkung zugelassener Währungen hilft, wenn:
 
 ## Änderungen speichern
 
-Klicken Sie auf **Änderungen speichern**, um Ihre Aktualisierungen anzuwenden. Das System wird:
+Klicken Sie auf **Speichern**, um Ihre Aktualisierungen anzuwenden. Das System wird:
   1. Alle Währungscodes validieren (müssen 3-stellige ISO-Codes sein)
   2. Ihre Mandanteneinstellungen aktualisieren
   3. Automatisch eine Hintergrund-FX-Kursaktualiserung für das aktuelle Jahr und alle Jahre mit Budgetdaten auslösen
@@ -166,9 +175,9 @@ Der Kurs des aktuellen Jahres wird als Forward-Schätzung wiederverwendet. Dies 
 Ihr Konzern wechselt von EUR-basierter zu USD-basierter Berichterstattung.
 
 **Schritte**:
-  1. Gehen Sie zu **Stammdaten > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
   2. Ändern Sie die Berichtswährung von `EUR` auf `USD`
-  3. Klicken Sie auf **Änderungen speichern** (löst automatisch FX-Aktualisierung aus)
+  3. Klicken Sie auf **Speichern** (löst automatisch FX-Aktualisierung aus)
   4. Überprüfen Sie die FX-Kurs-Snapshot-Tabelle -- alle Kurse sollten jetzt relativ zu USD sein
   5. Prüfen Sie OPEX- und CAPEX-Listen -- Summen und Jahresspalten zeigen nun USD
 
@@ -178,9 +187,9 @@ Ihr Konzern wechselt von EUR-basierter zu USD-basierter Berichterstattung.
 Ihre Finanzabteilung verlangt, dass alle Ausgaben nur in EUR, USD oder GBP erfasst werden.
 
 **Schritte**:
-  1. Gehen Sie zu **Stammdaten > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
   2. Setzen Sie zugelassene Währungen auf `EUR, USD, GBP`
-  3. Klicken Sie auf **Änderungen speichern**
+  3. Klicken Sie auf **Speichern**
   4. Führen Sie **FX-Kurse erzwingen** durch, um sicherzustellen, dass Kurse für alle drei Währungen verfügbar sind
 
 **Ergebnis**: Benutzer können beim Erstellen oder Bearbeiten von Positionen nur EUR, USD oder GBP auswählen. Versuche, andere Währungen zu importieren, schlagen mit einer klaren Fehlermeldung fehl.
@@ -189,9 +198,9 @@ Ihre Finanzabteilung verlangt, dass alle Ausgaben nur in EUR, USD oder GBP erfas
 Ihr Unternehmen beginnt Geschäftstätigkeit in der Schweiz und muss CHF-Ausgaben erfassen.
 
 **Schritte**:
-  1. Gehen Sie zu **Stammdaten > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
   2. Fügen Sie `CHF` zu den zugelassenen Währungen hinzu (z. B. `EUR, USD, GBP, CHF`)
-  3. Klicken Sie auf **Änderungen speichern**
+  3. Klicken Sie auf **Speichern**
   4. Klicken Sie auf **FX-Kurse erzwingen**, um CHF-Kurse sofort abzurufen
   5. Überprüfen Sie, dass CHF in der FX-Kurs-Snapshot-Tabelle mit gültigen Kursen erscheint
 
@@ -201,7 +210,7 @@ Ihr Unternehmen beginnt Geschäftstätigkeit in der Schweiz und muss CHF-Ausgabe
 Es ist Dezember, und Sie bereiten die Budgetplanung für das nächste Jahr vor.
 
 **Schritte**:
-  1. Gehen Sie zu **Stammdaten > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
   2. Klicken Sie auf **FX-Kurse erzwingen**, um die Kurse für das kommende Jahr zu aktualisieren
   3. Prüfen Sie die FX-Kurs-Snapshot-Tabelle, um die Forward-Schätzungen für das nächste Jahr zu sehen
   4. Beachten Sie, dass Kurse für zukünftige Jahre Forward-Schätzungen sind (Wiederverwendung des Kurses des aktuellen Jahres) -- überprüfen Sie sie, wenn das Jahr näher rückt

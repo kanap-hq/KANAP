@@ -1,8 +1,17 @@
 # Paramètres de devises
 
-La page Paramètres de devises (**Données de référence > Devise**) est l'endroit où vous configurez comment les devises sont stockées, affichées et converties dans votre espace de travail. Elle contrôle la devise de reporting au niveau du tenant, les devises par défaut pour les nouveaux éléments et les restrictions optionnelles sur les devises utilisables.
+La page Paramètres de devises (**Gestion budgétaire > Administration > Devises**) est l'endroit où vous configurez comment les devises sont stockées, affichées et converties dans votre espace de travail. Elle contrôle la devise de reporting au niveau du tenant, les devises par défaut pour les nouveaux éléments et les restrictions optionnelles sur les devises utilisables.
 
 Pour des informations de fond sur les concepts de devises et les mécanismes de conversion, consultez le guide de gestion des devises.
+
+## Qui peut la consulter et la modifier
+
+Les devises sont un paramètre budgétaire. La page se trouve avec les autres paramètres budgétaires dans l'[Administration budgétaire](budget-operations.md).
+
+- **Lecture seule** : toute personne disposant d'un accès lecteur à l'administration budgétaire, à l'OPEX ou au CAPEX. Les champs ne sont pas modifiables, les boutons **Enregistrer**, **Réinitialiser** et **Forcer la synchronisation des taux de change** sont masqués, et un message indique que seuls les administrateurs budgétaires peuvent modifier la page. Le tableau des taux de change reste visible.
+- **Modifier les paramètres et lancer la synchronisation des taux de change** : administration budgétaire au niveau administrateur.
+
+Le droit **Paramètres** de la cartographie SI ne donne pas accès aux devises. Il couvre uniquement les paramètres de la cartographie SI.
 
 ## Le formulaire des paramètres de devises
 
@@ -44,7 +53,7 @@ Limiter les devises autorisées est utile lorsque :
 
 ## Enregistrer les modifications
 
-Cliquez sur **Enregistrer les modifications** pour appliquer vos mises à jour. Le système va :
+Cliquez sur **Enregistrer** pour appliquer vos mises à jour. Le système va :
   1. Valider tous les codes de devises (doivent être des codes ISO à 3 lettres)
   2. Mettre à jour vos paramètres du tenant
   3. Déclencher automatiquement un rafraîchissement en arrière-plan des taux de change pour l'année en cours et toutes les années avec des données budgétaires
@@ -166,9 +175,9 @@ Réutilise le taux de l'année en cours comme estimation prospective. Cela fourn
 Votre groupe passe d'un reporting basé EUR à un reporting basé USD.
 
 **Étapes** :
-  1. Allez dans **Données de référence > Devise**
+  1. Allez dans **Gestion budgétaire > Administration > Devises**
   2. Changez la devise de reporting de `EUR` à `USD`
-  3. Cliquez sur **Enregistrer les modifications** (déclenche automatiquement un rafraîchissement des taux)
+  3. Cliquez sur **Enregistrer** (déclenche automatiquement un rafraîchissement des taux)
   4. Vérifiez que le tableau des instantanés de taux affiche USD comme base (tous les taux devraient maintenant être relatifs à USD)
   5. Vérifiez les listes OPEX et CAPEX -- les totaux et colonnes annuelles s'affichent maintenant en USD
 
@@ -178,9 +187,9 @@ Votre groupe passe d'un reporting basé EUR à un reporting basé USD.
 Votre équipe financière exige que toutes les dépenses soient enregistrées en EUR, USD ou GBP uniquement.
 
 **Étapes** :
-  1. Allez dans **Données de référence > Devise**
+  1. Allez dans **Gestion budgétaire > Administration > Devises**
   2. Définissez les devises autorisées sur `EUR, USD, GBP`
-  3. Cliquez sur **Enregistrer les modifications**
+  3. Cliquez sur **Enregistrer**
   4. Lancez **Forcer la synchronisation des taux** pour vous assurer que les taux sont disponibles pour les trois devises
 
 **Résultat** : Les utilisateurs ne peuvent sélectionner que EUR, USD ou GBP lors de la création ou modification de postes. Les tentatives d'import d'autres devises échoueront avec un message d'erreur clair.
@@ -189,9 +198,9 @@ Votre équipe financière exige que toutes les dépenses soient enregistrées en
 Votre entreprise commence des opérations en Suisse et doit suivre les dépenses en CHF.
 
 **Étapes** :
-  1. Allez dans **Données de référence > Devise**
+  1. Allez dans **Gestion budgétaire > Administration > Devises**
   2. Ajoutez `CHF` aux devises autorisées (ex. : `EUR, USD, GBP, CHF`)
-  3. Cliquez sur **Enregistrer les modifications**
+  3. Cliquez sur **Enregistrer**
   4. Cliquez sur **Forcer la synchronisation des taux** pour récupérer les taux CHF immédiatement
   5. Vérifiez que CHF apparaît dans le tableau des instantanés de taux avec des taux valides
 
@@ -201,7 +210,7 @@ Votre entreprise commence des opérations en Suisse et doit suivre les dépenses
 Nous sommes en décembre, et vous préparez la planification budgétaire de l'année prochaine.
 
 **Étapes** :
-  1. Allez dans **Données de référence > Devise**
+  1. Allez dans **Gestion budgétaire > Administration > Devises**
   2. Cliquez sur **Forcer la synchronisation des taux** pour rafraîchir les taux pour l'année à venir
   3. Vérifiez le tableau des instantanés de taux pour voir les estimations prospectives pour l'année prochaine
   4. Notez que les taux des années futures sont des estimations prospectives (réutilisant le taux de l'année en cours) -- revoyez-les à mesure que l'année approche
