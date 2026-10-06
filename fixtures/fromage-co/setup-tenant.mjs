@@ -354,12 +354,14 @@ async function projectIdByName(name) {
   return project?.id ?? project?.project_id ?? '';
 }
 
+// Items whose end of validity has passed import as disabled, and the lists default to enabled
+// items only: include the disabled ones so their links still resolve.
 async function spendIdByName(name) {
-  return idByName('/spend-items?limit=1000', name, 'product_name');
+  return idByName('/spend-items?limit=1000&includeDisabled=true', name, 'product_name');
 }
 
 async function capexIdByDescription(description) {
-  return idByName('/capex-items?limit=500', description, 'description');
+  return idByName('/capex-items?limit=500&includeDisabled=true', description, 'description');
 }
 
 async function contractIdByName(name) {
