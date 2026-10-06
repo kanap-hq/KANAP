@@ -659,12 +659,23 @@
       "skipped": "Skipped",
       "prorated": "Prorated",
       "proratedHelp": "This line starts or ends during {{year}}. Only the months within its validity are copied.",
+      "linesUpliftHelp": "Columns calculated from quantity and price get the increase on their unit prices. Their months are recalculated with the destination year's calendars.",
+      "calendarNote": "Calendar",
+      "lineNumber": "Line {{n}}",
+      "calendarIssue": {
+        "fallback": "{{line}}: {{calendar}} has no working days for {{year}}, uses {{fallback}} instead.",
+        "missing": "{{line}}: {{calendar}} has no working days for {{year}} and no replacement calendar. The amounts are copied without recalculation.",
+        "disabled": "{{line}}: {{calendar}} is disabled and is still used."
+      },
       "previewInfo_one": "{{count}} item in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
       "previewInfo_other": "{{count}} items in the preview: {{toProcess}} to copy, {{skipped}} skipped. Skipped items keep their current value.",
       "existingDataWarning_one": "{{count}} item already has an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace it.",
       "existingDataWarning_other": "{{count}} items already have an amount in the destination column and will be skipped. Turn on \"Overwrite existing data\" to replace them.",
       "copyDone_one": "Copied {{count}} item.",
-      "copyDone_other": "Copied {{count}} items."
+      "copyDone_other": "Copied {{count}} items.",
+      "calendarAlert_one": "{{count}} item has lines on a calendar with no working days for {{year}}. To recalculate it with its own calendar, add the year's days on the Working-day calendars page, then run the dry run again.",
+      "calendarAlert_other": "{{count}} items have lines on a calendar with no working days for {{year}}. To recalculate them with their own calendars, add the year's days on the Working-day calendars page, then run the dry run again.",
+      "acceptCalendarChanges": "Copy anyway with these calendar changes"
     },
     "currency": {
       "title": "Currency settings",

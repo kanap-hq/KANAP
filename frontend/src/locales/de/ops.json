@@ -659,12 +659,23 @@
       "skipped": "Übersprungen",
       "prorated": "Anteilig",
       "proratedHelp": "Diese Position beginnt oder endet im Jahr {{year}}. Nur die Monate innerhalb ihrer Gültigkeit werden kopiert.",
+      "linesUpliftHelp": "Bei Spalten, die aus Menge und Preis berechnet werden, gilt die Erhöhung für die Stückpreise. Ihre Monate werden mit den Kalendern des Zieljahres neu berechnet.",
+      "calendarNote": "Kalender",
+      "lineNumber": "Zeile {{n}}",
+      "calendarIssue": {
+        "fallback": "{{line}}: {{calendar}} hat keine Arbeitstage für {{year}}, stattdessen wird {{fallback}} verwendet.",
+        "missing": "{{line}}: {{calendar}} hat keine Arbeitstage für {{year}}, und kein Kalender kann ihn ersetzen. Die Beträge werden ohne Neuberechnung kopiert.",
+        "disabled": "{{line}}: {{calendar}} ist deaktiviert und wird weiterhin verwendet."
+      },
       "previewInfo_one": "{{count}} Position in der Vorschau: {{toProcess}} zu kopieren, {{skipped}} übersprungen. Übersprungene Positionen behalten ihren aktuellen Wert.",
       "previewInfo_other": "{{count}} Positionen in der Vorschau: {{toProcess}} zu kopieren, {{skipped}} übersprungen. Übersprungene Positionen behalten ihren aktuellen Wert.",
       "existingDataWarning_one": "{{count}} Position hat bereits einen Betrag in der Zielspalte und wird übersprungen. Aktivieren Sie „Vorhandene Daten überschreiben“, um ihn zu ersetzen.",
       "existingDataWarning_other": "{{count}} Positionen haben bereits einen Betrag in der Zielspalte und werden übersprungen. Aktivieren Sie „Vorhandene Daten überschreiben“, um sie zu ersetzen.",
       "copyDone_one": "{{count}} Position kopiert.",
-      "copyDone_other": "{{count}} Positionen kopiert."
+      "copyDone_other": "{{count}} Positionen kopiert.",
+      "calendarAlert_one": "{{count}} Position hat Zeilen auf einem Kalender ohne Arbeitstage für {{year}}. Um sie mit ihrem eigenen Kalender neu zu berechnen, ergänzen Sie die Tage des Jahres auf der Seite Arbeitstagekalender und starten Sie den Testlauf erneut.",
+      "calendarAlert_other": "{{count}} Positionen haben Zeilen auf einem Kalender ohne Arbeitstage für {{year}}. Um sie mit ihren eigenen Kalendern neu zu berechnen, ergänzen Sie die Tage des Jahres auf der Seite Arbeitstagekalender und starten Sie den Testlauf erneut.",
+      "acceptCalendarChanges": "Trotzdem mit diesen Kalenderänderungen kopieren"
     },
     "currency": {
       "title": "Währungseinstellungen",
