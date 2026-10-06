@@ -489,6 +489,10 @@
   "operations": {
     "title": "Administration",
     "subtitle": "Leistungsstarke Werkzeuge zur Verwaltung und Transformation Ihrer Budgetdaten über verschiedene Jahre und Spalten hinweg.",
+    "sections": {
+      "settings": "Einstellungen",
+      "operations": "Vorgänge"
+    },
     "cards": {
       "freezeTitle": "Daten einfrieren / auftauen",
       "freezeDesc": "Budgetspalten oder Mitarbeiterzahl-Metriken für ein bestimmtes Jahr sperren",
@@ -501,7 +505,13 @@
       "allocationDefaultTitle": "Standard-Zuordnungsmethode",
       "allocationDefaultDesc": "Methode wählen, die für OPEX- und CAPEX-Positionen mit Standard-Zuordnung gilt",
       "budgetColumnsTitle": "Budgetspalten",
-      "budgetColumnsDesc": "Die fünf Budgetspalten benennen, die angezeigten Spalten und die Standardspalte wählen"
+      "budgetColumnsDesc": "Die fünf Budgetspalten benennen, die angezeigten Spalten und die Standardspalte wählen",
+      "currencyTitle": "Währungen",
+      "currencyDesc": "Legen Sie die Reporting- und Standardwährungen fest und prüfen Sie die Wechselkurse",
+      "masterDataFreezeTitle": "Stammdaten einfrieren",
+      "masterDataFreezeDesc": "Sperren Sie die Kennzahlen der Unternehmen und Abteilungen für ein bestimmtes Jahr",
+      "metricsCopyTitle": "Jahreskennzahlen kopieren",
+      "metricsCopyDesc": "Kopieren Sie die Kennzahlen der Unternehmen und Abteilungen von einem Jahr in ein anderes"
     },
     "allocationDefault": {
       "title": "Standard-Zuordnungsmethode",
@@ -678,7 +688,8 @@
       "fxRatesTitle": "Neueste Wechselkurs-Snapshots (pro Geschäftsjahr, Basis Reporting-Währung des Mandanten)",
       "loadingRates": "Wechselkurse werden geladen…",
       "loadRatesError": "Wechselkurshistorie konnte nicht geladen werden.",
-      "noRatesYet": "Noch keine Wechselkurs-Snapshots vorhanden. Führen Sie \"Wechselkurssynchronisierung erzwingen\" aus, um einen zu erstellen.",
+      "noRatesYet": "Noch keine Wechselkurs-Snapshots vorhanden.",
+      "noRatesHint": "Führen Sie \"Wechselkurssynchronisierung erzwingen\" aus, um einen zu erstellen.",
       "currencyCol": "Währung",
       "liveSpot": "Live-Spot",
       "quarterlyAvg": "Quartalsdurchschnitt",

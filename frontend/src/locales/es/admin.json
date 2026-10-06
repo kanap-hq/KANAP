@@ -521,20 +521,6 @@
     },
     "title": "Administración"
   },
-  "masterDataOperations": {
-    "cards": {
-      "copy": {
-        "description": "Copiar datos maestros entre espacios de trabajo.",
-        "title": "Copiar"
-      },
-      "freeze": {
-        "description": "Congelar datos maestros para prevenir cambios.",
-        "title": "Congelar"
-      }
-    },
-    "subtitle": "Ejecutar operaciones de datos maestros a nivel de plataforma.",
-    "title": "Operaciones de datos maestros"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",

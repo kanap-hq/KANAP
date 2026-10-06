@@ -521,20 +521,6 @@
     },
     "title": "Administration"
   },
-  "masterDataOperations": {
-    "cards": {
-      "copy": {
-        "description": "Copy master data between workspaces.",
-        "title": "Copy"
-      },
-      "freeze": {
-        "description": "Freeze master data to prevent changes.",
-        "title": "Freeze"
-      }
-    },
-    "subtitle": "Run platform-wide master data operations.",
-    "title": "Master data operations"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",

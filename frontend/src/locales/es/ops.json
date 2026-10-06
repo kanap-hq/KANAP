@@ -489,6 +489,10 @@
   "operations": {
     "title": "Administración",
     "subtitle": "Herramientas potentes para gestionar y transformar sus datos presupuestarios en diferentes años y columnas.",
+    "sections": {
+      "settings": "Configuración",
+      "operations": "Operaciones"
+    },
     "cards": {
       "freezeTitle": "Congelar / Descongelar datos",
       "freezeDesc": "Bloquear columnas presupuestarias o métricas de plantilla para un año específico",
@@ -501,7 +505,13 @@
       "allocationDefaultTitle": "Método de asignación por defecto",
       "allocationDefaultDesc": "Elegir el método aplicado a las partidas de OPEX y CAPEX que siguen con la asignación por defecto",
       "budgetColumnsTitle": "Columnas presupuestarias",
-      "budgetColumnsDesc": "Nombrar las cinco columnas presupuestarias, elegir cuáles se muestran y cuál es la columna por defecto"
+      "budgetColumnsDesc": "Nombrar las cinco columnas presupuestarias, elegir cuáles se muestran y cuál es la columna por defecto",
+      "currencyTitle": "Monedas",
+      "currencyDesc": "Defina las monedas de reporting y predeterminadas, y consulte los tipos de cambio",
+      "masterDataFreezeTitle": "Congelar datos maestros",
+      "masterDataFreezeDesc": "Bloquee los indicadores de empresas y departamentos para un año determinado",
+      "metricsCopyTitle": "Copiar indicadores anuales",
+      "metricsCopyDesc": "Copie los indicadores de empresas y departamentos de un año a otro"
     },
     "allocationDefault": {
       "title": "Método de asignación por defecto",
@@ -678,7 +688,8 @@
       "fxRatesTitle": "Últimas capturas de tipos de cambio (por ejercicio fiscal, base moneda de reporting del espacio de trabajo)",
       "loadingRates": "Cargando tipos de cambio…",
       "loadRatesError": "No se pudo cargar el historial de tipos de cambio.",
-      "noRatesYet": "Aún no hay capturas de tipos de cambio. Ejecute \"Forzar sincronización de tipos de cambio\" para crear una.",
+      "noRatesYet": "Aún no hay capturas de tipos de cambio.",
+      "noRatesHint": "Ejecute \"Forzar sincronización de tipos de cambio\" para crear una.",
       "currencyCol": "Moneda",
       "liveSpot": "Spot en tiempo real",
       "quarterlyAvg": "Media trimestral",

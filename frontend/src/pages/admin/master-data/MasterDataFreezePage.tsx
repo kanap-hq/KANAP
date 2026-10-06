@@ -134,7 +134,7 @@ export default function MasterDataFreezePage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader title={t('admin.freeze.title')} />
+      <PageHeader title={t('admin.freeze.title')} breadcrumbTitle={t('admin.freeze.title')} />
       {!canModify && (
         <Alert severity="info" sx={{ maxWidth: 600 }}>
           {t('admin.freeze.noPermission')}
