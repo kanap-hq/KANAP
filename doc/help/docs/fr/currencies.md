@@ -8,8 +8,8 @@ Pour des informations de fond sur les concepts de devises et les mécanismes de 
 
 Les devises sont un paramètre budgétaire. La page se trouve avec les autres paramètres budgétaires dans l'[Administration budgétaire](budget-operations.md).
 
-- **Lecture seule** : toute personne disposant d'un accès lecteur à l'administration budgétaire, à l'OPEX ou au CAPEX. Les champs ne sont pas modifiables, les boutons **Enregistrer**, **Réinitialiser** et **Forcer la synchronisation des taux de change** sont masqués, et un message indique que seuls les administrateurs budgétaires peuvent modifier la page. Le tableau des taux de change reste visible.
-- **Modifier les paramètres et lancer la synchronisation des taux de change** : administration budgétaire au niveau administrateur.
+- **Ouvrir la page, modifier les paramètres et lancer la synchronisation des taux de change** : administration budgétaire au niveau administrateur. La carte est masquée pour les autres utilisateurs.
+- **Utiliser les devises sur les postes** : les utilisateurs OPEX et CAPEX choisissent parmi les devises autorisées dans leurs formulaires de poste, sans ouvrir cette page.
 
 Le droit **Paramètres** de la cartographie SI ne donne pas accès aux devises. Il couvre uniquement les paramètres de la cartographie SI.
 

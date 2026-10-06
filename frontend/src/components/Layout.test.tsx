@@ -10,13 +10,21 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
 }));
 
-// Every right by default; a test may narrow it to a set of readable resources.
-const access = vi.hoisted(() => ({ readable: null as Set<string> | null }));
+// Every right by default; a test may narrow it to a level per resource.
+type Level = 'reader' | 'member' | 'admin';
+const access = vi.hoisted(() => ({
+  grants: null as Record<string, 'reader' | 'member' | 'admin'> | null,
+  rank: { reader: 1, member: 3, admin: 4 } as Record<string, number>,
+}));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
     logout: vi.fn(),
     token: 'token',
-    hasLevel: (resource: string) => access.readable === null || access.readable.has(resource),
+    hasLevel: (resource: string, level: Level) => {
+      if (access.grants === null) return true;
+      const granted = access.grants[resource];
+      return !!granted && access.rank[granted] >= access.rank[level];
+    },
     claims: { isGlobalAdmin: false, isPlatformAdmin: false, isBillingAdmin: false },
     profile: { first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.com' },
     // A trial in progress: the subscription banner shows.
@@ -157,25 +165,36 @@ describe('Layout links and a page with unsaved edits (lot 3C review)', () => {
 
 describe('Layout budget management sidebar', () => {
   afterEach(() => {
-    access.readable = null;
+    access.grants = null;
   });
 
-  it('shows the administration entry to a budget-only reader', () => {
-    access.readable = new Set(['budget_ops']);
+  function renderSidebar() {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/ops/operations']}>
+        <MemoryRouter initialEntries={['/ops/opex']}>
           <Routes>
             <Route element={<Layout />}>
-              <Route path="/ops/operations" element={<div>landing</div>} />
+              <Route path="/ops/opex" element={<div>opex</div>} />
             </Route>
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
     );
+  }
+
+  it('shows the administration entry to a budget administrator', () => {
+    access.grants = { opex: 'admin', capex: 'admin', budget_ops: 'admin' };
+    renderSidebar();
 
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.administration' })).toHaveAttribute('href', '/ops/operations');
-    expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.opex' })).not.toBeInTheDocument();
+  });
+
+  it('hides the administration entry from a budget member, who can use none of its pages', () => {
+    access.grants = { opex: 'member', capex: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
+    renderSidebar();
+
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.opex' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.administration' })).not.toBeInTheDocument();
   });
 });

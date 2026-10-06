@@ -8,8 +8,8 @@ Para información sobre conceptos de moneda y mecánicas de conversión, consult
 
 Las monedas son un ajuste presupuestario. La página está junto a los demás ajustes presupuestarios, en la [Administración presupuestaria](budget-operations.md).
 
-- **Solo lectura**: cualquier persona con acceso de lector a la administración presupuestaria, a OPEX o a CAPEX. Los campos no se pueden editar, los botones **Guardar**, **Restablecer** y **Forzar sincronización de tipos de cambio** están ocultos, y un mensaje indica que solo los administradores de presupuesto pueden cambiar la página. La tabla de tipos de cambio sigue visible.
-- **Cambiar los ajustes y lanzar la sincronización de tipos de cambio**: administración presupuestaria con nivel de administrador.
+- **Abrir la página, cambiar los ajustes y lanzar la sincronización de tipos de cambio**: administración presupuestaria con nivel de administrador. La tarjeta se oculta a los demás usuarios.
+- **Usar monedas en las partidas**: los usuarios de OPEX y CAPEX eligen entre las monedas permitidas en los formularios de sus partidas, sin abrir esta página.
 
 El permiso **Configuración** del panorama IT no da acceso a las monedas. Solo cubre la configuración del panorama IT.
 

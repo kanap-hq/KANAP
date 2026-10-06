@@ -5,9 +5,9 @@ Budget Administration gives you a set of tools for managing and transforming bud
 ## Where to find it
 
 - Path: **Budget Management > Administration**
-- Permissions: the page opens for readers of Budget administration, OPEX or CAPEX. Most operations require `budget_ops:admin`.
+- Permissions: each card shows only to the users who can use it (see the table below). **Administration** appears in the menu when you can use at least one card.
 
-The landing page has two sections. Each card links to a dedicated tool. You see only the cards your access allows, and an empty section is hidden.
+The landing page has two sections. Each card links to a dedicated tool. An empty section is hidden.
 
 **Settings**
 
@@ -28,7 +28,13 @@ The landing page has two sections. Each card links to a dedicated tool. You see 
 | **Freeze master data** | Lock company and department metrics for a year. See [Freeze master data and copy yearly metrics](master-data-operations.md) |
 | **Copy yearly metrics** | Copy company and department metrics from one year to another. See [Freeze master data and copy yearly metrics](master-data-operations.md) |
 
-The Currencies card opens for readers of Budget administration, OPEX or CAPEX, and they see the page read only. The other cards open for OPEX readers. Changing a setting or running an operation needs admin access to Budget administration. For **Freeze master data** and **Copy yearly metrics**, admins of companies or departments can also act on their own scope.
+| Cards | Who sees them |
+|---|---|
+| Currencies, Budget columns, Default allocation method, Freeze / unfreeze data | Budget administration at admin level (`budget_ops:admin`) |
+| Copy budget columns, Copy allocations, Reset budget column | OPEX or CAPEX at admin level. The OPEX and CAPEX tabs follow the same rule: an OPEX administrator works on OPEX items only |
+| Freeze master data, Copy yearly metrics | Users with access to the budget who are admins of Budget administration, companies or departments. Company and department admins act on their own scope |
+
+The built-in Budget Administrator role sees every card. Budget Member and Budget Reader see none, so **Administration** is not in their menu.
 
 The budget columns are Budget, Revision, Forecast, Actuals and Expected landing. These are the standard names. Your organisation can rename them, hide some and choose a default column in [Budget columns](#budget-columns). Every page below shows the names your organisation chose.
 
@@ -73,7 +79,7 @@ Below the controls, two cards show the real-time freeze state of all five column
 
 ### Permissions
 
-Without `budget_ops:admin` you can still view the freeze status, but the controls are disabled. A banner reads "Only budget administrators can change this page."
+Freezing and unfreezing need `budget_ops:admin`. The card is hidden from other users.
 
 ---
 
@@ -311,7 +317,7 @@ The default is resolved every time allocations are displayed, so editing it re-d
 
 ### Permissions
 
-Without `budget_ops:admin` you can view the current setting but not change it.
+Changing the default needs `budget_ops:admin`. The card is hidden from other users.
 
 ---
 
@@ -354,7 +360,7 @@ Click **Save** to apply your changes. The button stays disabled until something 
 
 ### Permissions
 
-Changing the settings needs Budget administration admin rights (`budget_ops:admin`). Everyone else can open the page and see the settings, read-only, under the banner "Only budget administrators can change this page."
+Changing the settings needs Budget administration admin rights (`budget_ops:admin`). The card is hidden from other users.
 
 If the settings cannot be loaded, the page shows one line, "The column settings could not be loaded.", and no controls.
 

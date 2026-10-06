@@ -9,9 +9,8 @@ Die Jahreskennzahlen sind Mitarbeiterzahl, IT-Benutzer und Umsatz der Unternehme
 - Arbeitsbereich: **Budgetverwaltung**
 - Pfad: **Budgetverwaltung > Administration**, Abschnitt **Vorgänge**, Karten **Stammdaten einfrieren** und **Jahreskennzahlen kopieren**
 - Berechtigungen:
-  - Die Seiten öffnen und den Einfrierstatus anzeigen: derselbe Zugriff wie für den Rest der Budgetadministration (zum Beispiel Leserechte auf OPEX)
-  - Einfrieren / Freigeben: `companies:admin`, `departments:admin` oder `budget_ops:admin`
-  - Daten kopieren: `companies:admin`, `departments:admin` oder `budget_ops:admin`
+  - Zugriff auf das Budget (Leserechte auf OPEX, CAPEX oder die Budgetadministration) sowie eines der Rechte `companies:admin`, `departments:admin` oder `budget_ops:admin`
+  - Die Karten sind für andere Benutzer ausgeblendet
 
 Die Stammdaten haben keinen eigenen Administrationseintrag.
 
@@ -48,7 +47,7 @@ Sie benötigen Admin-Zugriff auf den relevanten Bereich zum Einfrieren oder Frei
 | Unternehmen | `companies:admin` oder `budget_ops:admin` |
 | Abteilungen | `departments:admin` oder `budget_ops:admin` |
 
-Wenn Ihnen die erforderlichen Berechtigungen fehlen, können Sie den aktuellen Einfrierstatus weiterhin einsehen -- Sie können ihn nur nicht ändern.
+Wenn Sie nur für einen Bereich Administrator sind, ist der andere Bereich ausgegraut. Der Einfrierstatus beider Bereiche bleibt sichtbar.
 
 ---
 
@@ -178,7 +177,7 @@ Nein. Das Werkzeug kopiert alle Entitäten für die ausgewählten Bereiche und K
 Nein. Es werden nur Kennzahlen für Entitäten geschrieben, die in beiden Jahren existieren. Wenn ein Unternehmen im Quelljahr existiert, aber nicht im Ziel, wird diese Zeile übersprungen.
 
 **Wer kann den Einfrierstatus sehen?**
-Jeder, der die Budgetadministration öffnen kann. Nur Administratoren des relevanten Bereichs können tatsächlich einfrieren oder freigeben.
+Jeder, der diese Seite öffnen kann, also Administratoren von Unternehmen, Abteilungen oder der Budgetadministration. Jeder Administrator friert seinen eigenen Bereich ein oder gibt ihn frei.
 
 **Kann ich zukünftige Jahre einfrieren?**
 Ja. Die Jahrauswahl umfasst einen Bereich vom letzten Jahr bis fünf Jahre voraus. Das Einfrieren eines zukünftigen Jahres ist nützlich, um genehmigte Budgets vor Beginn des Geschäftsjahres zu sperren.

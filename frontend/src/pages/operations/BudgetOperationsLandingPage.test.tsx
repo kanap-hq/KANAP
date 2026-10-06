@@ -8,9 +8,14 @@ import { createAppTheme } from '../../config/ThemeContext';
 const translation = vi.hoisted(() => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }));
 vi.mock('react-i18next', () => ({ useTranslation: () => translation }));
 vi.mock('../../components/PageHeader', () => ({ default: ({ title }: { title: string }) => <h1>{title}</h1> }));
-const auth = vi.hoisted(() => ({ readable: new Set<string>() }));
+const auth = vi.hoisted(() => ({
+  grants: {} as Record<string, string>,
+  rank: { reader: 1, member: 3, admin: 4 } as Record<string, number>,
+}));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (resource: string) => auth.readable.has(resource) }),
+  useAuth: () => ({
+    hasLevel: (resource: string, level: string) => (auth.rank[auth.grants[resource]] ?? 0) >= auth.rank[level],
+  }),
 }));
 
 import BudgetOperationsLandingPage from './BudgetOperationsLandingPage';
@@ -28,13 +33,16 @@ function renderPage() {
 const section = (name: string) => screen.getByRole('region', { name });
 const hrefs = (region: HTMLElement) => within(region).getAllByRole('link').map((link) => link.getAttribute('href'));
 
+const BUDGET_ADMIN = { opex: 'admin', capex: 'admin', budget_ops: 'admin' };
+const BUDGET_MEMBER = { opex: 'member', capex: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
+
 describe('BudgetOperationsLandingPage', () => {
   beforeEach(() => {
-    auth.readable = new Set();
+    auth.grants = {};
   });
 
-  it('shows the settings and the operations in two titled sections', () => {
-    auth.readable = new Set(['opex']);
+  it('shows every tile to a budget administrator, in two titled sections', () => {
+    auth.grants = BUDGET_ADMIN;
     renderPage();
 
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
@@ -57,24 +65,36 @@ describe('BudgetOperationsLandingPage', () => {
     expect(screen.getByRole('link', { name: /operations\.cards\.currencyTitle/ })).toHaveAttribute('href', '/ops/operations/currency');
   });
 
-  it('hides a section when none of its tiles is permitted', () => {
-    // A CAPEX reader may open the currencies only: the operations section goes away.
-    auth.readable = new Set(['capex']);
+  it('shows no tile to a budget member', () => {
+    auth.grants = BUDGET_MEMBER;
     renderPage();
 
-    expect(hrefs(section('operations.sections.settings'))).toEqual(['/ops/operations/currency']);
-    expect(screen.queryByRole('region', { name: 'operations.sections.operations' })).not.toBeInTheDocument();
-    expect(screen.queryByText('operations.sections.operations')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('region')).toHaveLength(0);
   });
 
-  it('shows the currency tile to a budget reader', () => {
-    auth.readable = new Set(['budget_ops']);
+  it('shows the item operations only to a CAPEX administrator, and hides the empty settings section', () => {
+    auth.grants = { opex: 'reader', capex: 'admin' };
     renderPage();
 
-    expect(hrefs(section('operations.sections.settings'))).toEqual(['/ops/operations/currency']);
+    expect(screen.queryByRole('region', { name: 'operations.sections.settings' })).not.toBeInTheDocument();
+    expect(hrefs(section('operations.sections.operations'))).toEqual([
+      '/ops/operations/copy-budget-columns',
+      '/ops/operations/copy-allocations',
+      '/ops/operations/column-reset',
+    ]);
   });
 
-  it('shows no section without any right', () => {
+  it('shows the master data tiles to a departments administrator with budget access', () => {
+    auth.grants = { ...BUDGET_MEMBER, departments: 'admin' };
+    renderPage();
+
+    expect(hrefs(section('operations.sections.operations'))).toEqual([
+      '/ops/operations/master-data-freeze',
+      '/ops/operations/metrics-copy',
+    ]);
+  });
+
+  it('shows no tile without any right', () => {
     renderPage();
 
     expect(screen.queryAllByRole('region')).toHaveLength(0);

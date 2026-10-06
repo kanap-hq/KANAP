@@ -5,9 +5,9 @@ Die Budget-Administration bietet Ihnen eine Reihe von Werkzeugen zur Verwaltung 
 ## Wo Sie es finden
 
 - Pfad: **Budgetverwaltung > Administration**
-- Berechtigungen: Die Seite öffnet sich für Leser der Budgetadministration, von OPEX oder CAPEX. Die meisten Vorgänge erfordern `budget_ops:admin`.
+- Berechtigungen: Jede Karte wird nur den Benutzern angezeigt, die sie verwenden können (siehe die Tabelle unten). **Administration** erscheint im Menü, sobald Sie mindestens eine Karte verwenden können.
 
-Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug. Sie sehen nur die Karten, die Ihr Zugriff erlaubt, und ein leerer Abschnitt wird ausgeblendet.
+Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug. Ein leerer Abschnitt wird ausgeblendet.
 
 **Einstellungen**
 
@@ -28,7 +28,13 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 | **Stammdaten einfrieren** | Die Kennzahlen der Unternehmen und Abteilungen für ein Jahr sperren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
 | **Jahreskennzahlen kopieren** | Die Kennzahlen der Unternehmen und Abteilungen von einem Jahr in ein anderes kopieren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
 
-Die Karte Währungen öffnet sich für Leser der Budgetadministration, von OPEX oder CAPEX, die die Seite schreibgeschützt sehen. Die anderen Karten öffnen sich für OPEX-Leser. Eine Einstellung zu ändern oder einen Vorgang zu starten erfordert Administratorzugriff auf die Budgetadministration. Bei **Stammdaten einfrieren** und **Jahreskennzahlen kopieren** können auch Administratoren von Unternehmen oder Abteilungen für ihren Bereich handeln.
+| Karten | Wer sie sieht |
+|---|---|
+| Währungen, Budgetspalten, Standard-Zuordnungsmethode, Daten einfrieren / auftauen | Budgetadministration auf Administratorebene (`budget_ops:admin`) |
+| Budgetspalten kopieren, Zuordnungen kopieren, Budgetspalte zurücksetzen | OPEX oder CAPEX auf Administratorebene. Die Registerkarten OPEX und CAPEX folgen derselben Regel: Ein OPEX-Administrator arbeitet nur mit OPEX-Positionen |
+| Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren der Budgetadministration, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
+
+Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied und Budget-Leser sehen keine, daher fehlt **Administration** in ihrem Menü.
 
 Die Budgetspalten sind Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert. Das sind die Standardnamen. Ihre Organisation kann sie umbenennen, einige ausblenden und unter [Budgetspalten](#budgetspalten) eine Standardspalte wählen. Jede der folgenden Seiten zeigt die Namen, die Ihre Organisation gewählt hat.
 
@@ -73,7 +79,7 @@ Unterhalb der Steuerelemente zeigen zwei Karten den Echtzeit-Einfrierstatus alle
 
 ### Berechtigungen
 
-Ohne `budget_ops:admin` können Sie den Einfrierstatus weiterhin einsehen, aber die Steuerelemente sind deaktiviert. Ein Banner zeigt „Nur Budgetadministratoren können diese Seite ändern.“
+Einfrieren und Auftauen erfordern `budget_ops:admin`. Die Karte ist für andere Benutzer ausgeblendet.
 
 ---
 
@@ -311,7 +317,7 @@ Der Standard wird bei jeder Anzeige der Zuordnungen neu aufgelöst: Eine Änderu
 
 ### Berechtigungen
 
-Ohne `budget_ops:admin` können Sie die aktuelle Einstellung einsehen, aber nicht ändern.
+Das Ändern der Standardmethode erfordert `budget_ops:admin`. Die Karte ist für andere Benutzer ausgeblendet.
 
 ---
 
@@ -354,7 +360,7 @@ Klicken Sie auf **Speichern**, um Ihre Änderungen anzuwenden. Die Schaltfläche
 
 ### Berechtigungen
 
-Zum Ändern der Einstellungen sind Administrationsrechte für die Budget-Administration erforderlich (`budget_ops:admin`). Alle anderen können die Seite öffnen und die Einstellungen schreibgeschützt einsehen, unter dem Banner „Nur Budgetadministratoren können diese Seite ändern.“
+Zum Ändern der Einstellungen sind Administrationsrechte für die Budget-Administration erforderlich (`budget_ops:admin`). Die Karte ist für andere Benutzer ausgeblendet.
 
 Wenn die Einstellungen nicht geladen werden können, zeigt die Seite eine einzige Zeile, „Die Spalteneinstellungen konnten nicht geladen werden.“, und keine Steuerelemente.
 

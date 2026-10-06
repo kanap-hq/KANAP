@@ -6,7 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const translation = vi.hoisted(() => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }));
 vi.mock('react-i18next', () => ({ useTranslation: () => translation }));
-const auth = vi.hoisted(() => ({ readable: new Set<string>() }));
+const auth = vi.hoisted(() => ({
+  grants: {} as Record<string, string>,
+  rank: { reader: 1, member: 3, admin: 4 } as Record<string, number>,
+}));
 vi.mock('./auth/AuthContext', () => ({
   useAuth: () => ({
     token: 'token',
@@ -15,7 +18,7 @@ vi.mock('./auth/AuthContext', () => ({
     sessionExpired: false,
     profile: { role: 'Reader', roles: [] },
     claims: { isGlobalAdmin: false, isPlatformAdmin: false, isBillingAdmin: false },
-    hasLevel: (resource: string) => auth.readable.has(resource),
+    hasLevel: (resource: string, level: string) => (auth.rank[auth.grants[resource]] ?? 0) >= auth.rank[level],
     hasAnyAccess: true,
     subscription: null,
   }),
@@ -61,7 +64,7 @@ function renderAt(path: string) {
 
 describe('legacy budget redirects', () => {
   beforeEach(() => {
-    auth.readable = new Set(['opex']);
+    auth.grants = { opex: 'admin', capex: 'admin', budget_ops: 'admin' };
   });
 
   it('sends /master-data/operations to the administration landing', () => {
@@ -93,42 +96,50 @@ const tileHrefs = () => screen.getAllByRole('region')
   .flatMap((region) => within(region).getAllByRole('link'))
   .map((link) => link.getAttribute('href'));
 
+const BUDGET_MEMBER = { opex: 'member', capex: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
+
 describe('budget administration access', () => {
-  it.each(['/ops/operations', '/ops/operations/'])('opens %s to a CAPEX-only reader, with the currency tile only', (path) => {
-    auth.readable = new Set(['capex']);
+  it.each(['/ops/operations', '/ops/operations/'])('opens %s to a budget administrator', (path) => {
+    auth.grants = { budget_ops: 'admin' };
     renderAt(path);
     expect(screen.getByRole('heading', { name: 'operations.title' })).toBeInTheDocument();
-    expect(tileHrefs()).toEqual(['/ops/operations/currency']);
-    expect(screen.queryByText('operations.sections.operations')).not.toBeInTheDocument();
+    expect(tileHrefs()).toEqual([
+      '/ops/operations/currency',
+      '/ops/operations/columns',
+      '/ops/operations/allocation-default',
+      '/ops/operations/freeze',
+      '/ops/operations/master-data-freeze',
+      '/ops/operations/metrics-copy',
+    ]);
   });
 
-  it('opens the landing to a budget-only reader, with the currency tile only', () => {
-    auth.readable = new Set(['budget_ops']);
-    renderAt('/ops/operations');
-    expect(tileHrefs()).toEqual(['/ops/operations/currency']);
-  });
-
-  it('keeps the landing closed without a budget right', () => {
-    auth.readable = new Set(['companies', 'departments']);
+  it('keeps the landing closed to a budget member, who can use none of its pages', () => {
+    auth.grants = BUDGET_MEMBER;
     renderAt('/ops/operations');
     expect(screen.getByText('forbidden')).toBeInTheDocument();
   });
 
-  it.each(['budget_ops', 'opex', 'capex'])('opens the currencies to a %s reader', (resource) => {
-    auth.readable = new Set([resource]);
+  it.each(NEW_ROUTES)('keeps %s closed to a budget member', (route) => {
+    auth.grants = BUDGET_MEMBER;
+    renderAt(route);
+    expect(screen.getByText('forbidden')).toBeInTheDocument();
+  });
+
+  it('keeps the landing closed to a master data administrator without budget access', () => {
+    auth.grants = { companies: 'admin', departments: 'admin' };
+    renderAt('/ops/operations');
+    expect(screen.getByText('forbidden')).toBeInTheDocument();
+  });
+
+  it('opens the master data pages to a departments administrator with budget access', () => {
+    auth.grants = { ...BUDGET_MEMBER, departments: 'admin' };
+    renderAt('/ops/operations/master-data-freeze');
+    expect(screen.getByText('page /ops/operations/master-data-freeze')).toBeInTheDocument();
+  });
+
+  it('keeps the budget settings closed to an OPEX administrator', () => {
+    auth.grants = { opex: 'admin', budget_ops: 'reader' };
     renderAt('/ops/operations/currency');
-    expect(screen.getByText('page /ops/operations/currency')).toBeInTheDocument();
-  });
-
-  it('keeps the currencies closed without a budget right', () => {
-    auth.readable = new Set(['companies']);
-    renderAt('/master-data/currency');
-    expect(screen.getByText('forbidden')).toBeInTheDocument();
-  });
-
-  it('keeps the other administration pages on OPEX readers', () => {
-    auth.readable = new Set(['capex', 'budget_ops']);
-    renderAt('/ops/operations/freeze');
     expect(screen.getByText('forbidden')).toBeInTheDocument();
   });
 });

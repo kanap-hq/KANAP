@@ -5,14 +5,23 @@ import { textTabSx, textTabsSx } from '../../theme/formSx';
 import { useAuth } from '../../auth/AuthContext';
 import type { BudgetScope } from '../../services/budgetOperations';
 
-/** The item type a column operation page opens on: OPEX when the user can read it, else CAPEX. */
-export function useDefaultBudgetScope(): BudgetScope {
+type ScopeLevel = 'reader' | 'admin';
+
+/** The item type a page opens on: OPEX when the user has `level` on it, else CAPEX. */
+export function useDefaultBudgetScope(level: ScopeLevel = 'reader'): BudgetScope {
   const { hasLevel } = useAuth();
-  return hasLevel('opex', 'reader') || !hasLevel('capex', 'reader') ? 'opex' : 'capex';
+  return hasLevel('opex', level) || !hasLevel('capex', level) ? 'opex' : 'capex';
 }
 
-/** OPEX / CAPEX switch of the column operations pages; a type the user cannot read is disabled. */
-export default function ItemScopeTabs({ value, onChange }: { value: BudgetScope; onChange: (next: BudgetScope) => void }) {
+/**
+ * OPEX / CAPEX switch; a type the user lacks `level` on is disabled. Reports read
+ * (`reader`), the column operations act and pass `admin`.
+ */
+export default function ItemScopeTabs({ value, onChange, level = 'reader' }: {
+  value: BudgetScope;
+  onChange: (next: BudgetScope) => void;
+  level?: ScopeLevel;
+}) {
   const { t } = useTranslation(['ops']);
   const { hasLevel } = useAuth();
   return (
@@ -22,8 +31,8 @@ export default function ItemScopeTabs({ value, onChange }: { value: BudgetScope;
       aria-label={t('operations.scope.label')}
       sx={[textTabsSx, { alignSelf: 'center' }]}
     >
-      <Tab value="opex" label={t('operations.scope.opex')} sx={textTabSx(value === 'opex')} disabled={!hasLevel('opex', 'reader')} />
-      <Tab value="capex" label={t('operations.scope.capex')} sx={textTabSx(value === 'capex')} disabled={!hasLevel('capex', 'reader')} />
+      <Tab value="opex" label={t('operations.scope.opex')} sx={textTabSx(value === 'opex')} disabled={!hasLevel('opex', level)} />
+      <Tab value="capex" label={t('operations.scope.capex')} sx={textTabSx(value === 'capex')} disabled={!hasLevel('capex', level)} />
     </Tabs>
   );
 }

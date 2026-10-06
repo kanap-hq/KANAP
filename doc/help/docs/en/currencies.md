@@ -6,8 +6,8 @@ The Currency Settings page (**Budget management > Administration > Currencies**)
 
 Currencies are a budget setting. The page sits with the other budget settings in [Budget Administration](budget-operations.md).
 
-- **Read only**: anyone with reader access to Budget administration, OPEX or CAPEX. The fields cannot be edited, the **Save**, **Reset** and **Force FX rates sync** buttons are hidden, and a message says that only budget administrators can change the page. The FX rate table is visible.
-- **Change settings and run the FX rates sync**: Budget administration at admin level.
+- **Open the page, change settings and run the FX rates sync**: Budget administration at admin level. The card is hidden from other users.
+- **Use currencies on items**: OPEX and CAPEX users pick from the allowed currencies in their item forms, without opening this page.
 
 The **Settings** permission of the IT landscape does not give access to currencies. It covers the IT landscape settings only.
 

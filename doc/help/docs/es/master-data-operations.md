@@ -9,9 +9,8 @@ Los indicadores anuales son la plantilla, los usuarios IT y la facturación de l
 - Espacio de trabajo: **Gestión presupuestaria**
 - Ruta: **Gestión presupuestaria > Administración**, sección **Operaciones**, tarjetas **Congelar datos maestros** y **Copiar indicadores anuales**
 - Permisos:
-  - Abrir las páginas y ver el estado de congelación: el mismo acceso que el resto de la administración presupuestaria (por ejemplo, acceso de lector a OPEX)
-  - Congelar / descongelar: `companies:admin`, `departments:admin` o `budget_ops:admin`
-  - Copiar datos: `companies:admin`, `departments:admin` o `budget_ops:admin`
+  - Acceso al presupuesto (acceso de lector a OPEX, CAPEX o la administración presupuestaria), más uno de los permisos `companies:admin`, `departments:admin` o `budget_ops:admin`
+  - Las tarjetas se ocultan a los demás usuarios
 
 Los datos maestros no tienen una entrada de Administración propia.
 
@@ -48,7 +47,7 @@ Necesita acceso de administrador en el alcance relevante para congelar o descong
 | Empresas | `companies:admin` o `budget_ops:admin` |
 | Departamentos | `departments:admin` o `budget_ops:admin` |
 
-Si no tiene los permisos requeridos, la página aún le permite revisar el estado actual de congelación -- simplemente no puede cambiarlo.
+Si es administrador de un solo alcance, el otro alcance aparece atenuado. El estado de congelación de ambos alcances sigue visible.
 
 ---
 
@@ -178,7 +177,7 @@ No. La herramienta copia todas las entidades para los alcances y métricas selec
 No. Solo escribe métricas para entidades que ya existen en ambos años. Si una empresa existe en el año de origen pero no en el de destino, esa fila se omite.
 
 **¿Quién puede ver el estado de congelación?**
-Cualquier persona que pueda abrir la administración presupuestaria. Solo los administradores del alcance relevante pueden realmente congelar o descongelar.
+Cualquier persona que pueda abrir esta página, es decir, los administradores de empresas, de departamentos o de la administración presupuestaria. Cada administrador congela o descongela su propio alcance.
 
 **¿Puedo congelar años futuros?**
 Sí. El selector de año cubre un rango desde el año pasado hasta cinco años adelante. Congelar un año futuro es útil para bloquear presupuestos aprobados antes de que comience el ejercicio fiscal.

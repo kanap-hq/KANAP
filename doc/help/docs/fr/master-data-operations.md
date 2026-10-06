@@ -9,9 +9,8 @@ Les indicateurs annuels sont l'effectif, les utilisateurs IT et le chiffre d'aff
 - Espace de travail : **Gestion budgétaire**
 - Chemin : **Gestion budgétaire > Administration**, section **Opérations**, cartes **Geler les données de référence** et **Copier les indicateurs annuels**
 - Autorisations :
-  - Ouvrir les pages et voir le statut de gel : le même accès que le reste de l'administration budgétaire (un accès lecteur à l'OPEX, par exemple)
-  - Geler / dégeler : `companies:admin`, `departments:admin`, ou `budget_ops:admin`
-  - Copier les données : `companies:admin`, `departments:admin`, ou `budget_ops:admin`
+  - Accès au budget (accès lecteur à l'OPEX, au CAPEX ou à l'administration budgétaire), plus l'un des droits `companies:admin`, `departments:admin` ou `budget_ops:admin`
+  - Les cartes sont masquées pour les autres utilisateurs
 
 Les données de référence n'ont pas d'entrée Administration propre.
 
@@ -48,7 +47,7 @@ Vous avez besoin d'un accès admin sur le périmètre concerné pour geler ou d�
 | Sociétés | `companies:admin` ou `budget_ops:admin` |
 | Départements | `departments:admin` ou `budget_ops:admin` |
 
-Si vous n'avez pas les autorisations requises, la page vous permet toujours de consulter le statut de gel actuel — vous ne pouvez simplement pas le modifier.
+Si vous êtes administrateur d'un seul périmètre, l'autre périmètre est grisé. Le statut de gel des deux périmètres reste visible.
 
 ---
 
@@ -178,7 +177,7 @@ Non. L'outil copie toutes les entités pour les périmètres et métriques séle
 Non. Elle n'écrit des métriques que pour les entités qui existent déjà dans les deux années. Si une société existe dans l'année source mais pas dans la destination, cette ligne est sautée.
 
 **Qui peut voir le statut de gel ?**
-Toute personne qui peut ouvrir l'administration budgétaire. Seuls les administrateurs du périmètre concerné peuvent effectivement geler ou dégeler.
+Toute personne qui peut ouvrir cette page, c'est-à-dire les administrateurs des sociétés, des départements ou de l'administration budgétaire. Chaque administrateur gèle ou dégèle son propre périmètre.
 
 **Puis-je geler des années futures ?**
 Oui. Le sélecteur d'année couvre une plage de l'année dernière à cinq ans à venir. Geler une année future est utile pour verrouiller des budgets approuvés avant le début de l'exercice.

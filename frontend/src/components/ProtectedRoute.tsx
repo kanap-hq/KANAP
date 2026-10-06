@@ -7,6 +7,7 @@ import { useFeatures } from '../config/FeaturesContext';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import PendingAccessPage from '../pages/PendingAccessPage';
+import { canUseAnyOperation, canUseOperation } from '../pages/operations/operationAccess';
 
 type RouteRequirement = {
   resource: string;
@@ -186,7 +187,7 @@ export default function ProtectedRoute() {
       'agent-control': { resource: 'ai_agents', level: 'reader' },
       'scheduled-tasks': { resource: 'users', level: 'admin' },
     };
-    const opsAliases: Record<string, string> = { reports: 'reporting', servers: 'infrastructure', operations: 'opex' };
+    const opsAliases: Record<string, string> = { reports: 'reporting', servers: 'infrastructure' };
     const itAliases: Record<string, string> = {
       locations: 'locations',
       assets: 'infrastructure',
@@ -247,14 +248,14 @@ export default function ProtectedRoute() {
     } else if (path === '/agents' || path.startsWith('/agents/')) {
       requirement = { resource: 'ai_agents', level: 'reader' };
     } else if (path === '/ops/operations' || path === '/ops/operations/') {
-      // The administration landing opens for every budget reader; its tiles filter themselves.
-      if (!['opex', 'capex', 'budget_ops'].some((resource) => hasLevel(resource, 'reader'))) {
+      // The administration landing opens when at least one of its pages can be used.
+      if (!canUseAnyOperation(hasLevel)) {
         return <Navigate to="/403" replace />;
       }
       requirement = null;
-    } else if (path === '/ops/operations/currency' || path.startsWith('/ops/operations/currency/')) {
-      // Currency settings follow the currency API: budget, OPEX or CAPEX readers.
-      if (!['budget_ops', 'opex', 'capex'].some((resource) => hasLevel(resource, 'reader'))) {
+    } else if (path.startsWith('/ops/operations/')) {
+      // Each administration page opens only to the users who can act on it.
+      if (!canUseOperation(path.split('/')[3] ?? '', hasLevel)) {
         return <Navigate to="/403" replace />;
       }
       requirement = null;
