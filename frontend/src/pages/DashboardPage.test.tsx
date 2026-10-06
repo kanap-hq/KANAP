@@ -20,8 +20,9 @@ vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
 vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 const readable: Record<string, boolean> = { opex: true, capex: true };
+const PROFILE = { id: 'user-1', email: 'thomas.berger@example.com', first_name: 'Thomas', last_name: 'Berger' };
 vi.mock('../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (resource: string) => readable[resource] ?? true, profile: { id: 'user-1' } }),
+  useAuth: () => ({ hasLevel: (resource: string) => readable[resource] ?? true, profile: PROFILE }),
 }));
 vi.mock('../components/PageHeader', () => ({ default: () => null }));
 vi.mock('./workspace/tiles/DashboardTile', () => ({
@@ -127,7 +128,7 @@ function mockBudgetEndpoints() {
     }
     if (url === '/contracts') {
       const items = [{ id: 'contract-1', name: 'Office suite', cancellation_deadline: `${new Date().getFullYear() + 1}-03-01` }];
-      return { data: { items, total: items.length, page: 1, limit: 10 } };
+      return { data: { items, total: items.length, page: 1, limit: 5 } };
     }
     const scope = url === '/spend-items/summary' ? 'opex' : url === '/capex-items/summary' ? 'capex' : null;
     if (!scope) return { data: { items: [], total: 0, page: 1, limit: 5 } };
@@ -150,20 +151,23 @@ function mockBudgetEndpoints() {
     const scope = url === '/spend-items/summary/aggregate' ? 'opex' : url === '/capex-items/summary/aggregate' ? 'capex' : null;
     if (!scope) throw new Error(`unexpected POST ${url}`);
     const filters = Object.keys(body.query.filters ?? {});
-    if (filters.length) {
+    // A hygiene count: one filter, no group, no sum.
+    if (filters.length && body.spec.groupBy.length === 0 && body.spec.measures.length === 0) {
       const counts: Record<string, number> = scope === 'opex'
-        ? { owner_it_name: 1, owner_business_name: 2, paying_company_name: 0, account_warning: 0 }
-        : { owner_it_name: 4, owner_business_name: 3, paying_company_name: 0, account_warning: 1 };
+        ? { owner_it_name: 1, owner_business_name: 2, paying_company_name: 0, cost_center_label: 3, yPlus1Budget: 5, yPlus1Forecast: 5, account_warning: 0 }
+        : { owner_it_name: 4, owner_business_name: 3, paying_company_name: 0, cost_center_label: 0, yPlus1Budget: 2, yPlus1Forecast: 2, account_warning: 1 };
       const count = counts[filters[0]] ?? 0;
       return { data: { groups: [], others: null, total: { keys: [], count, values: {}, unknown: {} }, groupCount: count ? 1 : 0, reportingCurrency: null } };
     }
+    // Names as the list shows them: Thomas Berger is IT owner of o1, business owner of o2 and holds
+    // the cost center of o2; o3 has no cost center.
     const items = scope === 'opex'
       ? [
-        { id: 'o1', item_number: 21, product_name: 'Opex grows', versions: budgetSlots(1000, 3000) },
-        { id: 'o2', product_name: 'Opex shrinks', versions: budgetSlots(8000, 1000) },
-        { id: 'o3', product_name: 'Opex small rise', versions: budgetSlots(1000, 1300) },
+        { id: 'o1', item_number: 21, product_name: 'Opex grows', versions: budgetSlots(1000, 3000), owner_it_name: 'Thomas Berger', cost_center_label: 'IT-1 · Infrastructure' },
+        { id: 'o2', product_name: 'Opex shrinks', versions: budgetSlots(8000, 1000), owner_business_name: 'Thomas Berger', budget_holder_name: 'Thomas Berger', cost_center_label: 'IT-2 · Workplace' },
+        { id: 'o3', product_name: 'Opex small rise', versions: budgetSlots(1000, 1300), owner_it_name: 'Marie Fontaine' },
       ]
-      : [{ id: 'c1', item_number: 22, description: 'Capex grows', versions: budgetSlots(0, 4000) }];
+      : [{ id: 'c1', item_number: 22, description: 'Capex grows', versions: budgetSlots(0, 4000), owner_it_name: 'Marie Fontaine' }];
     return { data: fakeAggregate(items, body) };
   });
 }
@@ -350,6 +354,89 @@ describe('DashboardPage budget tiles', () => {
     // Column 3 runs the other way: only the line that shrinks on column 1 grows on it.
     expect(await within(tile).findByText('Opex shrinks')).toBeInTheDocument();
     expect(within(tile).queryByText('Opex grows')).not.toBeInTheDocument();
+  });
+
+  const MY_BUDGET = 'dashboard.myBudget.title (ops:operations.budgetColumns.budget)';
+  const BY_COST_CENTER = 'dashboard.byCostCenterY (ops:operations.budgetColumns.budget)';
+  const filtersOf = (el: Element) => JSON.parse(new URLSearchParams(el.getAttribute('href')!.split('?')[1]).get('filters')!);
+
+  it("shows the user's lines per role, each row opening the list on that role and name", async () => {
+    renderPage();
+    const tile = await screen.findByRole('region', { name: MY_BUDGET });
+    const itOwner = await within(tile).findByRole('link', { name: /roles\.itOwner/ });
+    expect(itOwner.getAttribute('href')!.split('?')[0]).toBe('/ops/opex');
+    expect(filtersOf(itOwner)).toEqual({ owner_it_name: { filterType: 'set', values: ['Thomas Berger'] } });
+    expect(itOwner).toHaveTextContent('3k');
+    const business = within(tile).getByRole('link', { name: /roles\.businessOwner/ });
+    expect(filtersOf(business)).toEqual({ owner_business_name: { filterType: 'set', values: ['Thomas Berger'] } });
+    expect(business).toHaveTextContent('1k');
+    expect(filtersOf(within(tile).getByRole('link', { name: /roles\.budgetHolder/ })))
+      .toEqual({ budget_holder_name: { filterType: 'set', values: ['Thomas Berger'] } });
+    // Each count and sum uses the link's filter, on the lines the list shows by default, this year's default column.
+    expect(aggregateCalls('/spend-items/summary/aggregate')).toContainEqual({
+      query: { filters: { owner_it_name: { filterType: 'set', values: ['Thomas Berger'] } }, status: 'enabled' },
+      spec: { groupBy: [], measures: [{ id: 'value', fn: 'sum', field: 'yBudget' }] },
+    });
+  });
+
+  it('shows a role without lines as plain text, and one line when the user has none', async () => {
+    renderPage();
+    const tile = await screen.findByRole('region', { name: MY_BUDGET });
+    await within(tile).findByRole('link', { name: /roles\.itOwner/ });
+    fireEvent.click(within(tile).getByRole('tab', { name: 'operations.scope.capex' }));
+    // No CAPEX line in Thomas Berger's name.
+    expect(await within(tile).findByText('dashboard.myBudget.none')).toBeInTheDocument();
+    expect(within(tile).queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('ranks this year by cost center, lines without one included, each row opening the list on it', async () => {
+    renderPage();
+    const tile = await screen.findByRole('region', { name: BY_COST_CENTER });
+    const first = await within(tile).findByRole('link', { name: /IT-1 · Infrastructure/ });
+    expect(first.getAttribute('href')!.split('?')[0]).toBe('/ops/opex');
+    expect(filtersOf(first)).toEqual({ cost_center_label: { filterType: 'set', values: ['IT-1 · Infrastructure'] } });
+    expect(first).toHaveTextContent('3k');
+    const none = within(tile).getByRole('link', { name: /dashboard\.noCostCenter/ });
+    expect(filtersOf(none)).toEqual({ cost_center_label: { filterType: 'set', values: [null] } });
+    const rows = within(tile).getAllByRole('link').map((el) => el.textContent);
+    expect(rows).toEqual(['IT-1 · Infrastructure3k', 'dashboard.noCostCenter1k', 'IT-2 · Workplace1k']);
+    expect(aggregateCalls('/spend-items/summary/aggregate')).toContainEqual({
+      query: { status: 'enabled' },
+      spec: {
+        groupBy: ['cost_center_label'],
+        measures: [{ id: 'value', fn: 'sum', field: 'yBudget' }],
+        having: [{ measure: 'value', op: 'gt', value: 0 }],
+        order: [{ by: 'measure', id: 'value', dir: 'DESC' }],
+        limit: 5,
+      },
+    });
+  });
+
+  it('counts the lines without a cost center and without next year on the default column, with links', async () => {
+    setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' });
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.dataHygiene' });
+    const noCostCenter = await within(tile).findByLabelText('dashboard.hygiene.noCostCenter, ops:operations.scope.opex: 3');
+    expect(filtersOf(noCostCenter)).toEqual({ cost_center_label: { filterType: 'set', values: [null] } });
+    expect(within(tile).getByLabelText('dashboard.hygiene.noCostCenter, ops:operations.scope.capex: 0')).not.toHaveAttribute('href');
+    // Next year's amount of the default column (column 3 here) is zero: no version that year reads zero.
+    const noNextYear = await within(tile).findByLabelText('dashboard.hygiene.noBudgetNextYear (A2), ops:operations.scope.capex: 2');
+    expect(noNextYear.getAttribute('href')!.split('?')[0]).toBe('/ops/capex');
+    expect(filtersOf(noNextYear)).toEqual({ yPlus1Forecast: { filterType: 'number', type: 'equals', filter: 0 } });
+    const countQueries = aggregateCalls('/capex-items/summary/aggregate').filter((body) => body.query.filters).map((body) => body.query);
+    expect(countQueries).toContainEqual({ filters: { yPlus1Forecast: { filterType: 'number', type: 'equals', filter: 0 } }, status: 'enabled' });
+  });
+
+  it('asks the server for the next five renewals from today on', async () => {
+    renderPage();
+    await screen.findByRole('region', { name: 'dashboard.nextRenewals' });
+    await waitFor(() => expect(summaryCalls('/contracts')).toHaveLength(1));
+    const params = summaryCalls('/contracts')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    expect(params.limit).toBe(5);
+    expect(params.sort).toBe('cancellation_deadline:ASC');
+    expect(JSON.parse(params.filters)).toEqual({ cancellation_deadline: { filterType: 'date', type: 'greaterThanOrEqual', dateFrom: today } });
   });
 
   it('asks for no top items before the setting is loaded', async () => {

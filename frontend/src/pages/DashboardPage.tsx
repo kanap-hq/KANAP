@@ -16,7 +16,18 @@ import type { BudgetScope } from '../services/budgetOperations';
 import { buildItemPath, formatItemRef } from '../utils/item-ref';
 import ItemScopeTabs, { useDefaultBudgetScope } from './operations/ItemScopeTabs';
 import { BudgetSummaryRow, itemName, SUMMARY_ENDPOINT } from './reports/useReportScope';
-import { type ColumnFilters, countRequest, readTopIncreases, topIncreasesRequest } from './reports/reportAggregates';
+import {
+  type ColumnFilters,
+  costCenterTotalsRequest,
+  countRequest,
+  keepValues,
+  lineTotalRequest,
+  nextYearField,
+  readCostCenterTotals,
+  readLineTotal,
+  readTopIncreases,
+  topIncreasesRequest,
+} from './reports/reportAggregates';
 import { ACTIVE_TASK_STATUSES } from './tasks/task.constants';
 import { useBudgetAggregate, useBudgetAggregates } from './reports/useBudgetAggregate';
 
@@ -104,16 +115,24 @@ function useMyTasksSummary(userId: string | null | undefined, enabled: boolean) 
   });
 }
 
+/** Today as `YYYY-MM-DD`, in the user's time zone. */
+function localToday(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+/** The five contracts whose cancellation deadline comes next, today included (the server filters and sorts). */
 function useNextContractRenewal(enabled: boolean) {
+  const today = localToday();
   return useQuery({
-    queryKey: ['dashboard', 'next-contract-renewal'],
+    queryKey: ['dashboard', 'next-contract-renewal', today],
     enabled,
     queryFn: async () => {
       const filters = {
-        cancellation_deadline: { filterType: 'text', type: 'notBlank' },
+        cancellation_deadline: { filterType: 'date', type: 'greaterThanOrEqual', dateFrom: today },
       };
       const params: Record<string, any> = {
-        limit: 10, // fetch a few and filter client-side to drop overdue
+        limit: 5,
         sort: 'cancellation_deadline:ASC',
         filters: JSON.stringify(filters),
       };
@@ -128,30 +147,92 @@ function useNextContractRenewal(enabled: boolean) {
  * The hygiene checks. One filter, keyed by column ids of the OPEX and CAPEX lists, drives both the
  * count and the link to the list, so the number on the tile is the number of rows the list shows.
  */
-const HYGIENE_CHECKS = [
-  { key: 'noItOwner', tone: 'warning', filter: { owner_it_name: { filterType: 'set', values: [null] } } },
-  { key: 'noBusinessOwner', tone: 'warning', filter: { owner_business_name: { filterType: 'set', values: [null] } } },
-  { key: 'noPayingCompany', tone: 'warning', filter: { paying_company_name: { filterType: 'set', values: [null] } } },
-  { key: 'accountOutsideChart', tone: 'error', filter: { account_warning: { filterType: 'set', values: ['coa_mismatch'] } } },
-] as const;
-type HygieneKey = (typeof HYGIENE_CHECKS)[number]['key'];
+type HygieneKey = 'noItOwner' | 'noBusinessOwner' | 'noPayingCompany' | 'noCostCenter' | 'noBudgetNextYear' | 'accountOutsideChart';
+type HygieneCheck = { key: HygieneKey; tone: 'warning' | 'error'; filter: ColumnFilters };
 
-// The lines the list shows by default: enabled today.
-const HYGIENE_REQUESTS = HYGIENE_CHECKS.map((check) => countRequest(check.filter as unknown as ColumnFilters, 'enabled'));
+/**
+ * Next year's default column is zero: a line without a version that year reads 0 (an amount is
+ * never blank), so one number condition covers "no amount" and "zero".
+ */
+const ZERO_AMOUNT = { filterType: 'number', type: 'equals', filter: 0 };
 
-/** The list filtered to the lines a hygiene check counts. */
-function hygieneHref(scope: BudgetScope, filter: (typeof HYGIENE_CHECKS)[number]['filter']): string {
-  return `/ops/${scope}?${new URLSearchParams({ filters: JSON.stringify(filter) }).toString()}`;
+function hygieneChecks(metric: AmountColumnKey): HygieneCheck[] {
+  return [
+    { key: 'noItOwner', tone: 'warning', filter: { owner_it_name: keepValues([null]) } },
+    { key: 'noBusinessOwner', tone: 'warning', filter: { owner_business_name: keepValues([null]) } },
+    { key: 'noPayingCompany', tone: 'warning', filter: { paying_company_name: keepValues([null]) } },
+    { key: 'noCostCenter', tone: 'warning', filter: { cost_center_label: keepValues([null]) } },
+    { key: 'noBudgetNextYear', tone: 'warning', filter: { [nextYearField(metric)]: ZERO_AMOUNT } },
+    { key: 'accountOutsideChart', tone: 'error', filter: { account_warning: keepValues(['coa_mismatch']) } },
+  ];
 }
 
-/** The four hygiene counts of one type: lines enabled today (as the list's default) passing each check, no row built. */
-function useHygieneCounts(scope: BudgetScope, enabled: boolean) {
-  const counts = useBudgetAggregates(scope, HYGIENE_REQUESTS, { enabled });
+/** The OPEX or CAPEX list opened on exactly these filters (the list restores no stored search over them). */
+function listHref(scope: BudgetScope, filters: ColumnFilters): string {
+  return `/ops/${scope}?${new URLSearchParams({ filters: JSON.stringify(filters) }).toString()}`;
+}
+
+/** The hygiene counts of one type: lines enabled today (as the list's default) passing each check, no row built. */
+function useHygieneCounts(scope: BudgetScope, checks: readonly HygieneCheck[] | null, enabled: boolean) {
+  // The lines the list shows by default: enabled today.
+  const requests = useMemo(() => (checks ? checks.map((check) => countRequest(check.filter, 'enabled')) : null), [checks]);
+  const counts = useBudgetAggregates(scope, requests, { enabled });
   const data = useMemo(
-    () => (counts.data ? Object.fromEntries(HYGIENE_CHECKS.map((check, i) => [check.key, counts.data![i].total.count])) as Record<HygieneKey, number> : undefined),
-    [counts.data],
+    () => (counts.data && checks ? Object.fromEntries(checks.map((check, i) => [check.key, counts.data![i].total.count])) as Record<HygieneKey, number> : undefined),
+    [counts.data, checks],
   );
-  return { data, isLoading: counts.isLoading, isError: counts.isError, refetch: counts.refetch };
+  return { data, isLoading: enabled && (counts.isLoading || !checks), isError: counts.isError, refetch: counts.refetch };
+}
+
+type MyBudgetRole = 'itOwner' | 'businessOwner' | 'budgetHolder';
+type ProfileName = { email?: string | null; first_name?: string | null; last_name?: string | null } | null | undefined;
+
+/**
+ * The user's name as the lists show it in the owner columns (server `displayNameSql`): first and
+ * last names trimmed, joined by one space, else the email.
+ */
+function ownerDisplayName(profile: ProfileName): string {
+  return [profile?.first_name?.trim(), profile?.last_name?.trim()].filter(Boolean).join(' ') || profile?.email || '';
+}
+
+/**
+ * The user's name as the lists show it in the budget holder column (the cost center tree's
+ * `owner_name`: `TRIM(CONCAT(first, ' ', last))`, PostgreSQL trimming spaces only), else the email.
+ */
+function holderDisplayName(profile: ProfileName): string {
+  return `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.replace(/^ +| +$/g, '') || profile?.email || '';
+}
+
+/** One filter per role, on the list's name columns: the link opens the list on the same filter. */
+function myBudgetFilters(profile: ProfileName): Array<{ role: MyBudgetRole; filter: ColumnFilters }> | null {
+  const owner = ownerDisplayName(profile);
+  const holder = holderDisplayName(profile);
+  if (!owner || !holder) return null;
+  return [
+    { role: 'itOwner', filter: { owner_it_name: keepValues([owner]) } },
+    { role: 'businessOwner', filter: { owner_business_name: keepValues([owner]) } },
+    { role: 'budgetHolder', filter: { budget_holder_name: keepValues([holder]) } },
+  ];
+}
+
+/** Per role: the lines enabled today in the user's name and their sum of this year's default column. */
+function useMyBudget(scope: BudgetScope, profile: ProfileName, metric: AmountColumnKey, enabled: boolean) {
+  const roles = useMemo(() => myBudgetFilters(profile), [profile]);
+  const requests = useMemo(() => (roles ? roles.map((role) => lineTotalRequest(role.filter, metric)) : null), [roles, metric]);
+  const query = useBudgetAggregates(scope, requests, { enabled });
+  const rows = useMemo(
+    () => (roles && query.data ? roles.map((role, i) => ({ ...role, ...readLineTotal(query.data![i]) })) : []),
+    [roles, query.data],
+  );
+  return { rows, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch };
+}
+
+/** This year's default column by cost center, the five largest (lines without one in the ranking too). */
+function useCostCenterTotals(scope: BudgetScope, metric: AmountColumnKey, enabled: boolean) {
+  const request = useMemo(() => costCenterTotalsRequest(metric, 5), [metric]);
+  const query = useBudgetAggregate(scope, request, { enabled });
+  const rows = useMemo(() => readCostCenterTotals(query.data), [query.data]);
+  return { rows, isLoading: enabled && query.isLoading, isError: query.isError, refetch: query.refetch };
 }
 
 type RecentUpdate = { scope: BudgetScope; id: string; ref: string; name: string; at: string | null };
@@ -264,9 +345,11 @@ export default function DashboardPage() {
   const budgetColumns = useBudgetColumns();
   const defaultColumn = budgetColumns.defaultColumn;
 
+  // Next year's check names the default column: the checks wait for the setting.
+  const checks = useMemo(() => (budgetColumns.ready ? hygieneChecks(defaultColumn.key) : null), [budgetColumns.ready, defaultColumn.key]);
   const hygieneByScope = {
-    opex: useHygieneCounts('opex', canOpex),
-    capex: useHygieneCounts('capex', canCapex),
+    opex: useHygieneCounts('opex', checks, canOpex),
+    capex: useHygieneCounts('capex', checks, canCapex),
   };
   const hygieneLoading = readableScopes.some((scope) => hygieneByScope[scope].isLoading);
   const hygieneError = readableScopes.some((scope) => hygieneByScope[scope].isError);
@@ -290,19 +373,18 @@ export default function DashboardPage() {
   const [increaseScope, setIncreaseScope] = useTileScope('topIncreases');
   const { items: topIncreases, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0, defaultColumn.key, budgetColumns.ready, 5);
 
+  const [myBudgetScope, setMyBudgetScope] = useTileScope('myBudget');
+  const myBudget = useMyBudget(myBudgetScope, profile, defaultColumn.key, readableScopes.length > 0 && budgetColumns.ready);
+  const myBudgetLoading = myBudget.isLoading || (readableScopes.length > 0 && !budgetColumns.ready);
+  const [costCenterScope, setCostCenterScope] = useTileScope('byCostCenter');
+  const costCenters = useCostCenterTotals(costCenterScope, defaultColumn.key, readableScopes.length > 0 && budgetColumns.ready);
+  const costCentersLoading = costCenters.isLoading || (readableScopes.length > 0 && !budgetColumns.ready);
+  const largestCostCenter = Math.max(0, ...costCenters.rows.map((r) => r.value));
+
   const openTasks = myTasks?.total ?? 0;
   const taskItems = myTasks?.items || [];
 
-  const upcomingRenewals = useMemo(() => {
-    const now = new Date();
-    const items = (nextContract?.items || []).filter((c) => {
-      const dateStr = c?.cancellation_deadline;
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    }).slice(0, 5);
-    return items;
-  }, [nextContract]);
+  const upcomingRenewals = nextContract?.items || [];
 
   // Budget snapshot: one row per year, every shown column read from the totals key of the same name.
   const snapshotSlots: readonly YearSlot[] = ['yMinus1', 'y', 'yPlus1'];
@@ -328,9 +410,9 @@ export default function DashboardPage() {
         <Table size="small" sx={{ '& th, & td': { py: 0.75 } }}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: 120, fontWeight: 600 }} align="left">{t('labels.year')}</TableCell>
+              <TableCell sx={{ width: 120, fontWeight: 500 }} align="left">{t('labels.year')}</TableCell>
               {columns.map((c) => (
-                <TableCell key={`h-${c}`} align="center" sx={{ fontWeight: 600, minWidth: 76 }}>
+                <TableCell key={`h-${c}`} align="center" sx={{ fontWeight: 500, minWidth: 76 }}>
                   {snapshotColumnLabels[c]}
                 </TableCell>
               ))}
@@ -383,6 +465,48 @@ export default function DashboardPage() {
                 ) : (
                   <SnapshotTable rows={capexSnapshot.rows} columns={unionCols} />
                 )
+              )}
+            </DashboardTile>
+          </Grid>
+        )}
+
+        {/* My budget: the lines in the user's name, per role, each opening the list on that role */}
+        {readableScopes.length > 0 && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile
+              icon="VerifiedUser"
+              title={t('dashboard.myBudget.title', { column: defaultColumn.label })}
+              isLoading={myBudgetLoading}
+              isError={myBudget.isError}
+              onRetry={myBudget.refetch}
+              action={<ItemScopeTabs value={myBudgetScope} onChange={setMyBudgetScope} />}
+            >
+              {myBudget.rows.every((r) => r.count === 0) ? (
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>{t('dashboard.myBudget.none')}</Typography>
+              ) : (
+                <Stack spacing={0.5} sx={{ mt: 1 }}>
+                  {myBudget.rows.map((r) => {
+                    const label = t(`dashboard.myBudget.roles.${r.role}`);
+                    const lines = t('dashboard.myBudget.lineCount', { count: r.count });
+                    const cells = (
+                      <>
+                        <Typography variant="body1" noWrap sx={{ flex: 1, color: 'inherit' }}>{label}</Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{lines}</Typography>
+                        <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right', color: 'inherit' }}>{formatThousandsK(r.value)}</Typography>
+                      </>
+                    );
+                    // No line in that role: plain text, nothing to open.
+                    return r.count ? (
+                      <Stack key={r.role} component={RouterLink} to={listHref(myBudgetScope, r.filter)} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                        {cells}
+                      </Stack>
+                    ) : (
+                      <Stack key={r.role} direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary', mx: -0.5, px: 0.5 }}>
+                        {cells}
+                      </Stack>
+                    );
+                  })}
+                </Stack>
               )}
             </DashboardTile>
           </Grid>
@@ -455,32 +579,38 @@ export default function DashboardPage() {
                 {readableScopes.map((scope) => (
                   <Typography key={scope} sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'right' }}>{scopeLabel(scope)}</Typography>
                 ))}
-                {HYGIENE_CHECKS.map((check) => (
-                  <Fragment key={check.key}>
-                    <Typography variant="body2">{t(`dashboard.hygiene.${check.key}`)}</Typography>
-                    {readableScopes.map((scope) => {
-                      const count = hygieneByScope[scope].data?.[check.key] ?? 0;
-                      const label = `${t(`dashboard.hygiene.${check.key}`)}, ${scopeLabel(scope)}: ${count}`;
-                      // A count opens the list filtered to exactly the lines it counts; none, nothing to open.
-                      return count ? (
-                        <Typography
-                          key={scope}
-                          component={RouterLink}
-                          to={hygieneHref(scope, check.filter)}
-                          variant="body2"
-                          aria-label={label}
-                          sx={{ textAlign: 'right', fontWeight: 500, textDecoration: 'none', color: getDotColor(check.tone, mode), borderRadius: '5px', '&:hover': { bgcolor: 'kanap.bg.hover' } }}
-                        >
-                          {count}
-                        </Typography>
-                      ) : (
-                        <Typography key={scope} variant="body2" aria-label={label} sx={{ textAlign: 'right', fontWeight: 500, color: 'text.secondary' }}>
-                          {count}
-                        </Typography>
-                      );
-                    })}
-                  </Fragment>
-                ))}
+                {(checks ?? []).map((check) => {
+                  // Next year's check names the tenant's default column.
+                  const name = check.key === 'noBudgetNextYear'
+                    ? t('dashboard.hygiene.noBudgetNextYear', { column: defaultColumn.label })
+                    : t(`dashboard.hygiene.${check.key}`);
+                  return (
+                    <Fragment key={check.key}>
+                      <Typography variant="body2">{name}</Typography>
+                      {readableScopes.map((scope) => {
+                        const count = hygieneByScope[scope].data?.[check.key] ?? 0;
+                        const label = `${name}, ${scopeLabel(scope)}: ${count}`;
+                        // A count opens the list filtered to exactly the lines it counts; none, nothing to open.
+                        return count ? (
+                          <Typography
+                            key={scope}
+                            component={RouterLink}
+                            to={listHref(scope, check.filter)}
+                            variant="body2"
+                            aria-label={label}
+                            sx={{ textAlign: 'right', fontWeight: 500, textDecoration: 'none', color: getDotColor(check.tone, mode), borderRadius: '5px', '&:hover': { bgcolor: 'kanap.bg.hover' } }}
+                          >
+                            {count}
+                          </Typography>
+                        ) : (
+                          <Typography key={scope} variant="body2" aria-label={label} sx={{ textAlign: 'right', fontWeight: 500, color: 'text.secondary' }}>
+                            {count}
+                          </Typography>
+                        );
+                      })}
+                    </Fragment>
+                  );
+                })}
               </Box>
             </DashboardTile>
           </Grid>
@@ -577,6 +707,45 @@ export default function DashboardPage() {
                 ))}
                 {topIncreases.length === 0 && (
                   <Typography variant="body1" color="text.secondary">{t('dashboard.noIncreases')}</Typography>
+                )}
+              </Stack>
+            </DashboardTile>
+          </Grid>
+        )}
+
+        {/* This year by cost center: the five largest, each opening the list on that cost center */}
+        {readableScopes.length > 0 && (
+          <Grid item xs={12} md={6} lg={4}>
+            <DashboardTile
+              icon="Groups"
+              title={t('dashboard.byCostCenterY', { column: defaultColumn.label })}
+              isLoading={costCentersLoading}
+              isError={costCenters.isError}
+              onRetry={costCenters.refetch}
+              action={<ItemScopeTabs value={costCenterScope} onChange={setCostCenterScope} />}
+            >
+              <Stack spacing={0.5} sx={{ mt: 1 }}>
+                {costCenters.rows.map((r) => (
+                  <Stack
+                    key={r.label ?? ''}
+                    component={RouterLink}
+                    to={listHref(costCenterScope, { cost_center_label: keepValues([r.label]) })}
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={ROW_LINK_SX}
+                  >
+                    <Typography variant="body1" noWrap title={r.label ?? undefined} sx={{ flex: '0 1 45%', minWidth: 0, color: r.label ? 'inherit' : 'text.secondary' }}>
+                      {r.label ?? t('dashboard.noCostCenter')}
+                    </Typography>
+                    <Box sx={{ flex: 1, minWidth: 24, height: 4, borderRadius: '2px', bgcolor: 'kanap.sliderTrack', overflow: 'hidden' }}>
+                      <Box sx={{ height: '100%', borderRadius: '2px', bgcolor: 'kanap.teal', width: `${largestCostCenter > 0 ? (r.value / largestCostCenter) * 100 : 0}%` }} />
+                    </Box>
+                    <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsK(r.value)}</Typography>
+                  </Stack>
+                ))}
+                {costCenters.rows.length === 0 && (
+                  <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
                 )}
               </Stack>
             </DashboardTile>

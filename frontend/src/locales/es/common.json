@@ -186,11 +186,26 @@
       "noItOwner": "Sin responsable IT",
       "noBusinessOwner": "Sin responsable de negocio",
       "noPayingCompany": "Sin empresa pagadora",
+      "noCostCenter": "Sin centro de coste",
+      "noBudgetNextYear": "Sin {{column}} para el próximo año",
       "accountOutsideChart": "Cuenta fuera del plan de la empresa"
     },
     "topItemsY": "Top partidas ({{column}}, A)",
     "topIncreasesYvsYminus1": "Mayores incrementos ({{column}}, A vs A-1)",
     "noIncreases": "Sin incrementos",
+    "myBudget": {
+      "title": "Mi presupuesto ({{column}}, A)",
+      "roles": {
+        "itOwner": "Como responsable IT",
+        "businessOwner": "Como responsable de negocio",
+        "budgetHolder": "Como responsable del presupuesto"
+      },
+      "lineCount_one": "{{count}} línea",
+      "lineCount_other": "{{count}} líneas",
+      "none": "No hay líneas de presupuesto a su nombre"
+    },
+    "byCostCenterY": "Por centro de coste ({{column}}, A)",
+    "noCostCenter": "Sin centro de coste",
     "settings": {
       "title": "Configuración del panel",
       "description": "Active o desactive los mosaicos, ajuste sus opciones y arrástrelos para reordenarlos.",

@@ -146,6 +146,24 @@ describe('saved sorts and filters on hidden columns', () => {
     expect(new URLSearchParams(settleListSearch('', { sort: 'yBudget:DESC' }, shown, 'yRevision:DESC')).get('sort')).toBe('yBudget:DESC');
   });
 
+  it('opens a link carrying filters on exactly those, without the stored search or filters', () => {
+    const stored = { q: 'cloud', filters: JSON.stringify({ supplier_name: { filterType: 'set', values: ['Acme'] } }) };
+    const link = { owner_it_name: { filterType: 'set', values: [null] } };
+    const settled = new URLSearchParams(settleListSearch(new URLSearchParams({ filters: JSON.stringify(link) }).toString(), stored, shown, 'yBudget:DESC'));
+    expect(settled.get('q')).toBeNull();
+    expect(JSON.parse(settled.get('filters')!)).toEqual(link);
+    // A link with its own search keeps it.
+    expect(new URLSearchParams(settleListSearch(new URLSearchParams({ q: 'erp', filters: JSON.stringify(link) }).toString(), stored, shown, 'yBudget:DESC')).get('q')).toBe('erp');
+  });
+
+  it('restores the stored search and filters on a plain visit (the sidebar entry)', () => {
+    const storedFilters = JSON.stringify({ supplier_name: { filterType: 'set', values: ['Acme'] } });
+    const settled = new URLSearchParams(settleListSearch('', { q: 'cloud', filters: storedFilters, sort: 'yRevision:ASC' }, shown, 'yBudget:DESC'));
+    expect(settled.get('q')).toBe('cloud');
+    expect(settled.get('filters')).toBe(storedFilters);
+    expect(settled.get('sort')).toBe('yRevision:ASC');
+  });
+
   it('keeps a sort only when it is not the default', () => {
     expect(explicitSort('yBudget:DESC', shown, 'yBudget:DESC')).toBe('');
     expect(explicitSort(undefined, shown, 'yBudget:DESC')).toBe('');

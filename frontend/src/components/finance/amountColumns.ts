@@ -193,7 +193,8 @@ export function filtersStringOnShownColumns(
 
 /**
  * The list URL once the stored list context has filled what the URL leaves out (sort, search,
- * filters) and a sort or filter on a column that is not shown has fallen back to the defaults.
+ * filters; a URL carrying filters takes neither the stored filters nor the stored search) and a
+ * sort or filter on a column that is not shown has fallen back to the defaults.
  * The default sort is left out, so the grid applies whatever the default is now.
  */
 export function settleListSearch(
@@ -206,7 +207,10 @@ export function settleListSearch(
   const params = new URLSearchParams(search);
   const sort = explicitSort(params.get('sort') || stored?.sort, shown, defaultSort, isListField);
   if (sort) params.set('sort', sort); else params.delete('sort');
-  if (!params.get('q') && stored?.q) params.set('q', stored.q);
+  // A URL with its own filters (a link from the overview, the list's own back links) opens on
+  // exactly those: the stored search would narrow it to fewer lines than the link promised. The
+  // list's back links carry their search themselves.
+  if (!params.get('q') && !params.get('filters') && stored?.q) params.set('q', stored.q);
   const filters = filtersStringOnShownColumns(params.get('filters') || stored?.filters || '', shown, isListField);
   if (filters) params.set('filters', filters); else params.delete('filters');
   return params.toString();

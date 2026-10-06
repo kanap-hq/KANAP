@@ -186,11 +186,26 @@
       "noItOwner": "No IT owner",
       "noBusinessOwner": "No business owner",
       "noPayingCompany": "No paying company",
+      "noCostCenter": "No cost center",
+      "noBudgetNextYear": "No {{column}} for next year",
       "accountOutsideChart": "Account not in the company's chart"
     },
     "topItemsY": "Top items ({{column}}, Y)",
     "topIncreasesYvsYminus1": "Top increases ({{column}}, Y vs Y-1)",
     "noIncreases": "No increases",
+    "myBudget": {
+      "title": "My budget ({{column}}, Y)",
+      "roles": {
+        "itOwner": "As IT owner",
+        "businessOwner": "As business owner",
+        "budgetHolder": "As budget holder"
+      },
+      "lineCount_one": "{{count}} line",
+      "lineCount_other": "{{count}} lines",
+      "none": "No budget lines in your name"
+    },
+    "byCostCenterY": "By cost center ({{column}}, Y)",
+    "noCostCenter": "No cost center",
     "settings": {
       "title": "Dashboard settings",
       "description": "Enable or disable tiles, adjust their options and drag them to reorder.",

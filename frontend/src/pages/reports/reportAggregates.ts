@@ -604,6 +604,49 @@ export function countRequest(filters: ColumnFilters, status?: AggregateQuery['st
   return { query: status ? { filters, status } : { filters }, spec: { groupBy: [], measures: [] } };
 }
 
+/** This year's amount of a column in the reporting currency, as the list's column id (`yBudget`). */
+export function currentYearField(metric: MetricKey): string {
+  return `y${METRIC_SUFFIX[metric]}`;
+}
+
+/** Next year's amount of a column in the reporting currency, as the list's column id (`yPlus1Budget`). */
+export function nextYearField(metric: MetricKey): string {
+  return `yPlus1${METRIC_SUFFIX[metric]}`;
+}
+
+/** How many lines enabled today (the list's default) pass the filters, and their sum of this year's column. */
+export function lineTotalRequest(filters: ColumnFilters, metric: MetricKey): AggregateRequest {
+  return {
+    query: { filters, status: 'enabled' },
+    spec: { groupBy: [], measures: [{ id: 'value', fn: 'sum', field: currentYearField(metric) }] },
+  };
+}
+
+export function readLineTotal(result: AggregateResult | undefined): { count: number; value: number } {
+  return { count: result?.total.count ?? 0, value: valueOf(result?.total, 'value') };
+}
+
+/**
+ * This year's column by cost center label (`code · name`; lines without one: a null key), over the
+ * lines enabled today, the largest sums above zero first.
+ */
+export function costCenterTotalsRequest(metric: MetricKey, limit: number): AggregateRequest {
+  return {
+    query: { status: 'enabled' },
+    spec: {
+      groupBy: ['cost_center_label'],
+      measures: [{ id: 'value', fn: 'sum', field: currentYearField(metric) }],
+      having: [{ measure: 'value', op: 'gt', value: 0 }],
+      order: [{ by: 'measure', id: 'value', dir: 'DESC' }],
+      limit,
+    },
+  };
+}
+
+export function readCostCenterTotals(result: AggregateResult | undefined): Array<{ label: string | null; value: number }> {
+  return (result?.groups ?? []).map((group) => ({ label: group.keys[0] ?? null, value: valueOf(group, 'value') }));
+}
+
 // ----- budget operations pages -----
 
 /** Every line of the window from the earliest year, with amounts in the lines' own currency. */

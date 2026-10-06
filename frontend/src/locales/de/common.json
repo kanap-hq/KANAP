@@ -186,11 +186,26 @@
       "noItOwner": "Ohne IT-Verantwortlichen",
       "noBusinessOwner": "Ohne Fachbereichsverantwortlichen",
       "noPayingCompany": "Ohne zahlendes Unternehmen",
+      "noCostCenter": "Ohne Kostenstelle",
+      "noBudgetNextYear": "Ohne {{column}} im nächsten Jahr",
       "accountOutsideChart": "Konto nicht im Kontenplan des Unternehmens"
     },
     "topItemsY": "Top-Positionen ({{column}}, J)",
     "topIncreasesYvsYminus1": "Stärkste Zuwächse ({{column}}, J vs J-1)",
     "noIncreases": "Keine Zuwächse",
+    "myBudget": {
+      "title": "Mein Budget ({{column}}, J)",
+      "roles": {
+        "itOwner": "Als IT-Verantwortlicher",
+        "businessOwner": "Als Fachbereichsverantwortlicher",
+        "budgetHolder": "Als Budgetverantwortlicher"
+      },
+      "lineCount_one": "{{count}} Zeile",
+      "lineCount_other": "{{count}} Zeilen",
+      "none": "Keine Budgetzeilen auf Ihren Namen"
+    },
+    "byCostCenterY": "Nach Kostenstelle ({{column}}, J)",
+    "noCostCenter": "Ohne Kostenstelle",
     "settings": {
       "title": "Dashboard-Einstellungen",
       "description": "Kacheln ein- oder ausschalten, ihre Optionen anpassen und per Ziehen neu anordnen.",
