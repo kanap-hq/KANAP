@@ -80,7 +80,7 @@ Flags: `--skip-relations`, `--skip-agents`, `--org`, `--country`, `--year`,
 |---|---|---|
 | Dev | `https://fromage.dev.kanap.net` | Local stack behind the Cloudflare tunnel |
 | QA | `https://fromage.qa.kanap.net` | |
-| Prod | `https://fromage.kanap.net` | Live demos |
+| Prod | `https://demo.kanap.net` | Prospect demos: slug `demo`, private `--demo-password`, marked internal |
 
 The runner auto-detects whether the API is served under `/api` (nginx-proxied
 environments) or at the root.
@@ -91,8 +91,12 @@ Trial signup is the only tenant-creation path, and CAPTCHA is enforced on all
 environments, so create the tenant **exactly like a customer would** — no
 tokens, no scripting:
 
-1. On the marketing site, start a trial with slug `fromage` and your own
-   email (on dev/QA all outbound mail is redirected to `fried@kanap.net`).
+1. On the marketing site, start a trial with the environment's slug
+   (`fromage` on dev and QA, `demo` on prod), the organisation name
+   `Fromage & Co` and your own email. The runner removes the company the
+   trial creates under that name; with another name, pass it with `--org`.
+   On dev and QA all outbound mail is redirected to `fried@kanap.net`; prod
+   sends mail for real.
 2. Click the activation link in the email and set your password on the
    activation page — the tenant now exists and you are its Administrator.
 3. Run the runner with that email and password. It logs in and does
@@ -112,9 +116,12 @@ To wipe and rebuild (e.g. on QA):
 
 1. Log in to platform-admin (`https://platform-admin.<env>.kanap.net`) as a
    platform administrator.
-2. Delete the `fromage` tenant (requires typing the slug to confirm). This
-   purges all tenant data, frees the slug and clears the trial signup.
-3. Follow "Tenant creation and CAPTCHA" above, then run the runner.
+2. Delete the tenant (requires typing the slug to confirm). This purges all
+   tenant data, frees the slug and clears the trial signup.
+3. Follow "Tenant creation" above, then run the runner.
+4. On prod, mark the tenant internal in the platform console (Tenants →
+   the tenant → **Mark as internal tenant**). A trial tenant expires after 14 days:
+   it freezes and every AI feature stops.
 
 ## AI prerequisites
 
@@ -139,7 +146,10 @@ the fixture works without AI.
 | Maria Casanova (controller) | `maria.casanova@fromage-co.com` | Budget Administrator |
 | Nadia Lemaire (shops and e-commerce operations) | `nadia.lemaire@fromage-co.com` | Budget Member |
 
-All demo users share the `--demo-password` (default `Fromage2026!`).
+All demo users share the `--demo-password` (default `Fromage2026!`). The
+default is public (it is in this repository): on any tenant that people
+outside the team can reach, pass a private value. The runner sets it only
+when it creates a user, so choose it before the first run.
 
 ## Files
 
