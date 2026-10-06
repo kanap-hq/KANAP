@@ -86,6 +86,8 @@ function compile() {
     console.log(`tsc -p tsconfig.ci.json failed (exit ${tsc.status ?? tsc.signal}): no spec was run.`);
     process.exit(tsc.status || 1);
   }
+  // Like dist/, the compiled tree sits next to a package.json (config.controller.ts reads the version from it).
+  fs.copyFileSync(path.join(root, 'package.json'), path.join(OUT_DIR, path.basename(root), 'package.json'));
   console.log(`Compiled to ci-dist/ in ${((Date.now() - started) / 1000).toFixed(0)}s`);
 }
 
