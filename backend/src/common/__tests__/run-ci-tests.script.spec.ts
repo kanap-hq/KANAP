@@ -1,16 +1,21 @@
 import * as assert from 'node:assert/strict';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { backendPath } from './backend-root';
 
 // scripts/run-ci-tests.js (`npm run test:ci`) against a developer's `appdb`:
 // the race specs refuse that database (their harness throws), so the runner
 // leaves them out there, outside GitHub Actions, and says how to run them.
 // GitHub Actions' `appdb` is a throwaway service container: they run there.
+// It runs each spec from the output of `tsc -p tsconfig.ci.json`: the path it
+// computes must match that config's outDir and rootDir.
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const runner = require(backendPath('scripts', 'run-ci-tests.js')) as {
   databaseName: (url?: string) => string | null;
   racesRefused: () => boolean;
   RACE_SPEC: RegExp;
+  compiledPath: (file: string) => string;
 };
 
 function withEnv<T>(env: Record<string, string | undefined>, fn: () => T): T {
@@ -54,7 +59,20 @@ function testRaceSpecPattern() {
   assert.equal(runner.RACE_SPEC.test('src/common/__tests__/request-transaction-bounds-http.integration.spec.ts'), false);
 }
 
+function testCompiledPath() {
+  const config = JSON.parse(fs.readFileSync(backendPath('tsconfig.ci.json'), 'utf8'));
+  assert.equal(config.compilerOptions.noEmit, false);
+  assert.equal(config.compilerOptions.rootDir, '..', 'rootDir is the repository root: a spec imports a frontend module');
+  const outDir = path.resolve(backendPath(), config.compilerOptions.outDir);
+  const rootDir = path.resolve(backendPath(), config.compilerOptions.rootDir);
+  for (const file of ['src/spend/__tests__/budget-summary.integration.spec.ts', 'scripts/rls-self-test.ts']) {
+    const expected = path.join(outDir, path.relative(rootDir, backendPath(file))).replace(/\.ts$/, '.js');
+    assert.equal(runner.compiledPath(file), expected, file);
+  }
+}
+
 testDatabaseName();
 testRacesRefused();
 testRaceSpecPattern();
+testCompiledPath();
 console.log('run-ci-tests.script.spec: ok');
