@@ -271,11 +271,11 @@ describe('Option lists under a filter', () => {
     expect(await optionsOf('reports.filters.destinationYear', 'mouseDown')).toEqual(years);
   });
 
-  it('Analytics: the category exclusion offers the categories of every line', async () => {
+  it('Analytics: the category exclusion offers "unassigned", then the categories of every line', async () => {
     renderReport(<AnalyticsCategoryReport />, path);
     await waitFor(() => expect(gridRows().map((row) => row[String(Y)])).toEqual([100]));
     expect(await optionsOf('reports.filters.excludeCategories', 'keyDown')).toEqual([
-      'Category a', 'Category b', 'Category c', 'Category d', 'Category e',
+      'reports.analyticsCategory.unassigned', 'Category a', 'Category b', 'Category c', 'Category d', 'Category e',
     ]);
   });
 });

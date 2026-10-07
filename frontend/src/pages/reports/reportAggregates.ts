@@ -115,8 +115,8 @@ export function keepValues(values: Array<string | null>): FilterModel {
   return { filterType: 'set', values };
 }
 
-/** A set filter leaving out the listed values: lines without a value are kept. */
-export function dropValues(values: string[]): FilterModel {
+/** A set filter leaving out the listed values; `null` leaves out the lines without a value. */
+export function dropValues(values: Array<string | null>): FilterModel {
   return { filterType: 'set', mode: 'exclude', values };
 }
 
@@ -462,6 +462,9 @@ function yearValues(row: AggregateRow | null | undefined, years: readonly number
   return Object.fromEntries(years.map((year) => [year, valueOf(row, `y${year}`)]));
 }
 
+/** The Consolidation exclusion option for the lines without a consolidation line (unassigned). */
+export const NO_CONSOLIDATION_LINE = 'none';
+
 export interface ConsolidationParams {
   years: readonly number[];
   metric: MetricKey;
@@ -476,8 +479,11 @@ export interface ConsolidationParams {
  * per key).
  */
 export function consolidationRequest(p: ConsolidationParams): AggregateRequest {
+  const accountIds = p.excludedAccountIds.filter((id) => id !== NO_CONSOLIDATION_LINE);
+  let filters = exclusions(p.filters, [], 'account_id', accountIds);
+  if (accountIds.length < p.excludedAccountIds.length) filters = withFilter(filters, 'account_consolidation_key', dropValues([null]));
   return {
-    query: { filters: exclusions(p.filters, [], 'account_id', p.excludedAccountIds) },
+    query: { filters },
     spec: {
       groupBy: ['account_consolidation_key', 'account_consolidation_label'],
       measures: yearMeasures(p.years, p.metric),
@@ -504,10 +510,15 @@ export interface AnalyticsParams {
   filters: ColumnFilters;
 }
 
-/** By the line's value on the dimension (none: unassigned), one sum per year, the first year's largest first. */
+/**
+ * By the line's value on the dimension (none: unassigned), one sum per year, the first year's largest first.
+ * An excluded `NO_ANALYTICS_VALUE` leaves out the lines without a value.
+ */
 export function analyticsRequest(p: AnalyticsParams): AggregateRequest {
+  const excluded = p.excludedIds.map((id) => (id === NO_ANALYTICS_VALUE ? null : id));
+  const filters = excluded.length ? withFilter(p.filters, analyticsIdField(p.axisId), dropValues(excluded)) : p.filters;
   return {
-    query: { filters: exclusions(p.filters, [], analyticsIdField(p.axisId), p.excludedIds) },
+    query: { filters },
     spec: {
       groupBy: [analyticsIdField(p.axisId), analyticsNameField(p.axisId)],
       measures: yearMeasures(p.years, p.metric),
