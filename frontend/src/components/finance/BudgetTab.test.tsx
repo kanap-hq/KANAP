@@ -290,11 +290,15 @@ async function waitForAmounts(loads = 1) {
   });
 }
 
-/** The inputs of the monthly grid, row by row, in the fixed order: Budget, Revision, Forecast, Actuals, Expected landing. */
+/**
+ * The inputs of the monthly grid, row by row, in the fixed order: Budget, Revision, Forecast, Actuals, Expected landing.
+ * A plain selector: a role query computes the accessibility of every element of the grid, a cost
+ * paid at each call (dozens per test) and the first to grow on a loaded machine.
+ */
 function monthCells(container: HTMLElement) {
   const table = container.querySelector('table');
   if (!table) throw new Error('monthly table not rendered');
-  return within(table as HTMLElement).getAllByRole('textbox') as HTMLInputElement[];
+  return Array.from(table.querySelectorAll<HTMLInputElement>('input[type="text"]'));
 }
 const cell = (cells: HTMLInputElement[], month: number, column: number, columns = 5) => cells[(month - 1) * columns + column];
 
@@ -2139,7 +2143,9 @@ describe('BudgetTab edit conflicts (lot 3D)', () => {
     expect(cell(monthCells(container), 3, 1)).toHaveValue('450');
 
     fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
-    await waitFor(() => expect(bulkCalls()).toHaveLength(3));
+    // Overwrite queues the save behind the autosave delay: a flush sends it now.
+    expect(await flush(ref)).toBe(true);
+    expect(bulkCalls()).toHaveLength(3);
     expect(written(bulkCalls()[2][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
     expect(bulkCalls()[2][1].base).toEqual({ months: [{ period: period(3), committed: '950.00' }] });
     await waitFor(() => expect(screen.queryByRole('region')).toBeNull());
@@ -2318,7 +2324,9 @@ describe('BudgetTab edit conflicts, review round (lot 3D)', () => {
     expect(await flush(again.ref)).toBe(false);
 
     fireEvent.click(within(banner).getByRole('button', { name: /editConflict\.column\.applyMine/ }));
-    await waitFor(() => expect(bulkCalls()).toHaveLength(2));
+    // Overwrite queues the save behind the autosave delay: a flush sends it now.
+    expect(await flush(again.ref)).toBe(true);
+    expect(bulkCalls()).toHaveLength(2);
     expect(written(bulkCalls()[1][1])).toEqual({ kind: 'monthly', year: YEAR, months: [{ period: period(3), committed: 450 }] });
     expect(bulkCalls()[1][1].base).toEqual({ months: [{ period: period(3), committed: '950.00' }] });
   });

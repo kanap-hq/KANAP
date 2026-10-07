@@ -11,10 +11,11 @@ import { assert, inRolledBackTransaction, Kind, repeat, runSpecs, seedLine, seed
 // (reltuples 0 over their real pages, so every scan reads as one row), every lookup by id
 // given its worst plan (see takeWorstLookups), then one statement each: 16,000 round inputs
 // inserted, 72,000 months inserted, updated, half of them deleted, one costed line inserted
-// per round input. Each must finish in seconds, and give the counters and totals the rows hold.
-// With the bodies of 1853740000000 the first statement alone ran past the 30 s request timeout:
-// run the spec with STALE_STATS_PREVIOUS_FUNCTIONS=1 to install them (inside the rolled-back
-// transaction) and see the statements time out instead. The migration itself: a rerun repairs
+// per round input. Each must stay within a few times the same statement on tables without the
+// triggers (RATIO), and give the counters and totals the rows hold. With the bodies of
+// 1853740000000 the first statement alone ran past the 30 s request timeout: run the spec with
+// STALE_STATS_PREVIOUS_FUNCTIONS=1 to install them (inside the rolled-back transaction) and see
+// the guard fail, the statements cancelled at the statement timeout. The migration itself: a rerun repairs
 // a missing, disabled or replica-only trigger, leaves the others, rebuilds totals that drifted
 // while an amounts trigger did not fire; down() puts the previous bodies back.
 // Each test runs in a transaction rolled back at the end; the tables' statistics are taken
@@ -27,9 +28,20 @@ const FIRST_YEAR = 2041;
 const YEARS = 5;
 const ROUND_INPUTS = 16000;
 const VERSIONS_WITH_MONTHS = 6000;
-/** One statement over thousands of rows; the previous bodies took minutes. */
-const LIMIT_MS = 10000;
-const STATEMENT_TIMEOUT = '20s';
+/**
+ * Each statement is timed against the same statement on trigger-free copies of the tables it
+ * writes (bareTables), in the same run on the same database: the speed of the machine cancels
+ * out. It must stay under RATIO times that baseline, plus FLOOR_MS so a baseline of a few
+ * milliseconds does not make the guard twitchy. Measured on PostgreSQL 15 (2026-10-06), alone and
+ * with every core saturated: the current bodies stay within 3 (amounts written) to 28 (the
+ * DELETE, whose baseline is the cheapest) times their baseline, the same ratios under load; the
+ * bodies of 1853740000000 are cancelled at the statement timeout, over 110 times theirs.
+ */
+const RATIO = 60;
+const FLOOR_MS = 1000;
+/** The hard stop: the previous bodies took minutes. */
+const STATEMENT_TIMEOUT_MS = 20_000;
+const STATEMENT_TIMEOUT = `${STATEMENT_TIMEOUT_MS / 1000}s`;
 
 const T = {
   opex: {
@@ -42,7 +54,24 @@ const T = {
   },
 } as const;
 
+type Tables = { -readonly [K in keyof (typeof T)['opex']]: string };
+
 const staleTables = (kind: Kind) => [T[kind].versions, T[kind].rounds, T[kind].totals];
+
+/**
+ * Trigger-free copies of the tables the statements write, as they stand when the statements run
+ * (same columns, defaults, checks and indexes; no trigger, no foreign key, no row level
+ * security), temporary to the test's transaction: the baseline statements write there, reading
+ * the same versions.
+ */
+async function bareTables(runner: QueryRunner, kind: Kind): Promise<Tables> {
+  const bare: Tables = { ...T[kind] };
+  for (const key of ['rounds', 'amounts', 'lines'] as const) {
+    bare[key] = `bare_${T[kind][key]}`;
+    await runner.query(`CREATE TEMP TABLE ${bare[key]} (LIKE ${T[kind][key]} INCLUDING ALL) ON COMMIT DROP`);
+  }
+  return bare;
+}
 
 /** 5,000 lines and their 25,000 versions, in two statements (the lines' own triggers are off: the search index is not the subject). */
 async function seedVersions(runner: QueryRunner, kind: Kind, tenantId: string) {
@@ -133,9 +162,8 @@ async function takeWorstLookups(runner: QueryRunner, kind: Kind) {
 
 type Statement = { label: string; sql: string; params: unknown[]; rows: number };
 
-/** The statements timed, in order: each acts on what the ones before it wrote. */
-function statements(kind: Kind, tenantId: string): Statement[] {
-  const t = T[kind];
+/** The statements timed, in order: each acts on what the ones before it wrote (in `t`). */
+function statements(t: Tables, tenantId: string): Statement[] {
   const firstVersions = (limit: number) => `SELECT * FROM ${t.versions} WHERE tenant_id = $1 ORDER BY id LIMIT ${limit}`;
   return [
     {
@@ -248,19 +276,23 @@ async function testStaleStatistics(kind: Kind) {
       // A session mode other than the two step 4 switches between: a leak would show.
       const sessionMode = 'force_generic_plan';
       await runner.query(`SELECT set_config('plan_cache_mode', $1, true)`, [sessionMode]);
+      const baselines = statements(await bareTables(runner, kind), tenantId);
       const timings: string[] = [];
-      for (const statement of statements(kind, tenantId)) {
+      const over: string[] = [];
+      for (const [i, statement] of statements(T[kind], tenantId).entries()) {
+        // The same statement without the triggers first, then the statement itself.
+        const baseline = await timed(runner, baselines[i]);
+        assert.ok(baseline !== 'timeout', `${kind}: ${statement.label} without the triggers took more than ${STATEMENT_TIMEOUT}`);
         const ms = await timed(runner, statement);
-        timings.push(`${statement.label}: ${ms === 'timeout' ? `cancelled at ${STATEMENT_TIMEOUT}` : `${ms} ms`}`);
-        if (PREVIOUS) {
-          // The previous bodies: the cliff. The first two statements are enough to show it.
-          assert.ok(ms === 'timeout' || ms > LIMIT_MS, `${kind}: ${statement.label} with the previous functions: ${ms} ms`);
-          if (timings.length === 2) break;
-          continue;
-        }
-        assert.ok(ms !== 'timeout' && ms < LIMIT_MS, `${kind}: ${statement.label} took ${ms === 'timeout' ? `more than ${STATEMENT_TIMEOUT}` : `${ms} ms`} (limit ${LIMIT_MS} ms)`);
+        const limit = RATIO * baseline + FLOOR_MS;
+        const ratio = ms === 'timeout' ? `> ${(STATEMENT_TIMEOUT_MS / Math.max(baseline, 1)).toFixed(1)}` : (ms / Math.max(baseline, 1)).toFixed(1);
+        timings.push(`${statement.label}: ${ms === 'timeout' ? `cancelled at ${STATEMENT_TIMEOUT}` : `${ms} ms`} (${baseline} ms without the triggers, ratio ${ratio})`);
+        if (ms === 'timeout' || ms >= limit) over.push(`${statement.label} took ${ms === 'timeout' ? `more than ${STATEMENT_TIMEOUT}` : `${ms} ms`}, limit ${limit} ms (${RATIO} x ${baseline} ms without the triggers + ${FLOOR_MS} ms)`);
+        // The previous bodies (cancelled at the statement timeout): two statements show the cliff.
+        if (PREVIOUS && i === 1) break;
       }
       console.log(`  ${kind}${PREVIOUS ? ' (previous functions)' : ''}: ${timings.join('; ')}`);
+      assert.deepEqual(over, [], `${kind}: statements past their limit`);
       if (PREVIOUS) return;
 
       // Step 4 sets the plan cache mode inside the function only: the session keeps its own.

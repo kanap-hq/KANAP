@@ -31,10 +31,17 @@ async function testBackgroundWorkIsWaitedFor() {
 async function testDeadlineIsKept() {
   let release!: () => void;
   void trackBackgroundWork(new Promise<void>((resolve) => { release = resolve; }));
-  const started = Date.now();
-  const left = await waitForBackgroundWork(Date.now() + 150);
+  const deadlineAt = Date.now() + 150;
+  const wait = waitForBackgroundWork(deadlineAt);
+  // Timers fire in the order they expire, however late a loaded machine runs them: the wait
+  // must end before a timer set well past its deadline, not when the job ends.
+  let lateTimer: NodeJS.Timeout | undefined;
+  const late = new Promise<'late'>((resolve) => { lateTimer = setTimeout(() => resolve('late'), 1_000); });
+  const left = await Promise.race([wait, late]);
+  clearTimeout(lateTimer);
+  assert.notEqual(left, 'late', 'the wait ends at the deadline');
   assert.equal(left, 1, 'one job still running at the deadline');
-  assert.ok(Date.now() - started < 400, 'the wait ends at the deadline');
+  assert.ok(Date.now() >= deadlineAt, 'the wait lasted until the deadline');
   release();
   assert.equal(await waitForBackgroundWork(Date.now() + 500), 0);
 }
