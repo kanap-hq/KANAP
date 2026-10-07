@@ -75,6 +75,7 @@ async function run() {
   assert.equal(embeddedIpv4Address('::192.168.1.1'), '192.168.1.1');
   assert.equal(embeddedIpv4Address('64:ff9b::a9fe:a9fe'), '169.254.169.254');
   assert.equal(embeddedIpv4Address('64:FF9B::10.0.0.1'), '10.0.0.1');
+  assert.equal(embeddedIpv4Address('64:ff9b:1::a00:1'), '10.0.0.1');
   assert.equal(embeddedIpv4Address('2002:c0a8:101::1'), '192.168.1.1');
   assert.equal(embeddedIpv4Address('2002:7f00:0001:0000:0000:0000:0000:0001'), '127.0.0.1');
   assert.equal(embeddedIpv4Address('2606:4700:4700::1111'), null);
@@ -86,6 +87,7 @@ async function run() {
     '::ffff:127.0.0.1', '::ffff:10.0.0.5', '::ffff:169.254.169.254', '::ffff:0:192.168.1.1',
     '::127.0.0.1', '::10.0.0.5', '::169.254.169.254',
     '64:ff9b::127.0.0.1', '64:ff9b::10.0.0.5', '64:ff9b::169.254.169.254', '64:ff9b::192.168.1.1',
+    '64:ff9b:1::127.0.0.1', '64:ff9b:1:abcd::10.0.0.5',
     '2002:7f00:1::1', '2002:a00:5::1', '2002:a9fe:a9fe::1', '2002:c0a8:101::1',
   ];
   for (const address of embeddedNonPublic) {
@@ -98,8 +100,9 @@ async function run() {
       lookupFn: async () => [{ address }],
     }));
   }
-  // The NAT64, 6to4 and IPv4-compatible prefixes are refused as a whole when enforcing.
-  for (const address of ['64:ff9b::5db8:d822', '2002:5db8:d822::1', '::5db8:d822']) {
+  // The NAT64 (including local-use), 6to4 and IPv4-compatible prefixes are refused
+  // as a whole when enforcing.
+  for (const address of ['64:ff9b::5db8:d822', '64:ff9b:1::5db8:d822', '2002:5db8:d822::1', '::5db8:d822']) {
     throws(() => assertPublicHttpUrl(`http://[${address}]/`, ENFORCE));
   }
   // An ordinary public address passes, in either family and in the IPv4-mapped form.

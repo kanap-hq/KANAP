@@ -26,10 +26,12 @@ DISALLOWED_ADDRESS_BLOCKLIST.addSubnet('fc00::', 7, 'ipv6');
 DISALLOWED_ADDRESS_BLOCKLIST.addSubnet('fe80::', 10, 'ipv6');
 DISALLOWED_ADDRESS_BLOCKLIST.addSubnet('ff00::', 8, 'ipv6');
 DISALLOWED_ADDRESS_BLOCKLIST.addSubnet('2001:db8::', 32, 'ipv6');
-// IPv6 prefixes that carry an IPv4 address (IPv4-compatible, NAT64, 6to4). The
-// embedded IPv4 address is also checked on its own (see embeddedIpv4Address).
+// IPv6 prefixes that carry an IPv4 address (IPv4-compatible, NAT64, local-use
+// NAT64, 6to4). The embedded IPv4 address is also checked on its own (see
+// embeddedIpv4Address).
 DISALLOWED_ADDRESS_BLOCKLIST.addSubnet('::', 96, 'ipv6');
 DISALLOWED_ADDRESS_BLOCKLIST.addSubnet('64:ff9b::', 96, 'ipv6');
+DISALLOWED_ADDRESS_BLOCKLIST.addSubnet('64:ff9b:1::', 48, 'ipv6');
 DISALLOWED_ADDRESS_BLOCKLIST.addSubnet('2002::', 16, 'ipv6');
 
 export type LookupFn = (
@@ -102,7 +104,8 @@ function ipv6Groups(address: string): number[] | null {
 
 // Returns the IPv4 address an IPv6 address carries, when it uses one of the forms
 // that embed one: IPv4-mapped (::ffff:a.b.c.d), IPv4-translated (::ffff:0:a.b.c.d),
-// IPv4-compatible (::a.b.c.d), NAT64 (64:ff9b::/96) and 6to4 (2002::/16).
+// IPv4-compatible (::a.b.c.d), NAT64 (64:ff9b::/96), local-use NAT64
+// (64:ff9b:1::/48, IPv4 in the last 32 bits) and 6to4 (2002::/16).
 export function embeddedIpv4Address(address: string): string | null {
   const groups = ipv6Groups(address);
   if (!groups) return null;
@@ -112,6 +115,7 @@ export function embeddedIpv4Address(address: string): string | null {
   if (zeros(0, 4) && groups[4] === 0xffff && groups[5] === 0) return toIpv4(groups[6], groups[7]);
   if (zeros(0, 6)) return toIpv4(groups[6], groups[7]);
   if (groups[0] === 0x64 && groups[1] === 0xff9b && zeros(2, 6)) return toIpv4(groups[6], groups[7]);
+  if (groups[0] === 0x64 && groups[1] === 0xff9b && groups[2] === 1) return toIpv4(groups[6], groups[7]);
   if (groups[0] === 0x2002) return toIpv4(groups[1], groups[2]);
   return null;
 }

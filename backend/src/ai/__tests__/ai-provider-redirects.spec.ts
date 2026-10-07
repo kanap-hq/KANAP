@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import * as http from 'node:http';
+import { APIError as AnthropicApiError } from '@anthropic-ai/sdk';
 import { AddressInfo } from 'node:net';
 import { Features } from '../../config/features';
 import { AiProviderTestService } from '../ai-provider-test.service';
@@ -237,6 +238,15 @@ function testDescribeProviderError() {
   assert.equal(
     describeProviderError({ status: 404, error: 'model not found' }),
     'AI provider request failed (HTTP 404): model not found',
+  );
+  // Anthropic keeps the whole body on `error`: a raw text body is not a provider message.
+  assert.equal(
+    describeProviderError(new AnthropicApiError(500, `<html>${RAW_BODY_MARKER}</html>`, undefined, new Headers())),
+    'AI provider request failed (HTTP 500).',
+  );
+  assert.equal(
+    describeProviderError(new AnthropicApiError(undefined, RAW_BODY_MARKER, undefined, new Headers())),
+    'The AI provider returned an unexpected response.',
   );
   // A status without a structured message: the message text (raw body) is ignored.
   const withRawBody = Object.assign(new Error(`500 ${RAW_BODY_MARKER}`), { status: 500 });

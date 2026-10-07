@@ -1,3 +1,4 @@
+import { APIError as AnthropicApiError } from '@anthropic-ai/sdk';
 import { Features } from '../../config/features';
 import { isAbortError } from './streaming.util';
 
@@ -35,8 +36,9 @@ function httpStatusOf(error: object): number | null {
 
 // The provider's own error text, read from a structured JSON payload only:
 // `{ "error": { "message": "..." } }` (OpenAI-compatible) or `{ "error": "..." }`.
-// The SDKs keep that payload on `error.error` (OpenAI: the `error` member,
-// Anthropic: the whole body).
+// The OpenAI SDK keeps the `error` member of the parsed body on `error.error`, so a
+// string there is a JSON field. The Anthropic SDK keeps the whole body there, which
+// is raw text when the body was not JSON: only its parsed object form is read.
 function structuredDetailOf(error: object): string | null {
   const payload = (error as { error?: unknown }).error;
   const candidates: unknown[] = [];
@@ -48,7 +50,7 @@ function structuredDetailOf(error: object): string | null {
     } else {
       candidates.push(record.error);
     }
-  } else {
+  } else if (!(error instanceof AnthropicApiError)) {
     candidates.push(payload);
   }
   for (const candidate of candidates) {
@@ -74,7 +76,7 @@ export function describeProviderError(error: unknown): string {
   if (status !== null) {
     if (status >= 300 && status < 400) {
       return `The AI provider answered with a redirect (HTTP ${status}), which is not followed. `
-        + 'Enter the final endpoint URL of the provider.';
+        + 'Check the provider endpoint URL.';
     }
     return detail
       ? `AI provider request failed (HTTP ${status}): ${detail}`
