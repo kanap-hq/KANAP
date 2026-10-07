@@ -358,7 +358,7 @@ View OPEX or CAPEX budget data grouped by consolidation account, with chart type
 
 **Table**: One row per consolidation account with year columns. A pinned totals row at the bottom sums all groups.
 
-A line on a consolidation account that has since been disabled still counts, under that account's own consolidation line. Account names and numbers show only when you can read the [chart of accounts](chart-of-accounts.md); without that access, every line appears under "Unassigned" instead (the totals are still right, only the breakdown by account is hidden). Items without a consolidation account also appear as "Unassigned".
+A line on a consolidation account that has since been disabled still counts, under that account's own consolidation line. Account names and numbers show only when you can read the [chart of accounts](chart-of-accounts.md); without that access, every line appears under "Unassigned" instead (the totals are still right, only the breakdown by account is hidden). Items without a consolidation account also appear as "Unassigned". The consolidation accounts are the accounts of your [consolidation chart](chart-of-accounts.md#the-consolidation-chart).
 
 ---
 

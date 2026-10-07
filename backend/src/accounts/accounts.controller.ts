@@ -64,7 +64,7 @@ export class AccountsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'reader')
   @Get(':id')
-  get(@Param('id') id: string, @Tenant() ctx: TenantRequest) { return this.svc.get(id, { manager: ctx.manager }); }
+  get(@Param('id') id: string, @Tenant() ctx: TenantRequest) { return this.svc.getWithConsolidationStatus(id, { manager: ctx.manager }); }
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Post()

@@ -48,20 +48,34 @@ The page has two layers: a **CoA selector** at the top, and an **accounts grid**
 A horizontal row of chips represents each Chart of Accounts. Click a chip to switch the accounts grid to that CoA.
 
 - The selected chip is filled; others are outlined.
-- A star badge (**★**) marks the country default for that CoA's country.
-- A circle-plus badge marks the global default.
-- Hover a chip to see the CoA name and account count.
+- Hover a chip to see the CoA name, its countries, its account count and its roles. See [Chart roles](#chart-roles).
 
 If you have `accounts:manager` permission, two extra controls appear on the right:
 
-- **New**: Opens the **New Chart of Accounts** dialog.
-- **Manage**: Opens the **Manage Charts of Accounts** modal for administration.
+- **New**: Opens the **New chart of accounts** dialog.
+- **Manage charts**: Opens the [Manage charts](#the-manage-charts-dialog) dialog.
 
-When no CoAs exist, the chip bar shows a prompt to create your first Chart of Accounts.
+When no CoA exists, the chip bar shows a prompt to create your first Chart of Accounts.
 
 ### CoA summary
 
-Below the chip bar, a summary line shows the selected CoA's **code**, **account count**, **name**, and **country** (for country-scoped CoAs).
+Below the chip bar, a summary shows the selected CoA's **code** and **account count**. A second line gives its **name**, its **countries** and its **roles** in words, for example "French chart of accounts · France · Country default (France)".
+
+### Consolidation health line
+
+When your workspace has a [consolidation chart](#the-consolidation-chart), a third line tells you how well the selected CoA maps to it. It does not appear on the consolidation chart itself, because its accounts are the group accounts.
+
+In the examples below, `IFRS` stands for the code of your consolidation chart.
+
+- **All accounts map to the consolidation chart IFRS.** Every account has a consolidation account that exists in the consolidation chart.
+- **N accounts point to a consolidation account missing from IFRS**: these accounts keep a number that the consolidation chart does not hold.
+- **N accounts have no consolidation account**: these accounts are not mapped yet.
+
+Each count is a link. Click it to filter the grid to those accounts. The filter shows accounts of every status, so disabled accounts are counted and listed too. Click the count again, or **Show all accounts**, to go back to the normal list. The filter is also dropped when you pick another chip. When you open an account from a filtered list, **Previous** and **Next** in the workspace walk the same filtered list.
+
+In the grid, a small orange dot next to **Consol. account #** marks an account whose number is not in the consolidation chart. Hover the dot to see the name of the consolidation chart.
+
+Without a consolidation chart, the line reads "No consolidation chart." Managers can click **Choose one in Manage charts** to open the dialog.
 
 ### Accounts grid
 
@@ -70,13 +84,13 @@ The grid shows accounts for the selected CoA only.
 **Default columns**:
 - **Account #**: The account number. Click to open the account workspace.
 - **Name**: The account name. Click to open the account workspace.
-- **Consol. Account #**: The consolidation account number.
-- **Consol. Name**: The consolidation account name.
+- **Consol. account #**: The consolidation account number.
+- **Consol. name**: The consolidation account name.
 
 **Additional columns** (hidden by default, enable via the column chooser):
-- **Native Name**: The account name in the local language.
+- **Native name**: The account name in the local language.
 - **Description**: Account description.
-- **Consol. Description**: Consolidation account description.
+- **Consol. description**: Consolidation account description.
 - **Status**: Whether the account is enabled or disabled.
 - **Created**: Timestamp when the account was created.
 
@@ -88,10 +102,10 @@ The grid shows accounts for the selected CoA only.
 **Sort**: Defaults to **Account #** ascending.
 
 **Actions** (in the page header):
-- **New Account** (`accounts:manager`): Opens a new account workspace pre-linked to the selected CoA.
+- **New account** (`accounts:manager`): Opens a new account form with the selected CoA already chosen.
 - **Import CSV** (`accounts:admin`): Import accounts into the selected CoA.
 - **Export CSV** (`accounts:admin`): Export accounts from the selected CoA.
-- **Delete Selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins).
+- **Delete selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins).
 
 All row cells are clickable links to the account workspace. You can right-click or Ctrl+click to open in a new tab.
 
@@ -99,59 +113,50 @@ All row cells are clickable links to the account workspace. You can right-click 
 
 Click any row in the accounts grid to open the account workspace.
 
-### Overview
+### Layout
 
-The workspace has a single **Overview** tab with a form to view and edit the account's fields.
+- **Header**: the account number is the reference (you can copy it from there) and the account name is the title. Click the title to rename the account. **Previous** and **Next** move through the accounts of the list you came from, in the same order, with the same search and filters. The back link returns to **Charts of accounts** with your selection kept.
+- **Properties panel** on the right: **Chart of accounts**, **Account number** and **Lifecycle** (the status switch and the **End of validity** date). Use the panel toggle to collapse it or open it again. See [Status and lifecycle](#status-and-lifecycle).
+- **Main column**: **Native name (local language)**, **Description** and the **Consolidation** section.
 
-**What you can edit**:
-- **Chart of Accounts**: The CoA this account belongs to (dropdown of all CoAs in your workspace).
-- **Account Number** (required): The account number.
-- **Account Name** (required): The account name in English (or your primary language).
-- **Native Name (local language)**: The account name in the local language.
-- **Description**: Free-text description.
-- **Consolidation Account Number**: The standardized consolidation account number.
-- **Consolidation Account Name**: The standardized consolidation name.
-- **Consolidation Account Description**: Details about the consolidation category.
-- **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. Set an **End of validity** to schedule when the account stops appearing in selection dropdowns. See [Status and lifecycle](#status-and-lifecycle).
+**Changes save automatically.** Each field saves when you leave it, and there is no Save button. If a value is refused, a message appears under the field. The **Account number** must be a whole number greater than zero.
 
-**Navigation**:
-- **Prev / Next**: Navigate between accounts in the current list order.
-- **Save**: Save changes (enabled when the form is dirty and you have `accounts:manager`).
-- **Reset**: Discard unsaved changes.
-- **Close** (X button): Return to the accounts list, preserving your CoA selection, sort, search, and filters.
+You need `accounts:manager` to edit. Read-only users see the same page with the fields locked.
 
-If you navigate away with unsaved changes, the system prompts you to save or discard.
+### Consolidation account
 
-**Tip**: You need `accounts:manager` to edit. Read-only users see an info banner.
+The **Consolidation** section holds one field, **Consolidation account**. It is a list of the accounts of your [consolidation chart](#the-consolidation-chart), shown as number and name. Pick one to map the account to it, or pick **None** to clear the mapping.
+
+- You choose the number. The name and the description of the consolidation account come from the consolidation chart and appear under the field. You cannot type them.
+- Disabled accounts of the consolidation chart are listed only when the account is already mapped to one. They carry the label **Disabled**.
+- If the stored number does not exist in the consolidation chart, it stays visible with an orange dot and the message "This number does not exist in the consolidation chart IFRS. Choose an account from IFRS." Pick a valid account to fix it.
+- Without a consolidation chart, the field is locked and says "No consolidation chart is defined." followed by the link **Choose one in Charts of accounts → Manage charts.**
+
+### Creating an account
+
+**New account** on the list opens a short form with the chart you were viewing already selected. Fill in the chart, the account number and the name, plus the optional fields, then click **Create account**. After the creation, the account opens in the workspace and saves automatically from then on.
 
 ## Setting up Charts of Accounts
 
 ### Creating a CoA
 
-You can create a CoA in two ways:
+Click **New** in the chip bar, or **New chart** in the Manage charts dialog. You can create a CoA in two ways:
 
-1. **From scratch**: Choose a Scope and then create an empty CoA.
-   - **Scope**: `GLOBAL` (no country) or `COUNTRY` (requires a country selection)
-   - For `COUNTRY` scope, you may mark it as the default for that country. Only one default per country exists at a time.
-   - You can later load accounts via CSV.
-2. **From a template**: Load a pre-configured account set maintained by platform admins.
-   - Global templates create a `GLOBAL`-scoped CoA (no country field).
-   - Country templates create a `COUNTRY`-scoped CoA with the template's country prefilled.
+1. **An empty chart**: add accounts later, one by one or with a CSV import.
+2. **A template**: load a pre-configured account set maintained by platform admins.
 
 **Create dialog fields**:
-- **Mode**: Choose **Create from scratch** or **Copy from template**.
-- **Template** (template mode only): Select a template from the dropdown. Global templates show as "ALL -- ..."; country templates display their 2-letter code.
-- **Code** (required): A stable identifier used in CSV exports/imports and deep links.
+- **Start from**: **An empty chart** or **A template**.
+- **Template** (template mode only): Select a template from the list. Each entry shows its name, its countries and its version. Choosing a template fills in the name and the code, which you can change.
+- **Code** (required): A short, stable identifier used in CSV files and links.
 - **Name** (required): A descriptive name for the CoA.
-- **Scope**: `Country` or `Global`.
-- **Country** (country scope only): Select a country from the list.
-- **Set as default for this country** (country scope only): Check to make this the default CoA for the selected country.
+- **Used for**: **One country** or **All countries**. A global template always creates an **All countries** chart.
+- **Country** (one country only): Select a country from the list.
+- **Make it the country default** (one country only): Check to make this the default CoA for the selected country.
 
-In template mode, you can run **Preflight** before creating to see how many accounts will be inserted and updated. Then click **Create** to finalize.
+In template mode, click **Check template** before creating to see how many accounts will be added and how many updated. Then click **Create**.
 
-**Defaults**:
-  - Per-country: You can mark one CoA as the default for each country. New companies from that country are automatically assigned to that CoA (you can change it later in the company's Overview tab).
-  - Global fallback: Your workspace can have a Global Default CoA used for countries that don't have a country-specific default yet. Country defaults take precedence; the global default applies everywhere else.
+A new chart holds no role except the country default you tick here. To give it another role, use [Manage charts](#the-manage-charts-dialog).
 
 ### Loading from templates
 
@@ -162,12 +167,12 @@ Templates are standard account sets managed by platform administrators. They can
 **How it works**:
   - Go to **Master Data -> Charts of Accounts**
   - Click **New** in the chip bar
-  - Select **Copy from template** mode
-  - Select a template; global templates show as "ALL -- ..." (loads a `GLOBAL` CoA); country templates display their 2-letter code
-  - The system shows a preflight report (how many accounts will be inserted/updated)
-  - Confirm to copy accounts into your CoA
+  - Under **Start from**, choose **A template**
+  - Select a template. Global templates show "All countries" and create an all-countries chart; country templates show their country
+  - Click **Check template** to see how many accounts will be added and how many updated
+  - Click **Create** to copy the accounts into your CoA
 
-**What gets copied**: Account numbers, names, native names (local language), descriptions, consolidation mappings, and status. The accounts become yours to edit — changes to the platform template won't affect your CoA unless you explicitly reload it.
+**What gets copied**: Account numbers, names, native names (local language), descriptions, consolidation mappings, and status. The accounts become yours to edit. Changes to the platform template won't affect your CoA unless you explicitly reload it. If your workspace has a consolidation chart, the consolidation name and description of each account are taken from that chart (see [The consolidation chart](#the-consolidation-chart)).
 
 **Tip**: After loading a template, you can add company-specific accounts, rename entries, or disable unused accounts. Templates provide a starting point, not a locked structure.
 
@@ -221,54 +226,60 @@ All templates — regardless of country — map every account to one of **14 sta
 
 **Example**: Your French subsidiary loads **FR-PCG v1.0** and your German subsidiary loads **DE-SKR03 v1.0**. Both use different local account numbers and native names, but every account maps to the same IFRS consolidation structure. Group-level reports aggregate seamlessly without any manual mapping work.
 
-### Global Default CoA (Provisioning)
+### New workspaces (provisioning)
 
-New workspaces are automatically provisioned with the **IFRS v1.0** template. This creates a `GLOBAL`-scoped CoA containing the 14 IFRS consolidation accounts and sets it as the tenant's Global Default, so companies can use it immediately without any setup. You can edit or delete the preloaded accounts/CoA later as needed (subject to standard guardrails).
+New workspaces are automatically provisioned with the **IFRS v1.0** template. This creates an all-countries CoA containing the 14 IFRS consolidation accounts. It is both the **Default for other countries** and the **Consolidation chart**, so companies and group reporting work immediately without any setup. You can edit or delete the preloaded accounts and chart later as needed (subject to standard guardrails).
 
-Global CoAs are shown with scope metadata in the **Manage** modal, with no country value for `GLOBAL` entries. Only `GLOBAL` CoAs can be marked as the Global Default, and only `COUNTRY` CoAs can be set as a per-country default.
+## Chart roles
+
+A chart can hold up to three roles. They are independent, and each one is shown in words on the chip tooltip, in the summary and in **Manage charts**.
+
+| Role | What it does | How many |
+|------|--------------|----------|
+| **Country default ({country})** | Proposed when you create a company in that country | One per country. For one-country charts |
+| **Default for other countries** | Used for companies in a country that has no default chart. It is also assigned to the companies that have no chart | One per workspace. For all-countries charts |
+| **Consolidation chart** | The group accounts every local account maps to for consolidated reporting | One per workspace. Any chart |
+
+The usual starting point is one IFRS chart that holds both **Default for other countries** and **Consolidation chart**, plus one local chart per country that holds **Country default ({country})**. You can split the roles, for example a group chart that is the consolidation chart while a different all-countries chart serves the other countries. A chart can also hold no role.
+
+Each role has one holder (one per country for the country default). Giving a role to another chart takes it from the previous holder.
 
 ## Managing Charts of Accounts
 
-### The Manage modal
+### The Manage charts dialog
 
-Click **Manage** in the chip bar to open the administration modal. The modal has two panels:
+Click **Manage charts** in the chip bar to open the dialog. One table lists every chart:
 
-**Left panel** — CoA list:
-- Shows all your Charts of Accounts with their codes and names.
-- Default badges: **★** for country default, circle-plus for global default.
-- Click a row to view its details.
-
-**Right panel** — CoA details:
 - **Code** and **Name**
-- **Scope**: `GLOBAL` or `COUNTRY`
-- **Country** (for country-scoped CoAs)
-- **Country Default**: Yes/No
-- **Global Default**: Yes/No
-- **Linked Companies**: Number of companies assigned to this CoA
-- **Accounts**: Number of accounts in this CoA
+- **Countries**: the chart's country, or "All countries"
+- **Roles**: the roles of the chart in words, or a dash when it has none
+- **Companies**: the number of companies assigned to the chart
+- **Accounts**: the number of accounts in the chart
 
-**Actions** (in the modal toolbar):
-- **New** (`accounts:manager`): Opens the Create CoA dialog.
-- **Set Country Default** (`accounts:manager`): Mark the selected country-scoped CoA as the default for its country. Disabled for global CoAs.
-- **Set Global Default** (`accounts:manager`): Mark the selected global-scoped CoA as the global default. Disabled for country CoAs.
-- **Delete Selected** (`accounts:admin`): Delete the selected CoA. Deletion is blocked if any companies reference it or any OPEX/CAPEX items use its accounts.
+Three short lines under the table explain the roles. **New chart** (`accounts:manager`) at the bottom left opens the Create dialog.
+
+Each row has a **⋯** menu with only the actions that apply to that chart. The wording follows the current state.
+
+- **Make country default** / **Stop being country default** (`accounts:manager`): for one-country charts.
+- **Make default for other countries** / **Stop being default for other countries** (`accounts:manager`): for all-countries charts. Making it the default also assigns the chart to companies that have no chart.
+- **Make consolidation chart** / **Stop being consolidation chart** (`accounts:manager`): for any chart. See [Change the consolidation chart](#change-the-consolidation-chart).
+- **Delete** (`accounts:admin`): Delete the chart together with its accounts. If the chart has accounts, a confirmation tells you how many are deleted. If it is the consolidation chart, the confirmation says that group reporting will no longer have a reference chart. Deletion is refused while companies use the chart or OPEX/CAPEX items use its accounts, and the dialog shows the reason.
+
+The roles change as soon as you pick an action. The table updates on the spot.
 
 ## Managing Accounts
 
 ### Account numbers
 
-Account numbers are stored as text but typically contain numeric values. When editing accounts:
-  - You can enter numbers (e.g., `6011`) or text (e.g., `6011-TRAVEL`)
-  - The system automatically converts numeric inputs to strings
-  - Within a CoA, account numbers should be unique (enforced after backfill)
+An account number is a whole number greater than zero (for example `6011`). Within a CoA, each number is used once.
 
 ### Native names for multilingual support
 
-Some countries require accounts to be recorded in the local language. Use the **Native Name** field to store the original name while keeping the English name in the main **Account Name** field.
+Some countries require accounts to be recorded in the local language. Use the **Native name (local language)** field to store the original name while keeping the English name in the **Account name**.
 
 **Example**: French account
-  - **Account Name**: `Travel expenses` (English, for reporting)
-  - **Native Name**: `Frais de deplacement` (French, for legal compliance)
+  - **Account name**: `Travel expenses` (English, for reporting)
+  - **Native name (local language)**: `Frais de deplacement` (French, for legal compliance)
 
 The native name is available as a hidden column in the accounts grid. Enable it from the column chooser to view both names side by side.
 
@@ -276,14 +287,13 @@ The native name is available as a hidden column in the accounts grid. Enable it 
 
 For multi-country organizations, daily work is done using local Charts of Accounts (French PCG, UK GAAP, German HGB, etc.), but group-level reporting often requires consolidation to a common standard like **IFRS** or **US GAAP**.
 
-**Consolidation accounts** solve this by mapping local accounts to standardized consolidation accounts.
+**Consolidation accounts** solve this by mapping local accounts to the accounts of one reference chart.
 
-### How it works
+### The consolidation chart
 
-Each account can have three consolidation fields:
-  - **Consolidation Account Number**: The standardized account number (e.g., IFRS account `6200`)
-  - **Consolidation Account Name**: The standardized name (e.g., `IT Services and Software`)
-  - **Consolidation Account Description**: Optional details about the consolidation category
+Your workspace has at most one **Consolidation chart**. It holds the group accounts that every local account maps to. It is independent of the defaults: any chart can be the consolidation chart, including one that is also the default for other countries.
+
+On each local account, you choose a **Consolidation account** from the consolidation chart's accounts. The number is the link. The name and the description of the consolidation account come from the consolidation chart automatically, so they always match its accounts.
 
 **Example mapping**:
 
@@ -293,7 +303,12 @@ Each account can have three consolidation fields:
 | UK | UK-GAAP | 5200 | Postage and courier | -> | 6200 | IT Services and Software |
 | Germany | DE-HGB | 4920 | Portokosten | -> | 6200 | IT Services and Software |
 
-All three local accounts map to the same IFRS consolidation account `6200`, enabling group-level aggregation.
+All three local accounts map to the same consolidation account `6200`, enabling group-level aggregation.
+
+**What stays in sync**:
+
+  - When you rename an account of the consolidation chart, change its description or give it a new number, every account mapped to it follows. Its number, name and description update everywhere, in one step.
+  - When you map an account to a number that exists in the consolidation chart, the consolidation name and description are filled in for you.
 
 ### Why this matters
 
@@ -310,7 +325,7 @@ All three local accounts map to the same IFRS consolidation account `6200`, enab
 ### Setting up consolidation mappings
 
 **Option 1: Templates (recommended)**
-All built-in templates include IFRS consolidation mappings on every account. Load any country template and the consolidation columns are already filled in — no manual mapping needed. See [Available templates](#available-templates) for the full list.
+All built-in templates include IFRS consolidation mappings on every account. Load any country template and the consolidation columns are already filled in. A new workspace already has the IFRS chart as its consolidation chart. See [Available templates](#available-templates) for the full list.
 
 **Option 2: CSV import**
 When importing accounts, include the consolidation fields in your CSV:
@@ -322,16 +337,33 @@ UK-GAAP;5200;Postage and courier;6200;IT Services and Software;
 DE-HGB;4920;Portokosten;6200;IT Services and Software;
 ```
 
+Only the consolidation account number matters when the consolidation chart holds it: the import replaces the name and description columns with the consolidation chart's own. When the number is not in the consolidation chart, the name and description from the file are kept, and the account is flagged as outside the consolidation chart. An empty number clears the mapping, the name and the description.
+
 **Option 3: Manual entry**
-Edit accounts individually and fill in the consolidation fields in the account workspace.
+Open an account and choose its **Consolidation account** in the account workspace.
+
+### Change the consolidation chart
+
+1. Open **Manage charts** and open the **⋯** menu of the chart you want to use.
+2. Click **Make consolidation chart**.
+3. If the chart replaces another consolidation chart, or if some accounts point to numbers it does not hold, a confirmation opens. It says which chart it replaces and gives the counts: how many accounts keep their consolidation account, how many point to a number that does not exist in the new chart, and how many have no consolidation account.
+4. Click **Make consolidation chart** to confirm.
+
+**What happens to existing mappings**: KANAP never remaps accounts for you. Every account keeps its consolidation number.
+
+  - Accounts whose number exists in the new chart keep it, and take that chart's name and description.
+  - Accounts whose number does not exist in the new chart keep their number and are flagged: the health line counts them, a dot marks them in the grid and the account workspace asks you to choose a valid account. Filter on them from the health line and remap them one by one, or load a CSV.
+  - Accounts without a number stay unmapped.
+
+When you pick **Stop being consolidation chart**, group reporting no longer has a reference chart. The account mappings are kept.
 
 ### Best practices
 
   - **Use a common standard**: IFRS is typical for European groups; US GAAP for American companies. All built-in templates already map to the same 14 IFRS consolidation accounts (see [IFRS consolidation built in](#ifrs-consolidation-built-in))
-  - **Maintain a consolidation chart**: Keep a reference document listing your consolidation accounts and what they represent. If you use the built-in templates, the 14 IFRS accounts serve as this reference
+  - **Keep one consolidation chart**: It is your group's list of reporting accounts. If you use the built-in templates, the 14 IFRS accounts serve as this reference
   - **Map at the right granularity**: Don't consolidate too broadly (loses insight) or too narrowly (too complex)
   - **Involve finance**: Consolidation account mappings should align with your group's financial reporting requirements
-  - **Update systematically**: When you add local accounts, immediately map them to consolidation accounts
+  - **Update systematically**: When you add local accounts, immediately map them to consolidation accounts. The health line shows what is still missing
 
 ### Reporting with consolidation accounts
 
@@ -443,12 +475,13 @@ account_number;account_name;native_name;description;consolidation_account_number
   - The `coa_code` must match an existing Chart of Accounts in your workspace
   - Account numbers should be unique within a CoA
   - Status values: `enabled` or `disabled` (defaults to enabled)
+  - Consolidation columns: when `consolidation_account_number` exists in your consolidation chart, its name and description replace the `consolidation_account_name` and `consolidation_account_description` cells. An empty number clears all three. See [Setting up consolidation mappings](#setting-up-consolidation-mappings)
 
 ## Tips
 
   - **Start with templates**: KANAP ships with templates for 9 countries plus IFRS. Load one instead of building from scratch — you get proper account numbers, native names, and IFRS consolidation mappings out of the box. Start with v1.0 (Simple) if unsure; upgrade to v2.0 (Detailed) if you need more granularity.
-  - **One default per country**: Set a default CoA for each country so new companies are automatically assigned to the right account structure.
-  - **Native names for compliance**: Use the Native Name field if local regulations require accounts in the local language. Enable the **Native Name** column in the grid to see both names at a glance.
+  - **One default per country**: Make one CoA the default for each country, so new companies start with the right account structure.
+  - **Native names for compliance**: Use the **Native name (local language)** field if local regulations require accounts in the local language. Enable the **Native name** column in the grid to see both names at a glance.
   - **Migrate gradually**: You don't have to convert everything at once. Companies without CoAs continue to work with legacy accounts.
   - **Fix obsolete accounts**: When you see warnings, update the account to match the company's current CoA. This keeps your data clean for reporting.
   - **Disable over delete**: Disabling accounts preserves history. Only delete accounts that were created by mistake and have never been used.
@@ -465,7 +498,7 @@ You have subsidiaries in France, UK, and Germany, each following local accountin
 
 **Setup**:
   1. Load three templates: **FR-PCG v1.0**, **GB-UKGAAP v1.0**, **DE-SKR03 v1.0** (or v2.0 for more granularity)
-  2. Set each as the default for its country
+  2. Make each one the default for its country (**Manage charts**, then **Make country default**)
   3. Assign companies to their respective CoAs
   4. New companies automatically get the right CoA; account selection is filtered accordingly
   5. Consolidation mappings are already in place — group reports work immediately
@@ -508,7 +541,7 @@ Your group has subsidiaries in France, UK, and Germany. Each country uses its lo
       - GB-UKGAAP `510` (Capitalized Software) -> IFRS `1100` (Intangible Assets)
       - DE-SKR03 `27` (EDV-Software) -> IFRS `1100` (Intangible Assets)
 
-  3. Set each CoA as the default for its country and assign companies
+  3. Make each CoA the default for its country and assign companies
 
 **Result**:
   - French users work with French PCG accounts and native names in their daily tasks
@@ -530,7 +563,7 @@ A: Deletion is blocked if any companies reference it or any OPEX/CAPEX items use
 A: Yes, in the account's workspace. Changing the account number updates all references in OPEX/CAPEX items automatically (the account's UUID remains the same internally).
 
 **Q: How do I see which companies use a specific CoA?**
-A: Open **Manage** on the Charts of Accounts page, select the CoA, and check **Linked Companies** in the details panel. You can also filter the Companies page by CoA.
+A: Open **Manage charts** on the Charts of Accounts page and read the **Companies** column of the CoA's row. You can also filter the Companies page by CoA.
 
 **Q: What if my country doesn't have a template?**
 A: KANAP includes templates for 9 countries (FR, DE, GB, ES, IT, NL, BE, CH, US) plus IFRS as a global standard. If your country isn't covered, create a CoA from scratch and add accounts manually or via CSV import. You can still use the IFRS consolidation account numbers (1000-2900) in your consolidation mappings to stay compatible with the built-in templates.
@@ -549,3 +582,12 @@ A: Yes, that's the whole point! Many local accounts across different CoAs can ma
 
 **Q: What happens if I change a consolidation mapping?**
 A: Existing OPEX/CAPEX items don't store consolidation data directly — they reference the account, which has the consolidation mapping. When you change a mapping, all historical and future items using that account will report under the new consolidation account. Update mappings carefully if you need to preserve historical reporting categories.
+
+**Q: Does the consolidation chart have to be the default for other countries?**
+A: No. The two roles are independent. In the usual setup one IFRS chart holds both, and you can give them to different charts at any time in **Manage charts**.
+
+**Q: What happens to accounts when I rename or renumber an account of the consolidation chart?**
+A: Every account mapped to it follows. Their consolidation number, name and description are updated together, so the mappings stay valid.
+
+**Q: Why does the grid show a dot next to some consolidation numbers?**
+A: The dot marks an account whose consolidation number does not exist in the consolidation chart, typically after you changed the consolidation chart. Open the account and choose a valid consolidation account, or use the health line to list all of them.

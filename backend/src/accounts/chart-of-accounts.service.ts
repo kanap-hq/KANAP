@@ -11,6 +11,22 @@ import { AccountsService } from './accounts.service';
 import { parseString } from '@fast-csv/parse';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../common/csv-sheet';
+import { CURRENT_TENANT, lockTenantCharts, resyncFromChart } from './consolidation';
+
+/** The chart flags a grid can filter and sort on, with its columns. */
+const LIST_FIELDS = ['code', 'name', 'country_iso', 'scope', 'is_default', 'is_global_default', 'is_consolidation', 'created_at', 'updated_at'];
+
+/** A chart role: one holder per tenant at most (partial unique indexes). */
+type ChartRole = 'is_global_default' | 'is_consolidation';
+
+type ChartCounts = {
+  companies_count: number;
+  accounts_count: number;
+  accounts_unmapped_count: number;
+  accounts_outside_count: number;
+};
+
+const NO_COUNTS: ChartCounts = { companies_count: 0, accounts_count: 0, accounts_unmapped_count: 0, accounts_outside_count: 0 };
 
 @Injectable()
 export class ChartOfAccountsService {
@@ -31,10 +47,9 @@ export class ChartOfAccountsService {
     const repo = this.getRepo(mg);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
     assertSetFilterModes(filters);
-    const allowed = ['code','name','country_iso','scope','is_default','is_global_default','created_at','updated_at'];
     const where: any = {};
     if (filters && Object.keys(filters).length > 0) {
-      Object.assign(where, buildWhereFromAgFilters(filters, allowed));
+      Object.assign(where, buildWhereFromAgFilters(filters, LIST_FIELDS));
     }
     if (q) {
       // quick search on code or name
@@ -51,33 +66,60 @@ export class ChartOfAccountsService {
       take: limit,
     });
 
-    // Enrich with counts
-    const ids = baseItems.map((i) => i.id);
-    const counts: Record<string, { companies: number; accounts: number }> = {};
-    if (ids.length > 0) {
-      const companyCounts: Array<{ coa_id: string; count: string }>
-        = await mg.query(`SELECT coa_id, COUNT(*)::text AS count FROM companies WHERE coa_id = ANY($1) GROUP BY coa_id`, [ids]);
-      const accountCounts: Array<{ coa_id: string; count: string }>
-        = await mg.query(`SELECT coa_id, COUNT(*)::text AS count FROM accounts WHERE coa_id = ANY($1) GROUP BY coa_id`, [ids]);
-      companyCounts.forEach((r) => { counts[r.coa_id] = { ...(counts[r.coa_id] || { companies: 0, accounts: 0 }), companies: Number(r.count) }; });
-      accountCounts.forEach((r) => { counts[r.coa_id] = { ...(counts[r.coa_id] || { companies: 0, accounts: 0 }), accounts: Number(r.count) }; });
-    }
-    const items = baseItems.map((i) => ({
-      ...i,
-      companies_count: counts[i.id]?.companies ?? 0,
-      accounts_count: counts[i.id]?.accounts ?? 0,
-    }));
+    const counts = await this.countsByChart(baseItems.map((i) => i.id), mg);
+    const items = baseItems.map((i) => ({ ...i, ...(counts.get(i.id) ?? NO_COUNTS) }));
     return { items, total, page, limit };
+  }
+
+  /**
+   * Per chart, in one query: companies using it, its accounts, those without a consolidation
+   * number (unmapped) and those whose number is absent from the tenant's consolidation chart
+   * (outside; 0 when the tenant has no consolidation chart). Disabled accounts count too.
+   */
+  private async countsByChart(ids: string[], mg: EntityManager): Promise<Map<string, ChartCounts>> {
+    if (ids.length === 0) return new Map();
+    const rows: Array<{ id: string } & ChartCounts> = await mg.query(
+      `SELECT c.id::text AS id,
+              COALESCE(co.n, 0)::int AS companies_count,
+              COALESCE(ac.total, 0)::int AS accounts_count,
+              COALESCE(ac.unmapped, 0)::int AS accounts_unmapped_count,
+              COALESCE(ac.outside, 0)::int AS accounts_outside_count
+       FROM chart_of_accounts c
+       LEFT JOIN chart_of_accounts cons
+         ON cons.tenant_id = c.tenant_id AND cons.is_consolidation
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*) AS n FROM companies co
+         WHERE co.tenant_id = c.tenant_id AND co.coa_id = c.id
+       ) co ON true
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE a.consolidation_account_number IS NULL) AS unmapped,
+                COUNT(*) FILTER (
+                  WHERE a.consolidation_account_number IS NOT NULL
+                    AND cons.id IS NOT NULL
+                    AND NOT EXISTS (
+                      SELECT 1 FROM accounts ca
+                      WHERE ca.tenant_id = a.tenant_id
+                        AND ca.coa_id = cons.id
+                        AND ca.account_number = a.consolidation_account_number
+                    )
+                ) AS outside
+         FROM accounts a
+         WHERE a.tenant_id = c.tenant_id AND a.coa_id = c.id
+       ) ac ON true
+       WHERE c.tenant_id = ${CURRENT_TENANT} AND c.id = ANY($1::uuid[])`,
+      [ids],
+    );
+    return new Map(rows.map(({ id, ...counts }) => [id, counts]));
   }
 
   async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
     const repo = this.getRepo(opts?.manager);
     const { sort, q, filters } = parsePagination(query);
     assertSetFilterModes(filters);
-    const allowed = ['code','name','country_iso','scope','is_default','is_global_default','created_at','updated_at'];
     const where: any = {};
     if (filters && Object.keys(filters).length > 0) {
-      Object.assign(where, buildWhereFromAgFilters(filters, allowed));
+      Object.assign(where, buildWhereFromAgFilters(filters, LIST_FIELDS));
     }
     const whereArr = q ? [{ ...where, code: ILike(`%${q}%`) }, { ...where, name: ILike(`%${q}%`) }] : undefined;
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
@@ -92,9 +134,16 @@ export class ChartOfAccountsService {
     return { ids: rows.map((row) => row.id), total };
   }
 
+  /** The chart with its counts (see `list`). */
   async get(id: string, opts?: { manager?: EntityManager }) {
-    const repo = this.getRepo(opts?.manager);
-    const found = await repo.findOne({ where: { id } });
+    const mg = opts?.manager ?? this.repo.manager;
+    const found = await this.findOrFail(id, mg);
+    const counts = await this.countsByChart([found.id], mg);
+    return { ...found, ...(counts.get(found.id) ?? NO_COUNTS) };
+  }
+
+  private async findOrFail(id: string, mg: EntityManager): Promise<ChartOfAccounts> {
+    const found = await this.getRepo(mg).findOne({ where: { id } });
     if (!found) throw new NotFoundException('Chart of Accounts not found');
     return found;
   }
@@ -160,6 +209,8 @@ export class ChartOfAccountsService {
   async update(id: string, body: ChartOfAccountsUpsertDto, userId?: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
+    // A country default moves between two charts: lock them all, in the order every chart writer uses.
+    await lockTenantCharts(mg);
     const existing = await repo.findOne({ where: { id } });
     if (!existing) throw new NotFoundException('Chart of Accounts not found');
     const before = { ...existing };
@@ -173,6 +224,8 @@ export class ChartOfAccountsService {
         existing.is_default = false;
       } else if (body.scope === 'COUNTRY') {
         existing.scope = 'COUNTRY';
+        // "Default for other countries" belongs to GLOBAL charts only.
+        existing.is_global_default = false;
         const nextCountry = body.country_iso?.toUpperCase() || existing.country_iso?.toUpperCase();
         if (!nextCountry || nextCountry.length !== 2) throw new BadRequestException('country_iso is required and must be 2 letters when scope is COUNTRY');
         existing.country_iso = nextCountry;
@@ -221,6 +274,7 @@ export class ChartOfAccountsService {
   async delete(id: string, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
+    await lockTenantCharts(mg);
     const existing = await repo.findOne({ where: { id } });
     if (!existing) throw new NotFoundException('Chart of Accounts not found');
 
@@ -233,16 +287,16 @@ export class ChartOfAccountsService {
     const opexUsageRows = await mg.query(
       `SELECT COUNT(*)::int AS count
        FROM spend_items si
-       JOIN accounts a ON a.id = si.account_id
-       WHERE a.coa_id = $1`,
+       JOIN accounts a ON a.id = si.account_id AND a.tenant_id = si.tenant_id
+       WHERE a.coa_id = $1 AND si.tenant_id = ${CURRENT_TENANT}`,
       [id],
     );
     const opexCount = Number(opexUsageRows?.[0]?.count ?? 0);
     const capexUsageRows = await mg.query(
       `SELECT COUNT(*)::int AS count
        FROM capex_items ci
-       JOIN accounts a ON a.id = ci.account_id
-       WHERE a.coa_id = $1`,
+       JOIN accounts a ON a.id = ci.account_id AND a.tenant_id = ci.tenant_id
+       WHERE a.coa_id = $1 AND ci.tenant_id = ${CURRENT_TENANT}`,
       [id],
     );
     const capexCount = Number(capexUsageRows?.[0]?.count ?? 0);
@@ -266,18 +320,127 @@ export class ChartOfAccountsService {
     return { items: rows };
   }
 
-  async setGlobalDefault(coaId: string, opts?: { manager?: EntityManager }) {
+  /**
+   * "Default for other countries": a GLOBAL chart used for companies in a country without a
+   * default chart. Clears the previous holder; companies without a chart get this one.
+   */
+  async setGlobalDefault(coaId: string, userId?: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const mg = opts?.manager ?? this.repo.manager;
-    // Ensure target CoA is GLOBAL-scoped
-    const target = await this.get(coaId, { manager: mg });
+    await lockTenantCharts(mg);
+    const target = await this.findOrFail(coaId, mg);
     if (target.scope !== 'GLOBAL') {
       throw new BadRequestException('Only GLOBAL-scoped CoAs can be set as Global Default');
     }
-    // Clear any existing global default in this tenant, then set the requested one
-    await mg.query(`UPDATE chart_of_accounts SET is_global_default = false WHERE tenant_id = current_setting('app.current_tenant', true)::uuid AND is_global_default = true`);
-    await mg.query(`UPDATE chart_of_accounts SET is_global_default = true WHERE id = $1`, [coaId]);
+    await this.assignRole('is_global_default', coaId, userId, mg, opts?.audit);
     // Also backfill companies that have no CoA yet to this global default
-    await mg.query(`UPDATE companies SET coa_id = $1 WHERE coa_id IS NULL`, [coaId]);
+    await mg.query(`UPDATE companies SET coa_id = $1 WHERE coa_id IS NULL AND tenant_id = ${CURRENT_TENANT}`, [coaId]);
+  }
+
+  /** Removes "Default for other countries" from this chart; a no-op when it does not hold it. */
+  async clearGlobalDefault(coaId: string, userId?: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    await this.findOrFail(coaId, mg);
+    const cleared = await this.clearRole('is_global_default', coaId, userId, mg, opts?.audit);
+    return { cleared };
+  }
+
+  /**
+   * Makes this chart (any scope) the tenant's consolidation chart, clearing the previous one,
+   * then resyncs the derived fields: every account whose consolidation number matches an
+   * account of this chart takes that account's name and description. Accounts are never
+   * remapped. Returns the accounts rewritten (`resynced`) and the accounts of the other charts
+   * whose consolidation number is absent from this chart (`outside`).
+   */
+  async setConsolidation(coaId: string, userId?: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    await lockTenantCharts(mg);
+    await this.findOrFail(coaId, mg);
+    await this.assignRole('is_consolidation', coaId, userId, mg, opts?.audit);
+    const resynced = await resyncFromChart(mg, coaId, { userId, audit: opts?.audit });
+    const { outside } = await this.consolidationImpact(coaId, { manager: mg });
+    return { resynced, outside };
+  }
+
+  /** Removes the consolidation role from this chart; a no-op when it does not hold it. */
+  async clearConsolidation(coaId: string, userId?: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    await this.findOrFail(coaId, mg);
+    const cleared = await this.clearRole('is_consolidation', coaId, userId, mg, opts?.audit);
+    return { cleared };
+  }
+
+  /**
+   * What making this chart the consolidation chart would mean, without writing: among the
+   * accounts of the other charts, those whose consolidation number exists in this chart
+   * (`matched`), is set but absent from it (`outside`), or is not set (`unmapped`).
+   */
+  async consolidationImpact(coaId: string, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    await this.findOrFail(coaId, mg);
+    const [row]: Array<{ matched: number; outside: number; unmapped: number }> = await mg.query(
+      `SELECT COUNT(*) FILTER (WHERE a.consolidation_account_number IS NOT NULL AND t.id IS NOT NULL)::int AS matched,
+              COUNT(*) FILTER (WHERE a.consolidation_account_number IS NOT NULL AND t.id IS NULL)::int AS outside,
+              COUNT(*) FILTER (WHERE a.consolidation_account_number IS NULL)::int AS unmapped
+       FROM accounts a
+       LEFT JOIN accounts t
+         ON t.tenant_id = a.tenant_id AND t.coa_id = $1::uuid AND t.account_number = a.consolidation_account_number
+       WHERE a.tenant_id = ${CURRENT_TENANT} AND a.coa_id <> $1::uuid`,
+      [coaId],
+    );
+    return { matched: row?.matched ?? 0, outside: row?.outside ?? 0, unmapped: row?.unmapped ?? 0 };
+  }
+
+  /** Gives `role` to `holderId` and takes it from every other chart of the tenant (audited per chart). */
+  private async assignRole(role: ChartRole, holderId: string, userId: string | null | undefined, mg: EntityManager, audit?: AuditSourceOptions) {
+    // Clear first: the partial unique index checks each row as it is written.
+    const cleared = await this.writeRole(role, false, `${role} AND id <> $1::uuid`, holderId, mg);
+    const given = await this.writeRole(role, true, `NOT ${role} AND id = $1::uuid`, holderId, mg);
+    await this.auditCharts([...cleared, ...given], userId, mg, audit);
+  }
+
+  /** Takes `role` from this chart when it holds it; true when it did. */
+  private async clearRole(role: ChartRole, coaId: string, userId: string | null | undefined, mg: EntityManager, audit?: AuditSourceOptions) {
+    const cleared = await this.writeRole(role, false, `${role} AND id = $1::uuid`, coaId, mg);
+    await this.auditCharts(cleared, userId, mg, audit);
+    return cleared.length > 0;
+  }
+
+  /** Writes `role` on the tenant's charts matching `condition` ($1 is `id`); returns them before and after. */
+  private async writeRole(role: ChartRole, value: boolean, condition: string, id: string, mg: EntityManager) {
+    const rows: Array<{ before: any; after: any }> = await mg.query(
+      `WITH prev AS (
+         SELECT * FROM chart_of_accounts
+         WHERE tenant_id = ${CURRENT_TENANT} AND ${condition}
+       ),
+       changed AS (
+         UPDATE chart_of_accounts c
+         SET ${role} = ${value ? 'true' : 'false'}, updated_at = now()
+         FROM prev
+         WHERE c.id = prev.id AND c.tenant_id = ${CURRENT_TENANT}
+         RETURNING to_jsonb(prev) AS before, to_jsonb(c) AS after
+       )
+       SELECT before, after FROM changed`,
+      [id],
+    );
+    return rows;
+  }
+
+  private async auditCharts(changed: Array<{ before: any; after: any }>, userId: string | null | undefined, mg: EntityManager, audit?: AuditSourceOptions) {
+    for (const row of changed) {
+      await this.audit.log(
+        {
+          table: 'chart_of_accounts',
+          recordId: row.after?.id ?? null,
+          action: 'update',
+          before: row.before,
+          after: row.after,
+          userId: userId ?? null,
+          source: audit?.source,
+          sourceRef: audit?.sourceRef ?? null,
+        },
+        { manager: mg },
+      );
+    }
   }
 
   async loadTemplateIntoCoa(
@@ -287,7 +450,7 @@ export class ChartOfAccountsService {
     opts?: { manager?: EntityManager },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
-    const coa = await this.get(coaId, { manager: mg });
+    const coa = await this.findOrFail(coaId, mg);
     const tmplRows = await mg.query(`SELECT csv_payload FROM coa_templates WHERE id = $1`, [templateId]);
     const csv = tmplRows?.[0]?.csv_payload as string | undefined;
     if (!csv) throw new BadRequestException('Template has no CSV payload');
@@ -332,7 +495,7 @@ export class ChartOfAccountsService {
     opts?: { manager?: EntityManager; scope?: 'template' | 'data'; language?: CsvLanguage },
   ) {
     // Validate CoA belongs to tenant and exists
-    await this.get(coaId, { manager: opts?.manager });
+    await this.findOrFail(coaId, opts?.manager ?? this.repo.manager);
     const scope = opts?.scope ?? 'data';
     return this.accountsSvc.exportCsv(scope, { manager: opts?.manager, coaId, includeCoaCode: false, language: opts?.language });
   }
@@ -344,7 +507,7 @@ export class ChartOfAccountsService {
     userId?: string | null,
     opts?: { manager?: EntityManager; language?: CsvLanguage; dateOrder?: CsvDateOrder; decimalMark?: DecimalMark },
   ) {
-    await this.get(coaId, { manager: opts?.manager });
+    await this.findOrFail(coaId, opts?.manager ?? this.repo.manager);
     return this.accountsSvc.importCsv(
       { file, dryRun, userId: userId ?? null, language: opts?.language, dateOrder: opts?.dateOrder, decimalMark: opts?.decimalMark },
       { manager: opts?.manager, targetCoaId: coaId, allowCoaCodeColumn: false },

@@ -133,7 +133,7 @@ Jedes Unternehmen kann mit einem **Kontenplan** (CoA) verknüpft werden, der den
 
 **Funktionsweise**:
 
-- Wenn Sie ein Unternehmen erstellen, wird es automatisch dem Standard-Kontenplan für sein Land zugewiesen (sofern vorhanden). Existiert kein Länder-Standard, wird der globale Standard-Kontenplan verwendet.
+- Wenn Sie ein Unternehmen erstellen, wird es automatisch dem Standard-Kontenplan für sein Land zugewiesen (sofern vorhanden). Existiert kein Länderstandard, wird der Kontenplan mit der Rolle **Standard für andere Länder** verwendet.
 - Sie können die Kontenplan-Zuordnung im Bereich **Eigenschaften** über den **Kontenplan**-Selektor ändern. Der Selektor zeigt Kontenpläne, die zum Land des Unternehmens passen, plus alle global gültigen Kontenpläne.
 - Wenn Sie das Land des Unternehmens ändern, folgt der Kontenplan, sofern der aktuelle zu einem anderen Land gehört: Er wechselt zum Standard des neuen Landes. Ein globaler Kontenplan bleibt bestehen.
 - Bei einem bestehenden Unternehmen kann der Kontenplan nicht geleert werden. Sie können ihn nur durch einen anderen ersetzen.
@@ -145,7 +145,7 @@ Jedes Unternehmen kann mit einem **Kontenplan** (CoA) verknüpft werden, der den
 - **Unternehmen ohne Kontenplan** (Legacy): Können Konten verwenden, die keinem Kontenplan zugehören. Dies unterstützt die schrittweise Migration zum Kontenplan-System.
 - **Kontenplan wechseln**: Wenn Sie ein Unternehmen einem anderen Kontenplan zuweisen, behalten bestehende Ausgabenpositionen ihre aktuellen Konten (mit einer Warnung, falls sie nicht zum neuen Kontenplan passen), aber neue Positionen verwenden Konten aus dem neuen Kontenplan.
 
-**Kontenpläne einrichten**: Gehen Sie zu **Stammdaten > Kontenpläne**, um Ihre Kontenplan-Sets anzuzeigen, zu erstellen oder zu verwalten. Sie können Kontenpläne von Grund auf erstellen oder aus Plattform-Vorlagen laden (länderspezifische Standard-Kontensets). Jedes Land kann einen Standard-Kontenplan haben, der automatisch neuen Unternehmen aus diesem Land zugewiesen wird.
+**Kontenpläne einrichten**: Gehen Sie zu **Stammdaten > Kontenpläne**, um Ihre Kontenplan-Sets anzuzeigen, zu erstellen oder zu verwalten. Sie können Kontenpläne von Grund auf erstellen oder aus Plattform-Vorlagen laden (länderspezifische Standard-Kontensets). Jedes Land kann einen Standard-Kontenplan haben (**Länderstandard ({country})**), der vorgeschlagen wird, wenn Sie ein Unternehmen in diesem Land anlegen. Unternehmen in einem Land ohne Standard verwenden den Kontenplan **Standard für andere Länder**. Siehe [Rollen der Kontenpläne](chart-of-accounts.md#rollen-der-kontenplane).
 
 **Tipp**: Wenn Sie beim Bearbeiten von OPEX/CAPEX-Positionen eine Warnung „Veraltetes Konto" sehen, bedeutet dies, dass das Konto nicht zum aktuellen Kontenplan des Unternehmens gehört. Aktualisieren Sie das Konto auf eines aus dem richtigen Kontenplan, um dies zu beheben.
 
