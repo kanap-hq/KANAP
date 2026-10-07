@@ -184,6 +184,6 @@ Una organización más grande añade el resto de los datos maestros entre medias
 8. El archivo OPEX
 9. El archivo CAPEX
 
-**El plan de cuentas va primero.** En la página Planes de cuentas, haga clic en **Nuevo**, dé un código y un nombre al plan y elija el ámbito **Global**. Después abra **Gestionar** y haga clic en **Establecer como predeterminado global**. Una empresa sin plan de cuentas toma ese, y así se resuelven los números de cuenta de un archivo de presupuesto. Seleccione el plan en la página y haga clic en **Importar CSV** para cargar sus cuentas.
+**El plan de cuentas va primero.** En la página Planes de cuentas, haga clic en **Nuevo**, dé un código y un nombre al plan y elija **Todos los países** en **Se usa para**. Después haga clic en **Gestionar planes**, abra el menú **⋯** del plan y haga clic en **Hacer predeterminado para otros países**. Una empresa sin plan de cuentas toma ese, y así se resuelven los números de cuenta de un archivo de presupuesto. Seleccione el plan en la página y haga clic en **Importar CSV** para cargar sus cuentas.
 
 Cada una de estas páginas tiene su propia sección **Importar CSV** con las columnas de su archivo.

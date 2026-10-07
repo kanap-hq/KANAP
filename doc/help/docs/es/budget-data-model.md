@@ -43,7 +43,7 @@ Los archivos descritos aquí son el contrato en el que apoyarse. Sus columnas es
 | | Responsable del presupuesto (usuario) | Ninguno o uno |
 | | Grupo padre | Ninguno o uno |
 | Grupo de centros de coste | Grupo padre | Ninguno o uno. Un grupo no tiene empresa |
-| Empresa | Plan de cuentas | Uno. Una empresa sin plan propio usa el plan global por defecto |
+| Empresa | Plan de cuentas | Uno. Una empresa sin plan propio usa el plan predeterminado para otros países |
 | | País y moneda base | Uno de cada |
 | | Indicadores: plantilla, usuarios IT, facturación | Un conjunto por año |
 | Departamento | Empresa | Una |

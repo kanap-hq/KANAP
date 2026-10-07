@@ -8,6 +8,7 @@ import { Account } from './account.entity';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
+import { CURRENT_TENANT, lockTenantCharts } from './consolidation';
 
 @Injectable()
 export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccounts> {
@@ -46,6 +47,8 @@ export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccou
     const manager = opts?.manager ?? this.repository.manager;
     const repo = this.getRepo(manager);
 
+    // In the order every chart writer locks the charts (an account write holds them FOR SHARE).
+    await lockTenantCharts(manager);
     const existing = await repo.findOne({ where: { id } as any });
     if (!existing) {
       throw new NotFoundException('Chart of Accounts not found');
@@ -61,8 +64,8 @@ export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccou
     const opexUsageRows = await manager.query(
       `SELECT COUNT(*)::int AS count
        FROM spend_items si
-       JOIN accounts a ON a.id = si.account_id
-       WHERE a.coa_id = $1`,
+       JOIN accounts a ON a.id = si.account_id AND a.tenant_id = si.tenant_id
+       WHERE a.coa_id = $1 AND si.tenant_id = ${CURRENT_TENANT}`,
       [id],
     );
     const opexCount = Number(opexUsageRows?.[0]?.count ?? 0);
@@ -71,8 +74,8 @@ export class ChartOfAccountsDeleteService extends BaseDeleteService<ChartOfAccou
     const capexUsageRows = await manager.query(
       `SELECT COUNT(*)::int AS count
        FROM capex_items ci
-       JOIN accounts a ON a.id = ci.account_id
-       WHERE a.coa_id = $1`,
+       JOIN accounts a ON a.id = ci.account_id AND a.tenant_id = ci.tenant_id
+       WHERE a.coa_id = $1 AND ci.tenant_id = ${CURRENT_TENANT}`,
       [id],
     );
     const capexCount = Number(capexUsageRows?.[0]?.count ?? 0);

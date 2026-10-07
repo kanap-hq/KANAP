@@ -40,11 +40,19 @@ creating anything.
    The companies import is pinned to `--year` (default 2026) because year
    columns are relative to the import year.
    **Charts of accounts**: one local chart per company (France PCG,
-   Netherlands RGS, Italy PDC, US GAAP). Group reporting uses the IFRS chart
-   the tenant is provisioned with: every local account maps to one of its 14
-   consolidation accounts, as in the built-in templates. On a tenant built by
-   an earlier version of the fixture, the runner removes the old
-   `IFRS Group Chart` and its accounts 6100 to 6400 from the local charts.
+   Netherlands RGS, Italy PDC, US GAAP). The runner sets the three chart
+   roles: each local chart is the default chart of its country (proposed for
+   new companies there); the IFRS chart the tenant is provisioned with is the
+   default for other countries and the consolidation chart. Every local
+   account maps to one of the 14 IFRS consolidation accounts, as in the
+   built-in templates, and takes its consolidation name and description from
+   it: the runner sets IFRS as the consolidation chart on every run, which
+   resyncs those names. The runner warns when the tenant has no IFRS chart,
+   or when a local account is outside the consolidation chart or has no
+   consolidation account.
+   On a tenant built by an earlier version of the fixture, the runner removes
+   the old `IFRS Group Chart` and its accounts 6100 to 6400 from the local
+   charts.
    **Budget data**: right after the spend and CAPEX imports, the runner writes
    the quantity × price lines of the external staffing items (`30-costed-lines.csv`,
    keyed by item name, resolved to versions) and imports the monthly amounts

@@ -823,8 +823,42 @@ async function removeLegacyGroupAccounts(coaIds) {
       warn(`Could not remove legacy chart '${LEGACY_GROUP_COA}': ${error.message}`);
     }
   }
-  if (!coas.some((coa) => coa.is_global_default)) {
-    warn('No global default chart of accounts: load the IFRS template so consolidation accounts have a home');
+}
+
+// Chart roles: each local chart is its country's default chart, and the IFRS chart the
+// tenant is provisioned with is both the default for other countries and the
+// consolidation chart every local account maps to.
+async function ensureChartRoles(localCharts) {
+  let coas = items(await apiGet('/chart-of-accounts?limit=500'));
+  for (const [country, coaId] of Object.entries(localCharts)) {
+    const chart = coas.find((coa) => coa.id === coaId);
+    if (chart?.is_default) continue;
+    await apiPatch(`/chart-of-accounts/${coaId}`, { is_default: true });
+    ok(`${chart?.code ?? coaId} is the default chart for ${country}`);
+  }
+
+  const ifrs = coas.find((coa) => coa.scope === 'GLOBAL' && coa.code === 'IFRS');
+  if (!ifrs) {
+    warn('No IFRS chart (GLOBAL scope, code IFRS): load the IFRS template, then re-run so the local accounts have a consolidation chart');
+    return;
+  }
+  if (!ifrs.is_global_default) {
+    await apiPatch(`/chart-of-accounts/${ifrs.id}/global-default`);
+    ok('IFRS is the default chart for other countries');
+  }
+  // Always: the call is idempotent and resyncs the consolidation names of the local accounts
+  // from IFRS (an import or an older tenant may hold names typed by hand).
+  const result = await apiPatch(`/chart-of-accounts/${ifrs.id}/consolidation`);
+  ok(`IFRS is the consolidation chart (${result?.resynced ?? 0} account(s) resynced, ${result?.outside ?? 0} outside it)`);
+
+  coas = items(await apiGet('/chart-of-accounts?limit=500'));
+  for (const coaId of Object.values(localCharts)) {
+    const chart = coas.find((coa) => coa.id === coaId);
+    const outside = chart?.accounts_outside_count ?? 0;
+    const unmapped = chart?.accounts_unmapped_count ?? 0;
+    if (outside || unmapped) {
+      warn(`${chart?.code ?? coaId}: ${outside} account(s) outside the consolidation chart, ${unmapped} without consolidation account`);
+    }
   }
 }
 
@@ -844,6 +878,7 @@ async function setupCoas() {
   await assignCompanyCoa('Kaasmeester BV', nl);
   await assignCompanyCoa('Formaggio Supremo SRL', it);
   await assignCompanyCoa('Fromage & Co Inc.', us);
+  await ensureChartRoles({ FR: fr, NL: nl, IT: it, US: us });
   ok('CoA setup complete');
 }
 

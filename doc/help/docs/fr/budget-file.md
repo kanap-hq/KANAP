@@ -184,6 +184,6 @@ Une organisation plus grande ajoute le reste des données de référence entre l
 8. Le fichier OPEX
 9. Le fichier CAPEX
 
-**Le plan comptable vient en premier.** Sur la page Plans comptables, cliquez sur **Nouveau**, donnez un code et un nom au plan, et choisissez la portée **Global**. Ouvrez ensuite **Gérer** et cliquez sur **Définir comme défaut global**. Une société sans plan comptable prend celui-ci, et c'est ainsi que les numéros de compte d'un fichier budgétaire sont résolus. Sélectionnez le plan sur la page, puis cliquez sur **Importer CSV** pour charger ses comptes.
+**Le plan comptable vient en premier.** Sur la page Plans comptables, cliquez sur **Nouveau**, donnez un code et un nom au plan, et choisissez **Tous les pays** sous **Utilisé pour**. Cliquez ensuite sur **Gérer les plans**, ouvrez le menu **⋯** du plan et cliquez sur **Définir par défaut pour les autres pays**. Une société sans plan comptable prend celui-ci, et c'est ainsi que les numéros de compte d'un fichier budgétaire sont résolus. Sélectionnez le plan sur la page, puis cliquez sur **Importer CSV** pour charger ses comptes.
 
 Chacune de ces pages a sa propre section **Importer CSV** avec les colonnes de son fichier.
