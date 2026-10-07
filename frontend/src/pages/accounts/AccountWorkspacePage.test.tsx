@@ -110,6 +110,8 @@ async function openConsolidation() {
   await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/accounts', expect.objectContaining({
     params: expect.objectContaining({ coaId: 'coa-ifrs', includeDisabled: 1 }),
   })));
+  // The select opens once those accounts are loaded.
+  await waitFor(() => expect(consolidationSelect()).not.toHaveAttribute('aria-disabled'));
   fireEvent.mouseDown(consolidationSelect());
   return screen.findByRole('listbox');
 }
@@ -163,6 +165,34 @@ describe('AccountWorkspacePage', () => {
     fireEvent.change(description, { target: { value: '' } });
     fireEvent.blur(description);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/accounts/acc-1', { description: null }));
+    expect(mocked.patch).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends a field edited back to its stored value while the first save is in flight', async () => {
+    let release: () => void = () => undefined;
+    mocked.patch.mockImplementationOnce((_url: string, body: Record<string, unknown>) => new Promise((resolve) => {
+      release = () => {
+        store.account = { ...store.account, ...body };
+        resolve({ data: store.account });
+      };
+    }));
+    renderAt('/master-data/accounts/acc-1/overview');
+    const native = await screen.findByLabelText('accounts.fields.nativeName');
+    await waitFor(() => expect(native).toHaveValue('Logiciels SaaS'));
+    fireEvent.change(native, { target: { value: 'Abonnements' } });
+    fireEvent.blur(native);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    // Back to the stored value before the first save returns: the server must hear it too.
+    fireEvent.change(native, { target: { value: 'Logiciels SaaS' } });
+    fireEvent.blur(native);
+    release();
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(mocked.patch).toHaveBeenNthCalledWith(1, '/accounts/acc-1', { native_name: 'Abonnements' });
+    expect(mocked.patch).toHaveBeenNthCalledWith(2, '/accounts/acc-1', { native_name: 'Logiciels SaaS' });
+    await waitFor(() => expect(store.account.native_name).toBe('Logiciels SaaS'));
+    // Settled, an unchanged blur sends nothing.
+    fireEvent.blur(native);
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(mocked.patch).toHaveBeenCalledTimes(2);
   });
 
@@ -247,6 +277,24 @@ describe('AccountWorkspacePage', () => {
     await waitFor(() => expect(optionReads()).toBe(2));
   });
 
+  it('keeps the consolidation account closed until the consolidation chart accounts are loaded', async () => {
+    let releaseOptions: () => void = () => undefined;
+    const base = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string, config?: { params?: { coaId?: string } }) => {
+      if (url === '/accounts' && config?.params?.coaId === 'coa-ifrs') {
+        await new Promise<void>((resolve) => { releaseOptions = resolve; });
+      }
+      return base(url, config);
+    });
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    await waitFor(() => expect(consolidationSelect()).toHaveTextContent('1300 · Impairments & write-offs'));
+    // Only "None" and the stored number could be offered yet: no pick may clear the mapping.
+    expect(consolidationSelect()).toHaveAttribute('aria-disabled', 'true');
+    releaseOptions();
+    await waitFor(() => expect(consolidationSelect()).not.toHaveAttribute('aria-disabled'));
+  });
+
   it('clears the consolidation account with "None"', async () => {
     renderAt('/master-data/accounts/acc-1/overview');
     await screen.findByText('Software subscriptions');
@@ -287,7 +335,8 @@ describe('AccountWorkspacePage', () => {
   });
 
   it('says where to define a consolidation chart when the tenant has none', async () => {
-    serve({ coas: COAS_WITHOUT_CONSOLIDATION });
+    // Without a consolidation chart the server gives no consolidation status.
+    serve({ coas: COAS_WITHOUT_CONSOLIDATION, account: { ...ACCOUNT, consolidation_status: null } });
     renderAt('/master-data/accounts/acc-1/overview');
     const link = await screen.findByRole('link', { name: 'accounts.consolidation.noChartLink' });
     expect(link).toHaveAttribute('href', '/master-data/coa');
@@ -297,6 +346,16 @@ describe('AccountWorkspacePage', () => {
     expect(consolidationSelect()).toHaveTextContent('1300 · Impairments & write-offs');
     expect(screen.getByTestId('consolidation-description')).toHaveTextContent('Write-downs of assets');
     expect(screen.queryByText(/accounts\.consolidation\.outside/)).toBeNull();
+    expect(within(consolidationSelect()).queryByRole('img')).toBeNull();
+  });
+
+  it('ignores a consolidation filter once the charts show there is no consolidation chart', async () => {
+    serve({ coas: COAS_WITHOUT_CONSOLIDATION, account: { ...ACCOUNT, consolidation_status: null } });
+    renderAt('/master-data/accounts/acc-1/overview?selected=coa-fr&consolidation=outside');
+    await screen.findByRole('link', { name: 'accounts.consolidation.noChartLink' });
+    expect(nav.calls[nav.calls.length - 1]).toEqual(expect.objectContaining({
+      extraParams: { coaId: 'coa-fr', consolidationStatus: undefined },
+    }));
   });
 
   it('shows read-only users disabled fields and no title edit', async () => {

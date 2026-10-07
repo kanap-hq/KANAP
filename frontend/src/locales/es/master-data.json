@@ -447,7 +447,7 @@
       "codeLabel": "Código",
       "scopeCountry": "Un país",
       "scopeGlobal": "Todos los países",
-      "setDefaultForCountry": "Hacerlo predeterminado para este país",
+      "setDefaultForCountry": "Hacerlo plan predeterminado del país",
       "preflightOk": "Plantilla verificada: {{total}} cuentas, {{inserted}} nuevas, {{updated}} actualizadas.",
       "codeAndNameRequired": "El código y el nombre son obligatorios.",
       "countryRequired": "Elija un país.",
@@ -463,8 +463,7 @@
       "namePlaceholder": "p. ej., Plan de cuentas francés",
       "coverageLabel": "Se usa para",
       "countryLabel": "País",
-      "countryPlaceholder": "Elija un país",
-      "setDefaultForNamedCountry": "Hacerlo predeterminado para {{country}}"
+      "countryPlaceholder": "Elija un país"
     },
     "manageDialog": {
       "title": "Gestionar planes",
@@ -483,8 +482,8 @@
       },
       "rowMenu": "Acciones para {{code}}",
       "actions": {
-        "makeCountryDefault": "Hacer predeterminado para {{country}}",
-        "stopCountryDefault": "Dejar de ser predeterminado para {{country}}",
+        "makeCountryDefault": "Hacer plan predeterminado del país",
+        "stopCountryDefault": "Dejar de ser plan predeterminado del país",
         "makeGlobalDefault": "Hacer predeterminado para otros países",
         "makeGlobalDefaultHint": "También se asigna a las empresas sin plan de cuentas.",
         "stopGlobalDefault": "Dejar de ser predeterminado para otros países",
@@ -493,7 +492,7 @@
         "delete": "Eliminar"
       },
       "help": {
-        "countryDefault": "Predeterminado para un país: se propone al crear una empresa en ese país.",
+        "countryDefault": "Plan predeterminado del país: se propone al crear una empresa en ese país.",
         "globalDefault": "Predeterminado para otros países: se usa para las empresas de un país sin plan predeterminado.",
         "consolidation": "Plan de consolidación: las cuentas del grupo a las que se asigna cada cuenta local para el reporting consolidado."
       },
@@ -527,7 +526,7 @@
       "allCountries": "Todos los países"
     },
     "roles": {
-      "countryDefault": "Predeterminado para {{country}}",
+      "countryDefault": "Plan predeterminado del país ({{country}})",
       "globalDefault": "Predeterminado para otros países",
       "consolidation": "Plan de consolidación"
     },

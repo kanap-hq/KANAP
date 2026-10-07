@@ -209,12 +209,11 @@ export default function ManageCoAsDialog({
     const items: React.ReactNode[] = [];
     if (canManage) {
       if (coa.scope === 'COUNTRY' && coa.country_iso) {
-        const country = countryName(coa.country_iso);
         items.push(
           <MenuItem key="country" sx={drawerMenuItemSx} onClick={pick(() => void setCountryDefault(coa, !coa.is_default))}>
             {coa.is_default
-              ? t('coa.manageDialog.actions.stopCountryDefault', { country })
-              : t('coa.manageDialog.actions.makeCountryDefault', { country })}
+              ? t('coa.manageDialog.actions.stopCountryDefault')
+              : t('coa.manageDialog.actions.makeCountryDefault')}
           </MenuItem>,
         );
       }

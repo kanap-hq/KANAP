@@ -447,7 +447,7 @@
       "codeLabel": "Code",
       "scopeCountry": "One country",
       "scopeGlobal": "All countries",
-      "setDefaultForCountry": "Make it the default for this country",
+      "setDefaultForCountry": "Make it the country default",
       "preflightOk": "Template checked: {{total}} accounts, {{inserted}} new, {{updated}} updated.",
       "codeAndNameRequired": "Code and name are required.",
       "countryRequired": "Choose a country.",
@@ -463,8 +463,7 @@
       "namePlaceholder": "e.g., French chart of accounts",
       "coverageLabel": "Used for",
       "countryLabel": "Country",
-      "countryPlaceholder": "Choose a country",
-      "setDefaultForNamedCountry": "Make it the default for {{country}}"
+      "countryPlaceholder": "Choose a country"
     },
     "manageDialog": {
       "title": "Manage charts",
@@ -483,8 +482,8 @@
       },
       "rowMenu": "Actions for {{code}}",
       "actions": {
-        "makeCountryDefault": "Make default for {{country}}",
-        "stopCountryDefault": "Stop being default for {{country}}",
+        "makeCountryDefault": "Make country default",
+        "stopCountryDefault": "Stop being country default",
         "makeGlobalDefault": "Make default for other countries",
         "makeGlobalDefaultHint": "Also assigned to companies that have no chart.",
         "stopGlobalDefault": "Stop being default for other countries",
@@ -493,7 +492,7 @@
         "delete": "Delete"
       },
       "help": {
-        "countryDefault": "Default for a country: proposed when you create a company in that country.",
+        "countryDefault": "Country default: proposed when you create a company in that country.",
         "globalDefault": "Default for other countries: used for companies in a country that has no default chart.",
         "consolidation": "Consolidation chart: the group accounts every local account maps to for consolidated reporting."
       },
@@ -527,7 +526,7 @@
       "allCountries": "All countries"
     },
     "roles": {
-      "countryDefault": "Default for {{country}}",
+      "countryDefault": "Country default ({{country}})",
       "globalDefault": "Default for other countries",
       "consolidation": "Consolidation chart"
     },

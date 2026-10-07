@@ -34,12 +34,15 @@ type Account = {
   consolidation_account_number: number | null;
   consolidation_account_name: string | null;
   consolidation_account_description: string | null;
-  consolidation_status?: ConsolidationStatus;
+  /** Null when the tenant has no consolidation chart. */
+  consolidation_status?: ConsolidationStatus | null;
   status: string;
   disabled_at: string | null;
 };
 
 type TextKey = 'native_name' | 'description';
+/** Fields typed in place and saved on blur: a revert must reach the server even mid-save. */
+type TypedField = TextKey | 'account_name' | 'account_number';
 type AccountField = 'account_name' | 'account_number' | 'coa_id' | 'consolidation_account_number' | 'disabled_at' | TextKey;
 type FieldErrors = Partial<Record<AccountField, string>>;
 
@@ -85,7 +88,12 @@ export default function AccountWorkspacePage() {
   const isCreate = id === 'new';
   const canEdit = hasLevel('accounts', 'manager');
   const coaId = searchParams.get('selected') || searchParams.get('coaId');
-  const consolidationFilter = parseConsolidationFilter(searchParams.get('consolidation'));
+  const consolidationChart = coas.find((coa) => coa.is_consolidation);
+  const consolidationChartId = consolidationChart?.id;
+  // As on the charts page, the filter needs a consolidation chart: without one the list ignores it.
+  const consolidationFilter = coasLoading || consolidationChart
+    ? parseConsolidationFilter(searchParams.get('consolidation'))
+    : undefined;
 
   const nav = useAccountNav({
     id,
@@ -136,9 +144,6 @@ export default function AccountWorkspacePage() {
     if (targetId) navigate(withContext(`${ACCOUNT_PATH}/${targetId}/overview`));
   };
 
-  const consolidationChart = coas.find((coa) => coa.is_consolidation);
-  const consolidationChartId = consolidationChart?.id;
-
   /** Refreshes what a write changes; `chartIds` are the account's charts before and after it. */
   const afterWrite = React.useCallback((chartIds: Array<string | null | undefined>) => {
     // The grid and this account (its consolidation status); the consolidation chart's accounts
@@ -178,13 +183,31 @@ export default function AccountWorkspacePage() {
     [afterWrite, canEdit, data?.id, queryClient, t],
   );
 
-  const commitText = (field: TextKey, next: string | null) => {
+  // The last value sent per field while its writes are in flight (keyed by account and field):
+  // `data` shows the server's value only once they settle, so a field edited back to its stored
+  // value before the first write returns is compared against what was sent, and sent too.
+  const inFlightRef = React.useRef(new Map<string, { value: unknown; count: number }>());
+
+  const commitTyped = (field: TypedField, next: string | number | null, stored: string | number | null) => {
     if (!data) return;
-    if (next === (data[field] ?? null)) {
+    const key = `${data.id}:${field}`;
+    const inFlight = inFlightRef.current.get(key);
+    if (next === (inFlight ? inFlight.value : stored)) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       return;
     }
-    void patch({ [field]: next }, field);
+    inFlightRef.current.set(key, { value: next, count: (inFlight?.count ?? 0) + 1 });
+    void patch({ [field]: next }, field).finally(() => {
+      const entry = inFlightRef.current.get(key);
+      if (!entry) return;
+      if (entry.count <= 1) inFlightRef.current.delete(key);
+      else inFlightRef.current.set(key, { ...entry, count: entry.count - 1 });
+    });
+  };
+
+  const commitText = (field: TextKey, next: string | null) => {
+    if (!data) return;
+    commitTyped(field, next, data[field] ?? null);
   };
 
   const commitNumber = (raw: string) => {
@@ -194,11 +217,7 @@ export default function AccountWorkspacePage() {
       setErrors((prev) => ({ ...prev, account_number: t('accounts.messages.numberInvalid') }));
       return;
     }
-    if (next === Number(data.account_number)) {
-      setErrors((prev) => ({ ...prev, account_number: undefined }));
-      return;
-    }
-    void patch({ account_number: next }, 'account_number');
+    commitTyped('account_number', next, Number(data.account_number));
   };
 
   if (isCreate) {
@@ -286,7 +305,7 @@ export default function AccountWorkspacePage() {
         titleFallback={t('accounts.accountFallback')}
         canEditTitle={canEdit && !!data}
         onTitleSave={(next) => {
-          if (data && next !== data.account_name) void patch({ account_name: next }, 'account_name');
+          if (data) commitTyped('account_name', next, data.account_name);
         }}
         nav={shownNav ? {
           currentIndex: shownNav.index + 1,
@@ -319,7 +338,7 @@ export default function AccountWorkspacePage() {
             />
             <Box>
               <Typography sx={sectionLabelSx}>{t('accounts.sections.consolidation')}</Typography>
-              <PropertyRow label={t('accounts.fields.consolidationAccount')}>
+              <PropertyRow label={t('accounts.fields.consolidationAccount')} valueSx={{ maxWidth: 520 }}>
                 <ConsolidationAccountField
                   value={data.consolidation_account_number}
                   storedName={data.consolidation_account_name}
@@ -418,6 +437,7 @@ function AccountNumberRow({
           if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
         }}
         variant="standard"
+        fullWidth
         sx={drawerFieldValueSx}
         placeholder={t('accounts.placeholders.accountNumber')}
         disabled={disabled}
@@ -446,7 +466,8 @@ function AccountTextRow({
 }) {
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
-    <PropertyRow label={label}>
+    // One-line content fields fill the row up to the width used on the company workspace.
+    <PropertyRow label={label} valueSx={{ maxWidth: 520 }}>
       <TextField
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
@@ -459,6 +480,7 @@ function AccountTextRow({
           if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
         }}
         variant="standard"
+        fullWidth
         sx={drawerFieldValueSx}
         placeholder={placeholder}
         disabled={disabled}
@@ -630,6 +652,7 @@ function AccountCreate({
               value={values.account_number}
               onChange={(e) => set('account_number', e.target.value)}
               variant="standard"
+              fullWidth
               sx={drawerFieldValueSx}
               placeholder={t('accounts.placeholders.accountNumber')}
               error={!!errors.account_number}
@@ -647,6 +670,7 @@ function AccountCreate({
               value={values.account_name}
               onChange={(e) => set('account_name', e.target.value)}
               variant="standard"
+              fullWidth
               sx={drawerFieldValueSx}
               placeholder={t('accounts.placeholders.accountName')}
               error={!!errors.account_name}
@@ -659,6 +683,7 @@ function AccountCreate({
               value={values.native_name}
               onChange={(e) => set('native_name', e.target.value)}
               variant="standard"
+              fullWidth
               sx={drawerFieldValueSx}
               placeholder={t('accounts.placeholders.nativeName')}
               inputProps={{ 'aria-label': t('accounts.fields.nativeName'), autoComplete: 'off' }}
@@ -671,6 +696,7 @@ function AccountCreate({
               multiline
               minRows={2}
               variant="standard"
+              fullWidth
               sx={drawerFieldValueSx}
               placeholder={t('accounts.placeholders.description')}
               inputProps={{ 'aria-label': t('accounts.fields.description') }}

@@ -8,7 +8,7 @@ import '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 
-const state = vi.hoisted(() => ({ coas: [] as any[], level: 'admin' as 'reader' | 'member' | 'admin' }));
+const state = vi.hoisted(() => ({ coas: [] as any[], level: 'admin' as 'none' | 'reader' | 'member' | 'admin' }));
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any>, mounts: 0 }));
 const manage = vi.hoisted(() => ({ open: false }));
 
@@ -23,7 +23,7 @@ vi.mock('../../api', () => ({
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
     hasLevel: (_resource: string, level: string) => {
-      const rank: Record<string, number> = { reader: 1, member: 3, manager: 3, admin: 4 };
+      const rank: Record<string, number> = { none: 0, reader: 1, member: 3, manager: 3, admin: 4 };
       return rank[state.level] >= rank[level];
     },
   }),
@@ -76,9 +76,8 @@ const IFRS = chart({
 });
 const IT = chart({ id: 'it', code: 'IT-PDC', name: 'Piano dei conti', country_iso: 'IT', is_default: true, accounts_count: 80 });
 
-function renderPage(path = '/master-data/coa?selected=fr') {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+function pageTree(queryClient: QueryClient, path: string) {
+  return (
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={queryClient}>
         <KanapDialogProvider>
@@ -87,8 +86,14 @@ function renderPage(path = '/master-data/coa?selected=fr') {
           </MemoryRouter>
         </KanapDialogProvider>
       </QueryClientProvider>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
+}
+
+function renderPage(path = '/master-data/coa?selected=fr') {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const result = render(pageTree(queryClient, path));
+  return { ...result, rerenderPage: () => result.rerender(pageTree(queryClient, path)) };
 }
 
 describe('CoaPage summary and consolidation health', () => {
@@ -104,7 +109,7 @@ describe('CoaPage summary and consolidation health', () => {
     renderPage();
     const summary = await screen.findByTestId('coa-summary');
     expect(summary).toHaveTextContent('FR-PCG · 512 accounts');
-    expect(summary).toHaveTextContent('Plan comptable général · France · Default for France');
+    expect(summary).toHaveTextContent('Plan comptable général · France · Country default (France)');
     expect(screen.getByRole('button', { name: 'FR-PCG' })).toBeInTheDocument();
     expect(screen.queryByText(/★|⊕/)).not.toBeInTheDocument();
   });
@@ -184,12 +189,29 @@ describe('CoaPage summary and consolidation health', () => {
     });
 
     const { unmount } = render(<MemoryRouter>{column.cellRenderer(params('outside'))}</MemoryRouter>);
-    expect(screen.getByRole('img', { name: 'Not in the consolidation chart IFRS' })).toBeInTheDocument();
+    const marker = screen.getByRole('img', { name: 'Not in the consolidation chart IFRS' });
+    // Inside the cell's own link row, right after the number (not pushed to the cell's edge).
+    const link = screen.getByRole('link', { name: '9999' });
+    expect(link.nextElementSibling).toBe(marker);
     unmount();
 
-    act(() => {
-      render(<MemoryRouter>{column.cellRenderer(params('mapped'))}</MemoryRouter>);
-    });
-    expect(screen.queryByRole('img', { name: /Not in the consolidation chart/ })).not.toBeInTheDocument();
+    for (const status of ['mapped', null]) {
+      const rendered = render(<MemoryRouter>{column.cellRenderer(params(status as string))}</MemoryRouter>);
+      expect(screen.queryByRole('img', { name: /Not in the consolidation chart/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: '9999' })).toBeInTheDocument();
+      rendered.unmount();
+    }
+  });
+
+  it('keeps the hook order when access is granted after a forbidden render', async () => {
+    state.level = 'none';
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { rerenderPage } = renderPage();
+    expect(screen.queryByTestId('coa-summary')).not.toBeInTheDocument();
+    state.level = 'reader';
+    act(() => rerenderPage());
+    expect(await screen.findByTestId('coa-summary')).toBeInTheDocument();
+    expect(errors.mock.calls.flat().join(' ')).not.toMatch(/change in the order of Hooks|Rendered more hooks/);
+    errors.mockRestore();
   });
 });

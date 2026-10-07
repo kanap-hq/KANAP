@@ -118,7 +118,7 @@ describe('ManageCoAsDialog', () => {
 
     const fr = await row('FR-PCG');
     expect(fr).toHaveTextContent('France');
-    expect(fr).toHaveTextContent('Default for France');
+    expect(fr).toHaveTextContent('Country default (France)');
     expect(fr).toHaveTextContent('512');
 
     const ifrs = await row('IFRS');
@@ -139,7 +139,7 @@ describe('ManageCoAsDialog', () => {
     renderDialog();
 
     const frMenu = await openMenu('FR-PCG');
-    expect(menuLabels(frMenu)).toEqual(['Stop being default for France', 'Make consolidation chart', 'Delete']);
+    expect(menuLabels(frMenu)).toEqual(['Stop being country default', 'Make consolidation chart', 'Delete']);
     fireEvent.keyDown(frMenu, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
 
@@ -153,14 +153,14 @@ describe('ManageCoAsDialog', () => {
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
 
     const deMenu = await openMenu('DE-SKR');
-    expect(menuLabels(deMenu)).toEqual(['Make default for Germany', 'Make consolidation chart', 'Delete']);
+    expect(menuLabels(deMenu)).toEqual(['Make country default', 'Make consolidation chart', 'Delete']);
   });
 
   it('a manager has the role actions but no delete', async () => {
     state.level = 'member';
     renderDialog();
     const menu = await openMenu('FR-PCG');
-    expect(menuLabels(menu)).toEqual(['Stop being default for France', 'Make consolidation chart']);
+    expect(menuLabels(menu)).toEqual(['Stop being country default', 'Make consolidation chart']);
   });
 
   it('a reader sees the table without any row menu or new chart button', async () => {
@@ -174,7 +174,7 @@ describe('ManageCoAsDialog', () => {
   it('toggles the country default and the default for other countries without confirmation', async () => {
     const { onCoaUpdated } = renderDialog();
 
-    fireEvent.click(within(await openMenu('FR-PCG')).getByRole('menuitem', { name: 'Stop being default for France' }));
+    fireEvent.click(within(await openMenu('FR-PCG')).getByRole('menuitem', { name: 'Stop being country default' }));
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/chart-of-accounts/fr', { is_default: false }));
     await waitFor(() => expect(onCoaUpdated).toHaveBeenCalled());
 

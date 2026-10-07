@@ -105,8 +105,11 @@ type Props = {
   /** The stored consolidation name and description (derived by the server). */
   storedName: string | null;
   storedDescription: string | null;
-  /** What the server said of the stored number, used until the chart's accounts are loaded. */
-  serverStatus?: ConsolidationStatus;
+  /**
+   * What the server said of the stored number, used until the chart's accounts are loaded. Null
+   * when the tenant has no consolidation chart.
+   */
+  serverStatus?: ConsolidationStatus | null;
   /** The tenant's consolidation chart; undefined when it has none. */
   chart: CoaListItem | undefined;
   /** False while the charts are loading: the "no consolidation chart" line waits for them. */
@@ -138,9 +141,12 @@ export default function ConsolidationAccountField({
   const { t } = useTranslation(['master-data', 'common']);
   const { data: options } = useConsolidationOptions(chart?.id);
   const noChart = chartsLoaded && !chart;
+  // Until the charts and the consolidation accounts are loaded the menu would hold only "None"
+  // and the stored number: a pick then could clear a mapping by mistake.
+  const loading = !chartsLoaded || (!!chart && !options);
 
   const current = value != null ? options?.find((option) => option.account_number === value) : undefined;
-  let status: ConsolidationStatus | undefined = serverStatus;
+  let status: ConsolidationStatus | undefined = serverStatus ?? undefined;
   if (value == null) status = 'unmapped';
   else if (chart && options) status = current ? 'mapped' : 'outside';
   const outside = !!chart && value != null && status === 'outside';
@@ -180,7 +186,7 @@ export default function ConsolidationAccountField({
           if (next !== value) onChange(next);
         }}
         displayEmpty
-        disabled={disabled || noChart}
+        disabled={disabled || noChart || loading}
         error={!!error}
         sx={drawerSelectSx}
         MenuProps={{ slotProps: { paper: { style: { maxHeight: 360 } } } }}

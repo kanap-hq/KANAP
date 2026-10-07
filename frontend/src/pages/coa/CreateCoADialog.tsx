@@ -83,22 +83,31 @@ export default function CreateCoADialog({
     };
   }, [open, mode]);
 
-  useEffect(() => {
-    if (!open || mode !== 'template') return;
-    if (!selectedTemplate) return;
-    const template = templates.find((item) => item.id === selectedTemplate);
-    if (!template) return;
-    if (!name) setName(template.template_name);
-    if (template.is_global) {
+  const chosenTemplate = templates.find((item) => item.id === selectedTemplate);
+  // A global template makes a chart for every country: its coverage is fixed.
+  const coverageFixed = mode === 'template' && !!chosenTemplate?.is_global;
+
+  /**
+   * Picking a template proposes its code, name and coverage once. A value the user typed stays;
+   * a value the previous template proposed follows the new one.
+   */
+  const pickTemplate = (templateId: string) => {
+    const previous = chosenTemplate;
+    const next = templates.find((item) => item.id === templateId);
+    setSelectedTemplate(templateId);
+    setPreflight(null);
+    if (!next) return;
+    if (!code || code === previous?.template_code) setCode(next.template_code);
+    if (!name || name === previous?.template_name) setName(next.template_name);
+    if (next.is_global) {
       setScope('GLOBAL');
       setCountry('');
       setIsDefault(false);
     } else {
       setScope('COUNTRY');
-      if (!country) setCountry(template.country_iso || '');
+      if (!country || country === (previous?.country_iso || '')) setCountry(next.country_iso || '');
     }
-    if (!code) setCode(template.template_name);
-  }, [selectedTemplate, templates, open, mode, name, country, code]);
+  };
 
   const resetForm = () => {
     setCode('');
@@ -216,10 +225,7 @@ export default function CreateCoADialog({
             <Select
               variant="standard"
               value={selectedTemplate}
-              onChange={(e) => {
-                setSelectedTemplate(String(e.target.value));
-                setPreflight(null);
-              }}
+              onChange={(e) => pickTemplate(String(e.target.value))}
               displayEmpty
               sx={drawerSelectSx}
               MenuProps={selectMenuProps}
@@ -270,8 +276,8 @@ export default function CreateCoADialog({
             value={scope}
             onChange={(e) => setScope(e.target.value as 'GLOBAL' | 'COUNTRY')}
           >
-            <FormControlLabel value="COUNTRY" control={<Radio size="small" />} label={t('coa.createDialog.scopeCountry')} sx={choiceLabelSx} />
-            <FormControlLabel value="GLOBAL" control={<Radio size="small" />} label={t('coa.createDialog.scopeGlobal')} sx={choiceLabelSx} />
+            <FormControlLabel value="COUNTRY" control={<Radio size="small" />} label={t('coa.createDialog.scopeCountry')} sx={choiceLabelSx} disabled={coverageFixed} />
+            <FormControlLabel value="GLOBAL" control={<Radio size="small" />} label={t('coa.createDialog.scopeGlobal')} sx={choiceLabelSx} disabled={coverageFixed} />
           </RadioGroup>
         </PropertyRow>
 
@@ -301,9 +307,7 @@ export default function CreateCoADialog({
         {scope === 'COUNTRY' && (
           <FormControlLabel
             control={<Checkbox size="small" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />}
-            label={country
-              ? t('coa.createDialog.setDefaultForNamedCountry', { country: countryName(country) })
-              : t('coa.createDialog.setDefaultForCountry')}
+            label={t('coa.createDialog.setDefaultForCountry')}
             sx={{ ...choiceLabelSx, mr: 0 }}
           />
         )}

@@ -38,7 +38,7 @@ export function coaCoverage(coa: CoaListItem, t: TFunction, countryName: Country
   return countryName(coa.country_iso) || t('master-data:coa.coverage.allCountries');
 }
 
-/** The roles a chart holds, in words ("Default for France", "Consolidation chart"). */
+/** The roles a chart holds, in words ("Country default (France)", "Consolidation chart"). */
 export function coaRoleLabels(coa: CoaListItem, t: TFunction, countryName: CountryNameFn): string[] {
   const roles: string[] = [];
   if (coa.scope === 'COUNTRY' && coa.is_default) {

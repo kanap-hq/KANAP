@@ -37,6 +37,8 @@ export interface LinkCellRendererProps<T = unknown> extends ICellRendererParams<
   maxWidth?: number | string;
   /** Optional style overrides for the anchor itself */
   linkSx?: SxProps<Theme>;
+  /** Content shown right after the link text, inside the cell (a status marker, for example) */
+  endAdornment?: React.ReactNode;
 }
 
 /**
@@ -135,6 +137,7 @@ export function LinkCellRenderer<T = unknown>(
     onNavigate,
     maxWidth,
     linkSx,
+    endAdornment,
     valueFormatted,
     colDef,
   } = props;
@@ -241,6 +244,7 @@ export function LinkCellRenderer<T = unknown>(
       {isExternal && showExternalIcon && (
         <OpenInNewIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
       )}
+      {endAdornment}
     </Box>
   );
 

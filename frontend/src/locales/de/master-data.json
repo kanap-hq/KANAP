@@ -447,7 +447,7 @@
       "codeLabel": "Code",
       "scopeCountry": "Ein Land",
       "scopeGlobal": "Alle Länder",
-      "setDefaultForCountry": "Als Standard für dieses Land festlegen",
+      "setDefaultForCountry": "Als Länderstandard festlegen",
       "preflightOk": "Vorlage geprüft: {{total}} Konten, {{inserted}} neu, {{updated}} aktualisiert.",
       "codeAndNameRequired": "Code und Name sind erforderlich.",
       "countryRequired": "Wählen Sie ein Land aus.",
@@ -463,8 +463,7 @@
       "namePlaceholder": "z. B. Französischer Kontenplan",
       "coverageLabel": "Verwendet für",
       "countryLabel": "Land",
-      "countryPlaceholder": "Land auswählen",
-      "setDefaultForNamedCountry": "Als Standard für {{country}} festlegen"
+      "countryPlaceholder": "Land auswählen"
     },
     "manageDialog": {
       "title": "Kontenpläne verwalten",
@@ -483,8 +482,8 @@
       },
       "rowMenu": "Aktionen für {{code}}",
       "actions": {
-        "makeCountryDefault": "Als Standard für {{country}} festlegen",
-        "stopCountryDefault": "Nicht mehr Standard für {{country}}",
+        "makeCountryDefault": "Als Länderstandard festlegen",
+        "stopCountryDefault": "Nicht mehr Länderstandard",
         "makeGlobalDefault": "Als Standard für andere Länder festlegen",
         "makeGlobalDefaultHint": "Wird auch Gesellschaften ohne Kontenplan zugewiesen.",
         "stopGlobalDefault": "Nicht mehr Standard für andere Länder",
@@ -493,7 +492,7 @@
         "delete": "Löschen"
       },
       "help": {
-        "countryDefault": "Standard für ein Land: wird beim Anlegen einer Gesellschaft in diesem Land vorgeschlagen.",
+        "countryDefault": "Länderstandard: wird beim Anlegen einer Gesellschaft in diesem Land vorgeschlagen.",
         "globalDefault": "Standard für andere Länder: gilt für Gesellschaften in Ländern ohne Standardkontenplan.",
         "consolidation": "Konsolidierungskontenplan: die Konzernkonten, denen jedes lokale Konto für das konsolidierte Reporting zugeordnet ist."
       },
@@ -527,7 +526,7 @@
       "allCountries": "Alle Länder"
     },
     "roles": {
-      "countryDefault": "Standard für {{country}}",
+      "countryDefault": "Länderstandard ({{country}})",
       "globalDefault": "Standard für andere Länder",
       "consolidation": "Konsolidierungskontenplan"
     },

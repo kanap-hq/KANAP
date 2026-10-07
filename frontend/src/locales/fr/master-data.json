@@ -447,7 +447,7 @@
       "codeLabel": "Code",
       "scopeCountry": "Un pays",
       "scopeGlobal": "Tous les pays",
-      "setDefaultForCountry": "En faire le plan par défaut de ce pays",
+      "setDefaultForCountry": "En faire le plan par défaut du pays",
       "preflightOk": "Modèle vérifié : {{total}} comptes, {{inserted}} nouveaux, {{updated}} mis à jour.",
       "codeAndNameRequired": "Le code et le nom sont obligatoires.",
       "countryRequired": "Choisissez un pays.",
@@ -463,8 +463,7 @@
       "namePlaceholder": "ex. Plan comptable français",
       "coverageLabel": "Utilisé pour",
       "countryLabel": "Pays",
-      "countryPlaceholder": "Choisissez un pays",
-      "setDefaultForNamedCountry": "En faire le plan par défaut pour {{country}}"
+      "countryPlaceholder": "Choisissez un pays"
     },
     "manageDialog": {
       "title": "Gérer les plans",
@@ -483,8 +482,8 @@
       },
       "rowMenu": "Actions pour {{code}}",
       "actions": {
-        "makeCountryDefault": "Définir par défaut pour {{country}}",
-        "stopCountryDefault": "Ne plus utiliser par défaut pour {{country}}",
+        "makeCountryDefault": "Définir comme plan par défaut du pays",
+        "stopCountryDefault": "Ne plus utiliser comme plan par défaut du pays",
         "makeGlobalDefault": "Définir par défaut pour les autres pays",
         "makeGlobalDefaultHint": "Également attribué aux sociétés sans plan comptable.",
         "stopGlobalDefault": "Ne plus utiliser par défaut pour les autres pays",
@@ -493,7 +492,7 @@
         "delete": "Supprimer"
       },
       "help": {
-        "countryDefault": "Plan par défaut d'un pays : proposé à la création d'une société dans ce pays.",
+        "countryDefault": "Plan par défaut du pays : proposé à la création d'une société dans ce pays.",
         "globalDefault": "Plan par défaut des autres pays : utilisé pour les sociétés d'un pays sans plan par défaut.",
         "consolidation": "Plan de consolidation : les comptes groupe auxquels chaque compte local est rattaché pour le reporting consolidé."
       },
@@ -527,7 +526,7 @@
       "allCountries": "Tous les pays"
     },
     "roles": {
-      "countryDefault": "Plan par défaut pour {{country}}",
+      "countryDefault": "Plan par défaut du pays ({{country}})",
       "globalDefault": "Plan par défaut des autres pays",
       "consolidation": "Plan de consolidation"
     },

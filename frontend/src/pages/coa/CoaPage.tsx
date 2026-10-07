@@ -29,7 +29,8 @@ type AccountRow = {
   consolidation_account_number?: number | null;
   consolidation_account_name?: string | null;
   consolidation_account_description?: string | null;
-  consolidation_status?: 'mapped' | 'outside' | 'unmapped';
+  /** Null when the tenant has no consolidation chart. */
+  consolidation_status?: 'mapped' | 'outside' | 'unmapped' | null;
   created_at?: string;
   status?: string;
 };
@@ -46,7 +47,7 @@ const attentionDotSx = {
   width: 6,
   height: 6,
   borderRadius: '50%',
-  bgcolor: 'warning.main',
+  bgcolor: 'kanap.orange',
   flexShrink: 0,
 } as const;
 
@@ -83,10 +84,7 @@ export default function CoaPage() {
   const { coas, isLoading, refetch, isError } = useCoaList();
   const countryName = useCountryName();
 
-  if (!hasLevel('accounts', 'reader')) {
-    return <ForbiddenPage />;
-  }
-
+  const canRead = hasLevel('accounts', 'reader');
   const canManage = hasLevel('accounts', 'manager');
   const canAdmin = hasLevel('accounts', 'admin');
   const canCreateAccount = hasLevel('accounts', 'manager');
@@ -224,19 +222,22 @@ export default function CoaPage() {
       width: 180,
       cellStyle: { fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace", fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' },
       cellRenderer: (params: any) => {
-        const link = (
-          <LinkCellRenderer {...params} linkType="internal" getHref={getAccountHref} onNavigate={(href) => navigate(href)} />
-        );
         // Flag only against a real consolidation chart: without one, the summary line says so once.
-        if (!consolidationCode || params.data?.consolidation_status !== 'outside') return link;
-        const label = t('coa.outsideMarker', { code: consolidationCode });
+        const outside = !!consolidationCode && params.data?.consolidation_status === 'outside';
+        const label = outside ? t('coa.outsideMarker', { code: consolidationCode }) : '';
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-            {link}
-            <Tooltip title={label}>
-              <Box component="span" role="img" aria-label={label} sx={attentionDotSx} />
-            </Tooltip>
-          </Box>
+          <LinkCellRenderer
+            {...params}
+            linkType="internal"
+            getHref={getAccountHref}
+            onNavigate={(href) => navigate(href)}
+            // Inside the cell, right after the number.
+            endAdornment={outside ? (
+              <Tooltip title={label}>
+                <Box component="span" role="img" aria-label={label} sx={{ ...attentionDotSx, ml: '2px' }} />
+              </Tooltip>
+            ) : undefined}
+          />
         );
       },
     },
@@ -363,6 +364,11 @@ export default function CoaPage() {
       </Box>
     );
   };
+
+  // After every hook: the hook count stays the same whatever the access level.
+  if (!canRead) {
+    return <ForbiddenPage />;
+  }
 
   const actions = (
     <Stack direction="row" spacing={1}>
