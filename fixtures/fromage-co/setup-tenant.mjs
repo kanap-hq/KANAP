@@ -10,7 +10,12 @@
 // Usage:
 //   node fixtures/fromage-co/setup-tenant.mjs \
 //     --base-url https://fromage.dev.kanap.net \
-//     --email fried@kanap.net --password '<admin password>'
+//     --email fried@kanap.net --password '<admin password>' \
+//     --demo-password '<private value>'
+//
+// --demo-password is required: it is the password every imported demo user
+// gets. Use a private value on any tenant reachable from outside the machine,
+// or pass --demo-password '' to create the users without a password.
 //
 // See SETUP-GUIDE.md for the full procedure per environment.
 import { readFileSync } from 'node:fs';
@@ -25,7 +30,6 @@ const DEFAULTS = {
   email: 'fried@kanap.net',
   org: 'Fromage & Co',
   countryIso: 'FR',
-  demoPassword: 'Fromage2026!',
   year: 2026,
 };
 
@@ -37,7 +41,7 @@ const options = {
   org: DEFAULTS.org,
   countryIso: DEFAULTS.countryIso,
   activationToken: '',
-  demoPassword: DEFAULTS.demoPassword,
+  demoPassword: null, // required: set by --demo-password ('' = no password)
   year: DEFAULTS.year,
   skipRelations: false,
   skipAgents: false,
@@ -66,8 +70,18 @@ for (let i = 0; i < argv.length; i += 1) {
 }
 
 options.baseUrl = options.baseUrl.replace(/\/$/, '');
+const missingArgs = [];
 if (!options.password) {
-  console.error('[ERR]  --password is required (tenant admin password; also used when bootstrapping the tenant).');
+  missingArgs.push('[ERR]  --password is required (tenant admin password; also used when bootstrapping the tenant).');
+}
+if (options.demoPassword === null) {
+  missingArgs.push(
+    "[ERR]  --demo-password is required (password given to every imported demo user). "
+    + "Pass --demo-password <value> with a private value, or --demo-password '' to create the users without a password.",
+  );
+}
+if (missingArgs.length > 0) {
+  for (const message of missingArgs) console.error(message);
   process.exit(1);
 }
 
@@ -1792,9 +1806,9 @@ async function main() {
   console.log('');
   console.log(`  App URL:      ${options.baseUrl}`);
   console.log(`  Tenant admin: ${options.email}`);
-  if (options.demoPassword) {
-    console.log(`  Demo users:   thomas.berger@fromage-co.com (and 18 others) / ${options.demoPassword}`);
-  }
+  console.log(options.demoPassword
+    ? '  Demo users:   thomas.berger@fromage-co.com (and 18 others), password passed with --demo-password'
+    : '  Demo users:   thomas.berger@fromage-co.com (and 18 others), no password set (--demo-password was empty)');
   if (!options.skipAgents) {
     console.log(`  Demo agent:   '${AGENT_NAME}' (mock ticketing) — check the Agents pages`);
     console.log(`  Knowledge:    '${SERVICE_DESK_LIBRARY}' library — the demo tickets find their answers there`);

@@ -11,8 +11,14 @@ Everything is created through the public API by a single idempotent runner:
 node fixtures/fromage-co/setup-tenant.mjs \
   --base-url https://fromage.dev.kanap.net \
   --email fried@kanap.net \
-  --password '<admin password>'
+  --password '<admin password>' \
+  --demo-password '<private value>'
 ```
+
+`--demo-password` is required. It is the password every imported demo user
+gets. On any tenant reachable from outside your machine, use a private value
+that is not written in this repository. Pass `--demo-password ''` to create the
+users without a password.
 
 The runner is safe to re-run: every step looks up existing records before
 creating anything.
@@ -51,10 +57,10 @@ creating anything.
    budget demo initialises it by copying the 2026 landing. Re-running the
    runner restores the budget data, except on frozen columns: unfreeze them
    first (Budget administration → Freeze).
-5. **Demo user passwords**: all 19 imported users get `--demo-password`
-   (default `Fromage2026!`) so you can log in as e.g.
+5. **Demo user passwords**: all 19 imported users get the required
+   `--demo-password` so you can log in as e.g.
    `thomas.berger@fromage-co.com` during a demo. Pass `--demo-password ''`
-   to skip.
+   to create them without a password.
 6. **Relations**: Microsoft 365 suite members, application↔department links,
    app instances, interfaces + bindings, connections + equipment hops,
    interface↔connection links, contract↔spend links, spend↔application links,
@@ -146,10 +152,10 @@ the fixture works without AI.
 | Maria Casanova (controller) | `maria.casanova@fromage-co.com` | Budget Administrator |
 | Nadia Lemaire (shops and e-commerce operations) | `nadia.lemaire@fromage-co.com` | Budget Member |
 
-All demo users share the `--demo-password` (default `Fromage2026!`). The
-default is public (it is in this repository): on any tenant that people
-outside the team can reach, pass a private value. The runner sets it only
-when it creates a user, so choose it before the first run.
+All demo users share the `--demo-password` value. It is required and has no
+default: on any tenant reachable from outside your machine, pass a private
+value. The runner sets it only when it creates a user, so choose it before the
+first run.
 
 ## Files
 
