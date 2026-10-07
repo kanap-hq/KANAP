@@ -224,7 +224,7 @@ async function testCaseInsensitiveNameAndFqdnMatching() {
 async function testShortnameFqdnBridging() {
   // FQDN-shaped device name vs asset stored as bare shortname.
   {
-    const bare = assetItem({ label: 'lohr-fr-dc1', metadata: {} });
+    const bare = assetItem({ label: 'acme-fr-dc1', metadata: {} });
     const { calls, dispatch } = makeDispatch((capabilityName, input) => {
       if (capabilityName === KANAP_ENTITY_SEARCH_CAPABILITY && input.entity_type === 'assets') {
         return { ok: true, output: searchOutput([bare]) };
@@ -234,14 +234,14 @@ async function testShortnameFqdnBridging() {
     const resolver = new KanapEntityContextResolver({ dispatch });
     const resolution = await resolver.resolveAlertContext({
       context,
-      alert: { deviceName: 'LOHR-FR-DC1.lohr-fr.com' },
+      alert: { deviceName: 'ACME-FR-DC1.acme-fr.example' },
       kanapData: policy({ applications: false, interfaces: false, connections: false, locations: false }),
     });
     assert.equal(resolution.assetMatch, 'matched');
     // The candidate search must run on the shortname, or a shortname-stored
     // asset would never appear in the substring results.
     const assetSearch = calls.find((call) => call.capabilityName === KANAP_ENTITY_SEARCH_CAPABILITY);
-    assert.equal(assetSearch?.input.q, 'LOHR-FR-DC1');
+    assert.equal(assetSearch?.input.q, 'ACME-FR-DC1');
   }
   // Shortname device vs asset identified only by its FQDN.
   {
@@ -263,7 +263,7 @@ async function testShortnameFqdnBridging() {
   // Still no fuzzy matching: a shortname that is only a PREFIX of the
   // candidate's shortname must not match.
   {
-    const bare = assetItem({ label: 'lohr-fr-dc1', metadata: {} });
+    const bare = assetItem({ label: 'acme-fr-dc1', metadata: {} });
     const { dispatch } = makeDispatch((capabilityName, input) => {
       if (capabilityName === KANAP_ENTITY_SEARCH_CAPABILITY && input.entity_type === 'assets') {
         return { ok: true, output: searchOutput([bare]) };
@@ -273,7 +273,7 @@ async function testShortnameFqdnBridging() {
     const resolver = new KanapEntityContextResolver({ dispatch });
     const resolution = await resolver.resolveAlertContext({
       context,
-      alert: { deviceName: 'LOHR-FR.lohr-fr.com' },
+      alert: { deviceName: 'ACME-FR.acme-fr.example' },
       kanapData: policy({ applications: false, interfaces: false, connections: false, locations: false }),
     });
     assert.equal(resolution.assetMatch, 'unmatched');

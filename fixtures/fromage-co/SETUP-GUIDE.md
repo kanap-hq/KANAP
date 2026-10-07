@@ -11,8 +11,14 @@ Everything is created through the public API by a single idempotent runner:
 node fixtures/fromage-co/setup-tenant.mjs \
   --base-url https://fromage.dev.kanap.net \
   --email fried@kanap.net \
-  --password '<admin password>'
+  --password '<admin password>' \
+  --demo-password '<private value>'
 ```
+
+`--demo-password` is required. It is the password every imported demo user
+gets. On any tenant reachable from outside your machine, use a private value
+that is not written in this repository. Pass `--demo-password ''` to create the
+users without a password.
 
 The runner is safe to re-run: every step looks up existing records before
 creating anything.
@@ -24,8 +30,9 @@ creating anything.
    "Tenant creation and CAPTCHA" below.
 2. **Settings**: currencies (EUR/USD), IT Ops server kinds, operating systems,
    DNS domains, connection entities.
-3. **Portfolio classification** (sources, categories, streams) and
-   **analytics categories**.
+3. **Portfolio classification** (sources, categories, streams) and the
+   **Domaine** dimension: the default analytics dimension, named `Domaine`,
+   holds the domain each line serves (ERP, E-commerce, Workplace…).
 4. **CSV imports** (01, 03→19 and 26→30): companies, charts of accounts, suppliers,
    departments, contacts, users, cost centres, analytics dimension values,
    working-day calendars, business processes, applications, contracts,
@@ -50,15 +57,18 @@ creating anything.
    the quantity × price lines of the external staffing items (`30-costed-lines.csv`,
    keyed by item name, resolved to versions) and imports the monthly amounts
    (`29-budget-rows.csv`: 2026 actuals January to August for every item, a
-   forecast on some). Three analytics dimensions are created first (Nature de
-   coût, Référence budget, Récurrence). 2027 is left empty on purpose: the
+   forecast on some). Three more analytics dimensions are created first (Nature de
+   coût, Référence budget, Récurrence). What a line pays for is on Nature de
+   coût, so Domaine holds no expense kinds; on a tenant built by an earlier
+   version, the runner removes the old Domaine values Professional Services,
+   Managed Services, Training and General once no line uses them. 2027 is left empty on purpose: the
    budget demo initialises it by copying the 2026 landing. Re-running the
    runner restores the budget data, except on frozen columns: unfreeze them
    first (Budget administration → Freeze).
-5. **Demo user passwords**: all 19 imported users get `--demo-password`
-   (default `Fromage2026!`) so you can log in as e.g.
+5. **Demo user passwords**: all 19 imported users get the required
+   `--demo-password` so you can log in as e.g.
    `thomas.berger@fromage-co.com` during a demo. Pass `--demo-password ''`
-   to skip.
+   to create them without a password.
 6. **Relations**: Microsoft 365 suite members, application↔department links,
    app instances, interfaces + bindings, connections + equipment hops,
    interface↔connection links, contract↔spend links, spend↔application links,
@@ -84,7 +94,7 @@ Flags: `--skip-relations`, `--skip-agents`, `--org`, `--country`, `--year`,
 |---|---|---|
 | Dev | `https://fromage.dev.kanap.net` | Local stack behind the Cloudflare tunnel |
 | QA | `https://fromage.qa.kanap.net` | |
-| Prod | `https://fromage.kanap.net` | Live demos |
+| Prod | `https://demo.kanap.net` | Prospect demos: slug `demo`, private `--demo-password`, marked internal |
 
 The runner auto-detects whether the API is served under `/api` (nginx-proxied
 environments) or at the root.
@@ -95,8 +105,12 @@ Trial signup is the only tenant-creation path, and CAPTCHA is enforced on all
 environments, so create the tenant **exactly like a customer would** — no
 tokens, no scripting:
 
-1. On the marketing site, start a trial with slug `fromage` and your own
-   email (on dev/QA all outbound mail is redirected to `fried@kanap.net`).
+1. On the marketing site, start a trial with the environment's slug
+   (`fromage` on dev and QA, `demo` on prod), the organisation name
+   `Fromage & Co` and your own email. The runner removes the company the
+   trial creates under that name; with another name, pass it with `--org`.
+   On dev and QA all outbound mail is redirected to `fried@kanap.net`; prod
+   sends mail for real.
 2. Click the activation link in the email and set your password on the
    activation page — the tenant now exists and you are its Administrator.
 3. Run the runner with that email and password. It logs in and does
@@ -116,9 +130,12 @@ To wipe and rebuild (e.g. on QA):
 
 1. Log in to platform-admin (`https://platform-admin.<env>.kanap.net`) as a
    platform administrator.
-2. Delete the `fromage` tenant (requires typing the slug to confirm). This
-   purges all tenant data, frees the slug and clears the trial signup.
-3. Follow "Tenant creation and CAPTCHA" above, then run the runner.
+2. Delete the tenant (requires typing the slug to confirm). This purges all
+   tenant data, frees the slug and clears the trial signup.
+3. Follow "Tenant creation" above, then run the runner.
+4. On prod, mark the tenant internal in the platform console (Tenants →
+   the tenant → **Mark as internal tenant**). A trial tenant expires after 14 days:
+   it freezes and every AI feature stops.
 
 ## AI prerequisites
 
@@ -143,7 +160,10 @@ the fixture works without AI.
 | Maria Casanova (controller) | `maria.casanova@fromage-co.com` | Budget Administrator |
 | Nadia Lemaire (shops and e-commerce operations) | `nadia.lemaire@fromage-co.com` | Budget Member |
 
-All demo users share the `--demo-password` (default `Fromage2026!`).
+All demo users share the `--demo-password` value. It is required and has no
+default: on any tenant reachable from outside your machine, pass a private
+value. The runner sets it only when it creates a user, so choose it before the
+first run.
 
 ## Files
 

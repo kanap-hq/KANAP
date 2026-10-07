@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { backendPath } from './backend-root';
 import { MAX_EXPORT_LIMIT, MAX_LIST_LIMIT, parseExportPagination, parsePagination } from '../pagination';
 
 /**
@@ -67,7 +68,8 @@ function testClientCannotRaiseTheCeilingOnAListPath() {
  * (`spend/__tests__/budget-summary.integration.spec.ts` checks an ended line is in the file).
  */
 function testWholeSetPathsPassTheExportFlag() {
-  const srcRoot = path.join(__dirname, '..', '..');
+  // The TypeScript sources, also when this spec runs compiled.
+  const srcRoot = backendPath('src');
 
   const CALL_SITES = [
     'companies/companies.service.ts',

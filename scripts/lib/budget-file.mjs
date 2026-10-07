@@ -10,8 +10,6 @@
 // This module converts those shapes into the budget file layout at load time
 // and runs the two calls. Layout and rules:
 //   backend/src/spend/budget-file/columns.ts
-//   planning/sfr/csv-unification-design.md   ("File layout", "Cell rules")
-//   planning/sfr/briefs/csv-c2.md            (preflight and load contract)
 //
 // Files are written in English conventions (`,` separator, `.` decimal,
 // `YYYY-MM-DD` dates) and both routes are called with `language=en`.

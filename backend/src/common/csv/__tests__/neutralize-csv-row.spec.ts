@@ -8,6 +8,7 @@ import {
   neutralizeCsvFormulaValue,
   neutralizeCsvRow,
 } from '../csv-export.service';
+import { backendPath } from '../../__tests__/backend-root';
 
 /**
  * Every export that hand-rolls its own fast-csv formatter now passes
@@ -143,7 +144,8 @@ void run();
  * unmodified export stores "'+33 6 12..." and "'- first point".
  */
 function testEveryNeutralizingWriterDenormalizesItsImport() {
-  const srcRoot = path.join(__dirname, '..', '..', '..');
+  // The TypeScript sources, also when this spec runs compiled (the compiled tree has no .ts file).
+  const srcRoot = backendPath('src');
   const offenders: string[] = [];
   const walk = (dir: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -182,7 +184,8 @@ function testEveryCsvWriterNeutralizesFormulas() {
     'admin/coa-templates/admin-coa-templates.service.ts',
   ]);
 
-  const srcRoot = path.join(__dirname, '..', '..', '..');
+  // The TypeScript sources, also when this spec runs compiled (the compiled tree has no .ts file).
+  const srcRoot = backendPath('src');
   const offenders: string[] = [];
 
   const walk = (dir: string) => {

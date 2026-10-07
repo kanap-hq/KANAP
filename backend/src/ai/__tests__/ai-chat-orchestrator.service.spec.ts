@@ -2844,7 +2844,7 @@ async function testStructuredToolResultsCarryBlockingValidationMetadataForIgnore
   const { orchestrator, recordedRequests } = createOrchestrator({
     providerEvents: [
       { type: 'tool_call_start', id: 'tc-1', name: 'query_entities' },
-      { type: 'tool_call_delta', id: 'tc-1', arguments: '{"entity_type":"requests","filters":{"assignee":"yann.aubert@lohr.fr"}}' },
+      { type: 'tool_call_delta', id: 'tc-1', arguments: '{"entity_type":"requests","filters":{"assignee":"jane.doe@example.com"}}' },
       { type: 'tool_call_end', id: 'tc-1' },
       { type: 'done', usage: { input_tokens: 50, output_tokens: 25 } },
     ],

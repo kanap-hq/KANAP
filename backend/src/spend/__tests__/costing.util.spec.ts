@@ -107,7 +107,7 @@ function testProjectManager() {
   assert.deepEqual(amounts(busy.month_cents).slice(4, 6), ['8000.00', '8000.00'], '20 × 400 whatever the calendar');
 }
 
-/** People priced per day, full time (the SFR consultant): the calendar's days × quantity × unit price; FTE the quantity. */
+/** People priced per day, full time (the reference consultant): the calendar's days × quantity × unit price; FTE the quantity. */
 function testFullTime() {
   const consultant = line({ label: 'Consultant', period_start: `${YEAR}-02-01`, period_end: `${YEAR}-10-30` });
   const result = computeLine(consultant, YEAR, CALENDARS.get(FR218)!);

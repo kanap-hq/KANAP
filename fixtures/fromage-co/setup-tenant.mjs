@@ -10,7 +10,12 @@
 // Usage:
 //   node fixtures/fromage-co/setup-tenant.mjs \
 //     --base-url https://fromage.dev.kanap.net \
-//     --email fried@kanap.net --password '<admin password>'
+//     --email fried@kanap.net --password '<admin password>' \
+//     --demo-password '<private value>'
+//
+// --demo-password is required: it is the password every imported demo user
+// gets. Use a private value on any tenant reachable from outside the machine,
+// or pass --demo-password '' to create the users without a password.
 //
 // See SETUP-GUIDE.md for the full procedure per environment.
 import { readFileSync } from 'node:fs';
@@ -25,7 +30,6 @@ const DEFAULTS = {
   email: 'fried@kanap.net',
   org: 'Fromage & Co',
   countryIso: 'FR',
-  demoPassword: 'Fromage2026!',
   year: 2026,
 };
 
@@ -37,7 +41,7 @@ const options = {
   org: DEFAULTS.org,
   countryIso: DEFAULTS.countryIso,
   activationToken: '',
-  demoPassword: DEFAULTS.demoPassword,
+  demoPassword: null, // required: set by --demo-password ('' = no password)
   year: DEFAULTS.year,
   skipRelations: false,
   skipAgents: false,
@@ -66,8 +70,18 @@ for (let i = 0; i < argv.length; i += 1) {
 }
 
 options.baseUrl = options.baseUrl.replace(/\/$/, '');
+const missingArgs = [];
 if (!options.password) {
-  console.error('[ERR]  --password is required (tenant admin password; also used when bootstrapping the tenant).');
+  missingArgs.push('[ERR]  --password is required (tenant admin password; also used when bootstrapping the tenant).');
+}
+if (options.demoPassword === null) {
+  missingArgs.push(
+    "[ERR]  --demo-password is required (password given to every imported demo user). "
+    + "Pass --demo-password <value> with a private value, or --demo-password '' to create the users without a password.",
+  );
+}
+if (missingArgs.length > 0) {
+  for (const message of missingArgs) console.error(message);
   process.exit(1);
 }
 
@@ -497,32 +511,68 @@ async function ensurePortfolioClassification() {
   }
 }
 
+// The default dimension holds the domain a line serves (ERP, e-commerce, workplace…).
+// What the expense pays for is on the "Nature de coût" dimension.
+const DEFAULT_AXIS = { name: 'Domaine', description: 'Le domaine fonctionnel ou technique que la dépense sert' };
+const DOMAINS = [
+  ['Productivity', 'Email, collaboration, office suites'],
+  ['ERP', 'Enterprise resource planning'],
+  ['CRM', 'Customer relationship management'],
+  ['E-commerce', 'Online shop, B2B portal and payment'],
+  ['Retail', 'Shops and points of sale'],
+  ['Supply Chain', 'Warehouses, EDI and logistics'],
+  ['Traceability', 'Supply chain and cold chain'],
+  ['ITSM', 'IT service management'],
+  ['HR', 'Human capital management'],
+  ['Security', 'Cybersecurity and identity'],
+  ['Infrastructure', 'Hosting, cloud and virtualization'],
+  ['Network', 'WAN, LAN and telecom'],
+  ['Workplace', 'Workstations, end-user support and devices'],
+  ['Monitoring', 'Observability and alerting'],
+  ['IoT', 'Internet of Things platforms'],
+  ['Analytics', 'BI, data platforms and reporting'],
+  ['IT Management', 'IT governance, planning, sourcing and training'],
+];
+// Values of earlier fixture versions that described the kind of expense, not a domain.
+const LEGACY_DOMAIN_VALUES = ['Professional Services', 'Managed Services', 'Training', 'General'];
+
+async function defaultAxis() {
+  const axis = items(await apiGet('/analytics-axes')).find((item) => item.is_default);
+  if (!axis) throw new Error('The tenant has no default analytics dimension');
+  return axis;
+}
+
+async function defaultAxisValues(axisId) {
+  return (await getAll('/analytics-categories?limit=500')).filter((item) => item.axis_id === axisId);
+}
+
 async function ensureAnalyticsCategories() {
-  info('Ensuring analytics categories');
-  const existing = await getAll('/analytics-categories?limit=200');
-  for (const [name, description] of [
-    ['Productivity', 'Email, collaboration, office suites'],
-    ['ERP', 'Enterprise resource planning'],
-    ['CRM', 'Customer relationship management'],
-    ['ITSM', 'IT service management'],
-    ['HR', 'Human capital management'],
-    ['Security', 'Cybersecurity and identity'],
-    ['Infrastructure', 'Hosting, cloud and virtualization'],
-    ['Monitoring', 'Observability and alerting'],
-    ['IoT', 'Internet of Things platforms'],
-    ['Traceability', 'Supply chain and cold chain'],
-    ['Analytics', 'BI, data platforms and reporting'],
-    ['Managed Services', 'Outsourced IT services'],
-    ['Professional Services', 'Consulting and staff augmentation'],
-    ['Training', 'Learning and certifications'],
-    ['General', 'Miscellaneous IT expenses'],
-  ]) {
+  info('Ensuring the Domaine dimension');
+  const axis = await defaultAxis();
+  if (axis.name !== DEFAULT_AXIS.name || axis.description !== DEFAULT_AXIS.description) {
+    await apiPatch(`/analytics-axes/${axis.id}`, DEFAULT_AXIS);
+    ok(`Default analytics dimension named '${DEFAULT_AXIS.name}'`);
+  }
+  const existing = await defaultAxisValues(axis.id);
+  for (const [name, description] of DOMAINS) {
     if (existing.some((item) => lower(item.name) === lower(name))) continue;
     await apiPost('/analytics-categories', { name, description });
-    ok(`Created analytics category '${name}'`);
+    ok(`Created domain '${name}'`);
   }
 }
 
+// Runs after the budget imports, once no line uses the old values any more.
+async function removeLegacyDomainValues() {
+  const legacy = (await defaultAxisValues((await defaultAxis()).id)).filter((item) => LEGACY_DOMAIN_VALUES.some((name) => lower(name) === lower(item.name)));
+  for (const value of legacy) {
+    try {
+      await apiDelete(`/analytics-categories/${value.id}`);
+      ok(`Removed legacy domain value '${value.name}'`);
+    } catch (error) {
+      warn(`Could not remove legacy domain value '${value.name}': ${error.message.split('\n')[0]}`);
+    }
+  }
+}
 
 // ── Budget: analytics dimensions, costed lines, monthly rows ─────────────────
 //
@@ -1746,6 +1796,7 @@ async function runImports() {
   await importCsv('13-contracts.csv', '/contracts/import');
   const budgetIndex = await importBudgetItems();
   await runBudget(budgetIndex);
+  await removeLegacyDomainValues();
   await importCsv('16-portfolio-projects.csv', '/portfolio/projects/import');
   await importCsv('17-portfolio-requests.csv', '/portfolio/requests/import');
   const locationIdByFixtureCode = await ensureLocations();
@@ -1790,9 +1841,9 @@ async function main() {
   console.log('');
   console.log(`  App URL:      ${options.baseUrl}`);
   console.log(`  Tenant admin: ${options.email}`);
-  if (options.demoPassword) {
-    console.log(`  Demo users:   thomas.berger@fromage-co.com (and 18 others) / ${options.demoPassword}`);
-  }
+  console.log(options.demoPassword
+    ? '  Demo users:   thomas.berger@fromage-co.com (and 18 others), password passed with --demo-password'
+    : '  Demo users:   thomas.berger@fromage-co.com (and 18 others), no password set (--demo-password was empty)');
   if (!options.skipAgents) {
     console.log(`  Demo agent:   '${AGENT_NAME}' (mock ticketing) — check the Agents pages`);
     console.log(`  Knowledge:    '${SERVICE_DESK_LIBRARY}' library — the demo tickets find their answers there`);

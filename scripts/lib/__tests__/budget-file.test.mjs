@@ -4,7 +4,7 @@
 //
 // The expected column orders are the ones `backend/src/spend/budget-file/columns.ts`
 // writes: detail columns, then `analytics:<code>`, then the amount columns, then
-// `kanap_token`. Contract: planning/sfr/briefs/csv-c6-brief.md.
+// `kanap_token`.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
