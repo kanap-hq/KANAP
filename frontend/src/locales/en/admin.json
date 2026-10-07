@@ -648,7 +648,17 @@
     },
     "errors": {
       "noActiveSubscription": "No active subscription was found.",
-      "planNotBankTransferEligible": "This plan is not eligible for bank transfer."
+      "planNotBankTransferEligible": "This plan is not eligible for bank transfer.",
+      "vatNumberInvalid": "The VAT number was not accepted. Check it in the invoicing information."
+    },
+    "invoiceFields": {
+      "addressLine1": "address line 1",
+      "city": "city",
+      "company": "company",
+      "country": "country",
+      "email": "email",
+      "postalCode": "postal code",
+      "vatNumber": "VAT number"
     },
     "messages": {
       "checkoutUrlUnavailable": "Checkout URL is unavailable.",
@@ -660,6 +670,10 @@
       "trialExpires_other": "Trial expires in {{count}} days."
     },
     "pricePer": "per {{period}}",
+    "profile": {
+      "complete": "Complete invoicing information",
+      "incomplete": "Complete the invoicing information before subscribing: {{fields}}."
+    },
     "shared": {
       "month": "month",
       "year": "year"

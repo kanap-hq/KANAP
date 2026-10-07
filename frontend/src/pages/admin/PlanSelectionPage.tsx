@@ -23,6 +23,7 @@ import api from '../../api';
 import { useQuery } from '@tanstack/react-query';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useLocale } from '../../i18n/useLocale';
+import { invoiceProfileIncompleteMessage } from '../../utils/billingProfile';
 
 type PlanPrice = {
   monthly: number;
@@ -68,6 +69,13 @@ function parseApiError(error: any, t: TFunction): string {
   if (message === 'NO_ACTIVE_SUBSCRIPTION') {
     return t('planSelection.errors.noActiveSubscription');
   }
+  if (message === 'BILLING_PROFILE_INCOMPLETE') {
+    const missing = error?.response?.data?.missing;
+    return invoiceProfileIncompleteMessage(Array.isArray(missing) ? missing : [], t);
+  }
+  if (message === 'VAT_NUMBER_INVALID') {
+    return t('planSelection.errors.vatNumberInvalid');
+  }
   return getApiErrorMessage(error, t, t('planSelection.messages.requestFailed'));
 }
 
@@ -75,9 +83,22 @@ type PlanSelectionDialogProps = {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /** Invoice fields still needed before subscribing (from the billing profile). */
+  invoiceMissingFields?: readonly string[];
+  /** Takes the user to the invoicing information card. */
+  onCompleteInvoiceDetails?: () => void;
+  /** Called once the dialog has finished closing. */
+  onExited?: () => void;
 };
 
-export default function PlanSelectionDialog({ open, onClose, onSuccess }: PlanSelectionDialogProps) {
+export default function PlanSelectionDialog({
+  open,
+  onClose,
+  onSuccess,
+  invoiceMissingFields = [],
+  onCompleteInvoiceDetails,
+  onExited,
+}: PlanSelectionDialogProps) {
   const { subscription, claims } = useAuth();
   const { t } = useTranslation(['admin', 'common']);
   const locale = useLocale();
@@ -91,6 +112,11 @@ export default function PlanSelectionDialog({ open, onClose, onSuccess }: PlanSe
   const trialDaysRemaining = subscription?.trial_days_remaining;
   const hasStripeSubscription = !!subscription?.stripe_subscription_id;
   const hasHealthyStripeSubscription = hasStripeSubscription && subscription?.is_subscription_healthy === true;
+  // Subscribing (card checkout, bank transfer) needs complete invoice details; a card
+  // plan change on a running subscription does not.
+  const invoiceProfileIncomplete = invoiceMissingFields.length > 0;
+  const cardBlocked = invoiceProfileIncomplete && !hasHealthyStripeSubscription;
+  const bankTransferBlocked = invoiceProfileIncomplete;
 
   const plansQuery = useQuery<Plan[]>({
     queryKey: ['billing-plans'],
@@ -168,7 +194,7 @@ export default function PlanSelectionDialog({ open, onClose, onSuccess }: PlanSe
   const plans = plansQuery.data ?? [];
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth TransitionProps={{ onExited }}>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {t('planSelection.title')}
         <IconButton onClick={onClose} size="small" aria-label={t('common:buttons.close')}>
@@ -185,6 +211,19 @@ export default function PlanSelectionDialog({ open, onClose, onSuccess }: PlanSe
           {isTrialing && (trialDaysRemaining == null || trialDaysRemaining <= 0) && (
             <Alert severity="warning">
               {t('planSelection.messages.trialExpired')}
+            </Alert>
+          )}
+
+          {invoiceProfileIncomplete && (
+            <Alert
+              severity="warning"
+              action={onCompleteInvoiceDetails ? (
+                <Button color="inherit" size="small" onClick={onCompleteInvoiceDetails}>
+                  {t('planSelection.profile.complete')}
+                </Button>
+              ) : undefined}
+            >
+              {invoiceProfileIncompleteMessage(invoiceMissingFields, t)}
             </Alert>
           )}
 
@@ -271,7 +310,7 @@ export default function PlanSelectionDialog({ open, onClose, onSuccess }: PlanSe
                               variant="contained"
                               fullWidth
                               onClick={() => handleCardFlow(plan.plan_key)}
-                              disabled={!isBillingAdmin || isAnyLoading}
+                              disabled={!isBillingAdmin || isAnyLoading || cardBlocked}
                             >
                               {cardLoading ? (
                                 <CircularProgress size={20} sx={{ color: 'inherit' }} />
@@ -287,7 +326,7 @@ export default function PlanSelectionDialog({ open, onClose, onSuccess }: PlanSe
                                 variant="contained"
                                 fullWidth
                                 onClick={() => handleCardFlow(plan.plan_key)}
-                                disabled={!isBillingAdmin || isAnyLoading}
+                                disabled={!isBillingAdmin || isAnyLoading || cardBlocked}
                               >
                                 {cardLoading ? (
                                   <CircularProgress size={20} sx={{ color: 'inherit' }} />
@@ -299,7 +338,7 @@ export default function PlanSelectionDialog({ open, onClose, onSuccess }: PlanSe
                                 variant="outlined"
                                 fullWidth
                                 onClick={() => handleBankTransferFlow(plan.plan_key)}
-                                disabled={!isBillingAdmin || isAnyLoading}
+                                disabled={!isBillingAdmin || isAnyLoading || bankTransferBlocked}
                               >
                                 {bankTransferLoading ? (
                                   <CircularProgress size={20} sx={{ color: 'inherit' }} />

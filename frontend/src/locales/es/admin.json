@@ -648,7 +648,17 @@
     },
     "errors": {
       "noActiveSubscription": "No se encontró ninguna suscripción activa.",
-      "planNotBankTransferEligible": "Este plan no es elegible para transferencia bancaria."
+      "planNotBankTransferEligible": "Este plan no es elegible para transferencia bancaria.",
+      "vatNumberInvalid": "No se aceptó el número de IVA. Revíselo en la información de facturación."
+    },
+    "invoiceFields": {
+      "addressLine1": "dirección línea 1",
+      "city": "ciudad",
+      "company": "empresa",
+      "country": "país",
+      "email": "correo electrónico",
+      "postalCode": "código postal",
+      "vatNumber": "número de IVA"
     },
     "messages": {
       "checkoutUrlUnavailable": "La URL de pago no está disponible.",
@@ -660,6 +670,10 @@
       "trialExpires_other": "La prueba expira en {{count}} días."
     },
     "pricePer": "por {{period}}",
+    "profile": {
+      "complete": "Completar la información de facturación",
+      "incomplete": "Complete la información de facturación antes de suscribirse: {{fields}}."
+    },
     "shared": {
       "month": "mes",
       "year": "año"

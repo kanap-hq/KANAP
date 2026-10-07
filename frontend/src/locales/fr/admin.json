@@ -648,7 +648,17 @@
     },
     "errors": {
       "noActiveSubscription": "Aucun abonnement actif trouvé.",
-      "planNotBankTransferEligible": "Ce plan n'est pas éligible au virement bancaire."
+      "planNotBankTransferEligible": "Ce plan n'est pas éligible au virement bancaire.",
+      "vatNumberInvalid": "Le numéro de TVA n'a pas été accepté. Vérifiez-le dans les informations de facturation."
+    },
+    "invoiceFields": {
+      "addressLine1": "adresse ligne 1",
+      "city": "ville",
+      "company": "société",
+      "country": "pays",
+      "email": "e-mail",
+      "postalCode": "code postal",
+      "vatNumber": "numéro de TVA"
     },
     "messages": {
       "checkoutUrlUnavailable": "L'URL de paiement n'est pas disponible.",
@@ -660,6 +670,10 @@
       "trialExpires_other": "La période d'essai expire dans {{count}} jours."
     },
     "pricePer": "par {{period}}",
+    "profile": {
+      "complete": "Compléter les informations de facturation",
+      "incomplete": "Complétez les informations de facturation avant de vous abonner : {{fields}}."
+    },
     "shared": {
       "month": "mois",
       "year": "an"

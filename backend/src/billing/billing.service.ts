@@ -6,6 +6,7 @@ import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { StripeClientService, StripeConfigService } from './stripe';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
+import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, toIsoCountry } from './billing-profile.util';
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { AuditService } from '../audit/audit.service';
@@ -216,6 +217,7 @@ export class BillingService {
     return {
       customer: this.contactToResponse(customer),
       invoice: this.contactToResponse(invoice),
+      invoice_missing_fields: missingInvoiceFields(invoice),
       invoices,
     };
   }
@@ -269,6 +271,7 @@ export class BillingService {
     return {
       customer: this.contactToResponse(customer),
       invoice: this.contactToResponse(invoice),
+      invoice_missing_fields: missingInvoiceFields(invoice),
       invoices,
     };
   }
@@ -288,8 +291,9 @@ export class BillingService {
   }) {
     const client = this.getStripeClientOrThrow();
     const tenant = await this.requireTenant(opts.tenantId);
+    const invoiceProfile = this.requireCompleteInvoiceProfile(tenant);
     const manager = opts.manager ?? null;
-    const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager });
+    const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager, invoiceProfile });
 
     // Resolve plan_key: prefer explicit, then derive from legacy price_id
     let planKey: PlanKey | null = opts.planKey ?? null;
@@ -449,11 +453,11 @@ export class BillingService {
     }
 
     const tenant = await this.requireTenant(tenantId);
+    const invoiceContact = this.requireCompleteInvoiceProfile(tenant);
     const mg = manager ?? this.subs.manager;
     const sub = await this.ensureSubscription(mg);
     const before = this.subscriptionAuditSnapshot(sub);
-    const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager: mg });
-    const invoiceContact = this.getInvoiceContact(tenant);
+    const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager: mg, invoiceProfile: invoiceContact });
     const euBankTransferCountry = this.resolveEuBankTransferCountry(invoiceContact.address.country);
     let stripeSubResult: any | null = null;
     let previousLatestInvoiceId: string | null = null;
@@ -541,21 +545,39 @@ export class BillingService {
     };
   }
 
+  /**
+   * The invoice details a subscription needs (company, email, address, ISO country,
+   * EU VAT number). Checked before any Stripe call: Stripe refuses a `send_invoice`
+   * subscription without an email, and its invoices must carry the address and VAT.
+   */
+  private requireCompleteInvoiceProfile(tenant: Tenant): BillingContact {
+    const contact = this.getInvoiceContact(tenant);
+    const missing = missingInvoiceFields(contact);
+    if (missing.length) {
+      throw new BadRequestException({ message: 'BILLING_PROFILE_INCOMPLETE', missing });
+    }
+    return contact;
+  }
+
+  /**
+   * The tenant's Stripe customer id, created when missing. With `invoiceProfile`
+   * (subscribe time), the customer also gets the current invoice details and EU VAT
+   * tax id; errors are not swallowed, and a VAT number Stripe refuses becomes
+   * VAT_NUMBER_INVALID.
+   */
   private async ensureStripeCustomerForTenant(
     tenant: Tenant,
-    opts: { manager: EntityManager | null },
+    opts: { manager: EntityManager | null; invoiceProfile?: BillingContact },
   ): Promise<string> {
+    const client = this.getStripeClientOrThrow();
+    const profile = opts.invoiceProfile ?? null;
     if (tenant.stripe_customer_id) {
       // Verify the customer still exists in the current Stripe environment
-      const client = this.getStripeClientOrThrow();
       try {
         const customer = await client.customers.retrieve(tenant.stripe_customer_id);
         if ((customer as any)?.deleted === true) {
           this.logger.warn(`Deleted Stripe customer ${tenant.stripe_customer_id} for tenant ${tenant.id} — creating new customer`);
           tenant.stripe_customer_id = null as any;
-        } else {
-          await this.updateSubscriptionCustomer(tenant.id, tenant.stripe_customer_id, { manager: opts.manager });
-          return tenant.stripe_customer_id;
         }
       } catch (error: any) {
         if (error?.statusCode === 404 || error?.code === 'resource_missing') {
@@ -565,20 +587,29 @@ export class BillingService {
           throw error;
         }
       }
+      if (tenant.stripe_customer_id) {
+        const customerId = tenant.stripe_customer_id;
+        if (profile) {
+          await this.withVatNumberErrors(async () => {
+            await client.customers.update(customerId, this.stripeCustomerDetails(tenant, profile));
+            await this.syncStripeTaxIds(customerId, profile);
+          });
+        }
+        await this.updateSubscriptionCustomer(tenant.id, customerId, { manager: opts.manager });
+        return customerId;
+      }
     }
 
-    const client = this.getStripeClientOrThrow();
-    const invoiceContact = this.getInvoiceContact(tenant);
-    const customer = await client.customers.create({
-      email: invoiceContact.email || undefined,
-      name: invoiceContact.company || invoiceContact.name || tenant.name,
-      phone: invoiceContact.phone || undefined,
+    const invoiceContact = profile ?? this.getInvoiceContact(tenant);
+    const euVat = profile ? euVatTaxIdValue(profile) : null;
+    const customer = await this.withVatNumberErrors<{ id: string }>(() => client.customers.create({
+      ...this.stripeCustomerDetails(tenant, invoiceContact),
       metadata: {
         tenant_id: tenant.id,
         tenant_slug: tenant.slug,
       },
-      address: this.normaliseStripeAddress(this.addressToRecord(invoiceContact.address)),
-    });
+      ...(euVat ? { tax_id_data: [{ type: 'eu_vat' as const, value: euVat }] } : {}),
+    }));
 
     // The tenant was loaded by the caller before the Stripe calls: write the
     // customer id only, never the rest of that copy.
@@ -586,6 +617,50 @@ export class BillingService {
     await this.tenants.update({ id: tenant.id }, { stripe_customer_id: customer.id });
     await this.updateSubscriptionCustomer(tenant.id, customer.id, { manager: opts.manager });
     return customer.id;
+  }
+
+  /** The Stripe customer fields KANAP owns: email, name (company), phone, address. */
+  private stripeCustomerDetails(tenant: Tenant, contact: BillingContact) {
+    return {
+      email: contact.email || undefined,
+      name: contact.company || contact.name || tenant.name,
+      phone: contact.phone || undefined,
+      address: this.normaliseStripeAddress(this.addressToRecord(contact.address)),
+    };
+  }
+
+  /**
+   * Keeps the customer's `eu_vat` tax ids in line with the invoice details: one id
+   * with the normalised EU VAT number, none for a non-EU country or no VAT number.
+   * Other tax id types are left alone.
+   */
+  private async syncStripeTaxIds(customerId: string, contact: BillingContact): Promise<void> {
+    const client = this.getStripeClientOrThrow();
+    const target = euVatTaxIdValue(contact);
+    const existing = await client.customers.listTaxIds(customerId, { limit: 100 });
+    let kept = false;
+    for (const taxId of existing?.data ?? []) {
+      if (taxId?.type !== 'eu_vat') continue;
+      if (target && !kept && normaliseVatNumber(taxId.value) === target) {
+        kept = true;
+        continue;
+      }
+      await client.customers.deleteTaxId(customerId, taxId.id);
+    }
+    if (target && !kept) {
+      await client.customers.createTaxId(customerId, { type: 'eu_vat', value: target });
+    }
+  }
+
+  private async withVatNumberErrors<T>(run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (error: any) {
+      if (error?.code === 'tax_id_invalid' || error?.raw?.code === 'tax_id_invalid') {
+        throw new BadRequestException({ message: 'VAT_NUMBER_INVALID' });
+      }
+      throw error;
+    }
   }
 
   private normaliseStripeAddress(address: Record<string, any> | null | undefined) {
@@ -760,22 +835,19 @@ export class BillingService {
     return str.length ? str : null;
   }
 
+  /** An ISO alpha-2 code is stored uppercase; a legacy free-text value is kept as typed. */
   private toNullableCountry(value: any): string | null {
     const str = this.toNullableString(value);
     if (!str) return null;
-    return str.length <= 3 ? str.toUpperCase() : str;
+    return toIsoCountry(str) ?? str;
   }
 
   private async syncStripeCustomerProfile(tenant: Tenant, invoice: BillingContact): Promise<void> {
     const client = this.stripeClient.getClient();
     if (!client || !tenant.stripe_customer_id) return;
     try {
-      await client.customers.update(tenant.stripe_customer_id, {
-        email: invoice.email || undefined,
-        name: invoice.company || invoice.name || tenant.name,
-        phone: invoice.phone || undefined,
-        address: this.normaliseStripeAddress(this.addressToRecord(invoice.address)),
-      });
+      await client.customers.update(tenant.stripe_customer_id, this.stripeCustomerDetails(tenant, invoice));
+      await this.syncStripeTaxIds(tenant.stripe_customer_id, invoice);
     } catch (error) {
       this.logger.warn(`Failed to sync Stripe customer ${tenant.stripe_customer_id}: ${(error as Error).message}`);
     }

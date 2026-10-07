@@ -648,7 +648,17 @@
     },
     "errors": {
       "noActiveSubscription": "Kein aktives Abonnement gefunden.",
-      "planNotBankTransferEligible": "Dieser Plan ist nicht für Banküberweisung geeignet."
+      "planNotBankTransferEligible": "Dieser Plan ist nicht für Banküberweisung geeignet.",
+      "vatNumberInvalid": "Die USt-IdNr. wurde nicht akzeptiert. Prüfen Sie sie in den Rechnungsinformationen."
+    },
+    "invoiceFields": {
+      "addressLine1": "Adresszeile 1",
+      "city": "Stadt",
+      "company": "Unternehmen",
+      "country": "Land",
+      "email": "E-Mail",
+      "postalCode": "Postleitzahl",
+      "vatNumber": "USt-IdNr."
     },
     "messages": {
       "checkoutUrlUnavailable": "Checkout-URL ist nicht verfügbar.",
@@ -660,6 +670,10 @@
       "trialExpires_other": "Testphase läuft in {{count}} Tagen ab."
     },
     "pricePer": "pro {{period}}",
+    "profile": {
+      "complete": "Rechnungsinformationen vervollständigen",
+      "incomplete": "Vervollständigen Sie die Rechnungsinformationen, bevor Sie ein Abonnement abschließen: {{fields}}."
+    },
     "shared": {
       "month": "Monat",
       "year": "Jahr"
