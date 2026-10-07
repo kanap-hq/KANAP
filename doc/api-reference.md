@@ -201,15 +201,21 @@ These endpoints are tenant-scoped and require:
   - A file that cannot be read at all (encoding, empty, over 20,000 rows, unclosed quote) is a 400 with the shared layer's message.
 
 ## Charts of Accounts (Tenant)
-- GET `/chart-of-accounts` → list (supports quick search and AG Grid filters)
-  - Items include `scope: 'GLOBAL'|'COUNTRY'`, `country_iso` (NULL for GLOBAL), `is_default`, `is_global_default`, `companies_count`, and `accounts_count`.
-- GET `/chart-of-accounts/:id` → detail
+- GET `/chart-of-accounts` → list (supports quick search and AG Grid filters; filter and sort on `is_consolidation` like the other flags)
+  - Items include `scope: 'GLOBAL'|'COUNTRY'`, `country_iso` (NULL for GLOBAL), `is_default`, `is_global_default`, `is_consolidation`, `companies_count`, `accounts_count`, `accounts_unmapped_count` (accounts without consolidation number) and `accounts_outside_count` (number set but absent from the tenant's consolidation chart; 0 when the tenant has none). Disabled accounts count too.
+- GET `/chart-of-accounts/:id` → detail, with the same flags and counts
 - POST `/chart-of-accounts` → create
   - Body: `{ code: string, name: string, scope: 'GLOBAL'|'COUNTRY', country_iso?: string(2), is_default?: boolean }`
   - Rules: `scope='GLOBAL'` → `country_iso` omitted and `is_default=false`. `scope='COUNTRY'` → `country_iso` required; `is_default=true` makes it the single default for that country.
 - PATCH `/chart-of-accounts/:id` → update (enforces the same scope rules as create)
-- PATCH `/chart-of-accounts/:id/global-default` → sets the Global Default CoA
-  - Only allowed when the target CoA has `scope='GLOBAL'`; clears any previous Global Default and assigns it to companies with `coa_id=NULL`.
+- PATCH `/chart-of-accounts/:id/global-default` → sets the Global Default CoA ("Default for other countries")
+  - Only allowed when the target CoA has `scope='GLOBAL'`; clears any previous Global Default and assigns it to companies with `coa_id=NULL`. Empty response.
+- DELETE `/chart-of-accounts/:id/global-default` → removes the Global Default from this CoA → `{ cleared: boolean }` (`false` when it did not hold it)
+- PATCH `/chart-of-accounts/:id/consolidation` → makes this CoA (any scope) the tenant's consolidation chart and clears the previous one, then resyncs the derived fields: every account whose `consolidation_account_number` matches an account of this CoA takes that account's name and description. Accounts are never remapped.
+  - Response: `{ resynced: number, outside: number }`: the accounts whose consolidation name or description was rewritten, and the accounts of the other CoAs whose consolidation number is absent from this CoA.
+- DELETE `/chart-of-accounts/:id/consolidation` → removes the consolidation role from this CoA → `{ cleared: boolean }` (`false` when it did not hold it); accounts are not touched
+- GET `/chart-of-accounts/:id/consolidation-impact` → preview before a switch, no write → `{ matched, outside, unmapped }`: among the accounts of the other CoAs, those whose consolidation number exists in this CoA, is set but absent from it, or is not set
+- Role endpoints require `accounts` at manager level (`member`). Every role change is audited on `chart_of_accounts` (one line per CoA changed, before and after); the accounts rewritten by a resync get one audit line each. The country default stays on PATCH `/chart-of-accounts/:id` with `{ is_default: true|false }`.
 - DELETE `/chart-of-accounts/:id` → guarded delete
   - Blocks when companies reference the CoA
   - Blocks when any OPEX/CAPEX items reference its accounts
@@ -292,11 +298,14 @@ Notes
 - Standard accounts are stored as the template’s `csv_payload` and are used to seed tenant CoAs via `/chart-of-accounts/:id/load-template`.
 
 ## Accounts (Tenant)
-- GET `/accounts?status=...&page=...&limit=...&sort=...&filters=...&companyId=...&coaId=...`
+- GET `/accounts?status=...&page=...&limit=...&sort=...&filters=...&companyId=...&coaId=...&consolidationStatus=...`
   - Respects quick search and AG Grid filter model
   - Supports CoA scoping via `companyId` (company’s `coa_id`) or explicit `coaId`
-  - Items include `coa_code` to display CoA in the grid
-- GET `/accounts/ids?sort=...&q=...&filters=...` → `{ ids, total }` (ordered by current list query)
+  - Items include `coa_code` to display CoA in the grid, and `consolidation_status`: `mapped` (the consolidation number exists in the tenant's consolidation chart), `outside` (set but absent from it, or the tenant has no consolidation chart) or `unmapped` (no number)
+  - `consolidationStatus=mapped|outside|unmapped` filters on the server; page and total follow the filter; any other value is a 400
+- GET `/accounts/ids?sort=...&q=...&filters=...&consolidationStatus=...` → `{ ids, total }` (ordered by current list query)
+- GET `/accounts/:id` → detail, with `consolidation_status`
+- POST `/accounts`, PATCH `/accounts/:id` and the CSV imports derive `consolidation_account_name` and `consolidation_account_description` from the consolidation chart's account of the given number; without a match (or without a consolidation chart) the values sent are kept; a null or empty number clears both. When an account of the consolidation chart is created, renamed, described or renumbered, every account mapped to its old or new number follows it (number, name, description) in the same transaction, one audit line per account.
 - GET `/accounts/export?scope=template|data&coaId=...&language=…`
   - Global export includes `coa_code`; when `coaId` is provided, export is scoped
 - POST `/accounts/import?dryRun=true|false&coaId=...&language=…&dateOrder=…&decimalMark=…`

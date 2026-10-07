@@ -54,12 +54,41 @@ export class ChartOfAccountsController {
     return this.svc.update(id, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
-  // Set Global Default (explicit endpoint)
+  // Chart roles. Set Global Default ("Default for other countries", GLOBAL charts only)
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Patch(':id/global-default')
   setGlobalDefault(@Param('id') id: string, @Req() req: any) {
-    return this.svc.setGlobalDefault(id, { manager: req?.queryRunner?.manager });
+    return this.svc.setGlobalDefault(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('accounts', 'member')
+  @Delete(':id/global-default')
+  clearGlobalDefault(@Param('id') id: string, @Req() req: any) {
+    return this.svc.clearGlobalDefault(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  // Consolidation chart (one per tenant, any scope): set (with resync), clear, preview
+  @UseGuards(PermissionGuard)
+  @RequireLevel('accounts', 'member')
+  @Patch(':id/consolidation')
+  setConsolidation(@Param('id') id: string, @Req() req: any) {
+    return this.svc.setConsolidation(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('accounts', 'member')
+  @Delete(':id/consolidation')
+  clearConsolidation(@Param('id') id: string, @Req() req: any) {
+    return this.svc.clearConsolidation(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('accounts', 'member')
+  @Get(':id/consolidation-impact')
+  consolidationImpact(@Param('id') id: string, @Req() req: any) {
+    return this.svc.consolidationImpact(id, { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)

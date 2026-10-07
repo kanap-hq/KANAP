@@ -555,8 +555,9 @@ export class PublicController {
       const created = await this.coas.create({ code: tmpl.template_code, name: tmpl.template_name, scope: 'GLOBAL', is_default: false }, null, { manager });
       // Copy accounts into CoA
       await this.coas.loadTemplateIntoCoa(created.id, tmpl.id, { dryRun: false, userId: null, overwrite: true }, { manager });
-      // Mark as global default for the tenant
-      await this.coas.setGlobalDefault(created.id, { manager });
+      // Mark as global default and consolidation chart for the tenant
+      await this.coas.setGlobalDefault(created.id, null, { manager });
+      await this.coas.setConsolidation(created.id, null, { manager });
     } catch (e) {
       // Swallow provisioning issues to not block tenant creation, but log
       console.warn('[provisioning] Default global CoA provisioning skipped:', (e as Error)?.message);

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, EntityManager, ILike, IsNull, Raw, Repository } from 'typeorm';
+import { DeepPartial, EntityManager, Equal, ILike, IsNull, Raw, Repository } from 'typeorm';
 import { Account } from './account.entity';
 import { Company } from '../companies/company.entity';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
@@ -19,6 +19,18 @@ import {
   rowProblems,
   writeCsv,
 } from '../common/csv-sheet';
+import {
+  andCondition,
+  auditChangedAccounts,
+  consolidationChartId,
+  consolidationLookup,
+  ConsolidationStatus,
+  consolidationStatusCondition,
+  consolidationStatusOf,
+  CURRENT_TENANT,
+  parseConsolidationStatus,
+  remapToConsolidationAccount,
+} from './consolidation';
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
 const INT4_MAX = 2147483647;
@@ -47,6 +59,17 @@ function accountNumberQuery(q: string): number | null {
   return Number.isInteger(value) && Math.abs(value) <= INT4_MAX ? value : null;
 }
 
+/** The `consolidationStatus` filter, added to any condition already on the consolidation number. */
+function applyConsolidationStatus(where: any, status: ConsolidationStatus | undefined) {
+  if (!status) return;
+  where.consolidation_account_number = andCondition(where.consolidation_account_number, consolidationStatusCondition(status));
+}
+
+/** The quick search on a consolidation number, keeping the conditions already on that column. */
+function consolidationNumberEquals(where: any, value: number) {
+  return where.consolidation_account_number === undefined ? value : andCondition(where.consolidation_account_number, Equal(value));
+}
+
 @Injectable()
 export class AccountsService {
   constructor(
@@ -62,6 +85,7 @@ export class AccountsService {
     const repo = this.getRepo(opts?.manager);
     const { page, limit, skip, sort, status, q, filters } = parsePagination(query);
     assertSetFilterModes(filters, ['status', 'account_number']);
+    const consolidationStatus = parseConsolidationStatus(query?.consolidationStatus);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;
@@ -164,6 +188,8 @@ export class AccountsService {
       (where as any).coa_id = coaIdParam;
     }
 
+    applyConsolidationStatus(where, consolidationStatus);
+
     // Quick search across multiple fields; combine with filters via OR array
     if (q) {
       const like = ILike(`%${q}%`);
@@ -176,8 +202,8 @@ export class AccountsService {
       ];
       if (numQ !== null) {
         whereArr.push({ ...where, account_number: String(numQ) });
-        // Also allow numeric match on consolidation_account_number
-        whereArr.push({ ...where, consolidation_account_number: numQ });
+        // Also allow numeric match on consolidation_account_number (with its status filter, if any)
+        whereArr.push({ ...where, consolidation_account_number: consolidationNumberEquals(where, numQ) });
       }
     }
 
@@ -190,14 +216,22 @@ export class AccountsService {
       skip,
       take: limit,
     });
-    // Enrich with CoA code for UI
+    // Enrich with CoA code and consolidation status for UI
     const ids = Array.from(new Set(items.map((i) => i.coa_id).filter(Boolean))) as string[];
     let codeById = new Map<string, string>();
     if (ids.length > 0) {
-      const rows = await repo.manager.query(`SELECT id, code FROM chart_of_accounts WHERE id = ANY($1)`, [ids]);
+      const rows = await repo.manager.query(
+        `SELECT id, code FROM chart_of_accounts WHERE id = ANY($1) AND tenant_id = ${CURRENT_TENANT}`,
+        [ids],
+      );
       codeById = new Map(rows.map((r: any) => [r.id, r.code]));
     }
-    const enriched = (items as any[]).map((i) => ({ ...i, coa_code: i.coa_id ? codeById.get(i.coa_id) || '' : '' }));
+    const lookup = await consolidationLookup(repo.manager, items.map((i) => i.consolidation_account_number));
+    const enriched = (items as any[]).map((i) => ({
+      ...i,
+      coa_code: i.coa_id ? codeById.get(i.coa_id) || '' : '',
+      consolidation_status: consolidationStatusOf(i.consolidation_account_number, lookup),
+    }));
     return { items: enriched, total, page, limit };
   }
 
@@ -213,6 +247,7 @@ export class AccountsService {
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
     assertSetFilterModes(filters, ['status', 'account_number']);
+    const consolidationStatus = parseConsolidationStatus(query?.consolidationStatus);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
     const filtersToApply = sanitizedFilters ?? filters;
     const effectiveStatus = status ?? statusFromAg;
@@ -313,6 +348,8 @@ export class AccountsService {
       (where as any).coa_id = coaIdParam;
     }
 
+    applyConsolidationStatus(where, consolidationStatus);
+
     let whereArr: any[] | undefined;
     if (q) {
       const like = ILike(`%${q}%`);
@@ -325,7 +362,7 @@ export class AccountsService {
       ];
       if (numQ !== null) {
         whereArr.push({ ...where, account_number: String(numQ) });
-        whereArr.push({ ...where, consolidation_account_number: numQ });
+        whereArr.push({ ...where, consolidation_account_number: consolidationNumberEquals(where, numQ) });
       }
     }
 
@@ -366,6 +403,9 @@ export class AccountsService {
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     });
+    const mg = opts?.manager ?? repo.manager;
+    const chartId = await consolidationChartId(mg);
+    await this.deriveConsolidationFields(entity, true, chartId, mg);
     let saved: Account;
     try {
       saved = await repo.save(entity);
@@ -387,19 +427,27 @@ export class AccountsService {
         source: opts?.audit?.source,
         sourceRef: opts?.audit?.sourceRef ?? null,
       },
-      { manager: opts?.manager ?? repo.manager },
+      { manager: mg },
     );
+    // A new account of the consolidation chart: accounts already mapped to its number follow it.
+    if (chartId && saved.coa_id === chartId) {
+      await this.propagateConsolidationAccount(saved, [Number(saved.account_number)], userId, mg, opts?.audit);
+    }
     return saved;
   }
 
   async update(id: string, body: AccountUpsertDto, userId?: string, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const repo = this.getRepo(opts?.manager);
+    const mg = opts?.manager ?? repo.manager;
     const existing = await this.get(id, { manager: opts?.manager });
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
-    Object.assign(existing, rest);
+    // A field the body leaves undefined keeps its value (the save would skip it anyway).
+    for (const [key, value] of Object.entries(rest)) {
+      if (value !== undefined) (existing as any)[key] = value;
+    }
     if (body?.account_number !== undefined) {
-      existing.account_number = body.account_number != null ? String(body.account_number) : existing.account_number;
+      existing.account_number = body.account_number != null ? String(body.account_number) : before.account_number;
     }
     if (body?.consolidation_account_number !== undefined) {
       existing.consolidation_account_number = body.consolidation_account_number ?? null;
@@ -411,6 +459,27 @@ export class AccountsService {
     });
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
+
+    const chartId = await consolidationChartId(mg);
+    // An account of the consolidation chart that changes its number, name or description:
+    // every account mapped to it follows (below, once it is saved).
+    const previousNumber = Number(before.account_number);
+    const propagate = !!chartId && before.coa_id === chartId && existing.coa_id === chartId && (
+      Number(existing.account_number) !== previousNumber
+      || existing.account_name !== before.account_name
+      || (existing.description ?? null) !== (before.description ?? null)
+    );
+    // Its own self-reference follows a renumbering.
+    if (
+      propagate
+      && body?.consolidation_account_number === undefined
+      && before.consolidation_account_number != null
+      && Number(before.consolidation_account_number) === previousNumber
+    ) {
+      existing.consolidation_account_number = Number(existing.account_number);
+    }
+    await this.deriveConsolidationFields(existing, body?.consolidation_account_number !== undefined, chartId, mg);
+
     let saved: Account;
     try {
       saved = await repo.save(existing);
@@ -432,9 +501,72 @@ export class AccountsService {
         source: opts?.audit?.source,
         sourceRef: opts?.audit?.sourceRef ?? null,
       },
-      { manager: opts?.manager ?? repo.manager },
+      { manager: mg },
     );
+    if (propagate) {
+      await this.propagateConsolidationAccount(saved, [previousNumber, Number(saved.account_number)], userId, mg, opts?.audit);
+    }
     return saved;
+  }
+
+  /**
+   * The consolidation name and description follow the consolidation number: when the number
+   * matches an account of the consolidation chart, they are that account's (the account itself
+   * when it is its own consolidation account). Without a match (or without a consolidation
+   * chart), what the caller sent is kept. A number set to null (`numberGiven`) clears both.
+   */
+  private async deriveConsolidationFields(account: Account, numberGiven: boolean, chartId: string | null, mg: EntityManager) {
+    const number = account.consolidation_account_number;
+    if (number == null) {
+      if (numberGiven) {
+        account.consolidation_account_name = null;
+        account.consolidation_account_description = null;
+      }
+      return;
+    }
+    if (!chartId) return;
+    if (account.coa_id === chartId && Number(account.account_number) === Number(number)) {
+      account.consolidation_account_name = account.account_name;
+      account.consolidation_account_description = account.description ?? null;
+      return;
+    }
+    const [source]: Array<{ account_name: string; description: string | null }> = await mg.query(
+      `SELECT account_name, description FROM accounts
+       WHERE tenant_id = ${CURRENT_TENANT} AND coa_id = $1 AND account_number = $2::int`,
+      [chartId, number],
+    );
+    if (source) {
+      account.consolidation_account_name = source.account_name;
+      account.consolidation_account_description = source.description ?? null;
+    }
+  }
+
+  /**
+   * Accounts mapped to `fromNumbers` now point at `source`, an account of the consolidation
+   * chart: its number, name and description. One audit line per account rewritten.
+   */
+  private async propagateConsolidationAccount(
+    source: Account,
+    fromNumbers: number[],
+    userId: string | null | undefined,
+    mg: EntityManager,
+    audit?: AuditSourceOptions,
+  ) {
+    const changed = await remapToConsolidationAccount(
+      mg,
+      fromNumbers,
+      { number: Number(source.account_number), name: source.account_name, description: source.description ?? null },
+      source.id,
+    );
+    await auditChangedAccounts(this.audit, mg, changed, userId, audit);
+  }
+
+  /** One account with its `consolidation_status` (see `list`). */
+  async getWithConsolidationStatus(id: string, opts?: { manager?: EntityManager }) {
+    const found = await this.get(id, opts);
+    const mg = opts?.manager ?? this.getRepo().manager;
+    const lookup = await consolidationLookup(mg, [found.consolidation_account_number]);
+    return { ...found, consolidation_status: consolidationStatusOf(found.consolidation_account_number, lookup) };
   }
 
   private csvHeaders(includeCoaCode = false): string[] {

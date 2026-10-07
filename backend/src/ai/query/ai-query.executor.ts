@@ -684,6 +684,7 @@ export class AiQueryExecutor {
         scope: scalar(row.scope),
         is_default: row.is_default == null ? null : Boolean(row.is_default),
         is_global_default: row.is_global_default == null ? null : Boolean(row.is_global_default),
+        is_consolidation: row.is_consolidation == null ? null : Boolean(row.is_consolidation),
         companies_count: numericScalar(row.companies_count),
         accounts_count: numericScalar(row.accounts_count),
       },
