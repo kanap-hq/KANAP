@@ -38,11 +38,13 @@ Rate limiting (default enabled):
   - Body: `{ refresh_token?: string }` (optional when `refresh_token` cookie is present)
   - Validates the refresh token, extends its expiration (sliding window), returns new access token
   - Returns 401 if refresh token is invalid or expired
+  - Returns 403 `Origin not allowed` when the request's `Origin` (or, without it, the origin of its `Referer`) is refused by the CORS policy (`CORS_ORIGINS`, the configured application address, the address of the request; see `backend/src/common/cors-policy.ts`). No token is issued and no cookie is changed. A request with neither header is accepted as before.
 
 - POST `/auth/logout` → `{ ok: true }`
   - Body: `{ refresh_token?: string }` (optional when `refresh_token` cookie is present)
   - Revokes the refresh token (logout from current device)
-  - Always returns success even if token was already revoked
+  - Returns success even if token was already revoked
+  - Returns 403 under the same origin rule as `/auth/refresh`, before any token is revoked or cookie cleared.
 
 - GET `/auth/me` → returns claims and subscription summary
   - Response:
@@ -53,8 +55,9 @@ Rate limiting (default enabled):
     - Admin safety: users with the `Administrator` role have `admin` across all resources.
     - `seats_used` counts users with `status='enabled'`.
 - POST `/auth/password-reset/request` → `{ email }`
-  - Body: `{ email: string }` (case-insensitive). Always returns `{ ok: true }`.
-  - Requires `RESEND_API_KEY` to be configured; in production links are built from configured `APP_BASE_URL`/`PUBLIC_APP_URL` (non-production can derive from request host for local subdomain workflows).
+  - Body: `{ email: string }` (case-insensitive). Returns `{ ok: true }` whether or not the account exists.
+  - Requires `RESEND_API_KEY` to be configured. Links are built from the configured application address: `APP_BASE_URL` (or `PUBLIC_APP_URL`) in single-tenant mode; in multi-tenant mode, the address of the request's tenant derived from the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` (for example `https://acme.kanap.net`). `Host` and `X-Forwarded-*` headers are followed only in development mode (`APP_ENV=development`) on a local development host (`lvh.me`, `localhost`, `dev.kanap.net` and their subdomains).
+  - Without a configured address: `400` `application URL is not configured: set APP_BASE_URL`, checked before the account lookup, so every address gets the same answer.
   - Security: reset links now carry the token in URL fragment form (`/reset-password#token=...`) instead of query string.
 - POST `/auth/password-reset/complete` → `{ ok: true }`
   - Body: `{ token: string, password: string }`. Minimum length 8.
@@ -113,6 +116,7 @@ Rate limiting (default enabled):
     - Reserved slugs rejected as unavailable: `www`, `api`, `admin`, `billing`, `account`, `platform-admin`, `app`, `nextcloud`, `migration`, `example`.
     - `country_iso` is a 2-letter ISO code (uppercase), used later for the initial company.
   - Behavior: saves a pending signup and emails an activation link. When email is not configured, returns `{ activation_url }` so QA/dev can activate manually.
+  - The activation link starts with `MARKETING_BASE_URL`. Without it, outside development mode: `400` `marketing URL is not configured: set MARKETING_BASE_URL` for every request, before anything is saved or sent. In development mode, a request on a local development host stands in for it.
   - Unavailable slug response (reserved or already used by an active tenant): `400` with `message: 'Slug not available'` and `code: 'SUBDOMAIN_NOT_AVAILABLE'`.
   - CAPTCHA:
     - When `CAPTCHA_MODE=enforce`, a valid Turnstile token is required.
@@ -130,6 +134,7 @@ Rate limiting (default enabled):
     - Creates an initial company named from the org/slug with `country_iso` from the signup.
     - Provisions the default global CoA into the tenant if a platform template is marked `loaded_by_default`.
     - Issues a password-reset token so the owner can set credentials inside the tenant.
+    - `tenant_url` is the new tenant's address derived from the configured application address, as for password reset links (for example `https://acme.kanap.net`). Without a configured address: `400` `application URL is not configured: set APP_BASE_URL`, before the tenant is created.
     - Sends a non-blocking notification email to `admin@kanap.net` with the tenant name, slug, registered email, and `country_iso`. This notification does not affect the response if delivery fails.
 
 ## Admin Branding (Tenant)
@@ -1386,6 +1391,7 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 - POST `/users/:id/invite` → sets user `status='invited'` (does not consume a seat)
   - Requires: users:admin level
   - Sends a Resend email with a password setup CTA pointing to `/accept-invite#token=...`. The token reuses the password-reset pipeline and automatically enables the user once a password is set.
+  - The link uses the same address as password reset links (the tenant's address in multi-tenant mode). Without a configured address: `400` `application URL is not configured: set APP_BASE_URL`.
 
 ### Users CSV
 - GET `/users/export?scope=template|data&language=…` → `text/csv`

@@ -28,7 +28,7 @@ import { RolePermission } from '../permissions/role-permission.entity';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import type { CommitThenRunFn } from '../common/import-connection';
-import { APP_URL_NOT_CONFIGURED_MESSAGE, resolveConfiguredAppBaseUrl } from '../common/url';
+import { APP_URL_NOT_CONFIGURED_MESSAGE } from '../common/url';
 import {
   cellOf,
   CsvDateOrder,
@@ -1022,9 +1022,10 @@ export class UsersService {
       );
     }
 
-    // The HTTP route passes the link base of the request (common/url.ts); other callers get the
-    // configured address.
-    const resolvedBaseUrl = baseUrl?.trim() || resolveConfiguredAppBaseUrl();
+    // The caller passes the link base (the HTTP route: `resolveAppBaseUrl`, common/url.ts). No
+    // fallback to the configured address: without the tenant it is no tenant's address in
+    // multi-tenant mode.
+    const resolvedBaseUrl = baseUrl?.trim();
     if (!resolvedBaseUrl) {
       throw new BadRequestException(APP_URL_NOT_CONFIGURED_MESSAGE);
     }

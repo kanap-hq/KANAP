@@ -236,6 +236,12 @@ export function validateStartupEnv(
   if (appBaseUrl && !isHttpUrl(appBaseUrl)) {
     warnings.push(`[CONFIG] APP_BASE_URL is not a valid http(s) address: set it to the address users open KANAP at (for example https://kanap.example.com).`);
   }
+  // Trial sign-ups (multi-tenant only) link to the public website (public/public.controller.ts).
+  if (!options.singleTenant && mode !== 'development' && !String(env.MARKETING_BASE_URL || '').trim()) {
+    warnings.push(
+      '[CONFIG] MARKETING_BASE_URL is not set: trial sign-ups are refused because the activation email has no link. Set MARKETING_BASE_URL to the address of the public website (for example https://www.example.com).',
+    );
+  }
 
   const patterns = parseCorsPatterns(env);
   if (patterns.length === 0) {

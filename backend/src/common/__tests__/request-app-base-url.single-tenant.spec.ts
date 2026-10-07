@@ -15,7 +15,7 @@ const ENV_KEYS = ['DEPLOYMENT_MODE', 'APP_ENV', 'NODE_ENV', 'APP_BASE_URL', 'PUB
 const savedEnv = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
 process.env.DEPLOYMENT_MODE = 'single-tenant';
 
-const { resolveRequestAppBaseUrl, resolveAppBaseUrl } = require('../url') as typeof UrlModule;
+const { resolveAppBaseUrl } = require('../url') as typeof UrlModule;
 const { Features } = require('../../config/features') as typeof FeaturesModule;
 const { AuthController } = require('../../auth/auth.controller') as typeof AuthControllerModule;
 const { UsersController } = require('../../users/users.controller') as typeof UsersControllerModule;
@@ -43,18 +43,24 @@ async function testModeIsSingleTenant() {
 
 async function testProductionUsesTheConfiguredAddress() {
   await withEnv({ NODE_ENV: 'production', APP_BASE_URL: 'https://app.acme-corp.com' }, () => {
-    assert.equal(resolveRequestAppBaseUrl(onPremRequest('app.acme-corp.com')), 'https://app.acme-corp.com');
+    assert.equal(resolveAppBaseUrl(onPremRequest('app.acme-corp.com')), 'https://app.acme-corp.com');
   });
   await withEnv({ NODE_ENV: 'production', APP_BASE_URL: 'https://kanap.acme-corp.com' }, () => {
-    assert.equal(resolveRequestAppBaseUrl(onPremRequest('kanap.acme-corp.com')), 'https://kanap.acme-corp.com');
+    assert.equal(resolveAppBaseUrl(onPremRequest('kanap.acme-corp.com')), 'https://kanap.acme-corp.com');
   });
 }
 
-async function testNonProductionUnchanged() {
+// Outside production the configured address is kept too; development mode follows only a
+// local development host.
+async function testNonProductionUsesTheConfiguredAddress() {
   await withEnv({ NODE_ENV: 'development', APP_BASE_URL: 'https://app.acme-corp.com' }, () => {
-    for (const host of ['app.acme-corp.com', 'kanap.local', 'localhost']) {
-      const req = onPremRequest(host);
-      assert.equal(resolveRequestAppBaseUrl(req), resolveAppBaseUrl(req), `host ${host}`);
+    assert.equal(resolveAppBaseUrl(onPremRequest('app.acme-corp.com')), 'https://app.acme-corp.com', 'host app.acme-corp.com');
+    assert.equal(resolveAppBaseUrl(onPremRequest('kanap.local')), 'https://app.acme-corp.com', 'host kanap.local');
+    assert.equal(resolveAppBaseUrl(onPremRequest('localhost')), 'http://localhost', 'host localhost');
+  });
+  await withEnv({ APP_BASE_URL: 'https://app.acme-corp.com' }, () => {
+    for (const host of ['kanap.local', 'localhost']) {
+      assert.equal(resolveAppBaseUrl(onPremRequest(host)), 'https://app.acme-corp.com', `run mode not set, host ${host}`);
     }
   });
 }
@@ -112,7 +118,7 @@ async function main() {
   try {
     await testModeIsSingleTenant();
     await testProductionUsesTheConfiguredAddress();
-    await testNonProductionUnchanged();
+    await testNonProductionUsesTheConfiguredAddress();
     await testPasswordResetLink();
     await testInviteLink();
   } finally {
