@@ -109,7 +109,7 @@ function mockGets(
   opts: { subject?: Record<string, unknown>; listItems?: unknown[] } = {},
 ) {
   const subject = contributor(opts.subject);
-  vi.mocked(api.get).mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+  vi.mocked(api.get).mockImplementation(async (url: string, config?: { params?: unknown }) => {
     if (url === `/portfolio/team-members/${CONTRIBUTOR_ID}` || url === `/portfolio/team-members/${CONTRIBUTOR_REF}`) return { data: subject };
     if (url === '/portfolio/employment-types') {
       return { data: [
@@ -122,7 +122,8 @@ function mockGets(
         { id: 'user-3', first_name: 'Grace', last_name: 'Hopper' },
         { id: 'user-9', first_name: 'Antoine', last_name: 'Kandel' },
       ];
-      const ids = config?.params?.ids ? String(config.params.ids).split(',') : null;
+      const params = config?.params as Record<string, unknown> | undefined;
+      const ids = params?.ids ? String(params.ids).split(',') : null;
       return { data: { items: ids ? people.filter((p) => ids.includes(p.id)) : people, has_more: false } };
     }
     if (url === '/portfolio/team-members/me') {

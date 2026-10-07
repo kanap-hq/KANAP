@@ -288,7 +288,7 @@ These destinations are only needed during installation and `docker build`. They 
 | `download.docker.com` | 443 | Docker APT repository |
 | `dl.min.io` | 443 | MinIO binary download |
 | `registry.npmjs.org` | 443 | npm dependencies during `docker build` |
-| `registry-1.docker.io`, `production.cloudflare.docker.com` | 443 | Pull base Docker images (`node:20-alpine`, `nginx:alpine`) |
+| `registry-1.docker.io`, `production.cloudflare.docker.com` | 443 | Pull base Docker images (`node:22-alpine`, `nginx:alpine`) |
 | Ubuntu APT mirrors | 80/443 | System packages (PostgreSQL, nginx, etc.) |
 
 ### Outbound — Runtime (Conditional)

@@ -29,7 +29,7 @@ Goals, constraints, assumptions, and relevant background for architectural choic
 
 ## Components
 - **Frontend (`web`)**: React + TypeScript (Vite), MUI + icons, AG Grid community (`ServerDataGrid`), TanStack Query, i18next (en/fr/de/es), zod + react-hook-form, dnd-kit, ag-charts, d3, SVAR Gantt, MDXEditor. Navigation is a top AppBar with workspace tabs (AI, Agents, Portfolio, Knowledge, IT Landscape, Budget Management, Master Data, Admin) plus a per-workspace left drawer; Home is the `/` root. Details in `doc/frontend-architecture.md`.
-- **Backend API (`api`)**: NestJS + TypeORM on Node 20. Modules by domain:
+- **Backend API (`api`)**: NestJS + TypeORM on Node 22. Modules by domain:
   - Budget: spend (OPEX), capex, contracts, accounts / chart of accounts, currency, freeze, analytics, billing, dashboard
   - Master data: companies, departments, suppliers, contacts, locations, users, business processes, master-data operations
   - Portfolio: requests, projects, teams, contributors, time entries; tasks
