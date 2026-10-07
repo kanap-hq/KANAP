@@ -14,6 +14,7 @@ Rendez-vous dans **Administration** depuis le menu principal pour accéder au hu
 - Facturation : Nécessite le rôle admin facturation
 - Authentification : Nécessite `users:admin` (contrôlé par feature flag ; nécessite SSO activé)
 - Personnalisation : Nécessite `users:admin` (hôte tenant uniquement ; accessible depuis la barre latérale)
+- Données d'exemple : Nécessite le rôle Administrateur (espaces de travail cloud uniquement ; accessible depuis la barre latérale)
 
 ---
 
@@ -32,7 +33,7 @@ La page d'accueil Administration donne un accès rapide aux principales fonction
 | **Journal d'audit** | Parcourir tout l'historique des modifications | `users:admin` |
 | **Facturation** | Plan et factures | Admin facturation |
 
-Authentification et Personnalisation sont accessibles depuis la navigation dans la barre latérale mais n'apparaissent pas sur la page d'accueil du hub d'administration.
+Authentification, Personnalisation et Données d'exemple sont accessibles depuis la navigation dans la barre latérale mais n'apparaissent pas sur la page d'accueil du hub d'administration.
 
 ---
 
@@ -501,6 +502,18 @@ La personnalisation vous permet de :
 - Réinitialiser toute la personnalisation aux valeurs par défaut
 
 Pour les instructions détaillées étape par étape, consultez : [Personnalisation](branding.md)
+
+---
+
+## Données d'exemple
+
+Utilisez **Administration > Données d'exemple** pour remplir un espace de travail vide avec Fromage & Co, une fromagerie fictive, puis pour effacer ensuite tout l'espace de travail.
+
+- Route : `/admin/sample-data`
+- Qui : les utilisateurs ayant le rôle Administrateur
+- Portée : espaces de travail cloud uniquement
+
+Pour le contenu du jeu, ce que l'effacement supprime et conserve, et le bandeau de la page d'accueil, consultez : [Données d'exemple](sample-data.md)
 
 ---
 

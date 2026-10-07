@@ -5,6 +5,9 @@ entities, ~50 applications, spend/CAPEX budgets, a project portfolio, an IT
 landscape with interfaces and connections, a Service Desk knowledge library,
 and a demo AI agent working mock helpdesk tickets.
 
+On a KANAP cloud workspace you do not need the runner: an Administrator loads the same
+set from **Admin** → **Sample data** and erases it from the same page.
+
 Everything is created through the public API by a single idempotent runner:
 
 ```bash

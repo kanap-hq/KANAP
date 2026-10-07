@@ -34,6 +34,10 @@ La acción **Registrar tiempo** abre un diálogo enfocado para que pueda registr
 
 Después de guardar, el mosaico de resumen de tiempo del panel se actualiza automáticamente.
 
+## Línea de datos de ejemplo
+
+En un espacio de trabajo en la nube que todavía está vacío, los administradores ven una línea sobre los mosaicos: «Descubra KANAP con datos de ejemplo.» **Cargar** abre el cuadro de diálogo de datos de ejemplo y **Ocultar** elimina la línea de forma definitiva. La línea desaparece en cuanto el espacio de trabajo contiene datos. Véase [Datos de ejemplo](sample-data.md).
+
 ## Mosaicos del panel
 
 El panel muestra una cuadrícula de mosaicos, cada uno mostrando un aspecto diferente de su trabajo. Los mosaicos se distribuyen en una cuadrícula adaptable (tres columnas en pantallas grandes, dos en medianas, una en pequeñas). Los mosaicos para los que no tiene permiso de visualización no se cargan en absoluto.

@@ -4,7 +4,7 @@ Metadata
 - Purpose: Quick reference for core endpoints and allocation/metrics model
 - Audience: Engineers, integrators
 - Status: current
-- Last Updated: 2026-02-27
+- Last Updated: 2026-10-08
 
 ## Auth
 
@@ -171,6 +171,53 @@ These endpoints are tenant-scoped and require:
     - `use_logo_in_dark = true`
     - clear both primary colors
   - Returns `{ ok, has_logo, logo_version, use_logo_in_dark, primary_color_light, primary_color_dark }`.
+
+## Admin Sample Data (cloud workspaces)
+Loads the Fromage & Co demonstration set into an empty workspace and erases a workspace back to its starting state. Requirements for all four routes:
+- JWT authentication
+- the user holds the **Administrator** role of the workspace (the role itself, not a module permission level). Otherwise `403` `administrator_required`. There is no `@RequireLevel`, so a frozen workspace is not blocked by the generic freeze guard; the service decides per route (see below).
+- multi-tenant mode only: `404` in single-tenant mode (`MultiTenantOnlyGuard`), and `404` on the platform host
+- no request transaction (`@SkipTenantTransaction`): the service opens its own, so a reset never waits on a lock held by its own request
+
+The state lives in `tenants.metadata.demo` (no table of its own). Status values: `idle`, `loading`, `loaded`, `failed`, `resetting`.
+
+- GET `/admin/sample-data`
+  - Returns the state plus what the page needs:
+    - `{ status, step, started_at, heartbeat_at, loaded_at, loaded_by, failed_at, error_code, dismissed_at, can_load, created_since_load, workspace_name, loaded_by_name }`
+  - `step` is the loader step of a running load (for example `companies`), `null` otherwise.
+  - `error_code` when `status = failed`: `load_failed`, `load_timeout`, `load_not_started`, `load_interrupted` or `reset_failed` (the automatic reset after the failed load failed too).
+  - `can_load` is true when the status is `idle` or `failed` and the workspace is still in its starting state (no business data, no added configuration; what activation creates does not count). It does not look at the subscription.
+  - `created_since_load` counts the objects created after `loaded_at` (business and configuration tables, companies, documents outside the templates library, real users). `null` unless `status = loaded`.
+  - `workspace_name` is the name an Administrator types to confirm a reset (the workspace slug when the name is empty).
+  - A `loading` or `resetting` state left by a stopped API process is taken over on read (reset, then `failed` or `idle`).
+
+- POST `/admin/sample-data/load` → `202` with the `loading` state
+  - No body. Starts the loader in the background; the client polls `GET`.
+  - The request `Host` header (`req.headers.host`, never `X-Forwarded-Host`) must be a host of the workspace: the loader calls this API with it. The reverse proxies forward the browser's host unchanged.
+  - Refused when:
+    - `403` `administrator_required`
+    - `403` `tenant_not_active`
+    - `403` `TRIAL_EXPIRED` or `SUBSCRIPTION_FROZEN` (same rule as the AI features, `evaluateSubscriptionAccess`; cloud only)
+    - `400` `host_mismatch`
+    - `409` `tenant_not_empty` (body lists the offending `tables`)
+    - `409` `demo_status_conflict` (body carries the current `status`: a load, a reset or a loaded set already exists)
+    - `409` `demo_load_capacity` (too many loads running across all workspaces)
+    - `503` `demo_data_unavailable` (loader missing, or the server is stopping)
+  - A failed load resets the workspace automatically and ends in `failed` with an `error_code`.
+
+- POST `/admin/sample-data/reset` → `202` with the `resetting` state
+  - Body: `{ confirm_name: string }`, compared to `workspace_name` with surrounding spaces and case ignored. `400` `confirmation_mismatch` otherwise (also when missing).
+  - Allowed when the status is `loaded` or `failed`, and on a frozen workspace or an expired trial. `409` `demo_status_conflict` otherwise; `409` `tenant_reset_running` if another reset holds the lock.
+  - Runs `TenantResetService` in the background. It keeps real users and their roles, the subscription, the workspace name, address and logo, the Microsoft sign-in setup, the AI settings and the audit log (plus one audit entry with source reference `demo-reset`). Workspace settings (currencies, budget columns, classification catalog) go back to defaults. Storage objects are deleted after the commit.
+  - While the status is `resetting`, every other write request of the workspace gets `409` `tenant_resetting` (reads, token refresh and sign-out still work).
+  - After a successful reset, every enabled user with the Administrator role gets an e-mail (who, when, link to the workspace), if e-mail is enabled. A failure to send never fails the reset.
+
+- POST `/admin/sample-data/dismiss` → `200` with the state
+  - Hides the home banner for every Administrator: sets `metadata.demo.dismissed_at` (a targeted `jsonb_set`, never an entity save). A reset keeps it.
+
+Rate limit: `load`, `reset` and `dismiss` allow 10 calls per 10 minutes per user (`RATE_LIMITS.sampleDataAction`, `UserRateLimitGuard`); `429` beyond. `GET` has no dedicated limit.
+
+Public config: `GET /config/public` returns `features.sampleData` (`true` in multi-tenant mode, `false` in single-tenant mode). The frontend shows the page, the navigation entry and the home banner only when it is true and the user holds the Administrator role.
 
 ## Billing
 - GET `/billing/subscription` → `{ plan_name, seat_limit, seats_used }`

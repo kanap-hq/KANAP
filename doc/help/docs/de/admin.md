@@ -14,6 +14,7 @@ Navigieren Sie im Hauptmenü zu **Administration**, um den Administrationsbereic
 - Abrechnung: Erfordert die Rolle Abrechnungsadministrator
 - Authentifizierung: Erfordert `users:admin` (Feature-Flag-gesteuert; erfordert aktiviertes SSO)
 - Branding: Erfordert `users:admin` (nur Mandanten-Host; über die Seitenleiste zugänglich)
+- Beispieldaten: Erfordert die Rolle Administrator (nur Cloud-Arbeitsbereiche; über die Seitenleiste zugänglich)
 
 ---
 
@@ -32,7 +33,7 @@ Die Startseite der Administration bietet schnellen Zugriff auf die wichtigsten V
 | **Audit-Protokoll** | Gesamte Änderungshistorie durchsuchen | `users:admin` |
 | **Abrechnung** | Tarif und Rechnungen | Abrechnungsadministrator |
 
-Authentifizierung und Branding sind über die Seitenleistennavigation erreichbar, erscheinen jedoch nicht auf der Startseite des Administrations-Hubs.
+Authentifizierung, Branding und Beispieldaten sind über die Seitenleistennavigation erreichbar, erscheinen jedoch nicht auf der Startseite des Administrations-Hubs.
 
 ---
 
@@ -501,6 +502,18 @@ Mit Branding können Sie:
 - Alle Branding-Einstellungen auf die Standardwerte zurücksetzen
 
 Für eine vollständige Schritt-für-Schritt-Anleitung siehe: [Branding](branding.md)
+
+---
+
+## Beispieldaten
+
+Verwenden Sie **Administration > Beispieldaten**, um einen leeren Arbeitsbereich mit Fromage & Co, einem fiktiven Käsehersteller, zu füllen und den gesamten Arbeitsbereich anschließend wieder zu löschen.
+
+- Route: `/admin/sample-data`
+- Wer: Benutzer mit der Rolle Administrator
+- Geltungsbereich: nur Cloud-Arbeitsbereiche
+
+Zum Inhalt des Datensatzes, zu dem, was das Löschen entfernt und behält, und zum Banner auf der Startseite siehe: [Beispieldaten](sample-data.md)
 
 ---
 
