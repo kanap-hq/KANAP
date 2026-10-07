@@ -28,7 +28,7 @@
     "@tanstack/react-query-devtools": "^5.51.23",
     "@types/d3": "^7.4.3",
     "ag-charts-community": "^9.3.1",
-    "ag-charts-react": "^9.3.1",
+    "ag-charts-react": "^14.2.0",
     "ag-grid-community": "^32.3.2",
     "ag-grid-react": "^32.3.2",
     "axios": "^1.16.0",
