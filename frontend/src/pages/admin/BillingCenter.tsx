@@ -304,8 +304,9 @@ function InvoiceTextRow({
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   const message = error ?? (invalidMessage && draft === value ? invalidMessage : undefined);
   return (
-    <PropertyRow label={field.label} required={field.required} valueSx={{ maxWidth: 'none' }}>
+    <PropertyRow label={field.label} required={field.required}>
       <TextField
+        fullWidth
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
         onFocus={onFocus}
@@ -680,7 +681,7 @@ export default function BillingCenter() {
             <>
               <Box sx={twoColumnsSx}>
                 {fields.map(renderTextRow)}
-                <PropertyRow label={t('billing.fields.country')} required valueSx={{ maxWidth: 'none' }}>
+                <PropertyRow label={t('billing.fields.country')} required>
                   <CountryPicker
                     label={t('billing.fields.country')}
                     placeholder={t('billing.placeholders.country')}
