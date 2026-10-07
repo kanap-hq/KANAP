@@ -1000,10 +1000,7 @@ export class UsersService {
       );
     }
 
-    let resolvedBaseUrl = baseUrl?.trim();
-    if (!resolvedBaseUrl) {
-      resolvedBaseUrl = (process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL || '').trim();
-    }
+    const resolvedBaseUrl = baseUrl?.trim();
     if (!resolvedBaseUrl) {
       throw new BadRequestException('application url is not configured');
     }
