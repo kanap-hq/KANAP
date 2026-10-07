@@ -335,7 +335,8 @@ function AppRoutes() {
           <Route path="/admin/integrations" element={<AdminIntegrationsPage />} />
           {!isSingleTenant && <Route path="/admin/platform-ai" element={<AdminPlatformAiPage />} />}
           <Route path="/admin/branding" element={<AdminBrandingPage />} />
-          {!isSingleTenant && config.features.sampleData && <Route path="/admin/sample-data" element={<SampleDataPage />} />}
+          {/* Always registered: the page refuses itself where sample data is off (on-premise, flag off). */}
+          <Route path="/admin/sample-data" element={<SampleDataPage />} />
           <Route path="/admin/scheduled-tasks" element={<ScheduledTasksPage />} />
           {!isSingleTenant && <Route path="/admin/ops-dashboard" element={<OpsDashboardPage />} />}
           {!isSingleTenant && <Route path="/admin/tenants" element={<AdminTenantsPage />} />}

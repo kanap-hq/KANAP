@@ -175,3 +175,12 @@ export const DECISION_COLORS: Record<string, string> = {
   need_info: 'info',
   analysis_complete: 'info',
 };
+
+/** Sample data of a workspace (Administration › Sample data): running in blue, never orange. */
+export const SAMPLE_DATA_STATUS_COLORS: Record<string, string> = {
+  idle: 'default',
+  loading: 'info',
+  resetting: 'info',
+  loaded: 'success',
+  failed: 'error',
+};

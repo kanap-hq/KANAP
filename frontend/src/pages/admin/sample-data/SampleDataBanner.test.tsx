@@ -44,7 +44,10 @@ const EMPTY = {
   failed_at: null,
   error_code: null,
   dismissed_at: null,
+  ever_loaded_at: null,
+  reset_failed_at: null,
   can_load: true,
+  load_refusal: null,
   created_since_load: null,
   workspace_name: 'Fromage & Co',
   loaded_by_name: null,
@@ -79,10 +82,13 @@ describe('SampleDataBanner', () => {
     (apiClient.post as any).mockResolvedValue({ ...EMPTY, status: 'loading' });
     renderBanner();
 
-    const line = await screen.findByRole('status');
-    expect(within(line).getByText(TEXT)).toBeInTheDocument();
+    // The light answer of the banner.
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/admin/sample-data', { params: { view: 'banner' } }));
+    const text = await screen.findByRole('status');
+    expect(text).toHaveTextContent(TEXT);
+    expect(within(text).queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    fireEvent.click(within(line).getByRole('button', { name: 'Load' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/Fromage & Co, a fictional cheese maker/)).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Load sample data' }));
@@ -97,11 +103,13 @@ describe('SampleDataBanner', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Hide' }));
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/admin/sample-data/dismiss'));
+    // Only the text is announced, not the buttons.
+
     await waitFor(() => expect(screen.queryByText(TEXT)).not.toBeInTheDocument());
   });
 
   it('follows a running load on the same line', async () => {
-    (apiClient.get as any).mockResolvedValue({ ...EMPTY, status: 'loading', step: 'landscape', can_load: false, dismissed_at: '2026-10-07T10:00:00Z' });
+    (apiClient.get as any).mockResolvedValue({ ...EMPTY, status: 'loading', step: 'landscape', can_load: false });
     renderBanner();
 
     expect(await screen.findByText(/Loading sample data\. Step 15 of 19: instances, interfaces and connections\./)).toBeInTheDocument();
@@ -109,15 +117,42 @@ describe('SampleDataBanner', () => {
     expect(screen.queryByRole('button', { name: 'Hide' })).not.toBeInTheDocument();
   });
 
+  it('gives the reason of a failed load and offers to try again', async () => {
+    (apiClient.get as any).mockResolvedValue({ ...EMPTY, status: 'failed', error_code: 'load_timeout' });
+    (apiClient.post as any).mockResolvedValue({ ...EMPTY, status: 'loading' });
+    renderBanner();
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Loading took too long and was stopped. The workspace was put back in its starting state.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Load sample data' }));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/admin/sample-data/load'));
+  });
+
+  it('stops asking after a refusal that will not change', async () => {
+    (apiClient.get as any).mockRejectedValue({ response: { status: 403, data: { code: 'administrator_required' } } });
+    renderBanner();
+
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(apiClient.get).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('home')).toBeEmptyDOMElement();
+  });
+
   it.each([
     ['hidden before', { dismissed_at: '2026-10-07T10:00:00Z' }],
-    ['a workspace that holds data', { can_load: false }],
-    ['loaded sample data', { status: 'loaded', can_load: false }],
+    ['a workspace that holds data', { can_load: false, load_refusal: 'tenant_not_empty' }],
+    ['a frozen subscription', { can_load: false, load_refusal: 'SUBSCRIPTION_FROZEN' }],
+    ['loaded sample data', { status: 'loaded', can_load: false, ever_loaded_at: '2026-10-07T10:00:00Z' }],
+    ['a workspace reset after a load', { ever_loaded_at: '2026-10-07T10:00:00Z' }],
+    ['a load started again after a reset', { status: 'loading', can_load: false, ever_loaded_at: '2026-10-07T10:00:00Z' }],
   ])('shows nothing for %s', async (_label, overrides) => {
     (apiClient.get as any).mockResolvedValue({ ...EMPTY, ...overrides });
     renderBanner();
 
-    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/admin/sample-data'));
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/admin/sample-data', { params: { view: 'banner' } }));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.getByTestId('home')).toBeEmptyDOMElement();
   });

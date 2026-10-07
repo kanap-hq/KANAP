@@ -11,6 +11,7 @@ type ApiErrorLike = {
   code?: unknown;
   error?: unknown;
   response?: {
+    status?: number;
     data?: ApiErrorPayload;
   };
 };
@@ -39,6 +40,14 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
 
   if (code) {
     const translated = t(`errors:${code}`, { defaultValue: message || fallback });
+    if (typeof translated === 'string' && translated.trim()) {
+      return translated;
+    }
+  }
+
+  // A rate limit answers with no code of its own (ThrottlerException).
+  if (apiError?.response?.status === 429) {
+    const translated = t('errors:rate_limited', { defaultValue: fallback });
     if (typeof translated === 'string' && translated.trim()) {
       return translated;
     }

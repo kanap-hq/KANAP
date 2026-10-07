@@ -1244,6 +1244,10 @@
     "title": "Données d'exemple",
     "intro": "Découvrez KANAP avec Fromage & Co, une fromagerie fictive. Les données d'exemple se chargent dans un espace de travail vide, et s'effacent ensuite depuis cette page.",
     "notEmpty": "Les données d'exemple ne se chargent que dans un espace de travail vide. Cet espace de travail contient déjà des données.",
+    "loadRefusal": {
+      "SUBSCRIPTION_FROZEN": "Les données d'exemple ne peuvent pas être chargées tant que l'abonnement est gelé.",
+      "TRIAL_EXPIRED": "Les données d'exemple ne peuvent plus être chargées une fois la période d'essai terminée."
+    },
     "loadedHint": "Pour commencer votre propre travail dans un espace de travail propre, effacez tout. L'espace de travail revient à son état initial.",
     "resetting": "Effacement du contenu de l'espace de travail. Cela prend quelques secondes.",
     "status": {
@@ -1257,8 +1261,8 @@
       "status": "Statut",
       "loadedOn": "Chargées le",
       "startedOn": "Commencé le",
-      "failedOn": "Échec le",
-      "by": "Par"
+      "failedOn": "Échoué le",
+      "dateBy": "{{date}} par {{name}}"
     },
     "actions": {
       "load": "Charger les données d'exemple",
@@ -1268,7 +1272,7 @@
     },
     "loading": {
       "step": "Étape {{current}} sur {{total}} : {{label}}",
-      "preparing": "Préparation du chargement",
+      "generic": "Chargement…",
       "concurrentWrites": "Ce qui est créé dans l'espace de travail pendant ce temps est effacé si le chargement échoue."
     },
     "steps": {
@@ -1307,7 +1311,7 @@
       "users": "18 utilisateurs fictifs, qui ne peuvent pas se connecter",
       "landscape": "Les applications et leur cartographie : instances, interfaces et connexions",
       "business": "Les contrats, le budget de l'année en cours, les projets et les tâches",
-      "duration": "Le chargement prend moins d'une minute. Vous pourrez tout effacer ensuite depuis Administration › Données d'exemple."
+      "duration": "Le chargement prend moins d'une minute. Vous pourrez tout effacer ensuite depuis {{path}}."
     },
     "resetDialog": {
       "title": "Tout effacer et repartir de zéro",
@@ -1324,20 +1328,21 @@
       "settingsDefaults": "Les réglages enregistrés sur l'espace de travail (devises, colonnes budgétaires, catalogue de classification) reviennent à leurs valeurs par défaut.",
       "createdSinceLoad_one": "{{count}} élément créé depuis le chargement des données d'exemple sera aussi effacé.",
       "createdSinceLoad_other": "{{count}} éléments créés depuis le chargement des données d'exemple seront aussi effacés.",
-      "email": "Les administrateurs reçoivent un e-mail une fois l'espace de travail effacé.",
-      "typeName": "Pour confirmer, saisissez le nom de l'espace de travail : <strong>{{name}}</strong>",
+      "email": "Les administrateurs reçoivent un e-mail une fois le contenu de l'espace de travail effacé.",
+      "typeName": "Pour confirmer, saisissez le nom de l'espace de travail :",
       "nameLabel": "Nom de l'espace de travail"
     },
     "banner": {
       "text": "Découvrez KANAP avec des données d'exemple.",
       "load": "Charger",
       "hide": "Masquer",
-      "loading": "Chargement des données d'exemple. {{step}}."
+      "loading": "Chargement des données d'exemple. {{step}}.",
+      "loadingNoStep": "Chargement des données d'exemple."
     },
     "messages": {
       "statusFailed": "L'état des données d'exemple n'a pas pu être lu.",
       "loadFailed": "Les données d'exemple n'ont pas pu être chargées.",
-      "resetFailed": "L'espace de travail n'a pas pu être effacé.",
+      "resetFailed": "Le contenu de l'espace de travail n'a pas pu être effacé. Rien n'a été modifié.",
       "dismissFailed": "Ce message n'a pas pu être masqué."
     }
   }

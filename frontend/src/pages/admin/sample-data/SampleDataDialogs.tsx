@@ -1,18 +1,33 @@
 import React from 'react';
 import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
-import { Trans, useTranslation } from 'react-i18next';
+import { alpha, type Theme } from '@mui/material/styles';
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+import { useTranslation } from 'react-i18next';
 import { KanapDialog } from '../../../components/design';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { getPillBg } from '../../../utils/statusColors';
 import { confirmationMatches, SAMPLE_DATA_STEPS } from './useSampleData';
 
 const listSx = { m: 0, pl: 2.5, display: 'flex', flexDirection: 'column', gap: 0.5 } as const;
 
-/** "Step 3 of 19: companies" for a running load; a known step only, never the technical name. */
+/** The charter's attention treatment: orange icon, light orange tint, orange border. */
+const irreversibleWarningSx = (theme: Theme) => ({
+  bgcolor: getPillBg('warning', theme.palette.mode),
+  border: `1px solid ${alpha(theme.palette.kanap.orange, 0.45)}`,
+  color: theme.palette.kanap.text.primary,
+  fontWeight: 500,
+  '& .MuiAlert-icon': { color: theme.palette.kanap.orange, opacity: 1 },
+});
+
+/**
+ * "Step 3 of 19: companies" for a running load; null for a step this build does not know (or none
+ * yet), never the technical name.
+ */
 export function useStepLabel() {
   const { t } = useTranslation('admin');
-  return React.useCallback((step: string | null): string => {
+  return React.useCallback((step: string | null): string | null => {
     const index = step ? (SAMPLE_DATA_STEPS as readonly string[]).indexOf(step) : -1;
-    if (index < 0) return t('sampleData.loading.preparing');
+    if (index < 0) return null;
     return t('sampleData.loading.step', {
       current: index + 1,
       total: SAMPLE_DATA_STEPS.length,
@@ -29,7 +44,9 @@ export function LoadSampleDataDialog({ open, loading, error, onClose, onConfirm 
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const { t } = useTranslation(['admin', 'errors']);
+  const { t } = useTranslation(['admin', 'errors', 'nav']);
+  // Where the page is, as the navigation names it in this language.
+  const path = `${t('nav:workspaces.admin')} › ${t('nav:sidebar.admin.sampleData')}`;
   return (
     <KanapDialog
       open={open}
@@ -48,7 +65,7 @@ export function LoadSampleDataDialog({ open, loading, error, onClose, onConfirm 
           <Typography component="li" variant="body2">{t('sampleData.loadDialog.landscape')}</Typography>
           <Typography component="li" variant="body2">{t('sampleData.loadDialog.business')}</Typography>
         </Box>
-        <Typography variant="body2" color="text.secondary">{t('sampleData.loadDialog.duration')}</Typography>
+        <Typography variant="body2" color="text.secondary">{t('sampleData.loadDialog.duration', { path })}</Typography>
       </Stack>
     </KanapDialog>
   );
@@ -85,7 +102,9 @@ export function ResetWorkspaceDialog({ open, workspaceName, createdSinceLoad, re
     >
       <Stack spacing={1.5}>
         {error ? <Alert severity="error">{getApiErrorMessage(error, t, t('sampleData.messages.resetFailed'))}</Alert> : null}
-        <Alert severity="warning" icon={false}>{t('sampleData.resetDialog.warning')}</Alert>
+        <Alert severity="warning" icon={<WarningAmberRoundedIcon fontSize="inherit" />} sx={irreversibleWarningSx}>
+          {t('sampleData.resetDialog.warning')}
+        </Alert>
         <Box>
           <Typography variant="body2" sx={{ mb: 0.5 }}>{t('sampleData.resetDialog.keptTitle')}</Typography>
           <Box component="ul" sx={listSx}>
@@ -101,12 +120,8 @@ export function ResetWorkspaceDialog({ open, workspaceName, createdSinceLoad, re
         <Typography variant="body2" color="text.secondary">{t('sampleData.resetDialog.email')}</Typography>
         <Box>
           <Typography variant="body2" sx={{ mb: 0.75 }}>
-            <Trans
-              t={t}
-              i18nKey="sampleData.resetDialog.typeName"
-              values={{ name: workspaceName }}
-              components={{ strong: <Box component="span" sx={{ fontWeight: 500 }} /> }}
-            />
+            {t('sampleData.resetDialog.typeName')}{' '}
+            <Box component="span" sx={{ fontWeight: 500, whiteSpace: 'pre-wrap' }}>{workspaceName}</Box>
           </Typography>
           <TextField
             variant="standard"

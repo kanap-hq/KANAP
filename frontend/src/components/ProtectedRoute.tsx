@@ -297,6 +297,8 @@ export default function ProtectedRoute() {
       subscription?.is_subscription_healthy === false &&
       claims.isBillingAdmin &&
       !path.startsWith('/admin/billing') &&
+      // An Administrator may still erase the content of a frozen workspace (sample data reset).
+      !path.startsWith('/admin/sample-data') &&
       !claims.isPlatformAdmin
     ) {
       return <Navigate to="/admin/billing" replace />;

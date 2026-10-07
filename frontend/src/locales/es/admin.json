@@ -1244,6 +1244,10 @@
     "title": "Datos de ejemplo",
     "intro": "Descubra KANAP con Fromage & Co, una quesería ficticia. Los datos de ejemplo se cargan en un espacio de trabajo vacío y se borran después desde esta página.",
     "notEmpty": "Los datos de ejemplo solo se pueden cargar en un espacio de trabajo vacío. Este espacio de trabajo ya contiene datos.",
+    "loadRefusal": {
+      "SUBSCRIPTION_FROZEN": "Los datos de ejemplo no se pueden cargar mientras la suscripción esté congelada.",
+      "TRIAL_EXPIRED": "Los datos de ejemplo ya no se pueden cargar una vez finalizado el periodo de prueba."
+    },
     "loadedHint": "Para empezar su propio trabajo en un espacio de trabajo limpio, borre todo. El espacio de trabajo vuelve a su estado inicial.",
     "resetting": "Borrando el contenido del espacio de trabajo. Tarda unos segundos.",
     "status": {
@@ -1257,8 +1261,8 @@
       "status": "Estado",
       "loadedOn": "Cargados el",
       "startedOn": "Iniciado el",
-      "failedOn": "Error el",
-      "by": "Por"
+      "failedOn": "Falló el",
+      "dateBy": "{{date}} por {{name}}"
     },
     "actions": {
       "load": "Cargar datos de ejemplo",
@@ -1268,7 +1272,7 @@
     },
     "loading": {
       "step": "Paso {{current}} de {{total}}: {{label}}",
-      "preparing": "Preparando la carga",
+      "generic": "Cargando…",
       "concurrentWrites": "Lo que se cree en el espacio de trabajo mientras tanto se borra si la carga falla."
     },
     "steps": {
@@ -1307,7 +1311,7 @@
       "users": "18 usuarios ficticios, que no pueden iniciar sesión",
       "landscape": "Las aplicaciones y su panorama: instancias, interfaces y conexiones",
       "business": "Los contratos, el presupuesto del año en curso, los proyectos y las tareas",
-      "duration": "La carga tarda menos de un minuto. Puede borrarlo todo más tarde desde Administración › Datos de ejemplo."
+      "duration": "La carga tarda menos de un minuto. Puede borrarlo todo más tarde desde {{path}}."
     },
     "resetDialog": {
       "title": "Borrar todo y empezar de cero",
@@ -1324,20 +1328,21 @@
       "settingsDefaults": "La configuración guardada en el espacio de trabajo (monedas, columnas presupuestarias, catálogo de clasificación) vuelve a sus valores predeterminados.",
       "createdSinceLoad_one": "También se borrará {{count}} elemento creado desde la carga de los datos de ejemplo.",
       "createdSinceLoad_other": "También se borrarán {{count}} elementos creados desde la carga de los datos de ejemplo.",
-      "email": "Los administradores reciben un correo electrónico cuando el espacio de trabajo se ha borrado.",
-      "typeName": "Para confirmar, escriba el nombre del espacio de trabajo: <strong>{{name}}</strong>",
+      "email": "Los administradores reciben un correo electrónico cuando se ha borrado el contenido del espacio de trabajo.",
+      "typeName": "Para confirmar, escriba el nombre del espacio de trabajo:",
       "nameLabel": "Nombre del espacio de trabajo"
     },
     "banner": {
       "text": "Descubra KANAP con datos de ejemplo.",
       "load": "Cargar",
       "hide": "Ocultar",
-      "loading": "Cargando datos de ejemplo. {{step}}."
+      "loading": "Cargando datos de ejemplo. {{step}}.",
+      "loadingNoStep": "Cargando datos de ejemplo."
     },
     "messages": {
       "statusFailed": "No se pudo leer el estado de los datos de ejemplo.",
       "loadFailed": "No se pudieron cargar los datos de ejemplo.",
-      "resetFailed": "No se pudo borrar el espacio de trabajo.",
+      "resetFailed": "No se pudo borrar el contenido del espacio de trabajo. No se ha modificado nada.",
       "dismissFailed": "No se pudo ocultar este mensaje."
     }
   }

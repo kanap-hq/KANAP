@@ -40,5 +40,6 @@
   "tenant_not_active": "Este espacio de trabajo no está activo.",
   "tenant_resetting": "Este espacio de trabajo se está borrando y vuelve a su estado inicial. Inténtelo de nuevo en un momento.",
   "tenant_reset_running": "Este espacio de trabajo ya se está borrando. Inténtelo de nuevo cuando haya terminado.",
-  "confirmation_mismatch": "El nombre escrito no coincide con el nombre del espacio de trabajo."
+  "confirmation_mismatch": "El nombre escrito no coincide con el nombre del espacio de trabajo.",
+  "rate_limited": "Demasiados intentos. Espere unos minutos e inténtelo de nuevo."
 }

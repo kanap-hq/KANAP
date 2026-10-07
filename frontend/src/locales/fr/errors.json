@@ -40,5 +40,6 @@
   "tenant_not_active": "Cet espace de travail n'est pas actif.",
   "tenant_resetting": "Cet espace de travail est en cours d'effacement et revient à son état initial. Réessayez dans un instant.",
   "tenant_reset_running": "Cet espace de travail est déjà en cours d'effacement. Réessayez quand ce sera terminé.",
-  "confirmation_mismatch": "Le nom saisi ne correspond pas au nom de l'espace de travail."
+  "confirmation_mismatch": "Le nom saisi ne correspond pas au nom de l'espace de travail.",
+  "rate_limited": "Trop de tentatives. Patientez quelques minutes, puis réessayez."
 }

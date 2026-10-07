@@ -40,5 +40,6 @@
   "tenant_not_active": "This workspace is not active.",
   "tenant_resetting": "This workspace is being erased and put back in its starting state. Try again in a moment.",
   "tenant_reset_running": "This workspace is already being erased. Try again when it has finished.",
-  "confirmation_mismatch": "The name typed does not match the name of the workspace."
+  "confirmation_mismatch": "The name typed does not match the name of the workspace.",
+  "rate_limited": "Too many attempts. Wait a few minutes and try again."
 }

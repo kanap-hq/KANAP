@@ -7,39 +7,25 @@ import { StatusDot } from '../../components/design';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { getDotColor } from '../../utils/statusColors';
+import { getDotColor, SAMPLE_DATA_STATUS_COLORS } from '../../utils/statusColors';
+import { metricStripSx } from '../../theme/stripSx';
 import ForbiddenPage from '../ForbiddenPage';
-import type { SampleDataOverview, SampleDataStatus } from '../../api/endpoints/sampleData';
+import type { SampleDataOverview } from '../../api/endpoints/sampleData';
 import { LoadSampleDataDialog, ResetWorkspaceDialog, useStepLabel } from './sample-data/SampleDataDialogs';
 import { useSampleData, useSampleDataAvailable } from './sample-data/useSampleData';
 
-const STATUS_COLOR: Record<SampleDataStatus, string> = {
-  idle: 'default',
-  loading: 'info',
-  loaded: 'success',
-  failed: 'error',
-  resetting: 'warning',
-};
-
-const pageSx = (theme: Theme) => ({
-  '& .kanap-strip': {
-    display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
-    gap: '40px', flexWrap: 'wrap', fontSize: 13, p: '14px 18px',
-    bgcolor: theme.palette.kanap.bg.drawer,
-    borderRadius: '8px',
-    border: `1px solid ${theme.palette.kanap.border.soft}`,
-    width: '100%', boxSizing: 'border-box',
-  },
-  '& .kanap-strip-group': { display: 'flex', flexDirection: 'column', gap: '2px' },
-  '& .kanap-strip-label': { fontSize: 12, color: theme.palette.kanap.text.tertiary, whiteSpace: 'nowrap' },
-  '& .kanap-strip-val': { fontWeight: 500, color: theme.palette.kanap.text.primary, display: 'flex', alignItems: 'center', gap: '6px' },
-});
+const pageSx = (theme: Theme) => metricStripSx(theme);
 
 /** Status, and when and by whom the sample data was loaded or the load failed. */
 function SampleDataStrip({ overview }: { overview: SampleDataOverview }) {
   const { t } = useTranslation('admin');
   const theme = useTheme();
   const locale = useLocale();
+  /** "7 Oct 2026, 14:03 by Ada Admin": who started the load, when known. */
+  const dateBy = (at: string) => {
+    const date = formatShortDateTime(at, locale);
+    return overview.loaded_by_name ? t('sampleData.strip.dateBy', { date, name: overview.loaded_by_name }) : date;
+  };
   const group = (label: string, value: React.ReactNode) => (
     <Box className="kanap-strip-group">
       <Box component="span" className="kanap-strip-label">{label}</Box>
@@ -50,21 +36,18 @@ function SampleDataStrip({ overview }: { overview: SampleDataOverview }) {
     <Box className="kanap-strip">
       {group(t('sampleData.strip.status'), (
         <>
-          <StatusDot color={getDotColor(STATUS_COLOR[overview.status], theme.palette.mode)} />
+          <StatusDot color={getDotColor(SAMPLE_DATA_STATUS_COLORS[overview.status], theme.palette.mode)} />
           {t(`sampleData.status.${overview.status}`)}
         </>
       ))}
       {overview.status === 'loaded' && overview.loaded_at
-        ? group(t('sampleData.strip.loadedOn'), formatShortDateTime(overview.loaded_at, locale))
+        ? group(t('sampleData.strip.loadedOn'), dateBy(overview.loaded_at))
         : null}
       {overview.status === 'loading' && overview.started_at
-        ? group(t('sampleData.strip.startedOn'), formatShortDateTime(overview.started_at, locale))
+        ? group(t('sampleData.strip.startedOn'), dateBy(overview.started_at))
         : null}
       {overview.status === 'failed' && overview.failed_at
         ? group(t('sampleData.strip.failedOn'), formatShortDateTime(overview.failed_at, locale))
-        : null}
-      {(overview.status === 'loaded' || overview.status === 'loading') && overview.loaded_by_name
-        ? group(t('sampleData.strip.by'), overview.loaded_by_name)
         : null}
     </Box>
   );
@@ -86,7 +69,8 @@ export default function SampleDataPage() {
   if (!available) return <ForbiddenPage />;
 
   const openLoad = () => { load.reset(); setLoadOpen(true); };
-  const openReset = () => { reset.reset(); setResetOpen(true); };
+  // The count of objects created since the load must be today's: read the overview again.
+  const openReset = () => { reset.reset(); void query.refetch(); setResetOpen(true); };
   const confirmLoad = () => load.mutate(undefined, { onSuccess: () => setLoadOpen(false) });
   const confirmReset = (typedName: string) => reset.mutate(typedName, { onSuccess: () => setResetOpen(false) });
 
@@ -96,13 +80,21 @@ export default function SampleDataPage() {
     </Box>
   );
 
+  // Why no load is offered: the workspace holds data, or the subscription refuses it.
+  const refusal = overview?.load_refusal;
+  const refusalLine = (
+    <Typography variant="body2" color="text.secondary">
+      {refusal === 'SUBSCRIPTION_FROZEN' || refusal === 'TRIAL_EXPIRED' ? t(`sampleData.loadRefusal.${refusal}`) : t('sampleData.notEmpty')}
+    </Typography>
+  );
+
   const body = (() => {
     if (!overview) return null;
     switch (overview.status) {
       case 'loading':
         return (
           <Stack spacing={0.5}>
-            <Typography variant="body2">{stepLabel(overview.step)}</Typography>
+            <Typography variant="body2">{stepLabel(overview.step) ?? t('sampleData.loading.generic')}</Typography>
             <Typography variant="body2" color="text.secondary">{t('sampleData.loading.concurrentWrites')}</Typography>
           </Stack>
         );
@@ -126,9 +118,7 @@ export default function SampleDataPage() {
               <Box>
                 <Button variant="contained" onClick={openLoad}>{t('sampleData.actions.retry')}</Button>
               </Box>
-            ) : (
-              <Typography variant="body2" color="text.secondary">{t('sampleData.notEmpty')}</Typography>
-            )}
+            ) : refusalLine}
           </Stack>
         );
       default:
@@ -136,9 +126,7 @@ export default function SampleDataPage() {
           <Box>
             <Button variant="contained" onClick={openLoad}>{t('sampleData.actions.load')}</Button>
           </Box>
-        ) : (
-          <Typography variant="body2" color="text.secondary">{t('sampleData.notEmpty')}</Typography>
-        );
+        ) : refusalLine;
     }
   })();
 
@@ -151,6 +139,9 @@ export default function SampleDataPage() {
           <Alert severity="error">{getApiErrorMessage(query.error, t, t('sampleData.messages.statusFailed'))}</Alert>
         ) : null}
         {overview ? <SampleDataStrip overview={overview} /> : null}
+        {overview?.reset_failed_at && (overview.status === 'loaded' || overview.status === 'failed') ? (
+          <Alert severity="error">{t('sampleData.messages.resetFailed')}</Alert>
+        ) : null}
         {body}
       </Stack>
 

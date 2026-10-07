@@ -40,5 +40,6 @@
   "tenant_not_active": "Dieser Arbeitsbereich ist nicht aktiv.",
   "tenant_resetting": "Dieser Arbeitsbereich wird gerade gelöscht und in seinen Ausgangszustand zurückversetzt. Versuchen Sie es gleich noch einmal.",
   "tenant_reset_running": "Dieser Arbeitsbereich wird bereits gelöscht. Versuchen Sie es erneut, wenn der Vorgang abgeschlossen ist.",
-  "confirmation_mismatch": "Der eingegebene Name stimmt nicht mit dem Namen des Arbeitsbereichs überein."
+  "confirmation_mismatch": "Der eingegebene Name stimmt nicht mit dem Namen des Arbeitsbereichs überein.",
+  "rate_limited": "Zu viele Versuche. Warten Sie einige Minuten und versuchen Sie es erneut."
 }

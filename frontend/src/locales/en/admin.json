@@ -1244,6 +1244,10 @@
     "title": "Sample data",
     "intro": "Explore KANAP with Fromage & Co, a fictional cheese maker. Sample data can be loaded into an empty workspace, and erased afterwards from this page.",
     "notEmpty": "Sample data can only be loaded into an empty workspace. This workspace already holds data.",
+    "loadRefusal": {
+      "SUBSCRIPTION_FROZEN": "Sample data cannot be loaded while the subscription is frozen.",
+      "TRIAL_EXPIRED": "Sample data cannot be loaded once the trial has ended."
+    },
     "loadedHint": "To start your own work from a clean workspace, erase everything. The workspace goes back to its starting state.",
     "resetting": "Erasing the content of the workspace. This takes a few seconds.",
     "status": {
@@ -1258,7 +1262,7 @@
       "loadedOn": "Loaded on",
       "startedOn": "Started on",
       "failedOn": "Failed on",
-      "by": "By"
+      "dateBy": "{{date}} by {{name}}"
     },
     "actions": {
       "load": "Load sample data",
@@ -1268,7 +1272,7 @@
     },
     "loading": {
       "step": "Step {{current}} of {{total}}: {{label}}",
-      "preparing": "Preparing the load",
+      "generic": "Loading…",
       "concurrentWrites": "Anything created in the workspace meanwhile is erased if the load fails."
     },
     "steps": {
@@ -1307,7 +1311,7 @@
       "users": "18 fictional users, who cannot sign in",
       "landscape": "Applications and their landscape: instances, interfaces and connections",
       "business": "Contracts, the budget of the current year, projects and tasks",
-      "duration": "Loading takes less than a minute. You can erase everything later from Administration › Sample data."
+      "duration": "Loading takes less than a minute. You can erase everything later from {{path}}."
     },
     "resetDialog": {
       "title": "Erase everything and start over",
@@ -1324,20 +1328,21 @@
       "settingsDefaults": "Settings saved on the workspace (currencies, budget columns, classification catalog) go back to their default values.",
       "createdSinceLoad_one": "{{count}} item created since the sample data was loaded will also be erased.",
       "createdSinceLoad_other": "{{count}} items created since the sample data was loaded will also be erased.",
-      "email": "Administrators receive an e-mail once the workspace is erased.",
-      "typeName": "To confirm, type the name of the workspace: <strong>{{name}}</strong>",
+      "email": "Administrators receive an email once the content of the workspace is erased.",
+      "typeName": "To confirm, type the name of the workspace:",
       "nameLabel": "Workspace name"
     },
     "banner": {
       "text": "Discover KANAP with sample data.",
       "load": "Load",
       "hide": "Hide",
-      "loading": "Loading sample data. {{step}}."
+      "loading": "Loading sample data. {{step}}.",
+      "loadingNoStep": "Loading sample data."
     },
     "messages": {
       "statusFailed": "The sample data status could not be read.",
       "loadFailed": "The sample data could not be loaded.",
-      "resetFailed": "The workspace could not be erased.",
+      "resetFailed": "The content of the workspace could not be erased. Nothing was changed.",
       "dismissFailed": "This could not be hidden."
     }
   }

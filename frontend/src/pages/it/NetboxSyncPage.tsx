@@ -22,6 +22,7 @@ import ForbiddenPage from '../ForbiddenPage';
 import { useAuth } from '../../auth/AuthContext';
 import { KanapDialog, StatusDot } from '../../components/design';
 import { drawerMenuItemSx, pageSelectSx } from '../../theme/formSx';
+import { metricStripSx } from '../../theme/stripSx';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -118,20 +119,7 @@ function useRelativeLabel() {
 }
 
 const pageSx = (theme: Theme) => ({
-  '& .kanap-strip': {
-    // Five groups: pack them left with a generous gap. `space-between` is for the
-    // two-metric case and scatters the groups across a wide list page.
-    display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
-    gap: '40px', flexWrap: 'wrap', fontSize: 13, p: '14px 18px',
-    bgcolor: theme.palette.kanap.bg.drawer,
-    borderRadius: '8px',
-    border: `1px solid ${theme.palette.kanap.border.soft}`,
-    width: '100%', boxSizing: 'border-box',
-  },
-  '& .kanap-strip-group': { display: 'flex', flexDirection: 'column', gap: '2px' },
-  '& .kanap-strip-label': { fontSize: 12, color: theme.palette.kanap.text.tertiary, whiteSpace: 'nowrap' },
-  '& .kanap-strip-val': { fontWeight: 500, color: theme.palette.kanap.text.primary, display: 'flex', alignItems: 'center', gap: '6px' },
-  '& .kanap-strip-sub': { fontSize: 11, color: theme.palette.kanap.text.tertiary },
+  ...metricStripSx(theme),
   '& .kanap-table': { width: '100%', borderCollapse: 'collapse' },
   '& .kanap-table th': {
     fontSize: 12, fontWeight: 500, color: theme.palette.kanap.text.tertiary,
