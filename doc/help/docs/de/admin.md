@@ -409,6 +409,8 @@ Befindet sich das Abonnement in einer Testphase, werden die verbleibenden Testta
 
 Wenn Ihr Abonnement nicht in Ordnung ist (abgelaufene Testversion, überfällig usw.), öffnet sich der Tarifauswahldialog automatisch, wenn Sie die Abrechnungsseite besuchen.
 
+Um ein Abonnement abzuschließen, per Karte oder per Überweisung, müssen die Rechnungsinformationen vollständig sein (siehe [Rechnungsinformationen](#rechnungsinformationen)). Fehlt etwas, listet der Dialog **Plan wählen** die fehlenden Felder auf und die Zahlungsschaltflächen bleiben deaktiviert. Klicken Sie auf **Rechnungsinformationen vervollständigen**, um den Dialog zu schließen und zur Karte mit den Rechnungsinformationen zu wechseln. Sobald die Angaben gespeichert sind, werden die Zahlungsschaltflächen verfügbar. Der Planwechsel eines laufenden Kartenabonnements erfordert diese Prüfung nicht.
+
 ### Rechnungshistorie
 
 Vergangene Rechnungen werden unterhalb der Abonnementkarte angezeigt:
@@ -428,11 +430,26 @@ Aktualisieren Sie die Kontaktdaten, die mit Ihrem Stripe-Kundendatensatz verknü
 - **USt-IdNr.**
 - **Adresse** (Zeile 1, Zeile 2, Stadt, Bundesland/Kanton, Postleitzahl, Land)
 
+Das Feld **Land** ist eine durchsuchbare Liste. Ein Land, das in einer früheren Version als Freitext eingegeben wurde, erscheint leer, bis Sie ein Land aus der Liste auswählen.
+
 ### Rechnungsinformationen
 
 Separate Kontaktdaten, die speziell auf Rechnungen verwendet werden. Klicken Sie auf **Vom Kunden kopieren**, um die Daten aus den obigen Kundeninformationen zu übernehmen.
 
 Die Felder entsprechen dem Bereich Kundeninformationen: Empfängername, Unternehmen, E-Mail, Telefon, USt-IdNr. und vollständige Adresse.
+
+Diese Angaben erscheinen auf Ihren Rechnungen. KANAP kopiert sie in Ihren Stripe-Kundendatensatz, wenn Sie ein Abonnement abschließen und bei jedem Speichern.
+
+Pflichtfelder sind mit einem Sternchen markiert:
+- **Unternehmen**
+- **E-Mail**
+- **Adresszeile 1**, **Postleitzahl** und **Stadt**
+- **Land**
+- **USt-IdNr.**, wenn das Land zur Europäischen Union gehört
+
+Sie können unvollständige Angaben speichern und später ergänzen. Vor dem Abschluss eines Abonnements müssen sie vollständig sein.
+
+Bei einem Land der Europäischen Union wird die USt-IdNr. an Stripe übermittelt und auf Ihren Rechnungen ausgewiesen. Wenn Stripe sie nicht akzeptiert, zeigt KANAP „Die USt-IdNr. wurde nicht akzeptiert. Prüfen Sie sie in den Rechnungsinformationen.“ Korrigieren Sie die Nummer und versuchen Sie es erneut.
 
 Klicken Sie auf **Änderungen speichern**, um Kunden- und Rechnungsdaten zu aktualisieren. Verwenden Sie **Zurücksetzen**, um nicht gespeicherte Änderungen zu verwerfen.
 
