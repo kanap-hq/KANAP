@@ -43,7 +43,7 @@ Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes s
 | | Responsable budgétaire (utilisateur) | Zéro ou un |
 | | Groupe parent | Zéro ou un |
 | Groupe de centres de coûts | Groupe parent | Zéro ou un. Un groupe n'a pas de société |
-| Société | Plan comptable | Un. Une société sans plan propre utilise le plan global par défaut |
+| Société | Plan comptable | Un. Une société sans plan propre utilise le plan par défaut des autres pays |
 | | Pays et devise de base | Un de chaque |
 | | Indicateurs : effectif, utilisateurs IT, chiffre d'affaires | Un jeu par année |
 | Département | Société | Une |

@@ -17,6 +17,7 @@ suppliers.md	frontend/src/pages/suppliers/**/*.tsx
 contacts.md	frontend/src/pages/ContactsPage.tsx
 contacts.md	frontend/src/pages/contacts/**/*.tsx
 chart-of-accounts.md	frontend/src/pages/coa/CoaPage.tsx
+chart-of-accounts.md	frontend/src/pages/coa/**/*.tsx
 chart-of-accounts.md	frontend/src/components/ChipToggleBar.tsx
 chart-of-accounts.md	frontend/src/pages/accounts/**/*.tsx
 currencies.md	frontend/src/pages/operations/CurrencySettingsPage.tsx

@@ -1,7 +1,7 @@
 # Accounts and Charts of Accounts (Tenant + Platform Admin)
 
 Status: current (merged CoA+Accounts page implemented; legacy accounts list route redirected)
-Last Updated: 2026-02-22
+Last Updated: 2026-10-07
 
 This document explains the functional model and APIs for Charts of Accounts (CoA) and Accounts, including tenant flows, platform-admin templates, CSV import/export, the native account name capability, and CoA filtering in OPEX/CAPEX workspaces.
 
@@ -13,6 +13,45 @@ This document explains the functional model and APIs for Charts of Accounts (CoA
 - CSV alignment: Accounts CSV import/export is CoA-aware. Global accounts CSV includes a `coa_code` column. CoA-scoped CSV uses the CoA route.
 - Native account name: Each account can optionally carry a `native_name` (original local-language name). The UI shows it as a tooltip over the English name and exposes a hidden "Native Name" column.
 - Global templates: When loading a platform template marked global, country input is not required; the CoA is created with scope `GLOBAL` (no country). A tenant may mark one CoA as the Global Default; setting a Global Default also assigns it to all companies in the tenant where `companies.coa_id` is NULL.
+- Chart roles: three independent roles, each held by at most one chart (per country for the first one). See [Chart roles](#chart-roles).
+- Consolidation mapping: every account carries a consolidation account number that points at an account of the tenant's consolidation chart. See [Consolidation chart](#consolidation-chart).
+
+## Chart roles
+
+| Role | Column | Scope | UI label | Meaning |
+|---|---|---|---|---|
+| Country default | `is_default` | `COUNTRY` charts only | Country default ({country}) | Proposed when a company is created in that country. One per tenant and country. |
+| Global default | `is_global_default` | `GLOBAL` charts only | Default for other countries | Used for companies in a country that has no default chart. One per tenant. Setting it also assigns the chart to companies with `coa_id` NULL. |
+| Consolidation chart | `is_consolidation` | any scope | Consolidation chart | The group accounts every local account maps to for consolidated reporting. One per tenant. |
+
+The roles are independent: the base case (and the backfill of existing tenants) is one IFRS chart that is both the global default and the consolidation chart, but a tenant can split them. Each role can be removed (the chart then holds no role). A chart moved from `GLOBAL` to `COUNTRY` scope loses the global default. Deleting a chart (the usual delete rules apply) removes its roles with it. Every role change is written to the audit log on `chart_of_accounts` (before and after), one line per chart changed.
+
+New tenants: provisioning copies the platform template marked `loaded_by_default` (IFRS v1.0) into a `GLOBAL` chart and makes it both the global default and the consolidation chart. It runs under its own savepoint: when any step fails, the chart is undone and the signup goes on without it.
+
+Locking: every chart writer (role changes, chart updates, chart deletes) first locks the tenant's charts `FOR NO KEY UPDATE`, in id order, so they queue behind each other. Account writes (create, update, each CSV import once) read the consolidation chart under a `FOR SHARE` lock on the tenant's charts, before any account row lock: a role change waits for them, or they wait for it and derive from the new consolidation chart. Neither lock blocks the foreign key checks of accounts or companies inserted into a chart.
+
+## Consolidation chart
+
+The consolidation account number (`accounts.consolidation_account_number`) is the key. The consolidation name and description of an account are derived from the consolidation chart's account of that number, on the server:
+
+- Create, update and CSV import (template loading reuses the import): when the number matches an account of the consolidation chart, `consolidation_account_name` and `consolidation_account_description` are overwritten with that account's name and description. An account of the consolidation chart that maps to its own number takes its own (new) name and description.
+- When the number matches nothing (or the tenant has no consolidation chart), what the caller sent is kept, so legacy names stay visible. When the number changes to one that matches nothing, a name or description the caller did not send is cleared: it belonged to the previous number.
+- When the number is set to null (or a CSV row leaves it empty), name and description are cleared too.
+- Propagation: when an account of the consolidation chart is created, renamed, given a new description or renumbered, every tenant account mapped to its old or new number takes its number, name and description, in the same transaction. The same happens when an account joins the consolidation chart (`coa_id` changed to it): the accounts mapped to its number take its name and description. An account that leaves the consolidation chart takes nobody along: the accounts mapped to it become `outside` and keep their names. A self-reference follows a renumbering. Each account rewritten gets its own audit line (before and after), written by the statement that rewrites them.
+- CSV import reads the consolidation chart and the consolidation accounts the file refers to once, and writes the audit lines of its rows in one statement at the end. An import into the consolidation chart itself resyncs the accounts mapped to it once, at its end, instead of after each row.
+
+Status of an account against the consolidation chart (`consolidation_status`):
+
+| Status | Meaning |
+|---|---|
+| `mapped` | The consolidation number exists in the consolidation chart. |
+| `outside` | The number is set but absent from the consolidation chart. |
+| `unmapped` | No consolidation number. |
+| `null` | The number is set and the tenant has no consolidation chart: there is nothing to be in or outside of. |
+
+Without a consolidation chart, `consolidationStatus=mapped` and `consolidationStatus=outside` return no account, and `unmapped` still returns the accounts without a number. This matches the chart counts: `accounts_outside_count` is 0 and `accounts_unmapped_count` counts the accounts without a number.
+
+Changing the consolidation chart never remaps accounts. The switch resyncs the derived fields only: every account whose number matches an account of the new consolidation chart takes that account's name and description. Accounts whose number is absent from it become `outside`; the preview endpoint gives the counts before the switch. Reports group by consolidation number (else name) and are not affected by the role itself.
 
 ## CoA Filtering Logic (Accounts by Company)
 
@@ -122,6 +161,7 @@ const hasObsoleteAccount = accountId && companyId &&
 - `country_iso char(2) NULL` (required only when `scope=COUNTRY`)
 - `is_default boolean` (applies to `COUNTRY` scope; unique per tenant+country via partial unique index)
 - `is_global_default boolean` (applies to `GLOBAL` scope; one per tenant via partial unique index)
+- `is_consolidation boolean NOT NULL DEFAULT false` (any scope; one per tenant via the partial unique index `uq_coa_tenant_consolidation` on `(tenant_id) WHERE is_consolidation`)
 - `created_at/updated_at timestamptz`
 
 RLS is enforced; all queries run with `tenant_id = app.current_tenant()`.
@@ -163,8 +203,9 @@ Base permissions follow the existing model: `accounts:reader|manager|admin`.
 
 ### CoA CRUD (tenant)
 - `GET /chart-of-accounts` → paginated list
-  - Supports quick search, AG Grid filters, and returns `companies_count` and `accounts_count`.
-- `GET /chart-of-accounts/:id` → detail
+  - Supports quick search, AG Grid filters (and sort) on `code`, `name`, `country_iso`, `scope`, `is_default`, `is_global_default`, `is_consolidation`, `created_at`, `updated_at`.
+  - Each item carries `is_consolidation`, `companies_count`, `accounts_count`, `accounts_unmapped_count` (accounts without consolidation number) and `accounts_outside_count` (number set but absent from the consolidation chart; 0 when the tenant has none). Disabled accounts count too. The counts come from one batched query.
+- `GET /chart-of-accounts/:id` → detail, with the same counts
 - `POST /chart-of-accounts` → create (supports `is_default`; ensures one default per country)
 - `PATCH /chart-of-accounts/:id` → update
 - `DELETE /chart-of-accounts/:id` → guarded delete
@@ -173,6 +214,17 @@ Base permissions follow the existing model: `accounts:reader|manager|admin`.
   - When allowed, deletes the CoA and all unused accounts within it
 - `DELETE /chart-of-accounts/bulk` → guarded bulk delete
 - `GET /chart-of-accounts/templates` → list platform templates (for selection in load dialog)
+
+### Chart roles (tenant)
+
+All role endpoints require `accounts` at manager level (`member`), run in the request transaction and write one audit line per chart changed.
+
+- `PATCH /chart-of-accounts/:id/global-default` → makes this `GLOBAL` chart the global default (400 for a `COUNTRY` chart), clears the previous one, assigns it to companies with `coa_id` NULL. Empty response.
+- `DELETE /chart-of-accounts/:id/global-default` → removes the global default from this chart → `{ cleared: boolean }` (`false` when it did not hold it).
+- `PATCH /chart-of-accounts/:id` with `{ is_default: true | false }` → sets or removes the country default.
+- `PATCH /chart-of-accounts/:id/consolidation` → makes this chart (any scope) the consolidation chart, clears the previous one, then resyncs the derived fields → `{ resynced, outside }`: the accounts whose consolidation name or description was rewritten, and the accounts of the other charts whose consolidation number is absent from this chart.
+- `DELETE /chart-of-accounts/:id/consolidation` → removes the role from this chart → `{ cleared: boolean }` (`false` when it did not hold it). Accounts are not touched.
+- `GET /chart-of-accounts/:id/consolidation-impact` → preview for the confirmation dialog, no write → `{ matched, outside, unmapped }`: among the accounts of the other charts, those whose consolidation number exists in this chart, is set but absent from it, or is not set.
 
 ### CoA-scoped Accounts CSV (tenant)
 - `GET /chart-of-accounts/:id/accounts/export?scope=data|template`
@@ -184,9 +236,12 @@ Base permissions follow the existing model: `accounts:reader|manager|admin`.
 ### Accounts (tenant)
 - `GET /accounts` → paginated list
   - Supports quick search, AG filters, and CoA scoping via `?companyId` or `?coaId`
-  - Enriches items with `coa_code` for display
+  - Enriches items with `coa_code` for display and `consolidation_status` (`mapped` | `outside` | `unmapped`, or `null` for a numbered account when the tenant has no consolidation chart; see [Consolidation chart](#consolidation-chart)), computed for the page in one query
+  - `?consolidationStatus=mapped|outside|unmapped` filters on the server (page and total follow the filter; without a consolidation chart, `mapped` and `outside` return nothing); any other value is a 400. `GET /accounts/ids` accepts it too.
+- `GET /accounts/:id` → detail, with `consolidation_status`
 - `POST /accounts` → create account (requires `coa_id`; UI provides a required selector; API accepts `?coaId=` fallback)
 - `PATCH /accounts/:id` → update account (including moving to a different CoA via `coa_id`)
+  - Create, update and import derive the consolidation name and description from the consolidation chart, and an account of the consolidation chart propagates its changes (see [Consolidation chart](#consolidation-chart)).
 - `GET /accounts/export?scope=...&coaId=...` → CSV
   - Global export includes `coa_code` to identify the CoA; scoped export uses `coaId`
 - `POST /accounts/import?dryRun=...&coaId=...` → CSV import
@@ -251,7 +306,7 @@ Validation rules:
 - `account_name`: required (English UI name)
 - `native_name`: optional (original local-language name)
 - `status`: `enabled|disabled` (defaults to enabled); disable uses `disabled_at` in the model
-- `consolidation_*`: optional; `consolidation_account_number` must be an integer if provided
+- `consolidation_*`: optional; `consolidation_account_number` must be an integer if provided. When it matches an account of the consolidation chart, the file's consolidation name and description are replaced by that account's; when it is empty, they are cleared. Otherwise the file's name and description are kept (an empty cell clears the stored value).
 
 Import behavior:
 - Deduplicates by `account_number` within the target CoA (first row wins)
@@ -416,6 +471,8 @@ Country templates include `native_name` in the local language:
 - Seed templates migration (`1826000000000-seed-coa-templates`): replaces all `coa_templates` rows with the 20 seed templates. Revert + re-run is safe. Tenant CoAs are unaffected.
 - Backend build: `cd backend && npm run build`
 - Frontend: `cd frontend && npm run build` or `npm run dev`
+
+- Consolidation chart migration (`1853860000000-chart-of-accounts-consolidation`): adds `is_consolidation` and its partial unique index; every tenant without a consolidation chart gets its global default chart (if any) as consolidation chart. It then resyncs the derived names: every account mapped to an account of its tenant's consolidation chart takes that account's name and description where they differ (names typed by hand until then); accounts outside it keep theirs. It disables row level security on `chart_of_accounts`, `accounts` and `search_index` around these writes (the search triggers of charts and accounts write into `search_index`), restores it as found and logs the counts (accounts resynced per tenant). No audit lines. Rerun-safe.
 
 Operational Notes
 - Setting a CoA as Global Default also assigns it to companies with `coa_id` = NULL.

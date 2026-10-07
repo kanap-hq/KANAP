@@ -26,6 +26,11 @@ export class ChartOfAccounts {
   @Column('boolean', { default: false })
   is_global_default!: boolean;
 
+  // The tenant's consolidation chart (at most one, any scope): the group accounts every
+  // local account maps to through `accounts.consolidation_account_number`.
+  @Column('boolean', { default: false })
+  is_consolidation!: boolean;
+
   @Column('timestamptz', { default: () => 'now()' })
   created_at!: Date;
 

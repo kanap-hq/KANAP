@@ -184,6 +184,6 @@ A larger organisation adds the rest of the master data in between:
 8. The OPEX file
 9. The CAPEX file
 
-**The chart of accounts comes first.** On the Charts of Accounts page, click **New**, give the chart a code and a name, and choose the **Global** scope. Then open **Manage** and click **Set global default**. A company without a chart takes that one, which is how the account numbers of a budget file resolve. Select the chart on the page, then click **Import CSV** to load its accounts.
+**The chart of accounts comes first.** On the Charts of Accounts page, click **New**, give the chart a code and a name, and choose **All countries** under **Used for**. Then click **Manage charts**, open the **⋯** menu of the chart and click **Make default for other countries**. A company without a chart takes that one, which is how the account numbers of a budget file resolve. Select the chart on the page, then click **Import CSV** to load its accounts.
 
 Each of these pages has its own **Import CSV** section with the columns of its file.

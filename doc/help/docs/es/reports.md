@@ -358,7 +358,7 @@ Vea datos presupuestarios OPEX o CAPEX agrupados por cuenta de consolidación, c
 
 **Tabla**: Una fila por cuenta de consolidación con columnas de año. Una fila de totales fijada en la parte inferior suma todos los grupos.
 
-Una línea en una cuenta de consolidación desactivada desde entonces sigue contando, en la línea de consolidación de esa cuenta. Los nombres y números de cuenta solo se muestran si puede leer el [plan de cuentas](chart-of-accounts.md); sin ese acceso, todas las líneas aparecen bajo "Sin asignar" en su lugar (los totales siguen siendo correctos, solo se oculta el desglose por cuenta). Las partidas sin cuenta de consolidación también aparecen como "Sin asignar".
+Una línea en una cuenta de consolidación desactivada desde entonces sigue contando, en la línea de consolidación de esa cuenta. Los nombres y números de cuenta solo se muestran si puede leer el [plan de cuentas](chart-of-accounts.md); sin ese acceso, todas las líneas aparecen bajo "Sin asignar" en su lugar (los totales siguen siendo correctos, solo se oculta el desglose por cuenta). Las partidas sin cuenta de consolidación también aparecen como "Sin asignar". Las cuentas de consolidación son las cuentas de su [plan de consolidación](chart-of-accounts.md#el-plan-de-consolidacion).
 
 ---
 

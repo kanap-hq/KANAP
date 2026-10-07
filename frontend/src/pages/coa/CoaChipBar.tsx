@@ -9,6 +9,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ChipToggleBar from '../../components/ChipToggleBar';
+import { coaCoverage, coaRoleLabels, useCountryName } from './coaRoles';
 import { CoaListItem } from './useCoaList';
 
 export default function CoaChipBar({
@@ -27,6 +28,7 @@ export default function CoaChipBar({
   canManage: boolean;
 }) {
   const { t } = useTranslation(['master-data', 'common']);
+  const countryName = useCountryName();
   if (coas.length === 0) {
     return (
       <Paper variant="outlined" sx={{ p: 2 }}>
@@ -50,14 +52,22 @@ export default function CoaChipBar({
       ariaLabel={t('coa.title')}
       selectedId={selectedCoaId}
       onSelect={onSelect}
-      items={coas.map((coa) => {
-        const badges = `${coa.is_default ? '★' : ''}${coa.is_global_default ? '⊕' : ''}`;
-        return {
-          id: coa.id,
-          label: `${coa.code}${badges ? ` ${badges}` : ''}`,
-          tooltip: `${coa.name}${coa.accounts_count != null ? ` • ${coa.accounts_count} accounts` : ''}`,
-        };
-      })}
+      items={coas.map((coa) => ({
+        id: coa.id,
+        label: coa.code,
+        tooltip: (
+          <>
+            <div>{coa.name}</div>
+            <div>
+              {[
+                coaCoverage(coa, t, countryName),
+                t('coa.accountCount', { count: coa.accounts_count ?? 0 }),
+                ...coaRoleLabels(coa, t, countryName),
+              ].join(' · ')}
+            </div>
+          </>
+        ),
+      }))}
       actions={canManage && (
         <>
           <Button

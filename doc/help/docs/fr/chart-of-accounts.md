@@ -48,20 +48,34 @@ La page comporte deux niveaux : un **sélecteur de CoA** en haut et une **grille
 Une rangée horizontale de pastilles représente chaque plan comptable. Cliquez sur une pastille pour afficher les comptes de ce CoA dans la grille.
 
 - La pastille sélectionnée est pleine ; les autres sont en contour.
-- Un badge étoile (**★**) indique le CoA par défaut du pays de ce CoA.
-- Un badge cercle-plus indique le CoA par défaut global.
-- Survolez une pastille pour voir le nom du CoA et son nombre de comptes.
+- Survolez une pastille pour voir le nom du CoA, ses pays, son nombre de comptes et ses rôles. Voir [Rôles des plans](#roles-des-plans).
 
 Si vous avez l'autorisation `accounts:manager`, deux contrôles supplémentaires apparaissent à droite :
 
 - **Nouveau** : Ouvre la boîte de dialogue **Nouveau plan comptable**.
-- **Gérer** : Ouvre la fenêtre **Gérer les plans comptables** pour l'administration.
+- **Gérer les plans** : Ouvre la fenêtre [Gérer les plans](#la-fenetre-gerer-les-plans).
 
 Lorsqu'aucun CoA n'existe, la barre de pastilles vous invite à créer votre premier plan comptable.
 
 ### Résumé du CoA
 
-Sous la barre de pastilles, une ligne de résumé affiche le **code**, le **nombre de comptes**, le **nom** et le **pays** du CoA sélectionné (pour les CoA de périmètre pays).
+Sous la barre de pastilles, un résumé indique le **code** et le **nombre de comptes** du CoA sélectionné. Une deuxième ligne donne son **nom**, ses **pays** et ses **rôles** en toutes lettres, par exemple « Plan comptable français · France · Plan par défaut du pays (France) ».
+
+### Ligne de suivi de la consolidation
+
+Lorsque votre espace de travail a un [plan de consolidation](#le-plan-de-consolidation), une troisième ligne indique dans quelle mesure le CoA sélectionné s'y rattache. Elle n'apparaît pas sur le plan de consolidation lui-même, car ses comptes sont les comptes du groupe.
+
+Dans les exemples ci-dessous, `IFRS` représente le code de votre plan de consolidation.
+
+- **Tous les comptes sont rattachés au plan de consolidation IFRS.** Chaque compte a un compte de consolidation qui existe dans le plan de consolidation.
+- **N comptes pointent vers un compte de consolidation absent de IFRS** : ces comptes gardent un numéro que le plan de consolidation ne contient pas.
+- **N comptes n'ont pas de compte de consolidation** : ces comptes ne sont pas encore rattachés.
+
+Chaque nombre est un lien. Cliquez dessus pour filtrer la grille sur ces comptes. Le filtre affiche les comptes de tous les statuts : les comptes désactivés sont donc comptés et listés aussi. Cliquez de nouveau sur le nombre, ou sur **Afficher tous les comptes**, pour revenir à la liste normale. Le filtre est aussi retiré lorsque vous choisissez une autre pastille. Lorsque vous ouvrez un compte depuis une liste filtrée, les flèches précédent et suivant de l'espace de travail parcourent la même liste filtrée.
+
+Dans la grille, un petit point orange à côté de **N° compte de consolidation** signale un compte dont le numéro n'est pas dans le plan de consolidation. Survolez le point pour voir le nom du plan de consolidation.
+
+Sans plan de consolidation, la ligne indique « Aucun plan de consolidation. ». Les gestionnaires peuvent cliquer sur **Choisissez-en un dans Gérer les plans** pour ouvrir la fenêtre.
 
 ### Grille des comptes
 
@@ -88,9 +102,9 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 **Tri** : Par défaut, **N° de compte** par ordre croissant.
 
 **Actions** (dans l'en-tête de la page) :
-- **Nouveau compte** (`accounts:manager`) : Ouvre l'espace de travail d'un nouveau compte déjà lié au CoA sélectionné.
-- **Import CSV** (`accounts:admin`) : Importer des comptes dans le CoA sélectionné.
-- **Export CSV** (`accounts:admin`) : Exporter les comptes du CoA sélectionné.
+- **Nouveau compte** (`accounts:manager`) : Ouvre un nouveau formulaire de compte avec le CoA sélectionné déjà choisi.
+- **Importer CSV** (`accounts:admin`) : Importer des comptes dans le CoA sélectionné.
+- **Exporter CSV** (`accounts:admin`) : Exporter les comptes du CoA sélectionné.
 - **Supprimer la sélection** (`accounts:admin`) : Supprimer les lignes de comptes sélectionnées. Sélectionnez les lignes avec la colonne de cases à cocher (visible par les administrateurs).
 
 Toutes les cellules sont des liens cliquables vers l'espace de travail du compte. Vous pouvez faire un clic droit ou Ctrl+clic pour ouvrir dans un nouvel onglet.
@@ -99,59 +113,50 @@ Toutes les cellules sont des liens cliquables vers l'espace de travail du compte
 
 Cliquez sur n'importe quelle ligne de la grille des comptes pour ouvrir l'espace de travail du compte.
 
-### Vue d'ensemble
+### Disposition
 
-L'espace de travail comporte un seul onglet **Vue d'ensemble** avec un formulaire pour consulter et modifier les champs du compte.
+- **En-tête** : le numéro de compte sert de référence (vous pouvez le copier à cet endroit) et le nom du compte sert de titre. Cliquez sur le titre pour renommer le compte. Les flèches **Compte précédent** et **Compte suivant** parcourent les comptes de la liste d'où vous venez, dans le même ordre, avec la même recherche et les mêmes filtres. Le lien de retour ramène à **Plans comptables** en conservant votre sélection.
+- **Panneau des propriétés** à droite : **Plan comptable**, **Numéro de compte** et **Cycle de vie** (l'interrupteur de statut et la date de **Fin de validité**). Le bouton du panneau permet de le réduire ou de le rouvrir. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie).
+- **Colonne principale** : **Nom local (langue locale)**, **Description** et la section **Consolidation**.
 
-**Ce que vous pouvez modifier** :
-- **Plan comptable** : Le CoA auquel ce compte appartient (menu déroulant de tous les CoA de votre espace de travail).
-- **Numéro de compte** (obligatoire) : Le numéro du compte.
-- **Nom du compte** (obligatoire) : Le nom du compte en anglais (ou dans votre langue principale).
-- **Nom local (langue locale)** : Le nom du compte dans la langue locale.
-- **Description** : Description en texte libre.
-- **Numéro de compte de consolidation** : Le numéro de compte de consolidation standardisé.
-- **Nom du compte de consolidation** : Le nom de consolidation standardisé.
-- **Description du compte de consolidation** : Précisions sur la catégorie de consolidation.
-- **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Définissez une **Fin de validité** pour programmer le moment où le compte n'apparaît plus dans les menus déroulants de sélection. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie).
+**Les modifications s'enregistrent automatiquement.** Chaque champ s'enregistre lorsque vous le quittez, et il n'y a pas de bouton Enregistrer. Si une valeur est refusée, un message apparaît sous le champ. Le **Numéro de compte** doit être un nombre entier supérieur à zéro.
 
-**Navigation** :
-- **Préc. / Suiv.** : Passer d'un compte à l'autre dans l'ordre actuel de la liste.
-- **Enregistrer** : Enregistrer les modifications (actif lorsque le formulaire a été modifié et que vous avez `accounts:manager`).
-- **Réinitialiser** : Annuler les modifications non enregistrées.
-- **Fermer** (bouton X) : Revenir à la liste des comptes en conservant votre sélection de CoA, votre tri, votre recherche et vos filtres.
+Vous avez besoin de `accounts:manager` pour modifier. Les utilisateurs en lecture seule voient la même page, avec les champs verrouillés.
 
-Si vous quittez la page avec des modifications non enregistrées, le système vous invite à enregistrer ou à annuler.
+### Compte de consolidation
 
-**Conseil** : Vous avez besoin de `accounts:manager` pour modifier. Les utilisateurs en lecture seule voient une bannière d'information.
+La section **Consolidation** contient un seul champ, **Compte de consolidation**. C'est une liste des comptes de votre [plan de consolidation](#le-plan-de-consolidation), affichés avec leur numéro et leur nom. Choisissez-en un pour y rattacher le compte, ou choisissez **Aucun** pour supprimer le rattachement.
+
+- Vous choisissez le numéro. Le nom et la description du compte de consolidation viennent du plan de consolidation et s'affichent sous le champ. Vous ne pouvez pas les saisir.
+- Les comptes désactivés du plan de consolidation ne sont proposés que si le compte y est déjà rattaché. Ils portent la mention **Désactivé**.
+- Si le numéro enregistré n'existe pas dans le plan de consolidation, il reste visible avec un point orange et le message « Ce numéro n'existe pas dans le plan de consolidation IFRS. Choisissez un compte de IFRS. » Choisissez un compte valide pour corriger.
+- Sans plan de consolidation, le champ est verrouillé et indique « Aucun plan de consolidation n'est défini. », suivi du lien **Choisissez-en un dans Plans comptables → Gérer les plans.**
+
+### Créer un compte
+
+**Nouveau compte** dans la liste ouvre un court formulaire avec le plan que vous consultiez déjà sélectionné. Renseignez le plan, le numéro de compte et le nom, ainsi que les champs facultatifs, puis cliquez sur **Créer le compte**. Après la création, le compte s'ouvre dans l'espace de travail et s'enregistre ensuite automatiquement.
 
 ## Configurer les plans comptables
 
 ### Créer un CoA
 
-Vous pouvez créer un CoA de deux manières :
+Cliquez sur **Nouveau** dans la barre de pastilles, ou sur **Nouveau plan** dans la fenêtre Gérer les plans. Vous pouvez créer un CoA de deux façons :
 
-1. **De zéro** : Choisissez un périmètre, puis créez un CoA vide.
-   - **Périmètre** : `GLOBAL` (sans pays) ou `PAYS` (nécessite de choisir un pays)
-   - Pour le périmètre `PAYS`, vous pouvez le marquer comme défaut pour ce pays. Il n'existe qu'un seul défaut par pays à la fois.
-   - Vous pouvez ensuite charger des comptes via CSV.
-2. **À partir d'un modèle** : Chargez un ensemble de comptes préconfiguré, maintenu par les administrateurs de la plateforme.
-   - Les modèles globaux créent un CoA de périmètre `GLOBAL` (sans champ pays).
-   - Les modèles pays créent un CoA de périmètre `PAYS` avec le pays du modèle prérempli.
+1. **Un plan vide** : ajoutez les comptes plus tard, un par un ou par import CSV.
+2. **Un modèle** : chargez un ensemble de comptes préconfiguré, géré par les administrateurs de la plateforme.
 
 **Champs de la boîte de dialogue de création** :
-- **Mode** : Choisissez **Créer de zéro** ou **Copier à partir d'un modèle**.
-- **Modèle** (mode modèle uniquement) : Sélectionnez un modèle dans le menu déroulant. Les modèles globaux apparaissent sous la forme « ALL -- ... » ; les modèles pays affichent leur code à 2 lettres.
-- **Code** (obligatoire) : Un identifiant stable utilisé dans les exports/imports CSV et les liens directs.
+- **Partir de** : **Un plan vide** ou **Un modèle**.
+- **Modèle** (mode modèle uniquement) : Choisissez un modèle dans la liste. Chaque entrée indique son nom, ses pays et sa version. Le choix d'un modèle renseigne le nom et le code, que vous pouvez modifier.
+- **Code** (obligatoire) : Un identifiant court et stable, utilisé dans les fichiers CSV et les liens.
 - **Nom** (obligatoire) : Un nom descriptif pour le CoA.
-- **Périmètre** : `Pays` ou `Global`.
-- **Pays** (périmètre pays uniquement) : Sélectionnez un pays dans la liste.
-- **Définir comme défaut pour ce pays** (périmètre pays uniquement) : Cochez pour faire de ce CoA le défaut du pays sélectionné.
+- **Utilisé pour** : **Un pays** ou **Tous les pays**. Un modèle global crée toujours un plan pour **Tous les pays**.
+- **Pays** (un pays uniquement) : Choisissez un pays dans la liste.
+- **En faire le plan par défaut du pays** (un pays uniquement) : Cochez pour faire de ce CoA le plan par défaut du pays choisi.
 
-En mode modèle, vous pouvez lancer une **Vérification** avant la création pour voir combien de comptes seront insérés et mis à jour. Cliquez ensuite sur **Créer** pour finaliser.
+En mode modèle, cliquez sur **Vérifier le modèle** avant de créer pour voir combien de comptes seront ajoutés et combien mis à jour. Cliquez ensuite sur **Créer**.
 
-**Valeurs par défaut** :
-  - Par pays : Vous pouvez marquer un CoA comme défaut pour chaque pays. Les nouvelles sociétés de ce pays sont automatiquement assignées à ce CoA (vous pouvez le changer ensuite dans l'onglet Vue d'ensemble de la société).
-  - Repli global : Votre espace de travail peut avoir un CoA par défaut global, utilisé pour les pays qui n'ont pas encore de défaut propre. Les défauts pays sont prioritaires ; le défaut global s'applique partout ailleurs.
+Un nouveau plan n'a aucun rôle, hormis le plan par défaut d'un pays que vous cochez ici. Pour lui donner un autre rôle, utilisez [Gérer les plans](#la-fenetre-gerer-les-plans).
 
 ### Charger depuis les modèles
 
@@ -162,12 +167,12 @@ Les modèles sont des ensembles de comptes standard gérés par les administrate
 **Fonctionnement** :
   - Allez dans **Données de référence -> Plans comptables**
   - Cliquez sur **Nouveau** dans la barre de pastilles
-  - Choisissez le mode **Copier à partir d'un modèle**
-  - Sélectionnez un modèle ; les modèles globaux apparaissent sous la forme « ALL -- ... » (ils chargent un CoA `GLOBAL`) ; les modèles pays affichent leur code à 2 lettres
-  - Le système affiche un rapport de vérification (nombre de comptes qui seront insérés ou mis à jour)
-  - Confirmez pour copier les comptes dans votre CoA
+  - Sous **Partir de**, choisissez **Un modèle**
+  - Sélectionnez un modèle. Les modèles globaux affichent « Tous les pays » et créent un plan pour tous les pays ; les modèles pays affichent leur pays
+  - Cliquez sur **Vérifier le modèle** pour voir combien de comptes seront ajoutés et combien mis à jour
+  - Cliquez sur **Créer** pour copier les comptes dans votre CoA
 
-**Ce qui est copié** : Numéros de comptes, noms, noms locaux (langue locale), descriptions, correspondances de consolidation et statut. Les comptes deviennent les vôtres et sont modifiables. Les modifications du modèle de la plateforme n'affectent pas votre CoA, sauf si vous le rechargez explicitement.
+**Ce qui est copié** : Numéros de comptes, noms, noms locaux (langue locale), descriptions, correspondances de consolidation et statut. Les comptes deviennent les vôtres et sont modifiables. Les modifications du modèle de la plateforme n'affectent pas votre CoA, sauf si vous le rechargez explicitement. Si votre espace de travail a un plan de consolidation, le nom et la description de consolidation de chaque compte sont repris de ce plan (voir [Le plan de consolidation](#le-plan-de-consolidation)).
 
 **Conseil** : Après avoir chargé un modèle, vous pouvez ajouter des comptes propres à la société, renommer des entrées ou désactiver les comptes inutilisés. Les modèles sont un point de départ, pas une structure figée.
 
@@ -221,54 +226,60 @@ Tous les modèles, quel que soit le pays, associent chaque compte à l'un des **
 
 **Exemple** : Votre filiale française charge **FR-PCG v1.0** et votre filiale allemande charge **DE-SKR03 v1.0**. Elles utilisent des numéros de compte et des noms locaux différents, mais chaque compte est associé à la même structure de consolidation IFRS. Les rapports de groupe s'agrègent sans aucun travail de correspondance manuel.
 
-### CoA par défaut global (provisionnement)
+### Nouveaux espaces de travail (provisionnement)
 
-Les nouveaux espaces de travail sont automatiquement provisionnés avec le modèle **IFRS v1.0**. Cela crée un CoA de périmètre `GLOBAL` contenant les 14 comptes de consolidation IFRS et le définit comme défaut global du tenant, pour que les sociétés puissent l'utiliser immédiatement sans configuration. Vous pouvez ensuite modifier ou supprimer les comptes et le CoA préchargés si nécessaire (dans le respect des garde-fous habituels).
+Les nouveaux espaces de travail sont automatiquement provisionnés avec le modèle **IFRS v1.0**. Cela crée un CoA pour tous les pays, contenant les 14 comptes de consolidation IFRS. Il est à la fois le **Plan par défaut des autres pays** et le **Plan de consolidation** : les sociétés et le reporting de groupe fonctionnent donc immédiatement, sans configuration. Vous pouvez ensuite modifier ou supprimer les comptes et le plan préchargés si nécessaire (dans le respect des garde-fous habituels).
 
-Les CoA globaux sont affichés avec leur périmètre dans la fenêtre **Gérer**, sans valeur de pays pour les entrées `GLOBAL`. Seuls les CoA `GLOBAL` peuvent être marqués comme défaut global, et seuls les CoA `PAYS` peuvent être définis comme défaut d'un pays.
+## Rôles des plans
+
+Un plan peut avoir jusqu'à trois rôles. Ils sont indépendants et chacun s'affiche en toutes lettres dans l'infobulle de la pastille, dans le résumé et dans **Gérer les plans**.
+
+| Rôle | Ce qu'il fait | Combien |
+|------|---------------|---------|
+| **Plan par défaut du pays ({pays})** | Proposé lorsque vous créez une société dans ce pays | Un par pays. Pour les plans d'un seul pays |
+| **Plan par défaut des autres pays** | Utilisé pour les sociétés d'un pays sans plan par défaut. Il est aussi attribué aux sociétés sans plan comptable | Un par espace de travail. Pour les plans de tous les pays |
+| **Plan de consolidation** | Les comptes du groupe auxquels chaque compte local est rattaché pour le reporting consolidé | Un par espace de travail. N'importe quel plan |
+
+Le point de départ habituel est un plan IFRS qui porte à la fois **Plan par défaut des autres pays** et **Plan de consolidation**, plus un plan local par pays qui porte **Plan par défaut du pays ({pays})**. Vous pouvez séparer les rôles, par exemple un plan de groupe qui est le plan de consolidation alors qu'un autre plan pour tous les pays sert les autres pays. Un plan peut aussi n'avoir aucun rôle.
+
+Chaque rôle a un seul titulaire (un par pays pour le plan par défaut d'un pays). Donner un rôle à un autre plan le retire au titulaire précédent.
 
 ## Gérer les plans comptables
 
-### La fenêtre Gérer
+### La fenêtre Gérer les plans
 
-Cliquez sur **Gérer** dans la barre de pastilles pour ouvrir la fenêtre d'administration. Elle comporte deux panneaux :
+Cliquez sur **Gérer les plans** dans la barre de pastilles pour ouvrir la fenêtre. Un tableau liste tous les plans :
 
-**Panneau de gauche** : liste des CoA
-- Affiche tous vos plans comptables avec leurs codes et noms.
-- Badges par défaut : **★** pour le défaut pays, cercle-plus pour le défaut global.
-- Cliquez sur une ligne pour voir ses détails.
-
-**Panneau de droite** : détails du CoA
 - **Code** et **Nom**
-- **Périmètre** : `GLOBAL` ou `PAYS`
-- **Pays** (pour les CoA de périmètre pays)
-- **Défaut pays** : Oui/Non
-- **Défaut global** : Oui/Non
-- **Sociétés associées** : Nombre de sociétés assignées à ce CoA
-- **Comptes** : Nombre de comptes de ce CoA
+- **Pays** : le pays du plan, ou « Tous les pays »
+- **Rôles** : les rôles du plan en toutes lettres, ou un tiret s'il n'en a aucun
+- **Sociétés** : le nombre de sociétés assignées au plan
+- **Comptes** : le nombre de comptes du plan
 
-**Actions** (dans la barre d'outils de la fenêtre) :
-- **Nouveau** (`accounts:manager`) : Ouvre la boîte de dialogue de création de CoA.
-- **Définir comme défaut pays** (`accounts:manager`) : Marque le CoA de périmètre pays sélectionné comme défaut de son pays. Désactivé pour les CoA globaux.
-- **Définir comme défaut global** (`accounts:manager`) : Marque le CoA de périmètre global sélectionné comme défaut global. Désactivé pour les CoA pays.
-- **Supprimer la sélection** (`accounts:admin`) : Supprime le CoA sélectionné. La suppression est bloquée si des sociétés le référencent ou si des postes OPEX/CAPEX utilisent ses comptes.
+Trois courtes lignes sous le tableau expliquent les rôles. **Nouveau plan** (`accounts:manager`), en bas à gauche, ouvre la boîte de dialogue de création.
+
+Chaque ligne a un menu **⋯** qui ne propose que les actions applicables à ce plan. Le libellé suit l'état actuel.
+
+- **Définir comme plan par défaut du pays** / **Ne plus utiliser comme plan par défaut du pays** (`accounts:manager`) : pour les plans d'un seul pays.
+- **Définir par défaut pour les autres pays** / **Ne plus utiliser par défaut pour les autres pays** (`accounts:manager`) : pour les plans de tous les pays. En le définissant par défaut, vous l'attribuez aussi aux sociétés qui n'ont pas de plan comptable.
+- **Définir comme plan de consolidation** / **Ne plus utiliser comme plan de consolidation** (`accounts:manager`) : pour n'importe quel plan. Voir [Modifier le plan de consolidation](#modifier-le-plan-de-consolidation).
+- **Supprimer** (`accounts:admin`) : Supprime le plan avec ses comptes. Si le plan contient des comptes, une confirmation indique combien sont supprimés. S'il s'agit du plan de consolidation, la confirmation précise que le reporting de groupe n'aura plus de plan de référence. La suppression est refusée tant que des sociétés utilisent le plan ou que des postes OPEX/CAPEX utilisent ses comptes, et la fenêtre en indique la raison.
+
+Les rôles changent dès que vous choisissez une action. Le tableau se met à jour immédiatement.
 
 ## Gérer les comptes
 
 ### Numéros de compte
 
-Les numéros de compte sont stockés sous forme de texte, mais contiennent généralement des valeurs numériques. Lors de la modification des comptes :
-  - Vous pouvez saisir des nombres (ex. : `6011`) ou du texte (ex. : `6011-TRAVEL`)
-  - Le système convertit automatiquement les saisies numériques en texte
-  - Au sein d'un CoA, les numéros de compte doivent être uniques (contrôle appliqué après la reprise des données)
+Un numéro de compte est un nombre entier supérieur à zéro (par exemple `6011`). Au sein d'un CoA, chaque numéro n'est utilisé qu'une fois.
 
 ### Noms locaux pour le multilinguisme
 
-Certains pays exigent que les comptes soient enregistrés dans la langue locale. Utilisez le champ **Nom local** pour stocker le nom d'origine tout en conservant le nom anglais dans le champ principal **Nom du compte**.
+Certains pays exigent que les comptes soient enregistrés dans la langue locale. Utilisez le champ **Nom local (langue locale)** pour stocker le nom d'origine tout en conservant le nom anglais dans le champ principal **Nom du compte**.
 
 **Exemple** : Compte français
   - **Nom du compte** : `Travel expenses` (anglais, pour le reporting)
-  - **Nom local** : `Frais de deplacement` (français, pour la conformité légale)
+  - **Nom local (langue locale)** : `Frais de deplacement` (français, pour la conformité légale)
 
 Le nom local est disponible dans une colonne masquée de la grille des comptes. Activez-la depuis le sélecteur de colonnes pour voir les deux noms côte à côte.
 
@@ -276,14 +287,13 @@ Le nom local est disponible dans une colonne masquée de la grille des comptes. 
 
 Dans les organisations multi-pays, le travail quotidien se fait avec les plans comptables locaux (PCG français, UK GAAP, HGB allemand, etc.), mais le reporting de groupe exige souvent une consolidation vers une norme commune comme **IFRS** ou **US GAAP**.
 
-Les **comptes de consolidation** répondent à ce besoin en associant les comptes locaux à des comptes de consolidation standardisés.
+Les **comptes de consolidation** répondent à ce besoin en rattachant les comptes locaux aux comptes d'un plan de référence.
 
-### Fonctionnement
+### Le plan de consolidation
 
-Chaque compte peut avoir trois champs de consolidation :
-  - **Numéro de compte de consolidation** : Le numéro de compte standardisé (ex. : compte IFRS `6200`)
-  - **Nom du compte de consolidation** : Le nom standardisé (ex. : `IT Services and Software`)
-  - **Description du compte de consolidation** : Précisions facultatives sur la catégorie de consolidation
+Votre espace de travail a au plus un **Plan de consolidation**. Il contient les comptes du groupe auxquels chaque compte local est rattaché. Il est indépendant des plans par défaut : n'importe quel plan peut être le plan de consolidation, y compris un plan qui est aussi le plan par défaut des autres pays.
+
+Sur chaque compte local, vous choisissez un **Compte de consolidation** parmi les comptes du plan de consolidation. Le numéro fait le lien. Le nom et la description du compte de consolidation viennent automatiquement du plan de consolidation : ils correspondent donc toujours à ses comptes.
 
 **Exemple de correspondance** :
 
@@ -293,7 +303,12 @@ Chaque compte peut avoir trois champs de consolidation :
 | Royaume-Uni | UK-GAAP | 5200 | Postage and courier | -> | 6200 | IT Services and Software |
 | Allemagne | DE-HGB | 4920 | Portokosten | -> | 6200 | IT Services and Software |
 
-Les trois comptes locaux sont associés au même compte de consolidation IFRS `6200`, ce qui permet l'agrégation au niveau du groupe.
+Les trois comptes locaux sont rattachés au même compte de consolidation `6200`, ce qui permet l'agrégation au niveau du groupe.
+
+**Ce qui reste synchronisé** :
+
+  - Lorsque vous renommez un compte du plan de consolidation, modifiez sa description ou lui donnez un nouveau numéro, tous les comptes qui y sont rattachés suivent. Leur numéro, leur nom et leur description sont mis à jour partout, en une seule opération.
+  - Lorsque vous rattachez un compte à un numéro qui existe dans le plan de consolidation, le nom et la description de consolidation sont renseignés pour vous.
 
 ### Pourquoi c'est important
 
@@ -310,7 +325,7 @@ Les trois comptes locaux sont associés au même compte de consolidation IFRS `6
 ### Configurer les correspondances de consolidation
 
 **Option 1 : Modèles (recommandé)**
-Tous les modèles intégrés incluent les correspondances de consolidation IFRS sur chaque compte. Chargez n'importe quel modèle pays et les colonnes de consolidation sont déjà remplies, sans correspondance manuelle. Consultez [Modèles disponibles](#modeles-disponibles) pour la liste complète.
+Tous les modèles intégrés incluent les correspondances de consolidation IFRS sur chaque compte. Chargez n'importe quel modèle pays et les colonnes de consolidation sont déjà remplies. Un nouvel espace de travail a déjà le plan IFRS comme plan de consolidation. Consultez [Modèles disponibles](#modeles-disponibles) pour la liste complète.
 
 **Option 2 : Import CSV**
 Lors de l'import de comptes, incluez les champs de consolidation dans votre CSV :
@@ -322,16 +337,33 @@ UK-GAAP;5200;Postage and courier;6200;IT Services and Software;
 DE-HGB;4920;Portokosten;6200;IT Services and Software;
 ```
 
+Seul le numéro de compte de consolidation compte lorsque le plan de consolidation le contient : l'import remplace les colonnes de nom et de description par celles du plan de consolidation. Lorsque le numéro n'est pas dans le plan de consolidation, le nom et la description du fichier sont conservés, et le compte est signalé comme absent du plan de consolidation. Un numéro vide supprime le rattachement, le nom et la description.
+
 **Option 3 : Saisie manuelle**
-Modifiez les comptes un par un et remplissez les champs de consolidation dans l'espace de travail du compte.
+Ouvrez un compte et choisissez son **Compte de consolidation** dans l'espace de travail du compte.
+
+### Modifier le plan de consolidation
+
+1. Ouvrez **Gérer les plans** puis le menu **⋯** du plan que vous voulez utiliser.
+2. Cliquez sur **Définir comme plan de consolidation**.
+3. Si le plan remplace un autre plan de consolidation, ou si certains comptes pointent vers des numéros qu'il ne contient pas, une confirmation s'ouvre. Elle indique quel plan il remplace et donne les nombres : combien de comptes conservent leur compte de consolidation, combien pointent vers un numéro absent du nouveau plan, et combien n'ont pas de compte de consolidation.
+4. Cliquez sur **Définir comme plan de consolidation** pour confirmer.
+
+**Ce qu'il advient des rattachements existants** : KANAP ne rattache jamais les comptes à votre place. Chaque compte conserve son numéro de consolidation.
+
+  - Les comptes dont le numéro existe dans le nouveau plan le conservent et reprennent le nom et la description de ce plan.
+  - Les comptes dont le numéro n'existe pas dans le nouveau plan conservent leur numéro et sont signalés : la ligne de suivi les compte, un point les marque dans la grille et l'espace de travail du compte vous invite à choisir un compte valide. Filtrez-les depuis la ligne de suivi et rattachez-les un par un, ou chargez un CSV.
+  - Les comptes sans numéro restent non rattachés.
+
+Si vous choisissez **Ne plus utiliser comme plan de consolidation**, le reporting de groupe n'a plus de plan de référence. Les rattachements des comptes sont conservés.
 
 ### Bonnes pratiques
 
   - **Utilisez une norme commune** : IFRS est courant pour les groupes européens, US GAAP pour les sociétés américaines. Tous les modèles intégrés sont déjà associés aux 14 mêmes comptes de consolidation IFRS (voir [Consolidation IFRS intégrée](#consolidation-ifrs-integree))
-  - **Tenez un plan de consolidation** : Conservez un document de référence qui liste vos comptes de consolidation et ce qu'ils représentent. Si vous utilisez les modèles intégrés, les 14 comptes IFRS servent de référence
+  - **Gardez un seul plan de consolidation** : C'est la liste des comptes de reporting de votre groupe. Si vous utilisez les modèles intégrés, les 14 comptes IFRS servent de référence
   - **Choisissez le bon niveau de détail** : Ne consolidez ni trop large (perte d'information), ni trop fin (trop complexe)
   - **Impliquez la finance** : Les correspondances de consolidation doivent être alignées sur les exigences de reporting financier de votre groupe
-  - **Mettez à jour systématiquement** : Lorsque vous ajoutez des comptes locaux, associez-les immédiatement à des comptes de consolidation
+  - **Mettez à jour systématiquement** : Lorsque vous ajoutez des comptes locaux, rattachez-les immédiatement à des comptes de consolidation. La ligne de suivi montre ce qui manque encore
 
 ### Reporting avec les comptes de consolidation
 
@@ -443,12 +475,13 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Le `coa_code` doit correspondre à un plan comptable existant de votre espace de travail
   - Les numéros de compte doivent être uniques au sein d'un CoA
   - Valeurs de statut : `enabled` ou `disabled` (enabled par défaut)
+  - Colonnes de consolidation : lorsque `consolidation_account_number` existe dans votre plan de consolidation, son nom et sa description remplacent les cellules `consolidation_account_name` et `consolidation_account_description`. Un numéro vide efface les trois. Voir [Configurer les correspondances de consolidation](#configurer-les-correspondances-de-consolidation)
 
 ## Conseils
 
   - **Commencez par les modèles** : KANAP est livré avec des modèles pour 9 pays plus IFRS. Chargez-en un au lieu de partir de zéro : vous obtenez directement les bons numéros de compte, les noms locaux et les correspondances de consolidation IFRS. Commencez avec la v1.0 (Simple) en cas de doute ; passez à la v2.0 (Détaillé) si vous avez besoin de plus de détail.
-  - **Un défaut par pays** : Définissez un CoA par défaut pour chaque pays afin que les nouvelles sociétés reçoivent automatiquement la bonne structure de comptes.
-  - **Noms locaux pour la conformité** : Utilisez le champ Nom local si la réglementation locale exige les comptes dans la langue du pays. Activez la colonne **Nom local** dans la grille pour voir les deux noms d'un coup d'œil.
+  - **Un défaut par pays** : Faites d'un CoA le plan par défaut de chaque pays, pour que les nouvelles sociétés démarrent avec la bonne structure de comptes.
+  - **Noms locaux pour la conformité** : Utilisez le champ **Nom local (langue locale)** si la réglementation locale exige les comptes dans la langue du pays. Activez la colonne **Nom local** dans la grille pour voir les deux noms d'un coup d'œil.
   - **Migrez progressivement** : Vous n'avez pas à tout convertir en une fois. Les sociétés sans CoA continuent de fonctionner avec les comptes historiques.
   - **Corrigez les comptes obsolètes** : Lorsque vous voyez un avertissement, mettez à jour le compte pour qu'il corresponde au CoA actuel de la société. Vos données restent propres pour le reporting.
   - **Désactivez plutôt que de supprimer** : La désactivation préserve l'historique. Ne supprimez que les comptes créés par erreur et jamais utilisés.
@@ -465,7 +498,7 @@ Vous avez des filiales en France, au Royaume-Uni et en Allemagne, chacune soumis
 
 **Configuration** :
   1. Chargez trois modèles : **FR-PCG v1.0**, **GB-UKGAAP v1.0**, **DE-SKR03 v1.0** (ou v2.0 pour plus de détail)
-  2. Définissez chacun comme défaut de son pays
+  2. Faites de chacun le plan par défaut de son pays (**Gérer les plans**, puis **Définir comme plan par défaut du pays**)
   3. Assignez les sociétés à leurs CoA respectifs
   4. Les nouvelles sociétés reçoivent automatiquement le bon CoA ; la sélection de comptes est filtrée en conséquence
   5. Les correspondances de consolidation sont déjà en place : les rapports de groupe fonctionnent immédiatement
@@ -508,7 +541,7 @@ Votre groupe a des filiales en France, au Royaume-Uni et en Allemagne. Chaque pa
       - GB-UKGAAP `510` (Capitalized Software) -> IFRS `1100` (Immobilisations incorporelles)
       - DE-SKR03 `27` (EDV-Software) -> IFRS `1100` (Immobilisations incorporelles)
 
-  3. Définissez chaque CoA comme défaut de son pays et assignez les sociétés
+  3. Faites de chaque CoA le plan par défaut de son pays et assignez les sociétés
 
 **Résultat** :
   - Les utilisateurs français travaillent au quotidien avec les comptes du PCG et leurs noms locaux en français
@@ -530,7 +563,7 @@ R : La suppression est bloquée si des sociétés le référencent ou si des pos
 R : Oui, dans l'espace de travail du compte. Changer le numéro de compte met automatiquement à jour toutes les références dans les postes OPEX/CAPEX (l'UUID du compte reste le même en interne).
 
 **Q : Comment voir quelles sociétés utilisent un CoA donné ?**
-R : Ouvrez **Gérer** sur la page Plans comptables, sélectionnez le CoA et consultez **Sociétés associées** dans le panneau de détails. Vous pouvez aussi filtrer la page Sociétés par CoA.
+R : Ouvrez **Gérer les plans** sur la page Plans comptables et consultez la colonne **Sociétés** de la ligne du CoA. Vous pouvez aussi filtrer la page Sociétés par CoA.
 
 **Q : Que faire si mon pays n'a pas de modèle ?**
 R : KANAP inclut des modèles pour 9 pays (FR, DE, GB, ES, IT, NL, BE, CH, US) plus IFRS comme norme globale. Si votre pays n'est pas couvert, créez un CoA de zéro et ajoutez les comptes manuellement ou par import CSV. Vous pouvez tout de même utiliser les numéros de comptes de consolidation IFRS (1000-2900) dans vos correspondances de consolidation pour rester compatible avec les modèles intégrés.
@@ -549,3 +582,12 @@ R : Oui, c'est justement le principe. De nombreux comptes locaux de différents 
 
 **Q : Que se passe-t-il si je modifie une correspondance de consolidation ?**
 R : Les postes OPEX/CAPEX ne stockent pas directement de données de consolidation : ils référencent le compte, qui porte la correspondance. Lorsque vous modifiez une correspondance, tous les postes passés et futurs qui utilisent ce compte sont rapportés sous le nouveau compte de consolidation. Modifiez les correspondances avec prudence si vous devez conserver les catégories de reporting historiques.
+
+**Q : Le plan de consolidation doit-il être le plan par défaut des autres pays ?**
+R : Non. Les deux rôles sont indépendants. Dans la configuration habituelle, un même plan IFRS porte les deux, et vous pouvez les donner à des plans différents à tout moment dans **Gérer les plans**.
+
+**Q : Que deviennent les comptes quand je renomme ou renumérote un compte du plan de consolidation ?**
+R : Tous les comptes qui y sont rattachés suivent. Leur numéro, leur nom et leur description de consolidation sont mis à jour ensemble : les rattachements restent valides.
+
+**Q : Pourquoi la grille affiche-t-elle un point à côté de certains numéros de consolidation ?**
+R : Le point signale un compte dont le numéro de consolidation n'existe pas dans le plan de consolidation, typiquement après un changement de plan de consolidation. Ouvrez le compte et choisissez un compte de consolidation valide, ou utilisez la ligne de suivi pour les lister tous.

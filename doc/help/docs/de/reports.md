@@ -358,7 +358,7 @@ Zeigen Sie OPEX- oder CAPEX-Budgetdaten gruppiert nach Konsolidierungskonto, wob
 
 **Tabelle**: Eine Zeile pro Konsolidierungskonto mit Jahresspalten. Eine angeheftete Summenzeile unten summiert alle Gruppen.
 
-Eine Zeile auf einem inzwischen deaktivierten Konsolidierungskonto zählt weiterhin, unter der Konsolidierungszeile dieses Kontos. Kontonamen und -nummern werden nur angezeigt, wenn Sie den [Kontenplan](chart-of-accounts.md) lesen dürfen; ohne diesen Zugriff erscheinen alle Zeilen stattdessen unter „Nicht zugeordnet“ (die Summen bleiben richtig, nur die Aufteilung nach Konto ist ausgeblendet). Positionen ohne Konsolidierungskonto erscheinen ebenfalls als „Nicht zugeordnet“.
+Eine Zeile auf einem inzwischen deaktivierten Konsolidierungskonto zählt weiterhin, unter der Konsolidierungszeile dieses Kontos. Kontonamen und -nummern werden nur angezeigt, wenn Sie den [Kontenplan](chart-of-accounts.md) lesen dürfen; ohne diesen Zugriff erscheinen alle Zeilen stattdessen unter „Nicht zugeordnet“ (die Summen bleiben richtig, nur die Aufteilung nach Konto ist ausgeblendet). Positionen ohne Konsolidierungskonto erscheinen ebenfalls als „Nicht zugeordnet“. Die Konsolidierungskonten sind die Konten Ihres [Konsolidierungskontenplans](chart-of-accounts.md#der-konsolidierungskontenplan).
 
 ---
 

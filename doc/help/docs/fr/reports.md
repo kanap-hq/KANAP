@@ -358,7 +358,7 @@ Consultez les données budgétaires OPEX ou CAPEX regroupées par compte de cons
 
 **Tableau** : Une ligne par compte de consolidation avec des colonnes d'années. Une ligne de totaux épinglée en bas additionne tous les groupes.
 
-Une ligne sur un compte de consolidation désactivé depuis compte toujours, sur la ligne de consolidation de ce compte. Les noms et numéros de compte ne s'affichent que si vous pouvez lire le [plan comptable](chart-of-accounts.md) ; sans cet accès, toutes les lignes apparaissent sous « Non affecté » à la place (les totaux restent corrects, seule la répartition par compte est masquée). Les postes sans compte de consolidation apparaissent aussi comme « Non affecté ».
+Une ligne sur un compte de consolidation désactivé depuis compte toujours, sur la ligne de consolidation de ce compte. Les noms et numéros de compte ne s'affichent que si vous pouvez lire le [plan comptable](chart-of-accounts.md) ; sans cet accès, toutes les lignes apparaissent sous « Non affecté » à la place (les totaux restent corrects, seule la répartition par compte est masquée). Les postes sans compte de consolidation apparaissent aussi comme « Non affecté ». Les comptes de consolidation sont les comptes de votre [plan de consolidation](chart-of-accounts.md#le-plan-de-consolidation).
 
 ---
 
