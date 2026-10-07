@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as dayjs from 'dayjs';
 import 'dayjs/locale/de';
@@ -500,6 +500,10 @@ export class ScheduledNotificationsService implements OnModuleInit {
     userId: string,
     tenantId: string,
   ): Promise<{ success: boolean; message: string; code?: string }> {
+    // The email links to the application: without a configured address the caller gets 400.
+    if (resolveConfiguredAppBaseUrl(null) === null) {
+      throw new BadRequestException(APP_URL_NOT_CONFIGURED_MESSAGE);
+    }
     const runner = this.dataSource.createQueryRunner();
     await runner.connect();
     await runner.startTransaction();

@@ -1,3 +1,6 @@
+// url.ts imports this module as well: only functions cross between the two, called after load.
+import { resolveConfiguredAppBaseUrl } from './url';
+
 export function requireEnv(name: string, env: NodeJS.ProcessEnv = process.env): string {
   const value = env[name];
   if (!value || value.trim() === '') {
@@ -220,11 +223,12 @@ export function validateStartupEnv(
   }
 
   const appBaseUrl = String(env.APP_BASE_URL || env.PUBLIC_APP_URL || '').trim();
-  // Multi-tenant links can also derive from APP_URL (common/url.ts).
-  const anyAppAddress = appBaseUrl || (options.singleTenant ? '' : String(env.APP_URL || '').trim());
+  // No application address for links and origins (multi-tenant also reads APP_URL). Same test
+  // as the origin policy (common/cors-policy.ts).
+  const noAppAddress = resolveConfiguredAppBaseUrl(null, env, options.singleTenant) === null;
   if (mode === 'production') {
     requireAppBaseUrl(env);
-  } else if (!anyAppAddress) {
+  } else if (noAppAddress && !appBaseUrl) {
     warnings.push(
       '[CONFIG] APP_BASE_URL is not set: password reset and invitation emails, notification links and sign-in redirects are refused. Set APP_BASE_URL to the address users open KANAP at (for example https://kanap.example.com).',
     );
@@ -238,11 +242,17 @@ export function validateStartupEnv(
     if (mode === 'production') {
       throw new Error('FATAL: CORS_ORIGINS must be set in production. Example: CORS_ORIGINS=https://*.kanap.net');
     }
-    warnings.push(
-      mode === 'development'
-        ? '[CORS] CORS_ORIGINS not set; allowing all origins (development only)'
-        : '[CORS] CORS_ORIGINS is not set: browsers are allowed only from APP_BASE_URL and from the address of each request. Set CORS_ORIGINS to the exact address users open KANAP at (for example https://kanap.example.com).',
-    );
+    if (mode === 'development') {
+      warnings.push('[CORS] CORS_ORIGINS not set; allowing all origins (development only)');
+    } else if (noAppAddress) {
+      warnings.push(
+        '[CORS] CORS_ORIGINS and APP_BASE_URL are not set: browsers are still allowed from every origin in this version; a later version allows only the configured addresses. Set CORS_ORIGINS and APP_BASE_URL to the exact address users open KANAP at (for example https://kanap.example.com).',
+      );
+    } else {
+      warnings.push(
+        '[CORS] CORS_ORIGINS is not set: browsers are allowed only from APP_BASE_URL and from the address of each request. Set CORS_ORIGINS to the exact address users open KANAP at (for example https://kanap.example.com).',
+      );
+    }
   } else if (options.singleTenant && mode !== 'development') {
     for (const pattern of patterns.filter(isWildcardCorsPattern)) {
       warnings.push(

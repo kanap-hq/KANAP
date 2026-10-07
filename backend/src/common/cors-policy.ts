@@ -23,14 +23,16 @@ import { Features } from '../config/features';
  *   b. the configured address of the application: `APP_BASE_URL` in single-tenant mode, the
  *      configured address of the tenant the request targets in multi-tenant mode (same
  *      derivation as the links, `resolveConfiguredAppBaseUrl`);
- *   c. the address of the request itself (host and port of `Origin` equal to the `Host` header);
+ *   c. the address of the request itself (host and port of `Origin` equal to the `Host` header;
+ *      outside production mode, the host name only when `Host` carries no port);
  *   d. multi-tenant: a pattern entry of `CORS_ORIGINS` (`https://*.kanap.net`), for the address
  *      of the tenant the request targets only;
  *   e. single-tenant: a pattern entry of `CORS_ORIGINS`, as written (start-up warning);
  *   f. development mode: the entries of `CORS_ORIGINS` as written, and every origin when
  *      `CORS_ORIGINS` is empty.
  * With `CORS_ORIGINS` empty outside development mode, only b and c apply (production mode does
- * not start without it).
+ * not start without it). In unspecified mode with `CORS_ORIGINS` empty and no application
+ * address configured, every origin stays allowed in this version (start-up warning).
  */
 
 export type OriginRule = 'no-origin' | 'open' | 'listed' | 'application' | 'same-origin' | 'tenant-pattern' | 'pattern';
@@ -68,12 +70,24 @@ function parseOrigin(raw: string): URL | null {
   }
 }
 
-/** Host and port of the origin equal to the `Host` header (default port of the origin's scheme omitted). */
-function isSameAddressAsHost(origin: URL, host: string | null | undefined): boolean {
+/** A `Host` header that names a port (`kanap.example.test:8080`, `[::1]:8080`). */
+function hostHeaderHasPort(raw: string): boolean {
+  const afterAddress = raw.startsWith('[') ? raw.slice(raw.indexOf(']') + 1) : raw;
+  return /:\d+$/.test(afterAddress);
+}
+
+/**
+ * The origin is the address of the request: host and port of the origin equal to the `Host`
+ * header (default port of the origin's scheme omitted). Outside production mode, a `Host` header
+ * without a port (a reverse proxy that forwards the host name only) is compared on the host name.
+ */
+function isSameAddressAsHost(origin: URL, host: string | null | undefined, mode: RuntimeMode): boolean {
   const raw = String(host ?? '').split(',')[0].trim().toLowerCase();
   if (!raw || /[\s/\\@?#]/.test(raw)) return false;
   try {
-    return new URL(`${origin.protocol}//${raw}`).host === origin.host;
+    const request = new URL(`${origin.protocol}//${raw}`);
+    if (mode !== 'production' && !hostHeaderHasPort(raw)) return request.hostname === origin.hostname;
+    return request.host === origin.host;
   } catch {
     return false;
   }
@@ -103,7 +117,11 @@ export function createOriginPolicy(options: OriginPolicyOptions = {}): OriginPol
   const patterns = parseCorsPatterns(env);
   const exact = patterns.filter((pattern) => !isWildcardCorsPattern(pattern));
   const wildcards = patterns.filter(isWildcardCorsPattern);
-  const openToEveryOrigin = mode === 'development' && patterns.length === 0;
+  // CORS_ORIGINS empty: every origin in development mode, and in unspecified mode when no
+  // application address is configured either (nothing to compare with; start-up warning).
+  // Same test as validateStartupEnv (common/env.ts).
+  const openToEveryOrigin = patterns.length === 0
+    && (mode === 'development' || (mode === 'unspecified' && resolveConfiguredAppBaseUrl(null, env, singleTenant) === null));
 
   const applicationOrigin = (tenantSlug: string | null): string | null => {
     if (!singleTenant && !tenantSlug) return null;
@@ -120,7 +138,7 @@ export function createOriginPolicy(options: OriginPolicyOptions = {}): OriginPol
       const origin = parseOrigin(raw);
       if (!origin) return { allowed: false };
       if (matchesCorsOrigin(origin.origin, exact)) return { allowed: true, rule: 'listed' };
-      if (isSameAddressAsHost(origin, request.host)) return { allowed: true, rule: 'same-origin' };
+      if (isSameAddressAsHost(origin, request.host, mode)) return { allowed: true, rule: 'same-origin' };
 
       const slug = String(request.tenantSlug ?? '').trim().toLowerCase();
       const tenantSlug = slug && TENANT_SLUG_SHAPE.test(slug) ? slug : null;

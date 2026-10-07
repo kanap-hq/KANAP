@@ -66,15 +66,23 @@ function developmentRequestHost(req: any): string | null {
   return host && isLocalDevelopmentHost(host) ? host : null;
 }
 
+/** A request host: reused when it already is this tenant's host, otherwise the domain rules. */
 function resolveTenantOriginFromHost(host: string, tenantSlug: string, proto: 'http' | 'https'): string | null {
   const normalizedHost = sanitizeHost(host);
   if (!normalizedHost) return null;
-  const slug = tenantSlug.toLowerCase();
 
   // If the host is already a tenant host for this slug, reuse it.
-  if (normalizedHost.startsWith(`${slug}.`)) {
+  if (normalizedHost.startsWith(`${tenantSlug.toLowerCase()}.`)) {
     return `${proto}://${normalizedHost}`;
   }
+  return tenantOriginFromDomain(normalizedHost, tenantSlug, proto);
+}
+
+/** The tenant's address on the domain of a host (lvh.me, dev/qa.kanap.net, kanap.net, `app.<domain>`). */
+function tenantOriginFromDomain(host: string, tenantSlug: string, proto: 'http' | 'https'): string | null {
+  const normalizedHost = sanitizeHost(host);
+  if (!normalizedHost) return null;
+  const slug = tenantSlug.toLowerCase();
 
   // Dev: lvh.me wildcard
   if (normalizedHost === 'lvh.me' || normalizedHost === 'www.lvh.me' || normalizedHost.endsWith('.lvh.me')) {
@@ -127,10 +135,13 @@ function parseConfiguredUrl(raw: string | undefined): URL | null {
   }
 }
 
-/** A configured address turned into the tenant's address, keeping its scheme and port. */
+/**
+ * A configured address turned into the tenant's address, keeping its scheme and port. Only the
+ * domain rules apply: `https://kanap.net` gives `https://kanap.kanap.net` for the tenant `kanap`.
+ */
 function tenantOriginFromConfiguredUrl(url: URL, tenantSlug: string): string | null {
   const proto = url.protocol === 'https:' ? 'https' : 'http';
-  const derived = resolveTenantOriginFromHost(url.hostname, tenantSlug, proto);
+  const derived = tenantOriginFromDomain(url.hostname, tenantSlug, proto);
   if (!derived) return null;
   return url.port ? `${derived}:${url.port}` : derived;
 }
@@ -143,9 +154,9 @@ const TENANT_SLUG_SHAPE = /^[a-z0-9][a-z0-9-]*$/;
  *
  * - single-tenant: `APP_BASE_URL`, then `PUBLIC_APP_URL`;
  * - multi-tenant, for a tenant: the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` whose
- *   host names a tenant address (a host starting with `<slug>.`, lvh.me, dev.kanap.net,
- *   qa.kanap.net, kanap.net, or a host starting with `app.`), turned into the tenant's address
- *   (scheme and port kept); when none does, the first of them as configured;
+ *   host is on a known tenant domain (lvh.me, dev.kanap.net, qa.kanap.net, kanap.net, or a host
+ *   starting with `app.`), turned into the tenant's address `<slug>.<domain>` (scheme and port
+ *   kept); when none is, the first of them as configured;
  * - multi-tenant without a tenant: the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL`.
  *
  * Returns the origin (no trailing slash), or null when nothing is configured.

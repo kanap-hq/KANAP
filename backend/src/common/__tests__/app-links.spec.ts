@@ -5,7 +5,8 @@ import { AuthController } from '../../auth/auth.controller';
 import { UsersController } from '../../users/users.controller';
 import { PortfolioWeeklyReportController } from '../../portfolio/portfolio-weekly-report.controller';
 import { ScheduledNotificationsService } from '../../notifications/scheduled-notifications.service';
-import { resolveNotificationBaseUrl, resolveTenantAppBaseUrl } from '../url';
+import { NotificationPreferencesController } from '../../notifications/notification-preferences.controller';
+import { resolveConfiguredAppBaseUrl, resolveNotificationBaseUrl, resolveTenantAppBaseUrl } from '../url';
 
 // Absolute links to the application (password reset, invitation, sign-in redirects, notification
 // and export links) come from the configuration. The request's Host, X-Forwarded-Host and
@@ -45,6 +46,8 @@ async function withFeatures<T>(values: { SINGLE_TENANT: boolean }, fn: () => Pro
 
 const ON_PREMISE = { APP_BASE_URL: 'https://kanap.example.test' };
 const CLOUD = { APP_BASE_URL: 'https://app.kanap.net', APP_URL: 'https://app.kanap.net' };
+// The cloud configuration with APP_BASE_URL on the marketing site's apex.
+const CLOUD_APEX = { APP_BASE_URL: 'https://kanap.net', APP_URL: 'https://app.kanap.net' };
 const WORKSTATION = { APP_BASE_URL: 'http://localhost:5173', APP_URL: 'https://app.dev.kanap.net' };
 
 function requestOn(host: string, options: { forwardedHost?: string; proto?: string; tenantSlug?: string } = {}) {
@@ -113,25 +116,44 @@ async function testConfiguredLinksIgnoreRequestHost() {
       }
     }));
 
-    await withFeatures({ SINGLE_TENANT: false }, () => withEnv({ APP_ENV: appEnv, ...CLOUD }, async () => {
-      for (const req of [
-        requestOn(OTHER_HOST, { tenantSlug: 'acme' }),
-        requestOn('acme.kanap.net', { forwardedHost: OTHER_HOST, proto: 'http', tenantSlug: 'acme' }),
-      ]) {
-        assert.equal(await resetLinkFor(req), 'https://acme.kanap.net/reset-password#token=reset-token', `${label}: multi-tenant reset`);
-        assert.equal(await inviteBaseFor(req), 'https://acme.kanap.net', `${label}: multi-tenant invitation`);
-      }
-      // Sign-in redirects and knowledge links: the tenant's configured address.
-      assert.equal(resolveTenantAppBaseUrl(requestOn(OTHER_HOST), 'acme'), 'https://acme.kanap.net', `${label}: tenant redirect`);
-      // Notification links: same derivation.
-      assert.equal(resolveNotificationBaseUrl('acme'), 'https://acme.kanap.net', `${label}: notification`);
-      // XLSX export links.
-      const exportController = new PortfolioWeeklyReportController({} as any);
-      assert.equal(
-        (exportController as any).resolveExportBaseUrl(requestOn(OTHER_HOST, { tenantSlug: 'acme' }), 'acme'),
-        'https://acme.kanap.net',
-        `${label}: export`,
-      );
+    for (const cloud of [CLOUD, CLOUD_APEX]) {
+      const cloudLabel = `${label}, APP_BASE_URL=${cloud.APP_BASE_URL}`;
+      await withFeatures({ SINGLE_TENANT: false }, () => withEnv({ APP_ENV: appEnv, ...cloud }, async () => {
+        for (const req of [
+          requestOn(OTHER_HOST, { tenantSlug: 'acme' }),
+          requestOn('acme.kanap.net', { forwardedHost: OTHER_HOST, proto: 'http', tenantSlug: 'acme' }),
+        ]) {
+          assert.equal(await resetLinkFor(req), 'https://acme.kanap.net/reset-password#token=reset-token', `${cloudLabel}: multi-tenant reset`);
+          assert.equal(await inviteBaseFor(req), 'https://acme.kanap.net', `${cloudLabel}: multi-tenant invitation`);
+        }
+        // Sign-in redirects and knowledge links: the tenant's configured address.
+        assert.equal(resolveTenantAppBaseUrl(requestOn(OTHER_HOST), 'acme'), 'https://acme.kanap.net', `${cloudLabel}: tenant redirect`);
+        // Notification links: same derivation.
+        assert.equal(resolveNotificationBaseUrl('acme'), 'https://acme.kanap.net', `${cloudLabel}: notification`);
+        // XLSX export links.
+        const exportController = new PortfolioWeeklyReportController({} as any);
+        assert.equal(
+          (exportController as any).resolveExportBaseUrl(requestOn(OTHER_HOST, { tenantSlug: 'acme' }), 'acme'),
+          'https://acme.kanap.net',
+          `${cloudLabel}: export`,
+        );
+      }));
+    }
+  }
+}
+
+async function testConfiguredAddressUsesDomainRules() {
+  // A configured address is turned into the tenant's address by the domain rules only, also
+  // when the tenant's slug is the first label of the configured host.
+  assert.equal(resolveConfiguredAppBaseUrl('kanap', CLOUD_APEX, false), 'https://kanap.kanap.net');
+  assert.equal(resolveConfiguredAppBaseUrl('qa', { APP_BASE_URL: 'https://qa.kanap.net' }, false), 'https://qa.qa.kanap.net');
+  assert.equal(resolveConfiguredAppBaseUrl('app', CLOUD, false), 'https://app.kanap.net');
+  assert.equal(resolveConfiguredAppBaseUrl('app', { APP_BASE_URL: 'https://app.example.test:8443' }, false), 'https://app.example.test:8443');
+  for (const appEnv of [undefined, 'production']) {
+    await withFeatures({ SINGLE_TENANT: false }, () => withEnv({ APP_ENV: appEnv, ...CLOUD_APEX }, async () => {
+      assert.equal(resolveNotificationBaseUrl('kanap'), 'https://kanap.kanap.net');
+      assert.equal(resolveTenantAppBaseUrl(requestOn(OTHER_HOST), 'kanap'), 'https://kanap.kanap.net');
+      assert.equal(await resetLinkFor(requestOn('kanap.kanap.net', { tenantSlug: 'kanap' })), 'https://kanap.kanap.net/reset-password#token=reset-token');
     }));
   }
 }
@@ -219,11 +241,62 @@ async function testScheduledNotificationsSkipWithoutConfiguration() {
   }));
 }
 
+async function testWeeklyReviewTestSendWithoutConfiguration() {
+  await withFeatures({ SINGLE_TENANT: true }, () => withEnv({ APP_ENV: undefined }, async () => {
+    const warnings: string[] = [];
+    const sent: string[] = [];
+    let runners = 0;
+    // A user who may receive the weekly review; every other read is empty.
+    const query = async (sql: string) => (sql.includes('FROM users u')
+      ? [{
+        user_id: 'user-1', tenant_id: 'tenant-1', email: 'person@example.test', first_name: 'Ada', last_name: null, locale: null,
+        weekly_review_enabled: true, emails_enabled: true, weekly_review_day: 1, weekly_review_hour: 8, timezone: 'Europe/Paris',
+        role_is_system: false, role_name: 'Planner',
+      }]
+      : []);
+    const service = new ScheduledNotificationsService(
+      {
+        query,
+        createQueryRunner: () => {
+          runners += 1;
+          return {
+            connect: async () => undefined,
+            startTransaction: async () => undefined,
+            commitTransaction: async () => undefined,
+            rollbackTransaction: async () => undefined,
+            release: async () => undefined,
+            query,
+            manager: { query },
+          };
+        },
+      } as any,
+      { send: async (input: { to: string }) => { sent.push(input.to); } } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    (service as any).logger = { log: () => undefined, debug: () => undefined, error: () => undefined, warn: (line: string) => warnings.push(line) };
+    const controller = new NotificationPreferencesController({} as any, service);
+
+    // The "send a test" button: 400 with the explicit message, nothing read or sent.
+    await assert.rejects(
+      () => controller.testWeeklyReview({ user: { sub: 'user-1' }, tenant: { id: 'tenant-1' } }),
+      (error: unknown) => isNotConfigured(error) && (error as BadRequestException).getStatus() === 400,
+    );
+    assert.equal(runners, 0);
+    assert.deepEqual(sent, []);
+    assert.deepEqual(warnings, []);
+  }));
+}
+
 async function run() {
   await testConfiguredLinksIgnoreRequestHost();
+  await testConfiguredAddressUsesDomainRules();
   await testDevelopmentKeepsLocalDevelopmentHosts();
   await testMissingConfigurationIsExplicit();
   await testScheduledNotificationsSkipWithoutConfiguration();
+  await testWeeklyReviewTestSendWithoutConfiguration();
   console.log('app-links.spec: ok');
 }
 
