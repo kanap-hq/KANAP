@@ -7,6 +7,26 @@ import { isUploadTypeAllowedForScope, UploadValidationScope } from './upload-val
 export const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024; // 20 MB
 export const CSV_IMPORT_MAX_BYTES = 1 * 1024 * 1024; // 1 MB
 
+/**
+ * Limits of every multipart upload besides the file size. The app sends one
+ * file and at most one text field (`snapshot`, `kind` or `source_field`), with
+ * flat names. `fieldSize` keeps multer's default (1 MB).
+ */
+export const MULTIPART_LIMITS = {
+  files: 1,
+  fields: 10,
+  parts: 11,
+  fieldNameSize: 100,
+  fieldNestingDepth: 2,
+  fieldArrayIndexLimit: 10,
+} as const;
+
+export type MultipartLimits = typeof MULTIPART_LIMITS & { fileSize: number };
+
+export function multipartLimits(fileSize: number): MultipartLimits {
+  return { ...MULTIPART_LIMITS, fileSize };
+}
+
 const buildFileFilter = (scope: UploadValidationScope): NonNullable<MulterOptions['fileFilter']> => {
   return (_req, file, cb) => {
     if (isUploadTypeAllowedForScope(file, { scope })) {
@@ -32,22 +52,22 @@ const buildFileFilter = (scope: UploadValidationScope): NonNullable<MulterOption
 };
 
 export const attachmentMulterOptions: MulterOptions = {
-  limits: { fileSize: ATTACHMENT_MAX_BYTES },
+  limits: multipartLimits(ATTACHMENT_MAX_BYTES),
   fileFilter: buildFileFilter('attachment'),
 };
 
 export const inlineImageMulterOptions: MulterOptions = {
-  limits: { fileSize: ATTACHMENT_MAX_BYTES },
+  limits: multipartLimits(ATTACHMENT_MAX_BYTES),
   fileFilter: buildFileFilter('inline-image'),
 };
 
 export const documentImportMulterOptions: MulterOptions = {
-  limits: { fileSize: ATTACHMENT_MAX_BYTES },
+  limits: multipartLimits(ATTACHMENT_MAX_BYTES),
   fileFilter: buildFileFilter('document-import'),
 };
 
 export const csvImportMulterOptions: MulterOptions = {
-  limits: { fileSize: CSV_IMPORT_MAX_BYTES },
+  limits: multipartLimits(CSV_IMPORT_MAX_BYTES),
   fileFilter: buildFileFilter('csv-import'),
 };
 

@@ -29,6 +29,6 @@ KANAP puede desplegarse de forma local en **modo de inquilino único**. Usted pr
 ## Notas rápidas
 
 - `DEPLOYMENT_MODE=single-tenant` es el único conmutador que activa el modo local.
-- `APP_BASE_URL` debe coincidir con su URL pública para los enlaces de correo y las exportaciones.
+- `APP_BASE_URL` debe coincidir con la dirección exacta que abren los usuarios (incluido un puerto no estándar) para los enlaces de correo, las redirecciones de inicio de sesión y las exportaciones. Ponga la misma dirección en `CORS_ORIGINS`.
 - Para correo saliente, elija **Resend** o **SMTP**. SMTP está pensado solo para despliegues de inquilino único / locales.
 - El backend devuelve respuestas estructuradas `FEATURE_DISABLED` para las funciones deshabilitadas — la interfaz las oculta automáticamente.

@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import * as path from 'path';
-import AdmZip = require('adm-zip');
+import { ArchiveLimitError, BoundedArchive, openBoundedArchive } from './archive-limits';
 
 export type UploadValidationScope = 'attachment' | 'inline-image' | 'document-import' | 'csv-import';
 
@@ -174,14 +174,22 @@ function detectSignature(buffer: Buffer): 'png' | 'jpeg' | 'gif' | 'webp' | 'pdf
   return null;
 }
 
-/** Minimal entry shape needed from `adm-zip`, which is declared untyped in `src/types/external.d.ts`. */
-type ZipEntry = { entryName: string };
+// An OpenDocument `mimetype` entry is a short media type: a larger one is not read.
+const ODF_MIMETYPE_MAX_BYTES = 256;
 
 function detectZipContainerMime(buffer: Buffer): string {
+  // Only the entry list and the `mimetype` entry are read. An archive with more
+  // entries than allowed is refused (400); one that cannot be read is a plain ZIP.
+  let archive: BoundedArchive;
   try {
-    const zip = new AdmZip(buffer);
-    const zipEntries: ZipEntry[] = zip.getEntries();
-    const entries = zipEntries.map((entry) => entry.entryName.toLowerCase());
+    archive = openBoundedArchive(buffer);
+  } catch (error) {
+    if (error instanceof ArchiveLimitError) throw error;
+    return 'application/zip';
+  }
+
+  try {
+    const entries = archive.entries().map((entry) => entry.entryName.toLowerCase());
 
     if (entries.some((entry) => entry.startsWith('word/'))) {
       return ZIP_BASED_EXTENSION_MIME['.docx'];
@@ -193,8 +201,9 @@ function detectZipContainerMime(buffer: Buffer): string {
       return ZIP_BASED_EXTENSION_MIME['.pptx'];
     }
 
-    if (entries.includes('mimetype')) {
-      const odfMime = String(zip.readAsText('mimetype') || '').trim().toLowerCase();
+    const mimetypeEntry = archive.zip.getEntry('mimetype');
+    if (mimetypeEntry && !mimetypeEntry.isDirectory && mimetypeEntry.header.size <= ODF_MIMETYPE_MAX_BYTES) {
+      const odfMime = String(archive.readText(mimetypeEntry) || '').trim().toLowerCase();
       if (
         odfMime === ZIP_BASED_EXTENSION_MIME['.odt'] ||
         odfMime === ZIP_BASED_EXTENSION_MIME['.ods'] ||

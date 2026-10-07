@@ -104,7 +104,7 @@ ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
 Notes:
 - `ENTRA_AUTHORITY` should be **tenant-specific** for on-prem.
 - `ENTRA_REDIRECT_URI` must match **exactly** what you registered in Entra.
-- Make sure `APP_BASE_URL` is set to the public URL so the post-login redirect is correct.
+- Make sure `APP_BASE_URL` is set to the exact address users open (scheme, host and port when it is not standard). The post-login redirect is built from it. Without it, Microsoft sign-in answers "application URL is not configured".
 
 ## Step 5: Restart KANAP
 
@@ -156,7 +156,7 @@ The block on **Admin → Authentication** reports the outcome: **Last synced {da
 - **ENTRA_TENANT_MISMATCH**: You connected one tenant but are trying to sign in from another. Users see "This Microsoft account belongs to a different organization than the one connected to this workspace."
 - **ENTRA_EMAIL_UNVERIFIED**: The Microsoft account email address is not verified, so it cannot be used to sign in.
 - **Invalid Entra state / nonce**: The sign-in state expired or the Entra redirect did not return to the configured callback URL. Retry sign-in and verify `ENTRA_REDIRECT_URI` exactly matches the Entra app registration.
-- **Bad redirect after login**: Check `APP_BASE_URL` and reverse proxy headers (`Host`, `X-Forwarded-Proto`).
+- **Bad redirect after login**: Check that `APP_BASE_URL` is the exact address users open. The redirect comes from `APP_BASE_URL`, and the `Host` and `X-Forwarded-Host` headers do not change it. Also check that the proxy sends `X-Forwarded-Proto`.
 - **"Not authorized yet" on the directory sync**: either the application permission `User.Read.All` was never added to the app registration, or a Microsoft Entra administrator has not granted tenant-wide consent yet. Check both, then click **Sync now**.
 - **Sign-ins started failing right after granting admin consent**: the consent replaced the app's grant with the configured permission list, dropping `openid`, `profile`, `email` and `offline_access`. Add them as configured delegated permissions and grant consent again.
 - **Expired client secret**: Microsoft returns `AADSTS7000222`. Users only see the generic "Sign-in with Microsoft did not complete. Try again or ask your administrator." on the login page. To confirm the cause, look at **Admin → Authentication → Daily directory sync**: the failure line quotes the Microsoft error code. Re-running **Connect** also shows it. Create a new client secret in **Certificates & secrets**, update `ENTRA_CLIENT_SECRET`, and restart the API.

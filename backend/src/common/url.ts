@@ -1,6 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
-import { isProductionEnv } from './env';
+import { isDevelopmentEnv } from './env';
 import { Features } from '../config/features';
+
+/** The answer of a feature that needs an application link when no address is configured. */
+export const APP_URL_NOT_CONFIGURED_MESSAGE = 'application URL is not configured: set APP_BASE_URL';
 
 function normalizeProto(raw: string | undefined): 'http' | 'https' {
   const base = String(raw || '')
@@ -26,39 +29,69 @@ function sanitizeHost(raw: string | undefined): string {
   return hostOnly.toLowerCase();
 }
 
-function getConfiguredAppBaseUrl(): URL | null {
-  const value = String(process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL || '').trim();
-  if (!value) return null;
-  try {
-    return new URL(value);
-  } catch {
-    throw new BadRequestException('application url is not configured');
-  }
-}
-
-function getRequestOrigin(req: any): string | null {
-  const host = sanitizeHost(
+function getRequestHost(req: any): string {
+  return sanitizeHost(
     (req?.headers?.['x-forwarded-host'] as string | undefined)
       ?? (req?.headers?.host as string | undefined),
   );
-  if (!host) return null;
-  const proto = normalizeProto(
+}
+
+function getRequestProto(req: any): 'http' | 'https' {
+  return normalizeProto(
     (req?.headers?.['x-forwarded-proto'] as string | undefined)
       ?? (req?.protocol as string | undefined)
       ?? 'http',
   );
-  return `${proto}://${host}`;
 }
 
+/**
+ * Hosts of the local development set-ups: lvh.me and its subdomains, localhost and
+ * `*.localhost`, dev.kanap.net and its subdomains.
+ */
+export function isLocalDevelopmentHost(host: string): boolean {
+  const h = sanitizeHost(host);
+  if (!h) return false;
+  return h === 'lvh.me' || h.endsWith('.lvh.me')
+    || h === 'localhost' || h.endsWith('.localhost')
+    || h === 'dev.kanap.net' || h.endsWith('.dev.kanap.net');
+}
+
+/**
+ * The request host when links may follow it: in development mode only, and only for a local
+ * development host. Everywhere else links come from the configuration.
+ */
+function developmentRequestHost(req: any): string | null {
+  if (!isDevelopmentEnv()) return null;
+  const host = getRequestHost(req);
+  return host && isLocalDevelopmentHost(host) ? host : null;
+}
+
+/**
+ * The address of the request (scheme and host, port left out) when links may follow it: in
+ * development mode, on a local development host only. Null everywhere else.
+ */
+export function developmentRequestOrigin(req: any): string | null {
+  const host = developmentRequestHost(req);
+  return host ? `${getRequestProto(req)}://${host}` : null;
+}
+
+/** A request host: reused when it already is this tenant's host, otherwise the domain rules. */
 function resolveTenantOriginFromHost(host: string, tenantSlug: string, proto: 'http' | 'https'): string | null {
   const normalizedHost = sanitizeHost(host);
   if (!normalizedHost) return null;
-  const slug = tenantSlug.toLowerCase();
 
   // If the host is already a tenant host for this slug, reuse it.
-  if (normalizedHost.startsWith(`${slug}.`)) {
+  if (normalizedHost.startsWith(`${tenantSlug.toLowerCase()}.`)) {
     return `${proto}://${normalizedHost}`;
   }
+  return tenantOriginFromDomain(normalizedHost, tenantSlug, proto);
+}
+
+/** The tenant's address on the domain of a host (lvh.me, dev/qa.kanap.net, kanap.net, `app.<domain>`). */
+function tenantOriginFromDomain(host: string, tenantSlug: string, proto: 'http' | 'https'): string | null {
+  const normalizedHost = sanitizeHost(host);
+  if (!normalizedHost) return null;
+  const slug = tenantSlug.toLowerCase();
 
   // Dev: lvh.me wildcard
   if (normalizedHost === 'lvh.me' || normalizedHost === 'www.lvh.me' || normalizedHost.endsWith('.lvh.me')) {
@@ -100,91 +133,107 @@ function resolveTenantOriginFromHost(host: string, tenantSlug: string, proto: 'h
   return null;
 }
 
-export function resolveAppBaseUrl(req: any) {
-  const configured = getConfiguredAppBaseUrl();
-  // In production, only trust explicit application config.
-  if (isProductionEnv()) {
-    if (configured) return configured.origin;
-    throw new BadRequestException('application url is not configured');
+function parseConfiguredUrl(raw: string | undefined): URL | null {
+  const value = String(raw || '').trim();
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
+  } catch {
+    return null;
   }
-
-  // In non-production, keep request-derived origin for local subdomain workflows.
-  const requestOrigin = getRequestOrigin(req);
-  if (requestOrigin) return requestOrigin;
-  if (configured) return configured.origin;
-  throw new BadRequestException('application url is not configured');
 }
 
+/**
+ * A configured address turned into the tenant's address, keeping its scheme and port. Only the
+ * domain rules apply: `https://kanap.net` gives `https://kanap.kanap.net` for the tenant `kanap`.
+ */
+function tenantOriginFromConfiguredUrl(url: URL, tenantSlug: string): string | null {
+  const proto = url.protocol === 'https:' ? 'https' : 'http';
+  const derived = tenantOriginFromDomain(url.hostname, tenantSlug, proto);
+  if (!derived) return null;
+  return url.port ? `${derived}:${url.port}` : derived;
+}
+
+const TENANT_SLUG_SHAPE = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * The base URL of the application for the links the API builds (emails, sign-in redirects,
+ * exports), read from the configuration only. Priority:
+ *
+ * - single-tenant: `APP_BASE_URL`, then `PUBLIC_APP_URL`;
+ * - multi-tenant, for a tenant: the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL` whose
+ *   host is on a known tenant domain (lvh.me, dev.kanap.net, qa.kanap.net, kanap.net, or a host
+ *   starting with `app.`), turned into the tenant's address `<slug>.<domain>` (scheme and port
+ *   kept); when none is, the first of them as configured;
+ * - multi-tenant without a tenant: the first of `APP_BASE_URL`, `PUBLIC_APP_URL`, `APP_URL`.
+ *
+ * Returns the origin (no trailing slash), or null when nothing is configured.
+ */
+export function resolveConfiguredAppBaseUrl(
+  tenantSlug?: string | null,
+  env: NodeJS.ProcessEnv = process.env,
+  singleTenant: boolean = Features.SINGLE_TENANT,
+): string | null {
+  const names = singleTenant ? ['APP_BASE_URL', 'PUBLIC_APP_URL'] : ['APP_BASE_URL', 'PUBLIC_APP_URL', 'APP_URL'];
+  const configured = names
+    .map((name) => parseConfiguredUrl(env[name]))
+    .filter((url): url is URL => url !== null);
+  if (configured.length === 0) return null;
+  if (singleTenant) return configured[0].origin;
+
+  const slug = String(tenantSlug ?? '').trim().toLowerCase();
+  if (slug && TENANT_SLUG_SHAPE.test(slug)) {
+    for (const url of configured) {
+      const derived = tenantOriginFromConfiguredUrl(url, slug);
+      if (derived) return derived;
+    }
+  }
+  return configured[0].origin;
+}
+
+/**
+ * Base URL of the links sent for a request (password reset, invitation): the configured
+ * address (the tenant's address in multi-tenant mode). In development mode, a request on a
+ * local development host keeps its links on that host.
+ */
+export function resolveAppBaseUrl(req: any): string {
+  const devOrigin = developmentRequestOrigin(req);
+  if (devOrigin) return devOrigin;
+  const configured = resolveConfiguredAppBaseUrl(req?.tenant?.slug ?? null);
+  if (configured) return configured;
+  throw new BadRequestException(APP_URL_NOT_CONFIGURED_MESSAGE);
+}
+
+/**
+ * Base URL of a given tenant for a request (sign-in redirects, knowledge links): the
+ * configured address of that tenant. In development mode, a request on a local development
+ * host keeps the redirect on the matching development host.
+ */
 export function resolveTenantAppBaseUrl(req: any, tenantSlug: string) {
   if (!tenantSlug || typeof tenantSlug !== 'string') {
     throw new BadRequestException('tenant slug is required');
   }
 
-  const configured = getConfiguredAppBaseUrl();
-
-  // Single-tenant: one address, the configured application URL.
-  if (Features.SINGLE_TENANT && configured) return configured.origin;
-
-  // In non-production, preserve request-host behavior for local workflows.
-  if (!isProductionEnv()) {
-    const requestHost = sanitizeHost(
-      (req?.headers?.['x-forwarded-host'] as string | undefined)
-        ?? (req?.headers?.host as string | undefined),
-    );
-    const requestProto = normalizeProto(
-      (req?.headers?.['x-forwarded-proto'] as string | undefined)
-        ?? (req?.protocol as string | undefined)
-        ?? 'http',
-    );
-    const fromRequest = resolveTenantOriginFromHost(requestHost, tenantSlug, requestProto);
+  const devHost = developmentRequestHost(req);
+  if (devHost) {
+    const fromRequest = resolveTenantOriginFromHost(devHost, tenantSlug, getRequestProto(req));
     if (fromRequest) return fromRequest;
   }
 
-  // In production, derive from canonical configured host only.
-  if (configured) {
-    const configuredProto = normalizeProto(configured.protocol);
-    const fromConfigured = resolveTenantOriginFromHost(configured.host, tenantSlug, configuredProto);
-    if (fromConfigured) return fromConfigured;
-    return configured.origin.replace(/\/$/, '');
-  }
+  const configured = resolveConfiguredAppBaseUrl(tenantSlug);
+  if (configured) return configured;
 
-  if (isProductionEnv()) {
-    throw new BadRequestException('application url is not configured');
-  }
-
-  const requestOrigin = getRequestOrigin(req);
-  if (requestOrigin) return requestOrigin.replace(/\/$/, '');
-  throw new BadRequestException('application url is not configured');
+  if (devHost) return `${getRequestProto(req)}://${devHost}`;
+  throw new BadRequestException(APP_URL_NOT_CONFIGURED_MESSAGE);
 }
 
 /**
- * Resolve a base URL for notification links (emails, digests).
- * In single-tenant mode, uses APP_BASE_URL directly (no subdomain logic).
- * In multi-tenant mode, derives from APP_URL with slug substitution.
+ * Base URL for notification links (emails, digests), which have no request: the configured
+ * address of the tenant. Throws when no address is configured.
  */
 export function resolveNotificationBaseUrl(tenantSlug: string | null): string {
-  if (Features.SINGLE_TENANT) {
-    const url = (process.env.APP_BASE_URL || '').trim();
-    if (!url) {
-      throw new Error('FATAL: APP_BASE_URL is required in single-tenant mode for notification links');
-    }
-    return url.replace(/\/$/, '');
-  }
-  const appUrl = process.env.APP_URL || 'https://app.kanap.net';
-  if (!tenantSlug) return appUrl;
-  return appUrl.replace(/\/\/app\./, `//${tenantSlug}.`);
-}
-
-/**
- * Base URL for links sent by e-mail in answer to a request (password reset,
- * invitation): e-mail links open the tenant address of the request.
- * Multi-tenant with a request tenant: the tenant address (`<slug>.<domain>`).
- * Single-tenant, or a request without a tenant: `resolveAppBaseUrl`.
- */
-export function resolveRequestAppBaseUrl(req: any) {
-  const tenantSlug = req?.tenant?.slug;
-  if (!Features.SINGLE_TENANT && typeof tenantSlug === 'string' && tenantSlug) {
-    return resolveTenantAppBaseUrl(req, tenantSlug);
-  }
-  return resolveAppBaseUrl(req);
+  const configured = resolveConfiguredAppBaseUrl(tenantSlug);
+  if (configured) return configured;
+  throw new Error(APP_URL_NOT_CONFIGURED_MESSAGE);
 }

@@ -29,6 +29,6 @@ KANAP kann On-Premise im **Single-Tenant-Modus** bereitgestellt werden. Sie stel
 ## Schnelle Hinweise
 
 - `DEPLOYMENT_MODE=single-tenant` ist der einzelne Schalter, der den On-Premise-Modus aktiviert.
-- `APP_BASE_URL` muss mit Ihrer öffentlichen URL für E-Mail-Links und Exporte übereinstimmen.
+- `APP_BASE_URL` muss mit der genauen Adresse übereinstimmen, die Benutzer öffnen (einschließlich eines nicht standardmäßigen Ports), für E-Mail-Links, Anmelde-Weiterleitungen und Exporte. Tragen Sie dieselbe Adresse in `CORS_ORIGINS` ein.
 - Wählen Sie für ausgehende E-Mails entweder **Resend** oder **SMTP**. SMTP ist nur für Single-Tenant-/On-Prem-Bereitstellungen vorgesehen.
 - Das Backend gibt strukturierte `FEATURE_DISABLED`-Antworten für deaktivierte Funktionen zurück — die UI blendet sie automatisch aus.

@@ -1,0 +1,116 @@
+# Weekly dependency update pull requests. Minor and patch updates are grouped per ecosystem
+# and folder; a major update comes as its own pull request, except for the packages ignored
+# below, whose next major is planned separately.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: deps
+    groups:
+      backend-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: nodemailer
+        update-types: [version-update:semver-major]
+      - dependency-name: csv-parse
+        update-types: [version-update:semver-major]
+      - dependency-name: uuid
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: deps
+    groups:
+      frontend-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: vite
+        update-types: [version-update:semver-major]
+      - dependency-name: vitest
+        update-types: [version-update:semver-major]
+      - dependency-name: react-router-dom
+        update-types: [version-update:semver-major]
+      - dependency-name: "@mdxeditor/editor"
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: npm
+    directory: /marketing/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: deps
+    groups:
+      marketing-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: astro
+        update-types: [version-update:semver-major]
+      - dependency-name: puppeteer-core
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: deps
+    groups:
+      backend-images-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # The Node.js major is upgraded in a planned lot (images, CI and @types/node together).
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: docker
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: deps
+    groups:
+      frontend-images-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # The Node.js major is upgraded in a planned lot (images, CI and @types/node together).
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: docker
+    directory: /marketing
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: deps
+    groups:
+      marketing-images-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # The Node.js major is upgraded in a planned lot (images, CI and @types/node together).
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: deps
+    groups:
+      actions-minor-and-patch:
+        update-types: [minor, patch]

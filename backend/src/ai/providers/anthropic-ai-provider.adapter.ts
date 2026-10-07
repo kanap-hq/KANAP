@@ -8,6 +8,7 @@ import {
   AiStreamParams,
 } from './ai-provider.types';
 import { isAbortError, parseToolCallArguments } from './streaming.util';
+import { describeProviderError, providerFetchOptions, toProviderError } from './provider-http.util';
 
 @Injectable()
 export class AnthropicAiProviderAdapter implements AiProviderAdapter {
@@ -36,10 +37,12 @@ export class AnthropicAiProviderAdapter implements AiProviderAdapter {
       return;
     }
 
+    const fetchOptions = providerFetchOptions();
     const client = new Anthropic({
       apiKey: params.apiKey || '',
       timeout: params.timeoutMs ?? 120_000,
       maxRetries: params.maxRetries ?? 2,
+      ...(fetchOptions ? { fetchOptions } : {}),
     });
 
     const messages: Anthropic.MessageParam[] = [];
@@ -193,7 +196,7 @@ export class AnthropicAiProviderAdapter implements AiProviderAdapter {
       if (params.signal?.aborted || isAbortError(error)) {
         return;
       }
-      throw error;
+      throw toProviderError(error);
     }
 
     if (params.signal?.aborted) {
@@ -220,7 +223,7 @@ export class AnthropicAiProviderAdapter implements AiProviderAdapter {
       }
       yield {
         type: 'error',
-        message: error instanceof Error && error.message.trim() ? error.message : 'Anthropic stream failed.',
+        message: describeProviderError(error),
       };
     }
   }

@@ -32,25 +32,27 @@ cd kanap
 
 # 2. Configure environment BEFORE building
 cp infra/.env.onprem.example .env
-nano .env  # Set DATABASE_URL, S3 credentials, ADMIN_EMAIL, JWT_SECRET, APP_BASE_URL
+nano .env  # Set DATABASE_URL, S3 credentials, ADMIN_EMAIL, JWT_SECRET, APP_BASE_URL, CORS_ORIGINS
+#          (APP_BASE_URL and CORS_ORIGINS: the exact address users open)
+#          Add APP_ENV=production once users reach KANAP over HTTPS
 # See the Configuration guide for all variables
 
-# 3. Build Docker images
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
+# 3. Build the Docker images (Compose builds them from the repository)
+docker compose -f infra/compose.onprem.yml build --pull
 
 # 4. Start containers
 docker compose -f infra/compose.onprem.yml up -d
 
 # 5. Verify startup
 docker compose -f infra/compose.onprem.yml logs -f api
-# Wait for "Application started" message
+# Wait for "[entrypoint] Migrations complete", then "Nest application successfully started"
 # First boot creates the tenant, admin user, and subscription automatically
 
 # 6. Configure your reverse proxy to route traffic to:
 #    - /api/* → api:8080
 #    - /*     → web:80
 # Ensure the proxy preserves Host and sets X-Forwarded-Proto.
+# After the first start, read the [ENV], [CONFIG] and [CORS] lines of the API log.
 
 # 7. Access application
 # https://kanap.your-domain.com
@@ -61,6 +63,8 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 **Database role requirement:** `DATABASE_URL` must use a dedicated PostgreSQL application role. Do not point it at `postgres` or another cluster-admin role. KANAP will fail startup rather than run without effective RLS enforcement.
 
+**Address and origins:** Set `APP_BASE_URL` and `CORS_ORIGINS` to the exact address users open, with the port when it is not standard. Every link KANAP sends comes from `APP_BASE_URL`. Add `APP_ENV=production` when users reach KANAP over HTTPS: the API then refuses to start without these two values and always marks the session cookie Secure. See [Configuration](configuration.md#required-admin-credentials).
+
 **Email choice:** On-premise deployments can use either **Resend** or **SMTP** for outbound email. SMTP is useful when the customer already has an internal mail relay or a managed provider such as Microsoft 365. Configure one of these options if you want password reset, invitations, and notification emails to work from day one.
 
 ## Reverse Proxy Example (nginx)
@@ -70,7 +74,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 1. Terminate TLS on port 443
 2. Route `/api/*` to the API container (port 8080)
 3. Route all other requests to the web container (port 80)
-4. Set `X-Forwarded-Proto: https` and preserve `Host` / `X-Forwarded-Host`
+4. Set `X-Forwarded-Proto: https` and preserve `Host`. KANAP builds the links it sends from `APP_BASE_URL` and no longer reads `X-Forwarded-Host` outside local development. When the site uses a non-standard port, add the exact address with its port to `CORS_ORIGINS`.
 5. Support WebSocket upgrade (used by real-time features)
 
 Since containers bind to `127.0.0.1`, nginx runs on the same host and proxies to `localhost`.

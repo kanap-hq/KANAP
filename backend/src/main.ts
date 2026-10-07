@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
-import * as cors from 'cors';
 import * as express from 'express';
 import { DataSource, EntityManager } from 'typeorm';
 import { User } from './users/user.entity';
@@ -13,7 +12,9 @@ import { RESOURCES } from './permissions/permissions.service';
 import * as argon2 from 'argon2';
 import { Request, Response, NextFunction } from 'express';
 import { useRequestPipeline } from './common/request-pipeline';
-import { isProductionEnv, parseBoolean, parseCorsPatterns, matchesCorsOrigin, requireAppBaseUrl, requireEnv } from './common/env';
+import { parseBoolean, parseCorsPatterns, requireEnv, validateStartupEnv } from './common/env';
+import { createCorsMiddlewares, createOriginPolicy } from './common/cors-policy';
+import { createBodyParsers } from './common/body-parsers';
 import { describeTokenPurposePolicy } from './auth/access-token.util';
 import { describeSecretPolicy } from './auth/token-secret.util';
 import { PROCESS_STARTED_AT } from './common/process-start';
@@ -34,11 +35,17 @@ import { apiProcessCount, clusterWorkerId, isLeadProcess, processLabel } from '.
 import { STARTUP_PROVISIONING_LOCK, withStartupLock } from './common/cluster/startup-lock';
 import { checkPoolBudget, poolMaxFloorWarning, readPoolMax } from './common/db-pool-budget';
 
-function validateStartupEnv() {
-  requireEnv('DATABASE_URL');
-  requireEnv('JWT_SECRET');
-  if (isProductionEnv()) {
-    requireAppBaseUrl();
+/**
+ * Environment checks (common/env.ts): throws where the API always refused to start, prints the
+ * rest as warnings (run mode, application address, browser origins).
+ */
+function checkStartupEnv() {
+  const report = validateStartupEnv(process.env, { singleTenant: Features.SINGLE_TENANT });
+  // eslint-disable-next-line no-console
+  console.log(`[ENV] run mode: ${report.mode}`);
+  for (const warning of report.warnings) {
+    // eslint-disable-next-line no-console
+    console.warn(warning);
   }
 }
 
@@ -84,54 +91,27 @@ async function ensurePrimaryUserRole(manager: EntityManager, user: User, role: R
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
-  validateStartupEnv();
+  checkStartupEnv();
   logTokenSecretPolicy();
   if (shouldTrustProxyForRateLimit()) {
     const expressApp = app.getHttpAdapter().getInstance();
     expressApp.set('trust proxy', 1);
   }
   app.use(helmet());
+  // Browser origins (common/cors-policy.ts): a refused origin gets a 403 without CORS headers.
   const corsPatterns = parseCorsPatterns();
-  if (corsPatterns.length === 0) {
-    if (isProductionEnv()) {
-      throw new Error('FATAL: CORS_ORIGINS must be set in production. Example: CORS_ORIGINS=https://*.kanap.net');
-    }
-    // In non-production, allow all origins with a warning
-    app.use(cors({
-      origin: true,
-      credentials: true,
-    }));
-    // eslint-disable-next-line no-console
-    console.warn('[CORS] CORS_ORIGINS not set; allowing all origins (dev mode only)');
-  } else {
+  if (corsPatterns.length > 0) {
     // eslint-disable-next-line no-console
     console.log(`[CORS] Configured ${corsPatterns.length} origin pattern(s)`);
-    app.use(cors({
-      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        // Allow requests with no origin (server-to-server, curl, etc.)
-        if (!origin) {
-          callback(null, true);
-          return;
-        }
-        if (matchesCorsOrigin(origin, corsPatterns)) {
-          callback(null, true);
-          return;
-        }
-        // eslint-disable-next-line no-console
-        console.warn(`[CORS] Rejected origin: ${origin}`);
-        callback(new Error('CORS origin not allowed'), false);
-      },
-      credentials: true,
-    }));
   }
+  app.use(...createCorsMiddlewares(createOriginPolicy()));
   const rawBodySaver = (req: Request, _res: Response, buffer: Buffer) => {
     if (buffer?.length) {
       (req as any).rawBody = buffer;
     }
   };
   app.use('/stripe/webhook', express.raw({ type: '*/*' }));
-  app.use(express.json({ limit: '20mb', verify: rawBodySaver }));
-  app.use(express.urlencoded({ limit: '20mb', verify: rawBodySaver, extended: true }));
+  app.use(...createBodyParsers(rawBodySaver));
   // Ops metrics middleware — must be registered before tenancy so it wraps the full pipeline
   const opsMetricsStore = app.get(OpsMetricsStore);
   app.use(createRequestMetricsMiddleware(opsMetricsStore));

@@ -9,6 +9,7 @@ import {
   isReleasedRunnerError,
   mapDatabaseError,
 } from './database-error.mapping';
+import { mapMultipartError } from './multipart-error.mapping';
 
 /**
  * Global exception filter. Rolls back and releases the request's tenant runner
@@ -26,6 +27,9 @@ import {
  *   nobody is listening. The abort's own fallout (ClientAbortedError, the
  *   "already released" errors, a refusal below 500) is dropped quietly; any
  *   other error is logged at error level, since it may be a real fault;
+ * - a multipart refusal multer raised and Nest left untranslated (field name
+ *   array index, invalid field name, interrupted file stream) as 400, see
+ *   `multipart-error.mapping.ts`;
  * - anything else as before (BaseExceptionFilter).
  */
 @Catch()
@@ -97,7 +101,7 @@ export class ReleaseTenantRunnerFilter extends BaseExceptionFilter {
       console.warn(databaseErrorLogLine(req, mapped));
       return super.catch(mapped.exception, host);
     }
-    return super.catch(exception, host);
+    return super.catch(mapMultipartError(exception) ?? exception, host);
   }
 }
 

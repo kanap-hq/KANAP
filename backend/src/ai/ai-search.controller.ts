@@ -4,7 +4,7 @@ import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorat
 import { AiEntityService } from './ai-entity.service';
 import { AiPolicyService } from './ai-policy.service';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
-import { AiExecutionContext, AiSearchEntityType } from './ai.types';
+import { AI_SEARCH_ENTITY_TYPES, AiExecutionContext, AiSearchEntityType } from './ai.types';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 50;
@@ -31,6 +31,11 @@ const PICKER_ENTITY_TYPES: AiSearchEntityType[] = [
   'suppliers',
   'tasks',
 ];
+const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set<string>(AI_SEARCH_ENTITY_TYPES);
+
+function isKnownEntityType(value: string): value is AiSearchEntityType {
+  return KNOWN_ENTITY_TYPES.has(value);
+}
 
 /**
  * Lightweight entity search endpoint backing the @-mention autocomplete in the Plaid
@@ -113,15 +118,17 @@ export class AiSearchController {
     // (`@APP`, `@PRJ`, `@T-5`, …). With a narrow active, an empty query is
     // legitimate ("show recent items of this type"). Without a narrow, an empty
     // query is rejected so we don't dump the whole workspace.
-    const rawEntityTypes = (entityTypesRaw || '')
+    // Only known entity types are kept: any other value is ignored, and a list
+    // left empty is the same as no narrow at all.
+    const requestedEntityTypes = String(entityTypesRaw ?? '')
       .split(',')
       .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-    const entityTypes = rawEntityTypes.length > 0
-      ? rawEntityTypes
+      .filter(isKnownEntityType);
+    const entityTypes = requestedEntityTypes.length > 0
+      ? requestedEntityTypes
       : PICKER_ENTITY_TYPES;
 
-    if (!query && rawEntityTypes.length === 0) {
+    if (!query && requestedEntityTypes.length === 0) {
       return { items: [] };
     }
 
@@ -132,7 +139,7 @@ export class AiSearchController {
       const result = await this.entities.searchMentionCandidates(ctx, {
         query,
         limit: CANDIDATE_POOL,
-        entity_types: entityTypes as AiSearchEntityType[],
+        entity_types: entityTypes,
       });
 
       // Re-rank purely on item content (ignoring the per-type SQL CASE scores

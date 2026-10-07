@@ -6,6 +6,10 @@ import dataSource from '../../data-source';
 import { NotificationsService } from '../notifications.service';
 import { claimNotificationKeys, notificationDedupeKey } from '../notification-dedupe';
 
+// Notification links come from the configured application address (common/url.ts): without one
+// the emails are not built and the scheduled runs are skipped.
+if (!process.env.APP_BASE_URL) process.env.APP_BASE_URL = 'https://app.example.test';
+
 // Event notifications go out at most once per recipient, item and trigger within 5 minutes.
 // The window used to live in each API process's memory; with several processes (API_WORKERS > 1)
 // two quick changes answered by two processes both mailed. It is now claimed in the database

@@ -4,10 +4,10 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { ARCHIVE_MAX_ENTRY_BYTES, ARCHIVE_MAX_TOTAL_BYTES, openBoundedArchive } from './archive-limits';
 import { IMPORTABLE_MIME_TYPES } from './dto/import-document.dto';
 import { validateUploadedFile } from './upload-validation';
 import { VectorImageConversionService } from './vector-image-conversion.service';
-import AdmZip = require('adm-zip');
 
 const execFileAsync = promisify(execFile);
 
@@ -15,6 +15,13 @@ const IMPORT_MAX_FILE_BYTES = 20 * 1024 * 1024;
 const PANDOC_TIMEOUT_MS = 60_000;
 const PANDOC_MAX_BUFFER_BYTES = 50 * 1024 * 1024;
 const VECTOR_IMAGE_EXTENSIONS = new Set(['.svg', '.emf', '.wmf', '.eps']);
+
+/** Limits on the images pandoc extracts, read back from disk: those of the archive itself. */
+export type ExtractedMediaLimits = { maxImageBytes: number; maxTotalBytes: number };
+const EXTRACTED_MEDIA_LIMITS: ExtractedMediaLimits = {
+  maxImageBytes: ARCHIVE_MAX_ENTRY_BYTES,
+  maxTotalBytes: ARCHIVE_MAX_TOTAL_BYTES,
+};
 
 type ImportedImageOccurrence = {
   kind: 'markdown' | 'html';
@@ -71,6 +78,12 @@ export class DocumentImportService {
     const outputFile = path.join(tempDir, 'output.md');
 
     try {
+      // pandoc decompresses the whole document: its entry count and sizes, declared
+      // then real, are checked first (400 when over the limits).
+      const archive = openBoundedArchive(fileBuffer);
+      archive.assertDeclaredSizes();
+      archive.assertRealSizes();
+
       await fs.writeFile(inputFile, fileBuffer);
       this.stripProprietarySvgExtensions(inputFile);
       await this.convertInputToMarkdown(inputFile, outputFile, tempDir);
@@ -166,15 +179,16 @@ export class DocumentImportService {
     const svgBlipPattern = /<(?:[a-zA-Z0-9]+:)?svgBlip\b[\s\S]*?\/>/g;
 
     try {
-      const zip = new AdmZip(docxPath);
+      const archive = openBoundedArchive(docxPath);
+      const zip = archive.zip;
       let modified = false;
 
-      for (const entry of zip.getEntries()) {
+      for (const entry of archive.entries()) {
         if (entry.isDirectory) continue;
         const name = entry.entryName;
         if (!name.startsWith('word/') || !name.endsWith('.xml')) continue;
 
-        const content = zip.readAsText(entry);
+        const content = archive.readText(entry);
         const stripped = content.replace(svgBlipPattern, '');
         if (stripped.length !== content.length) {
           zip.updateFile(entry.entryName, Buffer.from(stripped, 'utf8'));
@@ -195,11 +209,13 @@ export class DocumentImportService {
   private async collectReferencedImages(
     markdown: string,
     tempDir: string,
+    mediaLimits: ExtractedMediaLimits = EXTRACTED_MEDIA_LIMITS,
   ): Promise<{ images: ImportedDocumentImage[]; omittedTargets: string[]; warnings: string[] }> {
     const images: ImportedDocumentImage[] = [];
     const omittedTargets = new Set<string>();
     const warnings: string[] = [];
     const seenTargets = new Set<string>();
+    let mediaBytes = 0;
 
     for (const occurrence of this.findImageOccurrences(markdown)) {
       const target = occurrence.target;
@@ -217,7 +233,15 @@ export class DocumentImportService {
 
       let buffer: Buffer;
       try {
+        // The size on disk is checked before the file is read.
+        const { size } = await fs.stat(filePath);
+        if (size > mediaLimits.maxImageBytes || mediaBytes + size > mediaLimits.maxTotalBytes) {
+          omittedTargets.add(target);
+          warnings.push(`Skipped extracted image ${target}: the image is too large.`);
+          continue;
+        }
         buffer = await fs.readFile(filePath);
+        mediaBytes += buffer.length;
       } catch {
         omittedTargets.add(target);
         warnings.push(`Skipped extracted image ${target}: converter output was not found.`);

@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
-    "astro": "^5.1.0",
-    "puppeteer-core": "^24.42.0"
+    "astro": "^5.1.0"
   },
   "devDependencies": {
+    "puppeteer-core": "^24.43.1",
     "typescript": "^5.6.3"
   }
 }

@@ -57,6 +57,13 @@ export function parseExportPagination(query: any, defaultSort: Sort = { field: '
   return parsePaginationWithCap(query, defaultSort, MAX_EXPORT_LIMIT);
 }
 
+/**
+ * Names of the bound parameters of the set filters below. A where clause built here can be
+ * merged with another one, or spread into several OR branches of one query, so each name is
+ * unique in the process; the branches of one clause share the same operator, name and value.
+ */
+let setFilterParamSeq = 0;
+
 // Build a TypeORM-compatible where clause from AG Grid Text Filter model (single condition only)
 // Supports: contains, notContains, equals, notEqual, startsWith, endsWith
 export function buildWhereFromAgFilters(filters: any, allowedFields?: string[]): Record<string, any> {
@@ -89,9 +96,11 @@ export function buildWhereFromAgFilters(filters: any, allowedFields?: string[]):
         continue;
       }
 
-      // Build condition: IN clause for non-null values, OR IS NULL if null is selected
+      // Build condition: IN clause for non-null values, OR IS NULL if null is selected.
+      // The values are bound parameters, as with In() below.
       if (nonNullValues.length > 0 && hasNull) {
-        where[field] = Raw((alias) => `(${alias} IN (${nonNullValues.map((v) => `'${String(v).replace(/'/g, "''")}'`).join(', ')}) OR ${alias} IS NULL)`);
+        const param = `set_filter_values_${++setFilterParamSeq}`;
+        where[field] = Raw((alias) => `(${alias} IN (:...${param}) OR ${alias} IS NULL)`, { [param]: nonNullValues });
       } else if (nonNullValues.length > 0) {
         where[field] = In(nonNullValues);
       } else if (hasNull) {

@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { EntityManager } from 'typeorm';
 import { decodeNumericHtmlEntities } from '../../common/html-entities';
 import { resolveHtmlContentSource } from '../../common/html-to-markdown';
-import { assertPublicHttpTarget } from '../../common/ssrf-guard';
+import { openValidatedFetch } from '../../common/pinned-fetch';
 import { Features } from '../../config/features';
 import { AiSecretCipherService } from '../ai-secret-cipher.service';
 import { AiSettingsService } from '../ai-settings.service';
@@ -1024,13 +1024,12 @@ export class GlpiService {
       pageUrl.searchParams.set('get_hateoas', 'false');
       pageUrl.searchParams.set('expand_dropdowns', 'false');
 
-      const response = await this.request(
+      const { response, raw } = await this.requestText(
         pageUrl.toString(),
         {
           headers: this.buildSessionHeaders(session),
         },
       );
-      const raw = await response.text();
       const payload = this.safeParseJson(raw, {
         requestUrl: pageUrl.toString(),
         responseUrl: response.url || pageUrl.toString(),
@@ -1092,13 +1091,12 @@ export class GlpiService {
       pageUrl.searchParams.set('get_hateoas', 'false');
       pageUrl.searchParams.set('order', 'DESC');
 
-      const response = await this.request(
+      const { response, raw } = await this.requestText(
         pageUrl.toString(),
         {
           headers: this.buildSessionHeaders(session),
         },
       );
-      const raw = await response.text();
       const payload = this.safeParseJson(raw, {
         requestUrl: pageUrl.toString(),
         responseUrl: response.url || pageUrl.toString(),
@@ -1316,13 +1314,17 @@ export class GlpiService {
   ): Promise<GlpiDocument> {
     const resolvedUrl = this.resolveSameOriginUrl(session.baseUrl, sourceUrl);
     const requestUrl = this.resolveDocumentDownloadUrl(session.baseUrl, resolvedUrl) ?? resolvedUrl.toString();
-    const response = await this.request(
+    // The body is read inside the request, before its connection is released.
+    return this.request(
       requestUrl,
       {
         headers: this.buildBinarySessionHeaders(session),
       },
+      (response) => this.readDocumentResponse(response, requestUrl, resolvedUrl),
     );
+  }
 
+  private async readDocumentResponse(response: Response, requestUrl: string, resolvedUrl: URL): Promise<GlpiDocument> {
     const contentType = textOrNull(response.headers.get('content-type'));
     if (!response.ok) {
       const raw = await response.text();
@@ -1386,6 +1388,7 @@ export class GlpiService {
         {
           headers: this.buildSessionHeaders(session),
         },
+        async () => undefined,
       );
     } catch (error: any) {
       this.logger.debug(`Failed to close GLPI session: ${String(error?.message || error || 'unknown error')}`);
@@ -1661,8 +1664,7 @@ export class GlpiService {
     init: RequestInit,
     opts?: { notFoundMessage?: string },
   ): Promise<unknown> {
-    const response = await this.request(url, init);
-    const raw = await response.text();
+    const { response, raw } = await this.requestText(url, init);
     const payload = this.safeParseJson(raw, {
       requestUrl: url,
       responseUrl: response.url || url,
@@ -1681,21 +1683,34 @@ export class GlpiService {
     return payload;
   }
 
-  private async request(url: string, init: RequestInit): Promise<Response> {
+  private async requestText(url: string, init: RequestInit): Promise<{ response: Response; raw: string }> {
+    return this.request(url, init, async (response) => ({ response, raw: await response.text() }));
+  }
+
+  // `read` gets the response and reads its body: the connection is released
+  // once it has finished, or failed.
+  private async request<T>(url: string, init: RequestInit, read: (response: Response) => Promise<T>): Promise<T> {
     // SSRF guard: block internal targets in multi-tenant cloud (no-op on-prem where
-    // a private GLPI base URL is legitimate). redirect:'error' in cloud additionally
-    // stops a public host 302-ing to an internal one after the DNS check.
-    await assertPublicHttpTarget(url);
+    // a private GLPI base URL is legitimate), then connect to the validated
+    // addresses only. redirect:'error' in cloud additionally stops a public host
+    // 302-ing to an internal one after the DNS check.
+    const target = await openValidatedFetch(url);
     try {
-      return await fetch(url, {
-        ...init,
-        redirect: Features.SINGLE_TENANT ? 'follow' : 'error',
-        signal: AbortSignal.timeout(GLPI_TIMEOUT_MS),
-      });
-    } catch (error: any) {
-      throw new BadRequestException(
-        `GLPI request failed: ${String(error?.message || error || 'request failed')}`,
-      );
+      let response: Response;
+      try {
+        response = await target.fetch(url, {
+          ...init,
+          redirect: Features.SINGLE_TENANT ? 'follow' : 'error',
+          signal: AbortSignal.timeout(GLPI_TIMEOUT_MS),
+        });
+      } catch (error: any) {
+        throw new BadRequestException(
+          `GLPI request failed: ${String(error?.message || error || 'request failed')}`,
+        );
+      }
+      return await read(response);
+    } finally {
+      await target.close();
     }
   }
 

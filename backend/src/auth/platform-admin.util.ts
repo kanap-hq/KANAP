@@ -1,4 +1,5 @@
 import { Features } from '../config/features';
+import { isDevelopmentEnv } from '../common/env';
 
 export type PlatformAdminCandidate = {
   email?: string | null;
@@ -20,7 +21,8 @@ export function isPlatformAdmin(candidate: PlatformAdminCandidate | undefined | 
   const allowlist = parseAllowlist();
   const email = candidate.email.toLowerCase();
   if (allowlist.size === 0) return false;
-  if (allowlist.has('*')) return process.env.NODE_ENV !== 'production' && process.env.APP_ENV !== 'production';
+  // The `*` allowlist is a workstation convenience: development mode only.
+  if (allowlist.has('*')) return isDevelopmentEnv();
   return allowlist.has(email);
 }
 

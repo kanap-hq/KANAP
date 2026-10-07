@@ -11,7 +11,7 @@ import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { USER_LOOKUP_ACCESS, USER_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
 import { lookupReference, USER_LOOKUP } from '../common/lookup/reference-lookups';
-import { resolveRequestAppBaseUrl } from '../common/url';
+import { resolveAppBaseUrl } from '../common/url';
 import { Features } from '../config/features';
 import { throwFeatureDisabled } from '../common/feature-gates';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -183,7 +183,7 @@ export class UsersController {
   @RequireLevel('users', 'admin')
   async invite(@Param('id') id: string, @Req() req: any) {
     if (!Features.EMAIL_ENABLED) throwFeatureDisabled('email');
-    const baseUrl = resolveRequestAppBaseUrl(req);
+    const baseUrl = resolveAppBaseUrl(req);
     // The invitation is committed before its e-mail waits on the mail queue (see inviteUser).
     return this.svc.inviteUser(id, req.user?.sub ?? null, baseUrl, {
       manager: req?.queryRunner?.manager,

@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { assertPublicHttpUrl, assertPublicHttpTarget, LookupFn } from '../ssrf-guard';
+import { assertPublicHttpUrl, assertPublicHttpTarget, embeddedIpv4Address, LookupFn } from '../ssrf-guard';
 
 const ENFORCE = { enforcePrivateBlock: true } as const;
 const SKIP = { enforcePrivateBlock: false } as const;
@@ -66,6 +66,58 @@ async function run() {
   const url = await assertPublicHttpTarget('http://internal.example.com', { enforcePrivateBlock: false, lookupFn: spy });
   assert.equal(url.hostname, 'internal.example.com');
   assert.equal(called, false, 'lookupFn must not run when private block is disabled');
+
+  // --- IPv6 forms that carry an IPv4 address are judged by that IPv4 address ---
+  assert.equal(embeddedIpv4Address('::ffff:127.0.0.1'), '127.0.0.1');
+  assert.equal(embeddedIpv4Address('::ffff:7f00:1'), '127.0.0.1');
+  assert.equal(embeddedIpv4Address('::ffff:0:a00:1'), '10.0.0.1');
+  assert.equal(embeddedIpv4Address('::7f00:1'), '127.0.0.1');
+  assert.equal(embeddedIpv4Address('::192.168.1.1'), '192.168.1.1');
+  assert.equal(embeddedIpv4Address('64:ff9b::a9fe:a9fe'), '169.254.169.254');
+  assert.equal(embeddedIpv4Address('64:FF9B::10.0.0.1'), '10.0.0.1');
+  assert.equal(embeddedIpv4Address('64:ff9b:1::a00:1'), '10.0.0.1');
+  assert.equal(embeddedIpv4Address('2002:c0a8:101::1'), '192.168.1.1');
+  assert.equal(embeddedIpv4Address('2002:7f00:0001:0000:0000:0000:0000:0001'), '127.0.0.1');
+  assert.equal(embeddedIpv4Address('2606:4700:4700::1111'), null);
+  assert.equal(embeddedIpv4Address('fe80::1'), null);
+  assert.equal(embeddedIpv4Address('10.0.0.1'), null);
+  assert.equal(embeddedIpv4Address('not-an-address'), null);
+
+  const embeddedNonPublic = [
+    '::ffff:127.0.0.1', '::ffff:10.0.0.5', '::ffff:169.254.169.254', '::ffff:0:192.168.1.1',
+    '::127.0.0.1', '::10.0.0.5', '::169.254.169.254',
+    '64:ff9b::127.0.0.1', '64:ff9b::10.0.0.5', '64:ff9b::169.254.169.254', '64:ff9b::192.168.1.1',
+    '64:ff9b:1::127.0.0.1', '64:ff9b:1:abcd::10.0.0.5',
+    '2002:7f00:1::1', '2002:a00:5::1', '2002:a9fe:a9fe::1', '2002:c0a8:101::1',
+  ];
+  for (const address of embeddedNonPublic) {
+    // literal host in the URL (sync guard and request-time guard)
+    throws(() => assertPublicHttpUrl(`http://[${address}]/`, ENFORCE));
+    await rejects(assertPublicHttpTarget(`http://[${address}]/`, ENFORCE));
+    // DNS name resolving to that address
+    await rejects(assertPublicHttpTarget('http://name.example.com/', {
+      enforcePrivateBlock: true,
+      lookupFn: async () => [{ address }],
+    }));
+  }
+  // The NAT64 (including local-use), 6to4 and IPv4-compatible prefixes are refused
+  // as a whole when enforcing.
+  for (const address of ['64:ff9b::5db8:d822', '64:ff9b:1::5db8:d822', '2002:5db8:d822::1', '::5db8:d822']) {
+    throws(() => assertPublicHttpUrl(`http://[${address}]/`, ENFORCE));
+  }
+  // An ordinary public address passes, in either family and in the IPv4-mapped form.
+  for (const address of ['93.184.216.34', '2606:4700:4700::1111', '::ffff:93.184.216.34']) {
+    const url = await assertPublicHttpTarget('http://public.example.com/', {
+      enforcePrivateBlock: true,
+      lookupFn: async () => [{ address }],
+    });
+    assert.equal(url.hostname, 'public.example.com');
+  }
+  // Single-tenant: private targets stay allowed, whatever their form.
+  for (const address of embeddedNonPublic) {
+    assert.ok(assertPublicHttpUrl(`http://[${address}]/`, SKIP));
+    assert.ok(await assertPublicHttpTarget(`http://[${address}]/`, SKIP));
+  }
 
   // --- allowlist: SSRF_ALLOWED_HOSTS permits an otherwise-blocked internal host ---
   const prevAllow = process.env.SSRF_ALLOWED_HOSTS;

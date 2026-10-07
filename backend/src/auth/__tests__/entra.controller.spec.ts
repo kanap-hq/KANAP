@@ -348,8 +348,28 @@ async function testStartLoginDoesNotSetNonceCookie() {
   assert.equal(cookieCalls.length, 0);
 }
 
+/** Runs `fn` with the given environment values, then restores them. */
+async function withEnv(values: Record<string, string | undefined>, fn: () => Promise<void>) {
+  const previous = new Map<string, string | undefined>();
+  for (const [key, value] of Object.entries(values)) {
+    previous.set(key, process.env[key]);
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+  try {
+    await fn();
+  } finally {
+    for (const [key, value] of previous) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
 async function run() {
-  await testHandleLoginCallbackRedirectsToTenantSessionHandoff();
+  // A local development host keeps the redirect on that host in development mode only
+  // (common/url.ts); the other modes are covered in common/__tests__/app-links.spec.ts.
+  await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testHandleLoginCallbackRedirectsToTenantSessionHandoff);
   await testCompleteLoginSessionSignsTokensOnTenantHost();
   await testStartSetupDoesNotSetNonceCookie();
   await testStartLoginDoesNotSetNonceCookie();

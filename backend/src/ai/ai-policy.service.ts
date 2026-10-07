@@ -13,6 +13,8 @@ import { AiSettingsService } from './ai-settings.service';
 import { PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import {
+  AI_CONTEXT_ENTITY_TYPES,
+  AI_SEARCH_ENTITY_TYPES,
   AiCapabilitiesDto,
   AiContextEntityType,
   AiExecutionContext,
@@ -58,6 +60,12 @@ const ENTITY_RESOURCE: Record<AiSearchEntityType | AiContextEntityType, string> 
   users: 'users',
   documents: 'knowledge',
 };
+
+/** The entity types the policy knows; any other requested value is never readable. */
+const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set<string>([
+  ...AI_SEARCH_ENTITY_TYPES,
+  ...AI_CONTEXT_ENTITY_TYPES,
+]);
 
 type EffectivePermissionState = {
   isAdmin: boolean;
@@ -451,6 +459,8 @@ export class AiPolicyService {
 
     const readable: Array<AiSearchEntityType | AiContextEntityType> = [];
     for (const entityType of requested) {
+      // Checked before the permissions: an administrator passes every permission check.
+      if (!KNOWN_ENTITY_TYPES.has(entityType)) continue;
       try {
         await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], 'reader', manager);
         readable.push(entityType);

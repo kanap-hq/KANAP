@@ -3,10 +3,11 @@ import { Features } from '../../config/features';
 import { resolveTenantAppBaseUrl } from '../url';
 
 // Multi-tenant (cloud): each tenant has its own subdomain, derived from the
-// configured application URL in production and from the request host
-// elsewhere. Pins the current behaviour.
+// configured application URL. The request host is followed only in
+// development mode, on a local development host; without a configured
+// address the answer is an explicit error.
 
-const ENV_KEYS = ['APP_ENV', 'NODE_ENV', 'APP_BASE_URL', 'PUBLIC_APP_URL'] as const;
+const ENV_KEYS = ['APP_ENV', 'NODE_ENV', 'APP_BASE_URL', 'PUBLIC_APP_URL', 'APP_URL'] as const;
 
 function withEnv(env: Partial<Record<(typeof ENV_KEYS)[number], string>>, fn: () => void) {
   const saved: Record<string, string | undefined> = {};
@@ -40,17 +41,33 @@ function testProductionCloud() {
 
 function testQaHost() {
   withEnv({ APP_ENV: 'qa', APP_BASE_URL: 'https://qa.kanap.net' }, () => {
-    assert.equal(resolveTenantAppBaseUrl(request('acme.qa.kanap.net'), 'acme'), 'http://acme.qa.kanap.net');
+    assert.equal(resolveTenantAppBaseUrl(request('acme.qa.kanap.net'), 'acme'), 'https://acme.qa.kanap.net');
     assert.equal(
       resolveTenantAppBaseUrl(request('acme.qa.kanap.net', { 'x-forwarded-proto': 'https' }), 'acme'),
+      'https://acme.qa.kanap.net',
+    );
+    assert.equal(
+      resolveTenantAppBaseUrl(
+        request('other.example.test', { 'x-forwarded-host': 'other.example.test', 'x-forwarded-proto': 'http' }),
+        'acme',
+      ),
       'https://acme.qa.kanap.net',
     );
   });
 }
 
 function testDevHost() {
-  withEnv({}, () => {
+  withEnv({ APP_ENV: 'development' }, () => {
     assert.equal(resolveTenantAppBaseUrl(request('fromage.lvh.me'), 'fromage'), 'http://fromage.lvh.me');
+  });
+}
+
+function testNotConfigured() {
+  withEnv({}, () => {
+    assert.throws(
+      () => resolveTenantAppBaseUrl(request('fromage.lvh.me'), 'fromage'),
+      (error: any) => error?.getStatus?.() === 400 && /^application URL is not configured/.test(error.message),
+    );
   });
 }
 
@@ -61,7 +78,7 @@ function testCustomDomainProduction() {
 }
 
 function main() {
-  const tests = [testProductionCloud, testQaHost, testDevHost, testCustomDomainProduction];
+  const tests = [testProductionCloud, testQaHost, testDevHost, testNotConfigured, testCustomDomainProduction];
   for (const test of tests) {
     test();
     console.log(`ok - ${test.name}`);
