@@ -33,7 +33,15 @@ async function testFirstStartProvisionsTheChart() {
     const [template] = await dataSource.query(
       `SELECT template_code FROM coa_templates WHERE is_global = true AND loaded_by_default = true LIMIT 1`,
     );
-    assert.equal(await createSingleTenantOnFirstStart(dataSource, svc.tenants, svc.baseline, { slug, name: 'On-prem Org' }), true);
+    const logged: string[] = [];
+    const log = console.log;
+    console.log = (...args: unknown[]) => { logged.push(args.join(' ')); };
+    try {
+      assert.equal(await createSingleTenantOnFirstStart(dataSource, svc.tenants, svc.baseline, { slug, name: 'On-prem Org' }), true);
+    } finally {
+      console.log = log;
+    }
+    assert.ok(logged.includes('[on-prem] Default chart of accounts created'), 'the outcome is logged');
     [{ id: tenantId }] = await dataSource.query(`SELECT id FROM tenants WHERE slug = $1`, [slug]);
 
     const charts = await chartsOf(tenantId!);

@@ -6,7 +6,7 @@ import { StorageService } from '../../common/storage/storage.service';
 import { withTenant } from '../../common/tenant-runner';
 import { Features } from '../../config/features';
 import { catalogToMetadata, DEFAULT_CLASSIFICATION_CATALOG } from '../../it-ops-settings/classification-catalog';
-import { TenantBaselineService } from '../../tenants/tenant-baseline.service';
+import { DefaultChartOutcome, TenantBaselineService } from '../../tenants/tenant-baseline.service';
 import { TenantStatus } from '../../tenants/tenant.entity';
 import { deleteStorageObjects, purgeTenantTables, TenantPurgeReport } from './tenant-data-purge';
 import {
@@ -32,6 +32,8 @@ export const TENANT_RESET_AUDIT_SOURCE_REF = 'demo-reset';
 export type TenantResetOutcome = {
   purged: TenantPurgeReport;
   demoUsersRemoved: number;
+  /** The default global chart of accounts of the starting state (a failure does not stop the reset). */
+  chartOfAccounts: DefaultChartOutcome;
   /** Storage objects of the purged attachments, deleted after the commit. */
   storagePaths: string[];
 };
@@ -39,6 +41,7 @@ export type TenantResetOutcome = {
 export type TenantResetResult = {
   purged: TenantPurgeReport;
   demoUsersRemoved: number;
+  chartOfAccounts: DefaultChartOutcome;
   storageObjectsDeleted: number;
   storageObjectsFailed: number;
 };
@@ -69,6 +72,13 @@ export async function lockTenantReset(manager: EntityManager, tenantId: string):
  * is created again (TenantBaselineService). The tenant row (name, address, branding, sign-in,
  * billing, status), the real users, the subscription, the AI settings and the history stay.
  * One transaction; the attachments' storage objects are deleted after it commits.
+ *
+ * Precondition: no other writer for the tenant while the reset runs. The advisory lock only
+ * excludes another reset; it does not block other writes. A request, a scheduled job or a
+ * sample data load that writes to the tenant during the reset transaction can commit after it,
+ * and its rows then remain in the reset tenant (for example a task allocated during the reset
+ * commits as T-1 after it). Callers stop or refuse every other write for the tenant before they
+ * call the reset, and wait until a running sample data load has exited.
  */
 @Injectable()
 export class TenantResetService {
@@ -87,6 +97,7 @@ export class TenantResetService {
     return {
       purged: outcome.purged,
       demoUsersRemoved: outcome.demoUsersRemoved,
+      chartOfAccounts: outcome.chartOfAccounts,
       storageObjectsDeleted: storage.deleted,
       storageObjectsFailed: storage.failed,
     };
@@ -121,7 +132,7 @@ export class TenantResetService {
     await this.resetMetadata(manager, tenantId);
 
     const company = await this.baseline.resolveStartingCompany(manager, tenant);
-    await this.baseline.ensureBaseline(manager, tenantId, { ...company, actorId });
+    const { chartOfAccounts } = await this.baseline.ensureBaseline(manager, tenantId, { ...company, actorId });
 
     await this.audit.log(
       {
@@ -135,12 +146,13 @@ export class TenantResetService {
           purged_tables: Object.fromEntries(report.filter((entry) => entry.deleted > 0).map((entry) => [entry.table, entry.deleted])),
           demo_users_removed: demoUsersRemoved,
           storage_objects: storagePaths.length,
+          chart_of_accounts: chartOfAccounts,
         },
       },
       { manager },
     );
 
-    return { purged: report, demoUsersRemoved, storagePaths };
+    return { purged: report, demoUsersRemoved, chartOfAccounts, storagePaths };
   }
 
   /**

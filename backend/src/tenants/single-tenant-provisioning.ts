@@ -1,6 +1,12 @@
 import { DataSource } from 'typeorm';
-import { TenantBaselineService } from './tenant-baseline.service';
+import { DefaultChartOutcome, TenantBaselineService } from './tenant-baseline.service';
 import { TenantsService } from './tenants.service';
+
+const DEFAULT_CHART_LOG: Record<DefaultChartOutcome, string> = {
+  provisioned: 'Default chart of accounts created',
+  skipped: 'Default chart of accounts not created: no global template is marked to load by default',
+  failed: 'Default chart of accounts not created: provisioning failed (see the warning above)',
+};
 
 /**
  * First start of a single-tenant installation: creates the tenant when no tenant has its slug
@@ -16,10 +22,12 @@ export async function createSingleTenantOnFirstStart(
 ): Promise<boolean> {
   const existing = await dataSource.query('SELECT id FROM tenants WHERE slug = $1 LIMIT 1', [params.slug]);
   if (existing?.[0]) return false;
-  await dataSource.transaction(async (manager) => {
+  const chart = await dataSource.transaction(async (manager) => {
     const tenant = await tenants.createTenant(params, { manager });
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
-    await baseline.provisionDefaultGlobalCoa(manager);
+    return baseline.provisionDefaultGlobalCoa(manager);
   });
+  // eslint-disable-next-line no-console
+  (chart === 'provisioned' ? console.log : console.warn)(`[on-prem] ${DEFAULT_CHART_LOG[chart]}`);
   return true;
 }

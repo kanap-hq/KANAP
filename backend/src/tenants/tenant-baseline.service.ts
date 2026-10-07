@@ -6,6 +6,9 @@ import { StatusState } from '../common/status';
 import { withSavepoint } from '../common/savepoint.util';
 import { TenantsService } from './tenants.service';
 
+/** What happened to the default global chart of accounts: created, no template to create it from, or failed. */
+export type DefaultChartOutcome = 'provisioned' | 'skipped' | 'failed';
+
 /** The company a new tenant starts with, and the user recorded as its creator. */
 export type StartingCompany = {
   companyName: string;
@@ -37,24 +40,36 @@ export class TenantBaselineService {
     private readonly companies: CompaniesService,
   ) {}
 
-  /** The tenant defaults, then the default global chart of accounts, then the starting company. */
-  async ensureBaseline(manager: EntityManager, tenantId: string, company: StartingCompany) {
+  /**
+   * The tenant defaults, then the default global chart of accounts, then the starting company.
+   * Returns what happened to the chart of accounts.
+   */
+  async ensureBaseline(
+    manager: EntityManager,
+    tenantId: string,
+    company: StartingCompany,
+  ): Promise<{ chartOfAccounts: DefaultChartOutcome }> {
     await this.tenants.seedTenantDefaults(manager, tenantId);
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-    await this.provisionDefaultGlobalCoa(manager);
+    const chartOfAccounts = await this.provisionDefaultGlobalCoa(manager);
     await this.createStartingCompany(manager, company);
+    return { chartOfAccounts };
   }
 
-  // Create a tenant CoA from the single global template marked loaded_by_default, if present.
-  // Under its own savepoint: a failure (a SQL error included) undoes the whole chart and leaves
-  // the signup transaction usable, so tenant creation goes on without it.
-  async provisionDefaultGlobalCoa(manager: EntityManager) {
+  /**
+   * Creates the tenant's chart of accounts from the single global template marked
+   * loaded_by_default, set as the default and consolidation chart. Under its own savepoint: a
+   * failure (a SQL error included) undoes the whole chart and leaves the caller's transaction
+   * usable, so the caller (trial activation, reset, single-tenant first start) goes on without
+   * it. Returns `provisioned`, `skipped` (no such template) or `failed` (logged, never thrown).
+   */
+  async provisionDefaultGlobalCoa(manager: EntityManager): Promise<DefaultChartOutcome> {
     try {
-      await withSavepoint(manager, async () => {
+      return await withSavepoint(manager, async (): Promise<DefaultChartOutcome> => {
         const rows: Array<{ id: string; template_code: string; template_name: string }>
           = await manager.query(`SELECT id, template_code, template_name FROM coa_templates WHERE is_global = true AND loaded_by_default = true LIMIT 1`);
         const tmpl = rows?.[0];
-        if (!tmpl) return;
+        if (!tmpl) return 'skipped';
         // Create tenant CoA from a global template with GLOBAL scope (no country), not country-default
         const created = await this.coas.create({ code: tmpl.template_code, name: tmpl.template_name, scope: 'GLOBAL', is_default: false }, null, { manager });
         // Copy accounts into CoA
@@ -62,10 +77,12 @@ export class TenantBaselineService {
         // Mark as global default and consolidation chart for the tenant
         await this.coas.setGlobalDefault(created.id, null, { manager });
         await this.coas.setConsolidation(created.id, null, { manager });
+        return 'provisioned';
       });
     } catch (e) {
       // Swallow provisioning issues to not block tenant creation, but log
       console.warn('[provisioning] Default global CoA provisioning skipped:', (e as Error)?.message);
+      return 'failed';
     }
   }
 

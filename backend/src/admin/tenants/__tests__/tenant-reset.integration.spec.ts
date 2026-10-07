@@ -143,6 +143,8 @@ async function testResetMatchesActivatedTenant() {
     assert.equal(resetEntries[0].record_id, b.tenantId);
     assert.equal(resetEntries[0].after_json.demo_users_removed, 3);
     assert.equal(resetEntries[0].after_json.storage_objects, 3);
+    assert.equal(resetEntries[0].after_json.chart_of_accounts, 'provisioned');
+    assert.equal(result.chartOfAccounts, 'provisioned');
 
     // The starting state, without ids or timestamps.
     assert.deepEqual(await baselineSnapshot(b.tenantId), await baselineSnapshot(a.tenantId));
@@ -350,12 +352,14 @@ async function testFailureRollsEverythingBack() {
   }
 }
 
-// Spec 7: the system tenant and a single-tenant installation are refused, nothing written.
+// Spec 7: the system tenant, a deleted or deleting tenant and a single-tenant installation are
+// refused, nothing written.
 async function testRefusals() {
   const svc = buildServices();
   const storage = svc.storage as RecordingStorage;
   let system: ActivatedTenant | undefined;
   let b: ActivatedTenant | undefined;
+  let gone: ActivatedTenant | undefined;
   try {
     system = await createActivatedTenant(svc, { tag: 'sys', orgName: 'System Org' });
     await loadDemoSet(system.tenantId);
@@ -365,6 +369,17 @@ async function testRefusals() {
     assert.ok(systemError instanceof BadRequestException, String(systemError));
     assert.match(systemError.message, /System tenants cannot be modified/);
     assert.deepEqual(countDifferences(systemCounts, await countTenantRows(system.tenantId)), []);
+
+    gone = await createActivatedTenant(svc, { tag: 'gone', orgName: 'Gone Org' });
+    await loadDemoSet(gone.tenantId);
+    const goneCounts = await countTenantRows(gone.tenantId);
+    for (const status of ['deleting', 'deleted']) {
+      await dataSource.query(`UPDATE tenants SET status = $2 WHERE id = $1`, [gone.tenantId, status]);
+      const goneError = await refusal(() => svc.reset.reset(gone!.tenantId, gone!.ownerId));
+      assert.ok(goneError instanceof BadRequestException, `${status}: ${String(goneError)}`);
+      assert.match(goneError.message, /Tenant already deleted/);
+      assert.deepEqual(countDifferences(goneCounts, await countTenantRows(gone.tenantId)), [], `${status}: nothing written`);
+    }
 
     b = await createActivatedTenant(svc, { tag: 'mode', orgName: 'Mode Org' });
     await loadDemoSet(b.tenantId);
@@ -381,7 +396,7 @@ async function testRefusals() {
     assert.deepEqual(countDifferences(counts, await countTenantRows(b.tenantId)), []);
     assert.deepEqual(storage.deleted, []);
   } finally {
-    await cleanupTenants([system?.tenantId, b?.tenantId]);
+    await cleanupTenants([system?.tenantId, b?.tenantId, gone?.tenantId]);
   }
 }
 
