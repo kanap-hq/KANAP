@@ -164,7 +164,9 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
   (precedent: `1824000000000-audit-log-viewer-metadata-indexes.ts`).
 - A new tenant-scoped table is registered in `backend/src/common/tenant-isolation.inventory.ts`
   and `backend/src/admin/tenants/tenant-purge.inventory.ts` (CI fails otherwise), with a policy
-  named `<table>_tenant_isolation` (USING and WITH CHECK). A migration cannot INSERT into a table it
+  named `<table>_tenant_isolation` (USING and WITH CHECK). The tenant reset purges it automatically;
+  it goes into `TENANT_RESET_KEEP_TABLES` (`backend/src/admin/tenants/tenant-reset.inventory.ts`),
+  with a reason, only if a reset must keep it. A migration cannot INSERT into a table it
   has just put under FORCE RLS: seed first, enable RLS after.
 - In psql, `count(*)` on a FORCE RLS table returns 0 without `app.current_tenant`, even for the
   owner. Count per tenant (a `DO` block looping over tenants with `set_config`).
