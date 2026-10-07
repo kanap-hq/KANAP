@@ -2,6 +2,7 @@ import React from 'react';
 import PageHeader from '../../components/PageHeader';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -33,6 +34,9 @@ import {
 } from '../../services/billing';
 import PlanSelectionDialog from './PlanSelectionPage';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { isEuCountry } from '../../utils/billingProfile';
+import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
+import { useCountryName } from '../coa/coaRoles';
 
 type BillingContactForm = {
   name: string;
@@ -110,7 +114,8 @@ function formToPayload(form: BillingContactForm): Partial<BillingContact> {
       city: normaliseValue(form.address.city),
       state: normaliseValue(form.address.state),
       postalCode: normaliseValue(form.address.postalCode),
-      country: normaliseValue(form.address.country)?.toUpperCase() ?? null,
+      // The picker stores ISO codes; a legacy free-text value is sent back as it was.
+      country: normaliseValue(form.address.country),
     },
   };
 }
@@ -232,6 +237,56 @@ function getInvoiceStatusMetaFromStatus(
     : { label: status.replace(/_/g, ' '), color: 'default' };
 }
 
+type CountryChoice = { code: string; name: string };
+
+/**
+ * Country picker storing the ISO 3166-1 alpha-2 code and showing the localized name.
+ * A stored value that is not a known code (legacy free text) shows as empty.
+ */
+function CountryPicker({
+  value,
+  onChange,
+  label,
+  required,
+  disabled,
+  fieldKey,
+}: {
+  value: string;
+  onChange: (code: string) => void;
+  label: string;
+  required?: boolean;
+  disabled?: boolean;
+  fieldKey?: string;
+}) {
+  const countryName = useCountryName();
+  const options = React.useMemo<CountryChoice[]>(
+    () => COUNTRY_OPTIONS
+      .map((option) => ({ code: option.code.toUpperCase(), name: countryName(option.code) }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [countryName],
+  );
+  const code = value.trim().toUpperCase();
+  const selected = options.find((option) => option.code === code) ?? null;
+  return (
+    <Autocomplete<CountryChoice, false, false, false>
+      options={options}
+      value={selected}
+      onChange={(_event, option) => onChange(option?.code ?? '')}
+      getOptionLabel={(option) => option.name}
+      isOptionEqualToValue={(a, b) => a.code === b.code}
+      disabled={disabled}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          label={label}
+          required={required}
+          inputProps={{ ...params.inputProps, ...(fieldKey ? { 'data-invoice-field': fieldKey } : {}) }}
+        />
+      )}
+    />
+  );
+}
+
 type SummaryItemProps = {
   label: string;
   children: React.ReactNode;
@@ -310,7 +365,13 @@ export default function BillingCenter() {
       setInvoiceForm(nextInvoice);
       queryClient.setQueryData<BillingProfileResponse | undefined>(['billing-profile'], (prev) => {
         if (!prev) return prev;
-        return { ...prev, customer: data.customer, invoice: data.invoice, invoices: data.invoices };
+        return {
+          ...prev,
+          customer: data.customer,
+          invoice: data.invoice,
+          invoice_missing_fields: data.invoice_missing_fields,
+          invoices: data.invoices,
+        };
       });
     },
     onError: (err: any) => {
@@ -325,11 +386,6 @@ export default function BillingCenter() {
   const hasSubscription = !!subscriptionSummary?.stripe_subscription_id;
   const subscriptionStatus = subscriptionSummary?.status ?? null;
   const planLabel = React.useMemo(() => derivePlanLabel(subscriptionSummary, t), [subscriptionSummary, t]);
-  const seatsLabel = subscriptionSummary
-    ? subscriptionSummary.seat_limit != null
-      ? `${subscriptionSummary.seats_used}/${subscriptionSummary.seat_limit}`
-      : t('billing.subscription.values.unlimitedSeatsUsed', { count: subscriptionSummary.seats_used })
-    : '—';
   const statusMeta = React.useMemo(() => getStatusMeta(subscriptionSummary, t), [subscriptionSummary, t]);
   const frequencyLabel = React.useMemo(() => formatSubscriptionType(subscriptionSummary, t), [subscriptionSummary, t]);
   const collectionLabel = React.useMemo(() => formatCollectionMethod(subscriptionSummary, t), [subscriptionSummary, t]);
@@ -366,6 +422,29 @@ export default function BillingCenter() {
   const invoices = profileQuery.data?.invoices ?? [];
   const invoicesToShow = showAllInvoices ? invoices : invoices.slice(0, 5);
   const canToggleInvoices = invoices.length > 5;
+  const invoiceMissingFields = profileQuery.data?.invoice_missing_fields ?? [];
+  const invoiceVatRequired = isEuCountry(invoiceForm.address.country);
+  const invoiceCardRef = React.useRef<HTMLDivElement>(null);
+  const focusInvoiceOnExit = React.useRef(false);
+
+  const handleCompleteInvoiceDetails = () => {
+    focusInvoiceOnExit.current = true;
+    setPlanDialogOpen(false);
+  };
+
+  // Runs once the plan dialog has closed (and given focus back), then moves to the card.
+  const handlePlanDialogExited = () => {
+    if (!focusInvoiceOnExit.current) return;
+    focusInvoiceOnExit.current = false;
+    const card = invoiceCardRef.current;
+    if (!card) return;
+    card.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    const firstMissing = invoiceMissingFields[0];
+    const target =
+      (firstMissing ? card.querySelector<HTMLInputElement>(`input[data-invoice-field="${firstMissing}"]`) : null) ??
+      card.querySelector<HTMLInputElement>('input:not([disabled])');
+    target?.focus({ preventScroll: true });
+  };
 
   const openPortal = async () => {
     setPortalError(null);
@@ -420,6 +499,17 @@ export default function BillingCenter() {
     }
   };
 
+  const handleCountryChange = (section: 'customer' | 'invoice') => (code: string) => {
+    setFormError(null);
+    setFormSuccess(null);
+    setCheckoutError(null);
+    if (section === 'customer') {
+      setCustomerForm((prev) => ({ ...prev, address: { ...prev.address, country: code } }));
+    } else {
+      setInvoiceForm((prev) => ({ ...prev, address: { ...prev.address, country: code } }));
+    }
+  };
+
   const handleCopyFromCustomer = () => {
     setFormError(null);
     setFormSuccess(null);
@@ -464,11 +554,6 @@ export default function BillingCenter() {
                 <Grid item xs={12} sm={6} md={3}>
                   <SummaryItem label={t('billing.subscription.labels.plan')}>
                     <Typography fontWeight={600}>{planLabel}</Typography>
-                  </SummaryItem>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <SummaryItem label={t('billing.subscription.labels.seats')}>
-                    <Typography>{seatsLabel}</Typography>
                   </SummaryItem>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
@@ -732,11 +817,10 @@ export default function BillingCenter() {
                 />
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField
+                <CountryPicker
                   label={t('billing.fields.country')}
                   value={customerForm.address.country}
-                  onChange={handleAddressChange('customer', 'country')}
-                  fullWidth
+                  onChange={handleCountryChange('customer')}
                   disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
                 />
               </Grid>
@@ -744,7 +828,7 @@ export default function BillingCenter() {
           </CardContent>
         </Card>
 
-        <Card variant="outlined">
+        <Card variant="outlined" ref={invoiceCardRef}>
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
               <Typography variant="h6">{t('billing.invoiceDetails.title')}</Typography>
@@ -756,7 +840,7 @@ export default function BillingCenter() {
                 {t('billing.invoiceDetails.copyFromCustomer')}
               </Button>
             </Stack>
-            <Grid container spacing={2}>
+            <Grid container spacing={2} sx={{ '& .MuiFormLabel-asterisk': { color: 'warning.main' } }}>
               <Grid item xs={12} md={6}>
                 <TextField
                   label={t('billing.fields.recipientName')}
@@ -772,6 +856,8 @@ export default function BillingCenter() {
                   value={invoiceForm.company}
                   onChange={handleContactChange('invoice', 'company')}
                   fullWidth
+                  required
+                  inputProps={{ 'data-invoice-field': 'company' }}
                   disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
                 />
               </Grid>
@@ -782,6 +868,8 @@ export default function BillingCenter() {
                   value={invoiceForm.email}
                   onChange={handleContactChange('invoice', 'email')}
                   fullWidth
+                  required
+                  inputProps={{ 'data-invoice-field': 'email' }}
                   disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
                   autoComplete="email"
                   InputLabelProps={{ shrink: true }}
@@ -802,6 +890,8 @@ export default function BillingCenter() {
                   value={invoiceForm.vatNumber}
                   onChange={handleContactChange('invoice', 'vatNumber')}
                   fullWidth
+                  required={invoiceVatRequired}
+                  inputProps={{ 'data-invoice-field': 'vatNumber' }}
                   disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
                 />
               </Grid>
@@ -811,6 +901,8 @@ export default function BillingCenter() {
                   value={invoiceForm.address.line1}
                   onChange={handleAddressChange('invoice', 'line1')}
                   fullWidth
+                  required
+                  inputProps={{ 'data-invoice-field': 'addressLine1' }}
                   disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
                 />
               </Grid>
@@ -829,6 +921,8 @@ export default function BillingCenter() {
                   value={invoiceForm.address.city}
                   onChange={handleAddressChange('invoice', 'city')}
                   fullWidth
+                  required
+                  inputProps={{ 'data-invoice-field': 'city' }}
                   disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
                 />
               </Grid>
@@ -847,15 +941,18 @@ export default function BillingCenter() {
                   value={invoiceForm.address.postalCode}
                   onChange={handleAddressChange('invoice', 'postalCode')}
                   fullWidth
+                  required
+                  inputProps={{ 'data-invoice-field': 'postalCode' }}
                   disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
                 />
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField
+                <CountryPicker
                   label={t('billing.fields.country')}
                   value={invoiceForm.address.country}
-                  onChange={handleAddressChange('invoice', 'country')}
-                  fullWidth
+                  onChange={handleCountryChange('invoice')}
+                  required
+                  fieldKey="country"
                   disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
                 />
               </Grid>
@@ -889,6 +986,9 @@ export default function BillingCenter() {
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['billing-profile'] });
         }}
+        invoiceMissingFields={invoiceMissingFields}
+        onCompleteInvoiceDetails={handleCompleteInvoiceDetails}
+        onExited={handlePlanDialogExited}
       />
     </>
   );

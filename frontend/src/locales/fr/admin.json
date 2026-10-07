@@ -346,7 +346,6 @@
         "paymentMethod": "Moyen de paiement",
         "plan": "Plan",
         "renewalDate": "Date de renouvellement",
-        "seats": "Postes",
         "status": "Statut",
         "trial": "Essai",
         "trialEnds": "Fin de l'essai"
@@ -363,8 +362,7 @@
         "daysRemaining_one": "{{count}} jour restant",
         "daysRemaining_other": "{{count}} jours restants",
         "invoiceManualPayment": "Facture (paiement manuel)",
-        "monthly": "Mensuel",
-        "unlimitedSeatsUsed": "{{count}} utilisés"
+        "monthly": "Mensuel"
       }
     },
     "title": "Facturation"
@@ -650,7 +648,17 @@
     },
     "errors": {
       "noActiveSubscription": "Aucun abonnement actif trouvé.",
-      "planNotBankTransferEligible": "Ce plan n'est pas éligible au virement bancaire."
+      "planNotBankTransferEligible": "Ce plan n'est pas éligible au virement bancaire.",
+      "vatNumberInvalid": "Le numéro de TVA n'a pas été accepté. Vérifiez-le dans les informations de facturation."
+    },
+    "invoiceFields": {
+      "addressLine1": "adresse ligne 1",
+      "city": "ville",
+      "company": "société",
+      "country": "pays",
+      "email": "e-mail",
+      "postalCode": "code postal",
+      "vatNumber": "numéro de TVA"
     },
     "messages": {
       "checkoutUrlUnavailable": "L'URL de paiement n'est pas disponible.",
@@ -662,10 +670,12 @@
       "trialExpires_other": "La période d'essai expire dans {{count}} jours."
     },
     "pricePer": "par {{period}}",
+    "profile": {
+      "complete": "Compléter les informations de facturation",
+      "incomplete": "Complétez les informations de facturation avant de vous abonner : {{fields}}."
+    },
     "shared": {
       "month": "mois",
-      "upToSeats_one": "Jusqu'à {{count}} poste",
-      "upToSeats_other": "Jusqu'à {{count}} postes",
       "year": "an"
     },
     "title": "Choisir un plan",
@@ -1059,10 +1069,6 @@
     },
     "exportTitle": "Exporter les utilisateurs",
     "importTitle": "Importer les utilisateurs",
-    "seats": {
-      "limited": "Postes {{used}}/{{limit}}",
-      "unlimited": "Postes {{used}} (illimité)"
-    },
     "accountType": {
       "entra": "Microsoft Entra",
       "local": "Local"

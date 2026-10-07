@@ -189,12 +189,11 @@ Users can be assigned multiple roles. Their effective permissions are the combin
 
 Clearing every role does not delete the account. The user falls back to the **Contact** system role, keeps no access, and shows as **Pending access** in the grid. You cannot remove your own last role, so you cannot lock yourself out.
 
-### Seat Management
+### Enabled and disabled users
 
-The hosted subscription includes **unlimited users** -- there is no seat limit to manage:
+Your subscription includes **unlimited users**. The **Enabled** switch controls who can sign in:
 - **Enabled users**: Can log in and use KANAP
 - **Disabled users**: Keep their data but can no longer log in
-- The counter in the toolbar shows how many enabled users you have
 - Toggle the **Enabled** switch when editing a user to control access
 
 ### Users managed by Microsoft Entra
@@ -391,7 +390,6 @@ Manage your subscription, users, and invoices.
 
 The subscription card shows your current plan at a glance:
 - **Plan**: Hosted KANAP (or Free trial). The subscription includes unlimited users -- billed monthly or annually
-- **Seats**: Number of enabled users
 - **Status**: Active, Trialing, Past Due, Canceled, etc.
 - **Renewal date**: When the next billing cycle starts
 
@@ -410,6 +408,8 @@ If the subscription is in a trial period, the remaining trial days are displayed
 - **Manage subscription**: Open the Stripe customer portal to update payment methods, cancel, or make other changes. Only available when a Stripe subscription exists.
 
 If your subscription is unhealthy (expired trial, past due, etc.), the plan selection dialog opens automatically when you visit the Billing page.
+
+To subscribe, by card or by bank transfer, the invoicing information must be complete (see [Invoicing Information](#invoicing-information)). If something is missing, the **Choose a plan** dialog lists the missing fields and the pay buttons stay disabled. Click **Complete invoicing information** to close the dialog and go to the invoicing card. Once the details are saved, the pay buttons become available. Changing the plan of a running card subscription does not require this check.
 
 ### Invoice History
 
@@ -430,11 +430,26 @@ Update the contact details associated with your Stripe customer record:
 - **VAT number**
 - **Address** (line 1, line 2, city, state/province, postal code, country)
 
+The **Country** field is a searchable list. A country entered as free text in an earlier version shows empty until you pick a country from the list.
+
 ### Invoicing Information
 
 Separate contact details used specifically on invoices. Click **Copy from customer** to pre-fill from the customer information above.
 
 Fields match the customer information section: recipient name, company, email, phone, VAT number, and full address.
+
+These details appear on your invoices. KANAP copies them to your Stripe customer record when you subscribe and each time you save.
+
+Required fields are marked with an asterisk:
+- **Company**
+- **Email**
+- **Address line 1**, **Postal code** and **City**
+- **Country**
+- **VAT number**, when the country is in the European Union
+
+You can save incomplete details and finish them later. The details must be complete before you can subscribe.
+
+For a country in the European Union, the VAT number is sent to Stripe and printed on your invoices. If Stripe does not accept it, KANAP shows "The VAT number was not accepted. Check it in the invoicing information." Correct the number and try again.
 
 Click **Save changes** to update both customer and invoicing details. Use **Reset** to discard unsaved edits.
 

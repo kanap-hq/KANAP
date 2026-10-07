@@ -189,12 +189,11 @@ Se pueden asignar múltiples roles a los usuarios. Sus permisos efectivos son la
 
 Quitar todos los roles no elimina la cuenta. El usuario pasa al rol de sistema **Contacto**, se queda sin acceso y aparece como **Acceso pendiente** en la cuadrícula. No puede quitarse su propio último rol, así que no puede bloquearse a sí mismo.
 
-### Gestión de puestos
+### Usuarios habilitados y deshabilitados
 
-La suscripción alojada incluye **usuarios ilimitados** — no hay límite de puestos que gestionar:
+Su suscripción incluye **usuarios ilimitados**. El interruptor **Habilitado** determina quién puede iniciar sesión:
 - **Usuarios habilitados**: Pueden iniciar sesión y usar KANAP
 - **Usuarios deshabilitados**: Conservan sus datos pero ya no pueden iniciar sesión
-- El contador en la barra de herramientas muestra el número de usuarios habilitados
 - Active o desactive el interruptor **Habilitado** al editar un usuario para controlar el acceso
 
 ### Usuarios gestionados por Microsoft Entra
@@ -391,7 +390,6 @@ Gestione su suscripción, usuarios y facturas.
 
 La tarjeta de suscripción muestra su plan actual de un vistazo:
 - **Plan**: Hosted KANAP (o Prueba gratuita). La suscripción incluye usuarios ilimitados — facturación mensual o anual
-- **Puestos**: Número de usuarios habilitados
 - **Estado**: Activo, En prueba, Pago vencido, Cancelado, etc.
 - **Fecha de renovación**: Cuándo comienza el siguiente ciclo de facturación
 
@@ -410,6 +408,8 @@ Si la suscripción está en período de prueba, se muestran los días restantes 
 - **Gestionar suscripción**: Abrir el portal de cliente de Stripe para actualizar métodos de pago, cancelar u otros cambios. Solo disponible cuando existe una suscripción de Stripe.
 
 Si su suscripción no está en buen estado (prueba expirada, pago vencido, etc.), el cuadro de selección de plan se abre automáticamente al visitar la página de Facturación.
+
+Para suscribirse, con tarjeta o por transferencia, la información de facturación debe estar completa (consulte [Información de facturación](#informacion-de-facturacion)). Si falta algo, el cuadro **Elegir un plan** enumera los campos que faltan y los botones de pago permanecen desactivados. Haga clic en **Completar la información de facturación** para cerrar el cuadro e ir a la tarjeta de facturación. Cuando los datos se guarden completos, los botones de pago estarán disponibles. Cambiar el plan de una suscripción con tarjeta en curso no requiere esta comprobación.
 
 ### Historial de facturas
 
@@ -430,11 +430,26 @@ Actualice los datos de contacto asociados a su registro de cliente en Stripe:
 - **Número de IVA**
 - **Dirección** (línea 1, línea 2, ciudad, estado/provincia, código postal, país)
 
+El campo **País** es una lista con búsqueda. Un país introducido como texto libre en una versión anterior aparece vacío hasta que elija un país de la lista.
+
 ### Información de facturación
 
 Datos de contacto separados utilizados específicamente en las facturas. Haga clic en **Copiar del cliente** para autocompletar a partir de la información del cliente anterior.
 
 Los campos coinciden con la sección de información del cliente: nombre del destinatario, empresa, correo electrónico, teléfono, número de IVA y dirección completa.
+
+Estos datos aparecen en sus facturas. KANAP los copia en su registro de cliente de Stripe al suscribirse y cada vez que guarda.
+
+Los campos obligatorios están marcados con un asterisco:
+- **Empresa**
+- **Correo electrónico**
+- **Dirección línea 1**, **Código postal** y **Ciudad**
+- **País**
+- **Número de IVA**, cuando el país pertenece a la Unión Europea
+
+Puede guardar datos incompletos y terminarlos más tarde. Deben estar completos antes de suscribirse.
+
+Para un país de la Unión Europea, el número de IVA se envía a Stripe y se imprime en sus facturas. Si Stripe no lo acepta, KANAP muestra «No se aceptó el número de IVA. Revíselo en la información de facturación.» Corrija el número e inténtelo de nuevo.
 
 Haga clic en **Guardar cambios** para actualizar tanto los datos del cliente como los de facturación. Utilice **Restablecer** para descartar las ediciones no guardadas.
 

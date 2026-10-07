@@ -923,7 +923,7 @@ export class UsersService {
     if (user.status === 'enabled') return user;
     const summary = await this.billingService.getSubscriptionSummary({ manager: opts?.manager });
     if (summary.seat_limit !== null && summary.seats_used >= summary.seat_limit) {
-      throw new BadRequestException('No seats available. Your plan allows up to ' + summary.seat_limit + ' contributors.');
+      throw new BadRequestException('This subscription allows ' + summary.seat_limit + ' enabled users. Disable another user first.');
     }
     const before = { ...user };
     user.status = 'enabled' as any;

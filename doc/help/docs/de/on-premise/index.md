@@ -1,6 +1,6 @@
 # On-Premise-Bereitstellung
 
-KANAP kann On-Premise im **Single-Tenant-Modus** bereitgestellt werden. Sie stellen Ihr eigenes PostgreSQL, S3-kompatiblen Speicher und TLS-Reverse-Proxy bereit. KANAP kümmert sich um den Rest: Migrationen laufen automatisch, der Mandant und Admin-Benutzer werden beim ersten Start erstellt, und ein großzügiges Platzlimit (1.000) ist vorkonfiguriert.
+KANAP kann On-Premise im **Single-Tenant-Modus** bereitgestellt werden. Sie stellen Ihr eigenes PostgreSQL, S3-kompatiblen Speicher und TLS-Reverse-Proxy bereit. KANAP kümmert sich um den Rest: Migrationen laufen automatisch, der Mandant und Admin-Benutzer werden beim ersten Start erstellt. Es gibt keine Benutzerbegrenzung.
 
 ## Leitfäden
 

@@ -189,12 +189,11 @@ Les utilisateurs peuvent se voir assigner plusieurs rôles. Leurs autorisations 
 
 Retirer tous les rôles ne supprime pas le compte. L'utilisateur revient au rôle système **Contact**, ne conserve aucun accès et apparaît avec le statut **Accès en attente** dans la grille. Vous ne pouvez pas retirer votre propre dernier rôle, vous ne pouvez donc pas vous bloquer l'accès.
 
-### Gestion des sièges
+### Utilisateurs activés et désactivés
 
-L'abonnement hébergé inclut un nombre **illimité d'utilisateurs** — il n'y a pas de limite de sièges à gérer :
+Votre abonnement inclut un nombre **illimité d'utilisateurs**. Le commutateur **Activé** détermine qui peut se connecter :
 - **Utilisateurs activés** : Peuvent se connecter et utiliser KANAP
 - **Utilisateurs désactivés** : Conservent leurs données mais ne peuvent plus se connecter
-- Le compteur dans la barre d'outils affiche le nombre d'utilisateurs activés
 - Basculez le commutateur **Activé** lors de la modification d'un utilisateur pour contrôler l'accès
 
 ### Utilisateurs gérés par Microsoft Entra
@@ -391,7 +390,6 @@ Gérez votre abonnement, vos utilisateurs et vos factures.
 
 La carte d'abonnement affiche votre plan actuel en un coup d'oeil :
 - **Plan** : Hosted KANAP (ou Essai gratuit). L'abonnement inclut un nombre illimité d'utilisateurs — facturation mensuelle ou annuelle
-- **Sièges** : Nombre d'utilisateurs activés
 - **Statut** : Actif, En essai, En retard, Annulé, etc.
 - **Date de renouvellement** : Quand le prochain cycle de facturation commence
 
@@ -410,6 +408,8 @@ Si l'abonnement est en période d'essai, le nombre de jours d'essai restants est
 - **Gérer l'abonnement** : Ouvrir le portail client Stripe pour mettre à jour les moyens de paiement, annuler ou effectuer d'autres modifications. Disponible uniquement lorsqu'un abonnement Stripe existe.
 
 Si votre abonnement n'est pas en règle (essai expiré, paiement en retard, etc.), la boîte de dialogue de sélection du plan s'ouvre automatiquement lorsque vous visitez la page Facturation.
+
+Pour souscrire, par carte ou par virement, les informations de facturation doivent être complètes (voir [Informations de facturation](#informations-de-facturation)). S'il manque quelque chose, la boîte de dialogue **Choisir un plan** liste les champs manquants et les boutons de paiement restent désactivés. Cliquez sur **Compléter les informations de facturation** pour fermer la boîte de dialogue et accéder à la carte de facturation. Une fois les informations enregistrées, les boutons de paiement deviennent disponibles. Le changement de plan d'un abonnement par carte en cours ne demande pas cette vérification.
 
 ### Historique des factures
 
@@ -430,11 +430,26 @@ Mettez à jour les coordonnées associées à votre enregistrement client Stripe
 - **Numéro de TVA**
 - **Adresse** (ligne 1, ligne 2, ville, état/province, code postal, pays)
 
+Le champ **Pays** est une liste avec recherche. Un pays saisi en texte libre dans une version précédente apparaît vide tant que vous n'en choisissez pas un dans la liste.
+
 ### Informations de facturation
 
 Coordonnées séparées utilisées spécifiquement sur les factures. Cliquez sur **Copier depuis le client** pour pré-remplir depuis les informations client ci-dessus.
 
 Les champs sont les mêmes que dans la section Informations client : nom du destinataire, société, e-mail, téléphone, numéro de TVA et adresse complète.
+
+Ces informations figurent sur vos factures. KANAP les copie dans votre fiche client Stripe lorsque vous souscrivez et à chaque enregistrement.
+
+Les champs obligatoires sont marqués d'un astérisque :
+- **Société**
+- **E-mail**
+- **Adresse ligne 1**, **Code postal** et **Ville**
+- **Pays**
+- **Numéro de TVA**, lorsque le pays fait partie de l'Union européenne
+
+Vous pouvez enregistrer des informations incomplètes et les terminer plus tard. Elles doivent être complètes avant de souscrire.
+
+Pour un pays de l'Union européenne, le numéro de TVA est transmis à Stripe et imprimé sur vos factures. Si Stripe ne l'accepte pas, KANAP affiche « Le numéro de TVA n'a pas été accepté. Vérifiez-le dans les informations de facturation. » Corrigez le numéro et réessayez.
 
 Cliquez sur **Enregistrer les modifications** pour mettre à jour à la fois les informations client et les informations de facturation. Utilisez **Réinitialiser** pour abandonner les modifications non enregistrées.
 

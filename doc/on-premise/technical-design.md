@@ -112,9 +112,9 @@ On first startup in single-tenant mode (`backend/src/main.ts`, before tenancy mi
 1. Migrations run (same as cloud)
 2. If `DEFAULT_TENANT_SLUG` does not exist, create tenant via `TenantsService.createTenant()` (idempotent)
 3. If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set, seed admin user with Administrator role and full permissions
-4. Bootstrap subscription row: `plan_name = 'On-Prem'`, `seat_limit = 1000`, `status = 'active'`
+4. Bootstrap subscription row: `plan_name = 'On-Prem'`, `seat_limit = NULL` (no user limit), `status = 'active'`
 
-**Safety net:** `billing.service.ts` `ensureSubscription()` also defaults to On-Prem/1000 seats instead of Starter/5 when `Features.SINGLE_TENANT` is true.
+**Safety net:** `billing.service.ts` `ensureSubscription()` also defaults to On-Prem with no user limit when `Features.SINGLE_TENANT` is true, and to Trial with no user limit otherwise. At startup, a single-tenant install clears any user limit left on its subscription.
 
 Existing `SEED_ADMIN=true` path remains available for cloud/QA bootstrapping and is independent.
 
@@ -176,7 +176,7 @@ GET /api/config/public
 | Platform-admin nav | Visible (if user has access) | Hidden |
 | Trial / support endpoints | Active | Return 404 |
 | Billing | Stripe-based | Disabled (`FEATURE_DISABLED`) |
-| Subscription defaults | Starter / 5 seats | On-Prem / 1000 seats |
+| Subscription defaults | Trial, no user limit | On-Prem, no user limit |
 | Notification URLs | `APP_URL` + slug substitution | `APP_BASE_URL` directly |
 
 ## CI Matrix
@@ -269,7 +269,7 @@ Rules:
 
 | File | Line | What | Behavior |
 |------|------|------|----------|
-| `main.ts` | 195 | First-boot provisioning | Creates tenant, admin user, subscription (On-Prem / 1000 seats) |
+| `main.ts` | 360 | First-boot provisioning | Creates tenant, admin user, subscription (On-Prem, no user limit) |
 | `main.ts` | 324 | Tenancy middleware | Skips Host parsing, resolves to `DEFAULT_TENANT_SLUG`; returns 503 if tenant not ready |
 | `platform-admin.util.ts` | 18 | `isPlatformAdmin()` | Returns `false` unconditionally |
 | `public.controller.ts` | 157 | `POST /public/start-trial` | 404 |
@@ -278,7 +278,7 @@ Rules:
 | `admin-tenants.controller.ts` | 10 | All `/admin/tenants/*` | 404 via `MultiTenantOnlyGuard` |
 | `admin-coa-templates.controller.ts` | 11 | All `/admin/coa-templates/*` | 404 via `MultiTenantOnlyGuard` |
 | `admin-ops.controller.ts` | 11 | All `/admin/ops/*` | 404 via `MultiTenantOnlyGuard` |
-| `billing.service.ts` | 1281 | `ensureSubscription()` fallback | Defaults to On-Prem / 1000 seats instead of Starter / 5 |
+| `billing.service.ts` | 1280 | `ensureSubscription()` fallback | Defaults to On-Prem, no user limit (single-tenant) or Trial, no user limit (cloud) |
 | `url.ts` | 163 | `resolveNotificationBaseUrl()` | Uses `APP_BASE_URL` directly (no subdomain substitution) |
 | `portfolio-status-change-report.controller.ts` | 134 | Export base URL | Delegates to `resolveNotificationBaseUrl()` |
 | `feature-gates.ts` | 34 | `MultiTenantOnlyGuard` | Throws 404 when `SINGLE_TENANT` is true |

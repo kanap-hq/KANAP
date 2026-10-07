@@ -79,12 +79,15 @@ export type BillingProfileResponse = {
   subscription: BillingSubscription;
   customer: BillingContact;
   invoice: BillingContact;
+  /** Invoice fields still needed before subscribing (`company`, `email`, `addressLine1`, ...). */
+  invoice_missing_fields?: string[];
   invoices: BillingInvoice[];
 };
 
 export type BillingProfileUpdateResponse = {
   customer: BillingContact;
   invoice: BillingContact;
+  invoice_missing_fields?: string[];
   invoices: BillingInvoice[];
 };
 
