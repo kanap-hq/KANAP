@@ -11,7 +11,7 @@ import { AccountsService } from './accounts.service';
 import { parseString } from '@fast-csv/parse';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../common/csv-sheet';
-import { auditChangedAccounts, CURRENT_TENANT, resyncFromChart } from './consolidation';
+import { CURRENT_TENANT, lockTenantCharts, resyncFromChart } from './consolidation';
 
 /** The chart flags a grid can filter and sort on, with its columns. */
 const LIST_FIELDS = ['code', 'name', 'country_iso', 'scope', 'is_default', 'is_global_default', 'is_consolidation', 'created_at', 'updated_at'];
@@ -209,6 +209,8 @@ export class ChartOfAccountsService {
   async update(id: string, body: ChartOfAccountsUpsertDto, userId?: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
+    // A country default moves between two charts: lock them all, in the order every chart writer uses.
+    await lockTenantCharts(mg);
     const existing = await repo.findOne({ where: { id } });
     if (!existing) throw new NotFoundException('Chart of Accounts not found');
     const before = { ...existing };
@@ -272,6 +274,7 @@ export class ChartOfAccountsService {
   async delete(id: string, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
+    await lockTenantCharts(mg);
     const existing = await repo.findOne({ where: { id } });
     if (!existing) throw new NotFoundException('Chart of Accounts not found');
 
@@ -284,16 +287,16 @@ export class ChartOfAccountsService {
     const opexUsageRows = await mg.query(
       `SELECT COUNT(*)::int AS count
        FROM spend_items si
-       JOIN accounts a ON a.id = si.account_id
-       WHERE a.coa_id = $1`,
+       JOIN accounts a ON a.id = si.account_id AND a.tenant_id = si.tenant_id
+       WHERE a.coa_id = $1 AND si.tenant_id = ${CURRENT_TENANT}`,
       [id],
     );
     const opexCount = Number(opexUsageRows?.[0]?.count ?? 0);
     const capexUsageRows = await mg.query(
       `SELECT COUNT(*)::int AS count
        FROM capex_items ci
-       JOIN accounts a ON a.id = ci.account_id
-       WHERE a.coa_id = $1`,
+       JOIN accounts a ON a.id = ci.account_id AND a.tenant_id = ci.tenant_id
+       WHERE a.coa_id = $1 AND ci.tenant_id = ${CURRENT_TENANT}`,
       [id],
     );
     const capexCount = Number(capexUsageRows?.[0]?.count ?? 0);
@@ -323,7 +326,7 @@ export class ChartOfAccountsService {
    */
   async setGlobalDefault(coaId: string, userId?: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const mg = opts?.manager ?? this.repo.manager;
-    await this.lockTenantCharts(mg);
+    await lockTenantCharts(mg);
     const target = await this.findOrFail(coaId, mg);
     if (target.scope !== 'GLOBAL') {
       throw new BadRequestException('Only GLOBAL-scoped CoAs can be set as Global Default');
@@ -350,13 +353,12 @@ export class ChartOfAccountsService {
    */
   async setConsolidation(coaId: string, userId?: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const mg = opts?.manager ?? this.repo.manager;
-    await this.lockTenantCharts(mg);
+    await lockTenantCharts(mg);
     await this.findOrFail(coaId, mg);
     await this.assignRole('is_consolidation', coaId, userId, mg, opts?.audit);
-    const changed = await resyncFromChart(mg, coaId);
-    await auditChangedAccounts(this.audit, mg, changed, userId, opts?.audit);
+    const resynced = await resyncFromChart(mg, coaId, { userId, audit: opts?.audit });
     const { outside } = await this.consolidationImpact(coaId, { manager: mg });
-    return { resynced: changed.length, outside };
+    return { resynced, outside };
   }
 
   /** Removes the consolidation role from this chart; a no-op when it does not hold it. */
@@ -386,11 +388,6 @@ export class ChartOfAccountsService {
       [coaId],
     );
     return { matched: row?.matched ?? 0, outside: row?.outside ?? 0, unmapped: row?.unmapped ?? 0 };
-  }
-
-  /** Serializes role changes of a tenant: two at once would otherwise both pass the clear step. */
-  private async lockTenantCharts(mg: EntityManager) {
-    await mg.query(`SELECT id FROM chart_of_accounts WHERE tenant_id = ${CURRENT_TENANT} ORDER BY id FOR UPDATE`);
   }
 
   /** Gives `role` to `holderId` and takes it from every other chart of the tenant (audited per chart). */

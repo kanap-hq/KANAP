@@ -796,10 +796,10 @@ async function ensureChartRoles(localCharts) {
     await apiPatch(`/chart-of-accounts/${ifrs.id}/global-default`);
     ok('IFRS is the default chart for other countries');
   }
-  if (!ifrs.is_consolidation) {
-    const result = await apiPatch(`/chart-of-accounts/${ifrs.id}/consolidation`);
-    ok(`IFRS is the consolidation chart (${result?.resynced ?? 0} account(s) resynced, ${result?.outside ?? 0} outside it)`);
-  }
+  // Always: the call is idempotent and resyncs the consolidation names of the local accounts
+  // from IFRS (an import or an older tenant may hold names typed by hand).
+  const result = await apiPatch(`/chart-of-accounts/${ifrs.id}/consolidation`);
+  ok(`IFRS is the consolidation chart (${result?.resynced ?? 0} account(s) resynced, ${result?.outside ?? 0} outside it)`);
 
   coas = items(await apiGet('/chart-of-accounts?limit=500'));
   for (const coaId of Object.values(localCharts)) {

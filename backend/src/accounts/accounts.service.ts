@@ -20,16 +20,20 @@ import {
   writeCsv,
 } from '../common/csv-sheet';
 import {
+  AccountAuditRow,
   andCondition,
-  auditChangedAccounts,
-  consolidationChartId,
+  ConsolidationAccount,
+  consolidationAccounts,
   consolidationLookup,
   ConsolidationStatus,
   consolidationStatusCondition,
   consolidationStatusOf,
   CURRENT_TENANT,
+  insertAccountAudits,
+  lockConsolidationChartId,
   parseConsolidationStatus,
   remapToConsolidationAccount,
+  resyncFromChart,
 } from './consolidation';
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
@@ -69,6 +73,22 @@ function applyConsolidationStatus(where: any, status: ConsolidationStatus | unde
 function consolidationNumberEquals(where: any, value: number) {
   return where.consolidation_account_number === undefined ? value : andCondition(where.consolidation_account_number, Equal(value));
 }
+
+function numberOrNull(value: unknown): number | null {
+  return value == null ? null : Number(value);
+}
+
+/** What an account write needs of the consolidation chart: read once per request, or once per CSV import. */
+type ConsolidationContext = {
+  /** The tenant's consolidation chart, read under lock (`lockConsolidationChartId`). */
+  chartId: string | null;
+  /** Its accounts by number, loaded up front by a CSV import; read per account otherwise. */
+  accounts?: Map<number, ConsolidationAccount>;
+  /** False when the caller resyncs the accounts mapped to the consolidation chart once, at its end. */
+  propagate: boolean;
+  /** The audit lines of the account writes, for the caller to write in one statement; written one by one otherwise. */
+  audits?: AccountAuditRow[];
+};
 
 @Injectable()
 export class AccountsService {
@@ -130,7 +150,7 @@ export class AccountsService {
 
           // Look up CoA IDs matching the code pattern
           const coaRows = await (opts?.manager ?? repo.manager).query(
-            `SELECT id FROM chart_of_accounts WHERE code ILIKE $1`,
+            `SELECT id FROM chart_of_accounts WHERE code ILIKE $1 AND tenant_id = ${CURRENT_TENANT}`,
             [pattern]
           );
           const coaIds = coaRows.map((r: any) => r.id);
@@ -176,7 +196,7 @@ export class AccountsService {
         } else {
           // Company has NO CoA → fallback to tenant global default if present
           try {
-            const rows = await mg.query(`SELECT id FROM chart_of_accounts WHERE is_global_default = true LIMIT 1`);
+            const rows = await mg.query(`SELECT id FROM chart_of_accounts WHERE is_global_default = true AND tenant_id = ${CURRENT_TENANT} LIMIT 1`);
             const globalId = rows?.[0]?.id as string | undefined;
             if (globalId) (where as any).coa_id = globalId; else (where as any).coa_id = IsNull();
           } catch {
@@ -292,7 +312,7 @@ export class AccountsService {
 
           // Look up CoA IDs matching the code pattern
           const coaRows = await (opts?.manager ?? repo.manager).query(
-            `SELECT id FROM chart_of_accounts WHERE code ILIKE $1`,
+            `SELECT id FROM chart_of_accounts WHERE code ILIKE $1 AND tenant_id = ${CURRENT_TENANT}`,
             [pattern]
           );
           const coaIds = coaRows.map((r: any) => r.id);
@@ -336,7 +356,7 @@ export class AccountsService {
           (where as any).coa_id = company.coa_id;
         } else {
           try {
-            const rows = await mg.query(`SELECT id FROM chart_of_accounts WHERE is_global_default = true LIMIT 1`);
+            const rows = await mg.query(`SELECT id FROM chart_of_accounts WHERE is_global_default = true AND tenant_id = ${CURRENT_TENANT} LIMIT 1`);
             const globalId = rows?.[0]?.id as string | undefined;
             if (globalId) (where as any).coa_id = globalId; else (where as any).coa_id = IsNull();
           } catch {
@@ -384,7 +404,19 @@ export class AccountsService {
   }
 
   async create(body: AccountUpsertDto, userId?: string, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
-    const repo = this.getRepo(opts?.manager);
+    const mg = opts?.manager ?? this.getRepo().manager;
+    const consolidation = { chartId: await lockConsolidationChartId(mg), propagate: true };
+    return this.createAccount(body, userId, mg, opts?.audit, consolidation);
+  }
+
+  private async createAccount(
+    body: AccountUpsertDto,
+    userId: string | null | undefined,
+    mg: EntityManager,
+    audit: AuditSourceOptions | undefined,
+    consolidation: ConsolidationContext,
+  ) {
+    const repo = mg.getRepository(Account);
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     if (!rest.coa_id) {
       throw new BadRequestException('coa_id is required');
@@ -403,9 +435,12 @@ export class AccountsService {
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     });
-    const mg = opts?.manager ?? repo.manager;
-    const chartId = await consolidationChartId(mg);
-    await this.deriveConsolidationFields(entity, true, chartId, mg);
+    await this.deriveConsolidationFields(entity, {
+      numberGiven: true,
+      numberChanged: true,
+      nameGiven: body?.consolidation_account_name !== undefined,
+      descriptionGiven: body?.consolidation_account_description !== undefined,
+    }, consolidation, mg);
     let saved: Account;
     try {
       saved = await repo.save(entity);
@@ -416,30 +451,31 @@ export class AccountsService {
       }
       throw e;
     }
-    await this.audit.log(
-      {
-        table: 'accounts',
-        recordId: saved.id,
-        action: 'create',
-        before: null,
-        after: saved,
-        userId,
-        source: opts?.audit?.source,
-        sourceRef: opts?.audit?.sourceRef ?? null,
-      },
-      { manager: mg },
-    );
+    await this.auditWrite({ recordId: saved.id, action: 'create', before: null, after: saved }, userId, mg, audit, consolidation);
     // A new account of the consolidation chart: accounts already mapped to its number follow it.
-    if (chartId && saved.coa_id === chartId) {
-      await this.propagateConsolidationAccount(saved, [Number(saved.account_number)], userId, mg, opts?.audit);
+    if (consolidation.chartId && saved.coa_id === consolidation.chartId) {
+      await this.followConsolidationAccount(saved, [Number(saved.account_number)], userId, mg, audit, consolidation);
     }
     return saved;
   }
 
   async update(id: string, body: AccountUpsertDto, userId?: string, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
-    const repo = this.getRepo(opts?.manager);
-    const mg = opts?.manager ?? repo.manager;
-    const existing = await this.get(id, { manager: opts?.manager });
+    const mg = opts?.manager ?? this.getRepo().manager;
+    // The lock first: the account is then read as any role change in progress left it.
+    const consolidation = { chartId: await lockConsolidationChartId(mg), propagate: true };
+    const existing = await this.get(id, { manager: mg });
+    return this.updateAccount(existing, body, userId, mg, opts?.audit, consolidation);
+  }
+
+  private async updateAccount(
+    existing: Account,
+    body: AccountUpsertDto,
+    userId: string | null | undefined,
+    mg: EntityManager,
+    audit: AuditSourceOptions | undefined,
+    consolidation: ConsolidationContext,
+  ) {
+    const repo = mg.getRepository(Account);
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     // A field the body leaves undefined keeps its value (the save would skip it anyway).
@@ -460,25 +496,40 @@ export class AccountsService {
     existing.status = lifecycle.status;
     existing.disabled_at = lifecycle.disabled_at;
 
-    const chartId = await consolidationChartId(mg);
-    // An account of the consolidation chart that changes its number, name or description:
-    // every account mapped to it follows (below, once it is saved).
+    const { chartId } = consolidation;
     const previousNumber = Number(before.account_number);
-    const propagate = !!chartId && before.coa_id === chartId && existing.coa_id === chartId && (
-      Number(existing.account_number) !== previousNumber
+    const renumbered = Number(existing.account_number) !== previousNumber;
+    const wasIn = !!chartId && before.coa_id === chartId;
+    const isIn = !!chartId && existing.coa_id === chartId;
+    // The accounts that follow this one once it is saved (below): those mapped to its number
+    // when it joins the consolidation chart; those mapped to its old or new number when, in
+    // the chart, it changes its number, name or description. One that leaves the chart takes
+    // nobody along: the accounts mapped to it are then outside, their names kept.
+    let followers: number[] = [];
+    if (isIn && !wasIn) {
+      followers = [Number(existing.account_number)];
+    } else if (isIn && (
+      renumbered
       || existing.account_name !== before.account_name
       || (existing.description ?? null) !== (before.description ?? null)
-    );
+    )) {
+      followers = [previousNumber, Number(existing.account_number)];
+    }
     // Its own self-reference follows a renumbering.
     if (
-      propagate
+      wasIn && isIn && renumbered
       && body?.consolidation_account_number === undefined
       && before.consolidation_account_number != null
       && Number(before.consolidation_account_number) === previousNumber
     ) {
       existing.consolidation_account_number = Number(existing.account_number);
     }
-    await this.deriveConsolidationFields(existing, body?.consolidation_account_number !== undefined, chartId, mg);
+    await this.deriveConsolidationFields(existing, {
+      numberGiven: body?.consolidation_account_number !== undefined,
+      numberChanged: numberOrNull(existing.consolidation_account_number) !== numberOrNull(before.consolidation_account_number),
+      nameGiven: body?.consolidation_account_name !== undefined,
+      descriptionGiven: body?.consolidation_account_description !== undefined,
+    }, consolidation, mg);
 
     let saved: Account;
     try {
@@ -490,21 +541,9 @@ export class AccountsService {
       }
       throw e;
     }
-    await this.audit.log(
-      {
-        table: 'accounts',
-        recordId: saved.id,
-        action: 'update',
-        before,
-        after: saved,
-        userId,
-        source: opts?.audit?.source,
-        sourceRef: opts?.audit?.sourceRef ?? null,
-      },
-      { manager: mg },
-    );
-    if (propagate) {
-      await this.propagateConsolidationAccount(saved, [previousNumber, Number(saved.account_number)], userId, mg, opts?.audit);
+    await this.auditWrite({ recordId: saved.id, action: 'update', before, after: saved }, userId, mg, audit, consolidation);
+    if (followers.length > 0) {
+      await this.followConsolidationAccount(saved, followers, userId, mg, audit, consolidation);
     }
     return saved;
   }
@@ -513,52 +552,91 @@ export class AccountsService {
    * The consolidation name and description follow the consolidation number: when the number
    * matches an account of the consolidation chart, they are that account's (the account itself
    * when it is its own consolidation account). Without a match (or without a consolidation
-   * chart), what the caller sent is kept. A number set to null (`numberGiven`) clears both.
+   * chart), what the caller sent is kept, and a new number drops the name and description the
+   * caller did not send (they belonged to the previous number). A number set to null clears both.
    */
-  private async deriveConsolidationFields(account: Account, numberGiven: boolean, chartId: string | null, mg: EntityManager) {
+  private async deriveConsolidationFields(
+    account: Account,
+    given: { numberGiven: boolean; numberChanged: boolean; nameGiven: boolean; descriptionGiven: boolean },
+    consolidation: ConsolidationContext,
+    mg: EntityManager,
+  ) {
     const number = account.consolidation_account_number;
     if (number == null) {
-      if (numberGiven) {
+      if (given.numberGiven) {
         account.consolidation_account_name = null;
         account.consolidation_account_description = null;
       }
       return;
     }
-    if (!chartId) return;
-    if (account.coa_id === chartId && Number(account.account_number) === Number(number)) {
-      account.consolidation_account_name = account.account_name;
-      account.consolidation_account_description = account.description ?? null;
+    const { chartId } = consolidation;
+    let source: ConsolidationAccount | undefined;
+    if (chartId && account.coa_id === chartId && Number(account.account_number) === Number(number)) {
+      source = { name: account.account_name, description: account.description ?? null };
+    } else if (chartId) {
+      source = consolidation.accounts
+        ? consolidation.accounts.get(Number(number))
+        : (await consolidationAccounts(mg, chartId, [number])).get(Number(number));
+    }
+    if (source) {
+      account.consolidation_account_name = source.name;
+      account.consolidation_account_description = source.description;
       return;
     }
-    const [source]: Array<{ account_name: string; description: string | null }> = await mg.query(
-      `SELECT account_name, description FROM accounts
-       WHERE tenant_id = ${CURRENT_TENANT} AND coa_id = $1 AND account_number = $2::int`,
-      [chartId, number],
-    );
-    if (source) {
-      account.consolidation_account_name = source.account_name;
-      account.consolidation_account_description = source.description ?? null;
+    if (given.numberChanged) {
+      if (!given.nameGiven) account.consolidation_account_name = null;
+      if (!given.descriptionGiven) account.consolidation_account_description = null;
     }
   }
 
   /**
    * Accounts mapped to `fromNumbers` now point at `source`, an account of the consolidation
-   * chart: its number, name and description. One audit line per account rewritten.
+   * chart: its number, name and description, with one audit line each. A CSV import into the
+   * consolidation chart resyncs once at its end instead (`propagate` false); it keeps the
+   * accounts it loaded in line with the rows it writes.
    */
-  private async propagateConsolidationAccount(
+  private async followConsolidationAccount(
     source: Account,
     fromNumbers: number[],
     userId: string | null | undefined,
     mg: EntityManager,
-    audit?: AuditSourceOptions,
+    audit: AuditSourceOptions | undefined,
+    consolidation: ConsolidationContext,
   ) {
-    const changed = await remapToConsolidationAccount(
-      mg,
-      fromNumbers,
-      { number: Number(source.account_number), name: source.account_name, description: source.description ?? null },
-      source.id,
+    const to = { number: Number(source.account_number), name: source.account_name, description: source.description ?? null };
+    if (consolidation.accounts) {
+      for (const number of fromNumbers) consolidation.accounts.delete(Number(number));
+      consolidation.accounts.set(to.number, { name: to.name, description: to.description });
+    }
+    if (!consolidation.propagate) return;
+    await remapToConsolidationAccount(mg, fromNumbers, to, source.id, { userId, audit });
+  }
+
+  /** The audit line of an account write: written now, or kept for the caller to write with the others (CSV import). */
+  private async auditWrite(
+    row: AccountAuditRow,
+    userId: string | null | undefined,
+    mg: EntityManager,
+    audit: AuditSourceOptions | undefined,
+    consolidation: ConsolidationContext,
+  ) {
+    if (consolidation.audits) {
+      consolidation.audits.push(row);
+      return;
+    }
+    await this.audit.log(
+      {
+        table: 'accounts',
+        recordId: row.recordId,
+        action: row.action,
+        before: row.before,
+        after: row.after,
+        userId,
+        source: audit?.source,
+        sourceRef: audit?.sourceRef ?? null,
+      },
+      { manager: mg },
     );
-    await auditChangedAccounts(this.audit, mg, changed, userId, audit);
   }
 
   /** One account with its `consolidation_status` (see `list`). */
@@ -600,7 +678,7 @@ export class AccountsService {
       if (includeCoa) {
         const ids = Array.from(new Set(items.map((a) => a.coa_id).filter(Boolean))) as string[];
         if (ids.length > 0) {
-          const coaRows: Array<{ id: string; code: string }> = await repo.manager.query(`SELECT id, code FROM chart_of_accounts WHERE id = ANY($1)`, [ids]);
+          const coaRows: Array<{ id: string; code: string }> = await repo.manager.query(`SELECT id, code FROM chart_of_accounts WHERE id = ANY($1) AND tenant_id = ${CURRENT_TENANT}`, [ids]);
           codeById = new Map(coaRows.map((r) => [r.id, r.code]));
         }
       }
@@ -731,31 +809,50 @@ export class AccountsService {
       if (!uniqueByNumber.has(key)) uniqueByNumber.set(key, item);
     }
     const unique = Array.from(uniqueByNumber.values());
+    // The consolidation chart, under lock (see `lockConsolidationChartId`), then the target
+    // chart's accounts, once: what each row updates (or creates when absent).
+    const mg = repo.manager;
+    const chartId = await lockConsolidationChartId(mg);
+    const existingByNumber = new Map(
+      (await repo.find({ where: { coa_id: targetCoaId } as any })).map((account) => [String(account.account_number), account]),
+    );
     // Count inserts/updates
     let inserted = 0;
     let updated = 0;
     for (const item of unique) {
-      const existing = await repo.findOne({ where: { account_number: item.account_number as string, coa_id: targetCoaId } as any });
-      if (existing) updated += 1; else inserted += 1;
+      if (existingByNumber.has(item.account_number as string)) updated += 1; else inserted += 1;
     }
     if (dryRun) {
       return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
-    // Commit
+    // Commit. The consolidation accounts the file refers to are read once, the audit lines of
+    // the rows written in one statement at the end.
+    const consolidation: ConsolidationContext = {
+      chartId,
+      accounts: chartId ? await consolidationAccounts(mg, chartId, unique.map((item) => item.consolidation_account_number)) : new Map(),
+      propagate: false,
+      audits: [],
+    };
     let processed = 0;
     for (const item of unique) {
-      const existing = await repo.findOne({ where: { account_number: item.account_number as string, coa_id: targetCoaId } as any });
+      const existing = existingByNumber.get(item.account_number as string);
       if (existing) {
         if (opts?.updateExisting === false) {
           // skip updating existing rows
           continue;
         }
-        const saved = await this.update(existing.id, { ...item, coa_id: targetCoaId }, userId ?? undefined, { manager: opts?.manager });
+        const saved = await this.updateAccount(existing, { ...item, coa_id: targetCoaId }, userId, mg, undefined, consolidation);
         if (saved) processed += 1;
       } else {
-        const saved = await this.create({ ...item, coa_id: targetCoaId }, userId ?? undefined, { manager: opts?.manager });
+        const saved = await this.createAccount({ ...item, coa_id: targetCoaId }, userId, mg, undefined, consolidation);
         if (saved) processed += 1;
       }
+    }
+    await insertAccountAudits(mg, consolidation.audits ?? [], { userId });
+    // An import into the consolidation chart: the accounts mapped to its numbers take their
+    // names and descriptions, in one statement.
+    if (chartId && targetCoaId === chartId) {
+      await resyncFromChart(mg, chartId, { userId });
     }
     return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, processed, errors: [], ignoredColumns: read.ignoredColumns, notices: read.notices };
   }

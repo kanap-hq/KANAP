@@ -301,11 +301,11 @@ Notes
 - GET `/accounts?status=...&page=...&limit=...&sort=...&filters=...&companyId=...&coaId=...&consolidationStatus=...`
   - Respects quick search and AG Grid filter model
   - Supports CoA scoping via `companyId` (company’s `coa_id`) or explicit `coaId`
-  - Items include `coa_code` to display CoA in the grid, and `consolidation_status`: `mapped` (the consolidation number exists in the tenant's consolidation chart), `outside` (set but absent from it, or the tenant has no consolidation chart) or `unmapped` (no number)
-  - `consolidationStatus=mapped|outside|unmapped` filters on the server; page and total follow the filter; any other value is a 400
+  - Items include `coa_code` to display CoA in the grid, and `consolidation_status`: `mapped` (the consolidation number exists in the tenant's consolidation chart), `outside` (set but absent from it), `unmapped` (no number), or `null` (a number is set and the tenant has no consolidation chart)
+  - `consolidationStatus=mapped|outside|unmapped` filters on the server; page and total follow the filter; without a consolidation chart `mapped` and `outside` return no account (`unmapped` still returns the accounts without a number); any other value is a 400
 - GET `/accounts/ids?sort=...&q=...&filters=...&consolidationStatus=...` → `{ ids, total }` (ordered by current list query)
 - GET `/accounts/:id` → detail, with `consolidation_status`
-- POST `/accounts`, PATCH `/accounts/:id` and the CSV imports derive `consolidation_account_name` and `consolidation_account_description` from the consolidation chart's account of the given number; without a match (or without a consolidation chart) the values sent are kept; a null or empty number clears both. When an account of the consolidation chart is created, renamed, described or renumbered, every account mapped to its old or new number follows it (number, name, description) in the same transaction, one audit line per account.
+- POST `/accounts`, PATCH `/accounts/:id` and the CSV imports derive `consolidation_account_name` and `consolidation_account_description` from the consolidation chart's account of the given number; without a match (or without a consolidation chart) the values sent are kept, and a new number drops the name and description not sent with it; a null or empty number clears both. When an account of the consolidation chart is created, renamed, described or renumbered, or an account joins the consolidation chart (`coa_id`), every account mapped to its old or new number follows it (number, name, description) in the same transaction, one audit line per account. An account that leaves the consolidation chart takes nobody along (the accounts mapped to it become `outside`).
 - GET `/accounts/export?scope=template|data&coaId=...&language=…`
   - Global export includes `coa_code`; when `coaId` is provided, export is scoped
 - POST `/accounts/import?dryRun=true|false&coaId=...&language=…&dateOrder=…&decimalMark=…`

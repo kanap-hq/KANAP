@@ -39,8 +39,10 @@ creating anything.
    default for other countries and the consolidation chart. Every local
    account maps to one of the 14 IFRS consolidation accounts, as in the
    built-in templates, and takes its consolidation name and description from
-   it. The runner warns when the tenant has no IFRS chart, or when a local
-   account is outside the consolidation chart or has no consolidation account.
+   it: the runner sets IFRS as the consolidation chart on every run, which
+   resyncs those names. The runner warns when the tenant has no IFRS chart,
+   or when a local account is outside the consolidation chart or has no
+   consolidation account.
    On a tenant built by an earlier version of the fixture, the runner removes
    the old `IFRS Group Chart` and its accounts 6100 to 6400 from the local
    charts.

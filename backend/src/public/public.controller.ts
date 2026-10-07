@@ -18,6 +18,7 @@ import { StatusState } from '../common/status';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { withTenant } from '../common/tenant-runner';
+import { withSavepoint } from '../common/savepoint.util';
 import { TurnstileService } from './turnstile.service';
 import { Subscription, SubscriptionStatus } from '../billing/subscription.entity';
 import { TRIAL_PERIOD_DAYS } from '../billing/plans.config';
@@ -544,20 +545,24 @@ export class PublicController {
     return { tenant_url: tenantUrl, reset_token: resetToken };
   }
 
-  // Create a tenant CoA from the single global template marked loaded_by_default, if present
+  // Create a tenant CoA from the single global template marked loaded_by_default, if present.
+  // Under its own savepoint: a failure (a SQL error included) undoes the whole chart and leaves
+  // the signup transaction usable, so tenant creation goes on without it.
   private async provisionDefaultGlobalCoa(manager: DataSource['manager']) {
     try {
-      const rows: Array<{ id: string; template_code: string; template_name: string }>
-        = await manager.query(`SELECT id, template_code, template_name FROM coa_templates WHERE is_global = true AND loaded_by_default = true LIMIT 1`);
-      const tmpl = rows?.[0];
-      if (!tmpl) return;
-      // Create tenant CoA from a global template with GLOBAL scope (no country), not country-default
-      const created = await this.coas.create({ code: tmpl.template_code, name: tmpl.template_name, scope: 'GLOBAL', is_default: false }, null, { manager });
-      // Copy accounts into CoA
-      await this.coas.loadTemplateIntoCoa(created.id, tmpl.id, { dryRun: false, userId: null, overwrite: true }, { manager });
-      // Mark as global default and consolidation chart for the tenant
-      await this.coas.setGlobalDefault(created.id, null, { manager });
-      await this.coas.setConsolidation(created.id, null, { manager });
+      await withSavepoint(manager, async () => {
+        const rows: Array<{ id: string; template_code: string; template_name: string }>
+          = await manager.query(`SELECT id, template_code, template_name FROM coa_templates WHERE is_global = true AND loaded_by_default = true LIMIT 1`);
+        const tmpl = rows?.[0];
+        if (!tmpl) return;
+        // Create tenant CoA from a global template with GLOBAL scope (no country), not country-default
+        const created = await this.coas.create({ code: tmpl.template_code, name: tmpl.template_name, scope: 'GLOBAL', is_default: false }, null, { manager });
+        // Copy accounts into CoA
+        await this.coas.loadTemplateIntoCoa(created.id, tmpl.id, { dryRun: false, userId: null, overwrite: true }, { manager });
+        // Mark as global default and consolidation chart for the tenant
+        await this.coas.setGlobalDefault(created.id, null, { manager });
+        await this.coas.setConsolidation(created.id, null, { manager });
+      });
     } catch (e) {
       // Swallow provisioning issues to not block tenant creation, but log
       console.warn('[provisioning] Default global CoA provisioning skipped:', (e as Error)?.message);

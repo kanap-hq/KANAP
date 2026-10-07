@@ -16,8 +16,12 @@ import { ChartOfAccountsConsolidation1853860000000 as Migration } from '../../mi
 // - a tenant whose consolidation chart is not its global default: kept as is;
 // - a tenant with two consolidation charts: the global default keeps the
 //   role; without a global default among them, the earliest keeps it;
-// - row level security is left as found on both tables written, the unique
-//   index exists and refuses a second consolidation chart;
+// - the accounts mapped to an account of their tenant's consolidation chart
+//   take its name and description (typed by hand until then); those already
+//   in line, those outside it and those of a tenant without a consolidation
+//   chart are left alone;
+// - row level security is left as found on the three tables written, the
+//   unique index exists and refuses a second consolidation chart;
 // - a second run changes nothing and logs zero counts.
 // The assertions read this test's own tenants, never table-wide counts: the
 // database may hold other tenants' charts.
@@ -65,6 +69,31 @@ async function seedTenant(runner: QueryRunner, tag: string) {
 
 type ChartSeed = { code: string; global?: boolean; globalDefault?: boolean; consolidation?: boolean; createdAt?: string };
 
+type AccountSeed = { number: number; name: string; description?: string | null; cons?: number | null; consName?: string | null; consDescription?: string | null };
+
+async function seedAccount(runner: QueryRunner, tenantId: string, coaId: string, account: AccountSeed): Promise<string> {
+  await asTenant(runner, tenantId);
+  const [row] = await runner.query(
+    `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name, description,
+                           consolidation_account_number, consolidation_account_name, consolidation_account_description, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '2026-01-01T00:00:00Z') RETURNING id`,
+    [tenantId, coaId, account.number, account.name, account.description ?? null, account.cons ?? null, account.consName ?? null, account.consDescription ?? null],
+  );
+  return row.id;
+}
+
+/** The consolidation name and description of an account, and whether it was written. */
+async function consolidationOf(runner: QueryRunner, tenantId: string, accountId: string) {
+  await asTenant(runner, tenantId);
+  const [row] = await runner.query(
+    `SELECT consolidation_account_number AS number, consolidation_account_name AS name,
+            consolidation_account_description AS description, updated_at > '2026-01-01T00:00:00Z' AS touched
+     FROM accounts WHERE id = $1`,
+    [accountId],
+  );
+  return row;
+}
+
 async function seedChart(runner: QueryRunner, tenantId: string, chart: ChartSeed): Promise<string> {
   await asTenant(runner, tenantId);
   const [row] = await runner.query(
@@ -105,23 +134,36 @@ async function indexDef(runner: QueryRunner): Promise<string | undefined> {
 
 type Seeded = Record<'withDefault' | 'withoutDefault' | 'alreadySet' | 'duplicates' | 'duplicatesNoDefault', string>;
 
-/** The database before the migration, plus the column, then the five tenants. */
-async function seedBeforeMigration(runner: QueryRunner): Promise<Seeded> {
+/** The accounts whose consolidation name the resync reads or writes, by role. */
+type SeededAccounts = Record<'stale' | 'inLine' | 'outside' | 'noChart' | 'otherChart', string>;
+
+/** The database before the migration, plus the column, then the five tenants and their accounts. */
+async function seedBeforeMigration(runner: QueryRunner): Promise<Seeded & { accounts: SeededAccounts }> {
   await migration.down(runner);
   await runner.query(`ALTER TABLE chart_of_accounts ADD COLUMN is_consolidation boolean NOT NULL DEFAULT false`);
   const seeded = {} as Seeded;
+  const accounts = {} as SeededAccounts;
 
   seeded.withDefault = await seedTenant(runner, 'default');
-  await seedChart(runner, seeded.withDefault, { code: 'IFRS', global: true, globalDefault: true });
-  await seedChart(runner, seeded.withDefault, { code: 'FR-PCG' });
+  const ifrs = await seedChart(runner, seeded.withDefault, { code: 'IFRS', global: true, globalDefault: true });
+  const fr = await seedChart(runner, seeded.withDefault, { code: 'FR-PCG' });
+  await seedAccount(runner, seeded.withDefault, ifrs, { number: 1000, name: 'Tangible', description: 'Physical equipment', cons: 1000, consName: 'Tangible', consDescription: 'Physical equipment' });
+  accounts.stale = await seedAccount(runner, seeded.withDefault, fr, { number: 600, name: 'Matériel', cons: 1000, consName: 'Typed by hand', consDescription: 'Old text' });
+  accounts.inLine = await seedAccount(runner, seeded.withDefault, fr, { number: 601, name: 'Outillage', cons: 1000, consName: 'Tangible', consDescription: 'Physical equipment' });
+  accounts.outside = await seedAccount(runner, seeded.withDefault, fr, { number: 602, name: 'Divers', cons: 9999, consName: 'Legacy group', consDescription: 'Legacy text' });
 
   seeded.withoutDefault = await seedTenant(runner, 'none');
-  await seedChart(runner, seeded.withoutDefault, { code: 'FR-PCG' });
-  await seedChart(runner, seeded.withoutDefault, { code: 'GROUP', global: true });
+  const frNone = await seedChart(runner, seeded.withoutDefault, { code: 'FR-PCG' });
+  const groupNone = await seedChart(runner, seeded.withoutDefault, { code: 'GROUP', global: true });
+  await seedAccount(runner, seeded.withoutDefault, groupNone, { number: 1000, name: 'Group tangible', cons: 1000, consName: 'Group tangible' });
+  accounts.noChart = await seedAccount(runner, seeded.withoutDefault, frNone, { number: 600, name: 'Matériel', cons: 1000, consName: 'Typed by hand' });
 
   seeded.alreadySet = await seedTenant(runner, 'set');
-  await seedChart(runner, seeded.alreadySet, { code: 'IFRS', global: true, globalDefault: true });
-  await seedChart(runner, seeded.alreadySet, { code: 'GROUP', global: true, consolidation: true });
+  const ifrsSet = await seedChart(runner, seeded.alreadySet, { code: 'IFRS', global: true, globalDefault: true });
+  const groupSet = await seedChart(runner, seeded.alreadySet, { code: 'GROUP', global: true, consolidation: true });
+  await seedAccount(runner, seeded.alreadySet, groupSet, { number: 1000, name: 'Group tangible', description: 'Group text', cons: 1000, consName: 'Group tangible', consDescription: 'Group text' });
+  // The global default's own account follows the consolidation chart, not itself.
+  accounts.otherChart = await seedAccount(runner, seeded.alreadySet, ifrsSet, { number: 1000, name: 'IFRS tangible', cons: 1000, consName: 'IFRS tangible' });
 
   seeded.duplicates = await seedTenant(runner, 'dup');
   await seedChart(runner, seeded.duplicates, { code: 'OLD', global: true, consolidation: true, createdAt: '2025-01-01T00:00:00Z' });
@@ -133,7 +175,7 @@ async function seedBeforeMigration(runner: QueryRunner): Promise<Seeded> {
 
   // Migrations run without a tenant.
   await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
-  return seeded;
+  return { ...seeded, accounts };
 }
 
 /** Backfill and repair per tenant, the index, row level security as found, the log. */
@@ -141,6 +183,7 @@ async function testBackfillAndRepair() {
   await inRolledBackTransaction(async (runner) => {
     const security = {
       chart_of_accounts: await rowSecurity(runner, 'chart_of_accounts'),
+      accounts: await rowSecurity(runner, 'accounts'),
       search_index: await rowSecurity(runner, 'search_index'),
     };
     const seeded = await seedBeforeMigration(runner);
@@ -152,23 +195,69 @@ async function testBackfillAndRepair() {
     assert.deepEqual(await flags(runner, seeded.duplicates), { IFRS: true, OLD: false }, 'duplicates: the global default keeps the role');
     assert.deepEqual(await flags(runner, seeded.duplicatesNoDefault), { EARLIER: true, LATER: false }, 'duplicates: the earliest keeps the role');
 
+    // The resync: the consolidation chart's name and description, where they differed.
+    const { accounts } = seeded;
+    assert.deepEqual(
+      await consolidationOf(runner, seeded.withDefault, accounts.stale),
+      { number: 1000, name: 'Tangible', description: 'Physical equipment', touched: true },
+      'a name typed by hand takes the consolidation chart\'s',
+    );
+    assert.deepEqual(
+      await consolidationOf(runner, seeded.withDefault, accounts.inLine),
+      { number: 1000, name: 'Tangible', description: 'Physical equipment', touched: false },
+      'an account in line is left alone',
+    );
+    assert.deepEqual(
+      await consolidationOf(runner, seeded.withDefault, accounts.outside),
+      { number: 9999, name: 'Legacy group', description: 'Legacy text', touched: false },
+      'an account outside the consolidation chart keeps its name',
+    );
+    assert.deepEqual(
+      await consolidationOf(runner, seeded.withoutDefault, accounts.noChart),
+      { number: 1000, name: 'Typed by hand', description: null, touched: false },
+      'a tenant without a consolidation chart is left alone',
+    );
+    assert.deepEqual(
+      await consolidationOf(runner, seeded.alreadySet, accounts.otherChart),
+      { number: 1000, name: 'Group tangible', description: 'Group text', touched: true },
+      'the consolidation chart of the tenant, not another chart of the same number',
+    );
+    await asTenant(runner, seeded.withDefault);
+    const [indexed] = await runner.query(
+      `SELECT search_vector @@ plainto_tsquery('kanap_en', 'Tangible') AS found FROM search_index WHERE entity_type = 'accounts' AND entity_id = $1`,
+      [accounts.stale],
+    );
+    assert.equal(indexed?.found, true, 'the search index follows the resynced name');
+    await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
+
     assert.match(String(await indexDef(runner)), /CREATE UNIQUE INDEX .* \(tenant_id\) WHERE is_consolidation/, 'the partial unique index');
     assert.deepEqual(await rowSecurity(runner, 'chart_of_accounts'), security.chart_of_accounts, 'chart_of_accounts: row level security as found');
+    assert.deepEqual(await rowSecurity(runner, 'accounts'), security.accounts, 'accounts: row level security as found');
     assert.deepEqual(await rowSecurity(runner, 'search_index'), security.search_index, 'search_index: row level security as found');
 
     const summary = lines.find((line) => line.startsWith(LOG_PREFIX));
     assert.ok(summary, 'the counts are logged');
     const backfilled = Number(/: (\d+) tenant\(s\) got/.exec(summary ?? '')?.[1] ?? -1);
     const repaired = Number(/, (\d+) duplicate/.exec(summary ?? '')?.[1] ?? -1);
+    const resynced = Number(/, (\d+) account\(s\) resynced/.exec(summary ?? '')?.[1] ?? -1);
     // Other tenants of the database count too: at least this test's ones.
     assert.ok(backfilled >= 1, `the backfill is counted (${summary})`);
     assert.ok(repaired >= 2, `the repairs are counted (${summary})`);
+    assert.ok(resynced >= 2, `the resync is counted (${summary})`);
     const named = (tenantId: string) => lines.filter((line) => line.includes(`(${tenantId})`));
-    assert.deepEqual(named(seeded.withDefault).length, 1, 'the backfilled chart is named');
+    assert.deepEqual(
+      named(seeded.withDefault).map((line) => line.replace(/^.*\): /, '')),
+      ['IFRS, global default made the consolidation chart', '1 account(s) resynced from the consolidation chart'],
+      'the backfilled chart and the resynced accounts are named',
+    );
     assert.match(named(seeded.duplicates)[0] ?? '', /OLD, consolidation role cleared/, 'the repaired chart is named');
     assert.match(named(seeded.duplicatesNoDefault)[0] ?? '', /LATER, consolidation role cleared/, 'the repaired chart is named');
     assert.deepEqual(named(seeded.withoutDefault), [], 'a tenant left alone is not named');
-    assert.deepEqual(named(seeded.alreadySet), [], 'a tenant left alone is not named');
+    assert.deepEqual(
+      named(seeded.alreadySet).map((line) => line.replace(/^.*\): /, '')),
+      ['1 account(s) resynced from the consolidation chart'],
+      'a tenant whose chart is kept is named for its resynced accounts only',
+    );
 
     // The index refuses a second consolidation chart in a tenant.
     await asTenant(runner, seeded.withDefault);
@@ -184,19 +273,39 @@ async function testBackfillAndRepair() {
 /** A second run: nothing changed, zero counts, the index kept. */
 async function testRerun() {
   await inRolledBackTransaction(async (runner) => {
-    const seeded = await seedBeforeMigration(runner);
+    const { accounts, ...seeded } = await seedBeforeMigration(runner);
     await captureLog(() => migration.up(runner));
-    const before = await Promise.all(Object.values(seeded).map((id) => flags(runner, id)));
+    // One after the other: each read sets its tenant on the shared connection.
+    const allFlags = async () => {
+      const rows = [];
+      for (const id of Object.values(seeded)) rows.push(await flags(runner, id));
+      return rows;
+    };
+    const before = await allFlags();
+    assert.equal(before.filter((row) => Object.keys(row).length === 2).length, 5, 'each tenant reads its two charts');
+    const tenantOf: Record<keyof SeededAccounts, string> = {
+      stale: seeded.withDefault, inLine: seeded.withDefault, outside: seeded.withDefault, noChart: seeded.withoutDefault, otherChart: seeded.alreadySet,
+    };
+    const names = async () => {
+      const rows = [];
+      for (const key of Object.keys(accounts) as Array<keyof SeededAccounts>) {
+        const { touched: _touched, ...rest } = await consolidationOf(runner, tenantOf[key], accounts[key]);
+        rows.push(rest);
+      }
+      return rows;
+    };
+    const namesBefore = await names();
     const def = await indexDef(runner);
 
     await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
     const second = await captureLog(() => migration.up(runner));
     assert.deepEqual(
       second.lines,
-      [`${LOG_PREFIX} 0 tenant(s) got their global default chart as consolidation chart, 0 duplicate consolidation chart(s) cleared`],
+      [`${LOG_PREFIX} 0 tenant(s) got their global default chart as consolidation chart, 0 duplicate consolidation chart(s) cleared, 0 account(s) resynced from the consolidation chart`],
       'a second run changes nothing',
     );
-    assert.deepEqual(await Promise.all(Object.values(seeded).map((id) => flags(runner, id))), before, 'the flags are kept');
+    assert.deepEqual(await allFlags(), before, 'the flags are kept');
+    assert.deepEqual(await names(), namesBefore, 'the consolidation names are kept');
     assert.equal(await indexDef(runner), def, 'the index is kept');
   });
 }
