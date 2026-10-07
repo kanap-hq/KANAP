@@ -37,9 +37,8 @@ nano .env  # Establecer DATABASE_URL, credenciales S3, ADMIN_EMAIL, JWT_SECRET, 
 #          Añadir APP_ENV=production cuando los usuarios accedan a KANAP por HTTPS
 # Ver la guía de Configuración para todas las variables
 
-# 3. Construir imágenes Docker
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
+# 3. Construir imágenes Docker (Compose las construye desde el repositorio)
+docker compose -f infra/compose.onprem.yml build --pull
 
 # 4. Iniciar contenedores
 docker compose -f infra/compose.onprem.yml up -d

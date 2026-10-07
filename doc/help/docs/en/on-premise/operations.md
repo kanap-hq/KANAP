@@ -5,25 +5,33 @@
 ```bash
 # 1. Backup database and storage (your responsibility)
 
-# 2. Pull latest changes and rebuild
+# 2. Pull the latest changes
 cd kanap
 git pull origin main
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
 
-# 3. Restart containers (migrations run automatically)
+# 3. Build the images from the pulled sources
+docker compose -f infra/compose.onprem.yml build --pull
+
+# 4. Restart containers (migrations run automatically)
 docker compose -f infra/compose.onprem.yml up -d
 # The old API container first finishes the requests in progress, the emails it queued and
 # its running background jobs (up to 20 s), then stops.
-
-# 4. Verify startup
-docker compose -f infra/compose.onprem.yml logs -f api
-# Wait for "Application started" message
 ```
+
+Docker Compose builds the `api` and `web` images itself, from the sources you just pulled. `--pull` also fetches updated base images. Running `up -d` alone keeps the old version, because Compose reuses the images it already has. Always run `build` first.
+
+**Check the upgrade:**
+
+```bash
+docker compose -f infra/compose.onprem.yml logs --tail=100 api
+curl https://kanap.company.com/api/health
+```
+
+The API log shows the migrations (`[entrypoint] Migrations complete (N executed).`) and then the start of the API, with no error. The health address answers `{ "status": "ok" }`.
 
 **Breaking changes:** Check `CHANGELOG.md` before upgrading.
 
-**Rollback:** Restore database from backup. Migrations are forward-only.
+**Rollback:** Restore database from backup. Migrations are forward-only. Then go back to the previous version with `git checkout <previous commit>`, run the same `build --pull` and `up -d` commands, and check the upgrade again. Run `git checkout main` before the next upgrade.
 
 ## Version Support
 

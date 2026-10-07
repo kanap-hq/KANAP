@@ -244,8 +244,7 @@ If you use SMTP instead of Resend, make sure the SMTP server accepts mail from t
 
 ```bash
 cd /opt/kanap
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
+docker compose -f infra/compose.onprem.yml build --pull
 docker compose -f infra/compose.onprem.yml up -d
 ```
 
@@ -419,8 +418,7 @@ docker compose -f infra/compose.onprem.yml down
 
 # Rebuild after update
 git pull origin main
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
+docker compose -f infra/compose.onprem.yml build --pull
 docker compose -f infra/compose.onprem.yml up -d
 
 # Check all services

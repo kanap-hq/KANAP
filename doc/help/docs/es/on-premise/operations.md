@@ -5,25 +5,33 @@
 ```bash
 # 1. Respaldar base de datos y almacenamiento (es su responsabilidad)
 
-# 2. Obtener últimos cambios y reconstruir
+# 2. Obtener los últimos cambios
 cd kanap
 git pull origin main
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
 
-# 3. Reiniciar contenedores (las migraciones se ejecutan automáticamente)
+# 3. Construir las imágenes a partir de las fuentes descargadas
+docker compose -f infra/compose.onprem.yml build --pull
+
+# 4. Reiniciar contenedores (las migraciones se ejecutan automáticamente)
 docker compose -f infra/compose.onprem.yml up -d
 # El contenedor de API anterior primero termina las solicitudes en curso, los correos en cola
 # y sus trabajos en segundo plano en curso (hasta 20 s), y luego se detiene.
-
-# 4. Verificar el inicio
-docker compose -f infra/compose.onprem.yml logs -f api
-# Esperar el mensaje "Application started"
 ```
+
+Docker Compose construye por sí mismo las imágenes `api` y `web`, a partir de las fuentes que acaba de descargar. `--pull` también descarga las imágenes base actualizadas. Si ejecuta solo `up -d`, se mantiene la versión anterior, porque Compose reutiliza las imágenes que ya tiene. Ejecute siempre `build` primero.
+
+**Comprobar la actualización:**
+
+```bash
+docker compose -f infra/compose.onprem.yml logs --tail=100 api
+curl https://kanap.company.com/api/health
+```
+
+El registro de la API muestra las migraciones (`[entrypoint] Migrations complete (N executed).`) y después el inicio de la API, sin errores. La dirección de salud responde `{ "status": "ok" }`.
 
 **Cambios importantes:** Revise `CHANGELOG.md` antes de actualizar.
 
-**Reversión:** Restaure la base de datos desde la copia de seguridad. Las migraciones son solo hacia adelante.
+**Reversión:** Restaure la base de datos desde la copia de seguridad. Las migraciones son solo hacia adelante. Después, vuelva a la versión anterior con `git checkout <commit anterior>`, ejecute los mismos comandos `build --pull` y `up -d` y compruebe de nuevo la actualización. Ejecute `git checkout main` antes de la siguiente actualización.
 
 ## Soporte de versiones
 

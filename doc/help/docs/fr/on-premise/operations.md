@@ -5,25 +5,33 @@
 ```bash
 # 1. Sauvegardez la base de données et le stockage (votre responsabilité)
 
-# 2. Récupérez les dernières modifications et recompilez
+# 2. Récupérez les dernières modifications
 cd kanap
 git pull origin main
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
 
-# 3. Redémarrez les conteneurs (les migrations s'exécutent automatiquement)
+# 3. Compilez les images à partir des sources récupérées
+docker compose -f infra/compose.onprem.yml build --pull
+
+# 4. Redémarrez les conteneurs (les migrations s'exécutent automatiquement)
 docker compose -f infra/compose.onprem.yml up -d
 # L'ancien conteneur API termine d'abord les requêtes en cours, les emails mis en file et
 # ses tâches de fond en cours (jusqu'à 20 s), puis s'arrête.
-
-# 4. Vérifiez le démarrage
-docker compose -f infra/compose.onprem.yml logs -f api
-# Attendez le message "Application started"
 ```
+
+Docker Compose compile lui-même les images `api` et `web`, à partir des sources que vous venez de récupérer. `--pull` récupère aussi les images de base mises à jour. Exécuter `up -d` seul conserve l'ancienne version, car Compose réutilise les images qu'il possède déjà. Exécutez toujours `build` d'abord.
+
+**Vérifier la mise à jour :**
+
+```bash
+docker compose -f infra/compose.onprem.yml logs --tail=100 api
+curl https://kanap.company.com/api/health
+```
+
+Le log de l'API montre les migrations (`[entrypoint] Migrations complete (N executed).`) puis le démarrage de l'API, sans erreur. L'adresse de santé répond `{ "status": "ok" }`.
 
 **Changements majeurs :** Consultez le `CHANGELOG.md` avant de mettre à jour.
 
-**Retour arrière :** Restaurez la base de données depuis une sauvegarde. Les migrations sont uniquement progressives.
+**Retour arrière :** Restaurez la base de données depuis une sauvegarde. Les migrations sont uniquement progressives. Revenez ensuite à la version précédente avec `git checkout <commit précédent>`, exécutez les mêmes commandes `build --pull` et `up -d`, puis vérifiez à nouveau la mise à jour. Exécutez `git checkout main` avant la prochaine mise à jour.
 
 ## Support des versions
 
