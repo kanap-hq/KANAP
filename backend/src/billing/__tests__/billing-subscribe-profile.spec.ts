@@ -208,15 +208,24 @@ async function testRefusedVatNumberBecomesVatNumberInvalid() {
   const stripeError = Object.assign(new Error('Invalid value for eu_vat.'), {
     type: 'StripeInvalidRequestError',
     code: 'tax_id_invalid',
+    param: 'value',
+    requestId: 'req_123',
     statusCode: 400,
   });
   const { service, manager, calls } = createService({
     tenant: createTenant(COMPLETE_FR_INVOICE),
     createTaxIdError: stripeError,
   });
+  const warnings: string[] = [];
+  (service as any).logger = { warn: (message: string) => warnings.push(message) };
   await expectBadRequest(service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any), {
     message: 'VAT_NUMBER_INVALID',
   });
+  // Stripe's refusal stays diagnosable from the API logs.
+  assert.equal(warnings.length, 1);
+  for (const part of ['tax_id_invalid', 'param=value', 'req_123', 'Invalid value for eu_vat.']) {
+    assert.ok(warnings[0].includes(part), `the warning carries ${part}: ${warnings[0]}`);
+  }
   assert.equal(calls.filter((call) => call.method === 'subscriptions.create').length, 0);
 
   const checkout = createService({ tenant: createTenant(COMPLETE_FR_INVOICE), createTaxIdError: stripeError });

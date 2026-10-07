@@ -384,61 +384,34 @@ La página de Roles tiene un diseño de dos paneles:
 
 ## Facturación
 
-Gestione su suscripción, usuarios y facturas.
+Gestione su suscripción, su información de facturación y sus facturas.
 
 ### Resumen de la suscripción
 
-La tarjeta de suscripción muestra su plan actual de un vistazo:
-- **Plan**: Hosted KANAP (o Prueba gratuita). La suscripción incluye usuarios ilimitados — facturación mensual o anual
-- **Estado**: Activo, En prueba, Pago vencido, Cancelado, etc.
-- **Fecha de renovación**: Cuándo comienza el siguiente ciclo de facturación
+La parte superior de la página resume su suscripción en dos líneas:
+- El plan, la frecuencia de facturación y el importe, por ejemplo «Hosted KANAP · Anual · 2490,00 € / año». La suscripción incluye usuarios ilimitados, con facturación mensual o anual.
+- El estado (Activo, En prueba, Pago vencido, Cancelado, etc.), la fecha de renovación y el método de pago, por ejemplo «Activo · se renueva el 7 oct 2027 · Visa •••• 4242».
 
-Para suscripciones activas (no pruebas locales), se muestran detalles adicionales:
-- **Importe por período**: Coste del ciclo de facturación actual
-- **Frecuencia de facturación**: Mensual o Anual
-- **Método de cobro**: Cargo automático o Factura (pago manual)
-- **Método de pago**: Datos de la tarjeta o Transferencia bancaria
-- **Última sincronización con Stripe**: Cuándo se actualizaron por última vez los datos de suscripción desde Stripe
-
-Si la suscripción está en período de prueba, se muestran los días restantes de prueba.
+Sin una suscripción en curso (una prueba, una prueba expirada o una suscripción finalizada), solo se muestra el estado. Durante una prueba, lo acompañan la fecha de fin de la prueba y los días restantes.
 
 ### Acciones
 
 - **Elegir plan** / **Cambiar plan**: Abrir el cuadro de diálogo del plan para suscribirse o alternar entre facturación mensual y anual. Requiere administrador de facturación.
-- **Gestionar suscripción**: Abrir el portal de cliente de Stripe para actualizar métodos de pago, cancelar u otros cambios. Solo disponible cuando existe una suscripción de Stripe.
+- **Gestionar el pago**: Abrir el portal de cliente de Stripe para actualizar el método de pago, cancelar u otros cambios. Solo disponible una vez suscrito.
 
 Si su suscripción no está en buen estado (prueba expirada, pago vencido, etc.), el cuadro de selección de plan se abre automáticamente al visitar la página de Facturación.
 
-Para suscribirse, con tarjeta o por transferencia, la información de facturación debe estar completa (consulte [Información de facturación](#informacion-de-facturacion)). Si falta algo, el cuadro **Elegir un plan** enumera los campos que faltan y los botones de pago permanecen desactivados. Haga clic en **Completar la información de facturación** para cerrar el cuadro e ir a la tarjeta de facturación. Cuando los datos se guarden completos, los botones de pago estarán disponibles. Cambiar el plan de una suscripción con tarjeta en curso no requiere esta comprobación.
-
-### Historial de facturas
-
-Las facturas anteriores se muestran debajo de la tarjeta de suscripción:
-- Número de factura y fecha
-- Estado (Borrador, Abierta, Pagada, Anulada, Incobrable)
-- Importe y moneda
-- **Ver**: Abrir la factura en el visor alojado de Stripe
-- **Descargar**: Descargar la factura en PDF
-
-Por defecto, se muestran las cinco facturas más recientes. Haga clic en **Mostrar más facturas** para ver el historial completo.
-
-### Información del cliente
-
-Actualice los datos de contacto asociados a su registro de cliente en Stripe:
-- **Nombre del cliente** y **Empresa**
-- **Correo electrónico** y **Teléfono**
-- **Número de IVA**
-- **Dirección** (línea 1, línea 2, ciudad, estado/provincia, código postal, país)
-
-El campo **País** es una lista con búsqueda. Un país introducido como texto libre en una versión anterior aparece vacío hasta que elija un país de la lista.
+Para suscribirse, con tarjeta o por transferencia, la información de facturación debe estar completa (consulte [Información de facturación](#informacion-de-facturacion)). Si falta algo, el cuadro **Elegir un plan** enumera los campos que faltan y los botones de pago permanecen desactivados. Haga clic en **Completar la información de facturación** para cerrar el cuadro e ir al primer campo que falta. Cuando los datos se guarden completos, los botones de pago estarán disponibles. Cambiar el plan de una suscripción con tarjeta en curso no requiere esta comprobación.
 
 ### Información de facturación
 
-Datos de contacto separados utilizados específicamente en las facturas. Haga clic en **Copiar del cliente** para autocompletar a partir de la información del cliente anterior.
+Estos datos aparecen en sus facturas. KANAP los copia en su registro de cliente de Stripe al suscribirse y cada vez que se guarda un campo.
 
-Los campos coinciden con la sección de información del cliente: nombre del destinatario, empresa, correo electrónico, teléfono, número de IVA y dirección completa.
+La sección contiene la empresa, el correo electrónico, el nombre del destinatario, el teléfono, la dirección (línea 1, línea 2, código postal, ciudad, estado/provincia), el país y el número de IVA.
 
-Estos datos aparecen en sus facturas. KANAP los copia en su registro de cliente de Stripe al suscribirse y cada vez que guarda.
+Cada campo se guarda por separado, sin botón de guardar. Un campo de texto se guarda al salir de él o al pulsar Intro, y el país en cuanto lo elige. Junto al título de la sección aparece «Guardando...» y después «Guardado». Para eliminar un valor, vacíe el campo y salga de él.
+
+El campo **País** es una lista con búsqueda. Un país introducido como texto libre en una versión anterior aparece vacío hasta que elija un país de la lista.
 
 Los campos obligatorios están marcados con un asterisco:
 - **Empresa**
@@ -447,11 +420,22 @@ Los campos obligatorios están marcados con un asterisco:
 - **País**
 - **Número de IVA**, cuando el país pertenece a la Unión Europea
 
-Puede guardar datos incompletos y terminarlos más tarde. Deben estar completos antes de suscribirse.
+Puede dejar los datos incompletos y terminarlos más tarde. Mientras falte algo, una línea bajo los campos lo indica, por ejemplo «Obligatorio antes de suscribirse: correo electrónico, ciudad.» Los datos deben estar completos antes de suscribirse.
+
+Las versiones anteriores de KANAP tenían una tarjeta aparte de información del cliente. Si la rellenó, sus valores aparecen en los campos de facturación correspondientes que estén vacíos, y se guardan como información de facturación la próxima vez que modifique un campo.
 
 Para un país de la Unión Europea, el número de IVA se envía a Stripe y se imprime en sus facturas. Si Stripe no lo acepta, KANAP muestra «No se aceptó el número de IVA. Revíselo en la información de facturación.» Corrija el número e inténtelo de nuevo.
 
-Haga clic en **Guardar cambios** para actualizar tanto los datos del cliente como los de facturación. Utilice **Restablecer** para descartar las ediciones no guardadas.
+### Historial de facturas
+
+Sus facturas se enumeran en una tabla bajo la información de facturación:
+- Número de factura y fecha
+- Importe
+- Estado (Borrador, Abierta, Pagada, Anulada, Incobrable)
+- **Ver**: Abrir la factura en el visor alojado de Stripe
+- **Descargar**: Descargar la factura en PDF
+
+Las cinco facturas más recientes se muestran primero. Haga clic en **Mostrar todo** para ver las demás.
 
 ---
 

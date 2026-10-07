@@ -6,8 +6,8 @@ import { Features } from '../../config/features';
 
 /**
  * A cloud subscription has one price whatever the number of users: checkout sends
- * quantity 1. When the stored amount is still empty (trial, before the first Stripe
- * sync), the billing page shows the estimate, which must use that same quantity.
+ * quantity 1. When the stored amount is still empty (before the first Stripe sync),
+ * the billing page shows the estimate, which must use that same quantity.
  * On-premise has no hosted subscription and shows no amount. Neither mode has a user
  * limit, and the Stripe quantity never becomes one.
  */
@@ -49,7 +49,7 @@ function createService(sub: Partial<Subscription>, enabledUsers: number, stripeS
       },
     }),
   };
-  const stripeConfig = { getPriceId: () => 'price_max_monthly' };
+  const stripeConfig = { getPriceId: (_interval: string, planKey: string) => (planKey === 'max' ? 'price_max_monthly' : null) };
   const service = new BillingService(
     { manager } as any,
     {} as any,
@@ -62,9 +62,9 @@ function createService(sub: Partial<Subscription>, enabledUsers: number, stripeS
   return { service, manager, priceRequests };
 }
 
-async function testTrialEstimateIsOneSubscription() {
+async function testEstimateIsOneSubscription() {
   const { service, manager } = createService(
-    { plan_name: 'Trial', seat_limit: null, active_seats: 0, subscription_type: SubscriptionType.MONTHLY, amount: null },
+    { plan_name: 'Hosted KANAP', seat_limit: null, active_seats: 0, subscription_type: SubscriptionType.MONTHLY, amount: null },
     12,
   );
   const summary = await service.getSubscriptionSummary({ manager: manager as any });
@@ -72,6 +72,19 @@ async function testTrialEstimateIsOneSubscription() {
   assert.equal(summary.estimated_amount, 24900);
   assert.equal(summary.amount, 24900);
   assert.equal(summary.currency, 'EUR');
+}
+
+async function testTrialHasNoEstimate() {
+  // "Trial" is no plan on sale: no estimate (the billing page shows no amount for a trial).
+  const { service, manager, priceRequests } = createService(
+    { plan_name: 'Trial', seat_limit: null, active_seats: 0, subscription_type: SubscriptionType.MONTHLY, amount: null },
+    12,
+  );
+  const summary = await service.getSubscriptionSummary({ manager: manager as any });
+  assert.equal(summary.seats_used, 12);
+  assert.equal(summary.estimated_amount, null);
+  assert.equal(summary.amount, null);
+  assert.deepEqual(priceRequests, []);
 }
 
 async function testSeatFieldsDoNotScaleTheEstimate() {
@@ -162,7 +175,8 @@ async function testStripeQuantityIsNotAUserLimit() {
 }
 
 async function run() {
-  await testTrialEstimateIsOneSubscription();
+  await testEstimateIsOneSubscription();
+  await testTrialHasNoEstimate();
   await testSeatFieldsDoNotScaleTheEstimate();
   await testStoredAmountWins();
   await testOnPremiseShowsNoAmount();

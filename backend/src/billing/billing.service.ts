@@ -46,6 +46,15 @@ type BillingContact = {
   address: BillingAddress;
 };
 
+const EMPTY_CONTACT: Readonly<BillingContact> = Object.freeze({
+  name: null,
+  company: null,
+  email: null,
+  phone: null,
+  vatNumber: null,
+  address: Object.freeze({ line1: null, line2: null, city: null, state: null, postalCode: null, country: null }),
+});
+
 type BillingAddressInput = Partial<Omit<BillingAddress, 'postalCode'>> & { postalCode?: string | null };
 
 type BillingContactInput = {
@@ -239,7 +248,8 @@ export class BillingService {
     const invoice = this.normaliseContactInput(opts.invoice ?? {}, currentInvoice);
 
     const billingColumns: Partial<Tenant> = {
-      billing_customer_info: this.contactToStorage(customer),
+      // Every invoicing field is written, a cleared one as null: from then on the
+      // invoicing details no longer borrow from the customer contact.
       billing_invoice_info: this.contactToStorage(invoice),
       billing_email: invoice.email,
       billing_company_name: invoice.company ?? invoice.name ?? tenant.name,
@@ -247,6 +257,8 @@ export class BillingService {
       billing_tax_id: invoice.vatNumber,
       billing_address: this.addressToRecord(invoice.address),
     };
+    // The customer contact is kept as stored unless the request changes it.
+    if (opts.customer) billingColumns.billing_customer_info = this.contactToStorage(customer);
     // Only the billing columns: saving the loaded tenant would write back its
     // other columns (metadata, branding) as they were when it was read.
     await manager.getRepository(Tenant).update({ id: tenant.id }, billingColumns);
@@ -279,46 +291,32 @@ export class BillingService {
   async createCheckoutSession(opts: {
     tenantId: string;
     manager?: EntityManager;
-    subscriptionType?: SubscriptionType;
-    priceId?: string | null;
-    quantity?: number;
-    planKey?: PlanKey;
-    interval?: IntervalKey;
+    planKey: PlanKey;
+    interval: IntervalKey;
     successUrl?: string | null;
     cancelUrl?: string | null;
     metadata?: Record<string, string>;
     allowPromotionCodes?: boolean;
   }) {
+    // Only a current plan can be bought, always at its configured price.
+    const planKey = opts.planKey;
+    const interval = opts.interval;
+    if (!planKey || !Object.prototype.hasOwnProperty.call(PLANS, planKey)) {
+      throw new BadRequestException('Unknown plan');
+    }
+    if (interval !== 'monthly' && interval !== 'annual') {
+      throw new BadRequestException('Unknown billing interval');
+    }
+    const priceId = getPriceId(this.stripeConfig, interval, planKey);
+    if (!priceId) {
+      throw new BadRequestException('Stripe price not configured for requested plan');
+    }
+
     const client = this.getStripeClientOrThrow();
     const tenant = await this.requireTenant(opts.tenantId);
     const invoiceProfile = this.requireCompleteInvoiceProfile(tenant);
     const manager = opts.manager ?? null;
     const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager, invoiceProfile });
-
-    // Resolve plan_key: prefer explicit, then derive from legacy price_id
-    let planKey: PlanKey | null = opts.planKey ?? null;
-    if (!planKey && opts.priceId) {
-      planKey = resolvePlanKeyFromPriceId(opts.priceId);
-    }
-
-    // Resolve interval from new field, legacy subscriptionType, or default
-    let interval: IntervalKey = opts.interval ?? (opts.subscriptionType === SubscriptionType.ANNUAL ? 'annual' : 'monthly');
-
-    // Resolve price: prefer canonical config lookup, fall back to legacy price_id
-    let priceId: string | null = null;
-    if (planKey) {
-      priceId = getPriceId(this.stripeConfig, interval, planKey);
-    }
-    if (!priceId && opts.priceId) {
-      priceId = opts.priceId;
-    }
-    if (!priceId) {
-      // Legacy fallback: interval-only lookup
-      priceId = this.stripeConfig.getPriceId(interval);
-    }
-    if (!priceId) {
-      throw new BadRequestException('Stripe price not configured for requested plan');
-    }
 
     const successUrl = opts.successUrl ?? this.stripeConfig.getCheckoutSuccessUrl();
     const cancelUrl = opts.cancelUrl ?? this.stripeConfig.getCheckoutCancelUrl();
@@ -657,6 +655,12 @@ export class BillingService {
       return await run();
     } catch (error: any) {
       if (error?.code === 'tax_id_invalid' || error?.raw?.code === 'tax_id_invalid') {
+        this.logger.warn(
+          `Stripe refused the VAT number: code=${error?.code ?? error?.raw?.code ?? 'unknown'} `
+          + `param=${error?.param ?? error?.raw?.param ?? 'unknown'} `
+          + `request=${error?.requestId ?? error?.raw?.requestId ?? 'unknown'} `
+          + `message=${error?.message ?? error?.raw?.message ?? ''}`,
+        );
         throw new BadRequestException({ message: 'VAT_NUMBER_INVALID' });
       }
       throw error;
@@ -696,13 +700,31 @@ export class BillingService {
     return this.fromStoredContact(tenant.billing_customer_info, fallback);
   }
 
+  /**
+   * The invoicing details, field by field: the saved invoicing value (a field the user
+   * cleared stays empty), else the stored customer contact (the former customer card),
+   * else the tenant billing columns. A tenant who only filled the customer card finds
+   * its values here; the next save writes them as invoicing values.
+   */
   private getInvoiceContact(tenant: Tenant): BillingContact {
-    const fallback = this.defaultInvoiceFallback(tenant);
-    const invoice = this.fromStoredContact(tenant.billing_invoice_info, fallback);
-    if (!invoice.company) {
-      invoice.company = fallback.company;
-    }
-    return invoice;
+    const columns = this.defaultInvoiceFallback(tenant);
+    const customer = this.fromStoredContact(tenant.billing_customer_info, EMPTY_CONTACT);
+    const fallback: BillingContact = {
+      name: customer.name ?? columns.name,
+      company: customer.company ?? columns.company,
+      email: customer.email ?? columns.email,
+      phone: customer.phone ?? columns.phone,
+      vatNumber: customer.vatNumber ?? columns.vatNumber,
+      address: {
+        line1: customer.address.line1 ?? columns.address.line1,
+        line2: customer.address.line2 ?? columns.address.line2,
+        city: customer.address.city ?? columns.address.city,
+        state: customer.address.state ?? columns.address.state,
+        postalCode: customer.address.postalCode ?? columns.address.postalCode,
+        country: customer.address.country ?? columns.address.country,
+      },
+    };
+    return this.fromStoredContact(tenant.billing_invoice_info, fallback);
   }
 
   private defaultContactFallback(tenant: Tenant): BillingContact {
@@ -712,7 +734,7 @@ export class BillingService {
       email: this.toNullableString(tenant.billing_email),
       phone: this.toNullableString(tenant.billing_phone),
       vatNumber: this.toNullableString(tenant.billing_tax_id),
-      address: this.fromStoredAddress(tenant.billing_address),
+      address: this.fromStoredAddress(tenant.billing_address, EMPTY_CONTACT.address),
     };
   }
 
@@ -723,80 +745,82 @@ export class BillingService {
       email: this.toNullableString(tenant.billing_email),
       phone: this.toNullableString(tenant.billing_phone),
       vatNumber: this.toNullableString(tenant.billing_tax_id),
-      address: this.fromStoredAddress(tenant.billing_address),
+      address: this.fromStoredAddress(tenant.billing_address, EMPTY_CONTACT.address),
     };
   }
 
+  /**
+   * A stored contact over its fallback, field by field. A key the record holds wins,
+   * null or empty included (the user cleared it); a key it lacks (never saved) takes
+   * the fallback.
+   */
   private fromStoredContact(value: any, fallback: BillingContact): BillingContact {
-    if (!value || typeof value !== 'object') {
-      return { ...fallback, address: { ...fallback.address } };
+    const data: Record<string, unknown> = value && typeof value === 'object' ? value : {};
+    return {
+      name: this.storedOr(data, ['name'], fallback.name),
+      company: this.storedOr(data, ['company'], fallback.company),
+      email: this.storedOr(data, ['email'], fallback.email),
+      phone: this.storedOr(data, ['phone'], fallback.phone),
+      vatNumber: this.storedOr(data, ['vat_number', 'vatNumber'], fallback.vatNumber),
+      address: this.fromStoredAddress(data.address, fallback.address),
+    };
+  }
+
+  private fromStoredAddress(value: any, fallback: BillingAddress): BillingAddress {
+    const data: Record<string, unknown> = value && typeof value === 'object' ? value : {};
+    const country = data.country !== undefined ? this.toNullableCountry(data.country) : fallback.country;
+    return {
+      line1: this.storedOr(data, ['line1'], fallback.line1),
+      line2: this.storedOr(data, ['line2'], fallback.line2),
+      city: this.storedOr(data, ['city'], fallback.city),
+      state: this.storedOr(data, ['state'], fallback.state),
+      postalCode: this.storedOr(data, ['postal_code', 'postalCode'], fallback.postalCode),
+      country,
+    };
+  }
+
+  /** The first of `keys` the record holds (null when it holds an empty value), else the fallback. */
+  private storedOr(data: Record<string, unknown>, keys: string[], fallback: string | null): string | null {
+    for (const key of keys) {
+      if (data[key] !== undefined) return this.toNullableString(data[key]);
     }
-    const data: any = value;
+    return fallback;
+  }
+
+  /**
+   * A PATCH payload over the current contact: a field the payload holds replaces the
+   * current value, and an empty string or null clears it; a field it lacks stays as
+   * it is. `address: null` leaves the address as it is.
+   */
+  private normaliseContactInput(input: BillingContactInput, current: BillingContact): BillingContact {
+    const data = input as Record<string, unknown>;
     return {
-      name: this.toNullableString(data.name ?? fallback.name),
-      company: this.toNullableString(data.company ?? fallback.company),
-      email: this.toNullableString(data.email ?? fallback.email),
-      phone: this.toNullableString(data.phone ?? fallback.phone),
-      vatNumber: this.toNullableString(data.vat_number ?? data.vatNumber ?? fallback.vatNumber),
-      address: this.fromStoredAddress(data.address ?? fallback.address),
+      name: this.storedOr(data, ['name'], current.name),
+      company: this.storedOr(data, ['company'], current.company),
+      email: this.storedOr(data, ['email'], current.email),
+      phone: this.storedOr(data, ['phone'], current.phone),
+      vatNumber: this.storedOr(data, ['vatNumber'], current.vatNumber),
+      address: input.address ? this.fromStoredAddress(input.address, current.address) : { ...current.address },
     };
   }
 
-  private fromStoredAddress(value: any): BillingAddress {
-    if (!value || typeof value !== 'object') {
-      return {
-        line1: null,
-        line2: null,
-        city: null,
-        state: null,
-        postalCode: null,
-        country: null,
-      };
-    }
-    return {
-      line1: this.toNullableString(value.line1),
-      line2: this.toNullableString(value.line2),
-      city: this.toNullableString(value.city),
-      state: this.toNullableString(value.state),
-      postalCode: this.toNullableString(value.postal_code ?? value.postalCode),
-      country: this.toNullableCountry(value.country),
-    };
-  }
-
-  private normaliseContactInput(input: BillingContactInput, fallback: BillingContact): BillingContact {
-    const address = this.normaliseAddressInput(input.address ?? null, fallback.address);
-    return {
-      name: this.toNullableString(input.name ?? fallback.name),
-      company: this.toNullableString(input.company ?? fallback.company),
-      email: this.toNullableString(input.email ?? fallback.email),
-      phone: this.toNullableString(input.phone ?? fallback.phone),
-      vatNumber: this.toNullableString(input.vatNumber ?? fallback.vatNumber),
-      address,
-    };
-  }
-
-  private normaliseAddressInput(input: BillingAddressInput | null, fallback: BillingAddress): BillingAddress {
-    const src = input ?? {};
-    return {
-      line1: this.toNullableString(src.line1 ?? fallback.line1),
-      line2: this.toNullableString(src.line2 ?? fallback.line2),
-      city: this.toNullableString(src.city ?? fallback.city),
-      state: this.toNullableString(src.state ?? fallback.state),
-      postalCode: this.toNullableString((src as any).postal_code ?? src.postalCode ?? fallback.postalCode),
-      country: this.toNullableCountry(src.country ?? fallback.country),
-    };
-  }
-
+  /** Every field is written, an empty one as null, so a cleared field stays cleared. */
   private contactToStorage(contact: BillingContact): Record<string, any> {
-    const payload: Record<string, any> = {};
-    if (contact.name) payload.name = contact.name;
-    if (contact.company) payload.company = contact.company;
-    if (contact.email) payload.email = contact.email;
-    if (contact.phone) payload.phone = contact.phone;
-    if (contact.vatNumber) payload.vat_number = contact.vatNumber;
-    const addressRecord = this.addressToRecord(contact.address);
-    if (addressRecord) payload.address = addressRecord;
-    return payload;
+    return {
+      name: contact.name,
+      company: contact.company,
+      email: contact.email,
+      phone: contact.phone,
+      vat_number: contact.vatNumber,
+      address: {
+        line1: contact.address.line1,
+        line2: contact.address.line2,
+        city: contact.address.city,
+        state: contact.address.state,
+        postal_code: contact.address.postalCode,
+        country: contact.address.country,
+      },
+    };
   }
 
   private contactToResponse(contact: BillingContact) {
@@ -1182,7 +1206,7 @@ export class BillingService {
 
   private async resolvePriceInfo(sub: Subscription): Promise<NormalisedPrice | null> {
     const client = this.stripeClient.getClient();
-    const priceId = sub.stripe_price_id ?? this.resolveConfiguredPriceId(sub);
+    const priceId = this.resolveConfiguredPriceId(sub);
     if (!priceId) return null;
 
     if (this.priceCache.has(priceId)) {
@@ -1202,10 +1226,17 @@ export class BillingService {
     }
   }
 
+  /**
+   * Configured price of the subscription's current plan for its interval. A plan that is no
+   * longer sold (an old Stripe price, "Starter", "Trial") has no price, so no estimate.
+   */
   private resolveConfiguredPriceId(sub: Subscription): string | null {
-    const planKey = resolvePlanKeyFromLegacyName(sub.plan_name) ?? undefined;
-    const interval = sub.subscription_type === SubscriptionType.ANNUAL ? 'annual' : 'monthly';
-    return this.stripeConfig.getPriceId(interval, planKey);
+    const planKey =
+      (sub.stripe_price_id ? resolvePlanKeyFromPriceId(sub.stripe_price_id) : null)
+      ?? resolvePlanKeyFromLegacyName(sub.plan_name);
+    if (!planKey) return null;
+    const interval: IntervalKey = sub.subscription_type === SubscriptionType.ANNUAL ? 'annual' : 'monthly';
+    return getPriceId(this.stripeConfig, interval, planKey);
   }
 
   private resolveStripeQuantity(subObject: any): number {

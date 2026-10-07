@@ -278,10 +278,7 @@
     "actions": {
       "changePlan": "Plan ändern",
       "choosePlan": "Plan wählen",
-      "manageSubscription": "Abonnement verwalten"
-    },
-    "customer": {
-      "title": "Kundeninformationen"
+      "managePayment": "Zahlung verwalten"
     },
     "fields": {
       "addressLine1": "Adresszeile 1",
@@ -289,7 +286,6 @@
       "city": "Stadt",
       "company": "Unternehmen",
       "country": "Land",
-      "customerName": "Kundenname",
       "email": "E-Mail",
       "phone": "Telefon",
       "postalCode": "Postleitzahl",
@@ -298,8 +294,10 @@
       "vatNumber": "USt-IdNr."
     },
     "invoiceDetails": {
-      "copyFromCustomer": "Vom Kunden kopieren",
-      "title": "Rechnungsinformationen"
+      "emailFormat": "Prüfen Sie das Format dieser E-Mail-Adresse.",
+      "missing": "Vor dem Abschluss eines Abonnements erforderlich: {{fields}}.",
+      "title": "Rechnungsinformationen",
+      "vatNumberFormat": "Prüfen Sie das Format dieser USt-IdNr."
     },
     "invoiceStatuses": {
       "draft": "Entwurf",
@@ -311,9 +309,16 @@
     "invoices": {
       "actions": {
         "download": "Herunterladen",
+        "showAll": "Alle anzeigen ({{count}})",
         "showFewer": "Weniger Rechnungen anzeigen",
-        "showMore": "Mehr Rechnungen anzeigen",
         "view": "Ansehen"
+      },
+      "columns": {
+        "amount": "Betrag",
+        "date": "Datum",
+        "links": "Dokumente",
+        "number": "Nummer",
+        "status": "Status"
       },
       "title": "Rechnungshistorie"
     },
@@ -321,8 +326,20 @@
       "loadFailed": "Abrechnungsdetails konnten nicht geladen werden.",
       "portalFailed": "Das Abrechnungsportal konnte nicht geöffnet werden.",
       "portalUnavailable": "Das Abrechnungsportal ist nicht verfügbar.",
-      "saveFailed": "Abrechnungsdetails konnten nicht gespeichert werden.",
-      "updateSuccess": "Abrechnungsdetails aktualisiert."
+      "saveFailed": "Abrechnungsdetails konnten nicht gespeichert werden."
+    },
+    "placeholders": {
+      "addressLine1": "z. B. Hauptstraße 12",
+      "addressLine2": "z. B. Gebäude B",
+      "city": "z. B. Berlin",
+      "company": "z. B. Beispiel GmbH",
+      "country": "z. B. Frankreich",
+      "email": "z. B. rechnung@example.com",
+      "phone": "z. B. +49 30 1234567",
+      "postalCode": "z. B. 10115",
+      "recipientName": "z. B. Buchhaltung",
+      "stateProvince": "z. B. Bayern",
+      "vatNumber": "z. B. DE123456789"
     },
     "statuses": {
       "active": "Aktiv",
@@ -337,32 +354,19 @@
       "unpaid": "Unbezahlt"
     },
     "subscription": {
-      "labels": {
-        "actions": "Aktionen",
-        "amountPerPeriod": "Betrag pro Periode",
-        "billingFrequency": "Abrechnungshäufigkeit",
-        "collectionMethod": "Einzugsmethode",
-        "lastStripeSync": "Letzte Stripe-Synchronisierung",
-        "paymentMethod": "Zahlungsmethode",
-        "plan": "Plan",
-        "renewalDate": "Verlängerungsdatum",
-        "status": "Status",
-        "trial": "Testphase",
-        "trialEnds": "Testphase endet"
-      },
-      "planLabels": {
-        "freeTrial": "Kostenlose Testphase"
-      },
       "title": "Abonnement",
       "values": {
+        "amountPerMonth": "{{amount}} / Monat",
+        "amountPerYear": "{{amount}} / Jahr",
         "annual": "Jährlich",
-        "automaticCharge": "Automatischer Einzug",
         "bankTransfer": "Banküberweisung",
         "card": "Karte",
         "daysRemaining_one": "{{count}} Tag verbleibend",
         "daysRemaining_other": "{{count}} Tage verbleibend",
-        "invoiceManualPayment": "Rechnung (manuelle Zahlung)",
-        "monthly": "Monatlich"
+        "ends": "endet am {{date}}",
+        "monthly": "Monatlich",
+        "renews": "Verlängerung am {{date}}",
+        "trialEnded": "Testphase beendet am {{date}}"
       }
     },
     "title": "Abrechnung"
@@ -641,9 +645,11 @@
       "payByBankTransfer": "Per Überweisung zahlen",
       "payByCard": "Per Karte zahlen"
     },
-    "annualSavings": "2 Monate gratis",
+    "annualSavings_one": "{{count}} Monat gratis",
+    "annualSavings_other": "{{count}} Monate gratis",
     "billingCycle": {
       "annual": "Jährlich",
+      "label": "Abrechnungszeitraum",
       "monthly": "Monatlich"
     },
     "errors": {
@@ -664,21 +670,26 @@
       "checkoutUrlUnavailable": "Checkout-URL ist nicht verfügbar.",
       "invoiceCreated": "Rechnung erstellt.",
       "loadFailed": "Pläne konnten nicht geladen werden.",
-      "requestFailed": "Anfrage fehlgeschlagen.",
-      "trialExpired": "Testphase abgelaufen.",
-      "trialExpires_one": "Testphase läuft in {{count}} Tag ab.",
-      "trialExpires_other": "Testphase läuft in {{count}} Tagen ab."
+      "requestFailed": "Anfrage fehlgeschlagen."
     },
-    "pricePer": "pro {{period}}",
+    "monthlyEquivalent": "{{amount}} pro Monat, jährlich abgerechnet",
+    "period": {
+      "month": "pro Monat",
+      "year": "pro Jahr"
+    },
     "profile": {
       "complete": "Rechnungsinformationen vervollständigen",
       "incomplete": "Vervollständigen Sie die Rechnungsinformationen, bevor Sie ein Abonnement abschließen: {{fields}}."
     },
-    "shared": {
-      "month": "Monat",
-      "year": "Jahr"
-    },
     "title": "Plan wählen",
+    "trial": {
+      "daysLeft_one": "noch {{count}} Tag",
+      "daysLeft_other": "noch {{count}} Tage",
+      "ended": "Ihre Testphase ist abgelaufen",
+      "ends": "Ihre Testphase endet am {{date}}",
+      "endsIn_one": "Ihre Testphase endet in {{count}} Tag",
+      "endsIn_other": "Ihre Testphase endet in {{count}} Tagen"
+    },
     "unlimitedUsers": "Unbegrenzte Nutzer"
   },
   "roles": {

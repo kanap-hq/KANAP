@@ -59,6 +59,29 @@ function testGreekVatUsesElPrefix() {
   assert.equal(isValidEuVatNumber('GR', 'el-123.456.789'), true);
 }
 
+function testVatNumberFollowsTheCountryFormat() {
+  // Looser numbers used to pass the local check and were then refused by Stripe.
+  assert.deepEqual(missingInvoiceFields(contact({ vatNumber: 'FR12345' })), ['vatNumber']);
+  assert.deepEqual(missingInvoiceFields(contact({ vatNumber: 'FR1234567890' })), ['vatNumber']);
+  assert.equal(euVatTaxIdValue(contact({ vatNumber: 'FR12345' })), null);
+
+  const valid: Array<[string, string]> = [
+    ['FR', 'FR12345678901'],
+    ['AT', 'ATU12345678'],
+    ['NL', 'NL123456789B01'],
+    ['GR', 'EL123456789'],
+    ['IE', 'IE1234567T'],
+    ['ES', 'ESX1234567L'],
+  ];
+  for (const [country, vatNumber] of valid) {
+    assert.equal(isValidEuVatNumber(country, vatNumber), true, `${vatNumber} is valid for ${country}`);
+    assert.deepEqual(missingInvoiceFields(contact({ vatNumber, address: { country } })), [], `${vatNumber} is complete`);
+  }
+  assert.equal(isValidEuVatNumber('GR', 'GR123456789'), false);
+  // A number from another member state does not match the country of the address.
+  assert.equal(isValidEuVatNumber('BE', 'NL123456789B01'), false);
+}
+
 function testBadEmailListsEmail() {
   assert.deepEqual(missingInvoiceFields(contact({ email: 'billing@fromage' })), ['email']);
   assert.deepEqual(missingInvoiceFields(contact({ email: null })), ['email']);
@@ -89,6 +112,7 @@ function run() {
   testUsProfileWithoutVatPasses();
   testFreeTextCountryListsCountry();
   testGreekVatUsesElPrefix();
+  testVatNumberFollowsTheCountryFormat();
   testBadEmailListsEmail();
   testEmptyProfileListsEverythingInOrder();
   testEuHelpers();
