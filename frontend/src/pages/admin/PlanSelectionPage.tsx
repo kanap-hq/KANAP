@@ -85,7 +85,7 @@ type PlanSelectionDialogProps = {
   onSuccess?: () => void;
   /** Invoice fields still needed before subscribing (from the billing profile). */
   invoiceMissingFields?: readonly string[];
-  /** Takes the user to the invoicing information card. */
+  /** Takes the user to the first missing field of the invoicing information. */
   onCompleteInvoiceDetails?: () => void;
   /** Called once the dialog has finished closing. */
   onExited?: () => void;
@@ -292,14 +292,14 @@ export default function PlanSelectionDialog({
                     <Card key={plan.plan_key} variant="outlined">
                       <CardContent>
                         <Stack spacing={2} alignItems="center" sx={{ textAlign: 'center', py: 1 }}>
-                          <Typography variant="h6" fontWeight={700}>
+                          <Typography variant="h6" fontWeight={500}>
                             {plan.display_name}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {t('planSelection.unlimitedUsers')}
                           </Typography>
                           <Box>
-                            <Typography variant="h4" fontWeight={700}>
+                            <Typography variant="h4" fontWeight={500}>
                               {formatPrice(price, locale)}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
@@ -310,7 +310,7 @@ export default function PlanSelectionDialog({
                               })}
                             </Typography>
                             {billingCycle === 'annual' && (
-                              <Typography variant="caption" color="success.main" fontWeight={600}>
+                              <Typography variant="caption" color="success.main" fontWeight={500}>
                                 {t('planSelection.annualSavings')}
                               </Typography>
                             )}

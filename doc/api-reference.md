@@ -175,7 +175,11 @@ These endpoints are tenant-scoped and require:
 - GET `/billing/profile` → `{ subscription, customer, invoice, invoice_missing_fields, invoices }`
   - `invoice_missing_fields: string[]` lists the invoice details still missing, in the order below (empty when complete). Possible keys: `company`, `email`, `addressLine1`, `postalCode`, `city`, `country`, `vatNumber`.
   - A malformed email, a country that is not an ISO 3166-1 alpha-2 code, or a malformed EU VAT number counts as missing. `vatNumber` is only reported when the country is in the EU.
+  - `invoice` is read field by field: the saved invoicing value, else the stored customer contact (`customer`, from the former customer card), else the tenant billing columns. A field saved empty stays empty.
 - PATCH `/billing/profile` → `{ customer, invoice, invoice_missing_fields, invoices }`
+  - Body: `{ invoice?: { name?, company?, email?, phone?, vatNumber?, address?: { line1?, line2?, city?, state?, postalCode?, country? } }, customer?: { same fields } }`. The billing page sends one changed field per call, for example `{ "invoice": { "address": { "city": "Lyon" } } }`.
+  - A field present in the body replaces the saved value; an empty string or `null` clears it. A field left out stays as it is, and so does the whole address when `address` is left out or `null`. `email` accepts an empty string or `null` (clearing it); any other value must be an email address (400 otherwise).
+  - Every save writes all invoicing fields, cleared ones as `null`, so values taken from the customer contact become invoicing values. `customer` is written only when the body holds it.
   - Incomplete details are accepted and saved; the answer reports what is still missing in `invoice_missing_fields`.
 - POST `/billing/checkout` → `{ url, id }`
   - Body: `{ plan_key, interval, success_url?, cancel_url?, allow_promotion_codes? }`. `plan_key` (a current plan: `max`) and `interval` (`monthly` or `annual`) are required; a missing or unknown value is a 400. The price is always the plan's configured Stripe price (`STRIPE_PRICE_<PLAN>_<INTERVAL>`) and the quantity is always 1. The former `price_id`, `quantity` and `subscription_type` fields are gone: the validation pipe strips them, so they have no effect. A plan without a configured price is a 400.

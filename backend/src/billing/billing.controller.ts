@@ -5,7 +5,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { BillingService } from './billing.service';
 import { Features } from '../config/features';
 import { throwFeatureDisabled } from '../common/feature-gates';
-import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, ValidateIf, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { PlanKey, IntervalKey } from './plans.config';
 import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
@@ -81,7 +81,8 @@ class BillingContactDto {
   @IsString()
   company?: string | null;
 
-  @IsOptional()
+  // Empty or null clears the email; anything else must be an email address.
+  @ValidateIf((_dto, value) => value !== undefined && value !== null && !(typeof value === 'string' && value.trim() === ''))
   @IsEmail()
   email?: string | null;
 
@@ -105,7 +106,11 @@ class OpenPortalDto {
   returnUrl?: string;
 }
 
-class UpdateBillingProfileDto {
+/**
+ * A field present in `customer` or `invoice` replaces the stored value; an empty string or
+ * null clears it. A field left out stays as it is.
+ */
+export class UpdateBillingProfileDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => BillingContactDto)

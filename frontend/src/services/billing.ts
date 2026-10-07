@@ -1,6 +1,6 @@
 import api from '../api';
 
-type BillingAddress = {
+export type BillingAddress = {
   line1: string | null;
   line2: string | null;
   city: string | null;
@@ -96,10 +96,15 @@ export async function getBillingProfile() {
   return res.data;
 }
 
-export async function updateBillingProfile(payload: {
-  customer: Partial<BillingContact>;
-  invoice: Partial<BillingContact>;
-}) {
+/**
+ * A change to the invoicing details: a field present replaces the saved value, null clears
+ * it, a field left out stays as it is.
+ */
+export type BillingContactPatch = Partial<Omit<BillingContact, 'address'>> & {
+  address?: Partial<BillingAddress>;
+};
+
+export async function updateBillingProfile(payload: { invoice: BillingContactPatch }) {
   const res = await api.patch<BillingProfileUpdateResponse>('/billing/profile', payload);
   return res.data;
 }

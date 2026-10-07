@@ -1,34 +1,21 @@
 import React from 'react';
 import PageHeader from '../../components/PageHeader';
-import {
-  Alert,
-  Autocomplete,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Grid,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Autocomplete, Box, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material';
 import type { ChipProps } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { getDotColor } from '../../utils/statusColors';
-import { StatusDot } from '../../components/design';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { PropertyRow, StatusDot } from '../../components/design';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import api from '../../api';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale } from '../../i18n/useLocale';
 import {
   BillingContact,
-  BillingProfileResponse,
-  BillingProfileUpdateResponse,
-  BillingSubscription,
+  BillingContactPatch,
   BillingInvoice,
+  BillingProfileResponse,
+  BillingSubscription,
   getBillingProfile,
   updateBillingProfile,
 } from '../../services/billing';
@@ -37,95 +24,57 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { isEuCountry } from '../../utils/billingProfile';
 import { COUNTRY_OPTIONS } from '../../constants/isoOptions';
 import { useCountryName } from '../coa/coaRoles';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
+import { formatShortDate } from '../../lib/dateFormat';
+import { drawerAutocompleteListboxSx, drawerFieldValueSx, tealLinkSx } from '../../theme/formSx';
 
-type BillingContactForm = {
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
-  vatNumber: string;
-  address: {
-    line1: string;
-    line2: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** One field of the invoicing details. `key` is also its name in `invoice_missing_fields`. */
+type InvoiceTextField = {
+  key: 'company' | 'email' | 'name' | 'phone' | 'addressLine1' | 'addressLine2' | 'postalCode' | 'city' | 'state' | 'vatNumber';
+  label: string;
+  placeholder: string;
+  required?: boolean;
+  type?: string;
+  autoComplete?: string;
+};
+type InvoiceFieldKey = InvoiceTextField['key'] | 'country';
+type FieldErrors = Partial<Record<InvoiceFieldKey, string>>;
+
+const ADDRESS_FIELDS: Partial<Record<InvoiceFieldKey, keyof BillingContact['address']>> = {
+  addressLine1: 'line1',
+  addressLine2: 'line2',
+  postalCode: 'postalCode',
+  city: 'city',
+  state: 'state',
+  country: 'country',
 };
 
-const EMPTY_FORM: BillingContactForm = {
-  name: '',
-  company: '',
-  email: '',
-  phone: '',
-  vatNumber: '',
-  address: {
-    line1: '',
-    line2: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    country: '',
-  },
-};
-
-function contactToForm(contact: BillingContact | undefined): BillingContactForm {
-  if (!contact) return { ...EMPTY_FORM, address: { ...EMPTY_FORM.address } };
-  return {
-    name: contact.name ?? '',
-    company: contact.company ?? '',
-    email: contact.email ?? '',
-    phone: contact.phone ?? '',
-    vatNumber: contact.vatNumber ?? '',
-    address: {
-      line1: contact.address?.line1 ?? '',
-      line2: contact.address?.line2 ?? '',
-      city: contact.address?.city ?? '',
-      state: contact.address?.state ?? '',
-      postalCode: contact.address?.postalCode ?? '',
-      country: contact.address?.country ?? '',
-    },
-  };
+/** The saved value of a field. */
+function savedValue(contact: BillingContact | undefined, key: InvoiceFieldKey): string {
+  if (!contact) return '';
+  const addressKey = ADDRESS_FIELDS[key];
+  if (addressKey) return contact.address?.[addressKey] ?? '';
+  return (contact[key as Exclude<keyof BillingContact, 'address'>] as string | null) ?? '';
 }
 
-function cloneForm(form: BillingContactForm): BillingContactForm {
-  return {
-    ...form,
-    address: { ...form.address },
-  };
+/** The PATCH body that sets one field; null clears it. */
+function fieldPatch(key: InvoiceFieldKey, value: string | null): BillingContactPatch {
+  const addressKey = ADDRESS_FIELDS[key];
+  if (addressKey) return { address: { [addressKey]: value } };
+  return { [key]: value } as BillingContactPatch;
 }
 
-function normaliseValue(value: string) {
-  const trimmed = value.trim();
-  return trimmed.length ? trimmed : null;
-}
-
-function formToPayload(form: BillingContactForm): Partial<BillingContact> {
-  return {
-    name: normaliseValue(form.name),
-    company: normaliseValue(form.company),
-    email: normaliseValue(form.email),
-    phone: normaliseValue(form.phone),
-    vatNumber: normaliseValue(form.vatNumber),
-    address: {
-      line1: normaliseValue(form.address.line1),
-      line2: normaliseValue(form.address.line2),
-      city: normaliseValue(form.address.city),
-      state: normaliseValue(form.address.state),
-      postalCode: normaliseValue(form.address.postalCode),
-      // The picker stores ISO codes; a legacy free-text value is sent back as it was.
-      country: normaliseValue(form.address.country),
-    },
-  };
-}
-
-function formsEqual(a: BillingContactForm, b: BillingContactForm): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+/** The saved contact with one field replaced, for a change shown before the server answers. */
+function withField(contact: BillingContact, key: InvoiceFieldKey, value: string | null): BillingContact {
+  const addressKey = ADDRESS_FIELDS[key];
+  if (addressKey) return { ...contact, address: { ...contact.address, [addressKey]: value } };
+  return { ...contact, [key]: value };
 }
 
 function formatMoney(locale: string, amount?: number | null, currency?: string | null) {
-  if (amount == null || !currency) return '—';
+  if (amount == null || !currency) return null;
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -134,21 +83,6 @@ function formatMoney(locale: string, amount?: number | null, currency?: string |
   } catch {
     return `${amount / 100} ${currency.toUpperCase()}`;
   }
-}
-
-function formatDate(locale: string, value?: string | null) {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat(locale, {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
-}
-
-function formatDateTime(locale: string, value?: string | null) {
-  return formatDate(locale, value);
 }
 
 const STATUS_META: Record<string, { label: string; color: ChipProps['color'] }> = {
@@ -178,51 +112,9 @@ function isLiveSubscription(subscription: BillingSubscription | null | undefined
   return !ENDED_SUBSCRIPTION_STATUSES.includes(subscription.status ?? '');
 }
 
-function derivePlanLabel(
-  subscription: BillingSubscription | null | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  if (!subscription) return '—';
-  // Local trial (no Stripe subscription)
-  if (subscription.status === 'trialing' && !subscription.stripe_subscription_id) return t('billing.subscription.planLabels.freeTrial');
-  // Without a live subscription the stored plan name is a leftover (an old plan, an ended one).
-  if (!isLiveSubscription(subscription)) return '—';
-  return subscription.plan_name || '—';
-}
-
-function formatSubscriptionType(
-  subscription: BillingSubscription | null | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  if (!subscription?.subscription_type) return '—';
-  return subscription.subscription_type === 'annual'
-    ? t('billing.subscription.values.annual')
-    : t('billing.subscription.values.monthly');
-}
-
-function formatCollectionMethod(
-  subscription: BillingSubscription | null | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  if (!subscription?.collection_method) return t('billing.subscription.values.automaticCharge');
-  return subscription.collection_method === 'send_invoice'
-    ? t('billing.subscription.values.invoiceManualPayment')
-    : t('billing.subscription.values.automaticCharge');
-}
-
-function formatPaymentMode(
-  subscription: BillingSubscription | null | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  if (!subscription?.payment_mode) return t('billing.subscription.values.card');
-  return subscription.payment_mode === 'bank_transfer'
-    ? t('billing.subscription.values.bankTransfer')
-    : t('billing.subscription.values.card');
-}
-
 function getStatusMeta(
   subscription: BillingSubscription | null | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
+  t: Translate,
 ): { label: string; color: ChipProps['color'] } {
   if (subscription?.status) {
     const meta = STATUS_META[subscription.status];
@@ -236,16 +128,107 @@ function getStatusMeta(
   return { label: t('billing.statuses.pending'), color: 'default' };
 }
 
-function getInvoiceStatusMetaFromStatus(
-  status: string | null | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): { label: string; color: ChipProps['color'] } {
+function getInvoiceStatusMeta(status: string | null | undefined, t: Translate): { label: string; color: ChipProps['color'] } {
   if (!status) return { label: '—', color: 'default' };
   const meta = INVOICE_STATUS_META[status];
   return meta
     ? { ...meta, label: t(`billing.invoiceStatuses.${status}`, { defaultValue: meta.label }) }
     : { label: status.replace(/_/g, ' '), color: 'default' };
 }
+
+/** "Visa •••• 4242", else the payment mode ("Card", "Bank transfer"). */
+function paymentMethodLabel(subscription: BillingSubscription, t: Translate): string {
+  const brand = subscription.default_payment_method_brand;
+  if (subscription.default_payment_method_id && brand) {
+    const name = brand.charAt(0).toUpperCase() + brand.slice(1);
+    const last4 = subscription.default_payment_method_last4;
+    return last4 ? `${name} •••• ${last4}` : name;
+  }
+  return subscription.payment_mode === 'bank_transfer'
+    ? t('billing.subscription.values.bankTransfer')
+    : t('billing.subscription.values.card');
+}
+
+/**
+ * The two summary lines. Without a live subscription the stored plan, amount and payment
+ * details are leftovers: only the status shows, with the trial dates.
+ */
+function subscriptionLines(subscription: BillingSubscription | null | undefined, t: Translate, locale: string) {
+  const live = isLiveSubscription(subscription);
+  const isTrialing = subscription?.status === 'trialing';
+  const date = (value: string) => formatShortDate(value, locale);
+
+  let plan: string | null = null;
+  if (live && subscription) {
+    const annual = subscription.subscription_type === 'annual';
+    const amount = formatMoney(
+      locale,
+      subscription.amount ?? subscription.estimated_amount ?? null,
+      subscription.currency ?? subscription.estimated_currency ?? null,
+    );
+    plan = [
+      subscription.plan_name,
+      subscription.subscription_type
+        ? t(annual ? 'billing.subscription.values.annual' : 'billing.subscription.values.monthly')
+        : null,
+      amount
+        ? t(annual ? 'billing.subscription.values.amountPerYear' : 'billing.subscription.values.amountPerMonth', { amount })
+        : null,
+    ].filter(Boolean).join(' · ') || null;
+  }
+
+  const details: string[] = [];
+  const trialEnd = subscription?.trial_end ?? null;
+  const trialOver = !!trialEnd && new Date(trialEnd).getTime() <= Date.now();
+  if (isTrialing && trialEnd && !trialOver) {
+    details.push(t('billing.subscription.values.ends', { date: date(trialEnd) }));
+  } else if (!live && trialEnd && trialOver) {
+    details.push(t('billing.subscription.values.trialEnded', { date: date(trialEnd) }));
+  }
+  const daysRemaining = subscription?.trial_days_remaining;
+  if (isTrialing && daysRemaining != null && daysRemaining > 0) {
+    details.push(t('billing.subscription.values.daysRemaining', { count: daysRemaining }));
+  }
+  if (live && subscription && !isTrialing) {
+    const renewal = subscription.renewal_at
+      ?? subscription.current_period_end
+      ?? subscription.next_payment_at
+      ?? subscription.payment_due_at
+      ?? null;
+    if (renewal) details.push(t('billing.subscription.values.renews', { date: date(renewal) }));
+  }
+  if (live && subscription) details.push(paymentMethodLabel(subscription, t));
+  return { plan, details };
+}
+
+const sectionTitleSx = { fontSize: 16, fontWeight: 500, color: 'kanap.text.primary', lineHeight: 1.4 } as const;
+const sectionHeadSx = { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2, mb: 1.5 } as const;
+const saveStatusSx = { fontSize: 12, color: 'kanap.text.tertiary' } as const;
+const twoColumnsSx = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+  columnGap: 3,
+  rowGap: 0.5,
+} as const;
+const summarySx = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 2,
+  p: '12px 16px',
+  borderRadius: '8px',
+  bgcolor: 'kanap.bg.drawer',
+  border: 1,
+  borderColor: 'kanap.border.soft',
+} as const;
+const inlineStatusSx = { display: 'inline-flex', alignItems: 'center', gap: 0.75 } as const;
+const invoiceNumberSx = {
+  fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
+  fontSize: 12,
+  color: 'kanap.text.secondary',
+  fontVariantNumeric: 'tabular-nums',
+} as const;
 
 type CountryChoice = { code: string; name: string };
 
@@ -257,16 +240,16 @@ function CountryPicker({
   value,
   onChange,
   label,
-  required,
+  placeholder,
   disabled,
-  fieldKey,
+  error,
 }: {
   value: string;
   onChange: (code: string) => void;
   label: string;
-  required?: boolean;
+  placeholder: string;
   disabled?: boolean;
-  fieldKey?: string;
+  error?: string;
 }) {
   const countryName = useCountryName();
   const options = React.useMemo<CountryChoice[]>(
@@ -285,30 +268,155 @@ function CountryPicker({
       getOptionLabel={(option) => option.name}
       isOptionEqualToValue={(a, b) => a.code === b.code}
       disabled={disabled}
+      ListboxProps={{ sx: drawerAutocompleteListboxSx }}
       renderInput={(params) => (
         <TextField
           {...params}
-          label={label}
-          required={required}
-          inputProps={{ ...params.inputProps, ...(fieldKey ? { 'data-invoice-field': fieldKey } : {}) }}
+          variant="standard"
+          sx={drawerFieldValueSx}
+          placeholder={placeholder}
+          error={!!error}
+          helperText={error}
+          inputProps={{ ...params.inputProps, 'aria-label': label, 'data-invoice-field': 'country' }}
         />
       )}
     />
   );
 }
 
-type SummaryItemProps = {
-  label: string;
-  children: React.ReactNode;
-};
+/** A one-line invoicing field: saved on blur (or Enter) when its value changed. */
+function InvoiceTextRow({
+  field,
+  value,
+  disabled,
+  error,
+  invalidMessage,
+  onCommit,
+}: {
+  field: InvoiceTextField;
+  value: string;
+  disabled: boolean;
+  error?: string;
+  /** Shown while the field holds its saved value (the server does not accept it). */
+  invalidMessage?: string;
+  onCommit: (next: string | null) => void;
+}) {
+  const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
+  const message = error ?? (invalidMessage && draft === value ? invalidMessage : undefined);
+  return (
+    <PropertyRow label={field.label} required={field.required} valueSx={{ maxWidth: 'none' }}>
+      <TextField
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onFocus={onFocus}
+        onBlur={() => {
+          onBlur();
+          onCommit(draft.trim() || null);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
+        }}
+        variant="standard"
+        type={field.type}
+        sx={drawerFieldValueSx}
+        placeholder={field.placeholder}
+        disabled={disabled}
+        error={!!message}
+        helperText={message}
+        inputProps={{ 'aria-label': field.label, 'data-invoice-field': field.key, autoComplete: field.autoComplete ?? 'off' }}
+      />
+    </PropertyRow>
+  );
+}
 
-function SummaryItem({ label, children }: SummaryItemProps) {
+function InvoicesTable({ invoices, locale, t }: { invoices: BillingInvoice[]; locale: string; t: Translate }) {
+  const { mode } = useTheme().palette;
+  const [showAll, setShowAll] = React.useState(false);
+  const rows = showAll ? invoices : invoices.slice(0, 5);
   return (
     <Box>
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
-      <Box>{children}</Box>
+      <Box sx={{ overflowX: 'auto' }}>
+        <Box
+          component="table"
+          sx={(theme) => ({
+            width: '100%',
+            borderCollapse: 'collapse',
+            '& th': {
+              fontSize: 12,
+              fontWeight: 500,
+              color: theme.palette.kanap.text.tertiary,
+              textAlign: 'left',
+              p: '6px 8px',
+              borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
+              whiteSpace: 'nowrap',
+            },
+            '& td': {
+              fontSize: 13,
+              color: theme.palette.kanap.text.primary,
+              p: '8px 8px',
+              borderBottom: `1px solid ${theme.palette.kanap.border.soft}`,
+              verticalAlign: 'middle',
+              whiteSpace: 'nowrap',
+            },
+            '& .r': { textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
+            '& tbody tr:hover td': { bgcolor: theme.palette.kanap.bg.hover },
+            '& a': { color: theme.palette.kanap.text.primary, textDecoration: 'none' },
+            '& a:hover': { color: theme.palette.kanap.teal, textDecoration: 'underline', textUnderlineOffset: '2px' },
+          })}
+        >
+          <thead>
+            <tr>
+              <th>{t('billing.invoices.columns.number')}</th>
+              <th>{t('billing.invoices.columns.date')}</th>
+              <th className="r">{t('billing.invoices.columns.amount')}</th>
+              <th>{t('billing.invoices.columns.status')}</th>
+              <th aria-label={t('billing.invoices.columns.links')} />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((invoice) => {
+              const status = getInvoiceStatusMeta(invoice.status, t);
+              const color = getDotColor(status.color ?? 'default', mode);
+              return (
+                <tr key={invoice.id}>
+                  <td>
+                    <Box component="span" sx={invoiceNumberSx}>{invoice.number || '—'}</Box>
+                  </td>
+                  <td>{formatShortDate(invoice.createdAt, locale, { empty: '—' })}</td>
+                  <td className="r">{formatMoney(locale, invoice.total, invoice.currency) ?? '—'}</td>
+                  <td>
+                    <Box component="span" sx={inlineStatusSx}>
+                      <StatusDot color={color} />
+                      <Box component="span" sx={{ color, fontWeight: 500 }}>{status.label}</Box>
+                    </Box>
+                  </td>
+                  <td className="r">
+                    <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+                      {invoice.hostedInvoiceUrl && (
+                        <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noopener noreferrer">
+                          {t('billing.invoices.actions.view')}
+                        </a>
+                      )}
+                      {invoice.invoicePdf && (
+                        <a href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer">
+                          {t('billing.invoices.actions.download')}
+                        </a>
+                      )}
+                    </Stack>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Box>
+      </Box>
+      {invoices.length > 5 && (
+        <Box component="button" type="button" onClick={() => setShowAll((prev) => !prev)} sx={{ ...tealLinkSx, fontSize: 13, mt: 1 }}>
+          {showAll
+            ? t('billing.invoices.actions.showFewer')
+            : t('billing.invoices.actions.showAll', { count: invoices.length })}
+        </Box>
+      )}
     </Box>
   );
 }
@@ -320,14 +428,13 @@ export default function BillingCenter() {
   const { mode } = useTheme().palette;
   const [portalError, setPortalError] = React.useState<string | null>(null);
   const [planDialogOpen, setPlanDialogOpen] = React.useState(false);
-  const [formError, setFormError] = React.useState<string | null>(null);
-  const [formSuccess, setFormSuccess] = React.useState<string | null>(null);
   const [opening, setOpening] = React.useState(false);
-  const [customerForm, setCustomerForm] = React.useState<BillingContactForm>(cloneForm(EMPTY_FORM));
-  const [invoiceForm, setInvoiceForm] = React.useState<BillingContactForm>(cloneForm(EMPTY_FORM));
-  const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = React.useState(false);
-  const [showAllInvoices, setShowAllInvoices] = React.useState(false);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
+  const [savesInFlight, setSavesInFlight] = React.useState(0);
+  const [justSaved, setJustSaved] = React.useState(false);
+  const savedTimerRef = React.useRef<number | null>(null);
+  // Saves run one after the other, so an answer never overwrites a newer one.
+  const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
 
   const canManage = !!claims?.isBillingAdmin;
   const queryClient = useQueryClient();
@@ -337,136 +444,130 @@ export default function BillingCenter() {
     queryFn: getBillingProfile,
   });
 
-  React.useEffect(() => {
-    if (profileQuery.data) {
-      setCustomerForm(contactToForm(profileQuery.data.customer));
-      setInvoiceForm(contactToForm(profileQuery.data.invoice));
-      setShowAllInvoices(false);
-    }
-  }, [profileQuery.data]);
+  React.useEffect(() => () => {
+    if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
+  }, []);
 
-  const baseCustomerForm = React.useMemo(
-    () => contactToForm(profileQuery.data?.customer),
-    [profileQuery.data?.customer],
-  );
-  const baseInvoiceForm = React.useMemo(
-    () => contactToForm(profileQuery.data?.invoice),
-    [profileQuery.data?.invoice],
-  );
-
-  const isDirty = profileQuery.data
-    ? !formsEqual(customerForm, baseCustomerForm) || !formsEqual(invoiceForm, baseInvoiceForm)
-    : false;
-
-  const updateMutation = useMutation<
-    BillingProfileUpdateResponse,
-    any,
-    { customer: Partial<BillingContact>; invoice: Partial<BillingContact> }
-  >({
-    mutationFn: (payload: { customer: Partial<BillingContact>; invoice: Partial<BillingContact> }) =>
-      updateBillingProfile(payload),
-    onSuccess: (data: BillingProfileUpdateResponse) => {
-      setFormError(null);
-      setFormSuccess(t('billing.messages.updateSuccess'));
-      setCheckoutError(null);
-      const nextCustomer = contactToForm(data.customer);
-      const nextInvoice = contactToForm(data.invoice);
-      setCustomerForm(nextCustomer);
-      setInvoiceForm(nextInvoice);
-      queryClient.setQueryData<BillingProfileResponse | undefined>(['billing-profile'], (prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          customer: data.customer,
-          invoice: data.invoice,
-          invoice_missing_fields: data.invoice_missing_fields,
-          invoices: data.invoices,
-        };
-      });
-    },
-    onError: (err: any) => {
-      setFormSuccess(null);
-      setFormError(getApiErrorMessage(err, t, t('billing.messages.saveFailed')));
-      setCheckoutError(null);
-    },
-  });
-
+  const invoice = profileQuery.data?.invoice;
   const subscriptionSummary = profileQuery.data?.subscription ?? subscription;
-  const loadingProfile = (profileQuery.isLoading && !profileQuery.data) || profileQuery.isFetching;
   const hasSubscription = !!subscriptionSummary?.stripe_subscription_id;
-  const subscriptionStatus = subscriptionSummary?.status ?? null;
-  const planLabel = React.useMemo(() => derivePlanLabel(subscriptionSummary, t), [subscriptionSummary, t]);
-  const statusMeta = React.useMemo(() => getStatusMeta(subscriptionSummary, t), [subscriptionSummary, t]);
-  const frequencyLabel = React.useMemo(() => formatSubscriptionType(subscriptionSummary, t), [subscriptionSummary, t]);
-  const collectionLabel = React.useMemo(() => formatCollectionMethod(subscriptionSummary, t), [subscriptionSummary, t]);
-  const paymentModeLabel = React.useMemo(() => formatPaymentMode(subscriptionSummary, t), [subscriptionSummary, t]);
-  const amountLabel = formatMoney(
-    locale,
-    subscriptionSummary?.amount ?? subscriptionSummary?.estimated_amount ?? null,
-    subscriptionSummary?.currency ?? subscriptionSummary?.estimated_currency ?? null
-  );
-  const paymentMethodLabel = (() => {
-    if (!subscriptionSummary?.default_payment_method_id) return paymentModeLabel;
-    if (subscriptionSummary.default_payment_method_brand && subscriptionSummary.default_payment_method_last4) {
-      return `${subscriptionSummary.default_payment_method_brand.toUpperCase()} •••• ${subscriptionSummary.default_payment_method_last4}`;
-    }
-    if (subscriptionSummary.default_payment_method_brand) return subscriptionSummary.default_payment_method_brand.toUpperCase();
-    return paymentModeLabel;
-  })();
-  const renewalLabel = formatDate(
-    locale,
-    subscriptionSummary?.renewal_at ??
-    subscriptionSummary?.current_period_end ??
-    subscriptionSummary?.next_payment_at ??
-    subscriptionSummary?.payment_due_at ??
-    null
-  );
-  const trialLabel = subscriptionSummary?.trial_end ? formatDate(locale, subscriptionSummary.trial_end) : null;
-  const lastSyncedLabel = formatDateTime(locale, subscriptionSummary?.last_synced_at);
-  const allowPortal = hasSubscription;
-  const isTrialing = subscriptionStatus === 'trialing';
-  const isLocalTrial = isTrialing && !hasSubscription;
-  // Amount, frequency, collection and payment method only describe a live subscription.
-  const showSubscriptionDetails = isLiveSubscription(subscriptionSummary);
-  const showRenewal = showSubscriptionDetails || isLocalTrial || renewalLabel !== '—';
-  const trialDaysRemaining = subscription?.trial_days_remaining;
+  const statusMeta = getStatusMeta(subscriptionSummary, t);
+  const statusColor = getDotColor(statusMeta.color ?? 'default', mode);
+  const { plan: planLine, details: detailParts } = subscriptionLines(subscriptionSummary, t, locale);
   const isHealthy = subscription?.is_subscription_healthy;
   const planActionLabel = hasSubscription ? t('billing.actions.changePlan') : t('billing.actions.choosePlan');
   const invoices = profileQuery.data?.invoices ?? [];
-  const invoicesToShow = showAllInvoices ? invoices : invoices.slice(0, 5);
-  const canToggleInvoices = invoices.length > 5;
   const invoiceMissingFields = profileQuery.data?.invoice_missing_fields ?? [];
-  const invoiceVatRequired = isEuCountry(invoiceForm.address.country);
-  // The saved VAT number is filled in but the server does not accept its format.
-  const invoiceVatMalformed =
-    invoiceMissingFields.includes('vatNumber') &&
-    invoiceForm.vatNumber.trim().length > 0 &&
-    invoiceForm.vatNumber === baseInvoiceForm.vatNumber;
-  const invoiceCardRef = React.useRef<HTMLDivElement>(null);
+  const savedCountry = savedValue(invoice, 'country');
+  const vatRequired = isEuCountry(savedCountry);
+  const sectionRef = React.useRef<HTMLDivElement>(null);
   const focusInvoiceOnExit = React.useRef(false);
+
+  const fields: InvoiceTextField[] = [
+    { key: 'company', label: t('billing.fields.company'), placeholder: t('billing.placeholders.company'), required: true, autoComplete: 'organization' },
+    { key: 'email', label: t('billing.fields.email'), placeholder: t('billing.placeholders.email'), required: true, type: 'email', autoComplete: 'email' },
+    { key: 'name', label: t('billing.fields.recipientName'), placeholder: t('billing.placeholders.recipientName') },
+    { key: 'phone', label: t('billing.fields.phone'), placeholder: t('billing.placeholders.phone'), autoComplete: 'tel' },
+    { key: 'addressLine1', label: t('billing.fields.addressLine1'), placeholder: t('billing.placeholders.addressLine1'), required: true },
+    { key: 'addressLine2', label: t('billing.fields.addressLine2'), placeholder: t('billing.placeholders.addressLine2') },
+    { key: 'postalCode', label: t('billing.fields.postalCode'), placeholder: t('billing.placeholders.postalCode'), required: true },
+    { key: 'city', label: t('billing.fields.city'), placeholder: t('billing.placeholders.city'), required: true },
+    { key: 'state', label: t('billing.fields.stateProvince'), placeholder: t('billing.placeholders.stateProvince') },
+  ];
+  const vatField: InvoiceTextField = {
+    key: 'vatNumber',
+    label: t('billing.fields.vatNumber'),
+    placeholder: t('billing.placeholders.vatNumber'),
+    required: vatRequired,
+  };
+
+  /**
+   * Sends one field. The answer replaces the cached profile's invoicing details, missing
+   * fields and invoices, so the plan dialog and the missing line follow what is saved.
+   */
+  const saveField = (key: InvoiceFieldKey, value: string | null, rollback?: () => void) => {
+    setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+    setSavesInFlight((count) => count + 1);
+    setJustSaved(false);
+    const run = async () => {
+      try {
+        const data = await updateBillingProfile({ invoice: fieldPatch(key, value) });
+        queryClient.setQueryData<BillingProfileResponse | undefined>(['billing-profile'], (prev) => (prev ? {
+          ...prev,
+          customer: data.customer ?? prev.customer,
+          invoice: data.invoice,
+          invoice_missing_fields: data.invoice_missing_fields ?? [],
+          invoices: data.invoices,
+        } : prev));
+        return true;
+      } catch (error) {
+        rollback?.();
+        const status = (error as { response?: { status?: number } } | null)?.response?.status;
+        const message = key === 'email' && status === 400
+          ? t('billing.invoiceDetails.emailFormat')
+          : getApiErrorMessage(error, t, t('billing.messages.saveFailed'));
+        setFieldErrors((prev) => ({ ...prev, [key]: message }));
+        return false;
+      }
+    };
+    const result = chainRef.current.then(run, run);
+    chainRef.current = result.catch(() => undefined);
+    void result.then((ok) => {
+      setSavesInFlight((count) => count - 1);
+      if (!ok) return;
+      setJustSaved(true);
+      if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = window.setTimeout(() => {
+        savedTimerRef.current = null;
+        setJustSaved(false);
+      }, 1500);
+    });
+  };
+
+  const commitText = (key: InvoiceTextField['key'], next: string | null) => {
+    if (!invoice || !canManage) return;
+    if ((next ?? '') === savedValue(invoice, key)) {
+      setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+      return;
+    }
+    saveField(key, next);
+  };
+
+  /** The country saves at once and shows before the answer (the VAT requirement follows it). */
+  const changeCountry = (code: string) => {
+    if (!invoice || !canManage) return;
+    const next = code || null;
+    if ((next ?? '') === savedCountry) return;
+    const setCountry = (value: string | null) => queryClient.setQueryData<BillingProfileResponse | undefined>(
+      ['billing-profile'],
+      (prev) => (prev ? { ...prev, invoice: withField(prev.invoice, 'country', value) } : prev),
+    );
+    const previous = savedCountry || null;
+    setCountry(next);
+    saveField('country', next, () => setCountry(previous));
+  };
 
   const handleCompleteInvoiceDetails = () => {
     focusInvoiceOnExit.current = true;
     setPlanDialogOpen(false);
   };
 
-  // Runs once the plan dialog has closed (and given focus back), then moves to the card.
+  // Runs once the plan dialog has closed (and given focus back), then moves to the first missing field.
   const handlePlanDialogExited = () => {
     if (!focusInvoiceOnExit.current) return;
     focusInvoiceOnExit.current = false;
-    const card = invoiceCardRef.current;
-    if (!card) return;
-    card.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    const section = sectionRef.current;
+    if (!section) return;
+    section.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     const firstMissing = invoiceMissingFields[0];
     const target =
-      (firstMissing ? card.querySelector<HTMLInputElement>(`input[data-invoice-field="${firstMissing}"]`) : null) ??
-      card.querySelector<HTMLInputElement>('input:not([disabled])');
+      (firstMissing ? section.querySelector<HTMLInputElement>(`input[data-invoice-field="${firstMissing}"]`) : null) ??
+      section.querySelector<HTMLInputElement>('input:not([disabled])');
     target?.focus({ preventScroll: true });
   };
 
   const openPortal = async () => {
     setPortalError(null);
-    setCheckoutError(null);
     setOpening(true);
     try {
       const res = await api.post('/billing/portal', { returnUrl: window.location.origin + '/admin/billing' });
@@ -489,516 +590,125 @@ export default function BillingCenter() {
     isHealthyRef.current = isHealthy;
   }, [isHealthy, canManage]);
 
-  const handleContactChange = (section: 'customer' | 'invoice', field: keyof BillingContactForm) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value;
-      setFormError(null);
-      setFormSuccess(null);
-      setCheckoutError(null);
-      if (section === 'customer') {
-        setCustomerForm((prev) => ({ ...prev, [field]: value }));
-      } else {
-        setInvoiceForm((prev) => ({ ...prev, [field]: value }));
-      }
-    };
+  const saveStatus = savesInFlight > 0
+    ? t('common:status.saving', { defaultValue: 'Saving…' })
+    : justSaved ? t('common:status.saved', { defaultValue: 'Saved' }) : null;
+  const missingLine = invoiceMissingFields.length > 0
+    ? t('billing.invoiceDetails.missing', {
+      fields: invoiceMissingFields
+        .map((key) => t(`planSelection.invoiceFields.${key}`, { defaultValue: key }))
+        .join(', '),
+    })
+    : null;
+  // The saved VAT number is filled in but the server does not accept its format.
+  const vatMalformed = invoiceMissingFields.includes('vatNumber') && savedValue(invoice, 'vatNumber').trim().length > 0;
+  const disabled = !canManage;
 
-  const handleAddressChange = (
-    section: 'customer' | 'invoice',
-    field: keyof BillingContactForm['address'],
-  ) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setFormError(null);
-    setFormSuccess(null);
-    setCheckoutError(null);
-    if (section === 'customer') {
-      setCustomerForm((prev) => ({ ...prev, address: { ...prev.address, [field]: value } }));
-    } else {
-      setInvoiceForm((prev) => ({ ...prev, address: { ...prev.address, [field]: value } }));
-    }
-  };
-
-  const handleCountryChange = (section: 'customer' | 'invoice') => (code: string) => {
-    setFormError(null);
-    setFormSuccess(null);
-    setCheckoutError(null);
-    if (section === 'customer') {
-      setCustomerForm((prev) => ({ ...prev, address: { ...prev.address, country: code } }));
-    } else {
-      setInvoiceForm((prev) => ({ ...prev, address: { ...prev.address, country: code } }));
-    }
-  };
-
-  const handleCopyFromCustomer = () => {
-    setFormError(null);
-    setFormSuccess(null);
-    setCheckoutError(null);
-    setInvoiceForm(cloneForm(customerForm));
-  };
-
-  const handleReset = () => {
-    if (!profileQuery.data) return;
-    setFormError(null);
-    setFormSuccess(null);
-    setCheckoutError(null);
-    setCustomerForm(contactToForm(profileQuery.data.customer));
-    setInvoiceForm(contactToForm(profileQuery.data.invoice));
-  };
-
-  const handleSave = () => {
-    if (!profileQuery.data) return;
-    setCheckoutError(null);
-    updateMutation.mutate({
-      customer: formToPayload(customerForm),
-      invoice: formToPayload(invoiceForm),
-    });
-  };
+  const renderTextRow = (field: InvoiceTextField) => (
+    <InvoiceTextRow
+      key={field.key}
+      field={field}
+      value={savedValue(invoice, field.key)}
+      disabled={disabled}
+      error={fieldErrors[field.key]}
+      invalidMessage={field.key === 'vatNumber' && vatMalformed ? t('billing.invoiceDetails.vatNumberFormat') : undefined}
+      onCommit={(next) => commitText(field.key, next)}
+    />
+  );
 
   return (
     <>
       <PageHeader title={t('billing.title')} />
-      <Stack spacing={2}>
-        {!!checkoutError && <Alert severity="error">{checkoutError}</Alert>}
-        {!!portalError && <Alert severity="error">{portalError}</Alert>}
-        {profileQuery.isError && (
-          <Alert severity="error">{getApiErrorMessage(profileQuery.error, t, t('billing.messages.loadFailed'))}</Alert>
+      <Stack spacing={4} sx={{ maxWidth: 960 }}>
+        {(!!portalError || profileQuery.isError) && (
+          <Stack spacing={1}>
+            {!!portalError && <Alert severity="error">{portalError}</Alert>}
+            {profileQuery.isError && (
+              <Alert severity="error">{getApiErrorMessage(profileQuery.error, t, t('billing.messages.loadFailed'))}</Alert>
+            )}
+          </Stack>
         )}
-        {!!formError && <Alert severity="error">{formError}</Alert>}
-        {!!formSuccess && <Alert severity="success">{formSuccess}</Alert>}
-        <Card variant="outlined">
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography variant="h6">{t('billing.subscription.title')}</Typography>
-              <Grid container spacing={3} alignItems="flex-start">
-                <Grid item xs={12} sm={6} md={3}>
-                  <SummaryItem label={t('billing.subscription.labels.plan')}>
-                    <Typography fontWeight={600}>{planLabel}</Typography>
-                  </SummaryItem>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <SummaryItem label={t('billing.subscription.labels.status')}>
-                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-                      <StatusDot color={getDotColor(statusMeta.color ?? 'default', mode)} />
-                      <Typography variant="body2" sx={{ color: getDotColor(statusMeta.color ?? 'default', mode), fontWeight: 500, fontSize: '0.8125rem', textTransform: 'capitalize' }}>{statusMeta.label}</Typography>
-                    </Box>
-                  </SummaryItem>
-                </Grid>
-                {showRenewal && (
-                  <Grid item xs={12} sm={6} md={3}>
-                    <SummaryItem label={t('billing.subscription.labels.renewalDate')}>
-                      <Typography>{renewalLabel}</Typography>
-                    </SummaryItem>
-                  </Grid>
-                )}
-                {showSubscriptionDetails && (
-                  <>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <SummaryItem label={t('billing.subscription.labels.amountPerPeriod')}>
-                        <Typography>{amountLabel}</Typography>
-                      </SummaryItem>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <SummaryItem label={t('billing.subscription.labels.billingFrequency')}>
-                        <Typography>{frequencyLabel}</Typography>
-                      </SummaryItem>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <SummaryItem label={t('billing.subscription.labels.collectionMethod')}>
-                        <Typography>{collectionLabel}</Typography>
-                      </SummaryItem>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <SummaryItem label={t('billing.subscription.labels.paymentMethod')}>
-                        <Typography>{paymentMethodLabel}</Typography>
-                      </SummaryItem>
-                    </Grid>
-                  </>
-                )}
-                {trialLabel && trialLabel !== '—' && (
-                  <Grid item xs={12} sm={6} md={3}>
-                    <SummaryItem label={t('billing.subscription.labels.trialEnds')}>
-                      <Typography>{trialLabel}</Typography>
-                    </SummaryItem>
-                  </Grid>
-                )}
-                {showSubscriptionDetails && (
-                  <Grid item xs={12} sm={6} md={3}>
-                    <SummaryItem label={t('billing.subscription.labels.lastStripeSync')}>
-                      <Typography>{lastSyncedLabel}</Typography>
-                    </SummaryItem>
-                  </Grid>
-                )}
-                {isTrialing && trialDaysRemaining != null && trialDaysRemaining > 0 && (
-                  <Grid item xs={12} md={4}>
-                    <SummaryItem label={t('billing.subscription.labels.trial')}>
-                      <Typography>{t('billing.subscription.values.daysRemaining', { count: trialDaysRemaining })}</Typography>
-                    </SummaryItem>
-                  </Grid>
-                )}
-                <Grid item xs={12} md={4}>
-                  <SummaryItem label={t('billing.subscription.labels.actions')}>
-                    <Stack
-                      direction={{ xs: 'column', sm: 'row', md: 'column' }}
-                      spacing={1}
-                      alignItems={{ xs: 'stretch', sm: 'center', md: 'flex-start' }}
-                    >
-                      <Button
-                        variant={isHealthy ? 'outlined' : 'contained'}
-                        onClick={() => setPlanDialogOpen(true)}
-                        disabled={!canManage}
-                      >
-                        {planActionLabel}
-                      </Button>
-                      {allowPortal && (
-                        <Button
-                          variant={isHealthy ? 'contained' : 'outlined'}
-                          onClick={openPortal}
-                          disabled={!canManage || opening}
-                        >
-                          {opening ? <CircularProgress size={20} sx={{ color: 'inherit' }} /> : t('billing.actions.manageSubscription')}
-                        </Button>
-                      )}
-                    </Stack>
-                    {!canManage && (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                        {t('shared.billingAdminRequired')}
-                      </Typography>
-                    )}
-                  </SummaryItem>
-                </Grid>
-              </Grid>
-            </Stack>
-          </CardContent>
-        </Card>
 
-        {invoices.length > 0 && (
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>{t('billing.invoices.title')}</Typography>
-              <Stack spacing={1.5}>
-                {invoicesToShow.map((invoice: BillingInvoice) => {
-                  const statusMeta = getInvoiceStatusMetaFromStatus(invoice.status, t);
-                  return (
-                    <Stack
-                      key={invoice.id}
-                      direction={{ xs: 'column', md: 'row' }}
-                      spacing={1.5}
-                      alignItems={{ xs: 'flex-start', md: 'center' }}
-                    >
-                      <Box sx={{ minWidth: 160 }}>
-                        <Typography fontWeight={600}>{invoice.number || invoice.id}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {invoice.createdAt ? formatDate(locale, invoice.createdAt) : '—'}
-                        </Typography>
-                      </Box>
-                      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-                        <StatusDot color={getDotColor(statusMeta.color ?? 'default', mode)} />
-                        <Typography variant="body2" sx={{ color: getDotColor(statusMeta.color ?? 'default', mode), fontWeight: 500, fontSize: '0.8125rem', textTransform: 'capitalize' }}>{statusMeta.label}</Typography>
-                      </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography>{formatMoney(locale, invoice.total, invoice.currency)}</Typography>
-                      </Box>
-                      <Stack direction="row" spacing={1}>
-                        {invoice.hostedInvoiceUrl && (
-                          <Button
-                            component="a"
-                            href={invoice.hostedInvoiceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            size="small"
-                          >
-                            {t('billing.invoices.actions.view')}
-                          </Button>
-                        )}
-                        {invoice.invoicePdf && (
-                          <Button
-                            component="a"
-                            href={invoice.invoicePdf}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            size="small"
-                          >
-                            {t('billing.invoices.actions.download')}
-                          </Button>
-                        )}
-                      </Stack>
-                    </Stack>
-                  );
-                })}
-              </Stack>
-              {canToggleInvoices && (
-                <Button
-                  variant="text"
-                  size="small"
-                  sx={{ mt: 2 }}
-                  onClick={() => setShowAllInvoices((prev) => !prev)}
-                >
-                  {showAllInvoices ? t('billing.invoices.actions.showFewer') : t('billing.invoices.actions.showMore')}
+        <Box component="section">
+          <Box sx={sectionHeadSx}>
+            <Typography component="h2" sx={sectionTitleSx}>{t('billing.subscription.title')}</Typography>
+          </Box>
+          <Box sx={summarySx}>
+            <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {planLine && (
+                <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary', lineHeight: 1.4 }}>
+                  {planLine}
+                </Typography>
+              )}
+              <Box sx={{ ...inlineStatusSx, flexWrap: 'wrap', fontSize: 13, lineHeight: 1.4, color: 'kanap.text.secondary' }}>
+                <StatusDot color={statusColor} />
+                <Box component="span" sx={{ color: statusColor, fontWeight: 500 }}>{statusMeta.label}</Box>
+                {detailParts.map((part) => (
+                  <Box component="span" key={part}>{`· ${part}`}</Box>
+                ))}
+              </Box>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+              <Button
+                variant={isHealthy === false ? 'contained' : 'action'}
+                size="small"
+                onClick={() => setPlanDialogOpen(true)}
+                disabled={!canManage}
+              >
+                {planActionLabel}
+              </Button>
+              {hasSubscription && (
+                <Button variant="action" size="small" onClick={openPortal} disabled={!canManage || opening}>
+                  {opening ? <CircularProgress size={14} sx={{ color: 'inherit' }} /> : t('billing.actions.managePayment')}
                 </Button>
               )}
-            </CardContent>
-          </Card>
-        )}
-
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>{t('billing.customer.title')}</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.customerName')}
-                  value={customerForm.name}
-                  onChange={handleContactChange('customer', 'name')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.company')}
-                  value={customerForm.company}
-                  onChange={handleContactChange('customer', 'company')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.email')}
-                  type="email"
-                  value={customerForm.email}
-                  onChange={handleContactChange('customer', 'email')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                  autoComplete="email"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.phone')}
-                  value={customerForm.phone}
-                  onChange={handleContactChange('customer', 'phone')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.vatNumber')}
-                  value={customerForm.vatNumber}
-                  onChange={handleContactChange('customer', 'vatNumber')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.addressLine1')}
-                  value={customerForm.address.line1}
-                  onChange={handleAddressChange('customer', 'line1')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.addressLine2')}
-                  value={customerForm.address.line2}
-                  onChange={handleAddressChange('customer', 'line2')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label={t('billing.fields.city')}
-                  value={customerForm.address.city}
-                  onChange={handleAddressChange('customer', 'city')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label={t('billing.fields.stateProvince')}
-                  value={customerForm.address.state}
-                  onChange={handleAddressChange('customer', 'state')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label={t('billing.fields.postalCode')}
-                  value={customerForm.address.postalCode}
-                  onChange={handleAddressChange('customer', 'postalCode')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <CountryPicker
-                  label={t('billing.fields.country')}
-                  value={customerForm.address.country}
-                  onChange={handleCountryChange('customer')}
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-
-        <Card variant="outlined" ref={invoiceCardRef}>
-          <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-              <Typography variant="h6">{t('billing.invoiceDetails.title')}</Typography>
-              <Button
-                startIcon={<ContentCopyIcon fontSize="small" />}
-                onClick={handleCopyFromCustomer}
-                disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-              >
-                {t('billing.invoiceDetails.copyFromCustomer')}
-              </Button>
             </Stack>
-            <Grid container spacing={2} sx={{ '& .MuiFormLabel-asterisk': { color: 'warning.main' } }}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.recipientName')}
-                  value={invoiceForm.name}
-                  onChange={handleContactChange('invoice', 'name')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.company')}
-                  value={invoiceForm.company}
-                  onChange={handleContactChange('invoice', 'company')}
-                  fullWidth
-                  required
-                  inputProps={{ 'data-invoice-field': 'company' }}
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.email')}
-                  type="email"
-                  value={invoiceForm.email}
-                  onChange={handleContactChange('invoice', 'email')}
-                  fullWidth
-                  required
-                  inputProps={{ 'data-invoice-field': 'email' }}
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                  autoComplete="email"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.phone')}
-                  value={invoiceForm.phone}
-                  onChange={handleContactChange('invoice', 'phone')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.vatNumber')}
-                  value={invoiceForm.vatNumber}
-                  onChange={handleContactChange('invoice', 'vatNumber')}
-                  fullWidth
-                  required={invoiceVatRequired}
-                  error={invoiceVatMalformed}
-                  helperText={invoiceVatMalformed ? t('billing.invoiceDetails.vatNumberFormat') : undefined}
-                  inputProps={{ 'data-invoice-field': 'vatNumber' }}
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.addressLine1')}
-                  value={invoiceForm.address.line1}
-                  onChange={handleAddressChange('invoice', 'line1')}
-                  fullWidth
-                  required
-                  inputProps={{ 'data-invoice-field': 'addressLine1' }}
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('billing.fields.addressLine2')}
-                  value={invoiceForm.address.line2}
-                  onChange={handleAddressChange('invoice', 'line2')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label={t('billing.fields.city')}
-                  value={invoiceForm.address.city}
-                  onChange={handleAddressChange('invoice', 'city')}
-                  fullWidth
-                  required
-                  inputProps={{ 'data-invoice-field': 'city' }}
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label={t('billing.fields.stateProvince')}
-                  value={invoiceForm.address.state}
-                  onChange={handleAddressChange('invoice', 'state')}
-                  fullWidth
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label={t('billing.fields.postalCode')}
-                  value={invoiceForm.address.postalCode}
-                  onChange={handleAddressChange('invoice', 'postalCode')}
-                  fullWidth
-                  required
-                  inputProps={{ 'data-invoice-field': 'postalCode' }}
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <CountryPicker
-                  label={t('billing.fields.country')}
-                  value={invoiceForm.address.country}
-                  onChange={handleCountryChange('invoice')}
-                  required
-                  fieldKey="country"
-                  disabled={!canManage || loadingProfile || updateMutation.isPending || checkoutLoading}
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
+          </Box>
+          {!canManage && (
+            <Typography sx={{ display: 'block', mt: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>
+              {t('shared.billingAdminRequired')}
+            </Typography>
+          )}
+        </Box>
 
-        {canManage && (
-          <Stack direction="row" spacing={2} justifyContent="flex-end">
-            <Button
-              variant="outlined"
-              onClick={handleReset}
-              disabled={!isDirty || updateMutation.isPending || loadingProfile || checkoutLoading}
-            >
-              {t('common:buttons.reset')}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSave}
-              disabled={!isDirty || updateMutation.isPending || loadingProfile || checkoutLoading}
-            >
-              {updateMutation.isPending ? <CircularProgress size={20} sx={{ color: 'inherit' }} /> : t('common:buttons.saveChanges')}
-            </Button>
-          </Stack>
+        <Box component="section" ref={sectionRef}>
+          <Box sx={sectionHeadSx}>
+            <Typography component="h2" sx={sectionTitleSx}>{t('billing.invoiceDetails.title')}</Typography>
+            {saveStatus && <Typography sx={saveStatusSx} role="status">{saveStatus}</Typography>}
+          </Box>
+          {invoice && (
+            <>
+              <Box sx={twoColumnsSx}>
+                {fields.map(renderTextRow)}
+                <PropertyRow label={t('billing.fields.country')} required valueSx={{ maxWidth: 'none' }}>
+                  <CountryPicker
+                    label={t('billing.fields.country')}
+                    placeholder={t('billing.placeholders.country')}
+                    value={savedCountry}
+                    onChange={changeCountry}
+                    disabled={disabled}
+                    error={fieldErrors.country}
+                  />
+                </PropertyRow>
+                {renderTextRow(vatField)}
+              </Box>
+              {missingLine && (
+                <Box sx={{ ...inlineStatusSx, mt: 1.5, fontSize: 13, color: 'kanap.text.secondary' }}>
+                  <StatusDot color={getDotColor('warning', mode)} />
+                  <span>{missingLine}</span>
+                </Box>
+              )}
+            </>
+          )}
+        </Box>
+
+        {invoices.length > 0 && (
+          <Box component="section">
+            <Box sx={sectionHeadSx}>
+              <Typography component="h2" sx={sectionTitleSx}>{t('billing.invoices.title')}</Typography>
+            </Box>
+            <InvoicesTable invoices={invoices} locale={locale} t={t} />
+          </Box>
         )}
       </Stack>
 

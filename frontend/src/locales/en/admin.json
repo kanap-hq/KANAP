@@ -278,10 +278,7 @@
     "actions": {
       "changePlan": "Change plan",
       "choosePlan": "Choose plan",
-      "manageSubscription": "Manage subscription"
-    },
-    "customer": {
-      "title": "Customer information"
+      "managePayment": "Manage payment"
     },
     "fields": {
       "addressLine1": "Address line 1",
@@ -289,7 +286,6 @@
       "city": "City",
       "company": "Company",
       "country": "Country",
-      "customerName": "Customer name",
       "email": "Email",
       "phone": "Phone",
       "postalCode": "Postal code",
@@ -298,7 +294,8 @@
       "vatNumber": "VAT number"
     },
     "invoiceDetails": {
-      "copyFromCustomer": "Copy from customer",
+      "emailFormat": "Check the format of this email address.",
+      "missing": "Required before subscribing: {{fields}}.",
       "title": "Invoicing information",
       "vatNumberFormat": "Check the format of this VAT number."
     },
@@ -312,9 +309,16 @@
     "invoices": {
       "actions": {
         "download": "Download",
+        "showAll": "Show all ({{count}})",
         "showFewer": "Show fewer invoices",
-        "showMore": "Show more invoices",
         "view": "View"
+      },
+      "columns": {
+        "amount": "Amount",
+        "date": "Date",
+        "links": "Documents",
+        "number": "Number",
+        "status": "Status"
       },
       "title": "Invoice history"
     },
@@ -322,8 +326,20 @@
       "loadFailed": "Failed to load billing details.",
       "portalFailed": "Failed to open the billing portal.",
       "portalUnavailable": "Billing portal is unavailable.",
-      "saveFailed": "Failed to save billing details.",
-      "updateSuccess": "Billing details updated."
+      "saveFailed": "Failed to save billing details."
+    },
+    "placeholders": {
+      "addressLine1": "e.g., 12 Main Street",
+      "addressLine2": "e.g., Building B",
+      "city": "e.g., Paris",
+      "company": "e.g., Example Ltd",
+      "country": "e.g., France",
+      "email": "e.g., billing@example.com",
+      "phone": "e.g., +33 1 23 45 67 89",
+      "postalCode": "e.g., 75001",
+      "recipientName": "e.g., Accounts payable",
+      "stateProvince": "e.g., Brittany",
+      "vatNumber": "e.g., FR12345678901"
     },
     "statuses": {
       "active": "Active",
@@ -338,32 +354,19 @@
       "unpaid": "Unpaid"
     },
     "subscription": {
-      "labels": {
-        "actions": "Actions",
-        "amountPerPeriod": "Amount per period",
-        "billingFrequency": "Billing frequency",
-        "collectionMethod": "Collection method",
-        "lastStripeSync": "Last stripe sync",
-        "paymentMethod": "Payment method",
-        "plan": "Plan",
-        "renewalDate": "Renewal date",
-        "status": "Status",
-        "trial": "Trial",
-        "trialEnds": "Trial ends"
-      },
-      "planLabels": {
-        "freeTrial": "Free trial"
-      },
       "title": "Subscription",
       "values": {
+        "amountPerMonth": "{{amount}} / month",
+        "amountPerYear": "{{amount}} / year",
         "annual": "Annual",
-        "automaticCharge": "Automatic charge",
         "bankTransfer": "Bank transfer",
         "card": "Card",
         "daysRemaining_one": "{{count}} day remaining",
         "daysRemaining_other": "{{count}} days remaining",
-        "invoiceManualPayment": "Invoice (manual payment)",
-        "monthly": "Monthly"
+        "ends": "ends {{date}}",
+        "monthly": "Monthly",
+        "renews": "renews {{date}}",
+        "trialEnded": "trial ended {{date}}"
       }
     },
     "title": "Billing"
