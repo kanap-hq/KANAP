@@ -86,7 +86,14 @@ async function serve(svc: Services, opts: { stripeConfigured?: boolean; failRese
       return svc.reset.reset(tenantId, actorId);
     },
   };
-  const service = new DemoDataService(dataSource, reset as any, svc.baseline, svc.auth, { isConfigured: () => !!opts.stripeConfigured } as any);
+  const notifications = {
+    async notifyWorkspaceReset(params: { tenantId: string; actorId: string }) {
+      emails.push({ tenantId: params.tenantId, actorId: params.actorId });
+    },
+  };
+  const service = new DemoDataService(
+    dataSource, reset as any, svc.baseline, svc.auth, { isConfigured: () => !!opts.stripeConfigured } as any, notifications as any,
+  );
   service.config.scriptPath = __filename;
   service.config.spawn = ((_command: string, _args: string[], options: any) => {
     const child = new FakeChild();
@@ -94,11 +101,6 @@ async function serve(svc: Services, opts: { stripeConfigured?: boolean; failRese
     return child;
   }) as any;
   (service as any).logger = { log: () => undefined, warn: () => undefined, error: () => undefined };
-  const notifications = {
-    async notifyWorkspaceReset(params: { tenantId: string; actorId: string }) {
-      emails.push({ tenantId: params.tenantId, actorId: params.actorId });
-    },
-  };
 
   @Module({
     imports: [ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }])],
@@ -107,7 +109,6 @@ async function serve(svc: Services, opts: { stripeConfigured?: boolean; failRese
       ListContextsService,
       { provide: DataSource, useValue: dataSource },
       { provide: DemoDataService, useValue: service },
-      { provide: NotificationsService, useValue: notifications },
     ],
   })
   class SampleDataProbeModule {}
@@ -172,6 +173,7 @@ function client(served: Served, t: ActivatedTenant, token = ownerToken(t)) {
   const host = hostOf(t);
   return {
     get: () => call(served, { method: 'GET', path: '/admin/sample-data', host, token }),
+    banner: () => call(served, { method: 'GET', path: '/admin/sample-data?view=banner', host, token }),
     load: () => call(served, { method: 'POST', path: '/admin/sample-data/load', host, token }),
     reset: (body?: unknown) => call(served, { method: 'POST', path: '/admin/sample-data/reset', host, token, body }),
     dismiss: () => call(served, { method: 'POST', path: '/admin/sample-data/dismiss', host, token }),
@@ -228,6 +230,33 @@ async function testAccess() {
     }
     assert.equal(served.children.length, 0, 'no loader started');
     assert.equal((await demoOf(t.tenantId)).status, 'idle');
+    // Who asks is checked first: a member learns nothing of the workspace's state.
+    await dataSource.query(`UPDATE tenants SET status = 'frozen' WHERE id = $1`, [t.tenantId]);
+    try {
+      const res = await asMember.load();
+      assert.equal(res.body?.code, 'administrator_required', `member load on a frozen tenant: ${JSON.stringify(res.body)}`);
+    } finally {
+      await dataSource.query(`UPDATE tenants SET status = 'active' WHERE id = $1`, [t.tenantId]);
+    }
+
+    // Administering users is not enough, and a disabled Administrator is refused too.
+    const people = await inTenant(t.tenantId, async (m) => {
+      const [role] = await m.query(`INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Sample spec user admins') RETURNING id`, [t!.tenantId]);
+      await m.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'users', 'admin')`, [t!.tenantId, role.id]);
+      const userAdmin = await svc.users.createUser({ email: `useradmin-${randomUUID().slice(0, 8)}@reset-spec.test`, role_name: 'Sample spec user admins', tenant_id: t!.tenantId }, { manager: m });
+      const disabled = await svc.users.createUser({ email: `disabled-${randomUUID().slice(0, 8)}@reset-spec.test`, role_name: 'Administrator', tenant_id: t!.tenantId }, { manager: m });
+      await m.query(`UPDATE users SET status = 'disabled' WHERE id = $1`, [disabled.id]);
+      return { userAdmin, disabled };
+    });
+    for (const [label, person] of [['users:admin', people.userAdmin], ['disabled Administrator', people.disabled]] as const) {
+      const as = client(served, t, tokenFor({ id: person.id, email: person.email, tenant_id: t.tenantId }));
+      for (const [route, run] of [['GET', as.get], ['load', as.load], ['reset', () => as.reset({ confirm_name: 'Access Org' })], ['dismiss', as.dismiss]] as const) {
+        const res = await run();
+        assert.equal(res.status, 403, `${route} as ${label}: ${JSON.stringify(res.body)}`);
+        assert.equal(res.body?.code, 'administrator_required', `${route} as ${label}`);
+      }
+    }
+    assert.equal(served.children.length, 0);
 
     const anonymous = await call(served, { method: 'GET', path: '/admin/sample-data', host: hostOf(t) });
     assert.equal(anonymous.status, 401);
@@ -243,6 +272,15 @@ async function testAccess() {
       assert.equal(res.status, 404, `platform host ${path}: ${JSON.stringify(res.body)}`);
     }
 
+    // A system tenant on its own address: nothing either.
+    await dataSource.query(`UPDATE tenants SET is_system_tenant = true WHERE id = $1`, [other.tenantId]);
+    try {
+      const res = await client(served, other).get();
+      assert.equal(res.status, 404, `system tenant: ${JSON.stringify(res.body)}`);
+    } finally {
+      await dataSource.query(`UPDATE tenants SET is_system_tenant = false WHERE id = $1`, [other.tenantId]);
+    }
+
     // On-premise: no route at all.
     const saved = Features.SINGLE_TENANT;
     (Features as any).SINGLE_TENANT = true;
@@ -254,6 +292,12 @@ async function testAccess() {
       (Features as any).SINGLE_TENANT = saved;
     }
     assert.equal(served.children.length, 0);
+
+    // A workspace that holds data: no load offered, and why.
+    await inTenant(t.tenantId, (m) => m.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`, [t!.tenantId]));
+    const full = await client(served, t).get();
+    assert.equal(full.body.can_load, false);
+    assert.equal(full.body.load_refusal, 'tenant_not_empty');
   } finally {
     await served.close();
     await cleanupTenants([t?.tenantId, other?.tenantId]);
@@ -275,6 +319,7 @@ async function testOverviewAndLoad() {
     assert.equal(first.status, 200, JSON.stringify(first.body));
     assert.equal(first.body.status, 'idle');
     assert.equal(first.body.can_load, true);
+    assert.equal(first.body.load_refusal, null);
     assert.equal(first.body.created_since_load, null);
     assert.equal(first.body.workspace_name, 'Load Org', 'the name to type, trimmed');
     assert.equal(first.body.loaded_by_name, null);
@@ -301,10 +346,20 @@ async function testOverviewAndLoad() {
     assert.equal(loaded.body.can_load, false);
     assert.equal(loaded.body.created_since_load, 0);
 
-    // Created after the load: a company and a real user count; a sample data user does not.
+    // Created after the load: a company and a document of the templates library count (the reset
+    // erases them); users do not (the reset keeps the real ones, the sample data ones are its own).
     await new Promise((resolve) => setTimeout(resolve, 20));
     await inTenant(t.tenantId, async (m) => {
       await m.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Created After', 'FR', 'Paris')`, [t!.tenantId]);
+      let [library] = await m.query(`SELECT id FROM document_libraries WHERE tenant_id = $1 AND slug = 'templates'`, [t!.tenantId]);
+      if (!library) {
+        [library] = await m.query(`INSERT INTO document_libraries (tenant_id, name, slug) VALUES ($1, 'Templates', 'templates') RETURNING id`, [t!.tenantId]);
+      }
+      await m.query(
+        `INSERT INTO documents (tenant_id, item_number, title, library_id)
+         VALUES ($1, (SELECT COALESCE(max(item_number), 0) + 1 FROM documents WHERE tenant_id = $1), 'Template after load', $2)`,
+        [t!.tenantId, library.id],
+      );
       await svc.users.createUser({
         email: `demo-${randomUUID().slice(0, 8)}@fromage-co.example`,
         role_name: 'Portfolio Member',
@@ -313,6 +368,14 @@ async function testOverviewAndLoad() {
     });
     await addRealUser(svc, t.tenantId);
     assert.equal((await owner.get()).body.created_since_load, 2);
+
+    // The banner's light answer: no count, no name.
+    const light = await owner.banner();
+    assert.equal(light.status, 200);
+    assert.equal(light.body.status, 'loaded');
+    assert.equal(light.body.created_since_load, null);
+    assert.equal(light.body.loaded_by_name, null);
+    assert.ok(light.body.ever_loaded_at, 'a full load is recorded');
   } finally {
     await served.close();
     await cleanupTenants([t?.tenantId]);
@@ -330,6 +393,7 @@ async function testReset() {
     t = await createActivatedTenant(svc, { tag: 'sdr-reset', orgName: 'Fromage Spec' });
     await loadThroughRoute(served, t);
     const owner = client(served, t);
+    assert.equal((await owner.get()).body.loaded_by_name, t.ownerEmail, 'no name: the email address');
 
     for (const body of [{ confirm_name: 'Fromage' }, { confirm_name: '' }, {}, { confirm_name: ['Fromage Spec'] }, undefined]) {
       const res = await owner.reset(body);
@@ -338,7 +402,7 @@ async function testReset() {
     }
     assert.equal((await demoOf(t.tenantId)).status, 'loaded', 'a mismatch changes nothing');
 
-    const started = await owner.reset({ confirm_name: '  fROMAGE spec ' });
+    const started = await owner.reset({ confirm_name: '  fROMAGE   spec ' });
     assert.equal(started.status, 202, JSON.stringify(started.body));
     assert.equal(started.body.status, 'resetting');
     assert.equal((await demoOf(t.tenantId)).status, 'resetting', 'answered before the reset has run');
@@ -352,6 +416,9 @@ async function testReset() {
     assert.deepEqual(served.emails, [{ tenantId: t.tenantId, actorId: t.ownerId }]);
     const after = await owner.get();
     assert.equal(after.body.can_load, true, 'back to its starting state');
+    assert.ok(after.body.ever_loaded_at, 'the past load is kept');
+    const light = await owner.banner();
+    assert.equal(light.body.can_load, false, 'the banner never comes back after a load');
 
     const again = await owner.reset({ confirm_name: 'Fromage Spec' });
     assert.equal(again.status, 409, 'nothing loaded any more');
@@ -370,6 +437,8 @@ async function testReset() {
     assert.equal(res.status, 202);
     await waitForBackgroundWork(Date.now() + 10_000);
     assert.equal((await demoOf(f.tenantId)).status, 'loaded', 'the state is back');
+    const failed = await client(failing, f).get();
+    assert.ok(failed.body.reset_failed_at, 'the page is told the reset failed');
     assert.deepEqual(failing.emails, [], 'no e-mail after a failed reset');
   } finally {
     await failing.close();
@@ -387,6 +456,10 @@ async function testFrozenWorkspace() {
     await inTenant(t.tenantId, (m) => m.query(
       `UPDATE subscriptions SET status = 'past_due', current_period_end = now() - interval '90 days' WHERE tenant_id = $1`, [t!.tenantId]));
     const owner = client(served, t);
+    // Said in advance: no load offered, and why.
+    const frozen = await owner.get();
+    assert.equal(frozen.body.can_load, false);
+    assert.equal(frozen.body.load_refusal, 'SUBSCRIPTION_FROZEN');
     const load = await owner.load();
     assert.equal(load.status, 403, JSON.stringify(load.body));
     assert.equal(load.body.code, 'SUBSCRIPTION_FROZEN');
@@ -396,15 +469,23 @@ async function testFrozenWorkspace() {
     const reset = await owner.reset({ confirm_name: 'Frozen Org' });
     assert.equal(reset.status, 202, JSON.stringify(reset.body));
     await waitFor('idle', () => demoOf(t!.tenantId), (state) => state.status === 'idle');
+
+    // While the API process stops, no reset starts (it would not be waited for).
+    await setDemo(t.tenantId, { status: 'loaded', loaded_at: new Date().toISOString(), loaded_by: t.ownerId });
+    served.service.stop();
+    const stopping = await owner.reset({ confirm_name: 'Frozen Org' });
+    assert.equal(stopping.status, 503, JSON.stringify(stopping.body));
+    assert.equal(stopping.body.code, 'demo_data_unavailable');
+    assert.equal((await demoOf(t.tenantId)).status, 'loaded');
   } finally {
     await served.close();
     await cleanupTenants([t?.tenantId]);
   }
 }
 
-// `dismiss` writes `metadata.demo.dismissed_at` and nothing else; a reset keeps it. The actions
-// are limited per user and route: the 11th in ten minutes gets 429, another administrator is
-// not counted.
+// `dismiss` writes `metadata.demo.dismissed_at` and nothing else. The actions (load, reset,
+// dismiss) are limited per user and per route: the 11th in ten minutes gets 429, reading is not
+// limited, another administrator keeps a budget of their own.
 async function testDismissAndRateLimit() {
   const saved = process.env.RATE_LIMIT_ENABLED;
   process.env.RATE_LIMIT_ENABLED = 'true';
@@ -435,6 +516,11 @@ async function testDismissAndRateLimit() {
     const limited = await owner.dismiss();
     assert.equal(limited.status, 429, 'one more: 429');
     assert.equal((await owner.get()).status, 200, 'reading is not limited');
+    // The same on the reset (refused names) and the load (one start, then conflicts).
+    for (let i = 0; i < limit; i++) assert.notEqual((await owner.reset({ confirm_name: 'wrong' })).status, 429, `reset ${i + 1}`);
+    assert.equal((await owner.reset({ confirm_name: 'wrong' })).status, 429, 'reset: one more, 429');
+    for (let i = 0; i < limit; i++) assert.notEqual((await owner.load()).status, 429, `load ${i + 1}`);
+    assert.equal((await owner.load()).status, 429, 'load: one more, 429');
 
     // Another administrator of the workspace keeps a budget of their own.
     const second = await inTenant(t.tenantId, (m) => svc.users.createUser({

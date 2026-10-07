@@ -1,12 +1,10 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Logger, NotFoundException, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { trackBackgroundWork } from '../common/background-work';
 import { MultiTenantOnlyGuard } from '../common/feature-gates';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { UserRateLimitGuard } from '../common/rate-limit.guard';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
-import { NotificationsService } from '../notifications/notifications.service';
 import { DemoDataOverview, DemoDataService, DemoDataState } from './demo-data.service';
 
 /**
@@ -15,7 +13,8 @@ import { DemoDataOverview, DemoDataService, DemoDataState } from './demo-data.se
  * Who: the Administrator role of the workspace, checked by DemoDataService on every route (403
  * `administrator_required`). No `@RequireLevel`: PermissionGuard's freeze would refuse the reset
  * of a frozen workspace, which stays allowed (the load is refused by the service instead).
- * Cloud only (MultiTenantOnlyGuard: 404 on-premise), never on the platform host (404).
+ * Cloud only (MultiTenantOnlyGuard: 404 on-premise), never on the platform host or another
+ * system tenant (404).
  *
  * No request transaction (`@SkipTenantTransaction`): the service opens its own, tenant-scoped
  * where it reads tenant tables. A request transaction that wrote a row referencing the tenant
@@ -31,17 +30,16 @@ import { DemoDataOverview, DemoDataService, DemoDataState } from './demo-data.se
 @SkipTenantTransaction()
 @Controller('admin/sample-data')
 export class DemoDataController {
-  private readonly logger = new Logger(DemoDataController.name);
+  constructor(private readonly demo: DemoDataService) {}
 
-  constructor(
-    private readonly demo: DemoDataService,
-    private readonly notifications: NotificationsService,
-  ) {}
-
-  /** The state, whether a load can start, the objects created since a load, the workspace name. */
+  /**
+   * The state, whether a load can start, the objects created since a load, the workspace name.
+   * `?view=banner`: the light answer of the home banner (`DemoOverviewView`).
+   */
   @Get()
-  overview(@Req() req: any): Promise<DemoDataOverview> {
-    return this.demo.getOverview({ tenantId: tenantOf(req), actorId: req.user?.sub });
+  async overview(@Req() req: any, @Query('view') view?: string): Promise<DemoDataOverview> {
+    const tenantId = await this.workspaceOf(req);
+    return this.demo.getOverview({ tenantId, actorId: req.user?.sub, view: view === 'banner' ? 'banner' : 'page' });
   }
 
   /** Starts the load and answers at once with the `loading` state; the page polls `GET`. */
@@ -49,29 +47,31 @@ export class DemoDataController {
   @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(UserRateLimitGuard)
   @Throttle({ default: RATE_LIMITS.sampleDataAction })
-  load(@Req() req: any): Promise<DemoDataState> {
-    return this.demo.load({ tenantId: tenantOf(req), actorId: req.user?.sub, host: String(req.headers?.host ?? '') });
+  async load(@Req() req: any): Promise<DemoDataState> {
+    const tenantId = await this.workspaceOf(req);
+    return this.demo.load({ tenantId, actorId: req.user?.sub, host: String(req.headers?.host ?? '') });
   }
 
   /**
    * `{ confirm_name }`: the workspace name, spaces around it and case ignored (400
    * `confirmation_mismatch` otherwise). Starts the reset and answers with the `resetting` state;
-   * the page polls `GET`. Once the reset has committed, the administrators get an e-mail.
+   * the page polls `GET`. Once the reset has committed, the administrators get an e-mail
+   * (DemoDataService, also when another API process finishes the reset).
    */
   @Post('reset')
   @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(UserRateLimitGuard)
   @Throttle({ default: RATE_LIMITS.sampleDataAction })
   async reset(@Req() req: any, @Body() body: { confirm_name?: unknown }): Promise<DemoDataState> {
-    const tenantId = tenantOf(req);
-    const actorId = req.user?.sub;
-    const { state, done } = await this.demo.startReset({ tenantId, actorId, confirmName: body?.confirm_name });
-    trackBackgroundWork(done.then(
-      () => this.notifications.notifyWorkspaceReset({ tenantId, actorId, resetAt: new Date() }),
-      (error) => {
-        this.logger.error(`Sample data reset of tenant ${tenantId} failed: ${error instanceof Error ? error.message : error}`);
-      },
-    ));
+    const tenantId = await this.workspaceOf(req);
+    const { state } = await this.demo.startReset({
+      tenantId,
+      actorId: req.user?.sub,
+      requireConfirmation: true,
+      confirmName: body?.confirm_name,
+    });
+    // The reset goes on in the background (tracked, never rejects); the service logs a failure
+    // and keeps it in the state for the page.
     return state;
   }
 
@@ -80,14 +80,16 @@ export class DemoDataController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(UserRateLimitGuard)
   @Throttle({ default: RATE_LIMITS.sampleDataAction })
-  dismiss(@Req() req: any): Promise<DemoDataState> {
-    return this.demo.dismissBanner({ tenantId: tenantOf(req), actorId: req.user?.sub });
+  async dismiss(@Req() req: any): Promise<DemoDataState> {
+    const tenantId = await this.workspaceOf(req);
+    return this.demo.dismissBanner({ tenantId, actorId: req.user?.sub });
   }
-}
 
-/** The workspace of the request; the platform host and tenant-less hosts have none. */
-function tenantOf(req: any): string {
-  const tenantId = req?.tenant?.id;
-  if (req?.isPlatformHost || typeof tenantId !== 'string' || !tenantId) throw new NotFoundException();
-  return tenantId;
+  /** The workspace of the request; the platform host, system tenants and tenant-less hosts have none. */
+  private async workspaceOf(req: any): Promise<string> {
+    const tenantId = req?.tenant?.id;
+    if (req?.isPlatformHost || typeof tenantId !== 'string' || !tenantId) throw new NotFoundException();
+    if (await this.demo.isSystemTenant(tenantId)) throw new NotFoundException();
+    return tenantId;
+  }
 }

@@ -85,6 +85,8 @@ type Harness = {
   logs: string[];
   /** Each reset: the status stored at that moment, and whether the last loader had closed. */
   resetCalls: Array<{ tenantId: string; actorId: string | null; status: string; childClosed: boolean | null }>;
+  /** The reset e-mails asked for (NotificationsService double). */
+  emails: Array<{ tenantId: string; actorId: string }>;
 };
 
 /** The service on the spec database, its loader spawned as a double, its log recorded. */
@@ -92,6 +94,7 @@ function harness(svc: Services, opts: { stripeConfigured?: boolean; failReset?: 
   const spawns: SpawnCall[] = [];
   const logs: string[] = [];
   const resetCalls: Harness['resetCalls'] = [];
+  const emails: Harness['emails'] = [];
   const realReset = svc.reset;
   const reset = {
     async reset(tenantId: string, actorId: string | null) {
@@ -115,6 +118,7 @@ function harness(svc: Services, opts: { stripeConfigured?: boolean; failReset?: 
     svc.baseline,
     svc.auth,
     { isConfigured: () => !!opts.stripeConfigured } as any,
+    { async notifyWorkspaceReset(params: { tenantId: string; actorId: string }) { emails.push({ tenantId: params.tenantId, actorId: params.actorId }); } } as any,
   );
   service.config.scriptPath = __filename;
   service.config.apiUrl = 'http://127.0.0.1:65530';
@@ -129,7 +133,7 @@ function harness(svc: Services, opts: { stripeConfigured?: boolean; failReset?: 
     for (const call of spawns) call.child.finish(0);
     await waitForBackgroundWork(Date.now() + 60_000);
   };
-  return { service, spawns, logs, resetCalls, finishAll };
+  return { service, spawns, logs, resetCalls, emails, finishAll };
 }
 
 const hostOf = (tenant: ActivatedTenant) => `${tenant.slug}.lvh.me`;
@@ -384,7 +388,7 @@ async function testReconciliation() {
 
     await setDemo(dead.tenantId, { status: 'loading', run_id: randomUUID(), heartbeat_at: minutesAgo(3), loaded_by: dead.ownerId, dismissed_at: '2026-10-01T00:00:00.000Z' });
     await setDemo(live.tenantId, { status: 'loading', run_id: randomUUID(), heartbeat_at: new Date(Date.now() - 10_000).toISOString(), loaded_by: live.ownerId });
-    await setDemo(manual.tenantId, { status: 'resetting', run_id: randomUUID(), heartbeat_at: minutesAgo(5), error_code: null });
+    await setDemo(manual.tenantId, { status: 'resetting', run_id: randomUUID(), heartbeat_at: minutesAgo(5), error_code: null, reset_by: manual.ownerId });
     await setDemo(auto.tenantId, { status: 'resetting', run_id: randomUUID(), heartbeat_at: minutesAgo(5), error_code: 'load_timeout' });
 
     const taken = await h.service.getStatus(dead.tenantId);
@@ -404,6 +408,10 @@ async function testReconciliation() {
     assert.equal(deadState.dismissed_at, '2026-10-01T00:00:00.000Z', 'the banner choice is kept');
     assert.equal(h.resetCalls.find((call) => call.tenantId === dead.tenantId)!.actorId, dead.ownerId);
     assert.equal((await demoOf(manual.tenantId)).status, 'idle');
+    // The reset an administrator asked for is finished for them, and e-mailed; the reset after a
+    // failed load is not.
+    assert.equal(h.resetCalls.find((call) => call.tenantId === manual.tenantId)!.actorId, manual.ownerId);
+    assert.deepEqual(h.emails, [{ tenantId: manual.tenantId, actorId: manual.ownerId }]);
     const autoState = await demoOf(auto.tenantId);
     assert.equal(autoState.status, 'failed');
     assert.equal(autoState.error_code, 'load_timeout');
@@ -593,8 +601,9 @@ async function testRefusals() {
 }
 
 // The reset an administrator asks for: `resetting` while the reset runs, then `idle` with the
-// tenant back to its starting state and the banner choice kept. A failed reset changes nothing
-// and puts the status back.
+// tenant back to its starting state, the banner choice and the past load kept, and an e-mail to
+// the administrators. A failed reset changes nothing, puts the status back with the failure
+// noted, and e-mails nobody; the next successful reset clears the note.
 async function testManualReset() {
   const svc = buildServices();
   const h = harness(svc);
@@ -604,7 +613,10 @@ async function testManualReset() {
     t = await createActivatedTenant(svc, { tag: 'dd-reset', orgName: 'Reset Org' });
     const initial = await countTenantRows(t.tenantId);
     await loadDemoSet(t.tenantId);
-    const loadedState = { status: 'loaded', run_id: randomUUID(), loaded_at: '2026-10-07T10:00:00.000Z', loaded_by: t.ownerId, dismissed_at: '2026-10-07T11:00:00.000Z' };
+    const loadedState = {
+      status: 'loaded', run_id: randomUUID(), loaded_at: '2026-10-07T10:00:00.000Z', loaded_by: t.ownerId,
+      dismissed_at: '2026-10-07T11:00:00.000Z', ever_loaded_at: '2026-10-07T10:00:00.000Z',
+    };
     await setDemo(t.tenantId, loadedState);
 
     const error = await refusal(() => failing.service.reset({ tenantId: t!.tenantId, actorId: t!.ownerId }));
@@ -614,6 +626,9 @@ async function testManualReset() {
     assert.equal(restored.status, 'loaded', 'the status is put back');
     assert.equal(restored.run_id, loadedState.run_id);
     assert.equal(restored.loaded_at, loadedState.loaded_at);
+    assert.ok(restored.reset_failed_at, 'the failure is noted for the page');
+    assert.equal(restored.reset_by, null);
+    assert.deepEqual(failing.emails, [], 'no e-mail after a failed reset');
 
     const done = await h.service.reset({ tenantId: t.tenantId, actorId: t.ownerId });
     assert.equal(done.status, 'idle');
@@ -622,13 +637,18 @@ async function testManualReset() {
     assert.deepEqual({ ...idle }, {
       status: 'idle', step: null, started_at: null, heartbeat_at: null, loaded_at: null, loaded_by: null,
       failed_at: null, error_code: null, dismissed_at: '2026-10-07T11:00:00.000Z', run_id: null,
+      ever_loaded_at: '2026-10-07T10:00:00.000Z', reset_failed_at: null, reset_by: null,
     });
+    await settle();
+    assert.deepEqual(h.emails, [{ tenantId: t.tenantId, actorId: t.ownerId }], 'the administrators are e-mailed');
     assert.deepEqual(countDifferences(initial, await countTenantRows(t.tenantId), ['audit_log']), []);
     // Ready for a new load.
     await h.service.load({ tenantId: t.tenantId, actorId: t.ownerId, host: hostOf(t) });
     h.spawns[0].child.finish(0);
     await settle();
-    assert.equal((await demoOf(t.tenantId)).status, 'loaded');
+    const reloaded = await demoOf(t.tenantId);
+    assert.equal(reloaded.status, 'loaded');
+    assert.ok(reloaded.ever_loaded_at && reloaded.ever_loaded_at > loadedState.ever_loaded_at, 'a full load is recorded');
   } finally {
     await h.finishAll();
     await failing.finishAll();

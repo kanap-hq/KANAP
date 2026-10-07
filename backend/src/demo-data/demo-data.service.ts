@@ -29,6 +29,7 @@ import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { TenantBaselineService } from '../tenants/tenant-baseline.service';
 import { TenantStatus } from '../tenants/tenant.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { User } from '../users/user.entity';
 
 /**
@@ -79,22 +80,44 @@ export type DemoDataState = {
   error_code: DemoErrorCode | null;
   /** When an administrator hid the home banner (written by the interface). */
   dismissed_at: string | null;
+  /** When sample data was last loaded in full. A reset keeps it: the home banner never shows again. */
+  ever_loaded_at: string | null;
+  /** When the last reset an administrator asked for failed; cleared by the next load or reset. */
+  reset_failed_at: string | null;
 };
 
-/** The stored state: the public one plus the id of the run that owns it. */
-type StoredDemoState = DemoDataState & { run_id: string | null };
+/**
+ * The stored state: the public one plus the id of the run that owns it and the administrator
+ * who asked for the running reset (for the e-mail, also when another API process finishes it).
+ */
+type StoredDemoState = DemoDataState & { run_id: string | null; reset_by: string | null };
 
 /** What the administration page and the home banner read (`GET /admin/sample-data`). */
 export type DemoDataOverview = DemoDataState & {
-  /** Sample data can be loaded now: the workspace is in its starting state, status `idle` or `failed`. */
+  /**
+   * Sample data can be loaded now: status `idle` or `failed`, the subscription in good standing,
+   * the workspace in its starting state.
+   */
   can_load: boolean;
+  /** Why a load would be refused now (status `idle` or `failed`), null when it would not be. */
+  load_refusal: DemoLoadRefusal | null;
   /** Objects users created since the load (`countCreatedSinceLoad`); null unless the status is `loaded`. */
   created_since_load: number | null;
   /** The name an administrator types to confirm a reset. */
   workspace_name: string;
-  /** The name of the user who started the last load, when known. */
+  /** Who started the last load: their name, or their email address when they have none. */
   loaded_by_name: string | null;
 };
+
+/**
+ * `page`: everything. `banner`: what the home banner needs, cheaply: no count of the objects
+ * created since a load, and no check of the workspace content once the banner can no longer
+ * show (hidden, or sample data loaded once): then `can_load` is false.
+ */
+export type DemoOverviewView = 'page' | 'banner';
+
+/** The refusals of a load the page explains in advance (the same codes as the load's errors). */
+export type DemoLoadRefusal = 'SUBSCRIPTION_FROZEN' | 'TRIAL_EXPIRED' | 'tenant_not_empty';
 
 /** A reset started by `startReset`: the state it moved to, and the reset itself. */
 export type StartedDemoReset = {
@@ -314,27 +337,21 @@ export async function findTenantContent(manager: EntityManager, tenantId: string
 }
 
 /**
- * The tables `countCreatedSinceLoad` reads besides the users and the documents: the business
- * and configuration tables of a workspace that has data, plus its companies. Each has `created_at`
- * (checked by the spec).
+ * The tables `countCreatedSinceLoad` reads: the business and configuration tables of a workspace
+ * that has data, its companies and its documents (the templates library included: a reset puts
+ * back only the starting templates). Each has `created_at` (checked by the spec). Users are not
+ * counted: the reset keeps the real ones.
  */
-export const DEMO_CREATED_SINCE_TABLES = [...DEMO_LOAD_EMPTY_TABLES, 'companies'] as const;
+export const DEMO_CREATED_SINCE_TABLES = [...DEMO_LOAD_EMPTY_TABLES, 'companies', 'documents'] as const;
 
 /**
  * How many objects were created in the workspace after `since` (the end of the sample data
- * load): the rows of `DEMO_CREATED_SINCE_TABLES`, the documents outside the templates library,
- * and the users other than the sample data ones. A reset erases them too. Runs under the
+ * load), which a reset erases too: the rows of `DEMO_CREATED_SINCE_TABLES`. Runs under the
  * tenant's RLS context.
  */
 export async function countCreatedSinceLoad(manager: EntityManager, tenantId: string, since: string): Promise<number> {
-  const counts = [
-    ...DEMO_CREATED_SINCE_TABLES.map((table) =>
-      `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND created_at > $2::timestamptz`),
-    `SELECT count(*)::int AS n FROM documents d LEFT JOIN document_libraries l ON l.id = d.library_id AND l.tenant_id = d.tenant_id
-      WHERE d.tenant_id = $1 AND d.created_at > $2::timestamptz AND l.slug IS DISTINCT FROM 'templates'`,
-    `SELECT count(*)::int AS n FROM users
-      WHERE tenant_id = $1 AND created_at > $2::timestamptz AND lower(email) NOT LIKE '%.example'`,
-  ];
+  const counts = DEMO_CREATED_SINCE_TABLES.map((table) =>
+    `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND created_at > $2::timestamptz`);
   const rows: Array<{ n: number }> = await manager.query(counts.join(' UNION ALL '), [tenantId, since]);
   return rows.reduce((sum, row) => sum + Number(row.n ?? 0), 0);
 }
@@ -344,9 +361,12 @@ export function workspaceConfirmationName(tenant: { name: string | null; slug: s
   return String(tenant.name ?? '').trim() || tenant.slug;
 }
 
-/** Whether a typed confirmation matches the workspace name: spaces around it and case ignored. */
+/**
+ * Whether a typed confirmation matches the workspace name: case, spaces around it and repeated
+ * spaces inside it ignored.
+ */
 export function confirmationMatches(typed: unknown, workspaceName: string): boolean {
-  const normalize = (value: string) => value.normalize('NFC').trim().toLowerCase();
+  const normalize = (value: string) => value.normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
   return typeof typed === 'string' && normalize(typed) !== '' && normalize(typed) === normalize(workspaceName);
 }
 
@@ -371,12 +391,15 @@ export function readDemoState(raw: unknown): StoredDemoState {
     failed_at: text(demo.failed_at),
     error_code: text(demo.error_code) as DemoErrorCode | null,
     dismissed_at: text(demo.dismissed_at),
+    ever_loaded_at: text(demo.ever_loaded_at),
+    reset_failed_at: text(demo.reset_failed_at),
     run_id: text(demo.run_id),
+    reset_by: text(demo.reset_by),
   };
 }
 
 function publicState(state: StoredDemoState): DemoDataState {
-  const { run_id: _runId, ...rest } = state;
+  const { run_id: _runId, reset_by: _resetBy, ...rest } = state;
   return rest;
 }
 
@@ -426,6 +449,7 @@ export class DemoDataService implements OnApplicationShutdown {
     private readonly baseline: TenantBaselineService,
     private readonly auth: AuthService,
     private readonly stripeConfig: StripeConfigService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** The tenant's sample data state. A load or a reset left by a stopped API process is taken over. */
@@ -436,22 +460,31 @@ export class DemoDataService implements OnApplicationShutdown {
 
   /**
    * What an administrator of the tenant sees of its sample data: the state, whether a load can
-   * start now, the objects created since a load, the name to type for a reset.
+   * start now, the objects created since a load, the name to type for a reset. The `banner` view
+   * skips what the home banner does not need (`DemoOverviewView`).
    */
-  async getOverview(params: { tenantId: string; actorId: string }): Promise<DemoDataOverview> {
+  async getOverview(params: { tenantId: string; actorId: string; view?: DemoOverviewView }): Promise<DemoDataOverview> {
     const tenant = await this.readTenant(params.tenantId);
     await withTenant(this.dataSource, tenant.id, (manager) => this.requireAdministrator(manager, tenant.id, params.actorId));
     const state = publicState(await this.reconcile(tenant.id, readDemoState(tenant.demo)));
+    const banner = params.view === 'banner';
     return withTenant(this.dataSource, tenant.id, async (manager) => {
-      const canLoad = (state.status === 'idle' || state.status === 'failed')
-        && (await findTenantContent(manager, tenant.id)).length === 0;
-      const createdSinceLoad = state.status === 'loaded' && state.loaded_at
+      const mayLoad = state.status === 'idle' || state.status === 'failed';
+      const bannerOver = banner && (!!state.dismissed_at || !!state.ever_loaded_at);
+      let refusal: DemoLoadRefusal | null = null;
+      if (mayLoad && !bannerOver) {
+        refusal = (await this.subscriptionRefusal(manager, tenant.id))
+          ?? ((await findTenantContent(manager, tenant.id)).length > 0 ? 'tenant_not_empty' : null);
+      }
+      const canLoad = mayLoad && !bannerOver && refusal === null;
+      const createdSinceLoad = !banner && state.status === 'loaded' && state.loaded_at
         ? await countCreatedSinceLoad(manager, tenant.id, state.loaded_at)
         : null;
       let loadedByName: string | null = null;
-      if (state.loaded_by && UUID.test(state.loaded_by)) {
+      if (!banner && state.loaded_by && UUID.test(state.loaded_by)) {
         const [user]: Array<{ name: string | null }> = await manager.query(
-          `SELECT NULLIF(trim(concat_ws(' ', first_name, last_name)), '') AS name FROM users WHERE tenant_id = $1 AND id = $2`,
+          `SELECT COALESCE(NULLIF(trim(concat_ws(' ', first_name, last_name)), ''), email) AS name
+             FROM users WHERE tenant_id = $1 AND id = $2`,
           [tenant.id, state.loaded_by],
         );
         loadedByName = user?.name ?? null;
@@ -459,11 +492,22 @@ export class DemoDataService implements OnApplicationShutdown {
       return {
         ...state,
         can_load: canLoad,
+        load_refusal: refusal,
         created_since_load: createdSinceLoad,
         workspace_name: workspaceConfirmationName(tenant),
         loaded_by_name: loadedByName,
       };
     });
+  }
+
+  /** Whether the tenant is a system tenant (the platform administration), which has no sample data. */
+  async isSystemTenant(tenantId: string): Promise<boolean> {
+    if (!UUID.test(String(tenantId ?? ''))) return false;
+    const [row]: Array<{ system: boolean | null }> = await this.dataSource.query(
+      `SELECT is_system_tenant AS system FROM tenants WHERE id = $1`,
+      [tenantId],
+    );
+    return row?.system === true;
   }
 
   /**
@@ -498,6 +542,9 @@ export class DemoDataService implements OnApplicationShutdown {
    */
   async load(params: { tenantId: string; actorId: string; host: string }): Promise<DemoDataState> {
     const tenant = await this.readTenant(params.tenantId);
+    // Who asks comes first: nothing else about the workspace is told to a non-administrator.
+    const actor = await withTenant(this.dataSource, tenant.id, (manager) =>
+      this.requireAdministrator(manager, tenant.id, params.actorId));
     if (tenant.status !== TenantStatus.ACTIVE) {
       throw new ForbiddenException({ code: 'tenant_not_active', message: 'This workspace is not active.' });
     }
@@ -514,8 +561,6 @@ export class DemoDataService implements OnApplicationShutdown {
       throw new ServiceUnavailableException({ code: 'demo_data_unavailable', message: 'Sample data is not available on this server.' });
     }
 
-    const actor = await withTenant(this.dataSource, tenant.id, (manager) =>
-      this.requireAdministrator(manager, tenant.id, params.actorId));
     const state = await this.reconcile(tenant.id, readDemoState(tenant.demo));
     if (state.status !== 'idle' && state.status !== 'failed') throw this.statusConflict(state.status);
 
@@ -566,18 +611,27 @@ export class DemoDataService implements OnApplicationShutdown {
 
   /**
    * The checks of a reset and the move to `resetting`, then the reset itself in `done`, tracked
-   * as background work (a stop waits for it). With `confirmName`, the typed workspace name must
-   * match (`confirmationMatches`), or 400 `confirmation_mismatch`. When the reset fails, the
-   * state goes back to what it was and `done` rejects.
+   * as background work (a stop waits for it). With `requireConfirmation`, the typed workspace
+   * name `confirmName` must match (`confirmationMatches`), or 400 `confirmation_mismatch`. When
+   * the reset succeeds, the workspace's administrators get an e-mail; when it fails, the state
+   * goes back to what it was with `reset_failed_at`, and `done` rejects.
    */
-  async startReset(params: { tenantId: string; actorId: string; confirmName?: unknown }): Promise<StartedDemoReset> {
+  async startReset(params: {
+    tenantId: string;
+    actorId: string;
+    requireConfirmation?: boolean;
+    confirmName?: unknown;
+  }): Promise<StartedDemoReset> {
     const tenant = await this.readTenant(params.tenantId);
     await withTenant(this.dataSource, tenant.id, (manager) => this.requireAdministrator(manager, tenant.id, params.actorId));
-    if ('confirmName' in params && !confirmationMatches(params.confirmName, workspaceConfirmationName(tenant))) {
+    if (params.requireConfirmation && !confirmationMatches(params.confirmName, workspaceConfirmationName(tenant))) {
       throw new BadRequestException({
         code: CONFIRMATION_MISMATCH_CODE,
         message: 'The name typed does not match the name of this workspace.',
       });
+    }
+    if (this.stopping) {
+      throw new ServiceUnavailableException({ code: 'demo_data_unavailable', message: 'The server is restarting. Try again in a minute.' });
     }
     const state = await this.reconcile(tenant.id, readDemoState(tenant.demo));
     if (state.status !== 'loaded' && state.status !== 'failed') throw this.statusConflict(state.status);
@@ -586,6 +640,7 @@ export class DemoDataService implements OnApplicationShutdown {
     const moved = await this.update(tenant.id, { statuses: [state.status], runId: state.run_id }, {
       status: 'resetting',
       run_id: runId,
+      reset_by: params.actorId,
       heartbeat_at: nowIso(),
       step: null,
       error_code: null,
@@ -601,15 +656,25 @@ export class DemoDataService implements OnApplicationShutdown {
     try {
       await this.withHeartbeat(tenantId, runId, () => this.tenantReset.reset(tenantId, actorId));
     } catch (error) {
-      // The reset is one transaction: nothing changed, the state goes back to what it was.
-      await this.update(tenantId, { statuses: ['resetting'], runId }, { ...previous }).catch((restoreError) => {
+      // The reset is one transaction: nothing changed, the state goes back to what it was, with
+      // the failure noted for the administrators.
+      this.logger.error(`Sample data reset of tenant ${tenantId} failed: ${errorMessage(error)}`);
+      await this.update(tenantId, { statuses: ['resetting'], runId }, { ...previous, reset_failed_at: nowIso() }).catch((restoreError) => {
         this.logger.error(`Sample data state of tenant ${tenantId} not restored after a failed reset: ${errorMessage(restoreError)}`);
       });
       throw error;
     }
     const settled = await this.update(tenantId, { statuses: ['resetting'], runId }, this.idleState());
     this.logger.log(`Tenant ${tenantId} reset to its starting state after sample data`);
+    if (settled) this.notifyReset(tenantId, actorId);
     return publicState(settled ?? (await this.readState(tenantId)));
+  }
+
+  /** The e-mail to the workspace's administrators after a reset one of them asked for. */
+  private notifyReset(tenantId: string, actorId: string | null): void {
+    if (!actorId) return;
+    // Never rejects (@NeverRejects), tracked as background work, its own connections.
+    void this.notifications.notifyWorkspaceReset({ tenantId, actorId, resetAt: new Date() });
   }
 
   /**
@@ -746,6 +811,8 @@ export class DemoDataService implements OnApplicationShutdown {
       loaded_by: null,
       failed_at: null,
       error_code: null,
+      reset_by: null,
+      reset_failed_at: null,
     };
   }
 
@@ -778,6 +845,7 @@ export class DemoDataService implements OnApplicationShutdown {
         loaded_by: actorId,
         failed_at: null,
         error_code: null,
+        reset_failed_at: null,
       }, manager);
       if (!claimed) throw this.statusConflict((await this.readState(tenantId, manager)).status);
       return claimed;
@@ -828,7 +896,10 @@ export class DemoDataService implements OnApplicationShutdown {
     );
     if (!claimed) return this.readState(tenantId);
     this.logger.warn(`Sample data ${state.status === 'loading' ? 'load' : 'reset'} of tenant ${tenantId} was left by a stopped API process: resetting the tenant`);
-    const actorId = state.loaded_by && UUID.test(state.loaded_by) ? state.loaded_by : null;
+    // A reset an administrator asked for is finished for them (and they are e-mailed); a load,
+    // or the reset after a failed load, is finished for whoever started the load.
+    const by = state.status === 'resetting' && !state.error_code ? state.reset_by : state.loaded_by;
+    const actorId = by && UUID.test(by) ? by : null;
     this.runInBackground(`reset of tenant ${tenantId}`, () =>
       this.resetThenSettle(tenantId, runId, actorId, errorCode));
     return claimed;
@@ -862,14 +933,24 @@ export class DemoDataService implements OnApplicationShutdown {
 
   /** Frozen subscriptions and expired trials get no sample data, like the AI features. */
   private async assertSubscriptionAllowsLoad(manager: EntityManager, tenantId: string): Promise<void> {
+    const decision = await this.subscriptionDecision(manager, tenantId);
+    if (!decision.allowed) {
+      throw new ForbiddenException({ error: decision.reason, code: decision.reason, message: decision.message });
+    }
+  }
+
+  /** The subscription's refusal of a load, or null (`assertSubscriptionAllowsLoad`). */
+  private async subscriptionRefusal(manager: EntityManager, tenantId: string): Promise<'SUBSCRIPTION_FROZEN' | 'TRIAL_EXPIRED' | null> {
+    const decision = await this.subscriptionDecision(manager, tenantId);
+    return decision.allowed ? null : (decision.reason ?? 'SUBSCRIPTION_FROZEN');
+  }
+
+  private async subscriptionDecision(manager: EntityManager, tenantId: string) {
     const configured = this.stripeConfig.isConfigured();
     const subscription = configured
       ? await manager.getRepository(Subscription).findOne({ where: { tenant_id: tenantId }, order: { created_at: 'DESC' } })
       : null;
-    const decision = evaluateSubscriptionAccess(subscription, Date.now(), configured);
-    if (!decision.allowed) {
-      throw new ForbiddenException({ error: decision.reason, code: decision.reason, message: decision.message });
-    }
+    return evaluateSubscriptionAccess(subscription, Date.now(), configured);
   }
 
   // ── Runs ──────────────────────────────────────────────────────────────────────────────────
@@ -937,12 +1018,16 @@ export class DemoDataService implements OnApplicationShutdown {
           return;
         }
         if (outcome.code === 0 && !outcome.error) {
-          const markLoaded = () => this.update(tenantId, { statuses: ['loading'], runId }, {
-            status: 'loaded',
-            loaded_at: nowIso(),
-            heartbeat_at: null,
-            step: null,
-          });
+          const markLoaded = () => {
+            const now = nowIso();
+            return this.update(tenantId, { statuses: ['loading'], runId }, {
+              status: 'loaded',
+              loaded_at: now,
+              heartbeat_at: null,
+              step: null,
+              ever_loaded_at: now,
+            });
+          };
           // Once more after a database error: left `loading`, the load would be taken for dead
           // and erased.
           const loaded = await markLoaded().catch(async (error) => {
@@ -1096,6 +1181,8 @@ export class DemoDataService implements OnApplicationShutdown {
     );
     if (settled) {
       this.logger.log(`Tenant ${tenantId} reset to its starting state after ${errorCode ? `a failed sample data load (${errorCode})` : 'sample data'}`);
+      // No error code: a reset an administrator asked for, taken over from a stopped API process.
+      if (!errorCode) this.notifyReset(tenantId, actorId);
     }
   }
 }
