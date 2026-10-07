@@ -7,8 +7,8 @@ Please report security vulnerabilities privately.
 Preferred channel:
 - GitHub: use this repository's private vulnerability reporting (Security Advisories).
 
-Fallback channel:
-- Email: `support@kanap.net`
+Alternative channel:
+- Email: `security@kanap.net`
 - Subject: `[SECURITY] <short summary>`
 
 Please do **not** open public GitHub issues for security vulnerabilities.

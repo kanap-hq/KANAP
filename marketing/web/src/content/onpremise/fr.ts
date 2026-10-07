@@ -33,7 +33,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Prêt pour la conformité',
-        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. TLS partout. Votre VPC, vos sauvegardes, votre SOC.',
+        body: 'Row-level security isole les tenants. Hash de mot de passe Argon2. HTTPS avec des certificats que vous maîtrisez. Votre VPC, vos sauvegardes, votre SOC.',
       },
       {
         title: 'Audit du code source',
@@ -45,7 +45,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Votre cadence',
-        body: 'Épinglez une version, testez une mineure, migrez selon votre calendrier de changements. Aucune mise à jour forcée, aucune coupure surprise.',
+        body: 'Épinglez la version que vous exécutez, testez une mise à jour, migrez selon votre calendrier de changements. Aucune mise à jour forcée, aucune coupure surprise.',
       },
     ],
   },
@@ -119,15 +119,15 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Mises à jour à votre rythme',
-        body: 'Épinglez un tag, testez en pré-prod, appliquez dans votre fenêtre de changement. Migrations au boot, idempotentes par conception.',
+        body: 'Épinglez la version que vous exécutez, testez la mise à jour en pré-prod, appliquez-la dans votre fenêtre de changement. Migrations au boot, idempotentes par conception.',
       },
       {
-        title: 'Les sauvegardes sont un dump postgres',
-        body: 'Outillage standard. Programmez pg_dump avec votre pipeline existant. Les fichiers sont légers et peuvent être snapshotés à part.',
+        title: 'Des sauvegardes avec vos propres outils',
+        body: 'PostgreSQL et stockage de fichiers standard. Sauvegardez-les avec le pipeline que vous exploitez déjà.',
       },
       {
         title: 'L\'observabilité que vous avez déjà',
-        body: 'Les conteneurs émettent des logs structurés et des endpoints de santé. Pointez votre stack existant dessus (Prometheus, Loki, Datadog, ce que vous avez déjà).',
+        body: 'Les conteneurs écrivent leurs logs sur stdout et exposent un endpoint de santé. Pointez votre stack existant dessus (Prometheus, Loki, Datadog, ce que vous avez déjà).',
       },
       {
         title: 'Branding inclus',

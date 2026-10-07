@@ -33,7 +33,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Compliance-ready',
-        body: 'Row-level security isolates tenants. Argon2 password hashing. TLS everywhere. Your VPC, your backups, your SOC.',
+        body: 'Row-level security isolates tenants. Argon2 password hashing. HTTPS with certificates you control. Your VPC, your backups, your SOC.',
       },
       {
         title: 'Audit the source',
@@ -45,7 +45,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Your cadence',
-        body: 'Pin a version, test a minor release, migrate on your change-window schedule. No forced updates, no surprise downtime.',
+        body: 'Pin the version you run, test an update, migrate on your change-window schedule. No forced updates, no surprise downtime.',
       },
     ],
   },
@@ -119,15 +119,15 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Updates on your schedule',
-        body: 'Pin a version tag, test a release in pre-prod, apply in your change window. Migrations run on boot, idempotent by design.',
+        body: 'Pin the version you run, test an update in pre-prod, apply it in your change window. Migrations run on boot, idempotent by design.',
       },
       {
-        title: 'Backups are a postgres dump',
-        body: 'Standard tooling. Schedule pg_dump with your existing backup pipeline. Files are minimal and can be snapshotted independently.',
+        title: 'Backups with your own tools',
+        body: 'Standard PostgreSQL and file storage. Back them up with the pipeline you already run.',
       },
       {
         title: 'Observability you already have',
-        body: 'Containers emit structured logs and health endpoints. Point your existing stack at them (Prometheus, Loki, Datadog, whatever you already run).',
+        body: 'Containers write logs to stdout and expose a health endpoint. Point your existing stack at them (Prometheus, Loki, Datadog, whatever you already run).',
       },
       {
         title: 'Branding included',

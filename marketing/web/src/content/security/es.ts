@@ -4,12 +4,12 @@ const content: SecurityContent = {
   meta: {
     title: 'Seguridad',
     description:
-      'Cómo KANAP protege sus datos: row-level security, cifrado, RBAC, registro de auditoría, gobernanza de agentes, SSO y transparencia open source. Autoalojado o en nube.',
+      'Cómo KANAP protege sus datos: row-level security, contraseñas con hash, secretos cifrados, RBAC, registro de auditoría, gobernanza de agentes, SSO y transparencia open source. Autoalojado o en nube.',
   },
   header: {
     eyebrow: 'Seguridad',
     title: 'Seguridad que respeta sus datos.',
-    lead: 'Controles a la altura de la gobernanza desde el primer día. La misma plataforma se ejecuta en nuestra nube y en sus propios servidores, con el mismo aislamiento, cifrado, auditabilidad y gobernanza sobre lo que los agentes pueden hacer.',
+    lead: 'Controles a la altura de la gobernanza desde el primer día. La misma plataforma se ejecuta en nuestra nube y en sus propios servidores, con el mismo aislamiento, control de acceso, auditabilidad y gobernanza sobre lo que los agentes pueden hacer.',
   },
   overview: {
     title: 'Principios',
@@ -22,37 +22,38 @@ const content: SecurityContent = {
       },
       {
         title: 'Aislado por diseño',
-        body: 'El row-level security a nivel de base de datos impone el aislamiento de tenants en cada consulta. No hay atajo entre tenants que esquivar, porque no hay atajo alguno.',
+        body: 'El row-level security de la propia base de datos impone el aislamiento de tenants en cada consulta que ejecuta la aplicación.',
       },
       {
         title: 'Exportable, siempre',
-        body: 'Sus datos son suyos. Exportación CSV en cada grid, exportación de documentos a PDF, DOCX, ODT, exportación completa del tenant bajo petición. Sin tasa de extracción.',
+        body: 'Sus datos son suyos. Exportación CSV en cada grid, exportación de documentos a PDF, DOCX y ODT. Sin tasa de extracción.',
       },
     ],
   },
   tenancy: {
     title: 'Aislamiento de tenants',
     body:
-      'KANAP es multi-tenant a nivel de base de datos. Cada fila de cada tabla compartida lleva un `tenant_id`, y las políticas de Row-Level Security de PostgreSQL imponen el filtro en cada lectura y escritura. La política es parte del esquema, no de la aplicación, una consulta maliciosa no puede saltársela.',
+      'KANAP es multi-tenant a nivel de base de datos. Cada fila de cada tabla compartida lleva un `tenant_id`, y las políticas de Row-Level Security de PostgreSQL imponen el filtro en cada lectura y escritura. La política es parte del esquema de la base de datos, así que se aplica a cada consulta de la aplicación.',
     bullets: [
-      'Políticas RLS de PostgreSQL en cada tabla compartida',
+      'Políticas RLS de PostgreSQL en cada tabla que contiene datos de tenant, todas forzadas',
       'Filtrado por `tenant_id` aplicado a nivel de base de datos, no solo en la app',
-      'Pools de conexión por tenant con variables de sesión que fijan el tenant actual',
+      'El tenant actual se fija al inicio de cada transacción de base de datos, y las políticas lo leen',
+      'El rol de base de datos de la aplicación no tiene derechos de superusuario ni de omisión, y la aplicación se niega a arrancar si los tuviera',
       'Las operaciones por lote usan `tenant_id = ANY($1)`, nunca fugas N+1',
-      'Pruebas de regresión multi-tenant en cada ejecución de CI',
+      'Pruebas de aislamiento de tenants en cada ejecución de CI',
     ],
   },
   dataProtection: {
     title: 'Protección de datos',
     body:
-      'Prácticas estándar, aplicadas con rigor. Cifrado en tránsito y en reposo, contraseñas con hash, minimización de datos sensibles.',
+      'Prácticas estándar, aplicadas con rigor. Hash robusto de contraseñas, secretos cifrados, tokens con hash y HTTPS en cada conexión de usuario.',
     bullets: [
-      'TLS en todas partes, sin texto plano entre componentes',
-      'Hash de contraseñas con Argon2 y salts por usuario',
+      'HTTPS en cada conexión entre los usuarios y la plataforma. En la nube, Cloudflare termina TLS delante de nuestros servidores',
+      'Hash de contraseñas con Argon2id (64 MiB de memoria) y salts por usuario',
       'Secretos gestionados vía entorno, no incluidos en el código',
-      'Los despliegues en nube usan volúmenes persistentes cifrados',
-      'Claves API (Plaid BYOK, tokens MCP) cifradas en reposo',
-      'Sin credenciales en texto plano en los logs; logs estructurados con reglas de redacción',
+      'Sus propias claves de proveedor de IA y credenciales de integración (GLPI, Netbox) cifradas en reposo con AES-256-GCM',
+      'Tokens MCP y tokens de renovación de sesión almacenados con hash, y revocables',
+      'Token de acceso en memoria en el navegador, token de renovación en una cookie HttpOnly',
     ],
   },
   access: {
@@ -71,14 +72,12 @@ const content: SecurityContent = {
   audit: {
     title: 'Registro de auditoría',
     body:
-      'Cada cambio relevante queda registrado. Quién cambió qué y cuándo, con instantáneas completas de antes y después. La actividad se ve en la app y se puede consultar por exportación.',
+      'Cada cambio relevante queda registrado. Quién cambió qué y cuándo, con los valores de antes y después. La actividad se ve en la app.',
     bullets: [
       'Cronología de actividad por entidad (tareas, proyectos, documentos, etc.)',
-      'Acciones de usuario registradas con marcas de tiempo y metadatos de IP',
-      'Acciones de inicio de sesión y administración en un feed de auditoría separado',
+      'Altas, modificaciones y desactivaciones registradas con el usuario, la marca de tiempo y los valores de antes y después',
+      'Los administradores consultan y filtran el registro de auditoría en la app',
       'Las acciones de los agentes se registran en el mismo registro, con las fuentes que utilizó cada agente',
-      'Exportable a CSV para ingesta en SIEM',
-      'Estructura inmutable append-only, las filas se añaden, nunca se reescriben',
     ],
   },
   agentGovernance: {
@@ -88,34 +87,35 @@ const content: SecurityContent = {
     bullets: [
       'Los agentes actúan solo a través de operaciones definidas, sin acceso directo a la base de datos ni al shell',
       'Cada agente acotado a lo que usted permite, bajo el mismo RBAC que la interfaz',
-      'Cada acción del agente registrada en el mismo registro de auditoría, exportable para su SIEM',
+      'Cada acción del agente registrada en el mismo registro de auditoría',
       'Las respuestas llevan las fuentes que utilizó el agente, para que una decisión se pueda comprobar',
       'Pause cualquier agente de inmediato, uno a uno o todos a la vez',
       'Los límites de gasto por agente mantienen acotado el coste de operación',
+      'Las funciones de IA están desactivadas por defecto. Antes de que un administrador las active con el modelo integrado, la aplicación indica el proveedor y dónde trata los datos, y pide confirmación. Puede usar su propio proveedor de modelos en su lugar',
     ],
   },
   deployment: {
     title: 'Despliegue y operaciones',
     body:
-      'Los despliegues en nube se ejecutan en hosts Linux reforzados dentro de la UE. Los despliegues autoalojados se ejecutan donde usted elija. Ambos llevan el mismo modelo de seguridad.',
+      'Los despliegues en nube se ejecutan en hosts Linux en Alemania, dentro de la Unión Europea, con Cloudflare por delante. Los despliegues autoalojados se ejecutan donde usted elija. Ambos llevan el mismo modelo de seguridad.',
     bullets: [
-      'Infraestructura solo en la UE para clientes en nube (OVH, Francia)',
-      'Actualizaciones periódicas de dependencias e imágenes de contenedor',
-      'Tarballs de autoalojamiento o imágenes de contenedor, deterministas, auditables',
-      'Logs estándar a stdout para integrarse con su stack de observabilidad',
-      'Copias de seguridad: pg_dump estándar, cífrelo con su propio pipeline',
+      'Alojamiento en la nube en Hetzner Online GmbH, en Núremberg, Alemania (UE), con Cloudflare por delante para CDN, terminación de TLS y protección',
+      'Autoalojado: el código fuente completo es público, y usted lo construye y lo ejecuta con Docker Compose',
+      'Autoalojado: ninguna llamada saliente obligatoria para las funciones básicas, así que KANAP puede funcionar sin acceso a internet',
+      'Autoalojado: usted decide dónde se ejecuta y cómo se respalda',
+      'Autoalojado: las funciones de IA usan solo el proveedor de modelos que configura su administrador',
     ],
   },
   disclosure: {
     title: 'Divulgación responsable',
     body:
-      'Si encuentra un problema de seguridad, queremos saberlo. Escríbanos primero, denos un plazo razonable para corregirlo y le daremos crédito en el aviso, salvo que prefiera permanecer anónimo.',
+      'Si encuentra un problema de seguridad, queremos saberlo. Infórmenos en privado, de preferencia mediante el reporte privado de vulnerabilidades de GitHub, o por correo. Denos un plazo razonable para corregirlo y le daremos crédito en el aviso, salvo que prefiera permanecer anónimo.',
     emailLabel: 'security@kanap.net',
     email: 'security@kanap.net',
   },
   cta: {
     title: '¿Preguntas sobre seguridad?',
-    body: 'Compartimos con gusto detalles de arquitectura, repasamos un modelo de amenazas o conectamos a su equipo de seguridad con el nuestro.',
+    body: 'Compartimos con gusto detalles de arquitectura, repasamos un modelo de amenazas con su equipo de seguridad.',
     primary: 'Hablar con nosotros',
     secondary: 'Autoaloje y audite el código',
   },

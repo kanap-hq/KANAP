@@ -33,7 +33,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Compliance-ready',
-        body: 'Row-Level Security isoliert Tenants. Argon2-Passworthashing. TLS überall. Ihre VPC, Ihre Backups, Ihr SOC.',
+        body: 'Row-Level Security isoliert Tenants. Argon2-Passworthashing. HTTPS mit Zertifikaten, die Sie kontrollieren. Ihre VPC, Ihre Backups, Ihr SOC.',
       },
       {
         title: 'Quellcode prüfbar',
@@ -45,7 +45,7 @@ const content: OnPremContent = {
       },
       {
         title: 'Ihr Takt',
-        body: 'Version pinnen, Minor-Release testen, im Change-Fenster migrieren. Keine erzwungenen Updates, keine Überraschungs-Downtime.',
+        body: 'Die betriebene Version pinnen, ein Update testen, im Change-Fenster migrieren. Keine erzwungenen Updates, keine Überraschungs-Downtime.',
       },
     ],
   },
@@ -119,15 +119,15 @@ const content: OnPremContent = {
     items: [
       {
         title: 'Updates nach Plan',
-        body: 'Version-Tag pinnen, Release in Pre-Prod testen, im Change-Fenster anwenden. Migrations laufen beim Boot, idempotent.',
+        body: 'Die betriebene Version pinnen, das Update in Pre-Prod testen, im Change-Fenster anwenden. Migrations laufen beim Boot, idempotent.',
       },
       {
-        title: 'Backups sind ein Postgres-Dump',
-        body: 'Standard-Tooling. pg_dump in Ihre bestehende Backup-Pipeline einbauen. Dateien sind klein und separat snapshotbar.',
+        title: 'Backups mit Ihren eigenen Werkzeugen',
+        body: 'Standard-PostgreSQL und Dateispeicher. Sichern Sie beides mit der Pipeline, die Sie bereits betreiben.',
       },
       {
         title: 'Observability, die Sie schon haben',
-        body: 'Container liefern strukturierte Logs und Health-Endpoints. Richten Sie Ihren bestehenden Stack darauf aus (Prometheus, Loki, Datadog, was Sie schon haben).',
+        body: 'Container schreiben Logs auf stdout und bieten einen Health-Endpoint. Richten Sie Ihren bestehenden Stack darauf aus (Prometheus, Loki, Datadog, was Sie schon haben).',
       },
       {
         title: 'Branding inklusive',

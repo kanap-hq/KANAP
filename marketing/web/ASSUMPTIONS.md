@@ -108,8 +108,8 @@ Built in phases: `/changelog`, `/security`, `/on-premise`. Confirmed in chat.
 ## SEO / analytics
 
 ### A-19. Analytics
-**Decision:** GA4 wired behind a `PUBLIC_GA_ID` build-time env var. If unset, the snippet is omitted. I ported the old `G-JNTR8JXN1Q` as a fallback in a commented line for reference — not active unless you uncomment.
-**Why:** Avoids accidentally double-counting against the old site and lets you opt in explicitly.
+**Decision:** No analytics script in the site. Audience is measured with Cloudflare Web Analytics, which is cookieless and injected at the Cloudflare edge. Google Analytics was removed.
+**Why:** No cookies, no consent banner, nothing stored on the visitor's device.
 
 ### A-20. Sitemap generation
 **Decision:** Using `@astrojs/sitemap` with per-locale entries (`/`, `/fr/`, `/de/`, `/es/`) and `i18n` config. Auto-generated at build.
@@ -179,7 +179,7 @@ Built in phases: `/changelog`, `/security`, `/on-premise`. Confirmed in chat.
 
 ### Infrastructure / deployment
 8. Set `PUBLIC_TURNSTILE_SITE_KEY` in the build env before production for `/trial/start` (form works without it locally but should have it on for real traffic)
-9. Set `PUBLIC_GA_ID` to the GA4 measurement ID if you want analytics — snippet is wired, just add the env var
+9. Analytics: Cloudflare Web Analytics is injected at the edge (zone RUM set to "Enable"); nothing to configure in the build
 10. Font self-hosting (A-29) — currently Google Fonts. Swap to `@fontsource-variable/inter` + `@fontsource-variable/jetbrains-mono` before prod for privacy/perf
 11. Delete or archive old `marketing/site/` — no longer built or served, kept for reference
 

@@ -4,13 +4,13 @@ const content: SecurityContent = {
   meta: {
     title: 'Sicherheit',
     description:
-      'Wie KANAP Ihre Daten schützt: Row-Level Security, Verschlüsselung, RBAC, Audit-Trail, Agenten-Governance, SSO und Open-Source-Transparenz. Self-Hosting oder Cloud.',
+      'Wie KANAP Ihre Daten schützt: Row-Level Security, gehashte Passwörter, verschlüsselte Secrets, RBAC, Audit-Trail, Agenten-Governance, SSO und Open-Source-Transparenz. Self-Hosting oder Cloud.',
   },
   header: {
     eyebrow: 'Sicherheit',
     title: 'Sicherheit, die Ihre Daten respektiert.',
     lead:
-      'Governance-taugliche Kontrollen vom ersten Tag an. Dieselbe Plattform läuft in unserer Cloud und auf Ihren eigenen Servern, mit derselben Isolation, Verschlüsselung, Auditierbarkeit und Governance darüber, was Agenten tun dürfen.',
+      'Governance-taugliche Kontrollen vom ersten Tag an. Dieselbe Plattform läuft in unserer Cloud und auf Ihren eigenen Servern, mit derselben Isolation, Zugriffskontrolle, Auditierbarkeit und Governance darüber, was Agenten tun dürfen.',
   },
   overview: {
     title: 'Prinzipien',
@@ -23,37 +23,38 @@ const content: SecurityContent = {
       },
       {
         title: 'Isoliert by design',
-        body: 'Row-Level Security auf Datenbankebene erzwingt Tenant-Isolation bei jeder Abfrage. Es gibt keinen Cross-Tenant-Shortcut zu umgehen, weil es überhaupt keinen gibt.',
+        body: 'Row-Level Security in der Datenbank selbst erzwingt die Tenant-Isolation bei jeder Abfrage, die die Anwendung ausführt.',
       },
       {
         title: 'Immer exportierbar',
-        body: 'Ihre Daten gehören Ihnen. CSV-Export auf jedem Grid, Dokumentexport nach PDF, DOCX, ODT, vollständiger Tenant-Export auf Anfrage. Keine Extraktions-Gebühr.',
+        body: 'Ihre Daten gehören Ihnen. CSV-Export auf jedem Grid, Dokumentexport nach PDF, DOCX und ODT. Keine Extraktions-Gebühr.',
       },
     ],
   },
   tenancy: {
     title: 'Tenant-Isolation',
     body:
-      'KANAP ist auf Datenbankebene multi-tenant. Jede Zeile in jeder geteilten Tabelle trägt eine `tenant_id`, und PostgreSQL Row-Level-Security-Policies erzwingen den Filter bei jedem Lese- und Schreibzugriff. Die Policy ist Teil des Schemas, nicht der Anwendung, eine bösartige Abfrage kann sie nicht umgehen.',
+      'KANAP ist auf Datenbankebene multi-tenant. Jede Zeile in jeder geteilten Tabelle trägt eine `tenant_id`, und PostgreSQL Row-Level-Security-Policies erzwingen den Filter bei jedem Lese- und Schreibzugriff. Die Policy ist Teil des Datenbankschemas und gilt damit für jede Abfrage der Anwendung.',
     bullets: [
-      'PostgreSQL-RLS-Policies auf jeder geteilten Tabelle',
+      'PostgreSQL-RLS-Policies auf jeder Tabelle mit Tenant-Daten, alle erzwungen (FORCE)',
       '`tenant_id`-Filter auf Datenbankebene erzwungen, nicht nur in der App',
-      'Verbindungspools pro Tenant mit Session-Variablen, die den aktuellen Tenant setzen',
+      'Der aktuelle Tenant wird zu Beginn jeder Datenbanktransaktion gesetzt, und die Policies lesen ihn',
+      'Die Datenbankrolle der Anwendung hat weder Superuser- noch Bypass-Rechte, sonst startet die Anwendung nicht',
       'Batch-Operationen mit `tenant_id = ANY($1)`, kein N+1-Leck',
-      'Multi-Tenant-Regressionstests bei jedem CI-Lauf',
+      'Tenant-Isolationstests bei jedem CI-Lauf',
     ],
   },
   dataProtection: {
     title: 'Datenschutz',
     body:
-      'Standardpraktiken, konsequent angewandt. Verschlüsselung in Transit und im Ruhezustand, gehashte Passwörter, Minimierung sensibler Daten.',
+      'Standardpraktiken, konsequent angewandt. Starkes Passwort-Hashing, verschlüsselte Secrets, gehashte Tokens und HTTPS für jede Nutzerverbindung.',
     bullets: [
-      'TLS überall, kein Klartext zwischen Komponenten',
-      'Argon2-Passwort-Hashing mit Salts pro Nutzer',
+      'HTTPS für jede Verbindung zwischen Nutzern und Plattform. In der Cloud beendet Cloudflare TLS vor unseren Servern',
+      'Argon2id-Passwort-Hashing (64 MiB Speicherkosten) mit Salts pro Nutzer',
       'Secrets über Environment, nicht im Code',
-      'Cloud-Deployments mit verschlüsselten persistenten Volumes',
-      'API-Keys (Plaid BYOK, MCP-Tokens) im Ruhezustand verschlüsselt',
-      'Keine Klartext-Zugangsdaten in Logs; strukturierte Logs mit Redaktionsregeln',
+      'Ihre eigenen KI-Provider-Schlüssel und Integrationszugangsdaten (GLPI, Netbox) im Ruhezustand mit AES-256-GCM verschlüsselt',
+      'MCP-Tokens und Refresh-Tokens der Sitzung werden gehasht gespeichert und sind widerrufbar',
+      'Zugriffstoken im Browser nur im Arbeitsspeicher, Refresh-Token in einem HttpOnly-Cookie',
     ],
   },
   access: {
@@ -72,14 +73,12 @@ const content: SecurityContent = {
   audit: {
     title: 'Audit-Trail',
     body:
-      'Jede relevante Änderung wird protokolliert. Wer hat was geändert, wann, mit vollständigen Vorher-/Nachher-Snapshots. Aktivität in der App sichtbar und per Export abfragbar.',
+      'Jede relevante Änderung wird protokolliert. Wer hat was geändert, wann, mit Werten vorher und nachher. Aktivität in der App sichtbar.',
     bullets: [
       'Zeitleiste pro Entity (Aufgaben, Projekte, Dokumente usw.)',
-      'Nutzeraktionen mit Zeitstempeln und IP-Metadaten geloggt',
-      'Login- und Admin-Aktionen in einem separaten Audit-Feed',
+      'Anlegen, Ändern und Deaktivieren mit Nutzer, Zeitstempel sowie Werten vorher und nachher protokolliert',
+      'Administratoren durchsuchen und filtern das Audit-Log in der App',
       'Agentenaktionen im selben Trail protokolliert, mit den Quellen, die jeder Agent genutzt hat',
-      'CSV-Export für die SIEM-Ingestion',
-      'Immutable Append-only-Struktur, Zeilen werden hinzugefügt, nie umgeschrieben',
     ],
   },
   agentGovernance: {
@@ -89,34 +88,35 @@ const content: SecurityContent = {
     bullets: [
       'Agenten handeln nur über definierte Operationen, ohne direkten Datenbank- oder Shell-Zugriff',
       'Jeder Agent auf das beschränkt, was Sie erlauben, unter demselben RBAC wie das UI',
-      'Jede Agentenaktion im selben Audit-Trail protokolliert, exportierbar für Ihr SIEM',
+      'Jede Agentenaktion im selben Audit-Trail protokolliert',
       'Antworten tragen die Quellen, die der Agent genutzt hat, sodass eine Entscheidung geprüft werden kann',
       'Jeden Agenten sofort pausieren, einzeln oder alle zusammen',
       'Ausgabenlimits pro Agent halten die Betriebskosten begrenzt',
+      'KI-Funktionen sind standardmäßig ausgeschaltet. Bevor ein Administrator sie mit dem integrierten Modell einschaltet, nennt die Anwendung den Anbieter und den Ort der Datenverarbeitung und bittet um Bestätigung. Sie können stattdessen Ihren eigenen Modellanbieter verwenden',
     ],
   },
   deployment: {
     title: 'Deployment & Betrieb',
     body:
-      'Cloud-Deployments laufen auf gehärteten Linux-Hosts innerhalb der EU. Self-Hosted-Deployments laufen dort, wo Sie wollen. Beide haben dasselbe Sicherheitsmodell.',
+      'Cloud-Deployments laufen auf Linux-Hosts in Deutschland, innerhalb der Europäischen Union, mit Cloudflare davor. Self-Hosted-Deployments laufen dort, wo Sie wollen. Beide haben dasselbe Sicherheitsmodell.',
     bullets: [
-      'Ausschließlich EU-Infrastruktur für Cloud-Kunden (OVH, Frankreich)',
-      'Regelmäßige Updates von Abhängigkeiten und Container-Images',
-      'Self-Hosting-Tarballs oder Container-Images, deterministisch, auditierbar',
-      'Standard-Logs auf stdout zur Integration in Ihren Observability-Stack',
-      'Backups: Standard-pg_dump, verschlüsselt über Ihre eigene Pipeline',
+      'Cloud-Hosting bei der Hetzner Online GmbH in Nürnberg, Deutschland (EU), mit Cloudflare davor für CDN, TLS-Terminierung und Schutz',
+      'Self-Hosting: Der vollständige Quellcode ist öffentlich, und Sie bauen und betreiben ihn selbst mit Docker Compose',
+      'Self-Hosting: keine zwingenden ausgehenden Aufrufe für Kernfunktionen, KANAP kann also ohne Internetzugang laufen',
+      'Self-Hosting: Sie entscheiden, wo es läuft und wie es gesichert wird',
+      'Self-Hosting: KI-Funktionen nutzen nur den Modellanbieter, den Ihr Administrator konfiguriert',
     ],
   },
   disclosure: {
     title: 'Responsible Disclosure',
     body:
-      'Wenn Sie ein Sicherheitsproblem finden, wollen wir davon erfahren. Schreiben Sie uns zuerst, geben Sie uns ein angemessenes Zeitfenster zur Behebung, und wir nennen Sie im Advisory, es sei denn, Sie bleiben lieber anonym.',
+      'Wenn Sie ein Sicherheitsproblem finden, wollen wir davon erfahren. Melden Sie es privat, am besten über das private Schwachstellen-Reporting von GitHub oder per E-Mail. Geben Sie uns ein angemessenes Zeitfenster zur Behebung, und wir nennen Sie im Advisory, es sei denn, Sie bleiben lieber anonym.',
     emailLabel: 'security@kanap.net',
     email: 'security@kanap.net',
   },
   cta: {
     title: 'Fragen zur Sicherheit?',
-    body: 'Wir teilen gerne Architektur-Details, besprechen ein Threat Model oder verbinden Ihr Security-Team mit unserem.',
+    body: 'Wir teilen gerne Architektur-Details, besprechen ein Threat Model mit Ihrem Security-Team.',
     primary: 'Sprechen Sie mit uns',
     secondary: 'Selbst hosten und den Code prüfen',
   },

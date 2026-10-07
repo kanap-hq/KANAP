@@ -1,4 +1,4 @@
-# ${VAR} interpolation in this file (e.g. marketing build.args.PUBLIC_GA_ID)
+# ${VAR} interpolation in this file (e.g. web build.args.VITE_API_URL)
 # comes from the Compose project env file passed on the command line:
 #   docker compose --env-file backend/.env.prod -f infra/compose.prod.yml ...
 # (a top-level env_file: key is not part of the Compose spec). The api
@@ -46,11 +46,6 @@ services:
     build:
       context: ../marketing
       dockerfile: Dockerfile
-      args:
-        # GA4 (BaseLayout gtag). Interpolated from project-level env_file
-        # (backend/.env.prod). Prod kanap.net: PUBLIC_GA_ID=G-JNTR8JXN1Q.
-        # Leave unset to omit gtag. Cloudflare Web Analytics stays edge-injected.
-        PUBLIC_GA_ID: ${PUBLIC_GA_ID:-}
     ports:
       - "127.0.0.1:8082:80"
     restart: unless-stopped
