@@ -7,7 +7,7 @@
 // demo user passwords, and provisions a demo AI agent on the mock ticketing
 // provider.
 //
-// Usage:
+// Usage (CLI mode, for the maintainer):
 //   node backend/fixtures/fromage-co/setup-tenant.mjs \
 //     --base-url https://fromage.dev.kanap.net \
 //     --email <your email> --password '<admin password>' \
@@ -17,11 +17,26 @@
 // gets. Use a private value on any tenant reachable from outside the machine,
 // or pass --demo-password '' to create the users without a password.
 //
+// Server mode (`--server-mode`, no other argument) is for the API, which runs
+// the script on a tenant that was just activated. Its inputs come from the
+// environment only:
+//   KANAP_DEMO_API_URL           the API root, e.g. http://127.0.0.1:8080
+//   KANAP_DEMO_HOST              the tenant's host name (the API resolves the tenant from it)
+//   KANAP_DEMO_TOKEN             an access token of the tenant administrator
+//   KANAP_DEMO_STARTING_COMPANY  the company the activation created, replaced by the dataset
+//   KANAP_DEMO_YEAR              the year the dataset is moved to
+// It skips the tenant bootstrap, the login, the demo passwords, the AI agent
+// and the Netbox test cases. Each step starts with a `KANAP_DEMO_STEP <name>`
+// line on stdout; the rest of the output goes to stderr. The exit code is not
+// zero when a step failed or warned: a partial load is a failure.
+//
 // See SETUP-GUIDE.md for the full procedure per environment.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildLinesFile, buildMonthlyFile, fetchDefaultDimensionCode, loadBudgetFile } from '../../scripts/lib/budget-file.mjs';
+import { DATASET_YEAR, parseCsv, shiftCsvText, shiftIsoDate } from '../../scripts/lib/fixture-csv.mjs';
+import { createHttpClient } from '../../scripts/lib/http-client.mjs';
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,10 +44,11 @@ const DEFAULTS = {
   baseUrl: 'https://fromage.dev.kanap.net',
   org: 'Fromage & Co',
   countryIso: 'FR',
-  year: 2026,
+  year: DATASET_YEAR,
 };
 
 const argv = process.argv.slice(2);
+const serverMode = argv.includes('--server-mode');
 const options = {
   baseUrl: DEFAULTS.baseUrl,
   email: '',
@@ -42,63 +58,121 @@ const options = {
   activationToken: '',
   demoPassword: null, // required: set by --demo-password ('' = no password)
   year: DEFAULTS.year,
+  yearShift: null, // --shift-years; null = the dataset's dates as written
   skipRelations: false,
   skipAgents: false,
   netboxTestCases: false,
 };
 
-for (let i = 0; i < argv.length; i += 1) {
-  const arg = argv[i];
-  if (arg === '--base-url') options.baseUrl = argv[++i] ?? options.baseUrl;
-  else if (arg === '--email') options.email = argv[++i] ?? options.email;
-  else if (arg === '--password') options.password = argv[++i] ?? options.password;
-  else if (arg === '--org') options.org = argv[++i] ?? options.org;
-  else if (arg === '--country') options.countryIso = argv[++i] ?? options.countryIso;
-  else if (arg === '--activation-token') {
-    // Accepts either the bare token or the full activation link from the email.
-    const raw = argv[++i] ?? '';
-    options.activationToken = raw.includes('#token=') ? raw.split('#token=')[1] : raw;
-  }
-  else if (arg === '--demo-password') options.demoPassword = argv[++i] ?? '';
-  else if (arg === '--year') options.year = Number(argv[++i] ?? options.year);
-  else if (arg === '--skip-relations') options.skipRelations = true;
-  else if (arg === '--skip-agents') options.skipAgents = true;
-  // Dev only: adds the deliberately duplicated asset used by the Netbox sync tests.
-  else if (arg === '--netbox-test-cases') options.netboxTestCases = true;
-  else throw new Error(`Unknown argument: ${arg}`);
-}
-
-options.baseUrl = options.baseUrl.replace(/\/$/, '');
-const missingArgs = [];
-if (!options.email) {
-  missingArgs.push('[ERR]  --email is required (the tenant administrator; also used when bootstrapping the tenant).');
-}
-if (!options.password) {
-  missingArgs.push('[ERR]  --password is required (tenant admin password; also used when bootstrapping the tenant).');
-}
-if (options.demoPassword === null) {
-  missingArgs.push(
-    "[ERR]  --demo-password is required (password given to every imported demo user). "
-    + "Pass --demo-password <value> with a private value, or --demo-password '' to create the users without a password.",
-  );
-}
-if (missingArgs.length > 0) {
-  for (const message of missingArgs) console.error(message);
+/** Stops before any request, with one line per problem. */
+function refuseToStart(messages) {
+  for (const message of messages) console.error(`[ERR]  ${message}`);
   process.exit(1);
 }
 
-const tenantHost = new URL(options.baseUrl).hostname;
-const slug = tenantHost.split('.')[0];
-// Public (pre-tenant) routes are served on the marketing apex; unknown tenant
-// subdomains answer TENANT_NOT_FOUND for everything else.
-const publicBaseUrl = options.baseUrl.replace(`//${tenantHost}`, `//${tenantHost.split('.').slice(1).join('.')}`);
-
 let token = '';
 let apiPrefix = '';
+let tenantHost = '';
+let publicBaseUrl = '';
 
-const info = (message) => console.log(`[INFO] ${message}`);
-const ok = (message) => console.log(`[OK]   ${message}`);
-const warn = (message) => console.warn(`[WARN] ${message}`);
+if (serverMode) {
+  if (argv.length !== 1) refuseToStart(['--server-mode takes no other argument: its inputs come from the KANAP_DEMO_* environment variables.']);
+  const env = process.env;
+  const problems = [];
+  const apiUrl = String(env.KANAP_DEMO_API_URL ?? '').trim();
+  try {
+    if (!['http:', 'https:'].includes(new URL(apiUrl).protocol)) problems.push('KANAP_DEMO_API_URL must be an http(s) URL.');
+  } catch {
+    problems.push('KANAP_DEMO_API_URL must be an http(s) URL.');
+  }
+  const host = String(env.KANAP_DEMO_HOST ?? '').trim().toLowerCase();
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(:\d+)?$/.test(host)) {
+    problems.push('KANAP_DEMO_HOST must be the host name of the tenant.');
+  }
+  const accessToken = String(env.KANAP_DEMO_TOKEN ?? '').trim();
+  if (!accessToken) problems.push('KANAP_DEMO_TOKEN is required.');
+  const startingCompany = String(env.KANAP_DEMO_STARTING_COMPANY ?? '').trim();
+  if (!startingCompany) problems.push('KANAP_DEMO_STARTING_COMPANY is required.');
+  const year = Number(String(env.KANAP_DEMO_YEAR ?? '').trim());
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) problems.push('KANAP_DEMO_YEAR must be a year between 2000 and 2100.');
+  if (problems.length) refuseToStart(problems);
+
+  options.baseUrl = apiUrl.replace(/\/$/, '');
+  options.org = startingCompany;
+  options.demoPassword = '';
+  options.yearShift = year - DATASET_YEAR;
+  options.skipAgents = true;
+  tenantHost = host;
+  token = accessToken;
+} else {
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--base-url') options.baseUrl = argv[++i] ?? options.baseUrl;
+    else if (arg === '--email') options.email = argv[++i] ?? options.email;
+    else if (arg === '--password') options.password = argv[++i] ?? options.password;
+    else if (arg === '--org') options.org = argv[++i] ?? options.org;
+    else if (arg === '--country') options.countryIso = argv[++i] ?? options.countryIso;
+    else if (arg === '--activation-token') {
+      // Accepts either the bare token or the full activation link from the email.
+      const raw = argv[++i] ?? '';
+      options.activationToken = raw.includes('#token=') ? raw.split('#token=')[1] : raw;
+    }
+    else if (arg === '--demo-password') options.demoPassword = argv[++i] ?? '';
+    else if (arg === '--year') options.year = Number(argv[++i] ?? options.year);
+    // Moves every date of the dataset by N years (N = target year - 2026), as the server mode does.
+    else if (arg === '--shift-years') options.yearShift = Number(argv[++i]);
+    else if (arg === '--skip-relations') options.skipRelations = true;
+    else if (arg === '--skip-agents') options.skipAgents = true;
+    // Dev only: adds the deliberately duplicated asset used by the Netbox sync tests.
+    else if (arg === '--netbox-test-cases') options.netboxTestCases = true;
+    else throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  options.baseUrl = options.baseUrl.replace(/\/$/, '');
+  const missingArgs = [];
+  if (!options.email) {
+    missingArgs.push('--email is required (the tenant administrator; also used when bootstrapping the tenant).');
+  }
+  if (!options.password) {
+    missingArgs.push('--password is required (tenant admin password; also used when bootstrapping the tenant).');
+  }
+  if (options.demoPassword === null) {
+    missingArgs.push(
+      "--demo-password is required (password given to every imported demo user). "
+      + "Pass --demo-password <value> with a private value, or --demo-password '' to create the users without a password.",
+    );
+  }
+  if (options.yearShift !== null && !Number.isInteger(options.yearShift)) {
+    missingArgs.push('--shift-years takes a whole number of years (target year - 2026).');
+  }
+  if (missingArgs.length > 0) refuseToStart(missingArgs);
+
+  tenantHost = new URL(options.baseUrl).hostname;
+  // Public (pre-tenant) routes are served on the marketing apex; unknown tenant
+  // subdomains answer TENANT_NOT_FOUND for everything else.
+  publicBaseUrl = options.baseUrl.replace(`//${tenantHost}`, `//${tenantHost.split('.').slice(1).join('.')}`);
+}
+
+const slug = tenantHost.split('.')[0];
+
+/** Years added to every date of the dataset (0: the files as written). */
+const YEAR_SHIFT = options.yearShift ?? 0;
+
+// Server mode: steps on stdout, everything a person reads on stderr.
+const say = serverMode ? (message) => process.stderr.write(`${message}\n`) : (message) => console.log(message);
+let warnings = 0;
+const info = (message) => say(`[INFO] ${message}`);
+const ok = (message) => say(`[OK]   ${message}`);
+const warn = (message) => {
+  warnings += 1;
+  if (serverMode) process.stderr.write(`[WARN] ${message}\n`);
+  else console.warn(`[WARN] ${message}`);
+};
+
+/** Marks the start of a step (server mode: one `KANAP_DEMO_STEP <name>` line on stdout). */
+function step(name) {
+  if (serverMode) process.stdout.write(`KANAP_DEMO_STEP ${name}\n`);
+}
 
 function file(name) {
   return path.join(ROOT_DIR, name);
@@ -109,60 +183,18 @@ function normalizeValue(value) {
   return String(value).trim();
 }
 
-function parseCsv(content, delimiter = ';') {
-  const rows = [];
-  let row = [];
-  let field = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < content.length; i += 1) {
-    const ch = content[i];
-    const next = content[i + 1];
-
-    if (ch === '"') {
-      if (inQuotes && next === '"') {
-        field += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (!inQuotes && ch === delimiter) {
-      row.push(field);
-      field = '';
-      continue;
-    }
-
-    if (!inQuotes && (ch === '\n' || ch === '\r')) {
-      if (ch === '\r' && next === '\n') i += 1;
-      row.push(field);
-      if (row.some((v) => v.length > 0)) rows.push(row);
-      row = [];
-      field = '';
-      continue;
-    }
-
-    field += ch;
-  }
-
-  row.push(field);
-  if (row.some((v) => v.length > 0)) rows.push(row);
-
-  if (rows.length === 0) return [];
-  const headers = rows[0].map((h) => normalizeValue(h));
-  return rows.slice(1).map((values) => {
-    const out = {};
-    for (let i = 0; i < headers.length; i += 1) {
-      out[headers[i]] = normalizeValue(values[i] ?? '');
-    }
-    return out;
-  });
+/** A dataset file as loaded: its dates moved by YEAR_SHIFT. */
+function fixtureText(name) {
+  return shiftCsvText(readFileSync(file(name), 'utf8'), YEAR_SHIFT);
 }
 
 function readCsv(name) {
-  return parseCsv(readFileSync(file(name), 'utf8'));
+  return parseCsv(fixtureText(name));
+}
+
+/** A date written in this script, moved like the dataset. */
+function shiftedDate(value) {
+  return shiftIsoDate(value, YEAR_SHIFT) ?? value;
 }
 
 function splitList(value) {
@@ -180,26 +212,22 @@ function lower(value) {
   return normalizeValue(value).toLowerCase();
 }
 
-async function request(method, route, body, { uploadPath, uploadBytes, uploadName, uploadFields, noAuth, publicHost } = {}) {
+// The tenant's API (server mode: on 127.0.0.1 with the tenant's Host) and, in
+// CLI mode, the public routes on the marketing apex.
+const tenantClient = createHttpClient({ baseUrl: options.baseUrl, host: serverMode ? tenantHost : null });
+const publicClient = serverMode ? null : createHttpClient({ baseUrl: publicBaseUrl });
+
+async function request(method, route, body, { uploadBytes, uploadName, uploadFields, noAuth, publicHost } = {}) {
   const headers = {};
-  const init = { method, headers };
-
   if (token && !noAuth) headers.Authorization = `Bearer ${token}`;
-
-  if (uploadPath || uploadBytes) {
-    const bytes = uploadBytes ?? readFileSync(uploadPath);
-    const form = new FormData();
-    form.append('file', new Blob([bytes], { type: 'text/csv;charset=utf-8' }), uploadName ?? path.basename(uploadPath));
-    for (const [name, value] of Object.entries(uploadFields ?? {})) form.append(name, value);
-    init.body = form;
-  } else if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-    init.body = JSON.stringify(body);
-  }
-
-  const url = `${publicHost ? publicBaseUrl : options.baseUrl}${apiPrefix}${route}`;
-  const response = await fetch(url, init);
-  const text = await response.text();
+  const client = publicHost ? publicClient : tenantClient;
+  const response = await client.request(method, `${apiPrefix}${route}`, {
+    headers,
+    ...(uploadBytes !== undefined
+      ? { form: { bytes: uploadBytes, filename: uploadName, fields: uploadFields ?? {} } }
+      : { json: body }),
+  });
+  const text = response.text;
   let payload = text;
   if (text) {
     try {
@@ -209,7 +237,7 @@ async function request(method, route, body, { uploadPath, uploadBytes, uploadNam
     }
   }
 
-  if (!response.ok) {
+  if (response.status < 200 || response.status >= 300) {
     const details = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
     const error = new Error(`${method} ${apiPrefix}${route} failed (${response.status})\n${details}`);
     error.status = response.status;
@@ -236,8 +264,9 @@ async function apiDelete(route) {
   return request('DELETE', route);
 }
 
-async function uploadCsv(route, csvPath) {
-  return request('POST', route, undefined, { uploadPath: csvPath });
+/** Sends a dataset file as loaded (dates moved by YEAR_SHIFT). */
+async function uploadCsv(route, name) {
+  return request('POST', route, undefined, { uploadBytes: Buffer.from(fixtureText(name), 'utf8'), uploadName: name });
 }
 
 function items(payload) {
@@ -683,8 +712,11 @@ async function budgetRequest(method, route, { bytes, filename, snapshot } = {}) 
   }
 }
 
-/** Y: the calendar year the source files' relative `y_*` columns are read against. */
-const BUDGET_YEAR = new Date().getFullYear();
+/**
+ * Y: the calendar year the source files' relative `y_*` columns are read against. The dataset's
+ * year moved by the shift when one is given (server mode, --shift-years), else the current year.
+ */
+const BUDGET_YEAR = options.yearShift === null ? new Date().getFullYear() : DATASET_YEAR + YEAR_SHIFT;
 
 const BUDGET_ITEM_FILES = { opex: '14-spend-items.csv', capex: '15-capex-items.csv' };
 
@@ -774,7 +806,7 @@ async function ensureCoa(name, code, scope, countryIso = undefined) {
 
 async function importCsv(name, route, extraQuery = '') {
   info(`Importing ${name}`);
-  const result = await uploadCsv(`${route}?dryRun=false${extraQuery}`, file(name));
+  const result = await uploadCsv(`${route}?dryRun=false${extraQuery}`, name);
   if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
   ok(`Imported ${name}`);
   return result;
@@ -782,7 +814,7 @@ async function importCsv(name, route, extraQuery = '') {
 
 async function importAccounts(coaId, name) {
   info(`Importing ${name} into CoA ${coaId}`);
-  const result = await uploadCsv(`/chart-of-accounts/${coaId}/accounts/import?dryRun=false`, file(name));
+  const result = await uploadCsv(`/chart-of-accounts/${coaId}/accounts/import?dryRun=false`, name);
   if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
   ok(`Imported ${name}`);
 }
@@ -1496,6 +1528,7 @@ async function ensurePortfolioTeamsAndCapacity() {
   ok('Portfolio teams and capacity ensured');
 }
 
+// Dates of the dataset year (2026), moved by YEAR_SHIFT when they are sent.
 const PROJECT_PHASES = {
   'Fromage-as-a-Service': [
     ['Discovery & UX Design', '2025-06-01', '2025-09-30', 'completed'],
@@ -1526,7 +1559,9 @@ async function ensureProjectPhases() {
       continue;
     }
     const existing = items(await apiGet(`/portfolio/projects/${projectId}/phases`));
-    for (const [name, planned_start, planned_end, status] of phases) {
+    for (const [name, start, end, status] of phases) {
+      const planned_start = shiftedDate(start);
+      const planned_end = shiftedDate(end);
       const phase = existing.find((item) => item.name === name);
       if (phase) {
         await apiPatch(`/portfolio/projects/${projectId}/phases/${phase.id}`, { name, planned_start, planned_end, status });
@@ -1783,35 +1818,50 @@ async function ensureDemoAgent() {
 // ── Orchestration ────────────────────────────────────────────────────────────
 
 async function runImports() {
-  await importCsv('01-companies.csv', '/companies/import', `&year=${options.year}`);
+  step('companies');
+  // The metric columns of 01-companies.csv (headcount_2025 ...) are read against this year.
+  await importCsv('01-companies.csv', '/companies/import', `&year=${options.year + YEAR_SHIFT}`);
   await cleanupBootstrapCompany();
+  step('charts-of-accounts');
   await setupCoas();
+  step('master-data');
   await importCsv('07-suppliers.csv', '/suppliers/import');
   await importCsv('08-departments.csv', '/departments/import');
   await importCsv('09-contacts.csv', '/contacts/import');
+  step('users');
   await ensureDemoUsers();
+  step('budget-setup');
   await importCsv('26-cost-centers.csv', '/cost-centers/import');
   await importCsv('27-analytics-values.csv', '/analytics-categories/import');
   await importCsv('28-working-day-calendars.csv', '/working-day-profiles/import');
+  step('applications');
   await importCsv('11-business-processes.csv', '/business-processes/import');
   await importCsv('12-applications.csv', '/applications/import');
+  step('contracts');
   await importCsv('13-contracts.csv', '/contracts/import');
+  step('budget');
   const budgetIndex = await importBudgetItems();
   await runBudget(budgetIndex);
   await removeLegacyDomainValues();
+  step('portfolio');
   await importCsv('16-portfolio-projects.csv', '/portfolio/projects/import');
   await importCsv('17-portfolio-requests.csv', '/portfolio/requests/import');
+  step('assets');
   const locationIdByFixtureCode = await ensureLocations();
   await ensureAssets(locationIdByFixtureCode);
-  await ensureAssetHardwareInfo();
+  // The hardware info and the two cases below only serve the Netbox sync tests (dev).
+  if (!serverMode) await ensureAssetHardwareInfo();
   if (options.netboxTestCases) await ensureDuplicateAssetName();
   if (options.netboxTestCases) await ensureRenamedAssets();
+  step('tasks');
   await importCsv('19-tasks.csv', '/tasks/import');
 }
 
 async function runRelations() {
+  step('application-links');
   await linkSuites();
   await linkApplicationDepartments();
+  step('landscape');
   await ensureAppInstances();
   await ensureMiddlewareEtlEnabled();
   await ensureInterfaces();
@@ -1819,40 +1869,67 @@ async function runRelations() {
   await ensureConnectionLegs(refToId);
   await ensureInterfaceBindings();
   await ensureInterfaceConnectionLinks(refToId);
+  step('budget-links');
   await linkContractsToSpend();
   await linkSpendToApps();
+  step('portfolio-teams');
   await ensurePortfolioTeamsAndCapacity();
   await ensureProjectPhases();
   await ensureProjectTeams();
+  step('allocations');
   await ensureCompanyAllocations();
 }
 
 async function main() {
-  await detectApiPrefix();
-  await ensureTenant();
+  if (!serverMode) {
+    await detectApiPrefix();
+    await ensureTenant();
+  }
+  step('settings');
   await setupSettings();
+  step('classification');
   await ensurePortfolioClassification();
   await ensureAnalyticsCategories();
   await ensureAnalyticsAxes();
   await runImports();
   if (!options.skipRelations) await runRelations();
+  step('knowledge');
   await ensureServiceDeskDocs();
   if (!options.skipAgents) await ensureDemoAgent();
 
+  const users = readCsv('10-users.csv');
+  const others = `${users[0]?.email} (and ${users.length - 1} others)`;
+  if (serverMode) {
+    if (warnings > 0) throw new Error(`The load is incomplete: ${warnings} warning(s) above.`);
+    ok('Fromage & Co demo data loaded');
+    say(`  Demo users:   ${others}, no password, no invitation`);
+    return;
+  }
   ok('Fromage & Co fixture setup complete');
   console.log('');
   console.log(`  App URL:      ${options.baseUrl}`);
   console.log(`  Tenant admin: ${options.email}`);
   console.log(options.demoPassword
-    ? '  Demo users:   thomas.berger@fromage-co.example (and 17 others), password passed with --demo-password'
-    : '  Demo users:   thomas.berger@fromage-co.example (and 17 others), no password set (--demo-password was empty)');
+    ? `  Demo users:   ${others}, password passed with --demo-password`
+    : `  Demo users:   ${others}, no password set (--demo-password was empty)`);
   if (!options.skipAgents) {
     console.log(`  Demo agent:   '${AGENT_NAME}' (mock ticketing) — check the Agents pages`);
     console.log(`  Knowledge:    '${SERVICE_DESK_LIBRARY}' library — the demo tickets find their answers there`);
   }
 }
 
-main().catch((error) => {
-  console.error(`[ERR]  ${error.message}`);
-  process.exitCode = 1;
-});
+const startedAt = Date.now();
+main()
+  .catch((error) => {
+    // The message names the route and the server's answer, never the request headers.
+    if (serverMode) process.stderr.write(`[ERR]  ${error.message}\n`);
+    else console.error(`[ERR]  ${error.message}`);
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    const requests = tenantClient.stats.requests + (publicClient?.stats.requests ?? 0);
+    const retries = tenantClient.stats.retries + (publicClient?.stats.retries ?? 0);
+    info(`${requests} HTTP requests (${retries} retried) in ${((Date.now() - startedAt) / 1000).toFixed(1)} s`);
+    tenantClient.close();
+    publicClient?.close();
+  });

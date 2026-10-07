@@ -96,7 +96,41 @@ time under its new address: load the current dataset on a new tenant instead.
    content immediately.
 
 Flags: `--skip-relations`, `--skip-agents`, `--org`, `--country`, `--year`,
-`--activation-token` (see below).
+`--shift-years`, `--activation-token` (see below), `--netbox-test-cases`.
+
+## Dates and years
+
+The dataset is written for 2026. `--shift-years N` moves every date by N
+years when the files are loaded (for 2027, pass `--shift-years 1`): each
+`YYYY-MM-DD` in a cell, each `year` value (files 28 to 30), the metric columns
+of `01-companies.csv` and the companies import year, the project phases, and
+the year the relative `y_*` budget columns are read against. A 29 February
+moved to a common year becomes the 28th. Years written inside a text (a note
+saying "2026 actuals") do not move. The files on disk never change.
+
+Without `--shift-years`, the runner behaves as before: the dates as written,
+and the `y_*` budget columns read against the current year.
+
+## Server mode
+
+The API runs the runner itself to load the demo data on a tenant that was just
+activated: `node backend/fixtures/fromage-co/setup-tenant.mjs --server-mode`,
+with no other argument. Its inputs come from the environment only:
+
+| Variable | Value |
+|---|---|
+| `KANAP_DEMO_API_URL` | The API root, e.g. `http://127.0.0.1:8080` (no `/api` prefix) |
+| `KANAP_DEMO_HOST` | The tenant's host name, sent as `Host` (the API resolves the tenant from it) |
+| `KANAP_DEMO_TOKEN` | An access token of the tenant administrator |
+| `KANAP_DEMO_STARTING_COMPANY` | The company the activation created, removed once the dataset's companies exist |
+| `KANAP_DEMO_YEAR` | The year the dataset is moved to (the shift is this year minus 2026) |
+
+In this mode the runner does not create the tenant, log in, set passwords
+(the demo users have none and get no invitation), create the demo AI agent or
+the Netbox test cases, or set the asset hardware info. Each step starts with
+one `KANAP_DEMO_STEP <name>` line on stdout; everything else goes to stderr.
+The runner exits with a non-zero code when a step fails or warns: a partial
+load is a failure. The token is never printed.
 
 ## Environments
 
@@ -177,7 +211,9 @@ first run.
 
 ## Files
 
-- `setup-tenant.mjs` — the runner (Node ≥ 20, no dependencies).
+- `setup-tenant.mjs` — the runner (Node ≥ 20, no dependencies). It reads the
+  files through `backend/scripts/lib/fixture-csv.mjs` (year shift) and calls the
+  API through `backend/scripts/lib/http-client.mjs`.
 - `01-…25-*.csv` — the dataset (semicolon-separated, UTF-8).
 - `26-…30-*.csv` — the budget dataset: cost centres, dimension values,
   calendars, costed lines and monthly rows. `14-spend-items.csv` and
