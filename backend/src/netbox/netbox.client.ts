@@ -1,7 +1,8 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import * as http from 'node:http';
 import * as https from 'node:https';
-import { assertPublicHttpTarget } from '../common/ssrf-guard';
+import { LookupFunction } from 'node:net';
+import { pinnedLookup, resolvePublicHttpTarget } from '../common/ssrf-guard';
 import {
   normalizeNetboxDevice,
   normalizeNetboxLocation,
@@ -55,6 +56,8 @@ export type NetboxHttpRequest = {
   headers: Record<string, string>;
   timeoutMs: number;
   insecureTls: boolean;
+  // Connects to the addresses validated before the request (multi-tenant mode).
+  lookup?: LookupFunction;
 };
 
 export type NetboxHttpLike = (url: string, request: NetboxHttpRequest) => Promise<NetboxHttpResponse>;
@@ -148,6 +151,7 @@ const nodeHttpTransport: NetboxHttpLike = (url, request) => new Promise((resolve
     {
       method: 'GET',
       headers: request.headers,
+      ...(request.lookup ? { lookup: request.lookup } : {}),
       ...(parsed.protocol === 'https:' && request.insecureTls ? { rejectUnauthorized: false } : {}),
     },
     (res) => {
@@ -367,8 +371,9 @@ export class NetboxClient {
     }
     // Blocks internal targets in multi-tenant cloud (no-op on-prem, where a
     // private Netbox address is the normal case). DNS-checked here, at request
-    // time, not only when the connection was saved.
-    await assertPublicHttpTarget(url.toString());
+    // time, not only when the connection was saved; the request then connects to
+    // the validated addresses only.
+    const target = await resolvePublicHttpTarget(url.toString());
 
     let response: NetboxHttpResponse;
     try {
@@ -379,6 +384,7 @@ export class NetboxClient {
         },
         timeoutMs,
         insecureTls: connection.insecureTls === true,
+        ...(target.addresses ? { lookup: pinnedLookup(url.hostname, target.addresses) } : {}),
       });
     } catch (error: any) {
       if (error instanceof NetboxApiError) {

@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { AiStreamEvent, AiStreamParams, AiSystemPromptRole } from './ai-provider.types';
 import { isAbortError } from './streaming.util';
+import { providerFetchOptions, toProviderError } from './provider-http.util';
 
 const logger = new Logger('OpenAiCompatibleStream');
 
@@ -122,7 +123,7 @@ async function* emitXmlStyleToolCallsFromError(
 ): AsyncGenerator<AiStreamEvent> {
   const parsedCalls = parseXmlStyleToolCallsFromText(extractErrorText(error));
   if (parsedCalls.length === 0) {
-    throw error;
+    throw toProviderError(error);
   }
 
   logger.warn(
@@ -150,11 +151,13 @@ export function getOpenAiSystemPromptRole(model: string): AiSystemPromptRole {
 
 export async function* openaiCompatibleStream(params: AiStreamParams): AsyncGenerator<AiStreamEvent> {
   const replayReasoningContent = shouldReplayReasoningContent(params.endpointUrl);
+  const fetchOptions = providerFetchOptions();
   const client = new OpenAI({
     apiKey: params.apiKey || 'unused',
     ...(params.endpointUrl ? { baseURL: params.endpointUrl } : {}),
     timeout: params.timeoutMs ?? 120_000,
     maxRetries: params.maxRetries ?? 2,
+    ...(fetchOptions ? { fetchOptions } : {}),
   });
 
   const tools: OpenAI.ChatCompletionTool[] = params.tools.map((t) => ({
