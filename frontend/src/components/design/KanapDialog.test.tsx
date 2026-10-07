@@ -85,3 +85,29 @@ describe('KanapDialog Enter key', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 });
+
+describe('KanapDialog optional slots', () => {
+  it('renders the subtitle and the secondary actions between cancel and the main action', () => {
+    const onSecondary = vi.fn();
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialog
+          open
+          title="Dialog"
+          subtitle="A quiet line"
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          saveLabel="Main"
+          secondaryActions={<button type="button" onClick={onSecondary}>Other</button>}
+        >
+          <div />
+        </KanapDialog>
+      </ThemeProvider>,
+    );
+    expect(screen.getByText('A quiet line')).toBeInTheDocument();
+    const names = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(names.slice(-3)).toEqual(['buttons.cancel', 'Other', 'Main']);
+    fireEvent.click(screen.getByRole('button', { name: 'Other' }));
+    expect(onSecondary).toHaveBeenCalledTimes(1);
+  });
+});

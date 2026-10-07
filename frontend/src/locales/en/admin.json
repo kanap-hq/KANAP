@@ -645,9 +645,11 @@
       "payByBankTransfer": "Pay by bank transfer",
       "payByCard": "Pay by card"
     },
-    "annualSavings": "2 months free",
+    "annualSavings_one": "{{count}} month free",
+    "annualSavings_other": "{{count}} months free",
     "billingCycle": {
       "annual": "Annual",
+      "label": "Billing interval",
       "monthly": "Monthly"
     },
     "errors": {
@@ -668,21 +670,26 @@
       "checkoutUrlUnavailable": "Checkout URL is unavailable.",
       "invoiceCreated": "Invoice created.",
       "loadFailed": "Failed to load plans.",
-      "requestFailed": "Request failed.",
-      "trialExpired": "Trial expired.",
-      "trialExpires_one": "Trial expires in {{count}} day.",
-      "trialExpires_other": "Trial expires in {{count}} days."
+      "requestFailed": "Request failed."
     },
-    "pricePer": "per {{period}}",
+    "monthlyEquivalent": "{{amount}} per month, billed annually",
+    "period": {
+      "month": "per month",
+      "year": "per year"
+    },
     "profile": {
       "complete": "Complete invoicing information",
       "incomplete": "Complete the invoicing information before subscribing: {{fields}}."
     },
-    "shared": {
-      "month": "month",
-      "year": "year"
-    },
     "title": "Choose a plan",
+    "trial": {
+      "daysLeft_one": "{{count}} day left",
+      "daysLeft_other": "{{count}} days left",
+      "ended": "Your trial has ended",
+      "ends": "Your trial ends {{date}}",
+      "endsIn_one": "Your trial ends in {{count}} day",
+      "endsIn_other": "Your trial ends in {{count}} days"
+    },
     "unlimitedUsers": "Unlimited users"
   },
   "roles": {

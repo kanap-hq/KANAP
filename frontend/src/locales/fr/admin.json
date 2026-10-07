@@ -645,9 +645,11 @@
       "payByBankTransfer": "Payer par virement",
       "payByCard": "Payer par carte"
     },
-    "annualSavings": "2 mois offerts",
+    "annualSavings_one": "{{count}} mois offert",
+    "annualSavings_other": "{{count}} mois offerts",
     "billingCycle": {
       "annual": "Annuel",
+      "label": "Période de facturation",
       "monthly": "Mensuel"
     },
     "errors": {
@@ -668,21 +670,26 @@
       "checkoutUrlUnavailable": "L'URL de paiement n'est pas disponible.",
       "invoiceCreated": "Facture créée.",
       "loadFailed": "Impossible de charger les plans.",
-      "requestFailed": "La requête a échoué.",
-      "trialExpired": "La période d'essai a expiré.",
-      "trialExpires_one": "La période d'essai expire dans {{count}} jour.",
-      "trialExpires_other": "La période d'essai expire dans {{count}} jours."
+      "requestFailed": "La requête a échoué."
     },
-    "pricePer": "par {{period}}",
+    "monthlyEquivalent": "{{amount}} par mois, facturé annuellement",
+    "period": {
+      "month": "par mois",
+      "year": "par an"
+    },
     "profile": {
       "complete": "Compléter les informations de facturation",
       "incomplete": "Complétez les informations de facturation avant de vous abonner : {{fields}}."
     },
-    "shared": {
-      "month": "mois",
-      "year": "an"
-    },
     "title": "Choisir un plan",
+    "trial": {
+      "daysLeft_one": "{{count}} jour restant",
+      "daysLeft_other": "{{count}} jours restants",
+      "ended": "Votre période d'essai est terminée",
+      "ends": "Votre période d'essai se termine le {{date}}",
+      "endsIn_one": "Votre période d'essai se termine dans {{count}} jour",
+      "endsIn_other": "Votre période d'essai se termine dans {{count}} jours"
+    },
     "unlimitedUsers": "Utilisateurs illimités"
   },
   "roles": {

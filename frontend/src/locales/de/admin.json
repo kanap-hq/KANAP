@@ -645,9 +645,11 @@
       "payByBankTransfer": "Per Überweisung zahlen",
       "payByCard": "Per Karte zahlen"
     },
-    "annualSavings": "2 Monate gratis",
+    "annualSavings_one": "{{count}} Monat gratis",
+    "annualSavings_other": "{{count}} Monate gratis",
     "billingCycle": {
       "annual": "Jährlich",
+      "label": "Abrechnungszeitraum",
       "monthly": "Monatlich"
     },
     "errors": {
@@ -668,21 +670,26 @@
       "checkoutUrlUnavailable": "Checkout-URL ist nicht verfügbar.",
       "invoiceCreated": "Rechnung erstellt.",
       "loadFailed": "Pläne konnten nicht geladen werden.",
-      "requestFailed": "Anfrage fehlgeschlagen.",
-      "trialExpired": "Testphase abgelaufen.",
-      "trialExpires_one": "Testphase läuft in {{count}} Tag ab.",
-      "trialExpires_other": "Testphase läuft in {{count}} Tagen ab."
+      "requestFailed": "Anfrage fehlgeschlagen."
     },
-    "pricePer": "pro {{period}}",
+    "monthlyEquivalent": "{{amount}} pro Monat, jährlich abgerechnet",
+    "period": {
+      "month": "pro Monat",
+      "year": "pro Jahr"
+    },
     "profile": {
       "complete": "Rechnungsinformationen vervollständigen",
       "incomplete": "Vervollständigen Sie die Rechnungsinformationen, bevor Sie ein Abonnement abschließen: {{fields}}."
     },
-    "shared": {
-      "month": "Monat",
-      "year": "Jahr"
-    },
     "title": "Plan wählen",
+    "trial": {
+      "daysLeft_one": "noch {{count}} Tag",
+      "daysLeft_other": "noch {{count}} Tage",
+      "ended": "Ihre Testphase ist abgelaufen",
+      "ends": "Ihre Testphase endet am {{date}}",
+      "endsIn_one": "Ihre Testphase endet in {{count}} Tag",
+      "endsIn_other": "Ihre Testphase endet in {{count}} Tagen"
+    },
     "unlimitedUsers": "Unbegrenzte Nutzer"
   },
   "roles": {
