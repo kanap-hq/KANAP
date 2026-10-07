@@ -105,7 +105,7 @@ The grid shows accounts for the selected CoA only.
 - **New account** (`accounts:manager`): Opens a new account form with the selected CoA already chosen.
 - **Import CSV** (`accounts:admin`): Import accounts into the selected CoA.
 - **Export CSV** (`accounts:admin`): Export accounts from the selected CoA.
-- **Delete Selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins).
+- **Delete selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins).
 
 All row cells are clickable links to the account workspace. You can right-click or Ctrl+click to open in a new tab.
 
@@ -130,7 +130,7 @@ The **Consolidation** section holds one field, **Consolidation account**. It is 
 - You choose the number. The name and the description of the consolidation account come from the consolidation chart and appear under the field. You cannot type them.
 - Disabled accounts of the consolidation chart are listed only when the account is already mapped to one. They carry the label **Disabled**.
 - If the stored number does not exist in the consolidation chart, it stays visible with an orange dot and the message "This number does not exist in the consolidation chart IFRS. Choose an account from IFRS." Pick a valid account to fix it.
-- Without a consolidation chart, the field is locked and says "No consolidation chart is defined." with a link to **Charts of accounts > Manage charts**.
+- Without a consolidation chart, the field is locked and says "No consolidation chart is defined." followed by the link **Choose one in Charts of accounts → Manage charts.**
 
 ### Creating an account
 
@@ -152,7 +152,7 @@ Click **New** in the chip bar, or **New chart** in the Manage charts dialog. You
 - **Name** (required): A descriptive name for the CoA.
 - **Used for**: **One country** or **All countries**. A global template always creates an **All countries** chart.
 - **Country** (one country only): Select a country from the list.
-- **Make it the default for {country}** (one country only): Check to make this the default CoA for the selected country.
+- **Make it the country default** (one country only): Check to make this the default CoA for the selected country.
 
 In template mode, click **Check template** before creating to see how many accounts will be added and how many updated. Then click **Create**.
 
@@ -275,11 +275,11 @@ An account number is a whole number greater than zero (for example `6011`). With
 
 ### Native names for multilingual support
 
-Some countries require accounts to be recorded in the local language. Use the **Native Name** field to store the original name while keeping the English name in the main **Account Name** field.
+Some countries require accounts to be recorded in the local language. Use the **Native name (local language)** field to store the original name while keeping the English name in the **Account name**.
 
 **Example**: French account
-  - **Account Name**: `Travel expenses` (English, for reporting)
-  - **Native Name**: `Frais de deplacement` (French, for legal compliance)
+  - **Account name**: `Travel expenses` (English, for reporting)
+  - **Native name (local language)**: `Frais de deplacement` (French, for legal compliance)
 
 The native name is available as a hidden column in the accounts grid. Enable it from the column chooser to view both names side by side.
 
@@ -481,7 +481,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
   - **Start with templates**: KANAP ships with templates for 9 countries plus IFRS. Load one instead of building from scratch — you get proper account numbers, native names, and IFRS consolidation mappings out of the box. Start with v1.0 (Simple) if unsure; upgrade to v2.0 (Detailed) if you need more granularity.
   - **One default per country**: Make one CoA the default for each country, so new companies start with the right account structure.
-  - **Native names for compliance**: Use the **Native name** field if local regulations require accounts in the local language. Enable the **Native name** column in the grid to see both names at a glance.
+  - **Native names for compliance**: Use the **Native name (local language)** field if local regulations require accounts in the local language. Enable the **Native name** column in the grid to see both names at a glance.
   - **Migrate gradually**: You don't have to convert everything at once. Companies without CoAs continue to work with legacy accounts.
   - **Fix obsolete accounts**: When you see warnings, update the account to match the company's current CoA. This keeps your data clean for reporting.
   - **Disable over delete**: Disabling accounts preserves history. Only delete accounts that were created by mistake and have never been used.

@@ -103,8 +103,8 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 
 **Actions** (dans l'en-tête de la page) :
 - **Nouveau compte** (`accounts:manager`) : Ouvre un nouveau formulaire de compte avec le CoA sélectionné déjà choisi.
-- **Import CSV** (`accounts:admin`) : Importer des comptes dans le CoA sélectionné.
-- **Export CSV** (`accounts:admin`) : Exporter les comptes du CoA sélectionné.
+- **Importer CSV** (`accounts:admin`) : Importer des comptes dans le CoA sélectionné.
+- **Exporter CSV** (`accounts:admin`) : Exporter les comptes du CoA sélectionné.
 - **Supprimer la sélection** (`accounts:admin`) : Supprimer les lignes de comptes sélectionnées. Sélectionnez les lignes avec la colonne de cases à cocher (visible par les administrateurs).
 
 Toutes les cellules sont des liens cliquables vers l'espace de travail du compte. Vous pouvez faire un clic droit ou Ctrl+clic pour ouvrir dans un nouvel onglet.
@@ -130,7 +130,7 @@ La section **Consolidation** contient un seul champ, **Compte de consolidation**
 - Vous choisissez le numéro. Le nom et la description du compte de consolidation viennent du plan de consolidation et s'affichent sous le champ. Vous ne pouvez pas les saisir.
 - Les comptes désactivés du plan de consolidation ne sont proposés que si le compte y est déjà rattaché. Ils portent la mention **Désactivé**.
 - Si le numéro enregistré n'existe pas dans le plan de consolidation, il reste visible avec un point orange et le message « Ce numéro n'existe pas dans le plan de consolidation IFRS. Choisissez un compte de IFRS. » Choisissez un compte valide pour corriger.
-- Sans plan de consolidation, le champ est verrouillé et indique « Aucun plan de consolidation n'est défini. » avec un lien vers **Plans comptables > Gérer les plans**.
+- Sans plan de consolidation, le champ est verrouillé et indique « Aucun plan de consolidation n'est défini. », suivi du lien **Choisissez-en un dans Plans comptables → Gérer les plans.**
 
 ### Créer un compte
 
@@ -152,7 +152,7 @@ Cliquez sur **Nouveau** dans la barre de pastilles, ou sur **Nouveau plan** dans
 - **Nom** (obligatoire) : Un nom descriptif pour le CoA.
 - **Utilisé pour** : **Un pays** ou **Tous les pays**. Un modèle global crée toujours un plan pour **Tous les pays**.
 - **Pays** (un pays uniquement) : Choisissez un pays dans la liste.
-- **En faire le plan par défaut pour {pays}** (un pays uniquement) : Cochez pour faire de ce CoA le plan par défaut du pays choisi.
+- **En faire le plan par défaut du pays** (un pays uniquement) : Cochez pour faire de ce CoA le plan par défaut du pays choisi.
 
 En mode modèle, cliquez sur **Vérifier le modèle** avant de créer pour voir combien de comptes seront ajoutés et combien mis à jour. Cliquez ensuite sur **Créer**.
 
@@ -275,11 +275,11 @@ Un numéro de compte est un nombre entier supérieur à zéro (par exemple `6011
 
 ### Noms locaux pour le multilinguisme
 
-Certains pays exigent que les comptes soient enregistrés dans la langue locale. Utilisez le champ **Nom local** pour stocker le nom d'origine tout en conservant le nom anglais dans le champ principal **Nom du compte**.
+Certains pays exigent que les comptes soient enregistrés dans la langue locale. Utilisez le champ **Nom local (langue locale)** pour stocker le nom d'origine tout en conservant le nom anglais dans le champ principal **Nom du compte**.
 
 **Exemple** : Compte français
   - **Nom du compte** : `Travel expenses` (anglais, pour le reporting)
-  - **Nom local** : `Frais de deplacement` (français, pour la conformité légale)
+  - **Nom local (langue locale)** : `Frais de deplacement` (français, pour la conformité légale)
 
 Le nom local est disponible dans une colonne masquée de la grille des comptes. Activez-la depuis le sélecteur de colonnes pour voir les deux noms côte à côte.
 
@@ -481,7 +481,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
   - **Commencez par les modèles** : KANAP est livré avec des modèles pour 9 pays plus IFRS. Chargez-en un au lieu de partir de zéro : vous obtenez directement les bons numéros de compte, les noms locaux et les correspondances de consolidation IFRS. Commencez avec la v1.0 (Simple) en cas de doute ; passez à la v2.0 (Détaillé) si vous avez besoin de plus de détail.
   - **Un défaut par pays** : Faites d'un CoA le plan par défaut de chaque pays, pour que les nouvelles sociétés démarrent avec la bonne structure de comptes.
-  - **Noms locaux pour la conformité** : Utilisez le champ **Nom local** si la réglementation locale exige les comptes dans la langue du pays. Activez la colonne **Nom local** dans la grille pour voir les deux noms d'un coup d'œil.
+  - **Noms locaux pour la conformité** : Utilisez le champ **Nom local (langue locale)** si la réglementation locale exige les comptes dans la langue du pays. Activez la colonne **Nom local** dans la grille pour voir les deux noms d'un coup d'œil.
   - **Migrez progressivement** : Vous n'avez pas à tout convertir en une fois. Les sociétés sans CoA continuent de fonctionner avec les comptes historiques.
   - **Corrigez les comptes obsolètes** : Lorsque vous voyez un avertissement, mettez à jour le compte pour qu'il corresponde au CoA actuel de la société. Vos données restent propres pour le reporting.
   - **Désactivez plutôt que de supprimer** : La désactivation préserve l'historique. Ne supprimez que les comptes créés par erreur et jamais utilisés.

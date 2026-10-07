@@ -105,7 +105,7 @@ La cuadrícula muestra cuentas solo del CoA seleccionado.
 - **Nueva cuenta** (`accounts:manager`): Abre un nuevo formulario de cuenta con el CoA seleccionado ya elegido.
 - **Importar CSV** (`accounts:admin`): Importar cuentas al CoA seleccionado.
 - **Exportar CSV** (`accounts:admin`): Exportar cuentas del CoA seleccionado.
-- **Eliminar seleccionadas** (`accounts:admin`): Eliminar filas de cuentas seleccionadas. Seleccione filas usando la columna de casilla de verificación (visible para administradores).
+- **Eliminar selección** (`accounts:admin`): Eliminar filas de cuentas seleccionadas. Seleccione filas usando la columna de casilla de verificación (visible para administradores).
 
 Todas las celdas de fila son enlaces clicables al espacio de trabajo de la cuenta. Puede hacer clic derecho o Ctrl+clic para abrir en una nueva pestaña.
 
@@ -130,7 +130,7 @@ La sección **Consolidación** contiene un único campo, **Cuenta de consolidaci
 - Usted elige el número. El nombre y la descripción de la cuenta de consolidación provienen del plan de consolidación y aparecen bajo el campo. No puede escribirlos.
 - Las cuentas desactivadas del plan de consolidación solo se ofrecen cuando la cuenta ya está asignada a una de ellas. Llevan la etiqueta **Desactivada**.
 - Si el número guardado no existe en el plan de consolidación, sigue visible con un punto naranja y el mensaje «Este número no existe en el plan de consolidación IFRS. Elija una cuenta de IFRS.» Elija una cuenta válida para corregirlo.
-- Sin plan de consolidación, el campo está bloqueado y muestra «No hay ningún plan de consolidación definido.» con un enlace a **Planes de cuentas > Gestionar planes**.
+- Sin plan de consolidación, el campo está bloqueado y muestra «No hay ningún plan de consolidación definido.», seguido del enlace **Elija uno en Planes de cuentas → Gestionar planes.**
 
 ### Crear una cuenta
 
@@ -152,7 +152,7 @@ Haga clic en **Nuevo** en la barra de chips, o en **Nuevo plan** en el cuadro Ge
 - **Nombre** (obligatorio): Un nombre descriptivo para el CoA.
 - **Se usa para**: **Un país** o **Todos los países**. Una plantilla global siempre crea un plan para **Todos los países**.
 - **País** (solo para un país): Elija un país de la lista.
-- **Hacerlo predeterminado para {country}** (solo para un país): Marque la casilla para hacer de este CoA el plan predeterminado del país elegido.
+- **Hacerlo plan predeterminado del país** (solo para un país): Marque la casilla para hacer de este CoA el plan predeterminado del país elegido.
 
 En modo plantilla, haga clic en **Verificar plantilla** antes de crear para ver cuántas cuentas se añadirán y cuántas se actualizarán. Después haga clic en **Crear**.
 
@@ -172,7 +172,7 @@ Las plantillas son conjuntos de cuentas estándar gestionados por los administra
   - Haga clic en **Verificar plantilla** para ver cuántas cuentas se añadirán y cuántas se actualizarán
   - Haga clic en **Crear** para copiar las cuentas en su CoA
 
-**Qué se copia**: Números de cuenta, nombres, nombres nativos (idioma local), descripciones, mapeos de consolidación y estado. Las cuentas pasan a ser suyas para editar -- los cambios en la plantilla de la plataforma no afectan a su CoA a menos que la recargue explícitamente. Si su espacio de trabajo tiene un plan de consolidación, el nombre y la descripción de consolidación de cada cuenta se toman de ese plan (consulte [El plan de consolidación](#el-plan-de-consolidacion)).
+**Qué se copia**: Números de cuenta, nombres, nombres locales (idioma local), descripciones, mapeos de consolidación y estado. Las cuentas pasan a ser suyas para editar -- los cambios en la plantilla de la plataforma no afectan a su CoA a menos que la recargue explícitamente. Si su espacio de trabajo tiene un plan de consolidación, el nombre y la descripción de consolidación de cada cuenta se toman de ese plan (consulte [El plan de consolidación](#el-plan-de-consolidacion)).
 
 **Consejo**: Después de cargar una plantilla, puede añadir cuentas específicas de la empresa, renombrar entradas o deshabilitar cuentas no utilizadas. Las plantillas proporcionan un punto de partida, no una estructura bloqueada.
 
@@ -183,7 +183,7 @@ KANAP incluye **20 plantillas preconfiguradas** que cubren 10 estándares contab
 - **v1.0 (Simple)**: Un conjunto enfocado de ~20 cuentas relevantes para IT -- licencias de software, alojamiento en la nube, ciberseguridad, telecomunicaciones, consultoría, costes de personal, formación y más. Ideal para organizaciones que quieren un punto de partida ligero.
 - **v2.0 (Detallado)**: Todo lo de v1.0 más subcuentas granulares adicionales (~30 cuentas). Añade desgloses como Software comprado vs. Desarrollado internamente, Equipos de red, SaaS vs. Licencias perpetuas, Comunicaciones móviles, Bonificaciones IT, Seguro IT y más. Ideal para organizaciones que necesitan un seguimiento de costes más fino.
 
-Ambas versiones usan **números de cuenta reales del estándar contable oficial de cada país** e incluyen nombres nativos en el idioma local.
+Ambas versiones usan **números de cuenta reales del estándar contable oficial de cada país** e incluyen nombres locales en el idioma local.
 
 | Código plantilla | País | Estándar | Cuentas (v1 / v2) |
 |------------------|------|----------|---------------------|
@@ -224,7 +224,7 @@ Todas las plantillas -- independientemente del país -- mapean cada cuenta a una
 | 2800 | Viajes y movilidad (proyectos IT) | Viajes relacionados con proyectos |
 | 2900 | Otros gastos operativos IT | Costes IT varios, ciberseguro |
 
-**Ejemplo**: Su filial francesa carga **FR-PCG v1.0** y su filial alemana carga **DE-SKR03 v1.0**. Ambas usan diferentes números de cuenta locales y nombres nativos, pero cada cuenta se mapea a la misma estructura de consolidación IFRS. Los informes a nivel de grupo se agregan sin ningún trabajo manual de mapeo.
+**Ejemplo**: Su filial francesa carga **FR-PCG v1.0** y su filial alemana carga **DE-SKR03 v1.0**. Ambas usan diferentes números de cuenta locales y nombres locales, pero cada cuenta se mapea a la misma estructura de consolidación IFRS. Los informes a nivel de grupo se agregan sin ningún trabajo manual de mapeo.
 
 ### Nuevos espacios de trabajo (aprovisionamiento)
 
@@ -273,15 +273,15 @@ Los roles cambian en cuanto elige una acción. La tabla se actualiza al instante
 
 Un número de cuenta es un número entero mayor que cero (por ejemplo, `6011`). Dentro de un CoA, cada número se usa una sola vez.
 
-### Nombres nativos para soporte multilingüe
+### Nombres locales para soporte multilingüe
 
-Algunos países requieren que las cuentas se registren en el idioma local. Utilice el campo **Nombre nativo** para almacenar el nombre original mientras mantiene el nombre en inglés en el campo principal **Nombre de la cuenta**.
+Algunos países requieren que las cuentas se registren en el idioma local. Utilice el campo **Nombre local (idioma local)** para almacenar el nombre original mientras mantiene el nombre en inglés en el campo principal **Nombre de la cuenta**.
 
 **Ejemplo**: Cuenta francesa
   - **Nombre de la cuenta**: `Travel expenses` (inglés, para informes)
-  - **Nombre nativo**: `Frais de deplacement` (francés, para conformidad legal)
+  - **Nombre local (idioma local)**: `Frais de deplacement` (francés, para conformidad legal)
 
-El nombre nativo está disponible como columna oculta en la cuadrícula de cuentas. Habilítelo desde el selector de columnas para ver ambos nombres lado a lado.
+El nombre local está disponible como columna oculta en la cuadrícula de cuentas. Habilítelo desde el selector de columnas para ver ambos nombres lado a lado.
 
 ## Cuentas de consolidación (Informes a nivel de grupo)
 
@@ -446,7 +446,7 @@ Puede exportar una lista de sus CoA (con metadatos como código, nombre, país, 
 
 El CSV global `/accounts` incluye una columna `coa_code` para identificar a qué CoA pertenece cada cuenta. **Exportar CSV** e **Importar CSV** la usan cuando no hay ningún CoA seleccionado en la página.
 
-  - **Exportar CSV**: todas las cuentas con sus códigos de CoA, números de cuenta, nombres, nombres nativos, descripciones, mapeos de consolidación y estado
+  - **Exportar CSV**: todas las cuentas con sus códigos de CoA, números de cuenta, nombres, nombres locales, descripciones, mapeos de consolidación y estado
   - **Importar CSV**: **Descargar plantilla** en el diálogo da un archivo solo con los encabezados. Empiece por la **Verificación previa** para validar la estructura, la codificación, los campos obligatorios y los duplicados, y después **Cargar** para aplicar las inserciones y las actualizaciones
   - **Coincidencia**: por `(coa_code, account_number)` dentro de su espacio de trabajo
   - **Celdas obligatorias**: `coa_code`, `account_number`, `account_name`. Todas las filas de un archivo deben llevar el mismo `coa_code`
@@ -479,9 +479,9 @@ account_number;account_name;native_name;description;consolidation_account_number
 
 ## Consejos
 
-  - **Comience con plantillas**: KANAP incluye plantillas para 9 países más IFRS. Cargue una en lugar de construir desde cero -- obtiene números de cuenta adecuados, nombres nativos y mapeos de consolidación IFRS desde el principio. Comience con v1.0 (Simple) si no está seguro; actualice a v2.0 (Detallado) si necesita más granularidad.
+  - **Comience con plantillas**: KANAP incluye plantillas para 9 países más IFRS. Cargue una en lugar de construir desde cero -- obtiene números de cuenta adecuados, nombres locales y mapeos de consolidación IFRS desde el principio. Comience con v1.0 (Simple) si no está seguro; actualice a v2.0 (Detallado) si necesita más granularidad.
   - **Un predeterminado por país**: Haga de un CoA el plan predeterminado de cada país, para que las nuevas empresas empiecen con la estructura de cuentas correcta.
-  - **Nombres nativos para conformidad**: Utilice el campo **Nombre local** si la normativa local requiere cuentas en el idioma local. Habilite la columna **Nombre local** en la cuadrícula para ver ambos nombres de un vistazo.
+  - **Nombres locales para conformidad**: Utilice el campo **Nombre local (idioma local)** si la normativa local requiere cuentas en el idioma local. Habilite la columna **Nombre local** en la cuadrícula para ver ambos nombres de un vistazo.
   - **Migre gradualmente**: No tiene que convertir todo a la vez. Las empresas sin CoA continúan trabajando con cuentas legado.
   - **Corrija cuentas obsoletas**: Cuando vea advertencias, actualice la cuenta para que coincida con el CoA actual de la empresa. Esto mantiene sus datos limpios para informes.
   - **Deshabilite en lugar de eliminar**: Deshabilitar cuentas preserva el historial. Solo elimine cuentas que fueron creadas por error y nunca se usaron.
@@ -544,9 +544,9 @@ Su grupo tiene filiales en Francia, Reino Unido y Alemania. Cada país usa su es
   3. Haga de cada CoA el plan predeterminado de su país y asigne empresas
 
 **Resultado**:
-  - Los usuarios franceses trabajan con cuentas PCG francés y nombres nativos en sus tareas diarias
+  - Los usuarios franceses trabajan con cuentas PCG francés y nombres locales en sus tareas diarias
   - Los usuarios del Reino Unido trabajan con cuentas UK GAAP
-  - Los usuarios alemanes trabajan con cuentas SKR03 y nombres nativos en alemán
+  - Los usuarios alemanes trabajan con cuentas SKR03 y nombres locales en alemán
   - Finanzas de grupo ejecuta informes por cuenta de consolidación para ver el gasto total en categorías IFRS
   - No se necesita trabajo manual de mapeo -- las plantillas lo gestionan todo
   - Tanto los informes estatutarios locales como los informes IFRS de grupo funcionan sin problemas desde los mismos datos

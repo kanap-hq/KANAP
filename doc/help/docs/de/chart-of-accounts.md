@@ -105,7 +105,7 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 - **Neues Konto** (`accounts:manager`): Öffnet ein neues Kontoformular, in dem der ausgewählte Kontenplan bereits gewählt ist.
 - **CSV importieren** (`accounts:admin`): Konten in den ausgewählten Kontenplan importieren.
 - **CSV exportieren** (`accounts:admin`): Konten aus dem ausgewählten Kontenplan exportieren.
-- **Ausgewählte löschen** (`accounts:admin`): Ausgewählte Kontenzeilen löschen. Zeilen über die Kontrollkästchen-Spalte auswählen (für Admins sichtbar).
+- **Auswahl löschen** (`accounts:admin`): Ausgewählte Kontenzeilen löschen. Zeilen über die Kontrollkästchen-Spalte auswählen (für Admins sichtbar).
 
 Alle Zeilenzellen sind anklickbare Links zum Konten-Arbeitsbereich. Sie können rechtsklicken oder Strg+Klicken, um in einem neuen Tab zu öffnen.
 
@@ -130,7 +130,7 @@ Der Abschnitt **Konsolidierung** enthält ein einziges Feld, **Konsolidierungsko
 - Sie wählen die Nummer. Name und Beschreibung des Konsolidierungskontos stammen aus dem Konsolidierungskontenplan und erscheinen unter dem Feld. Sie können sie nicht eingeben.
 - Deaktivierte Konten des Konsolidierungskontenplans werden nur angeboten, wenn das Konto bereits darauf abgebildet ist. Sie tragen den Hinweis **Deaktiviert**.
 - Existiert die gespeicherte Nummer nicht im Konsolidierungskontenplan, bleibt sie mit einem orangen Punkt sichtbar, dazu erscheint die Meldung „Diese Nummer existiert im Konsolidierungskontenplan IFRS nicht. Wählen Sie ein Konto aus IFRS." Wählen Sie ein gültiges Konto, um das zu beheben.
-- Ohne Konsolidierungskontenplan ist das Feld gesperrt und zeigt „Es ist kein Konsolidierungskontenplan festgelegt." mit einem Link zu **Kontenpläne > Kontenpläne verwalten**.
+- Ohne Konsolidierungskontenplan ist das Feld gesperrt und zeigt „Es ist kein Konsolidierungskontenplan festgelegt.", gefolgt vom Link **Wählen Sie einen unter Kontenpläne → Kontenpläne verwalten.**
 
 ### Ein Konto erstellen
 
@@ -152,7 +152,7 @@ Klicken Sie in der Chip-Leiste auf **Neu** oder im Dialog „Kontenpläne verwal
 - **Name** (Pflicht): Ein beschreibender Name für den Kontenplan.
 - **Verwendet für**: **Ein Land** oder **Alle Länder**. Eine globale Vorlage erstellt immer einen Kontenplan für **Alle Länder**.
 - **Land** (nur bei einem Land): Wählen Sie ein Land aus der Liste.
-- **Als Standard für {country} festlegen** (nur bei einem Land): Aktivieren Sie das Feld, um diesen Kontenplan zum Standard des gewählten Landes zu machen.
+- **Als Länderstandard festlegen** (nur bei einem Land): Aktivieren Sie das Feld, um diesen Kontenplan zum Standard des gewählten Landes zu machen.
 
 Klicken Sie im Vorlagenmodus vor dem Erstellen auf **Vorlage prüfen**, um zu sehen, wie viele Konten hinzugefügt und wie viele aktualisiert werden. Klicken Sie dann auf **Erstellen**.
 
@@ -275,11 +275,11 @@ Eine Kontonummer ist eine ganze Zahl größer als null (zum Beispiel `6011`). In
 
 ### Lokale Namen für Mehrsprachigkeit
 
-Einige Länder verlangen, dass Konten in der Landessprache erfasst werden. Verwenden Sie das Feld **Lokaler Name**, um den Originalnamen zu speichern, während der englische Name im Hauptfeld **Kontoname** bleibt.
+Einige Länder verlangen, dass Konten in der Landessprache erfasst werden. Verwenden Sie das Feld **Lokaler Name (Landessprache)**, um den Originalnamen zu speichern, während der englische Name im Hauptfeld **Kontoname** bleibt.
 
 **Beispiel**: Französisches Konto
   - **Kontoname**: `Travel expenses` (Englisch, für Berichte)
-  - **Lokaler Name**: `Frais de deplacement` (Französisch, für rechtliche Compliance)
+  - **Lokaler Name (Landessprache)**: `Frais de deplacement` (Französisch, für rechtliche Compliance)
 
 Der lokale Name ist als ausgeblendete Spalte im Konten-Grid verfügbar. Aktivieren Sie ihn über die Spaltenauswahl, um beide Namen nebeneinander zu sehen.
 
@@ -481,7 +481,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 
   - **Mit Vorlagen beginnen**: KANAP wird mit Vorlagen für 9 Länder plus IFRS ausgeliefert. Laden Sie eine, anstatt von Grund auf zu bauen -- Sie erhalten korrekte Kontonummern, lokale Namen und IFRS-Konsolidierungszuordnungen direkt. Beginnen Sie mit v1.0 (Einfach), wenn Sie unsicher sind; upgraden Sie auf v2.0 (Detailliert), wenn Sie mehr Granularität benötigen.
   - **Ein Standard pro Land**: Machen Sie für jedes Land einen Kontenplan zum Standard, damit neue Unternehmen mit der richtigen Kontenstruktur starten.
-  - **Lokale Namen für Compliance**: Verwenden Sie das Feld **Lokaler Name**, wenn lokale Vorschriften Konten in der Landessprache erfordern. Aktivieren Sie die Spalte **Lokaler Name** im Grid, um beide Namen auf einen Blick zu sehen.
+  - **Lokale Namen für Compliance**: Verwenden Sie das Feld **Lokaler Name (Landessprache)**, wenn lokale Vorschriften Konten in der Landessprache erfordern. Aktivieren Sie die Spalte **Lokaler Name** im Grid, um beide Namen auf einen Blick zu sehen.
   - **Schrittweise migrieren**: Sie müssen nicht alles auf einmal umstellen. Unternehmen ohne Kontenpläne arbeiten weiterhin mit Legacy-Konten.
   - **Veraltete Konten beheben**: Wenn Sie Warnungen sehen, aktualisieren Sie das Konto, damit es zum aktuellen Kontenplan des Unternehmens passt. Dies hält Ihre Daten für Berichte sauber.
   - **Deaktivieren statt löschen**: Das Deaktivieren von Konten bewahrt die Historie. Löschen Sie nur Konten, die versehentlich erstellt wurden und nie verwendet wurden.
