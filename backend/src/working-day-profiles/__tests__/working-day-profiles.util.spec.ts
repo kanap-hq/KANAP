@@ -14,11 +14,11 @@ import {
 // Working-day calendar validation (decision D4): one helper for the API, the
 // CSV and the computation. Pure, no database.
 
-const SFR_2026 = ['18', '18', '20', '20', '15', '20', '15', '16', '20', '19', '18', '19'];
+const FR_DAYS_2026 = ['18', '18', '20', '20', '15', '20', '15', '16', '20', '19', '18', '19'];
 
 // Loosely typed on purpose: the refusals feed values of every type.
 function months(overrides: Record<number, unknown> = {}): any[] {
-  return SFR_2026.map((value, index) => (index + 1 in overrides ? overrides[index + 1] : value));
+  return FR_DAYS_2026.map((value, index) => (index + 1 in overrides ? overrides[index + 1] : value));
 }
 
 /** The call is refused with exactly this sentence, as a 400 carrying the field. */
@@ -45,7 +45,7 @@ function testDaysInMonth() {
 }
 
 function testAcceptsAndNormalises() {
-  assert.deepEqual(normalizeDaysByYear({ 2026: SFR_2026 }), { 2026: SFR_2026 });
+  assert.deepEqual(normalizeDaysByYear({ 2026: FR_DAYS_2026 }), { 2026: FR_DAYS_2026 });
   const normalised = normalizeDaysByYear({
     '2027': ['18.000', '019.0833330', '0.50', 19.5, '19,5', '0', '00', '.5', '7.', ' 21 ', 16.75, '22.000000000'],
   });
@@ -55,7 +55,7 @@ function testAcceptsAndNormalises() {
   // Six decimals are kept exactly: 229 / 12 as a workbook stores it.
   assert.deepEqual(normalizeDaysByYear({ 2027: months({ 3: '19.083333' }) })['2027']![2], '19.083333');
   // Several years at once; an empty object is a calendar without years.
-  assert.deepEqual(Object.keys(normalizeDaysByYear({ 2026: SFR_2026, 2027: SFR_2026 })), ['2026', '2027']);
+  assert.deepEqual(Object.keys(normalizeDaysByYear({ 2026: FR_DAYS_2026, 2027: FR_DAYS_2026 })), ['2026', '2027']);
   assert.deepEqual(normalizeDaysByYear({}), {});
 }
 
@@ -83,8 +83,8 @@ function testSixDecimals() {
 
 function testMissingMonths() {
   const sentence = 'Enter the working days of all twelve months of 2027.';
-  refused(() => normalizeDaysByYear({ 2027: SFR_2026.slice(0, 11) }), sentence, { year: '2027' });
-  refused(() => normalizeDaysByYear({ 2027: [...SFR_2026, '18'] }), sentence);
+  refused(() => normalizeDaysByYear({ 2027: FR_DAYS_2026.slice(0, 11) }), sentence, { year: '2027' });
+  refused(() => normalizeDaysByYear({ 2027: [...FR_DAYS_2026, '18'] }), sentence);
   refused(() => normalizeDaysByYear({ 2027: months({ 6: '' }) }), sentence, { year: '2027', month: 6 });
   refused(() => normalizeDaysByYear({ 2027: months({ 6: '   ' }) }), sentence);
   refused(() => normalizeDaysByYear({ 2027: months({ 6: null }) }), sentence);
@@ -104,17 +104,17 @@ function testBadValues() {
 }
 
 function testYearRange() {
-  assert.deepEqual(Object.keys(normalizeDaysByYear({ 2000: SFR_2026, 2100: SFR_2026 })), ['2000', '2100']);
-  refused(() => normalizeDaysByYear({ 1999: SFR_2026 }), '1999 is not a year between 2000 and 2100.', { year: '1999' });
-  refused(() => normalizeDaysByYear({ 2101: SFR_2026 }), '2101 is not a year between 2000 and 2100.');
-  refused(() => normalizeDaysByYear({ '20261': SFR_2026 }), '20261 is not a year between 2000 and 2100.');
-  refused(() => normalizeDaysByYear({ '26': SFR_2026 }), '26 is not a year between 2000 and 2100.');
-  refused(() => normalizeDaysByYear({ next: SFR_2026 }), 'next is not a year between 2000 and 2100.');
-  refused(() => normalizeDaysByYear({ '2026': SFR_2026, ' 2026': SFR_2026 }), '2026 is given twice.');
+  assert.deepEqual(Object.keys(normalizeDaysByYear({ 2000: FR_DAYS_2026, 2100: FR_DAYS_2026 })), ['2000', '2100']);
+  refused(() => normalizeDaysByYear({ 1999: FR_DAYS_2026 }), '1999 is not a year between 2000 and 2100.', { year: '1999' });
+  refused(() => normalizeDaysByYear({ 2101: FR_DAYS_2026 }), '2101 is not a year between 2000 and 2100.');
+  refused(() => normalizeDaysByYear({ '20261': FR_DAYS_2026 }), '20261 is not a year between 2000 and 2100.');
+  refused(() => normalizeDaysByYear({ '26': FR_DAYS_2026 }), '26 is not a year between 2000 and 2100.');
+  refused(() => normalizeDaysByYear({ next: FR_DAYS_2026 }), 'next is not a year between 2000 and 2100.');
+  refused(() => normalizeDaysByYear({ '2026': FR_DAYS_2026, ' 2026': FR_DAYS_2026 }), '2026 is given twice.');
 }
 
 function testShape() {
-  for (const raw of [null, undefined, [], [SFR_2026], 'x', 12]) {
+  for (const raw of [null, undefined, [], [FR_DAYS_2026], 'x', 12]) {
     refused(() => normalizeDaysByYear(raw), 'Give the working days per year.');
   }
 }
@@ -124,16 +124,16 @@ function testPartialAndMerge() {
   const patch = normalizeDaysByYear({ 2026: null, 2027: months({ 1: '17' }) }, { partial: true });
   assert.deepEqual(patch, { 2026: null, 2027: months({ 1: '17' }) });
 
-  const stored = { 2025: SFR_2026, 2026: SFR_2026 };
+  const stored = { 2025: FR_DAYS_2026, 2026: FR_DAYS_2026 };
   const merged = mergeDaysByYear(stored, patch);
-  assert.deepEqual(merged, { 2025: SFR_2026, 2027: months({ 1: '17' }) }, '2025 kept, 2026 removed, 2027 added');
+  assert.deepEqual(merged, { 2025: FR_DAYS_2026, 2027: months({ 1: '17' }) }, '2025 kept, 2026 removed, 2027 added');
   assert.deepEqual(Object.keys(merged), ['2025', '2027']);
-  assert.deepEqual(stored, { 2025: SFR_2026, 2026: SFR_2026 }, 'the stored value is not mutated');
+  assert.deepEqual(stored, { 2025: FR_DAYS_2026, 2026: FR_DAYS_2026 }, 'the stored value is not mutated');
 
   // A year sent replaces that year only; removing an absent year changes nothing.
-  assert.deepEqual(mergeDaysByYear(stored, { 2026: months({ 12: '0' }) }), { 2025: SFR_2026, 2026: months({ 12: '0' }) });
+  assert.deepEqual(mergeDaysByYear(stored, { 2026: months({ 12: '0' }) }), { 2025: FR_DAYS_2026, 2026: months({ 12: '0' }) });
   assert.deepEqual(mergeDaysByYear(stored, { 2030: null }), stored);
-  assert.deepEqual(mergeDaysByYear(null, { 2026: SFR_2026 }), { 2026: SFR_2026 });
+  assert.deepEqual(mergeDaysByYear(null, { 2026: FR_DAYS_2026 }), { 2026: FR_DAYS_2026 });
   assert.deepEqual(mergeDaysByYear(stored, {}), stored);
 }
 
@@ -156,14 +156,14 @@ function testCalendarDaysFor() {
   });
 
   // A custom calendar: its stored years, nothing else.
-  const custom = calendar({ days_by_year: { 2026: SFR_2026 } });
-  assert.deepEqual(calendarDaysFor(custom, 2026), SFR_2026);
+  const custom = calendar({ days_by_year: { 2026: FR_DAYS_2026 } });
+  assert.deepEqual(calendarDaysFor(custom, 2026), FR_DAYS_2026);
   assert.equal(calendarDaysFor(custom, 2027), null);
 
   // A standard calendar: an edited year wins, any other year follows the public holidays.
-  const standard = calendar({ country_iso: 'FR', days_by_year: { 2027: SFR_2026 } });
+  const standard = calendar({ country_iso: 'FR', days_by_year: { 2027: FR_DAYS_2026 } });
   assert.deepEqual(calendarDaysFor(standard, 2026), FRANCE_2026);
-  assert.deepEqual(calendarDaysFor(standard, 2027), SFR_2026);
+  assert.deepEqual(calendarDaysFor(standard, 2027), FR_DAYS_2026);
   assert.equal(calendarDaysFor(calendar({ country_iso: 'FR', region_code: '57' }), 2026)!.reduce((sum, value) => sum + Number(value), 0), 251);
   // Outside the calendar years, or a source the rules do not know: no days (the computation then names the year).
   assert.equal(calendarDaysFor(standard, 1999), null);

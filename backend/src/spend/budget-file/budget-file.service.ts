@@ -28,7 +28,7 @@ export interface BudgetFileCaller {
 /**
  * The budget file: read, match, preflight, export, and the load.
  * The import route calls `analyzeAfterLargeImport` last and does not query
- * after that call. Contract: planning/sfr/briefs/csv-c2.md.
+ * after that call.
  */
 @Injectable()
 export class BudgetFileService {

@@ -45,7 +45,7 @@ import { exportBudgetFile, loadBudgetFile, preflightBudgetFile } from './budget-
 const YEAR = 2026;
 const KINDS: Kind[] = ['opex', 'capex'];
 
-const SFR_MONTHS = ['0.00', '7200.00', '8000.00', '8000.00', '6000.00', '8000.00', '6000.00', '6400.00', '8000.00', '7600.00', '0.00', '0.00'];
+const CONSULTANT_MONTHS = ['0.00', '7200.00', '8000.00', '8000.00', '6000.00', '8000.00', '6000.00', '6400.00', '8000.00', '7600.00', '0.00', '0.00'];
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 type Ctx = { runner: QueryRunner; tenantId: string; versionId: string; itemId: string; calendarId: string };
@@ -59,7 +59,7 @@ async function withCalendarLine(kind: Kind, fn: (ctx: Ctx) => Promise<void>, val
   });
 }
 
-/** The SFR row as a line: a consultant full time, February to October, 400 a day on France 218. */
+/** The reference row as a line: a consultant full time, February to October, 400 a day on France 218. */
 function sfrLine(calendarId: string, overrides: Record<string, unknown> = {}) {
   return {
     label: 'Consultant',
@@ -117,7 +117,7 @@ async function testLinesWrite(kind: Kind) {
     const audit = captureAudit();
     const svc = amountsService(kind, audit);
     const response = await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId), licenceLine()]), null, { manager: runner.manager });
-    const columnMonths = SFR_MONTHS.map((m) => (Number(m) + 2000).toFixed(2));
+    const columnMonths = CONSULTANT_MONTHS.map((m) => (Number(m) + 2000).toFixed(2));
     assert.equal(response.updated, 12, `${kind}: twelve months written`);
     assert.deepEqual(response.warnings, [], `${kind}: no warning`);
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), columnMonths, `${kind}: the two lines summed`);
@@ -144,7 +144,7 @@ async function testLinesWrite(kind: Kind) {
           frequency: 'per_month', days_per_month: null, period_start: `${YEAR}-02-01`, period_end: `${YEAR}-10-30`,
           working_day_profile_id: calendarId, working_day_profile_code: 'FR218', working_day_profile_name: 'France 218',
           active_months: [2, 3, 4, 5, 6, 7, 8, 9, 10], day_counts: FRANCE_218_2026, total_days: '163',
-          month_amounts: SFR_MONTHS, fte_months: ['0', ...repeat('1', 9), '0', '0'], fte: '0.75', fte_period: '1', total: '65200.00',
+          month_amounts: CONSULTANT_MONTHS, fte_months: ['0', ...repeat('1', 9), '0', '0'], fte: '0.75', fte_period: '1', total: '65200.00',
         },
         {
           label: 'Licences', quantity_unit: 'pieces', quantity: '10', unit_price: '200', price_basis: 'per_piece',
@@ -374,7 +374,7 @@ async function testAlsoMeasures(kind: Kind) {
       { manager: runner.manager },
     );
     for (const measure of ['planned', 'forecast', 'expected_landing'] as const) {
-      assert.deepEqual(await readMeasure(runner, kind, versionId, measure, YEAR), SFR_MONTHS, `${kind}: ${measure} written`);
+      assert.deepEqual(await readMeasure(runner, kind, versionId, measure, YEAR), CONSULTANT_MONTHS, `${kind}: ${measure} written`);
       assert.deepEqual(shape(await readLines(runner, kind, versionId, measure)).map((l) => l[1]), ['Consultant'], `${kind}: ${measure} lines`);
     }
     assert.deepEqual(await readMeasure(runner, kind, versionId, 'actual', YEAR), repeat('0.00', 12), `${kind}: the others untouched`);
@@ -415,7 +415,7 @@ async function testEmptyLines(kind: Kind) {
     assert.deepEqual([planned.method, planned.fte, planned.last_calculation], ['manual', null, null], `${kind}: computed becomes manual`);
     assert.deepEqual([planned.period_start, planned.period_end], [`${YEAR}-02-01`, `${YEAR}-10-31`], `${kind}: the period stays, the whole months of the lines`);
     assert.deepEqual([forecast.method, forecast.fte, forecast.last_calculation.kind], ['spread', null, 'annual'], `${kind}: a spread stays a spread`);
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), SFR_MONTHS, `${kind}: the amounts stay`);
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), CONSULTANT_MONTHS, `${kind}: the amounts stay`);
     assert.equal(await countLines(runner, kind, tenantId), 0, `${kind}: the lines are gone`);
     assert.deepEqual(removed.round_inputs.map((r: any) => r.lines), [[], []]);
   });
@@ -596,7 +596,7 @@ async function testOtherWritesKeepLines(kind: Kind) {
 
     // "Use the lines again": the same lines, sent again, compute the column again.
     await svc.bulkUpsert(versionId, linesPayload([sfrLine(calendarId), licenceLine()]), null, { manager: runner.manager });
-    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), SFR_MONTHS.map((m) => (Number(m) + 2000).toFixed(2)));
+    assert.deepEqual(await readMeasure(runner, kind, versionId, 'planned', YEAR), CONSULTANT_MONTHS.map((m) => (Number(m) + 2000).toFixed(2)));
     const again = (await readRecords(runner, kind, versionId)).planned;
     assert.deepEqual([again.method, again.last_calculation.kind], ['computed', 'computed']);
     assert.deepEqual(await linesOf(), ids, `${kind}: the same lines are not rewritten`);
