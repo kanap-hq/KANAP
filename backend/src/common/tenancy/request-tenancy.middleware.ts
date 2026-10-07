@@ -19,17 +19,41 @@ import { BUSY_RETRY_AFTER_SECONDS } from '../filters/database-error.mapping';
  *   exhausted (a monitor or an orchestrator does not restart a busy API), or
  *   before the single tenant is provisioned. Same for the ops metrics of a
  *   monitoring tool (`/ops/metrics`).
+ * - A tenant being reset to its starting state (`metadata.demo.status` is
+ *   `resetting`, demo-data.service.ts): its write requests get 409
+ *   `tenant_resetting`, so nothing written during the reset survives it. Reads
+ *   go on, as do the token refresh and the sign-out, which only touch the
+ *   sessions the reset keeps (a refused refresh would sign the user out).
  */
+export type TenantLookupRow = { id: string; slug: string; name: string; demo_status?: string | null };
+
 export type RequestTenancyOptions = {
   /** Runs one read query (the DataSource's `query`). */
-  query: (sql: string, params: unknown[]) => Promise<Array<{ id: string; slug: string; name: string }>>;
+  query: (sql: string, params: unknown[]) => Promise<TenantLookupRow[]>;
   singleTenant: boolean;
   defaultTenantSlug: string;
   platformAdminHost: string;
   marketingRedirectUrl: string;
 };
 
-const TENANT_BY_SLUG = 'SELECT id, slug, name FROM tenants WHERE slug = $1 AND deleted_at IS NULL LIMIT 1';
+const TENANT_BY_SLUG = `SELECT id, slug, name, metadata->'demo'->>'status' AS demo_status
+  FROM tenants WHERE slug = $1 AND deleted_at IS NULL LIMIT 1`;
+
+/** The code of the 409 a write request of a tenant being reset gets. */
+export const TENANT_RESETTING_CODE = 'tenant_resetting';
+
+/** Methods that write nothing: served while the tenant is being reset. */
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/** Writes allowed during a reset: the session routes, which touch only the sessions it keeps. */
+const SESSION_PATHS = new Set(['/auth/refresh', '/api/auth/refresh', '/auth/logout', '/api/auth/logout']);
+
+/** Whether a request of a tenant whose sample data status is `demoStatus` is refused. */
+export function refusedWhileResetting(req: Request, demoStatus: string | null | undefined): boolean {
+  if (demoStatus !== 'resetting') return false;
+  if (READ_METHODS.has(String(req.method || 'GET').toUpperCase())) return false;
+  return !SESSION_PATHS.has(routePath(req));
+}
 
 /**
  * Routes that need no tenant and are never looked up: the liveness route, and the ops metrics of
@@ -98,7 +122,8 @@ export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
       next();
       return;
     }
-    let rows: Array<{ id: string; slug: string; name: string }>;
+    let rows: TenantLookupRow[];
+    let found: TenantLookupRow | null = null;
     try {
       // Single-tenant mode: skip all Host parsing, resolve tenant by slug
       if (options.singleTenant) {
@@ -108,6 +133,7 @@ export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
           return;
         }
         (req as any).tenant = { id: rows[0].id, slug: rows[0].slug, name: rows[0].name };
+        found = rows[0];
       } else {
         const rawHost = req.headers.host || '';
         const host = rawHost.split(':')[0]?.toLowerCase() ?? '';
@@ -120,6 +146,7 @@ export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
           }
           (req as any).isPlatformHost = true;
           (req as any).tenant = { id: rows[0].id, slug: rows[0].slug, name: rows[0].name };
+          found = rows[0];
         } else {
           // Apex hosts are marketing/public (no tenant)
           const slug = tenantSlugFromHost(host);
@@ -132,11 +159,21 @@ export function createRequestTenancyMiddleware(options: RequestTenancyOptions) {
               return;
             }
             (req as any).tenant = { slug, id: rows[0].id, name: rows[0].name };
+            found = rows[0];
           }
         }
       }
     } catch (error) {
       answerTenantLookupFailed(req, res, error);
+      return;
+    }
+    if (found && refusedWhileResetting(req, found.demo_status)) {
+      res.status(409).json({
+        statusCode: 409,
+        error: 'Conflict',
+        code: TENANT_RESETTING_CODE,
+        message: 'This workspace is being reset to its starting state. Try again in a moment.',
+      });
       return;
     }
     // Outside the try: an error further down the chain is not a tenant lookup failure.
