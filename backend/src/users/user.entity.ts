@@ -53,7 +53,8 @@ export class User {
   @Column({ type: 'varchar', length: 5, nullable: true, default: null })
   locale!: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  // Never read by default: sign-in selects it explicitly (UsersService.findByEmailForSignIn).
+  @Column({ type: 'text', nullable: true, select: false })
   password_hash!: string | null;
 
   @Column({ type: 'uuid' })
@@ -70,7 +71,8 @@ export class User {
   @Column({ type: 'boolean', default: false })
   mfa_enabled!: boolean;
 
-  @Column({ type: 'text', nullable: true })
+  // Never read by default.
+  @Column({ type: 'text', nullable: true, select: false })
   mfa_secret!: string | null;
 
   @Column({ type: 'text', default: 'enabled' })

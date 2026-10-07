@@ -53,7 +53,7 @@ export class AuthService {
 
   async validateUser(email: string, password: string, manager?: import('typeorm').EntityManager) {
     if (!password || typeof password !== 'string') throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
-    const user = await this.users.findByEmail(email, { manager });
+    const user = await this.users.findByEmailForSignIn(email, { manager });
     if (!user || !user.password_hash || typeof user.password_hash !== 'string') {
       throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
     }

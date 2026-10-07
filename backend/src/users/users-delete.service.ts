@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
+import { userAuditSnapshot } from './users.service';
 
 @Injectable()
 export class UsersDeleteService extends BaseDeleteService<User> {
@@ -63,7 +64,7 @@ export class UsersDeleteService extends BaseDeleteService<User> {
         table: 'users',
         recordId: id,
         action: 'delete',
-        before: { ...user, password_hash: undefined },
+        before: userAuditSnapshot(user),
         after: null,
         userId: actorId ?? null,
       },

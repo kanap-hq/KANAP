@@ -147,9 +147,33 @@ function testSetModeGuard() {
   assert.throws(() => buildWhereFromAgFilters({ name: { filterType: 'set', mode: 'other', values: ['a'] } }), isBadRequest(/Unknown set filter mode/));
 }
 
+// `buildWhereFromAgFilters` with ticked values and the empty value: the values are bound
+// parameters, never written into the SQL text, and each clause has its own parameter name.
+function testSetWithNullBindsValues() {
+  const values = ["O'Neil & Co", 'Plain value'];
+  const where = buildWhereFromAgFilters({ name: { filterType: 'set', values: [...values, null] } });
+  const operator = where.name;
+  assert.equal(operator._type, 'raw');
+  const sql: string = operator._getSql('t.name');
+  const match = /^\(t\.name IN \(:\.\.\.(\w+)\) OR t\.name IS NULL\)$/.exec(sql);
+  assert.ok(match, `values bound as a parameter list, null kept (${sql})`);
+  assert.deepEqual(operator._objectLiteralParameters, { [match![1]]: values }, 'the parameter holds the ticked values unchanged');
+  assert.equal(sql.includes('Neil') || sql.includes('Plain'), false, 'no value in the SQL text');
+
+  const other = buildWhereFromAgFilters({ name: { filterType: 'set', values: ['x', null] }, code: { filterType: 'set', values: ['y', undefined] } });
+  const names = [where.name, other.name, other.code].map((op: any) => Object.keys(op._objectLiteralParameters)[0]);
+  assert.equal(new Set(names).size, names.length, `parameter names are unique (${names.join(', ')})`);
+  assert.deepEqual(other.code._objectLiteralParameters[names[2]], ['y'], 'undefined counts as the empty value');
+
+  // The other shapes are unchanged.
+  assert.equal(buildWhereFromAgFilters({ name: { filterType: 'set', values: [null] } }).name._getSql('t.name'), 't.name IS NULL');
+  assert.equal(buildWhereFromAgFilters({ name: { filterType: 'set', values: [] } }).name._getSql('t.name'), '1=0');
+}
+
 testIncludeModeUnchanged();
 testExcludeModeIsTheComplement();
 testExcludeModeOnlyOnSetModels();
 testUnknownModeIsRefused();
 testSetModeGuard();
+testSetWithNullBindsValues();
 console.log('ag-grid-filtering.spec: ok');

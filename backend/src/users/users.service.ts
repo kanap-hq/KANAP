@@ -68,6 +68,14 @@ const buildAiUserExpertiseSql = (configAlias: string): string =>
 
 const AI_USER_CONTRIBUTOR_PROFILE_SQL = `CASE WHEN tmc.id IS NULL THEN 'not_configured' ELSE 'configured' END`;
 
+/** A user as written to the audit log: a copy without its password hash or MFA secret. */
+export function userAuditSnapshot(user: Partial<User>): Record<string, unknown> {
+  const snapshot: Record<string, unknown> = { ...user };
+  delete snapshot.password_hash;
+  delete snapshot.mfa_secret;
+  return snapshot;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -464,6 +472,19 @@ export class UsersService {
     return repo.findOne({ where: { email }, relations: ['role'] });
   }
 
+  /**
+   * Sign-in only: the user and its role, with the password hash that no other read of a user
+   * selects (`select: false` on the column).
+   */
+  findByEmailForSignIn(email: string, opts?: { manager?: EntityManager }) {
+    return this.getRepo(opts?.manager)
+      .createQueryBuilder('u')
+      .addSelect('u.password_hash')
+      .leftJoinAndSelect('u.role', 'role')
+      .where('u.email = :email', { email })
+      .getOne();
+  }
+
   async findById(id: string, opts?: { manager?: EntityManager }) {
     const repo = this.getRepo(opts?.manager);
     return repo.findOne({
@@ -550,7 +571,7 @@ export class UsersService {
           recordId: saved.id,
           action: 'create',
           before: null,
-          after: { ...saved, password_hash: undefined },
+          after: userAuditSnapshot(saved),
           userId: saved.id,
         },
         { manager: opts?.manager ?? repo.manager },
@@ -629,8 +650,8 @@ export class UsersService {
           table: 'users',
           recordId: saved.id,
           action: 'update',
-          before: { ...existing, password_hash: undefined },
-          after: { ...saved, password_hash: undefined },
+          before: userAuditSnapshot(existing),
+          after: userAuditSnapshot(saved),
           userId: actorUserId,
         },
         { manager: opts?.manager ?? repo.manager },
@@ -884,8 +905,8 @@ export class UsersService {
               table: 'users',
               recordId: saved.id,
               action: 'update',
-              before: { ...before, password_hash: undefined },
-              after: { ...saved, password_hash: undefined },
+              before: userAuditSnapshot(before),
+              after: userAuditSnapshot(saved),
               userId: userId ?? null,
             },
             { manager: opts?.manager ?? repo.manager },
@@ -902,7 +923,7 @@ export class UsersService {
               recordId: saved.id,
               action: 'create',
               before: null,
-              after: { ...saved, password_hash: undefined },
+              after: userAuditSnapshot(saved),
               userId: userId ?? null,
             },
             { manager: opts?.manager ?? repo.manager },
@@ -925,12 +946,12 @@ export class UsersService {
     if (summary.seat_limit !== null && summary.seats_used >= summary.seat_limit) {
       throw new BadRequestException('No seats available. Your plan allows up to ' + summary.seat_limit + ' contributors.');
     }
-    const before = { ...user };
+    const before = userAuditSnapshot(user);
     user.status = 'enabled' as any;
     const saved = await repo.save(user);
     if (this.audit) {
       await this.audit.log(
-        { table: 'users', recordId: saved.id, action: 'update', before, after: saved, userId: actorId ?? null },
+        { table: 'users', recordId: saved.id, action: 'update', before, after: userAuditSnapshot(saved), userId: actorId ?? null },
         { manager: opts?.manager ?? repo.manager },
       );
     }
@@ -946,7 +967,7 @@ export class UsersService {
     const user = await repo.findOne({ where: { id } });
     if (!user) throw new BadRequestException('User not found');
     if (user.status === 'disabled') return user;
-    const before = { ...user };
+    const before = userAuditSnapshot(user);
     user.status = 'disabled' as any;
     const saved = await repo.save(user);
     // Kill live sessions immediately: without this the user could keep refreshing
@@ -959,7 +980,7 @@ export class UsersService {
           recordId: saved.id,
           action: 'update',
           before,
-          after: saved,
+          after: userAuditSnapshot(saved),
           userId: actorId ?? null,
           source: opts?.sourceRef ? 'system' : undefined,
           sourceRef: opts?.sourceRef ?? null,
@@ -1029,12 +1050,12 @@ export class UsersService {
       // default Users view.
       result = { ...user, password_hash: undefined };
     } else {
-      const before = { ...user };
+      const before = userAuditSnapshot(user);
       user.status = 'invited' as any;
       const saved = await repo.save(user);
       if (this.audit) {
         await this.audit.log(
-          { table: 'users', recordId: saved.id, action: 'update', before, after: saved, userId: actorId ?? null },
+          { table: 'users', recordId: saved.id, action: 'update', before, after: userAuditSnapshot(saved), userId: actorId ?? null },
           { manager: opts?.manager ?? repo.manager },
         );
       }
