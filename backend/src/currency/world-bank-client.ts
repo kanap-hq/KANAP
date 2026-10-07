@@ -5,11 +5,17 @@ import * as zlib from 'zlib';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import AdmZip = require('adm-zip');
 import { parse } from 'csv-parse/sync';
+import { openBoundedArchive } from '../common/archive-limits';
 import { CURRENCY_TO_WB_CODE } from './world-bank-codes';
 
 export type WorldBankFrequency = 'A' | 'Q';
+
+// The FX dataset archive is about 100 KB and the JSON answers a few KB: these
+// limits leave a wide margin and bound what a download or a decompression keeps
+// in memory.
+export const WB_DOWNLOAD_MAX_BYTES = 32 * 1024 * 1024;
+export const WB_RESPONSE_MAX_BYTES = 32 * 1024 * 1024;
 
 export interface WorldBankSeriesRequest {
   frequency: WorldBankFrequency;
@@ -188,17 +194,15 @@ export class WorldBankClient {
   }
 
   private extractCsvFromArchive(buffer: Buffer): string {
-    const zip = new AdmZip(buffer);
-    // `adm-zip` is declared untyped in `src/types/external.d.ts`.
-    const zipEntries: Array<{ entryName: string; getData(): Buffer }> = zip.getEntries();
-    const entry = zipEntries.find((item) => {
+    const archive = openBoundedArchive(buffer);
+    const entry = archive.entries().find((item) => {
       const name = item.entryName.toLowerCase();
       return name.endsWith('.csv') && name.includes('api_pa.nus.fcrf') && !name.includes('metadata');
     });
     if (!entry) {
       throw new Error('World Bank CSV archive missing FX data file');
     }
-    return entry.getData().toString('utf8');
+    return archive.readText(entry);
   }
 
   private parseAnnualCsv(content: string): Map<string, Map<number, number>> {
@@ -288,10 +292,30 @@ export class WorldBankClient {
             reject(err);
             return;
           }
+          const declared = Number(res.headers['content-length']);
+          if (Number.isFinite(declared) && declared > WB_DOWNLOAD_MAX_BYTES) {
+            res.destroy();
+            reject(new Error('World Bank download exceeds the size limit'));
+            return;
+          }
           const chunks: Buffer[] = [];
-          res.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+          let received = 0;
+          let overLimit = false;
+          res.on('data', (chunk) => {
+            if (overLimit) return;
+            const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+            received += buffer.length;
+            if (received > WB_DOWNLOAD_MAX_BYTES) {
+              overLimit = true;
+              chunks.length = 0;
+              res.destroy();
+              reject(new Error('World Bank download exceeds the size limit'));
+              return;
+            }
+            chunks.push(buffer);
+          });
           res.on('end', () => {
-            resolve(Buffer.concat(chunks));
+            if (!overLimit) resolve(Buffer.concat(chunks));
           });
           res.on('error', (err) => reject(err as Error));
         },
@@ -394,8 +418,20 @@ export class WorldBankClient {
             return;
           }
           const chunks: Buffer[] = [];
-          res.on('data', (chunk) => chunks.push(chunk as Buffer));
+          let received = 0;
+          res.on('data', (chunk) => {
+            if (settled) return;
+            received += (chunk as Buffer).length;
+            if (received > WB_RESPONSE_MAX_BYTES) {
+              chunks.length = 0;
+              res.destroy();
+              safeReject(new Error('World Bank response exceeds the size limit'));
+              return;
+            }
+            chunks.push(chunk as Buffer);
+          });
           res.on('end', () => {
+            if (settled) return;
             try {
               const buffer = Buffer.concat(chunks);
               if (!buffer.length) {
@@ -420,10 +456,12 @@ export class WorldBankClient {
                   safeResolve(null);
                 }
               };
+              // The decompressed answer is bounded too.
+              const inflateOptions = { maxOutputLength: WB_RESPONSE_MAX_BYTES };
               if (encoding.includes('gzip')) {
-                zlib.gunzip(buffer, handlePayload);
+                zlib.gunzip(buffer, inflateOptions, handlePayload);
               } else if (encoding.includes('deflate')) {
-                zlib.inflate(buffer, handlePayload);
+                zlib.inflate(buffer, inflateOptions, handlePayload);
               } else {
                 handlePayload(null, buffer);
               }

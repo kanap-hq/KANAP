@@ -75,6 +75,10 @@ export type AiStreamParams = {
   model: string;
   apiKey: string | null;
   endpointUrl: string | null;
+  // Who set `endpointUrl`: a tenant (the default; checked before the call and the
+  // connection bound to the validated addresses) or the platform operator (the
+  // built-in provider, used as configured).
+  endpointSource?: 'tenant' | 'platform';
   systemPrompt: string;
   systemPromptRole?: AiSystemPromptRole;
   messages: AiProviderMessage[];

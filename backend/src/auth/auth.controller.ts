@@ -8,7 +8,8 @@ import { PermissionsService, RESOURCES } from '../permissions/permissions.servic
 import { BillingService } from '../billing/billing.service';
 import * as jwt from 'jsonwebtoken';
 import { EmailService } from '../email/email.service';
-import { resolveRequestAppBaseUrl } from '../common/url';
+import { resolveAppBaseUrl } from '../common/url';
+import { assertRequestOriginAllowed } from '../common/cors-policy';
 import { Features } from '../config/features';
 import { throwFeatureDisabled } from '../common/feature-gates';
 import { isPlatformAdmin } from './platform-admin.util';
@@ -243,6 +244,9 @@ export class AuthController {
   @Throttle({ default: RATE_LIMITS.authPasswordResetRequest })
   async requestPasswordReset(@Body() body: PasswordResetRequestDto, @Req() req: any) {
     if (!Features.EMAIL_ENABLED) throwFeatureDisabled('email');
+    // The link base comes from the configuration and is checked before the account lookup:
+    // without it every address gets the same answer.
+    const baseUrl = resolveAppBaseUrl(req);
     const email = body.email.trim().toLowerCase();
     const user = await this.runInRequestTenant(req, (manager) => this.users.findByEmail(email, { manager }));
     if (!user) return { ok: true };
@@ -251,7 +255,6 @@ export class AuthController {
     if (user.external_auth_provider) return { ok: true };
 
     const token = await this.runInRequestTenant(req, (manager) => this.auth.createPasswordResetToken(user, manager));
-    const baseUrl = resolveRequestAppBaseUrl(req);
     const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password#token=${encodeURIComponent(token)}`;
     await this.emails.sendPasswordResetEmail({
       to: email,
@@ -275,6 +278,8 @@ export class AuthController {
   @UseGuards(RateLimitGuard)
   @Throttle({ default: RATE_LIMITS.authRefresh })
   async refreshToken(@Body() body: RefreshTokenDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
+    // Same origin rule as CORS, before the cookie is read (common/cors-policy.ts).
+    assertRequestOriginAllowed(req);
     const refreshToken = this.resolveRefreshToken(req, body);
     if (!refreshToken) throw new BadRequestException('refresh_token is required');
     const refreshed = await this.runInRequestTenant(req, (manager) => this.auth.refreshAccessToken(refreshToken, req?.tenant?.id, manager));
@@ -284,6 +289,8 @@ export class AuthController {
 
   @Post('logout')
   async logout(@Body() body: LogoutDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
+    // Same origin rule as CORS, before the cookie is cleared or the token revoked.
+    assertRequestOriginAllowed(req);
     const refreshToken = this.resolveRefreshToken(req, body);
     clearRefreshTokenCookie(res, isSecureRequest(req));
     if (refreshToken) {

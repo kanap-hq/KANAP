@@ -5,25 +5,33 @@
 ```bash
 # 1. Datenbank und Speicher sichern (Ihre Verantwortung)
 
-# 2. Neueste Änderungen pullen und neu bauen
+# 2. Neueste Änderungen pullen
 cd kanap
 git pull origin main
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
 
-# 3. Container neustarten (Migrationen laufen automatisch)
+# 3. Die Images aus den geladenen Quellen bauen
+docker compose -f infra/compose.onprem.yml build --pull
+
+# 4. Container neustarten (Migrationen laufen automatisch)
 docker compose -f infra/compose.onprem.yml up -d
 # Der alte API-Container beendet zuerst die laufenden Anfragen, die in die Warteschlange
 # gestellten E-Mails und seine laufenden Hintergrundjobs (bis zu 20 s), dann stoppt er.
-
-# 4. Start überprüfen
-docker compose -f infra/compose.onprem.yml logs -f api
-# Auf "Application started"-Meldung warten
 ```
+
+Docker Compose baut die Images `api` und `web` selbst, aus den Quellen, die Sie gerade geladen haben. `--pull` lädt außerdem aktualisierte Basis-Images. Wer nur `up -d` ausführt, behält die alte Version, weil Compose die vorhandenen Images wiederverwendet. Führen Sie daher immer zuerst `build` aus.
+
+**Upgrade prüfen:**
+
+```bash
+docker compose -f infra/compose.onprem.yml logs --tail=100 api
+curl https://kanap.company.com/api/health
+```
+
+Das API-Log zeigt die Migrationen (`[entrypoint] Migrations complete (N executed).`) und danach den Start der API, ohne Fehler. Die Health-Adresse antwortet mit `{ "status": "ok" }`.
 
 **Breaking Changes:** Prüfen Sie `CHANGELOG.md` vor dem Upgrade.
 
-**Rollback:** Datenbank aus Backup wiederherstellen. Migrationen sind nur vorwärtsgerichtet.
+**Rollback:** Datenbank aus Backup wiederherstellen. Migrationen sind nur vorwärtsgerichtet. Wechseln Sie danach mit `git checkout <vorheriger Commit>` zur vorherigen Version, führen Sie dieselben Befehle `build --pull` und `up -d` aus und prüfen Sie das Upgrade erneut. Führen Sie vor dem nächsten Upgrade `git checkout main` aus.
 
 ## Versionsunterstützung
 

@@ -104,7 +104,7 @@ ENTRA_REDIRECT_URI=https://kanap.firma.de/api/auth/entra/callback
 Hinweise:
 - `ENTRA_AUTHORITY` sollte für On-Premise **mandantenspezifisch** sein.
 - `ENTRA_REDIRECT_URI` muss **exakt** mit dem übereinstimmen, was Sie in Entra registriert haben.
-- Stellen Sie sicher, dass `APP_BASE_URL` auf die öffentliche URL gesetzt ist, damit die Post-Login-Umleitung korrekt funktioniert.
+- Stellen Sie sicher, dass `APP_BASE_URL` auf die genaue Adresse gesetzt ist, die Benutzer öffnen (Schema, Host und Port, wenn er nicht dem Standard entspricht). Die Post-Login-Umleitung wird daraus erstellt. Ohne sie antwortet die Microsoft-Anmeldung mit „application URL is not configured“.
 
 ## Schritt 5: KANAP neustarten
 
@@ -156,7 +156,7 @@ Der Block unter **Administration > Authentifizierung** meldet das Ergebnis: **Zu
 - **ENTRA_TENANT_MISMATCH**: Sie haben einen Mandanten verbunden, versuchen sich aber von einem anderen anzumelden. Benutzer sehen "Dieses Microsoft-Konto gehört zu einer anderen Organisation als der mit diesem Arbeitsbereich verbundenen."
 - **ENTRA_EMAIL_UNVERIFIED**: Die E-Mail-Adresse des Microsoft-Kontos ist nicht verifiziert und kann daher nicht zur Anmeldung verwendet werden.
 - **Invalid Entra state / nonce**: Der Anmeldestatus ist abgelaufen oder die Entra-Weiterleitung ist nicht zur konfigurierten Callback-URL zurückgekehrt. Versuchen Sie die Anmeldung erneut und prüfen Sie, dass `ENTRA_REDIRECT_URI` exakt mit der Entra-App-Registrierung übereinstimmt.
-- **Fehlerhafte Umleitung nach Anmeldung**: Prüfen Sie `APP_BASE_URL` und Reverse-Proxy-Header (`Host`, `X-Forwarded-Proto`).
+- **Fehlerhafte Umleitung nach Anmeldung**: Prüfen Sie, ob `APP_BASE_URL` die genaue Adresse ist, die Benutzer öffnen. Die Umleitung stammt aus `APP_BASE_URL`, und die Header `Host` und `X-Forwarded-Host` ändern sie nicht. Prüfen Sie außerdem, ob der Proxy `X-Forwarded-Proto` sendet.
 - **"Noch nicht autorisiert" bei der Verzeichnissynchronisierung**: Entweder wurde die Anwendungsberechtigung `User.Read.All` nie zur App-Registrierung hinzugefügt, oder ein Microsoft Entra-Administrator hat die mandantenweite Zustimmung noch nicht erteilt. Prüfen Sie beides und klicken Sie dann auf **Jetzt synchronisieren**.
 - **Anmeldungen schlagen direkt nach dem Erteilen der Admin-Zustimmung fehl**: Die Zustimmung hat die Berechtigungsgewährung der App durch die Liste der konfigurierten Berechtigungen ersetzt und dabei `openid`, `profile`, `email` und `offline_access` entfernt. Fügen Sie diese als konfigurierte delegierte Berechtigungen hinzu und erteilen Sie die Zustimmung erneut.
 - **Abgelaufenes Client-Secret**: Microsoft gibt `AADSTS7000222` zurück. Benutzer sehen auf der Anmeldeseite nur die allgemeine Meldung "Die Anmeldung mit Microsoft wurde nicht abgeschlossen. Versuchen Sie es erneut oder wenden Sie sich an Ihren Administrator." Um die Ursache zu bestätigen, sehen Sie unter **Administration > Authentifizierung > Tägliche Verzeichnissynchronisierung** nach: Die Fehlerzeile nennt den Microsoft-Fehlercode. Ein erneutes **Verbinden** zeigt ihn ebenfalls. Erstellen Sie ein neues Client-Secret unter **Zertifikate & Geheimnisse**, aktualisieren Sie `ENTRA_CLIENT_SECRET` und starten Sie die API neu.

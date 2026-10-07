@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import { assertPublicHttpTarget } from '../../common/ssrf-guard';
+import { openValidatedFetch } from '../../common/pinned-fetch';
 import { Features } from '../../config/features';
 import {
   PrtgApiError,
@@ -118,7 +118,7 @@ function connectionTimeoutMs(connection: PrtgConnection): number {
 }
 
 // Optional DI token so specs can inject a fake transport; production leaves
-// it unbound and the client falls back to the global fetch.
+// it unbound and the client uses the fetch bound to the validated target.
 export const PRTG_FETCH_IMPLEMENTATION = 'PRTG_FETCH_IMPLEMENTATION';
 
 function textOrNull(value: unknown): string | null {
@@ -202,12 +202,11 @@ export function formatPrtgDate(date: Date, serverTimeZone?: string | null): stri
 @Injectable()
 export class PrtgService {
   private readonly logger = new Logger(PrtgService.name);
-  private readonly fetchImpl: PrtgFetchLike;
+  private readonly fetchImpl: PrtgFetchLike | null;
 
   constructor(@Optional() @Inject(PRTG_FETCH_IMPLEMENTATION) fetchImpl?: PrtgFetchLike) {
-    // Default impl blocks redirect-based SSRF bypass in cloud (follows redirects on-prem).
-    this.fetchImpl = fetchImpl
-      ?? ((url, init) => fetch(url, { ...init, redirect: Features.SINGLE_TENANT ? 'follow' : 'error' }));
+    // Null: the default, the fetch bound to the validated target of each call (see requestJson).
+    this.fetchImpl = fetchImpl ?? null;
   }
 
   // GET /api/table.json — sensors/devices/groups listing with column
@@ -348,12 +347,24 @@ export class PrtgService {
   private async requestJson(url: string, endpoint: string, timeoutMs = PRTG_TIMEOUT_MS): Promise<unknown> {
     // SSRF guard: block internal targets in multi-tenant cloud (no-op on-prem where
     // a private PRTG base URL is legitimate). DNS-checked at request time, not only at
-    // config save; redirect:'error' in cloud additionally stops a public host 302-ing
-    // to an internal one after this check.
-    await assertPublicHttpTarget(url);
+    // config save, and the connection then goes to the validated addresses only;
+    // redirect:'error' in cloud additionally stops a public host 302-ing to an
+    // internal one after this check. The connection is released once the body is read.
+    const target = await openValidatedFetch(url);
+    try {
+      return await this.readJson(target.fetch, url, endpoint, timeoutMs);
+    } finally {
+      await target.close();
+    }
+  }
+
+  private async readJson(boundFetch: typeof fetch, url: string, endpoint: string, timeoutMs: number): Promise<unknown> {
+    // Default fetch: a redirect is an error in cloud (followed on-prem).
+    const fetchImpl: PrtgFetchLike = this.fetchImpl
+      ?? ((input, init) => boundFetch(input, { ...init, redirect: Features.SINGLE_TENANT ? 'follow' : 'error' }));
     let response: Response;
     try {
-      response = await this.fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
+      response = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
     } catch (error: any) {
       const name = String(error?.name || '');
       if (name === 'TimeoutError' || name === 'AbortError') {

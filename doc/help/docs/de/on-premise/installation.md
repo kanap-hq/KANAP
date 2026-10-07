@@ -32,25 +32,27 @@ cd kanap
 
 # 2. Umgebung konfigurieren VOR dem Bauen
 cp infra/.env.onprem.example .env
-nano .env  # DATABASE_URL, S3-Credentials, ADMIN_EMAIL, JWT_SECRET, APP_BASE_URL setzen
+nano .env  # DATABASE_URL, S3-Credentials, ADMIN_EMAIL, JWT_SECRET, APP_BASE_URL, CORS_ORIGINS setzen
+#          (APP_BASE_URL und CORS_ORIGINS: die genaue Adresse, die Benutzer öffnen)
+#          APP_ENV=production ergänzen, sobald Benutzer KANAP über HTTPS erreichen
 # Siehe den Konfigurationsleitfaden für alle Variablen
 
-# 3. Docker-Images bauen
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
+# 3. Docker-Images bauen (Compose baut sie aus dem Repository)
+docker compose -f infra/compose.onprem.yml build --pull
 
 # 4. Container starten
 docker compose -f infra/compose.onprem.yml up -d
 
 # 5. Start überprüfen
 docker compose -f infra/compose.onprem.yml logs -f api
-# Auf "Application started"-Meldung warten
+# Auf "[entrypoint] Migrations complete" und danach "Nest application successfully started" warten
 # Beim ersten Start erstellt KANAP automatisch Mandant, Admin-Benutzer und Abonnement
 
 # 6. Ihren Reverse Proxy konfigurieren, um Traffic zu routen an:
 #    - /api/* → api:8080
 #    - /*     → web:80
 # Stellen Sie sicher, dass der Proxy Host beibehält und X-Forwarded-Proto setzt.
+# Lesen Sie nach dem ersten Start die Zeilen [ENV], [CONFIG] und [CORS] im API-Protokoll.
 
 # 7. Auf Anwendung zugreifen
 # https://kanap.ihre-domain.de
@@ -61,6 +63,8 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 **Datenbankrollen-Anforderung:** `DATABASE_URL` muss eine dedizierte PostgreSQL-Anwendungsrolle verwenden. Zeigen Sie nicht auf `postgres` oder eine andere Cluster-Admin-Rolle. KANAP verweigert den Start, anstatt ohne effektive RLS-Durchsetzung zu laufen.
 
+**Adresse und Origins:** Setzen Sie `APP_BASE_URL` und `CORS_ORIGINS` auf die genaue Adresse, die Benutzer öffnen, mit dem Port, wenn er nicht dem Standard entspricht. Jeder Link, den KANAP versendet, stammt aus `APP_BASE_URL`. Ergänzen Sie `APP_ENV=production`, wenn Benutzer KANAP über HTTPS erreichen: Die API startet dann nicht ohne diese beiden Werte und markiert das Sitzungs-Cookie immer als Secure. Siehe [Konfiguration](configuration.md#erforderlich-admin-zugangsdaten).
+
 **E-Mail-Wahl:** On-Premise-Bereitstellungen können entweder **Resend** oder **SMTP** für ausgehende E-Mail verwenden. SMTP ist nützlich, wenn der Kunde bereits ein internes Mail-Relay oder einen verwalteten Anbieter wie Microsoft 365 hat. Konfigurieren Sie eine dieser Optionen, wenn Sie möchten, dass Passwortzurücksetzung, Einladungen und Benachrichtigungs-E-Mails ab dem ersten Tag funktionieren.
 
 ## Reverse-Proxy-Beispiel (nginx)
@@ -70,7 +74,7 @@ docker compose -f infra/compose.onprem.yml logs -f api
 1. TLS auf Port 443 terminieren
 2. `/api/*` an den API-Container routen (Port 8080)
 3. Alle anderen Anfragen an den Web-Container routen (Port 80)
-4. `X-Forwarded-Proto: https` setzen und `Host` / `X-Forwarded-Host` beibehalten
+4. `X-Forwarded-Proto: https` setzen und `Host` beibehalten. KANAP erstellt die Links, die es versendet, aus `APP_BASE_URL` und liest `X-Forwarded-Host` außerhalb der lokalen Entwicklung nicht mehr. Verwendet die Website einen nicht standardmäßigen Port, tragen Sie die genaue Adresse mit Port in `CORS_ORIGINS` ein.
 5. WebSocket-Upgrade unterstützen (verwendet für Echtzeit-Funktionen)
 
 Da Container an `127.0.0.1` gebunden sind, läuft nginx auf dem gleichen Host und proxyt zu `localhost`.

@@ -251,6 +251,7 @@ export class AiAgentLlmClient {
         model: runtime.model,
         apiKey: runtime.apiKey,
         endpointUrl: runtime.endpointUrl,
+        endpointSource: runtime.source === 'builtin' ? 'platform' : 'tenant',
         systemPrompt: input.systemPrompt,
         messages: [{
           role: 'user',

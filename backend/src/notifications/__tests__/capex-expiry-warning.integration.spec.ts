@@ -5,6 +5,10 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { ScheduledNotificationsService } from '../scheduled-notifications.service';
 
+// Notification links come from the configured application address (common/url.ts): without one
+// the emails are not built and the scheduled runs are skipped.
+if (!process.env.APP_BASE_URL) process.env.APP_BASE_URL = 'https://app.example.test';
+
 // CAPEX items warn their owners before their end of validity (disabled_at)
 // exactly like OPEX items: candidates end within 30 days, a warning goes out
 // when the end is 30, 14, 7 or 1 calendar day(s) away, and it carries the

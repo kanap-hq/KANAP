@@ -7,6 +7,10 @@ import { NotificationsService } from '../notifications.service';
 import { ScheduledNotificationsService } from '../scheduled-notifications.service';
 import { DEFAULT_NOTIFICATION_PREFERENCES, NotificationPreferencesData } from '../notifications.constants';
 
+// Notification links come from the configured application address (common/url.ts): without one
+// the emails are not built and the scheduled runs are skipped.
+if (!process.env.APP_BASE_URL) process.env.APP_BASE_URL = 'https://app.example.test';
+
 // The expiry reminder guard is durable: two runs of the daily check on the
 // same day send a reminder once, also when the api restarted in between (a
 // new service, nothing in memory). The guard rows are system rows of the

@@ -207,6 +207,9 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
+      # Every lockfile entry carries an integrity hash (backend, frontend, marketing).
+      - name: Check lockfile integrity hashes
+        run: bash .github/scripts/check-lockfile-integrity.sh
       - name: Build backend (onprem)
         working-directory: backend
         run: npm ci && npm run build

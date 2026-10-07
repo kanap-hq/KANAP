@@ -26,6 +26,7 @@ function createOrchestrator(options?: {
   followUpPreviews?: any[];
   conversationUsage?: { input_tokens: number; output_tokens: number };
   availableTools?: any[];
+  resolvedSource?: 'registry' | 'builtin';
 }) {
   const persistedMessages: any[] = [];
   let conversationCreated = false;
@@ -93,7 +94,7 @@ function createOrchestrator(options?: {
   };
 
   const mockResolvedModel = () => ({
-    source: 'registry' as const,
+    source: options?.resolvedSource ?? 'registry',
     configId: 'model-config-1',
     configName: options?.model ?? 'gpt-4o',
     provider: options?.providerId ?? 'openai',
@@ -2344,6 +2345,31 @@ async function testProviderRequestUsesChatTimeout() {
   assert.equal(recordedRequests[0].timeoutMs, 300000);
 }
 
+// The built-in provider's endpoint comes from the platform configuration and is
+// marked `platform`; a tenant's model is marked `tenant` (checked and bound).
+async function testProviderEndpointSourceFollowsTheResolvedModel() {
+  for (const [resolvedSource, expected] of [['registry', 'tenant'], ['builtin', 'platform']] as const) {
+    const { orchestrator, recordedRequests } = createOrchestrator({
+      resolvedSource,
+      providerEvents: [{ type: 'done', usage: { input_tokens: 1, output_tokens: 1 } }],
+    });
+    await collectEvents(
+      orchestrator.stream({
+        context: {
+          tenantId: 'tenant-1',
+          userId: 'user-1',
+          isPlatformHost: false,
+          surface: 'chat',
+          authMethod: 'jwt',
+        },
+        userMessage: 'Hello',
+      }),
+    );
+    assert.equal(recordedRequests[0].endpointSource, expected, `${resolvedSource} model`);
+    assert.equal(recordedRequests[0].apiKey, resolvedSource === 'builtin' ? 'platform-key' : 'real-api-key');
+  }
+}
+
 async function testRepeatedToolCallRepairCanRecoverToFinalAnswer() {
   const repeatedSearchBatch = (id: string) => [
     { type: 'tool_call_start', id, name: 'search_all' },
@@ -2972,6 +2998,7 @@ async function run() {
   await testTextualWriteConfirmationWithoutPreviewIsRewrittenToCreatePreviews();
   await testProviderReceivesAbortSignal();
   await testProviderRequestUsesChatTimeout();
+  await testProviderEndpointSourceFollowsTheResolvedModel();
   await testRepeatedToolCallRepairCanRecoverToFinalAnswer();
   await testRepeatedToolCallsStopWithoutFurtherProgress();
   await testDistinctSearchAllNoProgressStopsEarly();

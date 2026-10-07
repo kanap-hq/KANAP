@@ -1,7 +1,8 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import * as http from 'node:http';
 import * as https from 'node:https';
-import { assertPublicHttpTarget } from '../common/ssrf-guard';
+import { LookupFunction } from 'node:net';
+import { LookupFn, pinnedLookup, resolvePublicHttpTarget } from '../common/ssrf-guard';
 import {
   normalizeNetboxDevice,
   normalizeNetboxLocation,
@@ -55,6 +56,8 @@ export type NetboxHttpRequest = {
   headers: Record<string, string>;
   timeoutMs: number;
   insecureTls: boolean;
+  // Connects to the addresses validated before the request (multi-tenant mode).
+  lookup?: LookupFunction;
 };
 
 export type NetboxHttpLike = (url: string, request: NetboxHttpRequest) => Promise<NetboxHttpResponse>;
@@ -65,6 +68,9 @@ export type NetboxObjectPage = { objects: NetboxObject[]; complete: boolean };
 // Optional DI token so specs can inject a fake transport; production leaves it
 // unbound and the client uses node:https / node:http.
 export const NETBOX_HTTP_IMPLEMENTATION = 'NETBOX_HTTP_IMPLEMENTATION';
+// Optional DI token so specs can stand in for DNS in the request-time address
+// check; production leaves it unbound and the system resolver is used.
+export const NETBOX_ADDRESS_LOOKUP = 'NETBOX_ADDRESS_LOOKUP';
 
 // Node reports certificate problems through these error codes. They all mean
 // the same thing to an administrator: KANAP does not trust this certificate.
@@ -148,6 +154,9 @@ const nodeHttpTransport: NetboxHttpLike = (url, request) => new Promise((resolve
     {
       method: 'GET',
       headers: request.headers,
+      // A bound connection gets an agent of its own (agent: false): the shared
+      // keep-alive pool could hand it a socket opened without this lookup.
+      ...(request.lookup ? { lookup: request.lookup, agent: false } : {}),
       ...(parsed.protocol === 'https:' && request.insecureTls ? { rejectUnauthorized: false } : {}),
     },
     (res) => {
@@ -183,9 +192,14 @@ const nodeHttpTransport: NetboxHttpLike = (url, request) => new Promise((resolve
 export class NetboxClient {
   private readonly logger = new Logger(NetboxClient.name);
   private readonly httpImpl: NetboxHttpLike;
+  private readonly addressLookup: LookupFn | undefined;
 
-  constructor(@Optional() @Inject(NETBOX_HTTP_IMPLEMENTATION) httpImpl?: NetboxHttpLike) {
+  constructor(
+    @Optional() @Inject(NETBOX_HTTP_IMPLEMENTATION) httpImpl?: NetboxHttpLike,
+    @Optional() @Inject(NETBOX_ADDRESS_LOOKUP) addressLookup?: LookupFn,
+  ) {
     this.httpImpl = httpImpl ?? nodeHttpTransport;
+    this.addressLookup = addressLookup;
   }
 
   /** GET /api/status/ — connectivity probe; returns the reported Netbox version. */
@@ -367,8 +381,12 @@ export class NetboxClient {
     }
     // Blocks internal targets in multi-tenant cloud (no-op on-prem, where a
     // private Netbox address is the normal case). DNS-checked here, at request
-    // time, not only when the connection was saved.
-    await assertPublicHttpTarget(url.toString());
+    // time, not only when the connection was saved; the request then connects to
+    // the validated addresses only.
+    const target = await resolvePublicHttpTarget(
+      url.toString(),
+      this.addressLookup ? { lookupFn: this.addressLookup } : undefined,
+    );
 
     let response: NetboxHttpResponse;
     try {
@@ -379,6 +397,7 @@ export class NetboxClient {
         },
         timeoutMs,
         insecureTls: connection.insecureTls === true,
+        ...(target.addresses ? { lookup: pinnedLookup(url.hostname, target.addresses) } : {}),
       });
     } catch (error: any) {
       if (error instanceof NetboxApiError) {

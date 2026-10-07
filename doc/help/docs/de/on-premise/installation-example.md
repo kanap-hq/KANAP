@@ -244,12 +244,11 @@ Wenn Sie SMTP anstelle von Resend verwenden, stellen Sie sicher, dass der SMTP-S
 
 ```bash
 cd /opt/kanap
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
+docker compose -f infra/compose.onprem.yml build --pull
 docker compose -f infra/compose.onprem.yml up -d
 ```
 
-Überprüfen Sie die Logs — warten Sie auf die Meldung „Application started":
+Überprüfen Sie die Logs. Warten Sie auf die Zeile „[entrypoint] Migrations complete" und danach auf „Nest application successfully started":
 
 ```bash
 docker compose -f infra/compose.onprem.yml logs -f api
@@ -419,8 +418,7 @@ docker compose -f infra/compose.onprem.yml down
 
 # Nach einem Update neu bauen
 git pull origin main
-docker build -t kanap-api:latest ./backend
-docker build -t kanap-web:latest ./frontend
+docker compose -f infra/compose.onprem.yml build --pull
 docker compose -f infra/compose.onprem.yml up -d
 
 # Alle Dienste prüfen

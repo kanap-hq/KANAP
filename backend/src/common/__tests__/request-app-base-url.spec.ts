@@ -1,11 +1,12 @@
 import * as assert from 'node:assert/strict';
 import { Features } from '../../config/features';
-import { resolveRequestAppBaseUrl } from '../url';
+import { resolveAppBaseUrl } from '../url';
 
 // E-mail links sent in answer to a request (password reset, invitation) open
-// the tenant address of the request. In production the address comes from the
-// configuration only; in development it follows the request host. Multi-tenant
-// mode here; single-tenant cases are in request-app-base-url.single-tenant.spec.ts.
+// the tenant address of the request. Outside development mode the address comes
+// from the configuration only; in development mode it follows a local
+// development host. Multi-tenant mode here; single-tenant cases are in
+// request-app-base-url.single-tenant.spec.ts.
 
 const ENV_KEYS = ['APP_ENV', 'NODE_ENV', 'APP_BASE_URL', 'PUBLIC_APP_URL', 'APP_URL', 'MARKETING_BASE_URL'] as const;
 
@@ -36,7 +37,7 @@ function withConfig(env: Record<string, string>, singleTenant: boolean, fn: () =
 function testProductionTenantAddress() {
   withConfig(PROD_CLOUD, false, () => {
     assert.equal(
-      resolveRequestAppBaseUrl({ tenant: { slug: 'acme' }, headers: { host: 'acme.kanap.net' } }),
+      resolveAppBaseUrl({ tenant: { slug: 'acme' }, headers: { host: 'acme.kanap.net' } }),
       'https://acme.kanap.net',
     );
   });
@@ -45,7 +46,7 @@ function testProductionTenantAddress() {
 function testProductionIgnoresRequestHeaders() {
   withConfig(PROD_CLOUD, false, () => {
     assert.equal(
-      resolveRequestAppBaseUrl({
+      resolveAppBaseUrl({
         tenant: { slug: 'acme' },
         headers: { host: 'other.example.com', 'x-forwarded-host': 'other.example.com', 'x-forwarded-proto': 'http' },
       }),
@@ -56,18 +57,18 @@ function testProductionIgnoresRequestHeaders() {
 
 function testProductionWithoutTenantUnchanged() {
   withConfig(PROD_CLOUD, false, () => {
-    assert.equal(resolveRequestAppBaseUrl({ tenant: null, headers: { host: 'kanap.net' } }), 'https://kanap.net');
+    assert.equal(resolveAppBaseUrl({ tenant: null, headers: { host: 'kanap.net' } }), 'https://kanap.net');
   });
 }
 
 function testDevelopmentFollowsTheRequestHost() {
   withConfig({ APP_ENV: 'development' }, false, () => {
     assert.equal(
-      resolveRequestAppBaseUrl({ tenant: { slug: 'fromage' }, headers: { host: 'fromage.lvh.me' } }),
+      resolveAppBaseUrl({ tenant: { slug: 'fromage' }, headers: { host: 'fromage.lvh.me' } }),
       'http://fromage.lvh.me',
     );
     assert.equal(
-      resolveRequestAppBaseUrl({
+      resolveAppBaseUrl({
         tenant: { slug: 'fromage' },
         headers: { host: 'fromage.dev.kanap.net', 'x-forwarded-proto': 'https' },
       }),

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as path from 'path';
-import { assertPublicHttpTarget } from './ssrf-guard';
+import { openValidatedFetch } from './pinned-fetch';
 
 const MAX_REMOTE_INLINE_IMAGE_BYTES = 20 * 1024 * 1024;
 const REMOTE_IMAGE_FETCH_TIMEOUT_MS = 15_000;
@@ -15,12 +15,21 @@ const MIME_EXTENSION_MAP: Record<string, string> = {
 @Injectable()
 export class RemoteInlineImageImportService {
   async importFromUrl(sourceUrl: string): Promise<Express.Multer.File> {
-    // Always block private targets for user-supplied image URLs, in both deployment modes.
-    const url = await assertPublicHttpTarget(sourceUrl, { enforcePrivateBlock: true });
+    // Always block private targets for user-supplied image URLs, in both deployment
+    // modes, and connect to the validated addresses only. The connection is
+    // released once the image is read.
+    const target = await openValidatedFetch(sourceUrl, { enforcePrivateBlock: true });
+    try {
+      return await this.download(target.url, target.fetch);
+    } finally {
+      await target.close();
+    }
+  }
 
+  private async download(url: URL, boundFetch: typeof fetch): Promise<Express.Multer.File> {
     let response: Response;
     try {
-      response = await fetch(url.toString(), {
+      response = await boundFetch(url.toString(), {
         redirect: 'error',
         signal: AbortSignal.timeout(REMOTE_IMAGE_FETCH_TIMEOUT_MS),
       });

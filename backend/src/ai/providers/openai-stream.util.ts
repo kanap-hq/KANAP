@@ -1,7 +1,9 @@
 import { Logger } from '@nestjs/common';
 import OpenAI from 'openai';
+import { openValidatedFetch, ValidatedFetchTarget } from '../../common/pinned-fetch';
 import { AiStreamEvent, AiStreamParams, AiSystemPromptRole } from './ai-provider.types';
 import { isAbortError } from './streaming.util';
+import { providerFetchOptions, toProviderError } from './provider-http.util';
 
 const logger = new Logger('OpenAiCompatibleStream');
 
@@ -122,7 +124,7 @@ async function* emitXmlStyleToolCallsFromError(
 ): AsyncGenerator<AiStreamEvent> {
   const parsedCalls = parseXmlStyleToolCallsFromText(extractErrorText(error));
   if (parsedCalls.length === 0) {
-    throw error;
+    throw toProviderError(error);
   }
 
   logger.warn(
@@ -149,12 +151,32 @@ export function getOpenAiSystemPromptRole(model: string): AiSystemPromptRole {
 }
 
 export async function* openaiCompatibleStream(params: AiStreamParams): AsyncGenerator<AiStreamEvent> {
+  // A tenant endpoint is checked here, right before the call, and the SDK then
+  // connects to the addresses validated (multi-tenant mode). The dispatcher is
+  // released when the stream ends, fails or is abandoned.
+  const transport = params.endpointUrl && params.endpointSource !== 'platform'
+    ? await openValidatedFetch(params.endpointUrl)
+    : null;
+  try {
+    yield* streamCompletion(params, transport);
+  } finally {
+    await transport?.close();
+  }
+}
+
+async function* streamCompletion(
+  params: AiStreamParams,
+  transport: ValidatedFetchTarget | null,
+): AsyncGenerator<AiStreamEvent> {
   const replayReasoningContent = shouldReplayReasoningContent(params.endpointUrl);
+  const fetchOptions = providerFetchOptions();
   const client = new OpenAI({
     apiKey: params.apiKey || 'unused',
     ...(params.endpointUrl ? { baseURL: params.endpointUrl } : {}),
     timeout: params.timeoutMs ?? 120_000,
     maxRetries: params.maxRetries ?? 2,
+    ...(fetchOptions ? { fetchOptions } : {}),
+    ...(transport?.dispatcher ? { fetch: transport.fetch } : {}),
   });
 
   const tools: OpenAI.ChatCompletionTool[] = params.tools.map((t) => ({

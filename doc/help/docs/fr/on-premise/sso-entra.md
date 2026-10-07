@@ -104,7 +104,7 @@ ENTRA_REDIRECT_URI=https://kanap.company.com/api/auth/entra/callback
 Notes :
 - `ENTRA_AUTHORITY` doit être **spécifique au tenant** pour l'on-premise.
 - `ENTRA_REDIRECT_URI` doit correspondre **exactement** à ce que vous avez enregistré dans Entra.
-- Assurez-vous que `APP_BASE_URL` est défini sur l'URL publique pour que la redirection post-connexion soit correcte.
+- Assurez-vous que `APP_BASE_URL` est défini sur l'adresse exacte que les utilisateurs ouvrent (schéma, hôte et port s'il n'est pas standard). La redirection post-connexion en est déduite. Sans elle, la connexion Microsoft répond « application URL is not configured ».
 
 ## Étape 5 : Redémarrer KANAP
 
@@ -156,7 +156,7 @@ Le bloc dans **Administration → Authentification** indique le résultat : **De
 - **ENTRA_TENANT_MISMATCH** : Vous avez connecté un tenant mais vous essayez de vous connecter depuis un autre. Les utilisateurs voient « Ce compte Microsoft appartient à une autre organisation que celle connectée à cet espace de travail. »
 - **ENTRA_EMAIL_UNVERIFIED** : L'adresse e-mail du compte Microsoft n'est pas vérifiée et ne peut donc pas servir à la connexion.
 - **Invalid Entra state / nonce** : L'état de connexion a expiré ou la redirection Entra n'est pas revenue vers l'URL de callback configurée. Réessayez la connexion et vérifiez que `ENTRA_REDIRECT_URI` correspond exactement à l'enregistrement d'application Entra.
-- **Mauvaise redirection après connexion** : Vérifiez `APP_BASE_URL` et les en-têtes du reverse proxy (`Host`, `X-Forwarded-Proto`).
+- **Mauvaise redirection après connexion** : Vérifiez que `APP_BASE_URL` est l'adresse exacte que les utilisateurs ouvrent. La redirection vient de `APP_BASE_URL`, et les en-têtes `Host` et `X-Forwarded-Host` ne la modifient pas. Vérifiez aussi que le proxy envoie `X-Forwarded-Proto`.
 - **« Pas encore autorisé » sur la synchronisation de l'annuaire** : soit l'autorisation d'application `User.Read.All` n'a jamais été ajoutée à l'enregistrement d'application, soit aucun administrateur Microsoft Entra n'a encore accordé le consentement à l'échelle du tenant. Vérifiez les deux points, puis cliquez sur **Synchroniser maintenant**.
 - **Les connexions ont commencé à échouer juste après l'octroi du consentement administrateur** : le consentement a remplacé l'autorisation accordée à l'application par la liste des autorisations configurées, supprimant `openid`, `profile`, `email` et `offline_access`. Ajoutez-les comme autorisations déléguées configurées et accordez de nouveau le consentement.
 - **Secret client expiré** : Microsoft renvoie `AADSTS7000222`. Les utilisateurs voient seulement le message générique « La connexion avec Microsoft n'a pas abouti. Réessayez ou contactez votre administrateur. » sur la page de connexion. Pour confirmer la cause, regardez **Administration → Authentification → Synchronisation quotidienne de l'annuaire** : la ligne d'échec cite le code d'erreur Microsoft. Relancer **Connecter** l'affiche également. Créez un nouveau secret client dans **Certificats & secrets**, mettez à jour `ENTRA_CLIENT_SECRET`, puis redémarrez l'API.

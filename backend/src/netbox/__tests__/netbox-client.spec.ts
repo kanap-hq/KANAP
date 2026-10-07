@@ -1,4 +1,6 @@
 import * as assert from 'node:assert/strict';
+import { Features } from '../../config/features';
+import { LookupFn } from '../../common/ssrf-guard';
 import {
   NetboxClient,
   NetboxHttpLike,
@@ -386,6 +388,50 @@ assert.equal(netboxAuthorizationHeader('  padded  '), 'Token padded');
       (error: any) => /private or internal/i.test(String(error?.message || '')),
     );
     assert.equal(called, false, 'no request may be attempted for a blocked target');
+  }
+
+  {
+    // Multi-tenant, host not allowlisted: the transport receives a lookup that
+    // answers with the address validated before the request.
+    const originalSingleTenant = Features.SINGLE_TENANT;
+    (Features as any).SINGLE_TENANT = false;
+    try {
+      let resolutions = 0;
+      const addressLookup: LookupFn = async () => {
+        resolutions += 1;
+        return [{ address: '93.184.216.34' }];
+      };
+      const seen: Array<{ host: string; lookup: unknown }> = [];
+      const httpImpl: NetboxHttpLike = async (input, request) => {
+        seen.push({ host: new URL(input).hostname, lookup: request.lookup });
+        return { status: 200, body: JSON.stringify({ 'netbox-version': '4.1.0' }), contentType: 'application/json' };
+      };
+      const client = new NetboxClient(httpImpl, addressLookup);
+      const pinnedHost = 'netbox-public.example.test';
+      const version = await client.getVersion({
+        baseUrl: `https://${pinnedHost}`,
+        token: SECRET_TOKEN,
+        insecureTls: false,
+        requestTimeoutMs: null,
+      });
+      assert.equal(version, '4.1.0');
+      assert.equal(resolutions, 1);
+      assert.equal(seen.length, 1);
+      assert.equal(typeof seen[0].lookup, 'function', 'the transport receives the pinned lookup');
+      const answer = await new Promise<{ error: unknown; address: unknown }>((resolve) => {
+        (seen[0].lookup as any)(pinnedHost, {}, (error: unknown, address: unknown) => resolve({ error, address }));
+      });
+      assert.equal(answer.error, null);
+      assert.equal(answer.address, '93.184.216.34');
+
+      // An allowlisted host is not resolved, so nothing is pinned.
+      seen.length = 0;
+      await client.getVersion({ baseUrl: BASE_URL, token: SECRET_TOKEN, insecureTls: false, requestTimeoutMs: null });
+      assert.equal(resolutions, 1);
+      assert.equal(seen[0].lookup, undefined);
+    } finally {
+      (Features as any).SINGLE_TENANT = originalSingleTenant;
+    }
   }
 }
 

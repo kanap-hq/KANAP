@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { isProductionEnv } from '../common/env';
+import { Features } from '../config/features';
 
 type CaptchaMode = 'off' | 'monitor' | 'enforce';
 type CaptchaAction = 'start-trial' | 'contact' | 'support-invoice';
@@ -110,6 +111,9 @@ export class TurnstileService {
     if (raw === 'off' || raw === 'monitor' || raw === 'enforce') {
       return raw;
     }
+    // Single-tenant installs serve no public sign-up or contact pages: the CAPTCHA stays off
+    // unless CAPTCHA_MODE asks for it.
+    if (Features.SINGLE_TENANT) return 'off';
     return isProductionEnv() ? 'enforce' : 'off';
   }
 
