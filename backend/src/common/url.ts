@@ -122,6 +122,9 @@ export function resolveTenantAppBaseUrl(req: any, tenantSlug: string) {
 
   const configured = getConfiguredAppBaseUrl();
 
+  // Single-tenant: one address, the configured application URL.
+  if (Features.SINGLE_TENANT && configured) return configured.origin;
+
   // In non-production, preserve request-host behavior for local workflows.
   if (!isProductionEnv()) {
     const requestHost = sanitizeHost(
