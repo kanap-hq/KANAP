@@ -5,6 +5,7 @@ import { Subscription, SubscriptionStatus, SubscriptionType, PaymentMode, Collec
 import { computePriceAmount, normaliseStripePrice } from './price.util';
 import { Tenant } from '../tenants/tenant.entity';
 import { withTenant } from '../common/tenant-runner';
+import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { EmailService } from '../email/email.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -74,8 +75,7 @@ export class StripeWebhookService implements OnModuleInit {
   }
 
   private isDevelopmentEnv(): boolean {
-    const env = (process.env.APP_ENV || process.env.NODE_ENV || '').trim().toLowerCase();
-    return env === 'development' || env === 'dev';
+    return isDevelopmentEnv();
   }
 
   private shouldAlertMissingWebhookSecret(): boolean {
@@ -88,7 +88,7 @@ export class StripeWebhookService implements OnModuleInit {
   private logMissingWebhookSecretAlert(source: 'startup' | 'request'): void {
     if (!this.shouldAlertMissingWebhookSecret()) return;
     if (source === 'request' && this.hasLoggedRuntimeWebhookSecretAlert) return;
-    const env = (process.env.APP_ENV || process.env.NODE_ENV || '').trim().toLowerCase() || 'unknown';
+    const env = getEnvMode() || 'unknown';
     this.logger.error(
       `[SECURITY][STRIPE_WEBHOOK_SECRET_MISSING] Stripe billing is enabled but STRIPE_WEBHOOK_SECRET is missing in non-dev env "${env}" (${source}). Webhook requests will be rejected until the secret is configured.`,
     );

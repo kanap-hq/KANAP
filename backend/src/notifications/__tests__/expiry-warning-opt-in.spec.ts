@@ -5,6 +5,10 @@ import {
   NotificationPreferencesData,
 } from '../notifications.constants';
 
+// Notification links come from the configured application address (common/url.ts): without one
+// the emails are not built and the scheduled runs are skipped.
+if (!process.env.APP_BASE_URL) process.env.APP_BASE_URL = 'https://app.example.test';
+
 /**
  * Expiry warnings (contract cancellation deadline / end date, OPEX and CAPEX end of validity) go only
  * to users who opted in: emails on, budget notifications on, expiration warnings on. The

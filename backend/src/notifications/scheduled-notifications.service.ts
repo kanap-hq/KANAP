@@ -10,7 +10,7 @@ import { EmailService } from '../email/email.service';
 import { NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationsService } from './notifications.service';
 import { buildWeeklyReviewEmail } from './notification-templates';
-import { resolveNotificationBaseUrl } from '../common/url';
+import { APP_URL_NOT_CONFIGURED_MESSAGE, resolveConfiguredAppBaseUrl, resolveNotificationBaseUrl } from '../common/url';
 import { ACTIVE_TASK_STATUSES } from '../tasks/task.entity';
 import { StorageService } from '../common/storage/storage.service';
 import { type EmailBranding, resolveEmailBranding, getDefaultEmailBranding } from '../email/email-branding';
@@ -88,6 +88,17 @@ export class ScheduledNotificationsService implements OnModuleInit {
     return resolveNotificationBaseUrl(null);
   }
 
+  /**
+   * The emails of a run link to the application: without a configured address the run sends
+   * nothing and says so in one log line (and in its summary), the rest of the process goes on.
+   */
+  private skipWithoutAppUrl(label: string, summary: Record<string, any>): boolean {
+    if (resolveConfiguredAppBaseUrl(null) !== null) return false;
+    this.logger.warn(`[${label}] Skipped: ${APP_URL_NOT_CONFIGURED_MESSAGE}`);
+    summary.skipped_reason = 'application URL is not configured';
+    return true;
+  }
+
   private async resolveBranding(tenantId: string): Promise<EmailBranding> {
     try {
       const rows = await this.dataSource.query(
@@ -113,7 +124,8 @@ export class ScheduledNotificationsService implements OnModuleInit {
   async checkExpirations(now: Date = new Date()): Promise<Record<string, any>> {
     this.logger.log('[Expirations] Running expiration warnings check...');
 
-    const summary = { tenantsProcessed: 0, contractWarnings: 0, opexWarnings: 0, capexWarnings: 0, errors: [] as string[] };
+    const summary: Record<string, any> = { tenantsProcessed: 0, contractWarnings: 0, opexWarnings: 0, capexWarnings: 0, errors: [] as string[] };
+    if (this.skipWithoutAppUrl('Expirations', summary)) return summary;
 
     const tenants = await this.dataSource.query(`
       SELECT id, slug FROM tenants WHERE status = 'active'
@@ -388,7 +400,8 @@ export class ScheduledNotificationsService implements OnModuleInit {
       `[WeeklyReview] Cron triggered at ${now.format('YYYY-MM-DD HH:mm:ss')} UTC`,
     );
 
-    const summary = { tenantsProcessed: 0, totalUsers: 0, sent: 0, skipped: 0, errors: [] as string[] };
+    const summary: Record<string, any> = { tenantsProcessed: 0, totalUsers: 0, sent: 0, skipped: 0, errors: [] as string[] };
+    if (this.skipWithoutAppUrl('WeeklyReview', summary)) return summary;
 
     const tenants = await this.dataSource.query(`
       SELECT id, slug FROM tenants WHERE status = 'active'

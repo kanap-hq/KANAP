@@ -5,6 +5,10 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { ScheduledNotificationsService } from '../scheduled-notifications.service';
 
+// Notification links come from the configured application address (common/url.ts): without one
+// the emails are not built and the scheduled runs are skipped.
+if (!process.env.APP_BASE_URL) process.env.APP_BASE_URL = 'https://app.example.test';
+
 // The expiry warnings. Candidates are the deadlines within 30 days; a
 // warning goes out only when the deadline is 30, 14, 7 or 1 calendar day(s)
 // away. OPEX items read the end of validity (disabled_at): the warning carries

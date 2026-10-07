@@ -16,7 +16,7 @@ import {
 } from './token-ttl.util';
 import { RefreshToken } from './refresh-token.entity';
 import { PasswordResetToken } from './password-reset-token.entity';
-import { requireJwtSecret } from '../common/env';
+import { isDevelopmentEnv, requireJwtSecret } from '../common/env';
 
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -57,7 +57,7 @@ export class AuthService {
     if (!user || !user.password_hash || typeof user.password_hash !== 'string') {
       throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
     }
-    if (process.env.APP_ENV === 'development') {
+    if (isDevelopmentEnv()) {
       // eslint-disable-next-line no-console
       console.log('login attempt', {
         email,

@@ -28,6 +28,7 @@ import { RolePermission } from '../permissions/role-permission.entity';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import type { CommitThenRunFn } from '../common/import-connection';
+import { APP_URL_NOT_CONFIGURED_MESSAGE, resolveConfiguredAppBaseUrl } from '../common/url';
 import {
   cellOf,
   CsvDateOrder,
@@ -1021,9 +1022,11 @@ export class UsersService {
       );
     }
 
-    const resolvedBaseUrl = baseUrl?.trim();
+    // The HTTP route passes the link base of the request (common/url.ts); other callers get the
+    // configured address.
+    const resolvedBaseUrl = baseUrl?.trim() || resolveConfiguredAppBaseUrl();
     if (!resolvedBaseUrl) {
-      throw new BadRequestException('application url is not configured');
+      throw new BadRequestException(APP_URL_NOT_CONFIGURED_MESSAGE);
     }
     const normalizedBase = resolvedBaseUrl.replace(/\/$/, '');
 

@@ -2,6 +2,10 @@ import * as assert from 'node:assert/strict';
 import { NotificationsService } from '../notifications.service';
 import { backgroundWorkCount } from '../../common/background-work';
 
+// Notification links come from the configured application address (common/url.ts): without one
+// the emails are not built and the scheduled runs are skipped.
+if (!process.env.APP_BASE_URL) process.env.APP_BASE_URL = 'https://app.example.test';
+
 /**
  * notifyItLeadOfTeamChange is fired without being awaited by the team endpoints of projects
  * and requests. Until its IT lead lookup was given a tenant context it always stopped on
