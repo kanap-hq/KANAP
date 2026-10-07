@@ -43,6 +43,13 @@
   line-height: 1.55;
 }
 
+/* The native option list does not inherit a transparent select background:
+   paint it with the theme colours so dark mode stays readable. */
+.mk-tf__field select option {
+  color: var(--kanap-text-primary);
+  background: var(--kanap-bg-primary);
+}
+
 .mk-tf__field input::placeholder,
 .mk-tf__field textarea::placeholder {
   color: var(--kanap-text-tertiary);
